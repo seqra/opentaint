@@ -146,7 +146,7 @@ passThrough:
     - .org.w3c.dom.Node#nodeValue#java.lang.String
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
     to: result
   - from:
     - this
@@ -234,7 +234,7 @@ passThrough:
     - .org.w3c.dom.Node#nodeValue#java.lang.String
   - from:
     - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
     to: result
   - from:
     - this

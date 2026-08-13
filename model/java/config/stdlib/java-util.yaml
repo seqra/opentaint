@@ -5594,7 +5594,7 @@ passThrough:
     - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.StringJoiner#delimiter#java.lang.Object
+    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
     to: result
 - function: java.util.Collections#checkedSortedSet
   signature: (java.util.SortedSet, java.lang.Class) java.util.SortedSet

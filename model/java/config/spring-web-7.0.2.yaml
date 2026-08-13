@@ -325,7 +325,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
+    - .org.springframework.http.HttpHeaders#headerMap#java.util.Map
 - function: org.springframework.web.util.UriComponentsBuilder#cloneBuilder
   overrides: false
   copy:

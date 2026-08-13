@@ -419,7 +419,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#file#java.lang.Object
+    - .org.springframework.core.io.Resource#file#java.io.File
     to: result
 - function: org.springframework.core.io.ByteArrayResource#getContentAsString
   signature: (*) java.lang.String
@@ -1426,7 +1426,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#url#java.lang.Object
+    - .org.springframework.core.io.Resource#url#java.net.URL
     to: result
 - function: org.springframework.util.StringUtils#quote
   copy:
@@ -1903,7 +1903,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.core.io.Resource#file#java.lang.Object
+    - .org.springframework.core.io.Resource#file#java.io.File
     to: result
 - function: org.springframework.util.StringUtils#addStringToArray
   overrides: false
