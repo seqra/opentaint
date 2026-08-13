@@ -395,6 +395,12 @@ public class PassthroughContainerSamples {
         Runtime.getRuntime().exec("cat " + target.get("name"));
     }
 
+    /**
+     * Not registered in rule-test.yaml: Collectors#joining collapses the stream elements
+     * into one String, and a collector-aware model would have to know which collector was
+     * passed to collect(..). Modelling it at the Stream#collect level would taint the root
+     * of every collected container, so the gap is left open rather than over-approximated.
+     */
     @GetMapping("/stream-joining/unsafe")
     public void streamJoiningUnsafe(@RequestParam String input) throws IOException {
         List<String> files = new ArrayList<>();
