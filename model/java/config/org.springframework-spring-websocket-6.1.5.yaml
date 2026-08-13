@@ -7,9 +7,7 @@ passThrough:
   - from:
     - this
     - .org.springframework.web.socket.TextMessage#payload#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#content#java.lang.Object
+    to: result
 - function: org.springframework.web.socket.TextMessage#<init>
   signature:
     params:
@@ -26,9 +24,7 @@ passThrough:
   - from:
     - this
     - .org.springframework.web.socket.BinaryMessage#payload#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#bytes#java.lang.Object
+    to: result
 - function: org.springframework.web.socket.PongMessage#<init>
   taintCopyOnly: true
   copy:

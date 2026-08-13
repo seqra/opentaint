@@ -424,7 +424,8 @@ passThrough:
     - .java.text.MessageFormat#pattern#java.lang.Object
     to: result
 - function: java.text.MessageFormat#format
-  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition)
+    java.lang.StringBuffer
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -535,7 +536,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.text.MessageFormat#format
-  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition)
+    java.lang.StringBuffer
   copy:
   - from: arg(1)
     to: result
@@ -1140,9 +1142,7 @@ passThrough:
     return: java.lang.String
   copy:
   - from: arg(0)
-    to:
-    - result
-    - .java.lang.String#content#java.lang.Object
+    to: result
 - function: java.text.DecimalFormat#applyLocalizedPattern
   signature: (java.lang.String) void
   taintCopyOnly: true

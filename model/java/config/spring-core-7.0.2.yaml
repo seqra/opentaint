@@ -402,9 +402,7 @@ passThrough:
   - from:
     - this
     - .org.springframework.core.io.ByteArrayResource#byteArray#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#bytes#java.lang.Object
+    to: result
 - function: org.springframework.util.StringUtils#getFilenameExtension
   copy:
   - from: arg(0)
@@ -421,9 +419,7 @@ passThrough:
   - from:
     - this
     - .org.springframework.core.io.ByteArrayResource#byteArray#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#bytes#java.lang.Object
+    to: result
 - function: org.springframework.util.ObjectUtils#toObjectArray
   copy:
   - from: arg(0)
@@ -812,7 +808,8 @@ passThrough:
     - .java.io.File#uri#java.lang.Object
     - .java.net.URI#value#java.lang.Object
 - function: org.springframework.util.AutoPopulatingList#<init>
-  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory) *
+  signature: (java.util.List, org.springframework.util.AutoPopulatingList$ElementFactory)
+    *
   overrides: false
   copy:
   - from:

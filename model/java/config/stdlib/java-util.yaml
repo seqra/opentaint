@@ -50,8 +50,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -221,7 +221,8 @@ passThrough:
   - from: this
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -241,7 +242,8 @@ passThrough:
     - result
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -442,8 +444,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -638,8 +640,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -907,7 +909,8 @@ passThrough:
     - .java.util.Optional#Element#java.lang.Object
     to: result
 - function: java.util.StringJoiner#<init>
-  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence) void
+  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
+    void
   taintCopyOnly: true
   copy:
   - from: arg(1)
@@ -1141,10 +1144,10 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -1364,8 +1367,9 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Value#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -1569,10 +1573,11 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -1656,8 +1661,8 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -1798,9 +1803,10 @@ passThrough:
     - arg(0)
     - '[*]'
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -2356,8 +2362,9 @@ passThrough:
     - result
     - .java.util.Calendar#timeZone#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -2504,8 +2511,9 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -2763,9 +2771,7 @@ passThrough:
       type: java.lang.String
     return: byte[]
   copy:
-  - from:
-    - arg(0)
-    - .java.lang.String#bytes#java.lang.Object
+  - from: arg(0)
     to: result
 - function: java.util.List#remove
   signature: (int) java.lang.Object
@@ -3008,7 +3014,8 @@ passThrough:
   - from: this
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -3028,8 +3035,8 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -3107,8 +3114,8 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -3203,8 +3210,8 @@ passThrough:
     - result
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -3455,8 +3462,9 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -3674,8 +3682,8 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -3879,8 +3887,8 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -3985,9 +3993,9 @@ passThrough:
   - from: this
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -4837,8 +4845,8 @@ passThrough:
   - from: arg(1)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -5002,8 +5010,9 @@ passThrough:
     - result
     - .java.util.Optional#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -5065,9 +5074,7 @@ passThrough:
   - from:
     - this
     - .java.util.StringJoiner#delimiter#java.lang.Object
-    to:
-    - result
-    - .java.lang.String#content#java.lang.Object
+    to: result
 - function: java.util.Collections#checkedSortedSet
   signature: (java.util.SortedSet, java.lang.Class) java.util.SortedSet
   overrides: false
@@ -5153,7 +5160,8 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.StringJoiner#<init>
-  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence) void
+  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
+    void
   copy:
   - from: arg(2)
     to: this
@@ -5224,9 +5232,10 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    java.util.Map
   overrides: false
   copy:
   - from: arg(0)
