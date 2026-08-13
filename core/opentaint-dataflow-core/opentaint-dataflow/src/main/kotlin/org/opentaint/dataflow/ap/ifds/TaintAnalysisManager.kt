@@ -11,6 +11,9 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.util.analysis.ApplicationGraph
 
 interface TaintAnalysisManager : AnalysisManager {
+    val supportsForwardActionableRuleSelection: Boolean
+        get() = false
+
     sealed interface Phase {
         data object Prescan : Phase
         data object ShallowScan : Phase

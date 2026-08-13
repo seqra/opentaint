@@ -81,6 +81,8 @@ class JIRAnalysisManager(
     val externalMethodTracker: ExternalMethodTracker? = null,
     private val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
+    override val supportsForwardActionableRuleSelection: Boolean = true
+
     private object StaticFieldAccessDetector :
         JIRExprVisitor.Default<Boolean>,
         JIRInstVisitor.Default<Boolean> {

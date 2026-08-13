@@ -26,10 +26,29 @@ class ForwardActionableRulesRecorderTest {
         val first = recorder.snapshot()
         assertEquals(setOf(action), first.getValue(statement).getValue(rule))
 
-        recorder.reset()
+        recorder.clear()
         val second = recorder.snapshot()
         assertEquals(emptyMap(), second)
         assertNotSame(first, second)
         assertEquals(setOf(action), first.getValue(statement).getValue(rule))
+    }
+
+    @Test
+    fun `collect merges actions with an existing rule`() {
+        val recorder = ForwardActionableRulesRecorder()
+        val otherAction = object : CommonTaintAction {}
+        recorder.record(statement, rule, action)
+
+        val collector: MutableMap<
+            CommonInst,
+            MutableMap<CommonTaintConfigurationItem, MutableSet<CommonTaintAction>>,
+            > = hashMapOf(
+            statement to hashMapOf(
+                rule to hashSetOf<CommonTaintAction>(otherAction),
+            ),
+        )
+        recorder.collectInto(collector)
+
+        assertEquals(setOf(action, otherAction), collector.getValue(statement).getValue(rule))
     }
 }

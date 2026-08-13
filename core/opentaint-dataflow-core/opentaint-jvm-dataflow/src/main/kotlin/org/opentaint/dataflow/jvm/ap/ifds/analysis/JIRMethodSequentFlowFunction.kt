@@ -715,6 +715,9 @@ class JIRMethodSequentFlowFunction(
             val sourceRule = sourceRuleWithCondition.rule
             for (action in sourceRule.actionsAfter) {
                 sourceEvaluator.accept(sourceRule, action).onSome { evaluatedFacts ->
+                    if (!generateTrace && evaluatedFacts.isNotEmpty()) {
+                        analysisContext.recordForwardSourceAction(currentInst, sourceRule, action)
+                    }
                     val trace = TraceInfo.Rule(sourceRule, action)
 
                     evaluatedFacts.mapTo(this) {

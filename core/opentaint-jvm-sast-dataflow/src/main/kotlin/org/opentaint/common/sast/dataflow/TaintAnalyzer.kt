@@ -28,6 +28,7 @@ import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
+import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy
@@ -207,8 +208,13 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         logger.info { "Start actionable rules discovery" }
         val ruleDiscoveryTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.5
 
-        val actionableRules = ifdsEngine.resolveActionableRules(shallowScanManager, entryPoints, vulnerabilities, ruleDiscoveryTimeout)
-            .also { logger.info { "Finish actionable rules discovery" } }
+        val actionableRules = if (
+            analysisManager.supportsForwardActionableRuleSelection && !options.storeSummaries
+        ) {
+            listOf(ActionableRulesCollectionResult.Collected(forwardActionableRules(vulnerabilities)))
+        } else {
+            ifdsEngine.resolveActionableRules(shallowScanManager, entryPoints, vulnerabilities, ruleDiscoveryTimeout)
+        }.also { logger.info { "Finish actionable rules discovery" } }
 
         val successfullyResolvedRules = actionableRules.filterIsInstance<ActionableRulesCollectionResult.Collected>()
         if (successfullyResolvedRules.size != actionableRules.size) {
@@ -220,6 +226,29 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val status = Status(analysisStatus, ruleDiscoveryStatus)
 
         return successfullyResolvedRules to status
+    }
+
+    private fun forwardActionableRules(
+        vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
+    ): ActionableRules {
+        val recordedRules = ifdsEngine.getForwardActionableRules()
+        val result = recordedRules.mapValuesTo(linkedMapOf()) { (_, statementRules) ->
+            statementRules.mapValuesTo(linkedMapOf()) { (_, actions) -> actions.toMutableSet() }
+        }
+
+        vulnerabilities.forEach { vulnerability ->
+            val statementRules = result.getOrPut(vulnerability.statement) { linkedMapOf() }
+            vulnerability.vulnerabilityRules.keys.forEach { rule ->
+                statementRules.getOrPut(rule, ::linkedSetOf)
+            }
+        }
+
+        val sources = result.values.sumOf { statementRules -> statementRules.count { it.value.isNotEmpty() } }
+        val sinks = result.values.sumOf { statementRules -> statementRules.count { it.value.isEmpty() } }
+        logger.info {
+            "Forward actionable rule selection: $sources successful source rules, $sinks confirmed sinks"
+        }
+        return result
     }
 
     private fun fullScan(

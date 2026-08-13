@@ -8,15 +8,9 @@ import java.util.concurrent.ConcurrentHashMap
 typealias ActionableRules =
     Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>
 
-/**
- * Experimental record of source actions that emitted at least one fact during
- * the normal forward analysis.
- *
- * This is deliberately only an observation mechanism. Production actionable
- * rule selection continues to use trace resolution.
- */
+/** Source actions that emitted at least one fact during forward analysis. */
 class ForwardActionableRulesRecorder {
-    private var rules = ConcurrentHashMap<
+    private val rules = ConcurrentHashMap<
         CommonInst,
         ConcurrentHashMap<CommonTaintConfigurationItem, MutableSet<CommonTaintAction>>
         >()
@@ -31,19 +25,20 @@ class ForwardActionableRulesRecorder {
             .add(action)
     }
 
-    fun reset() {
-        rules = ConcurrentHashMap()
-    }
+    fun clear() = rules.clear()
 
     fun snapshot(): ActionableRules = rules.mapValues { (_, statementRules) ->
         statementRules.mapValues { (_, actions) -> actions.toSet() }
     }
-}
 
-object ForwardActionableRulesExperiment {
-    const val PROPERTY = "opentaint.experimental.forward-actionable-rules"
-
-    val enabled: Boolean by lazy {
-        System.getProperty(PROPERTY)?.toBooleanStrictOrNull() == true
+    fun collectInto(
+        collector: MutableMap<CommonInst, MutableMap<CommonTaintConfigurationItem, MutableSet<CommonTaintAction>>>,
+    ) {
+        rules.forEach { (statement, statementRules) ->
+            val targetRules = collector.getOrPut(statement, ::hashMapOf)
+            statementRules.forEach { (rule, actions) ->
+                targetRules.getOrPut(rule, ::hashSetOf).addAll(actions)
+            }
+        }
     }
 }

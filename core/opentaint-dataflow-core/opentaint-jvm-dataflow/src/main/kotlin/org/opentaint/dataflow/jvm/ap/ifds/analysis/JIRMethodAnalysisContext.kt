@@ -8,6 +8,8 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
@@ -19,6 +21,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
+import org.opentaint.ir.api.common.cfg.CommonInst
 import java.lang.ref.Reference
 import java.util.concurrent.ConcurrentHashMap
 
@@ -37,6 +40,15 @@ class JIRMethodAnalysisContext(
     }
 
     val phase: Phase get() = analysisManager.phase
+
+    fun recordForwardSourceAction(
+        statement: CommonInst,
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAction,
+    ) {
+        if (phase !is Phase.ShallowScan) return
+        taint.taintSinkTracker.recordForwardActionableRule(statement, rule, action)
+    }
 
     override val methodCallFactMapper: MethodCallFactMapper
         get() = JIRMethodCallFactMapper

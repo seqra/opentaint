@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.CommonTaintAnalysisContext
+import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisUnitStorage
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.TaintVulnerability
@@ -39,6 +40,8 @@ import org.opentaint.dataflow.ap.ifds.trace.path.generateTracePath
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.MemoryManager
 import org.opentaint.dataflow.util.RefManager
@@ -214,6 +217,15 @@ class TaintAnalysisUnitRunnerManager(
         }
 
         return vulnerabilities
+    }
+
+    fun getForwardActionableRules(): ActionableRules {
+        val rules = hashMapOf<
+            CommonInst,
+            MutableMap<CommonTaintConfigurationItem, MutableSet<CommonTaintAction>>,
+            >()
+        unitStorage.values.forEach { it.collectForwardActionableRules(rules) }
+        return rules
     }
 
     fun resolveVulnerabilityActionableRules(
