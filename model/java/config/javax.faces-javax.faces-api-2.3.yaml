@@ -39,23 +39,6 @@ passThrough:
     - this
     - .javax.faces.el.ValueBinding#content#java.lang.Object
     to: result
-- function: javax.faces.model.ArrayDataModel#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
 - function: javax.faces.model.ResultSetDataModel#<init>
   signature: (java.sql.ResultSet) void
   copy:
@@ -76,18 +59,6 @@ passThrough:
 - function: javax.faces.model.SelectItemGroup#<init>
   signature: (java.lang.String) void
   copy:
-  - from: arg(3)
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(3)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(1)
-    to: this
   - from: arg(0)
     to:
     - this
@@ -130,23 +101,6 @@ passThrough:
     - this
     - .java.util.EventObject#content#java.lang.Object
     to: result
-- function: javax.faces.model.ScalarDataModel#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.ScalarDataModel#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: javax.faces.model.SelectItemGroup#<init>
   signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[]) void
   copy:
@@ -170,23 +124,6 @@ passThrough:
     to:
     - this
     - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(0)
-    to: this
-- function: javax.faces.model.ResultDataModel#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.ResultDataModel#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
   - from: arg(0)
     to: this
 - function: javax.faces.model.ResultDataModel#<init>
@@ -257,23 +194,6 @@ passThrough:
     - .javax.faces.el.ValueBinding#content#java.lang.Object
   - from: arg(1)
     to: this
-- function: javax.faces.model.ListDataModel#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.ListDataModel#elements#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: javax.faces.model.SelectItemGroup#getSelectItems
   signature: () javax.faces.model.SelectItem[]
   copy:
@@ -301,23 +221,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: javax.faces.model.ResultSetDataModel#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.DataModel#wrappedData#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.ResultSetDataModel#elements#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: javax.faces.model.ListDataModel#<init>
   signature: (java.util.List) void
   copy:
@@ -370,24 +273,3 @@ passThrough:
     - this
     - .java.util.EventObject#content#java.lang.Object
     to: result
-- function: javax.faces.model.SelectItemGroup#<init>
-  signature: () void
-  copy:
-  - from: arg(3)
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(3)
-    to: this
-  - from: arg(1)
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(0)
-    to: this

@@ -105,23 +105,6 @@ passThrough:
     - this
     - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
 - function: javax.servlet.jsp.JspWriter#println
-  signature: () void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.Writer#buffer#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
-- function: javax.servlet.jsp.JspWriter#println
   signature: (double) void
   copy:
   - from: arg(0)
