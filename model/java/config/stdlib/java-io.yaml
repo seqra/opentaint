@@ -916,3 +916,33 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: java.io.Reader#read
+  signature:
+    params:
+    - index: 0
+      type: char[]
+  copy:
+  - from: this
+    to: arg(0)
+  - from:
+    - this
+    - .java.io.Reader#content#java.lang.Object
+    to: arg(0)
+- function: java.io.Reader#read
+  signature: (java.nio.CharBuffer) int
+  copy:
+  - from: this
+    to: arg(0)
+  - from:
+    - this
+    - .java.io.Reader#content#java.lang.Object
+    to: arg(0)
+- function: java.io.BufferedReader#readLine
+  signature: () java.lang.String
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .java.io.Reader#content#java.lang.Object
+    to: result
