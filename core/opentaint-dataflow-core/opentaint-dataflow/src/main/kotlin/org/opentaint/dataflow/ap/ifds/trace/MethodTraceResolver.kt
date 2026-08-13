@@ -66,6 +66,7 @@ import org.opentaint.ir.api.common.cfg.CommonValue
 import java.util.BitSet
 import java.util.LinkedList
 import java.util.Objects
+import java.util.concurrent.ConcurrentHashMap
 
 internal fun MethodTraceResolver.SummaryTrace.withUniverseExclusions(): MethodTraceResolver.SummaryTrace =
     copy(
@@ -104,6 +105,7 @@ class MethodTraceResolver(
     private val graph: MethodInstGraph,
     private val traceSummarizer: TraceSummarizer? = null,
     traceResolutionActionHardLimit: Int? = null,
+    private val cache: Cache = Cache(),
 ) {
     private val methodEntryPoint: MethodEntryPoint = analysisContext.methodEntryPoint
     private val analysisManager: AnalysisManager get() = runner.analysisManager
@@ -112,6 +114,59 @@ class MethodTraceResolver(
     private val apManager: ApManager get() = runner.apManager
     private val traceResolutionActionHardLimit =
         traceResolutionActionHardLimit ?: TRACE_RESOLUTION_ACTION_HARD_LIMIT
+
+    /**
+     * Query-independent data used while resolving traces for one analyzed method.
+     *
+     * A cache may be shared by concurrent resolvers only while the method edge storage is stable.
+     * [NormalMethodAnalyzer] owns one cache generation and replaces it with the method analysis state.
+     */
+    class Cache internal constructor() {
+        private data class CallPassSummaryKey(
+            val currentEdge: TraceEdge,
+            val callee: MethodEntryPoint,
+            val startFact: CallPreconditionFact.CallToStart,
+            val statement: CommonInst,
+        )
+
+        private val entryEdgePresence =
+            ConcurrentHashMap<CommonInst, ConcurrentHashMap<TraceEdge, Boolean>>()
+        private val callPassSummaries = ConcurrentHashMap<CallPassSummaryKey, List<CallSummary>>()
+        private val calleeEntryPoints = ConcurrentHashMap<CommonInst, List<MethodEntryPoint>>()
+        private val zeroEntryFacts =
+            ConcurrentHashMap<CommonInst, ConcurrentHashMap<AccessPathBase, List<FinalFactAp>>>()
+
+        internal fun containsEntryEdge(
+            statement: CommonInst,
+            edge: TraceEdge,
+            compute: () -> Boolean,
+        ): Boolean = entryEdgePresence
+            .computeIfAbsent(statement) { ConcurrentHashMap() }
+            .computeIfAbsent(edge) { compute() }
+
+        internal fun callPassSummaries(
+            currentEdge: TraceEdge,
+            callee: MethodEntryPoint,
+            startFact: CallPreconditionFact.CallToStart,
+            statement: CommonInst,
+            compute: () -> List<CallSummary>,
+        ): List<CallSummary> = callPassSummaries.computeIfAbsent(
+            CallPassSummaryKey(currentEdge, callee, startFact, statement)
+        ) { compute().toList() }
+
+        internal fun calleeEntryPoints(
+            statement: CommonInst,
+            compute: () -> List<MethodEntryPoint>,
+        ): List<MethodEntryPoint> = calleeEntryPoints.computeIfAbsent(statement) { compute().toList() }
+
+        internal fun zeroEntryFacts(
+            statement: CommonInst,
+            base: AccessPathBase,
+            compute: () -> List<FinalFactAp>,
+        ): List<FinalFactAp> = zeroEntryFacts
+            .computeIfAbsent(statement) { ConcurrentHashMap() }
+            .computeIfAbsent(base) { compute().toList() }
+    }
     // Enum can give non-determinacy as its entries have new hash code on every JVM run.
     // Override hashcode() and equals() when using enum as a field in classes whose objects
     // can be stored in sets etc.
@@ -526,11 +581,6 @@ class MethodTraceResolver(
         var steps = 0
         var actionHardLimitReached = false
 
-        val entryEdgePresence = hashMapOf<CommonInst, MutableMap<TraceEdge, Boolean>>()
-        val callPassSummaries = hashMapOf<CallPassSummaryKey, List<CallSummary>>()
-        val calleeEntryPoints = hashMapOf<CommonInst, List<MethodEntryPoint>>()
-        val zeroEntryFacts = hashMapOf<StatementFactBaseKey, List<FinalFactAp>>()
-
         fun addPredecessor(current: TraceEntry, predecessor: TraceEntry, enqueue: Boolean = true) {
             val currentId = entryManager.entryId(current)
             val predecessorId = entryManager.entryId(predecessor)
@@ -583,18 +633,6 @@ class MethodTraceResolver(
 
         fun actions(): Int = actionVariants.size
     }
-
-    private data class CallPassSummaryKey(
-        val currentEdge: TraceEdge,
-        val callee: MethodEntryPoint,
-        val startFact: CallPreconditionFact.CallToStart,
-        val statement: CommonInst,
-    )
-
-    private data class StatementFactBaseKey(
-        val statement: CommonInst,
-        val base: AccessPathBase,
-    )
 
     fun resolveIntraProceduralTrace(
         statement: CommonInst,
@@ -1350,7 +1388,7 @@ class MethodTraceResolver(
             }
 
             val resolvedMethodEntryPoints by lazy {
-                calleeEntryPoints.getOrPut(statement) {
+                cache.calleeEntryPoints(statement) {
                     callees.mapNotNull {
                         when (it) {
                             is MethodCallResolutionResult.ResolvedMethod -> it.method
@@ -1842,7 +1880,7 @@ class MethodTraceResolver(
                     edgeSummaries.resolveCallSourceSummary(currentEdge, callee, action.call2Start)
                 }
 
-                edgeSummaries.resolveCallPassSummary(builder, currentEdge, callee, action.call2Start, statement)
+                edgeSummaries.resolveCallPassSummary(currentEdge, callee, action.call2Start, statement)
             }
 
             if (edgeSummaries.isEmpty()) return emptyList()
@@ -2010,18 +2048,22 @@ class MethodTraceResolver(
     }
 
     private fun MutableList<CallSummary>.resolveCallPassSummary(
-        builder: TraceBuilder,
         currentEdge: TraceEdge,
         callee: MethodEntryPoint,
         startFact: CallPreconditionFact.CallToStart,
         statement: CommonInst
     ) {
-        val cacheKey = CallPassSummaryKey(currentEdge, callee, startFact, statement)
-        builder.callPassSummaries[cacheKey]?.let {
-            addAll(it)
-            return
-        }
+        addAll(cache.callPassSummaries(currentEdge, callee, startFact, statement) {
+            computeCallPassSummaries(currentEdge, callee, startFact, statement)
+        })
+    }
 
+    private fun computeCallPassSummaries(
+        currentEdge: TraceEdge,
+        callee: MethodEntryPoint,
+        startFact: CallPreconditionFact.CallToStart,
+        statement: CommonInst,
+    ): List<CallSummary> {
         val resolvedCallSummaries = mutableListOf<CallSummary>()
 
         val callerFact = startFact.callerFact
@@ -2071,9 +2113,7 @@ class MethodTraceResolver(
             }
         }
 
-        val weakestCallSummaries = selectWeakestEntries(resolvedCallSummaries)
-        val result = weakestCallSummaries.toMutableList()
-
+        val result = selectWeakestEntries(resolvedCallSummaries).toMutableList()
         val methodNdSummaries = manager.findFactNDSummaryEdges(callee, startFact.startFactBase)
         val applicableNDSummaries = methodNdSummaries.filter { isApplicableExitToReturnEdge(it) }
 
@@ -2107,8 +2147,7 @@ class MethodTraceResolver(
             }
         }
 
-        builder.callPassSummaries[cacheKey] = result
-        addAll(result)
+        return result
     }
 
     private fun MutableList<CallSummary>.resolveCallSourceSummary(
@@ -2251,8 +2290,7 @@ class MethodTraceResolver(
     private fun TraceBuilder.containsEntryEdge(entryStatement: CommonInst, entryEdge: TraceEdge): Boolean {
         when (entryEdge) {
             is TraceEdge.SourceTraceEdge -> {
-                val key = StatementFactBaseKey(entryStatement, entryEdge.fact.base)
-                val entryFacts = zeroEntryFacts.getOrPut(key) {
+                val entryFacts = cache.zeroEntryFacts(entryStatement, entryEdge.fact.base) {
                     edges.allZeroToFactFactsAtStatement(entryStatement, entryEdge.fact)
                 }
                 return entryFacts.any { statementFact -> statementFact.contains(entryEdge.fact) }
@@ -2273,9 +2311,9 @@ class MethodTraceResolver(
     private fun TraceBuilder.containsEntryEdgeCached(
         entryStatement: CommonInst,
         entryEdge: TraceEdge,
-    ): Boolean = entryEdgePresence
-        .getOrPut(entryStatement, ::hashMapOf)
-        .getOrPut(entryEdge) { containsEntryEdge(entryStatement, entryEdge) }
+    ): Boolean = cache.containsEntryEdge(entryStatement, entryEdge) {
+        containsEntryEdge(entryStatement, entryEdge)
+    }
 
     private fun TraceBuilder.debugTrace(): FullStart2FinalTrace {
         val successors = successors()

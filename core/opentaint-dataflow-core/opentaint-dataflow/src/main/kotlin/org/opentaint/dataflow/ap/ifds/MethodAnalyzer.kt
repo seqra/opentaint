@@ -235,6 +235,15 @@ class NormalMethodAnalyzer(
     private var baseOnlyNDSummaryDuplicateEmissions: Long = 0
     private var emittedBaseOnlyNDSummaryResults = hashSetOf<BaseOnlyNDSummaryResult>()
     private val traceResolverStats = TraceResolverStats()
+    @Volatile
+    private var traceResolverCache: MethodTraceResolver.Cache? = null
+
+    private fun traceResolverCache(): MethodTraceResolver.Cache {
+        traceResolverCache?.let { return it }
+        return synchronized(this) {
+            traceResolverCache ?: MethodTraceResolver.Cache().also { traceResolverCache = it }
+        }
+    }
 
     private var factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
     private var delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
@@ -1747,6 +1756,7 @@ class NormalMethodAnalyzer(
         methodInstGraph,
         traceSummarizer,
         traceResolutionActionHardLimit,
+        traceResolverCache(),
     )
 
     override fun resolveIntraProceduralForwardFullTrace(
@@ -1797,6 +1807,7 @@ class NormalMethodAnalyzer(
     }
 
     private fun resetEdgeProcessingStorage(apManager: ApManager) {
+        traceResolverCache = null
         unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
         enqueuedUnchangedBaseOnlyF2F.clear()

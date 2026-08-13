@@ -44,16 +44,17 @@ class JIRMethodCallPrecondition(
 
     private val taintCtx get() = analysisContext.taint
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val results = mutableListOf<CallPrecondition>()
-        addFactPreconditions(results, fact)
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> =
+        analysisContext.cachedCallTracePrecondition(apManager, statement.location.index, fact) {
+            val results = mutableListOf<CallPrecondition>()
+            addFactPreconditions(results, fact)
 
-        analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
-            addFactPreconditions(results, aliasedFact)
+            analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
+                addFactPreconditions(results, aliasedFact)
+            }
+
+            results
         }
-
-        return results
-    }
 
     private fun addFactPreconditions(
         results: MutableList<CallPrecondition>,
