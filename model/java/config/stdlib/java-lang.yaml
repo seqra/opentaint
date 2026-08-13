@@ -1559,3 +1559,32 @@ passThrough:
     - arg(1)
     - '[*]'
     to: result
+- function: java.lang.String#format
+  signature: (java.util.Locale, java.lang.String, java.lang.Object[]) java.lang.String
+  copy:
+  - from:
+    - arg(2)
+    - '[*]'
+    to: result
+- function: java.lang.String#copyValueOf
+  signature: (char[], int, int) java.lang.String
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: java.lang.String#charAt
+  signature: (int) char
+  copy:
+  - from:
+    - this
+    - .java.lang.String#<string-bytes>#byte[]
+    - '[*]'
+    to: result
+- function: java.lang.String#copyValueOf
+  signature: (char[]) java.lang.String
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
