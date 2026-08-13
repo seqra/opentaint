@@ -1,0 +1,151 @@
+package security.passthrough;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.util.Enumeration;
+import java.util.Map;
+
+import javax.servlet.annotation.WebServlet;
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServlet;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+/**
+ * Regression samples for the explicit {@code HttpServletRequest} accessor models in
+ * {@code model/java/config/javax.servlet-javax.servlet-api-4.0.1.yaml}.
+ *
+ * These models replaced the engine's implicit {@code get*} passthrough, so every accessor
+ * that used to be covered by that default now needs its own rule. Each servlet below pins
+ * one accessor; if its model is dropped or its slot is renamed on one side only, the
+ * corresponding positive turns into a false negative.
+ */
+public class PassthroughServletAccessorSamples {
+
+    /** getRequestURI(). */
+    @WebServlet("/passthrough/servlet/request-uri")
+    public static class RequestUriServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("cat " + request.getRequestURI());
+        }
+    }
+
+    /** getQueryString(). */
+    @WebServlet("/passthrough/servlet/query-string")
+    public static class QueryStringServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("cat " + request.getQueryString());
+        }
+    }
+
+    /** getServletPath(). */
+    @WebServlet("/passthrough/servlet/servlet-path")
+    public static class ServletPathServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("cat " + request.getServletPath());
+        }
+    }
+
+    /** getPathInfo(). */
+    @WebServlet("/passthrough/servlet/path-info")
+    public static class PathInfoServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("cat " + request.getPathInfo());
+        }
+    }
+
+    /** getRequestURL() returns a StringBuffer, so the buffer model has to carry it. */
+    @WebServlet("/passthrough/servlet/request-url")
+    public static class RequestUrlServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("curl " + request.getRequestURL().toString());
+        }
+    }
+
+    /** getRemoteUser(). */
+    @WebServlet("/passthrough/servlet/remote-user")
+    public static class RemoteUserServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Runtime.getRuntime().exec("id " + request.getRemoteUser());
+        }
+    }
+
+    /** getParameterMap() - the map values keep the request taint. */
+    @WebServlet("/passthrough/servlet/parameter-map")
+    public static class ParameterMapServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Map<String, String[]> parameters = request.getParameterMap();
+            String[] files = parameters.get("file");
+            Runtime.getRuntime().exec("cat " + files[0]);
+        }
+    }
+
+    /** getParameterValues() - the array elements keep the request taint. */
+    @WebServlet("/passthrough/servlet/parameter-values")
+    public static class ParameterValuesServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            String[] files = request.getParameterValues("file");
+            Runtime.getRuntime().exec("cat " + files[0]);
+        }
+    }
+
+    /** getCookies() - the cookie array elements keep the request taint. */
+    @WebServlet("/passthrough/servlet/cookies")
+    public static class CookiesServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Cookie[] cookies = request.getCookies();
+            Runtime.getRuntime().exec("cat " + cookies[0].getValue());
+        }
+    }
+
+    /** getHeaderNames() - the enumeration elements keep the request taint. */
+    @WebServlet("/passthrough/servlet/header-names")
+    public static class HeaderNamesServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            Enumeration<String> names = request.getHeaderNames();
+            Runtime.getRuntime().exec("cat " + names.nextElement());
+        }
+    }
+
+    /** getReader() - the request body reader keeps the request taint. */
+    @WebServlet("/passthrough/servlet/reader")
+    public static class ReaderServlet extends HttpServlet {
+        @Override
+        protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            BufferedReader reader = request.getReader();
+            Runtime.getRuntime().exec("cat " + reader.readLine());
+        }
+    }
+
+    /**
+     * Negative twin: the same accessors are called, but the executed command is built from
+     * constants only, so none of the accessor models may produce a finding here.
+     */
+    @WebServlet("/passthrough/servlet/safe")
+    public static class SafeAccessorsServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            request.getRequestURI();
+            request.getQueryString();
+            request.getServletPath();
+            request.getPathInfo();
+            request.getRequestURL();
+            request.getRemoteUser();
+            request.getParameterMap();
+            request.getParameterValues("file");
+            request.getCookies();
+            request.getHeaderNames();
+            Runtime.getRuntime().exec("cat /etc/motd");
+        }
+    }
+}
