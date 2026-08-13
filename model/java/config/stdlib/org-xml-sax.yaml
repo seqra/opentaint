@@ -9,7 +9,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.xml.sax.InputSource#systemId#java.lang.String
+    - .org.xml.sax.InputSource#systemId#java.lang.Object
 - function: org.xml.sax.InputSource#<init>
   signature:
     params:
@@ -19,7 +19,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.xml.sax.InputSource#characterStream#java.io.Reader
+    - .org.xml.sax.InputSource#characterStream#java.lang.Object
 - function: org.xml.sax.InputSource#<init>
   signature:
     params:
@@ -29,7 +29,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.xml.sax.InputSource#byteStream#java.io.InputStream
+    - .org.xml.sax.InputSource#byteStream#java.lang.Object
 - function: org.xml.sax.InputSource#setByteStream
   signature:
     params:
@@ -39,7 +39,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.xml.sax.InputSource#byteStream#java.io.InputStream
+    - .org.xml.sax.InputSource#byteStream#java.lang.Object
 - function: org.xml.sax.InputSource#<init>
   taintCopyOnly: true
   copy:

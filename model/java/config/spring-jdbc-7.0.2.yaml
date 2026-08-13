@@ -26,7 +26,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.jdbc.support.rowset.SqlRowSet#columnText#java.lang.String
+    - .org.springframework.jdbc.support.rowset.SqlRowSet#columnText#java.lang.Object
     to: result
 - function: org.springframework.jdbc.support.xml.SqlXmlHandler#newSqlXmlValue
   signature:
@@ -59,17 +59,17 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.sql.ResultSet#columnText#java.lang.String
+    - .java.sql.ResultSet#columnText#java.lang.Object
     to: result
   - from:
     - arg(0)
-    - .java.sql.ResultSet#clob#java.sql.Clob
-    - .java.sql.Clob#value#java.lang.String
+    - .java.sql.ResultSet#clob#java.lang.Object
+    - .java.sql.Clob#value#java.lang.Object
     to: result
   - from:
     - arg(0)
-    - .java.sql.ResultSet#url#java.net.URL
-    - .java.net.URL#spec#java.lang.String
+    - .java.sql.ResultSet#url#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: org.springframework.jdbc.core.support.SqlLobValue#<init>
   copy:

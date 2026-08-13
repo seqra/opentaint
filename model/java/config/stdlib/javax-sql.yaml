@@ -12,7 +12,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.sql.RowSetInternal#originalResultSet#java.sql.ResultSet
+    - .javax.sql.RowSetInternal#originalResultSet#java.lang.Object
     to: result
 - function: javax.sql.RowSetInternal#getOriginal
   signature: () java.sql.ResultSet
@@ -26,7 +26,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.sql.RowSetInternal#originalResultSet#java.sql.ResultSet
+    - .javax.sql.RowSetInternal#originalResultSet#java.lang.Object
     to: result
 - function: javax.sql.RowSetInternal#getParams
   signature: () java.lang.Object[]

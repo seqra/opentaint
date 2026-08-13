@@ -111,17 +111,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#rawBytes#byte[]
+    - .java.sql.ResultSet#rawBytes#java.lang.Object
     to: result
   - from:
     - this
-    - .java.sql.ResultSet#blob#java.sql.Blob
-    - .java.sql.Blob#data#byte[]
+    - .java.sql.ResultSet#blob#java.lang.Object
+    - .java.sql.Blob#data#java.lang.Object
     to: result
   - from:
     - this
-    - .java.sql.ResultSet#columnText#java.lang.String
-    - .java.lang.String#bytes#byte[]
+    - .java.sql.ResultSet#columnText#java.lang.Object
+    - .java.lang.String#bytes#java.lang.Object
     to: result
 - function: java.sql.ResultSet#getObject
   signature: (java.lang.String) java.lang.Object
@@ -159,7 +159,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#blob#java.sql.Blob
+    - .java.sql.ResultSet#blob#java.lang.Object
     to: result
 - function: java.sql.ResultSet#getUnicodeStream
   signature: (int) java.io.InputStream
@@ -257,7 +257,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#characterStream#java.io.Reader
+    - .java.sql.ResultSet#characterStream#java.lang.Object
     to: result
 - function: java.sql.Array#getArray
   signature: () java.lang.Object
@@ -289,7 +289,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.Blob#data#byte[]
+    - .java.sql.Blob#data#java.lang.Object
     to: result
 - function: java.sql.Array#getArray
   signature: (long, int) java.lang.Object
@@ -303,7 +303,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#binaryStream#java.io.InputStream
+    - .java.sql.ResultSet#binaryStream#java.lang.Object
     to: result
 - function: java.sql.Blob#getBinaryStream
   signature: (long, long) java.io.InputStream
@@ -392,7 +392,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#binaryStream#java.io.InputStream
+    - .java.sql.ResultSet#binaryStream#java.lang.Object
     to: result
 - function: java.sql.Array#getResultSet
   signature: () java.sql.ResultSet
@@ -485,7 +485,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.sql.ResultSet#ref#java.sql.Ref
+    - .java.sql.ResultSet#ref#java.lang.Object
     - .java.sql.Ref#value#java.lang.Object
     to: result
 - function: java.sql.Array#getResultSet
@@ -625,7 +625,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#url#java.net.URL
+    - .java.sql.ResultSet#url#java.lang.Object
     to: result
 - function: java.sql.Blob#getBinaryStream
   signature: () java.io.InputStream
@@ -645,7 +645,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#clob#java.sql.Clob
+    - .java.sql.ResultSet#clob#java.lang.Object
     to: result
 - function: java.sql.ResultSet#getCharacterStream
   signature: (int) java.io.Reader
@@ -668,17 +668,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#columnText#java.lang.String
+    - .java.sql.ResultSet#columnText#java.lang.Object
     to: result
   - from:
     - this
-    - .java.sql.ResultSet#clob#java.sql.Clob
-    - .java.sql.Clob#value#java.lang.String
+    - .java.sql.ResultSet#clob#java.lang.Object
+    - .java.sql.Clob#value#java.lang.Object
     to: result
   - from:
     - this
-    - .java.sql.ResultSet#url#java.net.URL
-    - .java.net.URL#spec#java.lang.String
+    - .java.sql.ResultSet#url#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.sql.Struct#getAttributes
   signature: () java.lang.Object[]
@@ -731,7 +731,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.Clob#value#java.lang.String
+    - .java.sql.Clob#value#java.lang.Object
     to: result
 - function: java.sql.Connection#prepareStatement
   signature: (java.lang.String, int, int, int) java.sql.PreparedStatement
@@ -853,7 +853,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#ref#java.sql.Ref
+    - .java.sql.ResultSet#ref#java.lang.Object
     to: result
 - function: java.sql.ResultSet#updateObject
   signature: (int, java.lang.Object, int) void
@@ -932,7 +932,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.sql.ResultSet#array#java.sql.Array
+    - .java.sql.ResultSet#array#java.lang.Object
     to: result
 - function: java.sql.ResultSet#getString
   signature: (java.lang.String) java.lang.String

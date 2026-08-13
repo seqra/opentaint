@@ -21,7 +21,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.security.Key#encoded#byte[]
+    - .java.security.Key#encoded#java.lang.Object
     to: result
 - function: java.security.CodeSource#<init>
   signature: (java.net.URL, java.security.cert.Certificate[]) void

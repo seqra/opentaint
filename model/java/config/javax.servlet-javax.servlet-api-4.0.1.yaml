@@ -29,7 +29,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.Cookie#path#java.lang.String
+    - .javax.servlet.http.Cookie#path#java.lang.Object
     to: result
   - from: this
     to: result
@@ -38,7 +38,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.Cookie#value#java.lang.String
+    - .javax.servlet.http.Cookie#value#java.lang.Object
     to: result
   - from: this
     to: result
@@ -47,7 +47,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.Cookie#domain#java.lang.String
+    - .javax.servlet.http.Cookie#domain#java.lang.Object
     to: result
   - from: this
     to: result
@@ -71,7 +71,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.servlet.http.Cookie#domain#java.lang.String
+    - .javax.servlet.http.Cookie#domain#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(1)
@@ -91,7 +91,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.Cookie#name#java.lang.String
+    - .javax.servlet.http.Cookie#name#java.lang.Object
     to: result
   - from: this
     to: result
@@ -101,7 +101,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.servlet.http.Cookie#path#java.lang.String
+    - .javax.servlet.http.Cookie#path#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(1)
@@ -112,11 +112,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.servlet.http.Cookie#name#java.lang.String
+    - .javax.servlet.http.Cookie#name#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .javax.servlet.http.Cookie#value#java.lang.String
+    - .javax.servlet.http.Cookie#value#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(1)
@@ -178,7 +178,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.servlet.http.Cookie#comment#java.lang.String
+    - .javax.servlet.http.Cookie#comment#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(1)
@@ -188,7 +188,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.Cookie#comment#java.lang.String
+    - .javax.servlet.http.Cookie#comment#java.lang.Object
     to: result
   - from: this
     to: result
@@ -198,7 +198,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.servlet.http.Cookie#value#java.lang.String
+    - .javax.servlet.http.Cookie#value#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(1)
@@ -290,42 +290,42 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#queryString#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#queryString#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getRequestURI
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#requestURI#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#requestURI#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getRequestURL
   signature: () java.lang.StringBuffer
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#requestURL#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#requestURL#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getPathInfo
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#pathInfo#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#pathInfo#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getPathTranslated
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#pathTranslated#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#pathTranslated#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getServletPath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#servletPath#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#servletPath#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getCookies
   signature: () javax.servlet.http.Cookie[]
@@ -346,46 +346,46 @@ passThrough:
     to:
     - result
     - '[*]'
-    - .javax.servlet.http.Cookie#name#java.lang.String
+    - .javax.servlet.http.Cookie#name#java.lang.Object
   - from:
     - this
     - .javax.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .javax.servlet.http.Cookie#value#java.lang.String
+    - .javax.servlet.http.Cookie#value#java.lang.Object
   - from:
     - this
     - .javax.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .javax.servlet.http.Cookie#path#java.lang.String
+    - .javax.servlet.http.Cookie#path#java.lang.Object
   - from:
     - this
     - .javax.servlet.http.HttpServletRequest#cookies#java.lang.Object
     to:
     - result
     - '[*]'
-    - .javax.servlet.http.Cookie#domain#java.lang.String
+    - .javax.servlet.http.Cookie#domain#java.lang.Object
 - function: javax.servlet.http.HttpServletRequest#getRequestedSessionId
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#requestedSessionId#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#requestedSessionId#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getRemoteUser
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#remoteUser#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#remoteUser#java.lang.Object
     to: result
 - function: javax.servlet.http.HttpServletRequest#getAuthType
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.servlet.http.HttpServletRequest#authType#java.lang.String
+    - .javax.servlet.http.HttpServletRequest#authType#java.lang.Object
     to: result

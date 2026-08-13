@@ -30,7 +30,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.parsers.DocumentBuilderFactory#schema#javax.xml.validation.Schema
+    - .javax.xml.parsers.DocumentBuilderFactory#schema#java.lang.Object
     to: result
 - function: javax.xml.parsers.DocumentBuilder#parse
   signature: (java.io.InputStream) org.w3c.dom.Document
@@ -119,8 +119,8 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function:
     package: javax.xml.parsers
     class: SAXParserFactory
@@ -169,7 +169,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.parsers.SAXParserFactory#schema#javax.xml.validation.Schema
+    - .javax.xml.parsers.SAXParserFactory#schema#java.lang.Object
     to: result
 - function: javax.xml.parsers.DocumentBuilder#parse
   signature:
@@ -181,8 +181,8 @@ passThrough:
   - from: arg(1)
     to:
     - result
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: javax.xml.parsers.DocumentBuilderFactory#getAttribute
   signature:
     return: java.lang.Object

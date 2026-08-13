@@ -32,7 +32,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapMessage#getDocument
   copy:
@@ -67,7 +67,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#java.lang.Object
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#getEnvelope
   copy:
   - from:
@@ -91,7 +91,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#jakarta.xml.soap.SOAPMessage
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#getDocument
   copy:
@@ -129,7 +129,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.SoapMessage#document#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#addVersionMismatchFault
   signature:
     params:
@@ -139,7 +139,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#setSaajMessage
   signature:
     params:
@@ -149,7 +149,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#jakarta.xml.soap.SOAPMessage
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#java.lang.Object
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#setSoapAction
   copy:
   - from: arg(0)
@@ -176,16 +176,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.pox.dom.DomPoxMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.pox.dom.DomPoxMessage#document#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#addVersionMismatchFault
   signature: (*, *) org.springframework.ws.soap.SoapFault
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.context.MessageContext#readResponse
   copy:
   - from: arg(0)
@@ -206,7 +206,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#getAttachment
   copy:
   - from:
@@ -245,10 +245,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.saaj.SaajSoapMessage#getSoapAction
   copy:
   - from:
@@ -266,13 +266,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#soapAction#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapBody#addMustUnderstandFault
   signature:
@@ -284,16 +284,16 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#addMustUnderstandFault
   signature: (*, *) org.springframework.ws.soap.SoapFault
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapHeaderElement#setActorOrRole
   copy:
   - from: arg(0)
@@ -365,7 +365,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.String
+    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.Object
 - function: org.springframework.ws.soap.SoapHeader#addHeaderElement
   copy:
   - from: arg(0)
@@ -413,7 +413,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapMessage#getSoapBody
   copy:
   - from:
@@ -472,7 +472,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#jakarta.xml.soap.SOAPMessage
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#saajMessage#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#addServerOrReceiverFault
   taintCopyOnly: true
   copy:
@@ -486,7 +486,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.pox.dom.DomPoxMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.pox.dom.DomPoxMessage#document#java.lang.Object
     to: result
 - function:
     package: org.springframework.ws.soap.saaj
@@ -504,7 +504,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.String
+    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapVersion#getMustUnderstandAttributeName
   taintCopyOnly: true
@@ -521,7 +521,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapVersion#getServerOrReceiverFaultName
   taintCopyOnly: true
   copy:
@@ -550,13 +550,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.SoapMessage#soapAction#java.lang.Object
     to: result
   - from:
     - this
-    - .org.springframework.ws.soap.SoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.SoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.AbstractSoapMessage#getFaultReason
   taintCopyOnly: true
@@ -584,10 +584,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .javax.xml.transform.Source#systemId#java.lang.String
+    - .javax.xml.transform.Source#systemId#java.lang.Object
 - function: org.springframework.ws.WebServiceMessage#writeTo
   taintCopyOnly: true
   copy:
@@ -608,22 +608,22 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#soapAction#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.saaj.SaajSoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#getPayloadResult
   signature: () javax.xml.transform.Result
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .javax.xml.transform.Result#systemId#java.lang.String
+    - .javax.xml.transform.Result#systemId#java.lang.Object
 - function: org.springframework.ws.mime.AbstractMimeMessage#addAttachment
   taintCopyOnly: true
   copy:
@@ -644,16 +644,16 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapBody#addClientOrSenderFault
   signature: (*, *) org.springframework.ws.soap.SoapFault
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapVersion#getUltimateReceiverRoleUri
   taintCopyOnly: true
   copy:
@@ -673,20 +673,20 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapMessage#soapAction#java.lang.String
+    - .org.springframework.ws.soap.SoapMessage#soapAction#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapMessage#document#org.w3c.dom.Document
-    - .org.w3c.dom.Document#documentElement#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    - .org.springframework.ws.soap.SoapMessage#document#java.lang.Object
+    - .org.w3c.dom.Document#documentElement#java.lang.Object
+    - .org.w3c.dom.Node#nodeValue#java.lang.Object
 - function: org.springframework.ws.soap.SoapHeaderElement#getText
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.String
+    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapMessage#getVersion
   copy:
@@ -699,10 +699,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.context.MessageContext#readResponse
   taintCopyOnly: true
   copy:
@@ -734,14 +734,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapBody#faultString#java.lang.Object
 - function: org.springframework.ws.soap.SoapMessage#getDocument
   signature:
     return: org.w3c.dom.Document
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapMessage#document#org.w3c.dom.Document
+    - .org.springframework.ws.soap.SoapMessage#document#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapVersion#getEnvelopeNamespaceUri
   taintCopyOnly: true
@@ -785,7 +785,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.String
+    - .org.springframework.ws.soap.SoapHeaderElement#actorOrRole#java.lang.Object
 - function: org.springframework.ws.soap.SoapHeader#examineMustUnderstandHeaderElements
   copy:
   - from:
@@ -802,7 +802,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
 - function: org.springframework.ws.mime.Attachment#getContentType
   taintCopyOnly: true
   copy:
@@ -824,7 +824,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.String
+    - .org.springframework.ws.soap.SoapFault#faultString#java.lang.Object
     to: result
 - function: org.springframework.ws.soap.SoapElement#getAttributeValue
   signature:
@@ -832,7 +832,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ws.soap.SoapElement#attributeValue#java.lang.String
+    - .org.springframework.ws.soap.SoapElement#attributeValue#java.lang.Object
     to: result
 - function: org.springframework.ws.mime.MimeMessage#getAttachment
   taintCopyOnly: true
