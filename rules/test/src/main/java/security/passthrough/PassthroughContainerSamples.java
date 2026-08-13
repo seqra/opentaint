@@ -1,9 +1,11 @@
 package security.passthrough;
 
 import java.io.IOException;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -306,5 +308,118 @@ public class PassthroughContainerSamples {
         Properties properties = new Properties();
         properties.setProperty("name", CONSTANT);
         Runtime.getRuntime().exec("cat " + properties.getProperty("name"));
+    }
+
+    @GetMapping("/map-get-or-default/unsafe")
+    public void mapGetOrDefaultUnsafe(@RequestParam String input) throws IOException {
+        Map<String, String> files = new HashMap<>();
+        files.put("name", input);
+        Runtime.getRuntime().exec("cat " + files.getOrDefault("name", CONSTANT));
+    }
+
+    @GetMapping("/map-get-or-default/safe")
+    public void mapGetOrDefaultSafe(@RequestParam String input) throws IOException {
+        Map<String, String> files = new HashMap<>();
+        files.put("name", CONSTANT);
+        Runtime.getRuntime().exec("cat " + files.getOrDefault("name", CONSTANT));
+    }
+
+    /** A nested container: the element of the inner list has to survive both hops. */
+    @GetMapping("/nested-map/unsafe")
+    public void nestedMapUnsafe(@RequestParam String input) throws IOException {
+        Map<String, List<String>> files = new HashMap<>();
+        List<String> names = new ArrayList<>();
+        names.add(input);
+        files.put("names", names);
+        Runtime.getRuntime().exec("cat " + files.get("names").get(0));
+    }
+
+    @GetMapping("/nested-map/safe")
+    public void nestedMapSafe(@RequestParam String input) throws IOException {
+        Map<String, List<String>> files = new HashMap<>();
+        List<String> names = new ArrayList<>();
+        names.add(CONSTANT);
+        files.put("names", names);
+        Runtime.getRuntime().exec("cat " + files.get("names").get(0));
+    }
+
+    // === bulk moves between containers ===
+
+    @GetMapping("/list-add-all/unsafe")
+    public void listAddAllUnsafe(@RequestParam String input) throws IOException {
+        List<String> source = new ArrayList<>();
+        source.add(input);
+        List<String> target = new ArrayList<>();
+        target.addAll(source);
+        Runtime.getRuntime().exec("cat " + target.get(0));
+    }
+
+    @GetMapping("/list-add-all/safe")
+    public void listAddAllSafe(@RequestParam String input) throws IOException {
+        List<String> source = new ArrayList<>();
+        source.add(CONSTANT);
+        List<String> target = new ArrayList<>();
+        target.addAll(source);
+        Runtime.getRuntime().exec("cat " + target.get(0));
+    }
+
+    @GetMapping("/collections-add-all/unsafe")
+    public void collectionsAddAllUnsafe(@RequestParam String input) throws IOException {
+        List<String> target = new ArrayList<>();
+        Collections.addAll(target, input);
+        Runtime.getRuntime().exec("cat " + target.get(0));
+    }
+
+    @GetMapping("/collections-add-all/safe")
+    public void collectionsAddAllSafe(@RequestParam String input) throws IOException {
+        List<String> target = new ArrayList<>();
+        Collections.addAll(target, CONSTANT);
+        Runtime.getRuntime().exec("cat " + target.get(0));
+    }
+
+    @GetMapping("/map-put-all/unsafe")
+    public void mapPutAllUnsafe(@RequestParam String input) throws IOException {
+        Map<String, String> source = new HashMap<>();
+        source.put("name", input);
+        Map<String, String> target = new HashMap<>();
+        target.putAll(source);
+        Runtime.getRuntime().exec("cat " + target.get("name"));
+    }
+
+    @GetMapping("/map-put-all/safe")
+    public void mapPutAllSafe(@RequestParam String input) throws IOException {
+        Map<String, String> source = new HashMap<>();
+        source.put("name", CONSTANT);
+        Map<String, String> target = new HashMap<>();
+        target.putAll(source);
+        Runtime.getRuntime().exec("cat " + target.get("name"));
+    }
+
+    @GetMapping("/stream-joining/unsafe")
+    public void streamJoiningUnsafe(@RequestParam String input) throws IOException {
+        List<String> files = new ArrayList<>();
+        files.add(input);
+        Runtime.getRuntime().exec("cat " + files.stream().collect(Collectors.joining(" ")));
+    }
+
+    @GetMapping("/stream-joining/safe")
+    public void streamJoiningSafe(@RequestParam String input) throws IOException {
+        List<String> files = new ArrayList<>();
+        files.add(CONSTANT);
+        Runtime.getRuntime().exec("cat " + files.stream().collect(Collectors.joining(" ")));
+    }
+
+    @GetMapping("/deque-poll/unsafe")
+    public void dequePollUnsafe(@RequestParam String input) throws IOException {
+        Deque<String> files = new ArrayDeque<>();
+        files.push(input);
+        Runtime.getRuntime().exec("cat " + files.poll());
+    }
+
+    @GetMapping("/deque-poll/safe")
+    public void dequePollSafe(@RequestParam String input) throws IOException {
+        Deque<String> files = new ArrayDeque<>();
+        files.push(CONSTANT);
+        Runtime.getRuntime().exec("cat " + files.poll());
     }
 }
