@@ -377,7 +377,7 @@ passThrough:
     - index: 1
       type: int
     - index: 2
-      type: .char[]
+      type: char[]
     - index: 3
       type: int
   copy:
@@ -424,7 +424,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .char[]
+      type: char[]
   taintCopyOnly: true
   copy:
   - from: arg(0)
@@ -943,7 +943,7 @@ passThrough:
     - index: 1
       type: int
     - index: 2
-      type: .char[]
+      type: char[]
     - index: 3
       type: int
   taintCopyOnly: true
@@ -990,7 +990,7 @@ passThrough:
     - index: 1
       type: int
     - index: 2
-      type: .byte[]
+      type: byte[]
     - index: 3
       type: int
   copy:
@@ -1403,7 +1403,7 @@ passThrough:
     - index: 1
       type: int
     - index: 2
-      type: .byte[]
+      type: byte[]
     - index: 3
       type: int
   taintCopyOnly: true
