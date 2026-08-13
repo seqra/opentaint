@@ -11,16 +11,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
   - from: this
     to: result
 - function: javax.servlet.http.PushBuilder#path
   signature: (java.lang.String) javax.servlet.http.PushBuilder
   copy:
   - from: arg(0)
-    to: result
-  - from: arg(1)
     to: result
   - from: this
     to: result
@@ -111,8 +107,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
   - from: this
     to: result
 - function: javax.servlet.http.PushBuilder#setHeader
@@ -138,8 +132,6 @@ passThrough:
   signature: (java.lang.String) javax.servlet.http.PushBuilder
   copy:
   - from: arg(0)
-    to: result
-  - from: arg(1)
     to: result
   - from: this
     to: result
