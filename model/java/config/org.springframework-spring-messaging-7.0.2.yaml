@@ -20,7 +20,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getMutableAccessor
   taintCopyOnly: true
@@ -89,11 +89,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeader
   signature:
     params:
@@ -118,7 +118,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getAccessor
   taintCopyOnly: true
@@ -129,7 +129,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#copyHeadersIfAbsent
   copy:
@@ -224,11 +224,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
 - function: org.springframework.messaging.support.ErrorMessage#getOriginalMessage
   signature: () org.springframework.messaging.Message
   copy:
@@ -266,11 +266,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.lang.Object
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
 - function: org.springframework.messaging.support.MessageHeaderAccessor#setHeader
   copy:
   - from: arg(0)

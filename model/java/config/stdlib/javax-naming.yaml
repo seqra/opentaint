@@ -305,7 +305,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.Name#components#java.lang.Object
+    - .javax.naming.Name#components#java.util.Enumeration
     to: result
 - function: javax.naming.CompositeName#getSuffix
   signature:
@@ -326,7 +326,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.Name#components#java.lang.Object
+    - .javax.naming.Name#components#java.util.Enumeration
     to: result
 - function: javax.naming.CompoundName#<init>
   signature:
@@ -1076,7 +1076,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.Reference#className#java.lang.Object
+    - .javax.naming.Reference#className#java.lang.String
     to: result
 - function: javax.naming.Reference#getFactoryClassName
   signature: () java.lang.String
@@ -1089,7 +1089,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.Reference#factoryClassName#java.lang.Object
+    - .javax.naming.Reference#factoryClassName#java.lang.String
     to: result
 - function: javax.naming.Reference#getFactoryClassLocation
   signature: () java.lang.String
@@ -1102,7 +1102,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.Reference#factoryClassLocation#java.lang.Object
+    - .javax.naming.Reference#factoryClassLocation#java.lang.String
     to: result
 - function: javax.naming.Reference#get
   signature: (int) javax.naming.RefAddr
