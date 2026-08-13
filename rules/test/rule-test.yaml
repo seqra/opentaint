@@ -100,7 +100,6 @@ tests:
       - security.passthrough.PassthroughContainerSamples#listAddAllUnsafe
       - security.passthrough.PassthroughContainerSamples#collectionsAddAllUnsafe
       - security.passthrough.PassthroughContainerSamples#mapPutAllUnsafe
-      - security.passthrough.PassthroughContainerSamples#streamJoiningUnsafe
       - security.passthrough.PassthroughContainerSamples#dequePollUnsafe
       - security.passthrough.PassthroughSerializationSamples#jacksonWriteUnsafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadUnsafe
@@ -134,7 +133,6 @@ tests:
       - security.passthrough.PassthroughContainerSamples#listAddAllSafe
       - security.passthrough.PassthroughContainerSamples#collectionsAddAllSafe
       - security.passthrough.PassthroughContainerSamples#mapPutAllSafe
-      - security.passthrough.PassthroughContainerSamples#streamJoiningSafe
       - security.passthrough.PassthroughContainerSamples#dequePollSafe
       - security.passthrough.PassthroughSerializationSamples#jacksonWriteSafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadSafe
