@@ -161,8 +161,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
-    to: result
 - function: javax.mail.Message#getAllRecipients
   signature: () javax.mail.Address[]
   copy:
@@ -177,8 +175,6 @@ passThrough:
 - function: javax.mail.Folder#search
   signature: (javax.mail.search.SearchTerm) javax.mail.Message[]
   copy:
-  - from: arg(1)
-    to: result
   - from: this
     to: result
 - function: javax.mail.Folder#getMessages
@@ -390,13 +386,6 @@ passThrough:
       pattern: get.*
   copy:
   - from: this
-    to: result
-- function: javax.mail.Message#<init>
-  signature: () void
-  copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
     to: result
 - function: javax.mail.Message#addRecipients
   signature: (javax.mail.Message$RecipientType, javax.mail.Address[]) void
