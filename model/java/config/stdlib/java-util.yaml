@@ -94,12 +94,6 @@ passThrough:
     to:
     - result
     - .java.util.Spliterator#Element#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Collection#<init>
   taintCopyOnly: true
   copy:
@@ -328,12 +322,6 @@ passThrough:
       type: java.lang.Object[]
     return: java.util.stream.Stream
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.stream.BaseStream#Element#java.lang.Object
   - from:
     - arg(0)
     - '[*]'
@@ -825,10 +813,6 @@ passThrough:
 - function: java.util.Map#computeIfPresent
   signature: (java.lang.Object, java.util.function.BiFunction) java.lang.Object
   copy:
-  - from:
-    - this
-    - .java.util.Map#MapValue#java.lang.Object
-    to: result
   - from:
     - this
     - .java.util.Map#MapValue#java.lang.Object
@@ -2406,10 +2390,6 @@ passThrough:
     - this
     - .java.util.StringTokenizer#token#java.lang.String
     to: result
-  - from:
-    - this
-    - .java.util.StringTokenizer#token#java.lang.String
-    to: result
 - function: java.util.Collections#unmodifiableCollection
   signature: (java.util.Collection) java.util.Collection
   overrides: false
@@ -3124,10 +3104,6 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
     to: result
-  - from:
-    - this
-    - .java.util.Map#MapValue#java.lang.Object
-    to: result
   - from: arg(0)
     to:
     - this
@@ -3597,10 +3573,6 @@ passThrough:
     - this
     - .java.util.Scanner#delimiter#java.lang.String
     to: result
-  - from:
-    - this
-    - .java.util.Scanner#delimiter#java.lang.String
-    to: result
 - function: java.util.Iterator#<init>
   taintCopyOnly: true
   copy:
@@ -3647,10 +3619,6 @@ passThrough:
   signature:
     return: java.lang.String
   copy:
-  - from:
-    - this
-    - .java.util.Scanner#delimiter#java.lang.String
-    to: result
   - from:
     - this
     - .java.util.Scanner#delimiter#java.lang.String
@@ -4717,10 +4685,6 @@ passThrough:
     - index: 0
       type: java.lang.CharSequence
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.StringJoiner#delimiter#java.lang.CharSequence
   - from: arg(0)
     to:
     - this
@@ -6165,8 +6129,6 @@ passThrough:
   - from:
     - this
     - .java.util.Optional#Element#java.lang.Object
-    to: result
-  - from: arg(0)
     to: result
 - function: java.util.Collections#list
   signature:

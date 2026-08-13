@@ -99,10 +99,6 @@ passThrough:
     to:
     - this
     - .javax.naming.directory.SearchResult#attributes#javax.naming.directory.Attributes
-  - from: arg(3)
-    to:
-    - this
-    - .javax.naming.directory.SearchResult#attributes#javax.naming.directory.Attributes
 - function: javax.naming.directory.SearchControls#<init>
   signature:
     params:
@@ -505,10 +501,6 @@ passThrough:
     to:
     - this
     - .javax.naming.directory.SearchResult#name#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.directory.SearchResult#name#java.lang.String
 - function: javax.naming.directory.SearchControls#setReturningAttributes
   signature:
     params:
@@ -525,10 +517,6 @@ passThrough:
     - index: 1
       type: java.lang.String
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.directory.SearchResult#name#java.lang.String
   - from: arg(1)
     to:
     - this

@@ -694,15 +694,6 @@ passThrough:
     - this
     - .java.io.File#uri#java.net.URI
     - .java.net.URI#value#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
 - function: java.io.File#getParent
   signature: () java.lang.String
   taintCopyOnly: true
@@ -762,33 +753,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#path#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .java.io.File#uri#java.net.URI
-    - .java.net.URI#value#java.lang.String
   - from: arg(0)
     to:
     - this

@@ -26,10 +26,6 @@ passThrough:
     - this
     - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.script.ScriptContext#attribute#java.lang.Object
-    to: result
 - function: javax.script.Bindings#putAll
   signature: (java.util.Map) void
   copy:
