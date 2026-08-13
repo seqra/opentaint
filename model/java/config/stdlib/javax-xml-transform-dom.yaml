@@ -19,14 +19,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
 - function:
     package: javax.xml.transform.dom
     class: DOMResult
@@ -68,14 +60,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
 - function: javax.xml.transform.dom.DOMResult#setNextSibling
   signature:
     params:
@@ -90,14 +74,6 @@ passThrough:
   signature: () org.w3c.dom.Node
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMSource#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
     to: result
 - function: javax.xml.transform.dom.DOMSource#getNode
   signature:
@@ -144,14 +120,6 @@ passThrough:
     to:
     - result
     - .org.w3c.dom.Node#nodeValue#java.lang.Object
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
-    to: result
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature:
     params:
@@ -182,22 +150,6 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-  - from: arg(1)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#content#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#setNode
   signature: (org.w3c.dom.Node) void
   taintCopyOnly: true
@@ -228,14 +180,6 @@ passThrough:
     to:
     - result
     - .org.w3c.dom.Node#nodeValue#java.lang.Object
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
-    to: result
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature: (org.w3c.dom.Node, java.lang.String) void
   taintCopyOnly: true
@@ -247,14 +191,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMResult#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#setNode
   signature:
     params:
@@ -270,27 +206,11 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.dom.DOMSource#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
 - function:
     package: javax.xml.transform.dom
     class: DOMResult
@@ -300,29 +220,5 @@ passThrough:
   copy:
   - from: arg(1)
     to: this
-  - from: arg(0)
-    to: this
-- function: javax.xml.transform.dom.DOMResult#setNextSibling
-  signature: (org.w3c.dom.Node) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: javax.xml.transform.dom.DOMResult#getNextSibling
-  signature: () org.w3c.dom.Node
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: javax.xml.transform.dom.DOMResult#getNode
-  signature: () org.w3c.dom.Node
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: javax.xml.transform.dom.DOMResult#setNode
-  signature: (org.w3c.dom.Node) void
-  taintCopyOnly: true
-  copy:
   - from: arg(0)
     to: this

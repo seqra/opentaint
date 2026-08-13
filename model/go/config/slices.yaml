@@ -8,12 +8,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Clone
@@ -22,12 +16,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Compact
@@ -36,12 +24,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: CompactFunc
@@ -50,12 +32,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Concat
@@ -77,12 +53,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: DeleteFunc
@@ -91,12 +61,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Grow
@@ -105,12 +69,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Insert
@@ -119,12 +77,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Insert
@@ -185,12 +137,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Replace
@@ -199,12 +145,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function:
     package: slices
     name: Replace

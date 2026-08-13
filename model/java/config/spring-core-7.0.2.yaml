@@ -302,12 +302,6 @@ passThrough:
     - '[*]'
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function: org.springframework.util.LinkedMultiValueMap#<init>
   signature: (java.util.Map) *
   overrides: false
@@ -760,12 +754,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function: org.springframework.util.AutoPopulatingList#<init>
   signature: (java.util.List, java.lang.Class) *
   overrides: false
@@ -1200,12 +1188,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function: org.springframework.util.MultiValueMapAdapter#<init>
   overrides: false
   copy:
@@ -1581,12 +1563,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function: org.springframework.util.StringUtils#trimAllWhitespace
   copy:
   - from: arg(0)
@@ -1914,12 +1890,6 @@ passThrough:
     - '[*]'
   - from: arg(0)
     to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
 - function: org.springframework.util.MultiValueMap#set
   copy:
   - from: arg(1)

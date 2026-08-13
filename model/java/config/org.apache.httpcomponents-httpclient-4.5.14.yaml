@@ -43,8 +43,6 @@ passThrough:
     to:
     - this
     - .org.apache.http.client.methods.HttpRequestBase#uRI#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: org.apache.http.client.utils.URIBuilder#setParameter
   copy:
   - from: arg(0)
@@ -110,8 +108,6 @@ passThrough:
   - from:
     - this
     - .org.apache.http.client.methods.HttpRequestBase#uri#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: org.apache.http.client.utils.URIBuilder#addParameters
   copy:
@@ -334,8 +330,6 @@ passThrough:
   - from:
     - this
     - .org.apache.http.client.methods.HttpRequestBase#uri#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function:
     package: org.apache.http.client.methods

@@ -11,10 +11,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.sql.rowset.serial.SerialDatalink#content#java.lang.Object
-    to: result
 - function: javax.sql.rowset.serial.SerialDatalink#<init>
   signature:
     params:
@@ -30,10 +26,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.sql.rowset.serial.SerialJavaObject#content#java.lang.Object
-    to: result
 - function: javax.sql.rowset.serial.SerialDatalink#getDatalink
   signature: () java.net.URL
   taintCopyOnly: true
@@ -45,10 +37,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.sql.rowset.serial.SerialDatalink#content#java.lang.Object
 - function: javax.sql.rowset.serial.SerialJavaObject#getObject
   signature:
     return: java.lang.Object
@@ -82,16 +70,8 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.sql.rowset.serial.SerialJavaObject#content#java.lang.Object
-    to: result
 - function: javax.sql.rowset.serial.SerialJavaObject#<init>
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.sql.rowset.serial.SerialJavaObject#content#java.lang.Object

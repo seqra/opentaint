@@ -49,24 +49,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.io.Writer#buffer#java.lang.Object
 - function: javax.servlet.jsp.JspWriter#println
   signature: (char[]) void
   copy:
@@ -88,24 +70,6 @@ passThrough:
     to:
     - this
     - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.io.Writer#buffer#java.lang.Object
 - function: javax.servlet.jsp.JspWriter#print
   signature: (java.lang.String) void
   copy:
