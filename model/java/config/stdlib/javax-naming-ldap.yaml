@@ -76,11 +76,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from: arg(2)
     to:
     - this
@@ -90,7 +90,7 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from:
     - arg(2)
     - '[*]'
@@ -106,15 +106,15 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
 - function: javax.naming.ldap.ControlFactory#getControlInstance
   signature: (javax.naming.ldap.Control) javax.naming.ldap.Control
   copy:
@@ -145,7 +145,7 @@ passThrough:
     - .java.lang.String#bytes#byte[]
   - from:
     - this
-    - .javax.naming.ldap.ExtendedRequest#encodedValue#java.lang.Object
+    - .javax.naming.ldap.ExtendedRequest#encodedValue#byte[]
     to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.directory.Attributes) void
@@ -381,7 +381,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .javax.naming.ldap.Rdn#type#java.lang.Object
+    - .javax.naming.ldap.Rdn#type#java.lang.String
 - function: javax.naming.ldap.Rdn#put
   signature: (*, *) javax.naming.ldap.Rdn
   copy:
@@ -559,11 +559,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
 - function: javax.naming.ldap.BasicControl#<init>
   signature: (java.lang.String, boolean, byte[]) void
   copy:
@@ -588,31 +588,31 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from:
     - arg(2)
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from:
     - arg(2)
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
 - function: javax.naming.ldap.BasicControl#getID
   signature: () java.lang.String
   copy:
@@ -678,17 +678,17 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from:
     - arg(2)
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.BasicControl#oid#java.lang.Object
+    - .javax.naming.ldap.BasicControl#oid#java.lang.String
   - from:
     - arg(2)
     - '[*]'
@@ -704,7 +704,7 @@ passThrough:
     - '[*]'
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(2)
     to:
     - this
@@ -712,11 +712,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.Control#oid#java.lang.Object
+    - .javax.naming.ldap.Control#oid#java.lang.String
 - function: javax.naming.ldap.SortResponseControl#getAttributeID
   signature: () java.lang.String
   copy:
@@ -801,7 +801,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.Object
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
     to: result
 - function: javax.naming.ldap.SortKey#<init>
   signature: (java.lang.String, boolean, java.lang.String) void
