@@ -735,7 +735,7 @@ passThrough:
     - index: 0
       type: java.lang.String
     - index: 1
-      type: .byte[]
+      type: byte[]
   taintCopyOnly: true
   copy:
   - from: arg(*)

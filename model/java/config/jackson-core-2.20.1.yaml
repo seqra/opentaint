@@ -249,7 +249,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   copy:
   - from: arg(0)
     to:
@@ -295,7 +295,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   copy:
   - from: arg(0)
     to: result
@@ -785,7 +785,7 @@ passThrough:
   signature:
     params:
     - index: 0
-      type: .byte[]
+      type: byte[]
   copy:
   - from: arg(0)
     to: result
