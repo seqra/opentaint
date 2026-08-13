@@ -57,6 +57,9 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#stringReaderUnsafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferUnsafe
       - security.passthrough.PassthroughValueFlowSamples#charBufferUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringGetCharsUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#byteBufferGetUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#charBufferGetUnsafe
       - security.passthrough.PassthroughValueFlowSamples#basicControlIdUnsafe
       - security.passthrough.PassthroughValueFlowSamples#rdnTypeUnsafe
       - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleUnsafe
@@ -73,6 +76,7 @@ tests:
       - security.passthrough.PassthroughServletAccessorSamples$CookiesServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$HeaderNamesServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$ReaderServlet#doPost
+      - security.passthrough.PassthroughServletAccessorSamples$InputStreamServlet#doPost
       - security.passthrough.PassthroughContainerSamples#arrayElementUnsafe
       - security.passthrough.PassthroughContainerSamples#arraysCopyOfUnsafe
       - security.passthrough.PassthroughContainerSamples#systemArrayCopyUnsafe
@@ -91,6 +95,13 @@ tests:
       - security.passthrough.PassthroughContainerSamples#mapValuesUnsafe
       - security.passthrough.PassthroughContainerSamples#mapEntryUnsafe
       - security.passthrough.PassthroughContainerSamples#propertiesUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapGetOrDefaultUnsafe
+      - security.passthrough.PassthroughContainerSamples#nestedMapUnsafe
+      - security.passthrough.PassthroughContainerSamples#listAddAllUnsafe
+      - security.passthrough.PassthroughContainerSamples#collectionsAddAllUnsafe
+      - security.passthrough.PassthroughContainerSamples#mapPutAllUnsafe
+      - security.passthrough.PassthroughContainerSamples#streamJoiningUnsafe
+      - security.passthrough.PassthroughContainerSamples#dequePollUnsafe
       - security.passthrough.PassthroughSerializationSamples#jacksonWriteUnsafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadUnsafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadBytesUnsafe
@@ -118,6 +129,13 @@ tests:
       - security.passthrough.PassthroughContainerSamples#mapValuesSafe
       - security.passthrough.PassthroughContainerSamples#mapEntrySafe
       - security.passthrough.PassthroughContainerSamples#propertiesSafe
+      - security.passthrough.PassthroughContainerSamples#mapGetOrDefaultSafe
+      - security.passthrough.PassthroughContainerSamples#nestedMapSafe
+      - security.passthrough.PassthroughContainerSamples#listAddAllSafe
+      - security.passthrough.PassthroughContainerSamples#collectionsAddAllSafe
+      - security.passthrough.PassthroughContainerSamples#mapPutAllSafe
+      - security.passthrough.PassthroughContainerSamples#streamJoiningSafe
+      - security.passthrough.PassthroughContainerSamples#dequePollSafe
       - security.passthrough.PassthroughSerializationSamples#jacksonWriteSafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadSafe
       - security.passthrough.PassthroughSerializationSamples#jacksonReadBytesSafe
@@ -139,6 +157,9 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#stringReaderSafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferSafe
       - security.passthrough.PassthroughValueFlowSamples#charBufferSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringGetCharsSafe
+      - security.passthrough.PassthroughValueFlowSamples#byteBufferGetSafe
+      - security.passthrough.PassthroughValueFlowSamples#charBufferGetSafe
       - security.passthrough.PassthroughValueFlowSamples#basicControlIdSafe
       - security.passthrough.PassthroughValueFlowSamples#rdnTypeSafe
       - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleSafe
