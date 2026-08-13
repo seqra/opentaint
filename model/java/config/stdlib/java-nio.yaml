@@ -492,10 +492,6 @@ passThrough:
     to:
     - this
     - .java.nio.LongBuffer#data#long[]
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.LongBuffer#data#long[]
 - function: java.nio.FloatBuffer#array
   signature:
     return: float[]
@@ -573,14 +569,6 @@ passThrough:
     to:
     - this
     - .java.nio.DoubleBuffer#data#double[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#data#double[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#data#double[]
 - function: java.nio.ByteBuffer#asFloatBuffer
   signature: () java.nio.FloatBuffer
   taintCopyOnly: true
@@ -613,14 +601,6 @@ passThrough:
       type: byte[]
     return: java.nio.ByteBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ByteBuffer#data#byte[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ByteBuffer#data#byte[]
   - from: arg(0)
     to:
     - result
@@ -658,10 +638,6 @@ passThrough:
     to:
     - result
     - .java.nio.ShortBuffer#data#short[]
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.ShortBuffer#data#short[]
 - function: java.nio.DoubleBuffer#put
   signature:
     params:
@@ -669,10 +645,6 @@ passThrough:
       type: double[]
     return: java.nio.DoubleBuffer
   copy:
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.DoubleBuffer#data#double[]
   - from: arg(1)
     to:
     - result
@@ -737,14 +709,6 @@ passThrough:
     - index: 0
       type: byte[]
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#data#byte[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ByteBuffer#data#byte[]
   - from: arg(0)
     to:
     - this
@@ -907,24 +871,6 @@ passThrough:
     - result
     - .java.nio.CharBuffer#value#java.lang.String
     - .java.lang.String#chars#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
 - function: java.nio.ByteBuffer#asFloatBuffer
   signature: () java.nio.FloatBuffer
   copy:
@@ -999,10 +945,6 @@ passThrough:
     to:
     - this
     - .java.nio.ShortBuffer#data#short[]
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ShortBuffer#data#short[]
 - function: java.nio.DoubleBuffer#put
   signature: (double[]) java.nio.DoubleBuffer
   copy:
@@ -1029,14 +971,6 @@ passThrough:
       type: double[]
     return: java.nio.DoubleBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.DoubleBuffer#data#double[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.DoubleBuffer#data#double[]
   - from: arg(0)
     to:
     - result
@@ -1106,10 +1040,6 @@ passThrough:
       type: int[]
     return: java.nio.IntBuffer
   copy:
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.IntBuffer#data#int[]
   - from: arg(1)
     to:
     - result
@@ -1247,14 +1177,6 @@ passThrough:
     to:
     - this
     - .java.nio.IntBuffer#data#int[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#data#int[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.IntBuffer#data#int[]
 - function: java.nio.ByteBuffer#asLongBuffer
   signature: () java.nio.LongBuffer
   taintCopyOnly: true
@@ -1300,15 +1222,6 @@ passThrough:
       type: char[]
     return: java.nio.CharBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
   - from: arg(0)
     to:
     - result
@@ -1424,14 +1337,6 @@ passThrough:
     to:
     - result
     - .java.nio.LongBuffer#data#long[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.LongBuffer#data#long[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.LongBuffer#data#long[]
 - function: java.nio.CharBuffer#put
   signature: (int, char) java.nio.CharBuffer
   copy:
@@ -1478,14 +1383,6 @@ passThrough:
     to:
     - this
     - .java.nio.ShortBuffer#data#short[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#data#short[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.ShortBuffer#data#short[]
 - function: java.nio.FloatBuffer#compact
   signature: () java.nio.FloatBuffer
   copy:
@@ -1523,10 +1420,6 @@ passThrough:
       type: float[]
     return: java.nio.FloatBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.FloatBuffer#data#float[]
   - from: arg(0)
     to:
     - result
@@ -1684,15 +1577,6 @@ passThrough:
       type: char[]
     return: java.nio.CharBuffer
   copy:
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
   - from: arg(1)
     to:
     - result
@@ -1917,10 +1801,6 @@ passThrough:
     to:
     - result
     - .java.nio.FloatBuffer#data#float[]
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.FloatBuffer#data#float[]
 - function: java.nio.IntBuffer#compact
   signature: () java.nio.IntBuffer
   copy:
@@ -1988,10 +1868,6 @@ passThrough:
     - index: 1
       type: double[]
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.DoubleBuffer#data#double[]
   - from: arg(1)
     to:
     - this
@@ -2075,10 +1951,6 @@ passThrough:
     to:
     - result
     - .java.nio.ByteBuffer#data#byte[]
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.ByteBuffer#data#byte[]
 - function: java.nio.LongBuffer#put
   signature: (int, long[], int, int) java.nio.LongBuffer
   taintCopyOnly: true
@@ -2101,10 +1973,6 @@ passThrough:
     - index: 1
       type: int[]
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.IntBuffer#data#int[]
   - from: arg(1)
     to:
     - this
@@ -2247,10 +2115,6 @@ passThrough:
     to:
     - result
     - .java.nio.LongBuffer#data#long[]
-  - from: arg(1)
-    to:
-    - result
-    - .java.nio.LongBuffer#data#long[]
 - function: java.nio.ByteBuffer#putLong
   signature: (long) java.nio.ByteBuffer
   copy:
@@ -2297,10 +2161,6 @@ passThrough:
       type: int[]
     return: java.nio.IntBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.IntBuffer#data#int[]
   - from: arg(0)
     to:
     - result
@@ -2368,14 +2228,6 @@ passThrough:
       type: int[]
     return: java.nio.IntBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.IntBuffer#data#int[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.IntBuffer#data#int[]
   - from: arg(0)
     to:
     - result
@@ -2549,14 +2401,6 @@ passThrough:
     to:
     - result
     - .java.nio.FloatBuffer#data#float[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.FloatBuffer#data#float[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.FloatBuffer#data#float[]
 - function: java.nio.DoubleBuffer#put
   signature: (double[], int, int) java.nio.DoubleBuffer
   copy:
@@ -2628,10 +2472,6 @@ passThrough:
     - index: 1
       type: byte[]
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.ByteBuffer#data#byte[]
   - from: arg(1)
     to:
     - this
@@ -2732,10 +2572,6 @@ passThrough:
     to:
     - result
     - .java.nio.ShortBuffer#data#short[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ShortBuffer#data#short[]
 - function: java.nio.ByteBuffer#putChar
   signature: (int, char) java.nio.ByteBuffer
   copy:
@@ -2775,10 +2611,6 @@ passThrough:
       type: java.lang.String
     return: java.nio.CharBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
   - from: arg(0)
     to:
     - result
@@ -2929,10 +2761,6 @@ passThrough:
     - this
     - .java.nio.CharBuffer#value#java.lang.String
     to: result
-  - from:
-    - this
-    - .java.nio.CharBuffer#value#java.lang.String
-    to: result
 - function: java.nio.CharBuffer#subSequence
   signature:
     return: java.lang.CharSequence
@@ -3048,15 +2876,6 @@ passThrough:
     - index: 1
       type: char[]
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
   - from: arg(1)
     to:
     - this
@@ -3248,10 +3067,6 @@ passThrough:
     to:
     - result
     - .java.nio.DoubleBuffer#data#double[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.DoubleBuffer#data#double[]
 - function: java.nio.ShortBuffer#asReadOnlyBuffer
   signature: () java.nio.ShortBuffer
   copy:
@@ -3284,10 +3099,6 @@ passThrough:
     to:
     - this
     - .java.nio.FloatBuffer#data#float[]
-  - from: arg(1)
-    to:
-    - this
-    - .java.nio.FloatBuffer#data#float[]
 - function: java.nio.CharBuffer#append
   signature:
     params:
@@ -3295,11 +3106,6 @@ passThrough:
       type: java.lang.CharSequence
     return: java.nio.CharBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#content#java.lang.CharSequence
   - from: arg(0)
     to:
     - result
@@ -3544,10 +3350,6 @@ passThrough:
       type: long[]
     return: java.nio.LongBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.LongBuffer#data#long[]
   - from: arg(0)
     to:
     - result
@@ -3890,24 +3692,6 @@ passThrough:
     - this
     - .java.nio.CharBuffer#value#java.lang.String
     - .java.lang.String#chars#char[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#data#char[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#chars#char[]
 - function: java.nio.CharBuffer#wrap
   signature:
     params:
@@ -3915,11 +3699,6 @@ passThrough:
       type: java.lang.CharSequence
     return: java.nio.CharBuffer
   copy:
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.CharBuffer#value#java.lang.String
-    - .java.lang.String#content#java.lang.CharSequence
   - from: arg(0)
     to:
     - result
@@ -3961,14 +3740,6 @@ passThrough:
     to:
     - this
     - .java.nio.LongBuffer#data#long[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#data#long[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.LongBuffer#data#long[]
 - function: java.nio.ShortBuffer#put
   signature: (short[]) java.nio.ShortBuffer
   copy:
@@ -3999,28 +3770,12 @@ passThrough:
     to:
     - result
     - .java.nio.ShortBuffer#data#short[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ShortBuffer#data#short[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ShortBuffer#data#short[]
 - function: java.nio.FloatBuffer#put
   signature:
     params:
     - index: 0
       type: float[]
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#data#float[]
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.FloatBuffer#data#float[]
   - from: arg(0)
     to:
     - this
@@ -4138,10 +3893,6 @@ passThrough:
     to:
     - result
     - .java.nio.ByteBuffer#data#byte[]
-  - from: arg(0)
-    to:
-    - result
-    - .java.nio.ByteBuffer#data#byte[]
 - function: java.nio.ByteBuffer#putChar
   signature: (char) java.nio.ByteBuffer
   copy:
@@ -4197,10 +3948,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.nio.CharBuffer#value#java.lang.String
   - from: arg(0)
     to:
     - this

@@ -17,10 +17,6 @@ passThrough:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-    to: result
   - from: this
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$ReduceAttempt#getLong
@@ -120,23 +116,11 @@ passThrough:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
   - from: arg(1)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-  - from: arg(1)
     to: this
   - from: arg(0)
     to: this
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#<init>
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -169,14 +153,6 @@ passThrough:
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#getJobHistoryLogLocationForUser
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
   - from: arg(1)
     to:
     - this
@@ -347,14 +323,6 @@ passThrough:
     to: result
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#getJobHistoryLogLocation
   copy:
-  - from: arg(1)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
   - from: arg(1)
     to:
     - this

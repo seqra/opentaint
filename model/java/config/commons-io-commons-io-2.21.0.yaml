@@ -46,8 +46,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to: result
 - function: org.apache.commons.io.FilenameUtils#normalize
   overrides: false
   copy:

@@ -831,8 +831,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to: result
 - function: org.apache.commons.lang.StringUtils#replace
   copy:
   - from: arg(2)
