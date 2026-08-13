@@ -190,3 +190,10 @@ passThrough:
     to: result
   - from: arg(1)
     to: result
+- function: java.nio.file.FileSystem#getPath
+  signature: (java.lang.String, java.lang.String[]) java.nio.file.Path
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to: result

@@ -48,6 +48,7 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendCharsUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringBufferInsertUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringFormatUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#stringFormatLocaleUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringJoinerAddUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringJoinerDelimiterUnsafe
       - security.passthrough.PassthroughValueFlowSamples#matcherGroupUnsafe
@@ -146,6 +147,10 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#stringBuilderAppendCharsSafe
       - security.passthrough.PassthroughValueFlowSamples#stringBufferInsertSafe
       - security.passthrough.PassthroughValueFlowSamples#stringFormatSafe
+      - security.passthrough.PassthroughValueFlowSamples#stringFormatLocaleSafe
+      - security.passthrough.PassthroughValueFlowSamples#primitiveResultSafe
+      - security.passthrough.PassthroughValueFlowSamples#mapValueDoesNotReachKeySafe
+      - security.passthrough.PassthroughValueFlowSamples#mapKeyDoesNotReachValueSafe
       - security.passthrough.PassthroughValueFlowSamples#stringJoinerAddSafe
       - security.passthrough.PassthroughValueFlowSamples#stringJoinerDelimiterSafe
       - security.passthrough.PassthroughValueFlowSamples#matcherGroupSafe
@@ -480,6 +485,7 @@ tests:
       - security.passthrough.PassthroughFileModelSamples#fileToPathUnsafe
       - security.passthrough.PassthroughFileModelSamples#fileFromUriUnsafe
       - security.passthrough.PassthroughFileModelSamples#fileToStringUnsafe
+      - security.passthrough.PassthroughFileModelSamples#fileSystemGetPathUnsafe
     negative:
       - security.passthrough.PassthroughFileModelSamples#fileGetNameSafe
       - security.passthrough.PassthroughFileModelSamples#fileCanonicalPathSafe
@@ -488,6 +494,7 @@ tests:
       - security.passthrough.PassthroughFileModelSamples#fileToPathSafe
       - security.passthrough.PassthroughFileModelSamples#fileFromUriSafe
       - security.passthrough.PassthroughFileModelSamples#fileToStringSafe
+      - security.passthrough.PassthroughFileModelSamples#fileSystemGetPathSafe
       - security.pathtraversal.PathTraversalServletSamples$SafeFileCreateTempFilePrefixSuffixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempDirectoryPrefixServlet#doGet
       - security.pathtraversal.PathTraversalServletSamples$SafeFilesCreateTempFilePrefixSuffixServlet#doGet
