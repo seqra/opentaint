@@ -5745,3 +5745,75 @@ passThrough:
     to:
     - this
     - .java.util.Dictionary#MapValue#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (java.lang.Object[], int) java.util.Spliterator
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (double[], int) java.util.Spliterator$OfDouble
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (int[], int, int, int) java.util.Spliterator$OfInt
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (java.lang.Object[], int, int, int) java.util.Spliterator
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (long[], int, int, int) java.util.Spliterator$OfLong
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (double[], int, int, int) java.util.Spliterator$OfDouble
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (long[], int) java.util.Spliterator$OfLong
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
+- function: java.util.Spliterators#spliterator
+  signature: (int[], int) java.util.Spliterator$OfInt
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object

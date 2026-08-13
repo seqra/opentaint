@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -105,6 +106,19 @@ public class PassthroughFileModelSamples {
     public void fileFromUriSafe(@RequestParam String input) throws IOException {
         File file = new File(URI.create("file:///var/www/uploads/release-notes.txt"));
         new FileInputStream(file.getPath()).close();
+    }
+
+    /** FileSystem#getPath(String, String...) - the trailing segments arrive as an array element. */
+    @GetMapping("/file-system-get-path/unsafe")
+    public void fileSystemGetPathUnsafe(@RequestParam String input) throws IOException {
+        Path path = FileSystems.getDefault().getPath(BASE_DIR, input);
+        Files.readAllBytes(path);
+    }
+
+    @GetMapping("/file-system-get-path/safe")
+    public void fileSystemGetPathSafe(@RequestParam String input) throws IOException {
+        Path path = FileSystems.getDefault().getPath(BASE_DIR, CONSTANT);
+        Files.readAllBytes(path);
     }
 
     /** File#toString() is the accessor most call sites use implicitly. */

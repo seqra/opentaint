@@ -1578,3 +1578,17 @@ passThrough:
     - this
     - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
     to: result
+- function: com.fasterxml.jackson.databind.util.ObjectBuffer#completeAndClearBuffer
+  signature:
+    params:
+    - index: 0
+      type: java.lang.Object[]
+    - index: 1
+      type: int
+    - index: 2
+      type: java.util.List
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: arg(2)

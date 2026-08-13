@@ -6,6 +6,9 @@ import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.text.MessageFormat;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Map;
 import java.util.StringJoiner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -251,6 +254,47 @@ public class PassthroughValueFlowSamples {
         CharBuffer buffer = CharBuffer.allocate(256);
         buffer.put(CONSTANT);
         Runtime.getRuntime().exec(buffer.flip().toString());
+    }
+
+    /** The Locale overload boxes its arguments into the same Object[] as the two-arg one. */
+    @GetMapping("/string-format-locale/unsafe")
+    public void stringFormatLocaleUnsafe(@RequestParam String input) throws IOException {
+        String command = String.format(Locale.US, "cat %s", input);
+        Runtime.getRuntime().exec(command);
+    }
+
+    @GetMapping("/string-format-locale/safe")
+    public void stringFormatLocaleSafe(@RequestParam String input) throws IOException {
+        String command = String.format(Locale.US, "cat %s", CONSTANT);
+        Runtime.getRuntime().exec(command);
+    }
+
+    // === precision: flows the type system says cannot happen ===
+
+    /**
+     * length() returns an int and a mark on a primitive is rejected outright
+     * (JIRFactTypeChecker.kt:87), so no amount of modelling may make this report.
+     */
+    @GetMapping("/primitive-result/safe")
+    public void primitiveResultSafe(@RequestParam String input) throws IOException {
+        int length = input.length();
+        Runtime.getRuntime().exec("cat report-" + length);
+    }
+
+    /** A map value must not reach the key side of the same map. */
+    @GetMapping("/map-value-not-key/safe")
+    public void mapValueDoesNotReachKeySafe(@RequestParam String input) throws IOException {
+        Map<String, String> files = new HashMap<>();
+        files.put("name", input);
+        Runtime.getRuntime().exec("cat " + files.keySet().iterator().next());
+    }
+
+    /** ...and a map key must not reach the value side. */
+    @GetMapping("/map-key-not-value/safe")
+    public void mapKeyDoesNotReachValueSafe(@RequestParam String input) throws IOException {
+        Map<String, String> files = new HashMap<>();
+        files.put(input, "constant");
+        Runtime.getRuntime().exec("cat " + files.values().iterator().next());
     }
 
     // === models that fill a caller-supplied buffer (arg, not result) ===
