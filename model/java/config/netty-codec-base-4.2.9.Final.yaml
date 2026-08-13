@@ -134,13 +134,6 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Key#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-    - .java.util.Map$Entry#Value#java.lang.Object
 - function: io.netty.handler.codec.Headers#setByte
   copy:
   - from: this
@@ -344,10 +337,3 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Key#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-    - .java.util.Map$Entry#Value#java.lang.Object

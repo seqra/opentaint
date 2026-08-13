@@ -19,10 +19,6 @@ passThrough:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.w3c.dom.Document#content#java.lang.Object
-    to: result
 - function: org.w3c.dom.Document#createElementNS
   taintCopyOnly: true
   copy:
@@ -43,10 +39,6 @@ passThrough:
   - from:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .org.w3c.dom.Document#content#java.lang.Object
     to: result
 - function: org.w3c.dom.NamedNodeMap#getNamedItemNS
   signature:
@@ -153,10 +145,6 @@ passThrough:
   - from:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .org.w3c.dom.Document#content#java.lang.Object
     to: result
 - function: org.w3c.dom.Document#getElementById
   taintCopyOnly: true
@@ -287,10 +275,6 @@ passThrough:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
     to: result
-  - from:
-    - this
-    - .org.w3c.dom.Document#content#java.lang.Object
-    to: result
 - function: org.w3c.dom.NamedNodeMap#setNamedItem
   taintCopyOnly: true
   copy:
@@ -368,10 +352,6 @@ passThrough:
     to:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.w3c.dom.Document#content#java.lang.Object
 - function: org.w3c.dom.Node#getNodeValue
   signature:
     return: java.lang.String
@@ -385,44 +365,4 @@ passThrough:
   - from:
     - this
     - .org.w3c.dom.Node#content#java.lang.Object
-    to: result
-- function: org.w3c.dom.Node#setNodeValue
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.w3c.dom.Node#getPrefix
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getNodeName
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getAttributes
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getNodeValue
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getChildNodes
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getOwnerDocument
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
-- function: org.w3c.dom.Node#getTextContent
-  taintCopyOnly: true
-  copy:
-  - from: this
     to: result

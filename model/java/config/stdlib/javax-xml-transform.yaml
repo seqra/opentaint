@@ -65,10 +65,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
 - function:
     package: javax.xml.transform
     class: Transformer
@@ -96,10 +92,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
-    to: result
 - function:
     package: javax.xml.transform
     class: Source
@@ -107,10 +99,6 @@ passThrough:
       pattern: get(.)*
   copy:
   - from: this
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Source#content#java.lang.Object
     to: result
 - function:
     package: javax.xml.transform
@@ -320,10 +308,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Result#content#java.lang.Object
 - function:
     package: javax.xml.transform
     class: Result

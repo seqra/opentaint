@@ -1902,12 +1902,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.Iterable#Element#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
   signature: (java.lang.Object, java.lang.Object, java.lang.Object) *
   copy:
@@ -9158,21 +9152,3 @@ passThrough:
     - result
     - .java.util.Iterator#Element#java.lang.Object
     - .java.util.Map$Entry#Key#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*, boolean) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
