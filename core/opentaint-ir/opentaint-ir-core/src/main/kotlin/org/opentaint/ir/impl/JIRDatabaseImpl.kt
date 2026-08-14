@@ -118,8 +118,10 @@ class JIRDatabaseImpl(
 
     override suspend fun classpath(dirOrJars: List<File>, features: List<JIRClasspathFeature>?): JIRClasspath {
         assertNotClosed()
-        val existingLocations = dirOrJars.createNonRuntimeByteCodeLocations(javaRuntime.version)
-        val processed = locationsRegistry.registerIfNeeded(existingLocations)
+        val requestedLocations = dirOrJars
+            .map { ByteCodeLocationSpec(it, LocationType.APP) }
+            .createByteCodeLocations(javaRuntime.version)
+        val processed = locationsRegistry.registerIfNeeded(requestedLocations, validateExistingType = false)
             .also { it.new.process(true) }.registered + locationsRegistry.runtimeLocations
         return JIRClasspathImpl(
             locationsRegistry.newSnapshot(processed),
