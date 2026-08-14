@@ -6,6 +6,7 @@ import org.opentaint.ir.api.jvm.JIRClasspathFeature
 import org.opentaint.ir.api.jvm.JIRDatabase
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRSettings
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.approximation.Approximations
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
 import org.opentaint.jvm.util.ApproximationPaths
@@ -70,7 +71,7 @@ object DataFlowApproximationLoader {
     fun installApproximations(settings: JIRSettings, options: Options) {
         val approxFiles = approximationFiles(options)
         settings.installFeatures(Approximations(emptyList()))
-        settings.loadByteCode(approxFiles)
+        settings.loadByteCode(approxFiles, LocationType.LIB)
     }
 
     suspend fun createCpWithApproximations(

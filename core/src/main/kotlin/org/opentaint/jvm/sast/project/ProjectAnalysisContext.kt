@@ -8,6 +8,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.LambdaExpressionToAnonymousClassTransf
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRDatabase
 import org.opentaint.ir.api.jvm.JIRSettings
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.ext.JAVA_OBJECT
 import org.opentaint.ir.impl.JIRRamErsSettings
 import org.opentaint.ir.impl.features.InMemoryHierarchy
@@ -90,8 +91,8 @@ private fun <T> initializeProjectAnalysisContextUtil(
             installFeatures(JIRSummariesFeature(it))
         }
 
-        loadByteCode(dependencyFiles)
-        loadByteCode(projectModulesFiles.keys.toList())
+        loadByteCode(dependencyFiles, LocationType.LIB)
+        loadByteCode(projectModulesFiles.keys.toList(), LocationType.APP)
     }
 
     val db: JIRDatabase
