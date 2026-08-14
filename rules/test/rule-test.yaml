@@ -78,6 +78,8 @@ tests:
       - security.passthrough.PassthroughServletAccessorSamples$HeaderNamesServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$ReaderServlet#doPost
       - security.passthrough.PassthroughServletAccessorSamples$InputStreamServlet#doPost
+      - security.passthrough.PassthroughServletAccessorSamples$RequestAttributeRoundTripServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$SessionAttributeRoundTripServlet#doGet
       - security.passthrough.PassthroughContainerSamples#arrayElementUnsafe
       - security.passthrough.PassthroughContainerSamples#arraysCopyOfUnsafe
       - security.passthrough.PassthroughContainerSamples#systemArrayCopyUnsafe
