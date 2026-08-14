@@ -4,6 +4,7 @@ import org.opentaint.ir.api.caches.PluggableCache
 import org.opentaint.ir.api.caches.PluggableCacheProvider
 import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JIRDatabasePersistence
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.storage.ers.getEntityOrNull
 import org.opentaint.ir.impl.caches.xodus.XODUS_CACHE_PROVIDER_ID
@@ -57,14 +58,14 @@ abstract class AbstractJIRDbPersistence(
                     }
                 ).mapNotNull {
                     try {
-                        if (it.runtime && JavaRuntimeModuleLocation.isModuleLocation(it.path)) {
+                        if (it.type == LocationType.RUNTIME && JavaRuntimeModuleLocation.isModuleLocation(it.path)) {
                             return@mapNotNull listOf(JavaRuntimeModuleLocation.fromPath(it.path))
                         }
 
                         val file = File(it.path)
                         if (!file.exists()) return@mapNotNull null
 
-                        file.dirOrJarAsBytecodeLocation(javaRuntime.version, it.runtime)
+                        file.dirOrJarAsBytecodeLocation(javaRuntime.version, it.type)
                     } catch (_: Exception) {
                         null
                     }
@@ -143,13 +144,18 @@ abstract class AbstractJIRDbPersistence(
                         val count = jooq.fetchCount(
                             BYTECODELOCATIONS,
                             BYTECODELOCATIONS.STATE.notEqual(LocationState.PROCESSED.ordinal)
-                                .and(BYTECODELOCATIONS.RUNTIME.isTrue)
+                                .and(
+                                    BYTECODELOCATIONS.LOCATION_TYPE.eq(
+                                        LocationType.RUNTIME.persistentValue
+                                    )
+                                )
                         )
                         count == 0
                     },
                     noSqlAction = {
                         context.txn.all(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE).none {
-                            it.get<Boolean>(BytecodeLocationEntity.IS_RUNTIME) == true &&
+                            it.get<String>(BytecodeLocationEntity.LOCATION_TYPE) ==
+                                    LocationType.RUNTIME.persistentValue &&
                                     it.get<Int>(BytecodeLocationEntity.STATE) != LocationState.PROCESSED.ordinal
                         }
                     }
