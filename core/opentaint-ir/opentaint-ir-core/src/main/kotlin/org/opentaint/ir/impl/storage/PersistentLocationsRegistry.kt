@@ -382,22 +382,19 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                 val record = BytecodelocationsRecord().also {
                     it.path = path
                     it.uniqueid = fileSystemId
-                    it.runtime = type == LocationType.RUNTIME
+                    it.locationType = type.persistentValue
+                    it.state = LocationState.INITIAL.ordinal
                 }
-                context.dslContext.insertInto(BYTECODELOCATIONS).set(record)
+                context.dslContext.insertInto(BYTECODELOCATIONS).set(record).execute()
                 PersistentByteCodeLocationData.fromSqlRecord(record)
             },
             noSqlAction = {
                 val txn = context.txn
-                val entity =
-                    txn.find(
-                        type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                        propertyName = BytecodeLocationEntity.PATH,
-                        value = path
-                    ).firstOrNull() ?: txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
+                val entity = txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
                 entity[BytecodeLocationEntity.PATH] = path
                 entity[BytecodeLocationEntity.FILE_SYSTEM_ID] = fileSystemId
-                entity[BytecodeLocationEntity.IS_RUNTIME] = type == LocationType.RUNTIME
+                entity[BytecodeLocationEntity.LOCATION_TYPE] = type.persistentValue
+                entity[BytecodeLocationEntity.STATE] = LocationState.INITIAL.ordinal
                 PersistentByteCodeLocationData.fromErsEntity(entity)
             }
         )
@@ -407,7 +404,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         return context.execute(
             sqlAction = {
                 context.dslContext.selectFrom(BYTECODELOCATIONS)
-                    .where(BYTECODELOCATIONS.PATH.eq(path).and(BYTECODELOCATIONS.UNIQUEID.eq(fileSystemId)))
+                    .where(BYTECODELOCATIONS.UNIQUEID.eq(fileSystemId))
                     .fetchAny()
                     ?.let { PersistentByteCodeLocationData.fromSqlRecord(it) }
             },
@@ -415,10 +412,10 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                 val txn = context.txn
                 txn.find(
                     type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                    propertyName = BytecodeLocationEntity.PATH,
-                    value = path
+                    propertyName = BytecodeLocationEntity.FILE_SYSTEM_ID,
+                    value = fileSystemId
                 )
-                    .firstOrNull { it.get<String>(BytecodeLocationEntity.FILE_SYSTEM_ID) == fileSystemId }
+                    .firstOrNull()
                     ?.let {
                         PersistentByteCodeLocationData.fromErsEntity(it)
                     }
