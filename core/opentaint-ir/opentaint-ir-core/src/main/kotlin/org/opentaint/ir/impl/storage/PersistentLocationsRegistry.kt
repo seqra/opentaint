@@ -392,7 +392,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
 object BytecodeLocationEntity {
     const val BYTECODE_LOCATION_ENTITY_TYPE = "ByteCodeLocation"
     const val STATE = "state"
-    const val IS_RUNTIME = "isRuntime"
+    const val LOCATION_TYPE = "locationType"
     const val PATH = "path"
     const val FILE_SYSTEM_ID = "fileSystemId"
     const val UPDATED_LINK = "updatedLink"
