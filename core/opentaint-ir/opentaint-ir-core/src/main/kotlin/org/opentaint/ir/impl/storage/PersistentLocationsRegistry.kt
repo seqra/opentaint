@@ -94,7 +94,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
             )
         }
 
-    override lateinit var runtimeLocations: List<RegisteredLocation>
+    override var runtimeLocations: List<RegisteredLocation> = emptyList()
 
     override val snapshots: KeySetView<LocationsRegistrySnapshot, Boolean> = ConcurrentHashMap.newKeySet()
 
@@ -171,7 +171,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                             setLong(1, id)
                             setString(2, location.path)
                             setString(3, location.fileSystemId)
-                            setBoolean(4, location.type == LocationType.RUNTIME)
+                            setString(4, location.type.persistentValue)
                             setInt(5, LocationState.INITIAL.ordinal)
                             setNull(6, Types.BIGINT)
                         }
@@ -184,7 +184,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                         val entity = txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
                         entity[BytecodeLocationEntity.PATH] = location.path
                         entity[BytecodeLocationEntity.FILE_SYSTEM_ID] = location.fileSystemId
-                        entity[BytecodeLocationEntity.IS_RUNTIME] = location.type == LocationType.RUNTIME
+                        entity[BytecodeLocationEntity.LOCATION_TYPE] = location.type.persistentValue
                         entity[BytecodeLocationEntity.STATE] = LocationState.INITIAL.ordinal
                         entity.id.instanceId to location
                     }
@@ -322,6 +322,13 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
     private fun JIRByteCodeLocation.findOrNew(context: StorageContext): PersistentByteCodeLocationData {
         val existing = findOrNull(context)
         if (existing != null) {
+            requireSameType(
+                fileSystemId = fileSystemId,
+                storedPath = existing.path,
+                storedType = existing.type,
+                requestedPath = path,
+                requestedType = type
+            )
             return existing
         }
         return context.execute(
