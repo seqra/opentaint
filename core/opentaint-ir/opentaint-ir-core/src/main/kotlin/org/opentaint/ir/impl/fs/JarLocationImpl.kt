@@ -12,8 +12,8 @@ import kotlin.text.Charsets.UTF_8
 
 open class JarLocation(
     val jarOrFolder: File,
-    private val isRuntime: Boolean,
-    private val runtimeVersion: JavaVersion
+    override val type: LocationType,
+    private val runtimeVersion: JavaVersion,
 ) : AbstractByteCodeLocation() {
 
     companion object : KLogging()
@@ -37,13 +37,7 @@ open class JarLocation(
             }
         }
 
-    override val type: LocationType
-        get() = when {
-            isRuntime -> LocationType.RUNTIME
-            else -> LocationType.APP
-        }
-
-    override fun createRefreshed() = JarLocation(jarOrFolder, isRuntime, runtimeVersion)
+    override fun createRefreshed() = JarLocation(jarOrFolder, type, runtimeVersion)
 
     override val classes: Map<String, ByteArray> by softLazy {
         try {
@@ -84,10 +78,10 @@ open class JarLocation(
         if (other == null || other !is JarLocation) {
             return false
         }
-        return other.jarOrFolder == jarOrFolder
+        return other.jarOrFolder == jarOrFolder && other.type == type
     }
 
     override fun hashCode(): Int {
-        return jarOrFolder.hashCode()
+        return 31 * jarOrFolder.hashCode() + type.hashCode()
     }
 }
