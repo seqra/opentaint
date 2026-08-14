@@ -69,7 +69,7 @@ interface MethodAnalyzer {
 
     fun handleMethodSideEffectRequirement(
         currentEdge: FactToFact,
-        methodInitialFactBase: AccessPathBase,
+        callee: MethodEntryPoint,
         methodSideEffectRequirements: List<InitialFactAp>
     )
 
@@ -80,11 +80,13 @@ interface MethodAnalyzer {
 
     fun handleZeroToFactMethodSideEffectSummary(
         summarySubs: List<ZeroToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     )
 
     fun handleFactToFactMethodSideEffectSummary(
         summarySubs: List<FactToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     )
 
@@ -881,14 +883,21 @@ class NormalMethodAnalyzer(
 
     override fun handleMethodSideEffectRequirement(
         currentEdge: FactToFact,
-        methodInitialFactBase: AccessPathBase,
+        callee: MethodEntryPoint,
         methodSideEffectRequirements: List<InitialFactAp>
     ) {
-        val methodInitialFact = currentEdge.factAp.rebase(methodInitialFactBase)
-        val exclusionRefinements = methodSideEffectRequirements.mapNotNull { methodSinkRequirement ->
-            MethodSummaryEdgeApplicationUtils.emptyDeltaExclusionRefinementOrNull(
-                methodInitialFact, methodSinkRequirement
-            )
+        val summaryHandler = analysisManager.getMethodCallSummaryHandler(
+            apManager, analysisContext, currentEdge.statement
+        )
+
+        val exclusionRefinements = mutableListOf<ExclusionSet>()
+        methodSideEffectRequirements.forEach { methodSinkRequirement ->
+            val mappedRequirements = summaryHandler.prepareSummaryInitialFact(methodSinkRequirement, callee)
+            mappedRequirements.mapNotNullTo(exclusionRefinements) { mappedRequirement ->
+                MethodSummaryEdgeApplicationUtils.emptyDeltaExclusionRefinementOrNull(
+                    currentEdge.factAp, mappedRequirement
+                )
+            }
         }
 
         if (exclusionRefinements.isEmpty()) {
@@ -920,6 +929,7 @@ class NormalMethodAnalyzer(
 
     override fun handleZeroToFactMethodSideEffectSummary(
         summarySubs: List<MethodAnalyzer.ZeroToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     ) {
         for (sub in summarySubs) {
@@ -930,8 +940,15 @@ class NormalMethodAnalyzer(
                 sub.currentEdge.statement,
                 runner
             )
+            val summaryHandler = analysisManager.getMethodCallSummaryHandler(
+                apManager, analysisContext, sub.currentEdge.statement
+            )
 
-            val summariesToApply = sideEffectSummaries.flatMap { handler.prepareSideEffectSummary(it) }
+            val summariesToApply = sideEffectSummaries.flatMap { se ->
+                summaryHandler.prepareSummaryInitialFact(se.initialFactAp, callee).map { mappedInitialFact ->
+                    SideEffectSummary.FactSideEffectSummary(mappedInitialFact, se.kind)
+                }
+            }
 
             applyMethodSideEffectSummaries(
                 currentEdge = sub.currentEdge,
@@ -944,6 +961,7 @@ class NormalMethodAnalyzer(
 
     override fun handleFactToFactMethodSideEffectSummary(
         summarySubs: List<FactToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     ) {
         for (sub in summarySubs) {
@@ -954,8 +972,15 @@ class NormalMethodAnalyzer(
                 sub.currentEdge.statement,
                 runner,
             )
+            val summaryHandler = analysisManager.getMethodCallSummaryHandler(
+                apManager, analysisContext, sub.currentEdge.statement
+            )
 
-            val summariesToApply = sideEffectSummaries.flatMap { handler.prepareSideEffectSummary(it) }
+            val summariesToApply = sideEffectSummaries.flatMap { se ->
+                summaryHandler.prepareSummaryInitialFact(se.initialFactAp, callee).map { mappedInitialFact ->
+                    SideEffectSummary.FactSideEffectSummary(mappedInitialFact, se.kind)
+                }
+            }
 
             applyMethodSideEffectSummaries(
                 currentEdge = sub.currentEdge,
@@ -1559,7 +1584,7 @@ class EmptyMethodAnalyzer(
 
     override fun handleMethodSideEffectRequirement(
         currentEdge: FactToFact,
-        methodInitialFactBase: AccessPathBase,
+        callee: MethodEntryPoint,
         methodSideEffectRequirements: List<InitialFactAp>
     ) {
         error("Empty method should not receive side effect requirements")
@@ -1574,6 +1599,7 @@ class EmptyMethodAnalyzer(
 
     override fun handleZeroToFactMethodSideEffectSummary(
         summarySubs: List<MethodAnalyzer.ZeroToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     ) {
         error("Empty method should not receive side effects")
@@ -1581,6 +1607,7 @@ class EmptyMethodAnalyzer(
 
     override fun handleFactToFactMethodSideEffectSummary(
         summarySubs: List<FactToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>
     ) {
         error("Empty method should not receive side effects")
@@ -1803,13 +1830,13 @@ class TimedMethodAnalyzer(
 
     override fun handleMethodSideEffectRequirement(
         currentEdge: FactToFact,
-        methodInitialFactBase: AccessPathBase,
+        callee: MethodEntryPoint,
         methodSideEffectRequirements: List<InitialFactAp>,
     ) = timeOperation(
         operation = "handleMethodSideEffectRequirement",
         category = OpCategory.SUMMARY,
     ) {
-        base.handleMethodSideEffectRequirement(currentEdge, methodInitialFactBase, methodSideEffectRequirements)
+        base.handleMethodSideEffectRequirement(currentEdge, callee, methodSideEffectRequirements)
     }
 
     override fun handleZeroToZeroMethodSideEffectSummary(
@@ -1824,22 +1851,24 @@ class TimedMethodAnalyzer(
 
     override fun handleZeroToFactMethodSideEffectSummary(
         summarySubs: List<MethodAnalyzer.ZeroToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>,
     ) = timeOperation(
         operation = "handleZeroToFactMethodSideEffectSummary",
         category = OpCategory.SUMMARY,
     ) {
-        base.handleZeroToFactMethodSideEffectSummary(summarySubs, sideEffectSummaries)
+        base.handleZeroToFactMethodSideEffectSummary(summarySubs, callee, sideEffectSummaries)
     }
 
     override fun handleFactToFactMethodSideEffectSummary(
         summarySubs: List<FactToFactSub>,
+        callee: MethodEntryPoint,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>,
     ) = timeOperation(
         operation = "handleFactToFactMethodSideEffectSummary",
         category = OpCategory.SUMMARY,
     ) {
-        base.handleFactToFactMethodSideEffectSummary(summarySubs, sideEffectSummaries)
+        base.handleFactToFactMethodSideEffectSummary(summarySubs, callee, sideEffectSummaries)
     }
 
     override fun handleNDFactToFactMethodSideEffectSummary(
