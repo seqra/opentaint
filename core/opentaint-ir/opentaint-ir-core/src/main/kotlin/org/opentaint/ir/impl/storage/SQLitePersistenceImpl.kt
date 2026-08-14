@@ -91,10 +91,8 @@ class SQLitePersistenceImpl(
         persistenceService.persist(location, allClasses)
     }
 
-    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? {
-        val symbolId = findSymbolId(fullName)
-        return cp.db.classSources(CLASSES.NAME.eq(symbolId).and(cp.clause), single = true).firstOrNull()
-    }
+    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? =
+        cp.classPathResolution.selectClassSource(findClassSources(cp, fullName).asSequence())
 
     override fun findClassSources(db: JIRDatabase, location: RegisteredLocation): List<ClassSource> {
         return db.classSources(CLASSES.LOCATION_ID.eq(location.id))
