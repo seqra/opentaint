@@ -148,8 +148,16 @@ class JIRDatabaseImpl(
     }
 
     override suspend fun load(dirOrJars: List<File>) = apply {
+        load(dirOrJars, LocationType.APP)
+    }
+
+    override suspend fun load(dirOrJars: List<File>, type: LocationType) = apply {
         assertNotClosed()
-        loadLocations(dirOrJars.createNonRuntimeByteCodeLocations(javaRuntime.version))
+        loadLocations(
+            dirOrJars
+                .map { ByteCodeLocationSpec(it, type) }
+                .createByteCodeLocations(javaRuntime.version)
+        )
     }
 
     override suspend fun loadLocations(locations: List<JIRByteCodeLocation>) = apply {
