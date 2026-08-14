@@ -75,7 +75,8 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         get() = persistence.read { context ->
             context.execute(
                 sqlAction = {
-                    context.dslContext.selectFrom(BYTECODELOCATIONS).where(BYTECODELOCATIONS.RUNTIME.ne(true))
+                    context.dslContext.selectFrom(BYTECODELOCATIONS)
+                        .where(BYTECODELOCATIONS.LOCATION_TYPE.ne(LocationType.RUNTIME.persistentValue))
                         .fetch { record ->
                             PersistentByteCodeLocation(
                                 jIRdb,
@@ -84,16 +85,11 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                         }
                 },
                 noSqlAction = {
-                    context.txn.find(
-                        type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                        propertyName = BytecodeLocationEntity.IS_RUNTIME,
-                        value = false
-                    ).map { entity ->
-                        PersistentByteCodeLocation(
-                            jIRdb,
-                            PersistentByteCodeLocationData.fromErsEntity(entity)
-                        )
-                    }.toList()
+                    context.txn.all(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
+                        .map { PersistentByteCodeLocationData.fromErsEntity(it) }
+                        .filter { it.type != LocationType.RUNTIME }
+                        .map { PersistentByteCodeLocation(jIRdb, it) }
+                        .toList()
                 }
             )
         }
@@ -110,17 +106,6 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
             this.runtimeLocations = it.registered
         }
     }
-//
-//    fun restorePure() {
-//        runtimeLocations = persistence.read {
-//            it.selectFrom(BYTECODELOCATIONS)
-//                .where(BYTECODELOCATIONS.RUNTIME.eq(true))
-//                .fetch {
-//                    PersistentByteCodeLocation(jIRdb, it.id!!)
-//                }
-//        }
-//    }
-
     override fun afterProcessing(locations: List<RegisteredLocation>) {
         val ids = locations.map { it.id }
         persistence.write { context ->
