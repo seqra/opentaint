@@ -11,12 +11,31 @@ import java.nio.file.Paths
 import kotlin.streams.asSequence
 import kotlin.text.Charsets.UTF_8
 
-class BuildFolderLocation(val jarOrFolder: File) : AbstractByteCodeLocation() {
+class BuildFolderLocation private constructor(
+    val jarOrFolder: File,
+    override val type: LocationType,
+    private val registeredFileSystemIdHash: BigInteger?,
+) : AbstractByteCodeLocation() {
 
-    companion object : KLogging()
+    constructor(
+        jarOrFolder: File,
+        type: LocationType = LocationType.APP,
+    ) : this(jarOrFolder, type, null)
+
+    companion object : KLogging() {
+        internal fun restored(
+            jarOrFolder: File,
+            type: LocationType,
+            fileSystemIdHash: BigInteger,
+        ) = BuildFolderLocation(jarOrFolder, type, fileSystemIdHash)
+    }
 
     override val path: String
         get() = jarOrFolder.absolutePath
+
+    override val fileSystemIdHash: BigInteger by lazy {
+        registeredFileSystemIdHash ?: currentHash
+    }
 
     @Suppress("UnstableApiUsage")
     override val currentHash: BigInteger
@@ -30,10 +49,7 @@ class BuildFolderLocation(val jarOrFolder: File) : AbstractByteCodeLocation() {
             }
         }
 
-    override val type: LocationType
-        get() = LocationType.APP
-
-    override fun createRefreshed() = BuildFolderLocation(jarOrFolder)
+    override fun createRefreshed() = BuildFolderLocation(jarOrFolder, type)
 
     override val classes: Map<String, ByteArray>
         get() {
@@ -84,10 +100,10 @@ class BuildFolderLocation(val jarOrFolder: File) : AbstractByteCodeLocation() {
         if (other == null || other !is BuildFolderLocation) {
             return false
         }
-        return other.jarOrFolder == jarOrFolder
+        return other.jarOrFolder == jarOrFolder && other.type == type
     }
 
     override fun hashCode(): Int {
-        return jarOrFolder.hashCode()
+        return 31 * jarOrFolder.hashCode() + type.hashCode()
     }
 }
