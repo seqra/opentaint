@@ -131,7 +131,11 @@ class PersistentByteCodeLocation(
             }
 
             if (file.isDirectory) {
-                return BuildFolderLocation(file)
+                return BuildFolderLocation.restored(
+                    file,
+                    type,
+                    BigInteger(fileSystemId, Character.MAX_RADIX),
+                )
             }
 
             return null
