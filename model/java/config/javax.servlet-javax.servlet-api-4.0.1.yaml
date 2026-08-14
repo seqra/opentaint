@@ -351,3 +351,116 @@ passThrough:
     - this
     - .javax.servlet.http.HttpServletRequest#authType#java.lang.Object
     to: result
+- function: javax.servlet.ServletRequest#setAttribute
+  signature: (java.lang.String, java.lang.Object) void
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .javax.servlet.ServletRequest#attributes#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.servlet.ServletRequest#attribute-names#java.lang.Object
+- function: javax.servlet.ServletRequest#getAttribute
+  signature: (java.lang.String) java.lang.Object
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#attributes#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getAttributeNames
+  signature: () java.util.Enumeration
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#attribute-names#java.lang.Object
+    to: result
+- function: javax.servlet.http.HttpSession#setAttribute
+  signature: (java.lang.String, java.lang.Object) void
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .javax.servlet.http.HttpSession#attributes#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.servlet.http.HttpSession#attribute-names#java.lang.Object
+- function: javax.servlet.http.HttpSession#getAttribute
+  signature: (java.lang.String) java.lang.Object
+  copy:
+  - from:
+    - this
+    - .javax.servlet.http.HttpSession#attributes#java.lang.Object
+    to: result
+- function: javax.servlet.http.HttpSession#getAttributeNames
+  signature: () java.util.Enumeration
+  copy:
+  - from:
+    - this
+    - .javax.servlet.http.HttpSession#attribute-names#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getScheme
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#scheme#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getServerName
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#server-name#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getRemoteAddr
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#remote-addr#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getRemoteHost
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#remote-addr#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getProtocol
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#protocol#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getContentType
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#content-type#java.lang.Object
+    to: result
+- function: javax.servlet.ServletRequest#getCharacterEncoding
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.ServletRequest#character-encoding#java.lang.Object
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getContextPath
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.http.HttpServletRequest#context-path#java.lang.Object
+    to: result
+- function: javax.servlet.http.HttpServletRequest#getMethod
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.servlet.http.HttpServletRequest#method#java.lang.Object
+    to: result

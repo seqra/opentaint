@@ -139,8 +139,42 @@ public class PassthroughServletAccessorSamples {
     }
 
     /**
-     * Negative twin: the same accessors are called, but the executed command is built from
-     * constants only, so none of the accessor models may produce a finding here.
+     * setAttribute/getAttribute on the request is a store-and-read pair, not a read of
+     * request data: what comes back out of getAttribute is whatever was put in. The models
+     * carry that through a named {@code attributes} slot, so the round trip below stays
+     * tainted even when nothing else about the request is.
+     */
+    @WebServlet("/passthrough/servlet/request-attribute")
+    public static class RequestAttributeRoundTripServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            request.setAttribute("file", request.getParameter("file"));
+            String file = (String) request.getAttribute("file");
+            Runtime.getRuntime().exec("cat " + file);
+        }
+    }
+
+    /**
+     * The same pair on the session. This one matters on its own: the session object is
+     * deliberately not a source (the trust-boundary rule excludes getSession, since the
+     * session is trusted-side state), so the only thing that can make a session read
+     * tainted is an earlier store - which is exactly what the attributes slot models.
+     */
+    @WebServlet("/passthrough/servlet/session-attribute")
+    public static class SessionAttributeRoundTripServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            javax.servlet.http.HttpSession session = request.getSession();
+            session.setAttribute("file", request.getParameter("file"));
+            String file = (String) session.getAttribute("file");
+            Runtime.getRuntime().exec("cat " + file);
+        }
+    }
+
+    /**
+     * Negative twin: the same accessors are called, and both attribute stores are
+     * exercised with constants, but the executed command is built from constants only, so
+     * none of the accessor models may produce a finding here.
      */
     @WebServlet("/passthrough/servlet/safe")
     public static class SafeAccessorsServlet extends HttpServlet {
@@ -156,6 +190,9 @@ public class PassthroughServletAccessorSamples {
             request.getParameterValues("file");
             request.getCookies();
             request.getHeaderNames();
+            request.setAttribute("file", "motd");
+            request.getAttribute("file");
+            request.getAttributeNames();
             Runtime.getRuntime().exec("cat /etc/motd");
         }
     }
