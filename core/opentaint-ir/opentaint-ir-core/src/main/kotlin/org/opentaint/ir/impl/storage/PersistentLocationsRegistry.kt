@@ -128,12 +128,30 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         jIRdb.featuresRegistry.broadcast(JIRInternalSignal.AfterIndexing)
     }
 
-    override fun registerIfNeeded(locations: List<JIRByteCodeLocation>): RegistrationResult {
-        val uniqueLocations = locations.toSet()
+    override fun registerIfNeeded(
+        locations: List<JIRByteCodeLocation>,
+        validateExistingType: Boolean
+    ): RegistrationResult {
+        if (locations.isEmpty()) return RegistrationResult(emptyList(), emptyList())
+
+        val uniqueLocations = linkedMapOf<String, JIRByteCodeLocation>()
+        locations.forEach { location ->
+            val previous = uniqueLocations.putIfAbsent(location.fileSystemId, location)
+            if (previous != null && validateExistingType) {
+                requireSameType(
+                    fileSystemId = location.fileSystemId,
+                    storedPath = previous.path,
+                    storedType = previous.type,
+                    requestedPath = location.path,
+                    requestedType = location.type
+                )
+            }
+        }
+
         return persistence.write { context ->
-            val result = arrayListOf<RegisteredLocation>()
             val toAdd = arrayListOf<JIRByteCodeLocation>()
-            val fsIds = uniqueLocations.map { it.fileSystemId }
+            val resolvedByFileSystemId = hashMapOf<String, RegisteredLocation>()
+            val fsIds = uniqueLocations.keys
             val existing = context.execute(
                 sqlAction = {
                     context.dslContext.selectFrom(BYTECODELOCATIONS).where(BYTECODELOCATIONS.UNIQUEID.`in`(fsIds))
@@ -153,12 +171,21 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                 }
             ).associateBy { it.fileSystemId }
 
-            uniqueLocations.forEach {
-                val found = existing[it.fileSystemId]
+            uniqueLocations.values.forEach { location ->
+                val found = existing[location.fileSystemId]
                 if (found == null) {
-                    toAdd += it
+                    toAdd += location
                 } else {
-                    result += PersistentByteCodeLocation(jIRdb, found, it)
+                    if (validateExistingType) {
+                        requireSameType(
+                            fileSystemId = location.fileSystemId,
+                            storedPath = found.path,
+                            storedType = found.type,
+                            requestedPath = location.path,
+                            requestedType = location.type
+                        )
+                    }
+                    resolvedByFileSystemId[location.fileSystemId] = PersistentByteCodeLocation(jIRdb, found, location)
                 }
             }
             val records = context.execute(
@@ -190,16 +217,35 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                     }
                 }
             )
-            val added = records.map {
+            val added = records.map { (id, location) ->
                 PersistentByteCodeLocation(
                     jIRdb.persistence,
                     jIRdb.runtimeVersion,
-                    it.first,
+                    id,
                     null,
-                    it.second
-                )
+                    location
+                ).also {
+                    resolvedByFileSystemId[location.fileSystemId] = it
+                }
             }
-            RegistrationResult(result + added, added)
+            RegistrationResult(
+                registered = uniqueLocations.keys.map { resolvedByFileSystemId.getValue(it) },
+                new = added
+            )
+        }
+    }
+
+    private fun requireSameType(
+        fileSystemId: String,
+        storedPath: String,
+        storedType: LocationType,
+        requestedPath: String,
+        requestedType: LocationType
+    ) {
+        require(storedType == requestedType) {
+            "Bytecode location type conflict for file-system id '$fileSystemId': " +
+                    "registered '$storedPath' as $storedType, but '$requestedPath' was requested as $requestedType. " +
+                    "Use the registered type or rebuild the database with the desired classification."
         }
     }
 
