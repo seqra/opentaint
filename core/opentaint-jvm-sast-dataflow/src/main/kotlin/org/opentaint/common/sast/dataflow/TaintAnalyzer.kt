@@ -11,7 +11,9 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodStats
+import org.opentaint.dataflow.ap.ifds.MethodTaintMarkState
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintMarkTransition
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -40,6 +42,8 @@ import org.opentaint.dataflow.ap.ifds.trace.action.ActionableRulesCollectionResu
 import org.opentaint.dataflow.ap.ifds.trace.action.mergeActionableRules
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.util.Cancellation
@@ -247,17 +251,71 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     private fun forwardActionableRules(
         vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
     ): ActionableRules {
-        val uncoveredSinkRules = vulnerabilities
-            .flatMapTo(linkedSetOf()) { it.vulnerabilityRules.keys }
-        val recordedRules = analysisManager.relevantForwardActionableRules(
-            ifdsEngine.getForwardActionableRules(),
-            uncoveredSinkRules,
-        )
-        val result = recordedRules.mapValuesTo(linkedMapOf()) { (_, statementRules) ->
-            statementRules.mapValuesTo(linkedMapOf()) { (_, actions) -> actions.toMutableSet() }
-        }
+        val forwardRules = ifdsEngine.getForwardActionableRules()
+        val result = linkedMapOf<
+            CommonInst,
+            MutableMap<CommonTaintConfigurationItem, MutableSet<CommonTaintAction>>,
+            >()
+        val summaryStats = ifdsEngine.methodTaintMarkSummaryStats()
 
         vulnerabilities.forEach { vulnerability ->
+            val sinkMethod = vulnerability.statement.location.method
+            val reachableMethods = ifdsEngine.methodsThatCanReach(sinkMethod)
+            val relevantRules = analysisManager.relevantForwardActionableRules(
+                forwardRules,
+                vulnerability.vulnerabilityRules.keys,
+            )
+            val ruleTransitions = hashMapOf<CommonMethod, MutableSet<TaintMarkTransition>>()
+            for ((statement, statementRules) in relevantRules) {
+                for ((rule, actions) in statementRules) {
+                    val flow = rule.taintRuleMarkFlow(actions)
+                    if (!flow.outputMarksComplete) continue
+                    val methodTransitions = ruleTransitions.getOrPut(statement.location.method, ::hashSetOf)
+                    flow.inputMarks.forEach { inputMark ->
+                        flow.outputMarks.forEach { outputMark ->
+                            methodTransitions += TaintMarkTransition(inputMark, outputMark)
+                        }
+                    }
+                }
+            }
+            val sinkMarks = vulnerability.vulnerabilityRules.keys.flatMapTo(hashSetOf()) { sinkRule ->
+                sinkRule.taintRuleMarkFlow(emptySet()).inputMarks
+            }
+            val markReachableStates = if (sinkMarks.isEmpty()) {
+                null
+            } else {
+                ifdsEngine.taintMarkStatesThatCanReach(sinkMethod, sinkMarks, ruleTransitions)
+            }
+            var candidates = 0
+            var retained = 0
+
+            for ((statement, statementRules) in relevantRules) {
+                candidates += statementRules.size
+                if (statement.location.method !in reachableMethods) continue
+
+                for ((rule, actions) in statementRules) {
+                    val flow = rule.taintRuleMarkFlow(actions)
+                    val markReachable = markReachableStates == null ||
+                        !flow.outputMarksComplete ||
+                        flow.outputMarks.isEmpty() ||
+                        flow.outputMarks.any { outputMark ->
+                            MethodTaintMarkState(statement.location.method, outputMark) in markReachableStates
+                        }
+                    if (!markReachable) continue
+
+                    val targetRules = result.getOrPut(statement) { linkedMapOf() }
+                    targetRules.getOrPut(rule, ::linkedSetOf).addAll(actions)
+                    retained++
+                }
+            }
+
+            logger.info {
+                "Forward actionable rule mark-reachability filter for $sinkMethod: " +
+                    "$retained/$candidates source rules, ${markReachableStates?.size ?: 0} mark states, " +
+                    "${reachableMethods.size} methods; summaries: ${summaryStats.methods} methods, " +
+                    "${summaryStats.transitions} transitions"
+            }
+
             val statementRules = result.getOrPut(vulnerability.statement) { linkedMapOf() }
             vulnerability.vulnerabilityRules.keys.forEach { rule ->
                 statementRules.getOrPut(rule, ::linkedSetOf)

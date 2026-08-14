@@ -86,6 +86,7 @@ class TaintAnalysisUnitRunnerManager(
     private val runnerForUnit = ConcurrentHashMap<UnitType, TaintAnalysisUnitRunner>()
     private val unitStorage = ConcurrentHashMap<UnitType, TaintAnalysisUnitStorage>()
     private val methodDependencies = ConcurrentHashMap<CommonMethod, MutableSet<UnitType>>()
+    private val methodTaintMarkReachability = MethodTaintMarkReachabilityIndex<CommonMethod>()
 
     private val runnerJobs = ConcurrentLinkedQueue<Job>()
     private var analysisCompletion = CompletableDeferred<Unit>()
@@ -133,6 +134,7 @@ class TaintAnalysisUnitRunnerManager(
 
     fun resetApManager(manager: ApManager) {
         this.activeApManager = manager
+        methodTaintMarkReachability.clearSummaries()
         runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
         unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
 
@@ -615,6 +617,19 @@ class TaintAnalysisUnitRunnerManager(
     fun methodCallers(method: CommonMethod): Set<UnitType> =
         methodDependencies[method].orEmpty()
 
+    fun methodsThatCanReach(method: CommonMethod): Set<CommonMethod> =
+        methodTaintMarkReachability.methodsThatCanReach(method)
+
+    fun taintMarkStatesThatCanReach(
+        method: CommonMethod,
+        marks: Set<String>,
+        ruleTransitions: Map<CommonMethod, Set<TaintMarkTransition>>,
+    ): Set<MethodTaintMarkState<CommonMethod>> =
+        methodTaintMarkReachability.statesThatCanReach(method, marks, ruleTransitions)
+
+    fun methodTaintMarkSummaryStats(): MethodTaintMarkSummaryStats =
+        methodTaintMarkReachability.stats()
+
     fun findUnitRunner(unit: UnitType): TaintAnalysisUnitRunner? {
         if (unit == UnknownUnit) return null
         return runnerForUnit[unit]
@@ -721,6 +736,15 @@ class TaintAnalysisUnitRunnerManager(
             ConcurrentHashMap.newKeySet()
         }
         dependencies.add(unit)
+    }
+
+    override fun registerResolvedMethodCall(caller: CommonMethod, callee: CommonMethod) {
+        methodTaintMarkReachability.addCall(caller, callee)
+    }
+
+    override fun newSummaryEdges(methodEntryPoint: MethodEntryPoint, edges: List<Edge>) {
+        super<AnalysisUnitRunnerManager>.newSummaryEdges(methodEntryPoint, edges)
+        methodTaintMarkReachability.addSummaryEdges(methodEntryPoint.method, edges)
     }
 
     override fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner? {

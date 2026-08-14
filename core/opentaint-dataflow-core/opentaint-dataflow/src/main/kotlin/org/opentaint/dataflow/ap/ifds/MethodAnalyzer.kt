@@ -34,6 +34,7 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolverStats
 import org.opentaint.dataflow.ap.ifds.trace.TraceSummarizer
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.cartesianProductMapTo
+import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -234,6 +235,7 @@ class NormalMethodAnalyzer(
     private var baseOnlyNDSummaryUniqueEmissions: Long = 0
     private var baseOnlyNDSummaryDuplicateEmissions: Long = 0
     private var emittedBaseOnlyNDSummaryResults = hashSetOf<BaseOnlyNDSummaryResult>()
+    private val registeredResolvedCallees = hashSetOf<CommonMethod>()
     private val traceResolverStats = TraceResolverStats()
     @Volatile
     private var traceResolverCache: MethodTraceResolver.Cache? = null
@@ -1115,6 +1117,7 @@ class NormalMethodAnalyzer(
     }
 
     override fun handleResolvedMethodCall(method: MethodWithContext, handler: MethodCallHandler) {
+        registerResolvedMethodCall(method.method)
         if (!resolvedMethodIsRelevant(method, handler)) {
             handleUnchangedStatementEdge(handler.currentEdge())
             return
@@ -1125,11 +1128,18 @@ class NormalMethodAnalyzer(
     }
 
     override fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler) {
+        registerResolvedMethodCall(entryPoint.method)
         if (!resolvedMethodIsRelevant(MethodWithContext(entryPoint.method, entryPoint.context), handler)) {
             handleUnchangedStatementEdge(handler.currentEdge())
             return
         }
         handleMethodCall(handler, entryPoint)
+    }
+
+    private fun registerResolvedMethodCall(callee: CommonMethod) {
+        if (registeredResolvedCallees.add(callee)) {
+            runner.manager.registerResolvedMethodCall(methodEntryPoint.method, callee)
+        }
     }
 
     private fun resolvedMethodIsRelevant(method: MethodWithContext, handler: MethodCallHandler): Boolean {
