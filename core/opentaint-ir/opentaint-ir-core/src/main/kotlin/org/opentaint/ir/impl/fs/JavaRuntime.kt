@@ -3,6 +3,7 @@ package org.opentaint.ir.impl.fs
 import mu.KLogging
 import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JavaVersion
+import org.opentaint.ir.api.jvm.LocationType
 import java.io.File
 import java.nio.file.Paths
 
@@ -66,7 +67,7 @@ class JavaRuntime(private val javaHome: File) {
             .listFiles { file -> file.name.endsWith(".jar") || file.name.endsWith(".jmod") }
             .orEmpty()
             .toList()
-            .flatMap { it.dirOrJarAsBytecodeLocation(version, true) }
+            .flatMap { it.dirOrJarAsBytecodeLocation(version, LocationType.RUNTIME) }
             .distinct()
     }
 
