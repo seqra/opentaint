@@ -17,7 +17,7 @@ interface LocationsRegistry : Closeable {
     fun refresh(): RefreshResult
     fun setup(runtimeLocations: List<JIRByteCodeLocation>): RegistrationResult
 
-    fun registerIfNeeded(locations: List<JIRByteCodeLocation>): RegistrationResult
+    fun registerIfNeeded(locations: List<JIRByteCodeLocation>, validateExistingType: Boolean = true): RegistrationResult
     fun afterProcessing(locations: List<RegisteredLocation>)
 
     fun newSnapshot(classpathSetLocations: List<RegisteredLocation>): LocationsRegistrySnapshot
