@@ -4,6 +4,7 @@ import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JIRDatabase
 import org.opentaint.ir.api.jvm.JIRDatabasePersistence
 import org.opentaint.ir.api.jvm.JavaVersion
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.storage.ers.Entity
 import org.opentaint.ir.api.storage.ers.getEntityOrNull
@@ -18,7 +19,7 @@ import java.math.BigInteger
 
 data class PersistentByteCodeLocationData(
     val id: Long,
-    val runtime: Boolean,
+    val type: LocationType,
     val path: String,
     val fileSystemId: String
 ) {
@@ -34,6 +35,9 @@ data class PersistentByteCodeLocationData(
         )
     }
 }
+
+internal val LocationType.persistentValue: String
+    get() = name
 
 class PersistentByteCodeLocation(
     private val persistence: JIRDatabasePersistence,
@@ -79,8 +83,8 @@ class PersistentByteCodeLocation(
     override val path: String
         get() = data.path
 
-    override val isRuntime: Boolean
-        get() = data.runtime
+    override val type: LocationType
+        get() = data.type
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -98,7 +102,7 @@ class PersistentByteCodeLocation(
 
     private fun PersistentByteCodeLocationData.toJIRLocation(): JIRByteCodeLocation? {
         return try {
-            if (isRuntime && JavaRuntimeModuleLocation.isModuleLocation(path)) {
+            if (type == LocationType.RUNTIME && JavaRuntimeModuleLocation.isModuleLocation(path)) {
                 val location = JavaRuntimeModuleLocation.fromPath(path)
 
                 val fsId = fileSystemId
@@ -115,7 +119,7 @@ class PersistentByteCodeLocation(
                 // NB! This JarLocation inheritor is necessary for hacking PersistentLocationsRegistry
                 // so that isChanged() would work properly in PersistentLocationsRegistry.refresh()
                 val fsId = fileSystemId
-                return object : JarLocation(file, isRuntime, runtimeVersion) {
+                return object : JarLocation(file, type, runtimeVersion) {
                     override val fileSystemIdHash: BigInteger
                         get() = BigInteger(fsId, Character.MAX_RADIX)
                 }
