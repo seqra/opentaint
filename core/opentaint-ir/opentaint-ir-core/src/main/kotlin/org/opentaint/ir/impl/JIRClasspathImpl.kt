@@ -15,6 +15,7 @@ import org.opentaint.ir.api.jvm.JIRClasspathExtFeature
 import org.opentaint.ir.api.jvm.JIRClasspathExtFeature.JIRResolvedClassResult
 import org.opentaint.ir.api.jvm.JIRClasspathExtFeature.JIRResolvedTypeResult
 import org.opentaint.ir.api.jvm.JIRClasspathFeature
+import org.opentaint.ir.api.jvm.JIRClasspathResolution
 import org.opentaint.ir.api.jvm.JIRClasspathTask
 import org.opentaint.ir.api.jvm.JIRFeatureEvent
 import org.opentaint.ir.api.jvm.JIRRefType
@@ -51,6 +52,7 @@ class JIRClasspathImpl(
     override val locations: List<JIRByteCodeLocation> = locationsRegistrySnapshot.locations.mapNotNull { it.jIRLocation }
     override val registeredLocations: List<RegisteredLocation> = locationsRegistrySnapshot.locations
     override val registeredLocationIds: Set<Long> = locationsRegistrySnapshot.ids
+    override val classPathResolution: JIRClasspathResolution = ClasspathResolution(registeredLocations)
     private val classpathVfs = ClasspathVfs(globalClassVFS, locationsRegistrySnapshot)
     private val featuresChain = JIRFeaturesChain(
         if (!features.any { it is UnknownClasses }) {

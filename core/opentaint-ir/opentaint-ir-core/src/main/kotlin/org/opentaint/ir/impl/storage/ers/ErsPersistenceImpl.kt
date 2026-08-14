@@ -161,11 +161,8 @@ class ErsPersistenceImpl(
         }
     }
 
-    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? {
-        return read { context ->
-            findClassSourcesImpl(context, cp, fullName).firstOrNull()
-        }
-    }
+    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? =
+        cp.classPathResolution.selectClassSource(findClassSources(cp, fullName).asSequence())
 
     override fun findClassSources(db: JIRDatabase, location: RegisteredLocation): List<ClassSource> {
         return read { context ->

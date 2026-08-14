@@ -16,13 +16,7 @@ class ClasspathVfs(
         locationsRegistrySnapshot.locations
     )
 
-    private val locationIds: Set<Long> = locations.map { it.id }.toHashSet()
-
-    fun firstClassOrNull(fullName: String): ClassVfsItem? {
-        return globalClassVFS.firstClassNodeOrNull(fullName) {
-            locationIds.contains(it)
-        }
-    }
+    private val locationIds: Set<Long> = locations.mapTo(hashSetOf()) { it.id }
 
     fun findClassNodes(fullName: String): List<ClassVfsItem> {
         return globalClassVFS.findClassNodes(fullName) {

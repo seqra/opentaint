@@ -30,12 +30,6 @@ open class GlobalClassesVfs : Closeable {
         return findPackage(splitted)?.firstClassOrNull(simpleClassName, codeLocation.id)
     }
 
-    fun firstClassNodeOrNull(fullName: String, predicate: (Long) -> Boolean = { true }): ClassVfsItem? {
-        val splitted = fullName.splitted
-        val simpleClassName = splitted[splitted.size - 1]
-        return findPackage(splitted)?.firstClassOrNull(simpleClassName, predicate)
-    }
-
     fun findClassNodes(fullName: String, predicate: (Long) -> Boolean = { true }): List<ClassVfsItem> {
         val splitted = fullName.splitted
         val simpleClassName = splitted[splitted.size - 1]
