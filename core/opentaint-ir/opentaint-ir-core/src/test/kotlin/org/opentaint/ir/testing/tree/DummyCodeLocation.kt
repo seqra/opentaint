@@ -6,7 +6,10 @@ import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.impl.storage.longHash
 import java.math.BigInteger
 
-open class DummyCodeLocation(private val name: String) : JIRByteCodeLocation, RegisteredLocation {
+open class DummyCodeLocation(
+    private val name: String,
+    override val type: LocationType = LocationType.APP,
+) : JIRByteCodeLocation, RegisteredLocation {
 
     override val id: Long
         get() = name.longHash
@@ -18,13 +21,8 @@ open class DummyCodeLocation(private val name: String) : JIRByteCodeLocation, Re
     override val fileSystemId: String
         get() = name
 
-    override val isRuntime: Boolean
-        get() = false
-
     override val jIRLocation: JIRByteCodeLocation
         get() = this
-
-    override val type = LocationType.APP
 
     override val classes: Map<String, ByteArray>
         get() = emptyMap()

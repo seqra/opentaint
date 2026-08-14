@@ -5,6 +5,7 @@ import org.opentaint.ir.api.jvm.JIRClassType
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.JIRTypedMethod
 import org.opentaint.ir.api.jvm.TypeName
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
@@ -360,7 +361,7 @@ open class IRTest : BaseInstructionsTest() {
     private fun runAlongLib(file: File, validateLineNumbers: Boolean = true, muteGraphChecker: Boolean = false) {
         println("Run along: ${file.absolutePath}")
 
-        val classes = JarLocation(file, isRuntime = false, object : JavaVersion {
+        val classes = JarLocation(file, LocationType.APP, object : JavaVersion {
             override val majorVersion: Int
                 get() = 8
         }).classes
