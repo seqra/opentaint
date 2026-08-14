@@ -4,6 +4,7 @@ import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRClasspathExtFeature
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.impl.features.classpaths.AbstractJIRResolvedResult.JIRResolvedClassResultImpl
 import org.opentaint.ir.impl.features.classpaths.virtual.JIRVirtualClass
@@ -54,7 +55,7 @@ class VirtualLocation : RegisteredLocation {
 
     override val path: String = "/dev/null"
 
-    override val isRuntime: Boolean
-        get() = false
+    override val type: LocationType
+        get() = LocationType.APP
 
 }
