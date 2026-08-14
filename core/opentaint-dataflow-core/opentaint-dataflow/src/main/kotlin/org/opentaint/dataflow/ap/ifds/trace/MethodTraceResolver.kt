@@ -912,9 +912,10 @@ class MethodTraceResolver(
         )
         builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
+        if (!cancellation.isActive()) return emptyList()
 
         if (builder.actionHardLimitReached && st.final.edges.hasAlternativePremises()) {
-            return st.resolveExactCubes { cube ->
+            return st.resolveExactCubes(cancellation::isActive) { cube ->
                 resolveIntraProceduralStart2FinalTrace(cube, cancellation)
             }
         }
@@ -943,9 +944,10 @@ class MethodTraceResolver(
         )
         builder.resolveTrace(st.traceKind)
         stats.traceResolverSteps += builder.steps
+        if (!cancellation.isActive()) return emptyList()
 
         if (builder.actionHardLimitReached && st.final.edges.hasAlternativePremises()) {
-            return st.resolveExactCubes { cube ->
+            return st.resolveExactCubes(cancellation::isActive) { cube ->
                 resolveIntraProceduralFullStart2FinalTrace(
                     cube,
                     cancellation,
@@ -955,9 +957,11 @@ class MethodTraceResolver(
         }
 
         builder.removeUnreachableNodes()
+        if (!cancellation.isActive()) return emptyList()
         if (collapseUnchangedNodes) {
             builder.collapseUnchangedNodes()
         }
+        if (!cancellation.isActive()) return emptyList()
         val fullTrace = builder.fullTrace(st.traceKind)
         return fullTrace
     }
@@ -977,6 +981,7 @@ class MethodTraceResolver(
         )
         builder.resolveTrace(start2FinalTrace.traceKind)
         stats.traceResolverSteps += builder.steps
+        if (!cancellation.isActive()) return emptyList()
 
         if (builder.actionHardLimitReached && start2FinalTrace.final.edges.hasAlternativePremises()) {
             return start2FinalTrace.resolveExactFullCubes(
@@ -997,9 +1002,11 @@ class MethodTraceResolver(
         }
 
         builder.removeUnreachableNodes()
+        if (!cancellation.isActive()) return emptyList()
         if (collapseUnchangedNodes) {
             builder.collapseUnchangedNodes()
         }
+        if (!cancellation.isActive()) return emptyList()
         val fullTrace = builder.fullTrace(start2FinalTrace.traceKind)
         return fullTrace
     }
@@ -1010,6 +1017,7 @@ class MethodTraceResolver(
     ): List<FullStart2FinalTrace> {
         val result = mutableListOf<FullStart2FinalTrace>()
         final.forEachExactCube { cube ->
+            if (!cancellation.isActive()) return result
             val cubeTrace = SummaryTrace(method, cube, traceKind)
             val resolved = resolveIntraProceduralFullStart2FinalTrace(
                 cubeTrace,
@@ -1029,10 +1037,14 @@ class MethodTraceResolver(
         premisesByFinalFact.values.any { it.size > 1 }
 
     private inline fun <T> SummaryTrace.resolveExactCubes(
+        isActive: () -> Boolean,
         resolve: (SummaryTrace) -> List<T>,
     ): List<T> {
         val result = mutableListOf<T>()
-        final.forEachExactCube { cube -> result += resolve(copy(final = cube)) }
+        final.forEachExactCube {
+            if (!isActive()) return result
+            result += resolve(copy(final = it))
+        }
         return result
     }
 
@@ -1079,7 +1091,7 @@ class MethodTraceResolver(
     private inline fun TraceBuilder.traverseReachableNodes(reachable: BitSet, initial: BitSet, next: (Int) -> CompactIntSet) {
         initial.forEach { unprocessedEntryIds.add(it) }
 
-        while (unprocessedEntryIds.isNotEmpty()) {
+        while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
             steps++
 
             val entryId = unprocessedEntryIds.removeInt(unprocessedEntryIds.lastIndex)
@@ -1094,7 +1106,7 @@ class MethodTraceResolver(
         processedEntryIds = CompactIntSet()
         unprocessedEntryIds.add(finalEntryId)
 
-        while (unprocessedEntryIds.isNotEmpty()) {
+        while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
             val entryId = unprocessedEntryIds.removeInt(unprocessedEntryIds.lastIndex)
 
             if (processedEntryIds.contains(entryId)) continue
@@ -1147,17 +1159,21 @@ class MethodTraceResolver(
 
     private fun TraceBuilder.fullTrace(traceKind: TraceKind): List<FullStart2FinalTrace> {
         val allSuccessors = successors()
+        if (!cancellation.isActive()) return emptyList()
 
         val result = mutableListOf<FullStart2FinalTrace>()
         startEntryIds.forEach { entryId: Int ->
+            if (!cancellation.isActive()) return@forEach
             val mapper = EntryMapper(entryManager)
             val finalEntry = mapper.translate(finalEntryId)
             val startEntry = mapper.translate(entryId)
-            val successors = mapper.translateSuccessors(entryId, allSuccessors)
+            val successors = mapper.translateSuccessors(entryId, allSuccessors, cancellation)
+            if (!cancellation.isActive()) return@forEach
             val entries = mapper.entries.toTypedArray()
 
             val actionVariants = Int2ObjectOpenHashMap<List<ActionVariant>>()
             unsafeActionVariants().forEachIntEntry { key, value ->
+                if (!cancellation.isActive()) return@forEachIntEntry
                 if (!mapper.isTranslated(key)) return@forEachIntEntry
 
                 val translatedId = mapper.translate(key)
@@ -1169,18 +1185,19 @@ class MethodTraceResolver(
             )
         }
 
-        return result
+        return result.takeIf { cancellation.isActive() }.orEmpty()
     }
 
     private fun EntryMapper.translateSuccessors(
         start: Int,
-        allSuccessors: Int2ObjectOpenHashMap<CompactIntSet>
+        allSuccessors: Int2ObjectOpenHashMap<CompactIntSet>,
+        cancellation: Cancellation,
     ): Int2ObjectOpenHashMap<CompactIntSet> {
         val result = Int2ObjectOpenHashMap<CompactIntSet>()
 
         val unprocessed = IntArrayList()
         unprocessed.add(start)
-        while (unprocessed.isNotEmpty()) {
+        while (unprocessed.isNotEmpty() && cancellation.isActive()) {
             val node = unprocessed.removeInt(unprocessed.lastIndex)
 
             val translatedNode = translate(node)
@@ -1201,6 +1218,7 @@ class MethodTraceResolver(
     private fun TraceBuilder.successors(): Int2ObjectOpenHashMap<CompactIntSet> {
         val allSuccessors = Int2ObjectOpenHashMap<CompactIntSet>()
         for ((entryId, entryPredecessorIds) in predecessors) {
+            if (!cancellation.isActive()) break
             entryPredecessorIds.forEach { predecessorId: Int ->
                 allSuccessors.computeIfAbsent(predecessorId) { CompactIntSet() }.add(entryId)
             }

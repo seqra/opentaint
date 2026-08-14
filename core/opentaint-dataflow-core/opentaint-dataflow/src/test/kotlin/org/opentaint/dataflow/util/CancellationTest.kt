@@ -12,6 +12,21 @@ import kotlin.test.assertTrue
 
 class CancellationTest {
     @Test
+    fun derivedCancellationRequiresParentAndAdditionalCondition() {
+        val parent = Cancellation()
+        var condition = true
+        val derived = parent.derive { condition }
+
+        assertTrue(derived.isActive())
+        condition = false
+        assertFalse(derived.isActive())
+
+        condition = true
+        parent.cancel()
+        assertFalse(derived.isActive())
+    }
+
+    @Test
     fun cancelledCheckpointDoesNotCancelParentCoroutineScope() = runBlocking {
         val parent = Job()
         val scope = CoroutineScope(coroutineContext + parent)

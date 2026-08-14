@@ -22,6 +22,7 @@ import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
+import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 
 private val logger = object : KLogging() {}.logger
@@ -44,6 +45,7 @@ sealed interface ActionableRulesCollectionResult {
 
 fun TaintAnalysisUnitRunnerManager.collectActionableRules(
     vulnerability: VulnerabilityWithInterproceduralTrace,
+    operationCancellation: Cancellation = cancellation,
 ): ActionableRulesCollectionResult {
     val trace = vulnerability.trace ?: return ActionableRulesCollectionResult.Failed
     return collectActionableRules(
@@ -58,14 +60,14 @@ fun TaintAnalysisUnitRunnerManager.collectActionableRules(
                     is TraceResolver.InterProceduralStart2FinalTraceNode ->
                         resolver.resolveIntraProceduralFullStart2FinalTrace(
                             node.trace,
-                            cancellation,
+                            operationCancellation,
                             collapseUnchangedNodes = true,
                         )
 
                     is TraceResolver.InterProceduralSummaryTraceNode ->
                         resolver.resolveIntraProceduralFullStart2FinalTrace(
                             node.trace,
-                            cancellation,
+                            operationCancellation,
                             collapseUnchangedNodes = true,
                         )
 
@@ -77,12 +79,12 @@ fun TaintAnalysisUnitRunnerManager.collectActionableRules(
             withMethodRunner(summary.method) {
                 methodTraceResolver(summary.method).resolveIntraProceduralFullStart2FinalTrace(
                     summary,
-                    cancellation,
+                    operationCancellation,
                     collapseUnchangedNodes = true,
                 )
             }
         },
-        isActive = cancellation::isActive,
+        isActive = operationCancellation::isActive,
     )
 }
 

@@ -31,6 +31,7 @@ import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
+import org.opentaint.dataflow.ap.ifds.trace.ExactProcessingTimeBudget
 import org.opentaint.dataflow.ap.ifds.trace.InnerCallTraceResolveStrategy
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
@@ -369,6 +370,8 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         (manager as? BaseOnlyApManager)?.enableTraceResolutionMode()
 
         val entryPointsSet = entryPoints.toHashSet()
+        val exactTimeBudget =
+            ExactProcessingTimeBudget<TaintSinkTracker.TaintVulnerability>(shallowRuleSearchExactTimeLimit)
         val interProcTraces = resolveVulnerabilityInterProceduralTraces(
             entryPointsSet, vulnerabilities,
             resolverParams = TraceResolver.Params(
@@ -376,13 +379,15 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 resolveAllTraces = true,
             ),
             timeout = timeout * 0.5,
-            cancellationTimeout = 30.seconds
+            cancellationTimeout = 30.seconds,
+            exactTimeBudget = exactTimeBudget,
         )
 
         return resolveVulnerabilityActionableRules(
             interProcTraces,
             timeout = timeout * 0.5,
-            cancellationTimeout = 30.seconds
+            cancellationTimeout = 30.seconds,
+            exactTimeBudget = exactTimeBudget,
         )
     }
 
@@ -513,6 +518,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     }
 
     companion object {
+        private val shallowRuleSearchExactTimeLimit = 10.seconds
         private val logger = object : KLogging() {}.logger
     }
 }
