@@ -25,14 +25,19 @@ data class PersistentByteCodeLocationData(
 ) {
     companion object {
         fun fromSqlRecord(record: BytecodelocationsRecord) =
-            PersistentByteCodeLocationData(record.id!!, record.runtime!!, record.path!!, record.uniqueid!!)
+            PersistentByteCodeLocationData(record.id!!, parseLocationType(record.locationType), record.path!!, record.uniqueid!!)
 
         fun fromErsEntity(entity: Entity) = PersistentByteCodeLocationData(
             id = entity.id.instanceId,
-            runtime = (entity.get<Boolean>(BytecodeLocationEntity.IS_RUNTIME) == true),
+            type = parseLocationType(entity.get<String>(BytecodeLocationEntity.LOCATION_TYPE)),
             path = entity[BytecodeLocationEntity.PATH]!!,
             fileSystemId = entity[BytecodeLocationEntity.FILE_SYSTEM_ID]!!
         )
+
+        private fun parseLocationType(value: String?): LocationType {
+            requireNotNull(value) { "Bytecode location has no location type" }
+            return LocationType.valueOf(value)
+        }
     }
 }
 
