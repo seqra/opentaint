@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryApRefinement
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication.SummaryExclusionRefinement
@@ -11,10 +12,6 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 
 interface MethodSideEffectSummaryHandler {
-    fun prepareSideEffectSummary(
-        sideEffectSummary: SideEffectSummary.FactSideEffectSummary,
-    ): List<SideEffectSummary.FactSideEffectSummary>
-
     fun handleZeroToZero(
         sideEffects: List<SideEffectSummary.ZeroSideEffectSummary>,
     ): Set<Sequent> = emptySet()

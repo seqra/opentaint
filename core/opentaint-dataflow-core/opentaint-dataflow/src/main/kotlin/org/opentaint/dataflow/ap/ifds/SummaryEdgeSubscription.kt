@@ -101,6 +101,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectSummaries.isNotEmpty()) {
             callerAnalyzer.handleZeroToFactMethodSideEffectSummary(
                 listOf(sub),
+                methodEntryPoint,
                 sideEffectSummaries
             )
         }
@@ -136,7 +137,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectRequirements.isNotEmpty()) {
             callerAnalyzer.handleMethodSideEffectRequirement(
                 addedSubscription.callerPathEdge,
-                addedSubscription.calleeInitialFactBase,
+                methodEntryPoint,
                 sideEffectRequirements
             )
         }
@@ -145,6 +146,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectSummaries.isNotEmpty()) {
             callerAnalyzer.handleFactToFactMethodSideEffectSummary(
                 listOf(sub),
+                methodEntryPoint,
                 sideEffectSummaries
             )
         }
@@ -634,7 +636,8 @@ class SummaryEdgeSubscriptionManager(
                     val analyzer = processingCtx.getMethodAnalyzer(ep)
                     for (subscription in subscriptions) {
                         analyzer.handleMethodSideEffectRequirement(
-                            subscription.callerPathEdge, subscription.calleeInitialFactBase,
+                            subscription.callerPathEdge,
+                            methodEntryPoint,
                             listOf(sideEffectRequirement)
                         )
                     }
@@ -701,7 +704,7 @@ class SummaryEdgeSubscriptionManager(
                 if (summarySubs.isEmpty()) return@forEach
 
                 val analyzer = processingCtx.getMethodAnalyzer(ep)
-                analyzer.handleFactToFactMethodSideEffectSummary(summarySubs, sideEffects)
+                analyzer.handleFactToFactMethodSideEffectSummary(summarySubs, methodEntryPoint, sideEffects)
             }
 
             subscriptionStorage.findZeroEdgeSub(seInitialFact).forEach { (ep, subscriptions) ->
@@ -712,7 +715,7 @@ class SummaryEdgeSubscriptionManager(
                 if (summarySubs.isEmpty()) return@forEach
 
                 val analyzer = processingCtx.getMethodAnalyzer(ep)
-                analyzer.handleZeroToFactMethodSideEffectSummary(summarySubs, sideEffects)
+                analyzer.handleZeroToFactMethodSideEffectSummary(summarySubs, methodEntryPoint, sideEffects)
             }
         }
     }
