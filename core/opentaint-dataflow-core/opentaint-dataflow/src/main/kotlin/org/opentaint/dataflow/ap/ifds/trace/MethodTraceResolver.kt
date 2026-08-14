@@ -450,9 +450,9 @@ class MethodTraceResolver(
         statement: CommonInst,
         calleeEntry: TraceEntry.MethodEntry
     ): List<SummaryTrace> {
-        val handler = analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
+        val handler = analysisManager.getMethodCallSummaryPrecondition(apManager, analysisContext, statement)
         val traceEdges = calleeEntry.facts.flatMap { fact ->
-            val mappedFacts = handler.prepareSummaryInitialFact(fact, calleeEntry.entryPoint)
+            val mappedFacts = handler.callSummaryPrecondition(fact, calleeEntry.entryPoint)
             mappedFacts.map { resolveIntraProceduralTraceEdge(statement, it, includeStatement = false) }
         }
 
@@ -1644,7 +1644,7 @@ class MethodTraceResolver(
         startFact: MethodCallPrecondition.CallToStartResolved,
         statement: CommonInst
     ) {
-        val summaryHandler = analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
+        val handler = analysisManager.getMethodCallSummaryPrecondition(apManager, analysisContext, statement)
         val resolvedCallSummaries = mutableListOf<CallSummary>()
 
         val methodSummaries = manager.findFactToFactSummaryEdges(callee, startFact.startFactBase)
@@ -1657,7 +1657,7 @@ class MethodTraceResolver(
 
             if (deltas.isEmpty()) continue
 
-            val mappedSummaryInitial = summaryHandler.prepareSummaryInitialFact(summaryEdge.initialFactAp, callee)
+            val mappedSummaryInitial = handler.callSummaryPrecondition(summaryEdge.initialFactAp, callee)
 
             for ((matchedEntryFact, delta) in deltas) {
                 // todo: remove this check?
@@ -1692,7 +1692,7 @@ class MethodTraceResolver(
             if (!mappedSummaryFact.contains(callerFact)) continue
 
             val mappedSummaryInitialFacts = summaryEdge.initialFacts.map {
-                summaryHandler.prepareSummaryInitialFact(it, callee)
+                handler.callSummaryPrecondition(it, callee)
             }
 
             mappedSummaryInitialFacts.cartesianProductMapTo { mappedFactGroup ->

@@ -19,7 +19,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -32,7 +32,7 @@ import org.opentaint.dataflow.python.pIRDowncast
 import org.opentaint.dataflow.python.rules.PIRTaintAnalysisContext
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
 import org.opentaint.dataflow.python.trace.PIRMethodCallPrecondition
-import org.opentaint.dataflow.python.trace.PIRMethodCallSummaryPreconditionHandler
+import org.opentaint.dataflow.python.trace.PIRMethodCallSummaryPrecondition
 import org.opentaint.dataflow.python.trace.PIRMethodSequentPrecondition
 import org.opentaint.dataflow.python.trace.PIRMethodStartPrecondition
 import org.opentaint.ir.api.common.CommonMethod
@@ -177,11 +177,13 @@ class PIRAnalysisManager(
         )
     }
 
-    override fun getMethodCallSummaryPreconditionHandler(
+    override fun getMethodCallSummaryPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         statement: CommonInst
-    ): MethodCallSummaryPreconditionHandler = PIRMethodCallSummaryPreconditionHandler
+    ): MethodCallSummaryPrecondition = PIRMethodCallSummaryPrecondition(
+        statement as PIRCall, analysisContext as PIRMethodAnalysisContext
+    )
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

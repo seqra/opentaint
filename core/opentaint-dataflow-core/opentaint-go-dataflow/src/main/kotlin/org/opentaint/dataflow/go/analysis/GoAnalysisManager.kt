@@ -20,7 +20,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.go.GoCallExpr
@@ -31,7 +30,6 @@ import org.opentaint.dataflow.go.graph.GoApplicationGraph
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.go.rules.GoTaintRulesProvider
 import org.opentaint.dataflow.go.trace.GoMethodCallPrecondition
-import org.opentaint.dataflow.go.trace.GoMethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.go.trace.GoMethodSequentPrecondition
 import org.opentaint.dataflow.go.trace.GoMethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -46,6 +44,8 @@ import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
+import org.opentaint.dataflow.go.trace.GoMethodCallSummaryPrecondition
 
 /**
  * Central factory that wires all Go dataflow analysis components together.
@@ -160,11 +160,13 @@ class GoAnalysisManager(
         )
     }
 
-    override fun getMethodCallSummaryPreconditionHandler(
+    override fun getMethodCallSummaryPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         statement: CommonInst
-    ): MethodCallSummaryPreconditionHandler = GoMethodCallSummaryPreconditionHandler
+    ): MethodCallSummaryPrecondition {
+        return GoMethodCallSummaryPrecondition(statement as GoIRInst)
+    }
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

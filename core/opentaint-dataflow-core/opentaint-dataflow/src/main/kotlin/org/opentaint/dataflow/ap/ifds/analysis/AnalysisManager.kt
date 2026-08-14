@@ -10,7 +10,7 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -91,11 +91,11 @@ interface AnalysisManager: LanguageManager {
         statement: CommonInst,
     ): MethodCallSummaryHandler
 
-    fun getMethodCallSummaryPreconditionHandler(
+    fun getMethodCallSummaryPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         statement: CommonInst,
-    ): MethodCallSummaryPreconditionHandler
+    ): MethodCallSummaryPrecondition
 
     fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

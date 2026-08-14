@@ -21,7 +21,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
@@ -37,7 +36,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
-import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallSummaryPreconditionHandler
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
@@ -54,6 +52,8 @@ import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
+import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallSummaryPrecondition
 
 class JIRAnalysisManager(
     cp: JIRClasspath,
@@ -238,11 +238,14 @@ class JIRAnalysisManager(
         }
     }
 
-    override fun getMethodCallSummaryPreconditionHandler(
+    override fun getMethodCallSummaryPrecondition(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         statement: CommonInst
-    ): MethodCallSummaryPreconditionHandler = JIRMethodCallSummaryPreconditionHandler
+    ): MethodCallSummaryPrecondition {
+        jIRDowncast<JIRInst>(statement)
+        return JIRMethodCallSummaryPrecondition(statement)
+    }
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

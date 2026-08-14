@@ -43,8 +43,8 @@ class PIRMethodCallSummaryHandler(
 
     override fun prepareSummaryInitialFact(fact: InitialFactAp, callee: MethodEntryPoint): List<InitialFactAp> {
         val callSiteBase = factMapper.toCallerFrame(callInst, callee.callee, fact.base) ?: return emptyList()
-        val callerBase = factMapper.mapCallSiteBaseToCaller(callInst, callSiteBase) ?: return emptyList()
-        return listOf(fact.rebase(callerBase))
+        return factMapper.mapMethodExitToReturnFlowFact(callInst, fact.rebase(callSiteBase))
+            .map { fact.rebase(it.base) }
     }
 
     override fun prepareSummaryFinalFact(fact: FinalFactAp, callee: MethodEntryPoint): List<FinalFactAp> =
