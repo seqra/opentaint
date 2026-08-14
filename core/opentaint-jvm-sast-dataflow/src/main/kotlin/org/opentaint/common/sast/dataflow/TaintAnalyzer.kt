@@ -208,18 +208,33 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         logger.info { "Start actionable rules discovery" }
         val ruleDiscoveryTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.5
 
-        val actionableRules = if (
-            analysisManager.supportsForwardActionableRuleSelection && !options.storeSummaries
-        ) {
-            listOf(ActionableRulesCollectionResult.Collected(forwardActionableRules(vulnerabilities)))
-        } else {
-            ifdsEngine.resolveActionableRules(shallowScanManager, entryPoints, vulnerabilities, ruleDiscoveryTimeout)
-        }.also { logger.info { "Finish actionable rules discovery" } }
+        val ruleSearchResults = ifdsEngine.resolveActionableRules(
+            shallowScanManager,
+            entryPoints,
+            vulnerabilities,
+            ruleDiscoveryTimeout,
+        ).also { logger.info { "Finish actionable rules discovery" } }
 
-        val successfullyResolvedRules = actionableRules.filterIsInstance<ActionableRulesCollectionResult.Collected>()
-        if (successfullyResolvedRules.size != actionableRules.size) {
-            val delta = actionableRules.size - successfullyResolvedRules.size
-            logger.info { "Filter out $delta discoveries without traces" }
+        check(ruleSearchResults.size == vulnerabilities.size) {
+            "Actionable rule search result count does not match vulnerability count"
+        }
+
+        val invalidTraces = ruleSearchResults.count { it === ActionableRulesCollectionResult.Failed }
+        if (invalidTraces > 0) {
+            logger.info { "Filter out $invalidTraces discoveries with invalid traces" }
+        }
+
+        val successfullyResolvedRules = actionableRulesWithFallback(ruleSearchResults) { unprocessedIndices ->
+            val uncoveredVulnerabilities = unprocessedIndices.map(vulnerabilities::get)
+            if (analysisManager.supportsForwardActionableRuleFallback) {
+                logger.info {
+                    "Use forward actionable rule fallback for ${uncoveredVulnerabilities.size} unprocessed discoveries"
+                }
+                ActionableRulesCollectionResult.Collected(forwardActionableRules(uncoveredVulnerabilities))
+            } else {
+                logger.info { "Filter out ${uncoveredVulnerabilities.size} discoveries without traces" }
+                null
+            }
         }
 
         val ruleDiscoveryStatus = ifdsEngine.status.get()
@@ -231,7 +246,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     private fun forwardActionableRules(
         vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
     ): ActionableRules {
-        val recordedRules = ifdsEngine.getForwardActionableRules()
+        val uncoveredSinkRules = vulnerabilities
+            .flatMapTo(linkedSetOf()) { it.vulnerabilityRules.keys }
+        val recordedRules = analysisManager.relevantForwardActionableRules(
+            ifdsEngine.getForwardActionableRules(),
+            uncoveredSinkRules,
+        )
         val result = recordedRules.mapValuesTo(linkedMapOf()) { (_, statementRules) ->
             statementRules.mapValuesTo(linkedMapOf()) { (_, actions) -> actions.toMutableSet() }
         }
@@ -246,7 +266,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val sources = result.values.sumOf { statementRules -> statementRules.count { it.value.isNotEmpty() } }
         val sinks = result.values.sumOf { statementRules -> statementRules.count { it.value.isEmpty() } }
         logger.info {
-            "Forward actionable rule selection: $sources successful source rules, $sinks confirmed sinks"
+            "Forward actionable rule fallback: $sources relevant source rules, $sinks uncovered sinks"
         }
         return result
     }

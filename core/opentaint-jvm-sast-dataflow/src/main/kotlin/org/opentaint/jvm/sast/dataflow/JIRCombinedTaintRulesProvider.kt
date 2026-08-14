@@ -96,4 +96,15 @@ class JIRCombinedTaintRulesProvider(
         base.selectRules(ruleIds)
         combined.selectRules(ruleIds)
     }
+
+    override fun relevantRuleIds(candidateRuleIds: Set<String>): Set<String>? {
+        val relevantRuleIds = listOfNotNull(
+            base.relevantRuleIds(candidateRuleIds),
+            combined.relevantRuleIds(candidateRuleIds),
+        )
+        if (relevantRuleIds.isEmpty()) return null
+        return buildSet {
+            relevantRuleIds.forEach(::addAll)
+        }
+    }
 }

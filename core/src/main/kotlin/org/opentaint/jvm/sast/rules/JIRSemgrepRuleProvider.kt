@@ -47,6 +47,9 @@ class JIRSemgrepRuleProvider(
         selectRelevantSemgrepRules(ruleIds)
     }
 
+    override fun relevantRuleIds(candidateRuleIds: Set<String>): Set<String> =
+        relevantSemgrepRuleIds(candidateRuleIds)
+
     override fun entryPointRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,

@@ -24,6 +24,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
+import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
@@ -48,6 +49,8 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
@@ -81,7 +84,37 @@ class JIRAnalysisManager(
     val externalMethodTracker: ExternalMethodTracker? = null,
     private val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
-    override val supportsForwardActionableRuleSelection: Boolean = true
+    override val supportsForwardActionableRuleFallback: Boolean = true
+
+    override fun relevantForwardActionableRules(
+        rules: ActionableRules,
+        uncoveredSinkRules: Set<CommonTaintConfigurationItem>,
+    ): ActionableRules {
+        if (uncoveredSinkRules.isEmpty()) return rules
+
+        val sinkRuleIds = hashSetOf<String>()
+        for (rule in uncoveredSinkRules) {
+            val ruleId = (rule as? TaintConfigurationItem)?.serializedId ?: return rules
+            sinkRuleIds += ruleId
+        }
+
+        val candidateRuleIds = rules.values
+            .asSequence()
+            .flatMap { it.keys.asSequence() }
+            .mapNotNullTo(hashSetOf()) { (it as? TaintConfigurationItem)?.serializedId }
+        candidateRuleIds += sinkRuleIds
+
+        val relevantRuleIds = taintConfig.relevantRuleIds(candidateRuleIds) ?: return rules
+        return buildMap {
+            rules.forEach { (statement, statementRules) ->
+                val retainedRules = statementRules.filterTo(linkedMapOf()) { (rule, _) ->
+                    val ruleId = (rule as? TaintConfigurationItem)?.serializedId
+                    ruleId == null || ruleId in relevantRuleIds
+                }
+                if (retainedRules.isNotEmpty()) put(statement, retainedRules)
+            }
+        }
+    }
 
     private object StaticFieldAccessDetector :
         JIRExprVisitor.Default<Boolean>,

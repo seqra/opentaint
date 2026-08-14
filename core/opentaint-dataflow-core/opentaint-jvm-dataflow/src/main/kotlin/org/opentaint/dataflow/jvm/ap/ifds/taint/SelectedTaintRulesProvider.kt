@@ -119,6 +119,9 @@ class SelectedTaintRulesProvider(
         delegate.selectRules(ruleIds)
     }
 
+    override fun relevantRuleIds(candidateRuleIds: Set<String>): Set<String>? =
+        delegate.relevantRuleIds(candidateRuleIds)
+
     override fun entryPointRulesForMethod(
         method: CommonMethod,
         statement: CommonInst,

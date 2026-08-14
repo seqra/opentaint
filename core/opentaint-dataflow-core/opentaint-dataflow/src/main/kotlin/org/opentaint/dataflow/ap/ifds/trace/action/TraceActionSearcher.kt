@@ -35,6 +35,7 @@ private enum class RuleResolutionSkipReason {
 
 sealed interface ActionableRulesCollectionResult {
     data object Failed : ActionableRulesCollectionResult
+    data object Unprocessed : ActionableRulesCollectionResult
 
     data class Collected(
         val rules: Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>,

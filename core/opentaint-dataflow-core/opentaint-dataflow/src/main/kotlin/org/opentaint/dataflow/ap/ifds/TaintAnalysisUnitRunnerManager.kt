@@ -237,7 +237,7 @@ class TaintAnalysisUnitRunnerManager(
 
         if (!timeout.isPositive()) {
             updateFailureStatus(Status.TIMEOUT)
-            return vulnerabilities.map { ActionableRulesCollectionResult.Failed }
+            return vulnerabilities.map { ActionableRulesCollectionResult.Unprocessed }
         }
 
         cancellation.activate()
@@ -294,7 +294,9 @@ class TaintAnalysisUnitRunnerManager(
 
         if (!timeout.isPositive()) {
             updateFailureStatus(Status.TIMEOUT)
-            return vulnerabilities.map { VulnerabilityWithInterproceduralTrace(it, trace = null) }
+            return vulnerabilities.map {
+                VulnerabilityWithInterproceduralTrace(it, trace = null, traceResolutionCompleted = false)
+            }
         }
 
         cancellation.activate()
@@ -346,7 +348,11 @@ class TaintAnalysisUnitRunnerManager(
             }
 
             override fun createUnprocessed(item: TraceResolver.State): VulnerabilityWithInterproceduralTrace =
-                VulnerabilityWithInterproceduralTrace(item.vulnerability, trace = null)
+                VulnerabilityWithInterproceduralTrace(
+                    item.vulnerability,
+                    trace = null,
+                    traceResolutionCompleted = false,
+                )
 
             private var prevStats: MethodStats? = null
 
@@ -430,12 +436,20 @@ class TaintAnalysisUnitRunnerManager(
             analyzerDispatcher, name = "Trace actionable entries resolution", vulnerabilities
         ) {
             override fun processItem(item: VulnerabilityWithInterproceduralTrace): ProcessingResult<VulnerabilityWithInterproceduralTrace, ActionableRulesCollectionResult> {
+                if (!item.traceResolutionCompleted) {
+                    return ProcessingResult.Done(ActionableRulesCollectionResult.Unprocessed)
+                }
                 val resolved = collectActionableRules(item)
-                return ProcessingResult.Done(resolved)
+                val result = if (resolved === ActionableRulesCollectionResult.Failed && !cancellation.isActive()) {
+                    ActionableRulesCollectionResult.Unprocessed
+                } else {
+                    resolved
+                }
+                return ProcessingResult.Done(result)
             }
 
             override fun createUnprocessed(item: VulnerabilityWithInterproceduralTrace): ActionableRulesCollectionResult =
-                ActionableRulesCollectionResult.Failed
+                ActionableRulesCollectionResult.Unprocessed
 
             override fun reportStats() {
                 logger.info { reportMemoryUsage() }
