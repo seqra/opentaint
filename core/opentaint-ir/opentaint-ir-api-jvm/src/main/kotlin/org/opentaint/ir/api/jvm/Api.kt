@@ -11,8 +11,20 @@ import java.io.File
 
 enum class LocationType {
     RUNTIME,
-    APP
+    APP,
+    LIB,
 }
+
+/**
+ * A bytecode artifact together with the role it has in a database.
+ *
+ * The type is assigned when the artifact is registered and cannot be changed by
+ * subsequently creating a classpath.
+ */
+data class ByteCodeLocationSpec(
+    val file: File,
+    val type: LocationType,
+)
 
 interface ClassSource {
     val className: String
@@ -82,6 +94,15 @@ interface JIRDatabase : Closeable {
      */
     suspend fun load(dirOrJars: List<File>): JIRDatabase
     fun asyncLoad(dirOrJars: List<File>) = GlobalScope.future { load(dirOrJars) }
+
+    /**
+     * Process and index byte-code resources with the specified location type.
+     *
+     * An artifact that is already registered with another type cannot be
+     * reclassified and causes the load operation to fail.
+     */
+    suspend fun load(dirOrJars: List<File>, type: LocationType): JIRDatabase
+    fun asyncLoad(dirOrJars: List<File>, type: LocationType) = GlobalScope.future { load(dirOrJars, type) }
 
     /**
      * load locations
@@ -183,5 +204,8 @@ interface RegisteredLocation {
     val jIRLocation: JIRByteCodeLocation?
     val id: Long
     val path: String
+    val type: LocationType
+
     val isRuntime: Boolean
+        get() = type == LocationType.RUNTIME
 }
