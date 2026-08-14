@@ -1,8 +1,10 @@
 package org.opentaint.ir.impl.fs
 
 import mu.KLogging
+import org.opentaint.ir.api.jvm.ByteCodeLocationSpec
 import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JavaVersion
+import org.opentaint.ir.api.jvm.LocationType
 import java.io.File
 import java.nio.file.Paths
 import java.util.jar.JarFile
@@ -17,14 +19,14 @@ private val logger = object : KLogging() {}.logger
  */
 fun File.dirOrJarAsBytecodeLocation(
     runtimeVersion: JavaVersion,
-    isRuntime: Boolean
+    type: LocationType,
 ): Collection<JIRByteCodeLocation> = runCatching {
     if (isJar()) {
-        return mutableSetOf<File>().also { classPath(it) }.map { JarLocation(it, isRuntime, runtimeVersion) }
+        return mutableSetOf<File>().also { classPath(it) }.map { JarLocation(it, type, runtimeVersion) }
     }
 
     if (isDirectory) {
-        return listOf(BuildFolderLocation(this))
+        return listOf(BuildFolderLocation(this, type))
     }
 
     logger.error("Invalid bytecode location: $absolutePath")
@@ -33,15 +35,15 @@ fun File.dirOrJarAsBytecodeLocation(
     logger.error(it) { "Failed to read bytecode location" }
 }.getOrNull() ?: emptyList()
 
-fun Collection<File>.createNonRuntimeByteCodeLocations(runtimeVersion: JavaVersion): List<JIRByteCodeLocation> =
-    filterExisting()
-        .flatMap { it.dirOrJarAsBytecodeLocation(runtimeVersion, isRuntime = false) }
+fun Collection<ByteCodeLocationSpec>.createByteCodeLocations(runtimeVersion: JavaVersion): List<JIRByteCodeLocation> =
+    filterExisting { it.file }
+        .flatMap { spec -> spec.file.dirOrJarAsBytecodeLocation(runtimeVersion, spec.type) }
         .distinct()
 
-fun Collection<File>.filterExisting(): List<File> = filter { file ->
-    file.exists().also {
+fun <T> Collection<T>.filterExisting(file: (T) -> File): List<T> = filter { item ->
+    file(item).exists().also {
         if (!it) {
-            logger.warn("${file.absolutePath} doesn't exists. make sure there is no mistake")
+            logger.warn("${file(item).absolutePath} doesn't exists. make sure there is no mistake")
         }
     }
 }
