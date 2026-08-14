@@ -26,6 +26,7 @@ interface JIRClasspath : Closeable, CommonProject {
     val registeredLocations: List<RegisteredLocation>
     val registeredLocationIds: Set<Long>
     val features: List<JIRClasspathFeature>?
+    val classPathResolution: JIRClasspathResolution
 
     /**
      *  @param name full name of the type
@@ -71,6 +72,11 @@ interface JIRClasspath : Closeable, CommonProject {
     fun <T : JIRClasspathTask> executeAsync(task: T): Future<T> = GlobalScope.future { execute(task) }
 
     fun isInstalled(feature: JIRClasspathFeature): Boolean
+}
+
+interface JIRClasspathResolution {
+    fun selectClassSource(candidates: Sequence<ClassSource>): ClassSource?
+    fun distinctClassSources(candidates: Sequence<ClassSource>): List<ClassSource>
 }
 
 interface JIRClasspathTask {
