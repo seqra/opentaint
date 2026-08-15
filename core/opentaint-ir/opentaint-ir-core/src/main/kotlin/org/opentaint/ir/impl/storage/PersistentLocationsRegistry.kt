@@ -185,7 +185,11 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                             requestedType = location.type
                         )
                     }
-                    resolvedByFileSystemId[location.fileSystemId] = PersistentByteCodeLocation(jIRdb, found, location)
+                    resolvedByFileSystemId[location.fileSystemId] = PersistentByteCodeLocation(
+                        jIRdb,
+                        found,
+                        location.takeIf { it.type == found.type }
+                    )
                 }
             }
             val records = context.execute(
@@ -380,6 +384,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         return context.execute(
             sqlAction = {
                 val record = BytecodelocationsRecord().also {
+                    it.id = requireNotNull(idGen).incrementAndGet()
                     it.path = path
                     it.uniqueid = fileSystemId
                     it.locationType = type.persistentValue

@@ -25,7 +25,6 @@ open class JarLocation(
         get() {
             val jarFile = jarFile() ?: return BigInteger.ZERO
             return Hashing.sha256().newHasher().let { h ->
-                h.putString(type.name, UTF_8)
                 jarFile.use { jf ->
                     jf.entries().asSequence().filter { !it.isDirectory }.sortedBy { it.name }.forEach { entry ->
                         h.putString(entry.name, UTF_8)

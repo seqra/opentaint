@@ -79,8 +79,21 @@ class JIRDatabaseImpl(
     }
 
     override val id: String
-        get() = locations.mapNotNull { it.jIRLocation?.fileSystemIdHash }
-            .fold(featuresHash) { result, hash -> result xor hash }.toString(Character.MAX_RADIX)
+        get() {
+            val typedLocations = locations.mapNotNull { location ->
+                location.jIRLocation?.fileSystemId?.let { it to location.type.name }
+            }.sortedWith(compareBy<Pair<String, String>> { it.first }.thenBy { it.second })
+            if (typedLocations.isEmpty()) {
+                return featuresHash.toString(Character.MAX_RADIX)
+            }
+
+            val hasher = Hashing.sha256().newHasher()
+            typedLocations.forEach { (fileSystemId, type) ->
+                hasher.putString(fileSystemId, StandardCharsets.UTF_8).putByte(0)
+                hasher.putString(type, StandardCharsets.UTF_8).putByte(0)
+            }
+            return (featuresHash xor BigInteger(hasher.hash().asBytes())).toString(Character.MAX_RADIX)
+        }
 
     override val locations: List<RegisteredLocation> get() = locationsRegistry.actualLocations
 

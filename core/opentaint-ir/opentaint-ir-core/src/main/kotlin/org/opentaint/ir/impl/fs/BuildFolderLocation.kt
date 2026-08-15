@@ -41,7 +41,6 @@ class BuildFolderLocation private constructor(
     override val currentHash: BigInteger
         get() {
             return Hashing.sha256().newHasher().let { h ->
-                h.putString(type.name, UTF_8)
                 jarOrFolder.walk().filter { it.isFile }.sortedBy { it.name }.forEach {
                     h.putString(it.name, UTF_8)
                     h.putBytes(it.mapReadonly())

@@ -58,6 +58,24 @@ class LocationTypeTest {
     }
 
     @Test
+    fun `location type does not change artifact file system identity`() {
+        val directory = tempDir.resolve("classes-identity").toFile().apply {
+            mkdir()
+            resolve("content.class").writeBytes(byteArrayOf(1, 2, 3))
+        }
+        val jar = tempDir.resolve("identity.jar").toFile().also { createJar(it) }
+
+        assertEquals(
+            BuildFolderLocation(directory, LocationType.APP).fileSystemId,
+            BuildFolderLocation(directory, LocationType.LIB).fileSystemId,
+        )
+        assertEquals(
+            JarLocation(jar, LocationType.APP, javaVersion).fileSystemId,
+            JarLocation(jar, LocationType.LIB, javaVersion).fileSystemId,
+        )
+    }
+
+    @Test
     fun `jar and manifest classpath entries inherit the requested type`() {
         val dependency = tempDir.resolve("dependency.jar").toFile().also { createJar(it) }
         val root = tempDir.resolve("root.jar").toFile().also {

@@ -31,7 +31,10 @@ class LocationRegistrationTest {
             val classpath = runBlocking { db.classpath(listOf(location)) }
             try {
                 assertEquals(LocationType.LIB, db.locations.single().type)
-                assertEquals(LocationType.LIB, classpath.registeredLocations.single().type)
+                val registeredLocation = classpath.registeredLocations.single()
+                assertEquals(LocationType.LIB, registeredLocation.type)
+                assertEquals(LocationType.LIB, registeredLocation.jIRLocation?.type)
+                assertEquals(LocationType.LIB, classpath.locations.single().type)
             } finally {
                 classpath.close()
             }
