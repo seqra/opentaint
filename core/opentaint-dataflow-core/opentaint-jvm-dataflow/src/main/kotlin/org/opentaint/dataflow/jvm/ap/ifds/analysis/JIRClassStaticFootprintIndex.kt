@@ -127,7 +127,9 @@ internal class JIRClassStaticFootprintIndex(
                             resolvedCallees += result.method
                         }
 
-                        JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> Unit
+                        JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> {
+                            hasUnknownCallee = true
+                        }
 
                         is JIRCallResolver.MethodResolutionResult.Lambda -> {
                             val tracker = context.lambdaCallResolution[statement.location.index]
