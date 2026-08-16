@@ -25,7 +25,12 @@ class MethodTaintMarkReachabilityIndexTest {
         index.recordExactSummary("transform", "raw", "encoded")
         index.recordInputMark("sink", "encoded")
 
-        val reachable = index.statesThatCanReach("sink", setOf("encoded"), emptyMap())
+        val reachable = index.statesThatCanReach(
+            "sink",
+            setOf("encoded"),
+            emptyMap(),
+            relevantMarks = setOf("raw", "encoded"),
+        )
 
         assertTrue(MethodTaintMarkState("entry", "raw") in reachable)
         assertFalse(MethodTaintMarkState("entry", "unrelated") in reachable)
@@ -39,7 +44,12 @@ class MethodTaintMarkReachabilityIndexTest {
         index.recordSummary("pass", emptySet(), emptySet())
         index.recordInputMark("sink", "tainted")
 
-        val reachable = index.statesThatCanReach("sink", setOf("tainted"), emptyMap())
+        val reachable = index.statesThatCanReach(
+            "sink",
+            setOf("tainted"),
+            emptyMap(),
+            relevantMarks = setOf("tainted"),
+        )
 
         assertFalse(MethodTaintMarkState("entry", "tainted") in reachable)
         assertEquals(1, index.stats().methods)
@@ -57,8 +67,53 @@ class MethodTaintMarkReachabilityIndexTest {
             ruleTransitions = mapOf(
                 "entry" to setOf(TaintMarkTransition("raw", "validated")),
             ),
+            relevantMarks = setOf("raw", "validated"),
         )
 
         assertTrue(MethodTaintMarkState("entry", "raw") in reachable)
+    }
+
+    @Test
+    fun `ignores summary marks outside the vulnerability rule graph`() {
+        val index = MethodTaintMarkReachabilityIndex<String>()
+        index.addCall("entry", "transform")
+        index.addCall("transform", "sink")
+        index.recordExactSummary("transform", "raw", "validated")
+        index.recordExactSummary("transform", "unrelated", "validated")
+        index.recordInputMark("sink", "validated")
+
+        val reachable = index.statesThatCanReach(
+            targetMethod = "sink",
+            targetMarks = setOf("validated"),
+            ruleTransitions = emptyMap(),
+            relevantMarks = setOf("raw", "validated"),
+        )
+
+        assertTrue(MethodTaintMarkState("transform", "raw") in reachable)
+        assertTrue(MethodTaintMarkState("entry", "raw") in reachable)
+        assertFalse(MethodTaintMarkState("transform", "unrelated") in reachable)
+        assertFalse(MethodTaintMarkState("entry", "unrelated") in reachable)
+    }
+
+    @Test
+    fun `ignores rule transitions outside the vulnerability rule graph`() {
+        val index = MethodTaintMarkReachabilityIndex<String>()
+        index.addCall("entry", "sink")
+        index.recordInputMark("sink", "validated")
+
+        val reachable = index.statesThatCanReach(
+            targetMethod = "sink",
+            targetMarks = setOf("validated"),
+            ruleTransitions = mapOf(
+                "entry" to setOf(
+                    TaintMarkTransition("raw", "validated"),
+                    TaintMarkTransition("unrelated", "validated"),
+                ),
+            ),
+            relevantMarks = setOf("raw", "validated"),
+        )
+
+        assertTrue(MethodTaintMarkState("entry", "raw") in reachable)
+        assertFalse(MethodTaintMarkState("entry", "unrelated") in reachable)
     }
 }

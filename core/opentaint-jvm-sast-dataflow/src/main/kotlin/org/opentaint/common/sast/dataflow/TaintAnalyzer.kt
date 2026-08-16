@@ -266,9 +266,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 vulnerability.vulnerabilityRules.keys,
             )
             val ruleTransitions = hashMapOf<CommonMethod, MutableSet<TaintMarkTransition>>()
+            val relevantMarks = hashSetOf<String>()
             for ((statement, statementRules) in relevantRules) {
                 for ((rule, actions) in statementRules) {
                     val flow = rule.taintRuleMarkFlow(actions)
+                    relevantMarks += flow.inputMarks
+                    relevantMarks += flow.outputMarks
                     if (!flow.outputMarksComplete) continue
                     val methodTransitions = ruleTransitions.getOrPut(statement.location.method, ::hashSetOf)
                     flow.inputMarks.forEach { inputMark ->
@@ -281,10 +284,16 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             val sinkMarks = vulnerability.vulnerabilityRules.keys.flatMapTo(hashSetOf()) { sinkRule ->
                 sinkRule.taintRuleMarkFlow(emptySet()).inputMarks
             }
+            relevantMarks += sinkMarks
             val markReachableStates = if (sinkMarks.isEmpty()) {
                 null
             } else {
-                ifdsEngine.taintMarkStatesThatCanReach(sinkMethod, sinkMarks, ruleTransitions)
+                ifdsEngine.taintMarkStatesThatCanReach(
+                    sinkMethod,
+                    sinkMarks,
+                    ruleTransitions,
+                    relevantMarks,
+                )
             }
             var candidates = 0
             var retained = 0
@@ -312,7 +321,8 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             logger.info {
                 "Forward actionable rule mark-reachability filter for $sinkMethod: " +
                     "$retained/$candidates source rules, ${markReachableStates?.size ?: 0} mark states, " +
-                    "${reachableMethods.size} methods; summaries: ${summaryStats.methods} methods, " +
+                    "${relevantMarks.size} relevant marks, ${reachableMethods.size} methods; " +
+                    "summaries: ${summaryStats.methods} methods, " +
                     "${summaryStats.transitions} transitions"
             }
 

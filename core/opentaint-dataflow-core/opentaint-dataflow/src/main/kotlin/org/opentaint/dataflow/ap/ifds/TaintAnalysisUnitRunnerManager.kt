@@ -624,8 +624,9 @@ class TaintAnalysisUnitRunnerManager(
         method: CommonMethod,
         marks: Set<String>,
         ruleTransitions: Map<CommonMethod, Set<TaintMarkTransition>>,
+        relevantMarks: Set<String>,
     ): Set<MethodTaintMarkState<CommonMethod>> =
-        methodTaintMarkReachability.statesThatCanReach(method, marks, ruleTransitions)
+        methodTaintMarkReachability.statesThatCanReach(method, marks, ruleTransitions, relevantMarks)
 
     fun methodTaintMarkSummaryStats(): MethodTaintMarkSummaryStats =
         methodTaintMarkReachability.stats()

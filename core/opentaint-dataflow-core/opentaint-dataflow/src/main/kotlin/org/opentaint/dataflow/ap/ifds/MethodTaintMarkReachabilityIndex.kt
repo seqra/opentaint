@@ -72,20 +72,24 @@ internal class MethodTaintMarkReachabilityIndex<Method> {
         targetMethod: Method,
         targetMarks: Set<String>,
         ruleTransitions: Map<Method, Set<TaintMarkTransition>>,
+        relevantMarks: Set<String>,
     ): Set<MethodTaintMarkState<Method>> {
-        if (targetMarks.isEmpty()) return emptySet()
+        if (targetMarks.isEmpty() || relevantMarks.isEmpty()) return emptySet()
 
         val reverseRuleTransitions = ruleTransitions.mapValues { (_, transitions) ->
-            transitions.groupBy({ it.outputMark }, { it.inputMark })
+            transitions.asSequence()
+                .filter { it.inputMark in relevantMarks && it.outputMark in relevantMarks }
+                .groupBy({ it.outputMark }, { it.inputMark })
         }
         val reachable = hashSetOf<MethodTaintMarkState<Method>>()
         val pending = ArrayDeque<MethodTaintMarkState<Method>>()
-        targetMarks.forEach { mark ->
+        targetMarks.asSequence().filter { it in relevantMarks }.forEach { mark ->
             val state = MethodTaintMarkState(targetMethod, mark)
             if (reachable.add(state)) pending.addLast(state)
         }
 
         fun enqueue(method: Method, mark: String) {
+            if (mark !in relevantMarks) return
             val state = MethodTaintMarkState(method, mark)
             if (reachable.add(state)) pending.addLast(state)
         }
