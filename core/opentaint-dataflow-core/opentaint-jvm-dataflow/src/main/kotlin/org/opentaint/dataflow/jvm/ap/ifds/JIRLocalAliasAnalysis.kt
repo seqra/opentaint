@@ -114,10 +114,16 @@ class JIRLocalAliasAnalysis(
         private fun PositionAccessor.toAaAccessor(): AAHeapAccessor? = when (this) {
             is PositionAccessor.AnyFieldAccessor -> null
             is PositionAccessor.ElementAccessor -> ArrayAlias
-            is PositionAccessor.FieldAccessor -> FieldAlias(
-                AliasAccessor.Field(className, fieldName, fieldType),
-                isImmutable = false
-            )
+            is PositionAccessor.FieldAccessor -> {
+                if (fieldName == "<rule-storage>") {
+                    null
+                } else {
+                    FieldAlias(
+                        AliasAccessor.Field(className, fieldName, fieldType),
+                        isImmutable = false
+                    )
+                }
+            }
         }
     }
 
