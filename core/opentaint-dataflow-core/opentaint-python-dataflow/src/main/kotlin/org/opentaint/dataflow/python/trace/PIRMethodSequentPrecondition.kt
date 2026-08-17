@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.python.trace
 
+import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
@@ -27,10 +28,12 @@ import org.opentaint.dataflow.python.analysis.PIRMethodCallFactMapper
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.taint.InitialFactReader
+import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
+import org.opentaint.dataflow.taint.preconditionDnf
 import org.opentaint.util.Maybe
 import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRBinaryExpr
@@ -103,7 +106,7 @@ class PIRMethodSequentPrecondition(
      */
     private fun MutableSet<SequentPrecondition>.attributeSourceRulePrecondition(fact: InitialFactAp) {
         val inst = currentInst as? PIRLoadAttr ?: return
-        val calleeFact = inst.mapFactToAttributeFrame(fact) ?: return
+        val calleeFact = mapFactToAttributeFrame(inst, fact) ?: return
 
         val sourceRules = attributeNames(inst).flatMap { rulesProvider.sourcesForAttribute(it) }
         if (sourceRules.isEmpty()) return
@@ -123,9 +126,35 @@ class PIRMethodSequentPrecondition(
                 mkSource = { r, actions ->
                     this += MethodSequentPrecondition.SequentSource(fact, TaintRulePrecondition.Source(r, actions))
                 },
-                // Attribute source rules are asserted unconditional by the forward function.
-                mkPass = { _, _, _ -> },
+                mkPass = { _, _, expr ->
+                    conditionalSourcePrecondition(inst, fact, expr)
+                },
             )
+        }
+    }
+
+    private fun MutableSet<SequentPrecondition>.conditionalSourcePrecondition(
+        inst: PIRLoadAttr,
+        fact: InitialFactAp,
+        condition: TaintMarkAwareConditionExpr,
+    ) {
+        val cubes = condition.preconditionDnf(
+            apManager,
+            allFactsAtStatement = { TODO("All facts enumeration is not supported") },
+            mapFacts = { listOfNotNull(PIRMethodCallFactMapper.mapLoadAttributeFactToReturn(inst, it)) },
+        )
+
+        val preconditionFacts = cubes.mapNotNull {
+            if (it.facts.size != 1) {
+                logger.warn("Attribute source precondition is not resolved")
+                null
+            } else {
+                it.facts.single()
+            }
+        }
+
+        if (preconditionFacts.isNotEmpty()) {
+            this += PreconditionFactsForInitialFact(fact, preconditionFacts)
         }
     }
 
@@ -135,7 +164,7 @@ class PIRMethodSequentPrecondition(
      */
     private fun attributePassRulePrecondition(fact: InitialFactAp): List<InitialFactAp> {
         val inst = currentInst as? PIRLoadAttr ?: return emptyList()
-        val calleeFact = inst.mapFactToAttributeFrame(fact) ?: return emptyList()
+        val calleeFact = mapFactToAttributeFrame(inst, fact) ?: return emptyList()
 
         val passRules = attributeNames(inst).flatMap { rulesProvider.passThroughForAttribute(it) }
         if (passRules.isEmpty()) return emptyList()
@@ -181,11 +210,14 @@ class PIRMethodSequentPrecondition(
      * Inverse of [PIRMethodCallFactMapper.mapLoadAttributeFactToReturn]: lift a fact
      * from the caller frame into the attribute-load frame the rules are written against.
      */
-    private fun PIRLoadAttr.mapFactToAttributeFrame(fact: InitialFactAp): InitialFactAp? = when (fact.base) {
-        base(target) -> fact.rebase(AccessPathBase.Return)
-        base(obj) -> fact.rebase(AccessPathBase.This)
-        is AccessPathBase.ClassStatic -> fact
-        else -> null
+    private fun mapFactToAttributeFrame(inst: PIRLoadAttr, fact: InitialFactAp): InitialFactAp? {
+        if (fact.base == base(inst.target)) return fact.rebase(AccessPathBase.Return)
+
+        var result: InitialFactAp? = null
+        PIRMethodCallFactMapper.mapLoadAttributeFactToStart(inst, fact) { mapped, newBase ->
+            if (result == null) result = mapped.rebase(newBase)
+        }
+        return result
     }
 
     private fun attributeNames(inst: PIRLoadAttr): Set<String> = callResolver.resolveAttribute(inst)
@@ -328,4 +360,8 @@ class PIRMethodSequentPrecondition(
     private fun base(value: PIRValue): AccessPathBase? = accessPathBase(value)
 
     private fun valueBases(value: PIRValue): List<AccessPathBase> = listOfNotNull(base(value))
+
+    companion object {
+        private val logger = object : KLogging() {}.logger
+    }
 }

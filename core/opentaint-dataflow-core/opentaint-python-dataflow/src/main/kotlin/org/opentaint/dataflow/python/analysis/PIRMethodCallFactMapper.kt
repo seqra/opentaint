@@ -85,6 +85,18 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         statement: PIRLoadAttr,
         fact: FinalFactAp,
         onMappedFact: (FinalFactAp, AccessPathBase) -> Unit,
+    ) = mapLoadAttributeFactToStart<FinalFactAp>(statement, fact, onMappedFact)
+
+    fun mapLoadAttributeFactToStart(
+        statement: PIRLoadAttr,
+        fact: InitialFactAp,
+        onMappedFact: (InitialFactAp, AccessPathBase) -> Unit,
+    ) = mapLoadAttributeFactToStart<InitialFactAp>(statement, fact, onMappedFact)
+
+    private inline fun <F : FactAp> mapLoadAttributeFactToStart(
+        statement: PIRLoadAttr,
+        fact: F,
+        onMappedFact: (F, AccessPathBase) -> Unit,
     ) {
         val objBase = valueToBase(statement.obj) ?: return
 
@@ -98,20 +110,21 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
     }
 
     fun mapLoadAttributeFactToReturn(statement: PIRLoadAttr, fact: FinalFactAp): FinalFactAp? =
-        when (fact.base) {
-            is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
-            is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
-            is AccessPathBase.ClassStatic -> fact
-            else -> null
-        }
+        mapLoadAttributeFactToReturn(statement, fact, FinalFactAp::rebase)
 
     fun mapLoadAttributeFactToReturn(statement: PIRLoadAttr, fact: InitialFactAp): InitialFactAp? =
-        when (fact.base) {
-            is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
-            is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
-            is AccessPathBase.ClassStatic -> fact
-            else -> null
-        }
+        mapLoadAttributeFactToReturn(statement, fact, InitialFactAp::rebase)
+
+    private inline fun <F : FactAp> mapLoadAttributeFactToReturn(
+        statement: PIRLoadAttr,
+        fact: F,
+        rebase: F.(AccessPathBase) -> F,
+    ): F? = when (fact.base) {
+        is AccessPathBase.Return -> valueToBase(statement.target)?.let { fact.rebase(it) }
+        is AccessPathBase.This -> valueToBase(statement.obj)?.let { fact.rebase(it) }
+        is AccessPathBase.ClassStatic -> fact
+        else -> null
+    }
 
     private fun <F : FactAp> mapMethodExitToReturnFlowFact(
         call: PIRCall,
