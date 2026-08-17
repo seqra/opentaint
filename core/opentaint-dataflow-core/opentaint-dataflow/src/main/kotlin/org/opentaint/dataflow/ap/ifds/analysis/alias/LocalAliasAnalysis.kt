@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.analysis.alias
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.util.getOrCreate
@@ -15,7 +16,11 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
 
     val aliasInfo: AnalysisResult? by lazy { compute() }
 
-    val convertedAliases = Long2ObjectOpenHashMap<Pair<Int, List<AliasInfo>>>()
+    val convertedAliases = Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<List<AliasInfo>>>()
+
+    protected open val aliasCompressionThreshold: Int = Int.MAX_VALUE
+
+    protected open fun compressAliases(aliases: List<AliasInfo>): List<AliasInfo> = aliases
 
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
         withStateBeforeStatement(statement) { state, stateId -> state.findLocalAlias(stateId, base.idx) }
@@ -120,7 +125,7 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
                 result += convert(stateId, aliasIdx, depth = 0)
             }
         }
-        return result
+        return compressIfRequired(result)
     }
 
     private fun State.convertAllAliasSets(stateId: Int): List<List<AliasInfo>> =
@@ -129,7 +134,7 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
             aliasSet.forEach {
                 result += convert(stateId, it, depth = 0)
             }
-            result
+            compressIfRequired(result)
         }
 
     abstract fun convert(info: AAInfo, depth: Int, convertInstance: (Int) -> List<AliasInfo>): List<AliasInfo>
@@ -137,15 +142,13 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     private fun State.convert(stateId: Int, infoIdx: Int, depth: Int): List<AliasInfo> =
         synchronized(convertedAliases) {
             val cacheId = pair(infoIdx, stateId)
-            var cacheResult = convertedAliases.getOrCreate(cacheId) {
-                depth to convert(stateId, manager.getElementUncheck(infoIdx), depth)
+            val resultsByDepth = convertedAliases.getOrCreate(cacheId) {
+                Int2ObjectOpenHashMap()
             }
-            if (depth < cacheResult.first) {
-                cacheResult = depth to convert(stateId, manager.getElementUncheck(infoIdx), depth)
-                convertedAliases.put(cacheId, cacheResult)
+            resultsByDepth.getOrCreate(depth) {
+                compressIfRequired(convert(stateId, manager.getElementUncheck(infoIdx), depth))
             }
-            cacheResult
-        }.second
+        }
 
     private fun State.convert(stateId: Int, info: AAInfo, depth: Int): List<AliasInfo> =
         convert(info, depth) { instance ->
@@ -153,8 +156,13 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
             forEachAliasInSet(instance) {
                 instances += convert(stateId, it, depth + 1)
             }
-            instances
+            compressIfRequired(instances)
         }
+
+    private fun compressIfRequired(aliases: List<AliasInfo>): List<AliasInfo> {
+        if (aliases.size <= aliasCompressionThreshold) return aliases
+        return compressAliases(aliases)
+    }
 
     private fun pair(a: Int, b: Int): Long =
         (a.toLong() shl 32) or (b.toLong() and 0xFFFF_FFFFL)

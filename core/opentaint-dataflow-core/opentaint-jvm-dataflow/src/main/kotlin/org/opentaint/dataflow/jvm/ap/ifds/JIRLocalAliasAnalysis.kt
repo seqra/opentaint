@@ -23,6 +23,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.Extern
 import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.Convert.convertToAliasInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRAliasPathCompressor
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -67,6 +68,12 @@ class JIRLocalAliasAnalysis(
         depth: Int,
         convertInstance: (Int) -> List<AliasInfo>
     ): List<AliasInfo> = info.convertToAliasInfo(depth, null, convertInstance)
+
+    // Converted aliases are cached separately for every recursion depth, so keep each retained set small.
+    override val aliasCompressionThreshold: Int = ALIAS_COMPRESSION_THRESHOLD
+
+    override fun compressAliases(aliases: List<AliasInfo>): List<AliasInfo> =
+        JIRAliasPathCompressor.compress(aliases, cancellation::checkpoint)
 
     private inner class CallModelProvider : ExternalCallModelProvider {
         override fun provideModel(method: JIRMethod): List<ExternalAssign> {
@@ -138,4 +145,8 @@ class JIRLocalAliasAnalysis(
         CommonAliasApInfo<AliasAccessor>
 
     data class AliasAllocInfo(val allocInst: Int) : AliasInfo
+
+    private companion object {
+        const val ALIAS_COMPRESSION_THRESHOLD = 1_000
+    }
 }
