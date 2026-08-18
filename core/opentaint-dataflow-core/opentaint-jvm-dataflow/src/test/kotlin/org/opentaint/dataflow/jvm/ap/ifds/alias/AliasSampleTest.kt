@@ -616,7 +616,10 @@ class AliasSampleTest : BasicTestUtils() {
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
 
-        return JIRLocalAliasAnalysis(ep, graph, callResolver, noRules, localReachability, cancellation, manager, params)
+        return JIRLocalAliasAnalysis(
+            ep, graph, callResolver, noRules,
+            localReachability, cancellation, manager, manager.factTypeChecker, params
+        )
     }
 
     private fun interProcParams(depth: Int) =

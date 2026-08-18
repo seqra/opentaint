@@ -104,6 +104,7 @@ class JIRIntraProcAliasAnalysis(
         fun AAInfo.convertToAliasInfo(
             depth: Int,
             cancellation: AnalysisCancellation?,
+            isValidAccessorTransition: (AliasAccessor?, AliasAccessor) -> Boolean,
             resolveHeapInstance: (Int) -> List<AliasInfo>
         ): List<AliasInfo> {
             if (this !is HeapAlias) {
@@ -129,7 +130,12 @@ class JIRIntraProcAliasAnalysis(
             return instances.mapNotNull {
                 when (it) {
                     is AliasAllocInfo -> return@mapNotNull null
-                    is AliasApInfo -> AliasApInfo(it.base, it.accessors + accessor)
+                    is AliasApInfo -> {
+                        if (!isValidAccessorTransition(it.accessors.lastOrNull(), accessor)) {
+                            return@mapNotNull null
+                        }
+                        AliasApInfo(it.base, it.accessors + accessor)
+                    }
                 }
             }
         }

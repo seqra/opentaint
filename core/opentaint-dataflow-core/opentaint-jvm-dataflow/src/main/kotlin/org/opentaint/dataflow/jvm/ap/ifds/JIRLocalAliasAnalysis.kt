@@ -43,6 +43,7 @@ class JIRLocalAliasAnalysis(
     private val localVariableReachability: JIRLocalVariableReachability,
     private val cancellation: Cancellation,
     private val languageManager: JIRLanguageManager,
+    private val factTypeChecker: JIRFactTypeChecker,
     private val params: Params,
 ) : LocalAliasAnalysis<AliasInfo, AliasAccessor>() {
     data class Params(
@@ -67,7 +68,10 @@ class JIRLocalAliasAnalysis(
         info: AAInfo,
         depth: Int,
         convertInstance: (Int) -> List<AliasInfo>
-    ): List<AliasInfo> = info.convertToAliasInfo(depth, null, convertInstance)
+    ): List<AliasInfo> = info.convertToAliasInfo(depth, null, ::isValidAccessorTransition, convertInstance)
+
+    private fun isValidAccessorTransition(previous: AliasAccessor?, next: AliasAccessor): Boolean =
+        isValidAliasAccessorTransition(previous, next, factTypeChecker::typeMayHaveSubtypeOf)
 
     // Converted aliases are cached separately for every recursion depth, so keep each retained set small.
     override val aliasCompressionThreshold: Int = ALIAS_COMPRESSION_THRESHOLD
@@ -155,4 +159,18 @@ class JIRLocalAliasAnalysis(
     private companion object {
         const val ALIAS_COMPRESSION_THRESHOLD = 1_000
     }
+}
+
+internal fun isValidAliasAccessorTransition(
+    previous: AliasAccessor?,
+    next: AliasAccessor,
+    typesMayOverlap: (String, String) -> Boolean,
+): Boolean {
+    val field = next as? AliasAccessor.Field ?: return true
+    val previousType = when (previous) {
+        is AliasAccessor.Field -> previous.fieldType
+        is AliasAccessor.Static -> previous.typeName
+        is AliasAccessor.Array, null -> return true
+    }
+    return typesMayOverlap(previousType, field.className)
 }
