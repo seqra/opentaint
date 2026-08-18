@@ -39,7 +39,7 @@ In fix mode, don't author from the unit: go straight to that one flagged rule, a
 
 ### 2. Author the library rules
 
-Derive each rule's pattern from the unit's exact member identifiers, recorded signatures, and relevant declaration metadata. Bind the tainted value to `$UNTRUSTED` and put the unit/group tag on the lib rule. A sink tag belongs to the whole semantic group, not to an individual method. One rule can cover several group methods and several rules can carry the same tag. The rule forms and locations are in the language reference.
+Derive each rule's pattern from the unit's exact member identifiers, recorded signatures, notes, relevant declaration metadata, and the real API semantics. Bind the tainted value to `$UNTRUSTED` and put the unit/group tag on the lib rule. Choose its scope at each pattern occurrence: plain `$UNTRUSTED` is base-only; prefix-star `$*UNTRUSTED` is whole-object scope. Star a producer whose entire returned/bound object's contents are untrusted, and star a consumer when taint in any nested field or element makes the operation dangerous. A sink tag belongs to the whole semantic group, not to an individual method. One rule can cover several group methods and several rules can carry the same tag. The rule forms, locations, exact star semantics, and placement restrictions are in the language reference.
 
 For `side: sinks`, iterate `groups`: ensure every method under `groups[].sinks` has an implementing `rule_id`, and put the enclosing `groups[].tag` on every custom rule you create. For `side: sources`, use the unit's top-level tag.
 
@@ -66,8 +66,8 @@ uv run <skill-dir>/scripts/check-test-result.py <unit>/<side>
 
 Fix by the verdict it reports:
 
-- `falseNegative` → the match is too narrow, broaden it and confirm the metavariable names line up across branches and between `refs` and `on`
-- `falsePositive` → the match is too broad, add an exclusion or a sanitizer
+- `falseNegative` → the match is too narrow; broaden it, confirm the metavariable names line up across branches and between `refs` and `on`, and use `$*UNTRUSTED` when the missing fact is on a nested field/element rather than the base
+- `falsePositive` → the match is too broad; add an exclusion or a sanitizer, or remove an unjustified star when only base taint should count
 - `skipped` / `disabled` → the rule wasn't exercised; fix the sample's `rule-test.yaml` entrypoint or `rule-id`, or enable the rule
 
 The concrete pattern operators for each fix are in the language reference.
@@ -127,6 +127,7 @@ stages:
 - Created source rules MUST carry the `untrusted-data-source` tag, created sink rules MUST carry their enclosing sink group's registered `*-sink` tag
 - The test joins MUST have `metadata.cwe` and `metadata.short-description`
 - In test joins, metavariable names must match across `refs` and `on` clauses or the join won't connect. Bind the tainted value to `$UNTRUSTED` in every lib source/sink rule
+- The star is a per-occurrence prefix used only in pattern text (`$*UNTRUSTED`). Keep `focus-metavariable`, `metavariable-*` constraints, propagator `from`/`to`, and join `on` names plain (`$UNTRUSTED`)
 - Test-join `rule` paths are relative to a ruleset root: marker rules resolve under the test project's rules, lib rules under the built-in or custom scanned rules tree
 - Rule IDs must be globally unique
 - The custom lib rules go in the scanned rules tree; the test joins go only in the test project's marker rules

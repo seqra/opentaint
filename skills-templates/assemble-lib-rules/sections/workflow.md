@@ -28,7 +28,7 @@ rules:
         - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-Both endpoints use `$UNTRUSTED`. Sink tags and join ids name vulnerability classes, not packages, frameworks, or individual methods: a newly created rule for an existing vulnerability class reuses that class's sink tag and therefore needs no new join. Derive accurate security metadata from the sink tag.
+Both endpoints use `$UNTRUSTED`. Never put `$*` in `join.on`; whole-object scope belongs to pattern occurrences, while joins use the plain metavariable identity. Sink tags and join ids name vulnerability classes, not packages, frameworks, or individual methods: a newly created rule for an existing vulnerability class reuses that class's sink tag and therefore needs no new join. Derive accurate security metadata from the sink tag.
 
 ### 3. Verify the matrix, then stop
 
