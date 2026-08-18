@@ -21,11 +21,13 @@ opentaint test rule init .opentaint/test-projects/<name> --sinks-only \
 
 Each unit entry already records the method's `signature` (its JVM descriptor) — the overload the sample must match, don't disassemble the jar. To shape a faithful call, look at how the method is actually used in the project. Write the samples under the sub-project's `src/main/java/test/`:
 
-- positive sample — a minimal flow that must flag, with the real sink/source signature and no extra hops:
-  - **sink** under test → `<Type> t = test.Taint.source(); pkg.theSink(t);` — declare the local as the sink argument's type; the generic `source()` infers it, no cast
-  - **source** under test → `var v = pkg.theSource(); test.Taint.sink(v);` — `sink` takes `Object`, so any type fits
+- positive sample — a minimal flow that must flag, with the real sink/source signature and no extra hops. Exercise the access-path shape the real API promises, so the sample distinguishes base-only `$VAR` from whole-object `$*VAR`:
+  - **sink** under test, base-only → `<Type> t = test.Taint.source(); pkg.theSink(t);` — declare the local as the sink argument's type; the generic `source()` infers it, no cast
+  - **sink** under test, whole-object/container → create the real argument object, put `test.Taint.source()` in a representative dangerous field/element, then pass the object to the sink. Don't taint the object base directly; the nested fact is what proves the sink needs `$*VAR`
+  - **source** under test, base-only/scalar → `var v = pkg.theSource(); test.Taint.sink(v);` — `sink` takes `Object`, so any type fits
+  - **source** under test, whole-object/container → call the source, read a representative attacker-controlled field/element, and pass that extracted value to `test.Taint.sink`. Don't sink the returned object base directly; the field read is what proves the source needs `$*VAR`
   One positive per new sink (in `sinks/`) and per new source (in `sources/`)
-- negative sample — the safe (sanitized or parameterized) variant of the same, which must not flag. Keep it realistic — prefer the library's real sanitizer or validation call when the source makes one visible — not stripped to constants
+- negative sample — the safe (sanitized or parameterized) variant of the same, which must not flag. Keep it realistic — prefer the library's real sanitizer or validation call when the source makes one visible — not stripped to constants. When a sanitizer promises whole-object cleaning, place taint in a field before sanitizing and sink the corresponding field afterward; that nested shape proves the sanitizer occurrence needs `$*VAR`
 
 The samples are plain methods; their verdicts live in a `rule-test.yaml` (below), not on the method.
 

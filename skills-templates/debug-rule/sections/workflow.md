@@ -23,7 +23,7 @@ Trace the exact run that misbehaved — a different `model` or ruleset traces so
 The killing instruction decides who owns the fix. An engine bug is by far the least likely — assume it last, only once the other two are ruled out; nearly every kill is a missing or wrong library model or a rule defect, both tedious to exclude but far more probable, and the tedium is no reason to jump to "engine". Three outcomes:
 
 - the kill is at an external library method → a model issue. Cross-check `dropped-external-methods.yaml` from that run (a `--track-external-methods` scan regenerates it if absent): listed there means the method is unmodeled — the missing model is the cause, for the approximation stage to model. Not listed but a built-in claims to model it, yet taint dies here → that model is wrong for this case: a passThrough override applies at the rule level, so prefer one for the method; a dataflow override conflicts with built-ins at load, so fall back to a passThrough, or call it an engine issue when only a dataflow shape can express the propagation
-- the kill is where the rule should have matched — a sanitizer misfires, a sink or source variant went unmatched → a rule defect, for rule authoring to fix
+- the kill is where the rule should have matched — a sanitizer misfires, a sink or source variant went unmatched, or the fact is present only on a nested field while the rule occurrence checks the base rather than `$*VAR` whole-object scope → a rule defect, for rule authoring to fix
 - the kill is a plain instruction the engine must propagate through (assignment, cast, field read, an already-modeled call), with the rule correct and the model complete → an engine issue
 
 ### 3. Report the diagnosis

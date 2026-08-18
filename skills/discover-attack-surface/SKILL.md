@@ -31,7 +31,7 @@ The assigned plan's `scopes` contains the already-extracted project-used depende
 
 A source is the exact boundary where untrusted data first enters from a network, persistence, serialization, messaging, execution, or another external channel. For a callable member, decide whether it returns or otherwise exposes attacker-controlled data. A member that merely passes along data it was handed is a propagator, not a source.
 
-Classify behavior rather than package or class names. For an individual member, prefer recording a borderline source with the uncertainty noted: later scan and triage can reject a false positive, while an omitted source becomes an unrecoverable false negative.
+Classify behavior rather than package or class names. For an object/container source, determine whether the boundary controls the complete value including its nested fields or only the base value, and say so in the unit note; the rule-authoring stage uses that distinction to choose whole-object (`$*VAR`) or base-only (`$VAR`) taint. For an individual member, prefer recording a borderline source with the uncertainty noted: later scan and triage can reject a false positive, while an omitted source becomes an unrecoverable false negative.
 
 ### 3. Record verdicts and source units
 
