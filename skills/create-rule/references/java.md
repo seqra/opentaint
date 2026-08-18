@@ -10,6 +10,10 @@ Built-in source/sink lib rules live under `java/lib/generic/` (framework-neutral
 
 ### 2. Author the library rules
 
+Every custom library source or sink declares its role family under top-level `tags`. Tags are exact, language-scoped strings used only to expand `join.refs`; they don't change matching or activate a library rule. Follow the built-in vocabulary: source families use `<framework>-untrusted-data-source`, and sink families use the security rule's exact `<vulnerability>-sink` tag (for example `servlet-untrusted-data-source`, `spring-untrusted-data-source`, `sqli-sink`, `ssrf-sink`, or `path-traversal-sink`). Read the built-in library and security rules before choosing.
+
+A tag is an open extension point: adding `sqli-sink` opts the rule into every Java join that references that tag. Reuse it only when that fan-out is correct. Otherwise use a stable project-specific family such as `<unit>-untrusted-data-source` or `<unit>-<vulnerability>-sink`; the assembly stage will add the required join. Multiple custom sources can declare the same project-specific source tag, and a custom join can select the whole family with one `tag:` ref. Use an explicit `rule:` ref when only one component should be selected.
+
 Reference a built-in:
 
 ```yaml
@@ -27,6 +31,8 @@ rules:
   - id: my-custom-source
     options:
       lib: true
+    tags:
+      - servlet-untrusted-data-source
     severity: NOTE
     message: Custom untrusted data source
     languages: [java]
@@ -42,6 +48,28 @@ rules:
                     - pattern: doPost
 ```
 
+To make several custom sources a reusable family, repeat the same exact list-form tag on every source rule:
+
+```yaml
+tags:
+  - orders-untrusted-data-source
+```
+
+A custom security join can then consume all active Java source rules in that family:
+
+```yaml
+join:
+  refs:
+    - tag: orders-untrusted-data-source
+      as: orders-source
+    - tag: sqli-sink
+      as: sink
+  on:
+    - 'orders-source.$UNTRUSTED -> sink.$UNTRUSTED'
+```
+
+Keep the shared tag project-specific unless these sources are intentionally members of a built-in family. Tag expansion is language-scoped and includes every active matching rule, including other custom rules.
+
 Custom sink library rule (`.opentaint/rules/java/lib/generic/my-sink.yaml`):
 
 ```yaml
@@ -49,6 +77,8 @@ rules:
   - id: my-custom-sink
     options:
       lib: true
+    tags:
+      - sqli-sink
     severity: NOTE
     message: Custom dangerous operation
     languages: [java]
@@ -90,7 +120,7 @@ rules:
         - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
-The marker rules resolve from the sub-project's `test-rules` root, your lib rules from `.opentaint/rules` — `test rule run` is passed both. Metavariable names must match across `refs` and `on`.
+The marker rules resolve from the sub-project's `test-rules` root, your lib rules from `.opentaint/rules` — `test rule run` is passed both. Metavariable names must match across `refs` and `on`. Keep these test refs explicit: replacing `rule:` with `tag:` would pull every active family member into the test and stop it isolating the new component.
 
 ### 4. Test until success
 
@@ -103,6 +133,7 @@ The concrete operators per verdict:
 ## Constraints
 
 - Custom library rules go under `java/lib/generic/` or `java/lib/spring/`, mirroring the built-in layout — never directly under `java/lib/`
+- Tags are exact strings, not display labels. Match the built-in security join's spelling, including distinctions such as `sqli-sink` versus the vulnerability class `sql-injection`
 - For a simple structural pattern (no dataflow), omit `mode` — it uses the default mode
 - Don't unpack or grep the analyzer JAR
 

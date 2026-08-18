@@ -23,7 +23,7 @@ Inputs:
 - `unit`
 - `fix-target` (optional) — only the scan-flagged rule correction explicitly assigned by the task
 
-Expect back — each sink's `rule_id` set and `stages.tests_passing: done`.
+Expect back — each sink's `rule_id` set, every custom rule carrying its deliberate sink-family tag, and `stages.tests_passing: done`.
 
 ## Assemble the full joins
 
@@ -32,7 +32,7 @@ Once no sink unit is pending, status names unwired sink rules. Dispatch assemble
 Inputs:
 - `language`
 
-Expect back — the created-sink joins added to the joins tally, each refing all relevant sources. Then delete the sink units' `test-compiled/` models.
+Expect back — existing tag-expanded joins reused where they already cover the created sinks, extension joins added only for uncovered combinations, and the concrete coverage recorded in the joins tally. Then delete the sink units' `test-compiled/` models.
 
 ## Stage gate
 

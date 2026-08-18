@@ -1,2 +1,3 @@
 - Ref the existing lib rules (built-in + created), never re-declare a source or sink
+- A tag is an open family, not shorthand for one rule — use it only when every active same-language member should fan out through the join
 - Keep produced joins comment-free

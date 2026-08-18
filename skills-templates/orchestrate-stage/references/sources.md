@@ -53,7 +53,7 @@ Inputs:
 - `unit`
 - `fix-target` (optional) — only the scan-flagged rule correction explicitly assigned by the task
 
-Expect back — each source's `rule_id` set and `stages.tests_passing: done`.
+Expect back — each source's `rule_id` set, every custom rule carrying its deliberate source-family tag, and `stages.tests_passing: done`.
 
 ## Assemble source joins
 
@@ -62,7 +62,7 @@ Once no source unit is pending, status names unwired created sources. Dispatch a
 Inputs:
 - `language`
 
-Expect back — the joins tally written: one join per built-in sink, each refing all created sources for that vulnerability class. Then delete the source units' `test-compiled/` models.
+Expect back — existing tag-expanded joins reused where they already cover the created sources, extension joins added only for uncovered combinations, and the concrete coverage recorded in the joins tally. Then delete the source units' `test-compiled/` models.
 
 ## Stage gate
 
