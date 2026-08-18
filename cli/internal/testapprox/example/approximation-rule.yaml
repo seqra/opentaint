@@ -7,6 +7,8 @@ rules:
     languages:
       - java
     mode: taint
+    options:
+      primitive-tracking: true
     pattern-sources:
       - pattern: $UNTRUSTED = test.Taint.source();
     pattern-sinks:
@@ -22,6 +24,8 @@ rules:
     languages:
       - java
     mode: taint
+    options:
+      primitive-tracking: true
     pattern-sources:
       - pattern: $UNTRUSTED = test.Taint.source();
     pattern-sinks:
@@ -37,6 +41,8 @@ rules:
     languages:
       - java
     mode: taint
+    options:
+      primitive-tracking: true
     pattern-sources:
       - pattern: $*UNTRUSTED = test.Taint.source();
     pattern-sinks:
@@ -52,6 +58,8 @@ rules:
     languages:
       - java
     mode: taint
+    options:
+      primitive-tracking: true
     pattern-sources:
       - pattern: $*UNTRUSTED = test.Taint.source();
     pattern-sinks:
