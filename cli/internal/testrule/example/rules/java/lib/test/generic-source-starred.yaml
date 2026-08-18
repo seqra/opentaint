@@ -1,0 +1,13 @@
+rules:
+  - id: generic-taint-source-starred
+    options:
+      lib: true
+    severity: NOTE
+    message: Generic whole-object untrusted-data marker (test.Taint.source)
+    metadata:
+      short-description: Generic whole-object test taint source
+    languages:
+      - java
+    patterns:
+      - pattern: |
+          $*UNTRUSTED = test.Taint.source();
