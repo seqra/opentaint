@@ -80,10 +80,17 @@ A tainted argument bound as a query parameter is already sanitized — the place
 
 ### 3. Write the test joins
 
-The join goes in the test project's `test-rules/java/security/`, named `<unit>-sinks` / `<unit>-sources` so the samples' `rule-test.yaml` `rule-id` resolves (`<unit>` = the package-kebab):
+The join goes in the test project's `test-rules/java/security/`, named `<unit>-sinks` / `<unit>-sources` so the samples' `rule-test.yaml` `rule-id` resolves (`<unit>` = the package-kebab). The scaffold provides independently referenceable plain and whole-object counterparts:
 
-- `sinks` side → `<unit>-sinks`: ref the generic source + every sink `rule_id` selected for the unit, wiring `src.$UNTRUSTED -> <sink>.$UNTRUSTED` for each
-- `sources` side → `<unit>-sources`: ref every source `rule_id` selected for the unit + the generic sink, wiring `<source>.$UNTRUSTED -> sink.$VALUE` for each
+- plain source: `java/lib/test/generic-source.yaml#generic-taint-source`
+- starred source: `java/lib/test/generic-source-starred.yaml#generic-taint-source-starred`
+- plain sink: `java/lib/test/generic-sink.yaml#generic-taint-sink`
+- starred sink: `java/lib/test/generic-sink-starred.yaml#generic-taint-sink-starred`
+
+- `sinks` side → `<unit>-sinks`: ref the plain or starred generic source + every sink `rule_id` selected for the unit, wiring `src.$UNTRUSTED -> <sink>.$UNTRUSTED` for each
+- `sources` side → `<unit>-sources`: ref every source `rule_id` selected for the unit + the plain or starred generic sink, wiring `<source>.$UNTRUSTED -> sink.$VALUE` for each
+
+Select starred only when the counterpart itself must mark or accept nested-field taint; don't load both variants into the same isolation join.
 
 ```yaml
 rules:
