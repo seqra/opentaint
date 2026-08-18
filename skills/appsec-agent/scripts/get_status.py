@@ -23,17 +23,17 @@ import sys
 from pathlib import Path
 
 from _common import (APPROX, BOUNDARIES_TR, DATAFLOW, FINDINGS_TR, JOINS_TR, MODEL,
-                     PASS_THROUGH, REFERENCE_TR, ROOT, RULES, RULES_TR, SARIF, SINKS_TR,
+                     PASS_THROUGH, REFERENCE_TR, ROOT, RULES, RULES_TR, SARIF, SCOPE, SINKS_TR,
                      SOURCES_TR, TRACKING, build_done_keys, classified_keys, dropped_entries,
-                     git_head, load_yaml, member_key, modeled_entries, skipped_keys,
-                     strip_quotes)
+                     git_head, load_yaml, member_key, modeled_entries, scope_families,
+                     skipped_keys, strip_quotes)
 
 STATE = load_yaml(TRACKING / "state.yaml", {}) or {}
-MODE = STATE.get("mode") or "assessment"
+MODE = STATE.get("mode") or "discovery"
 SCAN_LEVEL = STATE.get("scan_level")
 TRIAGE_LEVEL = STATE.get("triage_level")
 
-DISCOVER_PLANS = RULES_TR / "plans"
+FRONTIER_PLANS = RULES_TR / "plans"
 APPROX_PLANS = APPROX / "plans"
 VULN = ROOT / "vulnerabilities.md"
 ENACTMENT = ROOT / "enactment.md"
@@ -165,10 +165,13 @@ def ph_build():
                    "dispatch build-project"], None
 
 
-def ph_discover():
+def ph_frontier():
+    """Onboarding's intake: the external-method frontier, swept as one trust boundary. Every
+    dependency member the project's own code calls is a candidate boundary until a leaf verdicts
+    it, and the ledger is what makes that verdict durable for every later pass."""
     if not (TRACKING / "coverage.yaml").is_file():
         return False, ["dispatch triage-dependencies"], None
-    leftover = sorted(glob.glob(str(DISCOVER_PLANS / "*.yaml")))
+    leftover = sorted(glob.glob(str(FRONTIER_PLANS / "*.yaml")))
     units = load_units(SOURCES_TR)
     ledger = load_yaml(RULES_TR / "classification.yaml", {}) or {}
     if leftover:
@@ -177,7 +180,7 @@ def ph_discover():
         tasks.append("then run `scripts/generate.py mark-safe` to reconcile the plans")
         return False, tasks, None
     if not ledger and not units:
-        return False, ["run `scripts/generate.py partition discover` to plan the used members"], None
+        return False, ["run `scripts/generate.py partition frontier` to plan the called members"], None
     return True, [], None
 
 
@@ -288,9 +291,12 @@ def ph_poc():
     return True, [], None
 
 
-# ---- enactment-mode phases ----
+# ---- intake: one contract, three mode-specific derivations ----
 
 def ph_reference_set():
+    """Enactment's intake: the supplied findings, normalized and grouped. The `family` field on
+    each reference file is the assignment — it moves with the finding when a family splits, so
+    the families are read back from the files rather than from a separate list."""
     docs = load_docs(REFERENCE_TR)
     if not docs:
         src = STATE.get("findings") or "state.yaml findings unset"
@@ -303,31 +309,65 @@ def ph_reference_set():
     return True, [], None
 
 
+def ph_scope():
+    """Onboarding's and discovery's intake join: the families their evidence groups into, written
+    to scope.yaml. Enactment carries the same information on its reference files instead."""
+    fams = scope_families()
+    if not fams:
+        src = STATE.get("spec") or "the whole project"
+        what = ("the frontier the sweep verdicted as sources and effects" if MODE == "onboarding"
+                else f"the code {src} names")
+        return False, [f"group {what} into families and write {SCOPE}"], None
+    empty = [n for n, ev in fams if not ev]
+    if empty:
+        return False, ["families in scope.yaml with no evidence recorded:"] \
+            + [f"  {n}" for n in empty], None
+    return True, [], None
+
+
+def ph_intake():
+    if MODE == "enactment":
+        return ph_reference_set()
+    if MODE == "onboarding":
+        done, tasks, note = ph_frontier()
+        if not done:
+            return done, tasks, note
+    return ph_scope()
+
+
 def families():
-    return sorted({strip_quotes(d.get("family", "")) for _, d in load_docs(REFERENCE_TR)
-                   if strip_quotes(d.get("family", ""))})
+    """(family, evidence ids) for this pass, whichever mode scoped it — reference finding ids in
+    enactment mode, the members or areas intake recorded otherwise. The boundaries stage
+    generalizes one universal source and sink per entry."""
+    if MODE == "enactment":
+        out = {}
+        for path, doc in load_docs(REFERENCE_TR):
+            fam = strip_quotes(doc.get("family", ""))
+            if fam:
+                out.setdefault(fam, []).append(path.stem)
+        return sorted(out.items())
+    return scope_families()
 
 
 def ph_boundaries():
     specs = {p.stem: d for p, d in load_docs(BOUNDARIES_TR)}
     fams = families()
-    missing = [f for f in fams if f not in specs]
+    missing = [f for f, _ in fams if f not in specs]
     if missing:
         return False, ["dispatch discover-universal-boundaries, one per family:"] \
             + [f"  {f}" for f in missing], None
-    # a split renames the family on its reference findings, so every spec here owns its findings
-    unsaturated = [f for f in fams
+    # a split rewrites the family on the evidence it moves, so every spec here owns its evidence
+    unsaturated = [f for f, _ in fams
                    if str((specs[f].get("saturation") or {}).get("status", "")).strip()
                    != "saturated"]
     if unsaturated:
         return False, ["boundary specs not saturated:"] + [f"  {f}" for f in unsaturated], None
-    unfactored = sorted(p.stem for p, d in load_docs(REFERENCE_TR)
-                        if p.stem not in (specs.get(strip_quotes(d.get("family", "")), {})
-                                          .get("factorization") or {}))
+    unfactored = sorted(f"{f}: {e}" for f, evidence in fams for e in evidence
+                        if e not in (specs[f].get("factorization") or {}))
     if unfactored:
-        return False, ["reference findings with no factorization in their spec:"] \
+        return False, ["evidence with no factorization in its spec:"] \
             + [f"  {r}" for r in unfactored], None
-    unseeded = [f for f in fams if (specs[f].get("stages") or {}).get("units_seeded") != "done"]
+    unseeded = [f for f, _ in fams if (specs[f].get("stages") or {}).get("units_seeded") != "done"]
     if unseeded:
         return False, ["seed the source and sink units from these specs' candidate_patterns:"] \
             + [f"  {f}" for f in unseeded], None
@@ -359,14 +399,21 @@ def ph_crossref():
 
 def has_reference_set():
     """A reference set outlives the pass that created it. Any later pass that rescans changes what
-    it reproduces, so the cross-reference stays in scope — otherwise an assessment pass would leave
-    a coverage manifest that silently describes an older scan."""
+    it reproduces, so the cross-reference stays in scope — otherwise an onboarding or discovery
+    pass would leave a coverage manifest that silently describes an older scan."""
     return REFERENCE_TR.is_dir() and any(REFERENCE_TR.glob("*.yaml"))
 
 
-ASSESSMENT_PHASES = [
+# One pipeline, whatever the mode brought to it. Intake and its universal boundaries differ —
+# the swept frontier, the diff or spec, the supplied findings — but from the boundary specs on,
+# every mode runs the same stages in the same order: sources before the scan that proves them,
+# approximations against the frontier that scan names, sinks after it, then triage. Only the
+# closing phases are conditional, on the triage level, the controls knob, and whether the tree
+# carries a reference set to re-judge.
+PHASES = [
     ("build", ph_build, lambda: True),
-    ("discover", ph_discover, lambda: SCAN_LEVEL == "deep"),
+    ("intake", ph_intake, lambda: SCAN_LEVEL == "deep"),
+    ("boundaries", ph_boundaries, lambda: SCAN_LEVEL == "deep"),
     ("source_rules", ph_source_rules, lambda: SCAN_LEVEL == "deep"),
     ("scan", ph_scan, lambda: True),
     ("approximations", ph_approximations, lambda: SCAN_LEVEL in ("normal", "deep")),
@@ -376,24 +423,7 @@ ASSESSMENT_PHASES = [
     ("crossref", ph_crossref, has_reference_set),
 ]
 
-# enactment reproduces a supplied finding set: the reference set and its saturated boundaries
-# replace dependency discovery, and both rule sides are authored before the first scan so that
-# scan is rule-first. The cross-reference closes the run — it judges what the finished rule set,
-# its approximations, its verdicts and its controls actually reproduced.
-ENACTMENT_PHASES = [
-    ("build", ph_build, lambda: True),
-    ("reference_set", ph_reference_set, lambda: True),
-    ("boundaries", ph_boundaries, lambda: True),
-    ("source_rules", ph_source_rules, lambda: True),
-    ("sink_rules", ph_sink_rules, lambda: True),
-    ("scan", ph_scan, lambda: True),
-    ("approximations", ph_approximations, lambda: True),
-    ("triage", ph_triage, lambda: True),
-    ("poc", ph_poc, lambda: TRIAGE_LEVEL == "dynamic"),
-    ("crossref", ph_crossref, lambda: True),
-]
 
-PHASES = ENACTMENT_PHASES if MODE == "enactment" else ASSESSMENT_PHASES
 
 
 # ---- caps ----
@@ -436,8 +466,10 @@ def cmd_full():
     print(f"mode={MODE}  scan={SCAN_LEVEL}  triage={TRIAGE_LEVEL}  "
           f"language={STATE.get('language')}  commit={commit}  "
           f"cap={GLOBAL_CAP} (heavy {heavy_cap()})")
-    if STATE.get("findings"):        # printed on an assessment pass too — the set is still tracked
+    if STATE.get("findings"):        # printed in every mode — the set stays tracked
         print(f"findings={STATE.get('findings')}")
+    if STATE.get("spec"):
+        print(f"spec={STATE.get('spec')}")
     runs = (load_yaml(TRACKING / "history.yaml", {}) or {}).get("runs") or []
     if len(runs) > 1:
         print("passes: " + " -> ".join(str(r.get("type", "?")) for r in runs))

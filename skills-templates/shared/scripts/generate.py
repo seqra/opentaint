@@ -9,8 +9,8 @@ from the project root: `uv run scripts/generate.py <cmd>`.
 
   init                bootstrap the .opentaint tree + state.yaml from the workflow flags
   partition analyze   dropped external methods -> per-root batch plans (approximations)
-  partition discover  coverage.yaml's used members -> balanced discover plans
-  mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
+  partition frontier  coverage.yaml's used members -> balanced frontier plans
+  mark-safe           frontier plans' verdicts -> classification.yaml ledger (+prune plans)
   merge-skipped       batch skipped/engine_issues -> approximations/skipped.yaml (+prune plans)
   findings            results/report.sarif -> per-rule finding tracking files (idempotent)
 """
@@ -35,9 +35,9 @@ from _common import (APPROX, BOUNDARIES_TR, DATAFLOW, DROPPED, FINDINGS_TR, JOIN
 ANALYZE_BUDGET = 20                       # methods per approximation batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
 ROOT_DEPTH = 2                            # library root = first 2 dotted segments
-DISCOVER_TARGET, DISCOVER_BAND = 50, 15   # project-used members per discover plan (~50, loose)
+FRONTIER_TARGET, FRONTIER_BAND = 50, 15   # project-used members per frontier plan (~50, loose)
 
-DISCOVER_PLANS = RULES_TR / "plans"
+FRONTIER_PLANS = RULES_TR / "plans"
 APPROX_PLANS = APPROX / "plans"
 
 
@@ -46,22 +46,31 @@ APPROX_PLANS = APPROX / "plans"
 # the durable directories a run writes into; the leaves/scripts mkdir on write, but seeding
 # them up front gives every stage a place to land and makes the empty tree self-describing.
 INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, JOINS_TR, FINDINGS_TR,
-             RESULTS, RULES, PASS_THROUGH, DATAFLOW]
-ENACTMENT_DIRS = [REFERENCE_TR, BOUNDARIES_TR]                # enactment mode only
+             BOUNDARIES_TR, RESULTS, RULES, PASS_THROUGH, DATAFLOW]
+ENACTMENT_DIRS = [REFERENCE_TR]                               # the normalized supplied findings
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
 
 def carried_over():
     """What a pass inherits from the passes before it, as (label, count) — everything durable
-    the tree already holds. Both pipelines write into one tree, so a pass never starts empty
+    the tree already holds. Every mode writes into one tree, so a pass never starts empty
     unless the tree is."""
     def n(paths):
         return sum(1 for _ in paths)
     return [("rule unit", n(SOURCES_TR.glob("*.yaml")) + n(SINKS_TR.glob("*.yaml"))),
             ("created rule", n(p for p in RULES.rglob("*.yaml") if p.is_file())),
+            ("boundary spec", n(BOUNDARIES_TR.glob("*.yaml")) if BOUNDARIES_TR.is_dir() else 0),
             ("approximation batch", len(batch_files())),
             ("reference finding", n(REFERENCE_TR.glob("*.yaml")) if REFERENCE_TR.is_dir() else 0),
             ("triaged finding", n(FINDINGS_TR.glob("*.yaml")))]
+
+
+def onboarded(runs):
+    """Onboarding sweeps the whole external-method frontier and its corpus is durable, so it is
+    a one-time pass. Re-running init in onboarding mode is a resume while the tree is still in
+    that pass; once a later mode took over, the sweep is done and asking for it again is a
+    mistake worth naming."""
+    return any(str((r or {}).get("type", "")).startswith("onboarding/") for r in runs)
 
 
 def cmd_init(args):
@@ -73,20 +82,28 @@ def cmd_init(args):
     findings = args.findings or prior.get("findings")
     if enactment and not findings:
         raise SystemExit("init --mode enactment requires --findings <path to the supplied findings>")
-    if not enactment and not args.scan_level:
-        raise SystemExit("init --mode assessment requires --scan-level")
-    # enactment reproduces a supplied finding set, which always needs the full rule + approximation
-    # toolbox — there is no lite/normal variant of it, so the level is fixed rather than asked for.
-    scan_level = "deep" if enactment else args.scan_level
+    if args.mode == "discovery" and not args.scan_level:
+        raise SystemExit("init --mode discovery requires --scan-level")
+    runs = (load_yaml(TRACKING / "history.yaml", {}) or {}).get("runs") or []
+    if args.mode == "onboarding" and onboarded(runs) and prior.get("mode") != "onboarding":
+        raise SystemExit("this tree is already onboarded — its frontier sweep, universal rules, "
+                         "and models are on disk and every later pass builds on them; run "
+                         "discovery or enactment instead")
+    # onboarding sweeps the frontier and enactment reproduces a supplied finding set: both always
+    # need the full rule + approximation toolbox, so their level is fixed rather than asked for.
+    scan_level = args.scan_level if args.mode == "discovery" else "deep"
 
     for d in INIT_DIRS + (ENACTMENT_DIRS if enactment else []):
         d.mkdir(parents=True, exist_ok=True)
-    # `mode` is this pass's pipeline, not a permanent property of the tree: the two compose, in
-    # either order and repeatedly across commits, and every artifact below is shared between them.
+    # `mode` is this pass's intake, not a permanent property of the tree: the modes compose, in
+    # any order and repeatedly across commits, and every artifact below is shared between them.
     state = {"mode": args.mode, "scan_level": scan_level, "triage_level": args.triage_level,
              "language": args.language or prior.get("language")}
-    if findings:                    # kept even on an assessment pass, so a later one resumes it
+    if findings:                    # kept across other modes, so a later enactment pass resumes it
         state["findings"] = findings
+    spec = args.spec or prior.get("spec")
+    if spec:
+        state["spec"] = spec
     for k in STATE_DERIVED:                       # never clobber what build/scan already learned
         state[k] = prior.get(k)
     state_path.write_text(dump_yaml(state), encoding="utf-8")
@@ -94,7 +111,6 @@ def cmd_init(args):
     # history: one entry per pass. Re-running init with the same knobs on the same commit is a
     # resume of the current pass, not a new one — a different mode, level, or commit starts one.
     hist_path = TRACKING / "history.yaml"
-    runs = (load_yaml(hist_path, {}) or {}).get("runs") or []
     entry = {"commit": git_head(),
              "type": f"{args.mode}/{scan_level}/{args.triage_level}"}
     new_pass = not runs or runs[-1] != entry
@@ -115,6 +131,8 @@ def cmd_init(args):
           f"triage_level={state['triage_level']} language={state['language']}")
     if findings:
         print(f"findings={findings}")
+    if spec:
+        print(f"spec={spec}")
     if prior:
         kept = ", ".join(f"{c} {label}{'' if c == 1 else 's'}" for label, c in carried_over() if c)
         print(f"carried over: {kept or 'nothing yet'}")
@@ -209,7 +227,7 @@ def write_plans(plans, out_dir, prefix_id):
                                             if isinstance(x, dict) else x)
                 for p, v in sorted(scopes.items())}
         path = out_dir / f"{pid}.yaml"
-        # source: null is the unprocessed sentinel — a discover agent overwrites it with the
+        # source: null is the unprocessed sentinel — a frontier agent overwrites it with the
         # list of sources it found (an empty list when it finds none). mark-safe folds only
         # plans whose sentinel was replaced, so an un-returned plan is never marked safe.
         path.write_text(dump_yaml({"id": pid, "scopes": norm, "source": None}), encoding="utf-8")
@@ -273,7 +291,7 @@ def cmd_analyze(args):
     return 0
 
 
-# ---- partition discover ----
+# ---- partition frontier ----
 
 def yaml_modules(model_yaml):
     # each module in project.yaml as (packages, moduleClasses); only `packages` says which of a
@@ -345,8 +363,8 @@ def pending_packages():
     return tuple(p for p in (cov.get("packages") or []) if isinstance(p, str) and p)
 
 
-def cmd_discover(args):
-    regen_plans(DISCOVER_PLANS)
+def cmd_frontier(args):
+    regen_plans(FRONTIER_PLANS)
     packages = pending_packages()
     if not packages:
         print("nothing to plan — no pending package in coverage.yaml", file=sys.stderr)
@@ -360,26 +378,26 @@ def cmd_discover(args):
     if not todo:
         print("nothing to plan — every used member already verdicted", file=sys.stderr)
         return 0
-    cap = DISCOVER_TARGET + DISCOVER_BAND
-    plans = pack(atomize(todo, cap), DISCOVER_TARGET, cap)
+    cap = FRONTIER_TARGET + FRONTIER_BAND
+    plans = pack(atomize(todo, cap), FRONTIER_TARGET, cap)
     rows = {f: [{"method": f, "signature": s} for s in sorted(sigs[f])] for f in sigs}
     plans = [{pkg: [r for f in members for r in rows[f]] for pkg, members in plan.items()}
              for plan in plans]
-    for p in write_plans(plans, DISCOVER_PLANS, "lib"):
+    for p in write_plans(plans, FRONTIER_PLANS, "lib"):
         print(p)
     return 0
 
 
 def cmd_partition(args):
-    return cmd_analyze(args) if args.kind == "analyze" else cmd_discover(args)
+    return cmd_analyze(args) if args.kind == "analyze" else cmd_frontier(args)
 
 
-# ---- mark-safe (discover join) ----
+# ---- mark-safe (frontier join) ----
 
 def cmd_mark_safe(args):
-    plans = sorted(glob.glob(str(DISCOVER_PLANS / "lib-*.yaml")))
+    plans = sorted(glob.glob(str(FRONTIER_PLANS / "lib-*.yaml")))
     if not plans:
-        print("no discover plans to reconcile", file=sys.stderr)
+        print("no frontier plans to reconcile", file=sys.stderr)
         return 0
     ledger = RULES_TR / "classification.yaml"
     doc = load_yaml(ledger, {}) or {}
@@ -389,7 +407,7 @@ def cmd_mark_safe(args):
     for p in plans:
         pdoc = load_yaml(p, {}) or {}
         raw = pdoc.get("source")
-        if raw is None:                       # sentinel intact — no discover agent returned for it
+        if raw is None:                       # sentinel intact — no frontier agent returned for it
             unprocessed.append(p)
             continue
         members = {member_key(m) for v in (pdoc.get("scopes") or {}).values() for m in v}
@@ -399,7 +417,7 @@ def cmd_mark_safe(args):
         processed.append(p)
         print(f"{Path(p).name}: {len(srcs)} sources, {len(members - srcs)} safe")
     if not processed:
-        print("no processed discover plans (every plan still carries source: null) — "
+        print("no processed frontier plans (every plan still carries source: null) — "
               "fan out discover-attack-surface first", file=sys.stderr)
         return 0
     safe -= source
@@ -409,7 +427,7 @@ def cmd_mark_safe(args):
     if not args.keep:
         for p in processed:
             Path(p).unlink()
-        print(f"pruned {len(processed)} reconciled discover plan(s)")
+        print(f"pruned {len(processed)} reconciled frontier plan(s)")
     if unprocessed:
         print(f"left {len(unprocessed)} unprocessed plan(s) (source: null) for re-dispatch: "
               + ", ".join(Path(p).name for p in unprocessed))
@@ -605,22 +623,27 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     i = sub.add_parser("init", help="bootstrap the .opentaint tree + state.yaml from workflow flags")
-    i.add_argument("--mode", default="assessment", choices=["assessment", "enactment"],
-                   help="assessment: find vulnerabilities. enactment: reproduce supplied findings")
+    i.add_argument("--mode", required=True, choices=["onboarding", "discovery", "enactment"],
+                   help="onboarding: sweep the external-method frontier once. discovery: work "
+                        "from the project, a diff, or an informal spec. enactment: reproduce a "
+                        "supplied finding set")
     i.add_argument("--scan-level", choices=["lite", "normal", "deep"],
-                   help="assessment mode only; enactment is always deep")
+                   help="discovery mode only; onboarding and enactment are always deep")
     i.add_argument("--triage-level", required=True, choices=["static", "dynamic"])
     i.add_argument("--language", default=None, help="target language, determined by the orchestrator")
     i.add_argument("--findings", default=None,
                    help="enactment mode: path to the supplied finding manifest/report/directory")
+    i.add_argument("--spec", default=None,
+                   help="discovery mode: path to the diff, spec, or note that scopes the pass; "
+                        "omit to scope the pass to the whole project")
     i.set_defaults(func=cmd_init)
 
     p = sub.add_parser("partition", help="split classification work into per-agent plans")
-    p.add_argument("kind", choices=["analyze", "discover"])
+    p.add_argument("kind", choices=["analyze", "frontier"])
     p.set_defaults(func=cmd_partition)
 
-    m = sub.add_parser("mark-safe", help="merge discover plans into classification.yaml")
-    m.add_argument("--keep", action="store_true", help="keep the reconciled discover plans")
+    m = sub.add_parser("mark-safe", help="merge frontier plans into classification.yaml")
+    m.add_argument("--keep", action="store_true", help="keep the reconciled frontier plans")
     m.set_defaults(func=cmd_mark_safe)
 
     s = sub.add_parser("merge-skipped", help="rebuild approximations/skipped.yaml from batches")

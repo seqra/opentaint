@@ -1,6 +1,6 @@
 ---
 name: discover-attack-surface
-description: Classify project-used dependency members and record the taint sources among them not covered by the built-in rules. Use for the source-discovery depth pass
+description: Classify a slice of the external-method frontier — the dependency members the project calls — as trust boundaries or not, and record the taint sources among them that the built-in rules don't cover. Use for the frontier sweep of an onboarding pass, or wherever a scoped attack surface has to be classified
 license: Apache-2.0
 metadata:
   author: opentaint

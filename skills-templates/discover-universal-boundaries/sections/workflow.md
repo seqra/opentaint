@@ -1,6 +1,6 @@
 ### 1. Reconstruct every trace
 
-For each assigned finding, read its reference file and then the project source it points at, and record:
+For each assigned evidence item, read what the pass recorded for it — a reference finding's normalized file, or the member or code area `scope.yaml` named — and then the project source it points at, and record:
 
 1. the attacker or untrusted authority;
 2. the first project-visible ingress;
@@ -13,7 +13,7 @@ Read enough surrounding source to tell the real boundary from incidental syntax 
 
 ### 2. Propose the source
 
-Move backward from the finding-specific expressions until you reach the earliest reusable trust-boundary value the family shares. Prefer, in order when applicable:
+Move backward from the evidence's own expressions until you reach the earliest reusable trust-boundary value the family shares. Prefer, in order when applicable:
 
 - request body, parameter, path, query, header, cookie, or multipart value;
 - message, frame, packet, event, webhook, or callback payload;
@@ -29,7 +29,7 @@ Express narrow usage conditions separately, as typed patterns, `pattern-inside`,
 
 ### 3. Propose the sink
 
-Move forward from the finding-specific service calls to the most primitive operation that realizes the vulnerability, while staying specific to its class. Prefer boundaries such as:
+Move forward from the evidence's own service calls to the most primitive operation that realizes the vulnerability, while staying specific to its class. Prefer boundaries such as:
 
 - network connect, request, send, or download for SSRF;
 - process, script, expression, template, query, or deserialization execution for injection;
@@ -50,20 +50,20 @@ A boundary proposed from a few traces is a guess until it survives the whole fam
 
 Each round:
 
-1. Factor every assigned finding — not only the new ones — through the current boundaries:
+1. Factor every assigned evidence item — not only the new ones — through the current boundaries:
 
    ```text
-   universal source -> finding-specific context -> propagation -> universal sink
+   universal source -> item-specific context -> propagation -> universal sink
    ```
 
-2. For each finding that does not factor, generalize the offending side by exactly one step toward a more primitive boundary — never by adding a second alternative that merely spells out that finding's syntax. A `pattern-either` listing one branch per finding is the failure this skill exists to prevent.
-3. Re-check the findings that already factored. A widening that breaks an earlier factorization is a widening too far: back it out and split instead.
+2. For each item that does not factor, generalize the offending side by exactly one step toward a more primitive boundary — never by adding a second alternative that merely spells out that item's syntax. A `pattern-either` listing one branch per evidence item is the failure this skill exists to prevent.
+3. Re-check the items that already factored. A widening that breaks an earlier factorization is a widening too far: back it out and split instead.
 4. Challenge the widened boundary in both directions — if the sink now admits a different vulnerability class, narrow it back to the primitive effect or add a class-specific context restriction; if the source now admits trusted values, record what separates them as a context restriction rather than shrinking the boundary.
 5. Record the round: what changed, and which factorization statuses moved.
 
-The family is saturated when a full round widened nothing, broke nothing, and left every assigned finding either `covered` or `needs-restriction` with a named restriction. Stop and split — or record the finding `unfactored` with the evidence in `open_questions` — rather than looping a fourth time on the same finding.
+The family is saturated when a full round widened nothing, broke nothing, and left every assigned item either `covered` or `needs-restriction` with a named restriction. Stop and split — or record the item `unfactored`, with what blocked it in `open_questions` — rather than looping a fourth time on the same one.
 
-When the only boundary the whole family shares is arbitrary syntax, the family was wrong: split it. Each subfamily gets its own spec named `<family>-<qualifier>` and its own saturation loop, every assigned finding lands in exactly one subfamily, and each moved finding's reference file has its `family` rewritten to the subfamily that now owns it.
+When the only boundary the whole family shares is arbitrary syntax, the family was wrong: split it. Each subfamily gets its own spec named `<family>-<qualifier>` and its own saturation loop, and every assigned item lands in exactly one subfamily. A moved reference finding has its own file's `family` rewritten to the subfamily that now owns it; other evidence moves with the spec it is listed in, and the calling stage reconciles the family list to the specs you return.
 
 Keep independently triggerable paths distinct in the factorization even when they share both boundaries.
 
@@ -81,4 +81,4 @@ Real sanitization looks like resolved-IP private-range rejection for SSRF, canon
 
 ### 6. Write the specification
 
-Write one spec per family or subfamily. `candidate_patterns` must be concrete enough for `create-rule` to test, in the member shape that language's rule units use — the language reference gives that shape and the dependency identity to record with it. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.
+Write one spec per family or subfamily, listing the assigned ids under `evidence`. `candidate_patterns` must be concrete enough for `create-rule` to test, in the member shape that language's rule units use — the language reference gives that shape and the dependency identity to record with it. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.

@@ -1,38 +1,8 @@
-# Reference set + universal boundaries
+# Universal boundaries
 
-Turn the supplied findings into a normalized reference set, generalize each finding family into one saturated source and sink boundary, and seed the source and sink units those boundaries imply. Enactment mode only — it replaces dependency discovery, and everything it writes feeds the ordinary rule-authoring stages.
+Generalize each family intake produced into one saturated universal source and one universal sink, and seed the source and sink units those boundaries imply. Every mode runs this stage: the families differ — a swept frontier, a diff or spec, a supplied finding set — but what comes out is the same universal rule material, and everything it writes feeds the ordinary rule-authoring stages.
 
-## Normalize the reference set
-
-`state.yaml` names the supplied findings under `findings` — a manifest, SARIF, report, or directory of finding documents. Write one `.opentaint/tracking/reference/<finding-id>.yaml` per supplied finding.
-
-`.opentaint/tracking/reference/<finding-id>.yaml` — one supplied finding, normalized to a stable identity and carried through boundary discovery and the cross-reference. The file is named for the finding's own id. `family` ties it to its boundary spec and is rewritten when a family splits. `status` is `pending` until the cross-reference judges it, then `reproduced` or `unreproduced`; `cause` explains an `unreproduced` one so the pipeline knows who owns it — `rule` (a boundary, restriction, or sanitizer is wrong), `approximation` (an opaque carrier breaks the path), or `engine` (a modeling limit, paired with `blocker`). `blocked_at` lists the carriers still to model and is cleared once they are modeled or judged terminal. `matched_hashes` are the SARIF result hashes whose trace carries this finding's identity — never a rule-id match alone. Keep it clear from comments
-
-```yaml
-id: DSC-014
-vuln_class: ssrf
-family: ssrf
-source: request body field `callbackUrl` on POST /api/webhook/register
-propagation: WebhookReqVO -> WebhookDO -> WebhookService#dispatch
-sink: RestTemplate#getForObject in WebhookService#dispatch
-expected_location: yudao-module-infra/.../WebhookService.java:88
-guards: URL parsed with new URI(...), no private-range rejection
-status: reproduced
-cause: null
-blocker: null
-blocked_at: []
-matched_hashes: [a1b2c3d4e5f6a7b8]
-crossref: done
-notes: >
-  crossref: join ssrf-webhook-ext fired at WebhookService#dispatch:88 with the trace entering at
-  the registration body — same attack path as the reference finding
-```
-
-Give each finding a stable id of its own — the supplied one when it has one. Preserve separately triggerable attack paths as separate findings even when they share a sink. Never drop a finding for being a poor fit for taint analysis: an authorization, integrity, configuration, hard-coded-secret, or structural-control finding gets a reference file like any other, and becomes an explicit pseudo-boundary later.
-
-Then group the findings into families and set `family` on each. Partition by vulnerability class or by a cohesive finding family — never by file batches or arbitrary count. A family is the set of findings you expect to share one source and one sink.
-
-Fan out this normalization when the supplied set is large: one leaf per slice of the supplied report, each writing its own reference files. Assign the families yourself once every file exists, since that decision needs the whole set.
+Read the family list from `get_status.py`, which takes it from `.opentaint/tracking/scope.yaml` in onboarding and discovery mode, and from the reference findings' own `family` field in enactment mode.
 
 ## Discover the boundaries
 
@@ -40,17 +10,17 @@ Fan out discover-universal-boundaries, one leaf per family.
 
 Inputs each:
 - `language`
-- `findings` — the path `state.yaml` names
-- `finding-ids` — the ids assigned to this family
 - `family`
+- `evidence` — the ids the family carries: reference finding ids in enactment mode, the members or code areas `scope.yaml` recorded otherwise
+- `findings` (enactment mode) — the supplied-findings path `state.yaml` names, so a leaf can read a finding beyond its normalized file
 
-Expect back — `.opentaint/tracking/boundaries/<family>.yaml` with `saturation.status: saturated`, one `factorization` entry per assigned finding, and the controls listed separately from the positive boundaries. A leaf that splits its family writes one spec per subfamily and rewrites `family` on each reference finding it moved, so every finding still points at the spec that owns it.
+Expect back — `.opentaint/tracking/boundaries/<family>.yaml` with `saturation.status: saturated`, one `factorization` entry per assigned evidence item, and the controls listed separately from the positive boundaries. A leaf that splits its family writes one spec per subfamily; in enactment mode it also rewrites `family` on each reference finding it moved, and otherwise the split is recorded in the specs themselves — reconcile `scope.yaml` to the specs that came back so the family list and the specs still agree.
 
-`.opentaint/tracking/boundaries/<family>.yaml` — one boundary family: the single source and single sink every finding in the family factors through, plus the controls that recover precision. `candidate_patterns` are concrete enough for `create-rule` to test, and seed the family's source and sink units verbatim. `factorization` carries one entry per assigned reference finding, `status` one of `covered` (factors through both boundaries as-is), `needs-restriction` (factors only under a named `context_restrictions` entry), or `unfactored` (does not factor — explain in `open_questions` and split or add a pseudo-boundary). `saturation` records the widen-and-recheck rounds and only reads `saturated` once a full round changed neither the boundaries nor any factorization. `approximation_candidates` are opaque carriers noted for later — never acted on before a scan proves the trace stops there. Keep it clear from comments
+`.opentaint/tracking/boundaries/<family>.yaml` — one boundary family: the single universal source and single universal sink every piece of the family's evidence factors through, plus the controls that recover precision. `evidence` lists what the family was grouped from — reference finding ids in enactment mode, the members or code areas `scope.yaml` recorded otherwise. `candidate_patterns` are concrete enough for `create-rule` to test, and seed the family's source and sink units verbatim. `factorization` carries one entry per evidence item, `status` one of `covered` (factors through both boundaries as-is), `needs-restriction` (factors only under a named `context_restrictions` entry), or `unfactored` (does not factor — explain in `open_questions` and split or add a pseudo-boundary). `saturation` records the widen-and-recheck rounds and only reads `saturated` once a full round changed neither the boundaries nor any factorization. `approximation_candidates` are opaque carriers noted for later — never acted on before a scan proves the trace stops there. Keep it clear from comments
 
 ```yaml
 family: ssrf
-findings: [DSC-014, DSC-021]
+evidence: [DSC-014, DSC-021]
 source:
   semantic_boundary: external request value entering a controller
   candidate_patterns:
@@ -75,7 +45,7 @@ stages:
   units_seeded: done
 ```
 
-A spec returning with an `unfactored` finding is not a failure to retry blindly — read its `open_questions`, and either re-dispatch the leaf with the finding split out as its own family or accept the pseudo-boundary it proposes.
+A spec returning with an `unfactored` evidence item is not a failure to retry blindly — read its `open_questions`, and either re-dispatch the leaf with that item split out as its own family or accept the pseudo-boundary it proposes.
 
 ## Seed the rule units
 
@@ -107,6 +77,8 @@ stages:
 
 Copy `method`, `signature`, and `note` from the spec's `candidate_patterns` (plus `vuln_class` on the sink side), leave `rule_id: null` and the `stages` pending, and fill `dependencies` with the dependency each pattern's package comes from — empty when the boundary is a project member, as a structural pseudo-boundary usually is. Do not carry `context_restrictions`, `sanitizers`, or `negative_patterns` into the units: the boundary is the positive pattern, and the controls stay listed in the spec.
 
+Both sides are seeded here, and only the source side is authored before the first scan. That is deliberate: the sink boundary is decided now, on the evidence, and authored later against the frontier that scan names — never invented by a model round that found a carrier.
+
 ## Stage gate
 
-`get_status.py` drives `reference_set` then `boundaries`, naming findings without a family, families without a spec, unsaturated specs, unfactored findings, and unseeded specs. Finish when both are `DONE`, or when the next step it reports is source rules.
+`get_status.py` drives `boundaries`, naming families without a spec, unsaturated specs, evidence with no factorization, and unseeded specs. Finish when it reads `DONE`, or when the next step it reports is source rules.

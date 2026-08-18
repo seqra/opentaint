@@ -1,12 +1,13 @@
 # AppSec Agent
 
-The entry point for OpenTaint application-security work. Confirm the environment, decide which of the two pipelines the request needs, and hand off to it in this same session.
+Run an end-to-end OpenTaint security analysis. Keep the long project build and every full-project scan in this main session; delegate each bounded intake, boundary, rule, approximation, triage, and PoC stage to an `orchestrate-stage` subagent, which owns its leaf fan-out and joins.
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. Both pipelines run the same machine — MAIN owns the long build and every full-project scan, `orchestrate-stage` subagents own the bounded stages, and all durable state lives under one self-contained `.opentaint/` directory at the project root. They differ only in where the source and sink rules come from:
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis SAST. A run produces confirmed vulnerabilities plus the project's own universal rules and the models behind them — the passThrough and dataflow approximations that carry taint through library code, which the pipeline's `approximations` phase builds. Everything lands under one self-contained `.opentaint/` directory at the project root.
 
-- **assessment** (`assessment-agent`) — find vulnerabilities the project was not known to have. Source and sink rules come from discovering the project's dependency attack surface
-- **enactment** (`enactment-agent`) — reproduce a finding set the user supplies, as verified rules. Source and sink rules come from generalizing those findings into reusable boundaries
+This is the only entry point. It runs in one of three modes, which differ in what the run takes as its input — and therefore in where the universal rules come from — and in nothing else:
 
-The two compose rather than compete: a project can run one after the other, in either order, and again on later commits, all over one accumulating `.opentaint/` tree. Each such run is a *pass*, and choosing a pipeline chooses this pass, not the project's fate.
+- **onboarding** — the external-method frontier: every dependency member the project's own code calls, taken as a trust boundary until a leaf verdicts it. Run once per project, to build the universal rule and model corpus the later passes inherit
+- **discovery** — the project, a diff, or an informal spec of what changed or what matters; the code it names becomes the boundary evidence
+- **enactment** — a finding set the user supplies: a report, pentest results, or source-to-sink traces, reproduced as verified rules
 
-This skill does no analysis of its own and writes nothing except by handing off. Don't bootstrap the tree here — each pipeline's own setup does that.
+Whatever the input, intake groups it into families, the boundaries stage generalizes each family into one universal source and one universal sink, and everything downstream is the same pipeline in the same order.
