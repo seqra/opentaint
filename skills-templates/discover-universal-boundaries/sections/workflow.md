@@ -9,7 +9,7 @@ For each assigned finding, read its reference file and then the project source i
 5. the primitive security-relevant effect at the end; and
 6. the vulnerable invariant that is absent or defeated.
 
-Read enough surrounding source to tell the real boundary from incidental syntax. A getter, collection lookup, DTO accessor, or service method is usually propagation or context, not ingress.
+Read enough surrounding source to tell the real boundary from incidental syntax — the language reference says how to reach a dependency member's source, and which local shapes are propagation rather than ingress. A getter, collection lookup, or service method is usually propagation or context, not ingress.
 
 ### 2. Propose the source
 
@@ -23,9 +23,9 @@ Move backward from the finding-specific expressions until you reach the earliest
 - environment or runtime configuration entering a security decision; or
 - an explicit structural pseudo-source standing for attacker-selected identity or control state.
 
-Reject a candidate that is merely `$MAP.get(...)` after untrusted data has already entered, a `$METAVAR.method(...)` with no boundary type/signature/annotation/enclosing entrypoint, a ubiquitous getter that would taint trusted objects just as readily, or an internal carrier that ordinary propagation or a later approximation should handle.
+The language reference names the boundaries its built-in source rules already carry — one they match needs no new boundary — and what identifies a boundary in that language. Reject a candidate that is merely a map or collection read after untrusted data has already entered, a `$METAVAR.method(...)` with no boundary type, signature, declarative marker, or enclosing entrypoint, a ubiquitous getter that would taint trusted objects just as readily, or an internal carrier that ordinary propagation or a later approximation should handle.
 
-Express narrow usage conditions separately, as typed patterns, annotations, `pattern-inside`, and `...`. Never bake incidental access syntax into the source.
+Express narrow usage conditions separately, as typed patterns, `pattern-inside`, `...`, and whatever declarative marker the language offers. Never bake incidental access syntax into the source.
 
 ### 3. Propose the sink
 
@@ -42,7 +42,7 @@ Move forward from the finding-specific service calls to the most primitive opera
 - secret activation, credential construction, or outbound use for secret exposure; and
 - logger argument consumption for log injection.
 
-Don't stop at a controller-to-service call when the primitive effect is analyzable deeper in the project or a reusable library sink can express it. Use a structural sink only when the vulnerability *is* the missing control at that boundary, or when deeper propagation is genuinely unavailable.
+The language reference names the packages that realize these effects, and its built-in sinks. Don't stop at a controller-to-service call when the primitive effect is analyzable deeper in the project or a reusable library sink can express it. Use a structural sink only when the vulnerability *is* the missing control at that boundary, or when deeper propagation is genuinely unavailable.
 
 ### 4. Saturate
 
@@ -77,8 +77,8 @@ List these separately from the positive boundaries — the spec records them, an
 - `pattern-inside` contexts that constrain a universal boundary to the intended entrypoint, type, tenant, or vulnerability family; and
 - validators that are *not* security-relevant, recorded explicitly so nothing later mistakes them for sanitizers.
 
-Real sanitization looks like resolved-IP private-range rejection for SSRF, canonical-path containment for traversal, strict identifier ownership checks for IDOR, signature verification for callbacks, and CR/LF neutralization for log injection. Presence, length, parsing, or `@Valid` alone normally sanitizes none of these.
+Real sanitization looks like resolved-IP private-range rejection for SSRF, canonical-path containment for traversal, strict identifier ownership checks for IDOR, signature verification for callbacks, and CR/LF neutralization for log injection. Presence, length, and parsing alone normally sanitize none of these; the language reference names the usual impostors and what the real controls look like in that language.
 
 ### 6. Write the specification
 
-Write one spec per family or subfamily. `candidate_patterns` must be concrete enough for `create-rule` to test — a fully-qualified method with its signature, or the annotation and type that identify the boundary. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.
+Write one spec per family or subfamily. `candidate_patterns` must be concrete enough for `create-rule` to test, in the member shape that language's rule units use — the language reference gives that shape and the dependency identity to record with it. Record opaque carriers under `approximation_candidates`, and stop there: no approximation is created or recommended until a rule-first scan proves a trace stops at one.
