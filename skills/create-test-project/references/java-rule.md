@@ -6,7 +6,7 @@ Language reference for a `rule-source` / `rule-sink` type, keyed to the body's s
 
 ### 1. Scaffold the project
 
-`rule-source` → `opentaint test rule init <project> --sources-only`; `rule-sink` → `--sinks-only`. Each scaffolds that one sub-project under `.opentaint/test-projects/<name>` with `Taint.java` (the generic `source()` / `sink()`) and the generic marker lib rules in its `test-rules/`. You are handed one side per invocation, build only that side. Pass each coordinate from the unit's `dependencies` as a `--dependency`, taking its exact version from the app's dependency management (`.opentaint/project/sources/**/pom.xml`) verbatim — including timestamped snapshots — not a guess:
+`rule-source` → `opentaint test rule init <project> --sources-only`; `rule-sink` → `--sinks-only`. Each scaffolds that one sub-project under `.opentaint/test-projects/<name>` with `Taint.java` (the generic `source()` / `sink()`) and both plain and starred generic marker lib rules in its `test-rules/`. Use the plain counterpart for base-only flows and the starred counterpart when the marker must produce or consume whole-object taint. You are handed one side per invocation, build only that side. Pass each coordinate from the unit's `dependencies` as a `--dependency`, taking its exact version from the app's dependency management (`.opentaint/project/sources/**/pom.xml`) verbatim — including timestamped snapshots — not a guess:
 
 ```bash
 # source side
