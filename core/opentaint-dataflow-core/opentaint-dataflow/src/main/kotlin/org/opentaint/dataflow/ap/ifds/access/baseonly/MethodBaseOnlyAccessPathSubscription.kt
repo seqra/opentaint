@@ -93,6 +93,9 @@ class MethodBaseOnlyAccessPathSubscription(
         DefaultNDF2FSubStorageWithAp<BaseOnlyAccess, BaseOnlyAccess>(callerEp), BaseOnlyInitialApAccess {
         override val apManager: BaseOnlyApManager get() = manager
 
+        private val storageIndicesByExit =
+            BaseOnlyInitialAccessIndex<MutableSet<Int>>()
+
         override fun createBuilder(): CommonFactNDEdgeSubBuilder<BaseOnlyAccess> = NDBuilder(manager)
 
         override fun add(
@@ -103,28 +106,41 @@ class MethodBaseOnlyAccessPathSubscription(
             callerExitAp,
         )
 
-        private var maxIdx = 0
-
         override fun createStorage(idx: Int): Storage<BaseOnlyAccess, BaseOnlyAccess> {
-            maxIdx = maxOf(maxIdx, idx)
-            return FactStorage()
+            return FactStorage(idx)
         }
 
-        override fun relevantStorageIndices(summaryInitialFact: BaseOnlyAccess): BitSet =
-            BitSet().also { it.set(0, maxIdx + 1) }
+        override fun relevantStorageIndices(summaryInitialFact: BaseOnlyAccess): BitSet {
+            val result = BitSet()
+            storageIndicesByExit.collectCandidates(summaryInitialFact) { exit, storageIndices ->
+                val match = BaseOnlyAccessOps.matchPrefix(exit, summaryInitialFact)
+                if (match.emptyDelta || match.hasSuffix) {
+                    storageIndices.forEach(result::set)
+                }
+            }
+            return result
+        }
 
-        private inner class FactStorage : Storage<BaseOnlyAccess, BaseOnlyAccess> {
+        private inner class FactStorage(
+            private val storageIdx: Int,
+        ) : Storage<BaseOnlyAccess, BaseOnlyAccess> {
             private val edges = LongOpenHashSet()
 
-            override fun add(element: BaseOnlyAccess): BaseOnlyAccess? =
-                if (edges.add(element)) element else null
+            override fun add(element: BaseOnlyAccess): BaseOnlyAccess? {
+                if (!edges.add(element)) return null
+                storageIndicesByExit.getOrCreate(element, ::hashSetOf).add(storageIdx)
+                return element
+            }
 
             override fun collect(dst: MutableList<BaseOnlyAccess>) {
                 dst.addAll(edges)
             }
 
             override fun collect(dst: MutableList<BaseOnlyAccess>, summaryInitialFact: BaseOnlyAccess) {
-                dst.addAll(edges)
+                edges.forEach { exit ->
+                    val match = BaseOnlyAccessOps.matchPrefix(exit, summaryInitialFact)
+                    if (match.emptyDelta || match.hasSuffix) dst.add(exit)
+                }
             }
         }
     }

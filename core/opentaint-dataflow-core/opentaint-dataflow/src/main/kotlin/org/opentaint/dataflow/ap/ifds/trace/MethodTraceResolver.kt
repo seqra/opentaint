@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdgeSearcher
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FactAp
@@ -1864,7 +1865,8 @@ class MethodTraceResolver(
             null -> null
             is MergedPrimaryUnresolvedCallSkip -> listOf(primaryAction.action)
             is MergedPrimaryCall2StartAction -> {
-                resolveCallSummary(builder, statement, primaryAction.calleeEntryPoint, primaryAction.call2Start)
+                val callee = primaryAction.calleeEntryPoint.overApproximateContext(primaryAction.call2Start)
+                resolveCallSummary(builder, statement, callee, primaryAction.call2Start)
             }
         }
 
@@ -1881,6 +1883,19 @@ class MethodTraceResolver(
         resolvedRuleActions.forEachCartesianProduct { ruleActionGroup ->
             addResolved(resolvedPrimaryAction, ruleActionGroup.toHashSet())
         }
+    }
+
+    private fun MethodEntryPoint.overApproximateContext(
+        call2Start: Set<PartiallyResolvedCallAction.Call2Start>,
+    ): MethodEntryPoint {
+        val manager = analysisManager as? TaintAnalysisManager ?: return this
+        val contextIndependentFact = call2Start.all { action ->
+            action.currentEdges.all { it.fact.base == AccessPathBase.ClassStatic }
+        }
+        val method = manager.overApproximateMethodContext(
+            MethodWithContext(method, context), contextIndependentFact
+        )
+        return MethodEntryPoint(method.ctx, statement)
     }
 
     private fun resolveCallSummary(

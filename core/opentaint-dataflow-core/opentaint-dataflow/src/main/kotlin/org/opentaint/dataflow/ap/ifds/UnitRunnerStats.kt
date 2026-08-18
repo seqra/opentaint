@@ -31,6 +31,8 @@ class MethodStats {
             ndSummaryAnchorDeliveries = 0,
             ndSummaryUniqueEmissions = 0,
             ndSummaryDuplicateEmissions = 0,
+            ndSearchCacheHits = 0,
+            ndSearchCacheMisses = 0,
             transparentClosureQueries = 0,
             transparentClosureHits = 0,
             transparentClosureStatements = 0,
@@ -65,6 +67,8 @@ class MethodStats {
         var ndSummaryAnchorDeliveries: Long,
         var ndSummaryUniqueEmissions: Long,
         var ndSummaryDuplicateEmissions: Long,
+        var ndSearchCacheHits: Long,
+        var ndSearchCacheMisses: Long,
         var transparentClosureQueries: Long,
         var transparentClosureHits: Long,
         var transparentClosureStatements: Long,
@@ -99,6 +103,8 @@ class MethodStats {
             ndSummaryAnchorDeliveries -= other.ndSummaryAnchorDeliveries
             ndSummaryUniqueEmissions -= other.ndSummaryUniqueEmissions
             ndSummaryDuplicateEmissions -= other.ndSummaryDuplicateEmissions
+            ndSearchCacheHits -= other.ndSearchCacheHits
+            ndSearchCacheMisses -= other.ndSearchCacheMisses
             transparentClosureQueries -= other.transparentClosureQueries
             transparentClosureHits -= other.transparentClosureHits
             transparentClosureStatements -= other.transparentClosureStatements
@@ -155,6 +161,7 @@ class MethodStats {
             if (ndSummaryAnchorDeliveries > 0) {
                 append(" | ")
                 append("nd: $ndSummaryAnchorDeliveries/$ndSummaryUniqueEmissions/$ndSummaryDuplicateEmissions")
+                append(" | ND search: $ndSearchCacheHits/$ndSearchCacheMisses")
             }
 
             if (transparentClosureQueries > 0) {

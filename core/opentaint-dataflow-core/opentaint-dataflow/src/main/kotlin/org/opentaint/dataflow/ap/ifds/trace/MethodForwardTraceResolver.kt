@@ -10,7 +10,9 @@ import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
@@ -233,7 +235,11 @@ class MethodForwardTraceResolver(
         for (method in methodCalls) {
             when (method) {
                 is MethodCallResolutionResult.ResolvedMethod -> {
-                    for (ep in methodEntryPoints(method.method)) {
+                    val analysisMethod = (analysisManager as? TaintAnalysisManager)?.overApproximateMethodContext(
+                        method.method,
+                        contextIndependentFact = callerEdge.factAp.base == AccessPathBase.ClassStatic,
+                    ) ?: method.method
+                    for (ep in methodEntryPoints(analysisMethod)) {
                         handleMethodCall(ep, callerEdge, callerFact, startFactBase)
                     }
                 }

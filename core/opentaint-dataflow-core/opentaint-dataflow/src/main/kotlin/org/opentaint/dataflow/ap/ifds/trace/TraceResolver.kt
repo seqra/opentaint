@@ -1059,7 +1059,10 @@ class TraceResolver(
             methodEntry: MethodEntry
         ): List<Pair<CommonInst, MethodTraceResolver.SummaryTrace>> =
             methodEntryCallerTraceCache.computeIfAbsent(methodEntry) {
-                val callers = manager.findMethodCallers(methodEntry.entryPoint)
+                val callers = manager.findMethodCallers(
+                    methodEntry.entryPoint,
+                    collectZeroCallsOnly = manager.apManager !is BaseOnlyApManager,
+                )
                 callers.flatMap { caller ->
                     manager.withMethodRunner(caller.callerEp) {
                         val traceResolver = methodTraceResolver(caller.callerEp)

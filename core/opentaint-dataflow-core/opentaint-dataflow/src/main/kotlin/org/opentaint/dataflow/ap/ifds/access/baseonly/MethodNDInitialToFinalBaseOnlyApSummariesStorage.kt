@@ -1,11 +1,16 @@
 package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import it.unimi.dsi.fastutil.longs.LongArrayList
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonNDF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSummaryStorageWithAp
 import org.opentaint.dataflow.util.forEachLong
 import org.opentaint.dataflow.util.longSet
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.BitSet
+import java.util.concurrent.ConcurrentHashMap
 
 class MethodNDInitialToFinalBaseOnlyApSummariesStorage(
     methodEntryPoint: CommonInst,
@@ -19,9 +24,28 @@ class MethodNDInitialToFinalBaseOnlyApSummariesStorage(
 
     override fun createStorage(): Storage<BaseOnlyAccess> = object :
         DefaultNDF2FSummaryStorageWithAp<BaseOnlyAccess, BaseOnlyAccess>(methodEntryPoint),
-        BaseOnlyInitialApAccess {
+        BaseOnlyInitialApAccess,
+        BaseOnlyFinalApAccess {
         override val apManager: BaseOnlyApManager
             get() = this@MethodNDInitialToFinalBaseOnlyApSummariesStorage.apManager
+
+        private val initialAccessIndices =
+            ConcurrentHashMap<AccessPathBase, BaseOnlyInitialAccessIndex<Int>>()
+
+        override fun initialApAdded(idx: Int, ap: InitialFactAp) {
+            val byAccess = initialAccessIndices.computeIfAbsent(ap.base) { BaseOnlyInitialAccessIndex() }
+            val indexed = byAccess.getOrCreate(getInitialAccess(ap)) { idx }
+            check(indexed == idx) { "Different ND initial facts have the same canonical BaseOnly access" }
+        }
+
+        override fun relevantInitialAp(summaryInitialFactPattern: FinalFactAp): BitSet {
+            val pattern = getFinalAccess(summaryInitialFactPattern)
+            val result = BitSet()
+            initialAccessIndices[summaryInitialFactPattern.base]?.collectCandidates(pattern) { initial, idx ->
+                if (baseOnlySummaryInitialMatches(pattern, initial)) result.set(idx)
+            }
+            return result
+        }
 
         override fun createBuilder(): NDF2FBBuilder<BaseOnlyAccess> = Builder()
 

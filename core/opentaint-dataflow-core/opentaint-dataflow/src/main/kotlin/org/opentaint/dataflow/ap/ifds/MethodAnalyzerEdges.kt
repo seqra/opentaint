@@ -13,6 +13,9 @@ class MethodAnalyzerEdges(
     private val methodEntryPoint: MethodEntryPoint,
     languageManager: LanguageManager
 ) {
+    var modificationVersion: Long = 0
+        private set
+
     private val maxInstIdx = languageManager.getMaxInstIndex(methodEntryPoint.method)
 
     private val zeroToZeroEdges = SameInitialZeroFactEdges(maxInstIdx, languageManager)
@@ -23,7 +26,9 @@ class MethodAnalyzerEdges(
     fun add(edge: Edge): List<Edge> {
         check(edge.methodEntryPoint == methodEntryPoint)
 
-        return addEdge(edge)
+        return addEdge(edge).also { added ->
+            if (added.isNotEmpty()) modificationVersion++
+        }
     }
 
     fun reachedStatements() = zeroToZeroEdges.reachedStatements()
@@ -116,7 +121,12 @@ class MethodAnalyzerEdges(
         finalFact: FinalFactAp,
         emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
     ) {
-        taintedToFactEdges.addAll(statement, initialFacts, finalFact, emitDelta)
+        var changed = false
+        taintedToFactEdges.addAll(statement, initialFacts, finalFact) { initial, addedFinal ->
+            changed = true
+            emitDelta(initial, addedFinal)
+        }
+        if (changed) modificationVersion++
     }
 
     fun allZeroToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<FinalFactAp> {

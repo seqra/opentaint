@@ -4,6 +4,12 @@ import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
+import org.opentaint.ir.api.jvm.JIRClassOrInterface
+import org.opentaint.dataflow.jvm.ap.ifds.JIRArgumentTypeMethodContext
+import org.opentaint.dataflow.jvm.ap.ifds.JIRInstanceTypeMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodContext
+import org.opentaint.dataflow.ap.ifds.CombinedMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
@@ -70,7 +76,6 @@ import org.opentaint.ir.api.jvm.cfg.JIRInstVisitor
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
-import org.opentaint.ir.api.jvm.ext.usedFields
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
@@ -85,6 +90,35 @@ class JIRAnalysisManager(
     private val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
     override val supportsForwardActionableRuleFallback: Boolean = true
+
+    override fun overApproximateMethodContext(
+        method: MethodWithContext,
+        contextIndependentFact: Boolean,
+    ): MethodWithContext {
+        if (currentPhase !is Phase.ShallowScan) return method
+        if (!contextIndependentFact) return method
+        if (method.ctx is EmptyMethodContext || method.ctx.containsLambdaConstraint()) return method
+        return method.copy(ctx = EmptyMethodContext)
+    }
+
+    private val contextBoundFunctionTypes = ConcurrentHashMap<JIRClassOrInterface, Boolean>()
+
+    private fun MethodContext.containsLambdaConstraint(): Boolean = when (this) {
+        is JIRInstanceTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is JIRArgumentTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is CombinedMethodContext -> first.containsLambdaConstraint() || second.containsLambdaConstraint()
+        else -> false
+    }
+
+    private fun JIRClassOrInterface.isContextBoundFunction(): Boolean =
+        contextBoundFunctionTypes.computeIfAbsent(this) { type ->
+            type is LambdaAnonymousClassFeature.JIRLambdaClass ||
+                (sequenceOf(type) + type.allSuperHierarchySequence).any { superType ->
+                    superType.name.startsWith("kotlin.jvm.functions.Function") ||
+                        superType.name.startsWith("kotlin.coroutines.SuspendFunction") ||
+                        superType.name.startsWith("java.util.function.")
+                }
+        }
 
     override fun relevantForwardActionableRules(
         rules: ActionableRules,
@@ -153,14 +187,6 @@ class JIRAnalysisManager(
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
-    private sealed interface ClassStaticLeafFootprint {
-        data object NotLeaf : ClassStaticLeafFootprint
-        data class Fields(val fields: Set<org.opentaint.ir.api.jvm.JIRField>) : ClassStaticLeafFootprint
-    }
-
-    private val classStaticLeafFootprints = ConcurrentHashMap<JIRMethod, ClassStaticLeafFootprint>()
-    private val classStaticTransparentCalls =
-        ConcurrentHashMap<Pair<MethodEntryPoint, JIRInst>, ClassStaticLeafFootprint>()
     @Volatile
     private var classStaticFootprintIndex: JIRClassStaticFootprintIndex? = null
 
@@ -169,8 +195,6 @@ class JIRAnalysisManager(
 
     override fun selectPhase(phase: Phase) {
         currentPhase = phase
-        classStaticLeafFootprints.clear()
-        classStaticTransparentCalls.clear()
         classStaticFootprintIndex = null
         contexts.forEach { it.resetAnalysisCache() }
 
@@ -403,7 +427,10 @@ class JIRAnalysisManager(
         val callExpr = getCallExpr(statement)
         if (callExpr != null) {
             if (fact.base != AccessPathBase.ClassStatic) return false
-            return isClassStaticTransparentLeafCall(analysisContext, statement, callExpr, fact)
+            if (analysisContext.taint.hasRulesForCallStatement(statement)) return false
+            return classStaticCallIsDefinitelyIrrelevant(
+                apManager, analysisContext, callExpr, statement, fact,
+            )
         }
 
         if (statement !is JIRAssignInst && statement !is JIRReturnInst && statement !is JIRThrowInst) {
@@ -417,74 +444,45 @@ class JIRAnalysisManager(
         return !statement.accept(FactBaseAccessDetector(fact.base))
     }
 
-    private fun isClassStaticTransparentLeafCall(
-        analysisContext: JIRMethodAnalysisContext,
+    private fun classStaticCallIsDefinitelyIrrelevant(
+        apManager: ApManager,
+        context: JIRMethodAnalysisContext,
+        call: JIRCallExpr,
         statement: JIRInst,
-        callExpr: JIRCallExpr,
         fact: FinalFactAp,
     ): Boolean {
-        if (analysisContext.taint.hasRulesForCallStatement(statement)) return false
-        val footprint = classStaticTransparentCalls.computeIfAbsent(
-            analysisContext.methodEntryPoint to statement,
-        ) {
-            val callees = analysisContext.callResolver.resolve(callExpr, statement, analysisContext)
-            if (callees.isEmpty()) return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
+        context.cachedRawCallResolution(statement.location.index) {
+            context.callResolver.resolve(call, statement, context)
+        }.forEach { result ->
+            when (result) {
+                is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> {
+                    if (factIsRelevantToResolvedMethod(apManager, context, result.method, fact)) {
+                        return false
+                    }
+                }
 
-            val fields = hashSetOf<org.opentaint.ir.api.jvm.JIRField>()
-            for (callee in callees) {
-                val method = when (callee) {
-                    is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> callee.method.method
-                    JIRCallResolver.MethodResolutionResult.MethodResolutionFailed,
-                    is JIRCallResolver.MethodResolutionResult.Lambda ->
-                        return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-                } as JIRMethod
-                when (val target = classStaticLeafFootprint(method)) {
-                    ClassStaticLeafFootprint.NotLeaf ->
-                        return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-                    is ClassStaticLeafFootprint.Fields -> fields += target.fields
+                JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> Unit
+                is JIRCallResolver.MethodResolutionResult.Lambda -> {
+                    val tracker = context.lambdaCallResolution[statement.location.index] ?: return@forEach
+                    var relevantLambdaSeen = false
+                    tracker.forEachRegisteredLambda(object : JIRLambdaTracker.LambdaSubscriber {
+                        override fun newLambda(
+                            method: JIRMethod,
+                            lambdaClass: LambdaAnonymousClassFeature.JIRLambdaClass,
+                        ) {
+                            val implementation = lambdaClass.findMethodOrNull(method.name, method.description)
+                                ?: return
+                            val lambda = MethodWithContext(implementation, EmptyMethodContext)
+                            if (factIsRelevantToResolvedMethod(apManager, context, lambda, fact)) {
+                                relevantLambdaSeen = true
+                            }
+                        }
+                    })
+                    if (relevantLambdaSeen) return false
                 }
             }
-            ClassStaticLeafFootprint.Fields(fields)
         }
-
-        if (footprint !is ClassStaticLeafFootprint.Fields) return false
-        return footprint.fields.none { field -> factMayObserveStaticField(fact, field) }
-    }
-
-    private fun classStaticLeafFootprint(method: JIRMethod): ClassStaticLeafFootprint =
-        classStaticLeafFootprints.computeIfAbsent(method) {
-            val instructions = method.instList.toList()
-            if (instructions.isEmpty()) return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-            if (instructions.any { getCallExpr(it) != null }) {
-                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-            }
-
-            val statement = instructions.first()
-            if (taintConfig.exitSourceRulesForMethod(method, statement, fact = null, allRelevant = true).any()) {
-                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-            }
-            if (taintConfig.sinkRulesForMethodExit(
-                    method, statement, fact = null, initialFacts = null, allRelevant = true
-                ).any()
-            ) {
-                return@computeIfAbsent ClassStaticLeafFootprint.NotLeaf
-            }
-
-            val fields = method.usedFields.let { usages -> usages.reads + usages.writes }
-                .filterTo(hashSetOf()) { it.isStatic }
-            ClassStaticLeafFootprint.Fields(fields)
-        }
-
-    private fun factMayObserveStaticField(
-        fact: FinalFactAp,
-        field: org.opentaint.ir.api.jvm.JIRField,
-    ): Boolean {
-        val access = MethodFlowFunctionUtils.mkFieldAccess(field, instance = null)
-            as MethodFlowFunctionUtils.StaticRefAccess
-        val classFact = fact.readAccessor(access.classStaticAccessor) ?: return false
-        return MethodFlowFunctionUtils.run {
-            classFact.mayReadAccessor(AccessPathBase.ClassStatic, access.accessor)
-        }
+        return true
     }
 
     override fun factIsRelevantToResolvedMethod(

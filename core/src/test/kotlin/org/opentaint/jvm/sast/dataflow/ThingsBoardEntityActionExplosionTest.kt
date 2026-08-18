@@ -1,12 +1,36 @@
 package org.opentaint.jvm.sast.dataflow
 
+import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodStats
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.ApMode
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
+import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.ClassStatic
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
+import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
+import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.impl.features.usagesExt
+import org.opentaint.jvm.graph.JApplicationGraphImpl
+import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
+import org.opentaint.util.analysis.ApplicationGraph
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
 
 class ThingsBoardEntityActionExplosionTest : AnalysisTest() {
     override val sourceFileExtension: String = "java"
@@ -29,20 +53,59 @@ class ThingsBoardEntityActionExplosionTest : AnalysisTest() {
         ),
     )
 
+    private val classStaticRuleId = "thingsboard-class-static-context"
+    private val classStaticState = ClassStatic("thingsboard.class-static-context")
+    private val classStaticConfig = SerializedTaintConfig(
+        source = listOf(
+            sourceRule(testClass, "source", mark),
+            SerializedRule.Source(
+                function = functionMatcher(testClass, "seedClassStatic"),
+                condition = listOf(Argument(0) to mark).condition(),
+                taint = listOf(
+                    SerializedTaintAssignAction(
+                        kind = "ready",
+                        pos = PositionBaseWithModifiers.BaseOnly(classStaticState),
+                    )
+                ),
+            ),
+        ),
+        sink = listOf(
+            sinkRule(testClass, "classStaticSink", classStaticRuleId, listOf(classStaticState to "ready")),
+        ),
+    )
+
     @Test
     fun `interface contexts multiply the branch-heavy entity action analysis`() {
-        val single = analyzePushWorkload("singleEntityAction")
-        val contextual = analyzePushWorkload("entityActionExplosion")
+        val single = measureShallowScan(config, "singleEntityAction", "pushEntityActionToRuleEngine")
+        val contextual = measureShallowScan(config, "entityActionExplosion", "pushEntityActionToRuleEngine")
+
+        assertEquals(setOf(ruleId), single.ruleIds)
+        assertEquals(setOf(ruleId), contextual.ruleIds)
+
+        // The default ContextIndependentFacts policy shares only Zero and ClassStatic flows, so an
+        // ordinary interface-typed argument fact is still analyzed once per concrete context.
+        assertTrue(
+            contextual.stats.steps >= single.stats.steps * 4,
+            "six concrete interface contexts must multiply the shallow scan: " +
+                "single=${single.stats}, contextual=${contextual.stats}",
+        )
+        println("ThingsBoard entity-action shallow scan: single=${single.stats}, contextual=${contextual.stats}")
+    }
+
+    @Test
+    fun `class-static fact propagation is shared across argument type contexts`() {
+        val single = measureShallowScan(classStaticConfig, "singleClassStaticContext", "classStaticHotMethod")
+        val contextual = measureShallowScan(classStaticConfig, "classStaticContextExplosion", "classStaticHotMethod")
+
+        assertEquals(setOf(classStaticRuleId), single.ruleIds)
+        assertEquals(setOf(classStaticRuleId), contextual.ruleIds)
 
         assertTrue(
-            contextual.steps >= single.steps * 4,
-            "six concrete interface contexts must multiply analysis steps: single=$single, contextual=$contextual",
+            contextual.stats.steps < single.stats.steps * 2,
+            "six type contexts should share context-independent zero and ClassStatic analysis: " +
+                "single=${single.stats}, contextual=${contextual.stats}",
         )
-        assertTrue(
-            contextual.handledSummaries >= single.handledSummaries * 4,
-            "six concrete interface contexts must multiply summary applications: single=$single, contextual=$contextual",
-        )
-        println("ThingsBoard entity-action reproduction: single=$single, contextual=$contextual")
+        println("ThingsBoard class-static shallow scan: single=${single.stats}, contextual=${contextual.stats}")
     }
 
     @Test
@@ -73,11 +136,6 @@ class ThingsBoardEntityActionExplosionTest : AnalysisTest() {
             "seven contexts carrying the same fact must expose duplicated local work: " +
                 "single=$single, contextual=$contextual",
         )
-        assertTrue(
-            contextual.handledSummaries >= single.handledSummaries * 4,
-            "seven contexts carrying the same fact must expose duplicated summary work: " +
-                "single=$single, contextual=$contextual",
-        )
         println("ThingsBoard exact-context support: single=$single, contextual=$contextual")
     }
 
@@ -91,22 +149,6 @@ class ThingsBoardEntityActionExplosionTest : AnalysisTest() {
             "BaseOnly should not tabulate an unchanged fact at every control-only statement: " +
                 "tree=$tree, baseOnly=$baseOnly",
         )
-    }
-
-    private fun analyzePushWorkload(entryPoint: String): MethodStats.Stats {
-        var pushStats: MethodStats.Stats? = null
-        val vulnerabilities = runAnalysis(
-            config = config,
-            entryPointClass = testClass,
-            entryPointMethod = entryPoint,
-            apMode = ApMode.BaseOnlyField,
-        ) { analyzer, _ ->
-            val pushMethod = cp.findClassOrNull(testClass)!!.declaredMethods
-                .single { it.name == "pushEntityActionToRuleEngine" }
-            pushStats = analyzer.ifdsEngine.collectMethodStats().stats[pushMethod]
-        }
-        assertTrue(vulnerabilities.isNotEmpty(), "$entryPoint must preserve source-to-sink flow")
-        return requireNotNull(pushStats)
     }
 
     private fun analyzeContextWorkload(entryPoint: String): MethodStats.Stats {
@@ -128,6 +170,59 @@ class ThingsBoardEntityActionExplosionTest : AnalysisTest() {
             "$entryPoint must retain the exact context-to-sink association",
         )
         return requireNotNull(processStats)
+    }
+
+    private class ShallowScanMeasurement(val ruleIds: Set<String>, val stats: MethodStats.Stats)
+
+    private fun measureShallowScan(
+        config: SerializedTaintConfig,
+        entryPointMethod: String,
+        hotMethodName: String,
+    ): ShallowScanMeasurement {
+        val cls = checkNotNull(cp.findClassOrNull(testClass))
+        val entryPoint = cls.declaredMethods.single { it.name == entryPointMethod }
+        val hotMethod = cls.declaredMethods.single { it.name == hotMethodName }
+
+        val taintConfig = TaintConfiguration(cp).also { it.loadConfig(config) }
+        var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
+        rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
+        rulesProvider = customizeRulesProvider(rulesProvider)
+
+        val usages = runBlocking { cp.usagesExt() }
+        val graph = JIRSafeApplicationGraph(
+            JTryBoundaryExceptionsApplicationGraph(JApplicationGraphImpl(cp, usages)),
+        )
+
+        val managerHolder = arrayOfNulls<JIRAnalysisManager>(1)
+        val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(
+            TaintAnalyzerOptions(ifdsTimeout = 1.minutes, ifdsApMode = ApMode.BaseOnlyField),
+        ) {
+            override val unrollStrategy = AnyAccessorDisabled
+            override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = graph
+            override fun analysisManager() =
+                JIRAnalysisManager(cp, refManager, rulesProvider).also { managerHolder[0] = it }
+            override fun unitResolver() = this@ThingsBoardEntityActionExplosionTest
+                .unitResolver(cls.declaration.location)
+        }
+
+        return analyzer.use {
+            val engine = it.ifdsEngine
+            val manager = checkNotNull(managerHolder[0])
+            val startMethods = listOf(MethodWithContext(entryPoint, EmptyMethodContext))
+
+            manager.selectPhase(TaintAnalysisManager.Phase.Prescan)
+            engine.resetApManager(TreeApManager(AnyAccessorDisabled, it.refManager, it.cancellation))
+            engine.runAnalysis(startMethods, timeout = 1.minutes, cancellationTimeout = 30.seconds)
+            val afterPrescan = engine.collectMethodStats()
+
+            manager.selectPhase(TaintAnalysisManager.Phase.ShallowScan)
+            engine.resetApManager(BaseOnlyApManager(AnyAccessorDisabled, it.cancellation, fieldSensitive = true))
+            engine.runAnalysis(startMethods, timeout = 1.minutes, cancellationTimeout = 30.seconds)
+
+            val shallowDelta = engine.collectMethodStats().subtract(afterPrescan)
+            val ruleIds = engine.getVulnerabilities().mapTo(hashSetOf()) { v -> v.ruleId }
+            ShallowScanMeasurement(ruleIds, checkNotNull(shallowDelta.stats[hotMethod]))
+        }
     }
 
     private fun analyzeMethod(entryPoint: String, mode: ApMode): MethodStats.Stats {

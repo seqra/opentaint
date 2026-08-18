@@ -34,6 +34,7 @@ import org.opentaint.dataflow.ap.ifds.trace.TraceResolverStats
 import org.opentaint.dataflow.ap.ifds.trace.TraceSummarizer
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.cartesianProductMapTo
+import java.util.IdentityHashMap
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -234,7 +235,16 @@ class NormalMethodAnalyzer(
     private var baseOnlyNDSummaryAnchorDeliveries: Long = 0
     private var baseOnlyNDSummaryUniqueEmissions: Long = 0
     private var baseOnlyNDSummaryDuplicateEmissions: Long = 0
+    private var baseOnlyNDSearchCacheHits: Long = 0
+    private var baseOnlyNDSearchCacheMisses: Long = 0
     private var emittedBaseOnlyNDSummaryResults = hashSetOf<BaseOnlyNDSummaryResult>()
+    private var baseOnlyNDSearchCacheVersion = -1L
+    private var baseOnlyNDSearchCache = hashMapOf<NDSearchKey, List<Set<InitialFactAp>>>()
+    private var baseOnlyMethodCallSummaryHandlers = hashMapOf<CommonInst, MethodCallSummaryHandler>()
+    private var baseOnlyPreparedF2FSummaries =
+        hashMapOf<CommonInst, IdentityHashMap<FactToFact, List<FactToFact>>>()
+    private var baseOnlyPreparedNDSummaries =
+        hashMapOf<CommonInst, IdentityHashMap<NDFactToFact, List<NDFactToFact>>>()
     private val registeredResolvedCallees = hashSetOf<CommonMethod>()
     private val traceResolverStats = TraceResolverStats()
     @Volatile
@@ -282,6 +292,8 @@ class NormalMethodAnalyzer(
             ndSummaryAnchorDeliveries += this@NormalMethodAnalyzer.baseOnlyNDSummaryAnchorDeliveries
             ndSummaryUniqueEmissions += this@NormalMethodAnalyzer.baseOnlyNDSummaryUniqueEmissions
             ndSummaryDuplicateEmissions += this@NormalMethodAnalyzer.baseOnlyNDSummaryDuplicateEmissions
+            ndSearchCacheHits += this@NormalMethodAnalyzer.baseOnlyNDSearchCacheHits
+            ndSearchCacheMisses += this@NormalMethodAnalyzer.baseOnlyNDSearchCacheMisses
             transparentClosureQueries += this@NormalMethodAnalyzer.transparentClosureQueries
             transparentClosureHits += this@NormalMethodAnalyzer.transparentClosureHits
             transparentClosureStatements += this@NormalMethodAnalyzer.transparentClosureStatements
@@ -430,6 +442,24 @@ class NormalMethodAnalyzer(
         analysisManager.onInstructionReached(statement)
 
         val callExpr = analysisManager.getCallExpr(statement)
+        if (analysisManager.isTransparentToFact(
+                apManager,
+                analysisContext,
+                methodInstGraph,
+                statement,
+                finalFact,
+            )
+        ) {
+            if (callExpr != null) {
+                baseOnlyF2FGroupKinds.recordCall(initialFacts.size)
+            } else {
+                baseOnlyF2FGroupKinds.recordSequential(initialFacts.size)
+            }
+            analyzerSteps++
+            propagateTransparentFactGroup(group)
+            return
+        }
+
         if (callExpr != null) {
             baseOnlyF2FGroupKinds.recordCall(initialFacts.size)
             val returnValue: CommonValue? = (statement as? CommonAssignInst)?.lhv
@@ -459,19 +489,6 @@ class NormalMethodAnalyzer(
         }
 
         baseOnlyF2FGroupKinds.recordSequential(initialFacts.size)
-
-        if (analysisManager.isTransparentToFact(
-                apManager,
-                analysisContext,
-                methodInstGraph,
-                statement,
-                finalFact,
-            )
-        ) {
-            analyzerSteps++
-            propagateTransparentFactGroup(group)
-            return
-        }
 
         val flowFunction = analysisManager.getMethodSequentFlowFunction(
             apManager,
@@ -1118,23 +1135,45 @@ class NormalMethodAnalyzer(
 
     override fun handleResolvedMethodCall(method: MethodWithContext, handler: MethodCallHandler) {
         registerResolvedMethodCall(method.method)
-        if (!resolvedMethodIsRelevant(method, handler)) {
+        val analysisMethod = analysisMethod(method, handler)
+        if (!resolvedMethodIsRelevant(analysisMethod, handler)) {
             handleUnchangedStatementEdge(handler.currentEdge())
             return
         }
-        for (ep in methodEntryPoints(method)) {
+        for (ep in methodEntryPoints(analysisMethod)) {
             handleMethodCall(handler, ep)
         }
     }
 
     override fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler) {
         registerResolvedMethodCall(entryPoint.method)
-        if (!resolvedMethodIsRelevant(MethodWithContext(entryPoint.method, entryPoint.context), handler)) {
+        val analysisMethod = analysisMethod(MethodWithContext(entryPoint.method, entryPoint.context), handler)
+        val analysisEntryPoint = MethodEntryPoint(analysisMethod.ctx, entryPoint.statement)
+        if (!resolvedMethodIsRelevant(
+                MethodWithContext(analysisEntryPoint.method, analysisEntryPoint.context),
+                handler,
+            )
+        ) {
             handleUnchangedStatementEdge(handler.currentEdge())
             return
         }
-        handleMethodCall(handler, entryPoint)
+        handleMethodCall(handler, analysisEntryPoint)
     }
+
+    private fun analysisMethod(method: MethodWithContext, handler: MethodCallHandler): MethodWithContext {
+        val manager = analysisManager as? TaintAnalysisManager ?: return method
+        val contextIndependentFact = handler is MethodCallHandler.ZeroToZeroHandler ||
+            handler.currentEdge().finalFactBase == AccessPathBase.ClassStatic
+        return manager.overApproximateMethodContext(method, contextIndependentFact)
+    }
+
+    private val Edge.finalFactBase: AccessPathBase?
+        get() = when (this) {
+            is ZeroToZero -> null
+            is ZeroToFact -> factAp.base
+            is FactToFact -> factAp.base
+            is NDFactToFact -> factAp.base
+        }
 
     private fun registerResolvedMethodCall(callee: CommonMethod) {
         if (registeredResolvedCallees.add(callee)) {
@@ -1374,9 +1413,7 @@ class NormalMethodAnalyzer(
     ) {
         summaryEdgesHandled++
         val applicableSummaries = methodSummaries.filter { isApplicableExitToReturnEdge(it) }
-        val handler = analysisManager.getMethodCallSummaryHandler(
-            apManager, analysisContext, currentEdge.statement
-        )
+        val handler = methodCallSummaryHandler(currentEdge.statement)
 
         for (methodSummary in applicableSummaries) {
             if (!cancellation.isActive()) return
@@ -1399,11 +1436,11 @@ class NormalMethodAnalyzer(
         for (sub in summarySubs) {
             if (!cancellation.isActive()) return
 
-            val handler = analysisManager.getMethodCallSummaryHandler(
-                apManager, analysisContext, sub.currentEdge.statement
-            )
+            val handler = methodCallSummaryHandler(sub.currentEdge.statement)
 
-            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+            val summariesToApply = applicableSummaries.flatMap {
+                prepareFactToFactSummary(sub.currentEdge.statement, handler, it)
+            }
 
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
@@ -1435,11 +1472,11 @@ class NormalMethodAnalyzer(
         for (sub in summarySubs) {
             if (!cancellation.isActive()) return
 
-            val handler = analysisManager.getMethodCallSummaryHandler(
-                apManager, analysisContext, sub.currentEdge.statement
-            )
+            val handler = methodCallSummaryHandler(sub.currentEdge.statement)
 
-            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+            val summariesToApply = applicableSummaries.flatMap {
+                prepareFactToFactSummary(sub.currentEdge.statement, handler, it)
+            }
 
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
@@ -1473,11 +1510,11 @@ class NormalMethodAnalyzer(
         for (sub in summarySubs) {
             if (!cancellation.isActive()) return
 
-            val handler = analysisManager.getMethodCallSummaryHandler(
-                apManager, analysisContext, sub.currentEdge.statement
-            )
+            val handler = methodCallSummaryHandler(sub.currentEdge.statement)
 
-            val summariesToApply = applicableSummaries.flatMap { handler.prepareFactToFactSummary(it) }
+            val summariesToApply = applicableSummaries.flatMap {
+                prepareFactToFactSummary(sub.currentEdge.statement, handler, it)
+            }
 
             applyMethodSummaries(
                 currentEdge = sub.currentEdge,
@@ -1589,11 +1626,11 @@ class NormalMethodAnalyzer(
 
             val currentEdge = sub.subEdge()
 
-            val handler = analysisManager.getMethodCallSummaryHandler(
-                apManager, analysisContext, currentEdge.statement
-            )
+            val handler = methodCallSummaryHandler(currentEdge.statement)
 
-            val summariesToApply = applicableSummaries.flatMap { handler.prepareNDFactToFactSummary(it) }
+            val summariesToApply = applicableSummaries.flatMap {
+                prepareNDFactToFactSummary(currentEdge.statement, handler, it)
+            }
 
             applyMethodNDSummaries(
                 summaryHandler = handler,
@@ -1631,27 +1668,13 @@ class NormalMethodAnalyzer(
 
             val requiredInitials = mutableListOf<List<Set<InitialFactAp>>>()
             for (requiredFact in requiredFacts) {
-
-                val searcher = object : MethodAnalyzerEdgeSearcher(
-                    edges, apManager, analysisManager, analysisContext, methodInstGraph
-                ) {
-                    override fun matchFact(factAtStatement: FinalFactAp, targetFactPattern: InitialFactAp): Boolean =
-                        factAtStatement.rebase(requiredFact.base).matchNDInitial(requiredFact)
-                }
-
-                val mappedRequiredFacts = analysisContext.methodCallFactMapper.mapMethodExitToReturnFlowFact(
-                    currentEdge.statement, requiredFact
-                )
-
-                val factInitials = mappedRequiredFacts.flatMapTo(hashSetOf()) {
-                    searcher.findMatchingEdgesInitialFacts(currentEdge.statement, it)
-                }
+                val factInitials = findNDRequiredInitials(currentEdge.statement, requiredFact)
 
                 if (factInitials.isEmpty()) {
                     continue@nextSummary
                 }
 
-                requiredInitials.add(factInitials.toList())
+                requiredInitials.add(factInitials)
             }
 
             requiredInitials.cartesianProductMapTo { initialFactGroup ->
@@ -1741,6 +1764,79 @@ class NormalMethodAnalyzer(
                     }
                 }
             }
+        }
+    }
+
+    private fun findNDRequiredInitials(
+        callStatement: CommonInst,
+        requiredFact: InitialFactAp,
+    ): List<Set<InitialFactAp>> {
+        fun compute(): List<Set<InitialFactAp>> {
+            val searcher = object : MethodAnalyzerEdgeSearcher(
+                edges, apManager, analysisManager, analysisContext, methodInstGraph
+            ) {
+                override fun matchFact(
+                    factAtStatement: FinalFactAp,
+                    targetFactPattern: InitialFactAp,
+                ): Boolean = factAtStatement.rebase(requiredFact.base).matchNDInitial(requiredFact)
+            }
+            return analysisContext.methodCallFactMapper.mapMethodExitToReturnFlowFact(
+                callStatement, requiredFact
+            ).flatMapTo(hashSetOf()) {
+                searcher.findMatchingEdgesInitialFacts(callStatement, it)
+            }.toList()
+        }
+
+        if (apManager !is BaseOnlyApManager) return compute()
+
+        val edgeVersion = edges.modificationVersion
+        if (baseOnlyNDSearchCacheVersion != edgeVersion) {
+            baseOnlyNDSearchCacheVersion = edgeVersion
+            baseOnlyNDSearchCache.clear()
+        }
+
+        val key = NDSearchKey(callStatement, requiredFact)
+        baseOnlyNDSearchCache[key]?.let { cached ->
+            baseOnlyNDSearchCacheHits++
+            return cached
+        }
+        baseOnlyNDSearchCacheMisses++
+
+        val result = compute()
+        baseOnlyNDSearchCache[key] = result
+        return result
+    }
+
+    private fun methodCallSummaryHandler(statement: CommonInst): MethodCallSummaryHandler {
+        if (apManager !is BaseOnlyApManager) {
+            return analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
+        }
+        return baseOnlyMethodCallSummaryHandlers.getOrPut(statement) {
+            analysisManager.getMethodCallSummaryHandler(apManager, analysisContext, statement)
+        }
+    }
+
+    private fun prepareFactToFactSummary(
+        statement: CommonInst,
+        handler: MethodCallSummaryHandler,
+        summary: FactToFact,
+    ): List<FactToFact> {
+        if (apManager !is BaseOnlyApManager) return handler.prepareFactToFactSummary(summary)
+        val summariesAtStatement = baseOnlyPreparedF2FSummaries.getOrPut(statement) { IdentityHashMap() }
+        return summariesAtStatement.getOrPut(summary) {
+            handler.prepareFactToFactSummary(summary)
+        }
+    }
+
+    private fun prepareNDFactToFactSummary(
+        statement: CommonInst,
+        handler: MethodCallSummaryHandler,
+        summary: NDFactToFact,
+    ): List<NDFactToFact> {
+        if (apManager !is BaseOnlyApManager) return handler.prepareNDFactToFactSummary(summary)
+        val summariesAtStatement = baseOnlyPreparedNDSummaries.getOrPut(statement) { IdentityHashMap() }
+        return summariesAtStatement.getOrPut(summary) {
+            handler.prepareNDFactToFactSummary(summary)
         }
     }
 
@@ -1834,6 +1930,11 @@ class NormalMethodAnalyzer(
         pendingSideEffectSummaries = arrayListOf()
         appliedBaseOnlySideEffectRequirements = BaseOnlySideEffectRequirementDeltaTracker()
         emittedBaseOnlyNDSummaryResults = hashSetOf()
+        baseOnlyNDSearchCacheVersion = -1L
+        baseOnlyNDSearchCache = hashMapOf()
+        baseOnlyMethodCallSummaryHandlers = hashMapOf()
+        baseOnlyPreparedF2FSummaries = hashMapOf()
+        baseOnlyPreparedNDSummaries = hashMapOf()
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
 
         initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
@@ -1849,6 +1950,11 @@ class NormalMethodAnalyzer(
         val statement: CommonInst,
         val preparedSummary: NDFactToFact,
         val sequent: Sequent,
+    )
+
+    private data class NDSearchKey(
+        val statement: CommonInst,
+        val requiredFact: InitialFactAp,
     )
 
     private data class TransparentClosureKey(

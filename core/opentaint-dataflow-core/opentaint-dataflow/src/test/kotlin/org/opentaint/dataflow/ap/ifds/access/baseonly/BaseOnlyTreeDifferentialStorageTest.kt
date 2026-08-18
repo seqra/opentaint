@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.baseonly
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
@@ -181,6 +182,52 @@ class BaseOnlyTreeDifferentialStorageTest {
             treeNDBuilders.map { it.setEntryPoint(entryPoint).setExitStatement(inst).build().factAp },
             baseOnlyNDBuilders.map { it.setEntryPoint(entryPoint).setExitStatement(inst).build().factAp },
             "method ND patterned",
+        )
+    }
+
+    @Test
+    fun `method ND summary query does not enumerate a different concrete static accessor`() {
+        val (_, baseOnly) = managers()
+        val staticA = ClassStaticAccessor("StaticA")
+        val staticB = ClassStaticAccessor("StaticB")
+        val storage = baseOnly.methodNDInitialToFinalApSummariesStorage(inst)
+        val initialA = setOf(
+            baseOnly.initialOf(AccessPathBase.ClassStatic, ExclusionSet.Universe, staticA, mark),
+            baseOnly.initialOf(AccessPathBase.This, ExclusionSet.Universe, fieldA),
+        )
+        val initialB = setOf(
+            baseOnly.initialOf(AccessPathBase.ClassStatic, ExclusionSet.Universe, staticB, mark),
+            baseOnly.initialOf(AccessPathBase.Exception, ExclusionSet.Universe, fieldB),
+        )
+        storage.add(
+            listOf(
+                Edge.NDFactToFact(
+                    entryPoint,
+                    initialA,
+                    inst,
+                    baseOnly.finalOf(AccessPathBase.Return, ExclusionSet.Universe, fieldA, mark),
+                ),
+                Edge.NDFactToFact(
+                    entryPoint,
+                    initialB,
+                    inst,
+                    baseOnly.finalOf(AccessPathBase.Return, ExclusionSet.Universe, fieldB, mark),
+                ),
+            ),
+            mutableListOf(),
+        )
+
+        val selected = mutableListOf<org.opentaint.dataflow.ap.ifds.NDFactToFactEdgeBuilder>()
+        storage.filterEdgesTo(
+            selected,
+            baseOnly.finalOf(AccessPathBase.ClassStatic, staticA, mark),
+            AccessPathBase.Return,
+        )
+
+        assertEquals(1, selected.size)
+        assertEquals(
+            initialA,
+            selected.single().setEntryPoint(entryPoint).setExitStatement(inst).build().initialFacts,
         )
     }
 

@@ -199,7 +199,7 @@ class BaseOnlySubscriptionAndReqTest {
     }
 
     @Test
-    fun `ND subscription broadcasts conservative candidates for both residual modes`() {
+    fun `ND subscription indexes applicable candidates for both residual modes`() {
         val sub = manager.accessPathSubscription()
         val callerInitial = setOf(
             initial(pattern(fieldA)).replaceExclusions(ExclusionSet.Universe),
@@ -211,11 +211,11 @@ class BaseOnlySubscriptionAndReqTest {
 
         val nonEmpty = mutableListOf<FactNDEdgeSummarySubscription>()
         sub.collectFactNDEdge(nonEmpty, initial(pattern(fieldA)), emptyDeltaRequired = false)
-        assertEquals(3, nonEmpty.size)
+        assertEquals(2, nonEmpty.size)
 
         val empty = mutableListOf<FactNDEdgeSummarySubscription>()
         sub.collectFactNDEdge(empty, initial(pattern(fieldA)), emptyDeltaRequired = true)
-        assertEquals(3, empty.size)
+        assertEquals(2, empty.size)
     }
 
     @Test
@@ -271,7 +271,7 @@ class BaseOnlySubscriptionAndReqTest {
 
         val ndResult = mutableListOf<FactNDEdgeSummarySubscription>()
         sub.collectFactNDEdge(ndResult, initial(summaryAccess), emptyDeltaRequired = false)
-        assertEquals(exits.size, ndResult.size, "ND indexing is outside this change")
+        assertEquals(expectedApplicable, ndResult.size)
     }
 
     @Test

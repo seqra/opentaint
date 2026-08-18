@@ -20,6 +20,11 @@ interface TaintAnalysisManager : AnalysisManager {
         uncoveredSinkRules: Set<CommonTaintConfigurationItem>,
     ): ActionableRules = rules
 
+    fun overApproximateMethodContext(
+        method: MethodWithContext,
+        contextIndependentFact: Boolean,
+    ): MethodWithContext = method
+
     sealed interface Phase {
         data object Prescan : Phase
         data object ShallowScan : Phase

@@ -3,10 +3,14 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.access.FactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.ABSTRACT_MARK
 import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyFinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyInitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.fieldIdx
+import org.opentaint.dataflow.ap.ifds.access.baseonly.staticIdx
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -41,6 +45,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.toApAccessor
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
+import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
@@ -65,6 +70,7 @@ internal class JIRClassStaticFootprintIndex(
         val method: MethodWithContext,
         val context: JIRMethodAnalysisContext,
         val directAccesses: Set<StaticAccessPath>,
+        val directAliasedTypes: Set<String>,
         val callees: IntArray,
         val hasUnknownCallee: Boolean,
     )
@@ -74,6 +80,8 @@ internal class JIRClassStaticFootprintIndex(
         val componentByNode: IntArray,
         val accesses: List<StaticAccessPath>,
         val footprintByComponent: Array<LongArray>,
+        val aliasedTypes: List<String>,
+        val aliasedTypesByComponent: Array<LongArray>,
         val unknownByComponent: BooleanArray,
     )
 
@@ -93,6 +101,10 @@ internal class JIRClassStaticFootprintIndex(
         val footprint = index.footprintByComponent[component]
         footprint.forEachSetBit { accessId ->
             if (factMayObserve(fact, index.accesses[accessId])) return true
+        }
+        val aliasedTypes = index.aliasedTypesByComponent[component]
+        aliasedTypes.forEachSetBit { typeId ->
+            if (factMayAliasType(fact, index.aliasedTypes[typeId])) return true
         }
         return false
     }
@@ -117,18 +129,26 @@ internal class JIRClassStaticFootprintIndex(
             val context = contextByMethod.getValue(methodWithContext)
             val method = methodWithContext.method as JIRMethod
             val resolvedCallees = linkedSetOf<MethodWithContext>()
+            val directlyAliasedTypes = linkedSetOf<String>()
             var hasUnknownCallee = false
 
             method.instList.forEach { statement ->
                 val call = statement.callExpr ?: return@forEach
-                callResolver.resolve(call, statement, context).forEach { result ->
+                context.cachedRawCallResolution(statement.location.index) {
+                    callResolver.resolve(call, statement, context)
+                }.forEach { result ->
                     when (result) {
                         is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> {
                             resolvedCallees += result.method
                         }
 
                         JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> {
-                            hasUnknownCallee = true
+                            // A rule on an unresolved instance call can consume state aliased from
+                            // a typed object stored below ClassStatic. Preserve only that receiver
+                            // type; a rule-free failure is a pure identity transfer.
+                            if (call is JIRInstanceCallExpr && hasCallRules(call, statement)) {
+                                directlyAliasedTypes += call.instance.type.typeName
+                            }
                         }
 
                         is JIRCallResolver.MethodResolutionResult.Lambda -> {
@@ -167,6 +187,7 @@ internal class JIRClassStaticFootprintIndex(
                 methodWithContext,
                 context,
                 directAccessCache.getOrPut(method) { directStaticAccesses(method) },
+                directlyAliasedTypes,
                 calleeIds.copyOf(calleeCount),
                 hasUnknownCallee,
             )
@@ -184,12 +205,22 @@ internal class JIRClassStaticFootprintIndex(
         val accessIds = allAccesses.withIndex().associate { (idx, access) -> access to idx }
         val words = (allAccesses.size + Long.SIZE_BITS - 1) / Long.SIZE_BITS
         val footprintByComponent = Array(componentCount) { LongArray(words) }
+        val allAliasedTypes = nodes.asSequence()
+            .flatMap { it.directAliasedTypes.asSequence() }
+            .distinct()
+            .toList()
+        val aliasedTypeIds = allAliasedTypes.withIndex().associate { (idx, type) -> type to idx }
+        val aliasedTypeWords = (allAliasedTypes.size + Long.SIZE_BITS - 1) / Long.SIZE_BITS
+        val aliasedTypesByComponent = Array(componentCount) { LongArray(aliasedTypeWords) }
         val unknownByComponent = BooleanArray(componentCount)
 
         nodes.forEachIndexed { nodeId, node ->
             val component = componentByNode[nodeId]
             node.directAccesses.forEach { access ->
                 footprintByComponent[component].set(accessIds.getValue(access))
+            }
+            node.directAliasedTypes.forEach { type ->
+                aliasedTypesByComponent[component].set(aliasedTypeIds.getValue(type))
             }
             unknownByComponent[component] = unknownByComponent[component] || node.hasUnknownCallee
         }
@@ -215,40 +246,56 @@ internal class JIRClassStaticFootprintIndex(
             val callee = worklist.removeFirst()
             componentCallers[callee].forEach { caller ->
                 footprintByComponent[caller].or(footprintByComponent[callee])
+                aliasedTypesByComponent[caller].or(aliasedTypesByComponent[callee])
                 unknownByComponent[caller] = unknownByComponent[caller] || unknownByComponent[callee]
                 if (--remainingCallees[caller] == 0) worklist += caller
             }
         }
 
         check(remainingCallees.all { it == 0 }) { "Class-static footprint condensation graph contains a cycle" }
-        return Index(nodeIds, componentByNode, allAccesses, footprintByComponent, unknownByComponent)
+        return Index(
+            nodeIds,
+            componentByNode,
+            allAccesses,
+            footprintByComponent,
+            allAliasedTypes,
+            aliasedTypesByComponent,
+            unknownByComponent,
+        )
     }
 
-    private fun directStaticAccesses(method: JIRMethod): Set<StaticAccessPath> = buildSet {
+    private fun directStaticAccesses(method: JIRMethod): Set<StaticAccessPath> {
+        val staticAccesses = hashSetOf<StaticAccessPath>()
         val instructions = method.instList.toList()
-        val representative = instructions.firstOrNull() ?: return@buildSet
+        val representative = instructions.firstOrNull()
+            ?: return emptySet()
 
         val fieldUsages = method.usedFields
-        (fieldUsages.reads + fieldUsages.writes).asSequence()
-            .filter { it.isStatic }
-            .forEach { field ->
+        (fieldUsages.reads + fieldUsages.writes).forEach { field ->
+            if (field.isStatic) {
                 val access = MethodFlowFunctionUtils.mkFieldAccess(field, instance = null)
                     as MethodFlowFunctionUtils.StaticRefAccess
-                add(StaticAccessPath(listOf(access.classStaticAccessor, access.accessor)))
-                taintRules.sourceRulesForStaticField(field, representative, fact = null).forEach { addRule(it) }
+                staticAccesses += StaticAccessPath(listOf(access.classStaticAccessor, access.accessor))
+                taintRules.sourceRulesForStaticField(field, representative, fact = null)
+                    .forEach { staticAccesses.addRule(it) }
             }
+        }
 
-        taintRules.entryPointRulesForMethod(method, representative, fact = null).forEach { addRule(it) }
-        taintRules.sinkRulesForMethodEntry(method, representative, fact = null).forEach { addRule(it) }
-        taintRules.exitSourceRulesForMethod(method, representative, fact = null).forEach { addRule(it) }
+        taintRules.entryPointRulesForMethod(method, representative, fact = null)
+            .forEach { staticAccesses.addRule(it) }
+        taintRules.sinkRulesForMethodEntry(method, representative, fact = null)
+            .forEach { staticAccesses.addRule(it) }
+        taintRules.exitSourceRulesForMethod(method, representative, fact = null)
+            .forEach { staticAccesses.addRule(it) }
         taintRules.sinkRulesForMethodExit(
             method, representative, fact = null, initialFacts = null,
-        ).forEach { addRule(it) }
+        ).forEach { staticAccesses.addRule(it) }
 
         instructions.forEach { statement ->
             val call = statement.callExpr ?: return@forEach
-            addCallRules(call, statement)
+            staticAccesses.addCallRules(call, statement)
         }
+        return staticAccesses
     }
 
     private fun MutableSet<StaticAccessPath>.addCallRules(call: JIRCallExpr, statement: JIRInst) {
@@ -257,6 +304,14 @@ internal class JIRClassStaticFootprintIndex(
         taintRules.sinkRulesForMethod(method, statement, fact = null).forEach { addRule(it) }
         taintRules.cleanerRulesForMethod(method, statement, fact = null).forEach { addRule(it) }
         taintRules.passTroughRulesForMethod(method, statement, fact = null).forEach { addRule(it) }
+    }
+
+    private fun hasCallRules(call: JIRCallExpr, statement: JIRInst): Boolean {
+        val method = call.method.method
+        return taintRules.sourceRulesForMethod(method, statement, fact = null).any() ||
+            taintRules.sinkRulesForMethod(method, statement, fact = null).any() ||
+            taintRules.cleanerRulesForMethod(method, statement, fact = null).any() ||
+            taintRules.passTroughRulesForMethod(method, statement, fact = null).any()
     }
 
     private fun MutableSet<StaticAccessPath>.addRule(rule: TaintConfigurationItem) {
@@ -353,6 +408,31 @@ internal class JIRClassStaticFootprintIndex(
         }
         return true
     }
+
+    private fun factMayAliasType(fact: FactAp, typeName: String): Boolean {
+        val access = when (fact) {
+            is BaseOnlyFinalFactAp -> fact.access
+            is BaseOnlyInitialFactAp -> fact.access
+            else -> return true
+        }
+        // A call operand can only alias a typed object exposed by a concrete static/field
+        // accessor. An abstract slot has no such alias witness; its ordinary static accesses are
+        // still matched by factMayObserve above.
+        if (access.staticIdx == ABSTRACT_MARK) return false
+        if (access.fieldIdx == ABSTRACT_MARK) {
+            return fact.getAllAccessors().any { it is ClassStaticAccessor }
+        }
+        return fact.getAllAccessors().any { accessor ->
+            when (accessor) {
+                is ClassStaticAccessor -> sameJvmType(accessor.typeName, typeName)
+                is FieldAccessor -> sameJvmType(accessor.fieldType, typeName)
+                else -> false
+            }
+        }
+    }
+
+    private fun sameJvmType(left: String, right: String): Boolean =
+        left == right || left.replace('$', '.') == right.replace('$', '.')
 
     private fun reverseGraph(graph: Array<IntArray>): Array<IntArray> {
         val reverse = Array(graph.size) { arrayListOf<Int>() }

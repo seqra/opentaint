@@ -49,6 +49,40 @@ public class ThingsBoardEntityActionExplosionSample {
                 new Object[]{tainted, tainted, tainted});
     }
 
+    public static void classStaticContextExplosion() {
+        Object value = source();
+        seedClassStatic(value);
+        classStaticHotMethod(new SafeContextA());
+        classStaticHotMethod(new SafeContextB());
+        classStaticHotMethod(new SafeContextC());
+        classStaticHotMethod(new SafeContextD());
+        classStaticHotMethod(new SafeContextE());
+        classStaticHotMethod(new SafeContextF());
+    }
+
+    public static void singleClassStaticContext() {
+        Object value = source();
+        seedClassStatic(value);
+        classStaticHotMethod(new SafeContextA());
+    }
+
+    private static void seedClassStatic(Object value) {
+    }
+
+    private static void classStaticHotMethod(Context context) {
+        if (context != null) {
+            Object first = new Object();
+            Object second = new Object();
+            if (first != second) {
+                first = second;
+            }
+        }
+        classStaticSink();
+    }
+
+    private static void classStaticSink() {
+    }
+
     public static void controlOnlyFanout(int selector) {
         String value = source();
         if (selector == 0) {
