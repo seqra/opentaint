@@ -1375,6 +1375,7 @@ class NormalMethodAnalyzer(
     }
 
     private fun resetEdgeProcessingStorage(apManager: ApManager) {
+        analyzerEnqueued = false
         unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
 

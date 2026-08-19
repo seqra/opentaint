@@ -220,6 +220,12 @@ class TaintAnalysisUnitRunnerManager(
         cancellationTimeout: Duration
     ): List<VulnerabilityWithTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
+
+        if (!timeout.isPositive()) {
+            updateFailureStatus(Status.TIMEOUT)
+            return vulnerabilities.map { VulnerabilityWithTrace(it.vulnerability, TracePathGenerationResult.Failure) }
+        }
+
         cancellation.activate()
 
         val traceResolverMemoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
