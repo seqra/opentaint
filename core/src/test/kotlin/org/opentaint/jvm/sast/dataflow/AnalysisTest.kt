@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFunctionNameMatcher
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
@@ -67,6 +68,20 @@ abstract class AnalysisTest : BasicTestUtils() {
         )
     )
 
+    fun wholeObjectSourceRule(fqn: String, methodName: String, taintMark: String): SerializedRule.Source =
+        SerializedRule.Source(
+            function = functionMatcher(fqn, methodName),
+            taint = listOf(
+                SerializedTaintAssignAction(
+                    kind = taintMark,
+                    pos = PositionBaseWithModifiers.WithModifiers(
+                        PositionBase.Result,
+                        listOf(PositionModifier.AnyField),
+                    ),
+                )
+            ),
+        )
+
     fun entryPointRule(fqn: String, methodName: String, taintMark: String, argIndex: Int) =
         SerializedRule.EntryPoint(
             function = functionMatcher(fqn, methodName),
@@ -106,6 +121,12 @@ abstract class AnalysisTest : BasicTestUtils() {
     }
 
     open val useDefaultConfig = false
+    open val useDefaultUnrollStrategy = false
+
+    open fun customizeRulesProvider(rulesProvider: TaintRulesProvider): TaintRulesProvider = rulesProvider
+
+    open fun unitResolver(projectLocation: RegisteredLocation): JIRUnitResolver =
+        SingleLocationUnit(projectLocation)
 
     open val apMode: ApMode = ApMode.Tree
 
@@ -130,7 +151,14 @@ abstract class AnalysisTest : BasicTestUtils() {
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
-        entryPointMethod: String
+        entryPointMethod: String,
+        apMode: ApMode = this@AnalysisTest.apMode,
+        afterTraceAnalysis: ((
+            List<VulnerabilityWithTrace>,
+            TaintAnalyzer<JIRMethod, JIRInst>,
+            JIRSafeApplicationGraph,
+        ) -> Unit)? = null,
+        afterAnalysis: ((TaintAnalyzer<JIRMethod, JIRInst>, JIRSafeApplicationGraph) -> Unit)? = null,
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
@@ -146,27 +174,36 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
         rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
+        rulesProvider = customizeRulesProvider(rulesProvider)
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val ifdsGraph = JIRSafeApplicationGraph(mainGraph)
+        val tryBoundaryExceptionsGraph = JTryBoundaryExceptionsApplicationGraph(mainGraph)
+        val ifdsGraph = JIRSafeApplicationGraph(tryBoundaryExceptionsGraph)
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = apMode
+            ifdsApMode = apMode,
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy
-                get() = analysisUnrollStrategy
+                get() = if (useDefaultUnrollStrategy) {
+                    super.unrollStrategy
+                } else {
+                    analysisUnrollStrategy
+                }
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
-            override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
+            override fun unitResolver() = this@AnalysisTest.unitResolver(cls.declaration.location)
         }
 
         return analyzer.use {
-            it.analyzeWithIfds(listOf(ep)).first
+            val result = it.analyzeWithIfds(listOf(ep)).first
+            afterTraceAnalysis?.invoke(result, it, ifdsGraph)
+            afterAnalysis?.invoke(it, ifdsGraph)
+            result
         }
     }
 
@@ -176,8 +213,9 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointName: String,
         ruleId: String,
         testName: String,
+        apMode: ApMode = this@AnalysisTest.apMode,
     ) {
-        val traces = runAnalysis(config, testCls, entryPointName)
+        val traces = runAnalysis(config, testCls, entryPointName, apMode)
         assertTrue(traces.isNotEmpty(), "$testName: expected taint to reach the sink, but no vulnerability was found")
         traces.forEach { vt ->
             assertEquals(
@@ -192,8 +230,9 @@ abstract class AnalysisTest : BasicTestUtils() {
         testCls: String,
         entryPointName: String,
         testName: String,
+        apMode: ApMode = this@AnalysisTest.apMode,
     ) {
-        val traces = runAnalysis(config, testCls, entryPointName)
+        val traces = runAnalysis(config, testCls, entryPointName, apMode)
         assertTrue(traces.isEmpty(), "$testName: expected no vulnerability, but found ${traces.size}")
     }
 }
