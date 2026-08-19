@@ -2,9 +2,11 @@ package org.opentaint.dataflow.ap.ifds
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
+import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.AbstractStaticEdges.Companion.isAbstractStaticEdge
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.MethodEdgesInitialToFinalApSet
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
 
@@ -17,6 +19,7 @@ class MethodAnalyzerEdges(
 
     private val zeroToZeroEdges = SameInitialZeroFactEdges(maxInstIdx, languageManager)
     private val zeroToFactEdges = apManager.methodEdgesFinalApSet(methodEntryPoint.statement, maxInstIdx, languageManager)
+    private val abstractStaticEdges = AbstractStaticEdges(apManager, maxInstIdx, languageManager)
     private val taintedToFactEdges = apManager.methodEdgesInitialToFinalApSet(methodEntryPoint.statement, maxInstIdx, languageManager)
     private val ndFactToFactEdges = apManager.methodEdgesNDInitialToFinalApSet(methodEntryPoint.statement, maxInstIdx, languageManager)
 
@@ -37,6 +40,7 @@ class MethodAnalyzerEdges(
             val ndf2f = mutableListOf<Pair<Set<InitialFactAp>, FinalFactAp>>()
 
             zeroToFactEdges.collectApAtStatement(z2f, stmt)
+            abstractStaticEdges.collectApAtStatement(f2f, stmt)
             taintedToFactEdges.collectApAtStatement(f2f, stmt)
             ndFactToFactEdges.collectApAtStatement(ndf2f, stmt)
 
@@ -96,7 +100,8 @@ class MethodAnalyzerEdges(
         val initialAp = edge.initialFactAp
         val finalAp = edge.factAp
 
-        val (addedInitial, addedFinal) = taintedToFactEdges.add(edge.statement, initialAp, finalAp) ?: return emptyList()
+        val storage = if (isAbstractStaticEdge(initialAp, finalAp)) abstractStaticEdges else taintedToFactEdges
+        val (addedInitial, addedFinal) = storage.add(edge.statement, initialAp, finalAp) ?: return emptyList()
 
         if (addedInitial === initialAp && addedFinal === finalAp) return listOf(edge)
 
@@ -118,6 +123,7 @@ class MethodAnalyzerEdges(
 
     fun allFactToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<Pair<InitialFactAp, FinalFactAp>> {
         val result = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
+        abstractStaticEdges.collectApAtStatement(result, statement, finalFactPattern)
         taintedToFactEdges.collectApAtStatement(result, statement, finalFactPattern)
         return result
     }
@@ -130,6 +136,7 @@ class MethodAnalyzerEdges(
 
     fun allFactToFactFactsAtStatement(statement: CommonInst, initialFactAp: InitialFactAp, finalFactPattern: InitialFactAp): List<FinalFactAp> {
         val result = mutableListOf<FinalFactAp>()
+        abstractStaticEdges.collectApAtStatement(result, statement, initialFactAp, finalFactPattern)
         taintedToFactEdges.collectApAtStatement(result, statement, initialFactAp, finalFactPattern)
         return result
     }
@@ -155,6 +162,79 @@ class MethodAnalyzerEdges(
         }
 
         fun reachedStatements(): BitSet = edges
+    }
+
+    private class AbstractStaticEdges(
+        apManager: ApManager,
+        maxInstIdx: Int,
+        private val languageManager: LanguageManager
+    ): MethodEdgesInitialToFinalApSet {
+        private val initial = apManager.mostAbstractInitialAp(AccessPathBase.ClassStatic)
+        private val final = apManager.mostAbstractFinalAp(AccessPathBase.ClassStatic)
+
+        private val exclusions = arrayOfNulls<ExclusionSet>(instructionStorageSize(maxInstIdx))
+
+        override fun add(
+            statement: CommonInst,
+            initialAp: InitialFactAp,
+            finalAp: FinalFactAp
+        ): Pair<InitialFactAp, FinalFactAp>? {
+            val edgeIdx = instructionStorageIdx(statement, languageManager)
+            val exclusion = finalAp.exclusions
+            val currentExclusion = exclusions[edgeIdx]
+
+            if (currentExclusion == null) {
+                exclusions[edgeIdx] = exclusion
+                return initialAp to finalAp
+            }
+
+            val mergedExclusion = currentExclusion.union(exclusion)
+            if (mergedExclusion === currentExclusion) return null
+
+            exclusions[edgeIdx] = mergedExclusion
+            return initialAp.replaceExclusions(mergedExclusion) to finalAp.replaceExclusions(mergedExclusion)
+        }
+
+        override fun collectApAtStatement(
+            collection: MutableList<Pair<InitialFactAp, FinalFactAp>>,
+            statement: CommonInst
+        ) {
+            val exclusion = exclusionAt(statement) ?: return
+            collection += initial.replaceExclusions(exclusion) to final.replaceExclusions(exclusion)
+        }
+
+        override fun collectApAtStatement(
+            collection: MutableList<Pair<InitialFactAp, FinalFactAp>>,
+            statement: CommonInst,
+            finalFactPattern: InitialFactAp
+        ) {
+            if (finalFactPattern.base != AccessPathBase.ClassStatic) return
+            collectApAtStatement(collection, statement)
+        }
+
+        override fun collectApAtStatement(
+            collection: MutableList<FinalFactAp>,
+            statement: CommonInst,
+            initialAp: InitialFactAp,
+            finalFactPattern: InitialFactAp
+        ) {
+            if (initialAp.base != AccessPathBase.ClassStatic || initialAp.depth != 0) return
+            if (finalFactPattern.base != AccessPathBase.ClassStatic) return
+
+            val exclusion = exclusionAt(statement) ?: return
+            collection += final.replaceExclusions(exclusion)
+        }
+
+        private fun exclusionAt(statement: CommonInst): ExclusionSet? =
+            exclusions[instructionStorageIdx(statement, languageManager)]
+
+        companion object {
+            fun isAbstractStaticEdge(initialAp: InitialFactAp, finalAp: FinalFactAp): Boolean =
+                initialAp.base is AccessPathBase.ClassStatic
+                        && initialAp.depth == 0
+                        && finalAp.base is AccessPathBase.ClassStatic
+                        && finalAp.depth == 0
+        }
     }
 
     abstract class EdgeStorage<Storage : Any>(initialStatement: CommonInst) :
@@ -185,8 +265,6 @@ class MethodAnalyzerEdges(
         override fun forEachConstantValue(body: (AccessPathBase, Storage) -> Unit) {
             constants?.forEach { body(it.key, it.value) }
         }
-
-
     }
 
     companion object {
