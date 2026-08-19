@@ -55,7 +55,12 @@ class PIRAnalysisManager(
     private val pirApplicationGraph = PIRApplicationGraph(cp)
     private val pirCallResolver = PIRCallResolver(cp, pirApplicationGraph)
 
-    override fun selectPhase(phase: TaintAnalysisManager.Phase) = Unit
+    private var currentPhase: TaintAnalysisManager.Phase = TaintAnalysisManager.Phase.Prescan
+    val phase: TaintAnalysisManager.Phase get() = currentPhase
+
+    override fun selectPhase(phase: TaintAnalysisManager.Phase) {
+        currentPhase = phase
+    }
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
@@ -77,7 +82,7 @@ class PIRAnalysisManager(
             null
         }
 
-        return PIRMethodAnalysisContext(methodEntryPoint, method, taintCtx, aliasAnalysis)
+        return PIRMethodAnalysisContext(this, methodEntryPoint, method, taintCtx, aliasAnalysis)
     }
 
     override fun getMethodInstGraph(

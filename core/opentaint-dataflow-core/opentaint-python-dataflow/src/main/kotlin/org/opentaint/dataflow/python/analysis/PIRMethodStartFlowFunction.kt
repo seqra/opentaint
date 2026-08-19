@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.python.analysis
 
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -25,6 +25,8 @@ class PIRMethodStartFlowFunction(
     private val rulesProvider get() = ctx.taint.taintConfig
 
     override fun propagateZero(): List<StartFact> = buildList {
+        if (ctx.phase is TaintAnalysisManager.Phase.Prescan) return emptyList()
+
         this += StartFact.Zero
 
         val rules = rulesProvider.entryPointSourcesForMethod(ctx.method)

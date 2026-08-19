@@ -76,9 +76,9 @@ dependencies {
     implementation(opentaint_ir_core_go)
     implementation("org.opentaint.opentaint-dataflow-core:opentaint-go-dataflow")
 
-    testImplementation(opentaint_ir_api_python)
-    testImplementation(opentaint_ir_core_python)
-    testImplementation("org.opentaint.opentaint-dataflow-core:opentaint-python-dataflow")
+    implementation(opentaint_ir_api_python)
+    implementation(opentaint_ir_core_python)
+    implementation("org.opentaint.opentaint-dataflow-core:opentaint-python-dataflow")
 
     testImplementation(project(":opentaint-python-querylang"))
 }

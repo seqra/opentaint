@@ -18,6 +18,7 @@ import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.rulesWithConditions
 import org.opentaint.dataflow.python.adapter.callExpr
+import org.opentaint.dataflow.python.alias.forEachAliasBeforeStatement
 import org.opentaint.dataflow.python.alias.forEachPossibleAliasBeforeStatement
 import org.opentaint.dataflow.python.analysis.PIRMethodAnalysisContext
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils.accessPathBase
@@ -58,6 +59,12 @@ class PIRMethodCallPrecondition(
             ?: CallPrecondition.Unchanged
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasBeforeStatement(statement, fact) { aliasedFact ->
+            preconditionForFact(aliasedFact)?.let {
+                this += PreconditionFactsForInitialFact(aliasedFact, it)
+            }
+        }
+
+        analysisContext.aliasAnalysis?.forEachAliasBeforeStatement(statement, fact) { aliasedFact ->
             preconditionForFact(aliasedFact)?.let {
                 this += PreconditionFactsForInitialFact(aliasedFact, it)
             }

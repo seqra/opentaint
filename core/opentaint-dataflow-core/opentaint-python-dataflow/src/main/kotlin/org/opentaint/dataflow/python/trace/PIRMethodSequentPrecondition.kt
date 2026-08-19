@@ -91,10 +91,9 @@ class PIRMethodSequentPrecondition(
 
     private fun computePrecondition(fact: InitialFactAp): Set<SequentPrecondition> = buildSet {
         val structural = preconditionForFact(fact)
-        val passFacts = attributePassRulePrecondition(fact)
 
-        if (structural != null || passFacts.isNotEmpty()) {
-            this += PreconditionFactsForInitialFact(fact, structural.orEmpty() + passFacts)
+        if (structural != null) {
+            this += PreconditionFactsForInitialFact(fact, structural)
         }
 
         attributeSourceRulePrecondition(fact)
@@ -155,40 +154,6 @@ class PIRMethodSequentPrecondition(
 
         if (preconditionFacts.isNotEmpty()) {
             this += PreconditionFactsForInitialFact(fact, preconditionFacts)
-        }
-    }
-
-    /**
-     * Inverse of `PIRMethodSequentFlowFunction.applyLoadAttrPassRules`: the facts a
-     * `passThroughForAttribute` copy action would have read to produce [fact].
-     */
-    private fun attributePassRulePrecondition(fact: InitialFactAp): List<InitialFactAp> {
-        val inst = currentInst as? PIRLoadAttr ?: return emptyList()
-        val calleeFact = mapFactToAttributeFrame(inst, fact) ?: return emptyList()
-
-        val passRules = attributeNames(inst).flatMap { rulesProvider.passThroughForAttribute(it) }
-        if (passRules.isEmpty()) return emptyList()
-
-        val evaluator = TaintPassActionPreconditionEvaluator(InitialFactReader(calleeFact, apManager))
-        val conditionRewriter = attributeConditionRewriter()
-
-        val preconditions = mutableListOf<TaintRulePrecondition>()
-        for (rule in conditionRewriter.rulesWithConditions(passRules)) {
-            preconditions += evaluatePassRulePrecondition(
-                rule,
-                rule.rule.copy,
-                preconditionEvaluator = evaluator,
-                evalAction = { r, a -> acceptAttributePass(r, a) },
-                mapExit2Return = { listOfNotNull(PIRMethodCallFactMapper.mapLoadAttributeFactToReturn(inst, it)) },
-            )
-        }
-
-        return preconditions.filterIsInstance<TaintRulePrecondition.Pass>().mapNotNull {
-            when (val condition = it.condition) {
-                is TaintRulePrecondition.PassRuleCondition.Fact -> condition.fact
-                is TaintRulePrecondition.PassRuleCondition.FactWithExpr -> condition.fact
-                is TaintRulePrecondition.PassRuleCondition.Expr -> null
-            }
         }
     }
 

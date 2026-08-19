@@ -291,7 +291,6 @@ class PIRMethodSequentFlowFunction(
         addUnchecked: (Sequent) -> Unit
     ) {
         val factReader = FinalFactReader(currentFactAp, apManager)
-        applyLoadAttrPassRules(inst, factReader, propagateFact)
 
         applyLoadAttrSourceRules(
             inst, initialFacts, factReader, currentFactAp.exclusions,
@@ -355,46 +354,6 @@ class PIRMethodSequentFlowFunction(
                 createNDEdge(initial, srcF, trace)
             },
         )
-    }
-
-    private fun applyLoadAttrPassRules(
-        inst: PIRLoadAttr,
-        originalFactReader: FinalFactReader,
-        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-    ) {
-        ctx.methodCallFactMapper.mapLoadAttributeFactToStart(inst, originalFactReader.factAp) { fact, newBase ->
-            val mappedFact = fact.rebase(newBase)
-            val reader = FinalFactReader(mappedFact, apManager)
-
-            val rules = resolvedNames.flatMap { rulesProvider.passThroughForAttribute(it) }
-            val typeChecker = FactTypeChecker.Dummy
-            val evaluator = TaintPassActionEvaluator(
-                apManager, typeChecker, reader,
-                DummyPositionTypeResolver
-            )
-
-            rules.forEach { rule ->
-                check(rule.condition.isTrue()) { "Unexpected attribute pass rule condition: ${rule.condition}" }
-
-                rule.copy.forEach { action ->
-                    val from = action.from.resolveAp() ?: return@forEach
-                    val to = action.to.resolveAp() ?: return@forEach
-                    val traceInfo = TraceInfo.Rule(rule, action)
-
-                    evaluator.propagateData(rule, action, from, to).onSome { facts ->
-                        facts.forEach { fact ->
-                            ctx.methodCallFactMapper.mapLoadAttributeFactToReturn(inst, fact.fact)?.let { mappedFact ->
-                                propagateFact(mappedFact, traceInfo)
-                            }
-                        }
-                    }
-                }
-            }
-
-            if (reader.hasRefinement) {
-                originalFactReader.updateRefinement(reader)
-            }
-        }
     }
 
     private fun handleSliceExpr(

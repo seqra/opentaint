@@ -3,22 +3,14 @@ package org.opentaint.python.sast.dataflow
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
+import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.python.TaintSinkMeta
-import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
-import org.opentaint.dataflow.python.rules.PIRConfigTaintRulesProvider
-import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
 import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
-import org.opentaint.semgrep.pattern.SemgrepLoadTrace
-import org.opentaint.semgrep.pattern.SemgrepRuleLoader
-import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
-import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
-import org.opentaint.semgrep.pattern.conversion.toSerializedPythonTaintConfig
 import java.nio.file.Path
 import java.util.jar.JarFile
 import kotlin.io.path.Path
@@ -28,8 +20,6 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
 import kotlin.io.path.readText
-import kotlin.io.path.relativeTo
-import kotlin.io.path.toPath
 import kotlin.io.path.walk
 import kotlin.io.path.writeText
 import kotlin.test.assertTrue
@@ -1811,10 +1801,10 @@ class OwaspBenchmarkTest : AnalysisTest() {
         assertTrue(vulns.isEmpty(), "[$id] sink should not be reached")
     }
 
-    private fun analyzeForCwe(id: String): List<TaintSinkTracker.TaintVulnerability> {
+    private fun analyzeForCwe(id: String): List<VulnerabilityWithTrace> {
         val cweNum = (entryCwe[id] ?: error("No CWE mapping for $id")).removePrefix("CWE-").toInt()
         return runAnalysis(combinedProvider, entryFunction(id)).filter { vuln ->
-            vuln.vulnerabilityRules.keys.any { (it.meta as? TaintSinkMeta)?.cwe?.contains(cweNum) == true }
+            vuln.vulnerability.vulnerabilityRules.keys.any { (it.meta as? TaintSinkMeta)?.cwe?.contains(cweNum) == true }
         }
     }
 
@@ -1831,32 +1821,9 @@ class OwaspBenchmarkTest : AnalysisTest() {
             sink = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
         )
         val passRules = loadDefaultConfig()
-        val semgrepRules = loadPackRules()
+        val semgrepRules = loadSemgrepRules("/python-owasp")
 
         PIRCombinedTaintRulesProvider(passRules, semgrepRules, extendAll)
-    }
-
-    @Suppress("UNCHECKED_CAST")
-    private fun loadPackRules(): PIRConfigTaintRulesProvider {
-        val rulesRootUri = javaClass.getResource("/python-owasp")?.toURI() ?: error("Missing rule dir")
-        val rulesRoot = rulesRootUri.toPath()
-
-        val loader = SemgrepRuleLoader(listOf(PythonLanguageStrategy()))
-        val trace = SemgrepLoadTrace()
-        val ruleExt = arrayOf("yaml", "yml")
-        rulesRoot.walk().filter { it.extension in ruleExt }.forEach { rulePath ->
-            val rel = rulePath.relativeTo(rulesRoot)
-            loader.registerRuleSet(rulePath.readText(), rel, rulesRoot, trace)
-        }
-
-        val rules = loader.loadRules().rulesWithMeta
-        val taintConfig = PIRTaintConfiguration()
-        rules.forEach { rule ->
-            val typed = rule.first as TaintRuleFromSemgrep<SerializedPythonRule>
-            taintConfig.loadConfig(typed.toSerializedPythonTaintConfig())
-        }
-
-        return PIRConfigTaintRulesProvider(taintConfig)
     }
 
     private fun entryFunction(id: String): String {

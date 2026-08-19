@@ -68,6 +68,13 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         factReader: FinalFactReader?,
         evaluatedFacts: List<InitialFactAp>
     ) {
+        if (evaluatedFacts.isEmpty()) {
+            if (factReader != null) return
+
+            sinkTracker.addUnconditionalVulnerability(context.methodEntryPoint, statement, rule)
+            return
+        }
+
         val callerFacts = evaluatedFacts.mapTo(hashSetOf()) {
             mapFactToReturn(it).single()
         }
