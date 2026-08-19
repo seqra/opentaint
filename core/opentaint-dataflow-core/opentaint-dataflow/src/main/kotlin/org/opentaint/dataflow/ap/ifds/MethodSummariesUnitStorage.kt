@@ -78,6 +78,14 @@ open class MethodSummariesUnitStorage(
         return methodStorage.factToFactEdges(finalFactBase)
     }
 
+    fun methodFactToFactSummaryEdges(
+        methodEntryPoint: MethodEntryPoint,
+        finalFactPattern: FinalFactAp,
+    ): List<Edge.FactToFact> {
+        val methodStorage = methodSummaryEdges(methodEntryPoint)
+        return methodStorage.factToFactEdges(finalFactPattern)
+    }
+
     fun methodFactNDSummaries(
         methodEntryPoint: MethodEntryPoint,
         finalFactBase: AccessPathBase
