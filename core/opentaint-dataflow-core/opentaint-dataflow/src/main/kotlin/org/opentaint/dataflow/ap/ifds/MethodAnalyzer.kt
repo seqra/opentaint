@@ -14,12 +14,17 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryE
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlySideEffectRequirementDeltaTracker
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactToFactTransfer as FactToFactCallTransfer
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.FactToFactTransfer
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction.StartFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver.RelevantFactFilter
@@ -178,6 +183,7 @@ class NormalMethodAnalyzer(
     private var pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
     private var pendingSideEffectSummaries = arrayListOf<SideEffectSummary>()
+    private var appliedBaseOnlySideEffectRequirements = BaseOnlySideEffectRequirementDeltaTracker()
 
     private val analysisContext: MethodAnalysisContext = analysisManager.getMethodAnalysisContext(
         methodEntryPoint, runner.graph, runner.methodCallResolver,
@@ -185,13 +191,17 @@ class NormalMethodAnalyzer(
     )
 
     private val methodInstGraph = analysisManager.getMethodInstGraph(runner.graph, analysisContext, methodEntryPoint.method)
-
     private var analyzerEnqueued = false
     private var unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
     private var enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+    private var pendingBaseOnlyF2F = hashMapOf<F2FConclusion, InitialFactSupport>()
+    private var pendingBaseOnlyF2FOrder = ArrayDeque<F2FConclusion>()
+    private var enqueuedUnchangedBaseOnlyF2F = hashMapOf<F2FConclusion, InitialFactSupport>()
+    private val baseOnlyF2FTransfers = hashMapOf<F2FConclusion, Set<FactToFactTransfer>>()
+    private val unsupportedBaseOnlyF2FTransfers = hashSetOf<F2FConclusion>()
 
     override val containsUnprocessedEdges: Boolean
-        get() = !unprocessedEdges.isEmpty
+        get() = !unprocessedEdges.isEmpty || pendingBaseOnlyF2F.isNotEmpty()
 
     override val containsUnprocessedZeroToZeroEdges: Boolean
         get() = unprocessedEdges.containsZeroToZeroEdges
@@ -202,6 +212,7 @@ class NormalMethodAnalyzer(
     private val stepsForTaintMark: MutableMap<String, Long>? = taintRulesStatsSamplingPeriod?.let { hashMapOf() }
 
     private var summaryEdgesHandled: Long = 0
+    private var emittedBaseOnlyNDSummaryResults = hashSetOf<BaseOnlyNDSummaryResult>()
     private val registeredResolvedCallees = hashSetOf<CommonMethod>()
     private val traceResolverStats = TraceResolverStats()
     @Volatile
@@ -290,10 +301,41 @@ class NormalMethodAnalyzer(
     }
 
     override fun tabulationAlgorithmStep() {
-        analyzerSteps++
+        val factToFactGroup = if (apManager is BaseOnlyApManager && unprocessedEdges.isEmpty) {
+            takeNextBaseOnlyF2FGroup()
+        } else {
+            null
+        }
 
-        val edge = unprocessedEdges.removeLast()
+        if (factToFactGroup != null) {
+            processFactToFactGroup(factToFactGroup)
+        } else {
+            processEdge(unprocessedEdges.removeLast())
+        }
 
+        if (containsUnprocessedEdges) return
+
+        analyzerEnqueued = false
+
+        // Create new empty list to shrink internal array
+        unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
+        enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+        enqueuedUnchangedBaseOnlyF2F = hashMapOf()
+
+        flushPendingSummaryEdges()
+        flushPendingSideEffectRequirements()
+        flushPendingSideEffectSummaries()
+    }
+
+    private fun takeNextBaseOnlyF2FGroup(): FactToFactGroup? {
+        if (pendingBaseOnlyF2FOrder.isEmpty()) return null
+        val conclusion = pendingBaseOnlyF2FOrder.removeLast()
+        val support = checkNotNull(pendingBaseOnlyF2F.remove(conclusion))
+        return FactToFactGroup(conclusion, support)
+    }
+
+    private fun processEdge(edge: Edge, countStep: Boolean = true) {
+        if (countStep) analyzerSteps++
         val finalEdgeFact = when (edge) {
             is ZeroToZero -> null
             is ZeroToFact -> edge.factAp
@@ -317,18 +359,70 @@ class NormalMethodAnalyzer(
                 simpleStatementStep(edge)
             }
         }
+    }
 
-        if (!unprocessedEdges.isEmpty) return
+    private fun processFactToFactGroup(group: FactToFactGroup) {
+        val conclusion = group.conclusion
+        val statement = conclusion.statement
+        val finalFact = conclusion.finalFact
+        val initialFacts = group.initialFacts
 
-        analyzerEnqueued = false
+        if (methodInstGraph.isExitPoint(analysisManager, statement)) {
+            group.forEachEdge(methodEntryPoint, ::processEdge)
+            return
+        }
 
-        // Create new empty list to shrink internal array
-        unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
-        enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+        if (!analysisManager.isReachable(apManager, analysisContext, finalFact.base, statement)) {
+            analyzerSteps += initialFacts.size
+            return
+        }
+        analysisManager.onInstructionReached(statement)
 
-        flushPendingSummaryEdges()
-        flushPendingSideEffectRequirements()
-        flushPendingSideEffectSummaries()
+        val callExpr = analysisManager.getCallExpr(statement)
+        if (callExpr != null) {
+            val returnValue: CommonValue? = (statement as? CommonAssignInst)?.lhv
+            val flowFunction = analysisManager.getMethodCallFlowFunction(
+                apManager,
+                analysisContext,
+                returnValue,
+                callExpr,
+                statement,
+                generateTrace = false,
+            )
+            val transfer = flowFunction.createFactToFactTransfer(finalFact)
+            if (transfer != null) {
+                analyzerSteps++
+                transfer.forEach { output ->
+                    when (output) {
+                        FactToFactCallTransfer.Unchanged -> propagateUnchangedFactGroup(group)
+                    }
+                }
+                return
+            }
+            analyzerSteps += initialFacts.size
+            group.forEachEdge(methodEntryPoint) { callStatementStep(callExpr, it, flowFunction) }
+            return
+        }
+
+        val flowFunction = analysisManager.getMethodSequentFlowFunction(
+            apManager,
+            analysisContext,
+            statement,
+        )
+        val transfer = baseOnlyFactToFactTransfer(flowFunction, conclusion)
+        if (transfer == null) {
+            analyzerSteps += initialFacts.size
+            group.forEachEdge(methodEntryPoint) { supportedEdge ->
+                handleSequentFact(
+                    supportedEdge,
+                    flowFunction.propagateFactToFact(supportedEdge.initialFactAp, supportedEdge.factAp),
+                )
+            }
+            return
+        }
+
+        analyzerSteps++
+        applyBaseOnlyFactToFactTransfer(group, transfer)
     }
 
     private fun simpleStatementStep(edge: Edge) {
@@ -342,6 +436,55 @@ class NormalMethodAnalyzer(
         }
 
         handleSequentFact(edge, sequentialFacts)
+    }
+
+    private fun baseOnlyFactToFactTransfer(
+        flowFunction: MethodSequentFlowFunction,
+        conclusion: F2FConclusion,
+    ): Set<FactToFactTransfer>? {
+        baseOnlyF2FTransfers[conclusion]?.let { return it }
+        if (conclusion in unsupportedBaseOnlyF2FTransfers) return null
+
+        val transfer = flowFunction.createFactToFactTransfer(conclusion.finalFact)
+        if (transfer == null) {
+            unsupportedBaseOnlyF2FTransfers += conclusion
+            return null
+        }
+        baseOnlyF2FTransfers[conclusion] = transfer
+        return transfer
+    }
+
+    private fun applyBaseOnlyFactToFactTransfer(
+        group: FactToFactGroup,
+        transfer: Set<FactToFactTransfer>,
+    ) {
+        check(!methodInstGraph.isExitPoint(analysisManager, group.conclusion.statement)) {
+            "Grouped fact-to-fact transfer is not valid at a method exit"
+        }
+
+        transfer.forEach { output ->
+            when (output) {
+                FactToFactTransfer.Unchanged -> propagateUnchangedFactGroup(group)
+                is FactToFactTransfer.Fact -> propagateChangedFactGroup(
+                    group.initialFacts,
+                    group.conclusion.statement,
+                    output.factAp,
+                )
+                is FactToFactTransfer.ExcludeAccessor -> {
+                    val refinedInitials = InitialFactSupport()
+                    group.initialFacts.forEach { initial ->
+                        val refined = initial.replaceExclusions(output.excludedFactAp.exclusions)
+                        handleInputFactChange(initial, refined)
+                        refinedInitials.add(refined)
+                    }
+                    propagateChangedFactGroup(
+                        refinedInitials,
+                        group.conclusion.statement,
+                        output.excludedFactAp,
+                    )
+                }
+            }
+        }
     }
 
     private fun handleSequentFact(edge: Edge, sf: Iterable<Sequent>) =
@@ -375,10 +518,14 @@ class NormalMethodAnalyzer(
         handleStatementEdge(edge, edgeAfterStatement)
     }
 
-    private fun callStatementStep(callExpr: CommonCallExpr, edge: Edge) {
+    private fun callStatementStep(
+        callExpr: CommonCallExpr,
+        edge: Edge,
+        preparedFlowFunction: MethodCallFlowFunction? = null,
+    ) {
         val returnValue: CommonValue? = (edge.statement as? CommonAssignInst)?.lhv
 
-        val flowFunction = analysisManager.getMethodCallFlowFunction(
+        val flowFunction = preparedFlowFunction ?: analysisManager.getMethodCallFlowFunction(
             apManager,
             analysisContext,
             returnValue,
@@ -615,18 +762,79 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSequentialUnchangedEdge(edge: Edge) {
-        if (enqueuedUnchangedEdges.add(edge)) {
-            enqueueNewEdge(edge)
+        enqueueUnchangedBoundary(edge)
+    }
+
+    private fun enqueueUnchangedBoundary(edge: Edge) {
+        if (enqueuedUnchangedEdges.add(edge)) enqueueNewEdge(edge)
+    }
+
+    private fun enqueueUnchangedBoundary(group: FactToFactGroup) {
+        val seen = enqueuedUnchangedBaseOnlyF2F.getOrPut(group.conclusion, ::InitialFactSupport)
+        val added = InitialFactSupport()
+        group.initialFacts.forEach { initial ->
+            if (seen.add(initial)) added.add(initial)
+        }
+        if (!added.isEmpty) enqueueBaseOnlyF2F(group.conclusion, added)
+    }
+
+    private fun propagateUnchangedFactGroup(group: FactToFactGroup) {
+        methodInstGraph.forEachSuccessor(analysisManager, group.conclusion.statement) { successor ->
+            enqueueUnchangedBoundary(group.withStatement(successor))
         }
     }
 
-    private fun enqueueNewEdge(edge: Edge) {
-        unprocessedEdges.add(edge)
+    private fun propagateChangedFactGroup(
+        initialFacts: InitialFactSupport,
+        statement: CommonInst,
+        finalFact: FinalFactAp,
+    ) {
+        methodInstGraph.forEachSuccessor(analysisManager, statement) { successor ->
+            edges.addFactToFactSupports(successor, initialFacts, finalFact) { initial, addedFinal ->
+                enqueueBaseOnlyF2F(F2FConclusion(successor, addedFinal), initial)
+            }
+        }
+    }
 
+    private fun enqueueBaseOnlyF2F(conclusion: F2FConclusion, initial: InitialFactAp) {
+        val support = pendingBaseOnlyF2F.getOrPut(conclusion) {
+            pendingBaseOnlyF2FOrder.addLast(conclusion)
+            InitialFactSupport()
+        }
+        if (support.add(initial)) enqueueAnalyzer()
+    }
+
+    private fun enqueueBaseOnlyF2F(conclusion: F2FConclusion, initials: InitialFactSupport) {
+        val support = pendingBaseOnlyF2F.getOrPut(conclusion) {
+            pendingBaseOnlyF2FOrder.addLast(conclusion)
+            InitialFactSupport()
+        }
+        val changed = support.addAll(initials)
+        if (changed) enqueueAnalyzer()
+    }
+
+    private fun enqueueAnalyzer() {
         if (!analyzerEnqueued) {
             runner.enqueueMethodAnalyzer(this)
             analyzerEnqueued = true
         }
+    }
+
+    private fun enqueueNewEdge(edge: Edge) {
+        if (apManager is BaseOnlyApManager && edge is FactToFact) {
+            val conclusion = F2FConclusion(edge.statement, edge.factAp)
+            enqueueBaseOnlyF2F(conclusion, edge.initialFactAp)
+        } else {
+            val zeroToZeroPriorityChanged =
+                edge is ZeroToZero && !unprocessedEdges.containsZeroToZeroEdges
+            unprocessedEdges.add(edge)
+
+            if (analyzerEnqueued && zeroToZeroPriorityChanged) {
+                runner.reprioritizeMethodAnalyzer(this)
+            }
+        }
+
+        enqueueAnalyzer()
     }
 
     private fun handleInputFactChange(originalInputFactAp: InitialFactAp, newInputFactAp: InitialFactAp) {
@@ -969,9 +1177,15 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSideEffectRequirement(curInitialFactAp: InitialFactAp, sideEffectRequirement: InitialFactAp) {
-        handleInputFactChange(curInitialFactAp, sideEffectRequirement)
+        val requirementDelta = if (apManager is BaseOnlyApManager) {
+            appliedBaseOnlySideEffectRequirements.add(curInitialFactAp, sideEffectRequirement) ?: return
+        } else {
+            sideEffectRequirement
+        }
 
-        pendingSideEffectRequirements.add(sideEffectRequirement)
+        handleInputFactChange(curInitialFactAp, requirementDelta)
+
+        pendingSideEffectRequirements.add(requirementDelta)
 
         if (!analyzerEnqueued) {
             flushPendingSideEffectRequirements()
@@ -1184,6 +1398,8 @@ class NormalMethodAnalyzer(
         handleSummary: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, S) -> Set<Sequent>
     ) {
         val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
+        val resultingSequents: MutableSet<Sequent>? =
+            if (apManager is BaseOnlyApManager) hashSetOf() else null
 
         val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
         for ((summaryInitialFact, summaryEdges) in summaries) {
@@ -1192,16 +1408,21 @@ class NormalMethodAnalyzer(
             val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
                 methodInitialFact, summaryInitialFact
             )
-
             for (summaryEdgeEffect in summaryEdgeEffects) {
                 for (methodSummary in summaryEdges) {
                     if (!cancellation.isActive()) return
 
-                    val sf = handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
-                    handleSequentFact(currentEdge, sf)
+                    val sequents = handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
+                    if (resultingSequents != null) {
+                        resultingSequents += sequents
+                    } else {
+                        handleSequentFact(currentEdge, sequents)
+                    }
                 }
             }
         }
+
+        resultingSequents?.let { handleSequentFact(currentEdge, it) }
     }
 
     private inline fun <Sub> handleMethodNDSummariesSub(
@@ -1247,6 +1468,8 @@ class NormalMethodAnalyzer(
 
         nextSummary@for (summaryEdge in methodSummaries) {
             if (!cancellation.isActive()) return
+            val deduplicateConjunctiveResult =
+                apManager is BaseOnlyApManager && summaryEdge.initialFacts.size > 1
 
             val requiredFacts = mutableListOf<InitialFactAp>()
             for (summaryInitialFact in summaryEdge.initialFacts) {
@@ -1433,10 +1656,17 @@ class NormalMethodAnalyzer(
         analyzerEnqueued = false
         unprocessedEdges = EdgeCollection.UnprocessedEdgeList(apManager, methodEntryPoint)
         enqueuedUnchangedEdges = EdgeCollection.EdgeSet()
+        enqueuedUnchangedBaseOnlyF2F.clear()
+        pendingBaseOnlyF2F.clear()
+        pendingBaseOnlyF2FOrder.clear()
+        baseOnlyF2FTransfers.clear()
+        unsupportedBaseOnlyF2FTransfers.clear()
 
         pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
         pendingSideEffectRequirements = arrayListOf()
         pendingSideEffectSummaries = arrayListOf()
+        appliedBaseOnlySideEffectRequirements = BaseOnlySideEffectRequirementDeltaTracker()
+        emittedBaseOnlyNDSummaryResults = hashSetOf()
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
 
         initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
@@ -1447,6 +1677,79 @@ class NormalMethodAnalyzer(
         const val INITIAL_ALLOWED_FACT_DEPTH = 3
         const val DEBUG_ANALYSIS_TIME = false
     }
+
+    private data class BaseOnlyNDSummaryResult(
+        val statement: CommonInst,
+        val preparedSummary: NDFactToFact,
+        val sequent: Sequent,
+    )
+
+
+    private data class F2FConclusion(
+        val statement: CommonInst,
+        val finalFact: FinalFactAp,
+    )
+
+    private class InitialFactSupport : Iterable<InitialFactAp> {
+        private var first: InitialFactAp? = null
+        private var multiple: MutableSet<InitialFactAp>? = null
+
+        val size: Int get() = multiple?.size ?: if (first == null) 0 else 1
+        val isEmpty: Boolean get() = first == null
+
+        fun add(fact: InitialFactAp): Boolean {
+            val facts = multiple
+            if (facts != null) {
+                return facts.add(fact)
+            }
+
+            val current = first
+            if (current == null) {
+                first = fact
+                return true
+            } else if (current != fact) {
+                multiple = linkedSetOf(current, fact)
+                return true
+            }
+            return false
+        }
+
+        fun addAll(other: InitialFactSupport): Boolean {
+            var changed = false
+            other.forEach { changed = add(it) || changed }
+            return changed
+        }
+
+        fun first(): InitialFactAp = first ?: error("Empty initial fact support")
+
+        inline fun forEach(action: (InitialFactAp) -> Unit) {
+            multiple?.forEach(action) ?: action(first())
+        }
+
+        override fun iterator(): Iterator<InitialFactAp> =
+            multiple?.iterator() ?: listOf(first()).iterator()
+    }
+
+    private data class FactToFactGroup(
+        val conclusion: F2FConclusion,
+        val initialFacts: InitialFactSupport,
+    ) {
+        fun firstEdge(methodEntryPoint: MethodEntryPoint): FactToFact =
+            FactToFact(methodEntryPoint, initialFacts.first(), conclusion.statement, conclusion.finalFact)
+
+        inline fun forEachEdge(
+            methodEntryPoint: MethodEntryPoint,
+            action: (FactToFact) -> Unit,
+        ) {
+            initialFacts.forEach { initial ->
+                action(FactToFact(methodEntryPoint, initial, conclusion.statement, conclusion.finalFact))
+            }
+        }
+
+        fun withStatement(statement: CommonInst): FactToFactGroup =
+            copy(conclusion = F2FConclusion(statement, conclusion.finalFact))
+    }
+
 }
 
 class EmptyMethodAnalyzer(

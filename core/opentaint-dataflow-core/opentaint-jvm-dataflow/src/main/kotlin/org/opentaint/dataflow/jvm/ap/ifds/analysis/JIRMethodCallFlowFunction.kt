@@ -78,6 +78,13 @@ class JIRMethodCallFlowFunction(
         this += CallToStartZeroFact
     }
 
+    override fun createFactToFactTransfer(
+        currentFactAp: FinalFactAp,
+    ): Set<MethodCallFlowFunction.FactToFactTransfer>? {
+        if (factIsRelevantToMethodCall(statement, returnValue, callExpr, currentFactAp)) return null
+        return setOf(MethodCallFlowFunction.FactToFactTransfer.Unchanged)
+    }
+
     override fun propagateFact(
         initialFacts: Set<InitialFactAp>,
         exclusion: ExclusionSet,
