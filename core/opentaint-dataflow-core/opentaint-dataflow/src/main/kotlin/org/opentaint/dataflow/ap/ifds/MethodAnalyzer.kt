@@ -121,7 +121,9 @@ interface MethodAnalyzer {
         handler: MethodCallResolutionFailureHandler
     )
 
-    fun methodTraceResolver(): MethodTraceResolver
+    fun methodTraceResolver(
+        traceResolutionActionHardLimit: Int? = null,
+    ): MethodTraceResolver
 
     fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -200,6 +202,15 @@ class NormalMethodAnalyzer(
 
     private var summaryEdgesHandled: Long = 0
     private val traceResolverStats = TraceResolverStats()
+    @Volatile
+    private var traceResolverCache: MethodTraceResolver.Cache? = null
+
+    private fun traceResolverCache(): MethodTraceResolver.Cache {
+        traceResolverCache?.let { return it }
+        return synchronized(this) {
+            traceResolverCache ?: MethodTraceResolver.Cache().also { traceResolverCache = it }
+        }
+    }
 
     private var factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
     private var delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
@@ -1324,8 +1335,17 @@ class NormalMethodAnalyzer(
         return true
     }
 
-    override fun methodTraceResolver(): MethodTraceResolver =
-        MethodTraceResolver(runner, traceResolverStats, analysisContext, edges, methodInstGraph)
+    override fun methodTraceResolver(
+        traceResolutionActionHardLimit: Int?,
+    ): MethodTraceResolver = MethodTraceResolver(
+        runner,
+        traceResolverStats,
+        analysisContext,
+        edges,
+        methodInstGraph,
+        traceResolutionActionHardLimit,
+        traceResolverCache(),
+    )
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,
@@ -1560,7 +1580,9 @@ class EmptyMethodAnalyzer(
         error("Empty method should not method resolution results")
     }
 
-    override fun methodTraceResolver(): MethodTraceResolver {
+    override fun methodTraceResolver(
+        traceResolutionActionHardLimit: Int?,
+    ): MethodTraceResolver {
         error("Empty method has no trace")
     }
 
@@ -1831,7 +1853,9 @@ class TimedMethodAnalyzer(
         base.handleMethodCallResolutionFailure(callExpr, handler)
     }
 
-    override fun methodTraceResolver(): MethodTraceResolver = base.methodTraceResolver()
+    override fun methodTraceResolver(
+        traceResolutionActionHardLimit: Int?,
+    ): MethodTraceResolver = base.methodTraceResolver(traceResolutionActionHardLimit)
 
     override fun resolveIntraProceduralForwardFullTrace(
         statement: CommonInst,

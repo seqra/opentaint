@@ -14,7 +14,10 @@ inline fun <T> TaintAnalysisUnitRunnerManager.withMethodRunner(
     return runner.body()
 }
 
-fun TaintAnalysisUnitRunnerManager.findMethodCallers(methodEntryPoint: MethodEntryPoint): Set<MethodEntryPointCaller> {
+fun TaintAnalysisUnitRunnerManager.findMethodCallers(
+    methodEntryPoint: MethodEntryPoint,
+    collectZeroCallsOnly: Boolean = true,
+): Set<MethodEntryPointCaller> {
     val result = hashSetOf<MethodEntryPointCaller>()
 
     withMethodRunner(methodEntryPoint) {

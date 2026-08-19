@@ -109,6 +109,15 @@ interface AnalysisUnitRunnerManager {
         return storage.methodFactToFactSummaryEdges(methodEntryPoint, finalFactBase)
     }
 
+    fun findFactToFactSummaryEdges(
+        methodEntryPoint: MethodEntryPoint,
+        finalFactPattern: FinalFactAp,
+    ): List<Edge.FactToFact> {
+        val unit = unitResolver.resolve(methodEntryPoint.method)
+        val storage = getOrCreateUnitStorage(unit) ?: return emptyList()
+        return storage.methodFactToFactSummaryEdges(methodEntryPoint, finalFactPattern)
+    }
+
     fun findFactNDSummaryEdges(
         methodEntryPoint: MethodEntryPoint,
         finalFactBase: AccessPathBase

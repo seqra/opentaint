@@ -501,10 +501,13 @@ class TaintAnalysisUnitRunner(
         }
     }
 
-    fun methodTraceResolver(methodEntryPoint: MethodEntryPoint): MethodTraceResolver {
+    fun methodTraceResolver(
+        methodEntryPoint: MethodEntryPoint,
+        traceResolutionActionHardLimit: Int? = null,
+    ): MethodTraceResolver {
         val methodRunners = methodAnalyzers(methodEntryPoint)
         val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.methodTraceResolver()
+        return runner.methodTraceResolver(traceResolutionActionHardLimit)
     }
 
     fun resolveIntraProceduralForwardFullTrace(

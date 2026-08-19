@@ -10,6 +10,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntry.SourceStartEntry
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction.TraceSummaryEdge
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralMethodEntryNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralStart2FinalTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralSummaryTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralTraceNode
@@ -292,13 +293,27 @@ object NodeComparator : Comparator<InterProceduralTraceNode> {
     override fun compare(a: InterProceduralTraceNode, b: InterProceduralTraceNode): Int = when (a) {
         is InterProceduralSummaryTraceNode -> when (b) {
             is InterProceduralSummaryTraceNode -> SummaryNodeComparator.compare(a, b)
+            is InterProceduralMethodEntryNode,
+            is InterProceduralStart2FinalTraceNode -> -1
+        }
+        is InterProceduralMethodEntryNode -> when (b) {
+            is InterProceduralSummaryTraceNode -> 1
+            is InterProceduralMethodEntryNode -> MethodEntryNodeComparator.compare(a, b)
             is InterProceduralStart2FinalTraceNode -> -1
         }
         is InterProceduralStart2FinalTraceNode -> when (b) {
-            is InterProceduralSummaryTraceNode -> 1
+            is InterProceduralSummaryTraceNode,
+            is InterProceduralMethodEntryNode -> 1
             is InterProceduralStart2FinalTraceNode -> FullNodeComparator.compare(a, b)
         }
     }
+}
+
+object MethodEntryNodeComparator : Comparator<InterProceduralMethodEntryNode> {
+    override fun compare(a: InterProceduralMethodEntryNode, b: InterProceduralMethodEntryNode): Int =
+        MethodComparator.compare(a.entry.entryPoint, b.entry.entryPoint).ifEqual {
+            TraceFactComparator.compareUnordered(a.entry.facts, b.entry.facts)
+        }
 }
 
 object SummaryNodeComparator : Comparator<InterProceduralSummaryTraceNode> {

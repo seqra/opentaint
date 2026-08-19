@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver.TraceEntryAction
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSink
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.CallKind.CallToSource
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralStart2FinalTraceNode
+import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralMethodEntryNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralSummaryTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.InterProceduralTraceNode
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver.SourceToSinkTrace
@@ -111,13 +112,15 @@ private fun Source2SinkTraceGraph.traverseStartToSink(
         return
     }
 
-    val finalEntry = when (node) {
-        is InterProceduralStart2FinalTraceNode -> node.trace.final
-        is InterProceduralSummaryTraceNode -> node.trace.final
-    }
+    val sinkSuccessors = when (node) {
+        is InterProceduralStart2FinalTraceNode ->
+            trace.findSuccessors(node, kind = CallToSink, node.trace.final.statement)
 
-    val lastStatement = finalEntry.statement
-    val sinkSuccessors = trace.findSuccessors(node, kind = CallToSink, lastStatement)
+        is InterProceduralSummaryTraceNode ->
+            trace.findSuccessors(node, kind = CallToSink, node.trace.final.statement)
+
+        is InterProceduralMethodEntryNode -> trace.findSuccessors(node, kind = CallToSink)
+    }
     if (sinkSuccessors.isEmpty()) {
         // todo: fix trace
         return
