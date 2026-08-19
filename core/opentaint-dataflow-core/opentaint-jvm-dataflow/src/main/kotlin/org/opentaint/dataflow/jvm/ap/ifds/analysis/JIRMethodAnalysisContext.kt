@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
+import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -24,6 +25,7 @@ class JIRMethodAnalysisContext(
     val localVariableReachability: JIRLocalVariableReachability,
     val aliasAnalysis: JIRLocalAliasAnalysis?,
     val taint: JIRTaintAnalysisContext,
+    val callResolver: JIRCallResolver,
 ) : MethodAnalysisContext {
     init {
         taint.bindAnalysisContext(this)
@@ -37,6 +39,15 @@ class JIRMethodAnalysisContext(
     val taintMarksAssignedOnMethodEnter = hashSetOf<TaintMarkAccessor>()
 
     val lambdaCallResolution = Int2ObjectOpenHashMap<JIRLambdaTracker.LambdaTracker>()
+
+    private val rawCallResolutionCache =
+        int2ObjectMap<List<JIRCallResolver.MethodResolutionResult>>()
+
+    fun cachedRawCallResolution(
+        stmtIdx: Int,
+        resolve: () -> List<JIRCallResolver.MethodResolutionResult>,
+    ): List<JIRCallResolver.MethodResolutionResult> =
+        rawCallResolutionCache.computeIfAbsent(stmtIdx) { resolve() }
 
     fun cachedCallFF(stmtIdx: Int, body: () -> JIRMethodCallFlowFunction): JIRMethodCallFlowFunction =
         getCallFFCache().computeIfAbsent(stmtIdx) { body() }
@@ -64,6 +75,7 @@ class JIRMethodAnalysisContext(
         taint.reset()
         lambdaCallResolution.values.forEach { it.resetSubscribers() }
         taintMarksAssignedOnMethodEnter.clear()
+        rawCallResolutionCache.clear()
         callFFCache?.clear()
         callSHCache?.clear()
     }

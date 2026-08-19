@@ -141,6 +141,7 @@ class JIRAnalysisManager(
             localVariableReachability,
             aliasAnalysis,
             taintContext,
+            callResolver.callResolver,
         ).also {
             contexts.add(it)
         }
