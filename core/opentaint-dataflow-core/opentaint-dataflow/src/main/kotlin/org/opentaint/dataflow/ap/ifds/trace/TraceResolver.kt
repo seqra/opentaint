@@ -203,7 +203,7 @@ class TraceResolver(
 
         val nextState = state.copy(
             nextRequestIdx = state.nextRequestIdx + 1,
-            kind = ProcessingKind.PROCESS
+            kind = ProcessingKind.PROCESS,
         )
         return nextState
     }

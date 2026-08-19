@@ -1,7 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
-import org.opentaint.ir.api.jvm.JIRClassOrInterface
 import org.opentaint.dataflow.ap.ifds.MethodContext
+import org.opentaint.ir.api.jvm.JIRClassOrInterface
 
 data class TypeConstraintInfo(val type: JIRClassOrInterface, val exactType: Boolean)
 

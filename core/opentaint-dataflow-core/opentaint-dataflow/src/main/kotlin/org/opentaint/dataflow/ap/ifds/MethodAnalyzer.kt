@@ -242,6 +242,7 @@ class NormalMethodAnalyzer(
                 }
             }
         }
+
     }
 
     override fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>> =
