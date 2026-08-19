@@ -27,6 +27,18 @@ class JIRMethodCallRuleBasedSummaryRewriter(
     private val analysisContext: JIRMethodAnalysisContext,
     private val apManager: ApManager
 ) {
+    internal class RewrittenFact(
+        val fact: FinalFactAp,
+        private val refinement: FinalFactReader?,
+    ) {
+        val isIdentity: Boolean get() = refinement == null
+
+        fun createFactReader(apManager: ApManager): FinalFactReader =
+            refinement?.copy() ?: FinalFactReader(fact, apManager)
+    }
+
+    private val rewrittenFacts = hashMapOf<FinalFactAp, List<RewrittenFact>>()
+
     private val taintCtx get() = analysisContext.taint
 
     private val callExpr by lazy {
@@ -87,10 +99,14 @@ class JIRMethodCallRuleBasedSummaryRewriter(
         result
     }
 
-    fun rewriteSummaryFact(fact: FinalFactAp): List<Pair<FinalFactAp, FinalFactReader>> {
-        val startFactReader = FinalFactReader(fact, apManager)
+    internal fun rewriteSummaryFact(fact: FinalFactAp): List<RewrittenFact> =
+        rewrittenFacts.getOrPut(fact) { rewriteSummaryFactUncached(fact) }
+
+    private fun rewriteSummaryFactUncached(fact: FinalFactAp): List<RewrittenFact> {
         val actionsForBase = userRuleDefinedActions[fact.base].orEmpty()
-        if (actionsForBase.isEmpty()) return listOf(fact to startFactReader)
+        if (actionsForBase.isEmpty()) return listOf(RewrittenFact(fact, refinement = null))
+
+        val startFactReader = FinalFactReader(fact, apManager)
 
         val cleanEvaluator = JIRTaintCleanActionEvaluator(typeResolver)
         val cleanedFact = actionsForBase.entries.applyCleanerActions(
@@ -111,7 +127,11 @@ class JIRMethodCallRuleBasedSummaryRewriter(
 
         return cleanedFact.mapNotNull {
             val resultFact = it.fact ?: return@mapNotNull null
-            resultFact.factAp to resultFact
+            if (!resultFact.hasRefinement && resultFact.factAp == fact) {
+                RewrittenFact(fact, refinement = null)
+            } else {
+                RewrittenFact(resultFact.factAp, resultFact)
+            }
         }
     }
 }

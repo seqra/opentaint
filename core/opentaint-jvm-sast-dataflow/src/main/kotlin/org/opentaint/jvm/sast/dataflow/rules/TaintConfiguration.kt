@@ -31,6 +31,7 @@ import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
 import org.opentaint.ir.api.jvm.ext.objectClass
 import org.opentaint.ir.impl.util.adjustEmptyList
 import org.opentaint.jvm.util.typename
+import java.util.concurrent.ConcurrentHashMap
 
 class TaintConfiguration(private val cp: JIRClasspath) {
     private val patternManager = PatternManager()
@@ -117,24 +118,28 @@ class TaintConfiguration(private val cp: JIRClasspath) {
 
     private inner class TaintRulesStorage<S : SerializedRule, T : TaintConfigurationItem> {
         private var builder: MethodTaintRulesStorage.Builder<S>? = MethodTaintRulesStorage.Builder(patternManager, hierarchyInfo)
+        @Volatile
         private var storage: MethodTaintRulesStorage<S>? = null
 
         private fun storage(): MethodTaintRulesStorage<S> {
             storage?.let { return it }
 
-            storage = builder?.build()
-            builder = null
-
-            return storage ?: error("Storage initialization failed")
+            return synchronized(this) {
+                storage ?: builder?.build()?.also {
+                    storage = it
+                    builder = null
+                } ?: error("Storage initialization failed")
+            }
         }
 
+        @Synchronized
         fun addRules(rules: List<S>) {
             val builder = this.builder ?: error("Storage rule set closed")
             builder.addRules(rules)
         }
 
-        private val methodItems = hashMapOf<JIRMethod, List<T>>()
-        private val methodAllRelevantItems = hashMapOf<JIRMethod, List<T>>()
+        private val methodItems = ConcurrentHashMap<JIRMethod, List<T>>()
+        private val methodAllRelevantItems = ConcurrentHashMap<JIRMethod, List<T>>()
 
         fun configForMethod(method: JIRMethod, allRelevant: Boolean): List<T> = if (!allRelevant) {
             getConfigForMethod(method)
@@ -142,13 +147,11 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             getAllRelevantConfigForMethod(method)
         }
 
-        @Synchronized
-        private fun getConfigForMethod(method: JIRMethod): List<T> = methodItems.getOrPut(method) {
+        private fun getConfigForMethod(method: JIRMethod): List<T> = methodItems.computeIfAbsent(method) {
             resolveMethodItems(method).adjustEmptyList()
         }
 
-        @Synchronized
-        private fun getAllRelevantConfigForMethod(method: JIRMethod): List<T> = methodAllRelevantItems.getOrPut(method) {
+        private fun getAllRelevantConfigForMethod(method: JIRMethod): List<T> = methodAllRelevantItems.computeIfAbsent(method) {
             resolveMethodRelevantItems(method).adjustEmptyList()
         }
 

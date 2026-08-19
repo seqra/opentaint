@@ -108,17 +108,30 @@ class JIRTaintAnalysisContext(
         rules: Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
     ): List<RuleWithCondition<T>> {
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            CallPositionToJIRValueResolver(callExpr, returnValue),
-            analysisContext, statement
-        )
+        val iterator = rules.iterator()
+        if (!iterator.hasNext()) return emptyList()
+        var conditionRewriter: JIRMarkAwareConditionRewriter? = null
 
-        return rules.mapNotNull {
-            val cond = conditionRewriter.rewrite(it.cond())
-            if (cond.isFalse) return@mapNotNull null
+        val result = arrayListOf<RuleWithCondition<T>>()
+        do {
+            val rule = iterator.next()
+            val condition = rule.cond()
+            val rewrittenCondition = if (condition.isTrue()) {
+                RuleConditionRewriter.trueExpr
+            } else {
+                val rewriter = conditionRewriter ?: JIRMarkAwareConditionRewriter(
+                    CallPositionToJIRValueResolver(callExpr, returnValue),
+                    analysisContext,
+                    statement,
+                ).also { conditionRewriter = it }
+                rewriter.rewrite(condition)
+            }
+            if (!rewrittenCondition.isFalse) {
+                result += RuleWithCondition(rule, rewrittenCondition)
+            }
+        } while (iterator.hasNext())
 
-            RuleWithCondition(it, cond)
-        }.handlePhase()
+        return result.handlePhase()
     }
 
     fun sourceRulesForStaticField(
@@ -171,18 +184,30 @@ class JIRTaintAnalysisContext(
         rules: Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst,
     ): List<RuleWithCondition<T>> {
-        val method = statement.location.method
-        val valueResolver = CalleePositionToJIRValueResolver(method)
-        val conditionRewriter = JIRMarkAwareConditionRewriter(
-            valueResolver, analysisContext, statement
-        )
+        val iterator = rules.iterator()
+        if (!iterator.hasNext()) return emptyList()
+        var conditionRewriter: JIRMarkAwareConditionRewriter? = null
 
-        return rules.mapNotNull {
-            val cond = conditionRewriter.rewrite(it.cond())
-            if (cond.isFalse) return@mapNotNull null
+        val result = arrayListOf<RuleWithCondition<T>>()
+        do {
+            val rule = iterator.next()
+            val condition = rule.cond()
+            val rewrittenCondition = if (condition.isTrue()) {
+                RuleConditionRewriter.trueExpr
+            } else {
+                val rewriter = conditionRewriter ?: JIRMarkAwareConditionRewriter(
+                    CalleePositionToJIRValueResolver(statement.location.method),
+                    analysisContext,
+                    statement,
+                ).also { conditionRewriter = it }
+                rewriter.rewrite(condition)
+            }
+            if (!rewrittenCondition.isFalse) {
+                result += RuleWithCondition(rule, rewrittenCondition)
+            }
+        } while (iterator.hasNext())
 
-            RuleWithCondition(it, cond)
-        }.handlePhase()
+        return result.handlePhase()
     }
 
     private fun <T : TaintConfigurationItem> List<RuleWithCondition<T>>.handlePhase() =

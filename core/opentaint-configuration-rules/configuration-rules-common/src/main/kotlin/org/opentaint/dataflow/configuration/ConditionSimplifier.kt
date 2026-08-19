@@ -57,6 +57,7 @@ private class ConditionSimplifierImpl<A> : CommonConditionVisitor<A, CommonCondi
 }
 
 private val conditionSimplifier = ConditionSimplifierImpl<Nothing>()
+private val falseCondition: CommonCondition<Nothing> = Not(CommonCondition.True)
 
 @Suppress("UNCHECKED_CAST")
 fun <A> conditionSimplifier(): CommonConditionVisitor<A, CommonCondition<A>> =
@@ -66,7 +67,9 @@ fun <A> conditionSimplifier(): CommonConditionVisitor<A, CommonCondition<A>> =
 fun <A> mkTrue(): CommonCondition<A> =
     CommonCondition.True as CommonCondition<A>
 
-fun <A> mkFalse(): CommonCondition<A> = Not(mkTrue())
+@Suppress("UNCHECKED_CAST")
+fun <A> mkFalse(): CommonCondition<A> =
+    falseCondition as CommonCondition<A>
 
 fun <A> mkOr(conditions: List<CommonCondition<A>>) = when (conditions.size) {
     0 -> mkFalse()

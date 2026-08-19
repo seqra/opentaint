@@ -155,6 +155,18 @@ class JIRMethodCallFlowFunction(
 
         val callerFact = unmappedCallerFactAp.rebase(startFactBase)
         val conditionFactReader = FinalFactReader(callerFact, apManager)
+        val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)
+        if (cleanRules.isEmpty()) {
+            propagateCleanedFact(
+                method,
+                conditionFactReader,
+                originalFactReader,
+                addCallToReturn,
+                startFactBase,
+                addCallToStart,
+            )
+            return
+        }
 
         val conditionEvaluator = TaintFactAwareConditionEvaluator(
             listOf(conditionFactReader),
@@ -164,7 +176,6 @@ class JIRMethodCallFlowFunction(
         val cleaner = JIRTaintCleanActionEvaluator(typeResolver)
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
-        val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)
         val cleanerResults = applyCleaner(
             cleanRules,
             factReaderBeforeCleaner,
@@ -269,6 +280,13 @@ class JIRMethodCallFlowFunction(
             checker = analysisContext.factTypeChecker
         ) { callerFact, startFactBase ->
             val passFactReader = FinalFactReader(callerFact.rebase(startFactBase), apManager)
+            val passRules = taintCtx.passRulesForCallStatement(
+                statement, callExpr, returnValue, passFactReader.factAp
+            )
+            if (passRules.isEmpty() && analysisContext.analysisManager.params.defaultGetModel == null) {
+                trackExternalMethod(startFactBase, method, ruleApplied = false)
+                return@mapMethodCallToStartFlowFact
+            }
 
             val conditionEvaluator = TaintFactAwareConditionEvaluator(
                 listOf(passFactReader),
@@ -279,20 +297,13 @@ class JIRMethodCallFlowFunction(
                 apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
             )
 
-            val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
             var passThroughFacts = applyPassThrough(passRules, conditionEvaluator, passEvaluator)
 
-            if (startFactBase !is AccessPathBase.ClassStatic) {
-                analysisContext.taint.externalMethodTracker?.let { tracker ->
-                    if (JIRCallResolver.alwaysIgnoreMethod(method)) return@let
-
-                    val methodName = "${method.enclosingClass.name}#${method.name}"
-                    val methodDesc = method.description
-                    val factPosition = startFactBase.toString()
-                    val ruleApplied = startFactBase in passEvaluator.relevantPositionBase
-                    tracker.trackExternalMethod(methodName, methodDesc, factPosition, ruleApplied)
-                }
-            }
+            trackExternalMethod(
+                startFactBase,
+                method,
+                ruleApplied = startFactBase in passEvaluator.relevantPositionBase,
+            )
 
             analysisContext.analysisManager.params.defaultGetModel?.run {
                 /*todo: fix owasp, propagate default only if  passThroughFacts.isNone */
@@ -304,8 +315,9 @@ class JIRMethodCallFlowFunction(
             passThroughFacts.onSome { evaluatedPass ->
                 evaluatedPass.forEach { evp ->
                     val rewrittenFacts = summaryRewriter.rewriteSummaryFact(evp.fact)
-                    for ((unrefinedFact, factRefinement) in rewrittenFacts) {
-                        val fact = factRefinement.refineFact(unrefinedFact)
+                    for (rewritten in rewrittenFacts) {
+                        val factRefinement = rewritten.createFactReader(apManager)
+                        val fact = factRefinement.refineFact(rewritten.fact)
                         passFactReader.updateRefinement(factRefinement)
 
                         val mappedFact = fact.mapExitToReturnFact() ?: continue
@@ -327,13 +339,27 @@ class JIRMethodCallFlowFunction(
         }
     }
 
+    private fun trackExternalMethod(
+        startFactBase: AccessPathBase,
+        method: JIRMethod,
+        ruleApplied: Boolean,
+    ) {
+        if (startFactBase is AccessPathBase.ClassStatic) return
+        val tracker = analysisContext.taint.externalMethodTracker ?: return
+        if (JIRCallResolver.alwaysIgnoreMethod(method)) return
+
+        val methodName = "${method.enclosingClass.name}#${method.name}"
+        tracker.trackExternalMethod(methodName, method.description, startFactBase.toString(), ruleApplied)
+    }
+
     private fun unresolvedCallDefaultFactPropagation(
         factAp: FinalFactAp,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
     ) {
         val rewrittenFacts = summaryRewriter.rewriteSummaryFact(factAp)
-        for ((unrefinedFact, factRefinement) in rewrittenFacts) {
-            val fact = factRefinement.refineFact(unrefinedFact)
+        for (rewritten in rewrittenFacts) {
+            val factRefinement = rewritten.createFactReader(apManager)
+            val fact = factRefinement.refineFact(rewritten.fact)
             addCallToReturn(factRefinement, fact, null)
         }
     }
