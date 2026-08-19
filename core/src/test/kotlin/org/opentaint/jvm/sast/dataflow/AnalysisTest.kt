@@ -153,6 +153,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointClass: String,
         entryPointMethod: String,
         apMode: ApMode = this@AnalysisTest.apMode,
+        shallowApMode: ApMode = ApMode.BaseOnlyField,
         afterTraceAnalysis: ((
             List<VulnerabilityWithTrace>,
             TaintAnalyzer<JIRMethod, JIRInst>,
@@ -184,6 +185,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
             ifdsApMode = apMode,
+            shallowScanApMode = shallowApMode,
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {

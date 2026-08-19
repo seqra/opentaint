@@ -41,6 +41,18 @@ class RepositoryFragmentCallResolutionTest : AnalysisTest() {
     }
 
     @Test
+    fun `fragment implementation is reachable through repository typed receiver with BaseOnlyField`() {
+        assertReachable(
+            config = config,
+            testCls = SAMPLE_CLASS,
+            entryPointName = "listProducts",
+            ruleId = RULE_ID,
+            testName = "repository fragment (BaseOnlyField)",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
     fun `fragment declared outside the project is deliberately not widened`() {
         assertNotReachable(
             config = libraryConfig,

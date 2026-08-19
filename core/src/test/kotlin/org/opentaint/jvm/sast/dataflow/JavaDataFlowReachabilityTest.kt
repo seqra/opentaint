@@ -3,7 +3,12 @@ package org.opentaint.jvm.sast.dataflow
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.ClassStatic
+import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
+import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
@@ -88,6 +93,44 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
             entryPointName = "interproceduralDataFlow",
             ruleId = "ip-flow-rule",
             testName = "interprocedural flow"
+        )
+    }
+
+    @Test
+    fun `over-approximate start trace - non-zero summary starts at method entry`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-non-zero-start"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "nonZeroSummary",
+            ruleId = ruleId,
+            testName = "non-Zero summary direct MethodEntry",
+            apMode = ApMode.BaseOnlyField,
+        )
+    }
+
+    @Test
+    fun `over-approximate start trace - first zero origin on every CFG branch is retained`() {
+        val testCls = "$SAMPLE_PACKAGE.OverApproximateStartTraceSample"
+        val ruleId = "over-approximate-zero-frontier"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", ruleId, listOf(Argument(0) to TAINT_MARK))),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "zeroSummary",
+            ruleId = ruleId,
+            testName = "Zero summary CFG origin frontier",
+            apMode = ApMode.BaseOnlyField,
         )
     }
 

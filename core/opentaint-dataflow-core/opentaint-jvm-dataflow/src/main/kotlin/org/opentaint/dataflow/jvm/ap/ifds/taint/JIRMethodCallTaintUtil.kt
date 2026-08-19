@@ -158,6 +158,9 @@ class JIRMethodCallTaintUtil(
         sourceEvaluator: TaintSourceActionEvaluator,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit
     ) = applySourceAction(rule, rule.actionsAfter, sourceEvaluator) { f, action ->
+        if (!generateTrace) {
+            analysisContext.recordForwardSourceAction(statement, rule, action)
+        }
         val trace = TraceInfo.Rule(rule, action)
         createFinalFact(f, trace)
     }

@@ -129,6 +129,9 @@ class JIRSequentTaintUtil(
     ) {
         for (action in rule.actionsAfter) {
             sourceEvaluator.accept(rule, action).onSome { facts ->
+                if (!generateTrace && facts.isNotEmpty()) {
+                    analysisContext.recordForwardSourceAction(statement, rule, action)
+                }
                 val trace = Rule(rule, action)
                 facts.forEach { createFinalFact(it, trace) }
             }

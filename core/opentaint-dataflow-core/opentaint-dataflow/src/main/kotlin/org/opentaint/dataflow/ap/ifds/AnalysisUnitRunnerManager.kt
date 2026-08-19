@@ -14,6 +14,7 @@ interface AnalysisUnitRunnerManager {
     fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage?
     fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner?
     fun registerMethodCallFromUnit(method: CommonMethod, unit: UnitType)
+    fun registerResolvedMethodCall(caller: CommonMethod, callee: CommonMethod)
 
     fun handleCrossUnitZeroCall(callerUnit: UnitType, methodEntryPoint: MethodEntryPoint) {
         handleCrossUnitAction(callerUnit, methodEntryPoint) {
