@@ -43,17 +43,25 @@ class JIRMethodCallPrecondition(
 
     private val taintCtx get() = analysisContext.taint
 
-    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
-        val results = mutableListOf<CallPrecondition>()
+    override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> =
+        analysisContext.cachedCallTracePrecondition(apManager, statement.location.index, fact) {
+            val results = mutableListOf<CallPrecondition>()
+            addFactPreconditions(results, fact)
 
-        results += preconditionForFact(fact)?.let { PreconditionFactsForInitialFact(fact, it) }
-            ?: CallPrecondition.Unchanged
+            analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
+                addFactPreconditions(results, aliasedFact)
+            }
 
-        analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(statement, fact) { aliasedFact ->
-            preconditionForFact(aliasedFact)?.let { results += PreconditionFactsForInitialFact(aliasedFact, it) }
+            results
         }
 
-        return results
+    private fun addFactPreconditions(
+        results: MutableList<CallPrecondition>,
+        fact: InitialFactAp,
+    ) {
+        val callPreconditions = preconditionForFact(fact)
+        results += callPreconditions?.let { PreconditionFactsForInitialFact(fact, it) }
+            ?: CallPrecondition.Unchanged
     }
 
     override fun factPreconditionResolutionFailure(

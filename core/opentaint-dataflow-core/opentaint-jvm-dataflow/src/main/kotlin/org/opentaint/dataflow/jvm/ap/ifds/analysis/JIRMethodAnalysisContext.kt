@@ -4,6 +4,8 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.configuration.CommonTaintAction
@@ -21,6 +23,7 @@ import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.lang.ref.Reference
+import java.util.concurrent.ConcurrentHashMap
 
 class JIRMethodAnalysisContext(
     val analysisManager: JIRAnalysisManager,
@@ -57,6 +60,51 @@ class JIRMethodAnalysisContext(
     private val rawCallResolutionCache =
         int2ObjectMap<List<JIRCallResolver.MethodResolutionResult>>()
 
+    private data class TracePreconditionKey(
+        val apManager: ApManager,
+        val statementIndex: Int,
+        val fact: InitialFactAp,
+    )
+
+    private class TracePreconditionCache {
+        val sequent = ConcurrentHashMap<TracePreconditionKey, Set<SequentPrecondition>>()
+        val call = ConcurrentHashMap<TracePreconditionKey, List<CallPrecondition>>()
+    }
+
+    @Volatile
+    private var tracePreconditionCache: TracePreconditionCache? = null
+
+    private fun tracePreconditionCache(): TracePreconditionCache {
+        tracePreconditionCache?.let { return it }
+        return synchronized(this) {
+            tracePreconditionCache ?: TracePreconditionCache().also { tracePreconditionCache = it }
+        }
+    }
+
+    fun cachedSequentTracePrecondition(
+        apManager: ApManager,
+        stmtIdx: Int,
+        fact: InitialFactAp,
+        compute: () -> Set<SequentPrecondition>,
+    ): Set<SequentPrecondition> {
+        val cache = tracePreconditionCache()
+        return cache.sequent.computeIfAbsent(TracePreconditionKey(apManager, stmtIdx, fact)) {
+            compute().toSet()
+        }
+    }
+
+    fun cachedCallTracePrecondition(
+        apManager: ApManager,
+        stmtIdx: Int,
+        fact: InitialFactAp,
+        compute: () -> List<CallPrecondition>,
+    ): List<CallPrecondition> {
+        val cache = tracePreconditionCache()
+        return cache.call.computeIfAbsent(TracePreconditionKey(apManager, stmtIdx, fact)) {
+            compute().toList()
+        }
+    }
+
     fun cachedRawCallResolution(
         stmtIdx: Int,
         resolve: () -> List<JIRCallResolver.MethodResolutionResult>,
@@ -90,6 +138,7 @@ class JIRMethodAnalysisContext(
         lambdaCallResolution.values.forEach { it.resetSubscribers() }
         taintMarksAssignedOnMethodEnter.clear()
         rawCallResolutionCache.clear()
+        tracePreconditionCache = null
         callFFCache?.clear()
         callSHCache?.clear()
     }

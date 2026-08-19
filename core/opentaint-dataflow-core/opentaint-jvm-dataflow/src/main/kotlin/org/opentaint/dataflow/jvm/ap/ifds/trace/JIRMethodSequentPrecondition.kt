@@ -42,14 +42,18 @@ class JIRMethodSequentPrecondition(
 
     override fun factPrecondition(
         fact: InitialFactAp,
-    ): Set<SequentPrecondition> {
+    ): Set<SequentPrecondition> = analysisContext.cachedSequentTracePrecondition(
+        apManager,
+        currentInst.location.index,
+        fact,
+    ) {
         if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
-            return setOf(SequentPrecondition.Unchanged)
+            return@cachedSequentTracePrecondition setOf(SequentPrecondition.Unchanged)
         }
 
         val results = mutableSetOf<SequentPrecondition>()
         results.computeFactPrecondition(fact, applyExitSourceRules = true)
-        return results
+        results
     }
 
     private fun MutableSet<SequentPrecondition>.computeFactPrecondition(

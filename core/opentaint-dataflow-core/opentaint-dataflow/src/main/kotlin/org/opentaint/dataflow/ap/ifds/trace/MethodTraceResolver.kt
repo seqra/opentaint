@@ -2310,10 +2310,12 @@ class MethodTraceResolver(
     private fun methodEntryPoints(method: MethodWithContext): Sequence<MethodEntryPoint> =
         runner.graph.methodGraph(method.method).entryPoints().map { MethodEntryPoint(method.ctx, it) }
 
-    private fun containsEntryEdge(entryStatement: CommonInst, entryEdge: TraceEdge): Boolean {
+    private fun TraceBuilder.containsEntryEdge(entryStatement: CommonInst, entryEdge: TraceEdge): Boolean {
         when (entryEdge) {
             is TraceEdge.SourceTraceEdge -> {
-                val entryFacts = edges.allZeroToFactFactsAtStatement(entryStatement, entryEdge.fact)
+                val entryFacts = cache.zeroEntryFacts(entryStatement, entryEdge.fact.base) {
+                    edges.allZeroToFactFactsAtStatement(entryStatement, entryEdge.fact)
+                }
                 return entryFacts.any { statementFact -> statementFact.contains(entryEdge.fact) }
             }
 
