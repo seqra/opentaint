@@ -21,13 +21,13 @@ fun TaintAnalysisUnitRunnerManager.findMethodCallers(
     val result = hashSetOf<MethodEntryPointCaller>()
 
     withMethodRunner(methodEntryPoint) {
-        methodCallers(methodEntryPoint, collectZeroCallsOnly = true, result)
+        methodCallers(methodEntryPoint, collectZeroCallsOnly, result)
     }
 
     val callers = methodCallers(methodEntryPoint.method)
     for (callerUnit in callers) {
         val runner = findUnitRunner(callerUnit) ?: error("No runner for unit: $callerUnit")
-        runner.methodCallers(methodEntryPoint, collectZeroCallsOnly = true, result)
+        runner.methodCallers(methodEntryPoint, collectZeroCallsOnly, result)
     }
 
     return result

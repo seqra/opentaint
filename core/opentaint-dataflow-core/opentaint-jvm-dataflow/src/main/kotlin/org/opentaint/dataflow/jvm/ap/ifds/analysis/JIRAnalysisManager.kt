@@ -3,12 +3,21 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
+import org.opentaint.ir.api.jvm.JIRClassOrInterface
+import org.opentaint.dataflow.jvm.ap.ifds.JIRArgumentTypeMethodContext
+import org.opentaint.dataflow.jvm.ap.ifds.JIRInstanceTypeMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodContext
+import org.opentaint.dataflow.ap.ifds.CombinedMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
@@ -67,6 +76,35 @@ class JIRAnalysisManager(
     val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
     override val supportsForwardActionableRuleFallback: Boolean = true
+
+    override fun overApproximateMethodContext(
+        method: MethodWithContext,
+        contextIndependentFact: Boolean,
+    ): MethodWithContext {
+        if (currentPhase !is Phase.ShallowScan) return method
+        if (!contextIndependentFact) return method
+        if (method.ctx is EmptyMethodContext || method.ctx.containsLambdaConstraint()) return method
+        return method.copy(ctx = EmptyMethodContext)
+    }
+
+    private val contextBoundFunctionTypes = ConcurrentHashMap<JIRClassOrInterface, Boolean>()
+
+    private fun MethodContext.containsLambdaConstraint(): Boolean = when (this) {
+        is JIRInstanceTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is JIRArgumentTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is CombinedMethodContext -> first.containsLambdaConstraint() || second.containsLambdaConstraint()
+        else -> false
+    }
+
+    private fun JIRClassOrInterface.isContextBoundFunction(): Boolean =
+        contextBoundFunctionTypes.computeIfAbsent(this) { type ->
+            type is LambdaAnonymousClassFeature.JIRLambdaClass ||
+                (sequenceOf(type) + type.allSuperHierarchySequence).any { superType ->
+                    superType.name.startsWith("kotlin.jvm.functions.Function") ||
+                        superType.name.startsWith("kotlin.coroutines.SuspendFunction") ||
+                        superType.name.startsWith("java.util.function.")
+                }
+        }
 
     override fun relevantForwardActionableRules(
         rules: ActionableRules,

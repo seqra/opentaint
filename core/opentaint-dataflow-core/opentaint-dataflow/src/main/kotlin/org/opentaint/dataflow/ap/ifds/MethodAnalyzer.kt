@@ -757,13 +757,46 @@ class NormalMethodAnalyzer(
     }
 
     override fun handleResolvedMethodCall(method: MethodWithContext, handler: MethodCallHandler) {
-        for (ep in methodEntryPoints(method)) {
+        registerResolvedMethodCall(method.method)
+        val analysisMethod = analysisMethod(method, handler)
+        for (ep in methodEntryPoints(analysisMethod)) {
             handleMethodCall(handler, ep)
         }
     }
 
     override fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler) {
-        handleMethodCall(handler, entryPoint)
+        registerResolvedMethodCall(entryPoint.method)
+        val analysisMethod = analysisMethod(MethodWithContext(entryPoint.method, entryPoint.context), handler)
+        val analysisEntryPoint = MethodEntryPoint(analysisMethod.ctx, entryPoint.statement)
+        handleMethodCall(handler, analysisEntryPoint)
+    }
+
+    private fun analysisMethod(method: MethodWithContext, handler: MethodCallHandler): MethodWithContext {
+        val manager = analysisManager as? TaintAnalysisManager ?: return method
+        val contextIndependentFact = handler is MethodCallHandler.ZeroToZeroHandler ||
+            handler.currentEdge().finalFactBase == AccessPathBase.ClassStatic
+        return manager.overApproximateMethodContext(method, contextIndependentFact)
+    }
+
+    private val Edge.finalFactBase: AccessPathBase?
+        get() = when (this) {
+            is ZeroToZero -> null
+            is ZeroToFact -> factAp.base
+            is FactToFact -> factAp.base
+            is NDFactToFact -> factAp.base
+        }
+
+    private fun registerResolvedMethodCall(callee: CommonMethod) {
+        if (registeredResolvedCallees.add(callee)) {
+            runner.manager.registerResolvedMethodCall(methodEntryPoint.method, callee)
+        }
+    }
+
+    private fun MethodCallHandler.currentEdge(): Edge = when (this) {
+        is MethodCallHandler.ZeroToZeroHandler -> currentEdge
+        is MethodCallHandler.ZeroToFactHandler -> currentEdge
+        is MethodCallHandler.FactToFactHandler -> currentEdge
+        is MethodCallHandler.NDFactToFactHandler -> currentEdge
     }
 
     private fun handleMethodCall(handler: MethodCallHandler, ep: MethodEntryPoint) = when (handler) {

@@ -1856,7 +1856,8 @@ class MethodTraceResolver(
             null -> null
             is MergedPrimaryUnresolvedCallSkip -> listOf(primaryAction.action)
             is MergedPrimaryCall2StartAction -> {
-                resolveCallSummary(statement, primaryAction.calleeEntryPoint, primaryAction.call2Start)
+                val callee = primaryAction.calleeEntryPoint.overApproximateContext(primaryAction.call2Start)
+                resolveCallSummary(statement, callee, primaryAction.call2Start)
             }
         }
 
@@ -1873,6 +1874,19 @@ class MethodTraceResolver(
         resolvedRuleActions.forEachCartesianProduct { ruleActionGroup ->
             addResolved(resolvedPrimaryAction, ruleActionGroup.toHashSet())
         }
+    }
+
+    private fun MethodEntryPoint.overApproximateContext(
+        call2Start: Set<PartiallyResolvedCallAction.Call2Start>,
+    ): MethodEntryPoint {
+        val manager = analysisManager as? TaintAnalysisManager ?: return this
+        val contextIndependentFact = call2Start.all { action ->
+            action.currentEdges.all { it.fact.base == AccessPathBase.ClassStatic }
+        }
+        val method = manager.overApproximateMethodContext(
+            MethodWithContext(method, context), contextIndependentFact
+        )
+        return MethodEntryPoint(method.ctx, statement)
     }
 
     private fun resolveCallSummary(
