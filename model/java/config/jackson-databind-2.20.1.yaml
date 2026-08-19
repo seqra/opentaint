@@ -143,6 +143,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - .java.lang.String#<serialized-value>#java.lang.Object
+    to: result
 - function: com.fasterxml.jackson.databind.util.TokenBuffer$Parser#getFloatValue
   copy:
   - from: this
