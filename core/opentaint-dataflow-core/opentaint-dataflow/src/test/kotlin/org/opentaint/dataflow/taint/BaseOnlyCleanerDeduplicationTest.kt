@@ -10,6 +10,7 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.util.Cancellation
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import org.opentaint.dataflow.configuration.TaintCleanReach
 
 class BaseOnlyCleanerDeduplicationTest {
     @Test
@@ -33,6 +34,7 @@ class BaseOnlyCleanerDeduplicationTest {
             mark,
             rule,
             action,
+            TaintCleanReach.Exact,
         )
 
         assertEquals(1, result.size)
