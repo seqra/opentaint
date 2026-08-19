@@ -739,7 +739,7 @@ private class SpringControllerEntryPointGenerator(
         val epReturnType = PredefinedPrimitives.Void.typeName()
 
         val entryPointMethod = SpringGeneratedMethod(
-            name = controller.name,
+            name = controller.springEntryPointName(),
             returnType = epReturnType,
             description = methodDescription(emptyList(), epReturnType),
             parameters = emptyList(),
@@ -1041,6 +1041,20 @@ private class SpringControllerEntryPointGenerator(
         val controllerClsName = "${controller.name}_Opentaint_EntryPoint"
         return springGeneratedClass(cp, controllerClsName, controller)
     }
+}
+
+private fun JIRMethod.springEntryPointName(): String {
+    val overloadSignatures = enclosingClass.declaredMethods
+        .asSequence()
+        .filter { it.name == name }
+        .map { it.description }
+        .sorted()
+        .toList()
+    if (overloadSignatures.size == 1) return name
+
+    val overloadIndex = overloadSignatures.binarySearch(description)
+    check(overloadIndex >= 0) { "Method signature not found in its declaring class: $this" }
+    return "$name\$opentaint\$$overloadIndex"
 }
 
 private fun generateStubValue(type: JIRType): JIRValue? = when (type) {
