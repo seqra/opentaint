@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap
 class TaintConfiguration(private val cp: JIRClasspath) {
     private val patternManager = PatternManager()
     private val taintMarkManager = TaintMarkManager()
+    private val interner = ResolvedRuleInterner()
     private val hierarchyInfo = JIRHierarchyInfo(cp)
     private val objectTypeName = cp.objectClass.typename
 
@@ -172,7 +173,8 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             rules.removeAll { !it.function.matchFunctionName(method) }
             if (rules.isEmpty()) return emptyList()
 
-            val resolver = MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method)
+            val resolver =
+                MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method, interner)
             rules.removeAll {
                 with(resolver) {
                     it.signature?.matchFunctionSignature() == false
@@ -214,7 +216,7 @@ class TaintConfiguration(private val cp: JIRClasspath) {
                     }
                     actions += AssignMark(taintMarkManager.taintMark(action.kind), Result)
                 }
-                return listOf(TaintStaticFieldSource(field, mkTrue(), actions, info, serializedId))
+                return listOf(TaintStaticFieldSource(field, mkTrue(), interner.internList(actions), info, serializedId))
             }
         }
     }

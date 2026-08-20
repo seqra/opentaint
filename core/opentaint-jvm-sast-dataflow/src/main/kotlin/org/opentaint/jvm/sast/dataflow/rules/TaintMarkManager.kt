@@ -1,9 +1,10 @@
 package org.opentaint.jvm.sast.dataflow.rules
 
 import org.opentaint.dataflow.configuration.jvm.TaintMark
+import java.util.concurrent.ConcurrentHashMap
 
 class TaintMarkManager {
-    private val taintMarks = hashMapOf<String, TaintMark>()
+    private val taintMarks = ConcurrentHashMap<String, TaintMark>()
 
-    fun taintMark(name: String): TaintMark = taintMarks.getOrPut(name) { TaintMark(name) }
+    fun taintMark(name: String): TaintMark = taintMarks.computeIfAbsent(name) { TaintMark(it) }
 }
