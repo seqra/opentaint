@@ -47,6 +47,155 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     }
 
     @Test
+    fun `base-only class-static fact follows a transitive rule footprint`() {
+        val testCls = "$SAMPLE_PACKAGE.BaseOnlyClassStaticFootprintSample"
+        val state = ClassStatic("test.class-static-footprint")
+        val config = classStaticFootprintConfig(testCls, state)
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "transitiveRuleFootprint",
+            ruleId = "class-static-footprint-rule",
+            testName = "transitive class-static footprint",
+            apMode = ApMode.BaseOnly,
+        )
+    }
+
+    private fun classStaticFootprintConfig(
+        testCls: String,
+        state: ClassStatic,
+    ): SerializedTaintConfig =
+        SerializedTaintConfig(
+            source = listOf(
+                sourceRule(testCls, "source", TAINT_MARK),
+                SerializedRule.Source(
+                    function = functionMatcher(testCls, "seed"),
+                    condition = listOf(Argument(0) to TAINT_MARK).condition(),
+                    taint = listOf(
+                        SerializedTaintAssignAction(
+                            kind = "ready",
+                            pos = PositionBaseWithModifiers.BaseOnly(state),
+                        )
+                    ),
+                ),
+                SerializedRule.Source(
+                    function = functionMatcher(testCls, "transition"),
+                    condition = listOf(
+                        Argument(0) to TAINT_MARK,
+                        state to "ready",
+                    ).condition(),
+                    taint = listOf(
+                        SerializedTaintAssignAction(
+                            kind = "advanced",
+                            pos = PositionBaseWithModifiers.BaseOnly(state),
+                        )
+                    ),
+                ),
+            ),
+            sink = listOf(
+                sinkRule(
+                    testCls,
+                    "sink",
+                    "class-static-footprint-rule",
+                    listOf(Argument(0) to TAINT_MARK, state to "advanced"),
+                )
+            ),
+        )
+
+    @Test
+    fun `virtual dispatch - override cache is scoped by constrained base class`() {
+        val testCls = "$SAMPLE_PACKAGE.MethodOverridesCacheSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", "override-cache-rule", listOf(Argument(0) to TAINT_MARK))
+            ),
+        )
+
+        assertNotReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "narrowCallMustNotReuseBroadOverrides",
+            testName = "override cache base-class constraint",
+        )
+    }
+
+    @Test
+    fun `virtual dispatch - incompatible generic bridge cannot return normally`() {
+        val testCls = "$SAMPLE_PACKAGE.GenericBridgeDispatchSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", "generic-bridge-rule", listOf(Argument(0) to TAINT_MARK))
+            ),
+        )
+
+        assertNotReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "incompatibleBridgeMustNotReturn",
+            testName = "incompatible generic bridge",
+        )
+    }
+
+    @Test
+    fun `virtual dispatch - compatible generic bridge remains reachable`() {
+        val testCls = "$SAMPLE_PACKAGE.GenericBridgeDispatchSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", "generic-bridge-rule", listOf(Argument(0) to TAINT_MARK))
+            ),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "compatibleBridgeMustReach",
+            ruleId = "generic-bridge-rule",
+            testName = "compatible generic bridge",
+        )
+    }
+
+    @Test
+    fun `virtual dispatch - Object declared method remains ignored after receiver refinement`() {
+        val testCls = "$SAMPLE_PACKAGE.ObjectMethodDispatchSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", "object-method-rule", listOf(Argument(0) to TAINT_MARK))
+            ),
+        )
+
+        assertNotReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "callThroughObjectMustBeIgnored",
+            testName = "Object-declared virtual call remains ignored",
+        )
+    }
+
+    @Test
+    fun `virtual dispatch - directly declared override remains analyzable`() {
+        val testCls = "$SAMPLE_PACKAGE.ObjectMethodDispatchSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(
+                sinkRule(testCls, "sink", "object-method-rule", listOf(Argument(0) to TAINT_MARK))
+            ),
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "directOverrideCallRemainsAnalyzable",
+            ruleId = "object-method-rule",
+            testName = "direct Object override call",
+        )
+    }
+
+    @Test
     fun `field flow - source to sink through single field`() {
         val testCls = "$SAMPLE_PACKAGE.FieldFlowSample"
         val config = SerializedTaintConfig(
