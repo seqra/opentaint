@@ -60,7 +60,7 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 class TaintAnalysisUnitRunnerManager(
-    val refManager: RefManager,
+    override val refManager: RefManager,
     override val cancellation: Cancellation,
     private val analysisManager: TaintAnalysisManager,
     val graph: ApplicationGraph<CommonMethod, CommonInst>,

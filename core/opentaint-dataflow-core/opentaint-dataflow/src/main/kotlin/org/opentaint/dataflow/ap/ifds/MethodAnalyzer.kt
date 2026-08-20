@@ -33,6 +33,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodTraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolverStats
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.cartesianProductMapTo
+import java.lang.ref.Reference
 import java.util.IdentityHashMap
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
@@ -177,6 +178,7 @@ class NormalMethodAnalyzer(
     private val analysisManager get() = runner.analysisManager
     private val methodCallResolver get() = runner.methodCallResolver
     private val cancellation: Cancellation = runner.manager.cancellation
+    private val softRefManager = runner.manager.refManager.softRefManager(BASE_ONLY_REF_MANAGER)
 
     private var zeroInitialFactProcessed: Boolean = false
     private var initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
@@ -198,8 +200,20 @@ class NormalMethodAnalyzer(
     private var pendingBaseOnlyF2F = hashMapOf<F2FConclusion, InitialFactSupport>()
     private var pendingBaseOnlyF2FOrder = ArrayDeque<F2FConclusion>()
     private var enqueuedUnchangedBaseOnlyF2F = hashMapOf<F2FConclusion, InitialFactSupport>()
-    private val baseOnlyF2FTransfers = hashMapOf<F2FConclusion, Set<FactToFactTransfer>>()
-    private val unsupportedBaseOnlyF2FTransfers = hashSetOf<F2FConclusion>()
+    private var baseOnlyF2FTransfers: Reference<HashMap<F2FConclusion, Set<FactToFactTransfer>>>? = null
+    private var unsupportedBaseOnlyF2FTransfers: Reference<HashSet<F2FConclusion>>? = null
+
+    private fun baseOnlyF2FTransfers(): HashMap<F2FConclusion, Set<FactToFactTransfer>> {
+        baseOnlyF2FTransfers?.get()?.let { return it }
+        return hashMapOf<F2FConclusion, Set<FactToFactTransfer>>()
+            .also { baseOnlyF2FTransfers = softRefManager.createRef(it) }
+    }
+
+    private fun unsupportedBaseOnlyF2FTransfers(): HashSet<F2FConclusion> {
+        unsupportedBaseOnlyF2FTransfers?.get()?.let { return it }
+        return hashSetOf<F2FConclusion>()
+            .also { unsupportedBaseOnlyF2FTransfers = softRefManager.createRef(it) }
+    }
 
     override val containsUnprocessedEdges: Boolean
         get() = !unprocessedEdges.isEmpty || pendingBaseOnlyF2F.isNotEmpty()
@@ -217,10 +231,22 @@ class NormalMethodAnalyzer(
     private var baseOnlyNDSearchCacheVersion = -1L
     private var baseOnlyNDSearchCache = hashMapOf<NDSearchKey, List<Set<InitialFactAp>>>()
     private var baseOnlyMethodCallSummaryHandlers = hashMapOf<CommonInst, MethodCallSummaryHandler>()
-    private var baseOnlyPreparedF2FSummaries =
-        hashMapOf<CommonInst, IdentityHashMap<FactToFact, List<FactToFact>>>()
-    private var baseOnlyPreparedNDSummaries =
-        hashMapOf<CommonInst, IdentityHashMap<NDFactToFact, List<NDFactToFact>>>()
+    private var baseOnlyPreparedF2FSummaries: Reference<HashMap<CommonInst, IdentityHashMap<FactToFact, List<FactToFact>>>>? = null
+
+    private fun baseOnlyPreparedF2FSummaries(): HashMap<CommonInst, IdentityHashMap<FactToFact, List<FactToFact>>> {
+        baseOnlyPreparedF2FSummaries?.get()?.let { return it }
+        return hashMapOf<CommonInst, IdentityHashMap<FactToFact, List<FactToFact>>>()
+            .also { baseOnlyPreparedF2FSummaries = softRefManager.createRef(it) }
+    }
+
+    private var baseOnlyPreparedNDSummaries: Reference<HashMap<CommonInst, IdentityHashMap<NDFactToFact, List<NDFactToFact>>>>? = null
+
+    private fun baseOnlyPreparedNDSummaries(): HashMap<CommonInst, IdentityHashMap<NDFactToFact, List<NDFactToFact>>> {
+        baseOnlyPreparedNDSummaries?.get()?.let { return it }
+        return hashMapOf<CommonInst, IdentityHashMap<NDFactToFact, List<NDFactToFact>>>()
+            .also { baseOnlyPreparedNDSummaries = softRefManager.createRef(it) }
+    }
+
     private val registeredResolvedCallees = hashSetOf<CommonMethod>()
     private val traceResolverStats = TraceResolverStats()
     @Volatile
@@ -450,15 +476,17 @@ class NormalMethodAnalyzer(
         flowFunction: MethodSequentFlowFunction,
         conclusion: F2FConclusion,
     ): Set<FactToFactTransfer>? {
-        baseOnlyF2FTransfers[conclusion]?.let { return it }
-        if (conclusion in unsupportedBaseOnlyF2FTransfers) return null
+        val transfers = baseOnlyF2FTransfers()
+        transfers[conclusion]?.let { return it }
+        val unsupportedTransfers = unsupportedBaseOnlyF2FTransfers()
+        if (conclusion in unsupportedTransfers) return null
 
         val transfer = flowFunction.createFactToFactTransfer(conclusion.finalFact)
         if (transfer == null) {
-            unsupportedBaseOnlyF2FTransfers += conclusion
+            unsupportedTransfers += conclusion
             return null
         }
-        baseOnlyF2FTransfers[conclusion] = transfer
+        transfers[conclusion] = transfer
         return transfer
     }
 
@@ -1631,7 +1659,7 @@ class NormalMethodAnalyzer(
         summary: FactToFact,
     ): List<FactToFact> {
         if (apManager !is BaseOnlyApManager) return handler.prepareFactToFactSummary(summary)
-        val summariesAtStatement = baseOnlyPreparedF2FSummaries.getOrPut(statement) { IdentityHashMap() }
+        val summariesAtStatement = baseOnlyPreparedF2FSummaries().getOrPut(statement) { IdentityHashMap() }
         return summariesAtStatement.getOrPut(summary) {
             handler.prepareFactToFactSummary(summary)
         }
@@ -1643,7 +1671,7 @@ class NormalMethodAnalyzer(
         summary: NDFactToFact,
     ): List<NDFactToFact> {
         if (apManager !is BaseOnlyApManager) return handler.prepareNDFactToFactSummary(summary)
-        val summariesAtStatement = baseOnlyPreparedNDSummaries.getOrPut(statement) { IdentityHashMap() }
+        val summariesAtStatement = baseOnlyPreparedNDSummaries().getOrPut(statement) { IdentityHashMap() }
         return summariesAtStatement.getOrPut(summary) {
             handler.prepareNDFactToFactSummary(summary)
         }
@@ -1727,8 +1755,10 @@ class NormalMethodAnalyzer(
         enqueuedUnchangedBaseOnlyF2F.clear()
         pendingBaseOnlyF2F.clear()
         pendingBaseOnlyF2FOrder.clear()
-        baseOnlyF2FTransfers.clear()
-        unsupportedBaseOnlyF2FTransfers.clear()
+        baseOnlyF2FTransfers?.clear()
+        baseOnlyF2FTransfers = null
+        unsupportedBaseOnlyF2FTransfers?.clear()
+        unsupportedBaseOnlyF2FTransfers = null
 
         pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
         pendingSideEffectRequirements = arrayListOf()
@@ -1738,8 +1768,10 @@ class NormalMethodAnalyzer(
         baseOnlyNDSearchCacheVersion = -1L
         baseOnlyNDSearchCache = hashMapOf()
         baseOnlyMethodCallSummaryHandlers = hashMapOf()
-        baseOnlyPreparedF2FSummaries = hashMapOf()
-        baseOnlyPreparedNDSummaries = hashMapOf()
+        baseOnlyPreparedF2FSummaries?.clear()
+        baseOnlyPreparedF2FSummaries = null
+        baseOnlyPreparedNDSummaries?.clear()
+        baseOnlyPreparedNDSummaries = null
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
 
         initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
@@ -1749,6 +1781,7 @@ class NormalMethodAnalyzer(
     companion object {
         const val INITIAL_ALLOWED_FACT_DEPTH = 3
         const val DEBUG_ANALYSIS_TIME = false
+        const val BASE_ONLY_REF_MANAGER = "BaseOnly"
     }
 
     private data class BaseOnlyNDSummaryResult(

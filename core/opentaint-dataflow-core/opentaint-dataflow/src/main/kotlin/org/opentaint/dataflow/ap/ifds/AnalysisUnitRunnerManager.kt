@@ -6,10 +6,12 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 
 interface AnalysisUnitRunnerManager {
     val unitResolver: UnitResolver<CommonMethod>
     val cancellation: Cancellation
+    val refManager: RefManager
 
     fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage?
     fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner?
