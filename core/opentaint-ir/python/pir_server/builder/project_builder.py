@@ -2,16 +2,23 @@
 
 from __future__ import annotations
 from typing import Iterator
+import contextlib
+import io
 import os
 import sys
 import time
 import mypy.build
+import mypy.main
 import mypy.options
 from mypy.errors import CompileError
 from mypy.fscache import FileSystemCache
 from mypy.nodes import MypyFile
 from pir_server.proto import pir_pb2
 from pir_server.builder.ast_serializer import AstSerializer
+
+
+class InvalidMypyFlags(ValueError):
+    pass
 
 
 class ProjectBuilder:
@@ -27,6 +34,35 @@ class ProjectBuilder:
         self.python_version = python_version
         self.search_paths = search_paths or []
 
+    def _build_options(self) -> mypy.options.Options:
+        if self.mypy_flags:
+            captured = io.StringIO()
+            try:
+                with contextlib.redirect_stdout(captured):
+                    _, options = mypy.main.process_options(
+                        list(self.mypy_flags),
+                        stdout=captured,
+                        stderr=captured,
+                        require_targets=False,
+                    )
+            except SystemExit as e:
+                message = captured.getvalue().strip() or str(e)
+                raise InvalidMypyFlags(message[:2000]) from e
+        else:
+            options = mypy.options.Options()
+
+        if self.python_version:
+            parts = self.python_version.split(".")
+            if len(parts) >= 2:
+                options.python_version = (int(parts[0]), int(parts[1]))
+        if self.search_paths:
+            options.mypy_path = list(self.search_paths)
+
+        options.incremental = False
+        options.preserve_asts = True
+        options.export_types = True
+        return options
+
     def build(self) -> Iterator[pir_pb2.MypyModuleProto]:
         """Build project and return raw mypy AST protos.
 
@@ -37,19 +73,14 @@ class ProjectBuilder:
           for that module and continues with the next one.
         - Logs progress every 10 seconds for large projects.
         """
-        options = mypy.options.Options()
-        if self.python_version:
-            parts = self.python_version.split(".")
-            if len(parts) >= 2:
-                options.python_version = (int(parts[0]), int(parts[1]))
-        options.ignore_missing_imports = "--ignore-missing-imports" in self.mypy_flags
-        options.namespace_packages = "--namespace-packages" in self.mypy_flags
-        options.explicit_package_bases = "--explicit-package-bases" in self.mypy_flags
-        options.incremental = False
-        options.preserve_asts = True
-        options.export_types = True
-        if self.search_paths:
-            options.mypy_path = list(self.search_paths)
+        try:
+            options = self._build_options()
+        except InvalidMypyFlags as e:
+            yield pir_pb2.MypyModuleProto(
+                name="__build_errors__",
+                errors=[f"Invalid mypy flags {self.mypy_flags}: {e}"],
+            )
+            return
 
         mypy_sources = []
         all_file_paths = []

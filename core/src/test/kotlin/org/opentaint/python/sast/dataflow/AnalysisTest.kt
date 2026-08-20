@@ -98,11 +98,7 @@ abstract class AnalysisTest {
         return PIRClasspathLoader(
             PIRSettings(
                 sources = pyFiles,
-                mypyFlags = listOf(
-                    "--ignore-missing-imports",
-                    "--namespace-packages",
-                    "--explicit-package-bases",
-                ),
+                mypyFlags = listOf("--ignore-missing-imports"),
                 rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
         ).load()

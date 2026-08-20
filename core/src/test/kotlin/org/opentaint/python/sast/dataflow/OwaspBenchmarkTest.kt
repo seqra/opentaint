@@ -41,11 +41,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
         return PIRClasspathLoader(
             PIRSettings(
                 sources = pyFiles,
-                mypyFlags = listOf(
-                    "--ignore-missing-imports",
-                    "--namespace-packages",
-                    "--explicit-package-bases",
-                ),
+                mypyFlags = listOf("--ignore-missing-imports"),
                 searchPaths = listOf(sourcesDir.absolutePathString()),
                 rpcTimeout = java.time.Duration.ofSeconds(1200),
             )

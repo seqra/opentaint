@@ -13,8 +13,7 @@ import kotlin.test.assertTrue
 
 /**
  * End-to-end check that PEP 420 namespace packages reachable via
- * [PIRSettings.searchPaths] + `--namespace-packages` / `--explicit-package-bases`
- * are actually resolved by mypy.
+ * [PIRSettings.searchPaths] are actually resolved by mypy.
  *
  * Discriminator: [FlatCall.resolvedCallee]. Mypy sets it from its name-resolution
  * pass — if it couldn't resolve the import target, the call carries no fullname
@@ -83,18 +82,14 @@ class NamespacePackageResolutionTest {
     }
 
     @Test
-    fun `namespace package call resolves through searchPaths + namespace flags`() {
+    fun `namespace package call resolves through searchPaths`() {
         val fx = makeFixture()
 
         val f = loadMain(
             PIRSettings(
                 // helper file deliberately NOT in sources — must be found via mypy_path
                 sources = listOf(fx.mainPath),
-                mypyFlags = listOf(
-                    "--ignore-missing-imports",
-                    "--namespace-packages",
-                    "--explicit-package-bases",
-                ),
+                mypyFlags = listOf("--ignore-missing-imports"),
                 searchPaths = listOf(fx.rootDir),
             ),
         )
@@ -103,7 +98,7 @@ class NamespacePackageResolutionTest {
         assertNotNull(
             resolved,
             "Expected mypy to resolve helpers.db_sqlite.run_query when searchPaths " +
-                "+ namespace flags are set, but FlatCall.resolvedCallee was null.",
+                "is set, but FlatCall.resolvedCallee was null.",
         )
         assertTrue(
             resolved.contains("helpers.db_sqlite") && resolved.endsWith("run_query"),
@@ -118,11 +113,7 @@ class NamespacePackageResolutionTest {
         val f = loadMain(
             PIRSettings(
                 sources = listOf(fx.mainPath),
-                mypyFlags = listOf(
-                    "--ignore-missing-imports",
-                    "--namespace-packages",
-                    "--explicit-package-bases",
-                ),
+                mypyFlags = listOf("--ignore-missing-imports"),
                 // no searchPaths — mypy cannot find helpers/
                 searchPaths = emptyList(),
             ),
@@ -136,21 +127,20 @@ class NamespacePackageResolutionTest {
     }
 
     @Test
-    fun `namespace package call is unresolved without namespace flags`() {
+    fun `namespace package call is unresolved with namespace packages disabled`() {
         val fx = makeFixture()
 
         val f = loadMain(
             PIRSettings(
                 sources = listOf(fx.mainPath),
-                // no --namespace-packages / --explicit-package-bases
-                mypyFlags = listOf("--ignore-missing-imports"),
+                mypyFlags = listOf("--ignore-missing-imports", "--no-namespace-packages"),
                 searchPaths = listOf(fx.rootDir),
             ),
         )
 
         assertNull(
             resolvedCalleeOfRunQueryIn(f),
-            "Without --namespace-packages, mypy should not treat helpers/ as a " +
+            "With --no-namespace-packages, mypy should not treat helpers/ as a " +
                 "PEP 420 package — expected resolvedCallee to be null.",
         )
     }
