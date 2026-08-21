@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.ANY_ACCESSOR_DEPTH_CHARGE
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.SUBSEQUENT_ARRAY_ELEMENTS_LIMIT
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
@@ -39,6 +40,16 @@ class AccessPath(
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
         AccessPath(apManager, base, access, exclusions)
 
+    /**
+     * Every accessor on the chain, INCLUDING [org.opentaint.dataflow.ap.ifds.AnyAccessor].
+     *
+     * Deliberately asymmetric with the fact side, whose `AccessTree.AccessNode.collectAccessorsTo`
+     * always ignores `[any]` (there is a matching note there). A premise's accessor set answers
+     * "which links does this premise have", and an `[any]` link is a link: hiding it would make an
+     * `[any]`-only premise indistinguishable from a bare, unrefined one, which is exactly the
+     * distinction `MethodSideEffectHandlerWithAnyAccessorRequestHandling.handleFactToFact` needs.
+     * Consumers that want only concrete accessors must filter `AnyAccessor` out themselves.
+     */
     override fun getAllAccessors(): Set<Accessor> =
         access?.accessorList()?.toSet().orEmpty()
 
@@ -121,6 +132,26 @@ class AccessPath(
         }
     }
 
+    /**
+     * Split this premise against a fact into (matched prefix, remaining delta).
+     *
+     * Note the `otherNode.isAbstract` escape hatch, which `AccessTree.delta` does not have: it lets
+     * this premise be LONGER than the fact, matching the remainder against the fact's `*` and
+     * returning it as the delta. That includes matching an `[any]` link of the premise against a
+     * plain abstract node of the fact -- premise `a.b.[any]` does match fact `base.a.b.*`.
+     *
+     * That is kept deliberately:
+     * - it is not a false match. `*` denotes every path below the node, a strict superset of the
+     *   covered sequences `[any]` denotes, so an abstract fact really does cover the `[any]` premise.
+     * - the strong precondition of the `[any]` design is a property of SUMMARY APPLICATION, where
+     *   `AccessTree.delta`/`getChild` decide which premise a fact activates. This method is not on
+     *   that path: its only caller is trace resolution (`MethodTraceResolver`), which explains an
+     *   already-decided finding by attributing it to a summary edge.
+     * - trace resolution cannot add or remove a reported finding. A vulnerability that resolves to
+     *   no trace is still reported, with `trace = null`
+     *   (`TaintAnalysisUnitRunnerManager.resolveVulnerabilityTracesWithCancellation`). Tightening
+     *   this would therefore buy no soundness and cost trace coverage.
+     */
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 
@@ -169,6 +200,16 @@ class AccessPath(
         }
     }
 
+    /**
+     * Head-only: an exclusion set can only ever remove the FIRST link of a delta.
+     *
+     * `[any]` asymmetry, left as-is deliberately: exclusion sets are only ever populated from
+     * concrete accessors, so `AnyAccessor !in exclusion` always holds and an `[any]`-headed delta
+     * survives an exclusion `{f}` intact -- even though `[any]` covers `f`, so the delta really does
+     * denote `f`-prefixed paths that the exclusion meant to remove. The effect is that the excluded
+     * branch is kept rather than dropped: a false positive at worst, never a false negative. The
+     * fact side has the same property (see the `filter` call in `AccessTree.delta`).
+     */
     private fun AccessNode.filter(exclusion: ExclusionSet): AccessNode? = when (exclusion) {
         ExclusionSet.Empty -> this
         is ExclusionSet.Concrete -> this.takeIf { with(manager) { it.accessor.accessor !in exclusion } }
@@ -195,7 +236,7 @@ class AccessPath(
     override val size: Int
         get() = access?.size ?: 0
 
-    override val depth: Int get() = size
+    override val depth: Int get() = access?.depth ?: 0
 
     override fun toString(): String = "$base${access ?: ""}.*/$exclusions"
 
@@ -225,7 +266,28 @@ class AccessPath(
         val next: AccessNode?
     ) {
         private val hash: Int
+
+        /**
+         * The literal number of links in the chain, `[any]` counted as 1 like everything else.
+         *
+         * Kept a plain link count on purpose: it is used for STRUCTURAL comparisons, in particular
+         * `AccessTree.AccessNode.filterStartsWith` compares a tree node's `maxDepth` against it to
+         * prune premises that cannot fit under the fact. Inflating it would over-prune. For the
+         * COST-weighted length use [depth].
+         */
         val size: Int
+
+        /**
+         * The cost-weighted length of the chain: an `[any]` link is charged
+         * [ANY_ACCESSOR_DEPTH_CHARGE], every other link 1.
+         *
+         * An `[any]` stands for an unbounded sequence of covered steps, so charging it as one step
+         * would let exactly the premises that admit the deepest facts slip past
+         * `MethodAnalyzer.edgeExceedLimit`, which gates an edge on `initialFactAp.depth`. The number
+         * is deliberately the same one the fact side charges on `AccessTree.AccessNode.maxDepth` --
+         * the two are compared against one budget. See the note at the constant.
+         */
+        val depth: Int
 
         init {
             var hash = accessor
@@ -235,8 +297,13 @@ class AccessPath(
 
         init {
             var size = 1
-            if (next != null) size += next.size
+            var depth = if (accessor == ANY_ACCESSOR_IDX) ANY_ACCESSOR_DEPTH_CHARGE else 1
+            if (next != null) {
+                size += next.size
+                depth += next.depth
+            }
             this.size = size
+            this.depth = depth
         }
 
         override fun hashCode(): Int = hash
@@ -261,6 +328,13 @@ class AccessPath(
             return result
         }
 
+        /**
+         * Append [other] below this chain by re-prepending this chain's accessors onto it.
+         *
+         * Every link goes through [addParent], so an `[any]` in the LEFT operand is preserved
+         * exactly as far as [addParent] preserves it -- which, since [addParent] stopped dropping
+         * `ANY_ACCESSOR_IDX`, is fully. No separate handling is needed here.
+         */
         fun concat(other: AccessNode): AccessNode {
             val thisAccessors = this.toList()
             var node = other
@@ -293,7 +367,7 @@ class AccessPath(
                     AccessNode(manager, accessor, this)
                 }
 
-                accessor == ANY_ACCESSOR_IDX -> this // todo: All accessors are not supported in tree base ap
+                accessor == ANY_ACCESSOR_IDX -> prependAnyAccessor()
 
                 accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> AccessNode(manager, accessor, this)
                 accessor.isTypeInfoAccessor() -> AccessNode(manager, accessor, this)
@@ -333,11 +407,64 @@ class AccessPath(
             }
         }
 
+        /**
+         * Build `[any].this`, maintaining on the chain the same representation invariant the fact
+         * side maintains in `AccessTree.AccessNode.prependAnyAccessor`: no `[any]` is reachable
+         * from another `[any]` through a covered-only path.
+         *
+         * Under the zero-or-more reading of `[any]` the collapse is an IDENTITY, not an
+         * approximation: for `x`, `y` covered by `[any]`, `[any].x.y.[any].S` and `[any].S` denote
+         * the same path set, because `w.x.y.v` ranges over exactly the same covered sequences as a
+         * single `w'`.
+         *
+         * The scan stops at the first accessor `[any]` does not cover -- a taint mark, a static, a
+         * type-info accessor, `[value]`, `[final]` -- because the identity does not hold across one.
+         * There the `[any]` is simply prepended: `[any]` onto `![m].S` is `[any].![m].S`, never a
+         * collapse. (On the fact side an `[any]` below a mark is unconstructible outright; here it
+         * is enough that the scan does not cross one.)
+         *
+         * The predicate is [TreeApManager.isCoveredByAny], never `AnyAccessor.containsAccessor`:
+         * coverage is the unroll strategy's decision, and only it agrees with what `getChild` on
+         * the fact side will actually match.
+         */
+        private fun prependAnyAccessor(): AccessNode {
+            var node: AccessNode? = this
+            while (node != null) {
+                val accessor = node.accessor
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    // the whole covered run plus the inner `[any]` collapses into one `[any]`
+                    return AccessNode(manager, ANY_ACCESSOR_IDX, node.next)
+                }
+
+                if (!manager.isCoveredByAny(accessor)) break
+
+                node = node.next
+            }
+
+            return AccessNode(manager, ANY_ACCESSOR_IDX, this)
+        }
+
+        /**
+         * The repeated-field cycle collapse: prepending `.y` onto a chain that already contains a
+         * `y` truncates the chain to just below that `y`, which is what stops a cyclic data
+         * structure from generating an unbounded family of premises.
+         *
+         * The scan stops at an `[any]` and collapses nothing. An `[any]` between the new `y` and the
+         * old one means the two occurrences need not denote the same field of the same object -- an
+         * arbitrary covered sequence separates them -- so this is not a cycle. Walking through it
+         * would turn `y` prepended onto `x.[any].y.b.$` into `b.$`, discarding the `[any]` and the
+         * whole prefix above it and leaving a premise anchored at a different position entirely.
+         *
+         * The element-run analogues [limitElementAccess] and [collapseElementAccess] need no such
+         * guard: both terminate at the first non-element accessor, and `[any]` is not an element
+         * accessor, so an `[any]` already breaks an element run instead of being walked through.
+         */
         private fun limitFieldAccess(newRootField: AccessorIdx): AccessNode? {
             var node = this
             while (true) {
                 val accessor = node.accessor
                 if (accessor == newRootField) return node.next
+                if (accessor == ANY_ACCESSOR_IDX) return this
                 node = node.next ?: return this
             }
         }

@@ -41,6 +41,16 @@ class TaintSourceActionPreconditionEvaluator(
             return Maybe.some(listOf(rule to action))
         }
 
+        // Retry with the trailing `[any]` stripped. This is a workaround for premises that could
+        // not hold an `[any]`: `AccessPath.AccessNode.addParent` used to drop it, so a source rule
+        // whose position ends in `[any]` never matched the premise built for it and the lookup had
+        // to fall back to the `[any]`-free prefix.
+        //
+        // `addParent` no longer drops it, but the workaround must stay until step 5 puts a PRODUCER
+        // of `[any]` premises in place: until then the premises reaching this evaluator still come
+        // from paths that never introduce an `[any]`, and removing the fallback now would simply
+        // lose every such source. Once step 5 lands the exact lookup above succeeds on its own and
+        // this branch becomes redundant -- retire it there, not here.
         if (position is PositionAccess.Complex && position.accessor == AnyAccessor) {
             if (factReader.containsPositionWithTaintMark(position.base, mark)) {
                 return Maybe.some(listOf(rule to action))

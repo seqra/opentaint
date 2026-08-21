@@ -35,9 +35,16 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
      * here. Dropping it loses every sink whose condition reads a *field* of a formal parameter more
      * than one frame below the source.
      *
-     * Answered only while the request is still un-refined, i.e. its fact is the bare abstraction and
-     * no accessor below the parameter has been materialized yet. Fact-to-fact edges vastly outnumber
-     * zero-to-fact ones, and refining on all of them does not terminate in any reasonable time.
+     * Answered only while the request is still un-refined, i.e. no CONCRETE accessor below the
+     * parameter has been materialized yet. Fact-to-fact edges vastly outnumber zero-to-fact ones,
+     * and refining on all of them does not terminate in any reasonable time.
+     *
+     * "Un-refined" is not the same as "has no accessors at all". A premise carrying only `[any]`
+     * links -- `arg0.[any]` -- names no field: `[any]` is precisely the statement that nothing below
+     * the parameter has been pinned down, which is the case this request exists to serve. Testing
+     * `getAllAccessors().isEmpty()` would silently stop answering such requests, losing sinks,
+     * because `AccessPath.getAllAccessors` reports `AnyAccessor` along with everything else (that
+     * asymmetry with the fact side is documented at both ends).
      */
     override fun handleFactToFact(
         currentInitialFactAp: InitialFactAp,
@@ -45,7 +52,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         summaryEffect: MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication,
         kind: SideEffectKind
     ): Set<MethodSequentFlowFunction.Sequent> {
-        if (kind is TaintMarkFieldUnfoldRequest && kind.fact.getAllAccessors().isEmpty()) {
+        if (kind is TaintMarkFieldUnfoldRequest && kind.fact.getAllAccessors().all { it is AnyAccessor }) {
             handleUnfoldRequest(summaryEffect, kind)
         }
 

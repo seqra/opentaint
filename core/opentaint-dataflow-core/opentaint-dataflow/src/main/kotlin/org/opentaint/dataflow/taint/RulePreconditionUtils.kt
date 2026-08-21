@@ -157,6 +157,15 @@ fun TaintMarkAwareConditionExpr.preconditionDnf(
 
         val tailPosition = PositionAccess.Complex(PositionAccess.Simple(AccessPathBase.This), mark)
         val tail = apManager.mkInitialAccessPath(tailPosition, ExclusionSet.Universe)
+        // `specialization` is a path read off a real fact at this statement, so it CAN contain
+        // AnyAccessor -- `NodeAccessTreeDelta.getStartAccessors` reports the `[any]` edge like any
+        // other. `tail` is non-empty (`![mark].$`), so every prepend here goes through
+        // `AccessPath.AccessNode.addParent`, which used to drop the `[any]` silently and produce a
+        // precondition anchored one level too shallow: `pos.![mark]` where the evidence was
+        // `pos.[any].![mark]`. The `[any]` is preserved now, which makes the precondition name the
+        // position the mark was actually found at. It is strictly narrower -- a fact without an
+        // `[any]` at `pos` no longer satisfies it -- and it cannot be vacuous, because the fact the
+        // specialization was extracted from carries that `[any]` by construction.
         val tailWithAnySpecialized = anySpecialization.map { specialization ->
             specialization.foldRight(tail) { a, f -> f.prependAccessor(a) }
         }

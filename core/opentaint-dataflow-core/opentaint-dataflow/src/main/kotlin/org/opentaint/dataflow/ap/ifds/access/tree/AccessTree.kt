@@ -946,7 +946,15 @@ class AccessTree(
 
             forEachAccessor { accessor, accessorNode ->
                 if (accessor != ANY_ACCESSOR_IDX) {
-                    // note: always ignore any accessor
+                    // note: always ignore any accessor.
+                    //
+                    // Deliberately asymmetric with the premise side: [AccessPath.getAllAccessors]
+                    // DOES report `AnyAccessor`, and its consumers filter it out explicitly (see
+                    // MethodSideEffectHandlerWithAnyAccessorRequestHandling.handleFactToFact).
+                    // Keep both sides as they are. Here the set answers "which concrete accessors
+                    // does this fact mention", and `[any]` names none of them. There it answers
+                    // "which links does this premise have", and dropping `[any]` would make an
+                    // `[any]`-only premise indistinguishable from a bare, unrefined one.
                     dst.add(accessor)
                 }
 
@@ -1889,8 +1897,15 @@ class AccessTree(
              *
              * Nothing may use [maxDepth]'s magnitude to decide whether a node carries an `[any]`:
              * that is what [containsAnyInThisOrDeepNodes] is for.
+             *
+             * The premise side charges an `[any]` link the SAME number, in
+             * [AccessPath.AccessNode.depth]. That is deliberate, not a coincidence:
+             * `MethodAnalyzer.edgeExceedLimit` gates an edge's premise and its fact against one
+             * budget, so a cheaper premise charge would admit premises that no fact matching them
+             * can pass. Visibility is `internal` rather than public so only the premise side in this
+             * module can share it.
              */
-            private const val ANY_ACCESSOR_DEPTH_CHARGE = 10
+            internal const val ANY_ACCESSOR_DEPTH_CHARGE = 10
 
             @JvmStatic
             private fun removeSingleAccessor(
