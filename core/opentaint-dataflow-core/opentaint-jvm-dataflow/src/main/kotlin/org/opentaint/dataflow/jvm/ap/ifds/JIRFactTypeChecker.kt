@@ -291,6 +291,21 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         }
     }
 
+    private val typeIsAssignableToCache = ConcurrentHashMap<LongLongPair, Boolean>()
+
+    fun typeIsAssignableTo(typeName: String, requiredTypeName: String): Boolean {
+        if (typeName == requiredTypeName || requiredTypeName == "java.lang.Object") return true
+
+        val typeNameId = hierarchyInfo.persistence.findSymbolId(typeName)
+        val requiredTypeNameId = hierarchyInfo.persistence.findSymbolId(requiredTypeName)
+        val cacheKey = LongLongImmutablePair(typeNameId, requiredTypeNameId)
+        return typeIsAssignableToCache.computeIfAbsent(cacheKey) {
+            val type = cp.findTypeOrNull(typeName) ?: return@computeIfAbsent true
+            val requiredType = cp.findTypeOrNull(requiredTypeName) ?: return@computeIfAbsent true
+            type.isAssignable(requiredType)
+        }
+    }
+
     private fun computeTypeMayHaveSubtypeOf(
         typeName: String, requiredTypeName: String
     ): Boolean {

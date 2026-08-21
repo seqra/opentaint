@@ -8,8 +8,17 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasInfo
 internal object JIRAliasPathCompressor {
     fun compress(aliases: List<AliasInfo>, checkpoint: () -> Unit = {}): List<AliasInfo> {
         checkpoint()
-        val result = LinkedHashSet(aliases)
-        val components = result.toList().connectedAccessorComponents(checkpoint)
+        val result = LinkedHashSet<AliasInfo>()
+        aliases.forEach { alias ->
+            checkpoint()
+            if (alias !is AliasApInfo || !alias.accessors.containsInvalidUnboundedPath()) {
+                result += alias
+            }
+        }
+        val accessorPaths = result.filterIsInstance<AliasApInfo>().filter { it.accessors.size >= 2 }
+        if (accessorPaths.isEmpty()) return result.toList()
+
+        val components = accessorPaths.connectedAccessorComponents(checkpoint)
         if (components.isEmpty()) return result.toList()
 
         // Dropping the whole permutation-bearing fact is intentional: a shortened path would be a new alias fact.
@@ -19,7 +28,7 @@ internal object JIRAliasPathCompressor {
         }
     }
 
-    private fun List<AliasInfo>.connectedAccessorComponents(
+    private fun List<AliasApInfo>.connectedAccessorComponents(
         checkpoint: () -> Unit,
     ): Map<AliasAccessor, Int> {
         val accessorIds = hashMapOf<AliasAccessor, Int>()
@@ -28,7 +37,7 @@ internal object JIRAliasPathCompressor {
         fun accessorId(accessor: AliasAccessor): Int =
             accessorIds.getOrPut(accessor) { accessorIds.size }
 
-        filterIsInstance<AliasApInfo>().forEach { alias ->
+        forEach { alias ->
             checkpoint()
             alias.accessors.zipWithNext { outer, inner ->
                 graph.addEdge(accessorId(outer), accessorId(inner))
@@ -59,5 +68,22 @@ internal object JIRAliasPathCompressor {
         component != NO_COMPONENT && component == componentByAccessor[inner]
     }
 
+    private fun List<AliasAccessor>.containsInvalidUnboundedPath(): Boolean {
+        return zipWithNext().any { (outer, inner) ->
+            outer is AliasAccessor.Array ||
+                outer is AliasAccessor.Field && outer.fieldType == "java.lang.Object" ||
+                inner is AliasAccessor.Field && inner.isErasedContainerAccessor() ||
+                inner is AliasAccessor.Array &&
+                (outer !is AliasAccessor.Field || !outer.fieldType.isArrayTypeName())
+        }
+    }
+
+    private fun String.isArrayTypeName(): Boolean = endsWith("[]") || startsWith("[")
+
+    private fun AliasAccessor.Field.isErasedContainerAccessor(): Boolean =
+        fieldType == "java.lang.Object" &&
+            fieldName in ERASED_CONTAINER_ACCESSOR_NAMES
+
     private const val NO_COMPONENT = -1
+    private val ERASED_CONTAINER_ACCESSOR_NAMES = setOf("Element", "MapKey", "MapValue")
 }

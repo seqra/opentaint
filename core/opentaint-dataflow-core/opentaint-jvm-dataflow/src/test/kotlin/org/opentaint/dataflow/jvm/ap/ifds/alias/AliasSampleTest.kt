@@ -477,6 +477,13 @@ class AliasSampleTest : BasicTestUtils() {
                         && it.accessors.dropLast(1).all { a -> a.isField(FIELD_PREV) }
             }
         }
+
+        assertFalse {
+            apAliases.any { alias ->
+                val fields = alias.accessors.dropLast(1)
+                fields.any { it.isField(FIELD_NEXT) } && fields.any { it.isField(FIELD_PREV) }
+            }
+        }
     }
 
     @Test

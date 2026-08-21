@@ -18,7 +18,7 @@ class JIRAliasPathCompressorTest {
             alias(b, a, b, exit),
         )
 
-        val compressed = JIRAliasPathCompressor.compress(aliases)
+        val compressed = compress(aliases)
 
         assertEquals(setOf(shortA, shortB), compressed.toSet())
     }
@@ -30,7 +30,7 @@ class JIRAliasPathCompressorTest {
             alias(b, a, b, exit),
         )
 
-        assertEquals(emptyList(), JIRAliasPathCompressor.compress(aliases))
+        assertEquals(emptyList(), compress(aliases))
     }
 
     @Test
@@ -40,15 +40,45 @@ class JIRAliasPathCompressorTest {
             alias(b, exit),
         )
 
-        assertEquals(aliases, JIRAliasPathCompressor.compress(aliases))
+        assertEquals(aliases, compress(aliases))
     }
 
     @Test
-    fun `does not compress single accessor self loop`() {
-        val aliases = listOf(alias(a, a, a, exit))
+    fun `drops paths continuing past unbounded accessors`() {
+        val element = AliasAccessor.Field("java.lang.Iterable", "Element", "java.lang.Object")
+        val collection = AliasAccessor.Field("Test", "collection", "java.lang.Iterable")
+        val aliases = listOf(
+            alias(element),
+            alias(element, exit),
+            alias(collection, element),
+            alias(AliasAccessor.Array),
+            alias(AliasAccessor.Array, exit),
+        )
 
-        assertEquals(aliases, JIRAliasPathCompressor.compress(aliases))
+        assertEquals(
+            listOf(alias(element), alias(AliasAccessor.Array)),
+            compress(aliases),
+        )
     }
+
+    @Test
+    fun `keeps typed field to array access`() {
+        val arrayField = AliasAccessor.Field("Test", "values", "Test[]")
+        val alias = alias(arrayField, AliasAccessor.Array)
+
+        assertEquals(listOf(alias), compress(listOf(alias)))
+    }
+
+    @Test
+    fun `keeps repeated accessor facts without a field permutation`() {
+        val short = alias(a, exit)
+        val aliases = listOf(short, alias(a, a, a, exit))
+
+        assertEquals(aliases, compress(aliases))
+    }
+
+    private fun compress(aliases: List<AliasApInfo>) =
+        JIRAliasPathCompressor.compress(aliases)
 
     private fun alias(vararg accessors: AliasAccessor): AliasApInfo =
         AliasApInfo(Argument(0), accessors.toList())
@@ -58,6 +88,6 @@ class JIRAliasPathCompressorTest {
         val b = field("b")
         val exit = field("exit")
 
-        fun field(name: String) = AliasAccessor.Field("Test", name, "java.lang.Object")
+        fun field(name: String) = AliasAccessor.Field("Test", name, "Test")
     }
 }
