@@ -258,11 +258,27 @@ class AccessTree(
         return result
     }
 
+    /**
+     * A node of the access tree.
+     *
+     * Its booleans are NOT separate fields: all five live packed in [flags].
+     *
+     * [AccessNode] is the most numerous object in the analysis by a wide margin -- the prototype
+     * measured facts averaging 43 nodes each across 2.6 M abstraction calls, with 22,867 individual
+     * facts exceeding 1000 nodes -- and heap is the binding constraint (the target workload OOMs at
+     * 8 GB). Five `Boolean` fields occupy five bytes plus alignment padding in the JVM object
+     * layout; one `Byte` plus fold-away accessors removes several bytes per node.
+     *
+     * The constructor still takes the three CONSTRUCTED bits as named booleans rather than a packed
+     * argument: there are many call sites, they all pass them by name, and a packed `Int` argument
+     * would turn a transposition into a silent, near-undiscoverable bug. Packing happens once,
+     * internally, next to where the two DERIVED bits are computed.
+     */
     class AccessNode private constructor(
         val manager: TreeApManager,
-        @JvmField val interned: Boolean,
-        @JvmField val isAbstract: Boolean,
-        @JvmField val isFinal: Boolean,
+        interned: Boolean,
+        isAbstract: Boolean,
+        isFinal: Boolean,
         @JvmField val deepAccessorExclusion: DeepAccessorExclusion?,
         @JvmField val accessors: IntArray?,
         @JvmField val accessorNodes: Array<AccessNode>?,
@@ -270,7 +286,28 @@ class AccessTree(
         @JvmField val hash: Long
         @JvmField val size: Long
         @JvmField val maxDepth: Int
-        @JvmField val containsStatic: Boolean
+
+        /**
+         * All five boolean properties of this node, packed.
+         *
+         * Assigned exactly once, from an init block, so it is a final field: safely published to
+         * every thread that sees the node, which matters because nodes are shared and interned.
+         *
+         * WARNING: this byte mixes IDENTITY bits ([isAbstract], [isFinal]) with bits that are either
+         * derived from the subtree ([containsStatic], [containsAnyInThisOrDeepNodes]) or describe the
+         * node's storage state ([interned]). Comparing whole bytes in [equals] / [hashCode] /
+         * [AccessTreeInterner] would therefore be WRONG -- see the comment in [equals].
+         */
+        @JvmField val flags: Byte
+
+        /** Whether this node has been canonicalised by an [AccessTreeInterner]. */
+        val interned: Boolean get() = (flags.toInt() and INTERNED) != 0
+
+        val isAbstract: Boolean get() = (flags.toInt() and ABSTRACT) != 0
+
+        val isFinal: Boolean get() = (flags.toInt() and FINAL) != 0
+
+        val containsStatic: Boolean get() = (flags.toInt() and CONTAINS_STATIC) != 0
 
         /**
          * True if an `[any]` accessor is reachable from here: either on THIS node or anywhere
@@ -283,7 +320,27 @@ class AccessTree(
          * can be disabled exactly where [maxDepth] under-approximates the reachable depth, i.e.
          * where [getChild] can synthesise arbitrarily deep children through an `[any]` edge.
          */
-        @JvmField val containsAnyInThisOrDeepNodes: Boolean
+        val containsAnyInThisOrDeepNodes: Boolean get() = (flags.toInt() and CONTAINS_ANY_DEEP) != 0
+
+        /**
+         * Memoised [AccessTreeAnySuffixMatcher] for this node used as an `[any]` suffix.
+         *
+         * The matcher is immutable and a PURE FUNCTION of the node it is built from, so a benign
+         * race that builds it twice is harmless: both copies denote the same suffix language, and
+         * whichever wins the write is equally valid. That is why the field needs no lock, only
+         * `@Volatile` for safe publication of the fully-built object.
+         *
+         * Without it the matcher is rebuilt from scratch on every merge, which is the single
+         * hottest thing in the analysis once `[any]` stays symbolic in facts: measured at
+         * 91,002,062 constructions costing 143 s on conductor, cut to 30.6 M / 35 s by this memo.
+         *
+         * It is a derived cache, NOT part of the node's identity -- [equals], [hashCode] and
+         * [AccessTreeInterner.InternStrategy] must never look at it, and [markInterned] deliberately
+         * does not copy it (the rebuilt node simply refills it lazily).
+         */
+        @Volatile
+        @JvmField
+        var anySuffixMatcher: AccessTreeAnySuffixMatcher? = null
 
         init {
             check(deepAccessorExclusion == null || isAbstract) {
@@ -326,8 +383,16 @@ class AccessTree(
 
             this.hash = hash
             this.maxDepth = depth
-            this.containsStatic = containsStatic
-            this.containsAnyInThisOrDeepNodes = containsAnyDeep
+
+            // The only place [flags] is written. The three constructed bits and the two derived
+            // ones are packed together here so the field can stay a `val`, i.e. a final field.
+            var packed = 0
+            if (interned) packed = packed or INTERNED
+            if (isAbstract) packed = packed or ABSTRACT
+            if (isFinal) packed = packed or FINAL
+            if (containsStatic) packed = packed or CONTAINS_STATIC
+            if (containsAnyDeep) packed = packed or CONTAINS_ANY_DEEP
+            this.flags = packed.toByte()
         }
 
         init {
@@ -345,6 +410,10 @@ class AccessTree(
             if (other !is AccessNode) return false
 
             if (hash != other.hash) return false
+            // Compare the IDENTITY bits one by one, NEVER `flags` as a whole: `interned` is storage
+            // state, and `containsStatic` / `containsAnyInThisOrDeepNodes` are derived from the
+            // children that `accessorNodes.contentEquals` already compares. Folding them into the
+            // comparison would make structurally equal nodes unequal and break interning.
             if (isAbstract != other.isAbstract || isFinal != other.isFinal) return false
             if (deepAccessorExclusion != other.deepAccessorExclusion) return false
 
@@ -1154,6 +1223,13 @@ class AccessTree(
             return (results as Object2ObjectOpenHashMap<AccessNodeMergePair, T>).getComputedResult(initial)
         }
 
+        /**
+         * The single entry point for building an `[any]` suffix matcher -- see [anySuffixMatcher]
+         * for why building it twice under a race is safe.
+         */
+        private fun AccessNode.suffixMatcher(): AccessTreeAnySuffixMatcher =
+            anySuffixMatcher ?: AccessTreeAnySuffixMatcher(this).also { anySuffixMatcher = it }
+
         private fun trimAnyCoveredAndPushChildren(
             mergePair: AccessNodeMergePair,
             stack: MutableList<AccessNodeMergePair>,
@@ -1170,7 +1246,7 @@ class AccessTree(
             val aAnyIdx = aAccessorsUntrimmed.indexOf(ANY_ACCESSOR_IDX)
             val bTrimmed =
                 if (aAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(aNodesUntrimmed[aAnyIdx]).getNonMatchingNode(b)
+                    aNodesUntrimmed[aAnyIdx].suffixMatcher().getNonMatchingNode(b)
                 else b
 
             val bAccessorsUntrimmed = bTrimmed.accessors
@@ -1179,7 +1255,7 @@ class AccessTree(
             val bAnyIdx = bAccessorsUntrimmed?.indexOf(ANY_ACCESSOR_IDX) ?: -1
             val aTrimmed =
                 if (bAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(bNodesUntrimmed!![bAnyIdx]).getNonMatchingNode(a)
+                    bNodesUntrimmed!![bAnyIdx].suffixMatcher().getNonMatchingNode(a)
                 else a
 
             if (aTrimmed !== a || bTrimmed !== b) {
@@ -1806,6 +1882,9 @@ class AccessTree(
             }
 
             fun DataOutputStream.writeAccessNode(node: AccessNode) {
+                // A WIRE-FORMAT mask, unrelated to and deliberately not derived from
+                // AccessNode.flags: it carries only the three serialised bits, in its own layout,
+                // and must stay stable across changes to the in-memory packing.
                 var mask = 0
                 if (node.isFinal) {
                     mask += 1
@@ -1884,6 +1963,15 @@ class AccessTree(
 
         companion object {
             const val SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2
+
+            // Bit masks for [flags]. Held as `Int` because Kotlin `Byte` arithmetic promotes to
+            // `Int` anyway; the accessors do one `toInt()` (a sign extension, free) and one `and`,
+            // which is branch-free, allocation-free and folds away at the call site.
+            private const val INTERNED = 1
+            private const val ABSTRACT = 1 shl 1
+            private const val FINAL = 1 shl 2
+            private const val CONTAINS_STATIC = 1 shl 3
+            private const val CONTAINS_ANY_DEEP = 1 shl 4
 
             /**
              * How much a single `[any]` edge adds to [maxDepth].

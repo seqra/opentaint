@@ -18,6 +18,10 @@ class AccessTreeInterner {
 
             if (a.hash != b.hash) return false
 
+            // Same hazard as AccessNode.equals: compare the IDENTITY bits individually, never
+            // AccessNode.flags as a whole. `interned` is storage state -- and here it is ALWAYS set
+            // on one side and may differ on the other -- while `containsStatic` and
+            // `containsAnyInThisOrDeepNodes` are derived from the children compared just below.
             if (a.isAbstract != b.isAbstract || a.isFinal != b.isFinal) return false
 
             if (!a.accessors.contentEquals(b.accessors)) return false
