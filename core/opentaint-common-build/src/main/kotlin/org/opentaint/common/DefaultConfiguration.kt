@@ -53,12 +53,37 @@ fun Project.configureDefaultJvm() {
     }
 }
 
+/**
+ * System properties forwarded from the Gradle JVM into every forked test JVM.
+ *
+ * A test worker is a separate process that inherits nothing, so `-Dopentaint.x=y` on the Gradle
+ * command line reaches the daemon and not the code under test. Anything here that is set on the
+ * Gradle JVM is passed through; anything unset is left alone, so the analyzer sees its own default.
+ */
+private val FORWARDED_TEST_PROPERTIES = listOf(
+    // TreeInitialFactAbstraction: the `[any]` unroll cap. Off unless set.
+    "opentaint.anyUnrollLimit",
+)
+
 fun Project.configureDefaultTest() {
     tasks.named<Test>("test") {
         // Use JUnit Platform for unit tests.
         useJUnitPlatform()
 
         maxHeapSize = "1G"
+
+        FORWARDED_TEST_PROPERTIES.forEach { name ->
+            val value = System.getProperty(name)
+
+            // Declared as an input as well: a Test task does not treat its system properties as
+            // inputs, so without this a run with a different value would be UP-TO-DATE and would
+            // report the previous run's results.
+            inputs.property("systemProperty.$name", value.orEmpty())
+
+            if (value != null) {
+                systemProperty(name, value)
+            }
+        }
 
         testLogging {
             events("passed")

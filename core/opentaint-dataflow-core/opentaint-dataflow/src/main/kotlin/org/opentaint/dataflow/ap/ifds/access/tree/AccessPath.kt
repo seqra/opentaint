@@ -147,10 +147,24 @@ class AccessPath(
      *   `AccessTree.delta`/`getChild` decide which premise a fact activates. This method is not on
      *   that path: its only caller is trace resolution (`MethodTraceResolver`), which explains an
      *   already-decided finding by attributing it to a summary edge.
-     * - trace resolution cannot add or remove a reported finding. A vulnerability that resolves to
-     *   no trace is still reported, with `trace = null`
-     *   (`TaintAnalysisUnitRunnerManager.resolveVulnerabilityTracesWithCancellation`). Tightening
-     *   this would therefore buy no soundness and cost trace coverage.
+     * - trace resolution cannot ADD a finding, so a permissive match here cannot cause a false
+     *   positive. It can only attribute an already-decided one to a summary edge.
+     *
+     * It can, however, LOSE one, so being permissive here is load-bearing rather than merely
+     * harmless. `resolveVulnerabilityTracesWithCancellation` does hand back
+     * `VulnerabilityWithInterproceduralTrace(vuln, trace = null)` for an unresolved trace, which
+     * reads as if the finding survives -- but `TracePath.kt:37` turns a null trace into
+     * `TracePathGenerationResult.Failure`, and `TaintAnalyzer.fullScan` then drops exactly those:
+     *
+     *     val filteredVulnerabilities = vulnerabilitiesWithTraces.filter {
+     *         it.trace !is TracePathGenerationResult.Failure
+     *     }
+     *
+     * So a finding that is derived, registered and confirmed is discarded whole if no trace can be
+     * built for it. Tightening this would therefore not cost "trace coverage", it would cost
+     * findings. That was observed, not reasoned about: a positive `StarOperatorTest` case
+     * (`taint-StarMixedExclusionSanitizer`) was lost this way before this method learned to step
+     * over an `[any]` in the fact.
      */
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
@@ -161,17 +175,35 @@ class AccessPath(
         var otherNode: AccessTree.AccessNode = other.access
         val accessorsOnPath = IntArrayList()
 
+        /**
+         * Whether an `[any]` link of the FACT was stepped over to reach the current position, and
+         * whether that happened for the accessor currently being matched. See the `[any]` hop below.
+         */
+        var matchedThroughAny = false
+        var hoppedOverAnyHere = false
+
+        // `this` when the match consumed exactly this premise's chain, and the chain rebuilt from
+        // [accessorsOnPath] when an `[any]` hop added a link the premise did not have.
+        fun matchedPrefix(): InitialFactAp {
+            if (!matchedThroughAny) return this
+
+            val matchedAccessNode = accessorsOnPath.foldRightInt(null as AccessNode?) { accessor, prevNode ->
+                AccessNode(apManager, accessor, prevNode)
+            }
+            return AccessPath(apManager, base, matchedAccessNode, exclusions)
+        }
+
         while (true) {
             if (node == null) {
                 if (otherNode.isAbstract) {
-                    return listOf(this to AccessPathDelta.Empty)
+                    return listOf(matchedPrefix() to AccessPathDelta.Empty)
                 }
                 return emptyList()
             }
 
             val nextOtherNode = if (node.accessor == FINAL_ACCESSOR_IDX) {
                 if (otherNode.isFinal) {
-                    return listOf(this to AccessPathDelta.Empty)
+                    return listOf(matchedPrefix() to AccessPathDelta.Empty)
                 }
 
                 null
@@ -191,12 +223,41 @@ class AccessPath(
                     return listOf(matchedFact to AccessPathDelta.Delta(filteredNode))
                 }
 
+                // Step over an `[any]` link of the fact and retry the same premise accessor below it.
+                //
+                // `[any]` is zero-or-more, so a fact `X.[any].S` denotes `X.S` as well.
+                // `AccessTree.getChild` implements that for one level -- it hoists a CHILD of the
+                // `[any]` node up -- but it cannot look through an `[any]` whose subtree is a bare
+                // `*`, and `X.[any].*` is exactly the exit fact a summary keyed on an `[any]`
+                // premise carries. Without this hop such a summary explains nothing, the trace
+                // resolves to nothing, and the finding is dropped whole by
+                // `TaintAnalyzer.fullScan`, which filters out vulnerabilities without a trace.
+                //
+                // The stepped-over `[any]` is recorded on the matched prefix rather than skipped.
+                // The caller (`MethodTraceResolver.resolveCallPassSummary`) immediately re-checks
+                // `mappedSummaryFact.contains(matchedEntryFact)`, and only a prefix that names the
+                // `[any]` passes that test against an `[any]`-carrying fact. It is representable
+                // since `addParent` stopped dropping `ANY_ACCESSOR_IDX`.
+                //
+                // One hop per accessor: `[any].[any]` is collapsed on construction, so a second
+                // consecutive hop cannot be a real shape, and the flag makes the loop terminating
+                // rather than trusting that invariant.
+                val anyNode = if (hoppedOverAnyHere) null else otherNode.getChild(ANY_ACCESSOR_IDX)
+                if (anyNode != null) {
+                    matchedThroughAny = true
+                    hoppedOverAnyHere = true
+                    accessorsOnPath.add(ANY_ACCESSOR_IDX)
+                    otherNode = anyNode
+                    continue
+                }
+
                 return emptyList()
             }
 
             accessorsOnPath.add(node.accessor)
             node = node.next
             otherNode = nextOtherNode
+            hoppedOverAnyHere = false
         }
     }
 
