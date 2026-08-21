@@ -71,8 +71,19 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
 
             while (unprocessed.isNotEmpty()) {
                 val (node, accessor, triePar, depth, notCoveredByAny) = unprocessed.removeFirst()
-                // disallowing [any]->...->[any]
-                check(accessor != ANY_ACCESSOR_IDX)
+
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    // `[any]` is ZERO OR MORE covered steps, so `[any].<covered>*.[any]` == `[any]`.
+                    // Absorb the nested one instead of rejecting it: re-enqueue its children at the
+                    // SAME trie parent, depth and notCoveredByAny as the `[any]` node itself, which
+                    // is exactly the suffix language the outer `[any]` already denotes.
+                    node.forEachAccessor { childAccessor, childNode ->
+                        unprocessed.addLast(
+                            RawNodeWithParent(childNode, childAccessor, triePar, depth, notCoveredByAny)
+                        )
+                    }
+                    continue
+                }
 
                 val curNotCoveredByAny = when {
                     notCoveredByAny != null -> notCoveredByAny

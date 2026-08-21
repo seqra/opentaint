@@ -272,6 +272,19 @@ class AccessTree(
         @JvmField val maxDepth: Int
         @JvmField val containsStatic: Boolean
 
+        /**
+         * True if an `[any]` accessor is reachable from here: either on THIS node or anywhere
+         * strictly below it. Derived at construction, like [containsStatic].
+         *
+         * The shallow counterpart is [containsAnyAccessor], which tests THIS NODE ONLY. The two
+         * are easy to confuse, hence the deliberately long name -- do not shorten it.
+         *
+         * It exists so that the two soundness-critical [maxDepth] prefilters in [filterStartsWith]
+         * can be disabled exactly where [maxDepth] under-approximates the reachable depth, i.e.
+         * where [getChild] can synthesise arbitrarily deep children through an `[any]` edge.
+         */
+        @JvmField val containsAnyInThisOrDeepNodes: Boolean
+
         init {
             check(deepAccessorExclusion == null || isAbstract) {
                 "AnyFieldAccessorExclusions on a non-abstract node"
@@ -282,6 +295,7 @@ class AccessTree(
             var hash = 0L
             var depth = 0
             var containsStatic = false
+            var containsAnyDeep = false
 
             if (isAbstract) hash += 1
             if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
@@ -302,15 +316,18 @@ class AccessTree(
                 depth = accessorNodes.maxOf { it.maxDepth } + 1
 
                 containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
+                containsAnyDeep = containsAnyDeep || accessorNodes.any { it.containsAnyInThisOrDeepNodes }
             }
 
             if (containsAnyAccessor()) {
-                depth += 10_000
+                depth += ANY_ACCESSOR_DEPTH_CHARGE
+                containsAnyDeep = true
             }
 
             this.hash = hash
             this.maxDepth = depth
             this.containsStatic = containsStatic
+            this.containsAnyInThisOrDeepNodes = containsAnyDeep
         }
 
         init {
@@ -376,6 +393,31 @@ class AccessTree(
 
         val isEmptyAbstract: Boolean
             get() = isAbstract && !isFinal && accessors == null
+
+        /**
+         * Whether anything at all hangs below this node.
+         *
+         * This is the property a taint mark requires of the node under it: a mark is a leaf marker,
+         * so nothing structured -- an `[any]` least of all -- may sit below it. The raw
+         * [Companion.create] choke point enforces exactly this, which is the weakest condition that
+         * still gives the invariant, so it cannot reject a legitimate shape such as an abstract leaf
+         * carrying a [DeepAccessorExclusion] claim.
+         *
+         * Consequence: `[any].![m].[any]` is unconstructible. That is what lets [prependAnyAccessor]
+         * collapse a nested `[any]` without carving out an exception for an intervening uncovered
+         * accessor of taint-mark kind -- an `[any]` can never sit below a mark to begin with.
+         */
+        val isStructurelessLeaf: Boolean
+            get() = accessors == null
+
+        /**
+         * The stricter rule [addParentIfPossible] applies when PREPENDING a mark: only the three
+         * manager singletons qualify. It implies [isStructurelessLeaf] and is kept separate so that
+         * tightening the prepend rule and tightening the construction invariant stay independent
+         * decisions.
+         */
+        val isLegalNodeBelowTaintMark: Boolean
+            get() = this == manager.finalNode || this == manager.abstractNode || this == manager.abstractFinalNode
 
         private fun accessorIndex(accessor: AccessorIdx): Int {
             if (accessors == null) return -1
@@ -451,7 +493,7 @@ class AccessTree(
                 }
 
                 accessor.isTaintMarkAccessor() -> {
-                    if (this == manager.finalNode || this == manager.abstractNode || this == manager.abstractFinalNode) {
+                    if (isLegalNodeBelowTaintMark) {
                         create(accessor, this)
                     } else {
                         null
@@ -586,14 +628,79 @@ class AccessTree(
             return annotated
         }
 
+        /**
+         * Build `[any].this`, maintaining the representation invariant that no `[any]` is reachable
+         * from another `[any]` through a covered-only path.
+         *
+         * Under the zero-or-more reading of `[any]` the collapse is an identity, not an
+         * approximation: for `x`, `y`, `z` all covered by `[any]`,
+         * `[any].x.y.z.[any].S` and `[any].S` denote the same path set, because `w.x.y.z.v` ranges
+         * over exactly the same covered sequences as a single `w'`.
+         *
+         * Children reached through an accessor `[any]` does NOT cover (a taint mark, a static, a
+         * type-info accessor, `[value]`, `[final]`) are left alone: the identity does not hold
+         * across them, so neither the descent nor the collapse crosses one.
+         *
+         * The [containsAnyInThisOrDeepNodes] gate keeps the overwhelmingly common case O(1).
+         */
         private fun prependAnyAccessor(): AccessNode {
-            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
-            val nextNode = if (anyNode == null) {
-                this
-            } else {
-                removeSingleAccessor(ANY_ACCESSOR_IDX).mergeAdd(anyNode)
+            if (!containsAnyInThisOrDeepNodes) return create(ANY_ACCESSOR_IDX, this)
+
+            // Every `[any]` subtree found on a covered-only path is hoisted to sit directly under
+            // the new `[any]`, and must itself be stripped there -- hence the worklist.
+            val pending = ArrayDeque<AccessNode>()
+            val enqueued = IdentityHashMap<AccessNode, Unit>()
+            val cache = IdentityHashMap<AccessNode, AccessNode?>()
+
+            pending.addLast(this)
+            enqueued[this] = Unit
+
+            var nextNode: AccessNode? = null
+            while (pending.isNotEmpty()) {
+                val stripped = pending.removeFirst().stripAnyBelowCoveredPath(pending, enqueued, cache)
+                if (stripped != null) {
+                    nextNode = nextNode?.mergeAdd(stripped) ?: stripped
+                }
             }
-            return create(ANY_ACCESSOR_IDX, nextNode)
+
+            return create(ANY_ACCESSOR_IDX, nextNode ?: manager.emptyNode)
+        }
+
+        /**
+         * Delete every `[any]` edge reachable from this node through covered-only accessors,
+         * enqueueing each deleted edge's subtree onto [pending] so it can be merged in directly
+         * under the new `[any]`. Returns null when nothing is left of this branch.
+         *
+         * Every enqueued node is a node of the original tree, so the worklist is finite.
+         */
+        private fun stripAnyBelowCoveredPath(
+            pending: ArrayDeque<AccessNode>,
+            enqueued: IdentityHashMap<AccessNode, Unit>,
+            cache: IdentityHashMap<AccessNode, AccessNode?>,
+        ): AccessNode? {
+            if (!containsAnyInThisOrDeepNodes) return this
+            if (cache.containsKey(this)) return cache[this]
+
+            manager.cancellation.checkpoint()
+
+            val result = transformAccessorsNonEmpty { accessor, node ->
+                when {
+                    accessor == ANY_ACCESSOR_IDX -> {
+                        if (enqueued.put(node, Unit) == null) {
+                            pending.addLast(node)
+                        }
+                        null
+                    }
+
+                    manager.isCoveredByAny(accessor) ->
+                        node.stripAnyBelowCoveredPath(pending, enqueued, cache)
+
+                    else -> node
+                }
+            }
+
+            cache[this] = result
+            return result
         }
 
         private fun limitElementAccess(limit: Int): AccessNode {
@@ -1322,7 +1429,11 @@ class AccessTree(
         fun filterStartsWith(accessPath: AccessPath.AccessNode?): AccessNode? {
             if (accessPath == null) return this
 
-            if (maxDepth < accessPath.size) {
+            // Soundness-critical prefilter, not a cost gate: the walk below descends with getChild,
+            // which SYNTHESISES children through an `[any]` edge to arbitrary depth, so maxDepth
+            // under-approximates the reachable depth as soon as an `[any]` is in reach. Skipping a
+            // match here is a lost flow, so the prefilter must not fire in that case.
+            if (!containsAnyInThisOrDeepNodes && maxDepth < accessPath.size) {
                 return null
             }
 
@@ -1350,7 +1461,10 @@ class AccessTree(
 
                 currentApNode = currentApNode.next ?: break
 
-                if (filteredTreeNode.maxDepth < currentApNode.size) {
+                // Same soundness-critical prefilter as above, applied to the node reached so far:
+                // getChild can keep synthesising below an `[any]`, so maxDepth is only an upper
+                // bound on the reachable depth when no `[any]` is in reach from here.
+                if (!filteredTreeNode.containsAnyInThisOrDeepNodes && filteredTreeNode.maxDepth < currentApNode.size) {
                     return null
                 }
             }
@@ -1627,6 +1741,21 @@ class AccessTree(
         companion object {
             const val SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2
 
+            /**
+             * How much a single `[any]` edge adds to [maxDepth].
+             *
+             * This is a COST charge, not a sentinel: an `[any]` stands for an unbounded sequence of
+             * covered steps, so charging it as one step would let a fact carrying it slip past the
+             * cost gate in `MethodAnalyzer.edgeExceedLimit` as if it were cheap. It is deliberately
+             * small enough that the gate's growing `factDepthLimit` eventually clears it -- a value
+             * large enough to make the gate unsatisfiable would park every `[any]`-carrying edge
+             * forever.
+             *
+             * Nothing may use [maxDepth]'s magnitude to decide whether a node carries an `[any]`:
+             * that is what [containsAnyInThisOrDeepNodes] is for.
+             */
+            private const val ANY_ACCESSOR_DEPTH_CHARGE = 10
+
             @JvmStatic
             private fun removeSingleAccessor(
                 accessor: AccessorIdx,
@@ -1763,8 +1892,22 @@ class AccessTree(
                 } ?: emptyNode
 
             @JvmStatic
-            private fun create(accessor: AccessorIdx, node: AccessNode): AccessNode =
-                AccessNode(
+            private fun create(accessor: AccessorIdx, node: AccessNode): AccessNode {
+                // The single choke point for every raw single-edge build, including
+                // createAbstractNodeFromReversedAp / createAbstractNodeFromAccessors, which fold an
+                // arbitrary accessor chain straight through here. A taint mark is a leaf marker:
+                // nothing structured may sit below it, mirroring addParentIfPossible's rule.
+                // Consequence: `[any].![m].[any]` is unconstructible, so the nested-`[any]` collapse
+                // needs no exception for an intervening taint mark.
+                // Note a type-info accessor CAN legitimately carry children; only marks are banned.
+                if (accessor.isTaintMarkAccessor()) {
+                    check(node.isStructurelessLeaf) {
+                        val accessorName = with(node.manager) { accessor.accessor }
+                        "Taint mark accessor $accessorName above a structured node: $node"
+                    }
+                }
+
+                return AccessNode(
                     node.manager,
                     interned = false,
                     isAbstract = false, isFinal = false,
@@ -1772,6 +1915,7 @@ class AccessTree(
                     accessors = intArrayOf(accessor),
                     accessorNodes = arrayOf(node)
                 )
+            }
 
             @JvmStatic
             fun TreeApManager.create(
