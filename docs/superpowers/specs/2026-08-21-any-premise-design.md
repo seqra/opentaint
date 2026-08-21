@@ -13,12 +13,17 @@ Bounding the initial-fact-abstraction explosion caused by `[any]` unrolling.
 ## 1. Problem
 
 A `$*VAR` whole-object source rule seeds a fact of the shape `arg0.[any]![mark].$` — "the whole
-object at `arg0`, at any depth, is tainted". `[any]` means *one or more field or element steps*:
+object at `arg0`, at any depth, is tainted". `[any]` denotes **zero or more** field or element steps:
 
 ```kotlin
-// ap/ifds/Accessors.kt:145
+// ap/ifds/Accessors.kt:145 -- which accessor kinds [any] ranges over
 fun containsAccessor(accessor: Accessor): Boolean = accessor is FieldAccessor || accessor is ElementAccessor
 ```
+
+The *zero*-or-more reading is settled (§3.5): it is what `getChild`, `contains` and
+`AccessTreeAnySuffixMatcher` implement, and what `FactCleanerContractTest:110-121` pins across all
+three backends. One consequence used throughout: `X.[any].*` and `X.*` denote the **same set**, so
+`[any]` in a fact is a *representational* distinction, not a denotational one.
 
 A summary **premise** (`InitialFactAp`, concretely `AccessPath`) cannot express `[any]` — the
 representation silently drops it:
@@ -152,11 +157,17 @@ not contain it — `accessPathFilter(emptyList())` returns `AlwaysAcceptFilter`
 (`JIRFactTypeChecker.kt:184`), so depth-0 unrolling is unfiltered, and deeper it is only a
 permissive `typeMayHaveSubtypeOf` test on the last accessor.
 
-### 2.6 Why the unrolling exists at all
+### 2.6 What the unrolling actually buys
 
-Purely because a premise cannot hold `[any]`. Unrolling converts `arg0.[any]![mark].$` into concrete
-paths like `arg0.MapValue.externalInputPayloadStoragePath![mark].$` so that a *concrete* premise
-exists for callers to match. **It is a representation workaround, not a precision feature.**
+**Unrolling is the precision feature.** It converts `arg0.[any]![mark].$` into concrete paths like
+`arg0.MapValue.externalInputPayloadStoragePath![mark].$`, and the resulting premise states *exactly
+which field sequence must be tainted* for the summary to conclude its final fact. A caller matching
+that premise is known to have taint at precisely that path.
+
+The representation constraint — a premise cannot hold `[any]` — is why unrolling is the *only*
+available mechanism today, but it is not the reason the mechanism is valuable. Removing it is a
+deliberate trade of **precision for performance**, and this design should be read as such rather than
+as a pure win.
 
 ### 2.7 Prior art in the other backends
 
@@ -194,8 +205,28 @@ plain prefix `arg0.a.b`:
 - **`arg0.a.b.[any]` is exactly right.** It is a strong precondition: the only facts with a
   non-empty delta against it are facts that themselves carry `[any]` at `a.b`.
 
-**This property already holds under the existing `delta`/`getChild` implementation** — no change to
-the matching logic is required. Tracing `getChild(ANY_ACCESSOR_IDX)` (`AccessTree.kt:415-433`):
+#### The invariant this abuses
+
+A premise holding `[any]` is a very strong precondition — structurally, only a caller fact that
+*itself* carries `[any]` at that position can match it. Ordinarily that would be reckless. It is safe
+here because of what triggered the premise in the first place:
+
+> The `[any]` premise is only ever emitted while abstracting a fact that carries `[any]` at that
+> position, and that fact is in this entry point's `added` set. So a fact strong enough to match the
+> premise is **known to exist**; the premise can never be vacuous.
+
+Two things follow, and both must be kept in view:
+
+- **No flow is lost.** The `[any]` premise is emitted *in addition to* the premises the ordinary walk
+  produces. A caller sending a concrete fact `arg0.a.b.c.*` still matches the concrete premises
+  produced for it by the normal demand-driven mechanism (§2.5); it simply does not match the `[any]`
+  premise, which is correct, because that premise exists to serve the `[any]`-carrying fact.
+- **Precision is what is traded.** Under unrolling the premise named the exact field sequence
+  required. Under `[any]` it names "some sequence of covered steps". The conclusion is correspondingly
+  coarser. That is the cost of the feature and it is deliberate.
+
+**The matching property already holds under the existing `delta`/`getChild` implementation** — no
+change to the matching logic is required. Tracing `getChild(ANY_ACCESSOR_IDX)` (`AccessTree.kt:415-433`):
 
 ```kotlin
 val node = getNodeByAccessor(accessor)                       // the [any] subtree, or null
@@ -287,8 +318,17 @@ only to size the prize: **3.0x throughput**.
 
 **It is not really optional.** Without it the feature is correct but slower than baseline (§7 R1).
 
-#### Four constraints, all mandatory
+#### Five constraints, all mandatory
 
+- **C0 — absorb *before* the two limiters, and make them O(1).** The graft chain today is
+  `filterTypes -> limitElementAccess -> filterDeepExclusion`, and the descent additionally calls
+  `other?.limitFieldAccess(accessor, …)` per field accessor of the conclusion. Both limiters exist to
+  bound structure that `[any]` is about to absorb anyway. Running absorption first leaves a residual
+  whose head is, by construction, the first accessor `[any]` does **not** cover — so
+  `limitElementAccess` finds no leading element chain and `limitFieldAccess` finds no occurrence of
+  the field to strip. Both degenerate to O(1) no-ops and do real work only when an uncovered accessor
+  is actually present. Given how hot this path is — `concatToLeafAbstractNodes` grafts at *every*
+  abstract node of the conclusion — this is plausibly a larger win than the size reduction itself.
 - **C1 — hoist `isAbstract`/`isFinal` from the collapsed leaf.** Every delta leaf is abstract or final
   (`isEmpty = !isAbstract && !isFinal && accessors == null`). If a fully-covered branch is
   implemented as "nothing to graft", then `:1314` rebuilds the node with `isAbstract = false`,
@@ -297,12 +337,29 @@ only to size the prize: **3.0x throughput**.
   already unions the flags and intersects `deepAccessorExclusion`, which is the join wanted; hoisting
   must route through it or `manager.create`, never a raw `AccessNode` constructor (the init asserts
   `deepAccessorExclusion == null || isAbstract`).
-- **C2 — run strictly *after* `filterDeepExclusion`.** `DeepAccessorExclusion` is **depth-relative**
-  (`accessorsFromDepth0` vs `accessorsFromDepth1`). Absorption changes the relative depth of
-  everything it hoists, so hoisting a `![m]` from depth 4 to depth 0 turns it into a *start* accessor
-  and a depth-1 claim that would have deleted it now keeps it — silently defeating the sanitizer.
-  Applying absorption after the filter enforces claims at the original depths, and the annotations
-  `filterDeepExclusion` plants on inner abstract nodes travel with the hoisted nodes.
+- **C2 — the deep-exclusion claim must be evaluated at the *original* depths.**
+  `DeepAccessorExclusion` is **depth-relative** (`accessorsFromDepth0` vs `accessorsFromDepth1`).
+  Absorption changes the relative depth of everything it hoists, so hoisting a `![m]` from depth 4 to
+  depth 0 turns it into a *start* accessor, and a depth-1 claim that would have deleted it now keeps
+  it — silently defeating the sanitizer.
+
+  This is in direct tension with C0. The resolution is not to reorder but to **carry the absorbed
+  depth**. `filterDeepExclusion` already distinguishes the two cases by a `keepStartAccessor` flag:
+
+  ```kotlin
+  deepAccessorExclusion.accessorsFromDepth0.forEach {
+      filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = false, …)
+  }
+  deepAccessorExclusion.accessorsFromDepth1.forEach {
+      filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = true, …)
+  }
+  ```
+
+  If absorption consumed at least one step, every surviving accessor is logically at depth >= 1, so
+  **both** sets apply — i.e. the depth-1 set must also be applied with `keepStartAccessor = false`.
+  Threading a single "absorbed anything" boolean into `filterDeepExclusion` satisfies C0 and C2
+  together, and is strictly *more* aggressive filtering than today (more precise, sound direction).
+  If absorption consumed nothing, behaviour is unchanged.
 - **C3 — a nested `[any]` must also be consumable.** `isCoveredByAny(ANY_ACCESSOR_IDX)` is **false**,
   so a literal reading of "up to the first accessor `[any]` does not cover" *stops at a nested
   `[any]`* and still produces `[any].[any]…` — the shape `AccessTreeAnySuffixMatcher` aborts the run
@@ -328,19 +385,28 @@ i.e. iff the normal form this optimisation establishes already holds. Where it d
 `getChild` is *already* lossy. So absorption is not merely a size optimisation: it establishes the
 normal form the read path is written against.
 
-### 3.5 A semantics question this design must not lean on
+### 3.5 `[any]` is zero-or-more — settled
 
-`[any]` is documented as "one **or more**" steps, but three call sites are only correct for *zero or
-more*: `getChild`'s `anyChild = anyAccessorNode.getNodeByAccessor(accessor)` term
-(`AccessTree.kt:423`), `contains`'s `if (anyAccessorNode.contains(accessor)) return true` (`:400`),
-and `AccessTreeAnySuffixMatcher`'s root trie node, seeded with `suffixNode.isFinal` at depth 0 so
-that `[any].$` trims a bare `$` out of a merge peer. `FactCleanerContractTest:110-121` *pins* the
-zero-or-more reading across all three backends: `base.[any].![m]` must answer a read of `base.![m]`.
+The docstrings say "one or more", but the implementation is *zero* or more, and that is the reading
+this design adopts. Three sites are only correct under it:
 
-None of the arguments in this document depend on the distinction — the subset argument in §3.4 holds
-under either reading, and the `getChild(ANY)` match rule in §3.1 is unaffected. But the expansion arm
-of §6.5 **does** depend on it, and getting it wrong there is a silent soundness or blowup bug. It
-must be pinned down before that rule is written.
+- `getChild`'s `anyChild = anyAccessorNode.getNodeByAccessor(accessor)` term (`AccessTree.kt:423`) —
+  reads `a` from `N.[any].a` as if the `[any]` consumed nothing;
+- `contains`'s `if (anyAccessorNode.contains(accessor)) return true` (`:400`);
+- `AccessTreeAnySuffixMatcher`'s root trie node, seeded with `suffixNode.isFinal` at depth 0, so that
+  `[any].$` trims a bare `$` out of a merge peer.
+
+And `FactCleanerContractTest:110-121` pins it across tree, automata and cactus: `base.[any].![m]`
+must answer a read of `base.![m]`.
+
+Consequences used elsewhere in this document:
+
+- `X.[any].*` ≡ `X.*` denotationally. The selectivity of an `[any]` premise (§3.1) is therefore
+  **structural, not denotational** — which is exactly why it needs the invariant argument above, and
+  why it costs precision rather than recall.
+- `[any].<covered sequence>.[any]` ≡ `[any]`, which is what makes the nested-`[any]` collapse of §5.2
+  a normalisation rather than an approximation.
+- The docstrings should be corrected as part of the work.
 
 ## 4. Soundness
 
@@ -371,24 +437,71 @@ Empirical check on the prototype, with the cap forced to its most aggressive set
 
 ---
 
-## 5. Two invariants that assume `[any]` is shallow and short-lived
+## 5. Two representation invariants that must change
 
-Both must be relaxed or the feature is silently inert or crashes. Both were hit in the prototype.
+Both must change or the feature is silently inert or crashes. Both were hit in the prototype.
 
-1. **`maxDepth` inflation.** `AccessTree.AccessNode` adds `10_000` to `maxDepth` for any node carrying
-   an `[any]` child. `MethodAnalyzer.edgeExceedLimit` compares `factAp.depth` against the fact-depth
-   limit, which starts at 3 and rises by one per whole-analysis quiescence. Left alone, **every**
-   `[any]`-carrying start edge is parked and replayed forever. Measured: findings 0 and a *slower*
-   run, with nothing reaching the solver.
-2. **No nested `[any]`.** `AccessTreeAnySuffixMatcher` rejects `[any] -> … -> [any]`, and
-   `concatToLeafAbstractNodes` can build exactly that by grafting an `[any]`-carrying delta onto an
-   `[any]`-carrying conclusion — `getChild` re-prepends `[any]` when the premise accessor is covered,
-   so an `[any]`-carrying caller fact yields an `[any]`-carrying delta. It is a `check`, so it aborts
-   the whole analysis. `[any].[any]` denotes a subset of `[any]` and should be absorbed.
-   **Constraint C3 of §3.4 resolves this**: if the concat optimisation treats a nested `[any]` as
-   consumable, the shape is never built in the first place.
+### 5.1 The `maxDepth` inflation: 10_000 -> 10
 
----
+`AccessTree.AccessNode` adds a sentinel to `maxDepth` for any node carrying an `[any]` child
+(`AccessTree.kt:307-309`):
+
+```kotlin
+if (containsAnyAccessor()) {
+    depth += 10_000
+}
+```
+
+`MethodAnalyzer.edgeExceedLimit` compares `factAp.depth` against a fact-depth limit that starts at 3
+and rises by one per whole-analysis quiescence, so **every `[any]`-carrying start edge is parked and
+replayed forever**. Measured on the prototype: findings 0, a slower run, nothing reaching the solver.
+
+**Change the inflation to `+= 10`.** The intent is right — `[any]` stands for an unbounded sequence
+and should not be charged as one step — but 10_000 is not a cost, it is a sentinel that makes the
+gate unsatisfiable. A charge of 10 keeps `[any]` genuinely expensive relative to a concrete step
+while leaving it reachable, and then `edgeExceedLimit` needs no special case at all.
+
+Two knock-on effects to handle in the same change:
+
+- Anything using `depth > 10_000` as a "does this carry `[any]`" test breaks. That test should not
+  exist — use the `containsAny` flag of §5.2. (The prototype's diagnostics use it, and so does the
+  `anyPreserve` correction inside `edgeExceedLimit`.)
+- `AccessPath.size` counts `[any]` as **1**, so the premise-side budget still under-charges exactly
+  the premises that admit the deepest facts. Worth aligning the two charges.
+
+### 5.2 Nested `[any]` must be collapsed, not asserted against
+
+`AccessTreeAnySuffixMatcher` rejects `[any] -> … -> [any]` with a `check`, which aborts the whole
+analysis. `concatToLeafAbstractNodes` can build exactly that shape: `getChild` re-prepends `[any]`
+when the premise accessor is covered, so an `[any]`-carrying caller fact yields an `[any]`-carrying
+delta, which is then grafted onto an `[any]`-carrying conclusion.
+
+Under zero-or-more semantics (§3.5) the collapse is an **identity**, not an approximation:
+
+```
+[any].x.y.z.[any]   ==   [any]        for x, y, z all covered by [any]
+```
+
+so the invariant to maintain is: **no `[any]` is reachable from another `[any]` through a
+covered-only path**. Note the qualifier — `[any].![m].[any]` does *not* collapse, because the mark is
+not covered and must survive.
+
+**Implementation.** Add a deep `containsAny` flag to `AccessNode`, computed at construction exactly
+like the existing `containsStatic` (`AccessTree.kt:304`):
+
+```kotlin
+containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
+```
+
+`prependAnyAccessor` then checks the flag and collapses only when it is set — O(1) in the
+overwhelmingly common case where it is not. It already does a one-level version of this
+(`AccessTree.kt:589-597`: it merges an existing *direct* `[any]` child up rather than nesting); the
+flag generalises that to "reachable through covered steps" and makes the check cheap enough to run
+unconditionally.
+
+Maintaining this as a representation invariant **subsumes constraint C3 of §3.4**: the concat path
+cannot produce the illegal shape in the first place, so the matcher's `check` becomes unreachable
+rather than needing to be relaxed.
 
 ## 6. Impact analysis
 
@@ -705,12 +818,14 @@ from the ordinary walk rather than from a special case.
 The changes are heavily interdependent — several are silently inert or actively destructive on their
 own. Suggested sequencing, each step independently testable:
 
-1. **Unblock the environment.** Relax the `maxDepth` delay gate (#10) and the nested-`[any]`
-   assertion (#11). Nothing changes behaviourally yet, but `[any]`-carrying facts stop being parked
-   or fatal.
-2. **The concat optimisation (§3.4)** — with C1-C4. Independently valuable: it bounds tree growth
-   below `[any]` for facts that already exist today, and C3 removes the nested-`[any]` shape at its
-   source. Ship and measure this alone first.
+1. **Unblock the environment.** Change the `maxDepth` inflation from 10_000 to 10 (§5.1) and add
+   the deep `containsAny` flag with the collapse invariant (§5.2), which makes the nested-`[any]`
+   assertion unreachable. Nothing changes behaviourally yet, but `[any]`-carrying facts stop being
+   parked or fatal.
+2. **The concat optimisation (§3.4)** — with C0-C4. Independently valuable: it bounds tree growth
+   below `[any]` for facts that already exist today, and C0 turns both limiters into O(1) no-ops on
+   the hottest path in the engine. Ship and measure this alone first; §5.2 has already removed the
+   nested-`[any]` shape it would otherwise have to handle.
 3. **Make `[any]` representable in a premise**: `addParent` (#1), `concat` (#2), `limitFieldAccess`
    (#3), `splitDelta` (#7). Still no producer, so behaviour changes only for the already-reachable
    paths of §6.2 — audit `RulePreconditionUtils` (#14) and
@@ -722,7 +837,47 @@ own. Suggested sequencing, each step independently testable:
 
 Steps 1-2 are worth doing regardless of whether the rest lands.
 
-## 11. Free wins available independently
+## 11. Design follow-up: pack `AccessNode`'s flags into one byte
+
+`AccessTree.AccessNode` carries its booleans as separate fields (`AccessTree.kt:261-272`):
+
+```kotlin
+@JvmField val interned: Boolean,
+@JvmField val isAbstract: Boolean,
+@JvmField val isFinal: Boolean,
+…
+@JvmField val containsStatic: Boolean
+```
+
+plus `containsAny` from §5.2, which brings it to five. Replace them with a single `Byte` and
+bit-accessor properties:
+
+```kotlin
+@JvmField val flags: Byte
+
+val isAbstract: Boolean get() = flags and ABSTRACT != 0
+val isFinal: Boolean get() = flags and FINAL != 0
+…
+```
+
+The motivation is heap, and heap is the binding constraint on the workload this whole design targets
+— conductor OOMs at 8 GB, and live heap after full GC is 7377 M. `AccessNode` is the single most
+numerous object in the analysis (the prototype measured facts averaging 43 nodes each across
+2.6 M abstraction calls, and 22,867 individual facts exceeding 1000 nodes). Five booleans occupy five
+bytes plus alignment padding in the JVM object layout; one byte plus accessors removes several bytes
+per node, which at these counts is worth tens of megabytes.
+
+Two notes:
+
+- Do this **after** `containsAny` exists, so the flag set is stable and the change is made once.
+- Keep the properties `@JvmField`-free and `inline`-friendly; these are read on the hottest paths in
+  the engine (`getChild`, `mergeAdd`, `concatToLeafAbstractNodes`), so the accessors must fold away.
+  Verify with a before/after heap measurement rather than assuming — the prototype's benchmark
+  harness already reports live-heap-after-full-GC and the `MemoryManager` threshold-crossing count.
+
+This is independent of the rest of the design and can land at any point.
+
+## 12. Free wins available independently
 
 These are defects found while scoping, unrelated to whether this feature ships:
 
