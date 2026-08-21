@@ -438,8 +438,8 @@ inconsistency, and it means some `[any]` premises are already flowing through th
 | 2 | `AccessPath.kt:264-271` (`AccessNode.concat`) | Re-adds the left operand's accessors through `addParent`, so any `[any]` in it is **erased**. Live on the trace path (`MethodTraceResolver.kt:1601-1603`) — silent data loss, not a semantics choice. | blocker |
 | 3 | `AccessPath.kt:336-343` (`limitFieldAccess`) | Walks *through* `[any]` when collapsing a repeated field, so prepending `a` onto `x.[any].a.b` yields `a.b` — dropping the `[any]` and changing meaning. Must stop at or preserve `[any]`. | blocker |
 | 4 | `TIFA:188-196` | The abstraction descends the `[any]` edge but re-enqueues with `currentAp` **unchanged** — an independent second drop site. Must append `ANY_ACCESSOR_IDX`, or the representation exists but nothing can produce it. | blocker |
-| 5 | `MethodInitialToFinalApSummaries.kt:97-117` + `:89-92` | Id-edge subsumption silently destroys `[any]` premises. See §6.4. | blocker |
-| 6 | `ApManager.kt:55-59` (`AnyAccessorDisabled`) | `unrollAccessor` is `error("Any accessors disabled")`, and prescan installs it (`TaintAnalyzer.kt:135`). It is reached from `getChild:426` and `contains:402-404` whenever a node has an `[any]` child — **already latent for `[any]` facts**, and premises make it far likelier. Return `false` instead of throwing. | blocker |
+| 5 | `MethodInitialToFinalApSummaries.kt:97-117` + `:89-92` | *Not a blocker — resolved.* Id-edge subsumption drops `[any]` premises, and that is **correct**. See §6.4. | none |
+| 6 | `ApManager.kt:55-59` (`AnyAccessorDisabled`) | *Not a blocker — resolved.* `unrollAccessor` throws, and prescan installs it (`TaintAnalyzer.kt:135`). But there are no `[any]` accessors during prescan, so it is unreachable there and the exception is the correct assertion. Leave as-is. Revisit only if `[any]` premises could ever survive `resetApManager` into the prescan manager. | none |
 | 7 | `AccessPath.kt:141-164` (`splitDelta`) | Diverges from `delta`: an `isAbstract` escape hatch means premise `a.b.[any]` *does* match fact `arg0.a.b.*`. Needs the same strictness or the strong precondition leaks. | decision |
 | 8 | `MethodInitialToFinalApSummaries.kt:43-46` | Replace the `allNodes()` blanket with a targeted rule. See §6.5. Requires widening `AccessBasedStorage.collectNodesContains` visibility (`:55`, private). | decision |
 | 9 | `TIFA:263-265` | `TODO("Any after unroll-next is not supported yet")` becomes reachable — an `[any]` may now follow a mark, `[final]`, `[value]` or type accessor. | blocker |
@@ -450,27 +450,36 @@ inconsistency, and it means some `[any]` premises are already flowing through th
 | 14 | `taint/RulePreconditionUtils.kt:160-162` | `extractFactPaths` can emit `AnyAccessor` into `specialization`, which `prependAccessor` currently swallows — an existing correctness gap in `ContainsMarkOnAnyAccessorLiteral` preconditions. Fixing #1 fixes it for free, **and changes results**. | blocker |
 | 15 | `AccessPath.kt:42-43` (`getAllAccessors`) | Would start returning `AnyAccessor`, while the fact side deliberately does the opposite (`AccessTree.kt:763-767`, `// note: always ignore any accessor`). The two would disagree. | decision |
 
-### 6.4 Blocker in detail: id-edge subsumption destroys `[any]` premises
+### 6.4 Resolved: id-edge subsumption correctly drops `[any]` premises
 
-`MethodTaintedSummariesIdStorage.getOrCreateChild` (`MethodInitialToFinalApSummaries.kt:97-117`):
+`MethodTaintedSummariesIdStorage.getOrCreateChild` (`MethodInitialToFinalApSummaries.kt:97-117`)
+throws `NodeSubsumedException` — caught as a silent drop at `:80-83` — when the accessor being
+descended is *not* in the id edge's exclusion set. Since exclusion sets are only ever populated from
+concrete accessors, `contains(AnyAccessor)` is always false and an `[any]` premise is therefore
+always dropped.
+
+**That is the right answer.** An id edge at `p` is an identity summary: everything below `p` passes
+through unchanged. `p.[any].*` denotes a subset of `p.*`, so the id edge already covers it and the
+separate premise adds nothing.
+
+The apparent counter-example — an id edge `p.*{f}` that excludes `f`, against `p.[any]` which
+*includes* `f`-prefixed paths — does not bite, because the exclusion never reaches the `[any]`.
+`AccessTree.delta` filters the residual with `AccessNode.filter(exclusion)`
+(`AccessTree.kt:193-195`, `:646-653`), which drops children whose accessor is in the set:
 
 ```kotlin
-val curExclusion = current?.exclusion ?: return super.getOrCreateChild(accessor)
-val accessorInstance = with(manager) { accessor.accessor }
-if (!curExclusion.contains(accessorInstance)) {
-    throw NodeSubsumedException()        // :102
+val transformedAccessors = transformAccessors(accessors, accessorNodes) { accessor, node ->
+    with(manager) { node.takeIf { accessor.accessor !in exclusion } }
 }
 ```
 
-caught and turned into a silent drop at `:80-83`. `ExclusionSet.contains` means "is excluded", and
-exclusion sets are only ever populated from *concrete* accessors (`AccessPath.kt:36-37`). So
-`contains(AnyAccessor)` is **always false**, the exception always fires, and the `[any]` premise is
-discarded without a trace. `removeChildren` (`:89-92`) would likewise delete an already-stored
-`[any]` child once an id edge appears at its parent.
+`AnyAccessor` is never in an exclusion set, so an `[any]`-headed residual survives the filter intact,
+the id edge fires for the `[any]`-carrying caller fact, and the identity summary passes it through.
+Nothing is lost.
 
-Whether an id edge `arg0.*{E}` *should* subsume `arg0.[any].*` is a genuine design question. The
-defect is that the current code **decides it by accident, through a predicate never meant to see
-`AnyAccessor`.** An explicit branch is required either way.
+This is an over-approximation rather than a precision win — the id edge passes through the whole
+`[any]`, including the `f` part the exclusion meant to remove — but it is a false positive at worst,
+never a false negative, and it is pre-existing behaviour independent of this feature.
 
 ### 6.5 Replacing the `allNodes()` blanket
 
@@ -506,6 +515,11 @@ Cost today: `allNodes()` is an eager O(n) traversal with O(n) allocation and no 
 | **Cactus** | `AccessPathWithCycles.prependAccessor` (`:59-62`) would accept `[any]` silently; the rest of the class is stubs. No `[any]` support anywhere. |
 
 Recommendation: gate the feature on `ApMode.Tree`.
+
+Prescan needs no change: it installs `TreeApManager(AnyAccessorDisabled, …)` whose `unrollAccessor`
+throws, but there are no `[any]` accessors in that phase, so the assertion is unreachable and correct.
+The one thing to keep an eye on is `resetApManager`, which swaps the manager between prescan and full
+scan while `AccessPath` instances hold a reference to theirs.
 
 ### 6.7 Pre-existing asymmetry the feature will expose
 
@@ -691,9 +705,9 @@ from the ordinary walk rather than from a special case.
 The changes are heavily interdependent — several are silently inert or actively destructive on their
 own. Suggested sequencing, each step independently testable:
 
-1. **Unblock the environment.** `AnyAccessorDisabled.unrollAccessor` returns `false` instead of
-   throwing (#6), and relax the `maxDepth` delay gate (#10) and the nested-`[any]` assertion (#11).
-   Nothing changes behaviourally yet, but `[any]`-carrying facts stop being parked or fatal.
+1. **Unblock the environment.** Relax the `maxDepth` delay gate (#10) and the nested-`[any]`
+   assertion (#11). Nothing changes behaviourally yet, but `[any]`-carrying facts stop being parked
+   or fatal.
 2. **The concat optimisation (§3.4)** — with C1-C4. Independently valuable: it bounds tree growth
    below `[any]` for facts that already exist today, and C3 removes the nested-`[any]` shape at its
    source. Ship and measure this alone first.
@@ -701,8 +715,8 @@ own. Suggested sequencing, each step independently testable:
    (#3), `splitDelta` (#7). Still no producer, so behaviour changes only for the already-reachable
    paths of §6.2 — audit `RulePreconditionUtils` (#14) and
    `MethodSideEffectHandlerWithAnyAccessorRequestHandling` (#13) here.
-4. **Fix the storages that would destroy `[any]` premises**: id-edge subsumption (#5), then the
-   `allNodes()` rule (#8).
+4. **Fix the premise lookup rule**: the `allNodes()` blanket (#8). Id-edge subsumption (#5) needs
+   no change — it correctly drops `[any]` premises as already covered (§6.4).
 5. **Make the abstraction produce them**: `TIFA` (#4) plus the `TODO` at `TIFA:263-265` (#9).
 6. **Add the cap** (§3.3) and choose its limit on a converging workload.
 
