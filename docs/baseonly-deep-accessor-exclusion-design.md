@@ -270,8 +270,9 @@ limit, not a defect** — widening rule 2 of
 operation.
 
 `ApMode.BaseOnlyField`, the production default for the shallow scan, retains the
-outermost field and satisfies the second row exactly. This decides the test plan
-in [§8](#8-conformance-and-test-plan).
+outermost field and satisfies the second row exactly — but note that satisfying
+this row is not enough to pass the cross-mode contract test, for two reasons
+unrelated to this feature; see [§8](#8-conformance-and-test-plan).
 
 ---
 
@@ -528,30 +529,55 @@ Everything else in the design is a weakening and is safe by construction.
 ## 8. Conformance and test plan
 
 `FactCleanerContractTest` is the cross-mode contract, currently enumerating Tree,
-Automata and Cactus explicitly (`:39-43`). Two of its cases bear on BaseOnly, one
-per bucket:
+Automata and Cactus explicitly (`:39-43`).
 
-- `every representation implements the same cleaner boundary` — the `D1` case.
-  Part (a), cleaning the most abstract fact must leave exactly one surviving fact:
-  **both modes pass** (the claim is dropped, the fact is kept). Part (b), a
-  materialized `this.field.![m]` must not survive: **mode 1 passes exactly**
-  (`null`); **mode 0 cannot pass**, because it projects `this.f.!M.$` and
-  `this.!M.$` onto the same value and widening forces keeping it.
-- `exact mark cleanup follows an AnyField abstraction` — the `D0` case, on
-  `this.[any].![m]`. Both modes return `null` from the structural half, exactly.
-  **Both pass.**
+**Measured 2026-08-21, and this supersedes the recommendation this section
+originally carried.** Enrolling `BaseOnlyApManager(fieldSensitive = true)` was
+tried and reverted: **3 of the 5 cases fail**, and none of the three failures is
+caused by this feature.
 
-**Recommendation:** add `BaseOnlyApManager(fieldSensitive = true)` to the contract
-test's manager list. Do **not** add `fieldSensitive = false`; instead record the
-divergence in the mode-0 false-positive catalogue, since it is widening rule 2 and
-not a bug. This matches how the branch already handles inherent
-field-insensitivity limits.
+| case | `BaseOnlyField` | cause |
+|---|---|---|
+| `every representation implements the same cleaner boundary` | **passes** | as predicted below |
+| `every representation finds a mark behind AnyField` | **passes** | read path is permissive |
+| `plain and any-field cleaners use the same operation` | fails | (B) |
+| `any-field keeps its meaning below an exact position` | fails | (B) |
+| `exact mark cleanup follows an AnyField abstraction` | fails | (A) |
+
+Two pre-existing behaviours, both orthogonal to deep exclusions and both in the
+false-positive direction:
+
+**(A) `clearAccessor` keeps a root semantic terminal.** `BaseOnlyAccessOps.clear`
+returns the fact unchanged when the mark is the terminal of a slot-less access,
+because the same terminal stays reachable after one or more structural reads. The
+failing assertion is the `TaintCleanReach.Exact` half of the test, which requires
+`removedAlternative == true`. This is the deliberate rule recorded in the
+`clearAccessor` spec, and [§4.1](#41-why-the-structural-half-is-often-exact) row 3
+is the same rule applied to the new operation.
+
+**(B) `AnyAccessor` is absorbed on prepend but not matched on read.**
+`BaseOnlyAccessOps.prepend` makes `prepend(AnyAccessor)` the identity
+(`:167-187`), so `this.[any].!M.$` and `this.!M.$` are the same value — but
+`headRead` requires an exact index match against an occupied slot, so
+`startsWithAccessor(AnyAccessor)` is **false** for `this.f.!M.$`. The cleaner
+therefore never enters its any-field branch and returns the fact untouched. Making
+`headRead` treat `AnyAccessor` as consuming any structural accessor would fix
+both cases, but it changes a core matching predicate used by source preconditions
+and summary matching, so it is out of scope here and recorded in
+[§11](#11-open-risks).
+
+Neither failure loses taint: in each the mark is retained where Tree removes it.
+
+**Recommendation:** do **not** enrol either mode in `FactCleanerContractTest`
+until (B) is settled. Pin the new operation with a BaseOnly-owned test instead —
+`BaseOnlyDeepCleanTest` does this, covering the [§4](#4-the-central-decision-d1-is-conditional-not-dropped)
+rules and the mode-0 / mode-1 divergence in both modes.
 
 Additionally:
 
-- A BaseOnly golden table for `clearAllAccessorOccurrences`, alongside the
-  existing `BaseOnlyClearTableTest`, covering the four structural rows of
-  [§4.1](#41-the-structural-half-is-often-exact) in both modes.
+- `BaseOnlyDeepCleanTest` covers the structural rows of
+  [§4.1](#41-why-the-structural-half-is-often-exact) in both modes, including the
+  `TODO` guard on a non-mark accessor. **Landed.**
 - Run the new `DeepCleanSummaryAnalysisTest` and
   `CleanerFieldSensitivityAnalysisTest` suites under `BaseOnlyField`. Automata
   subclasses both without overriding a single test, which is the bar upstream set.
@@ -570,10 +596,12 @@ Additionally:
 Each stage is independently shippable and sound; a later stage never invalidates
 an earlier one.
 
-**Stage 1 — the operation.** `clearAllAccessorOccurrences` with the `pastFirst`
-rules of [§4](#4-the-central-decision-d1-is-conditional-not-dropped), the
-`TODO(...)` guard on non-mark accessors, and no claim stored. Unblocks the rebase,
-passes both relevant contract cases, changes no storage, adds no bytes. The gap it
+**Stage 1 — the operation. LANDED** (rebase of 2026-08-21, folded into the
+BaseOnly mode commit because the member is abstract from birth).
+`clearAllAccessorOccurrences` with the `pastFirst` rules of
+[§4](#4-the-central-decision-d1-is-conditional-not-dropped), the `TODO(...)` guard
+on non-mark accessors, and no claim stored. Unblocks the rebase, changes no
+storage, adds no bytes. The gap it
 leaves is under-cleaning of an abstract-terminal fact, which no shipped rule
 triggers today.
 
@@ -625,6 +653,18 @@ The full commit-by-commit conflict map lives with the rebase work, not here.
 ## 11. Open risks
 
 Things this design does not resolve, recorded so they are not rediscovered late.
+
+**`AnyAccessor` is absorbed on prepend but not matched on read.**
+`BaseOnlyAccessOps.prepend` makes `prepend(AnyAccessor)` the identity, so
+`this.[any].!M.$` and `this.!M.$` are one value — yet `headRead` requires an exact
+index match against an occupied slot, so `startsWithAccessor(AnyAccessor)` is
+false for `this.f.!M.$`. Any caller that branches on "does this fact start with
+`[any]`" therefore takes the wrong branch, which is what costs BaseOnly two of the
+three `FactCleanerContractTest` cases in [§8](#8-conformance-and-test-plan).
+Teaching `headRead` to let `AnyAccessor` consume any structural accessor would fix
+both, but that predicate is also used by source preconditions and summary
+matching, so it needs its own measurement rather than being folded into this
+feature.
 
 **BaseOnly's `toString()` becomes load-bearing.** `d07fe2aed` orders traces
 deterministically, and `TraceOrdering.TraceFactComparator` falls back to comparing
