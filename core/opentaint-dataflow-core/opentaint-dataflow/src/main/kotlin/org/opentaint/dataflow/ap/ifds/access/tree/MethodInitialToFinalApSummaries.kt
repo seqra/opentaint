@@ -5,9 +5,7 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary
 import org.opentaint.dataflow.ap.ifds.access.common.CommonF2FSummary.F2FBBuilder
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
-import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.ir.api.common.cfg.CommonInst
-import kotlin.collections.plusAssign
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
 class MethodInitialToFinalApSummaries(
@@ -35,18 +33,18 @@ private abstract class F2FInitialStorage<SN : F2FInitialStorage<SN, S>, S : Modi
         }
     }
 
-    override fun collectNodesContainsAccessor(
-        pattern: AccessTreeNode,
-        accessor: AccessorIdx,
-        nodes: MutableList<SN>
-    ) {
-        if (accessor == ANY_ACCESSOR_IDX) {
-            nodes += allNodes()
-            return
-        }
-
-        super.collectNodesContainsAccessor(pattern, accessor, nodes)
-    }
+    /*
+     * There used to be a `collectNodesContainsAccessor` override here: a caller fact carrying
+     * `[any]` activated the ENTIRE premise subtree (`nodes += allNodes()`), pattern discarded.
+     * That blanket was not a rule, it was compensation -- a premise could never hold `[any]`, so
+     * `children.get(ANY_ACCESSOR_IDX)` was always null, and without it a whole-subtree-tainted
+     * caller fact activated no deeper premise at all.
+     *
+     * Premises can hold `[any]` now, so the compensation became a real rule and moved to
+     * `AccessBasedStorage.collectNodesContainsAnyAccessor`, where the two side-effect storages get
+     * it too (design 6.5 and 6.7). The result is a subset of `allNodes()`: every node it drops is
+     * reachable only through an accessor `[any]` provably cannot step over.
+     */
 
     fun collectAllSummariesTo(dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>) {
         allNodes().forEach { node ->
@@ -94,6 +92,28 @@ private open class MethodTaintedSummariesIdStorage(
         return node
     }
 
+    /**
+     * Descending below an id edge is allowed only for accessors the edge EXCLUDES; anything else is
+     * already covered by it, so the deeper premise is dropped (via [NodeSubsumedException], caught
+     * silently in [add]).
+     *
+     * `[any]` is always dropped here, and that is CORRECT -- do not "fix" it (design 6.4). An
+     * exclusion set is only ever populated from a concrete accessor read off a memory access
+     * (`JIRMethodSequentFlowFunction.propagateAbstractFactWithFieldExcluded`,
+     * `GoMethodSequentFlowFunction.F2FPropagationContext.propagateFactWithAccessorExclude`) or from
+     * `TypeInfoGroupAccessor` (`CallTypeInfoUtil`), never from `AnyAccessor`, so
+     * `contains(AnyAccessor)` is false and an `[any]` link never gets past this check.
+     *
+     * Nothing is lost, because an id edge at `p` is an identity summary and `p.[any].*` denotes a
+     * subset of `p.*`. The apparent counter-example -- an id edge excluding `f`, against a premise
+     * `p.[any]` whose `[any]` covers `f` -- does not bite either: `AccessTree.delta` filters the
+     * residual with `AccessNode.filter(exclusion)`, which drops a child only when its own accessor
+     * is in the set. `AnyAccessor` never is, so an `[any]`-headed residual survives the filter
+     * intact, the id edge fires for the `[any]`-carrying caller fact, and the identity summary
+     * passes it through. That the pass-through also carries the `f` part the exclusion meant to
+     * remove is an over-approximation -- a false positive at worst, never a lost flow -- and it is
+     * pre-existing, independent of `[any]` being representable in a premise.
+     */
     override fun getOrCreateChild(accessor: AccessorIdx): MethodTaintedSummariesIdStorage {
         val curExclusion = current?.exclusion ?: return super.getOrCreateChild(accessor)
 
