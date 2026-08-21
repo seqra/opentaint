@@ -202,6 +202,137 @@ class AnyFieldAccessorExclusionTest {
         assertNull(applied, "a direct mark below a non-base abstract node is at base depth >= 2")
     }
 
+    /* ---------- absorption of the covered delta prefix below an `[any]` edge ---------- */
+
+    /** `this.[any].*` -- an abstract leaf sitting DIRECTLY below an `[any]` edge. */
+    private fun anyAbstractConclusion(): AccessTree =
+        abstractFact().prependAccessor(AnyAccessor) as AccessTree
+
+    /** A fact whose leaf is abstract rather than final: `a.b.c.*`. */
+    private fun abstractFactAt(vararg accessors: Accessor): AccessTree {
+        var fact: FinalFactAp = abstractFact()
+        for (accessor in accessors.reversed()) {
+            fact = fact.prependAccessor(accessor)
+        }
+        return fact as AccessTree
+    }
+
+    private fun FinalFactAp.belowAny(): FinalFactAp =
+        assertNotNull(readAccessor(AnyAccessor), "the [any] edge must survive the concat")
+
+    @Test
+    fun `an any edge consumes the covered prefix of the delta it is handed`() {
+        // [any].*  (+)  raw.val.f.![m].$  ->  [any].![m].$
+        val exit = anyAbstractConclusion()
+        val delta = deltaOf(concreteFact(FIELD_RAW, FIELD_VAL, FIELD_F, MARK))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+        val below = applied.belowAny()
+
+        assertTrue(below.startsWithAccessor(MARK), "the mark is hoisted to sit directly below the [any]")
+        assertEquals(
+            setOf<Accessor>(MARK), below.getStartAccessors(),
+            "the covered prefix is already denoted by the [any]: it must not be rebuilt below it"
+        )
+    }
+
+    @Test
+    fun `a fully covered delta is absorbed and the branch stays abstract`() {
+        // [any].*  (+)  raw.val.f.*  ->  [any].*   -- the branch must NOT be dropped
+        val exit = anyAbstractConclusion()
+        val delta = deltaOf(abstractFactAt(FIELD_RAW, FIELD_VAL, FIELD_F))
+
+        val applied = assertNotNull(
+            exit.concat(FactTypeChecker.Dummy, delta),
+            "a fully covered delta is absorbed, not discarded: dropping the branch loses taint"
+        )
+        val below = applied.belowAny()
+
+        assertTrue(below.isAbstract(), "the collapsed leaf's abstraction must be hoisted onto the [any] child")
+        assertTrue(below.getStartAccessors().isEmpty(), "nothing of the covered prefix survives below the [any]")
+    }
+
+    @Test
+    fun `a delta with no covered prefix is grafted below the any unchanged`() {
+        // [any].*  (+)  ![m].$  ->  [any].![m].$   -- nothing to consume
+        val exit = anyAbstractConclusion()
+        val delta = deltaOf(concreteFact(MARK))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+        val below = applied.belowAny()
+
+        assertEquals(setOf<Accessor>(MARK), below.getStartAccessors())
+    }
+
+    @Test
+    fun `a nested any in the delta is consumable too`() {
+        // [any].*  (+)  f.[any].![m].$  ->  [any].![m].$   -- isCoveredByAny([any]) is false, but
+        // [any].[any] denotes a subset of [any], so the nested edge is consumable as well
+        val exit = anyAbstractConclusion()
+        val delta = deltaOf(concreteFact(FIELD_F, AnyAccessor, MARK))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+        val below = applied.belowAny()
+
+        assertEquals(
+            setOf<Accessor>(MARK), below.getStartAccessors(),
+            "both the covered field and the nested [any] are consumed"
+        )
+    }
+
+    @Test
+    fun `a depth-1 claim still bites on a delta whose covered prefix was absorbed`() {
+        // the claim is depth-relative, absorption hoists the mark to the start: without carrying the
+        // absorbed depth the depth-1 exemption for the start accessor would silently free the mark
+        val exit = abstractFact().anyFieldCleaned().prependAccessor(AnyAccessor) as AccessTree
+        // f.![m] is claimed; raw.![n] is not, and keeps the fact alive so the assertion is not vacuous
+        val delta = deltaOf(merged(concreteFact(FIELD_F, MARK), concreteFact(FIELD_RAW, MARK_2)))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+        val below = applied.belowAny()
+
+        assertTrue(
+            below.startsWithAccessor(MARK_2),
+            "the unclaimed mark is hoisted to the start: absorption did run"
+        )
+        assertFalse(
+            applied.readsMarkAt(AnyAccessor),
+            "the mark was at depth 2 in the delta: absorption must not promote it out of the claim"
+        )
+    }
+
+    @Test
+    fun `a depth-1 claim keeps its start exemption when nothing was absorbed`() {
+        val exit = abstractFact().anyFieldCleaned().prependAccessor(AnyAccessor) as AccessTree
+        val delta = deltaOf(concreteFact(MARK))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+
+        assertTrue(
+            applied.readsMarkAt(AnyAccessor),
+            "a genuinely direct mark is outside a depth-1 claim, absorbed or not"
+        )
+    }
+
+    @Test
+    fun `an abstract node under a field under an any must not absorb`() {
+        // [any].f.x.![m] and [any].f.![m] are DISJOINT: only the immediate parent edge licenses
+        // absorption, so the covered prefix has to survive here
+        val exit = abstractFact().prependAccessor(FIELD_F).prependAccessor(AnyAccessor) as AccessTree
+        val delta = deltaOf(concreteFact(FIELD_RAW, MARK))
+
+        val applied = assertNotNull(exit.concat(FactTypeChecker.Dummy, delta))
+
+        assertTrue(
+            applied.readsMarkAt(AnyAccessor, FIELD_F, FIELD_RAW),
+            "the delta's prefix must be rebuilt in full below a non-[any] edge"
+        )
+        assertFalse(
+            applied.readsMarkAt(AnyAccessor, FIELD_F),
+            "absorbing here would move the mark onto a disjoint path"
+        )
+    }
+
     /* ---------- the claim survives a summary transit ---------- */
 
     @Test

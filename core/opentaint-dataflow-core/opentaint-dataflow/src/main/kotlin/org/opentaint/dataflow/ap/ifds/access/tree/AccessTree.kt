@@ -605,7 +605,21 @@ class AccessTree(
         fun removeAbstraction(): AccessNode =
             manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
 
-        private fun AccessNode.filterDeepExclusion(deepAccessorExclusion: DeepAccessorExclusion?): AccessNode? {
+        /**
+         * [absorbedAnyStep] is C2 of the concat absorption: [DeepAccessorExclusion] is
+         * DEPTH-RELATIVE, and absorption hoists accessors upward, so a `![m]` that stood at depth 4
+         * arrives here as a START accessor. When at least one step was consumed every surviving
+         * accessor is logically at depth >= 1, so the depth-1 set must also be applied with
+         * `keepStartAccessor = false` -- otherwise the start exemption silently frees a mark the
+         * sanitizer had claimed. When nothing was consumed the behaviour is exactly as before.
+         *
+         * Applying the depth-1 set at the start is strictly MORE aggressive filtering, i.e. more
+         * precise and in the sound direction.
+         */
+        private fun AccessNode.filterDeepExclusion(
+            deepAccessorExclusion: DeepAccessorExclusion?,
+            absorbedAnyStep: Boolean,
+        ): AccessNode? {
             if (deepAccessorExclusion == null) return this
 
             var filtered: AccessNode = this
@@ -613,7 +627,7 @@ class AccessTree(
                 filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = false, cache = IdentityHashMap()) ?: return null
             }
             deepAccessorExclusion.accessorsFromDepth1.forEach {
-                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = true, cache = IdentityHashMap()) ?: return null
+                filtered = filtered.clearAllAccessorOccurrences(it, keepStartAccessor = !absorbedAnyStep, cache = IdentityHashMap()) ?: return null
             }
 
             val belowClaim = deepAccessorExclusion.collapseToDepth0()
@@ -701,6 +715,69 @@ class AccessTree(
 
             cache[this] = result
             return result
+        }
+
+        /**
+         * Consume the longest prefix of this delta that an `[any]` edge sitting DIRECTLY above it
+         * already denotes, and report whether anything was consumed.
+         *
+         * ```
+         * [any].*  (+)  x.y.z.![m].$  ->  [any].![m].$
+         * [any].*  (+)  x.y.z.*       ->  [any].*        (fully covered, still abstract)
+         * [any].*  (+)  ![m].$        ->  [any].![m].$   (nothing to consume)
+         * [any].*  (+)  x.[any].![m].$ -> [any].![m].$   (a nested `[any]` is consumable too)
+         * ```
+         *
+         * The delta is a TREE, not a chain, so "consume the prefix" means: merge into the root every
+         * child reached through a consumable accessor, delete that edge, and iterate to a fixpoint.
+         * Children reached through an accessor `[any]` does not cover stay exactly where they are.
+         *
+         * Sound under both readings of `[any]` (design 3.4): existentially, `w.x.y.z` is itself a
+         * covered sequence, so the absorbed fact denotes a SUPERSET; universally, instantiating the
+         * quantifier at `w := w'.x.y.z` shows the absorbed fact is the stronger assertion. Either
+         * way it is a monotone coarsening -- never a loss on any branch.
+         *
+         * The predicate is `[any]` itself OR [TreeApManager.isCoveredByAny], not
+         * `AnyAccessor.containsAccessor`: the injected [AnyAccessorUnrollStrategy] is the operative
+         * denotation of `[any]` for this backend, and it can be narrower. Admitting a nested `[any]`
+         * is C3 -- `isCoveredByAny(ANY_ACCESSOR_IDX)` is false, yet `[any].[any]` denotes a subset
+         * of `[any]`, and stopping there would rebuild exactly the nested shape 5.2 collapses.
+         *
+         * Terminates: every merge-up strictly reduces the summed length of the tree's paths (each
+         * path through the deleted edge loses a step, no path is created), and the tree is finite.
+         */
+        private fun absorbCoveredByAnyPrefix(): Pair<AccessNode, Boolean> {
+            var current = this
+            var absorbedAnyStep = false
+
+            while (true) {
+                val accessors = current.accessors ?: break
+
+                var consumedIdx = -1
+                for (i in accessors.indices) {
+                    val accessor = accessors[i]
+                    if (accessor == ANY_ACCESSOR_IDX || manager.isCoveredByAny(accessor)) {
+                        consumedIdx = i
+                        break
+                    }
+                }
+
+                if (consumedIdx < 0) break
+
+                manager.cancellation.checkpoint()
+
+                val consumedNode = current.accessorNodes!![consumedIdx]
+
+                // C1: never "nothing to graft". [mergeAdd] unions isAbstract/isFinal and intersects
+                // deepAccessorExclusion -- exactly the join wanted -- so a fully covered branch
+                // collapses to a node that still CARRIES its leaf's flags. Returning an empty node
+                // here would leave the graft with concatNode == null, the abstraction unrestored,
+                // and `takeIf { !it.isEmpty }` would drop the whole branch: lost taint.
+                current = current.removeSingleAccessor(accessors[consumedIdx]).mergeAdd(consumedNode)
+                absorbedAnyStep = true
+            }
+
+            return current to absorbedAnyStep
         }
 
         private fun limitElementAccess(limit: Int): AccessNode {
@@ -1219,6 +1296,7 @@ class AccessTree(
 
             return concatToLeafAbstractNodes(
                 typeChecker, filteredOther, IntArrayList(), SUBSEQUENT_ARRAY_ELEMENTS_LIMIT,
+                parentEdgeIsAny = false,
             )
         }
 
@@ -1287,9 +1365,36 @@ class AccessTree(
             val allNodeAccessors: IdentityHashMap<AccessNode, IntOpenHashSet>,
             val cache: IdentityHashMap<AccessNode, Int2ObjectOpenHashMap<Optional<Pair<AccessNode, List<IntObjectImmutablePair<AccessNode>>>>>>,
             val typeFilterCache: IdentityHashMap<AccessNode, MutableMap<FactTypeChecker.FactApFilter, Optional<AccessNode>>>,
+            val absorbCache: IdentityHashMap<AccessNode, AccessNode>,
         ) {
             private fun updateNode(node: AccessNode) =
-                FilteredNode(manager, node, allNodeAccessors, cache, typeFilterCache)
+                FilteredNode(manager, node, allNodeAccessors, cache, typeFilterCache, absorbCache)
+
+            /**
+             * [AccessNode.absorbCoveredByAnyPrefix] lifted to the filtered wrapper: the absorbed
+             * sibling, plus whether any step was consumed (C2 needs the flag).
+             *
+             * The absorbed node is a fresh node, so it has no [allNodeAccessors] entry and
+             * [limitFieldAccess] would fall back to the full walk -- safe, since a MISSING entry
+             * means "unknown, do the work", but it forfeits exactly the O(1) that C0 is after.
+             * A WRONG entry would instead be a correctness bug, so the entry is computed EXACTLY,
+             * from the absorbed node itself. The walk is memoized in the same map, so the interned
+             * subtrees hanging below the absorbed spine are already present and cost nothing.
+             */
+            fun absorbCoveredByAnyPrefix(): Pair<FilteredNode, Boolean> {
+                absorbCache[node]?.let { cached ->
+                    return if (cached === node) this to false else updateNode(cached) to true
+                }
+
+                val (absorbedNode, absorbedAnyStep) = node.absorbCoveredByAnyPrefix()
+                absorbCache[node] = absorbedNode
+
+                if (!absorbedAnyStep) return this to false
+
+                collectAllAccessors(absorbedNode, allNodeAccessors)
+
+                return updateNode(absorbedNode) to true
+            }
 
             fun filterTypes(typeChecker: FactTypeChecker, path: IntArrayList): FilteredNode? {
                 val accessorPath = with(manager) { path.map { it.accessor } }
@@ -1357,7 +1462,10 @@ class AccessTree(
                     val internedNode = node.internNodes(AccessTreeInterner(), IdentityHashMap())
                     val allAccessors = IdentityHashMap<AccessNode, IntOpenHashSet>()
                     collectAllAccessors(internedNode, allAccessors)
-                    return FilteredNode(manager, internedNode, allAccessors, IdentityHashMap(), IdentityHashMap())
+                    return FilteredNode(
+                        manager, internedNode, allAccessors,
+                        IdentityHashMap(), IdentityHashMap(), IdentityHashMap()
+                    )
                 }
 
                 private fun collectAllAccessors(
@@ -1378,18 +1486,45 @@ class AccessTree(
             }
         }
 
+        /**
+         * [parentEdgeIsAny] is C4 of the concat absorption: ONLY an abstract node whose IMMEDIATE
+         * parent edge is `[any]` may absorb the covered prefix of the delta grafted onto it.
+         * Consuming into a path such as `[any].f.*` would be unsound -- `[any].f.x.![m]` and
+         * `[any].f.![m]` are disjoint path sets -- so the flag is set by the descent for exactly one
+         * level and is never inherited. It is deliberately kept apart from C2's absorbed-depth
+         * bookkeeping, which is derived locally at the graft point from what absorption actually
+         * consumed there and likewise never travels: a delta handed further down the recursion is
+         * always the UNABSORBED one, so no deeper frame's depths have been disturbed.
+         */
         private fun concatToLeafAbstractNodes(
             typeChecker: FactTypeChecker,
             other: FilteredNode?,
             path: IntArrayList,
             subsequentArrayElementLimit: Int,
+            parentEdgeIsAny: Boolean,
         ): AccessNode? {
             manager.cancellation.checkpoint()
 
             val concatNode = if (isAbstract && other != null) {
-                other.filterTypes(typeChecker, path)
-                    ?.node?.limitElementAccess(limit = subsequentArrayElementLimit)
-                    ?.filterDeepExclusion(deepAccessorExclusion)
+                // C0: filterTypes stays first and at full precision -- it reads the delta's real
+                // shape -- and absorption slots in ahead of the two limiters. Past it the residual's
+                // head is, by construction, the first accessor `[any]` does NOT cover, so
+                // limitElementAccess finds no leading element chain and limitFieldAccess (in the
+                // descent below) finds no occurrence of the field to strip: both degenerate to
+                // no-ops and do real work only when an uncovered accessor is actually present.
+                // This is one of the hottest paths in the engine -- concatToLeafAbstractNodes
+                // grafts at EVERY abstract node of the conclusion.
+                val typeFiltered = other.filterTypes(typeChecker, path)
+
+                val (absorbed, absorbedAnyStep) =
+                    if (parentEdgeIsAny && typeFiltered != null) {
+                        typeFiltered.absorbCoveredByAnyPrefix()
+                    } else {
+                        typeFiltered to false
+                    }
+
+                absorbed?.node?.limitElementAccess(limit = subsequentArrayElementLimit)
+                    ?.filterDeepExclusion(deepAccessorExclusion, absorbedAnyStep)
             } else null
 
             val nestedAccessors = mutableListOf<IntObjectImmutablePair<AccessNode>>()
@@ -1410,6 +1545,7 @@ class AccessTree(
                 path.add(accessor)
                 val concatenatedNode = node.concatToLeafAbstractNodes(
                     typeChecker, filteredOther, path, newSubsequentArrayLimit,
+                    parentEdgeIsAny = accessor == ANY_ACCESSOR_IDX,
                 )
                 path.removeLast()
 
