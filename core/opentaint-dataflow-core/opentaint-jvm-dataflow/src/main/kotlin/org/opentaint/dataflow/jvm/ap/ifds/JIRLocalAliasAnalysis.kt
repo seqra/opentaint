@@ -73,8 +73,8 @@ class JIRLocalAliasAnalysis(
     private fun isValidAccessorTransition(previous: AliasAccessor?, next: AliasAccessor): Boolean =
         isValidAliasAccessorTransition(previous, next, factTypeChecker::typeMayHaveSubtypeOf)
 
-    // Converted aliases are cached separately for every recursion depth, so keep each retained set small.
-    override val aliasCompressionThreshold: Int = ALIAS_COMPRESSION_THRESHOLD
+    // Even small permutation sets multiply downstream IFDS facts, so compress every non-empty set.
+    override val aliasCompressionThreshold: Int = 0
 
     override fun compressAliases(aliases: List<AliasInfo>): List<AliasInfo> =
         JIRAliasPathCompressor.compress(aliases, cancellation::checkpoint)
@@ -155,10 +155,6 @@ class JIRLocalAliasAnalysis(
         CommonAliasApInfo<AliasAccessor>
 
     data class AliasAllocInfo(val allocInst: Int) : AliasInfo
-
-    private companion object {
-        const val ALIAS_COMPRESSION_THRESHOLD = 1_000
-    }
 }
 
 internal fun isValidAliasAccessorTransition(
