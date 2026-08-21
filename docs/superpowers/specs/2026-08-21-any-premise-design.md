@@ -22,8 +22,13 @@ fun containsAccessor(accessor: Accessor): Boolean = accessor is FieldAccessor ||
 
 The *zero*-or-more reading is settled (§3.5): it is what `getChild`, `contains` and
 `AccessTreeAnySuffixMatcher` implement, and what `FactCleanerContractTest:110-121` pins across all
-three backends. One consequence used throughout: `X.[any].*` and `X.*` denote the **same set**, so
-`[any]` in a fact is a *representational* distinction, not a denotational one.
+three backends.
+
+`[any]` and `.*` are **not** interchangeable, and it is worth being explicit about why, because the
+notation invites the confusion. Read `.*` as an **existential** — "there is taint at or below here,
+we have not resolved where" — and `[any]` as a **universal** — "every suffix below here is tainted",
+which is exactly what a `$*VAR` whole-object source asserts. So `X.[any].*` and `X.*` are different
+facts, and the difference survives concatenation: `X.[any].b.*` and `X.b.*` are genuinely distinct.
 
 A summary **premise** (`InitialFactAp`, concretely `AccessPath`) cannot express `[any]` — the
 representation silently drops it:
@@ -294,10 +299,17 @@ accessors `[any]` covers, up to the first one it does not:
 [any].*  ⊕  x.[any].![m].$    ->   [any].![m].$         (nested [any] also consumed — see C3)
 ```
 
-**Sound.** `⟦[any].S⟧ = { w·p : w ∈ Covered*, p ∈ ⟦S⟧ }`. For any path `w·x·y·z·![m]·…` with
-`x,y,z ∈ Covered` and `w ∈ Covered`, `w·x·y·z ∈ Covered`, so the path is in `⟦[any].![m]⟧`. The
-absorbed fact is a **superset** — a monotone coarsening, path-wise. No taint can be lost, on any
-branch, for any prefix length.
+**Sound, under either reading of `[any]` (§1).**
+
+- *Existential reading* (`[any].S` denotes the path set `{ w·p : w ∈ Covered*, p ∈ ⟦S⟧ }`): for any
+  path `w·x·y·z·![m]·…` with `x,y,z,w ∈ Covered`, `w·x·y·z ∈ Covered`, so the path is already in
+  `⟦[any].![m]⟧`. The absorbed fact is a superset.
+- *Universal reading* (`[any].S` asserts `S` holds after **every** covered suffix): instantiating the
+  quantifier at `w := w'·x·y·z` shows `[any].![m]` implies `[any].x.y.z.![m]`. The absorbed fact is
+  the stronger assertion, so it marks taint on more paths.
+
+Either way absorption moves in the safe direction — a monotone coarsening, path-wise. No taint can be
+lost, on any branch, for any prefix length.
 
 **Why it matters.** `concatToLeafAbstractNodes` applies its no-repeated-field normalisation only via
 `accessor.isFieldAccessor()` (`AccessTree.kt:1291`), and `ANY_ACCESSOR_IDX` has basic kind
@@ -399,14 +411,19 @@ this design adopts. Three sites are only correct under it:
 And `FactCleanerContractTest:110-121` pins it across tree, automata and cactus: `base.[any].![m]`
 must answer a read of `base.![m]`.
 
+It bears repeating that this is about the *number of steps* `[any]` spans, not about `[any]` versus
+`.*`. Those two remain distinct quantifiers (§1): `.*` is existential, `[any]` is universal, and
+`X.[any].*` is a strictly stronger assertion than `X.*`. The selectivity of an `[any]` premise
+(§3.1) is therefore real and not merely representational — it genuinely admits only facts carrying
+whole-subtree taint at that position.
+
 Consequences used elsewhere in this document:
 
-- `X.[any].*` ≡ `X.*` denotationally. The selectivity of an `[any]` premise (§3.1) is therefore
-  **structural, not denotational** — which is exactly why it needs the invariant argument above, and
-  why it costs precision rather than recall.
 - `[any].<covered sequence>.[any]` ≡ `[any]`, which is what makes the nested-`[any]` collapse of §5.2
   a normalisation rather than an approximation.
-- The docstrings should be corrected as part of the work.
+- The absorption of §3.4 is a coarsening under either the existential or the universal reading — see
+  the soundness argument there.
+- The docstrings say "one or more" and should be corrected as part of the work.
 
 ## 4. Soundness
 
@@ -464,7 +481,7 @@ while leaving it reachable, and then `edgeExceedLimit` needs no special case at 
 Two knock-on effects to handle in the same change:
 
 - Anything using `depth > 10_000` as a "does this carry `[any]`" test breaks. That test should not
-  exist — use the `containsAny` flag of §5.2. (The prototype's diagnostics use it, and so does the
+  exist — use the `containsAnyInThisOrDeepNodes` flag of §5.2. (The prototype's diagnostics use it, and so does the
   `anyPreserve` correction inside `edgeExceedLimit`.)
 - `AccessPath.size` counts `[any]` as **1**, so the premise-side budget still under-charges exactly
   the premises that admit the deepest facts. Worth aligning the two charges.
@@ -483,15 +500,38 @@ Under zero-or-more semantics (§3.5) the collapse is an **identity**, not an app
 ```
 
 so the invariant to maintain is: **no `[any]` is reachable from another `[any]` through a
-covered-only path**. Note the qualifier — `[any].![m].[any]` does *not* collapse, because the mark is
-not covered and must survive.
+covered-only path**.
 
-**Implementation.** Add a deep `containsAny` flag to `AccessNode`, computed at construction exactly
-like the existing `containsStatic` (`AccessTree.kt:304`):
+There is no exception to carve out for an intervening uncovered accessor, because the obvious
+candidate cannot occur: **`[any]` after a taint mark is impossible, and must be explicitly banned.**
+`addParentIfPossible` only admits a mark above a bare leaf (`AccessTree.kt:453-459`):
+
+```kotlin
+accessor.isTaintMarkAccessor() -> {
+    if (this == manager.finalNode || this == manager.abstractNode || this == manager.abstractFinalNode) {
+        create(accessor, this)
+    } else {
+        null
+    }
+}
+```
+
+so nothing structured — an `[any]` least of all — can sit below a mark, and `[any].![m].[any]` is
+unconstructible through that path. It is *not* currently enforced on the raw `create` constructor
+used by `createAbstractNodeFromAccessors` and friends, which is why it should become an explicit
+check rather than an emergent property. With that ban in place the collapse rule needs no qualifier:
+any `[any]` reachable from another `[any]` collapses.
+
+**Implementation.** Add a deep `containsAnyInThisOrDeepNodes` flag to `AccessNode`, computed at
+construction exactly like the existing `containsStatic` (`AccessTree.kt:304`):
 
 ```kotlin
 containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
 ```
+
+The name is deliberately long: `AccessNode` already has `containsAnyAccessor()`
+(`AccessTree.kt:388-389`), which is `accessorIndex(ANY_ACCESSOR_IDX) >= 0` — **this node only**. The
+two are easy to confuse and mean different things, so the deep one says so in its name.
 
 `prependAnyAccessor` then checks the flag and collapses only when it is set — O(1) in the
 overwhelmingly common case where it is not. It already does a one-level version of this
@@ -818,8 +858,9 @@ from the ordinary walk rather than from a special case.
 The changes are heavily interdependent — several are silently inert or actively destructive on their
 own. Suggested sequencing, each step independently testable:
 
-1. **Unblock the environment.** Change the `maxDepth` inflation from 10_000 to 10 (§5.1) and add
-   the deep `containsAny` flag with the collapse invariant (§5.2), which makes the nested-`[any]`
+1. **Unblock the environment.** Change the `maxDepth` inflation from 10_000 to 10 (§5.1), ban
+   `[any]` below a taint mark, and add the deep `containsAnyInThisOrDeepNodes` flag with the collapse
+   invariant (§5.2), which makes the nested-`[any]`
    assertion unreachable. Nothing changes behaviourally yet, but `[any]`-carrying facts stop being
    parked or fatal.
 2. **The concat optimisation (§3.4)** — with C0-C4. Independently valuable: it bounds tree growth
@@ -849,7 +890,7 @@ Steps 1-2 are worth doing regardless of whether the rest lands.
 @JvmField val containsStatic: Boolean
 ```
 
-plus `containsAny` from §5.2, which brings it to five. Replace them with a single `Byte` and
+plus `containsAnyInThisOrDeepNodes` from §5.2, which brings it to five. Replace them with a single `Byte` and
 bit-accessor properties:
 
 ```kotlin
@@ -869,7 +910,8 @@ per node, which at these counts is worth tens of megabytes.
 
 Two notes:
 
-- Do this **after** `containsAny` exists, so the flag set is stable and the change is made once.
+- Do this **after** `containsAnyInThisOrDeepNodes` exists, so the flag set is stable and the
+  change is made once.
 - Keep the properties `@JvmField`-free and `inline`-friendly; these are read on the hottest paths in
   the engine (`getChild`, `mergeAdd`, `concatToLeafAbstractNodes`), so the accessors must fold away.
   Verify with a before/after heap measurement rather than assuming — the prototype's benchmark
