@@ -817,6 +817,69 @@ ${sinkPatterns.prependIndent("                ")}
     }
 
     @Test
+    fun `override replaces the original rule's tags`() {
+        val (result, trace) = load(
+            sinkLib, servletSource,
+            "override/servlet.yaml" to """
+                rules:
+                  - id: better-source
+                    options:
+                      lib: true
+                      overrides: "lib/servlet.yaml#servlet-source"
+                    tags: [custom-source]
+                    severity: NOTE
+                    message: src
+                    languages: [java]
+                    patterns:
+                      - pattern: ${'$'}X = betterSource()
+            """.trimIndent(),
+            "ssrf-custom.yaml" to """
+                rules:
+                  - id: ssrf-custom
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - tag: custom-source
+                          as: src
+                        - rule: lib/sink.yaml#ssrf-sink
+                          as: sink
+                      on:
+                        - 'src.${'$'}X -> sink.${'$'}X'
+            """.trimIndent()
+        )
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        assertTrue("ssrf-custom" in loadedRuleIds(result), "join on overriding rule's tag should load; loaded=${loadedRuleIds(result)}")
+    }
+
+    @Test
+    fun `override drops original tags from the tag index`() {
+        val (_, trace) = load(
+            sinkLib, servletSource,
+            "override/servlet.yaml" to """
+                rules:
+                  - id: better-source
+                    options:
+                      lib: true
+                      overrides: "lib/servlet.yaml#servlet-source"
+                    tags: [custom-source]
+                    severity: NOTE
+                    message: src
+                    languages: [java]
+                    patterns:
+                      - pattern: ${'$'}X = betterSource()
+            """.trimIndent(),
+            untrustedJoin
+        )
+        assertTrue(
+            trace.errorMessages().any { it.contains("declares that tag") },
+            "join on overridden rule's old tag should fail; errors=${trace.errorMessages()}"
+        )
+    }
+
+    @Test
     fun `chaining an alias as both source and sink is rejected`() {
         val (_, trace) = load(
             "lib/three.yaml" to """

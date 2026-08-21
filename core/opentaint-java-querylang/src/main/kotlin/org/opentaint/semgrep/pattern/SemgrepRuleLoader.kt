@@ -92,6 +92,7 @@ class SemgrepRuleLoader(
     private fun buildTagIndex(): Map<String, List<String>> {
         val tagIndex = hashMapOf<String, MutableList<String>>()
         for (registered in registeredRules.values) {
+            if (parsedRules[registered.ruleId] is RuleOverride<*>) continue
             for (tag in registered.rule.tags) {
                 tagIndex.getOrPut(tag, ::mutableListOf).add(registered.ruleId)
             }
