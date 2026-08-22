@@ -135,6 +135,14 @@ class AccessPath(
     /**
      * Split this premise against a fact into (matched prefix, remaining delta).
      *
+     * Two phases. [splitDeltaStrict] treats every premise accessor -- `[any]` included -- as one
+     * literal link; when it finds nothing and the premise carries an `[any]`, [matchThroughAny]
+     * re-runs the match with `[any]` read as zero-or-more covered steps. The split is deliberate:
+     * the strict phase decides every shape it already decided, byte for byte, and the permissive
+     * phase can only ADD a match.
+     *
+     * The rest of this note is about the strict phase.
+     *
      * Note the `otherNode.isAbstract` escape hatch, which `AccessTree.delta` does not have: it lets
      * this premise be LONGER than the fact, matching the remainder against the fact's `*` and
      * returning it as the delta. That includes matching an `[any]` link of the premise against a
@@ -167,6 +175,121 @@ class AccessPath(
      * over an `[any]` in the fact.
      */
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
+        val strict = splitDeltaStrict(other)
+        if (strict.isNotEmpty()) return strict
+
+        val access = access ?: return strict
+        if (!access.containsAnyAccessor()) return strict
+
+        other as AccessTree
+        if (base != other.base) return strict
+
+        val match = matchThroughAny(access, other.access, other, IntArrayList(), Budget()) ?: return strict
+        return listOf(match)
+    }
+
+    /**
+     * Visit budget for [matchThroughAny]. The `[any]` arm branches over every covered child, so the
+     * search is worst-case exponential in the fact's breadth; a summary exit fact is normally tiny,
+     * but trace resolution runs on whatever the analysis produced. Exhausting the budget reports NO
+     * match, which is exactly the pre-fix behaviour for that premise.
+     */
+    private class Budget(var steps: Int = MATCH_THROUGH_ANY_STEP_LIMIT)
+
+    /**
+     * The permissive re-match for a premise that carries an `[any]`, run only after
+     * [splitDeltaStrict] has already found nothing.
+     *
+     * [splitDeltaStrict] consumes an `[any]` of the PREMISE as one literal link -- it asks the fact
+     * for a child under `ANY_ACCESSOR_IDX` -- and, once the premise is spent, insists the fact be
+     * abstract there. Neither holds for a summary keyed on an `[any]` premise: its exit fact is
+     * `X.[any].![m].*`, whose `[any]` node is not abstract, and the same premise is equally answered
+     * by `X.![m].*` (the `[any]` taken zero times) and by `X.f.![m].*` (taken once). Under
+     * zero-or-more a premise ENDING in `[any]` is `X.[any].*` == `X.*`, so it covers the whole
+     * subtree.
+     *
+     * Being permissive here is the safe direction and is load-bearing: the only caller is
+     * `MethodTraceResolver`, which attributes an already-decided finding to a summary edge, and a
+     * finding with no trace is dropped whole by `TaintAnalyzer.fullScan`. Over-matching costs trace
+     * precision; under-matching costs the finding. `AccessTree.delta`, which decides which premise a
+     * fact ACTIVATES during summary application, is deliberately left strict.
+     */
+    private fun matchThroughAny(
+        node: AccessNode?,
+        otherNode: AccessTree.AccessNode,
+        other: AccessTree,
+        accessorsOnPath: IntArrayList,
+        budget: Budget,
+    ): Pair<InitialFactAp, InitialFactAp.Delta>? {
+        if (budget.steps-- <= 0) return null
+
+        fun matchedPrefix(): InitialFactAp {
+            val matchedAccessNode = accessorsOnPath.foldRightInt(null as AccessNode?) { accessor, prevNode ->
+                AccessNode(apManager, accessor, prevNode)
+            }
+            return AccessPath(apManager, base, matchedAccessNode, exclusions)
+        }
+
+        if (node == null) {
+            if (!otherNode.isAbstract) return null
+            return matchedPrefix() to AccessPathDelta.Empty
+        }
+
+        val accessor = node.accessor
+
+        if (accessor == FINAL_ACCESSOR_IDX) {
+            if (!otherNode.isFinal) return null
+            return matchedPrefix() to AccessPathDelta.Empty
+        }
+
+        if (accessor != ANY_ACCESSOR_IDX) {
+            val nextOtherNode = otherNode.getChild(accessor)
+            if (nextOtherNode == null) {
+                if (!otherNode.isAbstract) return null
+
+                val filteredNode = node.filter(other.exclusions) ?: return null
+                return matchedPrefix() to AccessPathDelta.Delta(filteredNode)
+            }
+
+            accessorsOnPath.add(accessor)
+            val result = matchThroughAny(node.next, nextOtherNode, other, accessorsOnPath, budget)
+            accessorsOnPath.popInt()
+            return result
+        }
+
+        // A premise that ends in `[any]` is `X.[any].*` == `X.*`: everything below the matched
+        // prefix is covered, whatever shape the fact has there. The `[any]` is NAMED on the prefix
+        // rather than dropped, because `MethodTraceResolver.resolveCallPassSummary` immediately
+        // re-checks `mappedSummaryFact.contains(matchedEntryFact)` and the `[any]` is what carries
+        // the same zero-or-more reading into that check.
+        if (node.next == null) {
+            if (otherNode.isEmpty) return null
+
+            accessorsOnPath.add(ANY_ACCESSOR_IDX)
+            val result = matchedPrefix() to AccessPathDelta.Empty
+            accessorsOnPath.popInt()
+            return result
+        }
+
+        // Zero steps: `[any]` matches the empty sequence, so try the rest of the premise here.
+        matchThroughAny(node.next, otherNode, other, accessorsOnPath, budget)?.let { return it }
+
+        // One or more steps: through the fact's own `[any]` link, or through any covered child.
+        var result: Pair<InitialFactAp, InitialFactAp.Delta>? = null
+        otherNode.forEachAccessor { childAccessor, childNode ->
+            if (result != null) return@forEachAccessor
+            if (childAccessor != ANY_ACCESSOR_IDX && !apManager.isCoveredByAny(childAccessor)) {
+                return@forEachAccessor
+            }
+
+            accessorsOnPath.add(childAccessor)
+            result = matchThroughAny(node, childNode, other, accessorsOnPath, budget)
+            accessorsOnPath.popInt()
+        }
+        return result
+    }
+
+    private fun splitDeltaStrict(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 
         if (base != other.base) return emptyList()
@@ -321,6 +444,11 @@ class AccessPath(
         return result
     }
 
+    private companion object {
+        /** See [Budget]. */
+        const val MATCH_THROUGH_ANY_STEP_LIMIT = 10_000
+    }
+
     class AccessNode(
         val manager: TreeApManager,
         val accessor: AccessorIdx,
@@ -377,6 +505,16 @@ class AccessPath(
             if (accessor != other.accessor) return false
 
             return next == other.next
+        }
+
+        /** Whether an `[any]` link appears anywhere on this chain. */
+        fun containsAnyAccessor(): Boolean {
+            var node: AccessNode? = this
+            while (node != null) {
+                if (node.accessor == ANY_ACCESSOR_IDX) return true
+                node = node.next
+            }
+            return false
         }
 
         fun toList(): IntArrayList {

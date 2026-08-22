@@ -62,6 +62,13 @@ class AnyPremiseAbstractionTest {
         return fact
     }
 
+    /** Like [fact], but left open at the leaf -- the `X.*` shape a summary exit fact carries. */
+    private fun abstractFact(vararg accessors: Accessor): FinalFactAp {
+        var fact = manager.mostAbstractFinalAp(base)
+        accessors.reversed().forEach { fact = fact.prependAccessor(it) }
+        return fact
+    }
+
     private fun TreeInitialFactAbstraction.register(fact: InitialFactAp) =
         registerNewInitialFact(fact, FactTypeChecker.Dummy)
 
@@ -224,6 +231,95 @@ class AnyPremiseAbstractionTest {
         assertEquals(premise(AnyAccessor), matched)
         assertTrue(exitFact.contains(matched), "the matched prefix must be contained in the exit fact")
         assertEquals(setOf(MARK), delta.getStartAccessors())
+    }
+
+    /*
+     * Past the cap the demand is answered by a summary keyed on an `[any]` PREMISE, and the exit
+     * fact it carries is `X.[any].![m].*` -- the `[any]` node is not abstract, there is a mark under
+     * it. Read as one literal link the premise `X.[any]` neither ends on an abstract node nor finds
+     * a child to descend into, so the match failed and, with it, the whole trace: `TracePath` turns
+     * a missing trace into a `TracePathGenerationResult.Failure` and `TaintAnalyzer.fullScan` drops
+     * exactly those, taking the derived, registered, confirmed finding with it.
+     *
+     * `[any]` is zero-or-more, so all three readings below are the same premise.
+     */
+
+    @Test
+    fun `splitDelta matches an any premise against the exit fact of a summary keyed on any`() {
+        // The exit fact of a summary keyed on `this.[any]`: `this.[any].![m].*`, NOT abstract at the
+        // `[any]` node.
+        val exitFact = abstractFact(AnyAccessor, MARK)
+        val required = premise(AnyAccessor)
+
+        val split = required.splitDelta(exitFact)
+
+        assertEquals(1, split.size, "split=$split")
+        val (matched, delta) = split.single()
+        assertTrue(delta.isEmpty, "`X.[any]` is `X.[any].*`, so the whole subtree is covered")
+        assertTrue(
+            exitFact.contains(matched),
+            "MethodTraceResolver re-checks the matched prefix against the fact; matched=$matched"
+        )
+    }
+
+    @Test
+    fun `splitDelta reads an any premise as zero steps`() {
+        val exitFact = abstractFact(MARK)
+        val required = premise(AnyAccessor, MARK)
+
+        val split = required.splitDelta(exitFact)
+
+        assertEquals(1, split.size, "split=$split")
+        val (matched, delta) = split.single()
+        assertEquals(premise(MARK), matched, "the `[any]` consumed nothing, so it is not named")
+        assertTrue(delta.isEmpty, "split=$split")
+        assertTrue(exitFact.contains(matched))
+    }
+
+    @Test
+    fun `splitDelta reads an any premise as one covered step`() {
+        val exitFact = abstractFact(FIELD_A, MARK)
+        val required = premise(AnyAccessor, MARK)
+
+        val split = required.splitDelta(exitFact)
+
+        assertEquals(1, split.size, "split=$split")
+        val (matched, delta) = split.single()
+        assertEquals(premise(FIELD_A, MARK), matched, "the `[any]` took the `a` step the fact has")
+        assertTrue(delta.isEmpty, "split=$split")
+        assertTrue(exitFact.contains(matched))
+    }
+
+    @Test
+    fun `contains sees an any premise through a concrete fact`() {
+        assertTrue(
+            abstractFact(FIELD_A, MARK).contains(premise(AnyAccessor, MARK)),
+            "`X.[any].![m]` is answered by `X.a.![m].*` -- the `[any]` takes the `a` step"
+        )
+        assertTrue(
+            abstractFact(MARK).contains(premise(AnyAccessor, MARK)),
+            "and by `X.![m].*` -- the `[any]` takes no step at all"
+        )
+        assertTrue(
+            abstractFact(FIELD_A, FIELD_C).contains(premise(AnyAccessor)),
+            "`X.[any]` is `X.[any].*`, which covers everything below X"
+        )
+        assertTrue(
+            abstractFact(AnyAccessor, MARK).contains(premise(AnyAccessor)),
+            "including the exit fact of a summary keyed on `[any]`"
+        )
+    }
+
+    @Test
+    fun `contains stays strict for a premise with no any`() {
+        assertFalse(
+            abstractFact(FIELD_A, MARK).contains(premise(MARK)),
+            "an `[any]`-free premise is matched link by link, exactly as before"
+        )
+        assertFalse(
+            abstractFact(FIELD_A).contains(premise(FIELD_B)),
+            "and a fact that does not have the premise's accessor still does not contain it"
+        )
     }
 
     @Test

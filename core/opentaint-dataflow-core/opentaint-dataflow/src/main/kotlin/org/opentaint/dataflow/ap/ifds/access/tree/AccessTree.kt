@@ -597,6 +597,12 @@ class AccessTree(
         }
 
         fun contains(otherAccess: AccessPath.AccessNode?): Boolean {
+            if (containsStrict(otherAccess)) return true
+            if (otherAccess == null || !otherAccess.containsAnyAccessor()) return false
+            return containsThroughAny(otherAccess, intArrayOf(CONTAINS_THROUGH_ANY_STEP_LIMIT))
+        }
+
+        private fun containsStrict(otherAccess: AccessPath.AccessNode?): Boolean {
             if (otherAccess == null) {
                 return isAbstract
             }
@@ -607,6 +613,58 @@ class AccessTree(
                 node = node.getChild(accessor) ?: return false
             }
             return node.isAbstract
+        }
+
+        /**
+         * The permissive re-run of [contains] for a PREMISE that carries an `[any]`.
+         *
+         * The strict walk above treats every premise accessor as one literal link, `[any]`
+         * included: it asks the fact for a child under `ANY_ACCESSOR_IDX` and, having consumed the
+         * premise, insists the fact be abstract there. That is right for summary APPLICATION -- and
+         * `AccessTree.delta`, which decides it, is deliberately left alone -- but it is wrong here.
+         * `[any]` is zero-or-more covered steps, so a premise `X.[any].![m]` is answered by a fact
+         * `X.![m].*` (zero steps) and by `X.f.![m].*` (one step) just as much as by `X.[any].![m].*`,
+         * and a premise ending in `[any]` is `X.[any].*`, which under the zero-or-more reading is
+         * simply `X.*` -- everything below `X`.
+         *
+         * The only callers of [FinalFactAp.contains] are in `MethodTraceResolver`, which ATTRIBUTES
+         * an already-decided finding to a summary edge. Under-matching there does not cost trace
+         * precision, it costs whole findings: `TracePath` turns a missing trace into a
+         * `TracePathGenerationResult.Failure` and `TaintAnalyzer.fullScan` drops exactly those. So
+         * this runs only after the strict walk has already said no, and can only add matches.
+         *
+         * [budget] is a one-cell visit counter. The `[any]` arm branches over every covered child,
+         * so the search is worst-case exponential in the fact's breadth; running out reports NO
+         * match, which is exactly what this premise got before the arm existed.
+         */
+        private fun containsThroughAny(otherAccess: AccessPath.AccessNode?, budget: IntArray): Boolean {
+            if (budget[0]-- <= 0) return false
+
+            if (otherAccess == null) return isAbstract
+
+            val accessor = otherAccess.accessor
+            if (accessor == FINAL_ACCESSOR_IDX) return isFinal
+
+            if (accessor != ANY_ACCESSOR_IDX) {
+                val child = getChild(accessor) ?: return false
+                return child.containsThroughAny(otherAccess.next, budget)
+            }
+
+            // `X.[any]` with nothing below it is `X.[any].*` == `X.*`: whatever hangs here is covered.
+            val next = otherAccess.next ?: return true
+
+            // zero steps
+            if (containsThroughAny(next, budget)) return true
+
+            // one or more steps, through the fact's own `[any]` link or through any covered child
+            forEachAccessor { childAccessor, childNode ->
+                if (childAccessor != ANY_ACCESSOR_IDX && !manager.isCoveredByAny(childAccessor)) {
+                    return@forEachAccessor
+                }
+                if (childNode.containsThroughAny(otherAccess, budget)) return true
+            }
+
+            return false
         }
 
         sealed interface MatchResult {
@@ -1963,6 +2021,9 @@ class AccessTree(
 
         companion object {
             const val SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2
+
+            /** Visit budget for [containsThroughAny]. */
+            private const val CONTAINS_THROUGH_ANY_STEP_LIMIT = 10_000
 
             // Bit masks for [flags]. Held as `Int` because Kotlin `Byte` arithmetic promotes to
             // `Int` anyway; the accessors do one `toInt()` (a sign extension, free) and one `and`,
