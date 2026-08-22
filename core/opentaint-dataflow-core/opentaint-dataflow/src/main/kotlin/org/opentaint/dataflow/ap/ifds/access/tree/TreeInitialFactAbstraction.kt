@@ -514,7 +514,7 @@ class TreeInitialFactAbstraction(
          * Read once, at class initialisation: the value is consulted per unrolled fact and a
          * `System.getProperty` there would show up in a profile.
          */
-        private val ANY_UNROLL_LIMIT: Int =
-            System.getProperty(ANY_UNROLL_LIMIT_PROPERTY)?.trim()?.toIntOrNull() ?: -1
+        private val ANY_UNROLL_LIMIT: Int = 100
+//            System.getProperty(ANY_UNROLL_LIMIT_PROPERTY)?.trim()?.toIntOrNull() ?: -1
     }
 }
