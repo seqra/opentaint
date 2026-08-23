@@ -33,42 +33,37 @@ type TriageConfig struct {
 var triageFlags TriageConfig
 
 var triageCmd = &cobra.Command{
-	Use:   "triage sarif",
-	Short: "Compare a SARIF report against a baseline and record suppressions",
+	Use:   "triage <sarif-report>",
+	Short: "Compare a report against a baseline and record suppressions",
 	Args:  cobra.ExactArgs(1),
-	Long: `Compare a SARIF report against a baseline and record accept/defer decisions
+	Long: `Compare a SARIF report against a baseline and record triage decisions. Accepting a finding means it will not be fixed; deferring means it is not being fixed for now. Both are recorded as SARIF suppressions, which any SARIF consumer honors.
 
-Findings are identified by fingerprint, so a decision survives edits elsewhere
-in the code. Nothing is ever deleted from the report: an accepted or deferred
-finding stays in the file, marked with a SARIF suppression that records who
-decided what and why.
+The required positional argument is the path to the SARIF report to triage, such as one written by opentaint scan. Findings are identified by fingerprint, so a decision survives edits elsewhere in the code. Nothing is ever deleted: an accepted or deferred finding stays in the report, marked with a suppression that records the decision and its justification.
 
-Arguments:
-  sarif  - Path to the SARIF report to triage
+Name a finding by a fingerprint prefix, git-style: the value shown as "Fingerprint:" by opentaint summary --show-findings. Both commands read the same key, so the value on screen is the value to paste here; --fingerprint-key changes it on both sides. An ambiguous or unknown prefix is an error, never a guess.
 
-A finding is named by a fingerprint prefix, git-style — the value shown as
-"Fingerprint:" by 'opentaint summary --show-findings'. Both commands read the
-same key, so the value on screen is the value to paste here; --fingerprint-key
-changes it on either side.
+The triaged report is rewritten in place, or written to --output when set. With --baseline, decisions recorded in the baseline are inherited by the matching findings first, so a chain of reports carries its triage history forward.
 
-Examples:
-  # See what changed since the last release, without modifying anything
-  opentaint triage scan.sarif --baseline release.sarif
-
-  # We will not fix this one
-  opentaint triage scan.sarif --accept q3Vf9k --justification "sink is a constant"
-
-  # We are not fixing this one for now
-  opentaint triage scan.sarif --defer 8bc1d2 --justification "waiting on OT-412"
-
-  # Carry earlier decisions forward and fail if anything new turned up
-  opentaint triage scan.sarif --baseline release.sarif -o triaged.sarif \
-      --error-on-findings
+Run opentaint scan to produce the report this command triages. Review the result with opentaint summary.
 
 Exit codes:
   0    Triage completed
   1    General failure (bad input, unreadable report)
   2    Findings remain and --error-on-findings was set`,
+	Example: `  # See what changed since the last release, without modifying anything
+  opentaint triage report.sarif --baseline release.sarif
+
+  # Record that a finding will not be fixed
+  opentaint triage report.sarif --accept q3Vf9k --justification "sink is a constant"
+
+  # Record that a finding is not being fixed for now
+  opentaint triage report.sarif --defer 8bc1d2 --justification "waiting on OT-412"
+
+  # Remove an earlier decision
+  opentaint triage report.sarif --unsuppress q3Vf9k
+
+  # Carry decisions forward and fail if anything new turned up
+  opentaint triage report.sarif --baseline release.sarif -o triaged.sarif --error-on-findings`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		runTriage(triageFlags, args[0])
@@ -84,16 +79,16 @@ func init() {
 	triageCmd.Flags().StringArrayVar(&triageFlags.Defer, "defer", nil, "Defer the finding with this fingerprint prefix: not fixing for now (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Unsuppress, "unsuppress", nil, "Remove the suppression from the finding with this fingerprint prefix (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Justifications, "justification", nil, "Why the finding is accepted or deferred (required with --accept/--defer; one per run)")
-	triageCmd.Flags().StringVarP(&triageFlags.Output, "output", "o", "", "Write the triaged report here (default: rewrite the input in place)")
+	triageCmd.Flags().StringVarP(&triageFlags.Output, "output", "o", "", "Path to write the triaged report; defaults to rewriting the input in place")
 	addGateFlags(triageCmd, &triageFlags.ErrorOnFindings, &triageFlags.ErrorOnSeverity)
 	triageCmd.Flags().BoolVar(&triageFlags.ShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
-	triageCmd.Flags().BoolVar(&triageFlags.ShowFindings, "show-findings", false, "List the findings, not just the summary")
+	triageCmd.Flags().BoolVar(&triageFlags.ShowFindings, "show-findings", false, "Show every finding, not just the summary")
 }
 
 // addGateFlags registers the failure-gate flags shared by scan and triage.
 func addGateFlags(cmd *cobra.Command, errorOnFindings *bool, severities *[]string) {
-	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain (new ones only, with --baseline)")
-	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: error, warning, note, none (comma-separated or repeated; default all)")
+	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain; with --baseline, only new ones count")
+	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: note, warning, error, none (repeatable or comma-separated; defaults to all)")
 }
 
 func runTriage(cfg TriageConfig, reportPath string) {
