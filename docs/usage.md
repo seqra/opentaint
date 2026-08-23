@@ -118,7 +118,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 | `--write-baseline-state` | Persist `result.baselineState` and `run.baselineGuid` into the output report (needs `--baseline`) |
 | `--fingerprint-key` | Which fingerprint identifies a finding across reports: `trace`, `source-sink`, `sink` (default), or a full partialFingerprints key |
 | `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
-| `--error-on-severity` | Restrict `--error-on-findings` to these levels: `error`, `warning`, `note`, `none` (repeatable, default all) |
+| `--error-on-severity` | Restrict `--error-on-findings` to these levels: `note`, `warning`, `error`, `none` (repeatable or comma-separated; defaults to all) |
 
 With `--baseline`, findings the baseline already accepted stay suppressed and
 the summary reports how many are new, unchanged, updated, or fixed. See
@@ -226,7 +226,7 @@ reflects the full set the tool ran.
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
 | `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
 | `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
-| `--baseline-state` | Show only findings whose state is one of `new` \| `unchanged` \| `updated` \| `absent` (repeatable). Reads the states persisted by `--write-baseline-state`, or the ones `--baseline` computes now; `absent` lists the fixed findings from the baseline. |
+| `--baseline-state` | Show only findings in these baseline states: `new`, `unchanged`, `updated`, `absent` (repeatable). Reads the states written by `--write-baseline-state`, or the ones `--baseline` computes now; `absent` lists the fixed findings from the baseline. |
 | `--suppressed` | Include suppressed findings in the listing (hidden by default) |
 | `--fingerprint-key` | Which fingerprint identifies a finding: `trace` (exact), `source-sink`, `sink` (rule and sink only; default), or a full partialFingerprints key. One key governs baseline matching, the `Fingerprint:` value shown, `--partial-fingerprint`, and the prefix `triage` resolves. |
 
@@ -257,12 +257,12 @@ opentaint triage scan.sarif --defer 8bc1d2 --justification "waiting on OT-412"
 | `--defer` | Defer the finding with this fingerprint prefix — not fixing for now (repeatable) |
 | `--unsuppress` | Remove the suppression from the finding with this fingerprint prefix (repeatable) |
 | `--justification` | Why the finding is accepted or deferred (required with `--accept`/`--defer`) |
-| `--output`, `-o` | Write the triaged report here (default: rewrite the input in place) |
-| `--show-findings` | List the findings, not just the summary |
+| `--output`, `-o` | Path to write the triaged report; defaults to rewriting the input in place |
+| `--show-findings` | Show every finding, not just the summary |
 | `--suppressed` | Include suppressed findings in the listing |
 | `--fingerprint-key` | Which fingerprint identifies a finding across reports: `trace`, `source-sink`, `sink` (default), or a full partialFingerprints key |
 | `--error-on-findings` | Exit with code 2 when findings remain; with `--baseline`, only new ones count |
-| `--error-on-severity` | Restrict `--error-on-findings` to these levels (repeatable, default all) |
+| `--error-on-severity` | Restrict `--error-on-findings` to these levels: `note`, `warning`, `error`, `none` (repeatable or comma-separated; defaults to all) |
 
 A finding is named by a fingerprint prefix, git-style — the value shown as
 `Fingerprint:` by `opentaint summary --show-findings`. An ambiguous or unknown

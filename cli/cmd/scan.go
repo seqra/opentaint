@@ -89,9 +89,11 @@ The source-path argument is the project root. It is optional. The default is the
 
 OpenTaint writes the findings to a SARIF report. Use --output to set the report path. If --output is not set, the report goes into the project model directory. A summary is shown when the scan completes.
 
+To compare with a previous report, use --baseline. The scan then keeps the suppressions from the baseline. With --error-on-findings, only new findings that are not suppressed cause a failure. To record decisions about findings, use "opentaint triage".
+
 Before your first scan, run "opentaint pull" one time. To read a report again later, use "opentaint summary".
 
-` + scanExitCodesHelp("Scan completed"),
+` + gateExitCodesHelp("Scan completed"),
 	Example: `  # Scan the current directory with the built-in rules
   opentaint scan .
 
@@ -104,6 +106,9 @@ Before your first scan, run "opentaint pull" one time. To read a report again la
   # Use your own rules and show only errors
   opentaint scan . --ruleset ./rules --severity error -o report.sarif
 
+  # Fail CI only on findings that are new since the baseline
+  opentaint scan . --baseline main.sarif --error-on-findings -o report.sarif
+
   # Give a large project more time and memory
   opentaint scan . --timeout 30m --max-memory 16G -o report.sarif
 
@@ -114,7 +119,11 @@ Before your first scan, run "opentaint pull" one time. To read a report again la
 
   # Recipe: build one time, then scan many times
   opentaint compile ./my-app -o ./model
-  opentaint scan --project-model ./model -o report.sarif`,
+  opentaint scan --project-model ./model -o report.sarif
+
+  # Recipe: a CI gate that fails only on new findings
+  opentaint scan . --baseline baselines/main.sarif --error-on-findings -o report.sarif
+  opentaint summary report.sarif --baseline baselines/main.sarif --baseline-state new --show-findings`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		runScan(cmd, prepareScanConfig(scanFlags, args))
