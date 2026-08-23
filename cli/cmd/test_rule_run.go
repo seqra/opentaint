@@ -151,7 +151,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	addDataflowApproximations(builder, opts.dataflowApprox, analyzerJarPath, projectPath)
 	addPassthroughApproximations(builder, opts.passthroughApprox)
 
-	javaRunner := newAnalyzerJavaRunner()
+	javaRunner := newAnalyzerJavaRunner(goServerEnvForModel(projectPath))
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		failf("Failed to resolve Java for analyzer: %s", err)
 	}

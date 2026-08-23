@@ -37,6 +37,7 @@ Run "opentaint pull" one time before your first scan. To remove old downloads, u
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
 			Field("Analyzer", globals.Config.Analyzer.Version).
 			Field("Rules", globals.Config.Rules.Version).
+			Field("GoServer", globals.Config.GoServer.Version).
 			Field("Java", globals.Config.Java.Version).
 			Render()
 
@@ -122,6 +123,12 @@ func downloadArtifact(spec globals.ArtifactDef, installNextToBinary, installCurr
 		}
 		if err := download(t.Path); err != nil {
 			return node, err
+		}
+		// go-ssa-server is a single native binary and must be executable on unix.
+		if spec.Kind() == "goserver" && runtime.GOOS != "windows" {
+			if err := os.Chmod(t.Path, 0o755); err != nil {
+				return node, fmt.Errorf("failed to mark %s executable: %w", spec.Kind(), err)
+			}
 		}
 		node.Child(fmt.Sprintf("Downloaded to %s", t.Path))
 		return node, nil

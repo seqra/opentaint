@@ -3,6 +3,7 @@ package globals
 import (
 	_ "embed"
 	"fmt"
+	"runtime"
 	"time"
 
 	"gopkg.in/yaml.v2"
@@ -15,6 +16,7 @@ type versions struct {
 	Analyzer    string `yaml:"analyzer"`
 	Autobuilder string `yaml:"autobuilder"`
 	Rules       string `yaml:"rules"`
+	GoServer    string `yaml:"go-server"`
 	Java        int    `yaml:"java"`
 }
 
@@ -30,6 +32,7 @@ var (
 	AnalyzerBindVersion    = BindVersions.Analyzer
 	AutobuilderBindVersion = BindVersions.Autobuilder
 	RulesBindVersion       = BindVersions.Rules
+	GoServerBindVersion    = BindVersions.GoServer
 	DefaultJavaVersion     = BindVersions.Java
 )
 
@@ -39,6 +42,21 @@ const RepoName = "opentaint"
 const AutobuilderAssetName = "opentaint-project-auto-builder.jar"
 const AnalyzerAssetName = "opentaint-project-analyzer.jar"
 const RulesAssetName = "opentaint-rules.tar.gz"
+
+// GoServerAssetNamePrefix is the per-platform go-ssa-server asset filename prefix.
+const GoServerAssetNamePrefix = "go-ssa-server_"
+
+// GoServerAssetName returns the platform-specific go-ssa-server release asset name,
+// matching the release pipeline's naming contract: "go-ssa-server_<GOOS>_<GOARCH>"
+// with ".exe" appended on windows. It uses raw runtime.GOOS/runtime.GOARCH values
+// (no Adoptium-style os/arch mapping).
+func GoServerAssetName() string {
+	name := fmt.Sprintf("%s%s_%s", GoServerAssetNamePrefix, runtime.GOOS, runtime.GOARCH)
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	return name
+}
 
 type Scan struct {
 	Timeout       time.Duration `mapstructure:"timeout"`
@@ -76,6 +94,11 @@ type Rules struct {
 	Exclude []string `mapstructure:"exclude"`
 }
 
+type GoServer struct {
+	Version string `mapstructure:"version"`
+	Binary  string `mapstructure:"binary"`
+}
+
 type Java struct {
 	Version int `mapstructure:"version"`
 }
@@ -88,6 +111,7 @@ type ConfigType struct {
 	Analyzer    Analyzer    `mapstructure:"analyzer"`
 	Autobuilder Autobuilder `mapstructure:"autobuilder"`
 	Rules       Rules       `mapstructure:"rules"`
+	GoServer    GoServer    `mapstructure:"go-server"`
 	Java        Java        `mapstructure:"java"`
 	Owner       string      `mapstructure:"owner"`
 	Repo        string      `mapstructure:"repo"`
