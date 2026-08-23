@@ -126,7 +126,7 @@ func Unsuppress(r *Result) bool {
 //
 // Presence in the baseline is not acceptance: a baseline result without a
 // suppression transmits nothing. A result that already carries its own
-// suppression is left alone; its own decision is the newer one.
+// suppression is left alone. Its own decision is the newer one.
 func InheritSuppressions(current, baseline *Report, key string) int {
 	byIdentity := make(map[string]*Suppression)
 	for _, r := range baseline.Results() {

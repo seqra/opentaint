@@ -27,7 +27,7 @@ but valid). Nothing about being in the baseline makes a finding "accepted" — o
 a `triage` decision does that.
 
 Neither axis ever deletes a result. Suppressed and baselined findings stay in the
-report, marked; the CLI filters them at display and gate time, not in the file.
+report, marked. The CLI filters them at display and gate time, not in the file.
 
 ## Quick start
 
@@ -73,7 +73,7 @@ opentaint triage baselines/main.sarif \
 A finding is named by a **fingerprint prefix**, git-style — the value shown as
 `Fingerprint:` by `opentaint summary --show-findings`. An ambiguous or unknown
 prefix is an error, never a guess. `--accept`, `--defer`, and `--unsuppress` are
-repeatable; one `--justification` applies to every decision in the invocation,
+repeatable. One `--justification` applies to every decision in the invocation,
 and passing it twice is an error rather than a silent "last one wins" — run
 `triage` once per reason.
 
@@ -175,7 +175,7 @@ the most exact identity to the coarsest:
 
 | `--fingerprint-key` | Full key | Hashes | Behavior |
 |-----|-----|--------|----------|
-| `trace` | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact; changes if anything on the path moves. |
+| `trace` | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact. Changes if anything on the path moves. |
 | `source-sink` | `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. |
 | `sink` | `vulnerabilitySinkHash/v1` | rule + sink | Survives any change to how the untrusted data reaches the sink. **Default.** |
 
@@ -198,7 +198,7 @@ ever spans two rules that fire on one statement.
 
 Pick a finer key when the route is part of what you are deciding about. Under
 `source-sink`, data arriving at a known-dangerous sink from a *new* source is a
-new finding that must be triaged again; under `sink`, an existing decision covers
+new finding that must be triaged again. Under `sink`, an existing decision covers
 it.
 
 ### What changed underneath
@@ -234,7 +234,7 @@ not in an in-source comment). The verdict is carried by the SARIF `status`:
 | `--unsuppress` | *(removes the entry)* | Retract a decision | — |
 
 Both `--accept` and `--defer` hide the finding from the listing and from the
-gate. A deferral does **not** expire on its own; the summary's `Deferred` count
+gate. A deferral does **not** expire on its own. The summary's `Deferred` count
 keeps it visible so it can be revisited.
 
 `--unsuppress` removes the suppression from the report being triaged. It does not
@@ -272,7 +272,7 @@ Suppressions
 └─ Added this run: 1      (triage only)
 ```
 
-`opentaint summary --show-findings` hides suppressed findings by default; add
+`opentaint summary --show-findings` hides suppressed findings by default. Add
 `--suppressed` to list them with their justification.
 
 ## The gate
@@ -280,7 +280,7 @@ Suppressions
 | Flag | Meaning |
 |------|---------|
 | `--error-on-findings` | Enable the gate. Off by default — without it, scans never fail on findings. |
-| `--error-on-severity <levels>` | Restrict the gate to these levels: `error`, `warning`, `note`, `none`. Comma-separated or repeated; default is all reported levels. |
+| `--error-on-severity <levels>` | Restrict the gate to these levels: `error`, `warning`, `note`, `none`. Comma-separated or repeated. Default is all reported levels. |
 
 A finding counts toward the gate when it is **not suppressed** and its level is
 in scope. With `--baseline`, only **new** findings count (`unchanged` and
@@ -291,7 +291,7 @@ closed — they count.
 
 | Code | Meaning |
 |------|---------|
-| `0` | Completed; gate not tripped |
+| `0` | Completed, gate not tripped |
 | `2` | Findings remain and `--error-on-findings` was set |
 | `1` | General failure (bad input, unreadable report) |
 | `252`–`255` | Analyzer failure (exception, OOM, timeout, config error) |
@@ -325,7 +325,7 @@ opentaint scan --exclude-rule-id java-jwt-decode-without-verify .
 
 Each entry matches a full `path/to/file.yaml:rule-id`, a bare rule name, or a
 doublestar glob over the full id — the same grammar as `summary --rule-id`.
-`--rule-id` overrides the config lists; `--exclude-rule-id` overrides
+`--rule-id` overrides the config lists. `--exclude-rule-id` overrides
 `rules.exclude`.
 
 Notes:
@@ -351,7 +351,7 @@ Persist the default-branch report with `actions/cache`, restore it on pull
 requests, and gate on new findings. A cache written on the default branch is
 readable from pull-request runs via `restore-keys`, which makes it a simple,
 official way to carry the baseline forward. (The first run has no baseline and
-scans without gating; every later PR gates against the latest main report.)
+scans without gating. Every later PR gates against the latest main report.)
 
 ```yaml
 name: opentaint
@@ -370,7 +370,7 @@ jobs:
         run: curl -fsSL https://raw.githubusercontent.com/seqra/opentaint/main/scripts/install/install.sh | sh
 
       # Restore the most recent main baseline. On main, this key also becomes
-      # the save target below; on a PR, restore-keys falls back to it read-only.
+      # the save target below. On a PR, restore-keys falls back to it read-only.
       - name: Restore baseline
         uses: actions/cache@v4
         with:

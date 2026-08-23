@@ -342,7 +342,7 @@ func TestWithAbsentAddsFixedFindingsForDisplayOnly(t *testing.T) {
 		t.Error("the added result is not marked absent")
 	}
 	if gone.BaselineState != nil {
-		t.Error("the baseline result itself was stamped; only the copy may be")
+		t.Error("the baseline result itself was stamped, but only the copy may be")
 	}
 }
 
@@ -391,7 +391,7 @@ func TestChangeUnderSinkIdentityNamesWhatMoved(t *testing.T) {
 		t.Errorf("path-changed count = %d, want 1", got)
 	}
 	if got := cmp.Counts[Updated]; got != 2 {
-		t.Errorf("updated count = %d, want 2; every change is still one SARIF state", got)
+		t.Errorf("updated count = %d, want 2 (every change is still one SARIF state)", got)
 	}
 }
 

@@ -36,11 +36,11 @@ var triageCmd = &cobra.Command{
 	Use:   "triage <sarif-report>",
 	Short: "Compare a report against a baseline and record suppressions",
 	Args:  cobra.ExactArgs(1),
-	Long: `Compare a SARIF report against a baseline and record triage decisions. Accepting a finding means it will not be fixed; deferring means it is not being fixed for now. Both are recorded as SARIF suppressions, which any SARIF consumer honors.
+	Long: `Compare a SARIF report against a baseline and record triage decisions. Accepting a finding means it will not be fixed. Deferring means it is not being fixed for now. Both are recorded as SARIF suppressions, which any SARIF consumer honors.
 
 The required positional argument is the path to the SARIF report to triage, such as one written by opentaint scan. Findings are identified by fingerprint, so a decision survives edits elsewhere in the code. Nothing is ever deleted: an accepted or deferred finding stays in the report, marked with a suppression that records the decision and its justification.
 
-Name a finding by a fingerprint prefix, git-style: the value shown as "Fingerprint:" by opentaint summary --show-findings. Both commands read the same key, so the value on screen is the value to paste here; --fingerprint-key changes it on both sides. An ambiguous or unknown prefix is an error, never a guess.
+Name a finding by a fingerprint prefix, git-style: the value shown as "Fingerprint:" by opentaint summary --show-findings. Both commands read the same key, so the value on screen is the value to paste here. The --fingerprint-key flag changes it on both sides. An ambiguous or unknown prefix is an error, never a guess.
 
 The triaged report is rewritten in place, or written to --output when set. With --baseline, decisions recorded in the baseline are inherited by the matching findings first, so a chain of reports carries its triage history forward.
 
@@ -78,8 +78,8 @@ func init() {
 	triageCmd.Flags().StringArrayVar(&triageFlags.Accept, "accept", nil, "Accept the finding with this fingerprint prefix: won't fix (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Defer, "defer", nil, "Defer the finding with this fingerprint prefix: not fixing for now (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Unsuppress, "unsuppress", nil, "Remove the suppression from the finding with this fingerprint prefix (repeatable)")
-	triageCmd.Flags().StringArrayVar(&triageFlags.Justifications, "justification", nil, "Why the finding is accepted or deferred (required with --accept/--defer; one per run)")
-	triageCmd.Flags().StringVarP(&triageFlags.Output, "output", "o", "", "Path to write the triaged report; defaults to rewriting the input in place")
+	triageCmd.Flags().StringArrayVar(&triageFlags.Justifications, "justification", nil, "Why the finding is accepted or deferred (required with --accept/--defer, one per run)")
+	triageCmd.Flags().StringVarP(&triageFlags.Output, "output", "o", "", "Path to write the triaged report (defaults to rewriting the input in place)")
 	addGateFlags(triageCmd, &triageFlags.ErrorOnFindings, &triageFlags.ErrorOnSeverity)
 	triageCmd.Flags().BoolVar(&triageFlags.ShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
 	triageCmd.Flags().BoolVar(&triageFlags.ShowFindings, "show-findings", false, "Show every finding, not just the summary")
@@ -87,8 +87,8 @@ func init() {
 
 // addGateFlags registers the failure-gate flags shared by scan and triage.
 func addGateFlags(cmd *cobra.Command, errorOnFindings *bool, severities *[]string) {
-	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain; with --baseline, only new ones count")
-	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: note, warning, error, none (repeatable or comma-separated; defaults to all)")
+	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain (with --baseline, only new ones count)")
+	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: note, warning, error, none (repeatable or comma-separated, defaults to all)")
 }
 
 func runTriage(cfg TriageConfig, reportPath string) {

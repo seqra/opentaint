@@ -100,7 +100,7 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 	}
 	if len(baselineResults) > 0 && len(byIdentity) == 0 {
 		return nil, fmt.Errorf(
-			"no result in the baseline carries the %q fingerprint; "+
+			"no result in the baseline carries the %q fingerprint: "+
 				"it was produced with a different fingerprint key or without fingerprints", key)
 	}
 
@@ -162,7 +162,7 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 // WithAbsent returns a shallow copy of the report whose first run also carries
 // the given baseline results, each stamped absent. It exists so that the fixed
 // findings — which live in the baseline and never in the current report — can be
-// listed on request. Only the display path calls it; the copies never reach a
+// listed on request. Only the display path calls it. The copies never reach a
 // report that is written back.
 func (report *Report) WithAbsent(absent []*Result) *Report {
 	if len(absent) == 0 || len(report.Runs) == 0 {
@@ -302,7 +302,7 @@ func EnsureRunGUIDs(report *Report) {
 }
 
 // newUUIDv4 returns a random RFC 4122 version 4 UUID. Hand-rolled to avoid a
-// dependency for sixteen bytes; rand.Read is documented never to fail.
+// dependency for sixteen bytes. rand.Read is documented never to fail.
 func newUUIDv4() string {
 	var b [16]byte
 	if _, err := rand.Read(b[:]); err != nil {
