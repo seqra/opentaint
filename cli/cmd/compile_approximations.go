@@ -18,7 +18,7 @@ import (
 // bundles approximation support sources (OpentaintNdUtil, ArgumentTypeContext).
 const approxClassesJarPrefix = "opentaint-dataflow-approximations/"
 
-// compileApproximationsIfNeeded checks whether a --dataflow-approximations directory
+// compileApproximationsIfNeeded checks whether a --java-models directory
 // contains .java source files. If so, it compiles them using javac (with the
 // analyzer JAR + project dependencies on the classpath) and returns the path to
 // the compiled .class output directory. If the directory already contains only
