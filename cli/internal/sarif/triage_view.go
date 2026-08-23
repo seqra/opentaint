@@ -82,7 +82,7 @@ func (c *Comparison) restrict(filtered *Report, f Filters) *Comparison {
 }
 
 // baselineItems renders the Baseline group, or nil when no baseline applies.
-// Zero-valued state counts are omitted so the group stays readable; the states
+// Zero-valued state counts are omitted so the group stays readable. The states
 // that matter are the ones that happened.
 func (v *TriageView) baselineItems(out *output.Printer) []any {
 	if v == nil || v.Comparison == nil {

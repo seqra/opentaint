@@ -188,7 +188,7 @@ func init() {
 	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (defaults to file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
 	addBaselineFlags(summaryCmd, &summaryBaseline, &summaryFingerprintKey)
-	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings in these baseline states: new, unchanged, updated, absent (repeatable; reads states written by --write-baseline-state, or computed from --baseline)")
+	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings in these baseline states: new, unchanged, updated, absent (repeatable, reads states written by --write-baseline-state or computed from --baseline)")
 	summaryCmd.Flags().BoolVar(&summaryShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
 }
 
@@ -196,7 +196,7 @@ func init() {
 // a report against a baseline.
 func addBaselineFlags(cmd *cobra.Command, baseline *string, fingerprintKey *string) {
 	cmd.Flags().StringVar(baseline, "baseline", "", "Previous SARIF report to compare against and inherit suppressions from")
-	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "Which fingerprint identifies a finding across reports: "+strings.Join(sarif.IdentityAliases, ", ")+", or a partialFingerprints key; defaults to sink")
+	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "Which fingerprint identifies a finding across reports: "+strings.Join(sarif.IdentityAliases, ", ")+", or a partialFingerprints key (defaults to sink)")
 }
 
 // loadBaselineOrExit resolves and loads a baseline report, refusing to use the
@@ -272,7 +272,7 @@ func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowS
 }
 
 // printSarifSummary renders the optional finding listing followed by the scan
-// summary. list controls whether the listing is printed; each command owns its
+// summary. list controls whether the listing is printed. Each command owns its
 // own --show-findings flag.
 func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.Filters, opts sarif.ListingOptions, view *sarif.TriageView, list bool) {
 	filtered := report.Filter(filters)

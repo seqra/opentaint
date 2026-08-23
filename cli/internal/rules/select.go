@@ -105,7 +105,7 @@ func Select(selection Selection, roots []string) (Resolved, error) {
 		kept = append(kept, id)
 	}
 	if len(kept) == 0 {
-		return Resolved{}, fmt.Errorf("rules.only/rules.exclude select no rules at all; nothing would be scanned")
+		return Resolved{}, fmt.Errorf("rules.only/rules.exclude select no rules at all: nothing would be scanned")
 	}
 
 	if len(selection.Only) == 0 {
@@ -141,7 +141,7 @@ func ApplyExclusions(ids, patterns []string) ([]string, error) {
 		}
 	}
 	if len(ids) > 0 && len(kept) == 0 {
-		return nil, fmt.Errorf("--exclude-rule-id excludes every rule selected by --rule-id; nothing would be scanned")
+		return nil, fmt.Errorf("--exclude-rule-id excludes every rule selected by --rule-id: nothing would be scanned")
 	}
 	return kept, nil
 }

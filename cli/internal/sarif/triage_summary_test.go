@@ -154,7 +154,7 @@ func TestRestrictCountsOnlyWhatTheFilterKept(t *testing.T) {
 	if got := restricted.Comparison.Counts[Unchanged]; got != 0 {
 		t.Errorf("Unchanged = %d, want 0: the unchanged finding belongs to another rule", got)
 	}
-	// Two baseline findings are gone (id-b under xss, id-gone under sql); the
+	// Two baseline findings are gone (id-b under xss, id-gone under sql). The
 	// filter keeps only the xss one.
 	if got := restricted.Comparison.Counts[Absent]; got != 1 {
 		t.Errorf("Fixed = %d, want 1: only the xss finding survives the filter", got)

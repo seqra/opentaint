@@ -156,7 +156,7 @@ func init() {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable; overrides rules.exclude from the config)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable, overrides rules.exclude from the config)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -212,7 +212,7 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 // resolveRuleIDs determines which rules the analyzer should run, as exact
 // inclusion and exclusion ids (patterns never reach the analyzer).
 //
-// --rule-id wins over the config lists, as flags do everywhere else; honoring
+// --rule-id wins over the config lists, as flags do everywhere else. Honoring
 // a flag and rules.only together would silently intersect two selections the
 // user never asked to combine. --exclude-rule-id overrides rules.exclude the
 // same way, and composes with --rule-id since both were asked for explicitly.

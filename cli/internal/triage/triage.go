@@ -50,8 +50,8 @@ type Outcome struct {
 // Apply runs a triage pass over report, mutating it in place.
 //
 // Order matters: suppressions are inherited from the baseline first, so that a
-// decision made in a previous cycle is visible; then explicit accept/defer
-// decisions from this run overwrite them; then the baseline comparison is
+// decision made in a previous cycle is visible. Explicit accept/defer
+// decisions from this run then overwrite them, and the baseline comparison is
 // computed over the final state.
 func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
 	key, err := sarif.ResolveIdentityKey(opts.FingerprintKey)
