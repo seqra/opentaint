@@ -3,18 +3,95 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
+	"time"
 
+	"github.com/seqra/opentaint/internal/analyzer"
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
 )
 
-// dockerFallbackHintPrefix is the shared lead-in for the Docker-based fallback
-// hints emitted when native compilation can't find a suitable Java. compile and
-// scan complete it with their respective "compilation:" / "scan:" suffix.
-const dockerFallbackHintPrefix = "If native compilation fails due to missing required Java, set JAVA_HOME according to the project's requirements or try Docker-based "
-
 func suggest(description, command string) {
 	out.Suggest(description, command)
+}
+
+// withFlag appends flag to the command string when it is not already present,
+// for suggestions that re-run the current invocation with one extra flag.
+func withFlag(command, flag string) string {
+	if strings.Contains(command, flag) {
+		return command
+	}
+	return command + " " + flag
+}
+
+// retrySuggestion builds the "re-run with more resources" hint for a resource
+// analyzer failure. The second result is false for exit codes where a plain
+// retry would not help (unhandled exception, configuration error).
+func retrySuggestion(exitCode int, timeout time.Duration, maxMemory string) (output.Suggestion, bool) {
+	switch exitCode {
+	case analyzer.ExitOOM:
+		return output.Suggestion{
+			Description: "To retry with more memory, run:",
+			Command:     rerunReplacingFlag(doubleMemory(maxMemory), "--max-memory"),
+		}, true
+	case analyzer.ExitTimeout:
+		return output.Suggestion{
+			Description: "To retry with a longer timeout, run:",
+			Command:     rerunReplacingFlag((timeout * 2).String(), "--timeout", "-t"),
+		}, true
+	}
+	return output.Suggestion{}, false
+}
+
+// rerunReplacingFlag reconstructs the current invocation with the named flag
+// (any alias, in both "--flag value" and "--flag=value" forms) replaced by the
+// given value, appended as names[0].
+func rerunReplacingFlag(value string, names ...string) string {
+	args := []string{"opentaint"}
+	skipNext := false
+	for _, arg := range os.Args[1:] {
+		if skipNext {
+			skipNext = false
+			continue
+		}
+		matched := false
+		for _, name := range names {
+			if arg == name {
+				matched = true
+				skipNext = true
+				break
+			}
+			if strings.HasPrefix(arg, name+"=") {
+				matched = true
+				break
+			}
+		}
+		if matched {
+			continue
+		}
+		args = append(args, shellQuote(arg))
+	}
+	args = append(args, names[0], shellQuote(value))
+	return strings.Join(args, " ")
+}
+
+// doubleMemory doubles a memory value like 8G or 1024m, falling back to the
+// runtime failure message's own 16G example when the value does not parse.
+func doubleMemory(value string) string {
+	digits := 0
+	for digits < len(value) && value[digits] >= '0' && value[digits] <= '9' {
+		digits++
+	}
+	suffix := value[digits:]
+	if digits == 0 || len(suffix) > 1 {
+		return "16G"
+	}
+	n, err := strconv.ParseInt(value[:digits], 10, 64)
+	if err != nil {
+		return "16G"
+	}
+	return fmt.Sprintf("%d%s", n*2, suffix)
 }
 
 // logSuggestion returns a Suggestion pointing at the active log file. The

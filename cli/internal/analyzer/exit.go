@@ -37,9 +37,9 @@ func ExitMessage(code int) string {
 	case ExitConfigError:
 		return "project configuration error"
 	case ExitTimeout:
-		return "analysis timed out — try increasing --timeout or --max-memory"
+		return "analysis timed out: try increasing --timeout or --max-memory"
 	case ExitOOM:
-		return "out of memory — try increasing --max-memory (e.g. --max-memory 16G)"
+		return "out of memory: try increasing --max-memory (e.g. --max-memory 16G)"
 	case ExitException:
 		return "unhandled analyzer exception"
 	default:
