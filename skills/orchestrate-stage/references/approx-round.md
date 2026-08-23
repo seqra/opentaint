@@ -37,7 +37,10 @@ It merges every batch's `skipped` / `engine_issues` into `approximations/skipped
   - `language`
   - `batch`
   - `methods` (optional) — only an explicitly assigned subset to redo
-- dataflow step 1 → dispatch create-test-project
+
+On Go the dataflow branch never runs: there is no dataflow approximation, so a Go batch's `dataflow` bucket stays empty, no test project is scaffolded for it, and every carrier is a passThrough. A Go carrier that won't converge goes straight to escalation.
+
+- dataflow step 1 (Java/JVM only) → dispatch create-test-project
   - `language`
   - `type: dataflow`
   - `batch`
