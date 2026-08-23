@@ -77,7 +77,7 @@ var scanCmd = &cobra.Command{
 	Args:  cobra.MaximumNArgs(1),
 	Long: `Scan a project for vulnerabilities. OpenTaint detects the build system, builds the project, and runs taint analysis over the result.
 
-The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to analyze a pre-compiled project model instead of building; source-path and --project-model are mutually exclusive.
+The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to analyze a pre-compiled project model instead of building. The source-path argument and --project-model are mutually exclusive.
 
 Findings are written as a SARIF report to --output, or into the project model directory when unset, and summarized on completion.
 
@@ -485,7 +485,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			if analyzerFail == nil {
 				out.Successf("Reachability analysis completed.")
 			}
-			// The reachability report is the command's deliverable; point at it,
+			// The reachability report is the command's deliverable. Point at it,
 			// never at the main SARIF.
 			reachabilityReportPath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
 			suggestions = append(suggestions, output.Suggestion{

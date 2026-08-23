@@ -14,7 +14,7 @@ var summaryCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1), // require exactly one argument
 	Long: `Summarize a SARIF report on the terminal. OpenTaint counts the findings by severity, groups them, and shows which rules ran and which produced results.
 
-The required positional argument is the path to a SARIF report, such as one written by opentaint scan or opentaint test. Pass --show-findings to list every finding; narrow the listing with --severity, --rule-id, or --path, and expand code flows with --show-code-snippets and --verbose-flow.
+The required positional argument is the path to a SARIF report, such as one written by opentaint scan or opentaint test. Pass --show-findings to list every finding. Narrow the listing with --severity, --rule-id, or --path, and expand code flows with --show-code-snippets and --verbose-flow.
 
 The report is read only: the summary and any findings are printed to the terminal and nothing is written to disk.
 
@@ -88,9 +88,9 @@ func init() {
 	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings at these SARIF levels: note, warning, error, none (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings from this rule: full id, leaf name, or glob (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose partial fingerprint starts with this value (git-hash style, repeatable)")
-	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint; defaults to vulnerabilityWithTraceHash/v1")
+	summaryCmd.Flags().StringVar(&summaryFingerprintKey, "partial-fingerprint-key", "", "partialFingerprints key matched by --partial-fingerprint (defaults to vulnerabilityWithTraceHash/v1)")
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
-	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path; defaults to file-path")
+	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (defaults to file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
 }
 

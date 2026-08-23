@@ -14,7 +14,7 @@ func failOnInvalidInputs(validate func() error) {
 // runDryRun prints the standard dry-run tail: a status line naming the skipped
 // action, then a suggestion to repeat the same invocation without --dry-run.
 func runDryRun(skippedAction string) {
-	out.Printf("Dry run complete. Inputs validated; %s skipped.", skippedAction)
+	out.Printf("Dry run complete. Inputs validated, %s skipped.", skippedAction)
 	suggest("To run for real, run:", rerunWithoutDryRun())
 }
 
@@ -34,7 +34,7 @@ func rerunWithoutDryRun() string {
 }
 
 // shellQuote single-quotes an argument that would break when copy-pasted into
-// a shell (spaces, quotes); plain arguments pass through unchanged.
+// a shell (spaces, quotes). Plain arguments pass through unchanged.
 func shellQuote(arg string) string {
 	if arg != "" && !strings.ContainsAny(arg, " \t'\"") {
 		return arg

@@ -18,7 +18,7 @@ var (
 var testApproximationRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
 	Short: "Run dataflow-approximation tests on a compiled project model",
-	Long: `Run the samples declared in rule-test.yaml with the supplied dataflow approximations applied and report which passed. A fixed source-to-sink harness rule is applied automatically; positive samples reference it by id approximation-rule.
+	Long: `Run the samples declared in rule-test.yaml with the supplied dataflow approximations applied and report which passed. A fixed source-to-sink harness rule is applied automatically. Positive samples reference it by id approximation-rule.
 
 The project-model argument is a compiled project model directory, produced by opentaint compile. Supply the approximation under test with --java-models.
 
