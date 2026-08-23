@@ -264,16 +264,17 @@ class MethodForwardTraceResolver(
         val calleeInitialFactAp = callerEdge.factAp.rebase(startFactBase)
         val summaries = manager.findFactSummaryEdges(ep, calleeInitialFactAp)
 
-        val applicableSummaries = summaries.filter { isApplicableExitToReturnEdge(it) }
-
         val handler = analysisManager.getMethodCallSummaryHandler(
             apManager, analysisContext, callerEdge.statement
         )
 
+        val applicableSummaries = summaries
+            .filter { isApplicableExitToReturnEdge(it) }
+            .flatMap { handler.prepareFactToFactSummary(it) }
+
         val summaryApplied = applyMethodSummaries(
             currentEdge = callerEdge,
             callerFact = callerFact,
-            methodInitialFactBase = startFactBase,
             methodSummaries = applicableSummaries,
             handleSummaryEdge = handler::handleZeroToFact
         )
@@ -292,22 +293,22 @@ class MethodForwardTraceResolver(
     private fun TraceBuilder.applyMethodSummaries(
         currentEdge: ZeroToFact,
         callerFact: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
         methodSummaries: List<FactToFact>,
         handleSummaryEdge: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge) -> Set<Sequent>,
     ): Boolean {
         var summaryApplied = false
-        val methodInitialFact = callerFact.rebase(methodInitialFactBase)
 
         val summaries = methodSummaries.groupByTo(hashMapOf()) { it.initialFactAp }
         for ((summaryInitialFact, summaryEdges) in summaries) {
             val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
-                methodInitialFact, summaryInitialFact
+                callerFact, summaryInitialFact
             )
 
             for (summaryEdgeEffect in summaryEdgeEffects) {
                 for (methodSummary in summaryEdges) {
-                    val summaryEdge = SummaryEdge.F2F(methodSummary.initialFactAp, methodSummary.factAp)
+                    val summaryEdge = SummaryEdge.F2F(
+                        methodSummary.methodEntryPoint, methodSummary.initialFactAp, methodSummary.factAp
+                    )
                     val sf = handleSummaryEdge(callerFact, summaryEdgeEffect, summaryEdge)
                     handleSequentFact(currentEdge, sf)
                     summaryApplied = true

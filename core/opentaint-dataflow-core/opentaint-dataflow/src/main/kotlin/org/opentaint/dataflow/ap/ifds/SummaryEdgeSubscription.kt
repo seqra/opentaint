@@ -86,7 +86,7 @@ class SummaryEdgeSubscriptionManager(
         val calleeInitialFactAp = addedSubscription.callerPathEdge.factAp.rebase(addedSubscription.calleeInitialFactBase)
         val summaries = manager.findFactSummaryEdges(methodEntryPoint, calleeInitialFactAp)
 
-        val sub = ZeroToFactSub(addedSubscription.callerPathEdge, addedSubscription.calleeInitialFactBase)
+        val sub = ZeroToFactSub(addedSubscription.callerPathEdge)
 
         if (summaries.isNotEmpty()) {
             callerAnalyzer.handleZeroToFactMethodSummaryEdge(listOf(sub), summaries)
@@ -101,6 +101,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectSummaries.isNotEmpty()) {
             callerAnalyzer.handleZeroToFactMethodSideEffectSummary(
                 listOf(sub),
+                methodEntryPoint,
                 sideEffectSummaries
             )
         }
@@ -121,7 +122,7 @@ class SummaryEdgeSubscriptionManager(
         val calleeInitialFactAp = addedSubscription.callerPathEdge.factAp.rebase(addedSubscription.calleeInitialFactBase)
         val summaries = manager.findFactSummaryEdges(methodEntryPoint, calleeInitialFactAp)
 
-        val sub = FactToFactSub(addedSubscription.callerPathEdge, addedSubscription.calleeInitialFactBase)
+        val sub = FactToFactSub(addedSubscription.callerPathEdge)
 
         if (summaries.isNotEmpty()) {
             callerAnalyzer.handleFactToFactMethodSummaryEdge(listOf(sub), summaries)
@@ -136,7 +137,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectRequirements.isNotEmpty()) {
             callerAnalyzer.handleMethodSideEffectRequirement(
                 addedSubscription.callerPathEdge,
-                addedSubscription.calleeInitialFactBase,
+                methodEntryPoint,
                 sideEffectRequirements
             )
         }
@@ -145,6 +146,7 @@ class SummaryEdgeSubscriptionManager(
         if (sideEffectSummaries.isNotEmpty()) {
             callerAnalyzer.handleFactToFactMethodSideEffectSummary(
                 listOf(sub),
+                methodEntryPoint,
                 sideEffectSummaries
             )
         }
@@ -165,7 +167,7 @@ class SummaryEdgeSubscriptionManager(
         val calleeInitialFactAp = addedSubscription.callerPathEdge.factAp.rebase(addedSubscription.calleeInitialFactBase)
         val summaries = manager.findFactSummaryEdges(methodEntryPoint, calleeInitialFactAp)
 
-        val sub = NDFactToFactSub(addedSubscription.callerPathEdge, addedSubscription.calleeInitialFactBase)
+        val sub = NDFactToFactSub(addedSubscription.callerPathEdge)
 
         if (summaries.isNotEmpty()) {
             callerAnalyzer.handleNDFactToFactMethodSummaryEdge(listOf(sub), summaries)
@@ -568,7 +570,7 @@ class SummaryEdgeSubscriptionManager(
         ) {
             subscriptionStorage.findFactEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
                 val summarySubs = subscriptions.mapTo(mutableListOf()) {
-                    FactToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
+                    FactToFactSub(it.callerPathEdge)
                 }
 
                 if (summarySubs.isEmpty()) return@forEach
@@ -579,7 +581,7 @@ class SummaryEdgeSubscriptionManager(
 
             subscriptionStorage.findZeroEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
                 val summarySubs = subscriptions.mapTo(mutableListOf()) {
-                    ZeroToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
+                    ZeroToFactSub(it.callerPathEdge)
                 }
 
                 if (summarySubs.isEmpty()) return@forEach
@@ -590,7 +592,7 @@ class SummaryEdgeSubscriptionManager(
 
             subscriptionStorage.findFactNDEdgeSub(summaryInitialFact).forEach { (ep, subscriptions) ->
                 val summarySubs = subscriptions.mapTo(mutableListOf()) {
-                    NDFactToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
+                    NDFactToFactSub(it.callerPathEdge)
                 }
 
                 if (summarySubs.isEmpty()) return@forEach
@@ -634,7 +636,8 @@ class SummaryEdgeSubscriptionManager(
                     val analyzer = processingCtx.getMethodAnalyzer(ep)
                     for (subscription in subscriptions) {
                         analyzer.handleMethodSideEffectRequirement(
-                            subscription.callerPathEdge, subscription.calleeInitialFactBase,
+                            subscription.callerPathEdge,
+                            methodEntryPoint,
                             listOf(sideEffectRequirement)
                         )
                     }
@@ -695,24 +698,24 @@ class SummaryEdgeSubscriptionManager(
         ) {
             subscriptionStorage.findFactEdgeSub(seInitialFact).forEach { (ep, subscriptions) ->
                 val summarySubs = subscriptions.mapTo(mutableListOf()) {
-                    FactToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
+                    FactToFactSub(it.callerPathEdge)
                 }
 
                 if (summarySubs.isEmpty()) return@forEach
 
                 val analyzer = processingCtx.getMethodAnalyzer(ep)
-                analyzer.handleFactToFactMethodSideEffectSummary(summarySubs, sideEffects)
+                analyzer.handleFactToFactMethodSideEffectSummary(summarySubs, methodEntryPoint, sideEffects)
             }
 
             subscriptionStorage.findZeroEdgeSub(seInitialFact).forEach { (ep, subscriptions) ->
                 val summarySubs = subscriptions.mapTo(mutableListOf()) {
-                    ZeroToFactSub(it.callerPathEdge, it.calleeInitialFactBase)
+                    ZeroToFactSub(it.callerPathEdge)
                 }
 
                 if (summarySubs.isEmpty()) return@forEach
 
                 val analyzer = processingCtx.getMethodAnalyzer(ep)
-                analyzer.handleZeroToFactMethodSideEffectSummary(summarySubs, sideEffects)
+                analyzer.handleZeroToFactMethodSideEffectSummary(summarySubs, methodEntryPoint, sideEffects)
             }
         }
     }
