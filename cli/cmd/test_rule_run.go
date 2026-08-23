@@ -173,7 +173,7 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	}
 	addPassthroughModels(builder, opts.passthroughModels)
 
-	javaRunner := newAnalyzerJavaRunner()
+	javaRunner := newAnalyzerJavaRunner(goServerEnvForModel(projectPath))
 	if _, err := javaRunner.EnsureJava(); err != nil {
 		fail("Failed to find Java for the analyzer", err)
 	}

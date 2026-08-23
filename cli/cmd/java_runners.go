@@ -5,11 +5,12 @@ import (
 	"github.com/seqra/opentaint/internal/utils/java"
 )
 
-func newAnalyzerJavaRunner() java.JavaRunner {
+func newAnalyzerJavaRunner(env map[string]string) java.JavaRunner {
 	return java.NewJavaRunner().
 		WithSkipVerify(globals.Config.SkipVerify).
 		WithDebugOutput(out.DebugStream("Analyzer")).
 		WithImageType(java.AdoptiumImageJRE).
+		WithExtraEnv(env).
 		TrySpecificVersion(globals.DefaultJavaVersion)
 }
 
