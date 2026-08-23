@@ -118,7 +118,7 @@ These flags are to work with custom approximations:
 | `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
 | `--java-models` | Apply Java dataflow model projects, build outputs, or class directories (repeatable) |
 
-Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
+Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available. The approximated-methods file shows methods already covered by built-in or custom models.
 
 ### opentaint health
 
@@ -221,9 +221,9 @@ Compiling ahead of time is optional — scanning and testing build the project t
 
 ### opentaint summary
 
-View findings from a SARIF report. By default it prints the Scan Summary; add
+View findings from a SARIF report. By default it prints the Scan Summary. Add
 `--show-findings` for the detailed listing. The filter flags below narrow the
-whole summary (both the counts and the listing); `Rules executed` always
+whole summary (both the counts and the listing). `Rules executed` always
 reflects the full set the tool ran.
 
 | Flag | Description |
@@ -298,6 +298,6 @@ These options apply to all commands:
 - `--java-version int` — Java version for analyzer (default: 21)
 - `--quiet` / `-q` — Suppress interactive output (spinners, progress bars, JAR streaming)
 - `--debug` / `-d` — Enable debug output (stream JAR subprocess output, show debug fields)
-- `--color string` — Color mode (`auto`, `always`, `never`); defaults to `auto` (detects terminal)
+- `--color string` — Color mode (`auto`, `always`, `never`), defaults to `auto` (detects terminal)
 
 For persistent configuration using files or environment variables, see the [Configuration](configuration.md) documentation.
