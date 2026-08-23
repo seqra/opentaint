@@ -27,7 +27,7 @@ var testApproximationCmd = &cobra.Command{
 	Short: "Create and run dataflow-approximation tests",
 	Long: `Create and run dataflow-approximation tests. Approximation tests check that a dataflow approximation carries taint from source to sink across your samples.
 
-Scaffold a test project with test approximation init, compile it with opentaint compile, then run the samples with test approximation run, supplying the approximation under test with --dataflow-approximations.`,
+Scaffold a test project with test approximation init, compile it with opentaint compile, then run the samples with test approximation run, supplying the approximation under test with --java-models.`,
 }
 
 func init() {
@@ -40,5 +40,7 @@ func addTestRunFlags(cmd *cobra.Command, outputDir *string, timeout *time.Durati
 	cmd.Flags().StringVarP(outputDir, "output", "o", "", "Directory for test-result.json and test-results.sarif")
 	cmd.Flags().DurationVar(timeout, "timeout", 600*time.Second, "Maximum wall-clock time for analysis (e.g. 30m, 1h)")
 	cmd.Flags().StringVar(maxMemory, "max-memory", "8G", "Maximum analyzer heap size (e.g. 8G, 1024m)")
-	cmd.Flags().StringArrayVar(dataflow, "dataflow-approximations", nil, "Dataflow approximation class directory or Java source directory (Java analysis only, repeatable)")
+	cmd.Flags().StringArrayVar(dataflow, "java-models", nil, "Java dataflow models: a compiled class directory or a Java source directory (repeatable)")
+	cmd.Flags().StringArrayVar(dataflow, "dataflow-approximations", nil, "Java dataflow models: a compiled class directory or a Java source directory (repeatable)")
+	_ = cmd.Flags().MarkDeprecated("dataflow-approximations", "use --java-models")
 }
