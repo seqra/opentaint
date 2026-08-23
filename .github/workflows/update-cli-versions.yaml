@@ -15,12 +15,17 @@ on:
         description: 'Rules version tag (e.g. rules/v0.1.0). Leave empty for latest.'
         required: false
         type: string
+      go_server_version:
+        description: 'Go server version tag (e.g. go-server/2026.03.19.adeb616). Leave empty for latest.'
+        required: false
+        type: string
 
   workflow_run:
     workflows:
       - Publish Analyzer and Models
       - Publish Autobuilder
       - Release Rules
+      - Publish Go Server
     branches: [main]
     types: [completed]
 
@@ -66,19 +71,26 @@ jobs:
             RULES=$(git tag -l "rules/v[0-9]*.[0-9]*.[0-9]*" --sort=-v:refname | head -1)
           fi
 
+          GO_SERVER="${{ inputs.go_server_version }}"
+          if [ -z "$GO_SERVER" ]; then
+            GO_SERVER=$(git tag -l "go-server/[0-9]*" --sort=-creatordate | head -1)
+          fi
+
           if [ -z "$ANALYZER" ] || [ -z "$AUTOBUILDER" ] || [ -z "$RULES" ]; then
-            echo "::error::Failed to resolve versions (analyzer=${ANALYZER:-<empty>}, autobuilder=${AUTOBUILDER:-<empty>}, rules=${RULES:-<empty>})"
+            echo "::error::Failed to resolve versions (analyzer=${ANALYZER:-<empty>}, autobuilder=${AUTOBUILDER:-<empty>}, rules=${RULES:-<empty>}, go-server=${GO_SERVER:-<empty>})"
             exit 1
           fi
 
           echo "analyzer=$ANALYZER" >> "$GITHUB_OUTPUT"
           echo "autobuilder=$AUTOBUILDER" >> "$GITHUB_OUTPUT"
           echo "rules=$RULES" >> "$GITHUB_OUTPUT"
+          echo "go_server=$GO_SERVER" >> "$GITHUB_OUTPUT"
 
           echo "Resolved versions:"
           echo "  Analyzer:    $ANALYZER"
           echo "  Autobuilder: $AUTOBUILDER"
           echo "  Rules:       $RULES"
+          echo "  Go server:   $GO_SERVER"
 
       - name: Read current versions
         id: current
@@ -87,6 +99,9 @@ jobs:
           echo "analyzer=$(grep '^analyzer:' cli/internal/globals/versions.yaml | awk '{print $2}' | tr -d '\"')" >> "$GITHUB_OUTPUT"
           echo "autobuilder=$(grep '^autobuilder:' cli/internal/globals/versions.yaml | awk '{print $2}' | tr -d '\"')" >> "$GITHUB_OUTPUT"
           echo "rules=$(grep '^rules:' cli/internal/globals/versions.yaml | awk '{print $2}' | tr -d '\"')" >> "$GITHUB_OUTPUT"
+          if [ -n "${{ steps.versions.outputs.go_server }}" ]; then
+            echo "go_server=$(grep '^go-server:' cli/internal/globals/versions.yaml | awk '{print $2}' | tr -d '\"')" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Check for changes
         id: diff
@@ -102,6 +117,9 @@ jobs:
           fi
           if [ "${{ steps.versions.outputs.rules }}" != "${{ steps.current.outputs.rules }}" ]; then
             CHANGES="${CHANGES}- **rules**: \`${{ steps.current.outputs.rules }}\` → \`${{ steps.versions.outputs.rules }}\`"$'\n'
+          fi
+          if [ -n "${{ steps.versions.outputs.go_server }}" ] && [ "${{ steps.versions.outputs.go_server }}" != "${{ steps.current.outputs.go_server }}" ]; then
+            CHANGES="${CHANGES}- **go-server**: \`${{ steps.current.outputs.go_server }}\` → \`${{ steps.versions.outputs.go_server }}\`"$'\n'
           fi
 
           if [ -z "$CHANGES" ]; then
@@ -124,6 +142,9 @@ jobs:
           sed -i 's|^analyzer: .*|analyzer: "${{ steps.versions.outputs.analyzer }}"|' cli/internal/globals/versions.yaml
           sed -i 's|^autobuilder: .*|autobuilder: "${{ steps.versions.outputs.autobuilder }}"|' cli/internal/globals/versions.yaml
           sed -i 's|^rules: .*|rules: "${{ steps.versions.outputs.rules }}"|' cli/internal/globals/versions.yaml
+          if [ -n "${{ steps.versions.outputs.go_server }}" ]; then
+            sed -i 's|^go-server: .*|go-server: "${{ steps.versions.outputs.go_server }}"|' cli/internal/globals/versions.yaml
+          fi
 
           echo "Updated versions.yaml:"
           cat cli/internal/globals/versions.yaml
