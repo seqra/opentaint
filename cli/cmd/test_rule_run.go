@@ -63,7 +63,7 @@ Compile the test project with opentaint compile before running. Inspect the resu
 
 type testProjectOptions struct {
 	label               string
-	passedLine          string // success status line; matches the documented exit-code 0 row
+	passedLine          string // success status line, matching the documented exit-code 0 row
 	tempDir             string
 	rulesets            []string
 	outputDir           string
@@ -165,8 +165,8 @@ func runTestProject(projectModelArg string, opts testProjectOptions) {
 	if analyzerFail != nil {
 		out.Error(analyzerFail.Message)
 		// Test runs do not activate file logging, so the log pointer is usually
-		// absent. For resource failures suggest the retry with more resources;
-		// otherwise the --debug re-run is the actionable way to see what failed.
+		// absent. For resource failures suggest the retry with more resources.
+		// Otherwise the --debug re-run is the actionable way to see what failed.
 		hint := output.Suggestion{
 			Description: "To stream the analyzer output, re-run with --debug:",
 			Command:     withFlag(rerunWithoutDryRun(), "--debug"),

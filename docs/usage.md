@@ -129,7 +129,7 @@ opentaint health --rules
 opentaint health --analyzer
 ```
 
-With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime, and reports whether each is present. With a single component flag, it prints only the bare path, which is useful for scripts. The command exits non-zero when a selected component is missing; fetch missing components with `opentaint pull`.
+With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Java runtime, and reports whether each is present. With a single component flag, it prints only the bare path, which is useful for scripts. The command exits non-zero when a selected component is missing. Fetch missing components with `opentaint pull`.
 
 | Flag | Description |
 |------|-------------|

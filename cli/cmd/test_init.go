@@ -19,9 +19,9 @@ var initRuleSourcesOnly bool
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects for detection-rule tests. The sinks project tests sink rules against a generic taint source; the sources project tests source rules against a generic taint sink.
+	Long: `Create one or two Gradle test projects for detection-rule tests. The sinks project tests sink rules against a generic taint source. The sources project tests source rules against a generic taint sink.
 
-The output-dir argument is the parent directory the projects are created under. By default both are scaffolded, as output-dir/sinks and output-dir/sources; pass --sinks-only or --sources-only to create just one. Use --dependency to add compile-only Maven dependencies for the samples.
+The output-dir argument is the parent directory the projects are created under. By default both are scaffolded, as output-dir/sinks and output-dir/sources. Pass --sinks-only or --sources-only to create just one. Use --dependency to add compile-only Maven dependencies for the samples.
 
 Each project ships a rule-test.yaml where you declare the positive and negative samples, plus a Taint.java source and sink harness.
 
@@ -70,7 +70,7 @@ var testApproximationInitCmd = &cobra.Command{
 	Short: "Create a dataflow-approximation test project",
 	Long: `Create a Gradle test project for dataflow-approximation tests. The project pins a fixed source-to-sink rule that the samples are checked against.
 
-The output-dir argument is the directory the project is created in. Use --dependency to add compile-only Maven dependencies for the samples. The approximation under test is not baked in; supply it at run time with --java-models.
+The output-dir argument is the directory the project is created in. Use --dependency to add compile-only Maven dependencies for the samples. The approximation under test is not baked in. Supply it at run time with --java-models.
 
 The project ships a rule-test.yaml where you declare the positive and negative samples, plus a Taint.java source and sink and the fixed approximation-rule.yaml.
 

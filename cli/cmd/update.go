@@ -20,7 +20,7 @@ var (
 var updateCmd = &cobra.Command{
 	Use:   "update [version]",
 	Short: "Update opentaint to the latest version",
-	Long: `Update the opentaint binary in place to the latest release, or to the optional version argument. Only upgrades are supported; downgrading to an older version is refused.
+	Long: `Update the opentaint binary in place to the latest release, or to the optional version argument. Only upgrades are supported. Downgrading to an older version is refused.
 
 Homebrew and npm installations print the matching package-manager command instead of updating in place. Pass --check to report the latest version without downloading, or --yes to skip the confirmation prompt.
 

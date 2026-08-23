@@ -30,7 +30,7 @@ var healthCmd = &cobra.Command{
 	Short: "Show dependency paths and report missing components",
 	Long: `Show the on-disk paths for the autobuilder, analyzer, built-in rules, and Java runtime, and report whether each component is present.
 
-Select components with --autobuilder, --analyzer, --rules, or --runtime; with no flag, all four are reported. When exactly one component is selected, only its path is printed, which suits scripting. Only the built-in rules are fetched on demand; no other artifact is downloaded.
+Select components with --autobuilder, --analyzer, --rules, or --runtime. With no flag, all four are reported. When exactly one component is selected, only its path is printed, which suits scripting. Only the built-in rules are fetched on demand. No other artifact is downloaded.
 
 The command exits non-zero when any selected component is missing. Download the missing components with opentaint pull.`,
 	Example: `  # Report all components and their paths

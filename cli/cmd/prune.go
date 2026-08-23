@@ -60,7 +60,7 @@ var pruneCmd = &cobra.Command{
 	Short: "Remove stale downloaded artifacts from the cache",
 	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint): superseded analyzer and autobuilder JARs, old rules, JDK and JRE versions that no longer match the configured one, and cached project models.
 
-Select categories with --artifacts, --rules, --jdk, --models, --logs, or --install. Without a category flag, prune removes artifacts, rules, jdk, and models; --all removes everything, including logs and install-tier artifacts, and cannot be combined with a specific category flag.
+Select categories with --artifacts, --rules, --jdk, --models, --logs, or --install. Without a category flag, prune removes artifacts, rules, jdk, and models. The --all flag removes everything, including logs and install-tier artifacts, and cannot be combined with a specific category flag.
 
 Preview the deletions with --dry-run, and skip the confirmation prompt with --yes. Restore install-tier artifacts afterward with opentaint pull.`,
 	Example: `  # Prune the default categories after confirming

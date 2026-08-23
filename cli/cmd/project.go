@@ -220,7 +220,7 @@ var (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Create a project model from precompiled JARs or classes",
-	Long: `Create a project model directly from precompiled JARs or classes, without running a build. OpenTaint inspects the supplied classpath, detects the modules and dependencies, and writes a project.yaml describing the project for later analysis. Use this when you already have compiled artifacts; opentaint compile builds a model from sources instead.
+	Long: `Create a project model directly from precompiled JARs or classes, without running a build. OpenTaint inspects the supplied classpath, detects the modules and dependencies, and writes a project.yaml describing the project for later analysis. Use this when you already have compiled artifacts. To build a model from sources, use opentaint compile instead.
 
 All inputs are supplied as flags. Provide --source-root for the project sources, one or more --classpath entries for the compiled classes or JARs, and one or more --package names to include. Add --dependency for extra JAR files on the compile classpath.
 
