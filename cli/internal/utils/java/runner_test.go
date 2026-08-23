@@ -1,7 +1,9 @@
 package java
 
 import (
+	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -391,4 +393,159 @@ func TestEnvironmentVariableList(t *testing.T) {
 		_ = os.Unsetenv(v)
 	}
 	_ = os.Unsetenv("NON_JAVA")
+}
+
+// --- WithExtraEnv: builder semantics ---
+
+func TestJavaRunner_WithExtraEnv_NilAndEmptyAreNoOps(t *testing.T) {
+	j := &javaRunner{}
+
+	ret := j.WithExtraEnv(nil)
+	if jr, ok := ret.(*javaRunner); !ok || jr != j {
+		t.Fatalf("WithExtraEnv(nil) should return the same usable *javaRunner")
+	}
+	if j.extraEnv != nil {
+		t.Errorf("WithExtraEnv(nil) should not allocate extraEnv, got %v", j.extraEnv)
+	}
+
+	ret = j.WithExtraEnv(map[string]string{})
+	if jr, ok := ret.(*javaRunner); !ok || jr != j {
+		t.Fatalf("WithExtraEnv(empty) should return the same usable *javaRunner")
+	}
+	if j.extraEnv != nil {
+		t.Errorf("WithExtraEnv(empty) should not allocate extraEnv, got %v", j.extraEnv)
+	}
+}
+
+func TestJavaRunner_WithExtraEnv_MergeLaterWins(t *testing.T) {
+	j := &javaRunner{}
+	j.WithExtraEnv(map[string]string{"A": "1", "B": "2"})
+	j.WithExtraEnv(map[string]string{"B": "20", "C": "3"})
+
+	want := map[string]string{"A": "1", "B": "20", "C": "3"}
+	if len(j.extraEnv) != len(want) {
+		t.Fatalf("extraEnv = %v, want %v", j.extraEnv, want)
+	}
+	for k, v := range want {
+		if j.extraEnv[k] != v {
+			t.Errorf("extraEnv[%q] = %q, want %q (later WithExtraEnv call should win)", k, j.extraEnv[k], v)
+		}
+	}
+}
+
+// --- executeWithJava: extra env reaches the child process ---
+//
+// These tests re-execute the test binary itself as the "java" process via
+// executeWithJava and have the child (TestHelperProcess) dump its environment
+// to a file, so we can assert what actually ended up in cmd.Env on each
+// resolution strategy. No real JVM is required.
+
+// runHelperEnv runs executeWithJava with the test binary as the child process
+// and returns the environment that child observed. The GO_WANT_HELPER_PROCESS
+// gate is injected through the runner's own extra-env mechanism, so if extra
+// env failed to reach the child the helper would never activate and the env
+// file would be missing (surfaced as a clear failure here).
+func runHelperEnv(t *testing.T, j *javaRunner, strategy ResolutionStrategy) map[string]string {
+	t.Helper()
+
+	outFile := filepath.Join(t.TempDir(), "child-env.txt")
+	j.WithExtraEnv(map[string]string{"GO_WANT_HELPER_PROCESS": "1"})
+
+	args := []string{"-test.run=TestHelperProcess", "--", outFile}
+	cmdErr, err := j.executeWithJava(os.Args[0], strategy, args, func(error) bool { return true })
+	if err != nil {
+		t.Fatalf("executeWithJava returned setup error: %v", err)
+	}
+	if cmdErr != nil {
+		t.Fatalf("helper process exited non-zero: %v", cmdErr)
+	}
+
+	raw, err := os.ReadFile(outFile)
+	if err != nil {
+		t.Fatalf("reading child env file (extra env likely not propagated to child): %v", err)
+	}
+
+	env := map[string]string{}
+	for _, line := range strings.Split(string(raw), "\n") {
+		if line == "" {
+			continue
+		}
+		parts := strings.SplitN(line, "=", 2)
+		if len(parts) == 2 {
+			env[parts[0]] = parts[1]
+		}
+	}
+	return env
+}
+
+func TestJavaRunner_ExtraEnv_SystemStrategy_AppendsAndPreservesInherited(t *testing.T) {
+	// Set an inherited variable in the parent environment. On the System path
+	// cmd.Env starts nil and must be seeded from os.Environ() so inherited
+	// variables survive alongside the appended extra entry.
+	t.Setenv("OPENTAINT_INHERITED_SYS", "inherited-value")
+
+	j := (&javaRunner{}).WithExtraEnv(map[string]string{
+		"OPENTAINT_EXTRA_ENV_TEST": "extra-value",
+	}).(*javaRunner)
+
+	env := runHelperEnv(t, j, System)
+
+	if got := env["OPENTAINT_EXTRA_ENV_TEST"]; got != "extra-value" {
+		t.Errorf("child OPENTAINT_EXTRA_ENV_TEST = %q, want %q (extra env not appended on System path)", got, "extra-value")
+	}
+	if got := env["OPENTAINT_INHERITED_SYS"]; got != "inherited-value" {
+		t.Errorf("child OPENTAINT_INHERITED_SYS = %q, want %q (inherited env dropped; cmd.Env not seeded from os.Environ() on System path)", got, "inherited-value")
+	}
+}
+
+func TestJavaRunner_ExtraEnv_SpecificStrategy_AppendsAfterCleanEnv(t *testing.T) {
+	// Specific strategy uses the clean environment (Java vars stripped) and then
+	// appends the extra entries.
+	t.Setenv("OPENTAINT_INHERITED_SPECIFIC", "kept-value")
+	t.Setenv("JAVA_HOME", "/fake/java/home")
+
+	j := (&javaRunner{}).WithExtraEnv(map[string]string{
+		"OPENTAINT_EXTRA_ENV_TEST": "extra-value",
+	}).(*javaRunner)
+
+	env := runHelperEnv(t, j, Specific)
+
+	if got := env["OPENTAINT_EXTRA_ENV_TEST"]; got != "extra-value" {
+		t.Errorf("child OPENTAINT_EXTRA_ENV_TEST = %q, want %q (extra env not appended on Specific path)", got, "extra-value")
+	}
+	if got := env["OPENTAINT_INHERITED_SPECIFIC"]; got != "kept-value" {
+		t.Errorf("child OPENTAINT_INHERITED_SPECIFIC = %q, want %q (non-Java inherited env should survive clean env)", got, "kept-value")
+	}
+	if _, present := env["JAVA_HOME"]; present {
+		t.Errorf("child JAVA_HOME should be stripped by clean environment on Specific path, but it was present")
+	}
+}
+
+// TestHelperProcess is not a real test. It is re-executed as the child "java"
+// process by the env-injection tests above. When the GO_WANT_HELPER_PROCESS
+// gate (passed through the runner's extra env) is present it writes the child's
+// full environment to the file named after "--" and exits; otherwise it is a
+// no-op for normal test runs.
+func TestHelperProcess(t *testing.T) {
+	if os.Getenv("GO_WANT_HELPER_PROCESS") != "1" {
+		return
+	}
+
+	args := os.Args
+	for len(args) > 0 {
+		if args[0] == "--" {
+			args = args[1:]
+			break
+		}
+		args = args[1:]
+	}
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "helper: missing output file argument")
+		os.Exit(2)
+	}
+	if err := os.WriteFile(args[0], []byte(strings.Join(os.Environ(), "\n")), 0o644); err != nil {
+		fmt.Fprintln(os.Stderr, "helper: write env:", err)
+		os.Exit(3)
+	}
+	os.Exit(0)
 }
