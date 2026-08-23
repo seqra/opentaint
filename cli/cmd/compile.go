@@ -44,7 +44,7 @@ var compileCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1), // require exactly one argument
 	Long: `OpenTaint detects the build system, resolves the project's modules and dependencies, and compiles the project into a reusable model.
 
-The project argument is the path to the project root and is required. Pass --output to name the project model directory to create; it must not already exist.
+The project argument is the path to the project root and is required. Pass --output to name the project model directory to create. It must not already exist.
 
 The project model is written to the --output directory and can be reused by later scans without rebuilding.
 
