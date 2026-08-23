@@ -23,11 +23,11 @@ func TestArtifacts(t *testing.T) {
 	Config.Rules.Version = "v3.0.0"
 
 	arts := Artifacts()
-	if len(arts) != 3 {
-		t.Fatalf("expected 3 artifacts, got %d", len(arts))
+	if len(arts) != 4 {
+		t.Fatalf("expected 4 artifacts, got %d", len(arts))
 	}
 
-	names := []string{"Autobuilder", "Analyzer", "Rules"}
+	names := []string{"Autobuilder", "Analyzer", "Rules", "GoServer"}
 	for i, want := range names {
 		if arts[i].Name != want {
 			t.Errorf("Artifacts()[%d].Name = %q, want %q", i, arts[i].Name, want)
