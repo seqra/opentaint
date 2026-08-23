@@ -34,9 +34,11 @@ opentaint scan --project-model .opentaint/project \
 
 - `--rule-id <full-id>` — restrict to specific rules (repeatable, one per input rule ID); every unnamed rule is dropped, including library `refs`, so list every id the restricted rules depend on. Omit to run all loaded rules
 - `--passthrough-models .opentaint/pass-through` — add when that directory exists: passThrough configs override built-ins at the rule level, a provided rule overriding a built-in only when it matches one
-- `--java-models .opentaint/dataflow` — add when that directory exists: code-based approximations (sources auto-compiled; pre-compiled `.class` dirs passed through as-is)
+- `--java-models .opentaint/dataflow` — Java/JVM only; add when that directory exists: code-based approximations (sources auto-compiled; pre-compiled `.class` dirs passed through as-is). A Go run has no dataflow directory and never passes this flag — `--passthrough-models` is its only model flag
 
 Both approximation-dir flags walk their trees recursively; pass each parent directory once, not every package or batch separately.
+
+A Go project also scans straight from sources — `opentaint scan <project-root>` compiles on the fly — but prefer the pre-built model so every scan in a run sees the same code. `go` must be on PATH either way.
 
 The scan is long — run it in the background and wait for it to finish. Leave `--timeout` at the engine default (900s); the CLI ends the analysis itself and writes whatever SARIF it has.
 
@@ -70,3 +72,4 @@ All three sit next to the report under `.opentaint/results/`:
 ## Constraints
 
 - Never hand-edit the project model to change scan results — this skill only reads it. If the model is wrong, rebuild it at the model stage rather than patching `project.yaml` or anything under it
+- Go coverage can go missing without the scan failing. `go` absent from PATH hard-fails a Go-only scan, but in a polyglot repo it only warns and silently skips the Go analysis — the other languages scan normally and the report simply carries no Go findings. The same silence follows a model whose Go source root no longer resolves: a `--project-model` scan re-derives that root from `project.yaml` and re-detects Go against it, so a hand-written model recording an absolute `projectDir` loses Go coverage once that tree moves or loses its `go.mod` (an autobuilder model is portable — the sources are copied into `<model>/go_0` under a model-relative `projectDir`). On a Go run, check the report actually holds Go results before treating it as complete
