@@ -9,7 +9,7 @@ import (
 var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "Create and run rule and approximation tests",
-	Long: `Create, run, and debug rule and approximation tests. Rule tests check detection rules against annotated sample projects; approximation tests check dataflow approximations the same way.
+	Long: `Create, run, and debug rule and approximation tests. Rule tests check detection rules against annotated sample projects. Approximation tests check dataflow approximations the same way.
 
 Scaffold a project with init, compile it with opentaint compile, then run the samples with test rule run or test approximation run. Use test rule reachability to debug why a single rule does or does not fire.`,
 }

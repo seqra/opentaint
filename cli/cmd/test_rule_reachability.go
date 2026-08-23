@@ -11,7 +11,7 @@ var testRuleReachabilityCmd = &cobra.Command{
 	Short: "Trace why a rule can or cannot reach its facts",
 	Long: `Scan a project with a single rule and write a fact-reachability SARIF report so you can see why that rule does or does not fire. Referenced library source and sink rules are collected and analyzed automatically.
 
-The rule-id argument selects the one rule to trace. The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to trace a pre-compiled model instead; source-path and --project-model are mutually exclusive. Use --entry-points to start the analysis from a specific method.
+The rule-id argument selects the one rule to trace. The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to trace a pre-compiled model instead. The source-path argument and --project-model are mutually exclusive. Use --entry-points to start the analysis from a specific method.
 
 The report is written as debug-ifds-fact-reachability.sarif next to the main SARIF report.
 
