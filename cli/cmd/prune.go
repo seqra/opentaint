@@ -57,24 +57,23 @@ func resolveCategories() (utils.PruneCategory, error) {
 
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
-	Short: "Remove stale downloaded artifacts from ~/.opentaint",
-	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint).
+	Short: "Remove stale downloaded artifacts from the cache",
+	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint): superseded analyzer and autobuilder JARs, old rules, JDK and JRE versions that no longer match the configured one, and cached project models.
 
-Identifies artifacts that are no longer needed:
-- Old versions of analyzer JARs, autobuilder JARs, and rules
-- Downloaded JDK/JRE versions that don't match the current version
-- Cached project models
+Select categories with --artifacts, --rules, --jdk, --models, --logs, or --install. Without a category flag, prune removes artifacts, rules, jdk, and models; --all removes everything, including logs and install-tier artifacts, and cannot be combined with a specific category flag.
 
-Use category flags to prune selectively:
-  --artifacts   Stale analyzer and autobuilder JARs
-  --rules       Stale rules directories
-  --jdk         Old JDK/JRE versions
-  --models      Cached project models
-  --logs        Project log files
-  --install     Install-tier lib and JRE artifacts (requires re-download)
+Preview the deletions with --dry-run, and skip the confirmation prompt with --yes. Restore install-tier artifacts afterward with opentaint pull.`,
+	Example: `  # Prune the default categories after confirming
+  opentaint prune
 
-Without category flags, prunes: artifacts + rules + jdk + models.
-With --all: prunes everything including logs and install-tier.`,
+  # Prune only old JDK and JRE versions
+  opentaint prune --jdk
+
+  # Prune everything, including logs and install-tier artifacts
+  opentaint prune --all
+
+  # Preview what would be deleted without deleting
+  opentaint prune --dry-run`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {
@@ -84,23 +83,23 @@ With --all: prunes everything including logs and install-tier.`,
 		// Acquire global prune lock
 		pruneLockPath, err := utils.PruneLockPath()
 		if err != nil {
-			out.Fatalf("Failed to resolve prune lock path: %s", err)
+			failf("Failed to resolve prune lock path: %s", err)
 		}
 		pruneLock, err := utils.TryLockExclusive(pruneLockPath, utils.LockMeta{
 			PID:     os.Getpid(),
 			Command: "prune",
 		})
 		if err == utils.ErrLocked {
-			out.Fatal("Another prune is already running")
+			failWith(1, "Another prune is already running")
 		}
 		if err != nil {
-			out.Fatalf("Failed to acquire prune lock: %s", err)
+			failf("Failed to acquire prune lock: %s", err)
 		}
 		defer pruneLock.Unlock()
 
 		result, err := utils.ScanForStaleArtifacts(categories)
 		if err != nil {
-			out.Fatalf("Failed to scan for stale artifacts: %s", err)
+			failf("Failed to scan for stale artifacts: %s", err)
 		}
 
 		// Display skipped projects
@@ -130,22 +129,27 @@ With --all: prunes everything including logs and install-tier.`,
 			Render()
 
 		if pruneDryRun {
-			out.Print("Dry run mode. No files were deleted.")
+			out.Print("Dry run complete. No files were deleted.")
+			suggest("To delete these artifacts, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 			return
 		}
 
 		if !pruneYes {
 			if !out.Confirm("Delete these artifacts?", false) {
 				out.Print("Prune cancelled.")
+				suggest("To prune without confirming, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
 			}
 		}
 
 		if err := utils.DeleteArtifacts(result.Stale); err != nil {
-			out.Fatalf("Failed to delete artifacts: %s", err)
+			failf("Failed to delete artifacts: %s", err)
 		}
 
 		out.Successf("Pruned %d items, freed %s", result.TotalCount, output.FormatSize(result.TotalSize))
+		if pruneInstall || pruneAll {
+			suggest("To restore the removed components, run:", "opentaint pull")
+		}
 	},
 }
 
