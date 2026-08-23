@@ -115,8 +115,8 @@ These flags are to work with custom approximations:
 | Flag | Description |
 |------|-------------|
 | `--track-external-methods` | Write external-method coverage files next to the SARIF report |
-| `--passthrough-approximations` | Apply pass-through approximation YAML files or directories (repeatable) |
-| `--dataflow-approximations` | Apply dataflow approximation projects, build outputs, or class directories (Java analysis only, repeatable) |
+| `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
+| `--java-models` | Apply Java dataflow model projects, build outputs, or class directories (repeatable) |
 
 Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available; the approximated-methods file shows methods already covered by built-in or custom models.
 
@@ -165,7 +165,7 @@ opentaint test approximation init .opentaint/test-projects/my-approximation \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
 opentaint test approximation run .opentaint/test-compiled/my-approximation \
-  --dataflow-approximations .opentaint/dataflow/my-approximation
+  --java-models .opentaint/dataflow/my-approximation
 ```
 
 | Command | Description |
@@ -200,12 +200,12 @@ opentaint approximation init .opentaint/dataflow/my-batch \
 
 # write the @Approximate classes under src/main/java/, then apply them
 opentaint scan --project-model ./my-project-model \
-  --dataflow-approximations .opentaint/dataflow/my-batch
+  --java-models .opentaint/dataflow/my-batch
 ```
 
 Pin the versions the target application uses. Those pins are the models' compile environment: they, and nothing about the project under analysis, decide what the models compile against, so a model compiles identically wherever it is applied.
 
-`--dataflow-approximations` accepts an approximation project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
+`--java-models` accepts an approximation project, a build output, or a directory of compiled classes — and a directory holding any of those, so a tree with one project per batch can be passed as a single flag. A directory counts as compiled classes only when nothing below it still needs building; one that holds compiled classes of its own alongside a project is reported rather than guessed at. Paths may overlap, and the same models may be reached twice, but two of them may not offer the same class with different content — which copy an analysis would read is not defined. Projects are built on demand and rebuilt when their sources, their dependency pins, or the compiler change.
 
 | Command | Description |
 |---------|-------------|

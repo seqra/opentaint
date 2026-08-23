@@ -147,7 +147,7 @@ func ambiguousDirError(dir, classFile string) error {
 		"%s holds compiled classes of its own (e.g. %s) and an approximation project or build "+
 			"output below it, so it is neither a class directory nor a directory of them.\n"+
 			"Move the classes into a directory of their own, or pass each approximation path to "+
-			"--dataflow-approximations separately",
+			"--java-models separately",
 		dir, classFile)
 }
 

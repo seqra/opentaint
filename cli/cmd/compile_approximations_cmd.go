@@ -53,7 +53,7 @@ needed to compile ahead of time or to see compilation errors on their own.`,
 			Field("Compiled models written to", approximation.ClassesDir(outputPath)).
 			Render()
 		suggest("To apply these models in a scan run",
-			fmt.Sprintf("opentaint scan <project-model> --dataflow-approximations %s", args[0]))
+			fmt.Sprintf("opentaint scan <project-model> --java-models %s", args[0]))
 	},
 }
 

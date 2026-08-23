@@ -14,7 +14,7 @@ func addDataflowApproximations(b *AnalyzerBuilder, paths []string, analyzerJarPa
 
 	absPaths := make([]string, 0, len(paths))
 	for _, approxPath := range paths {
-		absPaths = append(absPaths, log.AbsPathOrExit(approxPath, "dataflow-approximations"))
+		absPaths = append(absPaths, log.AbsPathOrExit(approxPath, "java-models"))
 	}
 
 	classDirs, err := approximation.ResolveAll(absPaths, newApproximationBuilder(analyzerJarPath))
@@ -28,6 +28,6 @@ func addDataflowApproximations(b *AnalyzerBuilder, paths []string, analyzerJarPa
 
 func addPassthroughApproximations(b *AnalyzerBuilder, paths []string) {
 	for _, passthrough := range paths {
-		b.AddPassthroughApproximations(log.AbsPathOrExit(passthrough, "passthrough-approximations"))
+		b.AddPassthroughApproximations(log.AbsPathOrExit(passthrough, "passthrough-models"))
 	}
 }

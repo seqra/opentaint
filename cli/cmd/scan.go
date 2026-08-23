@@ -159,9 +159,13 @@ func addScanFlags(cmd *cobra.Command) {
 	cmd.Flags().StringVar(&scanFlags.ProjectModelPath, "project-model", "", "Path to a pre-compiled project model (skips compilation)")
 	cmd.Flags().StringVar(&scanFlags.LogFile, "log-file", "", "Path to the log file (default: <cache-dir>/logs/<timestamp>.log)")
 
-	cmd.Flags().StringArrayVar(&scanFlags.PassthroughApproximations, "passthrough-approximations", nil, "Pass-through approximation YAML file or directory (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.PassthroughApproximations, "passthrough-models", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.PassthroughApproximations, "passthrough-approximations", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
+	_ = cmd.Flags().MarkDeprecated("passthrough-approximations", "use --passthrough-models")
 
-	cmd.Flags().StringArrayVar(&scanFlags.DataflowApproximations, "dataflow-approximations", nil, "Dataflow approximation project, build output, or class directory (Java analysis only, repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.DataflowApproximations, "java-models", nil, "Java dataflow models: a model project, build output, or class directory (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.DataflowApproximations, "dataflow-approximations", nil, "Java dataflow models: a model project, build output, or class directory (repeatable)")
+	_ = cmd.Flags().MarkDeprecated("dataflow-approximations", "use --java-models")
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
@@ -425,6 +429,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 	nativeBuilder.SetJarPath(analyzerJarPath)
 
+	// Process --java-models: build model projects if needed
 	addDataflowApproximations(nativeBuilder, cfg.DataflowApproximations, analyzerJarPath)
 
 	analyzerJavaRunner := newAnalyzerJavaRunner()
