@@ -20,19 +20,25 @@ var (
 var updateCmd = &cobra.Command{
 	Use:   "update [version]",
 	Short: "Update opentaint to the latest version",
-	Long: `Update the opentaint binary in place to the latest release, or to the optional version argument. Only upgrades are supported. Downgrading to an older version is refused.
+	Long: `Update the opentaint binary to the latest release. To get a specified version, give the version argument. Only upgrades are possible. The command refuses a version that is older than the current one.
 
-Homebrew and npm installations print the matching package-manager command instead of updating in place. Pass --check to report the latest version without downloading, or --yes to skip the confirmation prompt.
+If opentaint was installed with Homebrew or npm, the command does not change the binary. It shows the correct package-manager command.
 
-After a successful update, remove superseded artifacts with opentaint prune.`,
+To see the latest version without a download, use --check. To skip the confirmation prompt, use --yes.
+
+After a successful update, remove the old artifacts with "opentaint prune".`,
 	Example: `  # Update to the latest release
   opentaint update
 
-  # Check for a newer version without installing
+  # See if a newer version is available, without a download
   opentaint update --check
 
-  # Update to a specific version without prompting
-  opentaint update 1.2.3 --yes`,
+  # Update to a specified version without a prompt
+  opentaint update 1.2.3 --yes
+
+  # Recipe: update, then remove the artifacts of the old version
+  opentaint update --yes
+  opentaint prune --yes`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check installation method first

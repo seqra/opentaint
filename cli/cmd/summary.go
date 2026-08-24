@@ -10,29 +10,33 @@ import (
 // summaryCmd represents the summary command
 var summaryCmd = &cobra.Command{
 	Use:   "summary <sarif-report>",
-	Short: "Summarize a SARIF report",
+	Short: "Show a summary of a SARIF report",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `Summarize a SARIF report on the terminal. OpenTaint counts the findings by severity, groups them, and shows which rules ran and which produced results.
+	Long: `Show a summary of a SARIF report in the terminal. The summary counts the findings by severity. It also shows which rules ran and which rules found problems.
 
-The required positional argument is the path to a SARIF report, such as one written by opentaint scan or opentaint test. Pass --show-findings to list every finding. Narrow the listing with --severity, --rule-id, or --path, and expand code flows with --show-code-snippets and --verbose-flow.
+The sarif-report argument is the path to a SARIF report. It is required. Use a report from "opentaint scan" or "opentaint test".
 
-The report is read only: the summary and any findings are printed to the terminal and nothing is written to disk.
+To see each finding, use --show-findings. To make the list smaller, use --severity, --rule-id, or --path. To see the full data flow, use --verbose-flow and --show-code-snippets.
 
-Run opentaint scan to produce the report this command reads.`,
-	Example: `  # Print a summary of a report
+This command only reads the report. It does not write files.`,
+	Example: `  # Show a summary of a report
   opentaint summary report.sarif
 
-  # List every finding with its location
+  # Show each finding with its location
   opentaint summary report.sarif --show-findings
 
-  # Show only error-level findings
+  # Show only the error-level findings
   opentaint summary report.sarif --show-findings --severity error
 
-  # Group the listing by rule
+  # Group the findings by rule
   opentaint summary report.sarif --show-findings --group-by rule-id
 
-  # Trace one rule with full code flow and snippets
-  opentaint summary report.sarif --show-findings --rule-id <rule-id> --show-code-snippets --verbose-flow`,
+  # Recipe: examine one rule in full detail
+  opentaint summary report.sarif --show-findings --group-by rule-id
+  opentaint summary report.sarif --show-findings --rule-id <rule-id> --verbose-flow --show-code-snippets
+
+  # Recipe: read the findings for one part of the code
+  opentaint summary report.sarif --show-findings --path "src/main/**" --severity error`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		for _, s := range summarySeverities {
