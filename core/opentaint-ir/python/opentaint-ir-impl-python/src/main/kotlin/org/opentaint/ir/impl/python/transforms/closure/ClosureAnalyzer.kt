@@ -11,36 +11,11 @@ import org.opentaint.ir.impl.python.flat.operands
 import org.opentaint.ir.impl.python.flat.targets
 import kotlin.collections.orEmpty
 
-/**
- * Result of running [ClosureAnalyzer.analyze] over a module:
- *  - [info] — per-function [ClosureInfo] keyed by qualifiedName.
- *  - [diagnostics] — analyzer-emitted findings (e.g. parentless functions
- *    with non-empty propagated free names, which indicate either
- *    unresolved-name leaks from upstream or unsupported pass-through
- *    closure shapes).
- */
 data class ClosureAnalysis(
     val info: Map<String, ClosureInfo>,
     val diagnostics: List<PIRDiagnostic>,
 )
 
-/**
- * Pure analysis pass over a [FlatModuleIR]. Computes per-function
- * [ClosureInfo] (owned names, cells to allocate, closure variables to
- * receive from the parent) without modifying the IR.
- *
- * Bottom-up, no cycles: the parent map is a tree.
- *
- * **Closure roots are parentless functions** — the parent map (built from
- * each function's `parentQualifiedName` plus the class-walk for methods)
- * is the single source of truth, not [FlatFunctionKind]. A parentless
- * function cannot receive a closure environment, so its `closureVars` is
- * forced to `∅`. If [collectLocalReads] surfaced any unresolved free name
- * for a parentless function, the analyzer emits a diagnostic — that
- * indicates either an unsupported pass-through shape (e.g. METHOD passing
- * cells through to a nested def in a class-inside-function) or an
- * unresolved-name leak from upstream lowering.
- */
 class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
     private val byName: Map<String, FlatFunctionIR> = collectAllFunctions(module).associateBy { it.qualifiedName }
     private val publicCache = HashMap<String, ClosureInfo>()
@@ -56,23 +31,7 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         return ClosureAnalysis(info = publicCache, diagnostics = diagnostics)
     }
 
-    /**
-     * Drop captured names the parent can't provide. [compute] propagates every
-     * free name upward, so a nested def's `closureVars` also lists names no
-     * ancestor owns — globals/builtins/unresolved names lowered as NAME_LOCAL
-     * reads. Left in, they falsely mark the def as capturing, so the rewriter
-     * renames it to a `<closure_…>` shim and hides its entry point (inv 31).
-     *
-     * A capture is genuine iff the direct parent provides it (owns it as a cell
-     * or received it itself); walk parents-before-children and intersect with
-     * `parent.cellVars ∪ parent.closureVars`. Dropped names read as plain
-     * locals (Python LEGB). `cellVars` needs no pruning: a leaked name is never
-     * owned, so never a cell.
-     */
     private fun pruneUnprovidableClosureVars() {
-        // Pre-order DFS of the parent forest (acyclic, so no visited set): each
-        // function is pruned against its already-finalized parent before we
-        // descend, so a kept name is one the parent still provides.
         fun prune(qn: String) {
             parentMap[qn]?.let { parentQn ->
                 val parent = publicCache.getValue(parentQn)
@@ -104,26 +63,17 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
                     nonlocal
 
         val childQns = children[qn].orEmpty()
-        // Recurse on children first so their propagatedClosureVars are populated.
         for (childQn in childQns) compute(childQn)
         val childNeeds: Set<String> = childQns
             .flatMap { propagatedClosureVars.getValue(it) }
             .toSet()
 
-        // Keep deterministic iteration order on every set produced — the
-        // rewriter emits prologue instructions and env-dict entries in
-        // iteration order, and the PIR converter compares modules
-        // structurally, so non-determinism here would surface as flaky
-        // tests downstream.
         val cellVars = (childNeeds intersect ownedNames).sortedDeterministic()
         val propagated = (directFree + (childNeeds - ownedNames)).sortedDeterministic()
         propagatedClosureVars[qn] = propagated
 
         val isClosureRoot = parentMap[qn] == null
         if (isClosureRoot && propagated.isNotEmpty()) {
-            // Free names that reached a parentless function owned by no scope:
-            // globals, builtins, or unresolved names. pruneUnprovidableClosureVars
-            // drops them from captures; flagged here for visibility.
             diagnostics.add(
                 PIRDiagnostic(
                     severity = PIRDiagnosticSeverity.WARNING,
@@ -144,19 +94,9 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         )
     }
 
-    /* ------------------------------------------------------------------ */
-    /* Helpers                                                            */
-    /* ------------------------------------------------------------------ */
-
     private fun isSynthetic(name: String): Boolean =
         name.contains('$') || name.contains('<') || name.contains('>')
 
-    /**
-     * Returns a `Set<String>` whose iteration order is sorted ascending.
-     * Implemented via a [LinkedHashSet] populated in sorted order so consumers
-     * can rely on deterministic iteration without re-sorting at every use
-     * site, while still satisfying the `Set` contract for membership.
-     */
     private fun Set<String>.sortedDeterministic(): Set<String> =
         if (size <= 1) this else LinkedHashSet<String>(size).also { dst ->
             for (s in this.sorted()) dst.add(s)
@@ -175,49 +115,20 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         for (nested in cls.nestedClasses) collectClassFunctions(nested, out)
     }
 
-    /**
-     * Build a `qualifiedName -> closureParentQualifiedName` map.
-     *
-     * Rules:
-     * - Top-level functions and module init: parent = `null`.
-     * - Methods of a class **inside a function** can in principle capture the
-     *   enclosing function's locals through their nested defs/lambdas. The
-     *   walker tracks the enclosing function as it descends into class bodies
-     *   and nested classes and records `method.qn -> enclosingFunction`.
-     *   Today, however, [FlatModuleIR.classes] cannot represent a class
-     *   defined inside a function body (proto-to-Flat drops class-defs nested
-     *   in function bodies), so this rule has no effect on real input — it is
-     *   future-proofing. Until that gap is closed, a nested def lexically
-     *   inside such a method must explicitly carry
-     *   `parentQualifiedName = enclosingFunction.qualifiedName` to capture
-     *   that function's locals (the analyzer's class-walk does NOT rewrite
-     *   nested-def parents).
-     * - Methods of top-level / module-level classes: parent = `null`
-     *   (closure root).
-     * - Nested defs / lambdas: parent is taken from
-     *   [FlatFunctionIR.parentQualifiedName] (already correct: lexically
-     *   enclosing function-like scope).
-     */
     private fun buildClosureParentMap(
         module: FlatModuleIR,
         byName: Map<String, FlatFunctionIR>,
     ): Map<String, String?> {
         val map = HashMap<String, String?>()
 
-        // Closure roots that live directly under the module.
         map[module.moduleInit.qualifiedName] = null
 
         for (fn in module.functions) {
-            // For NESTED_DEF / LAMBDA the IR's parentQualifiedName already names
-            // the enclosing function-like scope (which may be a method). For
-            // TOP_LEVEL it's null. Trust it.
             map[fn.qualifiedName] = fn.parentQualifiedName
         }
 
         for (cls in module.classes) walkClass(cls, enclosingFunction = null, map = map)
 
-        // Sanity: every parent referenced must be a known function. Drop unknown
-        // parents (e.g. dangling refs) by mapping to null rather than crashing.
         return map.mapValues { (_, parent) -> if (parent != null && parent in byName) parent else null }
     }
 
@@ -227,9 +138,6 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         map: MutableMap<String, String?>,
     ) {
         for (method in cls.methods) {
-            // Methods are closure roots on their own (closureVars forced empty),
-            // but they may still own cells via descendants. Their closure parent
-            // is the nearest enclosing function (skipping the class scope).
             map[method.qualifiedName] = enclosingFunction
         }
         for (nested in cls.nestedClasses) walkClass(nested, enclosingFunction, map)
@@ -244,12 +152,6 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         return out
     }
 
-    /**
-     * Every name written via a `FlatLocal` target across all instructions in
-     * the function. Includes single-target instructions, the multi-target
-     * [org.opentaint.ir.impl.python.flat.FlatUnpack], and `FlatBindFunction`
-     * (so sibling `def b()` references resolve).
-     */
     private fun collectLocalDefs(fn: FlatFunctionIR): Set<String> {
         val out = HashSet<String>()
         for (block in fn.cfg.blocks) {
@@ -264,12 +166,6 @@ class ClosureAnalyzer private constructor(val module: FlatModuleIR) {
         if (value is FlatLocal) out.add(value.name)
     }
 
-    /**
-     * Every `FlatLocal` referenced as an *operand* across all instructions in
-     * the function. `FlatBindFunction.function` is a name-binding target,
-     * not an operand (per [org.opentaint.ir.impl.python.flat.mapOperand]'s
-     * contract), so it contributes no reads here.
-     */
     private fun collectLocalReads(fn: FlatFunctionIR): Set<String> {
         val out = HashSet<String>()
         for (block in fn.cfg.blocks) {

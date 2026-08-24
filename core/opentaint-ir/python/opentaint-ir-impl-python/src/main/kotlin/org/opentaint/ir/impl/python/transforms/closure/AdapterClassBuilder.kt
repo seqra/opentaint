@@ -19,7 +19,7 @@ import org.opentaint.ir.impl.python.flat.FlatReturn
 import org.opentaint.ir.impl.python.flat.FlatStoreAttr
 
 /**
- * Build the user-visible adapter class for a capturing impl function.
+ * Build the adapter class for a capturing impl function.
  *
  * Shape:
  * ```
@@ -29,15 +29,6 @@ import org.opentaint.ir.impl.python.flat.FlatStoreAttr
  *     def __call__(self, ...impl-user-params...):
  *         return _impl(self, ...impl-user-params...)
  * ```
- *
- * The original impl's user-visible parameters (i.e. its parameters minus
- * the synthetic `<self>` we just prepended) are mirrored on `__call__`
- * exactly — same kinds, defaults, types. Forwarding uses arg kinds matched
- * to each parameter kind.
- *
- * Pure: depends only on [originalImpl] and [moduleName], not on any
- * per-function rewrite state. Adapter and impl qualified names are derived
- * from [originalImpl]'s already-unique `name` via [ClosureRuntime].
  */
 internal fun buildAdapterClass(originalImpl: FlatFunctionIR, moduleName: String): FlatClass {
     val adapterQn = ClosureRuntime.adapterClassQn(moduleName, originalImpl.name)
@@ -104,24 +95,14 @@ private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
     )
 }
 
-/**
- * `__call__(self, p1, p2, …, *args, **kwargs)` — mirrors the impl's
- * user-visible parameters and forwards them positionally/keyword/star
- * to `_impl(self, …)`.
- */
 private fun buildCallMethod(
     adapterQn: String,
     implQn: String,
     originalImpl: FlatFunctionIR,
 ): FlatFunctionIR {
-    // Adapter `__call__` mirrors the impl's user-visible parameters
-    // (= original impl parameters; the impl's synthetic <self> is added
-    // by the prologue inside the impl itself).
     val implUserParams = originalImpl.parameters
     val callParams = listOf(plainParameter("self")) + implUserParams
 
-    // Forward args: first positional is `self` (impl's <self>), then one
-    // FlatCallArg per impl user-visible param, kind matched.
     val tmpReturn = FlatLocal("\$ret")
     val forwardArgs = listOf(FlatCallArg(FlatLocal("self"), FlatArgKind.POSITIONAL)) +
         implUserParams.map { p -> forwardArgFor(p) }
