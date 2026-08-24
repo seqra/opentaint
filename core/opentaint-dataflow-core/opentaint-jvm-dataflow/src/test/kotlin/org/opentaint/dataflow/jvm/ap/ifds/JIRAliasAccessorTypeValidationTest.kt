@@ -45,6 +45,14 @@ class JIRAliasAccessorTypeValidationTest {
     }
 
     @Test
+    fun `accepts equivalent nested class names between accessors`() {
+        val previous = field("test.Outer", "value", "test.Outer.Level")
+        val next = field("test.Outer\$Level", "nested", "java.lang.Object")
+
+        assertTrue(isValidAliasAccessorTransition(previous, next) { _, _ -> false })
+    }
+
+    @Test
     fun `validates a field following a static base`() {
         val previous = AliasAccessor.Static("org.example.Settings")
         val next = field("org.example.Settings", "DEFAULT", "org.example.Settings")
@@ -129,6 +137,13 @@ class JIRAliasAccessorTypeValidationTest {
         assertTrue(isValidAliasBaseAccessorTransition("org.example.A", first) { base, owner ->
             base == "org.example.A" && owner == "org.example.X"
         })
+    }
+
+    @Test
+    fun `accepts equivalent nested class names at alias base`() {
+        val first = field("test.Outer\$Node", "value", "java.lang.Object")
+
+        assertTrue(isValidAliasBaseAccessorTransition("test.Outer.Node", first) { _, _ -> false })
     }
 
     @Test
