@@ -713,11 +713,11 @@ func printScanInfo(cmd *cobra.Command, plan scanPlan, absSemgrepRuleLoadTracePat
 		if plan.projectCachePath != "" {
 			sb.FieldNode("Project model", plan.absProjectModel)
 		}
-		sb.FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...)
+		sb.FieldGroup("Autobuilder", componentItems(resolveArtifactComponent("autobuilder"), false)...)
 	} else {
 		sb.FieldNode("Project model", plan.absProjectModel)
 	}
-	sb.FieldGroup("Analyzer", componentItems(resolveJarComponent("analyzer"), false)...)
+	sb.FieldGroup("Analyzer", componentItems(resolveArtifactComponent("analyzer"), false)...)
 	for _, r := range absRuleSetPaths {
 		if r.Builtin {
 			rules := healthComponent{
@@ -836,7 +836,7 @@ func goServerRequired(sourceRoot string) bool {
 	}
 	if _, lookErr := exec.LookPath("go"); lookErr != nil {
 		if len(langs) == 1 {
-			out.Fatal("A Go project needs the Go toolchain, but `go` was not found on your PATH.\n" +
+			out.Fatal("A Go project needs the Go toolchain, but `go` was not found on your PATH.\n"+
 				"Install Go (https://go.dev/dl/), make sure `go` is on your PATH, and run the command again.", nil)
 		}
 		out.Warnf("A Go module (go.mod) was found, but `go` is not on your PATH. " +

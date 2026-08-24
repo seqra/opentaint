@@ -32,10 +32,23 @@ func (a ArtifactDef) Kind() string {
 // Label is the name of the artifact in the output. Name is not used there because Kind and the
 // cache paths derive from it.
 func (a ArtifactDef) Label() string {
-	if a.Kind() == "rules" {
+	switch a.Kind() {
+	case "rules":
 		return "Built-in ruleset"
+	case "goserver":
+		return "Go server"
 	}
 	return a.Name
+}
+
+// TagPrefix returns the release-tag prefix of this artifact, for example
+// "analyzer/". The go-ssa-server tag uses "go-server/", which differs from
+// the artifact kind.
+func (a ArtifactDef) TagPrefix() string {
+	if a.Kind() == "goserver" {
+		return "go-server/"
+	}
+	return a.Kind() + "/"
 }
 
 // IsBindVersion reports whether the configured version matches the compile-time bind version.
@@ -103,6 +116,7 @@ func Artifacts() []ArtifactDef {
 			CacheSuffix: goServerCacheSuffix,
 			BindVersion: GoServerBindVersion,
 			Version:     Config.GoServer.Version,
+			Override:    Config.GoServer.Binary,
 			Unpack:      false,
 		},
 	}
