@@ -59,6 +59,18 @@ about counting, nesting, dormancy, loop convergence and memory, changed the repr
 | "dead automata are collected" over-claims | **§3.8**: storages are merge-monotone and never delete, so states that reach a stored fact live for the phase. What reclamation recovers is the **transient mint** — precisely the case worth fixing, and not the whole population |
 | hoisting under an `[any]` might need `absorbedAnyStep`-style depth bookkeeping for `DeepAccessorExclusion` | **§4.7**: it does not, for three reasons visible in the code — checked rather than assumed, since this is where the change would have been quietly unsound |
 
+**Revision 4 — two notes.** `[any]` is `Σ*`, so the collapse is the containment `Σ* ⊇ Σ*·f·Σ*` for
+`f ∈ Σ` (§8.2) — which makes the covered-only guard a consequence rather than a rule, and shows that
+"at most one `[any]` per path" is sound only per *covered-only stretch* of a path. And the DSU's
+`parent` is written concurrently, whose interesting failure is a **cycle in the forest** rather than a
+lost update (§3.3).
+
+Checking the associated claim — that the analyzer never builds `[any].X.[any]` for uncovered `X` —
+confirmed it for all seven, and found that the three supporting mechanisms are not equally solid
+(§4.7): marks are enforced by `check(node.isStructurelessLeaf)`, statics by the subtree-wide
+`containsStatic` guard, `[final]` is not an edge, `[value]` is dead code — but **type-info is enforced
+by nothing**, and holds only because both front ends prepend onto a fresh `$`. That is now R28.
+
 ---
 
 ## 1. Three shapes that failed, and exactly why
@@ -316,11 +328,15 @@ merge: whenever two `[any]` edges in a fact tree become one edge, their managers
 ordinary position-wise merge, the fold-to-`[any]` trimming, and the collapse of a nested `[any]` into
 the one above it — all three are "two `[any]` edges became one", and all three need no separate rule.
 
-It is not the only case, and §2.4 shows why: on a branch where two `[any]` edges legitimately coexist
-without ever merging — the shape `[any].{Box}.[any]`, which a passing test pins as correct — the
-managers must still be unioned, because the population under them is multiplicative. So the rule is
-"two `[any]`s on one branch share a pot", and the tree-edge merge is the common way that happens rather
-than the definition of when it does.
+It is not the only case, and §2.4 shows why: on a branch where two `[any]` edges coexist without ever
+merging — the shape `[any].{Box}.[any]`, which a passing test pins as *legal* — the managers must
+still be unioned, because the population under them is multiplicative. So the rule is "two `[any]`s on
+one branch share a pot", and the tree-edge merge is the common way that happens rather than the
+definition of when it does.
+
+Whether the analyzer ever *builds* that shape is a separate question from whether the representation
+permits it. §4.7 answers it — no, for all seven uncovered accessors — which makes the union arm
+defensive rather than load-bearing, and §12.1 counts it so that stays measured.
 
 R3 has one consequence that is easy to miss and is spelled out in §3.5: **if the id changes, the merge
 must report a non-empty delta**, even when the shape did not change.
@@ -1222,6 +1238,57 @@ delete `ELEMENT_ACCESSOR_IDX` and hoist, which is safe **only because the produc
 elements covered** (`TaintAnalyzer.kt:71-73`). A future `AnyAccessorUnrollStrategy` that does not would
 turn it into a producer.
 
+#### Is the uncovered case reachable at all?
+
+The collapse must not cross an uncovered accessor (§8.2), so `[any].X.[any]` for uncovered `X` is a
+shape the representation has to tolerate. Whether the **analyzer ever builds one** is a different
+question, and the answer is no — for all seven uncovered accessors, though by three quite different
+mechanisms and with one of them unguarded.
+
+The reduction that makes this checkable rather than enumerable: **`[any]` only ever enters a tree at
+the root of a node**, via `prependAnyAccessor` (AT:787, sole caller AT:572). It gets *deeper* only by
+having accessors prepended above it. So `X.[any]` requires either a site that prepends `X` over a node
+already headed by `[any]`, or a site that grafts a fresh `[any]`-headed subtree under an existing `X`
+edge — and there is exactly one grafter, `concatToLeafAbstractNodes` (AT:1641-1705), which requires an
+**abstract node directly under the `X` edge** to graft into.
+
+| uncovered `X` | `[any]` below `X`? | `[any]` above `X`? | verdict |
+|---|---|---|---|
+| `[final]` | impossible — it is a flag, not an edge (AT:527, AT:2270 discards the accumulator) | n/a | **unreachable, structurally** |
+| taint mark | **enforced** by `check(node.isStructurelessLeaf)` at AT:2204 | yes | **unreachable, enforced** |
+| static | yes — `<static>(C).[any].![m].$` is an ordinary rule-position fact | **enforced** by the subtree-wide `containsStatic` guard at AT:547 | **unreachable, enforced** |
+| `[value]` | — | — | **unreachable, vacuously**: `ValueAccessor` is never constructed anywhere in `src/main`; `TaintAnalyzer.kt:81` even `error`s on it |
+| type-info / type-info-group | **nothing forbids it** — AT:2202 says outright that a type-info accessor may carry children | yes | **unreachable by construction-site accident, not by invariant** |
+
+Three things follow.
+
+**The union-without-collapse arm of `collapseNestedAny` is defensive, not load-bearing.** It costs
+nothing when the population is empty, and §12.1 counts it so that stays a measurement rather than a
+belief. §2.4's manager rule remains unconditional regardless — two `[any]`s on one branch multiply
+whether or not the tree collapses them — but if the counter reads zero the arm can be promoted to an
+assertion.
+
+**Type-info is the fragile leg and it is worth closing.** The invariant holds only because both
+front-end sites prepend onto a fresh `$` (`GoMethodCallResolver.kt:84,89` and
+`JIRMethodCallResolver.kt:155`, consumed by `foldRight(createFinalAp(...)) { a, f -> f.prependAccessor(a) }`),
+so structure is only ever added *above* a type-info accessor. One new flow function that prepends
+`TypeInfoAccessor` onto an existing fact produces `{T}.[any]` silently, and `[any].{T}.[any]` follows
+from a single `addParentIfPossible(ANY)`. A `check` that a type-info edge's child carries no `[any]`
+would make that a loud failure instead of a quiet precision loss; it belongs with step 0.
+
+**The load-bearing fact behind all of it is easy to lose:** TIFA never emits a chain terminating in an
+always-unroll-next accessor (`createAbstractAp` is reached only at TIFA:325, :332, :338/:370, :364, and
+`unprocessed` is pushed only with a non-always-unroll accessor or with `ANY`). Since both chain folds
+seed with `abstractNode`, that is why `![m].*` and `{T}.*` do not exist — and therefore why the one
+grafting site has nothing to graft into under a mark or a type-info edge. Change that and three of the
+five rows above change with it.
+
+For the record, `TreeInitialFactAbstraction.kt:353-356` reads as a counterexample and is not one. It
+says *"The reachable shapes are `[any]` under `[value]` or under a type-info accessor"*, but it is
+scoped to `forEachAccessor` — i.e. to `X.[any]`, not `[any].X.[any]` — it is an elimination argument
+over the four always-unroll-next accessors describing what the loop must **tolerate** rather than what
+the engine emits, and its `[value]` clause is stale.
+
 #### Where to enforce it
 
 Factor the body of `prependAnyAccessor` into the part that produces the normalised child:
@@ -1839,12 +1906,15 @@ independently.
    step contains no manager at all**, which is the point: it is a behavioural change to the tree
    representation, it lands and is measured on its own, and if it costs precision that is knowable
    before any of the rest exists.
+   Land the type-info `check` of §4.7 with it — same step, same reasoning, and it closes the one leg of
+   the uncovered-accessor argument that nothing currently enforces.
    *Gate: `AnyAccessorCollapseTest.kt:143-153` and `AnyAccessorPremiseTest.kt:139-143` green (the
    covered-only precondition); `AnyFieldMarkExclusionTest.kt:317-334` green (`.*` is not a collapsible
    tail); `AnyAccessorCollapseTest.kt:127-140` rewritten off its now-vacuous raw oracle; the two
    producers of §4.7 covered by new tests — a concat graft through `limitFieldAccess`, and
-   `removeAllAccessorChains` over an SCC containing an uncovered accessor; and a full SARIF comparison
-   on openmrs, tms and conductor, reported **separately from `L`**.*
+   `removeAllAccessorChains` over an SCC containing an uncovered accessor; the new type-info `check`
+   firing on a hand-built `{T}.[any]` and on nothing in the suite; and a full SARIF comparison on
+   openmrs, tms and conductor, reported **separately from `L`**.*
 1. **`AnyUnrollState` / `AnyUnrollDag`** (§2, §3.3) — the two objects, the pointer `find` with path
    halving, and `union` writing `parent`, `pathCount` and `total` inside one lock. There is no DSU
    class and no id space: this step is two small classes.
@@ -1925,10 +1995,11 @@ id being written. That catches B1 and B4 at the point of failure instead of at a
 Also count, under the same flag: unions, **cross-dag fusions** (§8.3 — the design assumes these are
 rare and over-counts when they happen), live dags and live states against states ever minted, records
 refused, and — the one that settles a standing question — **how often `collapseNestedAny` takes its
-union-without-collapse arm**, i.e. how often an uncovered accessor actually separates two `[any]`s in a
-fact the analyzer built. §4.7 argues that population should be empty in production. If the counter is
-zero across the witnesses, the arm is defensive rather than load-bearing and could later become an
-assertion; if it is not, §2.4's unconditional manager rule is doing real work and must stay.
+union-without-collapse arm, broken down by the separating accessor**. §4.7 concludes that population is
+empty in production, and predicts *which* accessor would show up first if it is not: type-info, the one
+leg of the argument that no check enforces. Zero across the witnesses means the arm can be promoted to
+an assertion; a non-zero type-info count means a front end started adding structure below a type-info
+accessor and §4.7's third bullet has become live.
 
 Run all of this before any tuning. A design whose bound leaks is not worth sweeping.
 
@@ -2116,6 +2187,7 @@ cannot serve as a control: the two backends differ in the mechanism under test.
 | R23 | Mints do not collapse: 40k on the conductor witness would be a 4M population bound — worse than the 735k §1.1b rejected — and a correspondingly large live automaton | **highest, jointly with R1** | §3.8 shows memory and budget are the same measurement, so §12.1 answers both; §4.7, §6.3 and §3.4 all attack the mint count. There is deliberately **no valve**: if this fails it must fail visibly (§3.1) |
 | R25 | §4.7's forced collapse costs precision — it is a coarsening, not the identity the existing KDoc claims (§8.2) — and it changes behaviour before any budget exists | **high**, but knowable early | it is implementation **step 0**, alone and first, gated on a full SARIF comparison reported separately from `L`. `TreeCleanerFieldSensitivityAnalysisTest`'s depth-3 pair is the end-to-end detector: a sanitizer must still bite after a graft |
 | R26 | The collapse is enforced at construction, so an over-reach is total rather than local: dropping *covered-only*, or treating `.*` as a collapsible tail, silently rewrites facts everywhere | **high** | three existing tests fence it, one per over-reach (§4.7); each fails loudly and for a distinct reason |
+| R28 | `[any]` under a **type-info** accessor is forbidden by nothing — AT:2202 permits children explicitly — and is kept out only by the two front ends prepending onto a fresh `$` and by TIFA never terminating a chain there. A new flow function prepending `TypeInfoAccessor` onto an existing fact reopens `[any].{T}.[any]` silently | medium, and silent | §4.7: add the `check` with step 0, and count the union arm by separating accessor (§12.1). Marks and statics are genuinely enforced; this one is not |
 | R27 | Reclamation recovers less than it appears to — storages never delete, so states reaching a stored fact live for the phase | medium, and stated rather than hidden | §3.8; the argument for references does not rest on the constant factor but on the array version being unbounded on a long phase |
 | R24 | `pathCount` approximates in both directions — over-stating live facts after a fact-merge, under-stating the language after a union whose increase is not pushed down | medium, deliberate | §2.6 states both, and both are `O(1)` choices; over-statement is the sound direction (§8.2) |
 | R20 | `anyId` adds one more per-`TreeApManager` namespace to a codebase with no `check(manager === …)` in the tree backend | low — no live path found (§9.1) | traced through `resetApManager` and `selectPhase`; add the guard the automata backend already has |
