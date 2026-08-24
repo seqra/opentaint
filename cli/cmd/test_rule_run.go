@@ -206,7 +206,5 @@ func init() {
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleset, "ruleset", nil, "Ruleset to test: a YAML file or a directory of .yml or .yaml files (repeatable)")
 	addTestRunFlags(testRuleRunCmd, &testRulesOutputDir, &testRulesTimeout, &testRulesMaxMemory, &testRulesDataflow)
 	testRuleRunCmd.Flags().StringArrayVar(&testRulesRuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-models", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
-	testRuleRunCmd.Flags().StringArrayVar(&testRulesPassthrough, "passthrough-approximations", nil, "Pass-through models: a YAML file or a directory of them (repeatable)")
-	_ = testRuleRunCmd.Flags().MarkDeprecated("passthrough-approximations", "use --passthrough-models")
+	addRenamedStringArrayFlag(testRuleRunCmd.Flags(), &testRulesPassthrough, "passthrough-models", "passthrough-approximations", "Pass-through models: a YAML file or a directory of them (repeatable)")
 }
