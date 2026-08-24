@@ -312,7 +312,6 @@ func TestSummaryFilterFlags(t *testing.T) {
 		WithSeverity([]string{"error"}).
 		WithRuleID([]string{"sql-injection"}).
 		WithPartialFingerprint([]string{"abc123"}).
-		WithPartialFingerprintKey("vulnerabilitySourceSinkHash/v1").
 		WithMaxNestingLevel(3).
 		WithGroupBy("severity").
 		Build()
@@ -323,7 +322,6 @@ func TestSummaryFilterFlags(t *testing.T) {
 		"--severity error",
 		"--rule-id sql-injection",
 		"--partial-fingerprint abc123",
-		"--partial-fingerprint-key vulnerabilitySourceSinkHash/v1",
 		"--max-nesting-level 3",
 		"--group-by severity",
 		"--show-findings",

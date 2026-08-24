@@ -18,8 +18,6 @@ type Options struct {
 	// WriteBaselineState persists result.baselineState and run.baselineGuid.
 	// Without it the comparison only drives what is printed.
 	WriteBaselineState bool
-	// FingerprintKey selects the identity fingerprint ("" = default).
-	FingerprintKey string
 	// ReadOnly means the caller will never persist the report. The comparison is
 	// still applied to the in-memory copy so that --baseline-state can filter on
 	// it, but nothing is reported as written or changed. This is what summary
@@ -54,10 +52,6 @@ type Outcome struct {
 // decisions from this run then overwrite them, and the baseline comparison is
 // computed over the final state.
 func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
-	key, err := sarif.ResolveIdentityKey(opts.FingerprintKey)
-	if err != nil {
-		return nil, err
-	}
 	if opts.suppressing() && opts.Justification == "" {
 		return nil, fmt.Errorf("a justification is required to suppress a finding: pass --justification")
 	}
@@ -66,25 +60,25 @@ func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
 	changed := false
 
 	if opts.Baseline != nil {
-		view.Inherited = sarif.InheritSuppressions(report, opts.Baseline, key)
+		view.Inherited = sarif.InheritSuppressions(report, opts.Baseline)
 		changed = changed || view.Inherited > 0
 	}
 
-	added, err := applyDecisions(report, key, opts)
+	added, err := applyDecisions(report, opts)
 	if err != nil {
 		return nil, err
 	}
 	view.Added = added
 	changed = changed || added > 0
 
-	removed, err := applyUnsuppressions(report, key, opts.Unsuppress)
+	removed, err := applyUnsuppressions(report, opts.Unsuppress)
 	if err != nil {
 		return nil, err
 	}
 	changed = changed || removed > 0
 
 	if opts.Baseline != nil {
-		comparison, err := sarif.CompareToBaseline(report, opts.Baseline, key)
+		comparison, err := sarif.CompareToBaseline(report, opts.Baseline)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +105,7 @@ func Apply(report *sarif.Report, opts Options) (*Outcome, error) {
 // applyDecisions resolves each accept/defer prefix and records the decision.
 // Every prefix is resolved before anything is written, so a typo in the second
 // of three prefixes leaves the report untouched rather than half-triaged.
-func applyDecisions(report *sarif.Report, key string, opts Options) (int, error) {
+func applyDecisions(report *sarif.Report, opts Options) (int, error) {
 	type decision struct {
 		result *sarif.Result
 		accept bool
@@ -119,7 +113,7 @@ func applyDecisions(report *sarif.Report, key string, opts Options) (int, error)
 
 	var decisions []decision
 	for _, prefix := range opts.Accept {
-		matched, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, prefix)
 		if err != nil {
 			return 0, err
 		}
@@ -128,7 +122,7 @@ func applyDecisions(report *sarif.Report, key string, opts Options) (int, error)
 		}
 	}
 	for _, prefix := range opts.Defer {
-		matched, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, prefix)
 		if err != nil {
 			return 0, err
 		}
@@ -153,10 +147,10 @@ func applyDecisions(report *sarif.Report, key string, opts Options) (int, error)
 
 // applyUnsuppressions resolves every prefix before removing anything, for the
 // same all-or-nothing reason as applyDecisions.
-func applyUnsuppressions(report *sarif.Report, key string, prefixes []string) (int, error) {
+func applyUnsuppressions(report *sarif.Report, prefixes []string) (int, error) {
 	var targets []*sarif.Result
 	for _, prefix := range prefixes {
-		matched, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, prefix)
 		if err != nil {
 			return 0, err
 		}

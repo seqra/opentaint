@@ -43,7 +43,7 @@ func TestCompareClassifiesNewUnchangedUpdatedAbsent(t *testing.T) {
 		makeResult("fresh", Error, "d.java", 4, fp("id-fresh", "trace-fresh")),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -71,24 +71,11 @@ func TestCompareClassifiesNewUnchangedUpdatedAbsent(t *testing.T) {
 	}
 }
 
-func TestCompareWithTraceKeyNeverReportsUpdated(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
-	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
-
-	cmp, err := CompareToBaseline(current, baseline, TraceFingerprintKey)
-	if err != nil {
-		t.Fatalf("compare: %v", err)
-	}
-	if got := cmp.StateOf(current.Results()[0]); got != Unchanged {
-		t.Errorf("got %q, want unchanged", got)
-	}
-}
-
 func TestCompareTreatsMissingTraceHashAsUnchanged(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "")))
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -104,7 +91,7 @@ func TestCompareCountsUnmatchableResultsSeparately(t *testing.T) {
 		makeResult("nofp", Error, "b.java", 2, nil),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -126,7 +113,7 @@ func TestCompareDuplicateIdentitiesBothMatch(t *testing.T) {
 		makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -142,7 +129,6 @@ func TestCompareEmptyBaselineMakesEverythingNew(t *testing.T) {
 	cmp, err := CompareToBaseline(
 		makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a"))),
 		&Report{},
-		SourceSinkFingerprintKey,
 	)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
@@ -156,7 +142,7 @@ func TestCompareRejectsBaselineWithoutTheIdentityKey(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("", "trace-a")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 
-	_, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	_, err := CompareToBaseline(current, baseline)
 	if err == nil {
 		t.Fatal("expected an error when no baseline result carries the identity key")
 	}
@@ -168,7 +154,6 @@ func TestCompareEmptyBaselineIsNotAKeyMismatch(t *testing.T) {
 	if _, err := CompareToBaseline(
 		makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a"))),
 		&Report{Runs: []Run{{}}},
-		SourceSinkFingerprintKey,
 	); err != nil {
 		t.Errorf("unexpected error: %v", err)
 	}
@@ -183,7 +168,7 @@ func TestApplyWritesBaselineStateAndGUID(t *testing.T) {
 		makeResult("fresh", Error, "b.java", 2, fp("id-fresh", "trace-fresh")),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -205,7 +190,7 @@ func TestApplyOmitsBaselineGUIDWhenBaselineHasNone(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -223,7 +208,7 @@ func TestApplyLeavesUnmatchableResultsUnannotated(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	current := makeReport(makeResult("nofp", Error, "b.java", 2, nil))
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -291,7 +276,7 @@ func TestCompareKeepsExcludedRuleOutOfFixed(t *testing.T) {
 		makeResult("kept", Error, "a.java", 1, fp("id-kept", "trace-kept")),
 	), "kept")
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -313,7 +298,7 @@ func TestCompareTreatsMissingRuleListAsEverythingRan(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	current := makeReport()
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -360,7 +345,7 @@ func TestChangeUnderSinkIdentityNamesWhatMoved(t *testing.T) {
 		makeResult("c", Error, "c.java", 3, fps("sink-c", "src-c", "trace-c-longer")), // path moved
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -401,7 +386,7 @@ func TestChangeReportsTheCoarsestThingThatMoved(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-z", "trace-z")))
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -410,66 +395,9 @@ func TestChangeReportsTheCoarsestThingThatMoved(t *testing.T) {
 	}
 }
 
-// Choosing a finer identity leaves less to refine: under source/sink, a moved
-// source is a different finding, not an updated one.
-func TestChangeUnderSourceSinkIdentityOnlyReportsPath(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
-	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a2")))
-
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
-	if err != nil {
-		t.Fatalf("compare: %v", err)
-	}
-	if got := cmp.ChangeOf(current.Results()[0]); got != ChangePath {
-		t.Errorf("change = %q, want %q", got, ChangePath)
-	}
-	if got := cmp.ChangeCounts[ChangeSource]; got != 0 {
-		t.Errorf("source-changed count = %d, want 0 under a source-binding identity", got)
-	}
-}
-
-// The trace hash is the finest key, so nothing refines it: a match is a match.
-func TestChangeUnderTraceIdentityIsAlwaysNone(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
-	current := makeReport(makeResult("a", Error, "a.java", 9, fps("sink-z", "src-z", "trace-a")))
-
-	cmp, err := CompareToBaseline(current, baseline, TraceFingerprintKey)
-	if err != nil {
-		t.Fatalf("compare: %v", err)
-	}
-	r := current.Results()[0]
-	if got := cmp.StateOf(r); got != Unchanged {
-		t.Errorf("state = %q, want unchanged", got)
-	}
-	if got := cmp.ChangeOf(r); got != ChangeNone {
-		t.Errorf("change = %q, want none", got)
-	}
-}
-
-// Under a fine identity, a source change makes the old identity absent and the
-// new one appear. The sink hash still matches, so the finding is not "fixed".
-func TestRemnantSameSinkUnderFineIdentity(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
-	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
-
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
-	if err != nil {
-		t.Fatalf("compare: %v", err)
-	}
-	if len(cmp.Absent) != 1 {
-		t.Fatalf("absent = %d, want 1", len(cmp.Absent))
-	}
-	if got := cmp.RemnantOf(cmp.Absent[0]); got != RemnantSameSink {
-		t.Errorf("remnant = %q, want %q", got, RemnantSameSink)
-	}
-	if got := cmp.StateOf(current.Results()[0]); got != New {
-		t.Errorf("the drifted identity should still classify as new, got %q", got)
-	}
-}
-
-// Under the sink identity, no coarser hash exists. A new finding of the same
-// rule in the same file is the hint that the sink hash itself drifted.
-func TestRemnantPossiblyMovedUnderSinkIdentity(t *testing.T) {
+// A new finding of the same rule in the same file is the hint that the sink
+// hash itself drifted.
+func TestRemnantDriftedNeedsANewSameRuleFindingInTheSameFile(t *testing.T) {
 	baseline := makeReport(
 		makeResult("a", Error, "a.java", 10, fps("sink-old", "src-a", "trace-a")),
 		makeResult("b", Error, "b.java", 20, fps("sink-gone", "src-b", "trace-b")),
@@ -478,7 +406,7 @@ func TestRemnantPossiblyMovedUnderSinkIdentity(t *testing.T) {
 		makeResult("a", Error, "a.java", 12, fps("sink-new", "src-a2", "trace-a2")),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -488,7 +416,7 @@ func TestRemnantPossiblyMovedUnderSinkIdentity(t *testing.T) {
 	for _, r := range cmp.Absent {
 		want := RemnantNone
 		if *r.RuleID == "a" {
-			want = RemnantSameRuleFile
+			want = RemnantDrifted
 		}
 		if got := cmp.RemnantOf(r); got != want {
 			t.Errorf("rule %s: remnant = %q, want %q", *r.RuleID, got, want)
@@ -507,7 +435,7 @@ func TestRemnantIgnoresMatchedFindingsOfTheSameRule(t *testing.T) {
 		makeResult("a", Error, "a.java", 10, fps("sink-kept", "src-a", "trace-a")),
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -519,38 +447,23 @@ func TestRemnantIgnoresMatchedFindingsOfTheSameRule(t *testing.T) {
 	}
 }
 
-// The exact evidence outranks the heuristic: when the sink is provably still
-// reported, the finding is not merely "possibly moved".
-func TestRemnantPrefersSameSinkOverSameRuleFile(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
-	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
-
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
-	if err != nil {
-		t.Fatalf("compare: %v", err)
-	}
-	if got := cmp.RemnantOf(cmp.Absent[0]); got != RemnantSameSink {
-		t.Errorf("remnant = %q, want %q", got, RemnantSameSink)
-	}
-}
-
 // The remnant lookup runs by identity, so the display copies that WithAbsent
 // stamps resolve to the same remnant as the baseline results themselves.
 func TestRemnantResolvesOnDisplayCopies(t *testing.T) {
-	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
-	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-old", "src-old", "trace-old")))
+	current := makeReport(makeResult("a", Error, "a.java", 4, fps("sink-new", "src-new", "trace-new")))
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
 	listing := current.WithAbsent(cmp.Absent)
 	copyOfGone := listing.Results()[1]
-	if got := cmp.RemnantOf(copyOfGone); got != RemnantSameSink {
-		t.Errorf("remnant on copy = %q, want %q", got, RemnantSameSink)
+	if got := cmp.RemnantOf(copyOfGone); got != RemnantDrifted {
+		t.Errorf("remnant on copy = %q, want %q", got, RemnantDrifted)
 	}
-	if got := cmp.StateNote(copyOfGone); got != "sink still reported" {
-		t.Errorf("state note = %q, want %q", got, "sink still reported")
+	if got := cmp.StateNote(copyOfGone); got != "possibly drifted" {
+		t.Errorf("state note = %q, want %q", got, "possibly drifted")
 	}
 }
 
@@ -558,7 +471,7 @@ func TestStateNoteNamesWhatMovedUnderUpdated(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-b", "trace-b")))
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -569,14 +482,15 @@ func TestStateNoteNamesWhatMovedUnderUpdated(t *testing.T) {
 }
 
 func TestCheckBaselineIdentity(t *testing.T) {
-	if err := CheckBaselineIdentity(&Report{}, SourceSinkFingerprintKey); err != nil {
+	if err := CheckBaselineIdentity(&Report{}); err != nil {
 		t.Errorf("an empty baseline is comparable: %v", err)
 	}
 	carrying := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
-	if err := CheckBaselineIdentity(carrying, SourceSinkFingerprintKey); err != nil {
-		t.Errorf("baseline carries the key: %v", err)
+	if err := CheckBaselineIdentity(carrying); err != nil {
+		t.Errorf("baseline carries the identity fingerprint: %v", err)
 	}
-	if err := CheckBaselineIdentity(carrying, "some-other-key/v1"); err == nil {
-		t.Error("expected an error for a key no baseline result carries")
+	traceOnly := makeReport(makeResult("a", Error, "a.java", 1, fp("", "trace-a")))
+	if err := CheckBaselineIdentity(traceOnly); err == nil {
+		t.Error("expected an error for a baseline without the identity fingerprint")
 	}
 }

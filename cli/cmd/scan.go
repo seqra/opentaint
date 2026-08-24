@@ -43,7 +43,6 @@ type ScanConfig struct {
 
 	Baseline           string
 	WriteBaselineState bool
-	FingerprintKey     string
 	ErrorOnFindings    bool
 	ErrorOnSeverity    []string
 
@@ -191,7 +190,7 @@ func addScanFlags(cmd *cobra.Command) {
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
 
-	addBaselineFlags(cmd, &scanFlags.Baseline, &scanFlags.FingerprintKey)
+	addBaselineFlags(cmd, &scanFlags.Baseline)
 	cmd.Flags().BoolVar(&scanFlags.WriteBaselineState, "write-baseline-state", false, "Persist result.baselineState and run.baselineGuid into the output report (needs --baseline)")
 	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 }
@@ -210,7 +209,6 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithTrackExternalMethods(cfg.TrackExternalMethods).
 		WithBaseline(cfg.Baseline).
 		WithWriteBaselineState(cfg.WriteBaselineState).
-		WithFingerprintKey(cfg.FingerprintKey).
 		WithErrorOnFindings(cfg.ErrorOnFindings).
 		WithErrorOnSeverity(cfg.ErrorOnSeverity)
 	if !isDefaultSeverity(cfg.Severity) {
@@ -374,11 +372,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var absBaselinePath string
 	if cfg.Baseline != "" {
 		baseline, absBaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
-		identityKey, keyErr := sarif.ResolveIdentityKey(cfg.FingerprintKey)
-		if keyErr != nil {
-			out.Fatalf("%s", keyErr)
-		}
-		if err := sarif.CheckBaselineIdentity(baseline, identityKey); err != nil {
+		if err := sarif.CheckBaselineIdentity(baseline); err != nil {
 			out.Fatalf("%s", err)
 		}
 	}
@@ -675,7 +669,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 func triageScanReport(cfg ScanConfig, report *sarif.Report, absSarifReportPath string, baseline *sarif.Report, absBaselinePath string) *sarif.TriageView {
 	outcome, err := triage.Apply(report, triage.Options{
 		WriteBaselineState: cfg.WriteBaselineState,
-		FingerprintKey:     cfg.FingerprintKey,
 		Baseline:           baseline,
 		BaselinePath:       absBaselinePath,
 	})

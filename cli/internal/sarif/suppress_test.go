@@ -150,7 +150,7 @@ func TestInheritCopiesSuppressionVerbatim(t *testing.T) {
 		makeResult("b", Error, "b.java", 2, fp("id-b", "trace-id-b")),
 	)
 
-	n := InheritSuppressions(current, baseline, SourceSinkFingerprintKey)
+	n := InheritSuppressions(current, baseline)
 	if n != 1 {
 		t.Fatalf("inherited %d, want 1", n)
 	}
@@ -178,7 +178,7 @@ func TestInheritIgnoresBaselineEntriesWithoutSuppressions(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 
-	if n := InheritSuppressions(current, baseline, SourceSinkFingerprintKey); n != 0 {
+	if n := InheritSuppressions(current, baseline); n != 0 {
 		t.Errorf("inherited %d, want 0: presence in a baseline is not acceptance", n)
 	}
 	if IsSuppressed(current.Results()[0]) {
@@ -190,7 +190,7 @@ func TestInheritDoesNotOverwriteAnExistingDecision(t *testing.T) {
 	baseline := makeReport(suppressed("a", "id-a", Accepted, "old decision"))
 	current := makeReport(suppressed("a", "id-a", UnderReview, "decided again just now"))
 
-	if n := InheritSuppressions(current, baseline, SourceSinkFingerprintKey); n != 0 {
+	if n := InheritSuppressions(current, baseline); n != 0 {
 		t.Errorf("inherited %d, want 0", n)
 	}
 	if *current.Results()[0].Suppressions[0].Justification != "decided again just now" {
@@ -202,7 +202,7 @@ func TestInheritSkipsRejectedBaselineEntries(t *testing.T) {
 	baseline := makeReport(suppressed("a", "id-a", Rejected, "denied"))
 	current := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 
-	if n := InheritSuppressions(current, baseline, SourceSinkFingerprintKey); n != 0 {
+	if n := InheritSuppressions(current, baseline); n != 0 {
 		t.Errorf("inherited %d, want 0", n)
 	}
 	if IsSuppressed(current.Results()[0]) {
