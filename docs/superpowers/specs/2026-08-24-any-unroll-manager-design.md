@@ -628,15 +628,62 @@ simply do not arise:
   `forEachElementInSet`, `collectElementParentPairs` and an `ImmutableIntDSU`/`mutableCopy`/`equals`
   pair, none of which this design wants. Removal is the collector's job now.
 
-Writes — `parent`, `pathCount`, `children`, `total` — happen under one lock on `TreeApManager`, and
-they must happen **together**: `pathCount` updated in the same critical section that repoints `parent`,
-or two concurrent unions can both read the pre-merge counts and lose an increment (§2.6). Reads stay
-lock-free: `find` walks volatile links, and transition lookup goes through
-`ConcurrentReadSafeInt2ObjectMap`, which is the house type for capture-and-retry reads
-(`util/ConcurrentReadSafeInt2ObjectMap.java`, already used for `AccessBasedStorage.children`).
+#### The concurrent write to `parent`
 
-Dags get exactly the same treatment: `AnyUnrollDag.parent`, the same `find`, `total` under the same
-lock.
+`parent` is written from two places — `union` repoints a root, path halving shortens a chain — and both
+run on the analysis thread pool. The interesting failure is not a lost update; it is a **cycle in the
+DSU forest**, and a cycle makes `find` spin forever:
+
+```
+thread A:  union(x, y)   ->  find(x)=a, find(y)=b,  b.parent = a
+thread B:  union(y, x)   ->  find(y)=b, find(x)=a,  a.parent = b     // interleaved
+```
+
+Both threads saw two distinct roots, both wrote, and now `a.parent == b` and `b.parent == a`. Nothing
+detects it and the next `find` hangs. This is the reason the rule is not "make `parent` volatile and
+hope":
+
+> **`find` and the parent write must be inside the same critical section for a union.** Unions are
+> serialized on one `TreeApManager` lock; a root discovered under that lock is still a root when it is
+> written.
+
+With that, the two writers have **disjoint write sets**, which is what lets halving stay lock-free:
+
+- **`union` writes only to roots** — it writes `b.parent` where `b` was `find(y)`, i.e. `b.parent` was
+  `null`, established under the lock.
+- **Path halving writes only to non-roots whose parent is also a non-root** — the loop writes
+  `cur.parent = grand` only after reading a non-null `cur.parent` *and* a non-null `up.parent`.
+
+So halving never touches a root and `union` never touches a non-root. Four further properties make the
+lock-free half safe rather than merely convenient:
+
+- **A halving write can only shorten a valid path.** `grand` was an ancestor of `cur` when it was read,
+  and ancestors are permanent: a root may acquire a parent, but a non-root never leaves its tree. So
+  the link installed is always still valid, even if it has since stopped being the root.
+- **A lost halving write is harmless.** Two threads racing to halve the same node write links that are
+  both valid; whichever lands, `find` still converges. Plain volatile writes are enough — no CAS.
+- **A stale read costs a hop, not a wrong answer.** `parent` is `@Volatile`, and a reader that misses a
+  recent union simply walks further up and reaches the same root.
+- **Any decision that mutates must re-`find` under the lock.** A lock-free `find` on the fast path is a
+  hint; the union, the record and the charge all re-resolve inside the critical section. This is the
+  one rule that turns "reads are stale" from a correctness problem into a performance note.
+
+`pathCount` is read on the charge path and written by `union`, so it follows the same discipline: the
+budget test, the transition insert and the `total` increment happen **together** under the lock (§2.6),
+or two concurrent unions read the same pre-merge counts and one increment is lost.
+
+That leaves the hot path lock-free, which is the point of the split: the common case for R4 is *the
+transition already exists*, answered by a `ConcurrentReadSafeInt2ObjectMap` lookup
+(`util/ConcurrentReadSafeInt2ObjectMap.java`, the house capture-and-retry type, already used for
+`AccessBasedStorage.children`) with no lock and no allocation. The lock is taken only when a transition
+must be **created** or two states **merged** — the first is bounded by `L` per dag (§3.8), the second by
+the union count. Both are rare against the number of reads, which is the whole reason the automaton
+exists.
+
+Dags get exactly the same treatment: `AnyUnrollDag.parent` volatile, the same `find`, `total` written
+under the same lock. And note the two-layer union (§2.2) must take the lock **once** for the whole
+operation — fusing dags and then merging states are not two independently-locked steps, or a third
+thread can observe a dag fused with its states not yet merged.
 
 ### 3.4 Identity, and why the sentinel matters
 
@@ -811,7 +858,9 @@ every unit runner on a pool of `(availableProcessors() / 2)` threads
 `AtomicBoolean`.
 
 The split that matters for cost: **`find` lock-free on the hot path; `union` and automaton mutation
-synchronized and rare.** This is not what a narrower design would have needed — the two spend sites are
+synchronized and rare.** §3.3 works through why that is safe rather than merely fast — the two writers
+have disjoint write sets, and the failure a naive version invites is a cycle in the DSU forest, which
+hangs. This is not what a narrower design would have needed — the two spend sites are
 individually single-threaded (TIFA is one per `NormalMethodAnalyzer` with all-plain-fastutil fields;
 the subscription storages are touched only by the owning caller runner). It is putting id handling on
 the shared manager that makes it cross-thread, the deliberate trade for a budget that is genuinely
@@ -1800,10 +1849,12 @@ independently.
    halving, and `union` writing `parent`, `pathCount` and `total` inside one lock. There is no DSU
    class and no id space: this step is two small classes.
    *Gate: single-threaded correctness (find/union/receiver-preference); the `pathCount` update being
-   atomic with the `parent` write; a concurrency test with N threads unioning and finding, asserting
-   every `find` returns the current representative and never a superseded one and that no `pathCount`
-   increment is lost; and a **reclamation** test — drop the last reference to a merged-away state and
-   assert it is collected (`WeakReference` + `System.gc()`), which is the property §3.8 rests on.*
+   atomic with the `parent` write; a **forest-acyclicity** test — N threads issuing `union(x, y)` and
+   `union(y, x)` on the same pairs concurrently, asserting `find` always terminates, which is the one
+   failure §3.3 shows is a hang rather than a wrong answer; a concurrency test asserting every `find`
+   returns the current representative and never a superseded one and that no `pathCount` increment is
+   lost; and a **reclamation** test — drop the last reference to a merged-away state and assert it is
+   collected (`WeakReference` + `System.gc()`), which is the property §3.8 rests on.*
 2. **The automaton on `TreeApManager`** (§2, §2.2, §2.6): the two DSUs, the `edges` transition map,
    `pathCount`, `total` at the dag, the two-layer `union` with its same-dag precondition, the
    memoised product merge (§2.2), and the dag fusion that precedes any cross-automaton state merge.
@@ -1871,9 +1922,13 @@ A cheap always-on version of (b) belongs in the assertion budget rather than the
 site that creates an `[any]` above a subtree, assert that the subtree's `[any]` ids all `find` to the
 id being written. That catches B1 and B4 at the point of failure instead of at a whole-program count.
 
-Also count, under the same flag: unions, **cross-origin cascades** (§8.3 — the design assumes these
-are rare and over-counts when they happen), live dags and live states against ids ever minted, and
-records refused.
+Also count, under the same flag: unions, **cross-dag fusions** (§8.3 — the design assumes these are
+rare and over-counts when they happen), live dags and live states against states ever minted, records
+refused, and — the one that settles a standing question — **how often `collapseNestedAny` takes its
+union-without-collapse arm**, i.e. how often an uncovered accessor actually separates two `[any]`s in a
+fact the analyzer built. §4.7 argues that population should be empty in production. If the counter is
+zero across the witnesses, the arm is defensive rather than load-bearing and could later become an
+assertion; if it is not, §2.4's unconditional manager rule is doing real work and must stay.
 
 Run all of this before any tuning. A design whose bound leaks is not worth sweeping.
 
@@ -2042,7 +2097,7 @@ cannot serve as a control: the two backends differ in the mechanism under test.
 | R3 | `anyId` in identity costs +8 bytes/node and fragments the interner by origin count | **high** — heap is the binding constraint | §12.7 measures size and node count; the fallback is dropping it out of identity, which trades precision for heap and re-opens global fusion |
 | R4 | §5.3's consumers require structural prefix-equality, so absorption loses a finding | high — redesign, not a tweak | §12.2 checks it before the refusal lands |
 | R5 | `markInterned` (AT:1494) drops `anyId`, exactly as it deliberately drops `anySuffixMatcher` | high but mechanical | in identity means a constructor parameter with no default, so it is a compile error rather than a silent refill (§3.4) |
-| R6 | A racing `find` reads a stale parent, or CAS compression loses an update | medium | §3.3: following parents converges regardless, and `union` is synchronized; the failure mode is a slower `find`, not a wrong representative |
+| R6 | **Two concurrent unions on the same pair create a cycle in the DSU forest and `find` spins forever.** A racing stale read or a lost halving write are the benign cousins of this and are not the problem | **high** — the failure is a hang, not a wrong answer, and nothing detects it | §3.3: `find` and the parent write are inside one critical section for a union, which is what keeps the forest acyclic; halving stays lock-free only because its write set is disjoint from `union`'s. Step 1's gate is a concurrent `union(x,y)` / `union(y,x)` test asserting `find` terminates |
 | R7 | N-way unions accounted incrementally instead of on the completed union, double-counting shared prefixes | medium | §4.6.1 — the trimming of §4.2 fires *inside* `stripAnyBelowCoveredPath`'s own merge loop |
 | R8 | A deserialised `[any]` reaches a prescan-phase tree, where `AnyAccessorDisabled.unrollAccessor` **throws** | low but total (analysis stalls) | AT:2018 is the one `[any]` creation site that never consults the strategy; guard the coverage query. This class of bug has been hit once, stalling openmrs at `Progress: 1/7367` |
 | R9 | The manager and `AccessPathTrieNode.unrollAccessors` disagree about which accessors remain, and the memo has no un-take | medium | §6.2 — consult the manager first; step 6 sequences it |
