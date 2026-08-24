@@ -1121,8 +1121,9 @@ attacks the origin count that §3.8 and R23 turn on. And it discharges most of �
 collapse fires, two `[any]` edges become one edge and the manager rule falls out of the tree rule
 instead of having to be threaded separately.
 
-**The precondition is exact and must not be relaxed by a single term.** Three existing tests are the
-fence, and each fails for a different over-reach:
+**The precondition is `f ∈ Σ`** — the collapse is `Σ* ⊇ Σ*·f·Σ*`, and §8.2 shows it fails outright for
+an accessor outside `Σ` rather than merely losing precision. Three existing tests are the fence, and
+each fails for a different over-reach:
 
 | relaxation | what breaks |
 |---|---|
@@ -1581,15 +1582,40 @@ that must stay green.
 
 **A correction to the existing documentation, which §4.7 depends on.** `prependAnyAccessor`'s KDoc
 (AT:776-779) calls the nested-`[any]` collapse "an identity, not an approximation", and
-`2026-08-21-any-premise-design.md:422` repeats it as `[any].<covered sequence>.[any] ≡ [any]`. That is
-not quite true: `[any].f.[any].g` denotes `w₁·f·w₂·g` for covered `w₁,w₂`, while `[any].g` denotes
-`w·g` — the second includes `g` with no `f` at all, so the inclusion is **strict**. The collapse is a
-**monotone coarsening**, exactly as the sibling KDoc for absorption honestly says at AT:862-865, and
-not an identity.
+`2026-08-21-any-premise-design.md:422` repeats it as `[any].<covered sequence>.[any] ≡ [any]`.
 
-Nothing existing is unsound, because the direction is the safe one. But the word matters for §4.7: a
-normalisation that is an identity may be applied anywhere without thought, whereas a coarsening has a
-precision cost and a precondition that has to be respected at every new site.
+Write `Σ` for the accessors `isCoveredByAny` accepts. `[any]` is `Σ*`, so the whole question is one
+line of language theory:
+
+```
+Σ*  ⊇  Σ* · f · Σ*        for f ∈ Σ
+```
+
+The inclusion is **strict** — the left side also denotes every sequence with no `f` in it — so the
+collapse is a **monotone coarsening**, exactly as the sibling KDoc for absorption honestly says at
+AT:862-865, and not an identity. Nothing existing is unsound, because a superset of a taint fact can
+only add false positives.
+
+The same line settles the precondition, which is why it is worth writing this way: the containment
+needs `f ∈ Σ`, and for `f ∉ Σ` it fails outright — `Σ* · {Box} · Σ* · g` contains paths through a
+`{Box}` step that `Σ* · g` does not denote at all. Collapsing there would **lose** flows, not
+over-approximate them. So "at most one `[any]` per path" is sound only as "at most one `[any]` per
+*covered-only* stretch of a path"; §4.7's covered-only guard is that side condition, and
+`AnyAccessorCollapseTest.kt:143-153` is the passing test that pins it.
+
+The distinction that is easy to lose, because the two rules read alike:
+
+| | scope | conditional? |
+|---|---|---|
+| the **tree** collapse (§4.7) | merges two `[any]` *edges* into one | **yes** — only across `Σ` |
+| the **manager** invariant (§2.4) | one budget per root-to-leaf path | **no** — unconditional |
+
+`[any].{Box}.[any]` keeps both of its edges and shares one pot. That is exactly what
+`collapseNestedAny` does in its two arms: collapse where legal, union where not (§4.1).
+
+The word "identity" matters for §4.7 beyond pedantry: a normalisation that is an identity may be
+applied anywhere without thought, whereas a coarsening has a precision cost — hence its own
+implementation step and its own SARIF gate.
 
 ### 8.3 Overshoot, and where it actually comes from
 
