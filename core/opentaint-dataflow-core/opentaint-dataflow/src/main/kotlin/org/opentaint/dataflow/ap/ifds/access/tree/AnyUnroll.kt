@@ -28,6 +28,10 @@ class AnyUnrollDag(@JvmField val id: Int) {
     @JvmField
     var total: Int = 0
 
+    /** Diagnostics only: reads this pot refused after it was spent. Written under the manager lock. */
+    @JvmField
+    var refusals: Int = 0
+
     /**
      * The automaton's start state, needed only to fuse two automata into one.
      *
@@ -146,6 +150,34 @@ object AnyUnrollDiagnostics {
     val absorptions = AtomicLong()
     val collapses = AtomicLong()
 
+    /**
+     * Facts materialised by the initial-fact abstraction's unroll -- one per `accountUnrolledFact()`
+     * in the retired per-`(entry point, base)` counter.
+     *
+     * It exists to measure the gap between what that counter charged and what the manager charges.
+     * The old counter charged once per materialised FACT, at every position, every time; the manager
+     * charges once per distinct `(state, accessor)` TRANSITION, and re-deriving a recorded path is
+     * free by design. Those two coincide only when paths are not re-derived at many positions, so
+     * the ratio is the honest measure of how much weaker the new cut is per unit of work.
+     */
+    val tifaUnrolledFacts = AtomicLong()
+
+    /**
+     * The largest `total` any pot ever reached, and how many reads the single worst pot refused.
+     *
+     * The aggregate counters cannot tell "every pot is at its limit" from "one giant pot is at its
+     * limit and refuses half the program", and those two call for opposite responses: the first says
+     * the limit is too low, the second says the cut is landing on one origin and the lever is that
+     * origin rather than its budget.
+     */
+    val maxPotTotal = AtomicLong()
+    val maxPotRefusals = AtomicLong()
+
+    fun recordPot(total: Int) {
+        var cur = maxPotTotal.get()
+        while (total > cur && !maxPotTotal.compareAndSet(cur, total.toLong())) cur = maxPotTotal.get()
+    }
+
     /** §12.1: the union-without-collapse arm, broken down by the accessor that separates the two. */
     val unionWithoutCollapseMark = AtomicLong()
     val unionWithoutCollapseStatic = AtomicLong()
@@ -177,6 +209,9 @@ object AnyUnrollDiagnostics {
         append(" refused=").append(readsRefused.get())
         append(" absorptions=").append(absorptions.get())
         append(" collapses=").append(collapses.get())
+        append(" tifaFacts=").append(tifaUnrolledFacts.get())
+        append(" maxPotTotal=").append(maxPotTotal.get())
+        append(" maxPotRefusals=").append(maxPotRefusals.get())
         append(" unionNoCollapse=[mark:").append(unionWithoutCollapseMark.get())
         append(",static:").append(unionWithoutCollapseStatic.get())
         append(",typeInfo:").append(unionWithoutCollapseTypeInfo.get())
@@ -409,7 +444,11 @@ class AnyUnrollManager(
 
             val dag = current.dag.find()
             if (dag.total >= limit) {
-                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.readsRefused.incrementAndGet()
+                if (AnyUnrollDiagnostics.enabled) {
+                    AnyUnrollDiagnostics.readsRefused.incrementAndGet()
+                    dag.refusals++
+                    AnyUnrollDiagnostics.maxPotRefusals.updateAndGet { maxOf(it, dag.refusals.toLong()) }
+                }
                 return null
             }
 
@@ -417,6 +456,7 @@ class AnyUnrollManager(
             child.pathCount = current.pathCount
             putTransition(current, accessor, child)
             dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.recordPot(dag.total)
 
             if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.transitionsCreated.incrementAndGet()
 

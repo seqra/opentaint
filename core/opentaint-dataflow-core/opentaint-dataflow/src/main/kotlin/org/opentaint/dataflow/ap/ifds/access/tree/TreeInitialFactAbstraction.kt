@@ -20,6 +20,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
 import org.opentaint.dataflow.util.forEachInt
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
 /**
@@ -35,8 +36,16 @@ import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as Acces
  */
 class TreeInitialFactAbstraction(
     private val apManager: TreeApManager,
+    methodInitialStatement: CommonInst? = null,
 ): InitialFactAbstraction {
     private val anyUnroll = apManager.anyUnroll
+
+    private val methodLabel: String? =
+        if (TifaDiagnostics.enabled) methodInitialStatement?.location?.method?.toString() else null
+
+    private fun baseStats(base: AccessPathBase): BaseStats? =
+        methodLabel?.let { TifaDiagnostics.baseStats("$base @ $it") }
+
     private val initialFacts = MethodSameMarkInitialFact(apManager, hashMapOf())
     private val interner = AccessTreeSoftInterner(apManager)
 
@@ -46,9 +55,19 @@ class TreeInitialFactAbstraction(
     ): List<Pair<InitialFactAp, FinalFactAp>> {
         factAp as AccessTree
 
+        if (TifaDiagnostics.enabled) {
+            TifaDiagnostics.addCalls.incrementAndGet()
+            baseStats(factAp.base)?.addCalls?.incrementAndGet()
+        }
+
         // note: we can ignore fact exclusions here
         val facts = initialFacts.getOrPut(factAp.base)
         val addedFact = facts.addInitialFact(factAp.access, interner) ?: return emptyList()
+
+        if (TifaDiagnostics.enabled) {
+            TifaDiagnostics.addDeltas.incrementAndGet()
+            baseStats(factAp.base)?.recordAdded(facts.allAddedFacts())
+        }
 
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
         addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts, typeChecker)
@@ -94,6 +113,11 @@ class TreeInitialFactAbstraction(
             val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
             abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier) { abstractAccess, governingAnyId ->
                 apManager.cancellation.checkpoint()
+
+                if (TifaDiagnostics.enabled) {
+                    TifaDiagnostics.emits.incrementAndGet()
+                    baseStats(concreteFactBase)?.emits?.incrementAndGet()
+                }
 
                 val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
                 val initialAbstractAp = AccessPath(apManager, concreteFactBase, initialAbstractAccessNode, Empty)
@@ -168,6 +192,10 @@ class TreeInitialFactAbstraction(
                 // accessors, which is the population the bound is about.
                 val childAnyState = anyUnroll.readChild(parentAnyState, accessor)
                 if (anyUnroll.enabled && parentAnyState != null && childAnyState == null) {
+                    // Counted SEPARATELY from every other refusal. `readsRefused` mixes this with
+                    // `getChild`'s arm, and reading the mixed number as if it were this one is
+                    // exactly how a censored count gets mistaken for a small mechanism.
+                    if (TifaDiagnostics.enabled) TifaDiagnostics.unrollRefusedByBudget.incrementAndGet()
                     budgetSpent = true
                     return@forEachInt
                 }
@@ -191,6 +219,12 @@ class TreeInitialFactAbstraction(
                 newFacts += filteredNode.withAnyState(childAnyState)
                     .addReversedApParents(prefix, unrollRequest.governingAnyId)
                     ?: return@forEachInt
+
+                // The event the retired per-base counter charged for. Counted, not charged: the gap
+                // between this and `transitions` is how much weaker the per-origin bound is per unit
+                // of work than the counter it replaces.
+                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.tifaUnrolledFacts.incrementAndGet()
+                if (TifaDiagnostics.enabled) TifaDiagnostics.unrollMaterialised.incrementAndGet()
             }
 
             // Not only an outright refusal: an unroll that took the pot exactly to its limit leaves
@@ -263,6 +297,8 @@ class TreeInitialFactAbstraction(
         while (unprocessed.isNotEmpty()) {
             val state = unprocessed.removeLast()
 
+            if (TifaDiagnostics.enabled) TifaDiagnostics.walkStates.incrementAndGet()
+
             val currentLevelExclusions = state.analyzedTrieRoot.exclusions()
             if (currentLevelExclusions == null) {
                 createAbstractAp(state.currentAp, state.governingAnyId)
@@ -270,6 +306,8 @@ class TreeInitialFactAbstraction(
             }
 
             if (state.added.containsAnyAccessor()) {
+                if (TifaDiagnostics.enabled) TifaDiagnostics.anyDescents.incrementAndGet()
+
                 // The budget is consulted BEFORE the memo, deliberately.
                 // `AccessPathTrieNode.unrollAccessors` commits as it reads and has no un-take, so
                 // collecting a request we will not honour burns demand that a later, better-funded
@@ -279,6 +317,10 @@ class TreeInitialFactAbstraction(
                 if (enumerateHere) {
                     val unrollAccessors = state.analyzedTrieRoot.unrollAccessors(currentLevelExclusions)
                     if (unrollAccessors.isNotEmpty()) {
+                        if (TifaDiagnostics.enabled) {
+                            TifaDiagnostics.unrollRequests.incrementAndGet()
+                            TifaDiagnostics.unrollAccessorsOffered.addAndGet(unrollAccessors.size.toLong())
+                        }
                         unrollRequests += AnyAccessorUnrollRequest(
                             state.currentAp, state.added, unrollAccessors, state.governingAnyId,
                         )

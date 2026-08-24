@@ -20,6 +20,8 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.AnyUnrollDiagnostics
+import org.opentaint.dataflow.ap.ifds.access.tree.SummaryPremiseDiagnostics
+import org.opentaint.dataflow.ap.ifds.access.tree.TifaDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -135,6 +137,18 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             // Also on stdout: the benchmark harness scrapes console.log, and a counter that only
             // exists inside a log level nobody enabled is a counter nobody reads.
             println("ANYUNROLL $report")
+        }
+
+        if (TifaDiagnostics.enabled) {
+            val report = TifaDiagnostics.report(topN = 20)
+            logger.info { report }
+            report.lineSequence().forEach { if (it.isNotBlank()) println("TIFA $it") }
+        }
+
+        if (SummaryPremiseDiagnostics.enabled) {
+            val report = SummaryPremiseDiagnostics.report(topN = 20)
+            logger.info { report }
+            report.lineSequence().forEach { if (it.isNotBlank()) println("SUMPREMISE $it") }
         }
 
         return fullScanResult

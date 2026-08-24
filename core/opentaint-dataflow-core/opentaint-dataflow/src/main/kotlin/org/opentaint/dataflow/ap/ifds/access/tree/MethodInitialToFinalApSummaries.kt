@@ -13,8 +13,16 @@ class MethodInitialToFinalApSummaries(
     override val apManager: TreeApManager,
 ) : CommonF2FSummary<AccessPath.AccessNode?, AccessTreeNode>(methodInitialStatement),
     TreeInitialApAccess, TreeFinalApAccess {
+
+    private val premiseCounter: MethodSummaryPremises? =
+        if (SummaryPremiseDiagnostics.enabled) {
+            SummaryPremiseDiagnostics.counterFor(methodInitialStatement.location.method.toString())
+        } else {
+            null
+        }
+
     override fun createStorage(): Storage<AccessPath.AccessNode?, AccessTreeNode> =
-        MethodTaintedSummariesGroupedByFactStorage(apManager)
+        MethodTaintedSummariesGroupedByFactStorage(apManager, premiseCounter)
 }
 
 private interface ModifiableStorage {
@@ -24,6 +32,8 @@ private interface ModifiableStorage {
 
 private abstract class F2FInitialStorage<SN : F2FInitialStorage<SN, S>, S : ModifiableStorage>(
     apManager: TreeApManager,
+    /** Diagnostics only; propagated through [createStorage] so every trie node reports to one method. */
+    @JvmField val premiseCounter: MethodSummaryPremises?,
 ) : AccessBasedStorage<SN>(apManager) {
     var current: S? = null
 
@@ -57,21 +67,27 @@ private abstract class F2FInitialStorage<SN : F2FInitialStorage<SN, S>, S : Modi
 
 private class MethodTaintedSummariesInitialApStorage(
     apManager: TreeApManager,
-) : F2FInitialStorage<MethodTaintedSummariesInitialApStorage, MethodTaintedSummariesMergingStorage>(apManager) {
-    override fun createStorage() = MethodTaintedSummariesInitialApStorage(manager)
+    premiseCounter: MethodSummaryPremises?,
+) : F2FInitialStorage<MethodTaintedSummariesInitialApStorage, MethodTaintedSummariesMergingStorage>(apManager, premiseCounter) {
+    override fun createStorage() = MethodTaintedSummariesInitialApStorage(manager, premiseCounter)
 
     fun getOrCreate(initialAccess: AccessPath.AccessNode?): MethodTaintedSummariesMergingStorage =
         getOrCreateNode(initialAccess).getOrCreateCurrent(initialAccess)
 
     private fun getOrCreateCurrent(access: AccessPath.AccessNode?) =
-        current ?: MethodTaintedSummariesMergingStorage(manager, access).also { current = it }
+        current ?: MethodTaintedSummariesMergingStorage(manager, access)
+            .also {
+                current = it
+                premiseCounter?.record(access, identity = false)
+            }
 }
 
 private open class MethodTaintedSummariesIdStorage(
     apManager: TreeApManager,
-) : F2FInitialStorage<MethodTaintedSummariesIdStorage, SummariesIdStorageNode>(apManager) {
+    premiseCounter: MethodSummaryPremises?,
+) : F2FInitialStorage<MethodTaintedSummariesIdStorage, SummariesIdStorageNode>(apManager, premiseCounter) {
 
-    override fun createStorage() = MethodTaintedSummariesIdStorage(manager)
+    override fun createStorage() = MethodTaintedSummariesIdStorage(manager, premiseCounter)
 
     fun add(initialAccess: AccessPath.AccessNode?, exclusion: ExclusionSet): SummariesIdStorageNode? {
         val storageNode = try {
@@ -137,7 +153,10 @@ private open class MethodTaintedSummariesIdStorage(
     }
 
     private fun getOrCreateCurrent(access: AccessPath.AccessNode?) =
-        current ?: SummariesIdStorageNode(manager, access).also { current = it }
+        current ?: SummariesIdStorageNode(manager, access).also {
+            current = it
+            premiseCounter?.record(access, identity = true)
+        }
 
     private class NodeSubsumedException : Exception() {
         override fun fillInStackTrace(): Throwable = this
@@ -197,9 +216,10 @@ private class SummariesIdStorageNode(
 
 private class MethodTaintedSummariesGroupedByFactStorage(
     apManager: TreeApManager,
+    premiseCounter: MethodSummaryPremises?,
 ) : CommonF2FSummary.Storage<AccessPath.AccessNode?, AccessTreeNode> {
-    private val idEdges = MethodTaintedSummariesIdStorage(apManager)
-    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(apManager)
+    private val idEdges = MethodTaintedSummariesIdStorage(apManager, premiseCounter)
+    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(apManager, premiseCounter)
 
     override fun add(
         edges: List<CommonF2FSummary.StorageEdge<AccessPath.AccessNode?, AccessTreeNode>>,

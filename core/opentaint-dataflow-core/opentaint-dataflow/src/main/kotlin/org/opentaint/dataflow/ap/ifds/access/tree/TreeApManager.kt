@@ -84,7 +84,7 @@ class TreeApManager(
         anyAccessorUnrollStrategy.unrollAccessor(accessor.accessor)
 
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
-        TreeInitialFactAbstraction(this)
+        TreeInitialFactAbstraction(this, methodInitialStatement)
 
     override fun methodEdgesFinalApSet(
         methodInitialStatement: CommonInst,
