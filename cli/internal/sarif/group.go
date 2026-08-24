@@ -28,6 +28,9 @@ type ListingOptions struct {
 	// about. Hiding happens here rather than in Filters so that the summary
 	// counts still see every result and can report how many were suppressed.
 	ShowSuppressed bool
+	// Comparison qualifies baseline states in the listing: what moved under an
+	// updated finding, what remains of an absent one. nil prints bare states.
+	Comparison *Comparison
 }
 
 // ParseGroupDimension converts a --group-by flag value into a GroupDimension.

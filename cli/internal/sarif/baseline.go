@@ -19,6 +19,11 @@ type Comparison struct {
 	key               string
 	changesByIdentity map[string]Change
 
+	// remnantsByIdentity records, per absent identity value, what the current
+	// report still shows of the finding. Keyed by identity for the same reason
+	// as changesByIdentity: the listing displays copies.
+	remnantsByIdentity map[string]Remnant
+
 	// Counts holds the number of current results in each state, plus the number
 	// of baseline results with no match in the current report under Absent.
 	Counts map[BaselineState]int
@@ -84,6 +89,74 @@ func (c Change) Label() string {
 	default:
 		return ""
 	}
+}
+
+// Remnant is the evidence that an absent baseline finding may still exist in
+// the current report under a different identity. An absence only proves that
+// the hash is gone, and the hash changes when the code around the finding
+// moves. So the comparison looks for what remains of the finding before the
+// summary claims "fixed".
+type Remnant string
+
+const (
+	// RemnantNone means nothing in the current report points at the finding.
+	// The summary reports it as fixed.
+	RemnantNone Remnant = ""
+	// RemnantSameSink means a current result carries the same fingerprint
+	// under a coarser key, so the sink is still reported. The identity
+	// changed, the finding did not go away.
+	RemnantSameSink Remnant = "sink"
+	// RemnantSameRuleFile means a new current result reports the same rule in
+	// the same file. That is a hint, not proof: the absent finding may have
+	// moved and taken its hash with it, or the new finding may be unrelated.
+	RemnantSameRuleFile Remnant = "moved"
+)
+
+// Label describes a remnant in the words a report uses.
+func (r Remnant) Label() string {
+	switch r {
+	case RemnantSameSink:
+		return "sink still reported"
+	case RemnantSameRuleFile:
+		return "possibly moved"
+	default:
+		return ""
+	}
+}
+
+// RemnantOf returns what the current report still shows of an absent finding.
+// The lookup runs by identity value, so it works both on the baseline results
+// themselves and on the display copies that WithAbsent makes.
+func (c *Comparison) RemnantOf(r *Result) Remnant {
+	if c == nil || c.remnantsByIdentity == nil {
+		return RemnantNone
+	}
+	id, ok := Identity(r, c.key)
+	if !ok {
+		return RemnantNone
+	}
+	return c.remnantsByIdentity[id]
+}
+
+// StateNote qualifies a result's baseline state for display: what moved under
+// an updated finding, what remains of an absent one. Returns "" when there is
+// nothing to add.
+func (c *Comparison) StateNote(r *Result) string {
+	if c == nil || r == nil || r.BaselineState == nil {
+		return ""
+	}
+	switch *r.BaselineState {
+	case Updated:
+		// The pointer map is exact for the classified results. Display copies
+		// miss it and fall back to the identity lookup.
+		if change := c.changes[r]; change != ChangeNone {
+			return change.Label()
+		}
+		return c.changeOfIdentity(r).Label()
+	case Absent:
+		return c.RemnantOf(r).Label()
+	}
+	return ""
 }
 
 // ChangeOf returns what moved under a matched result, or ChangeNone when
@@ -153,13 +226,14 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 	}
 
 	cmp := &Comparison{
-		states:            make(map[*Result]BaselineState),
-		changes:           make(map[*Result]Change),
-		key:               key,
-		changesByIdentity: make(map[string]Change),
-		Counts:            make(map[BaselineState]int),
-		ChangeCounts:      make(map[Change]int),
-		BaselineGUID:      baseline.RunGUID(),
+		states:             make(map[*Result]BaselineState),
+		changes:            make(map[*Result]Change),
+		key:                key,
+		changesByIdentity:  make(map[string]Change),
+		remnantsByIdentity: make(map[string]Remnant),
+		Counts:             make(map[BaselineState]int),
+		ChangeCounts:       make(map[Change]int),
+		BaselineGUID:       baseline.RunGUID(),
 	}
 
 	refinements := finerKeys(key)
@@ -206,8 +280,75 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		}
 	}
 	cmp.Counts[Absent] = len(cmp.Absent)
+	cmp.attributeAbsent(current)
 
 	return cmp, nil
+}
+
+// attributeAbsent records, for every absent finding, whatever the current
+// report still shows of it. Exact evidence first: a match under a coarser
+// fingerprint proves the sink is still reported. Then the heuristic: a new
+// finding of the same rule in the same file suggests the finding moved and
+// its hash moved with it.
+func (c *Comparison) attributeAbsent(current *Report) {
+	if len(c.Absent) == 0 {
+		return
+	}
+
+	currentResults := current.Results()
+	valuesUnder := map[string]map[string]bool{}
+	for _, key := range coarserKeys(c.key) {
+		values := make(map[string]bool, len(currentResults))
+		for _, r := range currentResults {
+			if v, ok := Identity(r, key); ok {
+				values[v] = true
+			}
+		}
+		valuesUnder[key] = values
+	}
+	newRuleFiles := map[string]bool{}
+	for _, r := range currentResults {
+		if c.states[r] != New {
+			continue
+		}
+		if rf, ok := ruleFileKey(r); ok {
+			newRuleFiles[rf] = true
+		}
+	}
+
+	for _, r := range c.Absent {
+		remnant := RemnantNone
+		for _, key := range coarserKeys(c.key) {
+			if v, ok := Identity(r, key); ok && valuesUnder[key][v] {
+				remnant = RemnantSameSink
+				break
+			}
+		}
+		if remnant == RemnantNone {
+			if rf, ok := ruleFileKey(r); ok && newRuleFiles[rf] {
+				remnant = RemnantSameRuleFile
+			}
+		}
+		if remnant == RemnantNone {
+			continue
+		}
+		if id, ok := Identity(r, c.key); ok {
+			c.remnantsByIdentity[id] = remnant
+		}
+	}
+}
+
+// ruleFileKey pairs a result's rule id with the file of its primary location,
+// which is as much identity as two reports share once every hash has changed.
+func ruleFileKey(r *Result) (string, bool) {
+	if r.RuleID == nil || *r.RuleID == "" {
+		return "", false
+	}
+	loc, ok := primaryNodeLoc(r)
+	if !ok || loc.relFilePath == "" {
+		return "", false
+	}
+	return *r.RuleID + "\x00" + loc.relFilePath, true
 }
 
 // WithAbsent returns a shallow copy of the report whose first run also carries

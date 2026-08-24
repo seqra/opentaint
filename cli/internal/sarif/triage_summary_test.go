@@ -57,6 +57,36 @@ func TestSummaryBaselineGroup(t *testing.T) {
 	}
 }
 
+func TestSummaryBaselineGroupHedgesAbsencesWithRemnants(t *testing.T) {
+	baseline := makeReport(
+		// The identity drifts but the sink hash survives: provably still there.
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")),
+		// Everything drifts, and a new same-rule finding sits in the same file.
+		makeResult("b", Error, "b.java", 2, fps("sink-b-old", "src-b-old", "trace-b-old")),
+		// Genuinely gone.
+		makeResult("c", Error, "c.java", 3, fps("sink-c", "src-c", "trace-c")),
+	)
+	report := makeReport(
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")),
+		makeResult("b", Error, "b.java", 4, fps("sink-b-new", "src-b-new", "trace-b-new")),
+	)
+	cmp, err := CompareToBaseline(report, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+
+	out := renderSummary(t, report, &TriageView{BaselinePath: "b.sarif", Comparison: cmp})
+
+	for _, want := range []string{"Gone, sink still reported", "Gone, possibly moved", "Fixed"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("missing %q in summary:\n%s", want, out)
+		}
+	}
+	if strings.Count(out, "Fixed") != 1 {
+		t.Errorf("exactly one Fixed line expected:\n%s", out)
+	}
+}
+
 func TestSummaryBaselineGroupOmitsZeroUpdated(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	report := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
