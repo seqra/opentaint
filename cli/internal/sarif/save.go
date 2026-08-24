@@ -28,10 +28,10 @@ func SaveReport(report *Report, path string) error {
 		return fmt.Errorf("failed to create temporary report file: %w", err)
 	}
 	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
+	defer func() { _ = os.Remove(tmpName) }() // no-op once the rename below succeeds
 
 	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
+		_ = tmp.Close()
 		return fmt.Errorf("failed to write sarif report: %w", err)
 	}
 	if err := tmp.Close(); err != nil {
