@@ -120,3 +120,14 @@ func TestArtifactByKindPanics(t *testing.T) {
 	}()
 	ArtifactByKind("unknown")
 }
+
+func TestGoServerDefCarriesTheBinaryOverride(t *testing.T) {
+	old := Config.GoServer.Binary
+	defer func() { Config.GoServer.Binary = old }()
+	Config.GoServer.Binary = "/tmp/dev-go-ssa-server"
+
+	def := ArtifactByKind("goserver")
+	if def.Override != "/tmp/dev-go-ssa-server" {
+		t.Errorf("Override = %q, want the --go-server-binary value", def.Override)
+	}
+}
