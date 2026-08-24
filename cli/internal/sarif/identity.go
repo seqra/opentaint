@@ -58,6 +58,23 @@ func finerKeys(key string) []string {
 	return []string{TraceFingerprintKey}
 }
 
+// coarserKeys returns the keys that key refines, nearest first. A key outside
+// the ladder has no coarser keys, so nothing can be said about what an absence
+// under it leaves behind.
+func coarserKeys(key string) []string {
+	for i, k := range identityLadder {
+		if k != key {
+			continue
+		}
+		out := make([]string, i)
+		for j := range out {
+			out[j] = identityLadder[i-1-j]
+		}
+		return out
+	}
+	return nil
+}
+
 // ResolveIdentityKey normalizes a user-supplied identity key, falling back to
 // DefaultIdentityKey when unset and expanding the short aliases. Any other key
 // is accepted as written — a report may carry fingerprints this build does not

@@ -56,13 +56,14 @@ func (c *Comparison) restrict(filtered *Report, f Filters) *Comparison {
 		return nil
 	}
 	out := &Comparison{
-		states:            c.states,
-		changes:           c.changes,
-		key:               c.key,
-		changesByIdentity: c.changesByIdentity,
-		Counts:            make(map[BaselineState]int),
-		ChangeCounts:      make(map[Change]int),
-		BaselineGUID:      c.BaselineGUID,
+		states:             c.states,
+		changes:            c.changes,
+		key:                c.key,
+		changesByIdentity:  c.changesByIdentity,
+		remnantsByIdentity: c.remnantsByIdentity,
+		Counts:             make(map[BaselineState]int),
+		ChangeCounts:       make(map[Change]int),
+		BaselineGUID:       c.BaselineGUID,
 	}
 	for _, r := range filtered.Results() {
 		if r.BaselineState == nil {
@@ -130,8 +131,20 @@ func (v *TriageView) baselineItems(out *output.Printer) []any {
 	if rest := v.Comparison.Counts[Updated] - attributed; rest > 0 {
 		items = append(items, out.FieldItem("Updated", rest))
 	}
-	// "Fixed" reads better than SARIF's "absent" for a finding that is gone.
-	if count := v.Comparison.Counts[Absent]; count > 0 {
+	// An absent finding is not always a fixed one: the hash may have changed
+	// while the finding stayed. Absences that left a trace in the current
+	// report get their own hedged lines, and "Fixed" — which reads better than
+	// SARIF's "absent" — keeps only the ones with nothing left behind.
+	remnants := map[Remnant]int{}
+	for _, r := range v.Comparison.Absent {
+		remnants[v.Comparison.RemnantOf(r)]++
+	}
+	for _, remnant := range []Remnant{RemnantSameSink, RemnantSameRuleFile} {
+		if count := remnants[remnant]; count > 0 {
+			items = append(items, out.FieldItem("Gone, "+remnant.Label(), count))
+		}
+	}
+	if count := remnants[RemnantNone]; count > 0 {
 		items = append(items, out.FieldItem("Fixed", count))
 	}
 	// Baseline findings whose rule did not run are deliberately not folded into

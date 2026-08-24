@@ -97,7 +97,11 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	findingNode.Child(out.FieldItem("Location", locStr))
 
 	if result.BaselineState != nil {
-		findingNode.Child(out.FieldItem("Baseline", string(*result.BaselineState)))
+		state := string(*result.BaselineState)
+		if note := opts.Comparison.StateNote(result); note != "" {
+			state += " (" + note + ")"
+		}
+		findingNode.Child(out.FieldItem("Baseline", state))
 	}
 	if IsSuppressed(result) {
 		suppressedLine := StatusOf(result)

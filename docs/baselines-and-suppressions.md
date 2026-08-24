@@ -133,7 +133,7 @@ Given `--baseline old.sarif`, every current finding is classified:
 | `new` | In this scan, not in the baseline |
 | `unchanged` | In both, identical trace |
 | `updated` | In both — same source and sink, but the path through the code changed |
-| `absent` | In the baseline, gone now (i.e. fixed) |
+| `absent` | In the baseline, not in this scan — fixed, unless something still points at it (see [What changed underneath](#what-changed-underneath)) |
 
 By default the comparison only affects **what is printed** — the SARIF file is
 left byte-for-byte unchanged. Two flags control it:
@@ -217,6 +217,23 @@ Both remain `updated` in the SARIF `baselineState`, so `--baseline-state updated
 selects either. The distinction narrows with a finer identity: under
 `source-sink` a moved source is `new` + `absent` rather than `updated`, and under
 `trace` nothing is left to refine, so a match is always `unchanged`.
+
+An absence gets the same scrutiny before the summary calls it fixed. A
+fingerprint disappears whenever the code it hashes moves, so a gone hash does
+not prove a gone finding. The summary reports what the current scan still shows
+of each absent finding:
+
+| Line | Meaning |
+|------|---------|
+| `Fixed` | Nothing in the current report points at the finding. |
+| `Gone, sink still reported` | A current finding carries the same hash under a coarser key, so the sink is provably still reported. The identity changed, the finding did not go away. |
+| `Gone, possibly moved` | A new finding reports the same rule in the same file. A hint, not proof: the absent finding may have moved and taken its hash with it, or the new finding may be unrelated. |
+
+`Gone, sink still reported` needs a coarser key to check against, so it appears
+under `source-sink` and `trace` but never under the default `sink` key. All
+three lines are `absent` in SARIF terms: `--baseline-state absent` selects them
+all, and the listing prints the qualifier next to each finding's `Baseline:`
+state.
 
 Comparing reports built with different fingerprint keys is a hard error, not a
 silent zero-match. Findings that carry no fingerprint at all (a report produced

@@ -446,6 +446,128 @@ func TestChangeUnderTraceIdentityIsAlwaysNone(t *testing.T) {
 	}
 }
 
+// Under a fine identity, a source change makes the old identity absent and the
+// new one appear. The sink hash still matches, so the finding is not "fixed".
+func TestRemnantSameSinkUnderFineIdentity(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if len(cmp.Absent) != 1 {
+		t.Fatalf("absent = %d, want 1", len(cmp.Absent))
+	}
+	if got := cmp.RemnantOf(cmp.Absent[0]); got != RemnantSameSink {
+		t.Errorf("remnant = %q, want %q", got, RemnantSameSink)
+	}
+	if got := cmp.StateOf(current.Results()[0]); got != New {
+		t.Errorf("the drifted identity should still classify as new, got %q", got)
+	}
+}
+
+// Under the sink identity, no coarser hash exists. A new finding of the same
+// rule in the same file is the hint that the sink hash itself drifted.
+func TestRemnantPossiblyMovedUnderSinkIdentity(t *testing.T) {
+	baseline := makeReport(
+		makeResult("a", Error, "a.java", 10, fps("sink-old", "src-a", "trace-a")),
+		makeResult("b", Error, "b.java", 20, fps("sink-gone", "src-b", "trace-b")),
+	)
+	current := makeReport(
+		makeResult("a", Error, "a.java", 12, fps("sink-new", "src-a2", "trace-a2")),
+	)
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if len(cmp.Absent) != 2 {
+		t.Fatalf("absent = %d, want 2", len(cmp.Absent))
+	}
+	for _, r := range cmp.Absent {
+		want := RemnantNone
+		if *r.RuleID == "a" {
+			want = RemnantSameRuleFile
+		}
+		if got := cmp.RemnantOf(r); got != want {
+			t.Errorf("rule %s: remnant = %q, want %q", *r.RuleID, got, want)
+		}
+	}
+}
+
+// Only new current findings hint at a move. A finding that matched the
+// baseline is accounted for and says nothing about the absent one.
+func TestRemnantIgnoresMatchedFindingsOfTheSameRule(t *testing.T) {
+	baseline := makeReport(
+		makeResult("a", Error, "a.java", 10, fps("sink-kept", "src-a", "trace-a")),
+		makeResult("a", Error, "a.java", 20, fps("sink-gone", "src-b", "trace-b")),
+	)
+	current := makeReport(
+		makeResult("a", Error, "a.java", 10, fps("sink-kept", "src-a", "trace-a")),
+	)
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if len(cmp.Absent) != 1 {
+		t.Fatalf("absent = %d, want 1", len(cmp.Absent))
+	}
+	if got := cmp.RemnantOf(cmp.Absent[0]); got != RemnantNone {
+		t.Errorf("remnant = %q, want none: the same-rule finding was matched, not new", got)
+	}
+}
+
+// The exact evidence outranks the heuristic: when the sink is provably still
+// reported, the finding is not merely "possibly moved".
+func TestRemnantPrefersSameSinkOverSameRuleFile(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if got := cmp.RemnantOf(cmp.Absent[0]); got != RemnantSameSink {
+		t.Errorf("remnant = %q, want %q", got, RemnantSameSink)
+	}
+}
+
+// The remnant lookup runs by identity, so the display copies that WithAbsent
+// stamps resolve to the same remnant as the baseline results themselves.
+func TestRemnantResolvesOnDisplayCopies(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")))
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	listing := current.WithAbsent(cmp.Absent)
+	copyOfGone := listing.Results()[1]
+	if got := cmp.RemnantOf(copyOfGone); got != RemnantSameSink {
+		t.Errorf("remnant on copy = %q, want %q", got, RemnantSameSink)
+	}
+	if got := cmp.StateNote(copyOfGone); got != "sink still reported" {
+		t.Errorf("state note = %q, want %q", got, "sink still reported")
+	}
+}
+
+func TestStateNoteNamesWhatMovedUnderUpdated(t *testing.T) {
+	baseline := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-a", "trace-a")))
+	current := makeReport(makeResult("a", Error, "a.java", 1, fps("sink-a", "src-b", "trace-b")))
+
+	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	cmp.Apply(current)
+	if got := cmp.StateNote(current.Results()[0]); got != "source changed" {
+		t.Errorf("state note = %q, want %q", got, "source changed")
+	}
+}
+
 func TestCheckBaselineIdentity(t *testing.T) {
 	if err := CheckBaselineIdentity(&Report{}, SourceSinkFingerprintKey); err != nil {
 		t.Errorf("an empty baseline is comparable: %v", err)

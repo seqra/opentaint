@@ -305,6 +305,9 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 	// Every number printed below must describe the findings printed above it, so
 	// the counts are recomputed over whatever survived the filters.
 	view = view.Restrict(filtered, filters)
+	if view != nil {
+		opts.Comparison = view.Comparison
+	}
 
 	hasOmittedFlow := false
 	if list {
