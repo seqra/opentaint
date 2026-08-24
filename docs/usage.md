@@ -94,6 +94,8 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 
 Automatically detects the project's build system (Maven or Gradle), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
 
+Go projects need the `go` command on `PATH`. The first Go scan downloads the `go-ssa-server` component. A project can mix languages. If `go` is missing in a mixed project, the scan skips the Go code and shows a warning.
+
 On the first run, the compiled project model is cached in `~/.opentaint/cache/`. Subsequent scans of the same project reuse the cached model, skipping compilation entirely.
 
 | Flag | Description |

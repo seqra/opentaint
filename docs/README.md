@@ -38,7 +38,7 @@ The more AI writes code, the more you need formal methods underneath.
 
 The engine runs IFDS-with-abduction — formal inter-procedural dataflow analysis. It tracks untrusted data from HTTP inputs to dangerous APIs across endpoints, persistence layers, object fields, aliased references, and async code. That includes multi-hop attack paths — cross-endpoint flows, stored injections, data through object fields and aliases — at monorepo scale. 100+ rules across 20+ vulnerability classes.
 
-Models Spring data flow and the full Boot ecosystem, analyzing Java and Kotlin at bytecode level. More languages and frameworks ahead.
+Models Spring data flow and the full Boot ecosystem, analyzing Java and Kotlin at bytecode level and Go on SSA form. More languages and frameworks ahead.
 
 ### One finding becomes total coverage
 
