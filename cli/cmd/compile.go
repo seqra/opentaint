@@ -84,7 +84,7 @@ var compileCmd = &cobra.Command{
 		}
 		sb.FieldNode("Project", absProjectRoot).
 			FieldNode("Project model", absOutputProjectModelPath).
-			FieldGroup("Autobuilder", componentItems(resolveJarComponent("autobuilder"), false)...).
+			FieldGroup("Autobuilder", componentItems(resolveArtifactComponent("autobuilder"), false)...).
 			Render()
 
 		if err := validation.ValidateCompileInputs(projectRoot, outputProjectModelPath); err != nil {
