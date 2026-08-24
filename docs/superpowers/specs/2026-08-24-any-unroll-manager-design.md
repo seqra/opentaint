@@ -20,13 +20,13 @@ and fixed in place; nothing was appended as errata. In order of consequence:
 
 | what was wrong | now |
 |---|---|
-| the branch invariant was never stated, so the bound was `Lᵈ`, not `L` | §2.4, with its four maintenance obligations |
-| `parentEdgeIsAny == false` was read as "no `[any]` above" — it is a one-level memory | §4.4: `governingAnyId` threaded down the receiver spine |
+| the branch invariant was never stated, so the bound was `Lᵈ`, not `L` | §2.4 |
+| `parentEdgeIsAny == false` was read as "no `[any]` above" — it is a one-level memory | §4.4 — superseded by revision 3, which normalises at install instead of threading |
 | `filterStartsWith` AT:1750 and `reconstructRemainder` AT:721 re-create `[any]` edges raw; both were absent from the site table. AT:1750 is 657,633 events at cap 0 | §4.1 |
-| the manager had no notion of its origin, so `total` was per-position and §1.2's branching returned | §2 — superseded by revision 2's packed `(dagId, nodeId)`, which stores the origin rather than chasing it |
+| the manager had no notion of its origin, so `total` was per-position and §1.2's branching returned | §2 — the state carries its dag, so the pot is reached rather than chased |
 | the TIFA unroll was to "share" the parent id; it consumes a step, so it must advance to the child | §6.1 |
-| TIFA's own emissions were to mint per premise — the §1.1b failure through a side door | §6.3: inherit the walk's governing id |
-| `find` was to be stored *and* compared, which makes `hashCode` change under a union | §3.4: raw at compare time, `find` at build time and in the guard |
+| TIFA's own emissions were to mint per premise — the §1.1b failure through a side door | §6.3: inherit the walk's governing state |
+| `find` was to be stored *and* compared, which makes `hashCode` change under a union | §3.4: the stored reference at compare time, `find` at build time and in the guard |
 | §5.3's sketch called `isCoveredByAnyOrFalse`, which does not exist and must not | §5.3: probe for the edge first |
 
 Two claims the audit **confirmed** rather than corrected: no `AccessNode` crosses a `TreeApManager`
@@ -41,12 +41,23 @@ about counting, nesting, dormancy, loop convergence and memory, changed the repr
 | a state can be reached by many accessor sequences, so counting states under-reports the population | **§2.6**: charge `pathCount`, not 1, maintained incrementally |
 | an ancestor–descendant union creates a **cycle**, and a program loop produces exactly that union | **§2.5**: the structure is cyclic by necessity; the cycle *is* the loop's fixed point, and breaking it breaks termination |
 | `total` as "number of accepted words" is `∞` on a cycle | **§2.6**: incremental, saturating `pathCount`; nothing is ever computed by traversing the automaton |
-| ids need an origin *and* a position, and states from different automata must not merge directly | **§3**: a packed `Long` — `(dagId, nodeId)` — two DSUs, and a same-dag precondition on `mergeStates`. Free: 53+8 rounds to the same 64 as 53+4 |
-| managers as objects do not pay for themselves | **§3**: columnar storage — two DSU arrays, one transition map, two side arrays |
-| `[any].f.[any]` was believed impossible by construction | **§2.4**: true only for *covered* `f`, and only when `prependAnyAccessor` is called. `AnyAccessorCollapseTest.kt:143-153` asserts `[any].{Box}.[any].$` **survives**, and the graft under a concrete parent edge builds the shape with nothing to normalise it |
+| a state needs an origin *and* a position, and states from different automata must not merge directly | **§3**: the state carries its dag, and `mergeStates` has a same-dag precondition that the caller establishes by fusing dags first |
+| `[any].f.[any]` was believed impossible by construction | **§2.4**: true only for *covered* `f`, and only when `prependAnyAccessor` is called. `AnyAccessorCollapseTest.kt:143-153` asserts `[any].{Box}.[any].$` **survives** |
 | dormant ids on `AccessNode` would break the one `===` the loop fixpoint rests on | **§3.4**: dormancy lives on the `AccessTree` wrapper, which is thin, uninterned and transient. One file needs it |
 | "an id change is a non-empty delta" | **§3.5**: reversed. Receiver-preferred unions make the term vacuous, and a tightened budget needs no re-propagation. But the union is a side effect that must not be skipped |
-| memory | **§3.8**: `origins × (L+1) × ~28 B`. The witness's 40k mints would be ~100 MB *and* a useless bound, so memory and budget are one measurement |
+| memory | **§3.8**: bounded by `origins × (L+1)`. The witness's 40k mints would be both a useless bound and a large heap, so memory and budget are one measurement |
+
+**Revision 3 — force the collapse, and stop leaking ids.** A third pass on two points:
+
+| finding | consequence |
+|---|---|
+| `[any].<covered>.[any]` collapses only inside `prependAnyAccessor`, so every other route preserves it — and two live operations actively **produce** it: the concat graft through `limitFieldAccess` (AT:1676 → AT:1700), and `removeAllAccessorChains` over an SCC containing an uncovered accessor | **§4.7**: normalise at the three sites that install an `[any]` edge (AT:2195, AT:2221, AT:2018). A rewrite, not a `check`; covered-only chain; the tail must be a literal `[any]`, never `.*` |
+| the collapse is not an identity, contrary to AT:776-779 and `2026-08-21-any-premise-design.md:422` | **§8.2**: `[any].f.[any].g ⊊ [any].g` — a monotone coarsening. Sound, but it has a precision cost that has to be measured, hence its own implementation step and its own SARIF gate |
+| forcing the collapse makes the graft threading redundant | **§2.4, §4.4**: `governingAnyId` on the concat recursion is **removed**. `concat` rebuilds the receiver's spine, so the outer edge is re-installed with the graft in place and one normalisation sees the whole subtree |
+| int ids in columnar arrays are never reclaimed, and the overflow valve survived a leak rather than removing one | **§2, §3**: states and dags become objects with pointer DSU links, so a merged-away state is collected once nothing holds it. No id space, no `AnyIdDsu` class, no valve |
+| a `WeakReference` + `ReferenceQueue` drain would work but is more machinery than needed | **§3.1**: plain reachability suffices, because nothing keeps a registry of states — checked: every counter in the engine is accumulated eagerly into `MethodStats`, and nothing iterates facts or nodes |
+| "dead automata are collected" over-claims | **§3.8**: storages are merge-monotone and never delete, so states that reach a stored fact live for the phase. What reclamation recovers is the **transient mint** — precisely the case worth fixing, and not the whole population |
+| hoisting under an `[any]` might need `absorbedAnyStep`-style depth bookkeeping for `DeepAccessorExclusion` | **§4.7**: it does not, for three reasons visible in the code — checked rather than assumed, since this is where the change would have been quietly unsound |
 
 ---
 
@@ -168,45 +179,61 @@ Not a trie, and not even a DAG: §2.5 shows the structure **must** be allowed to
 that the cycle is exactly how a program loop reaches its fixed point. Everything below is designed so
 that no operation ever has to traverse it.
 
-The node does not point at the structure. It carries a **`Long` id** that is two ids packed together,
-and `TreeApManager` owns everything else, stored columnar rather than as objects:
+The node **points at a state object**, and the whole structure is ordinary reachable heap:
 
+```kotlin
+class AnyUnrollState(
+    @JvmField val id: Int,                  // dense, for hashing only -- see §3.4
+    @JvmField val dag: AnyUnrollDag,        // strong: the pot this state spends from
+) {
+    @Volatile @JvmField var parent: AnyUnrollState? = null    // DSU link; null == representative
+    @JvmField var pathCount: Int = 1                          // §2.6, saturating
+    @JvmField var children: ConcurrentReadSafeInt2ObjectMap<AnyUnrollState>? = null   // transitions
+}
+
+class AnyUnrollDag(@JvmField val id: Int) {
+    @Volatile @JvmField var parent: AnyUnrollDag? = null      // DSU link
+    @JvmField var total: Int = 0                              // the budget pot
+}
+
+AccessNode.anyId : AnyUnrollState?         // null = none
 ```
-AccessNode.anyId : Long          // 0L = none.  hi 32 = dagId (the origin),  lo 32 = nodeId (the state)
 
-TreeApManager:
-    dagDsu   : AnyIdDsu                 // over dagIds  -- two origins fusing
-    nodeDsu  : AnyIdDsu                 // over nodeIds -- two states fusing
-    edges    : Long2IntOpenHashMap      // (nodeId << 32 | accessor) -> nodeId   (the transition fn)
-    pathCount: int[] by nodeId          // how many accessor sequences reach this state (saturating)
-    total    : int[] by dagId           // the budget pot -- ONLY meaningful at a dag representative
-```
+`ConcurrentReadSafeInt2ObjectMap` (`util/ConcurrentReadSafeInt2ObjectMap.java`) is the house type for
+exactly this access pattern — it captures the backing arrays and retries, so reads are lock-free while
+writes are synchronized. `AccessBasedStorage` already keys its children with it.
 
-Three things follow from this shape and each is load-bearing.
+Four things follow from this shape, and each is load-bearing.
 
-**The pair is the whole answer to "which pot?".** `total[dagDsu.find(hi(anyId))]` is one `find` and one
-array read — no manager object, no indirection through an `originId` field. The high half *is* the
-"each manager knows its root" rule, stored rather than chased. And `hi(a) == hi(b)` is a cheap test for
-"same automaton", which §3.3 turns into a precondition.
+**The DSU is pointer-based, so there is no id space to run out of.** `find` walks `parent` with path
+halving. A merged-away state holds its representative; a representative does not hold the states merged
+into it. Three earlier problems disappear at once: no segmented array that must never be copied, no
+ceiling on how many states may be minted, and — the point of the change — **no leak**.
 
-**A `Long` costs nothing over an `Int`.** `AccessNode` is 53 bytes of content, 56 aligned. `+4` gives
-57 → **64**; `+8` gives 61 → **64**. The two-layer id is free at this alignment, which is why it is
-worth having rather than packing an origin pointer into a side table.
+**Dead states are reclaimed by the garbage collector, with no registry and no reference queue.** A
+state is reachable exactly when a live `AccessNode` references it, a live state has a transition to it,
+or it is a live state's DSU representative. Nothing keeps a global index of states, so there is nothing
+to drain — §3.8 bounds what this actually recovers, which is narrower than it first appears.
 
-**There are no manager objects at all.** An earlier draft had one object per state with a children map
-and lazy allocation to keep the count down. Columnar storage removes the question: a state costs
-4 bytes of `nodeDsu` + 4 bytes of `pathCount` + one hash entry per outgoing edge. §3.5 does the memory
-arithmetic, and it is the arithmetic — not object churn — that binds.
+**A state keeps its successors alive, and that is correct rather than a leak.** The transitions *are*
+the record of what has been materialised, and R4's "reuse it free" — the idempotence the whole design
+rests on — needs them present. What dies is a state nothing can reach any more.
+
+**A reference costs the same as an `Int`.** `AccessNode` is 53 bytes of content, 56 aligned; `+4` for a
+compressed oop gives 57 → **64**, the same as the packed `Long` an earlier draft used. The state object
+itself is ~32 bytes plus a transition map when non-empty, so the trade against columnar arrays is
+"~32 bytes per **live** state" against "8 bytes per **ever-minted** state". §3.8 does that arithmetic
+and says when each wins.
 
 Five rules govern the lifecycle:
 
 | # | event | rule |
 |---|---|---|
-| R1 | an `[any]` edge is **created** where none existed | mint a fresh `(dagId, nodeId)`, `pathCount = 1`, `total = 0` (§4.1 lists the sites) |
+| R1 | an `[any]` edge is **created** where none existed | mint a fresh `AnyUnrollDag` and its root `AnyUnrollState`, `pathCount = 1`, `total = 0` (§4.1 lists the sites) |
 | R2 | an `[any]` is prepended onto a tree that **already has** one or more `[any]`s | union all of them and reuse the result — never mint (§2.4) |
-| R3 | two `[any]` **tree edges become one** | union their ids (§3.3); if the dags differ, fuse the dags first |
+| R3 | two `[any]` **tree edges become one** | union their states (§3.3); if the dags differ, fuse the dags first |
 | R4 | an accessor `a` is **read through** an `[any]` | if the `a`-transition exists, reuse it **free**; otherwise mint a successor and charge |
-| R5 | the **charge** for a new transition out of state `n` | `total += pathCount[n]`, **not** `+= 1` (§2.6) |
+| R5 | the **charge** for a new transition out of state `n` | `dag.total += n.pathCount`, **not** `+= 1` (§2.6) |
 
 R4 is where the budget is consulted and R5 is where it is spent. `total` lives at the dag, so every
 state descended from one `[any]` origin spends from one pot — that is §1.2's requirement. R4's
@@ -229,8 +256,8 @@ object every tree-backend site already holds — `TreeInitialFactAbstraction(thi
 common ancestor of the two spend sites, which live under different owners (TIFA under the callee's
 `NormalMethodAnalyzer`, the subscription under the caller's `SummaryEdgeSubscriptionManager`).
 
-A manager is reached as `managers[dsu.find(node.anyId)]`, so `total` is a `find` plus one lookup rather
-than a walk, and every node carrying any id in the set reaches the same object (§3.1).
+The pot is reached as `node.anyId.find().dag.find().total` — three pointer hops, no table — and every
+node pointing anywhere into the automaton reaches the same pot (§3.1).
 
 ### 2.2 The union is a product, not a root repoint — and it has two layers
 
@@ -244,15 +271,15 @@ deterministic. Both are `TreeApManager`'s job and they happen together:
 
 ```
 mergeStates(x, y):                                   // PRECONDITION: same dag (see below)
-    x = nodeDsu.find(x); y = nodeDsu.find(y)
-    if x == y: return x
+    x = find(x); y = find(y)
+    if x === y: return x
     if memo[(x, y)] exists: return it                 // REQUIRED -- breaks cycles (§2.5)
-    z = nodeDsu.union(x, y, prefer = x)               // receiver wins (§3.2)
-    memo[(x, y)] = z
-    pathCount[z] = sat(pathCount[x] + pathCount[y])
+    y.parent = x                                      // receiver wins (§3.2)
+    memo[(x, y)] = x
+    x.pathCount = sat(x.pathCount + y.pathCount)
     for each accessor a with a transition out of x or y:
-        edge(z, a) = mergeStates(edge(x, a), edge(y, a))   // one successor per accessor
-    return z
+        x.children[a] = mergeStates(x.children[a], y.children[a])   // one successor per accessor
+    return x
 ```
 
 Structurally this is what `AccessTree` already does for trees: `mergeNodeLoop` (AT:1231-1282) is an
@@ -260,22 +287,29 @@ explicit-stack merge with an identity-keyed memo (`AccessNodeMergePair`, AT:1122
 applies here, and the same reason for the explicit stack applies — these structures get deep enough
 that recursion is a liability, and here they can also be *cyclic*.
 
-**Two layers, and states from different automata must never be merged directly.** A state id is only
-meaningful inside its own automaton, so `mergeStates` carries a precondition, and the caller
-establishes it:
+Note `y.parent = x` is the whole DSU union: no array, no id allocation, and `y` becomes garbage the
+moment nothing else refers to it (§3.8).
+
+**Two layers, and states from different automata must never be merged directly.** A state belongs to
+one dag, so `mergeStates` carries a precondition, and the caller establishes it:
 
 ```
-union(idA, idB):
-    dA = dagDsu.find(hi(idA));  dB = dagDsu.find(hi(idB))
-    if dA != dB:
-        dagDsu.union(dA, dB, prefer = dA)
-        total[dA] += total[dB]                        // pots combine, §2.6
-        mergeStates(root(dA), root(dB))               // "2 automata in, 1 automaton out"
-    return pack(dagDsu.find(hi(idA)), mergeStates(lo(idA), lo(idB)))
+union(a, b):
+    da = find(a.dag);  db = find(b.dag)
+    if da !== db:
+        db.parent = da
+        da.total += db.total                          // pots combine, §2.6
+        mergeStates(rootStateOf(da), rootStateOf(db)) // "2 automata in, 1 automaton out"
+    return mergeStates(a, b)
 ```
 
-Fusing the dags means merging their **start states**, which is the user-stated rule: two automata
-before, one after. Only then are the two operand states in a common id space and mergeable.
+Fusing the dags means merging their **start states** — two automata before, one after — so the result
+is a single deterministic structure rather than two with a shared pot. Only then are the two operand
+states in one automaton and mergeable.
+
+That is the one thing the dag must retain: a reference to its root state, so it can be reached for a
+fusion. It costs one state per live dag and it closes a reference cycle (dag → root → dag) that the
+collector handles without help.
 
 **Where a union comes from.** The clean case is that a manager union is the *shadow* of a tree-edge
 merge: whenever two `[any]` edges in a fact tree become one edge, their managers union. That covers the
@@ -313,8 +347,7 @@ a population bound and a depth-indexed one**, which is the exact failure §1.2 w
 It is also what makes several other rules expressible at all:
 
 - **A walk down one path meets one manager.** That is why TIFA can carry a single `governingAnyId`
-  through `abstractAccessPath` (§6.3) and why `concatToLeafAbstractNodes` can carry a single one down
-  the receiver spine (§4.4) — no sets, no joins, one int per stack frame.
+  through `abstractAccessPath` (§6.3) — no sets, no joins, one reference per walk state.
 - **A linear chain fold needs exactly one id.** `createAbstractNodeFromReversedAp` (AT:2266) folds a
   premise chain that may contain several `[any]` links; they are all on one branch by construction, so
   one id covers the fold (§6.3).
@@ -351,30 +384,26 @@ So there are branches on which two `[any]` edges **legitimately coexist and neve
 managers must nevertheless be one pot — because the population under them is still multiplicative. The
 invariant is a manager-level obligation in its own right, not a corollary of tree normalisation.
 
-Four obligations, each corresponding to a way a second `[any]` comes to sit above or below an existing
-one on one path:
+**One rule discharges almost all of it, and it is the rule §4.7 installs anyway.** Whenever an `[any]`
+edge is *installed over a child*, normalise: collapse every `[any]` reachable through a covered-only
+path into the new edge, and — for the ones under an uncovered accessor, which must not be collapsed —
+union their managers without touching the tree. After that call, every `[any]` in the subtree shares
+the installed edge's manager, which is the invariant, established at the only moment it can be
+violated.
 
-| # | how a second `[any]` lands on an occupied branch | obligation | where |
-|---|---|---|---|
-| B1 | prepend: a new `[any]` is placed **above** everything | union **every** manager in the subtree — including those under uncovered accessors, which the strip walk skips | §4.1 |
-| B2 | graft: a delta rooted at `[any]` is spliced **below** a receiver whose path already crosses an `[any]` | thread the governing id down the receiver spine; union at the leaf | §4.4 |
-| B3 | merge: two trees are combined | per-position union, plus the fold-to-`[any]` trimming | §4.2 |
-| B4 | raw reconstruction: an `[any]` edge is re-created by a spine rebuild, a chain fold, or the wire | carry the consumed edge's id; one id per chain | §4.1, §9 |
+Because §4.7 enforces that at all three construction routes, three of the four ways a second `[any]`
+lands on an occupied branch stop being separate obligations:
 
-B2 deserves its own note because it was traced end to end rather than assumed, and the trace says
-nothing rescues it. For receiver `[any].f.*` and delta `[any].g.$`: the root frame recurses into the
-`[any]` child with `parentEdgeIsAny = true`; that frame recurses into `f` with `parentEdgeIsAny = false`;
-the leaf frame therefore **skips absorption** (AT:1661-1666) and grafts the delta verbatim; and the
-rebuild at AT:1699-1702 goes through `bulkMergeAddAccessors`, which re-attaches children through raw
-accessor arrays with no `addParent` and no `prependAnyAccessor`. The result is `[any].f.[any].g.$`.
-`trimAnyCoveredAndPushChildren` cannot undo it for three independent reasons: it is *subtractive*
-(`getNonMatchingNode` keeps every accessor it does not match, never merging a child up), it is
-*cross-operand* (one side's `[any]` is only ever a pattern against the other), and at the graft point it
-does not even run — `a.accessors == null` for an abstract leaf, so it returns at AT:1298-1299.
+| # | how a second `[any]` lands on an occupied branch | discharged by |
+|---|---|---|
+| B1 | prepend: a new `[any]` placed **above** everything | the normalisation, which is exactly what `prependAnyAccessor` already did |
+| B2 | graft: a delta rooted at `[any]` spliced **below** a receiver whose path already crosses an `[any]` | the normalisation — concat rebuilds the receiver's spine, so the outer `[any]` edge is re-installed with the grafted subtree already in place (§4.4) |
+| B4 | raw reconstruction by a spine rebuild, a chain fold, or the wire | the normalisation, since all three routes go through AT:2195 / AT:2221 / AT:2018 (§4.7) |
+| B3 | merge: two trees combined | **the per-position union (R3)** — not the normalisation |
 
-**There is no test for this case.** A grep of the test tree for `parentEdgeIsAny`, "C4", "concrete field"
-and "must NOT absorb" finds nothing; `AnyFieldMarkExclusionTest.kt:267-281` pins only the *absorbing*
-path (`parentEdgeIsAny == true`). §12.1 adds one.
+An earlier draft discharged B2 by threading a `governingAnyId` down `concatToLeafAbstractNodes`'s
+recursion. That is no longer needed and has been removed: the spine rebuild re-installs the edge, and
+the normalisation sees the whole subtree at once. Insisting on the collapse bought the simplification.
 
 B3 needs no extra machinery, and it is worth saying why, because it looks like it should. When receiver
 and arrival meet at position `p`, an `[any]` the receiver owns *at* `p` and an `[any]` the arrival owns
@@ -427,7 +456,7 @@ m --a--> m          a self-loop, and the automaton's language is now  a*
 **That self-loop is what makes the loop terminate**, and with §3.5's rule it terminates on the *same*
 lap: the union is performed while computing the merged id, the merged representative equals the
 receiver's, the guard passes, `mergeAddStep` returns `this`, and `===` fires. Had the guard compared
-raw ids instead, the merge would rebuild, one extra lap would run, the read at `m` would then find the
+stored references instead, the merge would rebuild, one extra lap would run, the read at `m` would then find the
 existing `a`-transition — no mint, no charge, same id — and it would converge on lap two. Either way it
 converges; comparing representatives makes it converge immediately and keeps the fact out of the
 worklist.
@@ -459,16 +488,16 @@ Emitting `c` at `C` authorises **two** sequences, `ac` and `bc`, from one transi
 or transitions would score that 1 and under-report the population by the sharing factor, compounding
 with every merge — the same class of error as §1's under-counting, arriving by a different route.
 
-So each state carries `pathCount[n]` — how many sequences reach it — and R5 charges
-`total += pathCount[n]` when a new transition is created.
+So each state carries `pathCount` — how many sequences reach it — and R5 charges
+`dag.total += n.pathCount` when a new transition out of `n` is created.
 
 `pathCount` is maintained **incrementally, never by traversal** (§2.5 forbids traversal):
 
 | event | update |
 |---|---|
-| mint a dag | `pathCount[root] = 1` |
-| new transition `n --a--> m` | `pathCount[m] = pathCount[n]` |
-| `union(x, y) → z` | `pathCount[z] = sat(pathCount[x] + pathCount[y])` |
+| mint a dag | `root.pathCount = 1` |
+| new transition `n --a--> m` | `m.pathCount = n.pathCount` |
+| `union(x, y) → x` | `x.pathCount = sat(x.pathCount + y.pathCount)` |
 
 Saturating arithmetic, at `L` — past `L` the state refuses everything anyway, so the exact value stops
 mattering and a ceiling removes any overflow question.
@@ -484,7 +513,7 @@ This is an approximation in **both** directions and it is worth being precise ab
   would be a subtree walk on every union, and unions are frequent. The error is bounded by the sharing
   below a merge point and is the price of `O(1)`.
 - **On a cycle it stays finite**, because it is never recomputed by traversal. `union(m, m₁)` in §2.5
-  sets `pathCount[m] = 2` even though the language is `a*`. So a loop does not kill the origin with an
+  sets `m.pathCount = 2` even though the language is `a*`. So a loop does not kill the origin with an
   infinite charge; it makes each *subsequent distinct* accessor at that state cost 2 instead of 1. A
   soft escalation rather than a cliff — and escalating the price of unrolling in proportion to how many
   loops have folded into a state is, on reflection, the economics this problem actually has.
@@ -497,48 +526,52 @@ show is rare.
 
 ---
 
-## 3. Representation: a packed pair in the node, two DSUs in the manager
+## 3. Representation: a state reference in the node, two pointer DSUs
 
-The node holds no reference to anything. It holds a **`Long`** — `(dagId, nodeId)` — and
-`TreeApManager` owns two disjoint-set unions and three columnar arrays:
+The node holds one reference — `AnyUnrollState?` — and every other piece of the structure hangs off it
+(§2). There are no ids to allocate, no arrays to grow, and no table mapping ids to anything.
 
-```
-AccessNode.anyId : Long          // 0L = none.  hi 32 = dagId,  lo 32 = nodeId
-TreeApManager:
-    dagDsu    : AnyIdDsu                // find(dagId)  -> representative origin
-    nodeDsu   : AnyIdDsu                // find(nodeId) -> representative state
-    edges     : Long2IntOpenHashMap     // (nodeId << 32 | accessor) -> nodeId
-    pathCount : int[] by nodeId         // saturating, §2.6
-    total     : int[] by dagId          // the pot
-    nextDagId, nextNodeId : AtomicInteger
-```
+The two alternatives considered earlier both failed for reasons worth keeping: `anySuffixMatcher` hangs
+on the node *below* the `[any]` edge — overwhelmingly the `abstractNode` singleton — so widening it
+would fuse every terminal `[any]` in the program into one manager before any interning; and a plain
+object reference is dropped by `markInterned` (AT:1494) exactly as the matcher deliberately is, with
+none of the matcher's "pure function, safe to rebuild" justification. The second objection is answered
+by putting the field in identity (§3.4), which makes it a constructor parameter with no default and
+therefore a compile error to omit.
 
-The two alternatives considered earlier both failed: `anySuffixMatcher` hangs on the node *below* the
-`[any]` edge — overwhelmingly the `abstractNode` singleton — so widening it would fuse every terminal
-`[any]` in the program into one manager before any interning; and a plain object reference is dropped
-by `markInterned` (AT:1494) exactly as the matcher deliberately is, with none of the matcher's "pure
-function, safe to rebuild" justification.
+### 3.1 Why a reference rather than an id
 
-`Long2IntOpenHashMap` and `AtomicIntegerArray` are both already used in this codebase
-(`trace/path/MethodTraceSearch.kt:6`, `trace/ParallelProcessingContext.kt:20`), so nothing new is
-introduced.
+An earlier draft used a packed `(dagId, nodeId)` `Long` with columnar side tables. It was smaller per
+state — 8 bytes against ~32 — and it was wrong for one reason that outweighs the rest.
 
-### 3.1 Why an id rather than a reference
+- **Ids leak; references do not.** A DSU over ints keeps a slot for every id ever minted, whether or
+  not it survived its first merge. That is precisely the case to worry about — mint a state, merge it
+  into another, discard the node that carried it — and it is also precisely the case a reference
+  recovers: the transient state becomes unreachable and the collector takes it. §3.8 is honest about
+  how far that goes, which is not as far as it sounds.
+- **The alternative to reclaiming was a valve, and a valve is a worse answer.** The columnar design
+  needed an id-space ceiling with an overflow dag to bound the leak — sound, but it hides the failure
+  instead of removing it, and a run that silently hit it produces numbers no one can interpret.
+  Reclamation makes the valve unnecessary; §3.8 retires it.
+- **It needs no machinery this codebase does not already have.** A `WeakReference` + `ReferenceQueue`
+  drain over a registry would work, but it would be the first `ReferenceQueue` in the repo — a grep
+  finds none, and `WeakReference` appears exactly twice, in `Async.kt`'s `weakLazy`. The house pattern
+  is soft references parked in a `SoftReferenceManager` queue and cleared by hand from a GC
+  notification (`util/SoftReferenceManager.kt`, `util/MemoryManager.kt`). Plain reachability needs
+  neither.
+- **The states must be strongly referenced, and that is not negotiable.** They must never be routed
+  through `SoftReferenceManager`: a budget that evaporates under memory pressure is a budget that
+  silently refills, which is §1's failure mode arriving through the heap.
+- **Stale references are as harmless as stale ids.** A node built before a union keeps pointing at the
+  merged-away state, and `find` still reaches the right representative. Nothing is chased through the
+  tree.
+- **A union is still a single write** — `y.parent = x` — and it rewrites no node.
+- **It costs the same in the place that matters.** One compressed oop takes `AccessNode` from 56 to 64,
+  identical to the `Int` or the packed `Long`.
 
-- **A union is an int operation.** Merging two managers rewrites no node: `union(a, b)`, and every node
-  carrying either id resolves through `find`.
-- **Stale ids are harmless.** A node built before a union keeps its old id and still `find`s to the
-  right representative. Nothing has to be chased through the tree.
-- **`total` is one `find` and one array read.** The high half names the pot directly, so there is no
-  object to allocate, no map to probe, and no `originId` field to chase (§2).
-- **It is eight bytes and they are free**, because 53 + 8 rounds to the same 64 as 53 + 4 (§2).
-
-**What an id does NOT buy, and an earlier draft wrongly claimed it did: unions do not reclaim
-anything.** With columnar storage there are no manager objects to free, and a merged-away id keeps its
-`nodeDsu` slot and its `pathCount` slot for the rest of the phase. The number of live *representatives*
-falls monotonically; the **id space only ever grows**, and it grows once per mint whether or not that
-mint survives its first merge. So the memory question is not "how many managers are live" but "how many
-ids were ever minted" — §3.5.
+What the reference gives up is the ability to answer "which pot?" with two array reads.
+`state.find().dag.find().total` is three pointer hops instead — still constant, on a path that already
+does a hash lookup for the transition.
 
 ### 3.2 The union, and the preferred root
 
@@ -558,103 +591,52 @@ stored node's id is unchanged, the merge returns `this`, and the storage's `===`
 **same** round. Preferring the arrival would rename the stored fact, produce a delta by §3.5, and cost
 an extra lap of the fixpoint for every folded loop in the program.
 
-### 3.3 A dedicated DSU, not the existing one
+### 3.3 The DSU is pointer-based, and there is no DSU class
 
-`analysis/alias/IntDisjointSets.kt` is the in-repo DSU and its `union` picks the parent through a
-strategy, which is the right shape:
+`analysis/alias/IntDisjointSets.kt` is the in-repo DSU, and an earlier draft of this design specified a
+dedicated concurrent replacement for it — segmented arrays that are never copied, a lock-free `find`
+with path halving, a synchronized `union(x, y, preferRoot)`. The state objects of §2 make that whole
+component unnecessary: the DSU is two fields and two small functions.
 
 ```kotlin
-// IntDisjointSets.kt:34-52
-fun union(x: Int, y: Int): Boolean {
-    val u = find(x); val v = find(y)
-    if (u == v) return false
-    val cmp = strategy.compare(u, v)
-    check(cmp != 0) { "Strategy cmp is 0 for non-equal elements" }
-    if (cmp < 0) merge(p = u, c = v) else merge(p = v, c = u)
-    return true
+fun AnyUnrollState.find(): AnyUnrollState {
+    var cur = this
+    while (true) {
+        val up = cur.parent ?: return cur
+        val grand = up.parent ?: return up
+        cur.parent = grand          // path halving, best-effort; a lost race is harmless
+        cur = grand
+    }
 }
 ```
 
-**It is the wrong class to reuse.** Write a dedicated one.
+Every property the dedicated class was written for still holds, and two problems it existed to solve
+simply do not arise:
 
-What is wrong with it here:
+- **Path halving, not full compression**, so `find` writes at most one field per step and a racing
+  writer can only install an equally valid link. `parent` is `@Volatile`; a reader that sees a stale
+  link walks one hop further and converges.
+- **No segmented storage, because there is no array.** The dedicated class needed segments precisely
+  because copy-on-grow would let a `find` holding the old array return a superseded representative.
+  With links inside the objects the invariant "parent links only ever move towards a root" is
+  structural.
+- **No `preferRoot` comparator problem.** `IntDisjointSets`' `RankStrategy` is a stateless
+  `IntComparator` over values, which cannot express "prefer the receiver" — that is a property of the
+  call, not of the two operands — and its `check(cmp != 0)` demands a total order that "prefer the
+  receiver" is not. `y.parent = x` states the preference directly (§3.2).
+- **No removal protocol.** `IntDisjointSets` carries `removeAll`/`prepareRemoveAll`/`RemoveResult`,
+  `forEachElementInSet`, `collectElementParentPairs` and an `ImmutableIntDSU`/`mutableCopy`/`equals`
+  pair, none of which this design wants. Removal is the collector's job now.
 
-1. **Not thread-safe.** It is written for the alias analysis, which is confined to one method's state.
-   This DSU lives on the shared `TreeApManager` (§3.6).
-2. **`find` is recursive** (`:25-32`) with unconditional path compression. These chains are as deep as
-   the merge history, and the write on every read is exactly what a lock-free reader cannot do.
-3. **`RankStrategy` is a stateless `IntComparator` over values**, so it cannot express "prefer the
-   receiver's id" — that is a property of the call, not of the two ints. Its `check(cmp != 0)` also
-   demands a total order over ids, which "prefer the receiver" is not.
-4. **Map-backed** (`Int2IntOpenHashMap`), where our ids are dense and minted from a counter.
+Writes — `parent`, `pathCount`, `children`, `total` — happen under one lock on `TreeApManager`, and
+they must happen **together**: `pathCount` updated in the same critical section that repoints `parent`,
+or two concurrent unions can both read the pre-merge counts and lose an increment (§2.6). Reads stay
+lock-free: `find` walks volatile links, and transition lookup goes through
+`ConcurrentReadSafeInt2ObjectMap`, which is the house type for capture-and-retry reads
+(`util/ConcurrentReadSafeInt2ObjectMap.java`, already used for `AccessBasedStorage.children`).
 
-What it carries that we do not need, and would have to keep working: removal
-(`removeAll`, `prepareRemoveAll`, `RemoveResult`, and the `NewSetRepr` re-rooting logic), set
-enumeration (`forEachElementInSet`, `collectElementParentPairs`), and the immutable/copy protocol
-(`ImmutableIntDSU`, `mutableCopy`, `equals`). Ids here are never removed and sets are never
-enumerated — a manager is reached by `find`, never by walking its members.
-
-The dedicated version, in full:
-
-```kotlin
-/**
- * DSU over `[any]`-manager ids. Ids are dense, minted from a counter, and never removed.
- *
- * `find` is on the hot path -- every covered read -- and is lock-free. `union` is rare and
- * synchronized. What makes the lock-free read safe: a parent link only ever moves TOWARDS a root,
- * never away, so following parents from a stale read still converges on the current representative.
- */
-class AnyIdDsu {
-    // Segmented, never copied: growth appends a segment, so a concurrent reader can never observe
-    // a moved entry. An AtomicIntegerArray cannot grow, and copy-on-grow would let a racing `find`
-    // return a representative that a union has already superseded.
-    @Volatile private var segments: Array<AtomicIntegerArray> = ...
-
-    fun find(x: Int): Int {
-        var cur = x
-        while (true) {
-            val up = parentOf(cur)
-            if (up == cur) return cur
-            val grand = parentOf(up)
-            if (grand != up) casParent(cur, up, grand)   // path halving, best-effort
-            cur = grand
-        }
-    }
-
-    @Synchronized fun union(x: Int, y: Int, preferRoot: Int): Int {
-        val a = find(x); val b = find(y)
-        if (a == b) return a
-        val root = if (find(preferRoot) == a) a else b
-        setParent(if (root == a) b else a, root)
-        return root
-    }
-
-    @Synchronized fun newId(): Int = ...   // bump the counter, append a segment if needed
-}
-```
-
-Three details that matter:
-
-- **Path halving, not full compression**, so `find` writes at most one CAS per step and a failed CAS
-  is simply ignored — another thread got there first with an equally valid link.
-- **Segmented storage**, because copy-on-grow is the one thing that would break the "parent links only
-  move towards a root" invariant: a `find` holding the old array could return a representative a union
-  has already superseded. Appending segments never moves an existing entry.
-- **`preferRoot` is a parameter, not a comparator**, which is what lets R3 pass the receiver's id
-  (§3.2) without inventing a fake total order over ids.
-
-**Two instances, not one.** `dagDsu` and `nodeDsu` are separate `AnyIdDsu`s over separate, independent
-id spaces (§3). Keeping them separate is what lets `mergeStates` assert its same-dag precondition
-(§2.2) instead of hoping: an id from the wrong space is a different array, not a silently plausible
-integer. The columnar side tables ride along with the same segmented, never-copied growth discipline —
-`pathCount` grows with `nodeDsu`, `total` with `dagDsu` — so a lock-free reader of either can never see
-a moved entry.
-
-The `union` above also has one extra obligation here that a plain DSU does not: it must update
-`pathCount` **inside** the same synchronized region that repoints the parent (§2.6), or two concurrent
-unions can both read the pre-merge counts and lose one of the increments. `total` is likewise updated
-under the dag-level lock. These are the only writes on the path; `find` and transition lookup stay
-lock-free.
+Dags get exactly the same treatment: `AnyUnrollDag.parent`, the same `find`, `total` under the same
+lock.
 
 ### 3.4 Identity, and why the sentinel matters
 
@@ -725,33 +707,39 @@ That buys everything the node-level version would have, and avoids all of its co
 
 Four things make identity participation safe here, where it was not for the superseded per-fact limit:
 
-- **`[any]`-free nodes carry the sentinel `0`**, contribute nothing to `hash`, and compare exactly as
+- **`[any]`-free nodes carry `null`**, contribute nothing to `hash`, and compare exactly as
   today. That is the overwhelming majority of nodes, so **the feature is provably inert on trees with
   no `[any]` in them** — and with `L < 0` every node is `0`, making the analysis bit-identical to today.
 - **The taint-mark check is untouched, and now provably.** `isLegalNodeBelowTaintMark` (AT:488-489)
-  compares structurally (`==`, not `===`) against three singletons. A node with `anyId != 0` owns an
+  compares structurally (`==`, not `===`) against three singletons. A node with `anyId != null` owns an
   `[any]` edge, hence has non-null `accessors`, hence fails `isStructurelessLeaf` and was never equal
   to a singleton anyway; and the singletons keep id `0`. So no comparison outcome changes. This is
   precisely the trap that killed identity participation for the superseded per-fact limit, where the
   limit rode on *every* node including the leaves.
 - **`createElementAndField`'s singleton collapse stays valid.** AT:2251-2252 returns the shared `base`
   singleton whenever there are no accessors and no exclusion; by the invariant such a node has
-  `anyId == 0`, so the collapse never loses an id. (This is also the reason not to invent "dormant"
+  `anyId == null`, so the collapse never loses a state. (This is also the reason not to invent "dormant"
   ids on `[any]`-less nodes: they would break this collapse and leak into every leaf.)
 - **Omissions become compile errors.** In identity means a constructor parameter with no default, so
   all five private-constructor sites — `markInterned` (AT:1494) and `Serializer.readAccessNode`
   (AT:2018) included — must supply it.
 
-**The id in `equals`/`hashCode` must be the raw stored id, never `find(id)`.** A `hashCode` that
+**`equals` compares the stored reference with `===`, and `hash` mixes in `anyId.id`, never `find`.** A `hashCode` that
 called `find` would *change over time*: a union moves the representative, the node's hash changes, and
 every hash structure already holding it — `AccessTreeInterner`'s bucket map, `EdgeSet`
 (`EdgeCollection.kt:177`), `hashSetOf<FinalFactAp>()` in `MethodAnalyzerEdges.kt:47` — silently loses
 it. `equals` must match `hashCode`, so it too compares raw. `find` appears only in the merge guard
 (§3.5), where it decides whether to rebuild rather than what a node *is*.
 
-Do canonicalise at construction — pass `find(id)` in, so freshly built nodes carry representatives and
-the structural duplicates a union leaves behind die out as the analysis rebuilds trees, which §4.3
-shows it does constantly. The distinction is: `find` at *build* time, raw at *compare* time.
+Do canonicalise at construction — pass `state.find()` in, so freshly built nodes point at
+representatives, the structural duplicates a union leaves behind die out as the analysis rebuilds trees
+(§4.3 shows it does constantly), and the merged-away states they were the last holders of become
+garbage (§3.8). The distinction is: `find` at *build* time, the stored reference at *compare* time.
+
+`AnyUnrollState.id` is a dense `Int` from an `AtomicInteger`, not `System.identityHashCode`, for two
+reasons: it distributes better inside a hash that is already a sum of children (AT:351-384), and it
+keeps `AccessNode.hash` no less reproducible than the rest of the analysis — an identity hash would
+add a fresh source of run-to-run variation to §8.4's list.
 
 Three places must learn about the id, not one:
 
@@ -796,7 +784,7 @@ That is the right outcome, and the earlier draft's justification for wanting a d
   under the laxer budget were produced with *less* coarsening, i.e. they are more precise and still
   sound (§8.2) — a budget that tightens afterwards cannot retroactively make them wrong.
 - **Rewriting ids to chase representatives is not worth a delta either.** `find` is path-halved and
-  effectively constant; letting a stored node keep a stale raw id costs nothing on the hot path, while
+  effectively constant; letting a stored node keep a stale reference costs nothing on the hot path, while
   reporting a delta for it would re-propagate a fact whose value did not change. The earlier draft had
   this backwards.
 
@@ -837,7 +825,7 @@ would not survive the next refactor. The invariant above turns it into one rule 
 check locally at each site:
 
 > Every construction passes an explicit `anyId`, and it must satisfy
-> `anyId != 0  ⟺  ANY_ACCESSOR_IDX ∈ accessors`.
+> `anyId != null  ⟺  ANY_ACCESSOR_IDX ∈ accessors`.
 
 Which value, by what the site does to the `[any]` edge:
 
@@ -862,51 +850,76 @@ extract entries keyed by a *field* accessor only. So the entry type gains an id 
 meaningful for the `[any]` entry alone, and the assertion above catches any future caller that forgets
 it.
 
-### 3.8 Memory: the id space, not the live set
+### 3.8 Memory: the live set, and why there is no valve
 
-Because ids are never reclaimed (§3.1), the cost is driven by **how many ids were ever minted**, not by
-how many managers are live. The arithmetic is small enough to do exactly:
+Because states are ordinary objects reached only from live facts, the cost is the **live** automaton,
+not the history of everything ever minted:
 
 | thing | cost |
 |---|---|
-| one state | 4 B `nodeDsu` parent + 4 B `pathCount` = **8 B** |
-| one transition | one `Long2IntOpenHashMap` entry ≈ **16–20 B** at the default load factor |
-| one dag | 4 B `dagDsu` parent + 4 B `total` = **8 B** |
-| every `AccessNode` | +8 B, but free at this alignment (§2) |
+| one live state | 12 B header + `id` + `dag` + `parent` + `pathCount` + `children` = 32 B |
+| one live transition | one `Int2ObjectOpenHashMap` slot, plus ~48 B for the map on the first transition out of a state |
+| one live dag | 12 B header + `id` + `parent` + `total` + root ref = 32 B |
+| every `AccessNode` | +4 B for the reference, which rounds to +8 (§2) |
 
-States are bounded, and by the budget itself: a new transition always charges at least 1 (`pathCount ≥ 1`,
-§2.6) and the pot stops at `L`, so **an automaton has at most `L` transitions and therefore at most
-`L + 1` states**. Total:
+The live set is bounded by the budget itself: a new transition always charges at least 1
+(`pathCount ≥ 1`, §2.6) and the pot stops at `L`, so **an automaton has at most `L` transitions and
+therefore at most `L + 1` states**. So
 
 ```
-bytes  ≈  origins × (L + 1) × ~28
+live bytes  ≈  live origins × (L + 1) × ~48
 ```
 
-So the memory question and the budget question are **the same question**, which is the useful thing
-here. The design's whole claim (§8.1) is that unions collapse the mint count toward the handful of real
-`[any]` origins — the conductor witness has on the order of ten `$*` whole-object source markers. If
-that holds, `origins ≈ 10²`, the automata cost single-digit megabytes, and the population bound is
-meaningful. If it does not hold, the bound is *also* meaningless, and it fails on budget grounds before
-it fails on memory grounds.
+and the crucial word is **live**. The columnar alternative was 8 bytes per state but per state *ever
+minted*, monotonically for the whole phase. Which wins depends on the surviving fraction: objects win
+below roughly 1 in 6, arrays win above it.
 
-The number to beat is on the record. At cap 0 on the conductor witness the prepend sites that can mint
-are `addParent/alias` 33,578, `addParent/source` 6,058 and `addParent/fieldWrite` 662 — call it **40k**
-mints. (`abstractionFact` 3,603 and `identitySummary` 404 are made to inherit or to heal on first graft
-by §6.3 and §4.4; `addParent/?` 1,062,285 is `getChild`'s own re-prepend, which reuses under R4; and
-`concat` 1,170,752 is propagation, not creation.) Un-collapsed, 40k origins at `L = 100` is a 4M
-population bound — **worse than the 735k that §1.1b rejected the per-context counter for** — and about
-100 MB of automata. So 40k is not a memory budget to plan for; it is the number §12.1 has to show
-collapsing.
+**Be precise about what reclamation actually recovers, because it is narrower than "dead automata are
+collected".** An `AccessNode` being alive is a poor proxy for the fact still mattering: every storage
+in the engine is merge-monotone and never deletes (`TreeSetWithCompression.edges` is a fixed array of
+ever-growing trees; `MergingTreeSummaryStorage.edges` is never nulled; `MethodSameBaseInitialFact.added`
+only ever grows), and interning makes liveness non-local — a node survives because some unrelated
+method's summary happens to share its shape. The only bulk reclamation is the wholesale
+`resetApManager` at a phase boundary.
 
-Two things attack it directly, and both are in this design for other reasons: **§3.4's dormancy**, which
-makes a destroy-then-recreate round trip reuse an id instead of minting one, and **§6.3's inheritance**,
-which stops the abstraction minting per emitted premise.
+So the states that reach a stored fact live for the phase, and *should* — their budgets are still being
+spent from. What reclamation recovers is the **transient mint**: a state minted by
+`prependAnyAccessor`, carried by a node that is immediately merged into a stored one, and then
+discarded. That node dies, the state dies with it, and under the columnar scheme its slot would have
+survived the phase. It is exactly the case worth fixing and it is not the whole population.
 
-**The safety valve.** Cap the id space at a configured ceiling. On exhaustion, stop minting and route
-every subsequent new `[any]` to a single shared **overflow dag**. That is sound — it can only fuse pots,
-which coarsens (§8.2) — it bounds memory absolutely, and it degrades gracefully instead of running the
-machine out of heap on the one workload the whole exercise is about. §12.7 reports whether the valve was
-ever reached, because reaching it silently would make every other number in a run uninterpretable.
+The other half of the argument is the one that does not depend on the surviving fraction: the array
+version has **no upper bound at all** on a long phase, while this one is bounded by what the analysis is
+still holding. And the failure mode of the unbounded version is not an abstraction — `MemoryManager`
+stops the analysis at 90 % heap (`TaintAnalysisUnitRunnerManager.kt:113-118, 644`), which is the
+`rc=253` these workloads already produce.
+
+**The valve is retired.** The columnar design needed an id-space ceiling and a shared overflow dag to
+stop the leak from being unbounded. That was a way of surviving a leak rather than not having one, and
+a run that silently hit it would have made every other number in §12 uninterpretable. With reclamation
+there is nothing to cap. If the live set is too large, the facts that keep it alive are too large too,
+and the manager is not the marginal cause.
+
+**Nothing needs a registry of states.** This was checked rather than assumed, because a registry is the
+one thing that would force weak references back in: every counter in the engine is accumulated eagerly
+into `MethodStats` (`UnitRunnerStats.kt`) and aggregated by *method*, and no code path iterates facts
+or nodes for statistics — `countNodes` (AT:424) exists but is called from nowhere in `src/main`. §12's
+counters are all increment-at-the-event, so they need no enumeration either.
+
+**Reclamation removes the leak; it does not fix the bound**, and the two must not be confused. At cap 0
+on the conductor witness the prepend sites that can mint are `addParent/alias` 33,578,
+`addParent/source` 6,058 and `addParent/fieldWrite` 662 — call it **40k** mints. (`abstractionFact`
+3,603 and `identitySummary` 404 are made to inherit or to heal on first graft by §6.3 and §4.4;
+`addParent/?` 1,062,285 is `getChild`'s own re-prepend, which reuses under R4; `concat` 1,170,752 is
+propagation, not creation.) If those 40k stayed distinct and live, `L = 100` would mean a 4M population
+bound — **worse than the 735k for which §1.1b rejected the per-context counter** — and about 190 MB of
+live automata. That is not a memory budget to plan for; it is the number §12.1 has to show collapsing
+toward the handful of real `[any]` origins the witness has.
+
+Three things in this design attack it directly, and all three exist for other reasons: **§4.7's forced
+collapse**, which turns every nested-`[any]` normalisation into a union; **§6.3's inheritance**, which
+stops the abstraction minting per emitted premise; and **§3.4's dormancy on the wrapper**, which makes
+a read-then-prepend round trip reuse rather than mint.
 
 ---
 
@@ -941,16 +954,24 @@ subscription match; treating it as a pure rebuild and dropping the id would stra
 the first storage hop. The walk is linear, so the fix is small: record the consumed id alongside each
 entry of `parentAccessors` and use it when the folded accessor is `ANY_ACCESSOR_IDX`.
 
-**AT:807's union is not complete as stated.** `stripAnyBelowCoveredPath` (AT:817-845) hoists `[any]`s
-found on *covered-only* paths; its `else -> node` arm leaves a subtree under an **uncovered** accessor
-untouched and does not descend it. A type-info accessor is uncovered and, unlike a taint mark, may
-legitimately carry children — so `T.[typeinfo].[any]ᴹ²` survives the strip, and the new `[any]ᴹ¹`
-lands above it: two managers on one branch, §2.4 violated. The fix is cheap and exact, because the
-walk is already there: in the `else` arm, when the child has `containsAnyInThisOrDeepNodes`, scan it
-for ids and union them without stripping. Gated on the existing flag, this costs nothing on the
-overwhelmingly common case. Note this also means **B1 needs no new node field** — the slow arm walks
-the subtree anyway, so it can accumulate the N-way union as it goes, and the fast arm's
-`!containsAnyInThisOrDeepNodes` guard is already the O(1) case split.
+**The union inside the collapse is not complete as stated, and the gap is the uncovered accessor.**
+`stripAnyBelowCoveredPath` (AT:817-845) hoists `[any]`s found on *covered-only* paths; its
+`else -> node` arm leaves a subtree under an **uncovered** accessor untouched and does not descend it.
+A type-info accessor is uncovered and, unlike a taint mark, may legitimately carry children — so
+`T.[typeinfo].[any]ᴹ²` survives the strip (and must: `AnyAccessorCollapseTest.kt:143-153` asserts it),
+and the new `[any]ᴹ¹` lands above it. Two managers on one branch, §2.4 violated, with no collapse to
+carry the union.
+
+So `collapseNestedAny` does two things, not one: **collapse where legal, union where not.** In the
+`else` arm, when the child has `containsAnyInThisOrDeepNodes`, scan it and union the managers found
+without touching the tree. Gated on the existing flag this costs nothing in the common case, and the
+walk is already there — which is also why **B1 needs no new node field**: the slow arm accumulates the
+N-way union as it goes, and the fast arm's `!containsAnyInThisOrDeepNodes` guard is already the O(1)
+case split.
+
+Because §4.7 calls `collapseNestedAny` at every site that installs an `[any]` edge, that one function
+is what makes the whole §2.4 invariant hold: after it returns, every `[any]` in the subtree is either
+gone or shares the installed edge's manager.
 
 ### 4.2 Absorption and destruction
 
@@ -1015,33 +1036,36 @@ concrete prefix the callee legitimately derived. The two rules:
 **But `parentEdgeIsAny == false` does not mean "no `[any]` above".** It is a *one-level* memory: the
 recursion at AT:1688-1691 sets it to `accessor == ANY_ACCESSOR_IDX` for the immediate edge and forgets
 everything higher. A receiver `x.[any]ᴹ¹.f.*` grafts a delta `[any]ᴹ².g` at an abstract leaf whose
-parent edge is the concrete `f`, producing `x.[any]ᴹ¹.f.[any]ᴹ².g` — two managers, one branch, §2.4
-violated, and the `Lᵈ` population back. The fix rides on machinery the function already has: it
-threads `path: IntArrayList` down the spine, so it can thread one more int.
+parent edge is the concrete `f`, producing `x.[any]ᴹ¹.f.[any]ᴹ².g` — two managers, one branch. There is
+a second, subtler route to the same shape that the census turned up: `limitFieldAccess` (AT:1676) hoists
+the delta's `f`-subtree out from arbitrary depth and AT:1700 installs it under the conclusion's `[any]`,
+so even a delta that was *not* rooted at `[any]` can put one there.
 
-```kotlin
-// concatToLeafAbstractNodes gains `governingAnyId: Int`, passed at AT:1688-1691 as
-//     if (accessor == ANY_ACCESSOR_IDX) this.anyId else governingAnyId
-// and at the leaf (AT:1659-1669) every manager in the grafted delta is unioned into it.
-```
+**§4.7's forced collapse handles both, and this is where insisting on it pays off.** `concat` rebuilds
+the receiver's spine from a singleton (AT:1699) and re-adds every child through
+`bulkMergeAddAccessors`, so the outer `[any]` edge is **re-installed** with the grafted subtree already
+underneath it. The normalisation therefore sees `[any] → (f → [any] → g)` at install time, collapses it
+to `[any] → g` for covered `f`, and unions the two managers as part of that collapse. For an uncovered
+intervening accessor it unions without collapsing. Either way the branch invariant holds when the node
+is built.
 
-By §2.4 there is exactly one governing manager per path, so this is one int per stack frame, not a
-set. Collecting "every manager in the delta" is a subtree scan gated on
-`containsAnyInThisOrDeepNodes`, and the delta is the residual of one premise match, so it is small.
+An earlier draft threaded a `governingAnyId` parameter down `concatToLeafAbstractNodes`'s recursion to
+achieve the same thing. That is removed: it was doing at every frame what the normalisation does once,
+at the point the edge is installed.
 
-This threading turns out to do more than repair the invariant, and the extra job is what makes two
-other sites affordable. Several places mint a *structurally derived* fact whose `[any]` has no
-predecessor to inherit from — most sharply `SummariesIdStorageNode.finalAccess`
+The normalisation does more than repair the invariant, and the extra job is what makes another site
+affordable. Several places mint a *structurally derived* fact whose `[any]` has no predecessor to
+inherit from — most sharply `SummariesIdStorageNode.finalAccess`
 (`MethodInitialToFinalApSummaries.kt:151-157`), which rebuilds the identity summary's exit fact from
 the storage **trie key**, a premise chain that carries no manager at all. Minted in isolation such a
 fact would carry a full fresh budget. But it is never *read* before it is applied, and applying it is
-exactly a graft: the caller's fact supplies the delta, the threading unions the caller's real manager
-into the fresh one, and a fresh dag has `total = 0`, so the fused pot is `0 + total(A)` and **no budget is
-refilled**. The mint is transient by construction.
+exactly a graft: the caller's fact supplies the delta, the re-installed `[any]` edge unions the
+caller's real manager into the fresh one, and a fresh dag has `total = 0`, so the fused pot is
+`0 + total(A)` and **no budget is refilled**. The mint is transient by construction.
 
-That is why §4.4 is ranked above §6.3 in the implementation order: get the threading right and the
-derived-fact mints heal themselves; get it wrong and they are permanent refills on top of a broken
-invariant.
+That is why §4.7 is ranked ahead of §6.3 in the implementation order: get the normalisation right and
+the derived-fact mints heal themselves; get it wrong and they are permanent refills sitting on top of
+a broken invariant.
 
 ### 4.5 The read — reuse, never allocate
 
@@ -1084,6 +1108,141 @@ arm can contribute nothing; and if the `[any]`'s subtree held only `accessor`, A
    Two structurally identical `[any]` subtrees inside one delta become one object, and the surrounding
    caches are all `IdentityHashMap`s over those interned nodes. Any identity-keyed side table
    inherits this aliasing.
+
+### 4.7 Forcing the nested-`[any]` collapse
+
+`prependAnyAccessor` (AT:787-808) already normalises `[any] . <covered chain> . [any]` down to a single
+`[any]`. The problem is that it is the *only* thing that does: the collapse is a property of that one
+function, not of construction, so every other route — the raw spine rebuilds, the chain folds, the
+graft, the wire — preserves the shape. **This design forces the normalisation at construction instead.**
+
+Two things make it worth doing beyond tidiness. Each collapse is a **union**, so forcing it directly
+attacks the origin count that §3.8 and R23 turn on. And it discharges most of §2.4's B2: where the
+collapse fires, two `[any]` edges become one edge and the manager rule falls out of the tree rule
+instead of having to be threaded separately.
+
+**The precondition is exact and must not be relaxed by a single term.** Three existing tests are the
+fence, and each fails for a different over-reach:
+
+| relaxation | what breaks |
+|---|---|
+| dropping *covered-only* on the intervening chain | `AnyAccessorCollapseTest.kt:143-153` — `[any].{Box}.[any].$` must survive a prepend, and `AnyAccessorPremiseTest.kt:139-143` pins `[any].x.{Box}.[any].$` on the premise side. A type-info accessor is not covered, so `[any]` does not range over it and collapsing would **lose** paths |
+| treating an abstract leaf `.*` as a collapsible tail | `AnyFieldMarkExclusionTest.kt:317-334` — `[any].f.*` must **not** become `[any].*`, or absorption fires under C4 and the mark lands on a disjoint path. `.*` is existential, `[any]` is universal (AT:1631-1639); the licence does not transfer |
+| making it a `check` on the raw `create` choke point instead of a rewrite | `AnyAccessorCollapseTest.kt:128` and `:175` deliberately build un-normalised shapes through `manager.create` as test oracles, with the helper documented as *"Raw node construction, bypassing `AccessTree.prependAccessor` so illegal shapes stay illegal"*. A `check` makes those fixtures unconstructible |
+
+So: **a rewrite, not an assertion; the tail must be a literal `[any]` edge; the chain between must be
+covered-only.** Exactly `prependAnyAccessor`'s existing predicate, applied in more places.
+
+#### Who actually produces the shape
+
+Two lemmas decide the whole census, and they are worth stating because they make the answer checkable
+rather than enumerable:
+
+- **L1 — union.** If an operation's result path-set is contained in the union of its operands'
+  path-sets *at the same accessor positions*, it cannot introduce the infix. This covers `mergeAddStep`,
+  `mergeAddDeltaStep` (both outputs — `onOtherNode` copies the other side's subtree under the other
+  side's accessor), `mergeAccessorsRaw`, and `trimAnyCoveredAndPushChildren`, whose
+  `getNonMatchingNode` only ever *drops* branches and rebuilds under the same accessors.
+- **L2 — edge deletion.** Deleting an edge and hoisting its child preserves cleanliness **iff the
+  deleted accessor is `[any]` or covered**. Deleting an *uncovered* accessor can create the infix:
+  `[any].f.{Box}.g.[any]` is clean, and deleting `{Box}` makes it `[any].f.g.[any]`, which is not.
+
+`absorbCoveredByAnyPrefix` is safe by L2 and in fact stronger: its loop runs to a fixpoint over
+`accessor == ANY_ACCESSOR_IDX || isCoveredByAny(accessor)` (AT:886), so the node it returns has **no
+top-level `[any]` and no top-level covered accessor at all** — grafting it under an `[any]` cannot form
+the infix at that junction. `addParentFieldAccess` is safe because its graft point is a *fresh*
+single-accessor root (AT:943).
+
+**Two operations genuinely produce it**, and both are live:
+
+1. **The concat graft, through `limitFieldAccess`.** Conclusion `[any].f.*`, delta `g.f.([any].S)`. At
+   the `f`-node's frame, AT:1676 hoists the delta's `f`-subtree — `[any].S` — into `nestedAccessors`,
+   and AT:1700 installs it as `f → [any] → S` *under the conclusion's `[any]`*. `f` is covered, so the
+   result is the bad shape. Neither limiter stops it: the absorbing arm is gated on `parentEdgeIsAny`,
+   which is false one level under `f` (AT:1690), and the hoist at :1676 operates on the **unabsorbed**
+   delta. Note the receiver shape here is exactly the one `AnyFieldMarkExclusionTest.kt:321` builds.
+2. **`removeAllAccessorChains`** (AT:1883-1927, live at `MergingTreeSummaryStorage.kt:66`). It deletes
+   `chainLengthToRemove` edges whose labels lie in an SCC of the accessor graph and merges the subtree
+   into the chain's top node (AT:1900). **The SCC set may contain uncovered accessors**, so L2 is
+   violated: a node `f → {Box} → ([any] → S)` sitting under an `[any]`, with component `{f, {Box}}` and
+   length 2, collapses to `[any].[any]`.
+
+One conditional case to record rather than rely on: `collapseElementAccess` / `limitElementAccess`
+delete `ELEMENT_ACCESSOR_IDX` and hoist, which is safe **only because the production strategy declares
+elements covered** (`TaintAnalyzer.kt:71-73`). A future `AnyAccessorUnrollStrategy` that does not would
+turn it into a producer.
+
+#### Where to enforce it
+
+Factor the body of `prependAnyAccessor` into the part that produces the normalised child:
+
+```kotlin
+// prependAnyAccessor() becomes  create(ANY_ACCESSOR_IDX, this.collapseNestedAny())
+private fun collapseNestedAny(): AccessNode        // AT:789-806, unchanged, plus the id union of §4.1
+```
+
+and call it wherever an `[any]` edge is **installed** over a child. There are exactly three such places,
+and the census confirms there is no fourth — *"no path in concat attaches an `[any]` edge to a node
+without that node being built by AT:2221 or AT:2195"*:
+
+| site | why it is needed |
+|---|---|
+| AT:2195 raw single-edge `create(accessor, node)` | `filterStartsWith`'s spine fold (:1750), `reconstructRemainder` (:721), and both chain folds (:2271, :2281) reach it with `[any]` |
+| AT:2221 → AT:2243 the array factory | the only route for `bulkMergeAddAccessors` (:1119), `mergeAddStep` (:1170), `mergeAddDeltaStep` (:1220, :1228), `transformAccessors` (:1850) and `AnySuffixMatcher.kt:162` — i.e. **both producers above land here** |
+| AT:2018 `Serializer.readAccessNode` | the one route that bypasses *both* factories, calling the private constructor directly |
+
+The gate is two O(1) steps and needs no new state: `accessors` must contain `ANY_ACCESSOR_IDX`
+(`containsAnyAccessor()`, a `binarySearch`, AT:499-500), and *that slot's child* must have
+`containsAnyInThisOrDeepNodes`. The flag is a final field set in the child's own init block, so it is
+readable **before the parent exists** — which is what makes enforcement at construction possible at all.
+Every node with no `[any]` edge exits on the first test with no allocation. What reaches the worklist is
+the population `prependAnyAccessor` already pays for today, plus the legitimate
+`[any].<uncovered>.[any]` cases, which enter and leave it unchanged (`stripAnyBelowCoveredPath` hits
+`else -> node`, `transformAccessors` reports no modification, AT:1849 returns `this`).
+
+#### The one test this breaks
+
+Exactly one assertion in the repo builds the shape on the fact side and depends on it surviving:
+`AnyAccessorCollapseTest.kt:128`, `val uncollapsed = treeOf(node(AnyAccessor to fact.access))`, used as
+an oracle at :129-140 to check that reads through the collapsed form match reads through the raw one.
+Its `node(...)` helper (test :68-75) goes through the **array factory**, so normalising there makes the
+oracle equal to the thing it is checking and that half of the test becomes vacuous. Rewrite :127-140 to
+assert the reads against a hand-specified expectation; the first half (:115-126), which pins the
+collapse itself, is unaffected.
+
+Nothing else moves. The same helper's other uses (:175, :195) have no `[any]` beneath their `[any]`
+child; `AnyAccessorPremiseTest`'s two-`[any]` assertions are premise-side and go through
+`AccessPath.AccessNode` (AccessPath.kt:629-644), not either fact factory; and no other test in the repo
+constructs `[any].<covered>*.[any]` as a fact.
+
+**Depth-relative exclusions need no new bookkeeping, and this was checked rather than assumed** —
+it is the obvious place for the change to be quietly unsound. `absorbCoveredByAnyPrefix` threads an
+`absorbedAnyStep` flag into `filterDeepExclusion` (AT:735-745) precisely because absorption hoists
+accessors under a *stationary* claim owner, so relative depths shrink and a depth-1 claim's start
+exemption would silently free a mark. `stripAnyBelowCoveredPath` carries `deepAccessorExclusion`
+verbatim on every hoisted node and has no analogue — and that is right for three reasons visible in
+the code:
+
+1. **The claim and its subtree move together.** A claim is depth-relative *to its own node*; hoisting
+   relocates owner and content as one unit, so no relative depth inside the moved subtree changes.
+   Absorption is the opposite situation, which is why C2 exists there and not here.
+2. **Hoisting only moves content out from under a claiming ancestor**, so fewer claims apply, not
+   more. That is the false-positive direction. `intersectDeepExclusion` (AT:1139-1143) is likewise a
+   weakening join.
+3. **Both claim-introduction sites already replicate the claim downward** as a depth-0 claim on every
+   abstract descendant — `clearAccessorOccurrencesBelow` → `addAccessorFromDepth0` (AT:1014, :1030),
+   and `filterDeepExclusion`'s `collapseToDepth0()` + `annotateAbstractNodes` (AT:760-764). So a
+   descendant that is later hoisted already carries the claim in its strictest form.
+
+One residual channel is worth naming rather than discovering: `splitOnMatching` refuses a match when a
+claim is present (AT:677, AT:698), so any normalisation that moves a claim onto a node that previously
+had none — reachable only through `intersectDeepExclusion`'s AT:1140 arm — can suppress a delta. That
+is false-negative shaped, it is reachable from any ordinary `mergeAdd` today, and §12 counts it rather
+than assuming it away.
+
+**This is a behavioural change beyond the manager**, and it should be measured as one: it coarsens
+facts the graft currently keeps precise, so it belongs behind its own gate in §12 and its own line in
+the SARIF comparison, separable from `L`.
 
 ## 5. Where the charge happens
 
@@ -1302,7 +1461,7 @@ It is also unnecessary, because a predecessor **does** exist and the walk is hol
 in `anyAp = ReversedApNode(ANY_ACCESSOR_IDX, state.currentAp)` is not invented — it is the `[any]`
 edge of `state.added`, whose `anyId` is right there. So:
 
-- `AbstractionState` carries a `governingAnyId`, initialised to `0` and set to `state.added.anyId`
+- `AbstractionState` carries a `governingAnyId`, initialised to `null` and set to `state.added.anyId`
   wherever the walk crosses an `[any]` (TIFA:228 and the Site B descent at TIFA:262).
 - the emit callback passes it to `createAbstractNodeFromReversedAp`, which uses it for **every**
   `[any]` link in the fold.
@@ -1417,8 +1576,20 @@ as a falsifiable prediction and tests it.
 
 The one place this could go wrong is the split in `addParentAbsorbingAny` (§5.3): absorbing across a
 merged node's concrete branches would rewrite `a.f.S` as `f.S`, which is neither a superset nor a
-subset. That is why the primitive splits, and why `AnyFieldMarkExclusionTest.kt:318` is the test that
-must stay green.
+subset. That is why the primitive splits, and why `AnyFieldMarkExclusionTest.kt:317-334` is the test
+that must stay green.
+
+**A correction to the existing documentation, which §4.7 depends on.** `prependAnyAccessor`'s KDoc
+(AT:776-779) calls the nested-`[any]` collapse "an identity, not an approximation", and
+`2026-08-21-any-premise-design.md:422` repeats it as `[any].<covered sequence>.[any] ≡ [any]`. That is
+not quite true: `[any].f.[any].g` denotes `w₁·f·w₂·g` for covered `w₁,w₂`, while `[any].g` denotes
+`w·g` — the second includes `g` with no `f` at all, so the inclusion is **strict**. The collapse is a
+**monotone coarsening**, exactly as the sibling KDoc for absorption honestly says at AT:862-865, and
+not an identity.
+
+Nothing existing is unsound, because the direction is the safe one. But the word matters for §4.7: a
+normalisation that is an identity may be applied anywhere without thought, whereas a coarsening has a
+precision cost and a precondition that has to be respected at every new site.
 
 ### 8.3 Overshoot, and where it actually comes from
 
@@ -1568,7 +1739,7 @@ misparse every stale cache — so that would need a version tag first.
 | property | meaning | default |
 |---|---|---|
 | `opentaint.anyUnrollLimit` | `L`, the per-origin budget. `< 0` = unbounded, i.e. today's behaviour | chosen by §12.3 |
-| `opentaint.anyManagerDiag` | counters: ids minted by site, unions, cross-dag cascades, records, refusals, distinct managers per origin and per branch (§12.1), live dags/states, `pathCount` and `total` distributions at exit, and whether the id-space valve fired (§3.8) | `false` |
+| `opentaint.anyManagerDiag` | counters: states minted by site, unions, cross-dag fusions, records, refusals, distinct managers per origin and per branch (§12.1), **live** dags and states against ever-minted (§3.8), and `pathCount` / `total` distributions at exit | `false` |
 
 `opentaint.anyUnrollLimit` is already in `FORWARDED_TEST_PROPERTIES`
 (`core/opentaint-common-build/src/main/kotlin/org/opentaint/common/DefaultConfiguration.kt:65`);
@@ -1588,38 +1759,51 @@ Ordered so that steps 1–4 are **inert by construction** — the DSU, the manag
 propagation rules all land before anything reads them — and each step has a gate that can fail
 independently.
 
-1. **`AnyIdDsu`** (§3.3) — dedicated, segmented, lock-free `find` with path halving, synchronized
-   `union(x, y, preferRoot)` and `newId`, plus the segmented side-array it carries (`pathCount` for
-   the node instance, `total` for the dag instance) updated inside the union's lock. Standalone,
-   nothing else depends on it.
-   *Gate: single-threaded correctness (find/union/preferRoot), the side-array update being atomic with
-   the parent repoint, and a concurrency test — N threads unioning and finding while a grower appends
-   segments, asserting every `find` returns the current representative and never a superseded one, and
-   that no `pathCount` increment is lost.*
+0. **Force the nested-`[any]` collapse** (§4.7) — `collapseNestedAny` factored out of
+   `prependAnyAccessor` and called at the three installation sites (AT:2195, AT:2221, AT:2018). **This
+   step contains no manager at all**, which is the point: it is a behavioural change to the tree
+   representation, it lands and is measured on its own, and if it costs precision that is knowable
+   before any of the rest exists.
+   *Gate: `AnyAccessorCollapseTest.kt:143-153` and `AnyAccessorPremiseTest.kt:139-143` green (the
+   covered-only precondition); `AnyFieldMarkExclusionTest.kt:317-334` green (`.*` is not a collapsible
+   tail); `AnyAccessorCollapseTest.kt:127-140` rewritten off its now-vacuous raw oracle; the two
+   producers of §4.7 covered by new tests — a concat graft through `limitFieldAccess`, and
+   `removeAllAccessorChains` over an SCC containing an uncovered accessor; and a full SARIF comparison
+   on openmrs, tms and conductor, reported **separately from `L`**.*
+1. **`AnyUnrollState` / `AnyUnrollDag`** (§2, §3.3) — the two objects, the pointer `find` with path
+   halving, and `union` writing `parent`, `pathCount` and `total` inside one lock. There is no DSU
+   class and no id space: this step is two small classes.
+   *Gate: single-threaded correctness (find/union/receiver-preference); the `pathCount` update being
+   atomic with the `parent` write; a concurrency test with N threads unioning and finding, asserting
+   every `find` returns the current representative and never a superseded one and that no `pathCount`
+   increment is lost; and a **reclamation** test — drop the last reference to a merged-away state and
+   assert it is collected (`WeakReference` + `System.gc()`), which is the property §3.8 rests on.*
 2. **The automaton on `TreeApManager`** (§2, §2.2, §2.6): the two DSUs, the `edges` transition map,
    `pathCount`, `total` at the dag, the two-layer `union` with its same-dag precondition, the
-   memoised product merge, and the id-space ceiling with its overflow dag (§3.8). Nothing reads it yet.
+   memoised product merge (§2.2), and the dag fusion that precedes any cross-automaton state merge.
+   Nothing reads it yet.
    *Gate, and this is the step where cycles have to be proved rather than hoped: one successor per
    accessor after merging two overlapping automata; `union(X, X)` idempotent; **`union(m, m.a)`
-   terminates, produces the self-loop, and leaves `pathCount[m] == 2`** (§2.5); a second read of `a` at
+   terminates, produces the self-loop, and leaves `m.pathCount == 2`** (§2.5); a second read of `a` at
    `m` afterwards mints nothing and charges nothing; `mergeStates` on two mutually reachable states
    terminates; a cross-dag union fuses the dags, merges their start states and leaves exactly one
    `total`; `mergeStates` across dags without a prior fusion is rejected, not silently accepted. Full
    suite green.*
-3. **The id on the node.** `anyId` in identity (§3.4), the
-   `anyId != 0 ⟺ ANY_ACCESSOR_IDX ∈ accessors` check in the init block, `find(id)` canonicalised at
-   construction and **raw** in `hash`/`equals`/`InternStrategy`, plumbed through the five
-   private-constructor sites (AT:1494, 2018, 2180, 2210, 2254), the `create` overloads and every
-   `manager.create(...)` caller per §3.7. Still inert.
-   *Gate: §12.7 (JOL + node counts); with `L < 0` every node is `0`, so `flags`, `hash` and every
-   comparison are bit-identical to today — assert that rather than assuming it; and a unit test that
-   a union does not change any live node's `hashCode`.*
+3. **The state reference on the node.** `anyId` in identity (§3.4), the
+   `anyId != null ⟺ ANY_ACCESSOR_IDX ∈ accessors` check in the init block, `find()` canonicalised at
+   construction with `===` / `anyId.id` at compare time, plumbed through the five private-constructor
+   sites (AT:1494, 2018, 2180, 2210, 2254), the `create` overloads and every `manager.create(...)`
+   caller per §3.7. Still inert.
+   *Gate: §12.7 (layout + node counts); with `L < 0` every node's `anyId` is `null`, so `flags`, `hash`
+   and every comparison are bit-identical to today — assert that rather than assuming it; a unit test
+   that a union does not change any live node's `hashCode`; and the reclamation test of step 1 repeated
+   end to end.*
 4. **The lifecycle rules.** Allocate / union / propagate at every site in §4.1–§4.5. Specifically
    including, because a census found each of them missing from the first draft: the `filterStartsWith`
    spine rebuild (AT:1750) and `reconstructRemainder` (AT:721) carrying the consumed id; the
-   `governingAnyId` thread through `concatToLeafAbstractNodes` (§4.4); the uncovered-accessor scan in
-   `stripAnyBelowCoveredPath` (§4.1); the `bulkMergeAddAccessors` entry id (§3.7); the delta node's id
-   (§3.7); the deserialisation thread (§9); and the N-way unions (§4.6.1) accounted on the
+   forced normalisation at all three installation sites (§4.7), which subsumes the graft case (§4.4);
+   the uncovered-accessor union inside `collapseNestedAny` (§4.1); the `bulkMergeAddAccessors` entry
+   state (§3.7); the delta node's state (§3.7); and the N-way unions (§4.6.1) accounted on the
    **completed** union. Still no charge and no refusal.
    *Gate: §12.1, now two counts — distinct managers reachable from one origin must be 1, **and
    distinct managers on any single root-to-leaf path must be ≤ 1** (§2.4). This is the step that
@@ -1630,7 +1814,7 @@ independently.
    hot path. Recording only — nothing is refused yet.
    *Gate: §12.5 (query callers record zero) and §12.4 (records track the `fromAny` population). This
    is where the design is compared against the 657,633 baseline and against the prototype's 1,448.*
-6. **The refusal.** `addParentAbsorbingAny` (§5.3) and the budget test `total[dagDsu.find(hi(anyId))] < L`.
+6. **The refusal.** `addParentAbsorbingAny` (§5.3) and the budget test `anyId.find().dag.find().total < L`.
    *Gate: §12.2's superset check on openmrs and tms; a new shape-asserting `filterStartsWith` test;
    `AnyFieldMarkExclusionTest.kt:318` green.*
 7. **TIFA integration.** Consult the manager **before** `AccessPathTrieNode.unrollAccessors` (§6.2),
@@ -1639,8 +1823,9 @@ independently.
 8. **Retire `unrolledFactCount`** (TIFA:401-408) and restore the property read at TIFA:517-518, which
    is currently hard-wired to `100`.
 
-Steps 1–4 can land behind `L < 0` with no behavioural change at all, which makes the risky part
-(5–7) a small, separately revertable surface.
+Step 0 is the only one that changes behaviour before `L` is ever set, and it is deliberately first and
+alone so that its cost is attributable. Steps 1–4 then land behind `L < 0` with no behavioural change
+at all, which makes the risky part (5–7) a small, separately revertable surface.
 
 ## 12. Validation
 
@@ -1679,7 +1864,7 @@ Run all of this before any tuning. A design whose bound leaks is not worth sweep
    `[any].{Box}.[any].$` survives a prepend; extend it to assert the two edges share a dag. That test
    is now doing double duty — it pins both the tree shape and the manager rule that the shape forces.
 3. **The cycle.** §2.5's scenario as a unit test on the manager alone: `union(m, m.a)` terminates,
-   leaves `m --a--> m`, sets `pathCount[m] = 2`, and a subsequent read of `a` at `m` mints nothing and
+   leaves `m --a--> m`, sets `m.pathCount = 2`, and a subsequent read of `a` at `m` mints nothing and
    charges nothing.
 4. **Interning under the token.** `AnyAccessorCollapseTest.kt:107, 120, 152, 188` and
    `AnyPremiseAbstractionTest.kt:210, 258, 275, 289` compare nodes structurally and will start
@@ -1766,10 +1951,16 @@ header, 8-byte alignment; `interned`/`isAbstract`/`isFinal` are constructor para
  52 byte flags | 53..55 tail padding
 ```
 
-41 bytes of fields, 53 total, **56 aligned, with 3 spare tail bytes**. Adding an `Int` gives 57 → **64**;
-adding a `Long` gives 61 → **64**. Both cost **+8 bytes**, which is why §3 takes the `Long`: the second
-id is free. The two `flags` bits dormancy needs (§3.4) are free as well — bits 5, 6, 7 are unused
-(AT:2031-2035) — as would be a `Byte` or `Short` field, which lands in the existing tail padding.
+41 bytes of fields, 53 total, **56 aligned, with 3 spare tail bytes**. Adding a reference (a 4-byte
+compressed oop) gives 57 → **64**; so would an `Int`, and so would a `Long` (61 → 64). All three cost
+**+8 bytes**, which is why §3.1 can take the reference without paying for it. A `Byte` or `Short` would
+have been free, landing in the tail padding, as are the three unused `flags` bits (AT:2031-2035) — but
+nothing in the final design needs them, because dormancy moved to the wrapper (§3.4).
+
+Report the **live automaton** separately from the node cost, because §3.8's whole claim is that it is
+reclaimed: live dags, live states, live transitions, and — the property the design rests on — that a
+merged-away state with no remaining `AccessNode` holder actually becomes unreachable. A heap dump at
+exit that still contains states from origins whose facts are long gone refutes §3.1 directly.
 
 **There is no JOL dependency in this repo** (no `jol`, `ClassLayout`, `objectSize` or `sizeOf` anywhere
 in source or build files), so either add one for this measurement or accept the hand layout above. The
@@ -1782,10 +1973,8 @@ nodes across 2.6 M abstraction calls, 22,867 facts over 1000 nodes, and the targ
 identity fragments the interner by ×(distinct origins touching a shape), and §3.4's dormancy adds a
 second fragmentation axis on childless abstract leaves.
 
-Report alongside it the §3.8 arithmetic as measured rather than projected: mints, live dags, live
-states, transitions, bytes in the two DSUs and the `edges` map, and **whether the id-space ceiling and
-its overflow dag were ever reached**. A run that silently hit the valve is a run whose every other
-number is uninterpretable.
+Report alongside it the §3.8 arithmetic as measured rather than projected: **mints** against **live
+states**, since the gap between those two numbers is the entire case for references over arrays.
 
 The fallback if it does not fit is to drop the id out of identity, which costs the per-origin scoping
 (interning fuses toward one global manager) and is what §12.3 would then have to price.
@@ -1832,18 +2021,21 @@ cannot serve as a control: the two backends differ in the mechanism under test.
 | R8 | A deserialised `[any]` reaches a prescan-phase tree, where `AnyAccessorDisabled.unrollAccessor` **throws** | low but total (analysis stalls) | AT:2018 is the one `[any]` creation site that never consults the strategy; guard the coverage query. This class of bug has been hit once, stalling openmrs at `Progress: 1/7367` |
 | R9 | The manager and `AccessPathTrieNode.unrollAccessors` disagree about which accessors remain, and the memo has no un-take | medium | §6.2 — consult the manager first; step 6 sequences it |
 | R10 | The query/build split (§5.2) is misclassified — a build treated as a query under-charges | medium | §12.5 counts records per caller; the list is ten functions |
-| R11 | ~~Manager and trie-node allocation churn~~ — **retired**: columnar storage means there are no per-state objects (§3). The cost moved to the id space and is now R23 | — | §3.8 |
+| R11 | Manager-state allocation churn adds GC pressure on a heap-bound workload | medium | one ~32-byte object per live state, bounded by `origins × (L+1)` (§3.8), and reclaimed when nothing holds it — which is the trade §3.1 makes deliberately against never reclaiming |
 | R12 | An `L` small enough to converge conductor is coarse enough to add FPs elsewhere | medium | §12.3 requires openmrs/tms/thingsboard SARIF-identical at the chosen `L` |
 | R13 | Order-sensitivity moves findings between runs | medium | §8.4 states the cost; §12.6 measures it — and it has never been run |
 | R14 | The interner data race returns a wrong accessor index, diverging findings independently of this design | **high for measurement** | the fix `e082a4b72` is **not** on this branch — land it first, or every measurement is uninterpretable |
 | R15 | Records lost at the two no-refund destruction sites (§4.6.2) make the automaton under-count | low | sound (the budget goes further, never shorter); §12's counters must treat `total` as a lower bound |
-| R16 | `find` leaks into `hashCode`/`equals`, so a union changes a live node's hash and every hash structure holding it loses the entry | high but preventable by rule | §3.4: raw at compare time, `find` at build time and in the merge guard only; step 3's gate asserts a union changes no live `hashCode` |
+| R16 | `find` leaks into `hashCode`/`equals`, so a union changes a live node's hash and every hash structure holding it loses the entry | high but preventable by rule | §3.4: the stored reference at compare time, `find` at build time and in the merge guard only; step 3's gate asserts a union changes no live `hashCode` |
 | R17 | The id is inside the fixpoint (§8.5) and a destroy-then-recreate cycle mints on every lap | medium | §3.5's no-delta rule removes the amplification; §3.4's wrapper-carried id closes `Cleaner`, the one genuine round trip. What is left — a re-creation at a different node — is counted, not argued |
 | R18 | `InternStrategy.equals` (`AccessTreeInterner.kt:15-29`) is a *second*, different comparison from `AccessNode.equals` and already omits `deepAccessorExclusion`; forgetting `anyId` there fuses two budgets on a hash collision | medium, silent | §3.4 names all three places that must learn about the id |
 | R19 | Cross-dag cascades are not rare, so the `total(dx) + total(dy)` over-count coarsens broadly | medium | §12.1 counts cascades; the fallback is the full product traversal |
 | R21 | **The whole loop fixpoint rests on one reference comparison.** `mergedAccess === currentAccess` fires only because `mergeAddStep` returns the receiver, which holds only because the `[any]` child is the shared `abstractNode` singleton. Any field that makes structurally-equal nodes distinct objects costs every loop in the program extra laps | **high** | the id is non-zero only on `[any]`-owning nodes; dormancy is kept off the node entirely (§3.4); §12.1's cycle test pins it |
 | R22 | The union is a **side effect** of computing the merged id, and an implementation that short-circuits the shape check before unioning skips it — then §2.5's self-loop never forms and **the analysis does not terminate** | **high**, and it looks like an optimisation | §3.5 states the ordering explicitly; §12.1's cycle test fails loudly if it is skipped |
-| R23 | Mints do not collapse: 40k on the conductor witness would be ~100 MB of automata *and* a 4M population bound — worse than the 735k §1.1b rejected | **highest, jointly with R1** | §3.8 shows memory and budget are the same measurement, so §12.1 answers both; §6.3 and §3.4 attack the mint count; the id-space ceiling and overflow dag bound the damage |
+| R23 | Mints do not collapse: 40k on the conductor witness would be a 4M population bound — worse than the 735k §1.1b rejected — and a correspondingly large live automaton | **highest, jointly with R1** | §3.8 shows memory and budget are the same measurement, so §12.1 answers both; §4.7, §6.3 and §3.4 all attack the mint count. There is deliberately **no valve**: if this fails it must fail visibly (§3.1) |
+| R25 | §4.7's forced collapse costs precision — it is a coarsening, not the identity the existing KDoc claims (§8.2) — and it changes behaviour before any budget exists | **high**, but knowable early | it is implementation **step 0**, alone and first, gated on a full SARIF comparison reported separately from `L`. `TreeCleanerFieldSensitivityAnalysisTest`'s depth-3 pair is the end-to-end detector: a sanitizer must still bite after a graft |
+| R26 | The collapse is enforced at construction, so an over-reach is total rather than local: dropping *covered-only*, or treating `.*` as a collapsible tail, silently rewrites facts everywhere | **high** | three existing tests fence it, one per over-reach (§4.7); each fails loudly and for a distinct reason |
+| R27 | Reclamation recovers less than it appears to — storages never delete, so states reaching a stored fact live for the phase | medium, and stated rather than hidden | §3.8; the argument for references does not rest on the constant factor but on the array version being unbounded on a long phase |
 | R24 | `pathCount` approximates in both directions — over-stating live facts after a fact-merge, under-stating the language after a union whose increase is not pushed down | medium, deliberate | §2.6 states both, and both are `O(1)` choices; over-statement is the sound direction (§8.2) |
 | R20 | `anyId` adds one more per-`TreeApManager` namespace to a codebase with no `check(manager === …)` in the tree backend | low — no live path found (§9.1) | traced through `resetApManager` and `selectPhase`; add the guard the automata backend already has |
 
