@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.tree.AnyUnrollDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -127,6 +128,15 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         logger.info { "Start full scan phase" }
         val fullScanResult = fullScan(analysisStart, entryPoints, startMethods)
         logger.info { "Finish full scan phase" }
+
+        if (AnyUnrollDiagnostics.enabled) {
+            val report = AnyUnrollDiagnostics.report()
+            logger.info { report }
+            // Also on stdout: the benchmark harness scrapes console.log, and a counter that only
+            // exists inside a log level nobody enabled is a counter nobody reads.
+            println("ANYUNROLL $report")
+        }
+
         return fullScanResult
     }
 

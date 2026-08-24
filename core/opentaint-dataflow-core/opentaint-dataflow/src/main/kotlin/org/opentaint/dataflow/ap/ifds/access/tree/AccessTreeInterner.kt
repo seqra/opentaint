@@ -24,6 +24,12 @@ class AccessTreeInterner {
             // `containsAnyInThisOrDeepNodes` are derived from the children compared just below.
             if (a.isAbstract != b.isAbstract || a.isFinal != b.isFinal) return false
 
+            // A SECOND, different comparison from AccessNode.equals -- it already diverges by
+            // omitting deepAccessorExclusion and leaning on `hash` alone to separate those. Leaning
+            // on the same trick for the `[any]` manager state would fuse two budgets on a hash
+            // collision, silently merging two pots, so it is compared explicitly.
+            if (a.anyId !== b.anyId) return false
+
             if (!a.accessors.contentEquals(b.accessors)) return false
             return a.accessorNodes.contentIdentityEquals(b.accessorNodes)
         }

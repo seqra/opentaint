@@ -44,11 +44,31 @@ class AnyPremiseAbstractionTest {
             accessor is FieldAccessor || accessor is ElementAccessor
     }
 
-    private val manager = TreeApManager(UnrollStrategy, RefManager(), Cancellation())
+    /**
+     * The `[any]` budget now lives on the manager, keyed by `[any]` ORIGIN rather than by
+     * `(entry point, access-path base)`, so a capped scenario configures the MANAGER.
+     *
+     * JUnit builds a fresh instance of this class per test method, so the lazy manager is per test.
+     * Accessor indices are assigned per manager in first-encounter order, so facts and premises must
+     * never be mixed across two of them -- hence one manager per test rather than one per limit.
+     */
+    private var configuredLimit: Int = -1
+    private var managerCreated = false
+
+    private val manager: TreeApManager by lazy {
+        managerCreated = true
+        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit)
+    }
 
     private val base = AccessPathBase.This
 
-    private fun abstraction(anyUnrollLimit: Int = -1) = TreeInitialFactAbstraction(manager, anyUnrollLimit)
+    private fun abstraction(anyUnrollLimit: Int = -1): TreeInitialFactAbstraction {
+        check(!managerCreated || anyUnrollLimit == configuredLimit) {
+            "the manager owns the [any] budget, so the limit must be chosen before the first fact is built"
+        }
+        configuredLimit = anyUnrollLimit
+        return TreeInitialFactAbstraction(manager)
+    }
 
     private fun premise(vararg accessors: Accessor): InitialFactAp {
         var fact = manager.mostAbstractInitialAp(base)
@@ -352,19 +372,22 @@ class AnyPremiseAbstractionTest {
     }
 
     @Test
-    fun `at the cap the base stops unrolling and the any premise stands in`() {
+    fun `at the cap the origin stops unrolling and the any premise stands in`() {
         val abstraction = abstraction(anyUnrollLimit = 1)
         abstraction.register(premise().exclude(FIELD_A))
 
         val first = abstraction.add(fact(AnyAccessor, FIELD_C))
         first.assertIdentityPair(premise(AnyAccessor))
-        assertTrue(first.premises().contains(premise(FIELD_A)), "the first unroll is still below the limit")
+        assertTrue(
+            first.premises().contains(premise(FIELD_A)),
+            "the first unroll is still below the limit; produced=${first.premises()}"
+        )
 
-        // The limit is now reached for this base. A second demand is not unrolled any more.
+        // The origin's pot is spent. A second demand is not unrolled any more.
         val second = abstraction.register(premise().exclude(FIELD_B))
         assertFalse(
             second.premises().contains(premise(FIELD_B)),
-            "the base is cut, so `this.b` is not materialised out of the `[any]`; produced=${second.premises()}"
+            "the pot is spent, so `this.b` is not materialised out of the `[any]`; produced=${second.premises()}"
         )
     }
 
@@ -382,6 +405,34 @@ class AnyPremiseAbstractionTest {
         assertTrue(
             produced.premises().contains(premise(FIELD_B)),
             "an accessor demanded later still gets its own premise; produced=${produced.premises()}"
+        )
+    }
+
+    /**
+     * The budget is per `[any]` ORIGIN, not per base -- which is the whole point of the change. A
+     * second base carries an independently created `[any]`, hence its own pot, so an origin that has
+     * spent its budget does not cut a base that still has one.
+     */
+    @Test
+    fun `the cap is keyed by origin, so a second base is unaffected`() {
+        val abstraction = abstraction(anyUnrollLimit = 1)
+
+        abstraction.register(premise().exclude(FIELD_A))
+        abstraction.add(fact(AnyAccessor, FIELD_C))
+        abstraction.register(premise().exclude(FIELD_B))
+
+        val otherBase = AccessPathBase.Argument(0)
+        abstraction.register(manager.mostAbstractInitialAp(otherBase).exclude(FIELD_A))
+
+        val otherFact = manager.createFinalAp(otherBase, ExclusionSet.Empty)
+            .prependAccessor(FIELD_C)
+            .prependAccessor(AnyAccessor)
+        val produced = abstraction.add(otherFact)
+
+        val expected = manager.mostAbstractInitialAp(otherBase).prependAccessor(FIELD_A)
+        assertTrue(
+            produced.premises().contains(expected),
+            "a fresh origin has its own full pot; produced=${produced.premises()}"
         )
     }
 }

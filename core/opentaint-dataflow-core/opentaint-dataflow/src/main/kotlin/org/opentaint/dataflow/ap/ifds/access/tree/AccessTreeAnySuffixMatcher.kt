@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
-import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 
@@ -159,6 +158,8 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         if (!areChildrenChanged && thisFinal == node.isFinal)
             return node
 
-        return manager.create(node.isAbstract, thisFinal, node.deepAccessorExclusion, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
+        // Only ever DROPS branches and rebuilds under the same accessors, so the node's own `[any]`
+        // state carries across -- and is dropped automatically when the trim removed that edge.
+        return node.recreate(node.isAbstract, thisFinal, node.deepAccessorExclusion, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
     }
 }

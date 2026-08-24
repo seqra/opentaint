@@ -35,8 +35,26 @@ class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     refManager: RefManager,
     override val cancellation: Cancellation,
+    /**
+     * `L`, the per-`[any]`-origin unroll budget. A constructor parameter rather than a direct read of
+     * the property so a test can pin a limit without touching global state, exactly as
+     * [TreeInitialFactAbstraction] does.
+     */
+    anyUnrollLimit: Int = AnyUnrollManager.DEFAULT_ANY_UNROLL_LIMIT,
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
+
+    /**
+     * Allocation, union and charging for the `[any]` unroll automata.
+     *
+     * It lives here because this is the single object every tree-backend site already holds, and the
+     * only common ancestor of the two spend sites -- the initial-fact abstraction under the callee's
+     * analyzer, and the access-path subscription under the caller's. Putting it here is what makes
+     * the budget genuinely SHARED rather than partitioned per `(entry point, base)`, which is the
+     * failure that made the previous cap ineffective.
+     */
+    @JvmField
+    val anyUnroll = AnyUnrollManager(anyUnrollLimit)
 
     val interner = AccessorInterner()
 

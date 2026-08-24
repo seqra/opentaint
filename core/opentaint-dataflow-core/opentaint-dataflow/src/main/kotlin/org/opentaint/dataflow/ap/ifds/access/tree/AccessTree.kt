@@ -45,10 +45,25 @@ class AccessTree(
     val apManager: TreeApManager,
     override val base: AccessPathBase,
     val access: AccessNode,
-    override val exclusions: ExclusionSet
+    override val exclusions: ExclusionSet,
+    /**
+     * The manager state of an `[any]` edge just taken OFF this fact, so that prepending one back
+     * reuses it instead of minting a fresh origin.
+     *
+     * Deliberately on the WRAPPER and not on [AccessNode]. Three things follow from that and each
+     * one matters: it costs the node nothing and adds no second axis to the interner; storages hold
+     * bare nodes, so it cannot leak into persistent state, which is right because dormancy is a
+     * within-operation notion; and, most sharply, it cannot break the one reference comparison the
+     * whole loop fixpoint rests on. A dormant id in node identity would make `abstractNode` and
+     * `abstractNode(dormant = X)` distinct objects, `mergeAddStep` would rebuild instead of
+     * returning the receiver, and every loop in the program would cost extra laps.
+     *
+     * It is NOT part of equality or the hash, for the same reason.
+     */
+    private val dormantAnyId: AnyUnrollState? = null,
 ) : FinalFactAp {
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessTree(apManager, newBase, access, exclusions)
+        AccessTree(apManager, newBase, access, exclusions, dormantAnyId)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
         AccessTree(apManager, base, access, exclusions.add(accessor))
@@ -75,18 +90,28 @@ class AccessTree(
     override fun isAbstract(): Boolean = access.isAbstract
 
     override fun readAccessor(accessor: Accessor): FinalFactAp? = with(apManager) {
-        access.getChild(accessor.idx)
-            ?.let { AccessTree(apManager, base, it, exclusions) }
+        val idx = accessor.idx
+        access.getChildRecording(idx)
+            ?.let { AccessTree(apManager, base, it, exclusions, dormantAnyIdAfterRemoving(idx)) }
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(apManager) {
-        AccessTree(apManager, base, access.addParent(accessor.idx), exclusions)
+        AccessTree(apManager, base, access.addParent(accessor.idx, dormantAnyId), exclusions)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? = with(apManager) {
-        val newAccess = access.clearChild(accessor.idx).takeIf { !it.isEmpty } ?: return null
-        return AccessTree(apManager, base, newAccess, exclusions)
+        val idx = accessor.idx
+        val newAccess = access.clearChild(idx).takeIf { !it.isEmpty } ?: return null
+        return AccessTree(apManager, base, newAccess, exclusions, dormantAnyIdAfterRemoving(idx))
     }
+
+    /**
+     * Reading or clearing the `[any]` accessor and then prepending one back is a round trip that
+     * should be free; without this it burns a fresh origin every lap. One file in the engine does it
+     * across operations -- the cleaner -- which is exactly the case the wrapper can carry.
+     */
+    private fun dormantAnyIdAfterRemoving(accessorIdx: AccessorIdx): AnyUnrollState? =
+        if (accessorIdx == ANY_ACCESSOR_IDX) access.anyId else dormantAnyId
 
     override fun removeAbstraction(): FinalFactAp? =
         access.removeAbstraction().takeIf { !it.isEmpty }
@@ -168,7 +193,7 @@ class AccessTree(
         }
 
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? = with(apManager) {
-            node.getChild(accessor.idx)
+            node.getChildRecording(accessor.idx)
                 ?.let { NodeAccessTreeDelta(apManager, it) }
         }
 
@@ -188,7 +213,7 @@ class AccessTree(
                 return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
             }
 
-            node = node.getChild(accessor) ?: return emptyList()
+            node = node.getChildRecording(accessor) ?: return emptyList()
         }
 
         val filteredNode = when (val exclusion = other.exclusions) {
@@ -282,7 +307,20 @@ class AccessTree(
         @JvmField val deepAccessorExclusion: DeepAccessorExclusion?,
         @JvmField val accessors: IntArray?,
         @JvmField val accessorNodes: Array<AccessNode>?,
+        anyIdRaw: AnyUnrollState?,
     ) {
+        /**
+         * The `[any]` unroll manager state owned by THIS node's `[any]` edge, or null when the node
+         * owns no such edge (and always null when the feature is off).
+         *
+         * Canonicalised at construction -- `find()` here and the STORED REFERENCE at compare time.
+         * A [hashCode] that called `find` would change over time: a union moves the representative,
+         * the node's hash changes, and every hash structure already holding it silently loses the
+         * entry. Canonicalising at build time instead lets the structural duplicates a union leaves
+         * behind die out as the analysis rebuilds trees, which it does constantly.
+         */
+        @JvmField val anyId: AnyUnrollState? = anyIdRaw?.find()
+
         @JvmField val hash: Long
         @JvmField val size: Long
         @JvmField val maxDepth: Int
@@ -349,6 +387,18 @@ class AccessTree(
         }
 
         init {
+            // The node-level invariant that turns the whole propagation problem into a rule a
+            // reviewer can check locally at each construction site: a state is present exactly when
+            // there is an `[any]` edge for it to belong to. A site that forgets to carry the state
+            // is not a crash -- it is a silent budget refill -- so it is asserted rather than hoped.
+            if (manager.anyUnroll.enabled) {
+                check((anyId != null) == containsAnyAccessor()) {
+                    "anyId/[any] edge mismatch: anyId=$anyId, accessors=${accessors?.toList()}"
+                }
+            }
+        }
+
+        init {
             var hash = 0L
             var depth = 0
             var containsStatic = false
@@ -356,6 +406,10 @@ class AccessTree(
 
             if (isAbstract) hash += 1
             if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
+            // Mixed in additively, like everything else here: nothing decodes `hash`, it is a bucket
+            // key plus an equality prefilter. `anyId.id` is a dense counter rather than an identity
+            // hash so it distributes inside a sum-of-children and adds no run-to-run variation.
+            if (anyId != null) hash += anyId.id.toLong() shl 7
 
             if (isFinal) {
                 depth = 1
@@ -416,6 +470,10 @@ class AccessTree(
             // comparison would make structurally equal nodes unequal and break interning.
             if (isAbstract != other.isAbstract || isFinal != other.isFinal) return false
             if (deepAccessorExclusion != other.deepAccessorExclusion) return false
+            // The STORED reference, never `find()` -- see [anyId]. Two nodes whose states have since
+            // been unioned stay unequal; they are structural duplicates that the next rebuild
+            // removes, which is cheaper than a hash that moves under a live entry.
+            if (anyId !== other.anyId) return false
 
             if (!accessors.contentEquals(other.accessors)) return false
             return accessorNodes.contentEquals(other.accessorNodes)
@@ -523,7 +581,26 @@ class AccessTree(
             return r.mergeAdd(l)
         }
 
-        fun getChild(accessor: AccessorIdx): AccessNode? {
+        /**
+         * The QUERY entry point: answers what the fact denotes without moving any budget.
+         *
+         * Its callers ([equalTo], [containsStrict], [containsThroughAny], and the premise side's
+         * `matchThroughAny` / `splitDeltaStrict`) decide a boolean; charging them would trip the cut
+         * early and coarsen facts that were never growing. Misclassifying a build as a query is the
+         * dangerous direction -- that is a refill -- so the split is a second entry point rather
+         * than a flag, and the two lists are short enough to check by reading them.
+         */
+        fun getChild(accessor: AccessorIdx): AccessNode? = getChild(accessor, record = false)
+
+        /**
+         * The BUILD entry point: [getChild] plus the R4 record.
+         *
+         * Used by every caller whose result becomes part of a fact -- the two `readAccessor`s,
+         * [AccessTree.delta] and [filterStartsWith].
+         */
+        fun getChildRecording(accessor: AccessorIdx): AccessNode? = getChild(accessor, record = true)
+
+        private fun getChild(accessor: AccessorIdx, record: Boolean): AccessNode? {
             if (accessor == FINAL_ACCESSOR_IDX) return manager.finalNode.takeIf { this.isFinal }
 
             val node = getNodeByAccessor(accessor)
@@ -535,15 +612,31 @@ class AccessTree(
             var resultNode = mergeAddMaybeNull(anyChild, node)
 
             if (manager.isCoveredByAny(accessor)) {
+                // The unique point at which a concrete accessor is SYNTHESISED out of an `[any]`, as
+                // opposed to being read off an edge the fact literally has. Putting the record here
+                // covers every caller at once, which is the structural difference from a predicate
+                // keyed on one caller's tree shapes.
+                //
+                // The arm destroys the `[any]` edge and rebuilds it, so the returned `[any]` is a
+                // FRESH node -- which is what makes the automaton expressible: the fresh edge takes
+                // the successor state while the original keeps its own. Had the arm returned the
+                // original node the two would be forced to share a state.
+                val childState = if (record) {
+                    manager.anyUnroll.readChild(anyId, accessor)
+                } else {
+                    manager.anyUnroll.peekChild(anyId, accessor)
+                }
+
                 val anyAccessorNoRepeats = anyAccessorNode.clearChild(accessor)
-                val originalAnyNoRepeats = anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX)
+                val originalAnyNoRepeats =
+                    anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX, childState ?: anyId)
                 resultNode = mergeAddMaybeNull(originalAnyNoRepeats, resultNode)
             }
 
             return resultNode
         }
 
-        fun addParentIfPossible(accessor: AccessorIdx): AccessNode? {
+        fun addParentIfPossible(accessor: AccessorIdx, anyState: AnyUnrollState? = null): AccessNode? {
             if (containsStatic) return null
 
             return when {
@@ -569,7 +662,7 @@ class AccessTree(
                     }
                 }
 
-                accessor == ANY_ACCESSOR_IDX -> prependAnyAccessor()
+                accessor == ANY_ACCESSOR_IDX -> prependAnyAccessor(anyState)
 
                 accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> create(accessor, this)
                 accessor.isTypeInfoAccessor() -> create(accessor, this)
@@ -718,19 +811,52 @@ class AccessTree(
             val childRemainder = getNodeByAccessor(accessor)
                 ?.reconstructRemainder(accessors, idx + 1)
                 ?.takeIf { !it.isEmpty }
-                ?.let { create(accessor, it) }
+                // Same raw re-creation as the spine fold above: carry the state of the edge this
+                // frame walked through.
+                ?.let { create(accessor, it, anyId) }
 
             if (levelRemainder == null) return childRemainder
             if (childRemainder == null) return levelRemainder
             return levelRemainder.mergeAdd(childRemainder)
         }
 
-        fun addParent(accessor: AccessorIdx): AccessNode =
-            addParentIfPossible(accessor)
+        fun addParent(accessor: AccessorIdx, anyState: AnyUnrollState? = null): AccessNode =
+            addParentIfPossible(accessor, anyState)
                 ?: error("Impossible accessor")
 
+        /**
+         * Prepend [accessor] above this node, EXCEPT on the branch an `[any]` at this node's root
+         * already denotes -- and only once that `[any]`'s pot is spent.
+         *
+         * `a.[any].R` is a subset of `[any].R` for covered `a`, so declining to materialise `a`
+         * asserts MORE, not less: refusal is absorption, not truncation, and no value of `L`
+         * including 0 can lose a finding relative to no limit at all.
+         *
+         * The naive form of this is unsound and the trap is worth naming: the node this runs on is
+         * generally a MERGE of the `[any]` branch and concrete branches, and dropping the step
+         * across the whole node would rewrite `a.f.S` as `f.S` on the concrete ones -- neither a
+         * superset nor a subset, so a genuine loss. Hence the split: skip the step only on the
+         * `[any]`-rooted branch, keep it everywhere else.
+         *
+         * The coverage query is reached only AFTER an `[any]` edge has been proved to exist. That is
+         * not tidiness: `isCoveredByAny` delegates straight to the injected strategy, and the one
+         * installed for the whole prescan phase THROWS rather than returning false.
+         */
+        private fun addParentAbsorbingAny(accessor: AccessorIdx, anyState: AnyUnrollState?): AccessNode {
+            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return create(accessor, this, anyState)
+            if (!manager.anyUnroll.budgetExhausted(anyId)) return create(accessor, this, anyState)
+            if (accessor == ANY_ACCESSOR_IDX) return create(accessor, this, anyState)
+            if (!manager.isCoveredByAny(accessor)) return create(accessor, this, anyState)
+
+            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.absorptions.incrementAndGet()
+
+            val absorbed = create(ANY_ACCESSOR_IDX, anyNode, anyId)
+            val rest = clearChild(ANY_ACCESSOR_IDX).takeIf { !it.isEmpty } ?: return absorbed
+            return create(accessor, rest).mergeAdd(absorbed)
+        }
+
         fun removeAbstraction(): AccessNode =
-            manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
+            recreate(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
 
         /**
          * [absorbedAnyStep] is C2 of the concat absorption: [DeepAccessorExclusion] is
@@ -769,23 +895,44 @@ class AccessTree(
             return annotated
         }
 
+        /** Build `[any].this`. The normalisation and the manager rules both live in [createAnyEdge]. */
+        private fun prependAnyAccessor(anyState: AnyUnrollState?): AccessNode =
+            createAnyEdge(this, anyState, AnyUnrollManager.MINT_PREPEND)
+
         /**
-         * Build `[any].this`, maintaining the representation invariant that no `[any]` is reachable
-         * from another `[any]` through a covered-only path.
+         * Normalise this node for the position DIRECTLY UNDER an `[any]` edge, and report the union
+         * of every `[any]` manager state found in it.
          *
-         * Under the zero-or-more reading of `[any]` the collapse is an identity, not an
-         * approximation: for `x`, `y`, `z` all covered by `[any]`,
-         * `[any].x.y.z.[any].S` and `[any].S` denote the same path set, because `w.x.y.z.v` ranges
-         * over exactly the same covered sequences as a single `w'`.
+         * Two jobs, and the second is unconditional while the first is not.
          *
-         * Children reached through an accessor `[any]` does NOT cover (a taint mark, a static, a
-         * type-info accessor, `[value]`, `[final]`) are left alone: the identity does not hold
-         * across them, so neither the descent nor the collapse crosses one.
+         * **Collapse where legal.** `[any]` is `sigma*` for the covered accessors `sigma`, so
+         * `sigma* ⊇ sigma*.f.sigma*` for covered `f` -- a monotone coarsening, NOT the identity the
+         * older KDoc here claimed. Sound, because a superset of a taint fact can only add false
+         * positives, but it has a precision cost, which is why it is measurable on its own
+         * (`-Dopentaint.anyCollapseNested=false`). The containment needs `f` covered: for an
+         * uncovered `f` it fails outright and collapsing would LOSE flows.
          *
-         * The [containsAnyInThisOrDeepNodes] gate keeps the overwhelmingly common case O(1).
+         * **Union always.** Two `[any]` edges on one root-to-leaf path multiply -- the outer
+         * materialises up to `L` prefixes and each carries a copy of the inner, so the population
+         * under one origin is `L^d` rather than `L`. That is the exact failure the per-fact carried
+         * limit was rejected for, so the branch invariant is a manager-level obligation in its own
+         * right and holds whether or not the tree collapses the two edges.
+         *
+         * The [containsAnyInThisOrDeepNodes] gate keeps the overwhelmingly common case O(1); the
+         * flag is a final field set in the child's own init block, so it is readable BEFORE the
+         * parent exists, which is what makes enforcement at construction possible at all.
          */
-        private fun prependAnyAccessor(): AccessNode {
-            if (!containsAnyInThisOrDeepNodes) return create(ANY_ACCESSOR_IDX, this)
+        private fun normaliseUnderAny(): Pair<AccessNode, AnyUnrollState?> {
+            if (!containsAnyInThisOrDeepNodes) return this to null
+
+            val states = mutableListOf<AnyUnrollState>()
+
+            if (!COLLAPSE_NESTED_ANY) {
+                collectAnyStates(states, IdentityHashMap())
+                return this to unionStates(states)
+            }
+
+            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.collapses.incrementAndGet()
 
             // Every `[any]` subtree found on a covered-only path is hoisted to sit directly under
             // the new `[any]`, and must itself be stripped there -- hence the worklist.
@@ -798,13 +945,13 @@ class AccessTree(
 
             var nextNode: AccessNode? = null
             while (pending.isNotEmpty()) {
-                val stripped = pending.removeFirst().stripAnyBelowCoveredPath(pending, enqueued, cache)
+                val stripped = pending.removeFirst().stripAnyBelowCoveredPath(pending, enqueued, cache, states)
                 if (stripped != null) {
                     nextNode = nextNode?.mergeAdd(stripped) ?: stripped
                 }
             }
 
-            return create(ANY_ACCESSOR_IDX, nextNode ?: manager.emptyNode)
+            return (nextNode ?: manager.emptyNode) to unionStates(states)
         }
 
         /**
@@ -818,11 +965,16 @@ class AccessTree(
             pending: ArrayDeque<AccessNode>,
             enqueued: IdentityHashMap<AccessNode, Unit>,
             cache: IdentityHashMap<AccessNode, AccessNode?>,
+            states: MutableList<AnyUnrollState>,
         ): AccessNode? {
             if (!containsAnyInThisOrDeepNodes) return this
             if (cache.containsKey(this)) return cache[this]
 
             manager.cancellation.checkpoint()
+
+            // This node's own `[any]` edge, if it has one, is deleted by the ANY arm below, so its
+            // state is one of the ones the new edge above must absorb.
+            anyId?.let { states.add(it) }
 
             val result = transformAccessorsNonEmpty { accessor, node ->
                 when {
@@ -834,15 +986,88 @@ class AccessTree(
                     }
 
                     manager.isCoveredByAny(accessor) ->
-                        node.stripAnyBelowCoveredPath(pending, enqueued, cache)
+                        node.stripAnyBelowCoveredPath(pending, enqueued, cache, states)
 
-                    else -> node
+                    else -> {
+                        // Union without collapsing. Reachable only for `[any].<uncovered>.[any]`,
+                        // which the analyzer is not believed to build -- marks are enforced by the
+                        // structureless-leaf check, statics by the subtree-wide containsStatic
+                        // guard, `[final]` is not an edge and `[value]` is dead code, and type-info
+                        // now has its own check. The counter is what keeps that a measurement.
+                        if (node.containsAnyInThisOrDeepNodes) {
+                            countUnionWithoutCollapse(accessor)
+                            node.collectAnyStates(states, IdentityHashMap())
+                        }
+                        node
+                    }
                 }
             }
 
             cache[this] = result
             return result
         }
+
+        /** Every manager state in this subtree, without touching the tree. */
+        private fun collectAnyStates(dst: MutableList<AnyUnrollState>, visited: IdentityHashMap<AccessNode, Unit>) {
+            if (!containsAnyInThisOrDeepNodes) return
+            if (visited.put(this, Unit) != null) return
+
+            anyId?.let { dst.add(it) }
+            forEachAccessor { _, child -> child.collectAnyStates(dst, visited) }
+        }
+
+        private fun unionStates(states: List<AnyUnrollState>): AnyUnrollState? {
+            if (states.isEmpty()) return null
+            var acc: AnyUnrollState? = states[0]
+            for (i in 1 until states.size) {
+                acc = manager.anyUnroll.union(acc, states[i])
+            }
+            return acc
+        }
+
+        private fun countUnionWithoutCollapse(accessor: AccessorIdx) {
+            if (!AnyUnrollDiagnostics.enabled) return
+            when {
+                accessor.isTaintMarkAccessor() -> AnyUnrollDiagnostics.unionWithoutCollapseMark
+                accessor.isStaticAccessor() -> AnyUnrollDiagnostics.unionWithoutCollapseStatic
+                accessor.isTypeInfoAccessor() || accessor == TYPE_INFO_GROUP_ACCESSOR_IDX ->
+                    AnyUnrollDiagnostics.unionWithoutCollapseTypeInfo
+                else -> AnyUnrollDiagnostics.unionWithoutCollapseOther
+            }.incrementAndGet()
+        }
+
+        /**
+         * Re-label THIS node's own `[any]` edge with [state], leaving the shape alone.
+         *
+         * The unroll re-parents an entire node under one more concrete accessor, so the `[any]` edge
+         * survives the operation while its language loses a step -- which is exactly a successor in
+         * the automaton. Only the top edge is touched; deeper and sibling `[any]`s keep their own
+         * states, because only this one's language changed.
+         */
+        fun withAnyState(state: AnyUnrollState?): AccessNode {
+            if (!manager.anyUnroll.enabled) return this
+            if (!containsAnyAccessor()) return this
+            if (state == null || state === anyId) return this
+            return manager.create(isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes, state)
+        }
+
+        /**
+         * Rebuild this node with a new accessor set, carrying its own `[any]` state -- and dropping
+         * it exactly when the new set no longer holds an `[any]` edge.
+         *
+         * This is the "keeps or shrinks the accessor array" row of the propagation rule. Sites that
+         * GROW the array (the merges, the bulk add) must compute the union explicitly instead.
+         */
+        internal fun recreate(
+            isAbstract: Boolean,
+            isFinal: Boolean,
+            deepAccessorExclusion: DeepAccessorExclusion?,
+            accessors: IntArray?,
+            accessorNodes: Array<AccessNode>?,
+        ): AccessNode = manager.create(
+            isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes,
+            anyStateIfPresent(accessors, anyId),
+        )
 
         /**
          * Consume the longest prefix of this delta that an `[any]` edge sitting DIRECTLY above it
@@ -945,12 +1170,14 @@ class AccessTree(
                 manager.emptyNode
             }
 
-            return resultNode.bulkMergeAddAccessors(filteredNodes)
+            // limitFieldAccess only ever extracts entries keyed by a FIELD accessor, so no `[any]`
+            // edge can arrive through this list.
+            return resultNode.bulkMergeAddAccessors(filteredNodes, entryAnyState = null)
                 .also { check(!it.isEmpty) { "Empty node after field normalization" } }
         }
 
         fun clearChild(accessor: AccessorIdx): AccessNode = when (accessor) {
-            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, deepAccessorExclusion, accessors, accessorNodes)
+            FINAL_ACCESSOR_IDX -> recreate(isAbstract, isFinal = false, deepAccessorExclusion, accessors, accessorNodes)
             else -> removeSingleAccessor(accessor)
         }
 
@@ -970,7 +1197,7 @@ class AccessTree(
             val accessors = transformedAccessors?.first ?: accessors
             val accessorNodes = transformedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes)
+            return recreate(isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes)
         }
 
         fun clearAllAccessorOccurrences(
@@ -1037,11 +1264,11 @@ class AccessTree(
             if (annotation == deepAccessorExclusion) {
                 this
             } else {
-                manager.create(isAbstract, isFinal, annotation, accessors, accessorNodes)
+                recreate(isAbstract, isFinal, annotation, accessors, accessorNodes)
             }
 
         fun abstractOnly(): AccessNode =
-            manager.create(isAbstract = true, isFinal = false, deepAccessorExclusion, accessors = null, accessorNodes = null)
+            recreate(isAbstract = true, isFinal = false, deepAccessorExclusion, accessors = null, accessorNodes = null)
 
         fun annotateAbstractNodes(
             incoming: DeepAccessorExclusion,
@@ -1089,7 +1316,15 @@ class AccessTree(
             }
         }
 
-        private fun bulkMergeAddAccessors(accessors: List<IntObjectImmutablePair<AccessNode>>): AccessNode {
+        private fun bulkMergeAddAccessors(
+            accessors: List<IntObjectImmutablePair<AccessNode>>,
+            entryAnyState: AnyUnrollState?,
+        ): AccessNode {
+            // Unconditional and BEFORE the early return: the union is a side effect of the merge,
+            // and an implementation that short-circuits past it loses the transition that makes a
+            // program loop reach its fixed point.
+            val mergedAnyId = manager.anyUnroll.union(anyId, entryAnyState)
+
             if (accessors.isEmpty()) return this
 
             val groupedUniqueAccessors = Int2ObjectOpenHashMap<MutableList<AccessNode>>()
@@ -1116,7 +1351,10 @@ class AccessTree(
 
             if (mergedAccessors == null) return this
 
-            return manager.create(isAbstract, isFinal, deepAccessorExclusion, mergedAccessors.first, mergedAccessors.second)
+            return manager.create(
+                isAbstract, isFinal, deepAccessorExclusion, mergedAccessors.first, mergedAccessors.second,
+                anyStateIfPresent(mergedAccessors.first, mergedAnyId),
+            )
         }
 
         private data class AccessNodeMergePair(val left: AccessNode, val right: AccessNode) {
@@ -1146,6 +1384,14 @@ class AccessTree(
             other: AccessNode,
             results: Object2ObjectOpenHashMap<AccessNodeMergePair, AccessNode>
         ): AccessNode {
+            // R3, and it MUST run before the unchanged-guard below. The guard returns the receiver
+            // object, which is what the storage layer's `===` test keys on; an implementation that
+            // tested the shape first and returned early would skip the union, the self-loop that a
+            // program loop's fixed point rests on would never form, and the analysis would not
+            // terminate. Preferring the receiver's representative is also what lets the guard fire on
+            // the SAME round rather than one lap later.
+            val mergedAnyId = manager.anyUnroll.union(this.anyId, other.anyId)
+
             val isAbstract = this.isAbstract || other.isAbstract
             val isFinal = this.isFinal || other.isFinal
             val deepExclusions = intersectDeepExclusion(other)
@@ -1167,7 +1413,10 @@ class AccessTree(
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, deepExclusions, accessors, accessorNodes)
+            return manager.create(
+                isAbstract, isFinal, deepExclusions, accessors, accessorNodes,
+                anyStateIfPresent(accessors, mergedAnyId),
+            )
         }
 
         fun mergeAddDelta(other: AccessNode, foldToAny: Boolean = true): Pair<AccessNode, AccessNode?> =
@@ -1179,6 +1428,9 @@ class AccessTree(
             other: AccessNode,
             results: Object2ObjectOpenHashMap<AccessNodeMergePair, Pair<AccessNode, AccessNode?>>,
         ): Pair<AccessNode, AccessNode?> {
+            // R3; see [mergeAddStep] for why this cannot move below the guard.
+            val mergedAnyId = manager.anyUnroll.union(this.anyId, other.anyId)
+
             val isFinal = this.isFinal || other.isFinal
             val isFinalDelta = !this.isFinal && other.isFinal
 
@@ -1217,15 +1469,22 @@ class AccessTree(
                 return this to null
             }
 
+            // The delta is what PROPAGATES, so an id-less delta would strand the manager at the far
+            // end of the propagation: it gets the same representative.
+            val deltaAccessorsArray = deltaAccessors.toIntArray()
             val delta = manager.create(
                 isAbstractDelta, isFinalDelta, deltaDeepExclusion,
-                deltaAccessors.toIntArray(), deltaAccessorNodes.toTypedArray(),
+                deltaAccessorsArray, deltaAccessorNodes.toTypedArray(),
+                anyStateIfPresent(deltaAccessorsArray, mergedAnyId),
             ).takeIf { !it.isEmpty }
 
             val accessors = mergedAccessors?.first ?: accessors
             val accessorNodes = mergedAccessors?.second ?: accessorNodes
 
-            return manager.create(isAbstract, isFinal, deepExclusion, accessors, accessorNodes) to delta
+            return manager.create(
+                isAbstract, isFinal, deepExclusion, accessors, accessorNodes,
+                anyStateIfPresent(accessors, mergedAnyId),
+            ) to delta
         }
 
         private inline fun <T: Any> mergeNodeLoop(
@@ -1498,7 +1757,8 @@ class AccessTree(
             isFinal = isFinal,
             deepAccessorExclusion = deepAccessorExclusion,
             accessors = accessors,
-            accessorNodes = accessorNodes
+            accessorNodes = accessorNodes,
+            anyIdRaw = anyId,
         )
 
         private class FilteredNode(
@@ -1696,8 +1956,13 @@ class AccessTree(
                 }
             }
 
-            val resultNode = manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors = null, accessorNodes = null)
-                .bulkMergeAddAccessors(nestedAccessors)
+            val resultNode = manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors = null, accessorNodes = null, anyState = null)
+                // `this.anyId` is the state of the receiver's own `[any]` edge, which the child loop
+                // above re-adds as a nestedAccessors entry: concat rebuilds the spine, so the edge
+                // is RE-INSTALLED with the grafted subtree already underneath it and one
+                // normalisation sees the whole thing. That is what discharges the graft case without
+                // threading a governing state down the recursion.
+                .bulkMergeAddAccessors(nestedAccessors, anyId)
 
             val concatenatedNode = concatNode?.let { resultNode.mergeAdd(it) } ?: resultNode
 
@@ -1716,12 +1981,19 @@ class AccessTree(
             }
 
             val parentAccessors = IntArrayList()
+            // The walk consumes an `[any]` edge at every step that crosses one, and the fold below
+            // re-creates those edges RAW. Minting there would refill the budget on every
+            // subscription match -- this is the single largest read channel in the engine -- and
+            // dropping the state would strand every manager at the first storage hop. So the state
+            // consumed at each step travels alongside the accessor.
+            val parentAnyStates = mutableListOf<AnyUnrollState?>()
 
             var filteredTreeNode = this
             var currentApNode: AccessPath.AccessNode = accessPath
 
             while (true) {
                 val accessor = currentApNode.accessor
+                val consumedAnyState = filteredTreeNode.anyId
 
                 filteredTreeNode = when (accessor) {
                     FINAL_ACCESSOR_IDX -> {
@@ -1731,8 +2003,11 @@ class AccessTree(
                     }
 
                     else -> {
-                        filteredTreeNode.getChild(accessor)
-                            ?.also { parentAccessors.add(accessor) }
+                        filteredTreeNode.getChildRecording(accessor)
+                            ?.also {
+                                parentAccessors.add(accessor)
+                                parentAnyStates.add(consumedAnyState)
+                            }
                             ?: return null
                     }
                 }
@@ -1747,7 +2022,11 @@ class AccessTree(
                 }
             }
 
-            return parentAccessors.foldRight(filteredTreeNode, ::create)
+            var result = filteredTreeNode
+            for (i in parentAccessors.size - 1 downTo 0) {
+                result = result.addParentAbsorbingAny(parentAccessors.getInt(i), parentAnyStates[i])
+            }
+            return result
         }
 
         private inline fun mergeAccessors(
@@ -1847,7 +2126,7 @@ class AccessTree(
             transformer: (AccessorIdx, AccessNode) -> AccessNode?
         ): AccessNode {
             val newAccessors = transformAccessors(accessors, accessorNodes, transformer) ?: return this
-            return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
+            return recreate(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
         private fun limitFieldAccess(
@@ -1928,7 +2207,7 @@ class AccessTree(
 
         private fun removeSingleAccessor(accessor: AccessorIdx): AccessNode {
             val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodes) ?: return this
-            return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
+            return recreate(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
         internal class Serializer(
@@ -1973,7 +2252,22 @@ class AccessTree(
                 }
             }
 
-            fun DataInputStream.readAccessNode(): AccessNode {
+            /**
+             * A deserialised `[any]` arrives managerless and takes a fresh origin, i.e. a full
+             * budget. That is sound -- more budget only means less coarsening -- and bounded at one
+             * refill per cached summary, but it does mean a warm cache and a cold cache can produce
+             * different precision.
+             *
+             * ONE state per deserialised TREE, threaded down the read, not one per `[any]` edge: the
+             * read applies no invariant re-normalisation of its own, so a tree whose wire form
+             * carried nested `[any]`s on one branch comes back with them intact, and minting per
+             * edge would violate the branch invariant on the first such tree. It also matches what
+             * the mint MEANS here: one cached summary, one origin.
+             */
+            fun DataInputStream.readAccessNode(): AccessNode =
+                readAccessNode(arrayOfNulls(1))
+
+            private fun DataInputStream.readAccessNode(treeAnyState: Array<AnyUnrollState?>): AccessNode {
                 val mask = read()
                 val isFinal = mask.and(1) > 0
                 val isAbstract = mask.and(2) > 0
@@ -1988,7 +2282,10 @@ class AccessTree(
 
                 val accessorsSize = readInt()
                 if (accessorsSize == 0) {
-                    return manager.create(isAbstract, isFinal, anyFieldAccessorExclusions, accessors = null, accessorNodes = null)
+                    return manager.create(
+                        isAbstract, isFinal, anyFieldAccessorExclusions,
+                        accessors = null, accessorNodes = null, anyState = null,
+                    )
                 }
 
                 val deserializedAccessors = Array(accessorsSize) {
@@ -1996,7 +2293,7 @@ class AccessTree(
                 }
 
                 val deserializedAccessNodes = Array(accessorsSize) {
-                    readAccessNode()
+                    readAccessNode(treeAnyState)
                 }
 
                 val accessorNodes = hashMapOf<Accessor, AccessNode>()
@@ -2015,12 +2312,44 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                return AccessNode(manager, interned = false, isAbstract, isFinal, anyFieldAccessorExclusions, accessors, accessNodes)
+                val anyState = if (accessors.indexOf(ANY_ACCESSOR_IDX) >= 0) {
+                    treeAnyState[0]
+                        ?: manager.anyUnroll.newOrigin(AnyUnrollManager.MINT_DESERIALIZE)
+                            .also { treeAnyState[0] = it }
+                } else {
+                    null
+                }
+
+                return manager.create(isAbstract, isFinal, anyFieldAccessorExclusions, accessors, accessNodes, anyState)
             }
         }
 
         companion object {
             const val SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2
+
+            private const val COLLAPSE_NESTED_ANY_PROPERTY = "opentaint.anyCollapseNested"
+
+            /**
+             * `-Dopentaint.anyCollapseNested=false` disables the FORCED nested-`[any]` collapse.
+             *
+             * With it on -- the default -- the normalisation `prependAnyAccessor` always performed
+             * is applied at every site that installs an `[any]` edge, so the shape cannot survive a
+             * raw spine rebuild, a chain fold, a summary graft or the wire. That is a behavioural
+             * change to the representation independent of any budget, and it is a COARSENING rather
+             * than the identity the old KDoc claimed, so it is separately switchable in order to be
+             * separately measurable.
+             */
+            @JvmField
+            internal val COLLAPSE_NESTED_ANY: Boolean =
+                System.getProperty(COLLAPSE_NESTED_ANY_PROPERTY)?.trim()?.toBooleanStrictOrNull() ?: true
+
+            /**
+             * The node invariant, applied to a candidate state: keep it exactly when the array it is
+             * about to sit on actually holds an `[any]` edge.
+             */
+            @JvmStatic
+            internal fun anyStateIfPresent(accessors: IntArray?, state: AnyUnrollState?): AnyUnrollState? =
+                if (state != null && accessors != null && accessors.indexOf(ANY_ACCESSOR_IDX) >= 0) state else null
 
             /** Visit budget for [containsThroughAny]. */
             private const val CONTAINS_THROUGH_ANY_STEP_LIMIT = 10_000
@@ -2182,7 +2511,8 @@ class AccessTree(
                 interned = true,
                 isAbstract = isAbstract, isFinal = isFinal,
                 deepAccessorExclusion = null,
-                accessors = null, accessorNodes = null
+                accessors = null, accessorNodes = null,
+                anyIdRaw = null,
             )
 
             @JvmStatic
@@ -2192,19 +2522,30 @@ class AccessTree(
                 } ?: emptyNode
 
             @JvmStatic
-            private fun create(accessor: AccessorIdx, node: AccessNode): AccessNode {
+            fun create(accessor: AccessorIdx, node: AccessNode, anyState: AnyUnrollState? = null): AccessNode {
                 // The single choke point for every raw single-edge build, including
                 // createAbstractNodeFromReversedAp / createAbstractNodeFromAccessors, which fold an
                 // arbitrary accessor chain straight through here. A taint mark is a leaf marker:
                 // nothing structured may sit below it, mirroring addParentIfPossible's rule.
                 // Consequence: `[any].![m].[any]` is unconstructible, so the nested-`[any]` collapse
                 // needs no exception for an intervening taint mark.
-                // Note a type-info accessor CAN legitimately carry children; only marks are banned.
                 if (accessor.isTaintMarkAccessor()) {
                     check(node.isStructurelessLeaf) {
                         val accessorName = with(node.manager) { accessor.accessor }
                         "Taint mark accessor $accessorName above a structured node: $node"
                     }
+                }
+
+                // NOTE a type-info accessor CAN legitimately carry children; only marks are banned,
+                // and `{T}.[any]` is a shape the ordinary prepend path builds -- pinned by
+                // AnyAccessorCollapseTest's uncovered-accessor case and by AnyPremiseAbstractionTest.
+                // So this is deliberately NOT a `check`: an assertion here would ban a legal fact.
+                // `[any].{T}.[any]` therefore follows from one more prepend, which is why the
+                // union-without-collapse arm below is load-bearing rather than defensive, and why
+                // §12.1 counts it by separating accessor rather than assuming it empty.
+
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    return createAnyEdge(node, anyState, AnyUnrollManager.MINT_CHAIN_FOLD)
                 }
 
                 return AccessNode(
@@ -2213,29 +2554,76 @@ class AccessTree(
                     isAbstract = false, isFinal = false,
                     deepAccessorExclusion = null,
                     accessors = intArrayOf(accessor),
-                    accessorNodes = arrayOf(node)
+                    accessorNodes = arrayOf(node),
+                    anyIdRaw = null,
                 )
             }
 
+            /**
+             * Install an `[any]` edge over [child], normalising the subtree first.
+             *
+             * The three rules of the lifecycle meet here. If the caller supplies a state it wins
+             * (the receiver-preferred union of R3). If it does not, an `[any]` already present below
+             * is REUSED rather than minted (R2) -- minting on a re-prepend is a budget refill, and
+             * the fast arm of the normalisation is exactly the O(1) case split that decides which.
+             * Only a genuinely fresh `[any]` mints an origin (R1).
+             */
+            @JvmStatic
+            private fun createAnyEdge(
+                child: AccessNode,
+                installed: AnyUnrollState?,
+                mintSite: Int,
+            ): AccessNode {
+                val manager = child.manager
+                val (normalised, found) = child.normaliseUnderAny()
+
+                val state = when {
+                    !manager.anyUnroll.enabled -> null
+                    installed != null -> manager.anyUnroll.union(installed, found)
+                    found != null -> found
+                    else -> manager.anyUnroll.newOrigin(mintSite)
+                }
+
+                return AccessNode(
+                    manager,
+                    interned = false,
+                    isAbstract = false, isFinal = false,
+                    deepAccessorExclusion = null,
+                    accessors = intArrayOf(ANY_ACCESSOR_IDX),
+                    accessorNodes = arrayOf(normalised),
+                    anyIdRaw = state,
+                )
+            }
+
+            /**
+             * The array factory, and the second of the three sites that can install an `[any]` edge.
+             *
+             * [anyState] is the state for the `[any]` slot of [accessors], if there is one. It is a
+             * REQUIRED parameter rather than a defaulted one on purpose: the propagation rule is
+             * "every construction passes an explicit state, and `state != null` iff the array holds
+             * an `[any]`", and a default would turn a forgotten site into a silent budget refill
+             * instead of a compile error.
+             */
             @JvmStatic
             fun TreeApManager.create(
                 isAbstract: Boolean,
                 isFinal: Boolean,
                 deepAccessorExclusion: DeepAccessorExclusion?,
                 accessors: IntArray?,
-                accessorNodes: Array<AccessNode>?
+                accessorNodes: Array<AccessNode>?,
+                anyState: AnyUnrollState?,
             ): AccessNode =
                 if (isAbstract) {
                     if (isFinal) {
-                        createElementAndField(abstractFinalNode, deepAccessorExclusion, accessors, accessorNodes)
+                        createElementAndField(abstractFinalNode, deepAccessorExclusion, accessors, accessorNodes, anyState)
                     } else {
-                        createElementAndField(abstractNode, deepAccessorExclusion, accessors, accessorNodes)
+                        createElementAndField(abstractNode, deepAccessorExclusion, accessors, accessorNodes, anyState)
                     }
                 } else {
                     if (isFinal) {
-                        createElementAndField(finalNode, deepAccessorExclusion = null, accessors, accessorNodes)
+                        createElementAndField(finalNode, deepAccessorExclusion = null, accessors, accessorNodes, anyState)
                     } else {
-                        createElementAndField(emptyNode, deepAccessorExclusion = null, accessors, accessorNodes)
+                        createElementAndField(emptyNode, deepAccessorExclusion = null, accessors, accessorNodes, anyState)
                     }
                 }
 
@@ -2245,39 +2633,91 @@ class AccessTree(
                 deepAccessorExclusion: DeepAccessorExclusion?,
                 accessors: IntArray?,
                 accessorNodes: Array<AccessNode>?,
+                anyState: AnyUnrollState?,
             ): AccessNode {
                 val nonEmptyAccessors = accessors?.takeIf { it.isNotEmpty() }
                 val nonEmptyAccessorNodes = accessorNodes?.takeIf { nonEmptyAccessors != null }
-                return if (nonEmptyAccessors == null && deepAccessorExclusion == null) {
-                    base
-                } else {
-                    AccessNode(
-                        base.manager,
-                        interned = false,
-                        isAbstract = base.isAbstract,
-                        isFinal = base.isFinal,
-                        deepAccessorExclusion = deepAccessorExclusion,
-                        accessors = nonEmptyAccessors,
-                        accessorNodes = nonEmptyAccessorNodes
-                    )
+                if (nonEmptyAccessors == null && deepAccessorExclusion == null) {
+                    // The singleton collapse stays valid: by the node invariant a childless,
+                    // exclusion-free node owns no `[any]` edge, so no state can be lost here.
+                    return base
+                }
+
+                val manager = base.manager
+                var resultNodes = nonEmptyAccessorNodes
+                var state: AnyUnrollState? = null
+
+                val anyIdx = nonEmptyAccessors?.indexOf(ANY_ACCESSOR_IDX) ?: -1
+                if (anyIdx >= 0) {
+                    val child = nonEmptyAccessorNodes!![anyIdx]
+                    val (normalised, found) = child.normaliseUnderAny()
+                    state = when {
+                        !manager.anyUnroll.enabled -> null
+                        anyState != null -> manager.anyUnroll.union(anyState, found)
+                        found != null -> found
+                        else -> manager.anyUnroll.newOrigin(AnyUnrollManager.MINT_BULK_MERGE)
+                    }
+                    if (normalised !== child) {
+                        // The array is shared with the node it came from; never write through it.
+                        resultNodes = nonEmptyAccessorNodes.copyOf()
+                        resultNodes[anyIdx] = normalised
+                    }
+                }
+
+                return AccessNode(
+                    manager,
+                    interned = false,
+                    isAbstract = base.isAbstract,
+                    isFinal = base.isFinal,
+                    deepAccessorExclusion = deepAccessorExclusion,
+                    accessors = nonEmptyAccessors,
+                    accessorNodes = resultNodes,
+                    anyIdRaw = state,
+                )
+            }
+
+            /**
+             * Fold a premise chain into a linear-spine fact.
+             *
+             * ONE state for the whole fold, not one per `[any]` link: the chain is linear, so all
+             * its `[any]`s lie on a single branch and the branch invariant says they must be one
+             * manager anyway. [anyState] is the state the caller's walk was already holding -- the
+             * abstraction inherits rather than minting, because minting per emitted premise would
+             * restore a per-premise budget, which is the failure the per-context counter was
+             * rejected for arriving through a side door.
+             */
+            @JvmStatic
+            fun TreeApManager.createAbstractNodeFromReversedAp(
+                reversedAp: ReversedApNode?,
+                anyState: AnyUnrollState? = null,
+            ): AccessNode {
+                var foldState = anyState
+                return reversedAp.foldRight(abstractNode) { accessor, node ->
+                    when (accessor) {
+                        FINAL_ACCESSOR_IDX -> finalNode
+                        ANY_ACCESSOR_IDX -> {
+                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_CHAIN_FOLD)
+                            create(accessor, node, foldState)
+                        }
+                        else -> create(accessor, node)
+                    }
                 }
             }
 
             @JvmStatic
-            fun TreeApManager.createAbstractNodeFromReversedAp(reversedAp: ReversedApNode?): AccessNode =
-                reversedAp.foldRight(abstractNode) { accessor, node ->
-                    when (accessor) {
-                        FINAL_ACCESSOR_IDX -> finalNode
-                        else -> create(accessor, node)
-                    }
-                }
-
-            @JvmStatic
-            fun TreeApManager.createAbstractNodeFromAccessors(accessors: IntList): AccessNode {
+            fun TreeApManager.createAbstractNodeFromAccessors(
+                accessors: IntList,
+                anyState: AnyUnrollState? = null,
+            ): AccessNode {
                 var result = abstractNode
+                var foldState = anyState
                 accessors.reversedForEachInt { accessor ->
                     result = when (accessor) {
                         FINAL_ACCESSOR_IDX -> finalNode
+                        ANY_ACCESSOR_IDX -> {
+                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_CHAIN_FOLD)
+                            create(accessor, result, foldState)
+                        }
                         else -> create(accessor, result)
                     }
                 }

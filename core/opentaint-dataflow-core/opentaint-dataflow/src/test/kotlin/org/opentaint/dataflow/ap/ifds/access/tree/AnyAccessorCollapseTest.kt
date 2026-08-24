@@ -71,6 +71,7 @@ class AnyAccessorCollapseTest {
             isAbstract, isFinal, null,
             sorted.map { it.first }.toIntArray(),
             sorted.map { it.second }.toTypedArray(),
+            anyState = null,
         )
     }
 
@@ -117,27 +118,26 @@ class AnyAccessorCollapseTest {
         val fact = concreteFact(FIELD_X, FIELD_Y, AnyAccessor) // this.x.y.[any].$
         val prepended = fact.prependAccessor(AnyAccessor) as AccessTree
 
-        assertEquals(concreteFact(AnyAccessor).access, prepended.access, "[any].x.y.[any].S == [any].S")
+        // The SHAPE, not `assertEquals` against a separately built `[any].$`: an `[any]` edge also
+        // carries its unroll-manager state, and two independently built facts are two ORIGINS, so
+        // structural equality against a fresh one would fail for a reason that has nothing to do
+        // with the collapse. `prepended` reuses the state of the edge it absorbed, which is what
+        // `AnyUnrollFactTest` asserts directly.
         assertEquals(listOf(ANY_ACCESSOR_IDX), prepended.access.accessors!!.toList())
-        assertFalse(
-            prepended.access.accessorNodes!!.single().containsAnyInThisOrDeepNodes,
-            "no [any] may remain below the new [any]"
-        )
+        val belowAny = prepended.access.accessorNodes!!.single()
+        assertEquals(manager.finalNode, belowAny, "[any].x.y.[any].\$ collapses to [any].\$")
+        assertFalse(belowAny.containsAnyInThisOrDeepNodes, "no [any] may remain below the new [any]")
 
-        // and it still answers the same reads as the uncollapsed shape it replaced
-        val uncollapsed = treeOf(node(AnyAccessor to fact.access)) // [any].x.y.[any].$, built raw
-        for (accessor in listOf(FIELD_X, FIELD_Y, FIELD_Z, ElementAccessor, TYPE)) {
-            assertEquals(
-                uncollapsed.startsWithAccessor(accessor),
-                prepended.startsWithAccessor(accessor),
-                "startsWith($accessor) must be unchanged by the collapse"
-            )
-            assertEquals(
-                uncollapsed.readAccessor(accessor) != null,
-                prepended.readAccessor(accessor) != null,
-                "read of $accessor must be unchanged by the collapse"
-            )
+        // and it answers exactly the reads `[any].*$` should: every covered accessor, none of the
+        // uncovered ones. The old form of this compared against a raw `[any].x.y.[any].$` oracle,
+        // which the forced normalisation now collapses on construction -- so the oracle had become
+        // the thing it was checking, and the comparison vacuous. Hand-specified instead.
+        for (accessor in listOf(FIELD_X, FIELD_Y, FIELD_Z, ElementAccessor)) {
+            assertTrue(prepended.startsWithAccessor(accessor), "[any] denotes the covered $accessor")
+            assertNotNull(prepended.readAccessor(accessor), "and a read of it must succeed")
         }
+        assertFalse(prepended.startsWithAccessor(TYPE), "[any] does not range over an uncovered accessor")
+        assertEquals(null, prepended.readAccessor(TYPE), "so a read of {Box} finds nothing")
     }
 
     @Test

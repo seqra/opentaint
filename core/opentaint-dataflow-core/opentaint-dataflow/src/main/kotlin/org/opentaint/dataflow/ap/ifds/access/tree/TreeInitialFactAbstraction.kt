@@ -22,17 +22,22 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isA
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
+/**
+ * The budget this used to carry itself now lives on [TreeApManager.anyUnroll], keyed by `[any]`
+ * ORIGIN rather than by `(method entry point, access-path base)`.
+ *
+ * That is not a refactor for tidiness. A single-rule, single-entry-point witness had 7,347 distinct
+ * `(entry point, base)` pairs, so a limit of 100 was an effective global allowance of ~735,000: the
+ * cap was not weak because 100 is a large number, it was weak because it was multiplied by seven
+ * thousand independent buckets. And it could only ever see the ONE channel that reaches this file --
+ * capping it did not remove work, it diverted it to the spine rebuilds and the summary graft, which
+ * measured a TWELVEFOLD increase in total materialisation at cap 0.
+ */
 class TreeInitialFactAbstraction(
     private val apManager: TreeApManager,
-    /**
-     * How many concrete facts a single `(method entry point, access-path base)` may materialise out
-     * of an `[any]` accessor before this abstraction stops unrolling that base. See
-     * [ANY_UNROLL_LIMIT]; negative means no cap. A parameter rather than a direct read of the
-     * companion value so that a test can pin a limit without touching global state.
-     */
-    private val anyUnrollLimit: Int = ANY_UNROLL_LIMIT,
 ): InitialFactAbstraction {
-    private val initialFacts = MethodSameMarkInitialFact(apManager, anyUnrollLimit, hashMapOf())
+    private val anyUnroll = apManager.anyUnroll
+    private val initialFacts = MethodSameMarkInitialFact(apManager, hashMapOf())
     private val interner = AccessTreeSoftInterner(apManager)
 
     override fun addAbstractedInitialFact(
@@ -84,20 +89,21 @@ class TreeInitialFactAbstraction(
         typeChecker: FactTypeChecker
     ) {
         var concreteFactAccess = initialConcreteFact
+        var enumerateAnyFrontier = true
         while (true) {
-            // Once the base is cut (§3.3) the walk must not even COLLECT unroll requests:
-            // `AccessPathTrieNode.unrollAccessors` commits as it reads, so collecting a request we
-            // will not honour would burn the memo for nothing. The same flag is what switches the
-            // walk from enumerating a frontier to summarising it with an `[any]` premise.
-            val enumerateAnyFrontier = facts.anyUnrollAllowed
             val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
-            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier) { abstractAccess ->
+            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier) { abstractAccess, governingAnyId ->
                 apManager.cancellation.checkpoint()
 
                 val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
                 val initialAbstractAp = AccessPath(apManager, concreteFactBase, initialAbstractAccessNode, Empty)
 
-                val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
+                // The emitted fact INHERITS the walk's governing state rather than minting one.
+                // Minting per emission would restore a per-premise budget -- finer than the
+                // per-`(entry point, base)` counter this replaces, and wrong the same way. The
+                // predecessor exists and the walk is holding it: the `[any]` in the emitted chain is
+                // not invented, it is the `[any]` edge the walk crossed.
+                val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess, governingAnyId)
                 val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
 
                 facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
@@ -106,41 +112,65 @@ class TreeInitialFactAbstraction(
 
             if (!enumerateAnyFrontier) break
 
-            val unrolled = facts.unrollAnyAccessors(unrollRequests, typeChecker)
+            val unrolled = unrollAnyAccessors(facts, unrollRequests, typeChecker)
 
-            if (!facts.anyUnrollAllowed) {
-                // The cap tripped inside this very round. The frontiers this round walked were
-                // walked while still enumerating, and the accessors it refused to unroll after the
-                // limit was reached have already been consumed from the one-shot `unrolled` memo,
-                // so nothing would answer them. Walk the base's whole fact set once more, coarsely:
-                // that round emits the `[any]` premise for every frontier that carries demand.
+            if (unrolled.budgetSpent) {
+                // A pot ran out during this round -- either an accessor was refused outright, or the
+                // last one it granted took the pot to its limit. Two things then have to happen at
+                // once, and neither survives simply breaking out of the loop.
+                //
+                // The refused accessors have already been consumed from `AccessPathTrieNode`'s
+                // one-shot memo, so nothing would answer them any more. And the round after this one
+                // would walk only the newly unrolled DELTA, whose root is a concrete accessor -- the
+                // `[any]` that needs summarising sits at the root of the base's whole fact set, not
+                // of the delta. So: walk the whole set once more, coarsely, which emits the `[any]`
+                // premise for every frontier that carries demand, and stop.
+                enumerateAnyFrontier = false
                 concreteFactAccess = facts.allAddedFacts()
                 continue
             }
 
-            concreteFactAccess = unrolled ?: break
+            concreteFactAccess = unrolled.node ?: break
         }
     }
 
-    private fun MethodSameBaseInitialFact.unrollAnyAccessors(
+    private class UnrollResult(val node: AccessTreeNode?, val budgetSpent: Boolean)
+
+    private fun unrollAnyAccessors(
+        facts: MethodSameBaseInitialFact,
         unrollRequests: List<AnyAccessorUnrollRequest>,
         typeChecker: FactTypeChecker
-    ): AccessTreeNode? {
-        if (unrollRequests.isEmpty()) return null
+    ): UnrollResult {
+        if (unrollRequests.isEmpty()) return UnrollResult(null, budgetSpent = false)
 
         val unrollStrategy = apManager.anyAccessorUnrollStrategy
 
+        var budgetSpent = false
         val newFacts = mutableListOf<AccessTreeNode>()
         for (unrollRequest in unrollRequests) {
             apManager.cancellation.checkpoint()
 
-            unrollRequest.accessors.forEachInt { accessor ->
-                // The cap is checked per materialised fact, not per request: a request carries a
-                // whole exclusion set and the limit may be reached in the middle of one.
-                if (!anyUnrollAllowed) return@forEachInt
+            // The state of the `[any]` edge this request is unrolling. The request captures the node
+            // that CARRIES the edge, not the `[any]` subtree, so this is the right one.
+            val parentAnyState = unrollRequest.node.anyId
 
+            unrollRequest.accessors.forEachInt { accessor ->
                 val accessorInstance = with(apManager) { accessor.accessor }
                 if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachInt
+
+                // The unroll IS an R4 read: `R.[any]` denotes `R`, `R.x`, `R.x.y`, ... while
+                // `R.f.[any]` denotes `R.f`, `R.f.x`, ... -- a strict subset with exactly one step
+                // spent. It is tempting to read the surviving `[any]` edge as "duplicated, not
+                // consumed" and keep the parent's state; that is a refill. Unroll `f` then `g` and
+                // read `p` under each: keeping the parent, both record `child(p)`, the second is
+                // free, and the automaton stays one level deep however wide the fan-out. Advancing,
+                // they record `child(f).child(p)` and `child(g).child(p)` -- two paths, two
+                // accessors, which is the population the bound is about.
+                val childAnyState = anyUnroll.readChild(parentAnyState, accessor)
+                if (anyUnroll.enabled && parentAnyState != null && childAnyState == null) {
+                    budgetSpent = true
+                    return@forEachInt
+                }
 
                 val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
                 val accessorStatus = accessorFilter.check(accessorInstance)
@@ -158,17 +188,19 @@ class TreeInitialFactAbstraction(
                 val nodeFilter = prefix.createFilter(typeChecker)
                 val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachInt
 
-                newFacts += filteredNode.addReversedApParents(prefix)
+                newFacts += filteredNode.withAnyState(childAnyState).addReversedApParents(prefix)
                     ?: return@forEachInt
-
-                accountUnrolledFact()
             }
+
+            // Not only an outright refusal: an unroll that took the pot exactly to its limit leaves
+            // nothing for the next round either, and the coarse premise still has to be emitted.
+            if (anyUnroll.budgetExhausted(parentAnyState)) budgetSpent = true
         }
 
         val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f, foldToAny = false) }
-            ?: return null
+            ?: return UnrollResult(null, budgetSpent)
 
-        return addInitialFact(mergedNewFacts, interner)
+        return UnrollResult(facts.addInitialFact(mergedNewFacts, interner), budgetSpent)
     }
 
     private fun ReversedApNode?.createFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactApFilter {
@@ -190,6 +222,16 @@ class TreeInitialFactAbstraction(
         val analyzedTrieRoot: AccessPathTrieNode,
         val added: AccessTreeNode,
         val currentAp: ReversedApNode?,
+        /**
+         * The `[any]` manager state the walk is under, or null above every `[any]`.
+         *
+         * One reference per walk state and no set, because the branch invariant guarantees a walk
+         * down one path meets exactly one manager. It travels on the FACT side only -- the emitted
+         * `AccessPath` gets nothing, and that matters more than it looks: premise identity keys the
+         * whole demand system, and two premises differing only by an annotation would be two
+         * demands.
+         */
+        val governingAnyId: AnyUnrollState?,
     )
 
     data class AnyAccessorUnrollRequest(
@@ -203,22 +245,28 @@ class TreeInitialFactAbstraction(
         initialAdded: AccessTreeNode,
         unrollRequests: MutableList<AnyAccessorUnrollRequest>,
         enumerateAnyFrontier: Boolean,
-        crossinline createAbstractAp: (ReversedApNode?) -> Unit
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
     ) {
         val unprocessed = mutableListOf<AbstractionState>()
-        unprocessed.add(AbstractionState(initialAnalyzedTrieRoot, initialAdded, currentAp = null))
+        unprocessed.add(AbstractionState(initialAnalyzedTrieRoot, initialAdded, currentAp = null, governingAnyId = null))
 
         while (unprocessed.isNotEmpty()) {
             val state = unprocessed.removeLast()
 
             val currentLevelExclusions = state.analyzedTrieRoot.exclusions()
             if (currentLevelExclusions == null) {
-                createAbstractAp(state.currentAp)
+                createAbstractAp(state.currentAp, state.governingAnyId)
                 continue
             }
 
             if (state.added.containsAnyAccessor()) {
-                if (enumerateAnyFrontier) {
+                // The budget is consulted BEFORE the memo, deliberately.
+                // `AccessPathTrieNode.unrollAccessors` commits as it reads and has no un-take, so
+                // collecting a request we will not honour burns demand that a later, better-funded
+                // state could have served.
+                val enumerateHere = enumerateAnyFrontier && !anyUnroll.budgetExhausted(state.added.anyId)
+
+                if (enumerateHere) {
                     val unrollAccessors = state.analyzedTrieRoot.unrollAccessors(currentLevelExclusions)
                     if (unrollAccessors.isNotEmpty()) {
                         unrollRequests += AnyAccessorUnrollRequest(state.currentAp, state.added, unrollAccessors)
@@ -235,7 +283,7 @@ class TreeInitialFactAbstraction(
                 // `root -> mark`, and a fact `this.[any].![m].$` has no mark child of its own, so the
                 // mark is reachable in the walk only through here. Dropping it is the shape that lost
                 // conductor's `ssrf` and `path-traversal` in the earlier prototypes (§3.2).
-                unprocessed += AbstractionState(state.analyzedTrieRoot, anyBranch, state.currentAp)
+                unprocessed += AbstractionState(state.analyzedTrieRoot, anyBranch, state.currentAp, state.governingAnyId)
 
                 // (2) The `[any]` as an ordinary accessor (§3.1): descend the trie THROUGH it, so the
                 // prefix and the trie node stay in step, and premises emitted below it name the
@@ -261,9 +309,12 @@ class TreeInitialFactAbstraction(
                 // thing answering the demand, and the trade is then the point.
                 val anyAp = ReversedApNode(ANY_ACCESSOR_IDX, state.currentAp)
                 val anyTrieRoot = state.analyzedTrieRoot.child(ANY_ACCESSOR_IDX)
+                // The premise emitted below this point NAMES the `[any]`, so it is governed by the
+                // state of the edge just crossed.
+                val anyGoverning = state.added.anyId ?: state.governingAnyId
                 when {
-                    anyTrieRoot != null -> unprocessed += AbstractionState(anyTrieRoot, anyBranch, anyAp)
-                    !enumerateAnyFrontier && currentLevelExclusions.isNotEmpty() -> createAbstractAp(anyAp)
+                    anyTrieRoot != null -> unprocessed += AbstractionState(anyTrieRoot, anyBranch, anyAp, anyGoverning)
+                    !enumerateHere && currentLevelExclusions.isNotEmpty() -> createAbstractAp(anyAp, anyGoverning)
                 }
             }
 
@@ -285,7 +336,10 @@ class TreeInitialFactAbstraction(
                 // nothing when it does not, since `exclusions.contains(ANY)` is never true.
                 if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
 
-                abstractAccessPath(state.analyzedTrieRoot, accessor, node, state.currentAp, unprocessed, createAbstractAp)
+                abstractAccessPath(
+                    state.analyzedTrieRoot, accessor, node, state.currentAp, state.governingAnyId,
+                    unprocessed, createAbstractAp,
+                )
             }
         }
     }
@@ -295,18 +349,19 @@ class TreeInitialFactAbstraction(
         accessor: AccessorIdx,
         addedNode: AccessTreeNode,
         currentAp: ReversedApNode?,
+        governingAnyId: AnyUnrollState?,
         unprocessed: MutableList<AbstractionState>,
-        crossinline createAbstractAp: (ReversedApNode?) -> Unit
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
     ) {
         val node = analyzedTrieRoot.child(accessor)
         if (node != null) {
             val apWithAccessor = ReversedApNode(accessor, currentAp)
             if (accessor.isAlwaysUnrollNext()) {
-                abstractNextAccessPath(addedNode, apWithAccessor) {
-                    createAbstractAp(it)
+                abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
+                    createAbstractAp(ap, governing)
                 }
             } else {
-                unprocessed += AbstractionState(node, addedNode, apWithAccessor)
+                unprocessed += AbstractionState(node, addedNode, apWithAccessor, governingAnyId)
             }
             return
         }
@@ -315,7 +370,7 @@ class TreeInitialFactAbstraction(
 
         // We have no excludes -> continue with the most abstract fact
         if (exclusions == null) {
-            createAbstractAp(currentAp)
+            createAbstractAp(currentAp, governingAnyId)
             return
         }
 
@@ -329,13 +384,13 @@ class TreeInitialFactAbstraction(
         // We have initial fact that exclude {b} and we have no a.b fact yet
         if (!accessor.isAlwaysUnrollNext()) {
             // Return a.b.* {}
-            createAbstractAp(ReversedApNode(accessor, currentAp))
+            createAbstractAp(ReversedApNode(accessor, currentAp), governingAnyId)
             return
         }
 
         val apWithAccessor = ReversedApNode(accessor, currentAp)
-        abstractNextAccessPath(addedNode, apWithAccessor) {
-            createAbstractAp(it)
+        abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
+            createAbstractAp(ap, governing)
         }
     }
 
@@ -358,55 +413,39 @@ class TreeInitialFactAbstraction(
     private fun abstractNextAccessPath(
         addedNode: AccessTreeNode,
         currentAp: ReversedApNode,
-        createAbstractAp: (ReversedApNode) -> Unit
+        governingAnyId: AnyUnrollState?,
+        createAbstractAp: (ReversedApNode, AnyUnrollState?) -> Unit
     ) {
         if (addedNode.isFinal) {
-            createAbstractAp(ReversedApNode(FINAL_ACCESSOR_IDX, currentAp))
+            createAbstractAp(ReversedApNode(FINAL_ACCESSOR_IDX, currentAp), governingAnyId)
         }
 
         addedNode.forEachAccessor { accessor, node ->
             val nextAp = ReversedApNode(accessor, currentAp)
+            val nextGoverning =
+                if (accessor == ANY_ACCESSOR_IDX) addedNode.anyId ?: governingAnyId else governingAnyId
             if (!accessor.isAlwaysUnrollNext()) {
-                createAbstractAp(nextAp)
+                createAbstractAp(nextAp, nextGoverning)
             } else {
-                abstractNextAccessPath(node, nextAp, createAbstractAp)
+                abstractNextAccessPath(node, nextAp, nextGoverning, createAbstractAp)
             }
         }
     }
 
     private class MethodSameMarkInitialFact(
         val manager: TreeApManager,
-        val anyUnrollLimit: Int,
         val facts: MutableMap<AccessPathBase, MethodSameBaseInitialFact>
     ) {
         fun getOrPut(base: AccessPathBase): MethodSameBaseInitialFact = facts.getOrPut(base) {
-            MethodSameBaseInitialFact(manager, anyUnrollLimit, added = null, AccessPathTrieNode.empty())
+            MethodSameBaseInitialFact(manager, added = null, AccessPathTrieNode.empty())
         }
     }
 
     private class MethodSameBaseInitialFact(
         val manager: TreeApManager,
-        private val anyUnrollLimit: Int,
         private var added: AccessTreeNode?,
         val analyzed: AccessPathTrieNode
     ) {
-        /**
-         * How many concrete facts this base has materialised out of an `[any]` accessor.
-         *
-         * The counter never decreases, so [anyUnrollAllowed] flips false once and stays false: the
-         * cut is sticky per base, which is what bounds the premise set a single base can contribute.
-         * The count is per `(method entry point, access-path base)` because there is one
-         * [TreeInitialFactAbstraction] per `NormalMethodAnalyzer` and one of these per base.
-         */
-        private var unrolledFactCount = 0
-
-        val anyUnrollAllowed: Boolean
-            get() = anyUnrollLimit < 0 || unrolledFactCount < anyUnrollLimit
-
-        fun accountUnrolledFact() {
-            unrolledFactCount++
-        }
-
         fun allAddedFacts(): AccessTreeNode = added ?: manager.create()
 
         fun addInitialFact(ap: AccessTreeNode, interner: AccessTreeSoftInterner): AccessTreeNode? {
@@ -498,23 +537,5 @@ class TreeInitialFactAbstraction(
         private const val INTERN_RATE = 100
         private const val INTERN_SIZE_REQUIREMENT = 1_000
         private const val SIZE_TO_FORCE_INTERN = 100_000
-
-        private const val ANY_UNROLL_LIMIT_PROPERTY = "opentaint.anyUnrollLimit"
-
-        /**
-         * `-Dopentaint.anyUnrollLimit=<n>`: the cap of §3.3, off by default (§8.3).
-         *
-         * `n < 0` -- and that is the default -- means no cap, i.e. `[any]` unrolling behaves exactly
-         * as it did before the cap existed. A non-negative `n` lets each
-         * `(method entry point, access-path base)` materialise at most `n` concrete facts out of an
-         * `[any]`, after which that base stops unrolling and relies on the `[any]` premise the walk
-         * emits instead. Turning it on trades precision for enumeration size and is a decision to be
-         * made from measurements on a converging workload, not a default.
-         *
-         * Read once, at class initialisation: the value is consulted per unrolled fact and a
-         * `System.getProperty` there would show up in a profile.
-         */
-        private val ANY_UNROLL_LIMIT: Int = 100
-//            System.getProperty(ANY_UNROLL_LIMIT_PROPERTY)?.trim()?.toIntOrNull() ?: -1
     }
 }
