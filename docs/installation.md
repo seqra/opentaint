@@ -150,7 +150,7 @@ For package manager installations, `opentaint update` will show the appropriate 
 
 ## Cleaning Up
 
-Remove stale downloaded artifacts:
+Remove old downloaded artifacts:
 
 ```bash
 opentaint prune              # Interactive confirmation

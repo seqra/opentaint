@@ -88,7 +88,7 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint approximation` | Create dataflow approximation projects |
 | `opentaint pull` | Download the analysis toolchain and Java runtime |
 | `opentaint update` | Update to latest version |
-| `opentaint prune` | Remove stale downloaded artifacts and cached models |
+| `opentaint prune` | Remove old downloaded artifacts and cached models |
 
 ### opentaint scan
 
@@ -156,7 +156,7 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 |---------|-------------|
 | `opentaint test rule init <output-dir>` | Create source and sink test projects with annotated sample support |
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
-| `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
+| `opentaint test rule reachability <rule-id> [source-path]` | Show why a rule does or does not fire |
 
 #### Approximation tests
 
