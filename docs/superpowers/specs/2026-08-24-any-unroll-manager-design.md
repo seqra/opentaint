@@ -71,6 +71,28 @@ confirmed it for all seven, and found that the three supporting mechanisms are n
 `containsStatic` guard, `[final]` is not an edge, `[value]` is dead code — but **type-info is enforced
 by nothing**, and holds only because both front ends prepend onto a fresh `$`. That is now R28.
 
+**Revision 5 — what the implementation refuted.** Landed on `saloed/31-any-unroll-manager-design`
+as `4d44e5013`, gate green with the manager off and at `L = 100` (3433 tests, the only two failures
+pre-existing and identical at HEAD). Four things in this document did not survive contact with the
+code:
+
+| claim | what the code says |
+|---|---|
+| §4.7 / R28: add a `check` that a type-info edge's child carries no `[any]`, making `{T}.[any]` a loud failure | **Refuted, and the check was removed.** `{T}.[any]` is built by the ordinary `FinalFactAp.prependAccessor` path, and two *passing* tests pin it — `AnyAccessorCollapseTest.kt:143-153` builds `this.{Box}.[any].$` that way and then prepends `[any]` above it, and `AnyPremiseAbstractionTest.kt:185` names the shape in its title. The assertion banned a legal fact and failed both on the first run. So `[any].{T}.[any]` is one `addParentIfPossible` away from any such fact |
+| §4.7: the union-without-collapse arm is "defensive, not load-bearing" | **Load-bearing.** It follows directly from the row above: the arm is the only thing keeping those two edges in one pot. §12.1's counter still answers *how often* in production, but it can no longer be promoted to an assertion |
+| §2.2's `mergeStates` sketch: `y.parent = x` then merge children, memoised on state pairs | The memo is unnecessary — the in-place union **is** the memo, since re-encountering a pair short-circuits on `find(x) === find(y)`. But an invariant the sketch does not state is required: **only a representative carries transitions.** A state that loses root status has its child map folded into the winner in the same step, or a lock-free reader resolves `find()` and reads an orphaned map |
+| §11 step 8: "retire `unrolledFactCount` and restore the property read at TIFA:517" | The property read moved to `AnyUnrollManager` and `TreeInitialFactAbstraction`'s `anyUnrollLimit` constructor parameter is **gone** — the budget is the manager's, so a test pins it by constructing the `TreeApManager` with a limit. `AnyPremiseAbstractionTest` builds its manager lazily for that reason |
+
+One mechanism the design did not anticipate at all: the round loop needs a coarse pass not only when
+a read is **refused**, but also when the read that succeeded took the pot exactly to its limit. The
+old per-base counter got this for free by testing `anyUnrollAllowed` after the round; the per-origin
+budget does not, and without it the round after the last successful unroll walks only the newly
+unrolled *delta* — whose root is a concrete accessor — so the `[any]` that needs summarising, which
+sits at the root of the base's whole fact set, is never reached and its coarse premise is never
+emitted. `AnyPremiseAbstractionTest`'s cap test is what caught it.
+
+---
+
 ---
 
 ## 1. Three shapes that failed, and exactly why
@@ -1258,23 +1280,28 @@ edge — and there is exactly one grafter, `concatToLeafAbstractNodes` (AT:1641-
 | taint mark | **enforced** by `check(node.isStructurelessLeaf)` at AT:2204 | yes | **unreachable, enforced** |
 | static | yes — `<static>(C).[any].![m].$` is an ordinary rule-position fact | **enforced** by the subtree-wide `containsStatic` guard at AT:547 | **unreachable, enforced** |
 | `[value]` | — | — | **unreachable, vacuously**: `ValueAccessor` is never constructed anywhere in `src/main`; `TaintAnalyzer.kt:81` even `error`s on it |
-| type-info / type-info-group | **nothing forbids it** — AT:2202 says outright that a type-info accessor may carry children | yes | **unreachable by construction-site accident, not by invariant** |
+| type-info / type-info-group | **nothing forbids it** — AT:2202 says outright that a type-info accessor may carry children | yes | ~~unreachable by construction-site accident~~ — **REACHABLE**, see revision 5 |
 
 Three things follow.
 
-**The union-without-collapse arm of `collapseNestedAny` is defensive, not load-bearing.** It costs
-nothing when the population is empty, and §12.1 counts it so that stays a measurement rather than a
-belief. §2.4's manager rule remains unconditional regardless — two `[any]`s on one branch multiply
-whether or not the tree collapses them — but if the counter reads zero the arm can be promoted to an
-assertion.
+**The union-without-collapse arm of `collapseNestedAny` is LOAD-BEARING.** An earlier draft of this
+section called it defensive and proposed promoting it to an assertion once §12.1's counter read zero.
+The implementation refuted that on its first run, and the refutation is worth keeping because the
+mistake was in this section's reasoning rather than in the code.
 
-**Type-info is the fragile leg and it is worth closing.** The invariant holds only because both
-front-end sites prepend onto a fresh `$` (`GoMethodCallResolver.kt:84,89` and
-`JIRMethodCallResolver.kt:155`, consumed by `foldRight(createFinalAp(...)) { a, f -> f.prependAccessor(a) }`),
-so structure is only ever added *above* a type-info accessor. One new flow function that prepends
-`TypeInfoAccessor` onto an existing fact produces `{T}.[any]` silently, and `[any].{T}.[any]` follows
-from a single `addParentIfPossible(ANY)`. A `check` that a type-info edge's child carries no `[any]`
-would make that a loud failure instead of a quiet precision loss; it belongs with step 0.
+**Type-info is not a fragile leg; it is an open door.** The claim was that the shape is kept out
+because both front-end sites prepend onto a fresh `$` (`GoMethodCallResolver.kt:84,89` and
+`JIRMethodCallResolver.kt:155`), so structure is only ever added *above* a type-info accessor, and
+that a `check` could therefore close it. But `FinalFactAp.prependAccessor` is a general operation and
+`{T}.[any]` is exactly what it produces when handed a type-info accessor and an `[any]`-carrying
+fact. Two passing tests build it that way and assert the result:
+`AnyAccessorCollapseTest.kt:143-153` (*"prepending any does not collapse an any below an uncovered
+accessor"*) goes on to prepend `[any]` above it, so the repository already contains
+`[any].{Box}.[any].$` as an asserted, legal shape; and `AnyPremiseAbstractionTest.kt:185` names the
+shape in its own title. The `check` was written, it fired on both, and it was removed.
+
+So the arm stays, unconditionally. §12.1's counter is now a question about *frequency* — whether the
+shape is common enough in production to matter for the origin count — rather than about existence.
 
 **The load-bearing fact behind all of it is easy to lose:** TIFA never emits a chain terminating in an
 always-unroll-next accessor (`createAbstractAp` is reached only at TIFA:325, :332, :338/:370, :364, and
@@ -1901,13 +1928,13 @@ Ordered so that steps 1–4 are **inert by construction** — the DSU, the manag
 propagation rules all land before anything reads them — and each step has a gate that can fail
 independently.
 
-0. **Force the nested-`[any]` collapse** (§4.7) — `collapseNestedAny` factored out of
-   `prependAnyAccessor` and called at the three installation sites (AT:2195, AT:2221, AT:2018). **This
+0. **Force the nested-`[any]` collapse** (§4.7) — factored out of `prependAnyAccessor` as
+   `normaliseUnderAny` and called at the three installation sites (AT:2195, AT:2221, AT:2018). **This
    step contains no manager at all**, which is the point: it is a behavioural change to the tree
    representation, it lands and is measured on its own, and if it costs precision that is knowable
-   before any of the rest exists.
-   Land the type-info `check` of §4.7 with it — same step, same reasoning, and it closes the one leg of
-   the uncovered-accessor argument that nothing currently enforces.
+   before any of the rest exists. It ships behind `-Dopentaint.anyCollapseNested` (default on) so it
+   can be switched off in a measurement arm without touching `L`.
+   ~~Land the type-info `check` of §4.7 with it.~~ The check cannot be written — revision 5.
    *Gate: `AnyAccessorCollapseTest.kt:143-153` and `AnyAccessorPremiseTest.kt:139-143` green (the
    covered-only precondition); `AnyFieldMarkExclusionTest.kt:317-334` green (`.*` is not a collapsible
    tail); `AnyAccessorCollapseTest.kt:127-140` rewritten off its now-vacuous raw oracle; the two
@@ -2187,7 +2214,7 @@ cannot serve as a control: the two backends differ in the mechanism under test.
 | R23 | Mints do not collapse: 40k on the conductor witness would be a 4M population bound — worse than the 735k §1.1b rejected — and a correspondingly large live automaton | **highest, jointly with R1** | §3.8 shows memory and budget are the same measurement, so §12.1 answers both; §4.7, §6.3 and §3.4 all attack the mint count. There is deliberately **no valve**: if this fails it must fail visibly (§3.1) |
 | R25 | §4.7's forced collapse costs precision — it is a coarsening, not the identity the existing KDoc claims (§8.2) — and it changes behaviour before any budget exists | **high**, but knowable early | it is implementation **step 0**, alone and first, gated on a full SARIF comparison reported separately from `L`. `TreeCleanerFieldSensitivityAnalysisTest`'s depth-3 pair is the end-to-end detector: a sanitizer must still bite after a graft |
 | R26 | The collapse is enforced at construction, so an over-reach is total rather than local: dropping *covered-only*, or treating `.*` as a collapsible tail, silently rewrites facts everywhere | **high** | three existing tests fence it, one per over-reach (§4.7); each fails loudly and for a distinct reason |
-| R28 | `[any]` under a **type-info** accessor is forbidden by nothing — AT:2202 permits children explicitly — and is kept out only by the two front ends prepending onto a fresh `$` and by TIFA never terminating a chain there. A new flow function prepending `TypeInfoAccessor` onto an existing fact reopens `[any].{T}.[any]` silently | medium, and silent | §4.7: add the `check` with step 0, and count the union arm by separating accessor (§12.1). Marks and statics are genuinely enforced; this one is not |
+| R28 | ~~`[any]` under a **type-info** accessor is kept out by the front ends; add a `check`.~~ **The shape is not kept out at all** — `prependAccessor(TypeInfoAccessor)` on an `[any]`-carrying fact builds `{T}.[any]` directly, and the repo already asserts `[any].{Box}.[any].$` as legal. The `check` was written, fired on two passing tests, and was removed | downgraded to **low**: the union arm covers it unconditionally, so the cost is precision (the two edges keep their places), not the bound | §4.7 as revised; §12.1's counter now measures how *often*, not whether |
 | R27 | Reclamation recovers less than it appears to — storages never delete, so states reaching a stored fact live for the phase | medium, and stated rather than hidden | §3.8; the argument for references does not rest on the constant factor but on the array version being unbounded on a long phase |
 | R24 | `pathCount` approximates in both directions — over-stating live facts after a fact-merge, under-stating the language after a union whose increase is not pushed down | medium, deliberate | §2.6 states both, and both are `O(1)` choices; over-statement is the sound direction (§8.2) |
 | R20 | `anyId` adds one more per-`TreeApManager` namespace to a codebase with no `check(manager === …)` in the tree backend | low — no live path found (§9.1) | traced through `resetApManager` and `selectPhase`; add the guard the automata backend already has |
