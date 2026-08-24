@@ -152,7 +152,14 @@ object AnyUnrollDiagnostics {
     val unionWithoutCollapseTypeInfo = AtomicLong()
     val unionWithoutCollapseOther = AtomicLong()
 
-    /** §12.5: records attributed to a query caller. Must stay at zero. */
+    /**
+     * §12.5: reads taken through the QUERY entry point.
+     *
+     * It counts CALLS, not records -- a query never records, by construction, so a "must stay at
+     * zero" reading of it is permanently red and meaningless. What it is actually for is spotting a
+     * caller misclassified the other way: a build treated as a query under-charges, and a large
+     * `queryReads` against a small `reads` is what that looks like.
+     */
     val queryReads = AtomicLong()
 
     fun report(): String = buildString {
@@ -242,6 +249,17 @@ class AnyUnrollManager(
         if (b == null) return a
         if (a === b) return a
 
+        // Lock-free, and it carries the steady state. Receiver preference keeps the accumulated
+        // tree's STORED reference unchanged while the arrival's is absorbed, and node identity
+        // compares stored references -- so "two distinct objects with the same representative" is
+        // the normal case, not the exception. Without this every merge of two `[any]`-carrying nodes
+        // would take the per-manager monitor on the hottest path in the analyzer just to discover
+        // there is nothing to do. The DSU only ever moves towards a root, so a stale negative simply
+        // falls through to the locked path.
+        val fastA = a.find()
+        val fastB = b.find()
+        if (fastA === fastB) return fastA
+
         synchronized(lock) {
             var x = a.find()
             var y = b.find()
@@ -264,7 +282,18 @@ class AnyUnrollManager(
 
                 val dxRoot = dx.rootState
                 if (dxRoot != null && dyRoot != null) {
-                    mergeStates(dxRoot.find(), dyRoot.find())
+                    // accumulatePaths = FALSE. Both start states denote the EMPTY sequence, so
+                    // merging them leaves one state reached by one sequence, not two -- and the same
+                    // holds all the way down the cascade, which pairs states reached by the SAME
+                    // accessor sequence in the two automata. The merged path set is the union of two
+                    // sets that overlap by construction, so `max` is the right operator and `sum`
+                    // over-states it by the whole overlap.
+                    //
+                    // Measured, before this was fixed: 11,482 of 11,625 unions on thingsboard were
+                    // cross-dag fusions, so root path counts saturated at `L` and a component of a
+                    // hundred fused origins refused on its FIRST new accessor. 1,323 transitions
+                    // across ~690 pots -- under two each -- produced 16,792 refusals at L = 100.
+                    mergeStates(dxRoot.find(), dyRoot.find(), accumulatePaths = false)
                 }
 
                 // The fusion may already have merged x and y transitively.
@@ -273,7 +302,10 @@ class AnyUnrollManager(
                 if (x === y) return x
             }
 
-            return mergeStates(x, y)
+            // A same-dag union DOES accumulate: `x` and `y` are different positions in one
+            // automaton, so the sequences reaching them are genuinely different sequences, and one
+            // new transition out of the merged state authorises all of them.
+            return mergeStates(x, y, accumulatePaths = true)
         }
     }
 
@@ -291,7 +323,11 @@ class AnyUnrollManager(
      * an orphaned map. A reader racing the fold sees the transition missing, falls to the slow path,
      * takes the lock -- which the fold holds -- and re-resolves.
      */
-    private fun mergeStates(x0: AnyUnrollState, y0: AnyUnrollState): AnyUnrollState {
+    private fun mergeStates(
+        x0: AnyUnrollState,
+        y0: AnyUnrollState,
+        accumulatePaths: Boolean,
+    ): AnyUnrollState {
         val pending = ArrayDeque<AnyUnrollState>()
         pending.addLast(x0)
         pending.addLast(y0)
@@ -302,7 +338,11 @@ class AnyUnrollManager(
             if (x === y) continue
 
             y.parent = x
-            x.pathCount = satAdd(x.pathCount, y.pathCount, pathCountCeiling)
+            x.pathCount = if (accumulatePaths) {
+                satAdd(x.pathCount, y.pathCount, pathCountCeiling)
+            } else {
+                maxOf(x.pathCount, y.pathCount)
+            }
 
             val absorbed = y.children ?: continue
             y.children = null
@@ -431,14 +471,24 @@ class AnyUnrollManager(
         // alone does not say which site leaked.
         const val MINT_PREPEND = 0
         const val MINT_DESERIALIZE = 1
-        const val MINT_CHAIN_FOLD = 2
-        const val MINT_SPINE_REBUILD = 3
-        const val MINT_BULK_MERGE = 4
-        const val MINT_TEST = 5
-        const val MINT_SITE_COUNT = 6
+
+        /**
+         * The raw single-edge `create`, shared by the `filterStartsWith` spine fold,
+         * `reconstructRemainder` and both premise chain folds.
+         *
+         * They are deliberately ONE bucket rather than four: they all reach the same choke point
+         * with a state their caller supplied, so a mint here means some caller failed to supply one,
+         * and the useful signal is "any of them leaked" rather than which. An earlier split had a
+         * `spineRebuild` bucket that was structurally unreachable and therefore always read zero,
+         * which is worse than no bucket at all.
+         */
+        const val MINT_RAW_EDGE = 2
+        const val MINT_BULK_MERGE = 3
+        const val MINT_TEST = 4
+        const val MINT_SITE_COUNT = 5
 
         val MINT_SITE_NAMES = arrayOf(
-            "prepend", "deserialize", "chainFold", "spineRebuild", "bulkMerge", "test"
+            "prepend", "deserialize", "rawEdge", "bulkMerge", "test"
         )
     }
 }

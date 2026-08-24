@@ -66,10 +66,10 @@ class AccessTree(
         AccessTree(apManager, newBase, access, exclusions, dormantAnyId)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions.add(accessor))
+        AccessTree(apManager, base, access, exclusions.add(accessor), dormantAnyId)
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions)
+        AccessTree(apManager, base, access, exclusions, dormantAnyId)
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = IntOpenHashSet()
@@ -115,10 +115,12 @@ class AccessTree(
 
     override fun removeAbstraction(): FinalFactAp? =
         access.removeAbstraction().takeIf { !it.isEmpty }
-            ?.let { AccessTree(apManager, base, it, exclusions) }
+            ?.let { AccessTree(apManager, base, it, exclusions, dormantAnyId) }
 
     override fun abstractOnly(): FinalFactAp =
-        AccessTree(apManager, base, access.abstractOnly(), exclusions)
+        // `abstractOnly` DROPS every child edge including the `[any]`, so its state has nowhere left
+        // to live on the node -- which is precisely when the wrapper should keep it.
+        AccessTree(apManager, base, access.abstractOnly(), exclusions, access.anyId ?: dormantAnyId)
 
     override fun clearAllAccessorOccurrences(
         accessor: Accessor,
@@ -129,18 +131,18 @@ class AccessTree(
             accessorIdx, keepStartAccessor, retainDeepAccessorExclusions = exclusions !is ExclusionSet.Universe, IdentityHashMap()
         ) ?: return null
 
-        return if (cleared === access) this else AccessTree(apManager, base, cleared, exclusions)
+        return if (cleared === access) this else AccessTree(apManager, base, cleared, exclusions, dormantAnyId)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessTree(apManager, base, filteredAccess, exclusions)
+        return AccessTree(apManager, base, filteredAccess, exclusions, dormantAnyId)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? {
         if (filter is FactTypeChecker.AlwaysCompatibleFilter) return this
         val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessTree(apManager, base, filteredAccess, exclusions)
+        return AccessTree(apManager, base, filteredAccess, exclusions, dormantAnyId)
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {
@@ -924,6 +926,12 @@ class AccessTree(
          */
         private fun normaliseUnderAny(): Pair<AccessNode, AnyUnrollState?> {
             if (!containsAnyInThisOrDeepNodes) return this to null
+            // The walk below asks `isCoveredByAny` about every child, and the prescan's strategy
+            // THROWS rather than answering. Nothing legitimate reaches here in that phase -- the
+            // contract is that no `[any]` exists -- but deserialisation is the one `[any]` source
+            // that never consults the strategy, and a stale summary blob would otherwise take down
+            // the prescan through a code path that used to be unreachable from the factory.
+            if (!manager.anyAccessorsQueryable) return this to null
 
             val states = mutableListOf<AnyUnrollState>()
 
@@ -1118,14 +1126,25 @@ class AccessTree(
 
                 manager.cancellation.checkpoint()
 
+                val consumedAccessor = accessors[consumedIdx]
                 val consumedNode = current.accessorNodes!![consumedIdx]
+
+                // The delta's own `[any]` edge is being eaten by the `[any]` sitting directly above
+                // this node. `removeSingleAccessor` drops the state with the edge, so union it into
+                // whatever `[any]` survives in the result first. When the consumed subtree carries
+                // one, that is where the pot lives on; when it does not, the record is genuinely
+                // lost, which is sound (the remaining budget only goes further) but means `total` is
+                // a lower bound on what was materialised.
+                if (consumedAccessor == ANY_ACCESSOR_IDX) {
+                    manager.anyUnroll.union(consumedNode.anyId, current.anyId)
+                }
 
                 // C1: never "nothing to graft". [mergeAdd] unions isAbstract/isFinal and intersects
                 // deepAccessorExclusion -- exactly the join wanted -- so a fully covered branch
                 // collapses to a node that still CARRIES its leaf's flags. Returning an empty node
                 // here would leave the graft with concatNode == null, the abstraction unrestored,
                 // and `takeIf { !it.isEmpty }` would drop the whole branch: lost taint.
-                current = current.removeSingleAccessor(accessors[consumedIdx]).mergeAdd(consumedNode)
+                current = current.removeSingleAccessor(consumedAccessor).mergeAdd(consumedNode)
                 absorbedAnyStep = true
             }
 
@@ -1553,6 +1572,14 @@ class AccessTree(
             results: Object2ObjectOpenHashMap<AccessNodeMergePair, Any>,
         ) {
             val (a, b) = mergePair
+
+            // R3, here rather than only in [mergeAddStep], because when the trim below substitutes a
+            // pair, [mergeNodeLoop] resolves the original through `results[currentResult]` and never
+            // calls the merge step for it at all -- so the step's own union would be skipped. Worse,
+            // the trim is exactly what DELETES one side's `[any]` edge, so the state it would have
+            // carried is gone by the time anything else could union it. This runs on every merge
+            // pair with `foldToAny`, which is the default and includes `getChild`'s own arm.
+            manager.anyUnroll.union(a.anyId, b.anyId)
 
             if (a.accessors == null || b.accessors == null)
                 return
@@ -2201,6 +2228,14 @@ class AccessTree(
                 val transformed = node.removeAllAccessorChains(accessors, chainLengthToRemove, cache, cancellation)
                 if (accessor !in accessors) return@transformAccessorsNonEmpty transformed
 
+                // `[any]` is an ordinary vertex of the accessor graph, so an SCC may contain it and
+                // this edge may be the one being deleted. The subtree is hoisted and keeps its own
+                // states, but THIS node's state would simply vanish with the edge, and the origin
+                // would then be free to spend a second full pot elsewhere.
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    manager.anyUnroll.union(anyId, transformed.anyId)
+                }
+
                 transformed.removeAllAccessorChains(accessors, removedNodes, chainLengthToRemove, currentChainLength + 1, cache, cancellation)
             }
         }
@@ -2312,7 +2347,7 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                val anyState = if (accessors.indexOf(ANY_ACCESSOR_IDX) >= 0) {
+                val anyState = if (accessors.binarySearch(ANY_ACCESSOR_IDX) >= 0) {
                     treeAnyState[0]
                         ?: manager.anyUnroll.newOrigin(AnyUnrollManager.MINT_DESERIALIZE)
                             .also { treeAnyState[0] = it }
@@ -2349,7 +2384,7 @@ class AccessTree(
              */
             @JvmStatic
             internal fun anyStateIfPresent(accessors: IntArray?, state: AnyUnrollState?): AnyUnrollState? =
-                if (state != null && accessors != null && accessors.indexOf(ANY_ACCESSOR_IDX) >= 0) state else null
+                if (state != null && accessors != null && accessors.binarySearch(ANY_ACCESSOR_IDX) >= 0) state else null
 
             /** Visit budget for [containsThroughAny]. */
             private const val CONTAINS_THROUGH_ANY_STEP_LIMIT = 10_000
@@ -2545,7 +2580,7 @@ class AccessTree(
                 // §12.1 counts it by separating accessor rather than assuming it empty.
 
                 if (accessor == ANY_ACCESSOR_IDX) {
-                    return createAnyEdge(node, anyState, AnyUnrollManager.MINT_CHAIN_FOLD)
+                    return createAnyEdge(node, anyState, AnyUnrollManager.MINT_RAW_EDGE)
                 }
 
                 return AccessNode(
@@ -2647,7 +2682,7 @@ class AccessTree(
                 var resultNodes = nonEmptyAccessorNodes
                 var state: AnyUnrollState? = null
 
-                val anyIdx = nonEmptyAccessors?.indexOf(ANY_ACCESSOR_IDX) ?: -1
+                val anyIdx = nonEmptyAccessors?.binarySearch(ANY_ACCESSOR_IDX) ?: -1
                 if (anyIdx >= 0) {
                     val child = nonEmptyAccessorNodes!![anyIdx]
                     val (normalised, found) = child.normaliseUnderAny()
@@ -2696,7 +2731,7 @@ class AccessTree(
                     when (accessor) {
                         FINAL_ACCESSOR_IDX -> finalNode
                         ANY_ACCESSOR_IDX -> {
-                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_CHAIN_FOLD)
+                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_RAW_EDGE)
                             create(accessor, node, foldState)
                         }
                         else -> create(accessor, node)
@@ -2715,7 +2750,7 @@ class AccessTree(
                     result = when (accessor) {
                         FINAL_ACCESSOR_IDX -> finalNode
                         ANY_ACCESSOR_IDX -> {
-                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_CHAIN_FOLD)
+                            if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_RAW_EDGE)
                             create(accessor, result, foldState)
                         }
                         else -> create(accessor, result)

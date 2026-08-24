@@ -45,6 +45,21 @@ class TreeApManager(
     val refManager = refManager.softRefManager("Tree")
 
     /**
+     * Whether `[any]` semantics may be QUERIED at all on this manager.
+     *
+     * [AnyAccessorUnrollStrategy.AnyAccessorDisabled] -- installed for the whole prescan phase --
+     * does not return `false` from [AnyAccessorUnrollStrategy.unrollAccessor], it **throws**. That is
+     * deliberate: the prescan's contract is that no `[any]` reaches it, and a swallowing wrapper
+     * would turn a loud violation into a silent mis-analysis. But it means every path that might
+     * reach [isCoveredByAny] has to prove an `[any]` edge exists first, or short-circuit before it --
+     * and the nested-`[any]` normalisation runs from the node factory, which cannot make either
+     * argument. So it short-circuits on this instead.
+     */
+    @JvmField
+    val anyAccessorsQueryable: Boolean =
+        anyAccessorUnrollStrategy !== AnyAccessorUnrollStrategy.AnyAccessorDisabled
+
+    /**
      * Allocation, union and charging for the `[any]` unroll automata.
      *
      * It lives here because this is the single object every tree-backend site already holds, and the
@@ -54,7 +69,7 @@ class TreeApManager(
      * failure that made the previous cap ineffective.
      */
     @JvmField
-    val anyUnroll = AnyUnrollManager(anyUnrollLimit)
+    val anyUnroll = AnyUnrollManager(if (anyAccessorsQueryable) anyUnrollLimit else -1)
 
     val interner = AccessorInterner()
 

@@ -188,7 +188,8 @@ class TreeInitialFactAbstraction(
                 val nodeFilter = prefix.createFilter(typeChecker)
                 val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachInt
 
-                newFacts += filteredNode.withAnyState(childAnyState).addReversedApParents(prefix)
+                newFacts += filteredNode.withAnyState(childAnyState)
+                    .addReversedApParents(prefix, unrollRequest.governingAnyId)
                     ?: return@forEachInt
             }
 
@@ -213,9 +214,16 @@ class TreeInitialFactAbstraction(
         return typeChecker.accessPathFilter(accessors.asReversed())
     }
 
-    private fun AccessTreeNode.addReversedApParents(ap: ReversedApNode): AccessTreeNode? =
+    private fun AccessTreeNode.addReversedApParents(
+        ap: ReversedApNode,
+        governingAnyId: AnyUnrollState?,
+    ): AccessTreeNode? =
         ap.foldRight(this) { accessor, node ->
-            node.addParentIfPossible(accessor) ?: return null
+            // `currentAp` can carry an `[any]` link -- the walk pushes one at every `[any]` descent
+            // -- and re-creating that edge with no state would derive R1/R2 from the subtree. That
+            // is a full fresh pot whenever the type filter has already stripped the subtree's own
+            // `[any]`, which is exactly the refill the rest of this file is threaded to avoid.
+            node.addParentIfPossible(accessor, governingAnyId) ?: return null
         }
 
     data class AbstractionState(
@@ -238,6 +246,8 @@ class TreeInitialFactAbstraction(
         val currentAp: ReversedApNode?,
         val node: AccessTreeNode,
         val accessors: IntOpenHashSet,
+        /** The state governing any `[any]` link already in [currentAp]; see [addReversedApParents]. */
+        val governingAnyId: AnyUnrollState?,
     )
 
     private inline fun abstractAccessPath(
@@ -269,7 +279,9 @@ class TreeInitialFactAbstraction(
                 if (enumerateHere) {
                     val unrollAccessors = state.analyzedTrieRoot.unrollAccessors(currentLevelExclusions)
                     if (unrollAccessors.isNotEmpty()) {
-                        unrollRequests += AnyAccessorUnrollRequest(state.currentAp, state.added, unrollAccessors)
+                        unrollRequests += AnyAccessorUnrollRequest(
+                            state.currentAp, state.added, unrollAccessors, state.governingAnyId,
+                        )
                     }
                 }
 
