@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/seqra/opentaint/internal/sarif"
 	"github.com/seqra/opentaint/internal/triage"
@@ -22,7 +21,7 @@ The sarif-report argument is the path to a SARIF report. It is required. Use a r
 
 To see each finding, use --show-findings. To make the list smaller, use --severity, --rule-id, or --path. To see the full data flow, use --verbose-flow and --show-code-snippets.
 
-To compare with a previous report, use --baseline. The summary then shows which findings are new, unchanged, updated, or fixed. Use --baseline-state to show only the findings in one of those states.
+To compare with a previous report, use --baseline. The summary then shows which findings are new, unchanged, updated, or absent. Use --baseline-state to show only the findings in one of those states.
 
 This command only reads the report. It does not write files. To record decisions about findings, use "opentaint triage".`,
 	Example: `  # Show a summary of a report
@@ -69,7 +68,6 @@ This command only reads the report. It does not write files. To record decisions
 		if err != nil {
 			out.Fatalf("%s", err)
 		}
-		resolveSummaryFingerprintKey()
 
 		absSarifPath := log.AbsPathOrExit(args[0], "sarif path")
 		report, err := sarif.LoadReport(absSarifPath)
@@ -97,38 +95,6 @@ This command only reads the report. It does not write files. To record decisions
 	},
 }
 
-// resolveSummaryFingerprintKey collapses --fingerprint-key and the older
-// --partial-fingerprint-key into the single key summary uses for everything it
-// does with fingerprints: baseline matching, --partial-fingerprint, and the
-// value printed as "Fingerprint:". One key means the fingerprint the listing
-// shows is always the one `triage --accept` resolves. The short aliases
-// (sink, source-sink, trace) are expanded here, so the listing and filter
-// paths — which look the key up verbatim in partialFingerprints — see the
-// same full key the triage engine resolves.
-func resolveSummaryFingerprintKey() {
-	full := func(key string) string {
-		if key == "" {
-			return ""
-		}
-		resolved, err := sarif.ResolveIdentityKey(key)
-		if err != nil {
-			out.Fatalf("%s", err)
-		}
-		return resolved
-	}
-
-	newKey, oldKey := full(summaryFingerprintKey), full(summaryPartialFingerprintKey)
-	if oldKey != "" {
-		if newKey != "" && newKey != oldKey {
-			out.Fatalf("--fingerprint-key %q and --partial-fingerprint-key %q disagree: pass --fingerprint-key alone",
-				summaryFingerprintKey, summaryPartialFingerprintKey)
-		}
-		// cobra already prints the deprecation notice for the flag itself.
-		newKey = oldKey
-	}
-	summaryFingerprintKey = newKey
-}
-
 // requireBaselineStates refuses a --baseline-state filter that cannot mean
 // anything. The filter reads result.baselineState, which a report only carries
 // after a comparison persisted it, so filtering a report that has none would
@@ -138,13 +104,13 @@ func requireBaselineStates(report *sarif.Report, states []string, baseline strin
 	if len(states) == 0 || baseline != "" {
 		return nil
 	}
-	// The absent state can never be satisfied from the report alone: fixed
+	// The absent state can never be satisfied from the report alone: absent
 	// findings live only in the baseline, and --write-baseline-state never
 	// writes them into the current report.
 	for _, state := range states {
 		if state == string(sarif.Absent) {
 			return fmt.Errorf("--baseline-state absent needs --baseline <report>: " +
-				"fixed findings live in the baseline and are never written into the current report")
+				"absent findings live in the baseline and are never written into the current report")
 		}
 	}
 	for _, r := range report.Results() {
@@ -166,10 +132,9 @@ func applyTriageForDisplay(report *sarif.Report, absSarifPath string) *sarif.Tri
 
 	baseline, absBaselinePath := loadBaselineOrExit(summaryBaseline, absSarifPath)
 	outcome, err := triage.Apply(report, triage.Options{
-		Baseline:       baseline,
-		BaselinePath:   absBaselinePath,
-		FingerprintKey: summaryFingerprintKey,
-		ReadOnly:       true,
+		Baseline:     baseline,
+		BaselinePath: absBaselinePath,
+		ReadOnly:     true,
 	})
 	if err != nil {
 		out.Fatalf("%s", err)
@@ -185,13 +150,11 @@ var summaryPaths []string
 var summarySeverities []string
 var summaryRuleIDs []string
 var summaryFingerprints []string
-var summaryPartialFingerprintKey string
 var summaryGroupBy string
 var summaryMaxNestingLevel = -1 // -1 = no cap; >= 0 collapses deeper flow steps
 var summaryCodeFlow string
 var summaryBaseline string
 var summaryBaselineStates []string
-var summaryFingerprintKey string
 var summaryShowSuppressed bool
 
 func init() {
@@ -204,23 +167,18 @@ func init() {
 	summaryCmd.Flags().StringArrayVar(&summarySeverities, "severity", nil, "Show only findings at these SARIF levels: note, warning, error, none (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryRuleIDs, "rule-id", nil, "Show only findings from this rule: full id, leaf name, or glob (repeatable)")
 	summaryCmd.Flags().StringArrayVar(&summaryFingerprints, "partial-fingerprint", nil, "Show only findings whose fingerprint starts with this value (git-hash style, repeatable)")
-	summaryCmd.Flags().StringVar(&summaryPartialFingerprintKey, "partial-fingerprint-key", "", "Deprecated alias for --fingerprint-key")
-	if err := summaryCmd.Flags().MarkDeprecated("partial-fingerprint-key", "use --fingerprint-key"); err != nil {
-		panic(err)
-	}
 	summaryCmd.Flags().IntVar(&summaryMaxNestingLevel, "max-nesting-level", -1, "Collapse code-flow steps deeper than this call-nesting level (-1 = no cap)")
 	summaryCmd.Flags().StringVar(&summaryGroupBy, "group-by", "", "Group the --show-findings listing by: severity, rule-id, file-path (defaults to file-path)")
 	summaryCmd.Flags().StringVar(&summaryCodeFlow, "code-flow", "", "Render code flows: \"all\", a 1-based index, or unset (first only)")
-	addBaselineFlags(summaryCmd, &summaryBaseline, &summaryFingerprintKey)
+	addBaselineFlags(summaryCmd, &summaryBaseline)
 	summaryCmd.Flags().StringArrayVar(&summaryBaselineStates, "baseline-state", nil, "Show only findings in these baseline states: new, unchanged, updated, absent (repeatable, reads states written by --write-baseline-state or computed from --baseline)")
 	summaryCmd.Flags().BoolVar(&summaryShowSuppressed, "suppressed", false, "Include suppressed findings in the listing")
 }
 
 // addBaselineFlags registers the flags shared by every command that can compare
 // a report against a baseline.
-func addBaselineFlags(cmd *cobra.Command, baseline *string, fingerprintKey *string) {
+func addBaselineFlags(cmd *cobra.Command, baseline *string) {
 	cmd.Flags().StringVar(baseline, "baseline", "", "Previous SARIF report to compare against and inherit suppressions from")
-	cmd.Flags().StringVar(fingerprintKey, "fingerprint-key", "", "Which fingerprint identifies a finding across reports: "+strings.Join(sarif.IdentityAliases, ", ")+", or a partialFingerprints key (defaults to sink)")
 }
 
 // loadBaselineOrExit resolves and loads a baseline report, refusing to use the
@@ -255,14 +213,10 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithSeverity(summarySeverities)
 	builder.WithRuleID(summaryRuleIDs)
 	builder.WithPartialFingerprint(summaryFingerprints)
-	// The deprecated --partial-fingerprint-key is not re-suggested: its value
-	// was folded into summaryFingerprintKey, which the line below emits under
-	// the flag's current name.
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
 	builder.WithCodeFlow(summaryCodeFlow)
 	builder.WithBaseline(summaryBaseline)
-	builder.WithFingerprintKey(summaryFingerprintKey)
 	builder.WithBaselineStateFilter(summaryBaselineStates)
 	builder.WithSuppressed(summaryShowSuppressed)
 	return builder
@@ -273,11 +227,10 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 // flag globals are at their defaults.
 func summaryFilters() sarif.Filters {
 	return sarif.Filters{
-		Paths:          summaryPaths,
-		Severities:     summarySeverities,
-		RuleIDs:        summaryRuleIDs,
-		Fingerprints:   summaryFingerprints,
-		FingerprintKey: summaryFingerprintKey,
+		Paths:        summaryPaths,
+		Severities:   summarySeverities,
+		RuleIDs:      summaryRuleIDs,
+		Fingerprints: summaryFingerprints,
 	}
 }
 
@@ -291,7 +244,6 @@ func summaryListingOptions(dim sarif.GroupDimension, codeFlowSel sarif.CodeFlowS
 		VerboseFlow:      verboseFlow,
 		MaxNestingLevel:  summaryMaxNestingLevel,
 		GroupBy:          dim,
-		FingerprintKey:   summaryFingerprintKey,
 		CodeFlows:        codeFlowSel,
 		ShowSuppressed:   summaryShowSuppressed,
 	}
@@ -311,7 +263,7 @@ func printSarifSummary(report *sarif.Report, absSarifPath string, filters sarif.
 
 	hasOmittedFlow := false
 	if list {
-		// Fixed findings live in the baseline, so they only reach the listing when
+		// Absent findings live in the baseline, so they only reach the listing when
 		// the reader explicitly asks for them.
 		listing := filtered
 		if filters.WantsAbsent() && view != nil && view.Comparison != nil {

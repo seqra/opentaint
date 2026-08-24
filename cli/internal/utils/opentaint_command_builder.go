@@ -216,14 +216,6 @@ func (cb *OpentaintCommandBuilder) WithPartialFingerprint(fingerprints []string)
 	return cb
 }
 
-// WithPartialFingerprintKey sets the --partial-fingerprint-key flag.
-func (cb *OpentaintCommandBuilder) WithPartialFingerprintKey(key string) *OpentaintCommandBuilder {
-	if key != "" {
-		cb.flags["partial-fingerprint-key"] = key
-	}
-	return cb
-}
-
 // WithMaxNestingLevel sets the --max-nesting-level flag when level >= 0.
 func (cb *OpentaintCommandBuilder) WithMaxNestingLevel(level int) *OpentaintCommandBuilder {
 	if level >= 0 {
@@ -402,14 +394,6 @@ func (cb *OpentaintCommandBuilder) WithBaseline(path string) *OpentaintCommandBu
 func (cb *OpentaintCommandBuilder) WithWriteBaselineState(enabled bool) *OpentaintCommandBuilder {
 	if enabled {
 		cb.boolFlags["write-baseline-state"] = true
-	}
-	return cb
-}
-
-// WithFingerprintKey sets the --fingerprint-key flag.
-func (cb *OpentaintCommandBuilder) WithFingerprintKey(key string) *OpentaintCommandBuilder {
-	if key != "" {
-		cb.flags["fingerprint-key"] = key
 	}
 	return cb
 }

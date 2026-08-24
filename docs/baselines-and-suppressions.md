@@ -133,7 +133,7 @@ Given `--baseline old.sarif`, every current finding is classified:
 | `new` | In this scan, not in the baseline |
 | `unchanged` | In both, identical trace |
 | `updated` | In both — same source and sink, but the path through the code changed |
-| `absent` | In the baseline, not in this scan — fixed, unless something still points at it (see [What changed underneath](#what-changed-underneath)) |
+| `absent` | In the baseline, not in this scan. Usually fixed, but see [What changed underneath](#what-changed-underneath) |
 
 By default the comparison only affects **what is printed** — the SARIF file is
 left byte-for-byte unchanged. Two flags control it:
@@ -164,43 +164,34 @@ Asking for a state when the report carries none and no baseline was given is an
 error, not an empty listing — "0 findings" would read as a clean bill of health
 for a report nobody compared against anything.
 
-`absent` (fixed) findings are never written into the output report — surfacing a
-fixed finding as a live alert would be wrong — but `--baseline-state absent`
+`absent` findings are never written into the output report — surfacing a
+resolved finding as a live alert would be wrong — but `--baseline-state absent`
 lists them, read from the baseline, which is how you see what a change fixed.
 
 ### Finding identity
 
 Findings are matched across reports by a **fingerprint**, not by line number, so
-moving code around does not invent new findings. Three fingerprints exist, from
-the most exact identity to the coarsest:
-
-| `--fingerprint-key` | Full key | Hashes | Behavior |
-|-----|-----|--------|----------|
-| `trace` | `vulnerabilityWithTraceHash/v1` | rule + every step of every trace | Exact. Changes if anything on the path moves. |
-| `source-sink` | `vulnerabilitySourceSinkHash/v1` | rule + source + sink | Survives edits to the call path between source and sink. |
-| `sink` | `vulnerabilitySinkHash/v1` | rule + sink | Survives any change to how the untrusted data reaches the sink. **Default.** |
-
-`--fingerprint-key` takes the short name or the full key, and one key governs
-everything a command does with fingerprints: baseline matching, the prefix
-`triage` resolves, the value `summary --show-findings` prints as `Fingerprint:`,
-and what `--partial-fingerprint` matches. That is why a fingerprint copied off
-the screen always names a finding to `triage`. (`--partial-fingerprint-key` is a
-deprecated alias for `--fingerprint-key`.)
-
-The sink hash is the default because it names the vulnerable statement and
-nothing else, so a decision survives every edit to how the data gets there —
+moving code around does not invent new findings. The identity is always the
+**sink hash** (`vulnerabilitySinkHash/v1`): it hashes the rule and the sink,
+the vulnerable statement itself, and nothing else. A decision therefore
+survives every edit to how the untrusted data reaches that statement —
 including the ones the analyzer makes on its own, since its choice of source is
 not yet stable between runs of the same code (see
-`docs/reports/fingerprint-stability.md`). It
-costs nothing in precision: the analyzer already reports one finding per rule and
-sink, so the coarsest key is still one fingerprint per finding — it only stops
-findings from changing identity. All three hash the rule id, so no fingerprint
-ever spans two rules that fire on one statement.
+`docs/reports/fingerprint-stability.md`). This costs nothing in precision: the
+analyzer reports one finding per rule and sink, so the sink hash is still one
+fingerprint per finding. The hash covers the rule id, so it never spans two
+rules that fire on one statement.
 
-Pick a finer key when the route is part of what you are deciding about. Under
-`source-sink`, data arriving at a known-dangerous sink from a *new* source is a
-new finding that must be triaged again. Under `sink`, an existing decision covers
-it.
+One identity governs everything a command does with fingerprints: baseline
+matching, suppression inheritance, the prefix `triage` resolves, the value
+`summary --show-findings` prints as `Fingerprint:`, and what
+`--partial-fingerprint` matches. That is why a fingerprint copied off the
+screen always names a finding to `triage`.
+
+The analyzer also emits two finer hashes, `vulnerabilitySourceSinkHash/v1`
+(rule + source + sink) and `vulnerabilityWithTraceHash/v1` (rule + every step
+of every trace). They never decide identity. The comparison reads them to
+describe what happened to a matched finding — see the next section.
 
 ### What changed underneath
 
@@ -214,30 +205,23 @@ SARIF has one word for all of it — `updated` — so the summary says which:
 | `Updated, path changed` | The same source and sink, joined by a different call path. Usually a refactoring in between. |
 
 Both remain `updated` in the SARIF `baselineState`, so `--baseline-state updated`
-selects either. The distinction narrows with a finer identity: under
-`source-sink` a moved source is `new` + `absent` rather than `updated`, and under
-`trace` nothing is left to refine, so a match is always `unchanged`.
+selects either.
 
-An absence gets the same scrutiny before the summary calls it fixed. A
-fingerprint disappears whenever the code it hashes moves, so a gone hash does
-not prove a gone finding. The summary reports what the current scan still shows
-of each absent finding:
+An absence gets the same scrutiny. The sink hash disappears whenever the code
+around the sink moves, so a gone hash does not prove a gone finding. The
+summary reports what the current scan still shows of each absent finding:
 
 | Line | Meaning |
 |------|---------|
-| `Fixed` | Nothing in the current report points at the finding. |
-| `Gone, sink still reported` | A current finding carries the same hash under a coarser key, so the sink is provably still reported. The identity changed, the finding did not go away. |
-| `Gone, possibly moved` | A new finding reports the same rule in the same file. A hint, not proof: the absent finding may have moved and taken its hash with it, or the new finding may be unrelated. |
+| `Absent` | Nothing in the current report points at the finding. |
+| `Possibly drifted` | A new finding reports the same rule in the same file. A hint, not proof: the absent finding may have moved and taken its hash with it, or the new finding may be unrelated. |
 
-`Gone, sink still reported` needs a coarser key to check against, so it appears
-under `source-sink` and `trace` but never under the default `sink` key. All
-three lines are `absent` in SARIF terms: `--baseline-state absent` selects them
-all, and the listing prints the qualifier next to each finding's `Baseline:`
-state.
+Both lines are `absent` in SARIF terms: `--baseline-state absent` selects both,
+and the listing prints the qualifier next to each finding's `Baseline:` state.
 
-Comparing reports built with different fingerprint keys is a hard error, not a
-silent zero-match. Findings that carry no fingerprint at all (a report produced
-without fingerprints) are reported as-is and counted as "not comparable."
+A baseline whose results carry no fingerprints at all is rejected with a hard
+error, not a silent zero-match. Current findings that carry no fingerprint are
+reported as-is and counted as "not comparable."
 
 ## Suppression reference
 
@@ -349,7 +333,7 @@ doublestar glob over the full id — the same grammar as `summary --rule-id`.
 Notes:
 - Excluding a rule does not fake a wave of fixes. A baseline finding whose rule
   did not run in the current scan is reported as `Rule not run`, separately from
-  `Fixed`, because its absence says nothing about whether anyone fixed it.
+  `Absent`, because its absence says nothing about whether anyone fixed it.
 - A pattern matching no rule produces a warning, so a typo cannot silently look
   effective.
 - A selection that ends up matching **no** rules is an error, not a silent scan

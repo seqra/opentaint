@@ -5,32 +5,6 @@ import (
 	"testing"
 )
 
-func TestResolveIdentityKeyDefaultsToSink(t *testing.T) {
-	key, err := ResolveIdentityKey("")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if key != SinkFingerprintKey {
-		t.Errorf("got %q, want %q", key, SinkFingerprintKey)
-	}
-}
-
-func TestResolveIdentityKeyAcceptsExplicitKey(t *testing.T) {
-	key, err := ResolveIdentityKey(TraceFingerprintKey)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if key != TraceFingerprintKey {
-		t.Errorf("got %q, want %q", key, TraceFingerprintKey)
-	}
-}
-
-func TestResolveIdentityKeyRejectsBlank(t *testing.T) {
-	if _, err := ResolveIdentityKey("   "); err == nil {
-		t.Error("expected error for whitespace-only key")
-	}
-}
-
 func TestIdentityReadsChosenKey(t *testing.T) {
 	r := makeResult("rule", Error, "a.java", 1, map[string]string{
 		SourceSinkFingerprintKey: "src-sink-hash",
@@ -76,10 +50,10 @@ func TestResultsIteratesEveryRun(t *testing.T) {
 
 func TestResolvePrefixFindsUniqueMatch(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9k2nAAA"}),
-		makeResult("b", Error, "b.java", 2, map[string]string{SourceSinkFingerprintKey: "8bc1d2xxBBB"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9k2nAAA"}),
+		makeResult("b", Error, "b.java", 2, map[string]string{SinkFingerprintKey: "8bc1d2xxBBB"}),
 	)
-	matched, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9k")
+	matched, err := ResolvePrefix(report, "q3Vf9k")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -90,14 +64,14 @@ func TestResolvePrefixFindsUniqueMatch(t *testing.T) {
 
 // Two results sharing one identity value are the same finding to a decision,
 // so an exact or prefix match on that value resolves to both rather than
-// erroring as ambiguous — under the coarse sink key such duplicates are
+// erroring as ambiguous — under the sink identity such duplicates are
 // legitimate, and no longer prefix could ever separate them.
 func TestResolvePrefixReturnsAllDuplicatesOfOneIdentity(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9kSAME"}),
-		makeResult("a", Error, "a.java", 9, map[string]string{SourceSinkFingerprintKey: "q3Vf9kSAME"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9kSAME"}),
+		makeResult("a", Error, "a.java", 9, map[string]string{SinkFingerprintKey: "q3Vf9kSAME"}),
 	)
-	matched, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9kSAME")
+	matched, err := ResolvePrefix(report, "q3Vf9kSAME")
 	if err != nil {
 		t.Fatalf("duplicates of one identity must resolve, got: %v", err)
 	}
@@ -108,19 +82,19 @@ func TestResolvePrefixReturnsAllDuplicatesOfOneIdentity(t *testing.T) {
 
 func TestResolvePrefixExactValueMatches(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9k2nAAA"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9k2nAAA"}),
 	)
-	if _, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9k2nAAA"); err != nil {
+	if _, err := ResolvePrefix(report, "q3Vf9k2nAAA"); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
 
 func TestResolvePrefixAmbiguousIsAnError(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9kAAA"}),
-		makeResult("b", Error, "b.java", 2, map[string]string{SourceSinkFingerprintKey: "q3Vf9kBBB"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9kAAA"}),
+		makeResult("b", Error, "b.java", 2, map[string]string{SinkFingerprintKey: "q3Vf9kBBB"}),
 	)
-	_, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9k")
+	_, err := ResolvePrefix(report, "q3Vf9k")
 	if err == nil {
 		t.Fatal("expected ambiguous prefix to error")
 	}
@@ -131,48 +105,19 @@ func TestResolvePrefixAmbiguousIsAnError(t *testing.T) {
 
 func TestResolvePrefixNoMatchIsAnError(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9kAAA"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9kAAA"}),
 	)
-	if _, err := ResolvePrefix(report, SourceSinkFingerprintKey, "zzzz"); err == nil {
+	if _, err := ResolvePrefix(report, "zzzz"); err == nil {
 		t.Error("expected unmatched prefix to error")
 	}
 }
 
 func TestResolvePrefixEmptyIsAnError(t *testing.T) {
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9kAAA"}),
+		makeResult("a", Error, "a.java", 1, map[string]string{SinkFingerprintKey: "q3Vf9kAAA"}),
 	)
-	if _, err := ResolvePrefix(report, SourceSinkFingerprintKey, ""); err == nil {
+	if _, err := ResolvePrefix(report, ""); err == nil {
 		t.Error("expected empty prefix to error rather than match everything")
-	}
-}
-
-func TestResolveIdentityKeyExpandsAliases(t *testing.T) {
-	cases := map[string]string{
-		"sink":          SinkFingerprintKey,
-		"SINK":          SinkFingerprintKey,
-		" source-sink ": SourceSinkFingerprintKey,
-		"sourcesink":    SourceSinkFingerprintKey,
-		"trace":         TraceFingerprintKey,
-	}
-	for in, want := range cases {
-		got, err := ResolveIdentityKey(in)
-		if err != nil {
-			t.Fatalf("ResolveIdentityKey(%q): %v", in, err)
-		}
-		if got != want {
-			t.Errorf("ResolveIdentityKey(%q) = %q, want %q", in, got, want)
-		}
-	}
-}
-
-func TestResolveIdentityKeyPassesUnknownKeysThrough(t *testing.T) {
-	got, err := ResolveIdentityKey("somethingElse/v9")
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if got != "somethingElse/v9" {
-		t.Errorf("got %q, want the key unchanged", got)
 	}
 }
 
@@ -186,7 +131,7 @@ func TestCompareOnSinkHashSeparatesRulesOnOneStatement(t *testing.T) {
 		makeResult("xss", Error, "a.java", 1, sink("xss-s1")),   // new: different rule
 	)
 
-	cmp, err := CompareToBaseline(current, baseline, SinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}

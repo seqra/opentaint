@@ -22,77 +22,19 @@ const (
 	SinkFingerprintKey       = "vulnerabilitySinkHash/v1"
 )
 
-// identityAliases are the short names accepted for the keys above, so a user
-// writes --fingerprint-key sink rather than the versioned SARIF key.
-var identityAliases = map[string]string{
-	"trace":       TraceFingerprintKey,
-	"source-sink": SourceSinkFingerprintKey,
-	"sourcesink":  SourceSinkFingerprintKey,
-	"sink":        SinkFingerprintKey,
-}
+// IdentityKey is the fingerprint that decides whether a finding in one report
+// is "the same finding" as one in another report. It is always the sink hash:
+// the sink hash names the vulnerable statement and nothing else, so a decision
+// survives every edit to how the untrusted data reaches it. The analyzer
+// reports one finding per rule and sink, so the coarsest key loses no findings
+// — it only stops them from changing identity. The finer keys never match
+// findings across reports. They only describe what moved underneath a finding.
+const IdentityKey = SinkFingerprintKey
 
-// IdentityAliases lists the short names in coarsening order, for help text.
-var IdentityAliases = []string{"trace", "source-sink", "sink"}
-
-// DefaultIdentityKey is the fingerprint key used to decide whether a finding in
-// one report is "the same finding" as one in another report. The sink hash is
-// the default because it names the vulnerable statement and nothing else, so a
-// decision survives every edit to how the untrusted data reaches it. The
-// analyzer already reports one finding per rule and sink, so the coarsest key
-// loses no findings — it only stops them from changing identity.
-const DefaultIdentityKey = SinkFingerprintKey
-
-// identityLadder is the keys ordered coarsest to finest. Each one adds detail to
-// the one before it, which is what lets a matched finding say what moved.
-var identityLadder = []string{SinkFingerprintKey, SourceSinkFingerprintKey, TraceFingerprintKey}
-
-// finerKeys returns the keys that refine key, nearest first. A key outside the
-// ladder is refined by the trace hash alone: an unrecognized identity may still
-// be compared for an exact match, which is all the trace hash reports.
-func finerKeys(key string) []string {
-	for i, k := range identityLadder {
-		if k == key {
-			return identityLadder[i+1:]
-		}
-	}
-	return []string{TraceFingerprintKey}
-}
-
-// coarserKeys returns the keys that key refines, nearest first. A key outside
-// the ladder has no coarser keys, so nothing can be said about what an absence
-// under it leaves behind.
-func coarserKeys(key string) []string {
-	for i, k := range identityLadder {
-		if k != key {
-			continue
-		}
-		out := make([]string, i)
-		for j := range out {
-			out[j] = identityLadder[i-1-j]
-		}
-		return out
-	}
-	return nil
-}
-
-// ResolveIdentityKey normalizes a user-supplied identity key, falling back to
-// DefaultIdentityKey when unset and expanding the short aliases. Any other key
-// is accepted as written — a report may carry fingerprints this build does not
-// know about — but a blank one is rejected rather than silently matching
-// nothing.
-func ResolveIdentityKey(key string) (string, error) {
-	if key == "" {
-		return DefaultIdentityKey, nil
-	}
-	trimmed := strings.TrimSpace(key)
-	if trimmed == "" {
-		return "", fmt.Errorf("fingerprint key must not be blank")
-	}
-	if full, ok := identityAliases[strings.ToLower(trimmed)]; ok {
-		return full, nil
-	}
-	return trimmed, nil
-}
+// refiningKeys are the keys that refine the identity, nearest first. The first
+// one that differs between two matched findings is the most meaningful
+// description of what changed.
+var refiningKeys = []string{SourceSinkFingerprintKey, TraceFingerprintKey}
 
 // Identity returns the result's value for the given fingerprint key. The second
 // return is false when the result carries no such fingerprint, which means it
@@ -123,12 +65,11 @@ func (report *Report) Results() []*Result {
 
 // ResolvePrefix finds the results whose identity fingerprint starts with
 // prefix, git-style. All matches must share one fingerprint value: results
-// with the same identity are the same finding to a decision, and under the
-// coarse default key one sink legitimately appears on several results. A
-// prefix matching two distinct values is ambiguous, and an empty or unmatched
-// prefix is an error — a decision names a finding, never "whichever matched
-// first".
-func ResolvePrefix(report *Report, key, prefix string) ([]*Result, error) {
+// with the same identity are the same finding to a decision, and one sink
+// legitimately appears on several results. A prefix matching two distinct
+// values is ambiguous, and an empty or unmatched prefix is an error — a
+// decision names a finding, never "whichever matched first".
+func ResolvePrefix(report *Report, prefix string) ([]*Result, error) {
 	if prefix == "" {
 		return nil, fmt.Errorf("fingerprint prefix must not be empty")
 	}
@@ -136,7 +77,7 @@ func ResolvePrefix(report *Report, key, prefix string) ([]*Result, error) {
 	var matches []*Result
 	distinct := map[string]bool{}
 	for _, r := range report.Results() {
-		fp, ok := Identity(r, key)
+		fp, ok := Identity(r, IdentityKey)
 		if !ok || !strings.HasPrefix(fp, prefix) {
 			continue
 		}
@@ -145,7 +86,7 @@ func ResolvePrefix(report *Report, key, prefix string) ([]*Result, error) {
 	}
 
 	if len(matches) == 0 {
-		return nil, fmt.Errorf("no finding matches fingerprint %q (key %s)", prefix, key)
+		return nil, fmt.Errorf("no finding matches fingerprint %q", prefix)
 	}
 	if len(distinct) > 1 {
 		values := make([]string, 0, len(distinct))

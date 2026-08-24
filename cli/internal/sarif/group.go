@@ -21,7 +21,6 @@ type ListingOptions struct {
 	VerboseFlow      bool
 	MaxNestingLevel  int               // < 0 means "no cap" (legacy flow rendering)
 	GroupBy          GroupDimension    // default groupByFilePath
-	FingerprintKey   string            // "" = DefaultFingerprintKey
 	CodeFlows        CodeFlowSelection // zero value = render first flow only
 	// ShowSuppressed lists findings that carry an honored suppression. They are
 	// hidden by default: a suppressed finding is one somebody already decided

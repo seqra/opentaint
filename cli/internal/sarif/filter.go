@@ -13,14 +13,11 @@ type Filters struct {
 	Paths          []string // doublestar globs against the relative file path
 	Severities     []string // SARIF levels: error/warning/note/none
 	RuleIDs        []string // full id, leaf, or doublestar glob over the full id
-	Fingerprints   []string // git-style prefixes of the chosen fingerprint key's value
-	FingerprintKey string   // partialFingerprints key to match ("" = DefaultIdentityKey)
+	Fingerprints   []string // git-style prefixes of the identity fingerprint's value
 	BaselineStates []string // SARIF baselineState values: new/unchanged/updated/absent
 }
 
-// active reports whether any filter dimension is set. FingerprintKey is
-// intentionally excluded: it only selects which key Fingerprints matches
-// against, so it has no effect without Fingerprints set.
+// active reports whether any filter dimension is set.
 func (f Filters) active() bool {
 	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 ||
 		len(f.Fingerprints) > 0 || len(f.BaselineStates) > 0
@@ -63,7 +60,7 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.RuleIDs) > 0 && !matchRuleID(r, f.RuleIDs) {
 		return false
 	}
-	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.FingerprintKey, f.Fingerprints) {
+	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.Fingerprints) {
 		return false
 	}
 	if len(f.BaselineStates) > 0 && !matchBaselineState(r, f.BaselineStates) {
@@ -73,7 +70,7 @@ func (f Filters) matches(r *Result) bool {
 }
 
 // matchesAs is matches for a result whose baseline state is known from the
-// comparison rather than carried on the result itself. Fixed findings live in
+// comparison rather than carried on the result itself. Absent findings live in
 // the baseline report and are never stamped with a state, so they can only be
 // filtered by a caller that already knows what they are.
 func (f Filters) matchesAs(r *Result, state BaselineState) bool {
@@ -85,7 +82,7 @@ func (f Filters) matchesAs(r *Result, state BaselineState) bool {
 	return stateless.matches(r)
 }
 
-// WantsAbsent reports whether the filter asks for fixed findings, which the
+// WantsAbsent reports whether the filter asks for absent findings, which the
 // caller must add to the listing from the baseline: they exist nowhere in the
 // current report.
 func (f Filters) WantsAbsent() bool {
@@ -215,23 +212,19 @@ func MatchesRuleID(full string, values []string) bool {
 	return false
 }
 
-// fingerprintValue returns the result's partialFingerprints value under key, or
-// "" when the key is absent or its value is empty. When key is empty the default
-// identity key is used — the same one triage resolves prefixes against, so a
-// fingerprint shown in the listing can always be pasted into triage --accept.
-func fingerprintValue(r *Result, key string) string {
-	if key == "" {
-		key = DefaultIdentityKey
-	}
-	v, _ := Identity(r, key)
+// fingerprintValue returns the result's identity fingerprint, or "" when the
+// result carries none. It is the same value triage resolves prefixes against,
+// so a fingerprint shown in the listing can always be pasted into
+// triage --accept.
+func fingerprintValue(r *Result) string {
+	v, _ := Identity(r, IdentityKey)
 	return v
 }
 
-// matchFingerprint reports whether the result's partialFingerprints value under
-// key has any supplied value as a prefix (git short-hash style). When key is
-// empty the default key is used.
-func matchFingerprint(r *Result, key string, prefixes []string) bool {
-	val := fingerprintValue(r, key)
+// matchFingerprint reports whether the result's identity fingerprint has any
+// supplied value as a prefix (git short-hash style).
+func matchFingerprint(r *Result, prefixes []string) bool {
+	val := fingerprintValue(r)
 	if val == "" {
 		return false
 	}

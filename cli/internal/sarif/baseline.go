@@ -12,11 +12,9 @@ type Comparison struct {
 	states  map[*Result]BaselineState
 	changes map[*Result]Change
 
-	// key is the identity fingerprint the comparison ran under, and
-	// changesByIdentity records what moved per identity value. Together they
-	// let a filtered view — which holds copies of the classified results —
-	// recover the change attribution by fingerprint rather than by pointer.
-	key               string
+	// changesByIdentity records what moved per identity value. It lets a
+	// filtered view — which holds copies of the classified results — recover
+	// the change attribution by fingerprint rather than by pointer.
 	changesByIdentity map[string]Change
 
 	// remnantsByIdentity records, per absent identity value, what the current
@@ -30,8 +28,8 @@ type Comparison struct {
 	// ChangeCounts holds the number of Updated results per kind of change, so a
 	// report can say a source moved rather than only that something did.
 	ChangeCounts map[Change]int
-	// Absent lists the baseline results that no longer appear — the fixed
-	// findings. They are reported, never written back into the current report.
+	// Absent lists the baseline results that no longer appear. They are
+	// reported, never written back into the current report.
 	Absent []*Result
 	// NotRun lists baseline results whose rule did not run in the current scan,
 	// so their absence says nothing about whether they were fixed. Counting them
@@ -93,35 +91,26 @@ func (c Change) Label() string {
 
 // Remnant is the evidence that an absent baseline finding may still exist in
 // the current report under a different identity. An absence only proves that
-// the hash is gone, and the hash changes when the code around the finding
-// moves. So the comparison looks for what remains of the finding before the
-// summary claims "fixed".
+// the hash is gone, and the hash changes when the code it covers moves. So the
+// comparison looks for what remains of the finding before the summary reports
+// the absence as a plain fact.
 type Remnant string
 
 const (
 	// RemnantNone means nothing in the current report points at the finding.
-	// The summary reports it as fixed.
 	RemnantNone Remnant = ""
-	// RemnantSameSink means a current result carries the same fingerprint
-	// under a coarser key, so the sink is still reported. The identity
-	// changed, the finding did not go away.
-	RemnantSameSink Remnant = "sink"
-	// RemnantSameRuleFile means a new current result reports the same rule in
-	// the same file. That is a hint, not proof: the absent finding may have
-	// moved and taken its hash with it, or the new finding may be unrelated.
-	RemnantSameRuleFile Remnant = "moved"
+	// RemnantDrifted means a new current result reports the same rule in the
+	// same file. That is a hint, not proof: the absent finding may have moved
+	// and taken its hash with it, or the new finding may be unrelated.
+	RemnantDrifted Remnant = "drifted"
 )
 
 // Label describes a remnant in the words a report uses.
 func (r Remnant) Label() string {
-	switch r {
-	case RemnantSameSink:
-		return "sink still reported"
-	case RemnantSameRuleFile:
-		return "possibly moved"
-	default:
-		return ""
+	if r == RemnantDrifted {
+		return "possibly drifted"
 	}
+	return ""
 }
 
 // RemnantOf returns what the current report still shows of an absent finding.
@@ -131,7 +120,7 @@ func (c *Comparison) RemnantOf(r *Result) Remnant {
 	if c == nil || c.remnantsByIdentity == nil {
 		return RemnantNone
 	}
-	id, ok := Identity(r, c.key)
+	id, ok := Identity(r, IdentityKey)
 	if !ok {
 		return RemnantNone
 	}
@@ -171,64 +160,61 @@ func (c *Comparison) ChangeOf(r *Result) Change {
 // changeOfIdentity looks up what moved under a result by its identity value,
 // for results that are copies of the ones the comparison classified and so
 // miss the pointer-keyed map. Two updated results sharing one identity share
-// one recorded change, which is the coarse key's usual granularity.
+// one recorded change, which is the identity's granularity.
 func (c *Comparison) changeOfIdentity(r *Result) Change {
 	if c == nil || c.changesByIdentity == nil {
 		return ChangeNone
 	}
-	id, ok := Identity(r, c.key)
+	id, ok := Identity(r, IdentityKey)
 	if !ok {
 		return ChangeNone
 	}
 	return c.changesByIdentity[id]
 }
 
-// CompareToBaseline classifies every result in current against baseline, using
-// key as the identity fingerprint. Results that match are additionally compared
-// on the full-trace fingerprint to tell "unchanged" from "updated".
-//
-// A baseline that holds results but none carrying key is rejected: silently
-// classifying everything as new would hide exactly the findings a baseline
-// exists to remember.
-// CheckBaselineIdentity reports whether the baseline can be compared under the
-// given identity key. A baseline that holds results but none carrying the key
-// was produced with a different fingerprint key or without fingerprints, and
-// comparing against it would silently classify every finding as new. The check
-// is cheap, so callers that pay for a scan before comparing can run it first.
-func CheckBaselineIdentity(baseline *Report, key string) error {
+// CheckBaselineIdentity reports whether the baseline can be compared at all. A
+// baseline that holds results but none carrying the identity fingerprint was
+// produced without fingerprints, and comparing against it would silently
+// classify every finding as new — hiding exactly the findings a baseline
+// exists to remember. The check is cheap, so callers that pay for a scan
+// before comparing can run it first.
+func CheckBaselineIdentity(baseline *Report) error {
 	results := baseline.Results()
 	if len(results) == 0 {
 		return nil
 	}
 	for _, r := range results {
-		if _, ok := Identity(r, key); ok {
+		if _, ok := Identity(r, IdentityKey); ok {
 			return nil
 		}
 	}
 	return fmt.Errorf(
 		"no result in the baseline carries the %q fingerprint: "+
-			"it was produced with a different fingerprint key or without fingerprints", key)
+			"it was produced without fingerprints, or by an analyzer too old to emit this one", IdentityKey)
 }
 
-func CompareToBaseline(current, baseline *Report, key string) (*Comparison, error) {
+// CompareToBaseline classifies every result in current against baseline. The
+// sink hash is the identity. Results that match are additionally compared on
+// the finer fingerprints to tell "unchanged" from "updated" and to say what
+// moved.
+func CompareToBaseline(current, baseline *Report) (*Comparison, error) {
 	baselineResults := baseline.Results()
 
 	byIdentity := make(map[string][]*Result, len(baselineResults))
 	for _, r := range baselineResults {
-		id, ok := Identity(r, key)
+		id, ok := Identity(r, IdentityKey)
 		if !ok {
 			continue
 		}
 		byIdentity[id] = append(byIdentity[id], r)
 	}
 	if len(baselineResults) > 0 && len(byIdentity) == 0 {
-		return nil, CheckBaselineIdentity(baseline, key)
+		return nil, CheckBaselineIdentity(baseline)
 	}
 
 	cmp := &Comparison{
 		states:             make(map[*Result]BaselineState),
 		changes:            make(map[*Result]Change),
-		key:                key,
 		changesByIdentity:  make(map[string]Change),
 		remnantsByIdentity: make(map[string]Remnant),
 		Counts:             make(map[BaselineState]int),
@@ -236,10 +222,9 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		BaselineGUID:       baseline.RunGUID(),
 	}
 
-	refinements := finerKeys(key)
 	matched := make(map[string]bool, len(byIdentity))
 	for _, r := range current.Results() {
-		id, ok := Identity(r, key)
+		id, ok := Identity(r, IdentityKey)
 		if !ok {
 			cmp.Unmatchable++
 			continue
@@ -253,7 +238,7 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		}
 
 		matched[id] = true
-		change := changeUnder(r, previous, refinements)
+		change := changeUnder(r, previous)
 		state := Updated
 		if change == ChangeNone {
 			state = Unchanged
@@ -286,28 +271,15 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 }
 
 // attributeAbsent records, for every absent finding, whatever the current
-// report still shows of it. Exact evidence first: a match under a coarser
-// fingerprint proves the sink is still reported. Then the heuristic: a new
-// finding of the same rule in the same file suggests the finding moved and
-// its hash moved with it.
+// report still shows of it: a new finding of the same rule in the same file
+// suggests the absent finding moved and its hash moved with it.
 func (c *Comparison) attributeAbsent(current *Report) {
 	if len(c.Absent) == 0 {
 		return
 	}
 
-	currentResults := current.Results()
-	valuesUnder := map[string]map[string]bool{}
-	for _, key := range coarserKeys(c.key) {
-		values := make(map[string]bool, len(currentResults))
-		for _, r := range currentResults {
-			if v, ok := Identity(r, key); ok {
-				values[v] = true
-			}
-		}
-		valuesUnder[key] = values
-	}
 	newRuleFiles := map[string]bool{}
-	for _, r := range currentResults {
+	for _, r := range current.Results() {
 		if c.states[r] != New {
 			continue
 		}
@@ -317,23 +289,12 @@ func (c *Comparison) attributeAbsent(current *Report) {
 	}
 
 	for _, r := range c.Absent {
-		remnant := RemnantNone
-		for _, key := range coarserKeys(c.key) {
-			if v, ok := Identity(r, key); ok && valuesUnder[key][v] {
-				remnant = RemnantSameSink
-				break
-			}
-		}
-		if remnant == RemnantNone {
-			if rf, ok := ruleFileKey(r); ok && newRuleFiles[rf] {
-				remnant = RemnantSameRuleFile
-			}
-		}
-		if remnant == RemnantNone {
+		rf, ok := ruleFileKey(r)
+		if !ok || !newRuleFiles[rf] {
 			continue
 		}
-		if id, ok := Identity(r, c.key); ok {
-			c.remnantsByIdentity[id] = remnant
+		if id, ok := Identity(r, IdentityKey); ok {
+			c.remnantsByIdentity[id] = RemnantDrifted
 		}
 	}
 }
@@ -352,7 +313,7 @@ func ruleFileKey(r *Result) (string, bool) {
 }
 
 // WithAbsent returns a shallow copy of the report whose first run also carries
-// the given baseline results, each stamped absent. It exists so that the fixed
+// the given baseline results, each stamped absent. It exists so that the absent
 // findings — which live in the baseline and never in the current report — can be
 // listed on request. Only the display path calls it. The copies never reach a
 // report that is written back.
@@ -369,10 +330,10 @@ func (report *Report) WithAbsent(absent []*Result) *Report {
 	results := make([]Result, 0, len(run.Results)+len(absent))
 	results = append(results, run.Results...)
 	for _, r := range absent {
-		fixed := *r
+		gone := *r
 		state := Absent
-		fixed.BaselineState = &state
-		results = append(results, fixed)
+		gone.BaselineState = &state
+		results = append(results, gone)
 	}
 	run.Results = results
 	out.Runs[0] = run
@@ -381,7 +342,7 @@ func (report *Report) WithAbsent(absent []*Result) *Report {
 
 // executedRuleIDs returns the ids of the rules the run declares it executed, or
 // nil when the report declares none — in which case nothing can be said about
-// which rules ran and every unmatched baseline finding is treated as fixed.
+// which rules ran and every unmatched baseline finding is treated as absent.
 func (report *Report) executedRuleIDs() map[string]bool {
 	ids := map[string]bool{}
 	for i := range report.Runs {
@@ -408,11 +369,11 @@ func ranInCurrentScan(r *Result, executed map[string]bool) bool {
 }
 
 // changeUnder reports the coarsest thing that moved below a finding's identity.
-// The refinements are ordered nearest-first, so the first one that differs is
+// The refining keys are ordered nearest-first, so the first one that differs is
 // the most meaningful description of the change: a source that moved is worth
 // saying even though the path moved along with it.
-func changeUnder(current *Result, previous []*Result, refinements []string) Change {
-	for _, key := range refinements {
+func changeUnder(current *Result, previous []*Result) Change {
+	for _, key := range refiningKeys {
 		if sameUnder(current, previous, key) {
 			continue
 		}

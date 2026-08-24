@@ -37,7 +37,7 @@ func TestSummaryBaselineGroup(t *testing.T) {
 		makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")),
 		makeResult("fresh", Error, "b.java", 2, fp("id-fresh", "trace-fresh")),
 	)
-	cmp, err := CompareToBaseline(report, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(report, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -47,7 +47,7 @@ func TestSummaryBaselineGroup(t *testing.T) {
 		Comparison:   cmp,
 	})
 
-	for _, want := range []string{"Baseline", "reports/main.sarif", "New", "Unchanged", "Fixed"} {
+	for _, want := range []string{"Baseline", "reports/main.sarif", "New", "Unchanged", "Absent"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in summary:\n%s", want, out)
 		}
@@ -59,38 +59,35 @@ func TestSummaryBaselineGroup(t *testing.T) {
 
 func TestSummaryBaselineGroupHedgesAbsencesWithRemnants(t *testing.T) {
 	baseline := makeReport(
-		// The identity drifts but the sink hash survives: provably still there.
-		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-old", "trace-old")),
-		// Everything drifts, and a new same-rule finding sits in the same file.
-		makeResult("b", Error, "b.java", 2, fps("sink-b-old", "src-b-old", "trace-b-old")),
+		// The sink hash drifts, and a new same-rule finding sits in the same file.
+		makeResult("a", Error, "a.java", 1, fps("sink-a-old", "src-a-old", "trace-a-old")),
 		// Genuinely gone.
 		makeResult("c", Error, "c.java", 3, fps("sink-c", "src-c", "trace-c")),
 	)
 	report := makeReport(
-		makeResult("a", Error, "a.java", 1, fps("sink-a", "src-new", "trace-new")),
-		makeResult("b", Error, "b.java", 4, fps("sink-b-new", "src-b-new", "trace-b-new")),
+		makeResult("a", Error, "a.java", 4, fps("sink-a-new", "src-a-new", "trace-a-new")),
 	)
-	cmp, err := CompareToBaseline(report, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(report, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
 
 	out := renderSummary(t, report, &TriageView{BaselinePath: "b.sarif", Comparison: cmp})
 
-	for _, want := range []string{"Gone, sink still reported", "Gone, possibly moved", "Fixed"} {
+	for _, want := range []string{"Possibly drifted", "Absent"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in summary:\n%s", want, out)
 		}
 	}
-	if strings.Count(out, "Fixed") != 1 {
-		t.Errorf("exactly one Fixed line expected:\n%s", out)
+	if strings.Count(out, "Absent") != 1 {
+		t.Errorf("exactly one Absent line expected:\n%s", out)
 	}
 }
 
 func TestSummaryBaselineGroupOmitsZeroUpdated(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	report := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
-	cmp, _ := CompareToBaseline(report, baseline, SourceSinkFingerprintKey)
+	cmp, _ := CompareToBaseline(report, baseline)
 
 	out := renderSummary(t, report, &TriageView{BaselinePath: "b.sarif", Comparison: cmp})
 	if strings.Contains(out, "Updated") {
@@ -104,7 +101,7 @@ func TestSummaryBaselineGroupOmitsZeroUpdated(t *testing.T) {
 func TestSummaryBaselineGroupReportsUnmatchable(t *testing.T) {
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
 	report := makeReport(makeResult("nofp", Error, "b.java", 2, nil))
-	cmp, _ := CompareToBaseline(report, baseline, SourceSinkFingerprintKey)
+	cmp, _ := CompareToBaseline(report, baseline)
 
 	out := renderSummary(t, report, &TriageView{BaselinePath: "b.sarif", Comparison: cmp})
 	if !strings.Contains(out, "Not comparable") {
@@ -168,7 +165,7 @@ func TestRestrictCountsOnlyWhatTheFilterKept(t *testing.T) {
 		makeResult("xss", Error, "b.java", 2, fp("id-fresh", "trace-fresh")), // new
 	), "sql", "xss")
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -187,10 +184,10 @@ func TestRestrictCountsOnlyWhatTheFilterKept(t *testing.T) {
 	// Two baseline findings are gone (id-b under xss, id-gone under sql). The
 	// filter keeps only the xss one.
 	if got := restricted.Comparison.Counts[Absent]; got != 1 {
-		t.Errorf("Fixed = %d, want 1: only the xss finding survives the filter", got)
+		t.Errorf("Absent = %d, want 1: only the xss finding survives the filter", got)
 	}
 	if got := view.Comparison.Counts[Absent]; got != 2 {
-		t.Errorf("unrestricted Fixed = %d, want 2", got)
+		t.Errorf("unrestricted Absent = %d, want 2", got)
 	}
 	if got := restricted.Suppressions.Total; got != 1 {
 		t.Errorf("Suppressions.Total = %d, want 1", got)
@@ -205,7 +202,7 @@ func TestRestrictKeepsFixedFindingsTheFilterNames(t *testing.T) {
 	baseline := makeReport(makeResult("sql", Error, "c.java", 3, fp("id-gone", "trace-gone")))
 	current := withRules(makeReport(), "sql")
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}
@@ -214,12 +211,12 @@ func TestRestrictKeepsFixedFindingsTheFilterNames(t *testing.T) {
 	filters := Filters{BaselineStates: []string{"absent"}}
 	restricted := view.Restrict(current.Filter(filters), filters)
 	if got := restricted.Comparison.Counts[Absent]; got != 1 {
-		t.Errorf("Fixed = %d, want 1", got)
+		t.Errorf("Absent = %d, want 1", got)
 	}
 
 	other := Filters{BaselineStates: []string{"new"}}
 	if got := view.Restrict(current.Filter(other), other).Comparison.Counts[Absent]; got != 0 {
-		t.Errorf("Fixed = %d, want 0 when the filter does not name absent", got)
+		t.Errorf("Absent = %d, want 0 when the filter does not name absent", got)
 	}
 }
 
@@ -227,16 +224,16 @@ func TestDisplayFingerprintIsTheOneTriageResolves(t *testing.T) {
 	r := makeResult("a", Error, "a.java", 1, fp("source-sink-value", "trace-value"))
 	report := makeReport(r)
 
-	shown := fingerprintAbbrev(&report.Runs[0].Results[0], "")
-	resolved, err := ResolvePrefix(report, DefaultIdentityKey, shown)
+	shown := fingerprintAbbrev(&report.Runs[0].Results[0])
+	resolved, err := ResolvePrefix(report, shown)
 	if err != nil {
 		t.Fatalf("the fingerprint the listing shows does not resolve: %v", err)
 	}
 	if len(resolved) != 1 {
 		t.Fatalf("resolved %d results, want 1", len(resolved))
 	}
-	if got, _ := Identity(resolved[0], DefaultIdentityKey); got != "sink-of-source-sink-value" {
-		t.Errorf("resolved %q, want the value under the default key", got)
+	if got, _ := Identity(resolved[0], IdentityKey); got != "sink-of-source-sink-value" {
+		t.Errorf("resolved %q, want the value under the identity key", got)
 	}
 }
 
@@ -252,7 +249,7 @@ func TestRestrictKeepsChangeAttribution(t *testing.T) {
 		makeResult("xss", Warning, "b.java", 2, fp("id-b", "trace-b")),
 	), "sql", "xss")
 
-	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	cmp, err := CompareToBaseline(current, baseline)
 	if err != nil {
 		t.Fatalf("compare: %v", err)
 	}

@@ -18,7 +18,6 @@ const ExitFindings = 2
 type TriageConfig struct {
 	Baseline           string
 	WriteBaselineState bool
-	FingerprintKey     string
 	Accept             []string
 	Defer              []string
 	Unsuppress         []string
@@ -40,7 +39,7 @@ var triageCmd = &cobra.Command{
 
 The sarif-report argument is the path to the report to triage. It is required. Use a report from "opentaint scan". A fingerprint identifies each finding. Thus a decision stays attached when other code changes. The command deletes nothing. An accepted or deferred finding stays in the report. A suppression marks it and keeps the decision and its justification.
 
-To name a finding, give a prefix of its fingerprint, as with a git hash. Use the value that "opentaint summary --show-findings" shows as "Fingerprint:". The two commands read the same key. Thus the value on the screen is the value to paste. The --fingerprint-key flag changes the key for both commands. A prefix that is unknown, or that matches two different values, causes an error. The command does not guess.
+To name a finding, give a prefix of its fingerprint, as with a git hash. Use the value that "opentaint summary --show-findings" shows as "Fingerprint:". The two commands read the same value. Thus the value on the screen is the value to paste. A prefix that is unknown, or that matches two different values, causes an error. The command does not guess.
 
 The command writes the triaged report in place. To write it to a different path, use --output. With --baseline, findings first get the decisions that the baseline recorded for them. Thus a sequence of reports keeps its triage history.
 
@@ -83,7 +82,7 @@ Exit codes:
 func init() {
 	rootCmd.AddCommand(triageCmd)
 
-	addBaselineFlags(triageCmd, &triageFlags.Baseline, &triageFlags.FingerprintKey)
+	addBaselineFlags(triageCmd, &triageFlags.Baseline)
 	triageCmd.Flags().BoolVar(&triageFlags.WriteBaselineState, "write-baseline-state", false, "Persist result.baselineState and run.baselineGuid into the output report (needs --baseline)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Accept, "accept", nil, "Accept the finding with this fingerprint prefix: won't fix (repeatable)")
 	triageCmd.Flags().StringArrayVar(&triageFlags.Defer, "defer", nil, "Defer the finding with this fingerprint prefix: not fixing for now (repeatable)")
@@ -117,16 +116,8 @@ func runTriage(cfg TriageConfig, reportPath string) {
 		out.Fatalf("Failed to load SARIF report: %s", err)
 	}
 
-	// The aliases (sink, source-sink, trace) are expanded once here, so the
-	// listing shows fingerprints under the same full key the decisions resolve.
-	identityKey, err := sarif.ResolveIdentityKey(cfg.FingerprintKey)
-	if err != nil {
-		out.Fatalf("%s", err)
-	}
-
 	opts := triage.Options{
 		WriteBaselineState: cfg.WriteBaselineState,
-		FingerprintKey:     identityKey,
 		Accept:             cfg.Accept,
 		Defer:              cfg.Defer,
 		Unsuppress:         cfg.Unsuppress,
@@ -166,7 +157,6 @@ func runTriage(cfg TriageConfig, reportPath string) {
 	printSarifSummary(report, outputPath, sarif.Filters{}, sarif.ListingOptions{
 		MaxNestingLevel: -1,
 		ShowSuppressed:  cfg.ShowSuppressed,
-		FingerprintKey:  identityKey,
 	}, outcome.View, cfg.ShowFindings)
 
 	exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report, outcome.View)

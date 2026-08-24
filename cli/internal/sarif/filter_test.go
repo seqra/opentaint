@@ -36,16 +36,17 @@ func TestMatchSeverity(t *testing.T) {
 
 func TestMatchFingerprint(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, map[string]string{
-		DefaultIdentityKey: "abc123def456",
+		IdentityKey: "abc123def456",
 	})
-	if !matchFingerprint(&r, "", []string{"abc123"}) {
-		t.Error("expected git-style prefix match on default key")
+	if !matchFingerprint(&r, []string{"abc123"}) {
+		t.Error("expected git-style prefix match")
 	}
-	if matchFingerprint(&r, "", []string{"zzz"}) {
+	if matchFingerprint(&r, []string{"zzz"}) {
 		t.Error("expected non-prefix not to match")
 	}
-	if matchFingerprint(&r, "missing/key", []string{"abc"}) {
-		t.Error("expected absent key not to match")
+	bare := makeResult("r", Error, "a.java", 1, nil)
+	if matchFingerprint(&bare, []string{"abc"}) {
+		t.Error("expected a result without the identity fingerprint not to match")
 	}
 }
 
