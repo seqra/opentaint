@@ -14,7 +14,6 @@ class SemgrepPythonPatternParserTest {
         return r.pattern
     }
 
-    /** Walks the AST and returns the first pattern matching the predicate, or null. */
     private fun find(p: SemgrepPythonPattern, pred: (SemgrepPythonPattern) -> Boolean): SemgrepPythonPattern? {
         if (pred(p)) return p
         for (c in p.children) find(c, pred)?.let { return it }

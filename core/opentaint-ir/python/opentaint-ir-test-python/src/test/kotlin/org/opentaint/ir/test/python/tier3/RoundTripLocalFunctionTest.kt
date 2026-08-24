@@ -3,17 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for local (nested) function definitions.
- *
- * Local functions are lowered to module-level synthetic functions in PIR.
- * The [roundTripWithLambdas] method handles looking up these extracted
- * functions and emitting them alongside the outer function's reconstruction.
- *
- * 29 test cases covering local function patterns: simple calls, closures,
- * nonlocal writes, multiple inner functions, factory patterns, nested closures,
- * conditional definitions, default parameters, and recursive inner functions.
- */
 @Tag("tier3")
 class RoundTripLocalFunctionTest : RoundTripTestBase() {
 
@@ -267,8 +256,6 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     return f_a(x) + f_b(x) + f_c(x)
     """.trimIndent()
 
-    // ─── Simple local function calls ─────────────────────────
-
     @Test fun `local fn - simple call`() = roundTripWithLambdas("rtlf_simple_call",
         posArgs(listOf(5), listOf(0), listOf(-3)))
 
@@ -277,8 +264,6 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
 
     @Test fun `local fn - call twice (chained)`() = roundTripWithLambdas("rtlf_simple_call_twice",
         posArgs(listOf(5), listOf(0), listOf(-1)))
-
-    // ─── Closure over parameter ──────────────────────────────
 
     @Test fun `local fn - closure over param add`() = roundTripWithLambdas("rtlf_closure_param_add",
         posArgs(listOf(3), listOf(0), listOf(-5)))
@@ -289,15 +274,11 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     @Test fun `local fn - closure over param concat`() = roundTripWithLambdas("rtlf_closure_param_concat",
         posArgs(listOf("Hello, ", "World"), listOf("Hi ", "there"), listOf("", "test")))
 
-    // ─── Closure over local variable ─────────────────────────
-
     @Test fun `local fn - closure over local var`() = roundTripWithLambdas("rtlf_closure_local_var",
         posArgs(emptyList()))
 
     @Test fun `local fn - closure over local compound`() = roundTripWithLambdas("rtlf_closure_local_compound",
         posArgs(emptyList()))
-
-    // ─── Nonlocal writes ─────────────────────────────────────
 
     @Test fun `local fn - nonlocal counter`() = roundTripWithLambdas("rtlf_nonlocal_counter",
         posArgs(emptyList()))
@@ -308,15 +289,11 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     @Test fun `local fn - nonlocal toggle`() = roundTripWithLambdas("rtlf_nonlocal_toggle",
         posArgs(emptyList()))
 
-    // ─── Multiple inner functions ────────────────────────────
-
     @Test fun `local fn - multiple inner fns`() = roundTripWithLambdas("rtlf_multiple_inner_fns",
         posArgs(listOf(2), listOf(0), listOf(5)))
 
     @Test fun `local fn - multiple inner ops`() = roundTripWithLambdas("rtlf_multiple_inner_ops",
         posArgs(listOf(3), listOf(0), listOf(-4)))
-
-    // ─── Factory pattern ─────────────────────────────────────
 
     @Test fun `local fn - factory adder`() = roundTripWithLambdas("rtlf_factory_adder",
         posArgs(listOf(5, 10), listOf(0, 0), listOf(-3, 7)))
@@ -324,15 +301,11 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     @Test fun `local fn - factory multiplier`() = roundTripWithLambdas("rtlf_factory_multiplier",
         posArgs(listOf(3, 4), listOf(0, 5), listOf(-2, 3)))
 
-    // ─── Nested closures — 3 levels ─────────────────────────
-
     @Test fun `local fn - nested three levels add`() = roundTripWithLambdas("rtlf_nested_three_levels",
         posArgs(listOf(1, 2, 3), listOf(0, 0, 0), listOf(10, 20, 30)))
 
     @Test fun `local fn - nested three levels mul`() = roundTripWithLambdas("rtlf_nested_three_mul",
         posArgs(listOf(2, 3, 4), listOf(1, 1, 1), listOf(0, 5, 3)))
-
-    // ─── Local function with multiple args ───────────────────
 
     @Test fun `local fn - inner multi args`() = roundTripWithLambdas("rtlf_inner_multi_args",
         posArgs(emptyList()))
@@ -340,15 +313,11 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     @Test fun `local fn - inner weighted`() = roundTripWithLambdas("rtlf_inner_weighted",
         posArgs(listOf(3, 4), listOf(0, 0), listOf(1, 1)))
 
-    // ─── Conditional local function ──────────────────────────
-
     @Test fun `local fn - conditional def int`() = roundTripWithLambdas("rtlf_conditional_def",
         posArgs(listOf(1), listOf(-1), listOf(0)))
 
     @Test fun `local fn - conditional def str`() = roundTripWithLambdas("rtlf_conditional_def_str",
         posArgs(listOf(1), listOf(-1), listOf(0)))
-
-    // ─── Local function with default params ──────────────────
 
     @Test fun `local fn - default param`() = roundTripWithLambdas("rtlf_inner_default_param",
         posArgs(emptyList()))
@@ -359,35 +328,20 @@ def rtlf_multi_instance_three_adders(a: int, b: int, c: int, x: int) -> int:
     @Test fun `local fn - multi defaults`() = roundTripWithLambdas("rtlf_inner_multi_defaults",
         posArgs(emptyList()))
 
-    // ─── Accumulator pattern ─────────────────────────────────
-
     @Test fun `local fn - accumulator sum`() = roundTripWithLambdas("rtlf_accumulator_sum",
         posArgs(emptyList()))
-
-    // ─── Inner calls inner ───────────────────────────────────
 
     @Test fun `local fn - inner calls inner`() = roundTripWithLambdas("rtlf_inner_calls_inner",
         posArgs(listOf(5), listOf(0), listOf(-3)))
 
-    // ─── Recursive inner function ────────────────────────────
-
     @Test fun `local fn - recursive inner factorial`() = roundTripWithLambdas("rtlf_recursive_inner",
         posArgs(listOf(5), listOf(1), listOf(0)))
-
-    // ─── Inner function in loop ──────────────────────────────
 
     @Test fun `local fn - inner in loop`() = roundTripWithLambdas("rtlf_inner_in_loop",
         posArgs(listOf(4), listOf(1), listOf(0)))
 
-    // ─── Wrapper / decorator-like pattern ────────────────────
-
     @Test fun `local fn - wrapper pattern`() = roundTripWithLambdas("rtlf_wrapper_pattern",
         posArgs(listOf(3), listOf(0), listOf(-2)))
-
-    // ─── Multi-instance closures ─────────────────────────────
-    // Each test builds the same lifted nested function multiple times. If
-    // binds shared a single wrapper, later binds would clobber earlier
-    // `_closure_env_` state and the result would diverge from the original.
 
     @Test fun `local fn - multi instance two adders`() = roundTripWithLambdas("rtlf_multi_instance_two_adders",
         posArgs(listOf(1, 10, 5), listOf(0, 0, 0), listOf(-3, 7, 2)))

@@ -15,7 +15,7 @@ class PIRApplicationGraph(
     }
 
     override fun callers(method: PIRFunction): Sequence<PIRInstruction> =
-        emptySequence()  // Not needed for forward analysis
+        emptySequence()
 
     override fun methodOf(node: PIRInstruction): PIRFunction =
         node.location.method

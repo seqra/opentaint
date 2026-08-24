@@ -107,7 +107,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         if (endEllipsis && second.actions.isEmpty() && first.actions.lastOrNull() is MethodExit) {
             endEllipsis = false
         }
-        // A leading "..." (empty list, both flags) contributes only the beginning flag.
         val beginEllipsis = first.hasEllipsisInTheBeginning
         return SemgrepPatternActionList(
             first.actions + second.actions,
@@ -149,11 +148,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         )
     }
 
-    /**
-     * Bare attribute read `recv.attr` modeled as a synthetic, zero-arg method call whose name
-     * carries [PythonLanguageStrategy.ATTR_READ_AUX_FN_PREFIX]; rule generation unpacks it into
-     * an attribute target. The result is left unbound here — an enclosing assignment binds it.
-     */
     private fun transformAttributeRead(attr: Attribute): SemgrepPatternActionList {
         val attrName = (attr.name as? ConcreteName)?.name
             ?: transformationFailed("AttributeRead_name_metavar")
@@ -180,7 +174,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         return joinElementModifier(recvActions)
     }
 
-    /** Appends [PythonLanguageStrategy.INDEX_AUX_FIELD_NAME] onto the last action's result modifier. */
     private fun joinElementModifier(recvActions: List<SemgrepPatternAction>): SemgrepPatternActionList {
         val currentFieldModifiers = mutableListOf<String>()
         val resultWithoutModifier = recvActions.last().result
@@ -228,18 +221,10 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         val enclosing: TypeConstraint?,
     )
 
-    /**
-     * Lowers a receiver of an attribute read / method call into prefix actions plus the condition
-     * to match it against. A bare metavar or an all-concrete dotted path bind directly; a
-     * metavar-based chain (`$A.attr1.attr2`) is recursively lowered into artificial-metavar-bound
-     * prefix actions so `$A.attr1.attr2.call1()` becomes `$T1 = $A.attr1; $T2 = $T1.attr2; ... $T2.call1()`.
-     */
     private fun resolveReceiver(recv: SemgrepPythonPattern): ReceiverBinding {
         if (recv is Metavar) {
             return ReceiverBinding(emptyList(), IsMetavar(MetavarAtom.create(recv.name)), null)
         }
-        // Keep the concrete-path check first so `a.b.c.func(...)` stays a qualified enclosing name
-        // rather than being split into chained temporaries.
         concreteDottedNameOrNull(recv)?.let {
             return ReceiverBinding(emptyList(), ParamCondition.True, pythonNamed(it))
         }
@@ -248,7 +233,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         return ReceiverBinding(actions, obj, null)
     }
 
-    /** All-concrete dotted path (`os`, `flask.views`) or null. */
     private fun concreteDottedNameOrNull(pattern: SemgrepPythonPattern): String? = when (pattern) {
         is Identifier -> (pattern.name as? ConcreteName)?.name
         is Attribute -> {
@@ -319,8 +303,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
         else -> "*->$i"
     }
 
-    /** Returns (prefix actions, condition?). A simple value yields (emptyList, cond). A complex
-     *  sub-expression yields its actions with the last result bound to a fresh artificial metavar. */
     private fun transformPatternIntoParamConditionWithActions(
         pattern: SemgrepPythonPattern,
     ): Pair<List<SemgrepPatternAction>, ParamCondition?> {
@@ -378,7 +360,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
 
         if (target is TupleExpr) transformationFailed("Assignment_tuple_target")
 
-        // Only metavar targets bind a result; attribute/subscript stores are not modeled.
         val name = when {
             target is Metavar -> target.name
             target is Identifier && target.name is MetavarName -> (target.name as MetavarName).name

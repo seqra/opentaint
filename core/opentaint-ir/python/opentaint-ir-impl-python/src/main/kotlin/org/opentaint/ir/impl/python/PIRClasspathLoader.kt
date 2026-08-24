@@ -11,14 +11,6 @@ import org.opentaint.ir.impl.python.proto.PIRServiceGrpc
 import org.opentaint.ir.impl.python.proto.PingRequest
 import java.util.concurrent.TimeUnit
 
-/**
- * Boots the Python `pir_server` subprocess, opens the gRPC channel, performs
- * the version handshake, streams the project build, and assembles the result
- * into an immutable [PIRClasspathImpl].
- *
- * On any failure during loading, the underlying process and channel are
- * released before the exception propagates.
- */
 class PIRClasspathLoader(private val settings: PIRSettings) {
 
     fun load(): PIRClasspathImpl {
@@ -69,10 +61,6 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
 
     private data class Versions(val pythonVersion: String, val mypyVersion: String)
 
-    /**
-     * Pings the server with retries — the gRPC channel may need time to connect
-     * after the server reports READY.
-     */
     private fun handshake(processManager: PIRProcessManager, channel: ManagedChannel): Versions {
         val maxRetries = 5
         var lastException: Exception? = null
@@ -114,7 +102,6 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
         while (iterator.hasNext()) {
             val astModuleProto = iterator.next()
 
-            // Modules with build errors become PIRUnknownModule
             if (astModuleProto.errorsCount > 0) {
                 val diagnostics = astModuleProto.errorsList.map {
                     PIRDiagnostic(
@@ -134,7 +121,6 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
             result.add(FlatToPirConverter(flatWithClosure).convert())
             count++
 
-            // Progress logging every 10 seconds
             val now = System.nanoTime()
             if (now - lastLog >= 10_000_000_000L) {
                 System.err.println("PIR: Built $count modules ($unknownCount unknown)...")

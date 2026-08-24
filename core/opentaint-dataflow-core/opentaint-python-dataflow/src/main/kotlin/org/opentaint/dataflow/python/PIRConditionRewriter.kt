@@ -21,13 +21,6 @@ import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr.ContainsMarkLite
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRCallArgKind
 
-/**
- * Rewrites a compiled [PythonRuleCondition] against the concrete [call] it is checked at.
- * `ContainsMark` becomes a taint-fact literal; an `arg(*)` ([AnyArgument]) `ContainsMark` is
- * unpacked here into an OR over the call's explicit (positional + keyword) arguments (the
- * signature can't be trusted for Python varargs). Every other (basic) atom is decided to a constant true/false by
- * [PIRBasicAtomEvaluator]. Mirrors `GoRuleConditionRewriter`.
- */
 class PIRConditionRewriter(
     private val anyArgumentResolver: AnyArgumentResolver,
     private val atomEvaluator: PIRBasicAtomEvaluator,
@@ -66,7 +59,6 @@ class PIRConditionRewriter(
         return if (result) trueExpr else falseExpr
     }
 
-    /** `ContainsMark` over `arg(*)` = mark on some explicit (positional or keyword) argument of the concrete call. */
     private fun expandAnyArgument(
         pos: Position,
         build: (Position) -> PythonRuleCondition,

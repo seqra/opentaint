@@ -8,38 +8,13 @@ interface PIRLocation : CommonInstLocation {
     val index: Int
 }
 
-/**
- * Base for all PIR instructions.
- */
 sealed interface PIRInstruction: CommonInst {
     fun <T> accept(visitor: PIRInstVisitor<T>): T
 
     override val location: PIRLocation
 
-    /**
-     * Optional source-level span. Separate from [location], which is the
-     * structural identity of the instruction inside its CFG. `null` when the
-     * instruction has no associated source position (e.g. synthetic
-     * instructions emitted by transforms, or proto entries that don't carry
-     * one).
-     */
     val physicalLocation: PIRPhysicalLocation?
 
-    /**
-     * PIR instruction data classes must use identity-based equality, not structural equality.
-     *
-     * Reason: structurally identical instructions from different methods (e.g. two
-     * `PIRReturn(value=null)`) must NOT be considered equal — the dataflow engine
-     * keys MethodEntryPoints by instruction identity, and value-equality would
-     * conflate them across methods and corrupt AccessPathBaseStorage.
-     *
-     * Implementors override equals/hashCode to use identity (=== / System.identityHashCode).
-     *
-     * Do not use the synthesized `copy()` on instructions: it would alias the same
-     * [PIRLocation] across the original and the copy, so any subsequent re-binding
-     * of the location's owning method silently affects both. If you ever need a
-     * structural clone, build a fresh [PIRLocation] for the copy.
-     */
 }
 
 sealed interface PIRBranchingInst : PIRInstruction {
@@ -49,16 +24,9 @@ sealed interface PIRBranchingInst : PIRInstruction {
 
 sealed interface PIRTerminatingInst : PIRInstruction
 
-/**
- * Base for all PIR expressions (right-hand sides of assignments).
- * [PIRValue] subtypes (locals, constants) are also expressions.
- * Compound expressions (binary ops, comparisons, attribute loads, etc.) extend this.
- */
 sealed interface PIRExpr : org.opentaint.ir.api.common.cfg.CommonExpr {
     override val typeName: String get() = "expr"
 }
-
-// ─── Assignment (target = expr) ─────────────────────────────
 
 data class PIRAssign(
     val target: PIRLocalVar,
@@ -70,10 +38,6 @@ data class PIRAssign(
     override fun hashCode() = System.identityHashCode(this)
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitAssign(this)
 }
-
-
-
-// ─── Binary Expressions ────────────────────────────────────
 
 sealed interface PIRBinaryExpr : PIRExpr {
     val left: PIRValue
@@ -94,8 +58,6 @@ data class PIRBitXorExpr(override val left: PIRValue, override val right: PIRVal
 data class PIRLShiftExpr(override val left: PIRValue, override val right: PIRValue) : PIRBinaryExpr
 data class PIRRShiftExpr(override val left: PIRValue, override val right: PIRValue) : PIRBinaryExpr
 
-// ─── Unary Expressions ─────────────────────────────────────
-
 sealed interface PIRUnaryExpr : PIRExpr {
     val operand: PIRValue
 }
@@ -104,8 +66,6 @@ data class PIRNegExpr(override val operand: PIRValue) : PIRUnaryExpr
 data class PIRPosExpr(override val operand: PIRValue) : PIRUnaryExpr
 data class PIRNotExpr(override val operand: PIRValue) : PIRUnaryExpr
 data class PIRInvertExpr(override val operand: PIRValue) : PIRUnaryExpr
-
-// ─── Compare Expressions ───────────────────────────────────
 
 sealed interface PIRCompareExpr : PIRExpr {
     val left: PIRValue
@@ -123,8 +83,6 @@ data class PIRIsNotExpr(override val left: PIRValue, override val right: PIRValu
 data class PIRInExpr(override val left: PIRValue, override val right: PIRValue) : PIRCompareExpr
 data class PIRNotInExpr(override val left: PIRValue, override val right: PIRValue) : PIRCompareExpr
 
-// ─── Other Expressions ─────────────────────────────────────
-
 data class PIRSubscriptExpr(
     val obj: PIRValue,
     val index: PIRValue,
@@ -140,32 +98,9 @@ data class PIRStringExpr(val parts: List<PIRValue>) : PIRExpr
 data class PIRIterExpr(val iterable: PIRValue) : PIRExpr
 data class PIRTypeCheckExpr(val value: PIRValue, val checkType: PIRType) : PIRExpr
 
-/**
- * Binds a lifted nested function or lambda to a local. Materializes the
- * function value at the site where the `def` / `lambda` syntactically appears
- * in the source. The closure transform may follow this with a
- * [PIRStoreAttr] writing `_closure_env_` on the bound local.
- *
- * The [function] is a structural name reference, not a value — it identifies
- * which lifted function to bind, but does not denote a runtime read.
- */
 data class PIRBindFunctionExpr(val function: PIRGlobalNameRef) : PIRExpr
 
-// ─── Name Resolution (read) ─────────────────────────────────
-
-/**
- * Resolves a name reference ([PIRGlobalNameRef] / [PIRModuleNameRef]) to its
- * runtime value. Materialized as the RHS of a [PIRAssign] by the Flat → PIR
- * converter wherever Flat IR carries a raw name. The discriminator between a
- * global read and a module read is the [ref]'s subtype.
- *
- * The [ref] is a structural name reference, not a value — like
- * [PIRBindFunctionExpr], it identifies a name to resolve rather than denoting
- * an operand read of a function-local slot.
- */
 data class PIRReadNameExpr(val ref: PIRNameRef) : PIRExpr
-
-// ─── Memory Store (side-effecting, no result) ───────────────
 
 data class PIRLoadAttr(
     val target: PIRLocalVar,
@@ -227,8 +162,6 @@ data class PIRStoreClosure(
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitStoreClosure(this)
 }
 
-// ─── Call ───────────────────────────────────────────────────
-
 data class PIRCall(
     val target: PIRLocalVar?,
     val callee: PIRValue,
@@ -249,8 +182,6 @@ data class PIRCallArg(
 )
 
 enum class PIRCallArgKind { POSITIONAL, KEYWORD, STAR, DOUBLE_STAR }
-
-// ─── Iteration ──────────────────────────────────────────────
 
 data class PIRNextIter(
     val target: PIRLocalVar,
@@ -284,8 +215,6 @@ data class PIRUnpack(
     override fun hashCode() = System.identityHashCode(this)
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitUnpack(this)
 }
-
-// ─── Control Flow (Terminators) ─────────────────────────────
 
 data class PIRGoto(
     val targetBlock: Int,
@@ -356,8 +285,6 @@ data class PIRExceptHandler(
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitExceptHandler(this)
 }
 
-// ─── Generators & Async ─────────────────────────────────────
-
 data class PIRYield(
     val target: PIRLocalVar?,
     val value: PIRValue?,
@@ -390,8 +317,6 @@ data class PIRAwait(
     override fun hashCode() = System.identityHashCode(this)
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitAwait(this)
 }
-
-// ─── Delete ─────────────────────────────────────────────────
 
 data class PIRDeleteLocal(
     val local: PIRLocalVar,
@@ -435,8 +360,6 @@ data class PIRDeleteGlobal(
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitDeleteGlobal(this)
 }
 
-// ─── Misc ───────────────────────────────────────────────────
-
 data object PIRUnreachable : PIRInstruction, PIRTerminatingInst {
     override val location: PIRLocation = object : PIRLocation {
         override val method: PIRFunction get() = error("Unreachable instruction has no method")
@@ -446,22 +369,14 @@ data object PIRUnreachable : PIRInstruction, PIRTerminatingInst {
     override fun <T> accept(visitor: PIRInstVisitor<T>): T = visitor.visitUnreachable(this)
 }
 
-// ─── Helper extensions for checking expression types ────────
-
-/** Check if this instruction is an assignment with a specific expression type. */
 inline fun <reified E : PIRExpr> PIRInstruction.isAssignOf(): Boolean =
     this is PIRAssign && this.expr is E
 
-/** Get the expression from an assignment, cast to the expected type. Returns null if not matching. */
 inline fun <reified E : PIRExpr> PIRInstruction.assignExprOrNull(): E? =
     (this as? PIRAssign)?.expr as? E
 
-/** Filter instructions for assignments with a specific expression type. */
 inline fun <reified E : PIRExpr> Iterable<PIRInstruction>.filterAssignOf(): List<PIRAssign> =
     filterIsInstance<PIRAssign>().filter { it.expr is E }
-
-// ─── Typed accessor extensions for PIRAssign ────────────────
-// These allow `assign.binExpr`, `assign.compareExpr` etc. for convenient access.
 
 val PIRAssign.binaryExpr: PIRBinaryExpr get() = expr as PIRBinaryExpr
 val PIRAssign.unaryExpr: PIRUnaryExpr get() = expr as PIRUnaryExpr

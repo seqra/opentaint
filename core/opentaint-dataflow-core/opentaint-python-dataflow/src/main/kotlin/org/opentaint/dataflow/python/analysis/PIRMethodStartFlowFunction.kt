@@ -12,12 +12,6 @@ import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.util.onSome
 
-/**
- * Python equivalent of `JIRMethodStartFlowFunction` — simpler because Python
- * entry-point rules have no condition evaluator, no type checking, and only
- * cover the `propagateZero` direction (entry-point sources inject taint on
- * method entry).
- */
 class PIRMethodStartFlowFunction(
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,

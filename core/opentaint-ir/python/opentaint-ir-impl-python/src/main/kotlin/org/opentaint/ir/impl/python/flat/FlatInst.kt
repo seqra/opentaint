@@ -2,24 +2,6 @@ package org.opentaint.ir.impl.python.flat
 
 import org.opentaint.ir.api.python.PIRPhysicalLocation
 
-/**
- * A single instruction inside a [FlatBlock].
- *
- * Each concrete subtype dispatches via [accept] to the matching `visit*`
- * method on [FlatInstVisitor]. Common shape queries — operand list, target
- * substitution — are implemented on top of the visitor: see
- * [FlatInst.targets], [FlatInst.mapOperand], and [FlatInst.mapTarget].
- *
- * [physicalLocation] is the source-level span of the instruction, or `null`
- * when no source position is associated (synthetic instructions, module-init
- * assignments unwrapped from their `MypyStmtProto`, etc.).
- *
- * **Equality.** [FlatInst] data classes use the synthesized structural
- * equality, which now includes [physicalLocation]. Two otherwise-identical
- * instructions emitted from different source spans are NOT equal. Analyzers
- * that need shape-level deduplication should compare on operands/targets
- * directly (see [FlatInstShape]) rather than using `==` on whole instructions.
- */
 sealed interface FlatInst {
     val physicalLocation: PIRPhysicalLocation?
     fun <R> accept(visitor: FlatInstVisitor<R>): R
@@ -40,13 +22,6 @@ data class FlatLoadSubscript(val target: FlatValue, val obj: FlatValue, val inde
 data class FlatStoreSubscript(val obj: FlatValue, val index: FlatValue, val value: FlatValue, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitStoreSubscript(this)
 }
-/**
- * Resolves a [FlatNameRef] (global or module) and writes the result into
- * [target]. The single instruction kind for "read a global" / "read a
- * module"; the discriminator is the [ref]'s subtype. Lowering chains
- * cross-module access into a `FlatReadName` root plus a `FlatLoadAttr`
- * chain.
- */
 data class FlatReadName(val target: FlatValue, val ref: FlatNameRef, override val physicalLocation: PIRPhysicalLocation? = null) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitReadName(this)
 }
@@ -54,8 +29,8 @@ data class FlatStoreGlobal(val ref: FlatGlobalNameRef, val value: FlatValue, ove
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitStoreGlobal(this)
 }
 data class FlatBindFunction(
-    val target: FlatValue,             // local that receives the bound function
-    val function: FlatGlobalNameRef,   // structural name of the lifted function
+    val target: FlatValue,
+    val function: FlatGlobalNameRef,
     override val physicalLocation: PIRPhysicalLocation? = null,
 ) : FlatInst {
     override fun <R> accept(visitor: FlatInstVisitor<R>): R = visitor.visitBindFunction(this)
@@ -157,10 +132,8 @@ enum class FlatUnaryOperator { NEG, POS, NOT, INVERT }
 enum class FlatCompareOperator { EQ, NE, LT, LE, GT, GE, IS, IS_NOT, IN, NOT_IN }
 enum class FlatArgKind { POSITIONAL, KEYWORD, STAR, DOUBLE_STAR }
 
-/** A single basic block: a label, a straight-line list of instructions, and the exception handlers in scope. */
 data class FlatBlock(val label: Int, val instructions: List<FlatInst>, val exceptionHandlers: List<Int>)
 
-/** The CFG of one function-like scope. */
 data class FlatCFG(val blocks: List<FlatBlock>, val entryBlock: Int, val exitBlocks: List<Int>) {
     companion object {
         val EMPTY = FlatCFG(

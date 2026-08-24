@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for mixed/complex patterns.
- * 55 test cases covering algorithms, combined patterns, edge cases.
- */
 @Tag("tier3")
 class RoundTripMixedTest : RoundTripTestBase() {
 
@@ -728,8 +724,6 @@ def rtm_matrix_diagonal_sum(matrix: list) -> int:
         i = i + 1
     return total
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `mixed - binary search`() = roundTrip("rtm_binary_search",
         posArgs(listOf(listOf(1, 3, 5, 7, 9), 5), listOf(listOf(1, 3, 5, 7, 9), 4), listOf(listOf(1), 1)))

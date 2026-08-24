@@ -5,11 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for the walrus operator (:= assignment expression).
- * This operator assigns a value to a variable as part of an expression.
- * The IR should lower it to a PIRAssign + use of the assigned value.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class WalrusOperatorTest : PIRTestBase() {
@@ -73,8 +68,6 @@ def w_in_assert(x: int) -> int:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Basic walrus tests ────────────────────────────────
-
     @Test fun `walrus in if produces assign for n`() {
         val assigns = insts("w_simple_if").filterIsInstance<PIRAssign>()
         assertTrue(assigns.isNotEmpty(), "Expected PIRAssign for walrus operator")
@@ -92,7 +85,6 @@ def w_in_assert(x: int) -> int:
 
     @Test fun `walrus simple assign produces multiple assigns`() {
         val assigns = insts("w_simple_assign").filterIsInstance<PIRAssign>()
-        // z := x*2 produces assign, then y = z + z produces another
         assertTrue(assigns.size >= 2,
             "Expected >= 2 assigns for walrus + outer assign, got ${assigns.size}")
     }
@@ -103,8 +95,6 @@ def w_in_assert(x: int) -> int:
         assertTrue(assigns.isNotEmpty(), "Expected PIRAssign for walrus")
         assertTrue(binOps.size >= 2, "Expected >= 2 BinOps for n + n + n, got ${binOps.size}")
     }
-
-    // ─── Walrus in compound expressions ────────────────────
 
     @Test fun `walrus in condition chain produces assign before branch`() {
         val allInsts = insts("w_in_condition_chain")
@@ -120,12 +110,9 @@ def w_in_assert(x: int) -> int:
 
     @Test fun `nested walrus produces 3 assigns`() {
         val assigns = insts("w_nested").filterIsInstance<PIRAssign>()
-        // c := x+1, b := c+2, a = b+3
         assertTrue(assigns.size >= 3,
             "Expected >= 3 assigns for nested walrus, got ${assigns.size}")
     }
-
-    // ─── Walrus in comprehension ───────────────────────────
 
     @Test fun `walrus in list comp has function structure`() {
         val f = func("w_in_list_comp")
@@ -133,8 +120,6 @@ def w_in_assert(x: int) -> int:
         val allInsts = insts("w_in_list_comp")
         assertTrue(allInsts.isNotEmpty(), "Expected instructions in walrus comp function")
     }
-
-    // ─── Walrus in ternary ─────────────────────────────────
 
     @Test fun `walrus in ternary produces assigns`() {
         val assigns = insts("w_in_ternary").filterIsInstance<PIRAssign>()
@@ -146,8 +131,6 @@ def w_in_assert(x: int) -> int:
         assertTrue(branches.isNotEmpty(), "Expected PIRBranch for ternary condition")
     }
 
-    // ─── Walrus in assert ──────────────────────────────────
-
     @Test fun `walrus in assert produces assign`() {
         val allInsts = insts("w_in_assert")
         assertTrue(allInsts.any { it is PIRAssign }, "Expected PIRAssign for walrus in assert")
@@ -157,8 +140,6 @@ def w_in_assert(x: int) -> int:
         val branches = insts("w_in_assert").filterIsInstance<PIRBranch>()
         assertTrue(branches.isNotEmpty(), "Expected PIRBranch for assert condition")
     }
-
-    // ─── General structural checks ─────────────────────────
 
     @Test fun `all walrus functions have valid CFGs`() {
         val funcNames = listOf(
@@ -176,7 +157,6 @@ def w_in_assert(x: int) -> int:
 
     @Test fun `walrus in while has loop structure`() {
         val allInsts = insts("w_in_while")
-        // While loop should have branch + goto (back edge)
         assertTrue(allInsts.any { it is PIRBranch } || allInsts.any { it is PIRGoto },
             "Expected loop structure (branch or goto) in while with walrus")
     }

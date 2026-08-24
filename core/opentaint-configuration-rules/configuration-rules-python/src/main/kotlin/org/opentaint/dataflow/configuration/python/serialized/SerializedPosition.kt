@@ -19,30 +19,16 @@ import kotlinx.serialization.descriptors.buildSerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-/**
- * Base position of a value the rule talks about: a positional arg, a keyword arg,
- * the implicit `self` receiver, the call result, or a class-scoped attribute
- * (e.g. `class(flask.request)` denotes accessing `flask.request` inside the rule's scope).
- */
 @Serializable(with = PythonPositionBaseSerializer::class)
 sealed interface PythonPositionBase {
-    /** `arg(N)` or `arg(*)` (the wildcard form is only valid in entry-point rules). */
     data class Argument(val idx: Int?) : PythonPositionBase
 
-    /** `kwarg(name)` — a keyword argument by name. */
     data class KwArgument(val name: String) : PythonPositionBase
 
-    /** `this` — the implicit receiver of a method call. */
     data object This : PythonPositionBase
 
-    /** `result` — the return value of a call (or the value of an `attribute:` access). */
     data object Result : PythonPositionBase
 
-    /**
-     * `class(fqn)` — references a value accessible via fully-qualified class/attribute path.
-     * In the Python config this appears only as `class(flask.request)` to taint accesses
-     * to `flask.request` inside entry-point methods.
-     */
     data class ClassRef(val fqn: String) : PythonPositionBase
 
     fun serializedStr(): String = when (this) {
@@ -92,16 +78,6 @@ object PythonPositionBaseSerializer : KSerializer<PythonPositionBase> {
     }
 }
 
-/**
- * A position, optionally extended with access-path modifiers (currently only `[*]` —
- * "any element of the collection"). YAML may encode this either as a scalar (no
- * modifiers) or as a list whose first element is the base.
- *
- * Example list form:
- *   pos:
- *   - kwarg(messages)
- *   - '[*]'
- */
 @Serializable(with = PythonPositionSerializer::class)
 sealed interface PythonPosition {
     val base: PythonPositionBase
@@ -117,10 +93,8 @@ sealed interface PythonPosition {
 }
 
 sealed interface PythonPositionModifier {
-    /** `[*]` — any array element at this position. */
     data object ArrayElement : PythonPositionModifier
 
-    /** `.<name>` — access the named attribute/field of the value at this position. */
     data class Field(val name: String) : PythonPositionModifier
 
     fun serializedStr(): String = when (this) {

@@ -88,16 +88,6 @@ class PIRMethodCallFlowFunction(
         return result
     }
 
-
-    /**
-     * Shared logic for both zero-to-fact and fact-to-fact propagation at call sites.
-     * Handles sinks, pass-through rules, and call-to-start mapping.
-     *
-     * [T] is the specific CallFact subtype ([ZeroCallFact] or [FactCallFact]).
-     * [mkCallToReturnFact] creates a call-to-return fact from a rebased fact.
-     * [mkCallToStartFact] creates a call-to-start fact from (callerFact, startBase).
-     * [mkUnchanged] creates the "unchanged" fact to keep in caller frame.
-     */
     override fun propagateFact(
         initialFacts: Set<InitialFactAp>,
         exclusion: ExclusionSet,

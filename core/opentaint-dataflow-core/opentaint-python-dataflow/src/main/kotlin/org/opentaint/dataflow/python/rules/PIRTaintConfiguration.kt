@@ -16,14 +16,6 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonPa
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSink
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonSource
 
-/**
- * Per-method / per-attribute Python taint rule lookup. Holds the parsed
- * [SerializedPythonTaintConfig] and delegates to
- * [MethodTaintConfigurationResolver] to compile rules against a
- * concrete [PIRFunction] (or attribute name) on demand. Mirrors the JVM
- * `TaintConfiguration` shape — rules are not materialised eagerly, and
- * the result of each lookup is cached on the matched key.
- */
 class PIRTaintConfiguration() {
     private val entryPoint: MutableList<SerializedPythonEntryPointSource> = mutableListOf()
     private val source: MutableList<SerializedPythonSource> = mutableListOf()
@@ -77,7 +69,6 @@ class PIRTaintConfiguration() {
             }
         }
 
-
     fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> =
         cleanersByMethod.cached(method) { MethodTaintConfigurationResolver(it).resolveCleaners(cleaner) }
 
@@ -93,7 +84,6 @@ class PIRTaintConfiguration() {
     fun cleanersForAttribute(name: String): List<TaintCleaner> =
         cleanersByAttribute.cached(name) { MethodTaintConfigurationResolver(method = null).resolveAttributeCleaners(cleaner, it) }
 
-    /** Canonicalises empty results to the shared [emptyList] singleton to avoid per-key allocations. */
     private inline fun <K : Any, V> ConcurrentHashMap<K, List<V>>.cached(key: K, crossinline resolve: (K) -> List<V>): List<V> =
         computeIfAbsent(key) { resolve(it).ifEmpty { emptyList() } }
 }

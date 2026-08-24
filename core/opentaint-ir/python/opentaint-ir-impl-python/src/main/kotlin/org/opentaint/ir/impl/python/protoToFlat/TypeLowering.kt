@@ -5,10 +5,6 @@ import org.opentaint.ir.impl.python.proto.MypyArgumentProto
 import org.opentaint.ir.impl.python.proto.MypyExprProto
 import org.opentaint.ir.impl.python.proto.PIRTypeProto
 
-/**
- * Stateless conversions of mypy proto types and constants into Flat IR.
- * No state, no side effects — safe to call from anywhere in the pipeline.
- */
 internal object TypeLowering {
 
     fun convertType(proto: PIRTypeProto): FlatType = when (proto.kindCase) {
@@ -56,7 +52,6 @@ internal object TypeLowering {
             )
         }
 
-    /** Map mypy's integer ARG_KIND enum into [FlatParamKind]. */
     private fun paramKind(kind: Int): FlatParamKind = when (kind) {
         0, 1 -> FlatParamKind.POSITIONAL_OR_KEYWORD     // ARG_POS, ARG_OPT
         2 -> FlatParamKind.VAR_POSITIONAL               // ARG_STAR
@@ -65,10 +60,6 @@ internal object TypeLowering {
         else -> FlatParamKind.POSITIONAL_OR_KEYWORD
     }
 
-    /**
-     * Evaluate a literal expression as a [FlatConst]. Returns null for anything
-     * that isn't a compile-time constant.
-     */
     fun constFromExpr(expr: MypyExprProto): FlatConst? = when (expr.kindCase) {
         MypyExprProto.KindCase.INT_EXPR -> FlatIntConst(expr.intExpr.value)
         MypyExprProto.KindCase.FLOAT_EXPR -> FlatFloatConst(expr.floatExpr.value)

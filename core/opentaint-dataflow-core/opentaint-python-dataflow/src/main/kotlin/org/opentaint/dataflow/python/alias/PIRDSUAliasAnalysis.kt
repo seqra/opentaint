@@ -35,20 +35,6 @@ import org.opentaint.ir.api.python.PIRTupleExpr
 import org.opentaint.ir.api.python.PIRValue
 import org.opentaint.ir.api.python.PythonNames
 
-/**
- * DSU alias simulator — port of the JVM `DSUAliasAnalysis`, dispatching directly
- * on PIR instructions (PIR is already a clean normalized form, so no separate
- * Stmt/Expr IR is built). Supports inter-procedural inlining bounded by
- * [PIRLocalAliasAnalysis.Params.aliasAnalysisInterProcCallDepth]: a resolved
- * callee is analyzed from the caller's current state with its parameters
- * substituted by the caller-frame actuals.
- *
- * Deviation requested by the user: when a call is NOT resolved (library / unknown
- * callee), it is opaque — we assign a fresh [CallReturn] to the lhs and leave the
- * heap alias state untouched (no JVM `invalidateOuterHeapAliases`).
- *
- * Member order mirrors the JVM `DSUAliasAnalysis` to ease side-by-side review.
- */
 class PIRDSUAliasAnalysis(
     private val methodCallResolver: CallResolver,
     private val cancellation: AnalysisCancellation,
@@ -56,7 +42,6 @@ class PIRDSUAliasAnalysis(
     private val aliasManager = AAInfoManager()
     private val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
 
-    /** Reserved name-only heap field recording a bound method's receiver: `t.$PIR_SELF ~ obj`. */
     private val selfField = AliasAccessor.Field("\$PIR_SELF")
 
     private class DsuMergeStrategy(private val manager: AAInfoManager) : IntDisjointSets.RankStrategy {
@@ -98,7 +83,7 @@ class PIRDSUAliasAnalysis(
         is PIRStoreAttr -> handleStoreAttr(inst, callFrame, state)
         is PIRStoreSubscript -> handleStoreSubscript(inst, callFrame, state)
         is PIRCall -> evalCall(inst, state, callFrame)
-        else -> state // no alias effect (control flow, raise, return, ...)
+        else -> state
     }
 
     private fun evalCall(inst: PIRCall, state: State, callFrame: CallTreeNode): State {
@@ -107,8 +92,6 @@ class PIRDSUAliasAnalysis(
             evalResolvedCall(inst, state, callFrame, resolved)?.let { return it }
         }
 
-        // Opaque call: assign a fresh CallReturn to the lhs, leave heap aliases
-        // untouched (no invalidateOuterHeapAliases — the requested deviation).
         val target = inst.target ?: return state
         val lValue = callFrame.instEvalCtx.createLocal(target.index)
         val info = aliasSetFromInfo(CallReturn(inst.location.index, callFrame.ctx))
@@ -139,21 +122,9 @@ class PIRDSUAliasAnalysis(
         return State.merge(aliasManager, dsuMergeStrategy, statesAfterCall)
     }
 
-    /** Resolved callee is a constructor body — an instance `__init__` of a class. */
     private fun isConstructor(method: PIRFunction): Boolean =
         method.name == PythonNames.INIT_METHOD && method.enclosingClass != null
 
-    /**
-     * Binds an instance method's implicit `self` (callee `Argument(0)`, the unbound
-     * slot `Local(-1, nestedCtx)`) to the call's receiver — the group of
-     * `call.callee.$PIR_SELF`, recorded at the attribute load (see [handleLoadAttr]).
-     * Module/static callees (offset 0) take no receiver and are left unchanged.
-     *
-     * Constructors are skipped: the callee is the *class*, not a bound method, so it
-     * has no receiver and no `$PIR_SELF`. The `self ~ classRef.$PIR_SELF` binding
-     * would be a meaningless (if harmless) junk alias — the constructed object is
-     * tied to `self` through the `return self` value instead (see [mapCallFinalStates]).
-     */
     private fun bindReceiver(
         stateBefore: ImmutableState,
         calleeRef: RefValue?,
@@ -168,14 +139,11 @@ class PIRDSUAliasAnalysis(
         return state.mergeWith(selfSlot.aliasInfo().index(), receiverHeap.index()).asImmutable()
     }
 
-    // ── simple assignment / rhs expression ───────────────────────────────────
-
     private fun handleAssign(inst: PIRAssign, callFrame: CallTreeNode, state: State): State {
         val lValue = callFrame.instEvalCtx.createLocal(inst.target.index)
         return state.removeOldAndMergeWith(lValue.aliasInfo().index(), aliasOfExpr(inst.expr, inst, callFrame, state))
     }
 
-    /** Alias set of an assignment rhs expression. */
     private fun aliasOfExpr(expr: PIRExpr, inst: PIRInstruction, callFrame: CallTreeNode, state: State): AliasSet {
         val freshAlloc = { aliasSetFromInfo(LocalAlias.Alloc(inst.location.index, callFrame.ctx)) }
         return when (expr) {
@@ -186,15 +154,12 @@ class PIRDSUAliasAnalysis(
                 ?.let { evalHeapLoad(it, state, ::createArrayAlias) }
                 ?: aliasSetFromInfo(Unknown(inst.location.index, callFrame.ctx))
 
-            // Fresh objects: container / binary / string literals.
             is PIRListExpr, is PIRTupleExpr, is PIRDictExpr, is PIRSetExpr,
             is PIRBinaryExpr, is PIRStringExpr -> freshAlloc()
 
             else -> aliasSetFromInfo(Unknown(inst.location.index, callFrame.ctx))
         }
     }
-
-    // ── heap load / store ───────────────────────────────────────────────────
 
     private fun evalHeapLoad(instance: RefValue, state: State, heapAppender: (Int) -> HeapAlias): AliasSet {
         val obj = state.heapObj(instance.aliasInfo())
@@ -216,9 +181,6 @@ class PIRDSUAliasAnalysis(
         }
         var result = state.removeOldAndMergeWith(lValue.aliasInfo().index(), rhs)
 
-        // Record the bound-method receiver: `t = obj.f` ⇒ `t.$PIR_SELF ~ obj`. An
-        // inlined call through `t` binds the callee's `self` to this group (see
-        // [bindReceiver]), mirroring the engine's $PIR_SELF receiver encoding.
         if (obj != null) {
             result = evalHeapStore(isFieldStore = true, lValue, aliasSetFromInfo(obj.aliasInfo()), result) {
                 createFieldAlias(it, selfField)
@@ -260,7 +222,6 @@ class PIRDSUAliasAnalysis(
         }
     }
 
-    /** Alias set of a stored value: an aliasing local, or a fresh object for a constant. */
     private fun storeValueAlias(value: PIRValue, inst: PIRInstruction, callFrame: CallTreeNode): AliasSet =
         callFrame.instEvalCtx.refValue(value)
             ?.let { aliasSetFromInfo(it.aliasInfo()) }
@@ -314,8 +275,6 @@ class PIRDSUAliasAnalysis(
         is RefValue.Arg -> true
     }
 
-    // ── inter-procedural call exit ──────────────────────────────────────────
-
     private fun GraphAnalysisState.mapCallFinalStates(
         graph: PIRInstGraph,
         callerLValue: RefValue?,
@@ -351,8 +310,6 @@ class PIRDSUAliasAnalysis(
         is HeapAlias -> false
         else -> error("Impossible aa-info")
     }
-
-    // ── alias-set plumbing (private mirrors of the JVM State extensions) ──────
 
     private fun RefValue.aliasInfo(): AAInfo = LocalAlias.SimpleLoc(this)
 

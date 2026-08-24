@@ -6,10 +6,6 @@ import com.charleskorn.kaml.decodeFromStream
 import kotlinx.serialization.Serializable
 import java.io.InputStream
 
-/**
- * Top-level Python taint configuration document. Each section is optional so that
- * smaller per-library configs can be split across multiple YAML files.
- */
 @Serializable
 data class SerializedPythonTaintConfig(
     val entryPoint: List<SerializedPythonEntryPointSource> = emptyList(),

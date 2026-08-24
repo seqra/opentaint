@@ -46,19 +46,10 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Sample-driven end-to-end test for Python taint rules — Python mirror of
- * [org.opentaint.semgrep.GoSampleBasedTest].
- *
- * Convention: `core/opentaint-python-querylang/samples-py/<RuleName>/` contains:
- *   - `rule.yaml`   — the semgrep rule under test (matching or taint mode)
- *   - `sample.py`   — the fixture, with functions named `Positive_*` (must report
- *                     ≥1 vulnerability when used as entrypoint) and `Negative_*`
- *                     (must report 0).
- *
- * Each sample is built into its own [PIRClasspath] (every file is named `sample.py`,
- * so they cannot share a classpath — the module name would collide). Classpaths are
- * cached per sample dir across @Test methods (PER_CLASS lifecycle) and closed in
- * [tearDown].
+ * Convention: `core/opentaint-python-querylang/samples-py/<RuleName>/` holds `rule.yaml` plus a
+ * `sample.py` whose `Positive_*` functions must report ≥1 vulnerability as entrypoint and whose
+ * `Negative_*` functions must report 0. Each sample gets its own [PIRClasspath] — every file is
+ * named `sample.py`, so they cannot share one.
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PythonSampleBasedTest {
@@ -125,10 +116,8 @@ class PythonSampleBasedTest {
     @Test fun ruleWithInside() = runSample("RuleWithInside")
     @Test fun ruleWithPass() = runSample("RuleWithPass")
 
-    // must-aa is required for cleaner to kill all the facts
     @Ignore @Test fun ruleCookie() = runSample("RuleCookie")
 
-    // cleaner after sink
     @Ignore @Test fun cleanerAfterSink0() = runSample("CleanerAfterSink0")
     @Ignore @Test fun cleanerAfterSink1() = runSample("CleanerAfterSink1")
     @Ignore @Test fun cleanerAfterSink2() = runSample("CleanerAfterSink2")
@@ -136,12 +125,10 @@ class PythonSampleBasedTest {
     @Ignore @Test fun ruleWithNotInsideSuffix() = runSample("RuleWithNotInsideSuffix")
     @Ignore @Test fun rulePatternNotWithSignature() = runSample("RulePatternNotWithSignature")
 
-    // method-chain ellipsis
     @Ignore @Test fun ruleWithEllipsisInvocationAndPatternNot() = runSample("RuleWithEllipsisInvocationAndPatternNot")
     @Ignore @Test fun ruleWithEllipsisMethodInvocation() = runSample("RuleWithEllipsisMethodInvocation")
     @Ignore @Test fun ruleWithMultiplePatternsEllipsisUnification() = runSample("RuleWithMultiplePatternsEllipsisUnification")
 
-    // return sinks
     @Test fun r1() = runSample("R1")
     @Test fun r2() = runSample("R2")
     @Test fun ruleReturn3() = runSample("RuleReturn3")
@@ -162,7 +149,6 @@ class PythonSampleBasedTest {
     @Test fun ruleWithMultiplePatternsUnification() = runSample("RuleWithMultiplePatternsUnification")
     @Test fun trickyPatternNot() = runSample("TrickyPatternNot")
 
-    // chained method calls and return sinks
     @Test fun ruleReturnChained() = runSample("RuleReturnChained")
     @Test fun ruleReturnNotInside() = runSample("RuleReturnNotInside")
     @Test fun ruleReturnNotInsidePrefix() = runSample("RuleReturnNotInsidePrefix")
@@ -174,8 +160,6 @@ class PythonSampleBasedTest {
     @Test fun ruleWithStaticField() = runSample("RuleWithStaticField")
 
     @Test fun subscriptElementSource() = runSample("SubscriptElementSource")
-
-    // ─── Plumbing ───────────────────────────────────────────────────────────
 
     private fun runSample(ruleName: String) {
         val sampleDir = samplesDir.resolve(ruleName)
@@ -221,7 +205,6 @@ class PythonSampleBasedTest {
         }
     }
 
-    /** Reason from a `@TaintRuleFalsePositive("...")` decorator on the entry, or null. */
     private fun PIRFunction.taintRuleFalsePositiveReason(): String? =
         decorators.firstOrNull { it.name == "TaintRuleFalsePositive" }
             ?.arguments?.firstOrNull()

@@ -53,8 +53,6 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `instance-call sink checks its tainted positions`() {
-        // `$DB.execute($Q, ...)` carries taint on the receiver ($DB) and on the argument ($Q);
-        // the emitter produces one mark-checking sink per taint-carrying position.
         val sinks = emit("python-rules/source-sink.yaml")
             .filterIsInstance<SerializedPythonSink>()
             .filter { it.functionTarget() == "execute" }
@@ -80,8 +78,6 @@ class PythonRuleEmitTest {
             .filterIsInstance<SerializedPythonSource>()
             .single()
 
-        // `requests.$METHOD(...)`: concrete enclosing + unconstrained metavar name -> a single
-        // regex matched against the qualified callee.
         assertEquals("""requests\..*""", source.functionTarget())
     }
 
@@ -94,8 +90,6 @@ class PythonRuleEmitTest {
         assertTrue(entryPoint.taint.isNotEmpty(), "entry-point taints at least one parameter position")
     }
 
-    // A `def` pattern with no decorator must stay unconstrained, else it would gate on a decorator
-    // nothing carries and never fire.
     @Test fun `undecorated function-def source has no decorator condition`() {
         val entryPoint = emit("python-rules/entrypoint-def.yaml")
             .filterIsInstance<SerializedPythonEntryPointSource>()
@@ -107,9 +101,6 @@ class PythonRuleEmitTest {
         )
     }
 
-    // `@entry_point def $METHOD(...)` must gate the entry-point source on the decorator. Without it the
-    // rule targets `.*` with no condition, so EVERY function becomes an entry point and its arg0 gets
-    // tainted — the Python-vs-JVM divergence (Java emits MethodAnnotated for the same constraint).
     @Test fun `decorated function-def source is gated on the decorator`() {
         val entryPoint = emit("python-rules/return-sink.yaml")
             .filterIsInstance<SerializedPythonEntryPointSource>()
@@ -125,8 +116,6 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `subscript source taints the result element`() {
-        // `source()[0]`: the subscript adds an element accessor onto the subscripted call's result,
-        // so the source marks `Result[*]` rather than the whole result.
         val source = emit("python-rules/subscript-source.yaml")
             .filterIsInstance<SerializedPythonSource>()
             .single { it.functionTarget() == "source" }
@@ -144,26 +133,19 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `subscript-assignment sink emits no sink (engine gap)`() {
-        // Reproducer for the trustbound / CWE-501 engine gap: the session-write sink
-        // `flask.session[k] = v` is a subscript-STORE. A structural rule whose final (sink) statement
-        // is a subscript-assignment `sess[$A] = $V` cannot be lowered — transformAssignment rejects a
-        // non-metavar (subscript) assignment target (Assignment_target_not_metavar), which collapses the
-        // whole `patterns` block, so ZERO taint rules are emitted. (Even if it did lower, sinks fire only
-        // at calls/attributes — PIRMethodSequentFlowFunction.handleStoreSubscript performs no sink check.)
-        // When store-target sinks become expressible, this assertion flips (emit becomes non-empty) — the
-        // signal to enable the @Disabled trustbound OWASP entries.
+        // trustbound / CWE-501 engine gap: `sess[$A] = $V` as the sink statement cannot be lowered
+        // (transformAssignment rejects a non-metavar target), collapsing the whole `patterns` block
+        // to ZERO rules; sinks also fire only at calls/attributes. When store-target sinks become
+        // expressible this flips — the signal to enable the @Disabled trustbound OWASP entries.
         val all = emitAll("python-rules/subscript-assign-sink.yaml")
         assertTrue(all.isEmpty(), "expected zero emitted rules (subscript-store sink unsupported), got ${all.size}")
     }
 
     @Test fun `return-value sink emits no sink (engine gap)`() {
-        // Reproducer for the xss / CWE-79 engine gap: the XSS sink is the returned HTTP response body
-        // (`RESPONSE += f'...{bar}...'; return RESPONSE`) — a bare `return $A`, not a call. A structural
-        // rule whose sink is `return $A` lowers the source fine but emits ZERO sinks: a return sink is a
-        // MethodExit edge to final-accept, and PythonTaintRuleGeneration errors on it ("Non method call
-        // sinks are not supported yet"). Sinks fire only at calls/attribute reads. So no structural rule
-        // can express OR fire on a return-value sink. When return sinks become expressible this flips
-        // (a SerializedPythonSink appears) — the signal to enable the @Disabled xss OWASP entries.
+        // xss / CWE-79 engine gap: the sink is the returned response body — a bare `return $A`,
+        // not a call. The source lowers but ZERO sinks are emitted (PythonTaintRuleGeneration
+        // errors on non-method-call sinks). When return sinks become expressible this flips — the
+        // signal to enable the @Disabled xss OWASP entries.
         val all = emitAll("python-rules/return-sink.yaml")
         assertTrue(
             all.filterIsInstance<SerializedPythonSource>().isNotEmpty(),
@@ -176,10 +158,6 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `subscript-assignment source binds the metavar to the result element`() {
-        // `$A = source()[0] ... sink($A)`: the metavar assignment must NOT drop the subscript's
-        // element modifier. The source binds `$A` to `Result[*]` (the element), exactly like the
-        // bare taint-mode `source()[0]` form, so an intraprocedural element read / for-loop
-        // iteration of the source result propagates the mark to the sink.
         val source = emit("python-rules/subscript-assign-source.yaml")
             .filterIsInstance<SerializedPythonSource>()
             .single { it.functionTarget() == "source" }
@@ -197,8 +175,6 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `qualified attribute read becomes an attribute-fqn source`() {
-        // `flask.request`: concrete receiver folds ahead of the synthetic name, so the unpacked
-        // attribute target must keep the qualifier (`flask.request`), not collapse to `request`.
         val source = emit("python-rules/attribute-source.yaml")
             .filterIsInstance<SerializedPythonSource>()
             .single { it.attributeTarget() == "flask.request" }
@@ -207,9 +183,6 @@ class PythonRuleEmitTest {
         assertTrue(source.taint.all { it.pos.base == PythonPositionBase.Result }, "attribute read taints the result")
     }
 
-    // A taint-reachability sink is expanded to check every position generically (arg(*)/This), so the
-    // keyword name only survives on a *condition* over that keyword. `run($CMD, shell=True)` keeps
-    // `shell=True` as a constant compare, which must land on kwarg(shell), not the over-broad arg(*).
     @Test fun `constant keyword-arg condition serializes as a named position`() {
         val sink = emitAll("python-rules/kwarg-const.yaml")
             .filterIsInstance<SerializedPythonSink>()
@@ -246,8 +219,6 @@ class PythonRuleEmitTest {
         )
     }
 
-    // Structural (non-`mode: taint`) rules synthesize source/sink from a `patterns:` block and keep
-    // concrete argument positions, so a keyword condition there must also decode to a named position.
     @Test fun `structural rule keyword condition serializes as a named position`() {
         val sink = emitAll("python-rules/kwarg-structural.yaml")
             .filterIsInstance<SerializedPythonSink>()
@@ -260,8 +231,6 @@ class PythonRuleEmitTest {
         )
     }
 
-    // A structural `pattern-not` synthesizes a cleaner (dead-edge). A keyword condition distinguishing
-    // the not-pattern must decode to a named position in the cleaner's guard, else it over-cleans on arg(*).
     @Test fun `structural not-pattern cleaner keyword condition serializes as a named position`() {
         val cleaners = emitAll("python-rules/kwarg-not-cleaner.yaml")
             .filterIsInstance<SerializedPythonCleaner>()
@@ -275,8 +244,6 @@ class PythonRuleEmitTest {
         )
     }
 
-    // The source-mark placement path is the shared TaintRuleStrategy (createAssignMark), distinct from
-    // the sink-condition path — proves the keyword name survives both lowerings, not just conditions.
     @Test fun `focused keyword-arg source taints the named position`() {
         val source = emit("python-rules/kwarg-source.yaml")
             .filterIsInstance<SerializedPythonSource>()
@@ -290,16 +257,11 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `decorated method-signature return pattern lowers to a method-exit sink`() {
-        // `@entry_point def $METHOD(...): $SRC = source() ... return $SRC` combines a method-signature
-        // pattern (with decorator) and an in-body source whose value is returned. It lowers to three
-        // rules: the `source()` call source, the decorated-function entry-point gate, and the return
-        // (method-exit) sink that fires at the analyzed function's own return.
         val rules = emit("python-rules/return-sink.yaml")
 
         val source = rules.filterIsInstance<SerializedPythonSource>().single { it.functionTarget() == "source" }
         assertTrue(source.taint.all { it.pos.base == PythonPositionBase.Result }, "the in-body source taints its result")
 
-        // The `@entry_point`-decorated `def $METHOD(...)` signature yields an entry-point rule.
         assertTrue(
             rules.filterIsInstance<SerializedPythonEntryPointSource>().isNotEmpty(),
             "the decorated method signature yields an entry-point source",
@@ -314,7 +276,6 @@ class PythonRuleEmitTest {
         )
     }
 
-    /** Flattens a condition tree to its leaves, so a test can assert on one kind of predicate. */
     private fun SerializedPythonCondition?.atoms(): List<SerializedPythonCondition> = when (this) {
         null -> emptyList()
         is SerializedPythonCondition.And -> allOf.flatMap { it.atoms() }

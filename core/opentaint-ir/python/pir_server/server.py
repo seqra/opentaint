@@ -1,5 +1,3 @@
-"""gRPC server lifecycle."""
-
 import os
 import sys
 import threading
@@ -10,12 +8,6 @@ from pir_server.proto import pir_pb2_grpc
 
 
 def _parent_watchdog(server):
-    """Monitor parent process. Exit when parent dies or stdin closes.
-
-    When the Kotlin JVM side (our parent) terminates — whether gracefully or
-    via crash/kill — its end of the stdin pipe closes, causing our read to
-    return EOF. We then stop the gRPC server and exit.
-    """
     try:
         # Block until stdin returns EOF (parent died / pipe closed)
         while True:
@@ -25,7 +17,6 @@ def _parent_watchdog(server):
     except Exception:
         pass
 
-    # Parent gone — shut down
     server.stop(grace=2)
     os._exit(0)
 
@@ -42,7 +33,6 @@ def serve(port: int = 0):
     actual_port = server.add_insecure_port(f"127.0.0.1:{port}")
     server.start()
 
-    # Start watchdog thread to detect parent death
     watchdog = threading.Thread(target=_parent_watchdog, args=(server,), daemon=True)
     watchdog.start()
 

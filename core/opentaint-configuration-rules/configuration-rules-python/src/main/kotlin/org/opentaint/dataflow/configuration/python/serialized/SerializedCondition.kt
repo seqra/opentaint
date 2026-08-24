@@ -7,13 +7,6 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
-/**
- * Sink condition predicate. Supports boolean composition (`anyOf` / `allOf` / `not`)
- * and the primitive `ContainsMark` check (`tainted: <kind>` at `pos:`).
- *
- * The shipped Python config only uses `anyOf` + `ContainsMark`; the other operators are
- * kept for parity with the JVM config and future extension.
- */
 @Serializable(with = SerializedPythonConditionSerializer::class)
 sealed interface SerializedPythonCondition {
     @Serializable
@@ -25,37 +18,27 @@ sealed interface SerializedPythonCondition {
     @Serializable
     data class Not(val not: SerializedPythonCondition) : SerializedPythonCondition
 
-    /** `tainted: <kind>` paired with `pos: <position>`. */
     @Serializable
     data class ContainsMark(
         val tainted: String,
         val pos: PythonPosition,
     ) : SerializedPythonCondition
 
-    /** `taintedAny:` — the key the serializer dispatches on; `tainted:` already selects [ContainsMark]. */
     @Serializable
     data class ContainsMarkOnAnyAccessor(
         @SerialName("taintedAny") val tainted: String,
         val pos: PythonPosition,
     ) : SerializedPythonCondition
 
-    /** Call-arity predicate: the matched call passes exactly `n` positional arguments. */
     @Serializable
     data class NumberOfArgs(val n: Int) : SerializedPythonCondition
 
-    /**
-     * The matched function carries the given decorator. A dotted name matches the decorator's
-     * qualified name, a bare one its simple name — the same convention function targets use.
-     * Mirrors the JVM `SerializedCondition.MethodAnnotated`.
-     */
     @Serializable
     data class MethodDecorated(val decorator: String) : SerializedPythonCondition
 
-    /** The matched function's enclosing class has [baseClass] in its MRO. */
     @Serializable
     data class ClassExtends(val baseClass: String) : SerializedPythonCondition
 
-    /** The argument at [pos] is a constant literal comparing [cmp] to [value]. */
     @Serializable
     data class ConstantCmp(
         val pos: PythonPosition,
@@ -63,7 +46,6 @@ sealed interface SerializedPythonCondition {
         val cmp: ConstantCmpType,
     ) : SerializedPythonCondition
 
-    /** The argument at [pos] is a string constant matching the regex [pattern]. */
     @Serializable
     data class ConstantMatches(
         val pos: PythonPosition,

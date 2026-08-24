@@ -6,20 +6,9 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
 import org.opentaint.dataflow.configuration.python.serialized.ItemInfo
 
-/**
- * Compiled (per-`PIRFunction` / per-attribute-name) Python taint-rule
- * representation. Built by the resolver from
- * [org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig].
- *
- * Mirrors the JVM `configuration-rules-jvm/TaintConfigurationItem.kt`
- * shape, except that Python conflates "method" and "attribute" rules
- * under a single [Target] sealed type — the JVM equivalent would be
- * `method: CommonMethod` plus a separate `TaintStaticFieldSource`.
- */
 sealed interface TaintConfigurationItem : CommonTaintConfigurationItem {
     val target: Target
 
-    /** [Condition.ConstantTrue] when the rule has no condition. */
     val condition: PIRCondition
 
     val info: ItemInfo?
@@ -40,7 +29,6 @@ sealed interface TaintConfigurationPassThrough : TaintConfigurationItem {
 sealed interface TaintConfigurationCleaner : TaintConfigurationItem {
     val cleans: List<TaintCleanAction>
 
-    /** `for: <note>` — scopes the cleaner to sinks whose `meta.note` matches. */
     val forCategory: String?
 }
 

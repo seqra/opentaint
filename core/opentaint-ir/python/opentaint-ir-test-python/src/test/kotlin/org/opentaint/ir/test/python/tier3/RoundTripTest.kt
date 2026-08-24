@@ -13,16 +13,6 @@ import org.opentaint.ir.test.python.PIRTestBase
 import java.io.File
 import java.nio.file.Files
 
-/**
- * Tier 3 round-trip tests.
- *
- * All test functions are placed into a SINGLE Python file and analyzed once.
- * For each function:
- *   1. Parse original source → PIR CFG
- *   2. Reconstruct Python source from CFG
- *   3. Execute both original and reconstructed with same inputs
- *   4. Assert outputs match
- */
 @Tag("tier3")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RoundTripTest : PIRTestBase() {
@@ -32,7 +22,6 @@ class RoundTripTest : PIRTestBase() {
     private lateinit var cp: PIRClasspathImpl
 
     companion object {
-        /** All test function sources concatenated into one module. */
         val ALL_SOURCES = """
 def rt_simple_return(x: int) -> int:
     return x + 1
@@ -243,16 +232,12 @@ def rt_build_dict(keys: list, vals: list) -> dict:
         val func = cp.findFunctionOrNull(qualifiedName)
         assertNotNull(func, "Function $qualifiedName not found")
 
-        // Reconstruct Python from CFG
         val reconstructed = reconstructor.reconstruct(func!!)
 
-        // Execute original
         val originalResults = executeFunction(ALL_SOURCES, funcName, inputs)
 
-        // Execute reconstructed
         val reconstructedResults = executeFunction(reconstructed, funcName, inputs)
 
-        // Compare
         for ((i, input) in inputs.withIndex()) {
             val original = originalResults[i]
             val recon = reconstructedResults[i]
@@ -273,8 +258,6 @@ def rt_build_dict(keys: list, vals: list) -> dict:
     private fun posArgs(vararg argSets: List<Any?>): List<Pair<List<Any?>, Map<String, Any?>>> {
         return argSets.map { it to emptyMap() }
     }
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `round trip - simple return`() = roundTrip("rt_simple_return",
         posArgs(listOf(0), listOf(5), listOf(-1), listOf(100)))
@@ -305,8 +288,6 @@ def rt_build_dict(keys: list, vals: list) -> dict:
 
     @Test fun `round trip - list building`() = roundTrip("rt_make_list",
         posArgs(listOf(1, 2, 3), listOf(0, 0, 0), listOf(-1, 0, 1)))
-
-    // ─── New complex round-trip tests ────────────────────────
 
     @Test fun `round trip - while break`() = roundTrip("rt_while_break",
         posArgs(listOf(listOf(1, 2, -1, 3)), listOf(listOf(1, 2, 3)), listOf(listOf(-1, 2, 3))))

@@ -55,18 +55,6 @@ import org.opentaint.ir.api.python.PIRSubscriptExpr
 import org.opentaint.ir.api.python.PIRTupleExpr
 import org.opentaint.ir.api.python.PIRValue
 
-/**
- * Inverse of [org.opentaint.dataflow.python.analysis.PIRMethodSequentFlowFunction]:
- * for [fact] holding after [currentInst], the facts that could have produced it
- * before. Mirrors `GoMethodSequentPrecondition` (structure + accessor read/write
- * inverses); every instruction case inverts the matching forward `handle*`.
- *
- * On a `PIRLoadAttr` this also inverts the attribute rules the forward applies:
- * `sourcesForAttribute` (originating the fact — reported as [SequentSource]) and
- * `passThroughForAttribute` (an ordinary fact-to-fact step). Exit rules on a
- * `PIRReturn` are *sinks*, which start a trace rather than produce a fact, so they
- * have no inverse here.
- */
 class PIRMethodSequentPrecondition(
     private val apManager: ApManager,
     private val currentInst: PIRInstruction,
@@ -99,10 +87,6 @@ class PIRMethodSequentPrecondition(
         attributeSourceRulePrecondition(fact)
     }
 
-    /**
-     * Inverse of `PIRMethodSequentFlowFunction.applySourceRules`: which attribute
-     * source rules could have originated [fact] at this load.
-     */
     private fun MutableSet<SequentPrecondition>.attributeSourceRulePrecondition(fact: InitialFactAp) {
         val inst = currentInst as? PIRLoadAttr ?: return
         val calleeFact = mapFactToAttributeFrame(inst, fact) ?: return
@@ -171,10 +155,6 @@ class PIRMethodSequentPrecondition(
         }
     }
 
-    /**
-     * Inverse of [PIRMethodCallFactMapper.mapLoadAttributeFactToReturn]: lift a fact
-     * from the caller frame into the attribute-load frame the rules are written against.
-     */
     private fun mapFactToAttributeFrame(inst: PIRLoadAttr, fact: InitialFactAp): InitialFactAp? {
         if (fact.base == base(inst.target)) return fact.rebase(AccessPathBase.Return)
 
@@ -224,7 +204,6 @@ class PIRMethodSequentPrecondition(
             is PIRSetExpr -> containerPrecondition(target, expr.elements.mapNotNull { base(it) }, fact)
             is PIRBinaryExpr -> operandsPrecondition(target, listOfNotNull(base(expr.left), base(expr.right)), fact)
             is PIRStringExpr -> operandsPrecondition(target, expr.parts.mapNotNull { base(it) }, fact)
-            // Other compound expression: strong update — kill a fact on the target.
             else -> if (fact.base == target) emptyList() else null
         }
     }
@@ -233,13 +212,12 @@ class PIRMethodSequentPrecondition(
         val target = base(inst.target) ?: return null
         if (fact.base != target) return null
 
-        val objBase = base(inst.obj) ?: return emptyList() // read off a constant: strong-update kill
+        val objBase = base(inst.obj) ?: return emptyList()
         val accessor = mkFieldAccessor(inst.attribute)
 
         val pres = mutableListOf<InitialFactAp>()
         pres += fact.prependAccessor(accessor).rebase(objBase)
 
-        // Inverse of the forward self-binding: target.$PIR_SELF encodes obj as the receiver.
         if (fact.startsWithAccessor(SELF_ACCESSOR)) {
             fact.readAccessor(SELF_ACCESSOR)?.let { pres += it.rebase(objBase) }
         }
@@ -302,7 +280,6 @@ class PIRMethodSequentPrecondition(
         fact: InitialFactAp,
     ): List<InitialFactAp>? {
         if (fact.base != target) return null
-        // Container assignment is a strong update: only an element-prefixed fact survives.
         val stripped = fact.readAccessor(ElementAccessor) ?: return emptyList()
         return elementBases.map { stripped.rebase(it) }
     }

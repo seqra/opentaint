@@ -6,12 +6,6 @@ import org.junit.jupiter.api.Tag
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Edge case tests for the Python IR.
- *
- * Tests unusual or boundary-case Python patterns that might trip up
- * the lowering pipeline.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class EdgeCasesTest : PIRTestBase() {
@@ -262,8 +256,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Empty/minimal function tests ──────────────────────
-
     @Test fun `empty pass function has CFG`() {
         val f = func("ec_empty_pass")
         assertTrue(f.instList.isNotEmpty())
@@ -290,8 +282,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
         assertTrue(assigns.isNotEmpty())
     }
 
-    // ─── Deep nesting tests ────────────────────────────────
-
     @Test fun `deeply nested if produces 5 branches`() {
         val branches = insts("ec_deep_nested_if").filterIsInstance<PIRBranch>()
         assertTrue(branches.size >= 5,
@@ -311,8 +301,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
         assertTrue(nextIters.size >= 4, "Expected >= 4 NextIter, got ${nextIters.size}")
     }
 
-    // ─── Multiple assignment target tests ──────────────────
-
     @Test fun `multi-target assignment produces assigns`() {
         val assigns = insts("ec_multi_target").filterIsInstance<PIRAssign>()
         assertTrue(assigns.size >= 3, "Expected >= 3 assigns for a = b = c = x")
@@ -322,8 +310,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
         val unpacks = insts("ec_swap").filterIsInstance<PIRUnpack>()
         assertTrue(unpacks.isNotEmpty(), "Expected PIRUnpack for a, b = b, a")
     }
-
-    // ─── Try/except edge case tests ────────────────────────
 
     @Test fun `nested try-in-try has multiple handler layers`() {
         val handlers = insts("ec_try_in_try").filterIsInstance<PIRExceptHandler>()
@@ -355,11 +341,8 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
             "Expected blocks with exceptionHandlers in nested try")
     }
 
-    // ─── Loop edge case tests ──────────────────────────────
-
     @Test fun `while True produces branch or no-condition loop`() {
         val f = func("ec_while_true_break")
-        // while True should have at least a goto (back edge) and a goto (break)
         val gotos = insts("ec_while_true_break").filterIsInstance<PIRGoto>()
         assertTrue(gotos.size >= 2, "Expected >= 2 gotos for while True + break")
     }
@@ -381,8 +364,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
             "Expected Branch for outer while-loop")
     }
 
-    // ─── Expression edge case tests ────────────────────────
-
     @Test fun `negative number produces unary neg`() {
         val unary = insts("ec_negative_number").filterAssignOf<PIRUnaryExpr>()
         assertTrue(unary.isEmpty() || unary.any { it.unaryExpr is PIRNegExpr },
@@ -391,7 +372,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
 
     @Test fun `boolean ops produce correct instructions`() {
         val allInsts = insts("ec_boolean_ops")
-        // and/or use branches (short-circuit), not uses UnaryOp(NOT)
         val branches = allInsts.filterIsInstance<PIRBranch>()
         val unary = allInsts.filterAssignOf<PIRUnaryExpr>()
         assertTrue(branches.isNotEmpty() || unary.isNotEmpty(),
@@ -422,18 +402,13 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
             "Expected NOT_IN comparison for 'x not in items'")
     }
 
-    // ─── String tests ──────────────────────────────────────
-
     @Test fun `f-string produces PIRBuildString or equivalent`() {
         val allInsts = insts("ec_fstring")
-        // f-strings might be lowered to PIRBuildString or a series of concatenations
         val buildStrings = allInsts.filterAssignOf<PIRStringExpr>()
         val calls = allInsts.filterIsInstance<PIRCall>()
         assertTrue(buildStrings.isNotEmpty() || calls.isNotEmpty(),
             "Expected PIRBuildString or calls for f-string")
     }
-
-    // ─── Class tests ───────────────────────────────────────
 
     @Test fun `class has methods`() {
         val cls = cp.findClassOrNull("__test__.ECClass")
@@ -463,25 +438,19 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
             "Expected load_attr for self.x")
     }
 
-    // ─── Global tests ──────────────────────────────────────
-
     @Test fun `read global has CFG`() {
         val f = func("ec_read_global")
         assertTrue(f.instList.isNotEmpty())
-        // Global reads may be lowered as LoadGlobal or direct value references
         assertTrue(insts("ec_read_global").any { it is PIRReturn })
     }
 
     @Test fun `write global has CFG`() {
         val f = func("ec_write_global")
         assertTrue(f.instList.isNotEmpty())
-        // Global writes may be lowered as StoreGlobal or direct assigns
         val allInsts = insts("ec_write_global")
         assertTrue(allInsts.any { it is PIRAssign || it is PIRStoreGlobal },
             "Expected assign or store_global for global write")
     }
-
-    // ─── Assert tests ──────────────────────────────────────
 
     @Test fun `assert simple produces branch`() {
         assertTrue(insts("ec_assert_simple").any { it is PIRBranch },
@@ -493,8 +462,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
         assertTrue(calls.any { it.args.isNotEmpty() },
             "Expected call with args for assert message")
     }
-
-    // ─── Delete tests ──────────────────────────────────────
 
     @Test fun `del local produces PIRDeleteLocal`() {
         assertTrue(insts("ec_del_local").any { it is PIRDeleteLocal },
@@ -510,8 +477,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
         assertTrue(insts("ec_del_subscript").any { it is PIRDeleteSubscript },
             "Expected PIRDeleteSubscript for 'del d[key]'")
     }
-
-    // ─── Parameter kinds tests ─────────────────────────────
 
     @Test fun `star args has VAR_POSITIONAL parameter`() {
         val f = func("ec_star_args")

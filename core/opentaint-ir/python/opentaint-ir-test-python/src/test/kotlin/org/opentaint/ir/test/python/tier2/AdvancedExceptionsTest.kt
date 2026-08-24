@@ -101,13 +101,11 @@ def exc_nested_try() -> int:
 
     @Test fun `try-else creates else block`() {
         val f = func("exc_try_else")
-        // Else block should produce additional control flow blocks
         assertTrue(f.cfg.blocks.size >= 3, "try/else should have >= 3 blocks")
     }
 
     @Test fun `try-finally creates finally block`() {
         val f = func("exc_try_finally")
-        // Finally should add blocks
         assertTrue(f.cfg.blocks.size >= 2, "try/finally should have >= 2 blocks")
     }
 

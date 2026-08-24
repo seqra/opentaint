@@ -103,8 +103,6 @@ async def async_yield_multiple(items):
     private inline fun <reified T : PIRInstruction> allOf(name: String): List<T> =
         insts(name).filterIsInstance<T>()
 
-    // ─── 1. async def with await ────────────────────────────
-
     @Test
     fun `fetch_data - isAsync is true`() {
         assertTrue(findFunc("fetch_data").isAsync)
@@ -123,8 +121,6 @@ async def async_yield_multiple(items):
         assertTrue(blocks.flatMap { it.instructions }.isNotEmpty(), "CFG should contain instructions")
     }
 
-    // ─── 2. Multiple awaits ─────────────────────────────────
-
     @Test
     fun `multi_await - emits at least two PIRAwait instructions`() {
         val awaits = allOf<PIRAwait>("multi_await")
@@ -136,8 +132,6 @@ async def async_yield_multiple(items):
     fun `multi_await - isAsync is true`() {
         assertTrue(findFunc("multi_await").isAsync)
     }
-
-    // ─── 3. async for loop ──────────────────────────────────
 
     @Test
     fun `async_for_loop - isAsync is true`() {
@@ -158,8 +152,6 @@ async def async_yield_multiple(items):
         assertTrue(blocks.size >= 3,
             "async for loop should produce >= 3 blocks (header, body, exit), got ${blocks.size}")
     }
-
-    // ─── 4. async with context manager ──────────────────────
 
     @Test
     fun `async_with_mgr - isAsync is true`() {
@@ -184,8 +176,6 @@ async def async_yield_multiple(items):
             "async with should produce __aexit__ or __exit__ PIRLoadAttr, found: ${attrs.map { it.attribute }}")
     }
 
-    // ─── 5. async generator (yield inside async def) ────────
-
     @Test
     fun `async_generator - isAsync and isGenerator`() {
         val f = findFunc("async_generator")
@@ -205,8 +195,6 @@ async def async_yield_multiple(items):
         assertTrue(awaits.isNotEmpty(), "async generator with await should emit PIRAwait")
     }
 
-    // ─── 6. await in conditional bodies ─────────────────────
-
     @Test
     fun `await_in_conditional - has branch and two awaits`() {
         val branches = allOf<PIRBranch>("await_in_conditional")
@@ -220,8 +208,6 @@ async def async_yield_multiple(items):
     fun `await_in_conditional - isAsync is true`() {
         assertTrue(findFunc("await_in_conditional").isAsync)
     }
-
-    // ─── 7. await in try/except ─────────────────────────────
 
     @Test
     fun `await_in_try - isAsync is true`() {
@@ -239,8 +225,6 @@ async def async_yield_multiple(items):
         val handlers = allOf<PIRExceptHandler>("await_in_try")
         assertTrue(handlers.isNotEmpty(), "try/except should emit PIRExceptHandler")
     }
-
-    // ─── 8. async def with only normal code ─────────────────
 
     @Test
     fun `async_with_normal_code - isAsync even without await`() {
@@ -261,16 +245,12 @@ async def async_yield_multiple(items):
         assertTrue(all.any { it is PIRReturn }, "Expected PIRReturn")
     }
 
-    // ─── Additional: chained awaits ─────────────────────────
-
     @Test
     fun `nested_await - emits three PIRAwait instructions`() {
         val awaits = allOf<PIRAwait>("nested_await")
         assertTrue(awaits.size >= 3,
             "Expected >= 3 PIRAwait for chained await calls, got ${awaits.size}")
     }
-
-    // ─── Additional: await in regular for loop ──────────────
 
     @Test
     fun `await_in_loop - has iteration and PIRAwait`() {
@@ -282,8 +262,6 @@ async def async_yield_multiple(items):
         assertTrue(awaits.isNotEmpty(), "await inside for loop body should emit PIRAwait")
     }
 
-    // ─── Additional: async with without as target ───────────
-
     @Test
     fun `async_with_no_as - has enter and exit dunders without as target`() {
         val attrs = insts("async_with_no_as").filterIsInstance<PIRLoadAttr>()
@@ -292,8 +270,6 @@ async def async_yield_multiple(items):
         assertTrue(hasEnter, "async with (no as) should still produce enter dunder, found: ${attrs.map { it.attribute }}")
         assertTrue(hasExit, "async with (no as) should still produce exit dunder, found: ${attrs.map { it.attribute }}")
     }
-
-    // ─── Additional: async generator with multiple yields ───
 
     @Test
     fun `async_yield_multiple - has multiple PIRYield instructions`() {

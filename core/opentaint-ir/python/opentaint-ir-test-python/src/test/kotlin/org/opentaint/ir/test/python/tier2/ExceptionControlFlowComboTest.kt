@@ -5,11 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for complex combinations of exception handling + control flow.
- * These test interactions between try/except/finally and loops, with
- * statements, generators, and other control flow constructs.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ExceptionControlFlowComboTest : PIRTestBase() {
@@ -181,8 +176,6 @@ def ecfc_except_as_in_loop(items: list) -> list:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Break in try ──────────────────────────────────────
-
     @Test fun `break in try has GetIter and Branch`() {
         val allInsts = insts("ecfc_break_in_try")
         assertTrue(allInsts.any { it.isAssignOf<PIRIterExpr>() }, "Expected GetIter for for-loop")
@@ -199,8 +192,6 @@ def ecfc_except_as_in_loop(items: list) -> list:
         assertTrue(gotos.isNotEmpty(), "Expected PIRGoto for break")
     }
 
-    // ─── Continue in except ────────────────────────────────
-
     @Test fun `continue in except has handler and goto`() {
         val allInsts = insts("ecfc_continue_in_except")
         assertTrue(allInsts.any { it is PIRExceptHandler })
@@ -212,8 +203,6 @@ def ecfc_except_as_in_loop(items: list) -> list:
         assertTrue(handlers.any { it.exceptionTypes.isNotEmpty() },
             "Expected typed exception handler for ZeroDivisionError")
     }
-
-    // ─── Return in try/except/finally ──────────────────────
 
     @Test fun `return in try has returns in both paths`() {
         val returns = insts("ecfc_return_in_try").filterIsInstance<PIRReturn>()
@@ -231,15 +220,11 @@ def ecfc_except_as_in_loop(items: list) -> list:
         assertTrue(returns.isNotEmpty(), "Expected return in finally")
     }
 
-    // ─── Try in loop with continue ─────────────────────────
-
     @Test fun `try in loop with continue has loop and handler`() {
         val allInsts = insts("ecfc_try_in_loop_with_continue")
         assertTrue(allInsts.any { it.isAssignOf<PIRIterExpr>() })
         assertTrue(allInsts.any { it is PIRExceptHandler })
     }
-
-    // ─── Nested try with break ─────────────────────────────
 
     @Test fun `nested try with break has multiple handlers`() {
         val handlers = insts("ecfc_nested_try_with_break").filterIsInstance<PIRExceptHandler>()
@@ -247,15 +232,11 @@ def ecfc_except_as_in_loop(items: list) -> list:
             "Expected >= 2 handlers for nested try, got ${handlers.size}")
     }
 
-    // ─── While with try ────────────────────────────────────
-
     @Test fun `while with try has branch and handler`() {
         val allInsts = insts("ecfc_while_with_try")
         assertTrue(allInsts.any { it is PIRBranch }, "Expected Branch for while")
         assertTrue(allInsts.any { it is PIRExceptHandler }, "Expected handler for try")
     }
-
-    // ─── Try-except-else in loop ───────────────────────────
 
     @Test fun `try-except-else in loop has handler and loop`() {
         val allInsts = insts("ecfc_try_except_else_in_loop")
@@ -269,22 +250,16 @@ def ecfc_except_as_in_loop(items: list) -> list:
             "Expected >= 5 blocks for try/except/else in loop, got ${f.cfg.blocks.size}")
     }
 
-    // ─── Try-finally in loop ───────────────────────────────
-
     @Test fun `try-finally in loop has loop structure`() {
         val allInsts = insts("ecfc_try_finally_in_loop")
         assertTrue(allInsts.any { it.isAssignOf<PIRIterExpr>() })
     }
-
-    // ─── Except with raise ─────────────────────────────────
 
     @Test fun `except with re-raise has handler and raise`() {
         val allInsts = insts("ecfc_except_with_raise")
         assertTrue(allInsts.any { it is PIRExceptHandler })
         assertTrue(allInsts.any { it is PIRRaise })
     }
-
-    // ─── Multiple handlers ─────────────────────────────────
 
     @Test fun `multiple except handlers produces 3+ handlers`() {
         val handlers = insts("ecfc_multiple_except_handlers").filterIsInstance<PIRExceptHandler>()
@@ -298,15 +273,11 @@ def ecfc_except_as_in_loop(items: list) -> list:
             "Expected >= 4 returns (try + 3 excepts), got ${returns.size}")
     }
 
-    // ─── Nested finally ────────────────────────────────────
-
     @Test fun `nested finally has multiple blocks`() {
         val f = func("ecfc_nested_finally")
         assertTrue(f.cfg.blocks.size >= 3,
             "Expected >= 3 blocks for nested finally, got ${f.cfg.blocks.size}")
     }
-
-    // ─── Except as in loop ─────────────────────────────────
 
     @Test fun `except as in loop has handler with exception var`() {
         val handlers = insts("ecfc_except_as_in_loop").filterIsInstance<PIRExceptHandler>()
@@ -317,8 +288,6 @@ def ecfc_except_as_in_loop(items: list) -> list:
         val calls = insts("ecfc_except_as_in_loop").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for str(e)")
     }
-
-    // ─── Structural validity ───────────────────────────────
 
     @Test fun `all exception combo functions have valid CFGs`() {
         val funcNames = listOf(

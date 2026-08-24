@@ -1,5 +1,3 @@
-"""Maps mypy Type objects to PIRTypeProto messages."""
-
 from __future__ import annotations
 from mypy.types import (
     Type,
@@ -27,7 +25,6 @@ class TypeMapper:
         if typ is None:
             return pir_pb2.PIRTypeProto(any_type=pir_pb2.PIRAnyTypeProto())
 
-        # Guard against recursive types
         self._depth += 1
         if self._depth > self.MAX_DEPTH:
             self._depth -= 1

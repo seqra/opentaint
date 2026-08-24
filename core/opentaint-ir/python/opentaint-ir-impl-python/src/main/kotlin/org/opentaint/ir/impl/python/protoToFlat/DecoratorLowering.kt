@@ -7,14 +7,6 @@ import org.opentaint.ir.impl.python.proto.MypyExprProto
 import org.opentaint.ir.impl.python.proto.MypyFuncDefProto
 import org.opentaint.ir.impl.python.proto.MypyMemberExprProto
 
-/**
- * Stateless lowering of decorator nodes into [FlatDecorator]. Three source
- * shapes feed in:
- *   - Bare `MypyFuncDefProto.decoratorsList`  — already-summarized decorators.
- *   - `MypyClassDefProto.decoratorsList`      — already-summarized decorators.
- *   - `MypyDecoratorDefProto.originalDecoratorsList` — raw expression nodes
- *     that we re-summarize via [fromExpr].
- */
 internal object DecoratorLowering {
 
     fun fromFuncDef(funcDef: MypyFuncDefProto): List<FlatDecorator> =
@@ -63,10 +55,6 @@ internal object DecoratorLowering {
         return "$prefix.${me.name}"
     }
 
-    /**
-     * Render a literal-ish argument expression as a printable string — mypy's
-     * decorator metadata stores arguments as raw text, not values.
-     */
     private fun exprRepr(expr: MypyExprProto): String = when {
         expr.hasIntExpr() -> expr.intExpr.value.toString()
         expr.hasStrExpr() -> "\"${escape(expr.strExpr.value)}\""

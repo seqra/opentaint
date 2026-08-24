@@ -8,17 +8,6 @@ import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import kotlin.test.assertTrue
 
-/**
- * Suffix invariant: every `FlatFunctionIR` in a lowered module satisfies
- * `qualifiedName.endsWith(name)`. This is the user-facing guarantee of the
- * `FlatGlobalRef` / `PIRGlobalRef` collapse refactor — the bare `name`
- * field is always the suffix of the canonical `qualifiedName`, regardless
- * of whether the function is top-level, a method, a lifted nested def, a
- * lambda, or the synthetic module-init.
- *
- * The fixture exercises every shape (including same-name shadowing
- * siblings, which stress the collision counter).
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FlatFunctionNameSuffixInvariantTest : RawFlatModuleTestBase() {
@@ -81,7 +70,6 @@ class FlatFunctionNameSuffixInvariantTest : RawFlatModuleTestBase() {
         val inner = module.functions.first {
             it.qualifiedName.endsWith(".outer\$inner")
         }
-        // `name` matches the suffix of qualifiedName after the module prefix.
         assertTrue(inner.name == "outer\$inner",
             "nested def short name should be 'outer\$inner', got '${inner.name}'")
     }
@@ -89,7 +77,6 @@ class FlatFunctionNameSuffixInvariantTest : RawFlatModuleTestBase() {
     @Test
     fun `triple-nested def name encodes its full lexical path`() {
         val module = lowerSourceToFlat(source)
-        // outer.deeper_outer.inner — an inner shadowing the sibling of outer.
         val deeplyNested = module.functions.firstOrNull {
             it.name == "outer\$deeper_outer\$inner"
         }
@@ -104,8 +91,6 @@ class FlatFunctionNameSuffixInvariantTest : RawFlatModuleTestBase() {
         val fs = module.functions.filter {
             it.name == "shadowing\$f" || it.name.startsWith("shadowing\$f\$")
         }
-        // Two `def f` inside `shadowing` must produce two distinct
-        // FlatFunctionIRs (else module.functions would have a duplicate name).
         assertTrue(fs.size == 2,
             "expected two shadowing 'f' functions, got ${fs.size}: ${fs.map { it.name }}")
         assertTrue(fs.map { it.name }.toSet().size == 2,

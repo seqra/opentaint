@@ -2,10 +2,6 @@ package org.opentaint.ir.impl.python.flat
 
 import org.opentaint.ir.api.python.PIRDiagnostic
 
-/**
- * Boundary types between proto-to-flat and flat-to-PIR. Pure data, no logic.
- */
-
 enum class FlatFunctionKind {
     MODULE_INIT,
     TOP_LEVEL,
@@ -14,16 +10,6 @@ enum class FlatFunctionKind {
     LAMBDA,
 }
 
-/**
- * A single lexical function-like scope: top-level functions, methods,
- * nested defs, lambdas, and the synthetic module initializer.
- *
- * `nonlocalNames` / `globalNames` capture function-wide `nonlocal` / `global`
- * declarations so later passes don't need to re-walk the source AST.
- * `closureVars` is populated by the closure transform on `NESTED_DEF` /
- * `LAMBDA` functions; always `emptySet()` on raw IR and on closure roots
- * (`TOP_LEVEL` / `METHOD` / `MODULE_INIT`).
- */
 data class FlatFunctionIR(
     val name: String,
     val qualifiedName: String,
@@ -44,7 +30,6 @@ data class FlatFunctionIR(
     val isProperty: Boolean get() = decorators.any { it.name == "property" }
 }
 
-/** A function parameter declaration. Mirrors PIRParameter but lives in Flat IR. */
 data class FlatParameter(
     val name: String,
     val type: FlatType,
@@ -76,7 +61,6 @@ data class FlatClassField(
     val name: String,
     val type: FlatType,
     val isClassVar: Boolean,
-    val hasInitializer: Boolean,
 )
 
 data class FlatClass(
@@ -93,13 +77,6 @@ data class FlatClass(
     val isEnum: Boolean,
 )
 
-/**
- * Raw module-level Flat IR bundle.
- *
- * `functions` is every non-init function-like scope (top-level defs, lambdas,
- * nested defs). The synthetic module initializer is exposed separately via
- * [moduleInit] so consumers don't need to filter on [FlatFunctionKind].
- */
 data class FlatModuleIR(
     val moduleName: String,
     val path: String,

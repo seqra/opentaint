@@ -92,7 +92,6 @@ def ta_no_annotation(x):
 
     @Test fun `Optional maps to union with None or optional flag`() {
         val p = func("ta_optional").parameters[0]
-        // Optional[int] can be either PIRUnionType(int, None) or PIRClassType with isOptional=true
         val isOptional = when (p.type) {
             is PIRUnionType -> true
             is PIRClassType -> (p.type as PIRClassType).isOptional

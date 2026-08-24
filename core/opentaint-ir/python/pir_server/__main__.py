@@ -1,5 +1,3 @@
-"""Entry point: python -m pir_server [--port PORT]"""
-
 import argparse
 import sys
 from pir_server.server import serve

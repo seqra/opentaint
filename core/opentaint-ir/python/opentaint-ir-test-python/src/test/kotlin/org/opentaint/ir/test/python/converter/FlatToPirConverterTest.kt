@@ -8,6 +8,7 @@ import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
@@ -117,7 +118,7 @@ class FlatToPirConverterTest {
                             decorators = emptyList(),
                         ),
                     ),
-                    fields = listOf(FlatClassField("x", FlatClassType("builtins.int"), false, true)),
+                    fields = listOf(FlatClassField("x", FlatClassType("builtins.int"), false)),
                     nestedClasses = emptyList(),
                     decorators = emptyList(),
                     isAbstract = false,
@@ -146,6 +147,89 @@ class FlatToPirConverterTest {
         for (method in cls.methods) {
             assertSame(module, method.module)
         }
+    }
+
+    private fun accessor(name: String, params: List<String>, vararg decorators: FlatDecorator) =
+        FlatFunctionIR(
+            name = name,
+            qualifiedName = "m.Cls.$name",
+            parentQualifiedName = null,
+            kind = FlatFunctionKind.METHOD,
+            cfg = FlatCFG.EMPTY,
+            parameters = params.map {
+                FlatParameter(it, FlatAnyType, FlatParamKind.POSITIONAL_OR_KEYWORD, false, null)
+            },
+            returnType = FlatAnyType,
+            isAsync = false,
+            isGenerator = false,
+            decorators = decorators.toList(),
+        )
+
+    private fun classWith(methods: List<FlatFunctionIR>): PIRClass {
+        val flat = FlatModuleIR(
+            moduleName = "m",
+            path = "m.py",
+            functions = emptyList(),
+            moduleInit = stubModuleInit(),
+            classes = listOf(
+                FlatClass(
+                    name = "Cls",
+                    qualifiedName = "m.Cls",
+                    baseClasses = emptyList(),
+                    mro = emptyList(),
+                    methods = methods,
+                    fields = emptyList(),
+                    nestedClasses = emptyList(),
+                    decorators = emptyList(),
+                    isAbstract = false,
+                    isDataclass = false,
+                    isEnum = false,
+                ),
+            ),
+            fields = emptyList(),
+            imports = emptyList(),
+            diagnostics = emptyList(),
+        )
+        return FlatToPirConverter(flat).convert().classes.single()
+    }
+
+    @Test
+    fun `property accessors are matched by decorator`() {
+        val property = FlatDecorator("property", "builtins.property", emptyList())
+        val setter = FlatDecorator("setter", "m.Cls.x.setter", emptyList())
+        val deleter = FlatDecorator("deleter", "m.Cls.x.deleter", emptyList())
+
+        val cls = classWith(
+            listOf(
+                accessor("x", listOf("self"), property),
+                accessor("x", listOf("self", "v"), setter),
+                accessor("x", listOf("self"), deleter),
+            ),
+        )
+
+        val prop = cls.properties.single()
+        assertEquals("x", prop.name)
+        assertEquals(1, prop.getter!!.parameters.size)
+        assertEquals(2, prop.setter!!.parameters.size)
+        assertNotNull(prop.deleter)
+    }
+
+    @Test
+    fun `same-named method without an accessor decorator is not an accessor`() {
+        val property = FlatDecorator("property", "builtins.property", emptyList())
+
+        val cls = classWith(
+            listOf(
+                accessor("x", listOf("self"), property),
+                accessor("x", listOf("self")),
+                accessor("x", listOf("self", "extra")),
+            ),
+        )
+
+        val prop = cls.properties.single()
+        assertNotNull(prop.getter)
+        assertNull(prop.setter)
+        assertNull(prop.deleter)
     }
 
     @Test

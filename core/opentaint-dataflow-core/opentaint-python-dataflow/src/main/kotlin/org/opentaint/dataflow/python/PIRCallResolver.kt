@@ -9,30 +9,6 @@ import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRLoadAttr
 
-/**
- * Resolves PIRCall instructions to concrete PIRFunction callees.
- *
- * Two reconstruction passes feed the resolver, in precedence order:
- *
- * 1. [PIRMethodQFNameReconstructor] produces fully-qualified callee names —
- *    mypy's static `resolvedCallee`, names reconstructed from receiver
- *    types / constructor-typed locals, names propagated through
- *    `PIRReadNameExpr` / `PIRBindFunctionExpr` chains.
- * 2. [PIRMethodSimpleNameReconstructor] is consulted only when (1) produces
- *    nothing for the call; it yields the trailing attribute segment of the
- *    callee operand (the "simple name"), so taint rules keyed on a bare
- *    method name can still match calls whose receiver chain couldn't be
- *    resolved to a global.
- *
- * Candidate names are translated to PIRFunctions: real ones via
- * [org.opentaint.ir.api.python.PIRClasspath.findFunctionOrNull], or a synthetic [org.opentaint.dataflow.python.graph.PIRUnknownFunction]
- * when no PIR body exists. The synthetic path lets taint rules keyed on
- * stdlib / library FQNs (`builtins.str.upper`, etc.) match calls whose
- * callee has no body loaded into the classpath. Qualified and simple-name
- * unknowns are split into [org.opentaint.dataflow.python.graph.PIRQualifiedUnknownFunction] /
- * [org.opentaint.dataflow.python.graph.PIRSimpleNameUnknownFunction] so downstream consumers can distinguish
- * the two precision levels at the type level.
- */
 class PIRCallResolver(
     private val cp: PIRClasspath,
     private val applicationGraph: PIRApplicationGraph,

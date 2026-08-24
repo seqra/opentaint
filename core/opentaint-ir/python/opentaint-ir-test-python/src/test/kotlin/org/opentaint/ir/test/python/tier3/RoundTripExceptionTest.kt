@@ -3,12 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for exception handling constructs.
- * Tests try/except/else/finally, raise, multiple handlers,
- * exception type resolution, and nested try blocks.
- * 50 test cases.
- */
 @Tag("tier3")
 class RoundTripExceptionTest : RoundTripTestBase() {
 
@@ -411,8 +405,6 @@ def rte_try_max_safe(items: list) -> int:
     return best
     """.trimIndent()
 
-    // ─── Basic try/except ──────────────────────────────────
-
     @Test fun `basic try - normal path`() = roundTrip("rte_basic_try", posArgs(listOf(2), listOf(5)))
     @Test fun `basic try - exception path`() = roundTrip("rte_basic_try", posArgs(listOf(0)))
     @Test fun `typed except - normal path`() = roundTrip("rte_typed_except", posArgs(listOf(2), listOf(5)))
@@ -420,40 +412,26 @@ def rte_try_max_safe(items: list) -> int:
     @Test fun `except as - normal`() = roundTrip("rte_except_as", posArgs(listOf(5)))
     @Test fun `except as - exception`() = roundTrip("rte_except_as", posArgs(listOf(0)))
 
-    // ─── Multiple handlers ─────────────────────────────────
-
     @Test fun `multi except - valid int`() = roundTrip("rte_multi_except", posArgs(listOf("42")))
     @Test fun `multi except - invalid str`() = roundTrip("rte_multi_except", posArgs(listOf("abc")))
-
-    // ─── Try-else ──────────────────────────────────────────
 
     @Test fun `try-else normal path`() = roundTrip("rte_try_else", posArgs(listOf(2), listOf(5)))
     @Test fun `try-else exception path`() = roundTrip("rte_try_else", posArgs(listOf(0)))
 
-    // ─── Try-finally ───────────────────────────────────────
-
     @Test fun `try-finally runs finally`() = roundTrip("rte_try_finally", posArgs(listOf(3), listOf(10), listOf(0)))
     @Test fun `try-except-else-finally`() = roundTrip("rte_try_except_else_finally", posArgs(listOf(2), listOf(5), listOf(0)))
-
-    // ─── Nested try ────────────────────────────────────────
 
     @Test fun `nested try - normal`() = roundTrip("rte_nested_try", posArgs(listOf(5)))
     @Test fun `nested try - inner catches`() = roundTrip("rte_nested_try", posArgs(listOf(0)))
     @Test fun `triple nested`() = roundTrip("rte_triple_nested_try", posArgs(listOf(5), listOf(0)))
 
-    // ─── Try in loop ───────────────────────────────────────
-
     @Test fun `try in loop`() = roundTrip("rte_try_in_loop", posArgs(listOf(listOf(5, 2, 0, 3))))
     @Test fun `continue in except`() = roundTrip("rte_continue_in_except", posArgs(listOf(listOf(5, 0, 2, 0, 1))))
     @Test fun `break in except`() = roundTrip("rte_break_in_except", posArgs(listOf(listOf(5, 2, 0, 3))))
 
-    // ─── Return patterns ───────────────────────────────────
-
     @Test fun `except return value - positive`() = roundTrip("rte_except_return_value", posArgs(listOf(5)))
     @Test fun `except return value - negative`() = roundTrip("rte_except_return_value", posArgs(listOf(-1)))
     @Test fun `finally always runs`() = roundTrip("rte_finally_always_runs", posArgs(listOf(5), listOf(0)))
-
-    // ─── More patterns ─────────────────────────────────────
 
     @Test fun `try simple body`() = roundTrip("rte_try_simple_body", posArgs(listOf(5), listOf(-1)))
     @Test fun `try multiple stmts`() = roundTrip("rte_try_multiple_stmts", posArgs(listOf(3, 4), listOf(10, 2)))

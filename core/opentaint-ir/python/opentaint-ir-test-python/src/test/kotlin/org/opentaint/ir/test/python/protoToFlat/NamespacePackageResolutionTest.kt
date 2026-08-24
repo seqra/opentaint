@@ -11,22 +11,6 @@ import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
-/**
- * End-to-end check that PEP 420 namespace packages reachable via
- * [PIRSettings.searchPaths] are actually resolved by mypy.
- *
- * Discriminator: [FlatCall.resolvedCallee]. Mypy sets it from its name-resolution
- * pass — if it couldn't resolve the import target, the call carries no fullname
- * and `resolvedCallee` is null. This is independent of how the import expression
- * itself surfaces (which may end up as a `FlatModuleRef` either way thanks to
- * the suppressed-import classification fallback).
- *
- * The fixture mirrors the OWASP Benchmark layout: a `helpers/` directory
- * without `__init__.py`, with a sibling `main.py` that imports it. The helper
- * file is deliberately omitted from `sources` so mypy must locate it via
- * `mypy_path` — which only works when `searchPaths` is actually applied on the
- * server.
- */
 class NamespacePackageResolutionTest {
 
     private data class Fixture(val mainPath: String, val helperPath: String, val rootDir: String)
@@ -39,7 +23,6 @@ class NamespacePackageResolutionTest {
         helpersDir.mkdir()
         helpersDir.deleteOnExit()
 
-        // PEP 420 namespace package: no __init__.py in helpersDir.
         val dbSqlite = File(helpersDir, "db_sqlite.py")
         dbSqlite.writeText(
             """
@@ -87,7 +70,6 @@ class NamespacePackageResolutionTest {
 
         val f = loadMain(
             PIRSettings(
-                // helper file deliberately NOT in sources — must be found via mypy_path
                 sources = listOf(fx.mainPath),
                 mypyFlags = listOf("--ignore-missing-imports"),
                 searchPaths = listOf(fx.rootDir),
@@ -114,7 +96,6 @@ class NamespacePackageResolutionTest {
             PIRSettings(
                 sources = listOf(fx.mainPath),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                // no searchPaths — mypy cannot find helpers/
                 searchPaths = emptyList(),
             ),
         )

@@ -9,8 +9,6 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class IntraproceduralFlowTest : AnalysisTest() {
 
-    // --- AssignmentFlow.py ---
-
     @Test
     fun testAssignDirect() = assertSinkReachable(
         source = source("AssignmentFlow.source", "taint", Result),
@@ -46,8 +44,6 @@ class IntraproceduralFlowTest : AnalysisTest() {
         entryPointFunction = "AssignmentFlow.assign_overwrite_other"
     )
 
-    // --- BranchFlow.py ---
-
     @Test
     fun testBranchIfTrue() = assertSinkReachable(
         source = source("BranchFlow.source", "taint", Result),
@@ -75,8 +71,6 @@ class IntraproceduralFlowTest : AnalysisTest() {
         sink = sink("BranchFlow.sink", "taint", Argument(0), "branch"),
         entryPointFunction = "BranchFlow.branch_overwrite_in_branch"
     )
-
-    // --- LoopFlow.py ---
 
     @Test
     fun testLoopWhileBody() = assertSinkReachable(

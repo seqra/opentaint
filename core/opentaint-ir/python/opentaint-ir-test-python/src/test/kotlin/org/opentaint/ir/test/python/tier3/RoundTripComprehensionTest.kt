@@ -3,12 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for comprehensions, conditional expressions, and advanced features.
- * Comprehensions are lowered to explicit loops in the IR; this verifies the lowered
- * form produces the same results as the original comprehension syntax.
- * 40 test cases.
- */
 @Tag("tier3")
 class RoundTripComprehensionTest : RoundTripTestBase() {
 
@@ -215,8 +209,6 @@ def rtcp_comp_index_values(items: list) -> list:
         i = i + 1
     return result
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `comp - list comp double`() = roundTrip("rtcp_list_comp_double",
         posArgs(listOf(listOf(1, 2, 3)), listOf(emptyList<Int>())))

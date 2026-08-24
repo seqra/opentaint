@@ -50,7 +50,6 @@ class Regular:
     private fun init(className: String): PIRFunction =
         cp.findClassOrNull("__test__.$className")!!.methods.first { it.name == "__init__" }
 
-    /** Every return in a constructor returns the first parameter (`self`). */
     private fun assertEveryReturnIsSelf(fn: PIRFunction) {
         val self = fn.parameters.first().name
         val returns = fn.instList.filterIsInstance<PIRReturn>()
@@ -73,8 +72,6 @@ class Regular:
     @Test
     fun `return self uses the first parameter name`() = assertEveryReturnIsSelf(init("RenamedSelf"))
 
-    // A constructor with no parameters has no `self` to return — the builder must
-    // fall back to a value-less return rather than crash (CfgBuild.constructorSelf).
     @Test
     fun `parameter-less __init__ falls back to value-less return`() {
         val fn = init("NoParams")

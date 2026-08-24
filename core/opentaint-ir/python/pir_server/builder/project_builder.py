@@ -1,5 +1,3 @@
-"""Top-level builder: mypy.build() -> iterate modules -> emit raw AST protobuf."""
-
 from __future__ import annotations
 from typing import Iterator
 import contextlib
@@ -64,15 +62,6 @@ class ProjectBuilder:
         return options
 
     def build(self) -> Iterator[pir_pb2.MypyModuleProto]:
-        """Build project and return raw mypy AST protos.
-
-        Handles failures gracefully:
-        - If mypy.build() raises CompileError, yields per-module error protos
-          based on error messages (mapped to source files).
-        - If individual module serialization fails, yields an error proto
-          for that module and continues with the next one.
-        - Logs progress every 10 seconds for large projects.
-        """
         try:
             options = self._build_options()
         except InvalidMypyFlags as e:
@@ -124,12 +113,9 @@ class ProjectBuilder:
                 fscache=fscache,
             )
         except CompileError as e:
-            # mypy couldn't complete analysis. Map errors to modules by file path.
             yield from self._errors_to_unknown_modules(e.messages, seen_modules)
             return
         except Exception as e:
-            # Unexpected mypy internal error (e.g. AssertionError inside mypy).
-            # Try to identify the specific module that caused the failure.
             yield from self._exception_to_unknown_modules(e, seen_modules)
             return
 
@@ -158,7 +144,6 @@ class ProjectBuilder:
             if not self._should_include(state, source_paths):
                 continue
 
-            # Progress logging every 10 seconds
             now = time.monotonic()
             if now - last_log >= 10.0:
                 print(
@@ -193,13 +178,6 @@ class ProjectBuilder:
     def _errors_to_unknown_modules(
         self, messages: list[str], seen_modules: dict[str, str]
     ) -> Iterator[pir_pb2.MypyModuleProto]:
-        """Convert mypy CompileError messages to per-module error protos.
-
-        Mypy error messages have the format: 'path/to/file.py:line: error: message'.
-        We group by file path, map to module name, and yield one error proto per module.
-        Errors that can't be mapped go to a synthetic '__build_errors__' module.
-        """
-        # Reverse map: path -> module_name (sorted longest first for best match)
         path_to_module = sorted(
             ((v, k) for k, v in seen_modules.items()),
             key=lambda x: -len(x[0]),
@@ -209,7 +187,6 @@ class ProjectBuilder:
         unmapped: list[str] = []
 
         for msg in messages:
-            # Try to extract file path from error message (match by absolute or relative path)
             mapped = False
             for path, mod in path_to_module:
                 if path in msg:
@@ -217,7 +194,6 @@ class ProjectBuilder:
                     mapped = True
                     break
             if not mapped:
-                # Try relative path fragments
                 for path, mod in path_to_module:
                     rel = os.path.relpath(path)
                     if rel in msg:
@@ -244,13 +220,6 @@ class ProjectBuilder:
     def _exception_to_unknown_modules(
         self, exc: Exception, seen_modules: dict[str, str]
     ) -> Iterator[pir_pb2.MypyModuleProto]:
-        """Convert an unexpected exception from mypy.build() to per-module error protos.
-
-        Tries to identify the specific module that caused the failure by:
-        1. Scanning the exception message for known module/class names
-        2. Scanning the traceback for file paths matching source files
-        3. Falling back to __build_errors__ if nothing matches
-        """
         import traceback as tb
 
         error_msg = f"{type(exc).__name__}: {exc}"
@@ -260,10 +229,6 @@ class ProjectBuilder:
         exc_str = str(exc)
         tb_str = "".join(tb.format_exception(type(exc), exc, exc.__traceback__))
 
-        # Strategy 1: Match dotted names in exception message against module names.
-        # Use longest match first to find the most specific module.
-        # e.g. "core.graphql.filters.DataFileFilter" should match
-        # "core.graphql.filters" not just "core".
         best_match: str | None = None
         for mod_name in seen_modules:
             if mod_name in exc_str:
@@ -277,7 +242,6 @@ class ProjectBuilder:
             )
             return
 
-        # Strategy 3: Match file paths in traceback against source files
         for path, mod_name in sorted(
             ((v, k) for k, v in seen_modules.items()), key=lambda x: -len(x[0])
         ):
@@ -289,14 +253,12 @@ class ProjectBuilder:
                 )
                 return
 
-        # Fallback: can't identify the module
         yield pir_pb2.MypyModuleProto(
             name="__build_errors__",
             errors=[error_msg],
         )
 
     def _find_search_root(self, file_paths: list[str]) -> str:
-        """Find the best root directory for module name derivation."""
         if not file_paths:
             return "."
 
@@ -324,7 +286,6 @@ class ProjectBuilder:
         return os.path.commonpath(file_paths)
 
     def _path_to_module(self, path: str, search_root: str) -> str:
-        """Convert an absolute path to a Python module name relative to search_root."""
         rel = os.path.relpath(path, search_root)
         mod_name = rel.replace(os.sep, ".").removesuffix(".py")
         if mod_name.endswith(".__init__"):

@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for conditionals and boolean logic.
- * 50 test cases covering if/elif/else, guard patterns, ternary-like, boolean ops.
- */
 @Tag("tier3")
 class RoundTripConditionalTest : RoundTripTestBase() {
 
@@ -381,8 +377,6 @@ def rtc_season(month: int) -> str:
             return "fall"
     return "winter"
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `cond - simple if`() = roundTrip("rtc_simple_if",
         posArgs(listOf(5), listOf(-1), listOf(0)))

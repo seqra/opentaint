@@ -10,14 +10,12 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.util.analysis.ApplicationGraph
 
-/** Per-method instruction graph the alias simulator runs over (mirror of JVM `JIRInstGraph`). */
 data class PIRInstGraph(
     val statements: List<PIRInstruction>,
     val graph: CompactGraph,
     val initialIdx: Int,
 )
 
-/** Builds the [PIRInstGraph] for [method], with [entry] as the initial statement. */
 fun buildPirInstGraph(
     languageManager: LanguageManager,
     graph: ApplicationGraph<CommonMethod, CommonInst>,

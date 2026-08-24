@@ -8,19 +8,9 @@ import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatModuleIR
 
 /**
- * Normalizes [FlatCall.resolvedCallee] strings to match
- * [FlatFunctionIR.qualifiedName] across the module.
- *
- * Mypy emits the lexical qualified name (`m.outer.inner`) for a nested
- * def, but the lifter encodes lexical scope within a module using `$`
- * separators (`m.outer$inner`). Without this pass, every consumer of
- * `resolvedCallee` would have to know about both encodings.
- *
- * The transform walks the module's qn registry once, then rewrites each
- * call's resolvedCallee to the matching FlatFunctionIR's qualifiedName.
- * If no match is found, the original string is preserved (might be a
- * builtin / cross-module reference / unknown name; downstream resolvers
- * still try those paths).
+ * Rewrites `resolvedCallee` from mypy's dotted qualified name for a nested def (`m.outer.inner`)
+ * into the lifter's `$`-scoped encoding (`m.outer$inner`). A name that matches nothing declared in
+ * this module — a builtin or a cross-module symbol — is passed through unchanged.
  */
 internal object ResolvedCalleeNormalizer {
 
@@ -67,13 +57,6 @@ internal object ResolvedCalleeNormalizer {
         for (nested in cls.nestedClasses) collectClassQns(nested, out)
     }
 
-    /**
-     * Try the original string first; if it's not a known qn, progressively
-     * collapse trailing `.` separators into `$` (right-to-left) and try
-     * again at each step. This handles any nesting depth: `m.a.b.c` is
-     * tried as-is, then `m.a.b$c`, then `m.a$b$c`. Returns the first match
-     * or [original] if none found.
-     */
     private fun remap(original: String?, knownQns: Set<String>): String? {
         if (original == null) return null
         if (original in knownQns) return original

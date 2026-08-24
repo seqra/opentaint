@@ -1,9 +1,3 @@
-"""Thin AST serializer: walks mypy AST and serializes to MypyModuleProto.
-
-No CFG construction, no expression flattening — just 1:1 serialization.
-All complex lowering is done in Kotlin.
-"""
-
 from __future__ import annotations
 import sys
 from mypy.nodes import (
@@ -79,22 +73,6 @@ from pir_server.builder.type_mapper import TypeMapper
 
 
 class AstSerializer:
-    """Serializes a mypy MypyFile AST to MypyModuleProto.
-
-    This is the thin Python-side wrapper. It does NOT:
-    - Construct CFGs
-    - Flatten expressions
-    - Generate temporary variables
-    - Lower control flow
-
-    It DOES:
-    - Walk the mypy AST tree
-    - Serialize each node to its proto counterpart
-    - Map mypy types to PIRTypeProto (reuses TypeMapper)
-    - Extract class metadata (base classes, MRO, dataclass/enum/abstract flags)
-    - Resolve symbol fullnames from mypy's symbol table
-    """
-
     def __init__(self, tree: MypyFile, types: dict, module_name: str):
         self.tree = tree
         self.types = types
@@ -135,7 +113,6 @@ class AstSerializer:
             try:
                 clean.ParseFromString(proto.SerializeToString())
             except Exception:
-                # If even serialization fails, return a minimal module
                 clean = pir_pb2.MypyModuleProto(
                     name=self.module_name,
                     path=self.tree.path or "",
@@ -143,8 +120,6 @@ class AstSerializer:
             return clean
         proto.imports.extend(self._collect_imports())
         return proto
-
-    # ─── Definitions ──────────────────────────────────────
 
     def _serialize_definitions(
         self, defn, enclosing_class: str | None = None
@@ -175,25 +150,20 @@ class AstSerializer:
                 )
             ]
         elif isinstance(defn, OverloadedFuncDef):
-            # Serialize ALL items (e.g. property getter + setter + deleter)
             results = []
             for item in defn.items:
                 results.extend(self._serialize_definitions(item, enclosing_class))
             return results
         elif isinstance(defn, AssignmentStmt):
-            # Wrap in MypyStmtProto so the module-level assignment carries
-            # its physical location alongside the assignment payload (mirrors
-            # how nested statements look in `_serialize_block`).
             return [
                 pir_pb2.MypyDefinitionProto(
                     assignment=self._serialize_stmt(defn)
                 )
             ]
         elif isinstance(defn, (Import, ImportFrom)):
-            # Module-level Import / ImportFrom: route through the same
-            # `assignment` slot (which is typed as MypyStmtProto and so accepts
-            # any statement variant). Module-level lowering peeks at this slot
-            # to register import bindings before any function body is lowered.
+            # Module-level Import / ImportFrom ride the `assignment` slot (typed MypyStmtProto,
+            # so it accepts any statement variant); module-level lowering peeks at this slot to
+            # register import bindings before any function body is lowered.
             return [
                 pir_pb2.MypyDefinitionProto(
                     assignment=self._serialize_stmt(defn)
@@ -204,9 +174,6 @@ class AstSerializer:
     def _serialize_class_def(
         self, class_def: ClassDef, enclosing_class: str | None = None
     ) -> pir_pb2.MypyClassDefProto:
-        # `enclosing_class` is the chained class qualifier (no module prefix),
-        # e.g. `"Outer"` for `class Inner` nested in `Outer`. We always prepend
-        # `module_name` here so `fullname` is fully-qualified at the proto level.
         own_qualifier = (
             f"{enclosing_class}.{class_def.name}" if enclosing_class else class_def.name
         )
@@ -223,26 +190,17 @@ class AstSerializer:
                 for mro_item in class_def.info.mro:
                     proto.mro.append(mro_item.fullname)
             proto.is_abstract = class_def.info.is_abstract
-            # is_dataclass and is_enum are computed on the Kotlin side from
-            # base_classes and decorators. Pass raw metadata flag only.
             if (
                 hasattr(class_def.info, "metadata")
                 and "dataclass" in class_def.info.metadata
             ):
                 proto.is_dataclass = True
 
-        # Serialize class decorators as MypyDecoratorInfoProto summaries.
-        # ClassDef.decorators is the raw expression list — unlike Decorator.decorators
-        # for methods, mypy's semantic analyzer does NOT strip entries here, so reading
-        # it directly is safe (analogous in purpose to the Decorator.original_decorators
-        # fix for methods). The proto field type is the summary (name / qualified_name /
-        # stringified arguments), so unwrap each decorator expression into that shape.
+        # Unlike Decorator.decorators for methods, mypy's semantic analyzer does NOT strip
+        # entries from ClassDef.decorators, so the raw expression list is safe to read.
         for dec_expr in class_def.decorators:
             proto.decorators.append(self._serialize_decorator_info(dec_expr))
 
-        # Class body — pass the chained class qualifier so nested classes and
-        # methods produce fully-qualified fullnames (e.g. `module.Outer.Inner`,
-        # `module.Outer.Inner.method`).
         for defn in class_def.defs.body:
             for d in self._serialize_definitions(defn, enclosing_class=own_qualifier):
                 proto.body.append(d)
@@ -306,7 +264,6 @@ class AstSerializer:
             return f"{expr.value.real}+{expr.value.imag}j"
         if isinstance(expr, EllipsisExpr):
             return "..."
-        # True / False / None are NameExprs in mypy's AST; their names render verbatim.
         if isinstance(expr, NameExpr):
             return expr.name
         if isinstance(expr, MemberExpr):
@@ -320,7 +277,6 @@ class AstSerializer:
     def _serialize_func_def(
         self, func_def: FuncDef, enclosing_class: str | None = None
     ) -> pir_pb2.MypyFuncDefProto:
-        # Use mypy's native fullname when available, fall back to manual construction
         native_fullname = getattr(func_def, "fullname", "") or ""
         if enclosing_class:
             fullname = f"{self.module_name}.{enclosing_class}.{func_def.name}"
@@ -337,15 +293,12 @@ class AstSerializer:
             line=getattr(func_def, "line", -1),
         )
 
-        # Body
         if func_def.body:
             proto.body.CopyFrom(self._serialize_block(func_def.body))
 
-        # Arguments
         for arg in func_def.arguments:
             proto.arguments.append(self._serialize_argument(arg))
 
-        # Return type
         func_type = func_def.type
         if isinstance(func_type, CallableType):
             proto.return_type.CopyFrom(self.type_mapper.map(func_type.ret_type))
@@ -365,7 +318,6 @@ class AstSerializer:
         # `dec.original_decorators` is the untouched list.
         for d in dec.original_decorators:
             proto.original_decorators.append(self._serialize_expr(d))
-        # Extract qualified name
         if dec.func.fullname:
             proto.qualified_name = dec.func.fullname
         return proto
@@ -381,8 +333,6 @@ class AstSerializer:
         if arg.initializer:
             proto.default_value.CopyFrom(self._serialize_expr(arg.initializer))
         return proto
-
-    # ─── Blocks & Statements ──────────────────────────────
 
     def _serialize_block(self, block: Block) -> pir_pb2.MypyBlockProto:
         proto = pir_pb2.MypyBlockProto()
@@ -460,8 +410,6 @@ class AstSerializer:
             for pattern, guard, body in zip(stmt.patterns, stmt.guards, stmt.bodies):
                 pat_proto = self._serialize_pattern(pattern)
                 if pat_proto is None:
-                    # Unsupported pattern kind — drop this case, keep the rest of
-                    # the match. Keeps patterns/guards/bodies parallel.
                     continue
                 match_proto.patterns.append(pat_proto)
                 if guard is not None:
@@ -478,7 +426,6 @@ class AstSerializer:
                 if t is not None:
                     try_proto.types.append(self._serialize_expr(t))
                 else:
-                    # Bare except — empty expr
                     try_proto.types.append(pir_pb2.MypyExprProto())
             for v in stmt.vars:
                 if v is not None:
@@ -544,7 +491,6 @@ class AstSerializer:
         elif isinstance(stmt, (FuncDef, OverloadedFuncDef)):
             func_def = self._unwrap_func(stmt)
             if func_def:
-                # closure_vars computed on Kotlin side via FreeVarAnalyzer
                 proto.func_def.CopyFrom(self._serialize_func_def(func_def))
         elif isinstance(stmt, ClassDef):
             proto.class_def.CopyFrom(self._serialize_class_def(stmt))
@@ -563,9 +509,6 @@ class AstSerializer:
                 )
             proto.import_stmt.CopyFrom(import_proto)
         elif isinstance(stmt, ImportFrom):
-            # Resolve the module path on the Python side so the Kotlin
-            # statement lowering doesn't need to know the current module
-            # name or its package-init status.
             resolved_module, ok = correct_relative_import(
                 cur_mod_id=self.module_name,
                 relative=stmt.relative,
@@ -592,11 +535,8 @@ class AstSerializer:
                 )
             proto.import_from_stmt.CopyFrom(from_proto)
         elif isinstance(stmt, ImportAll):
-            # `from m import *` has no statically-known bindings — skip.
             return None
         elif isinstance(stmt, Block):
-            # Inline block — serialize each statement
-            # Return None and let caller handle
             return None
         else:
             return None
@@ -604,9 +544,6 @@ class AstSerializer:
         return proto
 
     def _serialize_pattern(self, pattern) -> pir_pb2.MypyPatternProto | None:
-        # v1 supports only non-destructuring patterns: capture / wildcard / `as`
-        # (all folded into mypy's AsPattern) and value patterns. Everything else
-        # (sequence/mapping/class/or/singleton/star) is dropped with a diagnostic.
         proto = pir_pb2.MypyPatternProto()
         if isinstance(pattern, AsPattern):
             as_proto = pir_pb2.MypyAsPatternProto()
@@ -642,8 +579,6 @@ class AstSerializer:
             proto.lvalues.append(self._serialize_expr(lvalue))
         return proto
 
-    # ─── Expressions ──────────────────────────────────────
-
     MAX_EXPR_DEPTH = 40
 
     def _serialize_expr(self, expr: Expression) -> pir_pb2.MypyExprProto:
@@ -662,7 +597,6 @@ class AstSerializer:
     def _serialize_expr_inner(self, expr: Expression) -> pir_pb2.MypyExprProto:
         line = getattr(expr, "line", -1)
         col = getattr(expr, "column", 0)
-        # See _serialize_stmt for why we don't collapse 0 to -1.
         end_line = getattr(expr, "end_line", None)
         if end_line is None:
             end_line = -1
@@ -673,7 +607,6 @@ class AstSerializer:
             line=line, col=col, end_line=end_line, end_col=end_col
         )
 
-        # Attach resolved type if available
         try:
             typ = self.types.get(expr)
             if typ is not None:
@@ -710,21 +643,11 @@ class AstSerializer:
             if expr.node is not None:
                 fullname = getattr(expr.node, "fullname", "") or ""
             name_proto.fullname = fullname
-            # mypy's `kind` (LDEF/GDEF/MDEF) tells us, for resolved names,
-            # whether the binding is local, module-level/imported, or a
-            # class member. Without this flag the Kotlin side has to guess
-            # from `fullname` shape and would misclassify single-segment
-            # imports like `import os` (fullname == "os") as locals.
-            #
-            # When the resolved node is a MypyFile, the bound name *is* a
-            # module reference (`import os`, `import os.path as p`, plain
-            # `import os.path` which binds `os`). We emit NAME_MODULE so the
-            # Kotlin side can lower these to FlatModuleRef rather than a
-            # FlatGlobalRef whose name and module slot are the same string.
-            #
-            # For unresolved names mypy leaves `kind=None`; we fall back to
-            # NAME_LOCAL so the closure-root override continues to defend
-            # that case.
+            # mypy's `kind` (LDEF/GDEF/MDEF) is what distinguishes a local from a
+            # module-level/imported binding; without it the Kotlin side would have to guess from
+            # `fullname` shape and would misclassify `import os` (fullname == "os") as a local.
+            # A resolved MypyFile node means the name IS a module reference, emitted as
+            # NAME_MODULE. Unresolved names leave `kind=None` and fall back to NAME_LOCAL.
             if isinstance(expr.node, MypyFile):
                 name_proto.name_kind = pir_pb2.NAME_MODULE
             elif expr.kind == GDEF:
@@ -744,23 +667,18 @@ class AstSerializer:
             call_proto = pir_pb2.MypyCallExprProto(
                 callee=self._serialize_expr(expr.callee),
             )
-            # Resolved callee
             resolved = ""
             if hasattr(expr.callee, "node"):
                 node = expr.callee.node
                 if node is not None and hasattr(node, "fullname"):
                     resolved = node.fullname or ""
-            # Fallback: for method calls (MemberExpr), resolve from receiver type
-            # or from the MemberExpr's own resolved type
             if not resolved and isinstance(expr.callee, MemberExpr):
                 try:
-                    # Strategy 1: receiver's Instance type → type.fullname + method name
                     receiver_type = self.types.get(expr.callee.expr)
                     if receiver_type is not None:
                         type_name = getattr(receiver_type, "type", None)
                         if type_name is not None:
                             resolved = f"{type_name.fullname}.{expr.callee.name}"
-                    # Strategy 2: MemberExpr type is CallableType → definition.fullname
                     if not resolved:
                         member_type = self.types.get(expr.callee)
                         if member_type is not None:
@@ -773,7 +691,6 @@ class AstSerializer:
                     pass
             if resolved:
                 call_proto.resolved_callee = resolved
-            # Args
             for i, arg_expr in enumerate(expr.args):
                 kind = int(expr.arg_kinds[i].value)
                 name = expr.arg_names[i] if expr.arg_names else None
@@ -922,7 +839,6 @@ class AstSerializer:
             proto.dict_comprehension.CopyFrom(dict_comp)
         elif isinstance(expr, GeneratorExpr):
             proto.generator_expr.CopyFrom(self._serialize_generator_expr(expr))
-        # else: leave kind unset (will be NAME_LOCAL/empty on Kotlin side)
 
         return proto
 
@@ -943,8 +859,6 @@ class AstSerializer:
             proto.condlists.append(cl)
         return proto
 
-    # ─── Helpers ──────────────────────────────────────────
-
     def _unwrap_func(self, defn) -> FuncDef | None:
         if isinstance(defn, FuncDef):
             return defn
@@ -954,8 +868,6 @@ class AstSerializer:
             if defn.items:
                 return self._unwrap_func(defn.items[0])
         return None
-
-    # _collect_free_vars logic migrated to Kotlin FreeVarAnalyzer
 
     def _collect_imports(self) -> list[str]:
         imports = []

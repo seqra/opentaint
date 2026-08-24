@@ -5,15 +5,7 @@ import org.opentaint.ir.impl.python.PIRClasspathLoader
 import java.io.File
 import java.nio.file.Files
 
-/**
- * Base class for PIR tests. Provides utilities for building classpaths
- * from inline Python sources.
- */
 abstract class PIRTestBase {
-    /**
-     * Build a PIRClasspath from inline Python source code.
-     * Writes the source to a temp file and analyzes it.
-     */
     protected fun buildFromSource(
         source: String,
         moduleName: String = "__test__"

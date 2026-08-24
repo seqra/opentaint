@@ -6,19 +6,6 @@ import org.junit.jupiter.api.Tag
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * CFG structural integrity tests.
- *
- * Validates invariants that must hold for ALL well-formed CFGs:
- * - Every block is reachable from entry
- * - Successor/predecessor consistency
- * - Every non-exit block has at least one successor
- * - Every block (except entry) has at least one predecessor
- * - Exit blocks end with a terminator (return/raise/unreachable)
- * - No dangling edges (successor labels all resolve to real blocks)
- * - Block labels are unique
- * - Entry block exists in blocks list
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CfgIntegrityTest : PIRTestBase() {
@@ -199,9 +186,6 @@ def ci_no_return():
         return module.functions.toList()
     }
 
-    // ─── Structural invariant helpers ──────────────────────────
-
-    /** Collect all blocks reachable from entry via BFS on normal successors. */
     private fun reachableBlocks(cfg: PIRCFG): Set<Int> {
         val visited = mutableSetOf<Int>()
         val queue = ArrayDeque<PIRBasicBlock>()
@@ -215,7 +199,6 @@ def ci_no_return():
                     queue.add(succ)
                 }
             }
-            // Also follow exceptional successors
             for (succ in cfg.exceptionalSuccessors(block)) {
                 if (succ.label !in visited) {
                     visited.add(succ.label)
@@ -226,14 +209,11 @@ def ci_no_return():
         return visited
     }
 
-    /** Check if an instruction is a terminator (ends a basic block). */
     private fun isTerminator(inst: PIRInstruction): Boolean = when (inst) {
         is PIRGoto, is PIRBranch, is PIRReturn, is PIRRaise,
         is PIRUnreachable, is PIRNextIter -> true
         else -> false
     }
-
-    // ─── Tests: All-functions invariants ───────────────────────
 
     @Test
     fun `all functions have non-empty CFG blocks`() {
@@ -269,10 +249,6 @@ def ci_no_return():
             val allLabels = cfg.blocks.map { it.label }.toSet()
             val unreachable = allLabels - reachable
 
-            // Unreachable blocks are allowed if they are dead merge/fallthrough
-            // blocks generated after branches where all paths return/raise.
-            // They must end with a terminator (return/goto/raise) and should
-            // not contain side-effecting instructions like calls.
             for (label in unreachable) {
                 val block = cfg.block(label)
                 if (block.instructions.isEmpty()) continue
@@ -289,7 +265,6 @@ def ci_no_return():
 
     @Test
     fun `successor-predecessor consistency`() {
-        // If B is a successor of A, then A must be a predecessor of B
         for (func in allTestFunctions()) {
             val cfg = func.cfg
             for (block in cfg.blocks) {
@@ -305,7 +280,6 @@ def ci_no_return():
 
     @Test
     fun `predecessor-successor consistency`() {
-        // If A is a predecessor of B, then B must be a successor of A
         for (func in allTestFunctions()) {
             val cfg = func.cfg
             for (block in cfg.blocks) {
@@ -357,7 +331,6 @@ def ci_no_return():
                 val last = block.instructions.last()
                 val hasNormalSucc = cfg.successors(block).isNotEmpty()
                 val hasExceptionalSucc = cfg.exceptionalSuccessors(block).isNotEmpty()
-                // A non-exit block must either end with a terminator or have successors
                 assertTrue(isTerminator(last) || hasNormalSucc || hasExceptionalSucc,
                     "${func.qualifiedName}: block ${block.label} ends with ${last::class.simpleName} " +
                         "but has no successors and is not an exit block")
@@ -367,8 +340,6 @@ def ci_no_return():
 
     @Test
     fun `no self-loops on entry block without being a loop header`() {
-        // Entry block self-loop is only valid for infinite loops (while True)
-        // For non-loop functions, entry should not be its own successor
         val nonLoopFuncs = listOf("ci_empty", "ci_single_return", "ci_if_else",
             "ci_raise_exception", "ci_many_params", "ci_no_return")
         for (name in nonLoopFuncs) {
@@ -379,12 +350,9 @@ def ci_no_return():
         }
     }
 
-    // ─── Tests: Specific function structural checks ────────────
-
     @Test
     fun `empty function has single block`() {
         val f = func("ci_empty")
-        // An empty function that just passes should have a very compact CFG
         assertTrue(f.cfg.blocks.size <= 2, "ci_empty: expected 1-2 blocks, got ${f.cfg.blocks.size}")
     }
 
@@ -407,7 +375,6 @@ def ci_no_return():
     fun `while loop has back edge`() {
         val f = func("ci_while_loop")
         val cfg = f.cfg
-        // There should be at least one block that jumps back to an earlier block
         var hasBackEdge = false
         for (block in cfg.blocks) {
             for (succ in cfg.successors(block)) {
@@ -426,7 +393,6 @@ def ci_no_return():
         assertTrue(allInsts.any { it.isAssignOf<PIRIterExpr>() }, "ci_for_loop: no PIRGetIter")
         assertTrue(allInsts.any { it is PIRNextIter }, "ci_for_loop: no PIRNextIter")
 
-        // NextIter should reference valid blocks
         val nextIter = allInsts.filterIsInstance<PIRNextIter>().first()
         assertNotNull(f.cfg.blocks.find { it.label == nextIter.bodyBlock },
             "ci_for_loop: NextIter bodyBlock ${nextIter.bodyBlock} not found")
@@ -450,7 +416,6 @@ def ci_no_return():
         val handlers = f.instList.filterIsInstance<PIRExceptHandler>()
         assertTrue(handlers.isNotEmpty(), "ci_try_except: no PIRExceptHandler found")
 
-        // Some blocks should reference exception handlers
         val blocksWithHandlers = f.cfg.blocks.filter { it.exceptionHandlers.isNotEmpty() }
         assertTrue(blocksWithHandlers.isNotEmpty(),
             "ci_try_except: no blocks have exceptionHandlers set")
@@ -459,7 +424,6 @@ def ci_no_return():
     @Test
     fun `try-finally has blocks for finally code`() {
         val f = func("ci_try_finally")
-        // Finally block means more blocks than a simple function
         assertTrue(f.cfg.blocks.size >= 3,
             "ci_try_finally: expected >= 3 blocks, got ${f.cfg.blocks.size}")
     }
@@ -475,7 +439,6 @@ def ci_no_return():
     @Test
     fun `while break exits loop`() {
         val f = func("ci_while_break")
-        // Should have a Goto that exits the loop (break)
         val gotos = f.instList.filterIsInstance<PIRGoto>()
         assertTrue(gotos.isNotEmpty(), "ci_while_break: no PIRGoto for break")
     }
@@ -533,7 +496,6 @@ def ci_no_return():
     @Test
     fun `deeply nested if produces many blocks`() {
         val f = func("ci_deeply_nested")
-        // 4 levels of nesting = at least 4 branches
         val branches = f.instList.filterIsInstance<PIRBranch>()
         assertTrue(branches.size >= 3,
             "ci_deeply_nested: expected >= 3 branches, got ${branches.size}")
@@ -549,13 +511,10 @@ def ci_no_return():
     @Test
     fun `no-return function still has implicit return`() {
         val f = func("ci_no_return")
-        // Python functions implicitly return None at the end
         val returns = f.instList.filterIsInstance<PIRReturn>()
         assertTrue(returns.isNotEmpty(),
             "ci_no_return: function without explicit return should still have implicit PIRReturn")
     }
-
-    // ─── Tests: Goto/Branch target validity ────────────────────
 
     @Test
     fun `all Goto targets resolve to existing blocks`() {
@@ -623,8 +582,6 @@ def ci_no_return():
             }
         }
     }
-
-    // ─── Tests: instList invariants ─────────────────────────────
 
     @Test
     fun `instList indices match location index`() {
@@ -715,7 +672,6 @@ def ci_no_return():
                 val insts = block.instructions
                 if (insts.isEmpty()) continue
 
-                // Within-block: each non-last instruction's successor is the next instruction
                 for (i in 0 until insts.size - 1) {
                     val succs = cfg.successors(insts[i])
                     assertEquals(1, succs.size,
@@ -726,7 +682,6 @@ def ci_no_return():
                             "successor should be next instruction")
                 }
 
-                // Last instruction: inst-level successors should match block-level successors' first instructions
                 val lastInst = insts.last()
                 val instSuccs = cfg.successors(lastInst)
                 val blockSuccFirstInsts = cfg.successors(block).mapNotNull { it.instructions.firstOrNull() }
@@ -756,8 +711,6 @@ def ci_no_return():
             }
         }
     }
-
-    // ─── Tests: No mid-block terminators ───────────────────────
 
     @Test
     fun `no terminators in middle of blocks`() {

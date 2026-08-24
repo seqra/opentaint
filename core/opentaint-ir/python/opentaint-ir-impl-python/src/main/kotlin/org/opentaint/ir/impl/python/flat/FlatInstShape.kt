@@ -1,77 +1,16 @@
 package org.opentaint.ir.impl.python.flat
 
-/**
- * Shape utilities for [FlatInst]: the result-target slot, the operand
- * positions, and substitution helpers. All implemented on top of
- * [FlatInstVisitor] so adding a new instruction kind is one method
- * per visitor.
- *
- * Conventions
- * -----------
- *
- * **Operands.** "Operand" means a [FlatValue] that the instruction *reads*
- * to produce its effect. Specifically:
- * - `FlatBindFunction.function` is treated as a name-binding target, NOT
- *   an operand. The lifted-function reference is part of the instruction's
- *   identity — closure-aware passes that need to see it should match
- *   directly on `FlatBindFunction`.
- *
- * **Targets.** "Target" means the [FlatValue] that the instruction
- * *writes* to (the result slot). Most instructions have exactly one
- * (sometimes nullable: `FlatCall`, `FlatYield`, `FlatYieldFrom`,
- * `FlatAwait`, `FlatExceptHandler`). [FlatUnpack] is the multi-target
- * exception: [targets] returns `null` for it. Use [unpackTargets] to read
- * its slots; [mapTarget] handles writing uniformly across single-target
- * and multi-target instructions.
- */
-
-/**
- * The single result-slot of [inst], or `null` if the instruction has none
- * (control-flow, side-effect-only stores/deletes, or [FlatUnpack] which
- * has multiple targets — use [unpackTargets] for it).
- */
 val FlatInst.targets: List<FlatValue>
     get() = accept(TargetExtractor)
 
-/**
- * Apply [f] to every target position of [inst] and return a copy. For
- * single-target instructions ([FlatAssign], [FlatBinOp], …) [f] is called
- * once on the target; for [FlatUnpack] it is called once per slot in
- * `targets`; for instructions with no target ([FlatGoto], [FlatStoreAttr],
- * …) it is not called.
- *
- * Identity-preserving: when every call to [f] returns its input
- * (referential identity), the original [inst] is returned unchanged.
- *
- * For instructions whose target is nullable ([FlatCall], [FlatYield], …)
- * [f] is invoked only when the target is present. The mapper itself does
- * not introduce or remove a target — it cannot turn a non-null target
- * into null or vice versa.
- */
 fun FlatInst.mapTarget(f: (FlatValue) -> FlatValue): FlatInst = accept(TargetMapper(f))
 
-/**
- * Apply [f] to every operand position of [inst] and return a copy with
- * the substituted operands. See the file KDoc for the operand definition;
- * `FlatBindFunction.function` is NOT considered an operand.
- *
- * Identity-preserving: when every call to [f] returns its input
- * (referential identity), the original [inst] is returned unchanged.
- */
 fun FlatInst.mapOperand(f: (FlatValue) -> FlatValue): FlatInst = accept(OperandMapper(f))
 
-/**
- * Every operand of [inst], in source-order. Convenience over [mapOperand]
- * for analyzers that only need to read.
- */
 val FlatInst.operands: List<FlatValue>
     get() = buildList {
         mapOperand { v -> add(v); v }
     }
-
-/* ------------------------------------------------------------------ */
-/* Visitor implementations backing the extensions above.              */
-/* ------------------------------------------------------------------ */
 
 private object TargetExtractor : FlatInstVisitor<List<FlatValue>> {
     override fun visitAssign(inst: FlatAssign) = listOf(inst.target)
@@ -163,10 +102,10 @@ private class OperandMapper(private val f: (FlatValue) -> FlatValue) : FlatInstV
         transform(inst, inst.obj, inst.index, inst.value, f) { o, i, v ->
             inst.copy(obj = o, index = i, value = v)
         }
-    override fun visitReadName(inst: FlatReadName): FlatInst = inst  // ref is not an operand
+    override fun visitReadName(inst: FlatReadName): FlatInst = inst
     override fun visitStoreGlobal(inst: FlatStoreGlobal) =
         transform(inst, inst.value, f) { inst.copy(value = it) }
-    override fun visitBindFunction(inst: FlatBindFunction): FlatInst = inst   // function ref is not an operand
+    override fun visitBindFunction(inst: FlatBindFunction): FlatInst = inst
     override fun visitBinOp(inst: FlatBinOp) =
         transform(inst, inst.left, inst.right, f) { l, r -> inst.copy(left = l, right = r) }
     override fun visitUnaryOp(inst: FlatUnaryOp) =
@@ -241,10 +180,6 @@ private class OperandMapper(private val f: (FlatValue) -> FlatValue) : FlatInstV
         transform(inst, inst.value, f) { inst.copy(value = it) }
     override fun visitUnreachable(inst: FlatUnreachable): FlatInst = inst
 
-    /**
-     * Map [list] through [f]. Returns [list] itself when every element is
-     * unchanged (referential identity); otherwise returns a fresh list.
-     */
     private inline fun mappedList(
         list: List<FlatValue>,
         f: (FlatValue) -> FlatValue,
@@ -259,18 +194,6 @@ private class OperandMapper(private val f: (FlatValue) -> FlatValue) : FlatInstV
         return if (changed) out else list
     }
 }
-
-/* ------------------------------------------------------------------- */
-/* Identity-preserving helpers used by the mappers below.              */
-/*                                                                     */
-/* Each `transform` helper applies [f] to its input(s), checks whether */
-/* anything actually changed (by referential identity, `===`), and     */
-/* invokes [build] only when at least one input changed. Otherwise     */
-/* returns the original [original]. This lets every `visitXxx` body    */
-/* preserve the input instruction's identity when [f] is an identity   */
-/* on every operand/target, so callers can detect "no rewrite" via     */
-/* `result === original`.                                              */
-/* ------------------------------------------------------------------- */
 
 private inline fun transform(
     original: FlatInst,

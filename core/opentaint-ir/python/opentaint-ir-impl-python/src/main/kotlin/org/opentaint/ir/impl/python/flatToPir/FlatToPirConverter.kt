@@ -4,20 +4,15 @@ import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.*
 import org.opentaint.ir.impl.python.flat.*
 
-/**
- * Converts a [FlatModuleIR] into a [PIRModule]. Pure Flat-side; no proto reads.
- */
 class FlatToPirConverter(
     private val flat: FlatModuleIR,
 ) {
-    // ─── Module conversion ───
-
     fun convert(): PIRModule {
         val pirFunctions = flat.functions.map { convertFlatFunction(it) }
         val pirModuleInit = convertFlatFunction(flat.moduleInit)
         val pirClasses = flat.classes.map { flatClassToPir(it) }
         val pirFields = flat.fields.map {
-            PIRFieldImpl(it.name, TypeConverter.convert(it.type), isClassVar = false, hasInitializer = it.hasInitializer)
+            PIRFieldImpl(it.name, TypeConverter.convert(it.type), isClassVar = false)
         }
 
         return PIRModuleImpl(
@@ -32,13 +27,6 @@ class FlatToPirConverter(
         ).also { wireModuleBackRefs(it) }
     }
 
-    /**
-     * Wires `.module` on every function and class reachable from [module].
-     * Covers: top-level functions (incl. extracted lambdas/nested defs),
-     * moduleInit, top-level classes and — recursively — their methods and
-     * nested classes. Class methods are only reachable via [PIRClass.methods],
-     * not [PIRModule.functions].
-     */
     private fun wireModuleBackRefs(module: PIRModuleImpl) {
         for (fn in module.functions) wireFunctionModule(fn, module)
         wireFunctionModule(module.moduleInit, module)
@@ -55,12 +43,10 @@ class FlatToPirConverter(
         for (nested in cls.nestedClasses) wireClassModule(nested as PIRClassImpl, module)
     }
 
-    // ─── Class conversion ───
-
     private fun flatClassToPir(flat: FlatClass): PIRClass {
         val methods = flat.methods.map { convertFlatFunction(it) }
         val classFields = flat.fields.map {
-            PIRFieldImpl(it.name, TypeConverter.convert(it.type), it.isClassVar, it.hasInitializer)
+            PIRFieldImpl(it.name, TypeConverter.convert(it.type), it.isClassVar)
         }
         val nestedClasses = flat.nestedClasses.map { flatClassToPir(it) }
         val properties = synthesizeProperties(flat.methods, methods)
@@ -88,53 +74,31 @@ class FlatToPirConverter(
         return cls
     }
 
-    // ─── Property synthesis ───
-
-    /**
-     * Group property methods into PIRPropertyImpl objects.
-     * OverloadedFuncDef serializes all items: getter, setter, deleter in order.
-     * The getter is the one with isProperty=true. Setter/deleter have the same name
-     * but may NOT have isProperty=true (mypy only sets it on the @property getter).
-     * We detect properties by finding methods with  isProperty=true, then group all
-     * methods sharing that name.
-     *
-     * [flatMethods] and [pirMethods] are position-aligned: `pirMethods[i]` is the
-     * conversion of `flatMethods[i]`.
-     */
     private fun synthesizeProperties(
         flatMethods: List<FlatFunctionIR>,
         pirMethods: List<PIRFunctionImpl>,
     ): List<PIRProperty> {
-        require(flatMethods.size == pirMethods.size) {
-            "flatMethods and pirMethods must be position-aligned: ${flatMethods.size} vs ${pirMethods.size}"
-        }
-        // `distinct()` preserves first-occurrence order so `PIRClass.properties`
-        // reflects source order of getter definitions.
-        val propertyGetterNames = flatMethods.filter { it.isProperty }.map { it.name }.distinct()
-        val result = mutableListOf<PIRProperty>()
-        for (propName in propertyGetterNames) {
-            val groupIndices = flatMethods.indices.filter { flatMethods[it].name == propName }
-            val getterIdx = groupIndices.firstOrNull { flatMethods[it].isProperty }
-            val getterParamCount = getterIdx?.let { flatMethods[it].parameters.size } ?: 0
-            val setterIdx = groupIndices.firstOrNull {
-                !flatMethods[it].isProperty && flatMethods[it].parameters.size > getterParamCount
-            } ?: groupIndices.firstOrNull {
-                it != getterIdx && flatMethods[it].parameters.size > getterParamCount
+        val methods = flatMethods.zip(pirMethods)
+        val byName = methods.groupBy { (flat, _) -> flat.name }
+        return methods
+            .filter { (flat, _) -> flat.isProperty }
+            .distinctBy { (flat, _) -> flat.name }
+            .map { (getterFlat, getterPir) ->
+                val group = byName.getValue(getterFlat.name)
+                PIRPropertyImpl(
+                    name = getterFlat.name,
+                    type = getterPir.returnType,
+                    getter = getterPir,
+                    setter = group.accessorFor("setter"),
+                    deleter = group.accessorFor("deleter"),
+                )
             }
-            val deleterIdx = groupIndices.firstOrNull {
-                it != getterIdx && it != setterIdx && flatMethods[it].parameters.size == getterParamCount
-            }
-
-            val getterPir = getterIdx?.let { pirMethods[it] }
-            val setterPir = setterIdx?.let { pirMethods[it] }
-            val deleterPir = deleterIdx?.let { pirMethods[it] }
-            val propType = getterPir?.returnType ?: PIRAnyType
-            result.add(PIRPropertyImpl(propName, propType, getterPir, setterPir, deleterPir))
-        }
-        return result
     }
 
-    // ─── Function conversion ───
+    private fun List<Pair<FlatFunctionIR, PIRFunctionImpl>>.accessorFor(
+        decorator: String,
+    ): PIRFunctionImpl? =
+        firstOrNull { (flat, _) -> flat.decorators.any { it.name == decorator } }?.second
 
     private fun convertFlatFunction(pending: FlatFunctionIR): PIRFunctionImpl {
         val params = pending.parameters.mapIndexed { idx, p ->
@@ -165,8 +129,6 @@ class FlatToPirConverter(
             closureVars = pending.closureVars.toList(),
             enclosingClass = null,
         )
-        // Each instruction was constructed with its location already populated;
-        // only `method` is still pending. Wire it now that the function exists.
         for (loc in cfgResult.locations) loc.method = function
         return function
     }

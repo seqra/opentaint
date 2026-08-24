@@ -5,14 +5,6 @@ import org.opentaint.ir.api.python.PIRLocalVar
 import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRValue
 
-/**
- * Context-tagged alias value — the only PIR-independent value layer the alias DSU
- * needs (the simulator otherwise dispatches directly on PIR instructions).
- *
- * PIR locals/params are equal by index only, so a callee local inlined in a child
- * context would collide with the caller's local of the same index. [RefValue.Local]
- * tags the index with its frame [ContextInfo] to keep frames distinct.
- */
 sealed interface RefValue : Comparable<RefValue> {
     val valueKind: Int
 
@@ -42,17 +34,11 @@ sealed interface RefValue : Comparable<RefValue> {
     }
 }
 
-/**
- * Maps PIR values to context-tagged [RefValue]s. The root frame maps locals/params
- * identically (tagging with the root context); inlined callee frames substitute
- * parameters with the caller-frame actuals (see [NestedCallInstEvalCtx]).
- */
 interface InstEvalContext {
     fun createArg(idx: Int): RefValue
     fun createLocal(idx: Int): RefValue.Local
 }
 
-/** Converts a PIR value to a context-tagged [RefValue], or null if not ref-trackable (constant). */
 fun InstEvalContext.refValue(value: PIRValue): RefValue? = when (value) {
     is PIRLocalVar -> createLocal(value.index)
     is PIRParameterRef -> createArg(value.index)

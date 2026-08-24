@@ -9,8 +9,6 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class InterproceduralFlowTest : AnalysisTest() {
 
-    // --- SimpleCall.py ---
-
     @Test
     fun testCallSimple() = assertSinkReachable(
         source = source("SimpleCall.source", "taint", Result),
@@ -32,8 +30,6 @@ class InterproceduralFlowTest : AnalysisTest() {
         entryPointFunction = "SimpleCall.call_pass_through"
     )
 
-    // --- ChainedCall.py ---
-
     @Test
     fun testCallChain2() = assertSinkReachable(
         source = source("ChainedCall.source", "taint", Result),
@@ -47,8 +43,6 @@ class InterproceduralFlowTest : AnalysisTest() {
         sink = sink("ChainedCall.sink", "taint", Argument(0), "chain"),
         entryPointFunction = "ChainedCall.call_chain_3"
     )
-
-    // --- ArgumentPassing.py ---
 
     @Test
     fun testCallArgKill() = assertSinkNotReachable(
@@ -71,8 +65,6 @@ class InterproceduralFlowTest : AnalysisTest() {
         entryPointFunction = "ArgumentPassing.call_multiple_args_negative"
     )
 
-    // --- NestedCall.py ---
-
     @Test
     fun testNestedArgToSink() = assertSinkReachable(
         source = source("NestedCall.source", "taint", Result),
@@ -86,8 +78,6 @@ class InterproceduralFlowTest : AnalysisTest() {
         sink = sink("NestedCall.sink", "taint", Argument(0), "nested"),
         entryPointFunction = "NestedCall.nested_return"
     )
-
-    // --- ReturnValue.py ---
 
     @Test
     fun testReturnAssignAndSink() = assertSinkReachable(

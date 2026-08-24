@@ -2,11 +2,6 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.ir.api.python.PIRFunction
 
-/**
- * Layers two [PIRTaintRulesProvider]s, combining their results per rule type.
- * Mirrors `GoCombinedTaintRulesProvider`: [base] holds the primary rules and
- * [combined] the overlay (e.g. custom approximations or per-test rules).
- */
 class PIRCombinedTaintRulesProvider(
     private val base: PIRTaintRulesProvider,
     private val combined: PIRTaintRulesProvider,

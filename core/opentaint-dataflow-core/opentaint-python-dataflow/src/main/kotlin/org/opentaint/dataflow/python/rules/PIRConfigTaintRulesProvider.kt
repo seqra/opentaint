@@ -2,10 +2,6 @@ package org.opentaint.dataflow.python.rules
 
 import org.opentaint.ir.api.python.PIRFunction
 
-/**
- * Default [PIRTaintRulesProvider] backed by a single [PIRTaintConfiguration].
- * Thin delegating wrapper, mirroring the JVM `JIRTaintRulesProvider(config)`.
- */
 class PIRConfigTaintRulesProvider(private val config: PIRTaintConfiguration) : PIRTaintRulesProvider {
     override fun entryPointSourcesForMethod(method: PIRFunction) = config.entryPointSourcesForMethod(method)
     override fun sourcesForMethod(method: PIRFunction) = config.sourcesForMethod(method)

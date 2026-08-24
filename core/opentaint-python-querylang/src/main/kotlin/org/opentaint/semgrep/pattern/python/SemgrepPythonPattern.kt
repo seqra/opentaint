@@ -1,32 +1,16 @@
 package org.opentaint.semgrep.pattern.python
 
-// ----------------------------------------------------------------------------
-// Root
-// ----------------------------------------------------------------------------
-
 sealed interface SemgrepPythonPattern {
     val children: List<SemgrepPythonPattern>
 
-    /**
-     * Fallback for grammar fragments the visitor cannot yet translate but that
-     * shouldn't fail the whole parse. Real AST nodes never use this.
-     */
     data class Raw(val text: String) : SemgrepPythonPattern {
         override val children: List<SemgrepPythonPattern> get() = emptyList()
     }
 }
 
-// ----------------------------------------------------------------------------
-// Names
-// ----------------------------------------------------------------------------
-
 sealed interface Name
 data class ConcreteName(val name: String) : Name
 data class MetavarName(val name: String) : Name
-
-// ----------------------------------------------------------------------------
-// Pattern atoms / wildcards
-// ----------------------------------------------------------------------------
 
 data class Metavar(val name: String) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
@@ -48,10 +32,6 @@ data class Identifier(val name: Name) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
 
-// ----------------------------------------------------------------------------
-// Literals
-// ----------------------------------------------------------------------------
-
 data class NumberLiteral(val text: String) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
@@ -71,10 +51,6 @@ data class StringLiteral(val content: Name) : SemgrepPythonPattern {
 data object StringEllipsis : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
-
-// ----------------------------------------------------------------------------
-// Expressions
-// ----------------------------------------------------------------------------
 
 sealed interface CallArgs : SemgrepPythonPattern
 
@@ -118,7 +94,6 @@ data class Subscript(val obj: SemgrepPythonPattern, val index: SemgrepPythonPatt
     override val children: List<SemgrepPythonPattern> get() = listOfNotNull(obj, index)
 }
 
-/** Any binary operator: arithmetic/bitwise (`+`), boolean (`and`/`or`), and comparison (`<`, `==`, `is not`). */
 data class BinaryExpr(
     val op: String,
     val left: SemgrepPythonPattern,
@@ -139,10 +114,6 @@ data class ListExpr(val elements: List<SemgrepPythonPattern>) : SemgrepPythonPat
     override val children: List<SemgrepPythonPattern> get() = elements
 }
 
-// ----------------------------------------------------------------------------
-// Statements
-// ----------------------------------------------------------------------------
-
 data class ExprStmt(val expr: SemgrepPythonPattern) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = listOf(expr)
 }
@@ -151,11 +122,6 @@ data object EllipsisStmt : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
 
-/**
- * Every assignment form: plain (`a = b`), chained (`a = b = c`), augmented
- * (`a += b`, [op] is `+=`), and annotated (`a: T = b`, [annotation] set; [value]
- * null for a bare `a: T` declaration). [op] is `=` for everything but augmented.
- */
 data class Assign(
     val op: String,
     val targets: List<SemgrepPythonPattern>,
@@ -221,10 +187,6 @@ data object ContinueStmt : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
 
-// ----------------------------------------------------------------------------
-// Imports
-// ----------------------------------------------------------------------------
-
 data class ImportAlias(val dottedName: List<Name>, val asName: Name?)
 
 data class ImportStmt(val names: List<ImportAlias>) : SemgrepPythonPattern {
@@ -238,10 +200,6 @@ data class FromImportStmt(
 ) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = emptyList()
 }
-
-// ----------------------------------------------------------------------------
-// Declarations
-// ----------------------------------------------------------------------------
 
 sealed interface Param : SemgrepPythonPattern
 
@@ -285,10 +243,6 @@ data class ClassDef(
 ) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = listOf(bases) + decorators + body
 }
-
-// ----------------------------------------------------------------------------
-// Top level
-// ----------------------------------------------------------------------------
 
 data class TopList(val items: List<SemgrepPythonPattern>) : SemgrepPythonPattern {
     override val children: List<SemgrepPythonPattern> get() = items

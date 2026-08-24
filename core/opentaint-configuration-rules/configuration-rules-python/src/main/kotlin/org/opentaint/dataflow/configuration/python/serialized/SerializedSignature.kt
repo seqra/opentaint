@@ -8,13 +8,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-/**
- * Coarse function signature matcher: `(<param1>, <param2>, ...) <return>`.
- * `*` is the wildcard token (matches any type).
- *
- * The Python config currently only uses `() *` to constrain the zero-arg overloads
- * of `argparse.ArgumentParser.parse_args` / `parse_known_args`.
- */
 @Serializable(with = SerializedPythonSignatureMatcherSerializer::class)
 data class SerializedPythonSignatureMatcher(
     val args: List<String>,

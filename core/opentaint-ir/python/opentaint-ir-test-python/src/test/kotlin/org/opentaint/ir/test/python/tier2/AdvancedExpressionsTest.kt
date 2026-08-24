@@ -5,12 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for advanced expression patterns: matrix multiply, f-strings,
- * star/double-star unpacking, del targets, tuple returns, comprehension
- * unpacking, assert patterns, global semantics, augmented subscript,
- * multiple assignment targets, and yield-from.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdvancedExpressionsTest : PIRTestBase() {
@@ -151,16 +145,12 @@ def ae_yield_from(inner):
     private inline fun <reified T : PIRInstruction> instsOf(name: String): List<T> =
         allInstructions(findFunc(name)).filterIsInstance<T>()
 
-    // ─── Matrix multiply ───────────────────────────────────
-
     @Test
     fun `mat mul produces PIRBinExpr with MAT_MUL`() {
         val binOps = allInstructions(findFunc("ae_mat_mul")).filterAssignOf<PIRBinaryExpr>()
         assertTrue(binOps.any { it.binaryExpr is PIRMatMulExpr },
             "Expected PIRBinExpr(MAT_MUL) for 'a @ b', got ops: ${binOps.map { it.binaryExpr }}")
     }
-
-    // ─── F-string tests ────────────────────────────────────
 
     // F-strings are lowered by mypy to regular calls/concat before reaching the IR,
     // so PIRBuildString is NOT emitted. We just verify the function compiles to a valid CFG.
@@ -175,7 +165,6 @@ def ae_yield_from(inner):
     }
 
     // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
-    // We just verify the function compiles to a valid non-empty CFG.
     @Test
     fun `fstring format spec produces PIRBuildString or format call`() {
         val func = findFunc("ae_fstring_format_spec")
@@ -187,15 +176,12 @@ def ae_yield_from(inner):
     }
 
     // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
-    // The ternary expression should still produce a PIRBranch.
     @Test
     fun `fstring conditional has branch for ternary expression`() {
         val allInsts = allInstructions(findFunc("ae_fstring_conditional"))
         val hasBranch = allInsts.any { it is PIRBranch }
         assertTrue(hasBranch, "Expected PIRBranch for ternary 'if x > 0 else'")
     }
-
-    // ─── Star expressions in literals ──────────────────────
 
     @Test
     fun `star list produces list building instructions`() {
@@ -213,8 +199,6 @@ def ae_yield_from(inner):
             "Expected PIRDictExpr for {**a, **b}")
     }
 
-    // ─── Star in function call arguments ───────────────────
-
     @Test
     fun `star call has STAR argument kind`() {
         val calls = instsOf<PIRCall>("ae_star_call")
@@ -230,8 +214,6 @@ def ae_yield_from(inner):
             call.args.any { it.kind == PIRCallArgKind.DOUBLE_STAR }
         }, "Expected PIRCall with DOUBLE_STAR arg kind for **kwargs")
     }
-
-    // ─── Del patterns ──────────────────────────────────────
 
     @Test
     fun `del tuple produces two PIRDeleteLocal`() {
@@ -270,8 +252,6 @@ def ae_yield_from(inner):
             "Expected PIRLoadAttr for 'obj.inner' before deleting '.attr'")
     }
 
-    // ─── Tuple return ──────────────────────────────────────
-
     @Test
     fun `tuple return produces PIRBuildTuple and PIRReturn`() {
         val allInsts = allInstructions(findFunc("ae_tuple_return"))
@@ -283,12 +263,8 @@ def ae_yield_from(inner):
             "Expected PIRReturn for return statement")
     }
 
-    // ─── Comprehension with tuple unpacking ────────────────
-
     @Test
     fun `dict comp with tuple unpacking produces PIRUnpack`() {
-        // The comprehension body is compiled as a separate inner function;
-        // search all functions for the unpack instruction.
         val found = cp.modules.flatMap { m ->
             m.functions.flatMap { f ->
                 f.instList
@@ -297,8 +273,6 @@ def ae_yield_from(inner):
         assertTrue(found,
             "Expected PIRUnpack somewhere for 'k, v' in dict comprehension")
     }
-
-    // ─── Assert patterns ───────────────────────────────────
 
     @Test
     fun `assert func call produces PIRCall for len`() {
@@ -317,7 +291,6 @@ def ae_yield_from(inner):
     }
 
     // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
-    // We just verify the function compiles to a valid non-empty CFG.
     @Test
     fun `assert fstring message contains PIRBuildString`() {
         val func = findFunc("ae_assert_fstring")
@@ -328,10 +301,6 @@ def ae_yield_from(inner):
             "Expected non-empty instructions for ae_assert_fstring (f-strings are lowered by mypy)")
     }
 
-    // ─── Global statement semantics ────────────────────────
-
-    // The CfgBuilder currently treats global writes as regular PIRAssign (local),
-    // NOT PIRStoreGlobal. This may change in a future implementation.
     @Test
     fun `global write produces PIRStoreGlobal`() {
         val assigns = instsOf<PIRAssign>("ae_global_write")
@@ -341,8 +310,6 @@ def ae_yield_from(inner):
 
     @Test
     fun `global del produces PIRDeleteLocal for current behavior`() {
-        // Current behavior: del on a global-declared name emits PIRDeleteLocal
-        // rather than PIRDeleteGlobal.
         val allInsts = allInstructions(findFunc("ae_global_del"))
         val hasDeleteLocal = allInsts.any { it is PIRDeleteLocal }
         val hasDeleteGlobal = allInsts.any { it is PIRDeleteGlobal }
@@ -350,16 +317,12 @@ def ae_yield_from(inner):
             "Expected PIRDeleteLocal or PIRDeleteGlobal for 'del _ae_counter' with global declaration")
     }
 
-    // ─── Multiple assignment targets ───────────────────────
-
     @Test
     fun `multi assign produces at least three PIRAssign`() {
         val assigns = instsOf<PIRAssign>("ae_multi_assign")
         assertTrue(assigns.size >= 3,
             "Expected >= 3 PIRAssign for 'a = b = c = 0', got ${assigns.size}")
     }
-
-    // ─── Augmented assignment on subscript ─────────────────
 
     @Test
     fun `augmented subscript produces LoadSubscript StoreSubscript and BinOp`() {
@@ -372,8 +335,6 @@ def ae_yield_from(inner):
             "Expected PIRBinOp(ADD) for += 1")
     }
 
-    // ─── Yield from ────────────────────────────────────────
-
     @Test
     fun `yield from produces PIRYieldFrom`() {
         val yfs = instsOf<PIRYieldFrom>("ae_yield_from")
@@ -385,8 +346,6 @@ def ae_yield_from(inner):
         assertTrue(findFunc("ae_yield_from").isGenerator,
             "Expected ae_yield_from to be flagged as generator")
     }
-
-    // ─── Structural validity ───────────────────────────────
 
     @Test
     fun `all ae functions have non-empty CFGs with return instructions`() {

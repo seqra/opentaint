@@ -3,12 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for `match` statements. Executes the original `match` and the
- * reconstructed desugaring (if/elif chain) and asserts identical results —
- * verifies the desugaring in [StatementLowering.visitMatch] preserves semantics.
- * v1 covers capture / wildcard / `as` / value patterns and guards.
- */
 @Tag("tier3")
 class RoundTripMatchTest : RoundTripTestBase() {
 

@@ -16,16 +16,6 @@ import org.opentaint.util.analysis.ApplicationGraph
 import java.util.BitSet
 import org.opentaint.dataflow.python.util.indexOfKeywordParam
 
-/**
- * Inter-procedural call inlining support, mirroring the JVM `InterProcCallNode`.
- * A resolved call is inlined by analyzing the callee's graph from the caller's
- * current state, with the callee's parameter references substituted by the
- * caller-frame actuals via [NestedCallInstEvalCtx].
- *
- * Declaration order mirrors the JVM `InterProcCallNode`; the trailing
- * [RootInstEvalContext] / [GraphAnalysisState] / [ResolvedCallMethod] have no JVM
- * counterpart here (the JVM keeps them in `DSUAliasAnalysis`).
- */
 interface CallResolver {
     fun resolveMethodCall(call: PIRCall, level: Int): List<PIRFunction>?
     fun buildMethodGraph(method: PIRFunction): PIRInstGraph?
@@ -39,7 +29,6 @@ class AliasCallResolver(
 ) : CallResolver {
     override fun resolveMethodCall(call: PIRCall, level: Int): List<PIRFunction>? {
         if (level >= params.aliasAnalysisInterProcCallDepth) return null
-        // Synthetic unknown functions have no CFG to step into.
         val methods = callResolver.resolveCall(call).filter { it !is PIRUnknownFunction }
         return methods.takeIf { it.isNotEmpty() }
     }
@@ -70,15 +59,6 @@ class CallTreeNode(val ctx: ContextInfo, val instEvalCtx: InstEvalContext) {
     }
 }
 
-/**
- * Evaluates a callee's body in [ctx], substituting its parameter references with
- * the caller-frame actuals in [paramActuals], indexed by callee parameter index.
- * The implicit receiver (`self`/`cls`) is left unbound here, so it falls through
- * to the slot `Local(-1, ctx)` and is bound to the call's receiver separately by
- * `PIRDSUAliasAnalysis.bindReceiver` (via `call.callee.$PIR_SELF`). Other unbound
- * parameters (missing / star args) likewise become fresh context-local slots that
- * alias nothing.
- */
 class NestedCallInstEvalCtx(
     private val paramActuals: Array<RefValue?>,
     private val ctx: ContextInfo,
@@ -108,11 +88,6 @@ private fun resolveCallNoCache(
     return resolved.takeIf { it.isNotEmpty() }
 }
 
-/**
- * Binds each caller actual to the callee parameter it fills: a positional arg at raw
- * slot `s` to parameter `s + offset`, a keyword arg to the declared parameter of its
- * name. The result is indexed by callee parameter index (self/cls at 0, left unbound).
- */
 private fun bindParamActuals(call: PIRCall, method: PIRFunction, callerCtxEval: InstEvalContext): Array<RefValue?> {
     val offset = PIRFlowFunctionUtils.implicitParamOffset(method)
     val actuals = arrayOfNulls<RefValue>(method.parameters.size)

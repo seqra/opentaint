@@ -645,7 +645,7 @@ message MypyFuncDefProto {
 message MypyArgumentProto {
   string name = 1;
   PIRTypeProto type = 2;
-  int32 kind = 3;                             // ARG_POS=0, ARG_OPT=1, ARG_STAR=2, ARG_STAR2=4, ARG_NAMED=5, ARG_NAMED_OPT=6
+  int32 kind = 3;                             // ARG_POS=0, ARG_OPT=1, ARG_STAR=2, ARG_NAMED=3, ARG_STAR2=4, ARG_NAMED_OPT=5
   bool has_default = 4;
   MypyExprProto default_value = 5;            // Optional default expression
 }
@@ -961,7 +961,7 @@ message MypyCallExprProto {
 
 message MypyCallArgProto {
   MypyExprProto expr = 1;
-  int32 kind = 2;                             // ARG_POS=0, ARG_STAR=2, ARG_STAR2=4, ARG_NAMED=5, etc.
+  int32 kind = 2;                             // ARG_POS=0, ARG_OPT=1, ARG_STAR=2, ARG_NAMED=3, ARG_STAR2=4, ARG_NAMED_OPT=5
   string name = 3;
 }
 

@@ -38,7 +38,6 @@ data object PythonTaintStrategy :
 
         return rules.filter { r ->
             if (r !is SerializedPythonSink) return@filter true
-            // A trivially-true sink condition is normalized to null at emission.
             if (r.condition != null) return@filter true
 
             if (sinkDiscardMode == SinkDiscardMode.TRIVIAL_CONDITION_WITH_EMPTY_FUNCTION) {

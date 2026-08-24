@@ -15,8 +15,6 @@ open class PIRLanguageManager(
     protected val cp: PIRClasspath,
 ) : LanguageManager {
 
-    // --- Interface implementations ---
-
     override fun getInstIndex(inst: CommonInst): Int =
         (inst as PIRInstruction).location.index
 
@@ -43,7 +41,6 @@ open class PIRLanguageManager(
         val qualifiedName = call.resolvedCallee
             ?: error("Unresolved call: ${call.callee}")
 
-        // Primary: direct lookup by qualified name
         cp.findFunctionOrNull(qualifiedName)?.let { return it }
 
         // Fallback: for nested function calls, mypy may set resolvedCallee to just

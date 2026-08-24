@@ -108,7 +108,6 @@ class PIRMethodSequentFlowFunction(
             unchanged = { this += Sequent.Unchanged },
             propagateFact = { it, traceInfo -> this += Sequent.FactToFact(initialFactAp, it, traceInfo) },
             propagateFactWithAccessorExclude = { fact, accessor, traceInfo ->
-                // Exclude the accessor on BOTH edge ends so the edge stays well-formed.
                 this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), traceInfo)
             },
             addSideEffectRequirement = { reader ->
@@ -137,10 +136,6 @@ class PIRMethodSequentFlowFunction(
         )
     }
 
-    /**
-     * Shared dispatch over the instruction kind. Results are collected by the caller's
-     * Unit-returning lambdas (mirrors [PIRMethodCallFlowFunction.propagateFact]).
-     */
     private fun propagateFact(
         initialFacts: Set<InitialFactAp>,
         currentFactAp: FinalFactAp,
@@ -169,17 +164,6 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    // ==========================================================================
-    // Assignment: target = expr
-    // ==========================================================================
-
-    /**
-     * Assignment `target = expr`. Dispatches based on expression type:
-     * - Simple value (PIRValue): variable-to-variable copy
-     * - PIRSubscriptExpr: subscript read (x = obj[i])
-     * - Container/binary/string: taint flows from operands
-     * - Other compound: strong update (kill) on target
-     */
     private fun handleAssign(
         assign: PIRAssign,
         currentFactAp: FinalFactAp,
@@ -190,7 +174,6 @@ class PIRMethodSequentFlowFunction(
         val assignTo = PIRFlowFunctionUtils.accessPathBase(assign.target) ?: return unchanged(currentFactAp)
         val expr = assign.expr
 
-        // Simple value copy (x = y)
         if (expr is PIRValue) {
             handleSimpleAssign(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
@@ -201,7 +184,6 @@ class PIRMethodSequentFlowFunction(
             return
         }
 
-        // Subscript read (x = obj[index])
         if (expr is PIRSubscriptExpr) {
             handleSubscriptRead(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             return
@@ -212,31 +194,26 @@ class PIRMethodSequentFlowFunction(
             return
         }
 
-        // Container literal (dict, list, tuple, set) — taint flows from values to target
         if (expr is PIRDictExpr || expr is PIRListExpr || expr is PIRTupleExpr || expr is PIRSetExpr) {
             handleContainerLiteral(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Binary expression — taint flows from either operand (e.g. string concatenation)
         if (expr is PIRBinaryExpr) {
             handleBinExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // String expression (f-string parts) — taint flows from any part
         if (expr is PIRStringExpr) {
             handleStringExpr(expr, assignTo, currentFactAp, unchanged, propagateFact)
             return
         }
 
-        // Global / module read — read ClassStatic.<name> into the target
         if (expr is PIRReadNameExpr) {
             handleReadNameExpr(expr, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
             return
         }
 
-        // Other compound expression — strong update on target, pass through otherwise
         if (currentFactAp.base != assignTo) unchanged(currentFactAp)
     }
 
@@ -266,20 +243,6 @@ class PIRMethodSequentFlowFunction(
         handleAccessorRead(assignTo, instance, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
     }
 
-    // ==========================================================================
-    // LoadAttr: target = obj.attr (PIRLoadAttr instruction)
-    // ==========================================================================
-
-    /**
-     * Field read: target = obj.attr
-     *
-     * If fact is on obj with matching field accessor (e.g., obj.data.![taint].*),
-     * read the field accessor to produce target.![taint].* and rebase.
-     *
-     * If fact is abstract on obj (obj.*) and field is not excluded,
-     * materialize the concrete read and propagate the abstract fact with the field
-     * excluded on both edge ends.
-     */
     private fun handleAttrRead(
         inst: PIRLoadAttr,
         initialFacts: Set<InitialFactAp>,
@@ -319,7 +282,6 @@ class PIRMethodSequentFlowFunction(
         handleAccessorRead(assignTo, objBase, accessor, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
 
         if (currentFactAp.base == objBase) {
-            // method self binding
             propagateFact(currentFactAp.rebase(assignTo).prependAccessor(SELF_ACCESSOR), TraceInfo.Flow)
         }
     }
@@ -388,11 +350,6 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    /**
-     * Subscript read: target = obj[index]
-     *
-     * Similar to field read but uses ElementAccessor instead of FieldAccessor.
-     */
     private fun handleSubscriptRead(
         expr: PIRSubscriptExpr,
         assignTo: AccessPathBase,
@@ -448,14 +405,6 @@ class PIRMethodSequentFlowFunction(
         propagateFact(newAp, TraceInfo.Flow)
     }
 
-    // ==========================================================================
-    // Container literal: target = {k: v, ...} / [v, ...] / (v, ...) / {v, ...}
-    // ==========================================================================
-
-    /**
-     * If any value in the container matches the current fact's base, propagate taint
-     * to target with ElementAccessor prepended. Dict keys are not tracked.
-     */
     private fun handleContainerLiteral(
         expr: PIRExpr,
         assignTo: AccessPathBase,
@@ -485,14 +434,6 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    // ==========================================================================
-    // Binary expression: target = left op right
-    // ==========================================================================
-
-    /**
-     * For operations like string concatenation (ADD), if either operand is tainted,
-     * taint flows to the result. This is a broad rule — conservative but safe.
-     */
     private fun handleBinExpr(
         expr: PIRBinaryExpr,
         assignTo: AccessPathBase,
@@ -510,13 +451,6 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    // ==========================================================================
-    // String expression (f-string parts): target = f"... {part} ..."
-    // ==========================================================================
-
-    /**
-     * If any string part is tainted, taint flows to the result.
-     */
     private fun handleStringExpr(
         expr: PIRStringExpr,
         assignTo: AccessPathBase,
@@ -534,10 +468,6 @@ class PIRMethodSequentFlowFunction(
             return
         }
     }
-
-    // ==========================================================================
-    // Return
-    // ==========================================================================
 
     private fun handleReturn(
         ret: PIRReturn,
@@ -560,8 +490,6 @@ class PIRMethodSequentFlowFunction(
     }
 
     private fun applyExitSinkRules(ret: PIRReturn, initialFacts: Set<InitialFactAp>, fact: FinalFactReader?, addUnchecked: (Sequent) -> Unit) {
-        // Return sinks fire only on the zero-to-fact path —
-        // a fact sourced inside the method reaching the exit
         if (initialFacts.isNotEmpty()) return
 
         val exitSinks = rulesProvider.exitSinksForMethod(ctx.method)
@@ -582,14 +510,6 @@ class PIRMethodSequentFlowFunction(
         )
     }
 
-    // ==========================================================================
-    // StoreAttr: obj.attr = value
-    // ==========================================================================
-
-    /**
-     * obj.attr = value: if fact is on value, propagate taint to obj.attr.
-     * Also applies strong update when the current fact is on obj.attr.
-     */
     private fun handleStoreAttr(
         store: PIRStoreAttr,
         currentFactAp: FinalFactAp,
@@ -619,7 +539,7 @@ class PIRMethodSequentFlowFunction(
                 return
             }
 
-            val auxiliaryBase = AccessPathBase.LocalVar.create(-1) // b
+            val auxiliaryBase = AccessPathBase.LocalVar.create(-1)
             check(auxiliaryBase != destObj)
 
             handleAccessorWrite(
@@ -685,7 +605,6 @@ class PIRMethodSequentFlowFunction(
         }
 
         if (accessor is ElementAccessor) {
-            // Weak update for elements
             propagateFact(currentFactAp, TraceInfo.Flow)
             return
         }
@@ -696,7 +615,7 @@ class PIRMethodSequentFlowFunction(
             val nonAbstractFact = currentFactAp.removeAbstraction()
             if (nonAbstractFact != null) {
                 handleAccessorWrite(
-                    destObj, accessor, assignFrom, nonAbstractFact, 
+                    destObj, accessor, assignFrom, nonAbstractFact,
                     unchanged, propagateFact, propagateFactWithAccessorExclude
                 )
             }
@@ -714,14 +633,6 @@ class PIRMethodSequentFlowFunction(
         }
     }
 
-    // ==========================================================================
-    // StoreSubscript: obj[index] = value
-    // ==========================================================================
-
-    /**
-     * obj[index] = value: if fact is on value, propagate taint to obj's element.
-     * Also applies strong update when the current fact is on obj's element.
-     */
     private fun handleStoreSubscript(
         store: PIRStoreSubscript,
         currentFactAp: FinalFactAp,

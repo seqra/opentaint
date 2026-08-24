@@ -67,11 +67,6 @@ interface PIRBasicAtomEvaluator : PIRConditionVisitor<Boolean> {
     }
 }
 
-/**
- * Evaluates the statically-decidable atoms of a [org.opentaint.dataflow.configuration.python.PythonRuleCondition]
- * against the concrete [call] — mirrors `GoBasicAtomEvaluator` / `JIRBasicAtomEvaluator`. The taint-fact atom
- * [ContainsMark] is not basic: it is handled by [PIRConditionRewriter], so visiting it here is a bug.
- */
 class PIRCallAtomEvaluator(private val call: PIRCall) : PIRBasicAtomEvaluator {
     override fun numberOrArgs(): IntRange {
         val explicit = call.args.count {

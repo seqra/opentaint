@@ -56,7 +56,6 @@ private object OperandExtractor : PIRInstVisitor<List<PIRValue>> {
     override fun visitDeleteLocal(inst: PIRDeleteLocal)         = listOf(inst.local)
     override fun visitDeleteAttr(inst: PIRDeleteAttr)           = listOf(inst.obj)
     override fun visitDeleteSubscript(inst: PIRDeleteSubscript) = listOf(inst.obj, inst.index)
-    // `ref` is a structural name reference, not a value read.
     override fun visitDeleteGlobal(inst: PIRDeleteGlobal)       = emptyList<PIRValue>()
     override fun visitUnreachable(inst: PIRUnreachable)         = emptyList<PIRValue>()
 }
@@ -75,7 +74,6 @@ private fun PIRExpr.operands(): List<PIRValue> = when (this) {
     is PIRStringExpr      -> parts
     is PIRIterExpr        -> listOf(iterable)
     is PIRTypeCheckExpr   -> listOf(value)
-    // Structural name references, not value reads.
     is PIRBindFunctionExpr -> emptyList()
     is PIRReadNameExpr     -> emptyList()
 }

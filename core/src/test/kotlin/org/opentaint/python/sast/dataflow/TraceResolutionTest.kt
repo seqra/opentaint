@@ -9,17 +9,9 @@ import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import kotlin.test.Test
 import kotlin.test.assertTrue
 
-/**
- * Exercises the Python trace resolver end-to-end (the precondition classes wired
- * into [org.opentaint.dataflow.python.analysis.PIRAnalysisManager]) on shapes that
- * no other test covers. Reachability alone is asserted by the flow tests, which
- * already require a resolvable trace.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class TraceResolutionTest : AnalysisTest() {
 
-    // Taint originating from an ATTRIBUTE read (not a call): exercises the attribute
-    // source-rule inversion in the sequent precondition.
     @Test
     fun testAttributeSourceTraceResolves() = assertResolves(
         attributeSource("tainted_attr", "taint"),

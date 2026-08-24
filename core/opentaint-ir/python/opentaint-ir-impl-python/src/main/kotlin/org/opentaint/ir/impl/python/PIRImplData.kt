@@ -3,8 +3,6 @@ package org.opentaint.ir.impl.python
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.PIRCFGImpl.Companion.EMPTY_CFG
 
-// ─── Entity Implementations ────────────────────────────────
-
 data class PIRModuleImpl(
     override val name: String,
     override val path: String,
@@ -15,15 +13,11 @@ data class PIRModuleImpl(
     override val imports: List<String>,
     override val diagnostics: List<PIRDiagnostic> = emptyList(),
 ) : PIRModule {
-    // Break circular hashCode/toString: module → classes/functions → module
     override fun equals(other: Any?): Boolean = this === other || (other is PIRModuleImpl && name == other.name && path == other.path)
     override fun hashCode(): Int = name.hashCode() * 31 + path.hashCode()
     override fun toString(): String = "PIRModule($name)"
 }
 
-// Not `data class`: `module` is `lateinit var` wired post-construction, so
-// synthesized copy()/componentN() would drop it. equals/hashCode/toString are
-// hand-rolled below to break circular references anyway.
 class PIRClassImpl(
     override val name: String,
     override val qualifiedName: String,
@@ -38,17 +32,13 @@ class PIRClassImpl(
     override val isDataclass: Boolean,
     override val isEnum: Boolean,
 ) : PIRClass {
-    // Wired after construction: chicken-and-egg — module needs its classes built first.
     override lateinit var module: PIRModule
 
-    // Break circular hashCode/toString: class → methods → function → enclosingClass → class
     override fun equals(other: Any?): Boolean = this === other || (other is PIRClassImpl && qualifiedName == other.qualifiedName)
     override fun hashCode(): Int = qualifiedName.hashCode()
     override fun toString(): String = "PIRClass($qualifiedName)"
 }
 
-// Not `data class`: `module` is `lateinit var` wired post-construction, so
-// synthesized copy()/componentN() would drop it.
 class PIRFunctionImpl(
     override val name: String,
     override val qualifiedName: String,
@@ -62,15 +52,12 @@ class PIRFunctionImpl(
     override val isClassMethod: Boolean,
     override val isProperty: Boolean,
     override val closureVars: List<String>,
-    // Mutable: set after construction to wire up circular class<->method reference
     override var enclosingClass: PIRClass?,
 ) : PIRFunction {
-    // Wired after construction: chicken-and-egg — module needs its functions built first.
     override lateinit var module: PIRModule
 
     override val instList: List<PIRInstruction> get() = cfg.instList
 
-    // Break circular hashCode/toString: function → enclosingClass → methods → function
     override fun equals(other: Any?): Boolean = this === other || (other is PIRFunctionImpl && qualifiedName == other.qualifiedName)
     override fun hashCode(): Int = qualifiedName.hashCode()
     override fun toString(): String = "PIRFunction($qualifiedName)"
@@ -89,7 +76,6 @@ data class PIRFieldImpl(
     override val name: String,
     override val type: PIRType,
     override val isClassVar: Boolean,
-    override val hasInitializer: Boolean,
 ) : PIRField
 
 data class PIRPropertyImpl(
@@ -105,8 +91,6 @@ data class PIRDecoratorImpl(
     override val qualifiedName: String,
     override val arguments: List<String>,
 ) : PIRDecorator
-
-// ─── CFG Implementation ────────────────────────────────────
 
 class PIRCFGImpl(
     override val blocks: List<PIRBasicBlock>,
@@ -171,10 +155,6 @@ class PIRCFGImpl(
     }
 }
 
-// ─── Unknown Entity Implementations ────────────────────────
-// Returned when a module fails to build (e.g. mypy syntax error).
-// All collections are empty; lookups return further Unknown entities.
-
 class PIRUnknownModule(
     override val name: String,
     override val diagnostics: List<PIRDiagnostic>,
@@ -218,4 +198,3 @@ class PIRUnknownClass(
     override val isDataclass: Boolean = false
     override val isEnum: Boolean = false
 }
-

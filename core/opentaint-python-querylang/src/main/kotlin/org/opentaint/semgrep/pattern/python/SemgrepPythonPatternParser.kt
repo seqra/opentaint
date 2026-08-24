@@ -95,13 +95,7 @@ class SemgrepPythonPatternParser : SemgrepPatternParser<SemgrepPythonPattern> {
     }
 }
 
-// ----------------------------------------------------------------------------
-// Visitor
-// ----------------------------------------------------------------------------
-
 private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<SemgrepPythonPattern?>() {
-
-    // --- top level ---
 
     override fun visitSemgrepPattern(ctx: PythonParser.SemgrepPatternContext): SemgrepPythonPattern {
         ctx.eval_input()?.let { return parseEvalInput(it) }
@@ -117,8 +111,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
 
     private fun parseFileInput(ctx: PythonParser.File_inputContext): List<SemgrepPythonPattern> =
         ctx.stmt().flatMap { parseStmt(it) }
-
-    // --- statements ---
 
     private fun parseStmt(ctx: PythonParser.StmtContext): List<SemgrepPythonPattern> {
         ctx.simple_stmt()?.let { s -> return s.small_stmt().map { parseSmallStmt(it) } }
@@ -143,20 +135,17 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
         val ap = ctx.assign_part()
             ?: return if (lhs is Ellipsis) EllipsisStmt else ExprStmt(lhs)
 
-        // Plain / chained assignment: `a = b = c`
         if (ap.ASSIGN().isNotEmpty() && ap.testlist_star_expr().isNotEmpty()) {
             val rhs = ap.testlist_star_expr().map { parseTestlistStarExpr(it) }
             val value = rhs.last()
             val targets = listOf(lhs) + rhs.dropLast(1)
             return Assign("=", targets, value, annotation = null)
         }
-        // Annotated assignment: `a : T (= v)?`
         ap.COLON()?.let {
             val annotation = parseTest(ap.test())
             val value = ap.testlist()?.let { tl -> parseTestlist(tl) }
             return Assign("=", listOf(lhs), value, annotation)
         }
-        // Augmented assignment: `a += b`
         val opToken = (0 until ap.childCount)
             .map { ap.getChild(it) }
             .filterIsInstance<TerminalNode>()
@@ -198,7 +187,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
     private fun parseIf(ctx: PythonParser.If_stmtContext): SemgrepPythonPattern {
         val cond = parseTest(ctx.test())
         val body = parseSuite(ctx.suite())
-        // Build elif chain from the tail; attach final else if present.
         var orelse: SemgrepPythonPattern? = ctx.else_clause()?.let { parseSuite(it.suite()) }
         for (elif in ctx.elif_clause().reversed()) {
             orelse = IfStmt(parseTest(elif.test()), parseSuite(elif.suite()), orelse)
@@ -263,7 +251,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
 
     private fun parseParams(ctx: PythonParser.TypedargslistContext): List<Param> {
         val params = mutableListOf<Param>()
-        // Walk children in order so ellipsis position is preserved.
         for (i in 0 until ctx.childCount) {
             when (val c = ctx.getChild(i)) {
                 is PythonParser.Def_parametersContext -> c.def_parameter().forEach { params.add(parseDefParameter(it)) }
@@ -282,7 +269,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
             val default = ctx.test()?.let { parseTest(it) }
             return NamedParam(name, annotation, default)
         }
-        // bare `*`
         return StarParam(null)
     }
 
@@ -290,8 +276,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
         ctx.simple_stmt()?.let { s -> return Block(s.small_stmt().map { parseSmallStmt(it) }) }
         return Block(ctx.stmt().flatMap { parseStmt(it) })
     }
-
-    // --- expressions ---
 
     private fun parseTestlist(ctx: PythonParser.TestlistContext): SemgrepPythonPattern {
         val tests = ctx.test().map { parseTest(it) }
@@ -321,7 +305,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
     }
 
     private fun parseTest(ctx: PythonParser.TestContext): SemgrepPythonPattern {
-        // Ternary (`a if c else b`) and lambda are outside the supported subset.
         if (ctx.IF() != null || ctx.LAMBDA() != null) return SemgrepPythonPattern.Raw(ctx.text)
         return parseLogicalTest(ctx.logical_test(0))
     }
@@ -401,7 +384,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
     private fun parseSubscript(ctx: PythonParser.SubscriptContext): SemgrepPythonPattern {
         if (ctx.ELLIPSIS() != null) return Ellipsis
         val tests = ctx.test()
-        // Plain index `a[i]`; slices fall back to Raw for now.
         if (ctx.COLON() == null && tests.size == 1) return parseTest(tests[0])
         return SemgrepPythonPattern.Raw(ctx.text)
     }
@@ -434,8 +416,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
             else -> ConcreteName(ctx.text.substringBefore('=').trim())
         }
 
-    // --- atoms ---
-
     private fun parseAtom(ctx: PythonParser.AtomContext): SemgrepPythonPattern {
         ctx.ELLIPSIS()?.let { return Ellipsis }
         ctx.LDOTS()?.let { return DeepExpr(parseTest(ctx.test())) }
@@ -448,7 +428,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
         if (ctx.STRING().isNotEmpty()) return parseStringAtom(ctx.STRING().map { it.text })
         ctx.PRINT()?.let { return Identifier(ConcreteName("print")) }
         ctx.EXEC()?.let { return Identifier(ConcreteName("exec")) }
-        // ( ... ) tuple / parenthesized, [ ... ] list
         if (ctx.OPEN_PAREN() != null) {
             val tc = ctx.testlist_comp() ?: return SemgrepPythonPattern.Raw(ctx.text)
             val elems = parseTestlistComp(tc)
@@ -489,11 +468,9 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
         return StringLiteral(ConcreteName(parts.joinToString("") { unquoteString(it) }))
     }
 
-    // --- names ---
-
     private fun parseName(ctx: PythonParser.NameContext): Name {
         ctx.METAVAR()?.let { return MetavarName(it.text) }
-        ctx.METAVAR_ELLIPSIS()?.let { return MetavarName(it.text.removePrefix("$")) } // "$...X" -> "...X"
+        ctx.METAVAR_ELLIPSIS()?.let { return MetavarName(it.text.removePrefix("$")) }
         ctx.ANONYMOUS_METAVAR()?.let { return MetavarName("_") }
         return ConcreteName(ctx.text)
     }
@@ -516,10 +493,6 @@ private class SemgrepPythonPatternParserVisitor : PythonParserBaseVisitor<Semgre
     }
 }
 
-// ----------------------------------------------------------------------------
-// Helpers
-// ----------------------------------------------------------------------------
-
 private tailrec fun CallArgs.containsEllipsis(): Boolean =
     when (this) {
         is NoArgs -> false
@@ -533,7 +506,6 @@ private fun isMetavarText(s: String): Boolean =
 
 private fun unquoteString(raw: String): String {
     var s = raw
-    // strip string prefixes (r, b, f, u and combinations)
     val quoteIdx = s.indexOfFirst { it == '"' || it == '\'' }
     if (quoteIdx > 0) s = s.substring(quoteIdx)
     for (q in listOf("\"\"\"", "'''")) {

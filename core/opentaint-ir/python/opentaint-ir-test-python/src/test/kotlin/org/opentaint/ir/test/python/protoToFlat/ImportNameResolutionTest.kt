@@ -49,23 +49,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Regression coverage for proto→Flat name resolution of `import` bindings.
- *
- * - `import os` (and aliases like `import os.path as p`) bind a module:
- *   they lower to [FlatModuleRef] carrying the canonical fullname; the
- *   alias is resolved away.
- * - `from os import getcwd` binds a value inside a module: each read
- *   lowers to `FlatLoadAttr(tmp, FlatModuleRef("os"), "getcwd")`. The
- *   cross-module invariant is that `FlatGlobalRef` only ever names a
- *   symbol of the *current* module (or a builtin); references to symbols
- *   defined in any other user module are split into ModuleRef + attribute
- *   read.
- *
- * In all cases the bound name must NOT surface as [FlatLocal] — otherwise
- * the closure analyzer treats every imported name in every nested function
- * body as a fake capture, corrupting the downstream closure transform.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ImportNameResolutionTest : RawFlatModuleTestBase() {
@@ -80,8 +63,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         return out
     }
 
-    /** Returns each FlatGlobalNameRef (carried by a [FlatReadName]) as
-     *  `(simpleName, module)` derived from `qualifiedName` via last-dot split. */
     private fun globalRefs(fn: FlatFunctionIR): Set<Pair<String, String>> {
         val out = HashSet<Pair<String, String>>()
         for (block in fn.cfg.blocks) {
@@ -113,19 +94,9 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         return out
     }
 
-    /**
-     * Harvest cross-module attribute reads. After the FlatReadName lowering,
-     * `from os import getcwd` produces:
-     *   FlatReadName(tmp, FlatModuleNameRef("os"))
-     *   FlatLoadAttr(t2, tmp, "getcwd")
-     * This helper finds each `FlatLoadAttr` whose `obj` was filled by a
-     * `FlatReadName` of a [FlatModuleNameRef], and returns `(attr, module)`
-     * pairs.
-     */
     private fun importedAttrReads(fn: FlatFunctionIR): Set<Pair<String, String>> {
         val out = HashSet<Pair<String, String>>()
         for (block in fn.cfg.blocks) {
-            // Build name → moduleRef map for FlatReadName-defined locals in this block.
             val nameToModule = HashMap<String, String>()
             for (inst in block.instructions) {
                 if (inst is FlatReadName) {
@@ -406,11 +377,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         val modInit = fn(mod, ".__module_init__")
         val f = fn(mod, ".f")
 
-        // Both module-init (which contains the `import` statement) and `f`
-        // (which only reads the binding) should see `missing_pkg` as a
-        // FlatModuleRef. Module-init produces no read in this example
-        // because the import statement emits no FlatInst — but `f`'s read
-        // must still resolve correctly via the GDEF override path.
         val fModules = moduleRefs(f)
         val fGlobals = globalRefs(f)
         assertTrue(
@@ -421,7 +387,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
             fGlobals.any { it.second == "__test__" && it.first == "missing_pkg" },
             "scope-prefixed FlatGlobalRef(__test__.missing_pkg) must NOT appear; got fGlobals=$fGlobals",
         )
-        // sanity: confirm modInit didn't emit a stray ref either
         assertFalse(
             globalRefs(modInit).any { it.first == "missing_pkg" && it.second == "__test__" },
             "module-init must not emit FlatGlobalRef(__test__.missing_pkg)",
@@ -511,14 +476,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * `from m import submodule` where `submodule` is *actually* a module
-     * (not a value) is an accepted limitation: without resolving `m` we
-     * can't disambiguate value from submodule. Both cases share the same
-     * lowered shape — `LoadAttr(ModuleRef(m), submodule)` — which is also
-     * a faithful representation of submodule access at runtime (Python
-     * imports populate `m.submodule` as an attribute of `m`).
-     */
     @Test
     fun `from suppressed module import submodule defaults to LoadAttr`() {
         val source = """
@@ -566,13 +523,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Function-scope imports must shadow module-level ones (Python's
-     * scoping rule: inner scope wins). Here `missing_pkg` is bound at
-     * module level to itself (as a MODULE), and shadowed inside `f` by a
-     * `from other_pkg import missing_pkg` that rebinds the same name to a
-     * VALUE under a different module.
-     */
     @Test
     fun `function-scope import shadows module-level import of same name`() {
         val source = """
@@ -600,12 +550,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Same-name rebind across import kinds within one scope: the textually
-     * LAST write wins. Here `x` is first bound as a module, then rebound as
-     * a value via `from pkg import x`. The read after both must see the
-     * value binding, not the stale module binding.
-     */
     @Test
     fun `same-scope import-then-from-import rebinds bound name to value`() {
         val source = """
@@ -631,10 +575,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Symmetric rebind: `from … import …` then `import …` of the same name.
-     * Module binding must win.
-     */
     @Test
     fun `same-scope from-import-then-import rebinds bound name to module`() {
         val source = """
@@ -658,13 +598,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Order sensitivity: reads of an imported name BEFORE the function-scope
-     * import statement do not see the import (the lowering walks
-     * instructions in order). The pre-import read falls through to FlatLocal
-     * — which is what Python would do at runtime (it would raise
-     * UnboundLocalError). The post-import read picks up the import correctly.
-     */
     @Test
     fun `pre-import read falls back to FlatLocal, post-import read picks up canonical`() {
         val source = """
@@ -691,11 +624,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Sanity: a function-scoped import is scoped *to that function*. Reading
-     * the same bare name from a sibling function must not pick up the other
-     * function's import map — there's no shared `CfgSession`.
-     */
     @Test
     fun `function-scoped suppressed import does not leak across functions`() {
         val source = """
@@ -724,15 +652,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Pins the lambda-RHS-sees-textually-later-import semantics that the
-     * two-pass module-init walk in [CfgBuild.buildModuleInitCfg] depends on.
-     *
-     * The lambda body is lowered as part of module-init's pass 2 (assignment
-     * emission). Without pass 1 (import recording first), the textually-later
-     * `import missing_pkg` would not yet be on `ModuleContext.imports` and
-     * the lambda's NameExpr would mis-classify as a scope-prefixed FlatGlobalRef.
-     */
     @Test
     fun `module-level lambda RHS sees textually-later import`() {
         val source = """
@@ -760,13 +679,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Builtins are exempt from the cross-module split: `int`, `str`, etc.
-     * surface as `FlatGlobalRef("builtins.int")`, not as
-     * `LoadAttr(ModuleRef(builtins), int)`. Downstream passes already
-     * special-case the `builtins.` prefix and treat builtins as ambient
-     * rather than imported.
-     */
     @Test
     fun `bare builtin name stays as FlatGlobalRef`() {
         val source = """
@@ -788,13 +700,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Hard-coded synthetic refs to nested builtins (e.g. the `builtins.set`
-     * emitted by set-comprehension lowering) live as `FlatGlobalRef`. The
-     * `splitForeignFullname` builtins carve-out is prefix-based so it also
-     * covers hypothetical mypy-resolved `builtins.str.join`-style names
-     * if they ever surface as NAME_GLOBAL.
-     */
     @Test
     fun `set comprehension emits FlatGlobalRef for builtins set`() {
         val source = """
@@ -816,13 +721,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * Same-module top-level references stay as `FlatGlobalRef` — they're
-     * the canonical case for the in-module invariant. mypy emits a
-     * `NAME_GLOBAL` fullname `__test__.helper` for the reference to `helper`
-     * inside `caller`; the lowering must NOT split this into a foreign
-     * `LoadAttr(ModuleRef(__test__), helper)`.
-     */
     @Test
     fun `same-module top-level reference stays as FlatGlobalRef`() {
         val source = """
@@ -852,17 +750,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         )
     }
 
-    /**
-     * `from collections.abc import Iterable; Iterable(...)` lowers as a
-     * nested `LoadAttr` chain rooted at a single-segment `FlatModuleRef`:
-     *
-     *   t1 = LoadAttr(ModuleRef(collections), abc)
-     *   t2 = LoadAttr(t1, Iterable)
-     *
-     * This pins the invariant that `FlatModuleRef.module` is always a
-     * single segment; multi-segment module paths are reached via attribute
-     * access, never embedded into the `ModuleRef`'s name.
-     */
     @Test
     fun `from nested module import value chains through LoadAttr`() {
         val source = """
@@ -893,14 +780,6 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
             "abc" to "collections" in attrReads,
             "expected `LoadAttr(ModuleRef(collections), abc)` as the first link in the chain; got attrReads=$attrReads",
         )
-        // The final `Iterable` LoadAttr's obj is a FlatLocal temp (the
-        // result of the first LoadAttr), not a ModuleRef — so it does not
-        // appear in `importedAttrReads`, which intentionally only harvests
-        // LoadAttr-off-ModuleRef pairs (the first link of every chain).
-        // We walk the raw instructions here to confirm the second link
-        // exists AND that its obj is the expected temp shape — the
-        // stronger assertion is the FlatLocal check, which proves the
-        // ModuleRef stays single-segment instead of swallowing `collections.abc`.
         val instructions = f.cfg.blocks.flatMap { it.instructions }
         val iterableLoad = instructions.filterIsInstance<FlatLoadAttr>().firstOrNull { it.attribute == "Iterable" }
         assertNotNull(iterableLoad, "expected a FlatLoadAttr reading `Iterable`; got $instructions")

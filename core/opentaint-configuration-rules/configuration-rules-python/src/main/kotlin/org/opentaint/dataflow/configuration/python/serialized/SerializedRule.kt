@@ -6,11 +6,6 @@ import kotlinx.serialization.descriptors.SerialDescriptor
 import kotlinx.serialization.encoding.Decoder
 import kotlinx.serialization.encoding.Encoder
 
-/**
- * Sink metadata. `cwe` may be omitted (e.g. for `prompt-injection` / `template-injection`).
- * `note` is the canonical short name of the vulnerability category and is also used by
- * cleaner rules' `for:` field to scope cleaning to a specific sink category.
- */
 @Serializable
 data class PythonSinkMetaData(
     val cwe: List<Int>? = null,
@@ -18,28 +13,18 @@ data class PythonSinkMetaData(
 )
 
 sealed interface SerializedPythonRule {
-    /** Identifies what the rule fires on — a function call or an attribute access. */
     val target: PythonTarget
 
     val info: ItemInfo?
 
-    /** Assigned by the semgrep converter; identifies the rule within its generated group. */
     val serializedId: String?
 }
 
-/** Rules that emit taint (entry-point parameters or arbitrary calls/attributes). */
 sealed interface SerializedPythonSourceRule : SerializedPythonRule {
     val condition: SerializedPythonCondition?
     val taint: List<SerializedPythonTaintAssignAction>
 }
 
-/**
- * Entry-point source — fires when control reaches a function matched by the rule,
- * tainting the listed positions before the function executes. Distinct from a regular
- * [SerializedPythonSource] because the rule's `function:` matcher is typically a regex
- * or unqualified name (e.g. `.*`, `dispatch_request`), narrowed by a structural
- * condition such as [SerializedPythonCondition.MethodDecorated].
- */
 @Serializable(with = SerializedPythonEntryPointSerializer::class)
 data class SerializedPythonEntryPointSource(
     override val target: PythonTarget,
@@ -49,7 +34,6 @@ data class SerializedPythonEntryPointSource(
     override val serializedId: String? = null,
 ) : SerializedPythonSourceRule
 
-/** Regular source — taints the result of a call or attribute access. */
 @Serializable(with = SerializedPythonSourceSerializer::class)
 data class SerializedPythonSource(
     override val target: PythonTarget,
@@ -68,7 +52,6 @@ data class SerializedPythonSink(
     override val serializedId: String? = null,
 ) : SerializedPythonRule
 
-/** Return (method-exit) sink — fires at the analyzed method's own `return`; mirrors JVM `MethodExitSink`. */
 @Serializable(with = SerializedPythonExitSinkSerializer::class)
 data class SerializedPythonExitSink(
     override val target: PythonTarget,
@@ -87,10 +70,6 @@ data class SerializedPythonPassThrough(
     override val serializedId: String? = null,
 ) : SerializedPythonRule
 
-/**
- * `for: <note>` scopes the cleaner to sinks with a matching `note:` value
- * (e.g. cleaning only applies for `url-redirection` sinks).
- */
 @Serializable(with = SerializedPythonCleanerSerializer::class)
 data class SerializedPythonCleaner(
     override val target: PythonTarget,
@@ -102,9 +81,6 @@ data class SerializedPythonCleaner(
 ) : SerializedPythonRule
 
 // region Surrogates
-// Rules carry `function:` / `attribute:` / `signature:` as flat top-level keys in YAML
-// for readability, but the in-memory model nests them inside `target: PythonTarget`.
-// Each rule deserializes via a flat surrogate which is then folded into the target.
 
 private fun buildTarget(function: String?, attribute: String?, signature: SerializedPythonSignatureMatcher?): PythonTarget {
     return when {

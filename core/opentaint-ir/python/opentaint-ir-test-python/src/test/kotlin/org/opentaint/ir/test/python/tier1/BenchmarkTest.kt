@@ -3,17 +3,8 @@ package org.opentaint.ir.test.python.tier1
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Tag
 
-/**
- * Tier 1: Real-world library benchmark tests.
- *
- * Analyzes installed Python packages through the full PIR pipeline.
- * Uses [BenchmarkTestBase] for all assertion and stats logic.
- * Entity counts are exact expected values (modules, classes, functions).
- */
 @Tag("tier1")
 class BenchmarkTest : BenchmarkTestBase() {
-
-    // ─── Original benchmarks ────────────────────────────────
 
     @Test @Timeout(600) fun `benchmark - click`() = analyzePkg("click", 17, 67, 506)
     @Test @Timeout(600) fun `benchmark - requests`() = analyzePkg("requests", 18, 44, 256)
@@ -35,8 +26,6 @@ class BenchmarkTest : BenchmarkTestBase() {
     @Test @Timeout(600) fun `benchmark - mdurl`() = analyzePkg("mdurl", 6, 2, 16)
     @Test @Timeout(600) fun `benchmark - markupsafe`() = analyzePkg("markupsafe", 2, 5, 56)
 
-    // ─── Web framework libraries ────────────────────────────
-
     @Test @Timeout(600) fun `benchmark - flask`() = analyzePkg("flask", 18, 30, 228)
     @Test @Timeout(600) fun `benchmark - django`() = analyzePkg("django", 899, 1907, 10298, recursive = true)
     @Test @Timeout(600) fun `benchmark - fastapi`() = analyzePkg("fastapi", 48, 99, 476, recursive = true)
@@ -51,18 +40,12 @@ class BenchmarkTest : BenchmarkTestBase() {
     @Test @Timeout(600) fun `benchmark - aiohttp`() = analyzePkg("aiohttp", 55, 306, 1647, recursive = true)
     @Test @Timeout(600) fun `benchmark - celery`() = analyzePkg("celery", 161, 276, 3112, recursive = true)
 
-    // ─── Data / Validation / ORM ────────────────────────────
-
     @Test @Timeout(600) fun `benchmark - pydantic`() = analyzePkg("pydantic", 105, 358, 1922, recursive = true)
     @Test @Timeout(600) fun `benchmark - sqlalchemy`() = analyzePkg("sqlalchemy", 256, 1723, 10777, recursive = true)
     @Test @Timeout(600) fun `benchmark - marshmallow`() = analyzePkg("marshmallow", 14, 63, 245, recursive = true)
 
-    // ─── HTTP clients ───────────────────────────────────────
-
     @Test @Timeout(600) fun `benchmark - httpx`() = analyzePkg("httpx", 23, 85, 465, recursive = true)
     @Test @Timeout(600) fun `benchmark - httpcore`() = analyzePkg("httpcore", 31, 85, 454, recursive = true)
-
-    // ─── Utility libraries ──────────────────────────────────
 
     @Test @Timeout(600) fun `benchmark - yaml`() = analyzePkg("yaml", 17, 88, 364, recursive = true)
     @Test @Timeout(600) fun `benchmark - mako`() = analyzePkg("mako", 33, 91, 575, recursive = true)

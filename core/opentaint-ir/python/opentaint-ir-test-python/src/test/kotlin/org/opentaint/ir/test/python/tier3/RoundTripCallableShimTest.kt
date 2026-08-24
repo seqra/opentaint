@@ -5,20 +5,10 @@ import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
 /**
- * Round-trip tests targeting the callable-shim synthetic adapter class.
- *
- * @Disabled: the angle-bracket class name `<closure_…>` is not a valid Python
- * identifier, and the source reconstructor cannot produce parseable Python
- * for synthetic classes whose qualified names embed those characters. Until
- * `PIRReconstructor` grows full support for the new closure shape (see
- * `.agents/closure-lowering/summary.md` §1: "PIRReconstructor cell shape"),
- * leave this test disabled rather than relax the assertion.
- *
- * Note: [RoundTripLocalFunctionTest] still passes by going through the
- * sanitised function-only path (`reconstructWithLambdas` rewrites
- * `<closure_X>` to `__closure_X__` and emits the adapter class as Python
- * code). This test would target the *raw* synthetic class shape — not the
- * sanitised reconstruction — and is the placeholder for the follow-up.
+ * @Disabled: the angle-bracket class name `<closure_…>` is not a valid Python identifier and
+ * [PIRReconstructor] cannot emit parseable Python for it. [RoundTripLocalFunctionTest] still
+ * passes because it goes through the sanitised function-only path; this test targets the raw
+ * synthetic shape and is the placeholder for that follow-up.
  */
 @Tag("tier3")
 class RoundTripCallableShimTest {

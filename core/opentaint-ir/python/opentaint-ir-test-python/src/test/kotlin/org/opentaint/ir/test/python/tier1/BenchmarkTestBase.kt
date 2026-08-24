@@ -6,22 +6,8 @@ import org.opentaint.ir.impl.python.PIRClasspathLoader
 import org.opentaint.ir.test.python.PIRTestBase
 import java.io.File
 
-/**
- * Shared base for benchmark tests: library benchmarks and web app benchmarks.
- *
- * Provides common analysis methods, stats collection, and assertion logic.
- * All assertions are strict: zero errors, zero empty CFGs, zero dangling edges.
- *
- * Modules that fail to build are reported as [PIRModule.isUnknown].
- * Tests can declare expected unknown modules via [expectedUnknownModules] parameter.
- */
 abstract class BenchmarkTestBase : PIRTestBase() {
 
-    // ─── Analysis entry points ──────────────────────────────
-
-    /**
-     * Analyze an installed Python package by module name.
-     */
     protected fun analyzePkg(
         pythonModule: String,
         expectedModules: Int,
@@ -37,13 +23,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions)
     }
 
-    /**
-     * Analyze a directory-based project (cloned from git).
-     * Scans for .py files excluding tests, migrations, and venvs.
-     *
-     * @param expectedUnknownModules module name patterns that are expected to fail.
-     *   Use "__build_errors__" for whole-project build failures.
-     */
     protected fun analyzeDir(
         projectName: String,
         sourceDir: String,
@@ -83,8 +62,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         verifyClasspath(projectName, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions, expectedUnknownModules)
     }
 
-    // ─── Core analysis ──────────────────────────────────────
-
     private fun createClasspath(pyFiles: List<String>): PIRClasspath {
         return PIRClasspathLoader(PIRSettings(
             sources = pyFiles,
@@ -103,7 +80,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         expectedUnknownModules: Set<String> = emptySet(),
     ) {
         cp.use {
-            // Separate known and unknown modules
             val unknownModules = it.modules.filter { m -> m.isUnknown }
             val knownModules = it.modules.filter { m -> !m.isUnknown }
 
@@ -126,7 +102,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             }
             println("╚══════════════════════════════════════════════════════════════")
 
-            // ─── Unknown module verification ─────────────────
             val unknownNames = unknownModules.map { m -> m.name }.toSet()
             val unexpectedUnknowns = unknownNames - expectedUnknownModules
             assertTrue(unexpectedUnknowns.isEmpty(),
@@ -136,9 +111,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
                             "  ${m.name}: ${m.diagnostics.joinToString("; ") { d -> d.message }}"
                         })
 
-            // ─── Strict assertions on known modules ──────────
-
-            // Zero loading errors on known modules
             if (stats.errorDiagnosticMessages.isNotEmpty()) {
                 println("║ ERRORS:")
                 stats.errorDiagnosticMessages.take(10).forEach { msg -> println("║   $msg") }
@@ -147,18 +119,14 @@ abstract class BenchmarkTestBase : PIRTestBase() {
                 "$name: found ${stats.errorDiagnostics} loading errors:\n" +
                     stats.errorDiagnosticMessages.take(10).joinToString("\n") { msg -> "  $msg" })
 
-            // Zero empty CFGs
             assertEquals(0, stats.emptyFunctions,
                 "$name: ${stats.emptyFunctions} functions with empty CFG:\n  " +
                     stats.emptyFunctionNames.take(20).joinToString("\n  "))
 
-            // Zero zero-instruction functions
             assertEquals(0, stats.zeroInstructionFunctions,
                 "$name: ${stats.zeroInstructionFunctions} functions with 0 instructions:\n  " +
                     stats.zeroInstructionFunctionNames.take(20).joinToString("\n  "))
 
-            // Skip count/diversity checks if there are no known modules
-            // (entire build failed or all modules are expected-unknown).
             val wholeBuildFailed = knownModules.isEmpty()
             if (!wholeBuildFailed) {
                 assertEquals(expectedModules, stats.modules,
@@ -169,18 +137,15 @@ abstract class BenchmarkTestBase : PIRTestBase() {
                     "$name: function count mismatch")
             }
 
-            // No dangling edges
             assertEquals(0, stats.danglingEdges,
                 "$name: found ${stats.danglingEdges} dangling edges in CFGs")
 
-            // Instruction diversity >= 3 types (skip if build failed entirely)
             if (!wholeBuildFailed) {
                 assertTrue(stats.instructionKinds.size >= 3,
                     "$name: instruction diversity too low — only ${stats.instructionKinds.size} types: " +
                         stats.instructionKinds)
             }
 
-            // Unreachable blocks < 10%
             if (stats.blocks > 0) {
                 val pct = stats.unreachableBlocks.toDouble() / stats.blocks
                 assertTrue(pct < 0.10,
@@ -189,8 +154,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             }
         }
     }
-
-    // ─── Stats ──────────────────────────────────────────────
 
     data class Stats(
         val modules: Int, val classes: Int, val functions: Int,
@@ -286,8 +249,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         yieldAll(module.functions)
         for (cls in module.classes) { yieldAll(cls.methods) }
     }
-
-    // ─── Helpers ────────────────────────────────────────────
 
     companion object {
         fun findPackageDir(pythonModule: String): String {

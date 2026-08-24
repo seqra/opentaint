@@ -31,14 +31,6 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Unit tests for the callable-shim closure shape: capturing nested defs and
- * lambdas emit a synthetic adapter `FlatClass` plus a renamed impl function.
- * Bind sites for capturing children become constructor calls instead of
- * `FlatBindFunction`.
- *
- * See `.agents/callable-shim/plan.md` for the full design.
- */
 @Tag("tier2")
 class CallableShimTest {
 
@@ -112,10 +104,6 @@ class CallableShimTest {
             ?: error("Impl $expected not found")
     }
 
-    /**
-     * Resolve the qualified name of a `FlatCall`'s callee through a
-     * preceding `FlatReadName` that defined it.
-     */
     private fun calleeQnHelper(call: FlatCall, insts: List<FlatInst>): String? {
         val callee = call.callee as? FlatLocal ?: return null
         for (inst in insts) {
@@ -126,8 +114,6 @@ class CallableShimTest {
         }
         return null
     }
-
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `capturing nested def emits adapter class + renamed impl`() {
@@ -155,17 +141,12 @@ class CallableShimTest {
 
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
 
-        // 1. Adapter class is in module.classes.
         val cls = adapterFor(out, "inner")
-        // 2. Adapter class name + qn use angle brackets.
         assertTrue(cls.name.contains('<') && cls.name.contains('>'))
         assertTrue(cls.qualifiedName.contains('<') && cls.qualifiedName.contains('>'))
         assertEquals("$moduleName.${cls.name}", cls.qualifiedName)
-        // 3. Two methods: __init__, __call__.
         assertEquals(listOf("__init__", "__call__"), cls.methods.map { it.name })
-        // 4. Impl is renamed to <closure_inner_impl> and stays in module.functions.
         val impl = implFor(out, "inner")
-        // 5. Impl <self> is at index 0.
         assertEquals(ClosureRuntime.SELF_PARAM_NAME, impl.parameters[0].name)
         assertEquals("p", impl.parameters[1].name)
     }
@@ -221,11 +202,8 @@ class CallableShimTest {
             ),
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
-        // No adapter class.
         assertTrue(out.classes.none { it.name.startsWith("<closure_") })
-        // Impl keeps its original qn.
         assertNotNull(out.functions.firstOrNull { it.qualifiedName == innerQn })
-        // Bind site is preserved as FlatBindFunction (no constructor rewrite).
         val outerInsts = out.functions.first { it.qualifiedName == outerQn }.cfg.blocks.single().instructions
         assertTrue(outerInsts.any { it is FlatBindFunction })
     }
@@ -266,16 +244,13 @@ class CallableShimTest {
         val outerQn = "$moduleName.outer"
         val outer = out.functions.first { it.qualifiedName == outerQn }
         val insts = outer.cfg.blocks.first { it.label == outer.cfg.entryBlock }.instructions
-        // No FlatBindFunction for the capturing child.
         assertFalse(insts.any { it is FlatBindFunction })
-        // Find the adapter ctor call.
         val cls = adapterFor(out, "inner")
         val ctor = insts.filterIsInstance<FlatCall>().firstOrNull {
             calleeQnHelper(it, insts) == cls.qualifiedName
         }
         assertNotNull(ctor)
         assertEquals("inner", (ctor!!.target as FlatLocal).name)
-        // Ctor receives exactly one positional arg: the env dict.
         assertEquals(1, ctor.args.size)
         assertEquals(FlatArgKind.POSITIONAL, ctor.args[0].kind)
     }
@@ -367,11 +342,9 @@ class CallableShimTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val cls = adapterFor(out, "inner")
         val callMethod = cls.methods[1]
-        // Adapter __call__ should declare the same VAR_POSITIONAL param.
         val argsParam = callMethod.parameters[1]
         assertEquals("args", argsParam.name)
         assertEquals(FlatParamKind.VAR_POSITIONAL, argsParam.kind)
-        // Forward arg uses STAR kind.
         val implCall = callMethod.cfg.blocks.single().instructions.filterIsInstance<FlatCall>().single()
         val starArg = implCall.args[1]
         assertEquals(FlatArgKind.STAR, starArg.kind)
@@ -451,9 +424,6 @@ class CallableShimTest {
 
     @Test
     fun `cell-managed bind target wraps adapter ctor through temp then store`() {
-        // Sibling pattern: a, b, where b captures a (so a is cell-managed in
-        // outer), and b is also captured by another sibling c (so b is
-        // cell-managed too). Then binding b lands in a cell.
         val outerQn = "$moduleName.outer"
         val aQn = "$moduleName.outer.a"
         val bQn = "$moduleName.outer.b"
@@ -499,17 +469,13 @@ class CallableShimTest {
         val outerOut = out.functions.first { it.qualifiedName == outerQn }
         val insts = outerOut.cfg.blocks.first { it.label == outerOut.cfg.entryBlock }.instructions
 
-        // For `b` (capturing & cell-managed): expect FlatBuildDict, FlatCall(adapter, into temp),
-        // then FlatStoreAttr($cell$b, "value", temp).
         val clsB = adapterFor(out, "b")
         val ctorB = insts.filterIsInstance<FlatCall>().firstOrNull {
             calleeQnHelper(it, insts) == clsB.qualifiedName
         }
         assertNotNull(ctorB)
-        // ctor target is a fresh temp (not "b").
         val tmpName = (ctorB!!.target as FlatLocal).name
         assertTrue(tmpName.startsWith("\$t"), "ctor target should be a temp, got $tmpName")
-        // After the ctor, expect a FlatStoreAttr to $cell$b's value attribute.
         val ctorIdx = insts.indexOf(ctorB)
         val store = insts[ctorIdx + 1] as FlatStoreAttr
         assertEquals("\$cell\$b", (store.obj as FlatLocal).name)
@@ -524,10 +490,6 @@ class CallableShimTest {
         assertTrue(cls.name.startsWith("<closure_"))
         assertTrue(cls.name.endsWith(">"))
     }
-
-    /* ------------------------------------------------------------------ */
-    /* Helpers                                                            */
-    /* ------------------------------------------------------------------ */
 
     private fun simpleCapturingModule(): FlatModuleIR {
         val outerQn = "$moduleName.outer"

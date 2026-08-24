@@ -8,12 +8,6 @@ import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Verifies that `nonlocal` / `global` declarations in function bodies are
- * collected into `FlatFunctionIR.nonlocalNames` / `globalNames` during
- * proto-to-flat lowering, and that the raw output never carries any
- * closureVars (those are populated only by the closure transform).
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class NonlocalGlobalCollectionTest : RawFlatModuleTestBase() {

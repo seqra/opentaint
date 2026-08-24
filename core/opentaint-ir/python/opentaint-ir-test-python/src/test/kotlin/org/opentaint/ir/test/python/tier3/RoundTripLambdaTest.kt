@@ -3,15 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for lambda expressions.
- *
- * Lambda expressions are lowered to synthetic `<lambda>$N` functions.
- * The [reconstructWithLambdas] method in [RoundTripTestBase] handles
- * looking up the lambda functions and emitting them as regular `def` blocks.
- *
- * 30 test cases covering lambda usage patterns.
- */
 @Tag("tier3")
 class RoundTripLambdaTest : RoundTripTestBase() {
 
@@ -156,8 +147,6 @@ def rtlm_sorted_by_mod(items: list) -> list:
 def rtlm_min_with_key(items: list) -> int:
     return min(items, key=lambda x: x if x >= 0 else -x)
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `lambda - add one`() = roundTripWithLambdas("rtlm_lambda_add_one",
         posArgs(listOf(listOf(1, 2, 3)), listOf(emptyList<Int>())))

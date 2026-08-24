@@ -12,8 +12,6 @@ class BuiltinPassThroughFlowTest : AnalysisTest() {
     private fun source() = source("BuiltinPassThrough.source", "taint", Result)
     private fun sink() = sink("BuiltinPassThrough.sink", "taint", Argument(0), "builtin")
 
-    // --- String method pass-through ---
-
     @Test
     fun testStrUpper() = assertSinkReachable(
         source = source(), sink = sink(),
@@ -56,16 +54,12 @@ class BuiltinPassThroughFlowTest : AnalysisTest() {
         entryPointFunction = "BuiltinPassThrough.builtin_str_format"
     )
 
-    // --- F-string ---
-
     @Test
     @Disabled("F-string desugaring varies by mypy version; needs investigation")
     fun testFstring() = assertSinkReachable(
         source = source(), sink = sink(),
         entryPointFunction = "BuiltinPassThrough.builtin_fstring"
     )
-
-    // --- String concatenation ---
 
     @Test
     fun testStrConcat() = assertSinkReachable(

@@ -1,19 +1,5 @@
 package org.opentaint.ir.impl.python.flat
 
-/**
- * Visitor over [FlatInst]. Every concrete instruction has a `visit*` method;
- * dispatch goes through [FlatInst.accept], which each instruction implements
- * by invoking the matching method. Adding a new [FlatInst] kind requires
- * adding one method here and one `accept` override on the new type — the
- * compiler will then flag every implementation that has not handled it.
- *
- * Most utility passes don't need a visitor directly — see [FlatInst.targets],
- * [FlatInst.mapOperand], and [FlatInst.mapTarget] for the common shape
- * queries, all implemented on top of this visitor.
- *
- * Visitors must NOT walk operands recursively here; operand walks are
- * driven externally by composing visitors with these helpers.
- */
 interface FlatInstVisitor<R> {
     fun visitAssign(inst: FlatAssign): R
     fun visitLoadAttr(inst: FlatLoadAttr): R

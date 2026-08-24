@@ -5,23 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for nested functions, closures, nonlocal, classes inside functions.
- *
- * Current IR behavior: nested defs inside function bodies are NOT extracted
- * as separate PIRFunction objects. They are skipped during CFG building.
- * Only top-level functions and class methods are extracted.
- * Lambdas inside functions ARE extracted as synthetic lambda functions.
- *
- * These tests verify:
- * 1. Outer functions containing nested defs have valid CFGs
- * 2. Nested defs don't crash the pipeline
- * 3. The outer function's calls to inner functions are present
- * 4. closureVars property on PIRFunction is accessible
- * 5. nonlocal/global keywords don't cause errors
- * 6. Classes inside functions don't crash
- * 7. Lambdas inside functions are still extracted
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ClosureNestedFunctionTest : PIRTestBase() {
@@ -214,9 +197,6 @@ def cnf_inv31_route(app):
 
     @Test
     fun `nested route with undefined name in except keeps its entry point (inv 31)`() {
-        // The undefined `e` is an unowned free name; if mistaken for a capture
-        // the route gets rewritten to a `<closure_…>` shim and renamed, so its
-        // entry point can no longer be found ("Entry point not found").
         assertNotNull(
             findFuncOrNull("cnf_inv31_route\$cnf_inv31_post"),
             "nested route must remain a discoverable entry point, not a closure shim",
@@ -227,8 +207,6 @@ def cnf_inv31_route(app):
         }
         assertFalse(shimmed, "route must not be rewritten into a closure shim")
     }
-
-    // ─── 1. Outer functions with nested defs have valid CFGs ───
 
     @Test
     fun `simple nested - outer has valid CFG`() {
@@ -248,8 +226,6 @@ def cnf_inv31_route(app):
         assertTrue(rets.isNotEmpty(), "cnf_simple_nested should have PIRReturn")
     }
 
-    // ─── 2. Closure read doesn't crash ────────────────────────
-
     @Test
     fun `closure read - outer has valid CFG`() {
         val f = findFunc("cnf_closure_read")
@@ -262,8 +238,6 @@ def cnf_inv31_route(app):
         assertTrue(insts.any { it is PIRCall }, "should call reader()")
         assertTrue(insts.any { it is PIRReturn }, "should return")
     }
-
-    // ─── 3. Nonlocal keyword doesn't crash ────────────────────
 
     @Test
     fun `nonlocal write - outer has valid CFG`() {
@@ -289,8 +263,6 @@ def cnf_inv31_route(app):
         assertTrue(f.instList.isNotEmpty())
     }
 
-    // ─── 4. Class inside function doesn't crash ───────────────
-
     @Test
     fun `class inside func - outer has valid CFG`() {
         val f = findFunc("cnf_class_inside_func")
@@ -309,8 +281,6 @@ def cnf_inv31_route(app):
         assertTrue(rets.isNotEmpty())
     }
 
-    // ─── 5. Triple nesting doesn't crash ──────────────────────
-
     @Test
     fun `triple nested - outer has valid CFG`() {
         val f = findFunc("cnf_triple_nested")
@@ -323,8 +293,6 @@ def cnf_inv31_route(app):
         assertTrue(insts.any { it is PIRCall })
         assertTrue(insts.any { it is PIRReturn })
     }
-
-    // ─── 6. Lambda inside function IS extracted ───────────────
 
     @Test
     fun `lambda in func - lambda is extracted as synthetic function`() {
@@ -346,15 +314,11 @@ def cnf_inv31_route(app):
         assertTrue(insts.any { it is PIRReturn })
     }
 
-    // ─── 7. Lambda in nested function ─────────────────────────
-
     @Test
     fun `lambda in nested - outer has valid CFG`() {
         val f = findFunc("cnf_lambda_in_nested")
         assertTrue(f.instList.isNotEmpty())
     }
-
-    // ─── 8. Closure over loop variable ────────────────────────
 
     @Test
     fun `closure over loop - outer has valid CFG`() {
@@ -369,16 +333,12 @@ def cnf_inv31_route(app):
         assertTrue(hasIter, "should have for-loop iteration")
     }
 
-    // ─── 9. Returns inner function ────────────────────────────
-
     @Test
     fun `returns inner - outer has valid CFG with return`() {
         val f = findFunc("cnf_returns_inner")
         assertTrue(f.instList.isNotEmpty())
         assertTrue(allInstructions(f).any { it is PIRReturn })
     }
-
-    // ─── 10. Two inner functions ──────────────────────────────
 
     @Test
     fun `two inner - outer has valid CFG`() {
@@ -392,15 +352,11 @@ def cnf_inv31_route(app):
         assertTrue(calls.size >= 2, "should call add_one() and double()")
     }
 
-    // ─── 11. Inner calls inner ────────────────────────────────
-
     @Test
     fun `inner calls inner - outer has valid CFG`() {
         val f = findFunc("cnf_inner_calls_inner")
         assertTrue(f.instList.isNotEmpty())
     }
-
-    // ─── 12. Global keyword ───────────────────────────────────
 
     @Test
     fun `global keyword - function has valid CFG`() {
@@ -412,12 +368,9 @@ def cnf_inv31_route(app):
     fun `global keyword - function has assign and return`() {
         val insts = allInstructions(findFunc("cnf_global_keyword"))
         assertTrue(insts.any { it is PIRReturn })
-        // Global write may be PIRAssign (to local) or PIRStoreGlobal
         val hasAssign = insts.any { it is PIRAssign }
         assertTrue(hasAssign, "should assign to MY_GLOBAL")
     }
-
-    // ─── 13. Deeply nested ────────────────────────────────────
 
     @Test
     fun `deeply nested - outer has valid CFG`() {
@@ -432,8 +385,6 @@ def cnf_inv31_route(app):
         assertTrue(insts.any { it is PIRReturn })
     }
 
-    // ─── 14. Decorator inside function ────────────────────────
-
     @Test
     fun `decorator inside - outer has valid CFG`() {
         val f = findFunc("cnf_decorator_inside")
@@ -444,8 +395,6 @@ def cnf_inv31_route(app):
     fun `decorator inside - outer returns`() {
         assertTrue(allInstructions(findFunc("cnf_decorator_inside")).any { it is PIRReturn })
     }
-
-    // ─── 15. Conditional nested def ───────────────────────────
 
     @Test
     fun `conditional nested - outer has valid CFG`() {
@@ -459,8 +408,6 @@ def cnf_inv31_route(app):
         assertTrue(insts.any { it is PIRBranch }, "should have branch for if/else")
     }
 
-    // ─── 16. closureVars property accessible ──────────────────
-
     @Test
     fun `closureVars property is accessible on all functions`() {
         for (m in cp.modules) {
@@ -469,8 +416,6 @@ def cnf_inv31_route(app):
             }
         }
     }
-
-    // ─── 17. All outer functions have valid CFGs ──────────────
 
     @Test
     fun `all outer functions have valid non-empty CFGs`() {
@@ -490,34 +435,11 @@ def cnf_inv31_route(app):
         }
     }
 
-    // ═══════════════════════════════════════════════════════════════
-    // NEW: Nested functions are now extracted as module-level PIRFunctions
-    // Qualified name pattern: __test__.outer_name.inner_name
-    // ═══════════════════════════════════════════════════════════════
-
-    /**
-     * Finds a nested function by substring match on qualifiedName.
-     *
-     * Tests pass patterns like `cnf_closure_read.reader`. The lifter encodes
-     * lexical scope with `$` (e.g. `cnf_closure_read$reader`), so the
-     * pattern's last `.` is normalized to `$` before lookup.
-     *
-     * Capturing nested defs are renamed to
-     * `module.<closure_${parent}$${child}_impl>` by the callable-shim
-     * refactor; fall back to matching the impl's `name` field on the bare
-     * child segment.
-     */
     private fun findNestedFunc(pattern: String): PIRFunction? {
-        // The lifter encodes lexical scope inside the module-flat name field
-        // with `$` separators. A pattern like "cnf_simple_nested.inner"
-        // matches a qn whose name part is "cnf_simple_nested$inner".
         val flatPattern = pattern.replace('.', '$')
         val direct = cp.modules.flatMap { it.functions }
             .firstOrNull { it.qualifiedName.contains(flatPattern) || it.qualifiedName.contains(pattern) }
         if (direct != null) return direct
-        // Fallback: capturing impls use synthetic names
-        // `<closure_${parent}$${child}_impl>`. Match by the bare child
-        // segment, the most distinctive part.
         val baseName = pattern.substringAfterLast('.')
         return cp.modules.flatMap { it.functions }.firstOrNull { fn ->
             val n = fn.name
@@ -525,11 +447,8 @@ def cnf_inv31_route(app):
         }
     }
 
-    /** Finds all module functions matching a substring pattern */
     private fun findAllNestedFuncs(pattern: String): List<PIRFunction> =
         cp.modules.flatMap { it.functions }.filter { it.qualifiedName.contains(pattern) }
-
-    // ─── 18. Nested function IS extracted as a PIRFunction ────
 
     @Test
     fun `nested function inner is extracted as PIRFunction`() {
@@ -548,8 +467,6 @@ def cnf_inv31_route(app):
         val factory = findNestedFunc("cnf_returns_inner.factory")
         assertNotNull(factory, "factory should be extracted as a module-level PIRFunction")
     }
-
-    // ─── 19. Nested function has valid CFG with return ────────
 
     @Test
     fun `extracted inner function has valid CFG with return`() {
@@ -575,8 +492,6 @@ def cnf_inv31_route(app):
         assertTrue(rets.isNotEmpty(), "factory should have PIRReturn")
     }
 
-    // ─── 20. closureVars populated on nested funcs that capture ──
-
     @Test
     fun `closureVars contains value for reader that captures outer local`() {
         val reader = findNestedFunc("cnf_closure_read.reader")!!
@@ -598,8 +513,6 @@ def cnf_inv31_route(app):
         assertTrue(vars.any { it.contains("a") }, "swap closureVars should contain 'a', got: $vars")
         assertTrue(vars.any { it.contains("b") }, "swap closureVars should contain 'b', got: $vars")
     }
-
-    // ─── 21. Deeply nested functions are extracted ────────────
 
     @Test
     fun `triple nested - middle is extracted as PIRFunction`() {
@@ -623,8 +536,6 @@ def cnf_inv31_route(app):
         assertNotNull(level3, "level3 should be extracted")
     }
 
-    // ─── 22. Qualified name has correct enclosing function prefix ──
-
     @Test
     fun `inner qualifiedName contains enclosing function cnf_simple_nested`() {
         val inner = findNestedFunc("cnf_simple_nested.inner")!!
@@ -645,8 +556,6 @@ def cnf_inv31_route(app):
         assertTrue(middle.qualifiedName.contains("cnf_triple_nested"),
             "middle qualifiedName should contain 'cnf_triple_nested', got: ${middle.qualifiedName}")
     }
-
-    // ─── 23. Two inner functions from same outer both extracted ──
 
     @Test
     fun `two inner from cnf_two_inner - add_one and double both extracted`() {
@@ -676,8 +585,6 @@ def cnf_inv31_route(app):
         assertNotNull(caller, "caller should be extracted from cnf_inner_calls_inner")
     }
 
-    // ─── 24. Closure over loop variable ──────────────────────
-
     @Test
     fun `closure over loop - make is extracted as PIRFunction`() {
         val make = findNestedFunc("cnf_closure_over_loop.make")
@@ -692,8 +599,6 @@ def cnf_inv31_route(app):
             "make should have val_i default parameter, got params: $paramNames")
     }
 
-    // ─── 25. Nonlocal variables appear in closureVars ─────────
-
     @Test
     fun `nonlocal count - increment closureVars is non-empty`() {
         val increment = findNestedFunc("cnf_nonlocal_write.increment")!!
@@ -707,10 +612,6 @@ def cnf_inv31_route(app):
         assertTrue(swap.closureVars.size >= 2,
             "swap should have at least 2 closureVars for 'a' and 'b', got: ${swap.closureVars}")
     }
-
-    // ═══════════════════════════════════════════════════════════════
-    // Step 6: closure-lowered IR shape (cells, <self>, env attach)
-    // ═══════════════════════════════════════════════════════════════
 
     @Test
     fun `reader has self at parameter index 0`() {
@@ -736,10 +637,6 @@ def cnf_inv31_route(app):
         val reader = findNestedFunc("cnf_closure_read.reader")!!
         val insts = reader.instList
 
-        // Look for: PIRLoadAttr whose obj is the parameter-ref `<self>` and
-        // attribute == "_closure_env_". `<self>` is the synthetic env
-        // parameter the closure rewriter prepends, so it shows up as a
-        // PIRParameterRef at the use site rather than a PIRLocalVar.
         val envLoad = insts.filterIsInstance<PIRLoadAttr>().firstOrNull { la ->
             val obj = la.obj
             obj is PIRParameterRef && obj.name == "<self>" && la.attribute == "_closure_env_"
@@ -752,7 +649,6 @@ def cnf_inv31_route(app):
         assertTrue(envLocalName!!.startsWith("\$env"),
             "env local name should start with \$env, got: $envLocalName")
 
-        // Look for: PIRAssign(target=$cell$value, expr=PIRSubscriptExpr(obj=$env, index=PIRStrConst("value")))
         val cellAssign = insts.filterIsInstance<PIRAssign>().firstOrNull { a ->
             val tgt = a.target
             val expr = a.expr
@@ -782,7 +678,6 @@ def cnf_inv31_route(app):
         val outer = findFunc("cnf_closure_read")
         val insts = outer.instList
 
-        // Build a map: localVar.index → qualifiedName for PIRReadNameExpr(GlobalNameRef).
         val nameByLocal = insts
             .filterIsInstance<PIRAssign>()
             .mapNotNull { a ->
@@ -801,9 +696,6 @@ def cnf_inv31_route(app):
         assertTrue(cellCtorCalls.isNotEmpty(),
             "outer should have at least one PIRCall to __pir_cell__() for owning value's cell")
 
-        // Callable-shim shape: the bind site is now a constructor call to the
-        // synthesized adapter class with the env dict as the only positional arg.
-        // The class qualified name uses angle brackets (synthetic, not user-visible).
         val adapterCtors = insts.filterIsInstance<PIRCall>().filter { call ->
             val qn = calleeQn(call) ?: return@filter false
             qn.substringAfterLast('.').let {
@@ -847,8 +739,6 @@ def cnf_inv31_route(app):
     @Test
     fun `call to capturing reader does NOT pass self argument`() {
         val outer = findFunc("cnf_closure_read")
-        // Find the call whose callee resolves to "reader" — either via resolvedCallee
-        // or by callee operand referencing the bound `reader` local.
         val readerCalls = outer.instList.filterIsInstance<PIRCall>().filter { call ->
             val resolved = call.resolvedCallee
             if (resolved != null && resolved.endsWith("reader")) return@filter true

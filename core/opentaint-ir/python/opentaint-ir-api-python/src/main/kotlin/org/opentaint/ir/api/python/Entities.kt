@@ -14,9 +14,6 @@ private fun defaultPirServerPythonExecutable(): String =
         ?.takeIf { it.isNotBlank() }
         ?: error("Environment variable $PIR_SERVER_PYTHON_ENV must point to a Python executable")
 
-/**
- * Top-level container for an analyzed Python project.
- */
 interface PIRClasspath : Closeable {
     val modules: List<PIRModule>
     fun findModuleOrNull(name: String): PIRModule?
@@ -26,9 +23,6 @@ interface PIRClasspath : Closeable {
     val mypyVersion: String
 }
 
-/**
- * Settings for creating a PIRClasspath.
- */
 data class PIRSettings(
     val sources: List<String>,
     val pythonExecutable: String = defaultPirServerPythonExecutable(),
@@ -41,9 +35,6 @@ data class PIRSettings(
     val embeddedServer: Boolean = true,
 )
 
-/**
- * A diagnostic message produced during IR construction.
- */
 data class PIRDiagnostic(
     val severity: PIRDiagnosticSeverity,
     val message: String,
@@ -53,11 +44,6 @@ data class PIRDiagnostic(
 
 enum class PIRDiagnosticSeverity { WARNING, ERROR }
 
-/**
- * A Python module (.py file).
- * If [isUnknown] is true, this module failed to build (e.g. mypy error)
- * and all collections are empty. The [diagnostics] list contains the error details.
- */
 interface PIRModule {
     val name: String
     val path: String
@@ -70,9 +56,6 @@ interface PIRModule {
     val isUnknown: Boolean get() = false
 }
 
-/**
- * A Python class.
- */
 interface PIRClass {
     val name: String
     val qualifiedName: String
@@ -89,16 +72,12 @@ interface PIRClass {
     val module: PIRModule
 }
 
-/**
- * A Python function or method.
- */
 interface PIRFunction: CommonMethod {
     override val name: String
     val qualifiedName: String
     override val parameters: List<PIRParameter>
     override val returnType: PIRType
     val cfg: PIRCFG
-    /** Flat instruction list: blocks sorted by label, instructions flattened. */
     val instList: List<PIRInstruction>
     val decorators: List<PIRDecorator>
     val isAsync: Boolean
@@ -106,7 +85,6 @@ interface PIRFunction: CommonMethod {
     val isStaticMethod: Boolean
     val isClassMethod: Boolean
     val isProperty: Boolean
-    /** Names of variables captured from enclosing scope (closure variables). Empty for non-nested functions. */
     val closureVars: List<String>
     val enclosingClass: PIRClass?
     val module: PIRModule
@@ -114,15 +92,11 @@ interface PIRFunction: CommonMethod {
     override fun flowGraph(): ControlFlowGraph<CommonInst> = error("Unsupported operation")
 }
 
-/**
- * A function parameter.
- */
 interface PIRParameter: CommonMethodParameter {
     val name: String
     override val type: PIRType
     val kind: PIRParameterKind
     val hasDefault: Boolean
-    /** Constant default value, or null if no default or if the default is a non-constant expression. */
     val defaultValue: PIRValue?
     val index: Int
 }
@@ -135,19 +109,12 @@ enum class PIRParameterKind {
     VAR_KEYWORD,
 }
 
-/**
- * A field (module-level variable, class variable, or instance variable).
- */
 interface PIRField {
     val name: String
     val type: PIRType
     val isClassVar: Boolean
-    val hasInitializer: Boolean
 }
 
-/**
- * A Python property (with optional getter/setter/deleter).
- */
 interface PIRProperty {
     val name: String
     val type: PIRType
@@ -156,9 +123,6 @@ interface PIRProperty {
     val deleter: PIRFunction?
 }
 
-/**
- * A decorator applied to a class or function.
- */
 interface PIRDecorator {
     val name: String
     val qualifiedName: String

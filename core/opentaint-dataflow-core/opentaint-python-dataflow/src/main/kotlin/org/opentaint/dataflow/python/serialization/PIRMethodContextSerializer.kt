@@ -6,14 +6,10 @@ import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
-/**
- * Minimal context serializer for Python. Since we only use EmptyMethodContext,
- * serialization is trivial.
- */
 class PIRMethodContextSerializer : MethodContextSerializer {
 
     override fun DataOutputStream.writeMethodContext(methodContext: MethodContext) {
-        writeByte(0) // tag for EmptyMethodContext
+        writeByte(0)
     }
 
     override fun DataInputStream.readMethodContext(): MethodContext {

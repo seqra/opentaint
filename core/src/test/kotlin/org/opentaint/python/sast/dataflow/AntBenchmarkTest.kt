@@ -34,17 +34,6 @@ import kotlin.test.assertTrue
 import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Runs the Ant Application Security Testing Benchmark for Python 3.
- *
- * Benchmark .py files and metadata are loaded from the ant-benchmark-samples JAR
- * (built by the samples module). The JAR path is provided via the ANT_BENCHMARK_SAMPLES_JAR
- * environment variable (set automatically by Gradle).
- *
- * All benchmark .py files are extracted to a flat temp directory and loaded into a shared
- * PIRClasspath (built once in @BeforeAll). Each parameterized test case analyzes a single
- * function within that classpath.
- */
 @Ignore
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AntBenchmarkTest {
@@ -80,7 +69,6 @@ class AntBenchmarkTest {
             return
         }
 
-        // Extract .py files from JAR to flat temp directory
         val tmp = java.nio.file.Files.createTempDirectory("ant-benchmark").toFile()
         tempDir = tmp
         extractPythonFiles(jarPath, tmp.toPath())
@@ -152,15 +140,11 @@ class AntBenchmarkTest {
 
     companion object {
         /**
-         * Optional: set BENCHMARK_SUBSET env var to limit to a specific category prefix.
-         * E.g., "accuracy" to only run accuracy tests, or "accuracy/flow_sensitive" for a sub-category.
-         * If not set, runs all benchmark tests.
+         * Set BENCHMARK_SUBSET to a category prefix (`accuracy`, `accuracy/flow_sensitive`) to
+         * limit the run; unset runs everything.
          */
         private val BENCHMARK_SUBSET: String? = System.getenv("BENCHMARK_SUBSET")
 
-        /**
-         * Reads the benchmark-metadata.csv from the JAR to build the filename→category map.
-         */
         private fun loadMetadata(jarPath: String): Map<String, String> {
             val metadata = mutableMapOf<String, String>()
             JarFile(jarPath).use { jar ->
@@ -179,11 +163,6 @@ class AntBenchmarkTest {
             return metadata
         }
 
-        /**
-         * Extracts .py files from the benchmark JAR into a flat target directory.
-         * Files inside the JAR are stored under ant-benchmark/ prefix; they are extracted
-         * directly into the target dir without the prefix.
-         */
         private fun extractPythonFiles(jarPath: String, targetDir: Path) {
             JarFile(jarPath).use { jar ->
                 jar.entries().asSequence()
@@ -209,7 +188,6 @@ class AntBenchmarkTest {
                 val baseName = fileName.removeSuffix(".py")
                 if (!baseName.endsWith("_T") && !baseName.endsWith("_F")) continue
 
-                // Apply subset filter on category
                 if (BENCHMARK_SUBSET != null && !category.startsWith(BENCHMARK_SUBSET)) continue
 
                 val isTP = baseName.endsWith("_T")

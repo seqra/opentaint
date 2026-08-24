@@ -9,12 +9,6 @@ import org.opentaint.dataflow.configuration.python.TaintSink
 import org.opentaint.dataflow.configuration.python.TaintSource
 import org.opentaint.ir.api.python.PIRFunction
 
-/**
- * Python taint rule lookup, programmed against by the dataflow analysis.
- * Mirrors the Go (`GoTaintRulesProvider`) and JVM (`TaintRulesProvider`)
- * provider interfaces. Rules are resolved per concrete [PIRFunction] (call /
- * method matches) or per attribute name (field reads).
- */
 interface PIRTaintRulesProvider : CommonTaintRulesProvider {
     fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource>
     fun sourcesForMethod(method: PIRFunction): List<TaintSource>

@@ -8,15 +8,6 @@ import org.opentaint.ir.impl.python.protoToFlat.moduleChain
 import org.opentaint.ir.impl.python.protoToFlat.toPhysicalLocation
 import org.opentaint.ir.impl.python.proto.*
 
-/**
- * Expression-level lowering. Extension functions on [CfgSession]; mirrors the
- * structure of mypy's `expression_visitor.py`.
- *
- * Each function returns a [FlatValue] and may emit instructions via the
- * receiver. Unlike the old `ExpressionLowering` class, there is no back-ref
- * to a CFG builder — the receiver *is* the session.
- */
-
 internal val BIN_OP_MAP = mapOf(
     "+" to FlatBinaryOperator.ADD,
     "-" to FlatBinaryOperator.SUB,
@@ -90,12 +81,8 @@ internal fun CfgSession.lowerExpr(expr: MypyExprProto): FlatValue {
     }
 }
 
-// ─── Constants ────────────────────────────────────────
-
 private fun intConst(proto: MypyIntExprProto): FlatValue =
     if (proto.strValue.isNotEmpty()) FlatStrConst(proto.strValue) else FlatIntConst(proto.value)
-
-// ─── Names & Attributes ──────────────────────────────
 
 private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalLocation?): FlatValue {
     val name = expr.name
@@ -107,20 +94,8 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
     }
 
     return when (expr.nameKind) {
-        // Module imports — `import os`, `import os.path as p`, plain
-        // `import os.path` (which binds `os`). mypy stores the canonical
-        // module fullname in `fullname`; `name` may be an alias which we
-        // discard (downstream consumers match against canonical paths).
-        // Multi-segment fullnames (`os.path` reached via `import os.path
-        // as p`) chain through `LoadAttr` so `FlatModuleRef` stays
-        // single-segment.
         MypyNameKind.NAME_MODULE ->
             materializeImport(moduleChain(expr.fullname.ifEmpty { name }), location)
-        // Module-level / imported / builtin values. mypy populates a dotted
-        // canonical fullname for every GDEF binding (`pkg.x`, `os.getcwd`,
-        // `builtins.print`); aliases like `from m import x as y` already
-        // arrive with the canonical fullname `m.x`, so no extra alias
-        // handling is needed.
         //
         // Exception: a module-scope `import missing_pkg` where mypy can't
         // resolve `missing_pkg` falls through to `add_unknown_imported_symbol`,
@@ -159,25 +134,6 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
     }
 }
 
-/**
- * Materialize an [ImportBinding] into a `FlatValue`, recursively emitting
- * the `FlatLoadAttr` chain along the way.
- *
- * - [ImportBinding.Module] → emit `FlatReadName(tmp, FlatModuleNameRef(name))`;
- *   return `tmp`.
- * - [ImportBinding.Attr] → materialize the parent, then emit
- *   `FlatLoadAttr(tmp, parent_result, name)`. This handles both submodule
- *   access (`import os.path as p` → `Attr(Module(os), path)`) and from-
- *   import (`from os import getcwd` → `Attr(Module(os), getcwd)`) and
- *   nested chains (`from collections.abc import Iterable` →
- *   `Attr(Attr(Module(collections), abc), Iterable)`). Each read site
- *   gets fresh temps; we don't hoist or cache, which matches Python's
- *   re-resolve-on-every-access semantics.
- * - [ImportBinding.BareGlobal] → emit `FlatReadName(tmp,
- *   FlatGlobalNameRef(name))`. Used only when mypy couldn't resolve the
- *   base of a relative `from . import x`. The KDoc on
- *   `ImportManager.recordImportFrom` documents this carve-out.
- */
 private fun CfgSession.materializeImport(
     binding: ImportBinding,
     location: PIRPhysicalLocation?,
@@ -200,23 +156,6 @@ private fun CfgSession.materializeImport(
     }
 }
 
-/**
- * Lower a dotted mypy `NAME_GLOBAL.fullname` that wasn't matched by the
- * import-scope chain. If [fullname] names a symbol in the current module
- * or in `builtins` (including nested names like `builtins.str.join`), it
- * stays as a `FlatGlobalRef`. Otherwise it's a cross-module reference
- * and we materialize a `ModuleRef`-rooted `LoadAttr` chain from the full
- * dotted path via [moduleChain].
- *
- * The classification splits the fullname into a `(moduleSegments, last)`
- * pair on the *last* dot — the prefix is the owning module path, the
- * tail is the symbol name. Same-module / builtins checks compare the
- * module prefix as a whole, so a current module whose own name is dotted
- * (e.g. `pkg.sub` for a file at `pkg/sub.py`) classifies its own globals
- * correctly. Sibling modules like `pkg.sub_other` cannot collide with
- * `pkg.sub` because the dotted comparison is segment-aligned by
- * construction (we split on actual dot characters).
- */
 private fun CfgSession.lowerGlobalFullname(
     fullname: String,
     location: PIRPhysicalLocation?,
@@ -238,8 +177,6 @@ private fun CfgSession.lowerMember(expr: MypyMemberExprProto, location: PIRPhysi
     emit(FlatLoadAttr(target, obj, expr.name, physicalLocation = location))
     return target
 }
-
-// ─── Operators ────────────────────────────────────────
 
 private fun CfgSession.lowerOp(expr: MypyOpExprProto, location: PIRPhysicalLocation?): FlatValue {
     val op = expr.op
@@ -294,7 +231,6 @@ private fun CfgSession.lowerComparison(expr: MypyComparisonExprProto, location: 
         return target
     }
 
-    // Chained comparison: `a < b < c` short-circuits as `a<b and b<c`.
     val resultVar = newTempValue()
     val endBlock = newBlock()
 
@@ -318,8 +254,6 @@ private fun CfgSession.lowerComparison(expr: MypyComparisonExprProto, location: 
     return resultVar
 }
 
-// ─── Call ─────────────────────────────────────────────
-
 private fun CfgSession.lowerCall(expr: MypyCallExprProto, location: PIRPhysicalLocation?): FlatValue {
     val callee = lowerExpr(expr.callee)
     val args = expr.argsList.map { arg ->
@@ -340,14 +274,6 @@ private fun CfgSession.lowerCall(expr: MypyCallExprProto, location: PIRPhysicalL
     return target
 }
 
-/**
- * Resolve the qualified name of a call's target. Tries, in order:
- *   1. mypy's pre-resolved [MypyCallExprProto.resolvedCallee];
- *   2. the callee's [MypyMemberExprProto.fullname] (instance/class method calls
- *      where mypy doesn't set node.fullname on the CallExpr);
- *   3. composing from the receiver's static type, e.g. `data.upper()` on
- *      `data: str` → `builtins.str.upper`.
- */
 private fun resolveCallee(expr: MypyCallExprProto): String? {
     expr.resolvedCallee.ifEmpty { null }?.let { return it }
 
@@ -362,11 +288,8 @@ private fun resolveCallee(expr: MypyCallExprProto): String? {
     return null
 }
 
-// ─── Subscript & Slice ───────────────────────────────
-
 private fun CfgSession.lowerIndex(expr: MypyIndexExprProto, location: PIRPhysicalLocation?): FlatValue {
     val obj = lowerExpr(expr.base)
-    // Fuse `a[l:u:s]` into a single slice that carries the sliced object.
     if (expr.index.kindCase == MypyExprProto.KindCase.SLICE_EXPR) {
         return lowerSlice(expr.index.sliceExpr, obj, location)
     }
@@ -384,8 +307,6 @@ private fun CfgSession.lowerSlice(expr: MypySliceExprProto, obj: FlatValue?, loc
     emit(FlatBuildSlice(target, obj, lower, upper, step, physicalLocation = location))
     return target
 }
-
-// ─── Collection literals ─────────────────────────────
 
 private fun CfgSession.lowerListExpr(expr: MypyListExprProto, location: PIRPhysicalLocation?): FlatValue {
     val elements = expr.itemsList.map { lowerExpr(it) }
@@ -418,8 +339,6 @@ private fun CfgSession.lowerDictExpr(expr: MypyDictExprProto, location: PIRPhysi
     return target
 }
 
-// ─── Conditional expression ─────────────────────────
-
 private fun CfgSession.lowerConditional(expr: MypyConditionalExprProto, location: PIRPhysicalLocation?): FlatValue {
     val cond = lowerExpr(expr.cond)
     val target = newTempValue()
@@ -442,8 +361,6 @@ private fun CfgSession.lowerConditional(expr: MypyConditionalExprProto, location
     activate(endBlock)
     return target
 }
-
-// ─── Generators & Async ─────────────────────────────
 
 private fun CfgSession.lowerYield(expr: MypyYieldExprProto, location: PIRPhysicalLocation?): FlatValue {
     val value = if (expr.hasExpr() && expr.expr.kindCase != MypyExprProto.KindCase.KIND_NOT_SET) {
@@ -468,8 +385,6 @@ private fun CfgSession.lowerAwait(expr: MypyAwaitExprProto, location: PIRPhysica
     return target
 }
 
-// ─── Walrus ─────────────────────────────────────────
-
 private fun CfgSession.lowerWalrus(expr: MypyAssignmentExprProto, location: PIRPhysicalLocation?): FlatValue {
     val value = lowerExpr(expr.value)
     val targetName = if (expr.target.hasNameExpr()) {
@@ -481,8 +396,6 @@ private fun CfgSession.lowerWalrus(expr: MypyAssignmentExprProto, location: PIRP
     emit(FlatAssign(target, value, physicalLocation = location))
     return target
 }
-
-// ─── Lambda ─────────────────────────────────────────
 
 private fun CfgSession.lowerLambda(expr: MypyLambdaExprProto): FlatValue {
     val lambda = FunctionLowering.lowerLambda(
@@ -498,8 +411,6 @@ private fun CfgSession.lowerLambda(expr: MypyLambdaExprProto): FlatValue {
     return target
 }
 
-// ─── Super ──────────────────────────────────────────
-
 private fun CfgSession.lowerSuper(location: PIRPhysicalLocation?): FlatValue {
     val callee = newTempValue()
     emit(FlatReadName(callee, FlatGlobalNameRef("builtins.super"), physicalLocation = location))
@@ -507,8 +418,6 @@ private fun CfgSession.lowerSuper(location: PIRPhysicalLocation?): FlatValue {
     emit(FlatCall(target, callee, physicalLocation = location))
     return target
 }
-
-// ─── Comprehensions ─────────────────────────────────
 
 private enum class CollectionKind { LIST, SET }
 
@@ -559,11 +468,6 @@ private fun CfgSession.lowerDictComprehension(expr: MypyDictComprehensionProto, 
     return result
 }
 
-/**
- * Emit nested for-loops for a comprehension. Each loop level has its own
- * iterator + header/body/exit blocks; conditions inside a level act as
- * `if cond: continue` between header and recursive body.
- */
 private fun CfgSession.emitComprehensionLoops(
     indices: List<MypyExprProto>,
     sequences: List<MypyExprProto>,

@@ -198,8 +198,6 @@ abstract class AnalysisTest {
     }
 
     // region Test-only rule builders: declare per-fixture source / sink rules
-    // inline and layer them over the shipped config (stdlib pass-throughs,
-    // library rules) via PIRCombinedTaintRulesProvider.
     protected fun source(function: String, mark: String, pos: Position): TestSource =
         TestSource.Method(function, mark, pos)
 
@@ -225,7 +223,6 @@ sealed interface TestSource {
     fun rulesForMethod(method: PIRFunction): List<TaintSource> = emptyList()
     fun rulesForAttribute(name: String): List<TaintSource> = emptyList()
 
-    /** Synthetic per-fixture source rule: taints [pos] of [function]'s call with [mark]. */
     data class Method(val function: String, val mark: String, val pos: Position) : TestSource {
         override fun rulesForMethod(method: PIRFunction): List<TaintSource> {
             if (!method.matches(function)) return emptyList()
@@ -245,14 +242,8 @@ sealed interface TestSource {
     }
 }
 
-/** Synthetic per-fixture sink rule: flags when [mark] reaches [pos] of [function]. */
 data class TestSink(val function: String, val mark: String, val pos: Position, val id: String)
 
-/**
- * In-place [PIRTaintRulesProvider] over synthetic [TestSource] / [TestSink] rules.
- * Matches a call by fully-qualified name (constructor calls also match the class
- * FQN) and emits the compiled runtime rule directly — no serialized config.
- */
 private class TestRulesProvider(
     private val sources: List<TestSource>,
     private val sinks: List<TestSink>,

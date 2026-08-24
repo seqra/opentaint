@@ -1,5 +1,3 @@
-"""Execute Python functions for Tier 3 round-trip testing."""
-
 import json
 import textwrap
 from pir_server.proto import pir_pb2
@@ -28,7 +26,6 @@ def execute_function(
 
 
 def _serialize(value):
-    """Best-effort JSON serialization of Python values."""
     if isinstance(value, (int, float, str, bool, type(None))):
         return value
     if isinstance(value, (list, tuple)):

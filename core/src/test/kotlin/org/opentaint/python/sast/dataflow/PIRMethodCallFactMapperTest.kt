@@ -17,18 +17,10 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
-/**
- * Unit-level coverage for the keyword-aware frame arithmetic in [PIRMethodCallFactMapper].
- * The `toCallerFrame` keyword back-map and its POSITIONAL guard have no end-to-end path yet
- * (they serve callee→caller mutation flow, which is future work), so they are pinned here.
- */
 class PIRMethodCallFactMapperTest {
-
-    // --- toCalleeFrame ---
 
     @Test
     fun `toCalleeFrame binds a keyword arg to its named parameter, ignoring position`() {
-        // out-of-order: kw(b) at raw slot 0 must land on param b (index 1), not positional slot 0
         val call = call(kw("b"), kw("a"))
         val callee = moduleFunction("a", "b")
         assertEquals(AccessPathBase.Argument(1), PIRMethodCallFactMapper.toCalleeFrame(call, callee, arg(0)))
@@ -49,11 +41,8 @@ class PIRMethodCallFactMapperTest {
         assertEquals(AccessPathBase.Argument(0), PIRMethodCallFactMapper.toCalleeFrame(call, callee, AccessPathBase.This))
     }
 
-    // --- toCallerFrame (the branches with no end-to-end coverage) ---
-
     @Test
     fun `toCallerFrame maps a callee parameter back to its keyword arg slot`() {
-        // param b (index 1) is filled by kw(b) at raw slot 0 → exit fact on Argument(1) returns Argument(0)
         val call = call(kw("b"), kw("a"))
         val callee = moduleFunction("a", "b")
         assertEquals(AccessPathBase.Argument(0), PIRMethodCallFactMapper.toCallerFrame(call, callee, arg(1)))
@@ -61,7 +50,6 @@ class PIRMethodCallFactMapperTest {
 
     @Test
     fun `toCallerFrame drops an unfilled parameter that would rebase onto a keyword slot`() {
-        // param b (index 1) is an unpassed default; raw slot 1 is kw(c), not positional → must not leak
         val call = call(pos(), kw("c"))
         val callee = moduleFunction("a", "b", "c")
         assertNull(PIRMethodCallFactMapper.toCallerFrame(call, callee, arg(1)))
@@ -80,8 +68,6 @@ class PIRMethodCallFactMapperTest {
         val callee = instanceMethod("self", "a")
         assertEquals(AccessPathBase.This, PIRMethodCallFactMapper.toCallerFrame(call, callee, arg(0)))
     }
-
-    // --- helpers ---
 
     private fun arg(idx: Int): AccessPathBase = AccessPathBase.Argument(idx)
 

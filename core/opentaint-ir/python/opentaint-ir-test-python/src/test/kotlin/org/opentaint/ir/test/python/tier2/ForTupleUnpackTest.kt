@@ -5,11 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for for-loop with tuple unpacking targets.
- * `for a, b in pairs:` should produce PIRNextIter + PIRUnpack.
- * Also tests starred unpacking in for loops and dict.items() patterns.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ForTupleUnpackTest : PIRTestBase() {
@@ -89,8 +84,6 @@ def ftu_ignore_second(pairs: list) -> list:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Pair unpacking ────────────────────────────────────
-
     @Test fun `pair unpack produces GetIter and NextIter`() {
         assertTrue(insts("ftu_pair_unpack").any { it.isAssignOf<PIRIterExpr>() })
         assertTrue(insts("ftu_pair_unpack").any { it is PIRNextIter })
@@ -107,23 +100,17 @@ def ftu_ignore_second(pairs: list) -> list:
         assertTrue(binOps.isNotEmpty(), "Expected PIRBinOp for a + b")
     }
 
-    // ─── Triple unpacking ──────────────────────────────────
-
     @Test fun `triple unpack produces Unpack`() {
         val unpacks = insts("ftu_triple_unpack").filterIsInstance<PIRUnpack>()
         assertTrue(unpacks.isNotEmpty(),
             "Expected PIRUnpack for 'for a, b, c in triples'")
     }
 
-    // ─── Nested unpacking ──────────────────────────────────
-
     @Test fun `nested unpack has Unpack`() {
         val unpacks = insts("ftu_nested_unpack").filterIsInstance<PIRUnpack>()
         assertTrue(unpacks.isNotEmpty(),
             "Expected PIRUnpack for nested '(a,b), c'")
     }
-
-    // ─── Dict items pattern ────────────────────────────────
 
     @Test fun `dict items has GetIter and Unpack`() {
         val allInsts = insts("ftu_dict_items")
@@ -137,23 +124,17 @@ def ftu_ignore_second(pairs: list) -> list:
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for d.items()")
     }
 
-    // ─── Enumerate pattern ─────────────────────────────────
-
     @Test fun `enumerate has call and Unpack`() {
         val allInsts = insts("ftu_enumerate")
         assertTrue(allInsts.any { it is PIRCall }, "Expected call to enumerate()")
         assertTrue(allInsts.any { it is PIRUnpack }, "Expected Unpack for i, x")
     }
 
-    // ─── Zip pattern ───────────────────────────────────────
-
     @Test fun `zip has call and Unpack`() {
         val allInsts = insts("ftu_zip")
         assertTrue(allInsts.any { it is PIRCall }, "Expected call to zip()")
         assertTrue(allInsts.any { it is PIRUnpack }, "Expected Unpack for x, y")
     }
-
-    // ─── Single target (baseline) ──────────────────────────
 
     @Test fun `single target has no Unpack`() {
         val unpacks = insts("ftu_single_target").filterIsInstance<PIRUnpack>()
@@ -166,23 +147,17 @@ def ftu_ignore_second(pairs: list) -> list:
         assertTrue(insts("ftu_single_target").any { it is PIRNextIter })
     }
 
-    // ─── Four targets ──────────────────────────────────────
-
     @Test fun `four target unpack produces Unpack`() {
         val unpacks = insts("ftu_four_targets").filterIsInstance<PIRUnpack>()
         assertTrue(unpacks.isNotEmpty(),
             "Expected PIRUnpack for 'for a, b, c, d in items'")
     }
 
-    // ─── Ignore with underscore ────────────────────────────
-
     @Test fun `underscore target still produces Unpack`() {
         val unpacks = insts("ftu_ignore_second").filterIsInstance<PIRUnpack>()
         assertTrue(unpacks.isNotEmpty(),
             "Expected PIRUnpack even when using _ as target")
     }
-
-    // ─── Structural validity ───────────────────────────────
 
     @Test fun `all for-unpack functions have valid CFGs`() {
         val funcNames = listOf(

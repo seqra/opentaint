@@ -13,12 +13,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * Verifies that nested-def, decorated nested-def, and lambda binding sites
- * lower to [FlatBindFunction] (not the previous shape of
- * `FlatAssign(FlatLocal, FlatGlobalRef(...))` for nested defs / a bare
- * `FlatGlobalRef` for lambdas).
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BindFunctionEmissionTest : RawFlatModuleTestBase() {

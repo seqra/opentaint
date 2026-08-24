@@ -15,11 +15,6 @@ import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 import org.opentaint.util.onSome
 
-/**
- * Inverse of [org.opentaint.dataflow.python.analysis.PIRMethodStartFlowFunction.propagateZero]:
- * which entry-point source rules could have produced [fact] on method entry.
- * Simpler than the JVM equivalent — Python entry-point rules are unconditional.
- */
 class PIRMethodStartPrecondition(
     private val apManager: ApManager,
     private val ctx: PIRMethodAnalysisContext,

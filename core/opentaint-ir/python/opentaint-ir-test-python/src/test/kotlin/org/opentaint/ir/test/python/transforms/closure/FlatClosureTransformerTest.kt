@@ -47,10 +47,6 @@ import kotlin.test.assertNull
 import kotlin.test.assertTrue
 import kotlin.test.assertFalse
 
-/**
- * Unit tests for [FlatClosureTransformer]: rewriter on top of analyzer.
- * Hand-built [FlatModuleIR] fixtures — does NOT go through proto-to-Flat.
- */
 @Tag("tier2")
 class FlatClosureTransformerTest {
 
@@ -146,27 +142,18 @@ class FlatClosureTransformerTest {
 
     private fun cellName(n: String) = "\$cell\$$n"
 
-    /**
-     * Locate the rewritten function by qualified name. Capturing impls are
-     * renamed to `module.<closure_$base_impl>` per the callable-shim refactor,
-     * so a lookup for the original `module.outer.inner` qn falls back to
-     * searching for a function whose `name` matches the impl-rename pattern
-     * `<closure_$base_impl>` for the original short name.
-     */
     private fun lookup(out: FlatModuleIR, qn: String): FlatFunctionIR {
         out.functions.firstOrNull { it.qualifiedName == qn }?.let { return it }
         if (out.moduleInit.qualifiedName == qn) return out.moduleInit
         for (c in out.classes) {
             c.methods.firstOrNull { it.qualifiedName == qn }?.let { return it }
         }
-        // Fallback: capturing impl was renamed.
         val baseName = qn.substringAfterLast('.')
         val implName = "<closure_${baseName}_impl>"
         out.functions.firstOrNull { it.name == implName }?.let { return it }
         error("Function $qn not found in rewritten module")
     }
 
-    /** Find the synthesized adapter class for a capturing impl by its base name. */
     private fun adapter(out: FlatModuleIR, baseName: String): FlatClass {
         val expected = "<closure_$baseName>"
         return out.classes.firstOrNull { it.name == expected }
@@ -176,11 +163,6 @@ class FlatClosureTransformerTest {
     private fun entryInsts(fn: FlatFunctionIR): List<FlatInst> =
         fn.cfg.blocks.first { it.label == fn.cfg.entryBlock }.instructions
 
-    /**
-     * Resolve the qualified name of a `FlatCall`'s callee through a
-     * preceding `FlatReadName` that defined it. Returns null when the
-     * callee is not a local filled by a `FlatGlobalNameRef`-tagged read.
-     */
     private fun calleeQn(call: FlatCall, insts: List<FlatInst>): String? {
         val callee = call.callee as? FlatLocal ?: return null
         for (inst in insts) {
@@ -193,10 +175,6 @@ class FlatClosureTransformerTest {
         }
         return null
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 1. <self> injected iff closureVars non-empty                       */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `self injected when closureVars non-empty`() {
@@ -231,10 +209,6 @@ class FlatClosureTransformerTest {
         assertEquals(setOf("x"), rewrittenInner.closureVars)
     }
 
-    /* ------------------------------------------------------------------ */
-    /* 2. Non-capturing nested has no <self>                              */
-    /* ------------------------------------------------------------------ */
-
     @Test
     fun `non-capturing nested has no self`() {
         val outerQn = "m.outer"
@@ -263,10 +237,6 @@ class FlatClosureTransformerTest {
         assertEquals(listOf("p"), rewrittenInner.parameters.map { it.name })
         assertEquals(emptySet(), rewrittenInner.closureVars)
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 3. Prologue contains __pir_cell__() calls for each cellVar          */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `prologue contains pir_cell calls for each cellVar`() {
@@ -298,7 +268,6 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenOuter = lookup(out, outerQn)
         val insts = entryInsts(rewrittenOuter)
-        // First two should be __pir_cell__() calls.
         val cellCtorQn = "builtins.${ClosureRuntime.CELL_CTOR_NAME}"
         val cellCalls = insts.filterIsInstance<FlatCall>().filter {
             calleeQn(it, insts) == cellCtorQn
@@ -306,9 +275,6 @@ class FlatClosureTransformerTest {
         assertEquals(2, cellCalls.size)
         val targets = cellCalls.mapNotNull { (it.target as? FlatLocal)?.name }.toSet()
         assertEquals(setOf(cellName("a"), cellName("b")), targets)
-        // First instructions in body are the prologue: FlatReadName loading
-        // the cell ctor, then the FlatCall allocating the cell. The very
-        // first instruction is the read; the cell allocation follows.
         assertTrue(insts[0] is FlatReadName, "first inst should be the cell-ctor FlatReadName, got ${insts[0]}")
         assertTrue(
             insts[1] is FlatCall && calleeQn(insts[1] as FlatCall, insts) == cellCtorQn,
@@ -316,21 +282,14 @@ class FlatClosureTransformerTest {
         )
     }
 
-    /* ------------------------------------------------------------------ */
-    /* 4. Parameter cells seeded                                          */
-    /* ------------------------------------------------------------------ */
-
     @Test
     fun `parameter cells seeded`() {
         // outer(x): def inner(): return x  → outer.cellVars = {x}, x is param
         //
-        // The fixture mirrors what `CfgBuild.buildFunctionCfg` produces: the
-        // function-entry parameter-binding prologue (`FlatAssign(FlatLocal(x),
-        // FlatParameterRef(x))`) is the body's first instruction. The closure
-        // rewriter's `defaultRewrite` redirects writes into a cell-managed
-        // `FlatLocal(x)` target through a fresh temp + `FlatStoreAttr`, which
-        // is what seeds `$cell$x` from the parameter — no explicit seed is
-        // emitted by the rewriter's prologue. We assert exactly that shape.
+        // The fixture mirrors `CfgBuild.buildFunctionCfg`: the parameter-binding prologue is the
+        // body's first instruction, and `defaultRewrite` redirecting its cell-managed target
+        // through a temp + `FlatStoreAttr` is what seeds `$cell$x` — the rewriter's own prologue
+        // emits no explicit seed.
         val outerQn = "m.outer"
         val innerQn = "m.outer.inner"
         val inner = fn(
@@ -347,7 +306,7 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             params = listOf("x"),
             body = listOf(
-                FlatAssign(local("x"), FlatParameterRef("x")),  // mirrors CfgBuild's prologue
+                FlatAssign(local("x"), FlatParameterRef("x")),
                 FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
@@ -357,9 +316,6 @@ class FlatClosureTransformerTest {
         val rewrittenOuter = lookup(out, outerQn)
         val insts = entryInsts(rewrittenOuter)
 
-        // Expect FlatCall(__pir_cell__, target=$cell$x) somewhere in the
-        // entry block, followed (after the param-binding prologue's redirected
-        // assign) by a FlatStoreAttr($cell$x, "value", _) seeding the cell.
         val allocIdx = insts.indexOfFirst {
             it is FlatCall &&
                 calleeQn(it, insts) == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
@@ -367,11 +323,6 @@ class FlatClosureTransformerTest {
         }
         assertTrue(allocIdx >= 0, "expected cell-alloc for x; insts=$insts")
 
-        // The redirected param-binding prologue produces:
-        //   FlatAssign($tcN, FlatParameterRef("x"))
-        //   FlatStoreAttr($cell$x, "value", $tcN)
-        // somewhere after the cell-alloc. Find the FlatStoreAttr targeting
-        // $cell$x and verify its value chains back to the parameter-ref.
         val seedStore = insts.drop(allocIdx + 1).filterIsInstance<FlatStoreAttr>().firstOrNull { s ->
             (s.obj as? FlatLocal)?.name == cellName("x") &&
                 s.attribute == ClosureRuntime.CELL_VALUE_ATTR
@@ -385,10 +336,6 @@ class FlatClosureTransformerTest {
             "expected FlatAssign($seedTemp, FlatParameterRef(\"x\")) preceding the seed store; insts=$insts")
         assertEquals("x", (seedAssign!!.source as FlatParameterRef).name)
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 5. Body reads through FlatLoadAttr; substitution flows downstream   */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `body reads through FlatLoadAttr and substitution flows`() {
@@ -418,12 +365,9 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenInner = lookup(out, innerQn)
         val insts = entryInsts(rewrittenInner)
-        // Skip the prologue. Find the FlatReturn — the value should be a temp loaded
-        // from $cell$x via FlatLoadAttr immediately preceding it.
         val ret = insts.last() as FlatReturn
         val retVal = ret.value as FlatLocal
         assertTrue(retVal.name.startsWith("\$t"), "Return value should be a fresh temp, got ${retVal.name}")
-        // The instruction immediately before should be FlatLoadAttr targeting that temp.
         val loadIdx = insts.indexOfFirst {
             it is FlatLoadAttr &&
                 (it.target as? FlatLocal)?.name == retVal.name &&
@@ -432,10 +376,6 @@ class FlatClosureTransformerTest {
         }
         assertTrue(loadIdx >= 0, "No matching FlatLoadAttr found in: $insts")
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 6. Body writes go through FlatStoreAttr for various inst kinds      */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `body writes through FlatStoreAttr - FlatBinOp target captured`() {
@@ -467,8 +407,6 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inc)))
         val rewrittenInc = lookup(out, incQn)
         val insts = entryInsts(rewrittenInc)
-        // Find the FlatBinOp. Its target must be a $tN temp (not "count"), and a
-        // FlatStoreAttr($cell$count, "value", $tN) must immediately follow.
         val binIdx = insts.indexOfFirst { it is FlatBinOp }
         assertTrue(binIdx >= 0)
         val bin = insts[binIdx] as FlatBinOp
@@ -567,11 +505,10 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.NESTED_DEF,
             body = listOf(FlatReturn(local("i"))),
         )
-        // Manually build a CFG with FlatNextIter writing to `i`.
         val entryBlock = FlatBlock(
             label = 0,
             instructions = listOf(
-                FlatAssign(local("it"), FlatIntConst(0)), // pretend iterator
+                FlatAssign(local("it"), FlatIntConst(0)),
                 FlatNextIter(target = local("i"), iterator = local("it"), bodyBlock = 1, exitBlock = 2),
             ),
             exceptionHandlers = emptyList(),
@@ -685,16 +622,11 @@ class FlatClosureTransformerTest {
         val b = unpack.targets[1] as FlatLocal
         assertTrue(a.name.startsWith("\$t"), "Captured slot should be redirected to temp, got ${a.name}")
         assertEquals("b", b.name, "Non-captured slot should be unchanged")
-        // After the unpack, expect a FlatStoreAttr for $cell$a from the temp.
         val storeIdx = unpackIdx + 1
         val store = insts[storeIdx] as FlatStoreAttr
         assertEquals(cellName("a"), (store.obj as FlatLocal).name)
         assertEquals(a.name, (store.value as FlatLocal).name)
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 7. FlatDeleteLocal of captured name → FlatDeleteAttr                */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `delete local of captured name lowers to delete attr`() {
@@ -721,17 +653,12 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val insts = entryInsts(lookup(out, outerQn))
-        // Original FlatDeleteLocal must be gone; a FlatDeleteAttr on $cell$x must appear.
         assertFalse(insts.any { it is FlatDeleteLocal }, "FlatDeleteLocal(x) should be lowered")
         val del = insts.filterIsInstance<FlatDeleteAttr>().firstOrNull {
             (it.obj as? FlatLocal)?.name == cellName("x") && it.attribute == ClosureRuntime.CELL_VALUE_ATTR
         }
         assertNotNull(del, "Expected FlatDeleteAttr on \$cell\$x")
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 8. Bind sites for capturing children emit BuildDict + StoreAttr     */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `bind site for capturing child emits build dict and constructor call`() {
@@ -757,8 +684,6 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val insts = entryInsts(lookup(out, outerQn))
-        // Capturing-child bind site is replaced by FlatBuildDict + FlatCall(adapter ctor).
-        // No FlatBindFunction should remain at this site (callable-shim shape).
         assertFalse(
             insts.any { it is FlatBindFunction },
             "Capturing-child bind should be rewritten to a constructor call",
@@ -768,8 +693,6 @@ class FlatClosureTransformerTest {
         val buildDict = insts[buildIdx] as FlatBuildDict
         assertEquals(listOf(FlatStrConst("x") as FlatValue), buildDict.keys)
         assertEquals(listOf(local(cellName("x")) as FlatValue), buildDict.values)
-        // Next is a FlatReadName loading the adapter class into a temp,
-        // then the constructor call producing the adapter instance into `inner`.
         val read = insts[buildIdx + 1] as FlatReadName
         assertEquals("$moduleName.<closure_inner>", (read.ref as FlatGlobalNameRef).qualifiedName)
         val ctor = insts[buildIdx + 2] as FlatCall
@@ -804,7 +727,6 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val cls = adapter(out, "inner")
-        // Synthetic name uses angle brackets — invalid Python identifier, no collision.
         assertTrue(cls.name.contains('<') && cls.name.contains('>'),
             "Adapter class name should contain angle brackets, got ${cls.name}")
         assertEquals("$moduleName.${cls.name}", cls.qualifiedName)
@@ -812,7 +734,6 @@ class FlatClosureTransformerTest {
         assertEquals("__init__", cls.methods[0].name)
         assertEquals("__call__", cls.methods[1].name)
 
-        // __init__: stores _closure_env_ on self.
         val initInsts = cls.methods[0].cfg.blocks.first().instructions
         assertEquals(listOf("self", ClosureRuntime.CLOSURE_ATTR_NAME), cls.methods[0].parameters.map { it.name })
         val store = initInsts.filterIsInstance<FlatStoreAttr>().single()
@@ -820,7 +741,6 @@ class FlatClosureTransformerTest {
         assertEquals("self", (store.obj as FlatLocal).name)
         assertEquals(ClosureRuntime.CLOSURE_ATTR_NAME, (store.value as FlatLocal).name)
 
-        // __call__: forwards self + p positionally to impl.
         val callMethod = cls.methods[1]
         assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
         val callInsts = callMethod.cfg.blocks.first().instructions
@@ -828,7 +748,6 @@ class FlatClosureTransformerTest {
         assertEquals(2, implCall.args.size)
         assertEquals("self", (implCall.args[0].value as FlatLocal).name)
         assertEquals("p", (implCall.args[1].value as FlatLocal).name)
-        // Impl callee is a local filled by FlatReadName pointing at the renamed impl.
         assertEquals("$moduleName.<closure_inner_impl>", calleeQn(implCall, callInsts))
     }
 
@@ -855,18 +774,12 @@ class FlatClosureTransformerTest {
             ),
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
-        // No adapter class emitted.
         assertTrue(
             out.classes.none { it.name.startsWith("<closure_") },
             "Non-capturing child should not synthesize an adapter class",
         )
-        // Impl keeps its original qualified name.
         assertNotNull(out.functions.firstOrNull { it.qualifiedName == innerQn })
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 9. Bind sites for non-capturing children emit no env attach         */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `bind site for non-capturing child has no env attach`() {
@@ -892,8 +805,6 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenOuter = lookup(out, outerQn)
-        // Since outer has no cells and no capturing children, function should be untouched.
-        // Either way: no FlatStoreAttr with CLOSURE_ATTR_NAME may exist anywhere in body.
         val insts = entryInsts(rewrittenOuter)
         assertFalse(
             insts.any {
@@ -906,10 +817,6 @@ class FlatClosureTransformerTest {
             "Non-capturing child should not trigger env build",
         )
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 10. Calls to closure-bearing children pass only user args           */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `calls to closure bearing children pass only user args`() {
@@ -938,20 +845,14 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val insts = entryInsts(lookup(out, outerQn))
-        // Find the user call: callee is FlatLocal("inner") (the adapter instance).
         val userCall = insts.filterIsInstance<FlatCall>().firstOrNull {
             val callee = it.callee
             callee is FlatLocal && callee.name == "inner"
         }
         assertNotNull(userCall)
-        // Only one user-provided argument: 42. No implicit <self> at the call site.
         assertEquals(1, userCall!!.args.size)
         assertEquals(FlatIntConst(42), userCall.args[0].value)
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 11. Decorated nested def: bind emitted, decorator metadata kept     */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `decorated nested def keeps decorators and binds`() {
@@ -979,36 +880,24 @@ class FlatClosureTransformerTest {
         )
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenInner = lookup(out, innerQn)
-        // Decorators stay on the impl function (callable-shim shape: decorators
-        // wrap a function, not a class).
         assertEquals(listOf(deco), rewrittenInner.decorators)
-        // Capturing child: bind site replaced by adapter ctor call. Adapter class
-        // synthesized; its methods carry no decorators.
         val cls = adapter(out, "inner")
         assertEquals(emptyList(), cls.methods[0].decorators)
         assertEquals(emptyList(), cls.methods[1].decorators)
         val outerInsts = entryInsts(lookup(out, outerQn))
-        // Capturing-child bind became a FlatCall to the adapter constructor.
         val ctor = outerInsts.filterIsInstance<FlatCall>().firstOrNull {
             calleeQn(it, outerInsts) == cls.qualifiedName
         }
         assertNotNull(ctor)
     }
 
-    /* ------------------------------------------------------------------ */
-    /* 12. Transitive capture through closure-root METHOD                  */
-    /* ------------------------------------------------------------------ */
-
     @Test
     fun `transitive capture through method-in-class-inside-function pass-through`() {
         // outer (TOP_LEVEL) → m (METHOD, parent=outer) → inner (NESTED_DEF,
         // parent=m) reads x from outer.
         //
-        // Closure-root status now derives from "no parent". The method m has
-        // a parent (outer), so it forwards x through cells just like any
-        // other inner scope. The class-inside-function shape isn't producible
-        // from real proto→Flat input today, but the analyzer/rewriter are
-        // forward-compatible. No diagnostic, no `ClosureRewriteLimitation`.
+        // Closure-root status derives from "no parent": m has one (outer), so it forwards x
+        // through cells like any other inner scope. No diagnostic, no `ClosureRewriteLimitation`.
         val outerQn = "m.outer"
         val mQn = "m.outer.C.m"
         val innerQn = "m.outer.C.m.inner"
@@ -1044,7 +933,6 @@ class FlatClosureTransformerTest {
 
         val out = FlatClosureTransformer.transform(module(listOf(outer, method, inner)))
 
-        // outer: x cell allocated (descendant captures transitively).
         val outerInsts = entryInsts(lookup(out, outerQn))
         assertTrue(
             outerInsts.any {
@@ -1054,21 +942,14 @@ class FlatClosureTransformerTest {
             },
             "outer should allocate \$cell\$x",
         )
-        // inner: <self> param injected, $cell$x extracted from env.
         val rewrittenInner = lookup(out, innerQn)
         assertEquals(ClosureRuntime.SELF_PARAM_NAME, rewrittenInner.parameters[0].name)
         assertEquals(setOf("x"), rewrittenInner.closureVars)
-        // m: parented, so forwards x. <self> injected; x in closureVars.
         val rewrittenM = lookup(out, mQn)
         assertEquals(ClosureRuntime.SELF_PARAM_NAME, rewrittenM.parameters[0].name)
         assertEquals(setOf("x"), rewrittenM.closureVars)
-        // No diagnostic on m: rewrite succeeds.
         assertEquals(emptyList(), out.diagnostics.filter { it.functionName == mQn })
     }
-
-    /* ------------------------------------------------------------------ */
-    /* 13. closureVars surfaces on FlatFunctionIR for PIR conversion       */
-    /* ------------------------------------------------------------------ */
 
     @Test
     fun `closureVars populated on rewritten FlatFunctionIR`() {
@@ -1101,15 +982,9 @@ class FlatClosureTransformerTest {
         assertEquals(emptySet(), lookup(out, outerQn).closureVars)
     }
 
-    /* ------------------------------------------------------------------ */
-    /* 14. Module init untouched when no closures                          */
-    /* ------------------------------------------------------------------ */
-
     @Test
     fun `module init untouched when no closures`() {
         val out = FlatClosureTransformer.transform(module(functions = emptyList()))
-        // moduleInit should be returned unchanged (same instance reasoning is
-        // strict, just verify no <self> appears and no diagnostics added).
         assertEquals(emptyList(), out.moduleInit.parameters.map { it.name })
         assertEquals(emptySet(), out.moduleInit.closureVars)
         assertEquals(0, out.diagnostics.size)

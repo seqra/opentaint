@@ -4,17 +4,6 @@ import org.opentaint.ir.api.python.PIRPhysicalLocation
 import org.opentaint.ir.impl.python.proto.MypyExprProto
 import org.opentaint.ir.impl.python.proto.MypyStmtProto
 
-/**
- * Build a [PIRPhysicalLocation] from a Mypy proto's `(line, col, end_line, end_col)`
- * tuple. Returns `null` unless the span is fully valid:
- *   - every coordinate is non-negative,
- *   - `end_line >= line`,
- *   - on the same line, `end_col >= col`. Equality is permitted because mypy's
- *     `end_column` is *exclusive* — a zero-width span is a legitimate empty
- *     node (e.g. an empty string literal or synthesized expression).
- *
- * A partial or inverted span is no span at all.
- */
 internal fun MypyStmtProto.toPhysicalLocation(): PIRPhysicalLocation? =
     physicalLocationOf(line, col, endLine, endCol)
 

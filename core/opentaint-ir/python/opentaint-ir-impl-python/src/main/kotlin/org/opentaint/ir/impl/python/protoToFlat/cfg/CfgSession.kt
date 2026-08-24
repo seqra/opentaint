@@ -6,86 +6,38 @@ import org.opentaint.ir.impl.python.protoToFlat.ImportManager
 import org.opentaint.ir.impl.python.protoToFlat.ModuleContext
 import org.opentaint.ir.impl.python.protoToFlat.Scope
 
-/**
- * Per-function CFG construction state. Owned exclusively by [buildFunctionCfg]
- * / [buildModuleInitCfg]; never reused across functions.
- *
- * State that used to be split between `CfgBuilder` / `ExpressionLowering` /
- * `ProtoToFlatBuilder` lives here behind a small API:
- *
- *   - Block & instruction emission ([newBlock], [activate], [emit], goto/branch/return helpers)
- *   - Loop targets and exception-handler stacks (real ArrayDeques, no manual save/restore)
- *   - Scope (locals + temporaries) and the enclosing function's qualified name
- *
- * [StatementLowering] and [ExpressionLowering] are extension files on this class
- * — they share state because they're co-building one CFG. There are no
- * back-references from the lowerings into a parent builder.
- */
 internal class CfgSession(
     val module: ModuleContext,
     val scope: Scope = Scope(),
     val currentFunctionQualifiedName: String? = null,
-    /**
-     * Module-flat short name of the enclosing function (its
-     * [org.opentaint.ir.impl.python.flat.FlatFunctionIR.name] field).
-     * Used by nested-def lowering to compose the lifted child's name as
-     * `"$enclosingName$$childSourceName"`. `null` for module-init.
-     */
     val currentFunctionName: String? = null,
-    /**
-     * The scope's import-binding view. Default = the module's root manager,
-     * which is correct for module-init (whose scope IS the module scope).
-     * Top-level functions and nested defs pass a `nestedChild()` of their
-     * enclosing scope's manager so resolution walks the lexical chain.
-     */
     val imports: ImportManager = module.imports,
-    /**
-     * For a constructor (`__init__`) body: the `self` local to return in place of
-     * a value-less `return`. Python's `__init__` syntactically returns `None`, but
-     * `C(...)` yields the constructed instance, so we lower every bare/implicit
-     * `return` in a constructor to `return self` — making the "self is the result"
-     * mapping explicit in the IR. `null` for every non-constructor scope.
-     */
     val constructorSelf: FlatValue? = null,
 ) {
-    // ─── CFG state (private) ───────────────────────────────
-
     private val blocks = mutableListOf<FlatBlock>()
     private var currentInstructions = mutableListOf<FlatInst>()
     private var currentLabel = 0
     private var blockCounter = 0
 
-    /**
-     * Stack of enclosing exception-handler block lists. The top of stack is
-     * the set of handler labels that catch exceptions raised from the
-     * currently-active block.
-     */
     private val exceptionHandlerStack = ArrayDeque<List<Int>>()
 
-    /** Stack of break / continue jump targets for nested loops. */
     private val loopStack = ArrayDeque<LoopTargets>()
 
     private data class LoopTargets(val breakBlock: Int, val continueBlock: Int)
 
-    // ─── Nonlocal / global declarations ────────────────────
-
     private val _nonlocalNames = mutableSetOf<String>()
     private val _globalNames = mutableSetOf<String>()
 
-    /** Record `nonlocal` declarations encountered while lowering this scope. */
     fun recordNonlocal(names: Iterable<String>) {
         _nonlocalNames.addAll(names)
     }
 
-    /** Record `global` declarations encountered while lowering this scope. */
     fun recordGlobal(names: Iterable<String>) {
         _globalNames.addAll(names)
     }
 
     val nonlocalNames: Set<String> get() = _nonlocalNames
     val globalNames: Set<String> get() = _globalNames
-
-    // ─── Block management ──────────────────────────────────
 
     fun newBlock(): Int = ++blockCounter
 
@@ -107,16 +59,6 @@ internal class CfgSession(
         }
     }
 
-    /**
-     * Force-finalize the current block without starting a new one. The only
-     * legitimate caller is [StatementLowering.visitTry], which needs to commit
-     * the try-body block under the active exception-handler stack frame
-     * *before* popping handlers. Callers MUST follow up with [activate] before
-     * emitting again. `currentLabel` is intentionally left in place: with the
-     * just-closed label, a forgotten [activate] with no further emits is a
-     * no-op, whereas resetting `currentLabel = 0` would trip the entry-block
-     * special case in [finalizeCurrentBlock] and emit a phantom empty block 0.
-     */
     fun closeCurrentBlock() {
         finalizeCurrentBlock()
         currentInstructions = mutableListOf()
@@ -128,8 +70,6 @@ internal class CfgSession(
                 last is FlatRaise || last is FlatUnreachable || last is FlatNextIter
     }
 
-    // ─── Instruction emission ──────────────────────────────
-
     fun emit(inst: FlatInst) {
         currentInstructions.add(inst)
     }
@@ -137,7 +77,6 @@ internal class CfgSession(
     fun emitGoto(target: Int, location: PIRPhysicalLocation? = null) =
         emit(FlatGoto(target, location))
 
-    /** Fall through to [target] unless the current block already ended (return/raise/goto/branch). */
     fun emitGotoIfOpen(target: Int, location: PIRPhysicalLocation? = null) {
         if (!currentBlockTerminated()) emitGoto(target, location)
     }
@@ -150,11 +89,10 @@ internal class CfgSession(
     ) = emit(FlatBranch(condition, trueBlock, falseBlock, location))
 
     fun emitReturn(value: FlatValue?, location: PIRPhysicalLocation? = null) =
+        // hack: emit `return self` at the end of the __init__
         emit(FlatReturn(value ?: constructorSelf, location))
 
     fun newTempValue(): FlatLocal = FlatLocal(scope.newTemp())
-
-    // ─── Scoped stacks ─────────────────────────────────────
 
     inline fun <R> withExceptionHandlers(handlers: List<Int>, block: () -> R): R {
         pushExceptionHandlers(handlers)
@@ -192,8 +130,6 @@ internal class CfgSession(
 
     val breakTarget: Int? get() = loopStack.lastOrNull()?.breakBlock
     val continueTarget: Int? get() = loopStack.lastOrNull()?.continueBlock
-
-    // ─── CFG finalization ──────────────────────────────────
 
     fun finalizeCfg(): FlatCFG {
         finalizeCurrentBlock()

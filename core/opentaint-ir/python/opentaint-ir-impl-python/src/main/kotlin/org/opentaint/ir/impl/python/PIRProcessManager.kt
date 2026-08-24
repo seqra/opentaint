@@ -6,9 +6,6 @@ import java.io.InputStreamReader
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
-/**
- * Manages the Python pir_server subprocess lifecycle.
- */
 class PIRProcessManager(
     private val pythonExecutable: String,
     private val serverModule: String = "pir_server",

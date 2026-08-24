@@ -69,27 +69,6 @@ import org.opentaint.ir.api.python.PythonNames
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
-/**
- * Compiles serialized Python taint rules against a single concrete
- * [PIRFunction] (function-targeted rules) or, when constructed via
- * [forAttribute], against an attribute name (attribute-targeted rules).
- * Mirrors the JVM `MethodTaintConfigurationResolver` — one instance per
- * matched method — name matching, signature matching and structural predicates
- * (`MethodDecorated`, `ClassExtends`) are resolved here against the matched
- * method: non-matching rules are dropped and the predicates fold to a literal,
- * so the runtime [PIRCondition] AST attached to compiled rules carries only
- * value-level predicates (`ConstantTrue | Not | And | Or | ContainsMark |
- * NumberOfArgs | ConstantCmp | ConstantMatches`). Arity (`NumberOfArgs`) and
- * the positional indices of ordinary (call-site) rules are decided at the call site against
- * the concrete `PIRCall`, not here: Python keeps the `*args` spread at the call
- * site, so the signature can't be trusted for arity (unlike Go, which compiles
- * varargs into a single array). Entry-point rules are the exception — they fire
- * at function entry, where there is no call site, so they expand `arg(*)` and
- * validate concrete indices against the signature ([argIndices]) eagerly.
- *
- * [method] is null for attribute-targeted resolution (an attribute access has
- * no enclosing call, hence no positional arguments or call arity).
- */
 internal class MethodTaintConfigurationResolver(private val method: PIRFunction?, val bySimpleName: Boolean = false) {
 
     // region Function-targeted resolution
@@ -214,7 +193,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
 
     // endregion
 
-    /** Match a function-target rule against [method]. */
     private inline fun <S : SerializedPythonRule, T : TaintConfigurationItem> resolveFunctionTargeted(
         serialized: List<S>,
         build: (S, PythonTarget.Function, PIRFunction) -> T,
@@ -229,7 +207,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         }
     }
 
-    /** Match an attribute-target rule against the attribute [name]. */
     private inline fun <S : SerializedPythonRule, T : TaintConfigurationItem> resolveAttributeTargeted(
         serialized: List<S>,
         name: String,
@@ -276,7 +253,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         }
     }
 
-    /** `.` is treated as a literal FQN separator, not a regex meta char. */
     private fun hasRegexMetaChar(name: String): Boolean = name.any { it in REGEX_META_CHARS }
 
     private fun matchesSignature(sig: SerializedPythonSignatureMatcher, method: PIRFunction): Boolean {
@@ -286,37 +262,16 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         return params.zip(sig.args).all { (p, m) -> matchesType(m, p.type) }
     }
 
-    /** Matches the serialized matcher token (`*` or an FQN) against a [PIRClassType]. */
     private fun matchesType(matcher: String, type: PIRType): Boolean =
         matcher == "*" || (type as? PIRClassType)?.qualifiedName == matcher
 
-    /**
-     * Parameters as the user wrote them — drops the implicit receiver slot
-     * (`self` / `cls`) so signature matchers like `() *` line up with the
-     * source-level arity. Uses `enclosingClass` + `isStaticMethod` rather
-     * than parameter naming so misnamed receivers and top-level functions
-     * both behave; `@classmethod`'s `cls` slot is dropped by the same rule
-     * since `isClassMethod` implies `enclosingClass != null` and
-     * `!isStaticMethod`.
-     */
     private fun PIRFunction.declaredParameters(): List<PIRParameter> = when {
         enclosingClass == null || isStaticMethod -> parameters
         else -> if (parameters.isEmpty()) parameters else parameters.drop(1)
     }
 
-    /**
-     * Positional-argument index space of a call to this method, receiver excluded —
-     * aligned with `PIRCall.args` (so `arg(*)` expands to exactly these). Drops the
-     * implicit `self` / `cls` slot via [declaredParameters].
-     */
     private fun PIRFunction.argumentIndices(): List<Int> = declaredParameters().indices.toList()
 
-    /**
-     * Bare names match the decorator's simple name, as [matchesName] does. Dotted names match its
-     * qualified name, but only as a suffix: a rule names the decorator as it is written at the
-     * definition (`app.route`), while the IR qualifies it with the defining module
-     * (`myapp.app.route`); a config FQN (`flask.Flask.route`) still matches outright.
-     */
     private fun PIRFunction.hasDecorator(name: String): Boolean = decorators.any {
         if ('.' in name) it.qualifiedName == name || it.qualifiedName.endsWith(".$name") else it.name == name
     }
@@ -331,7 +286,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
     private fun convertAssignActions(a: SerializedPythonTaintAssignAction): List<TaintAssignAction> =
         expandPositions(a.pos).map { TaintAssignAction(mark = TaintMark(a.kind), pos = it) }
 
-    /** Entry-point variant: `arg(*)` expands against the signature, since there is no call site. */
     private fun convertEntryPointAssignActions(a: SerializedPythonTaintAssignAction): List<TaintAssignAction> =
         expandEntryPointPositions(a.pos).map { TaintAssignAction(mark = TaintMark(a.kind), pos = it) }
 
@@ -425,7 +379,6 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         SerializedPythonCondition.ConstantCmpType.Gt -> ConstantCmpType.Gt
     }
 
-    /** `ContainsMark` over `arg(*)` means "the mark is on some argument" — an [CommonCondition.Or] of per-arg atoms. */
     private fun containsMarkCondition(c: SerializedPythonCondition.ContainsMark): PIRCondition =
         mkOr(expandPositions(c.pos).map { atom(ContainsMark(mark = TaintMark(c.tainted), pos = it)) })
 

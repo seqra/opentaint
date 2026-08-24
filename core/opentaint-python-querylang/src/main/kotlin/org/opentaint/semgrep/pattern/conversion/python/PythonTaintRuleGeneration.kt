@@ -141,8 +141,6 @@ private fun SerializedPythonRule.withId(id: String): SerializedPythonRule = when
     is SerializedPythonCleaner -> copy(serializedId = id)
 }
 
-// The converter encodes an attribute read as a synthetic method name carrying
-// PythonLanguageStrategy.ATTR_READ_AUX_FN_PREFIX; recover the attribute target from it.
 private fun pythonTargetFor(function: String): PythonTarget =
     PythonLanguageStrategy.attrReadAttrOrNull(function)
         ?.let { PythonTarget.Attribute(it) }
@@ -207,8 +205,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConditionAndEffect(
     effect: EdgeEffect,
     trace: SemgrepRuleLoadStepTrace,
 ): List<PythonEvaluatedEdgeCondition> {
-    // A subscript read attaches a field-signature modifier to the Result position; strip it into
-    // element accessors and re-attach it to the Result position wherever it is materialized.
     val resultFieldChains = mutableListOf<String>()
     val normalizedCondition = condition.dropFieldResultModifier(resultFieldChains)
     val normalizedEffect = effect.dropFieldResultModifier(resultFieldChains)
@@ -256,7 +252,6 @@ private fun MethodPredicate.dropFieldResultModifier(fieldChains: MutableList<Str
     return if (remainingModifier != null) this else null
 }
 
-/** Splits the collected field chain into serialized element accessors (single chain, mirrors Go). */
 private fun resultModifiersOf(resultFieldChains: List<String>): List<PositionModifier>? {
     if (resultFieldChains.isEmpty()) return null
     val uniqueChains = resultFieldChains.distinct()
@@ -289,8 +284,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonFormulaSignature(
     if (signature.isGeneratedAnyValueGenerator()) TODO("Eliminate generated method")
     if (signature.isGeneratedStringConcat()) TODO("Eliminate generated string concat")
 
-    // The function target already encodes the method/class; return type and signature predicate
-    // conditions (IsType / class-name matches) are not representable in Python conditions.
     return evaluatePythonFunctionNames(signature.methodName.name, signature.enclosingClassName.name, trace)
         .map { name -> PythonRuleConditionBuilder().also { it.function = name } }
 }
@@ -309,8 +302,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonEdgePredicateConstraint(
         val negatedConditions = mutableListOf<SerializedPythonCondition>()
         evaluatePythonMethodConstraints(edgeState, constraint, resultModifiers, negatedConditions, trace)
         val body = pythonAnd(negatedConditions)
-        // Negating an empty (unrepresentable) body yields Not(true) = false, a never-firing rule.
-        // Surface it rather than silently dropping the predicate's effect.
         if (body == PYTHON_TRUE) {
             trace.error(FailedToCreateTaintRules("Negated predicate has no Python condition representation"))
         }
@@ -342,11 +333,10 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
 }
 
 /**
- * Gates the rule on the decorator a `@dec def f(...)` pattern requires, named as the pattern writes
- * it (`entry_point`, `app.route`). An unresolvable name (`@$DEC`) yields a never-matching rule rather
- * than an ungated one: dropping the gate would make `@dec def f($P)` taint the parameter of *every*
- * function. Decorator arguments (`@app.route("/p")`) have no condition form, so the name alone
- * matches and the rule widens to every use of the decorator instead of being dropped.
+ * An unresolvable decorator name (`@$DEC`) yields a never-matching rule rather than an ungated one:
+ * dropping the gate would make `@dec def f($P)` taint the parameter of *every* function. Decorator
+ * arguments (`@app.route("/p")`) have no condition form, so the name alone matches and the rule
+ * widens to every use of the decorator instead of being dropped.
  */
 private fun pythonDecoratorCondition(
     modifier: SignatureModifier,
@@ -377,7 +367,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
         }
         containsMarkWithAnyStateBefore(edgeState, condition.metavar, position)
     }
-    // `$X = "..."` etc. — the argument must be a specific constant literal.
     is SpecificStringValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Str, condition.value)
     is SpecificIntValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Int, condition.value.toString())
     is SpecificBoolValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Bool, condition.value.toString())
@@ -386,9 +375,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
     ParamCondition.AnyStringLiteral ->
         SerializedPythonCondition.ConstantMatches(position.toPythonPosition(), "(?s).*")
 
-    // Type / string-metavar / static-field / annotation / null predicates have no Python representation yet.
-    // A ParamModifier is stripped upstream (dropFieldResultModifier); reaching it here means the modifier
-    // sat on a non-result position and could not be materialized as an accessor.
     is ParamCondition.TypeIs,
     is ParamCondition.StringValueMetaVar,
     is ParamCondition.ParamModifier,
@@ -445,9 +431,7 @@ private fun SerializedPythonCondition.rewriteAsEndCondition(): SerializedPythonC
     is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedPythonCondition.ConstantCmp -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedPythonCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
-    // Call arity is meaningless at method exit.
     is SerializedPythonCondition.NumberOfArgs -> PYTHON_TRUE
-    // Predicates of the enclosing function itself: no position to rewrite, and they still hold at exit.
     is SerializedPythonCondition.MethodDecorated,
     is SerializedPythonCondition.ClassExtends -> this
 }

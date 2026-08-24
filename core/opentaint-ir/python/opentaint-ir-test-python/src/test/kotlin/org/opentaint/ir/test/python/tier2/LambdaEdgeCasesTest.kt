@@ -5,10 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for lambda edge cases: nested lambdas, lambda+comprehension combos,
- * lambda with default args, lambda with star-args/kwargs, and closure patterns.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class LambdaEdgeCasesTest : PIRTestBase() {
@@ -96,15 +92,12 @@ def lec_lambda_chain(x: int) -> int:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Basic lambda tests ────────────────────────────────
-
     @Test fun `basic lambda produces call`() {
         val calls = insts("lec_lambda_basic").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for f(5)")
     }
 
     @Test fun `basic lambda creates synthetic function`() {
-        // Lambda functions are registered as module-level <lambda>$N
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
         assertTrue(lambdaFuncs.isNotEmpty(),
@@ -114,7 +107,6 @@ def lec_lambda_chain(x: int) -> int:
     @Test fun `no-args lambda has no params`() {
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
-        // At least one should have 0 params
         assertTrue(lambdaFuncs.any { it.parameters.isEmpty() },
             "Expected a lambda with no parameters")
     }
@@ -126,8 +118,6 @@ def lec_lambda_chain(x: int) -> int:
             "Expected a lambda with 2 parameters")
     }
 
-    // ─── Lambda with conditional ───────────────────────────
-
     @Test fun `conditional lambda has branch in CFG`() {
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
@@ -138,17 +128,12 @@ def lec_lambda_chain(x: int) -> int:
             "Expected at least one lambda with PIRBranch (conditional)")
     }
 
-    // ─── Lambda in collection ──────────────────────────────
-
     @Test fun `lambda in list creates multiple lambda functions`() {
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
-        // Source has many lambdas, should have plenty of synthetic funcs
         assertTrue(lambdaFuncs.size >= 3,
             "Expected >= 3 lambda functions, got ${lambdaFuncs.size}")
     }
-
-    // ─── Lambda as argument ────────────────────────────────
 
     @Test fun `sorted with lambda key produces call`() {
         val calls = insts("lec_lambda_as_key").filterIsInstance<PIRCall>()
@@ -165,8 +150,6 @@ def lec_lambda_chain(x: int) -> int:
         assertTrue(calls.size >= 2, "Expected >= 2 calls (list + filter), got ${calls.size}")
     }
 
-    // ─── Lambda in comprehension ───────────────────────────
-
     @Test fun `lambda in comprehension has CFG`() {
         val f = func("lec_lambda_in_comp")
         assertTrue(f.instList.isNotEmpty())
@@ -178,26 +161,18 @@ def lec_lambda_chain(x: int) -> int:
         assertTrue(insts("lec_comp_in_lambda").any { it is PIRCall })
     }
 
-    // ─── Lambda with defaults ──────────────────────────────
-
     @Test fun `lambda with default arg has function with param`() {
-        // Find lambda that has a default
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
-        // At least one should have a parameter with default
         assertTrue(lambdaFuncs.any { f ->
             f.parameters.any { it.hasDefault }
         }, "Expected a lambda with default parameter")
     }
 
-    // ─── Immediate invocation ──────────────────────────────
-
     @Test fun `immediately invoked lambda produces call`() {
         val calls = insts("lec_lambda_immediate").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for (lambda ...)(3, 4)")
     }
-
-    // ─── Multiple lambdas in one function ──────────────────
 
     @Test fun `multiple lambdas produce multiple calls`() {
         val calls = insts("lec_multiple_lambdas").filterIsInstance<PIRCall>()
@@ -205,15 +180,11 @@ def lec_lambda_chain(x: int) -> int:
             "Expected >= 2 calls for add() and mul(), got ${calls.size}")
     }
 
-    // ─── Lambda chain ──────────────────────────────────────
-
     @Test fun `lambda chain produces nested calls`() {
         val calls = insts("lec_lambda_chain").filterIsInstance<PIRCall>()
         assertTrue(calls.size >= 2,
             "Expected >= 2 calls for f(x)(10) chain, got ${calls.size}")
     }
-
-    // ─── Lambda in dict ────────────────────────────────────
 
     @Test fun `lambda in dict has BuildDict and calls`() {
         val allInsts = insts("lec_lambda_in_dict")
@@ -222,15 +193,12 @@ def lec_lambda_chain(x: int) -> int:
         assertTrue(calls.isNotEmpty(), "Expected calls for ops['add'](3,4)")
     }
 
-    // ─── All lambdas have valid CFGs ───────────────────────
-
     @Test fun `all lambda functions have valid CFGs`() {
         val lambdaFuncs = cp.modules.flatMap { it.functions }
             .filter { it.qualifiedName.contains("<lambda>") }
         for (f in lambdaFuncs) {
             assertTrue(f.instList.isNotEmpty(),
                 "Lambda ${f.qualifiedName} should have non-empty CFG")
-            // Every lambda should have a return
             val hasReturn = f.instList.any { it is PIRReturn }
             assertTrue(hasReturn,
                 "Lambda ${f.qualifiedName} should have a return instruction")

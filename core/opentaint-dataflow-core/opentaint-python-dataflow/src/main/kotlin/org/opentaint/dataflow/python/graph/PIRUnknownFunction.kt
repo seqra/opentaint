@@ -13,21 +13,6 @@ import org.opentaint.ir.api.python.PIRParameter
 import org.opentaint.ir.api.python.PIRType
 import org.opentaint.ir.impl.python.PIRCFGImpl
 
-/**
- * Synthetic [PIRFunction]s produced by [org.opentaint.dataflow.python.PIRCallResolver] when a call's callee
- * cannot be resolved to a real function in the classpath. Two precision levels:
- *
- * - [PIRQualifiedUnknownFunction]: a fully-qualified name was reconstructed
- *   (e.g. `os.path.join`) but no body is loaded — taint rules keyed on the FQN
- *   can match.
- * - [PIRSimpleNameUnknownFunction]: only the trailing attribute segment is
- *   known (e.g. `encode` from `obj.encode(...)`) — taint rules keyed on the
- *   simple name can match.
- *
- * Both are filtered out of interprocedural stepping by
- * [org.opentaint.dataflow.python.analysis.PIRMethodCallResolver.realCallees] via the common [PIRUnknownFunction]
- * supertype.
- */
 sealed interface PIRUnknownFunction : PIRFunction {
     override val parameters: List<PIRParameter> get() = emptyList()
     override val returnType: PIRType get() = PIRAnyType

@@ -4,19 +4,6 @@ import org.opentaint.ir.api.python.PIRDiagnostic
 import org.opentaint.ir.api.python.PIRDiagnosticSeverity
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 
-/**
- * One-way sink shared by every per-function lowering inside a single module:
- *
- *   - Allocates fresh names for synthetic functions (lambdas, nested defs).
- *   - Collects [FlatFunctionIR]s emitted by inner scopes so the top-level
- *     [ModuleLowering] can append them to the module's `functions` list.
- *   - Collects diagnostics produced anywhere in the pipeline.
- *
- * No back-references to the lowering classes — components are *given* a
- * [ModuleContext] which they only write to. [ModuleContext] is single-shot:
- * one instance per module lowering; [registeredFunctions] / [diagnostics] are
- * read once at the end of [ModuleLowering.lower].
- */
 internal class ModuleContext(val moduleName: String) {
 
     private var lambdaCounter = 0
@@ -24,25 +11,12 @@ internal class ModuleContext(val moduleName: String) {
     private val _registeredFunctions = mutableListOf<FlatFunctionIR>()
     private val _diagnostics = mutableListOf<PIRDiagnostic>()
 
-    /** Append a synthetic function (lambda or nested def) to the module's function list. */
     fun register(function: FlatFunctionIR) {
         _registeredFunctions.add(function)
     }
 
-    /** Allocate a unique synthetic-lambda name within this module, e.g. `<lambda>$3`. */
     fun freshLambdaName(): String = "<lambda>\$${lambdaCounter++}"
 
-    /**
-     * Build the module-flat short name for a nested `def` named [shortName]
-     * lexically inside [parentName] (which is itself a module-flat short
-     * name — so for a doubly-nested def the parent's name already contains
-     * `$`). The first nested def in a given parent gets `parent$short`;
-     * shadowing siblings get `parent$short$2`, `parent$short$3`, etc., so
-     * `module.functions` stays unique.
-     *
-     * Maintains the suffix invariant: the resulting name is the suffix of
-     * `"$moduleName.$result"` that will be stored as `qualifiedName`.
-     */
     fun freshNestedName(parentName: String, shortName: String): String {
         val key = parentName to shortName
         val count = nestedShadowCounters.getOrDefault(key, 0)
@@ -51,17 +25,6 @@ internal class ModuleContext(val moduleName: String) {
         return if (count == 0) base else "$base$${count + 1}"
     }
 
-    /**
-     * Root of the import-scope chain for this module. Populated by a
-     * pre-walk in [ModuleLowering] *before* any function bodies are lowered,
-     * so that top-level functions see the module-level `import` bindings even
-     * though module-init's CFG is built after the top-level functions.
-     *
-     * Top-level function / class-method [CfgSession]s use
-     * `imports.nestedChild()` as their own manager; nested defs / lambdas
-     * chain off their enclosing function's manager. Module-init's CFG
-     * session uses this same root directly (module-init IS the module scope).
-     */
     val imports: ImportManager = ImportManager()
 
     fun reportError(message: String, source: String, code: String) {
@@ -72,9 +35,7 @@ internal class ModuleContext(val moduleName: String) {
         reportError("$prefix: ${e.javaClass.simpleName}: ${e.message}", source, e.javaClass.simpleName)
     }
 
-    /** Functions registered so far, in registration order. */
     val registeredFunctions: List<FlatFunctionIR> get() = _registeredFunctions.toList()
 
-    /** Diagnostics reported so far, in registration order. */
     val diagnostics: List<PIRDiagnostic> get() = _diagnostics.toList()
 }

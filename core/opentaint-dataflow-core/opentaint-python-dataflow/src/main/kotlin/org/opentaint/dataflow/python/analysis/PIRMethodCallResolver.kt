@@ -19,11 +19,6 @@ class PIRMethodCallResolver(
     private val runner: TaintAnalysisUnitRunner,
 ) : MethodCallResolver {
 
-    /**
-     * Synthetic [org.opentaint.dataflow.python.graph.PIRUnknownFunction]s are only used by the call flow
-     * function for rule lookup — they have no CFG to step into, so they
-     * must not be surfaced as resolved interprocedural targets.
-     */
     private fun Set<PIRFunction>.realCallees(): List<PIRFunction> =
         filter { it !is PIRUnknownFunction }
 

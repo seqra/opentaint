@@ -9,13 +9,6 @@ import org.opentaint.ir.impl.python.proto.*
 import org.opentaint.ir.impl.python.protoToFlat.recordImports
 import org.opentaint.ir.impl.python.protoToFlat.recordImportsFrom
 
-/**
- * Statement-level lowering. Extension functions on [CfgSession] — no class
- * holds a reference to another, all state flows through the receiver.
- *
- * Mirrors the structure of mypy's `statement_visitor.py`.
- */
-
 internal fun CfgSession.visitBlock(block: MypyBlockProto) {
     for (stmt in block.stmtsList) {
         if (currentBlockTerminated()) break
@@ -48,11 +41,8 @@ private fun CfgSession.visitStmt(stmt: MypyStmtProto) {
         stmt.hasNonlocalDecl() -> recordNonlocal(stmt.nonlocalDecl.namesList)
         stmt.hasImportStmt() -> recordImports(imports, stmt.importStmt)
         stmt.hasImportFromStmt() -> recordImportsFrom(imports, stmt.importFromStmt)
-        // PassStmt, ClassDef inside body: no-op
     }
 }
-
-// ─── Assignment ────────────────────────────────────────
 
 internal fun CfgSession.visitAssignment(stmt: MypyAssignmentStmtProto, location: PIRPhysicalLocation?) {
     val rhs = lowerExpr(stmt.rvalue)
@@ -105,13 +95,9 @@ private fun CfgSession.visitOperatorAssignment(stmt: MypyOperatorAssignmentStmtP
     assignTo(stmt.lvalue, target, location)
 }
 
-// ─── Expression statement ────────────────────────────
-
 private fun CfgSession.visitExpressionStmt(stmt: MypyExpressionStmtProto) {
     lowerExpr(stmt.expr)
 }
-
-// ─── Return ────────────────────────────────────────────
 
 private fun CfgSession.visitReturn(stmt: MypyReturnStmtProto, location: PIRPhysicalLocation?) {
     val value = if (stmt.hasExpr() && stmt.expr.kindCase != MypyExprProto.KindCase.KIND_NOT_SET) {
@@ -119,8 +105,6 @@ private fun CfgSession.visitReturn(stmt: MypyReturnStmtProto, location: PIRPhysi
     } else null
     emitReturn(value, location)
 }
-
-// ─── If ────────────────────────────────────────────────
 
 private fun CfgSession.visitIf(stmt: MypyIfStmtProto, location: PIRPhysicalLocation?) {
     val endBlock = newBlock()
@@ -146,12 +130,6 @@ private fun CfgSession.visitIf(stmt: MypyIfStmtProto, location: PIRPhysicalLocat
 
     activate(endBlock)
 }
-
-// ─── Match ─────────────────────────────────────────────
-// Desugared to an if/elif chain: the subject is evaluated once, each case
-// becomes a test (`subject == value`, or always-true for capture/wildcard)
-// whose true edge runs the body and false edge falls to the next case. No new
-// dataflow instruction — captures are ordinary assignments from the subject.
 
 private fun CfgSession.visitMatch(stmt: MypyMatchStmtProto, location: PIRPhysicalLocation?) {
     val subject = lowerExpr(stmt.subject)
@@ -185,8 +163,6 @@ private fun CfgSession.visitMatch(stmt: MypyMatchStmtProto, location: PIRPhysica
     activate(endBlock)
 }
 
-// Returns the branch condition, or null when the pattern always matches
-// (capture / wildcard). Emitted into the current block, before the branch.
 private fun CfgSession.lowerPatternCondition(
     pattern: MypyPatternProto,
     subject: FlatValue,
@@ -204,7 +180,6 @@ private fun CfgSession.lowerPatternCondition(
     else -> null
 }
 
-// Binds the pattern's captured names to the subject. Emitted on the matched edge.
 private fun CfgSession.bindPattern(
     pattern: MypyPatternProto,
     subject: FlatValue,
@@ -217,8 +192,6 @@ private fun CfgSession.bindPattern(
         emit(FlatAssign(FlatLocal(scope.resolveLocal(asPattern.name)), subject, physicalLocation = location))
     }
 }
-
-// ─── While ─────────────────────────────────────────────
 
 private fun CfgSession.visitWhile(stmt: MypyWhileStmtProto, location: PIRPhysicalLocation?) {
     val headerBlock = newBlock()
@@ -260,8 +233,6 @@ private fun CfgSession.visitWhile(stmt: MypyWhileStmtProto, location: PIRPhysica
     }
 }
 
-// ─── For ───────────────────────────────────────────────
-
 private fun CfgSession.visitFor(stmt: MypyForStmtProto, location: PIRPhysicalLocation?) {
     val iterVal = newTempValue()
     val iterableVal = lowerExpr(stmt.iterable)
@@ -292,7 +263,6 @@ private fun CfgSession.visitFor(stmt: MypyForStmtProto, location: PIRPhysicalLoc
 
     activate(bodyBlock)
     if (stmt.index.hasTupleExpr()) {
-        // For tuple targets the temp holds the next iter value; unpack into named locals.
         assignTo(stmt.index, targetVal, location)
     }
     withLoopTargets(breakBlock = breakBlock, continueBlock = headerBlock) {
@@ -312,11 +282,8 @@ private fun CfgSession.visitFor(stmt: MypyForStmtProto, location: PIRPhysicalLoc
 
 private fun CfgSession.lowerForTarget(target: MypyExprProto): FlatLocal = when {
     target.hasNameExpr() -> FlatLocal(scope.resolveLocal(target.nameExpr.name))
-    // Tuple targets land in a temp that we then unpack inside the body block.
     else -> newTempValue()
 }
-
-// ─── Try / Except ──────────────────────────────────────
 
 private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLocation?) {
     val handlerBlocks = (0 until stmt.handlersCount).map { newBlock() }
@@ -333,9 +300,6 @@ private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLoc
 
         emitGotoIfOpen(elseBlock ?: finallyBlock ?: endBlock)
 
-        // Commit the try-body block under the handler-stack frame. Handlers
-        // themselves run *outside* the frame (a raise inside a handler is not
-        // caught by the same try).
         closeCurrentBlock()
     }
 
@@ -390,8 +354,6 @@ private fun resolveExceptTypes(typeExpr: MypyExprProto): List<FlatType> {
     return result
 }
 
-// ─── With ──────────────────────────────────────────────
-
 private fun CfgSession.visitWith(stmt: MypyWithStmtProto, location: PIRPhysicalLocation?) {
     val ctxVals = mutableListOf<FlatValue>()
     for (i in stmt.exprsList.indices) {
@@ -412,7 +374,6 @@ private fun CfgSession.visitWith(stmt: MypyWithStmtProto, location: PIRPhysicalL
 
     visitBlock(stmt.body)
 
-    // Skip __exit__ if body terminated (early return / raise / break).
     if (currentBlockTerminated()) return
 
     val noneArg = FlatCallArg(FlatNoneConst)
@@ -424,8 +385,6 @@ private fun CfgSession.visitWith(stmt: MypyWithStmtProto, location: PIRPhysicalL
     }
 }
 
-// ─── Raise ─────────────────────────────────────────────
-
 private fun CfgSession.visitRaise(stmt: MypyRaiseStmtProto, location: PIRPhysicalLocation?) {
     val exc = if (stmt.hasExpr() && stmt.expr.kindCase != MypyExprProto.KindCase.KIND_NOT_SET) {
         lowerExpr(stmt.expr)
@@ -435,8 +394,6 @@ private fun CfgSession.visitRaise(stmt: MypyRaiseStmtProto, location: PIRPhysica
     } else null
     emit(FlatRaise(exc, cause, physicalLocation = location))
 }
-
-// ─── Del ───────────────────────────────────────────────
 
 private fun CfgSession.visitDel(stmt: MypyDelStmtProto, location: PIRPhysicalLocation?) =
     visitDelExpr(stmt.expr, location)
@@ -457,8 +414,6 @@ private fun CfgSession.visitDelExpr(expr: MypyExprProto, location: PIRPhysicalLo
         expr.hasTupleExpr() -> for (item in expr.tupleExpr.itemsList) visitDelExpr(item, location)
     }
 }
-
-// ─── Assert ────────────────────────────────────────────
 
 private fun CfgSession.visitAssert(stmt: MypyAssertStmtProto, location: PIRPhysicalLocation?) {
     val cond = lowerExpr(stmt.expr)
@@ -481,8 +436,6 @@ private fun CfgSession.visitAssert(stmt: MypyAssertStmtProto, location: PIRPhysi
     activate(passBlock)
 }
 
-// ─── Nested function definitions ───────────────────────
-
 private fun CfgSession.visitNestedFuncDef(
     funcDef: MypyFuncDefProto,
     decoratorExprs: List<MypyExprProto>,
@@ -493,8 +446,6 @@ private fun CfgSession.visitNestedFuncDef(
     // `MypyFuncDefProto.decorators` for nested-def nodes).
     val decorators = decoratorExprs.map { DecoratorLowering.fromExpr(it) }
 
-    // Nested-def statements only occur inside function bodies, where the
-    // current function's qualified name is always set.
     val enclosing = requireNotNull(currentFunctionQualifiedName) {
         "visitNestedFuncDef invoked outside a function scope"
     }
@@ -507,13 +458,10 @@ private fun CfgSession.visitNestedFuncDef(
         decorators = decorators,
         enclosingQualifiedName = enclosing,
         enclosingName = enclosingFnName,
-        // Chain the child's manager off this scope's so resolution walks
-        // outward through enclosing function scopes up to the module.
         enclosingImports = imports,
     )
     module.register(nested)
 
-    // Bind the local name to the synthetic global function.
     val ref = FlatGlobalNameRef(nested.qualifiedName)
     val targetName = scope.resolveLocal(funcDef.name)
     emit(FlatBindFunction(FlatLocal(targetName), ref, physicalLocation = location))

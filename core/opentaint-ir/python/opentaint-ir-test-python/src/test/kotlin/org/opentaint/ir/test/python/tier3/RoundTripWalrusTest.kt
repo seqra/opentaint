@@ -3,11 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for the walrus operator (:= assignment expression).
- * Tests walrus in if, while, nested, and compound expressions.
- * 30 test cases.
- */
 @Tag("tier3")
 class RoundTripWalrusTest : RoundTripTestBase() {
 
@@ -136,8 +131,6 @@ def rtw_walrus_abs(x: int) -> int:
     return (a := x if x >= 0 else -x) * 2
     """.trimIndent()
 
-    // ─── Basic walrus ──────────────────────────────────────
-
     @Test fun `walrus in if - above threshold`() = roundTrip("rtw_simple_if", posArgs(listOf(10), listOf(5)))
     @Test fun `walrus in if - below threshold`() = roundTrip("rtw_simple_if", posArgs(listOf(3), listOf(0)))
     @Test fun `walrus simple assign`() = roundTrip("rtw_simple_assign", posArgs(listOf(5), listOf(10)))
@@ -147,8 +140,6 @@ def rtw_walrus_abs(x: int) -> int:
     @Test fun `walrus multiple`() = roundTrip("rtw_multiple", posArgs(listOf(3, 4), listOf(10, 20)))
     @Test fun `walrus in ternary`() = roundTrip("rtw_in_ternary", posArgs(listOf(5), listOf(-3)))
 
-    // ─── Arithmetic patterns ───────────────────────────────
-
     @Test fun `walrus add`() = roundTrip("rtw_walrus_add", posArgs(listOf(3, 4), listOf(10, 20)))
     @Test fun `walrus mul`() = roundTrip("rtw_walrus_mul", posArgs(listOf(3, 4)))
     @Test fun `walrus chain ops`() = roundTrip("rtw_chain_ops", posArgs(listOf(5), listOf(10)))
@@ -157,22 +148,16 @@ def rtw_walrus_abs(x: int) -> int:
     @Test fun `walrus in arithmetic`() = roundTrip("rtw_walrus_in_arithmetic", posArgs(listOf(5, 3)))
     @Test fun `walrus negative`() = roundTrip("rtw_walrus_negative", posArgs(listOf(5), listOf(-3)))
 
-    // ─── Sequential and repeated use ───────────────────────
-
     @Test fun `walrus sequential`() = roundTrip("rtw_walrus_sequential", posArgs(listOf(5)))
     @Test fun `walrus with zero`() = roundTrip("rtw_walrus_with_zero", posArgs(listOf(0), listOf(5)))
     @Test fun `walrus double`() = roundTrip("rtw_walrus_double", posArgs(listOf(7)))
     @Test fun `walrus triple use`() = roundTrip("rtw_walrus_triple_use", posArgs(listOf(4)))
     @Test fun `walrus bool result`() = roundTrip("rtw_walrus_bool_result", posArgs(listOf(200), listOf(50)))
 
-    // ─── More arithmetic ───────────────────────────────────
-
     @Test fun `walrus subtract`() = roundTrip("rtw_walrus_subtract", posArgs(listOf(10, 3)))
     @Test fun `walrus floor div`() = roundTrip("rtw_walrus_floor_div", posArgs(listOf(17, 3)))
     @Test fun `walrus mod`() = roundTrip("rtw_walrus_mod", posArgs(listOf(17, 5)))
     @Test fun `walrus complex expr`() = roundTrip("rtw_walrus_complex_expr", posArgs(listOf(5, 3)))
-
-    // ─── In control flow ───────────────────────────────────
 
     @Test fun `walrus in loop body`() = roundTrip("rtw_walrus_in_loop_body", posArgs(listOf(5), listOf(10)))
     @Test fun `walrus chained if`() = roundTrip("rtw_walrus_chained_if", posArgs(listOf(10), listOf(2), listOf(-1)))

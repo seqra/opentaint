@@ -8,8 +8,6 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FieldSensitiveFlowTest : AnalysisTest() {
 
-    // --- ClassField.py ---
-
     @Test
     fun testFieldSimpleRead() = assertSinkReachable(
         source = source("ClassField.source", "taint", Result),
@@ -30,8 +28,6 @@ class FieldSensitiveFlowTest : AnalysisTest() {
         sink = sink("ClassField.sink", "taint", Argument(0), "field"),
         entryPointFunction = "ClassField.field_overwrite"
     )
-
-    // --- DictAccess.py ---
 
     @Test
     fun testDictLiteral() = assertSinkReachable(

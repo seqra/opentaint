@@ -20,12 +20,6 @@ import org.opentaint.dataflow.taint.applyCleanerActions
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
 
-/**
- * Strong-updates the marks a user-defined (semgrep-converted) source/cleaner rule controls when a
- * callee's summary fact is mapped back to the caller: the rule's [PIRUserDefinedRuleInfo.relevantTaintMarks]
- * are removed from the rule's positions so the rule's own action — not a stale propagated mark — decides
- * them. Python mirror of [org.opentaint.dataflow.go.analysis.GoCallRuleBasedSummaryRewriter].
- */
 class PIRCallRuleBasedSummaryRewriter(
     private val callInst: PIRCall,
     private val ctx: PIRMethodAnalysisContext,

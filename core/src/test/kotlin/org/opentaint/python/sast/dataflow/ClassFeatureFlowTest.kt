@@ -8,8 +8,6 @@ import kotlin.test.Test
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ClassFeatureFlowTest : AnalysisTest() {
 
-    // --- SimpleObject.py ---
-
     @Test
     fun testClassMethodCall() = assertSinkReachable(
         source = source("SimpleObject.source", "taint", Result),
@@ -23,8 +21,6 @@ class ClassFeatureFlowTest : AnalysisTest() {
         sink = sink("SimpleObject.sink", "taint", Argument(0), "class"),
         entryPointFunction = "SimpleObject.class_method_return"
     )
-
-    // --- StaticMethod.py ---
 
     @Test
     fun testStaticMethodCall() = assertSinkReachable(
@@ -40,11 +36,6 @@ class ClassFeatureFlowTest : AnalysisTest() {
         entryPointFunction = "StaticMethod.classmethod_call"
     )
 
-    // --- ReceiverSelf.py ---
-
-    // The receiver carries a tainted field into an instance method via `self`:
-    // the receiver maps to the callee's self = Argument(0), and the prologue
-    // assign exposes `self.data` to the body's sink.
     @Test
     fun testReceiverFieldToSelf() = assertSinkReachable(
         source = source("ReceiverSelf.source", "taint", Result),
@@ -52,9 +43,6 @@ class ClassFeatureFlowTest : AnalysisTest() {
         entryPointFunction = "ReceiverSelf.receiver_field_to_self"
     )
 
-    // --- ResidualField.py ---
-
-    // Regression for the abstract-read both-ends refinement (see ResidualField.py).
     @Test
     fun testReceiverResidualFieldAfterRead() = assertSinkReachable(
         source = source("ResidualField.source", "taint", Result),

@@ -1,8 +1,5 @@
 package org.opentaint.ir.api.python
 
-/**
- * Visitor for PIR instructions.
- */
 interface PIRInstVisitor<out T> {
     fun visitAssign(inst: PIRAssign): T
     fun visitLoadAttr(inst: PIRLoadAttr): T
@@ -27,9 +24,6 @@ interface PIRInstVisitor<out T> {
     fun visitDeleteGlobal(inst: PIRDeleteGlobal): T
     fun visitUnreachable(inst: PIRUnreachable): T
 
-    /**
-     * Default implementation: all methods delegate to defaultVisit.
-     */
     interface Default<out T> : PIRInstVisitor<T> {
         fun defaultVisit(inst: PIRInstruction): T
 
@@ -58,11 +52,7 @@ interface PIRInstVisitor<out T> {
     }
 }
 
-/**
- * Visitor for PIR expressions (right-hand sides of PIRAssign).
- */
 interface PIRExprVisitor<out T> {
-    // Binary expressions
     fun visitAddExpr(expr: PIRAddExpr): T
     fun visitSubExpr(expr: PIRSubExpr): T
     fun visitMulExpr(expr: PIRMulExpr): T
@@ -76,12 +66,10 @@ interface PIRExprVisitor<out T> {
     fun visitBitXorExpr(expr: PIRBitXorExpr): T
     fun visitLShiftExpr(expr: PIRLShiftExpr): T
     fun visitRShiftExpr(expr: PIRRShiftExpr): T
-    // Unary expressions
     fun visitNegExpr(expr: PIRNegExpr): T
     fun visitPosExpr(expr: PIRPosExpr): T
     fun visitNotExpr(expr: PIRNotExpr): T
     fun visitInvertExpr(expr: PIRInvertExpr): T
-    // Compare expressions
     fun visitEqExpr(expr: PIREqExpr): T
     fun visitNeExpr(expr: PIRNeExpr): T
     fun visitLtExpr(expr: PIRLtExpr): T
@@ -92,7 +80,6 @@ interface PIRExprVisitor<out T> {
     fun visitIsNotExpr(expr: PIRIsNotExpr): T
     fun visitInExpr(expr: PIRInExpr): T
     fun visitNotInExpr(expr: PIRNotInExpr): T
-    // Other expressions
     fun visitSubscriptExpr(expr: PIRSubscriptExpr): T
     fun visitListExpr(expr: PIRListExpr): T
     fun visitTupleExpr(expr: PIRTupleExpr): T
@@ -104,13 +91,9 @@ interface PIRExprVisitor<out T> {
     fun visitTypeCheckExpr(expr: PIRTypeCheckExpr): T
     fun visitBindFunctionExpr(expr: PIRBindFunctionExpr): T
     fun visitReadNameExpr(expr: PIRReadNameExpr): T
-    // Values (also expressions)
     fun visitValue(value: PIRValue): T
 }
 
-/**
- * Visitor for PIR values.
- */
 interface PIRValueVisitor<out T> {
     fun visitLocalVar(value: PIRLocalVar): T
     fun visitParameterRef(value: PIRParameterRef): T

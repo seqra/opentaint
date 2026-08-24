@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for loop constructs.
- * 55 test cases covering while, for, break, continue, nested loops.
- */
 @Tag("tier3")
 class RoundTripLoopTest : RoundTripTestBase() {
 
@@ -476,8 +472,6 @@ def rtl_drop_while_pos(items: list) -> list:
             result = result + [x]
     return result
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `loop - while count`() = roundTrip("rtl_while_count",
         posArgs(listOf(0), listOf(5), listOf(10)))

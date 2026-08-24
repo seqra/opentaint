@@ -1,6 +1,5 @@
 package org.opentaint.ir.impl.python.flat
 
-/** Static type carried by a [FlatValue] or annotated on a [FlatInst]/[FlatParameter]. */
 sealed interface FlatType
 
 data object FlatAnyType : FlatType

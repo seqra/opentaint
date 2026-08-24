@@ -5,11 +5,6 @@ import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import java.io.File
 import java.nio.file.Files
 
-/**
- * Test base for asserting on raw `FlatModuleIR` produced by
- * `ProtoToFlat.lowerModule` (i.e. before any later transform). Mirrors
- * `PIRTestBase` but stops at Flat IR.
- */
 abstract class RawFlatModuleTestBase {
     protected fun lowerSourceToFlat(
         source: String,

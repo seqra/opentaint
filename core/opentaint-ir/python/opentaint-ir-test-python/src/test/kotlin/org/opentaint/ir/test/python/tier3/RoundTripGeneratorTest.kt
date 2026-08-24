@@ -3,14 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for advanced patterns: walrus in complex contexts,
- * chained comparisons, augmented assignments, ternary chains, and
- * complex mixed patterns. Generators can't be round-tripped via
- * the state machine approach, so this focuses on non-generator
- * advanced patterns.
- * 40 test cases.
- */
 @Tag("tier3")
 class RoundTripAdvancedTest : RoundTripTestBase() {
 
@@ -234,8 +226,6 @@ def rta_guard_clauses(x: int, y: int) -> int:
     return x * y
     """.trimIndent()
 
-    // ─── Chained comparisons ───────────────────────────────
-
     @Test fun `chain simple`() = roundTrip("rta_chain_simple", posArgs(listOf(5), listOf(15), listOf(-1)))
     @Test fun `chain triple`() = roundTrip("rta_chain_triple", posArgs(listOf(25), listOf(75), listOf(-1)))
     @Test fun `chain ge`() = roundTrip("rta_chain_ge", posArgs(listOf(50), listOf(101), listOf(-1)))
@@ -243,28 +233,20 @@ def rta_guard_clauses(x: int, y: int) -> int:
     @Test fun `chain in if`() = roundTrip("rta_chain_in_if", posArgs(listOf(50), listOf(150), listOf(-1)))
     @Test fun `chain mixed`() = roundTrip("rta_chain_mixed", posArgs(listOf(3, 50), listOf(50, 50), listOf(50, 3)))
 
-    // ─── Complex arithmetic ────────────────────────────────
-
     @Test fun `augmented chain`() = roundTrip("rta_augmented_chain", posArgs(listOf(10), listOf(0), listOf(100)))
     @Test fun `power chain`() = roundTrip("rta_power_chain", posArgs(listOf(3), listOf(2)))
     @Test fun `complex expr`() = roundTrip("rta_complex_expr", posArgs(listOf(5, 3, 2), listOf(10, 4, 3)))
     @Test fun `bitwise combo`() = roundTrip("rta_bitwise_combo", posArgs(listOf(0b1010, 0b1100)))
     @Test fun `shift combo`() = roundTrip("rta_shift_combo", posArgs(listOf(5, 3), listOf(1, 0)))
 
-    // ─── Nested ternary ────────────────────────────────────
-
     @Test fun `nested ternary`() = roundTrip("rta_nested_ternary", posArgs(listOf(5), listOf(0), listOf(-3)))
     @Test fun `ternary in assign`() = roundTrip("rta_ternary_in_assign", posArgs(listOf(5), listOf(-3)))
     @Test fun `ternary in return`() = roundTrip("rta_ternary_in_return", posArgs(listOf(5, 3), listOf(3, 5)))
     @Test fun `ternary chain`() = roundTrip("rta_ternary_chain", posArgs(listOf(200), listOf(50), listOf(5), listOf(-1)))
 
-    // ─── Assignment patterns ───────────────────────────────
-
     @Test fun `multi assign`() = roundTrip("rta_multi_assign", posArgs(listOf(10)))
     @Test fun `swap`() = roundTrip("rta_swap", posArgs(listOf(3, 7), listOf(1, 1)))
     @Test fun `tuple unpack`() = roundTrip("rta_tuple_unpack", posArgs(listOf(1, 2, 3)))
-
-    // ─── Complex loop patterns ─────────────────────────────
 
     @Test fun `nested loop sum`() = roundTrip("rta_nested_loop_sum", posArgs(listOf(5), listOf(0)))
     @Test fun `loop with flag`() = roundTrip("rta_loop_with_flag", posArgs(listOf(listOf(1, 2, 0, 3)), listOf(listOf(1, 2, 3))))
@@ -272,31 +254,21 @@ def rta_guard_clauses(x: int, y: int) -> int:
     @Test fun `count negatives`() = roundTrip("rta_count_negatives", posArgs(listOf(listOf(1, -2, 3, -4, 5))))
     @Test fun `min max`() = roundTrip("rta_min_max", posArgs(listOf(listOf(3, 1, 4, 1, 5)), listOf(emptyList<Int>())))
 
-    // ─── String operations ─────────────────────────────────
-
     @Test fun `str repeat`() = roundTrip("rta_str_repeat", posArgs(listOf("ab", 3), listOf("x", 0)))
     @Test fun `str contains`() = roundTrip("rta_str_contains", posArgs(listOf("hello world", "world"), listOf("hello", "xyz")))
     @Test fun `str len`() = roundTrip("rta_str_len", posArgs(listOf("hello"), listOf("")))
 
-    // ─── Walrus in complex contexts ────────────────────────
-
     @Test fun `walrus accumulate`() = roundTrip("rta_walrus_accumulate", posArgs(listOf(listOf(1, 2, 3))))
     @Test fun `walrus max`() = roundTrip("rta_walrus_max", posArgs(listOf(listOf(3, 1, 4, 1, 5))))
-
-    // ─── Complex boolean logic ─────────────────────────────
 
     @Test fun `complex bool`() = roundTrip("rta_complex_bool", posArgs(listOf(1, 1, 0), listOf(-1, -1, 1), listOf(-1, -1, -1)))
     @Test fun `not chain`() = roundTrip("rta_not_chain", posArgs(listOf(false, false), listOf(true, false), listOf(false, true)))
     @Test fun `bool with compare`() = roundTrip("rta_bool_with_compare", posArgs(listOf(5, 10), listOf(5, 3), listOf(-1, 20)))
 
-    // ─── Collection building ───────────────────────────────
-
     @Test fun `build list loop`() = roundTrip("rta_build_list_loop", posArgs(listOf(5), listOf(0)))
     @Test fun `build dict loop`() = roundTrip("rta_build_dict_loop", posArgs(listOf(listOf("a", "b", "c"), listOf(1, 2, 3))))
     @Test fun `merge lists`() = roundTrip("rta_merge_lists", posArgs(listOf(listOf(1, 2), listOf(3, 4))))
     @Test fun `filter and transform`() = roundTrip("rta_filter_and_transform", posArgs(listOf(listOf(1, -2, 3, -4, 5))))
-
-    // ─── Nested if patterns ────────────────────────────────
 
     @Test fun `classify`() = roundTrip("rta_classify", posArgs(listOf(200), listOf(75), listOf(25), listOf(5), listOf(-1)))
     @Test fun `guard clauses`() = roundTrip("rta_guard_clauses", posArgs(listOf(5, 3), listOf(-1, 5), listOf(5, -1)))

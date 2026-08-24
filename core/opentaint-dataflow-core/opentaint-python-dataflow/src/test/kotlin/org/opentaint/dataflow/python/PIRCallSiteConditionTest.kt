@@ -21,11 +21,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
-/**
- * Arity (`NumberOfArgs`) and `arg(*)` (`AnyArgument`) `ContainsMark` are decided against the
- * concrete call, not the signature — Python keeps the `*args` spread at the call site. These
- * tests pin that call-site behaviour directly.
- */
 class PIRCallSiteConditionTest {
 
     @Test

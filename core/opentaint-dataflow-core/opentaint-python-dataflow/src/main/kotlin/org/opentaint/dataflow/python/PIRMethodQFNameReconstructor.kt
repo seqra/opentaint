@@ -157,7 +157,6 @@ class PIRMethodQFNameReconstructor private constructor(
     private fun classQnOrNull(type: PIRType?): String? =
         (type as? PIRClassType)?.qualifiedName?.ifEmpty { null }
 
-    /** QN of a method named [attribute] declared on [baseType] or a base class (MRO order). */
     private fun attributeMethodQn(baseType: PIRClass, attribute: String): String? {
         for (qn in baseType.mro) {
             val cls = cp.findClassOrNull(qn) ?: continue
@@ -192,7 +191,6 @@ class PIRMethodQFNameReconstructor private constructor(
         }
     }
 
-    /** A resolved class-name callee with an `__init__` body → that `__init__` QN. */
     private fun constructorInitQnOrNull(calleeName: NameEntry): String? {
         val qn = calleeName.flattenOrNull() ?: return null
         if (cp.findClassOrNull(qn) == null) return null
@@ -201,7 +199,7 @@ class PIRMethodQFNameReconstructor private constructor(
     }
 
     private fun saveResult(inst: PIRInstruction, nameEntry: NameEntry) {
-        val qfName = nameEntry.flattenOrNull() ?: return // unresolved parameter (no declared type)
+        val qfName = nameEntry.flattenOrNull() ?: return
 
         result.getOrPut(inst) { hashSetOf() }
             .add(qfName)

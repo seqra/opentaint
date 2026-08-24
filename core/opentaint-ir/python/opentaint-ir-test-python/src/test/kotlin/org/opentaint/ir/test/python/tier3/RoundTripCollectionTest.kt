@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for collection operations.
- * 50 test cases covering lists, dicts, tuples, subscript, building.
- */
 @Tag("tier3")
 class RoundTripCollectionTest : RoundTripTestBase() {
 
@@ -356,8 +352,6 @@ def rtco_second_largest(items: list) -> int:
                 second = x
     return second
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `coll - build list 0`() = roundTrip("rtco_build_list_0",
         posArgs(emptyList()))

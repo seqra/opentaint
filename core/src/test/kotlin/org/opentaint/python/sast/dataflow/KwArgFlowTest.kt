@@ -13,8 +13,6 @@ class KwArgFlowTest : AnalysisTest() {
     private val src = "KwArgs.source"
     private val snk = "KwArgs.sink"
 
-    // --- Gap A: interprocedural keyword-argument binding ---
-
     @Test
     fun testKwIntoParam() = assertSinkReachable(
         source = source(src, "taint", Result),
@@ -57,8 +55,6 @@ class KwArgFlowTest : AnalysisTest() {
         entryPointFunction = "KwArgs.kw_instance_method"
     )
 
-    // --- Gap B: rule positions written as kwarg(name), resolved at the call site ---
-
     @Test
     fun testKwargRulePresent() = assertSinkReachable(
         source = source(src, "taint", Result),
@@ -72,8 +68,6 @@ class KwArgFlowTest : AnalysisTest() {
         sink = sink("KwArgs.kw_sink", "taint", KwArgument("a"), "call"),
         entryPointFunction = "KwArgs.kw_rule_absent"
     )
-
-    // --- arg(*) sink expands over keyword args at the call site ---
 
     @Test
     fun testAnyArgOverKeyword() = assertSinkReachable(

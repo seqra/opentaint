@@ -16,11 +16,6 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-/**
- * End-to-end test: lower real Python source through proto→Flat→closure
- * transform→PIR conversion and assert callable-shim invariants on the
- * resulting PIR module.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class CallableShimE2ETest : PIRTestBase() {
@@ -28,7 +23,6 @@ class CallableShimE2ETest : PIRTestBase() {
     private lateinit var cp: PIRClasspath
 
     companion object {
-        // A capturing nested def + a user call site exercising the shim.
         val SOURCE = """
 def cse_capturing(x):
     def inner(p):
@@ -49,7 +43,6 @@ def cse_capturing(x):
         val adapters = module.classes.filter { it.name.startsWith("<closure_") }
         assertTrue(adapters.isNotEmpty(),
             "module should contain a synthesized adapter class; classes=${module.classes.map { it.name }}")
-        // The adapter has __init__ and __call__.
         val adapter = adapters.first()
         val methodNames = adapter.methods.map { it.name }
         assertTrue("__init__" in methodNames, "adapter should expose __init__, got $methodNames")

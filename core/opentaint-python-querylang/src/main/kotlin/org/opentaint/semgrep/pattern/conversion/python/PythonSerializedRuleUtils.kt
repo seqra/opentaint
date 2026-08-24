@@ -12,7 +12,6 @@ import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTa
 import org.opentaint.semgrep.pattern.Mark.GeneratedMark
 import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
 
-/** Match-anything function target. */
 internal const val ANY_PYTHON_FUNCTION = ".*"
 
 // And-of-nothing is true and Or-of-nothing is false — honored by the runtime's
@@ -46,13 +45,8 @@ internal fun pythonOr(args: List<SerializedPythonCondition>): SerializedPythonCo
     return if (flat.size == 1) flat.single() else SerializedPythonCondition.Or(flat)
 }
 
-/** Drops a trivially-true condition to `null` (the rule's "no condition" form). */
 internal fun SerializedPythonCondition.nullIfTrue(): SerializedPythonCondition? = takeUnless { it == PYTHON_TRUE }
 
-/**
- * Maps the language-agnostic [PositionBaseWithModifiers] (produced by the shared rule-generation
- * context) onto the Python serialized position vocabulary.
- */
 internal fun PositionBaseWithModifiers.toPythonPosition(): PythonPosition = when (this) {
     is PositionBaseWithModifiers.BaseOnly -> PythonPosition.BaseOnly(base.toPythonPositionBase())
     is PositionBaseWithModifiers.WithModifiers ->
@@ -72,7 +66,6 @@ private fun PositionBase.toPythonPositionBase(): PythonPositionBase = when (this
 private fun PositionModifier.toPythonPositionModifier(): PythonPositionModifier = when (this) {
     PositionModifier.ArrayElement -> PythonPositionModifier.ArrayElement
     is PositionModifier.Field -> PythonPositionModifier.Field(fieldName)
-    // The Python converter never emits attribute loads, so an any-field modifier shouldn't reach here.
     PositionModifier.AnyField -> error("Python rules have no any-field position modifier")
 }
 

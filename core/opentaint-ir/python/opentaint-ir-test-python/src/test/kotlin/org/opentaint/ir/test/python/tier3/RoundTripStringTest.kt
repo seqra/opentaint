@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for string operations.
- * 50 test cases covering string manipulation, searching, and building.
- */
 @Tag("tier3")
 class RoundTripStringTest : RoundTripTestBase() {
 
@@ -455,8 +451,6 @@ def rts_center_pad(s: str, width: int) -> str:
         result = result + " "
     return result
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `string - concat`() = roundTrip("rts_concat",
         posArgs(listOf("hello", " world"), listOf("", "x"), listOf("a", "")))

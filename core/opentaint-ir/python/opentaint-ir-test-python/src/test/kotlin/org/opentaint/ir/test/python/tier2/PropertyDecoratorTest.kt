@@ -5,13 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Deep tests for properties, decorators, dataclasses, and enums.
- *
- * Covers: property getter/setter/deleter, custom decorators, stacked decorators,
- * decorator with arguments, staticmethod, classmethod, dataclass generated methods,
- * and enum class members/methods.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PropertyDecoratorTest : PIRTestBase() {
@@ -183,8 +176,6 @@ class Priority(IntEnum):
         throw AssertionError("Class not found: $name")
     }
 
-    // ─── Property getter tests ─────────────────────────────
-
     @Test fun `property getter is flagged as isProperty`() {
         val cls = findClass("PropClass")
         val getter = cls.methods.find { it.name == "value" && it.isProperty }
@@ -218,8 +209,6 @@ class Priority(IntEnum):
             "Getter body should load self._value")
     }
 
-    // ─── Property setter tests ─────────────────────────────
-
     @Test fun `property setter is present in PIRProperty`() {
         val cls = findClass("PropClass")
         val valueProp = cls.properties.find { it.name == "value" }
@@ -240,8 +229,6 @@ class Priority(IntEnum):
             "Setter body should store to self._value")
     }
 
-    // ─── Property deleter tests ────────────────────────────
-
     @Test fun `property deleter is present in PIRProperty`() {
         val cls = findClass("PropClass")
         val valueProp = cls.properties.find { it.name == "value" }
@@ -249,8 +236,6 @@ class Priority(IntEnum):
         assertNotNull(valueProp!!.deleter,
             "value property should have a deleter; methods: ${cls.methods.map { it.name }}")
     }
-
-    // ─── Multiple properties on one class ──────────────────
 
     @Test fun `class with multiple properties exposes all`() {
         val cls = findClass("PropClass")
@@ -268,8 +253,6 @@ class Priority(IntEnum):
         assertNull(nameProp.deleter, "name property should NOT have a deleter")
     }
 
-    // ─── Custom decorator tests ────────────────────────────
-
     @Test fun `custom decorated method exists on class`() {
         val cls = findClass("CustomDecClass")
         val m = cls.methods.find { it.name == "decorated_method" }
@@ -281,8 +264,6 @@ class Priority(IntEnum):
         val cls = findClass("CustomDecClass")
         val m = cls.methods.find { it.name == "decorated_method" }
         assertNotNull(m, "decorated_method not found")
-        // mypy may or may not preserve custom decorators in the decorator list
-        // At minimum the method should be callable and have a CFG
         assertTrue(m!!.instList.isNotEmpty(),
             "decorated_method should have a valid CFG")
     }
@@ -293,8 +274,6 @@ class Priority(IntEnum):
         assertTrue(f!!.instList.isNotEmpty(),
             "decorated_function should have a valid CFG")
     }
-
-    // ─── Decorator with arguments ──────────────────────────
 
     @Test fun `decorator with arguments - method exists`() {
         val cls = findClass("CustomDecClass")
@@ -307,8 +286,6 @@ class Priority(IntEnum):
         val f = cp.findFunctionOrNull("__test__.repeated_function")
         assertNotNull(f, "repeated_function should be found at module level")
     }
-
-    // ─── Stacked decorators ────────────────────────────────
 
     @Test fun `stacked decorators - method exists with valid CFG`() {
         val cls = findClass("CustomDecClass")
@@ -326,15 +303,11 @@ class Priority(IntEnum):
             "stacked_function should have a valid CFG")
     }
 
-    // ─── staticmethod / classmethod ────────────────────────
-
     @Test fun `staticmethod flag is set and decorator list carries staticmethod`() {
         val cls = findClass("StaticClassMethods")
         val m = cls.methods.find { it.name == "static_fn" }
         assertNotNull(m, "static_fn should exist")
         assertTrue(m!!.isStaticMethod, "static_fn should have isStaticMethod=true")
-        // Since Stage 1 the decorator list is the authoritative source for
-        // isStaticMethod — `staticmethod` must appear in it.
         val decoNames = m.decorators.map { it.name }
         assertTrue(decoNames.contains("staticmethod"),
             "staticmethod decorator should appear in decorator list; got: $decoNames")
@@ -359,8 +332,6 @@ class Priority(IntEnum):
         assertFalse(m.isProperty, "instance_fn should NOT be property")
     }
 
-    // ─── Dataclass tests ───────────────────────────────────
-
     @Test fun `dataclass flag is set on SimpleData`() {
         val cls = findClass("SimpleData")
         assertTrue(cls.isDataclass, "SimpleData should have isDataclass=true")
@@ -377,7 +348,6 @@ class Priority(IntEnum):
         val cls = findClass("SimpleData")
         val init = cls.methods.find { it.name == "__init__" }
         assertNotNull(init, "__init__ not found")
-        // Parameters should include 'self' plus the declared fields
         val paramNames = init!!.parameters.map { it.name }
         assertTrue("x" in paramNames,
             "Expected 'x' param in __init__, got: $paramNames")
@@ -397,8 +367,6 @@ class Priority(IntEnum):
             "DataWithDefaults should have fields; got: $fieldNames")
     }
 
-    // ─── Enum tests ────────────────────────────────────────
-
     @Test fun `enum flag is set on Color`() {
         val cls = findClass("Color")
         assertTrue(cls.isEnum, "Color should have isEnum=true")
@@ -414,8 +382,6 @@ class Priority(IntEnum):
         val cls = findClass("Priority")
         assertTrue(cls.isEnum, "Priority (IntEnum) should have isEnum=true")
     }
-
-    // ─── Class decorator propagation ────────────────────────
 
     @Test fun `class decorator reaches PIRClass decorators list`() {
         val cls = findClass("SimpleData")
@@ -434,8 +400,6 @@ class Priority(IntEnum):
             "@dataclass(frozen=True) should render its argument as \"True\" in PIRDecorator.arguments; got: ${dec.arguments}")
         assertTrue(cls.isDataclass, "FrozenData should still be isDataclass=true")
     }
-
-    // ─── Nested decorated function dispatch ─────────────────
 
     @Test fun `nested decorated function is captured with its decorator`() {
         val nested = cp.findFunctionOrNull("__test__.outer_with_nested_decorated\$inner")

@@ -4,12 +4,6 @@ import org.opentaint.dataflow.configuration.CommonCondition
 
 typealias PIRCondition = CommonCondition<PythonRuleCondition>
 
-/**
- * Value-level predicate atom of a compiled Python taint rule. `ContainsMark` is a taint-fact
- * check (resolved against dataflow facts by the rewriter); the `Constant*` atoms are call-site
- * checks on a literal argument value (decided by [PIRConditionVisitor] implementations such as
- * the basic-atom evaluator, since the value is syntactic).
- */
 sealed interface PythonRuleCondition {
     fun <R> accept(visitor: PIRConditionVisitor<R>): R
 }
@@ -22,17 +16,14 @@ data class ContainsMarkOnAnyAccessor(val mark: TaintMark, val pos: Position) : P
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
 }
 
-/** The matched call passes exactly [n] positional arguments — decided against the concrete call. */
 data class NumberOfArgs(val n: Int) : PythonRuleCondition {
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
 }
 
-/** The value at [pos] is a constant literal comparing [cmp] to [value]. */
 data class ConstantCmp(val pos: Position, val value: ConstantValue, val cmp: ConstantCmpType) : PythonRuleCondition {
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
 }
 
-/** The value at [pos] is a string constant matching [pattern]. */
 data class ConstantMatches(val pos: Position, val pattern: Regex) : PythonRuleCondition {
     override fun <R> accept(visitor: PIRConditionVisitor<R>): R = visitor.visit(this)
 }

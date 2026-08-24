@@ -5,25 +5,8 @@ import org.opentaint.ir.impl.python.PIRCFGImpl
 import org.opentaint.ir.impl.python.PIRLocationImpl
 import org.opentaint.ir.impl.python.flat.*
 
-/**
- * Output of [CfgConverter.convert]: the built CFG plus the locations of every
- * instruction in `cfg.instList` (position-aligned). Each [PIRLocationImpl] has
- * `index` already set; the caller must wire `method` once the owning function
- * is built.
- */
 class CfgConversionResult(val cfg: PIRCFG, val locations: List<PIRLocationImpl>)
 
-/**
- * Per-function Flat → PIR CFG converter. One instance per function: holds
- * the [LocalIndexer] that hands out parameter and body-local indices on the
- * fly, so a single instance can only convert one CFG. Construct via the
- * companion's [convert] factory.
- *
- * Pure 1:1 structural map. The proto→flat layer guarantees that every
- * `FlatValue` operand is `FlatLocal | FlatParameterRef | FlatConst` —
- * name resolution is already lowered into `FlatReadName` instructions
- * before reaching this point.
- */
 class CfgConverter private constructor(parameters: List<FlatParameter>, qualifiedName: String) {
 
     private val indexer = LocalIndexer(parameters, qualifiedName)
@@ -76,15 +59,12 @@ class CfgConverter private constructor(parameters: List<FlatParameter>, qualifie
         }
     }
 
-    // ─── Value conversion ─────────────────────────────────
-
     private fun v(flat: FlatValue): PIRValue = when (flat) {
         is FlatLocal -> PIRLocalVar(flat.name, TypeConverter.convert(flat.type), indexer.localIndex(flat.name))
         is FlatParameterRef -> PIRParameterRef(flat.name, TypeConverter.convert(flat.type), indexer.paramIndex(flat.name))
         is FlatConst -> ConstConverter.convert(flat)
     }
 
-    /** Convert a [FlatValue] that must be a local-var slot (i.e. a `FlatLocal`). */
     private fun vLocalVar(flat: FlatValue): PIRLocalVar =
         v(flat) as? PIRLocalVar ?: error("Expected a local-var slot, got $flat")
 
@@ -92,8 +72,6 @@ class CfgConverter private constructor(parameters: List<FlatParameter>, qualifie
         is FlatGlobalNameRef -> PIRGlobalNameRef(ref.qualifiedName)
         is FlatModuleNameRef -> PIRModuleNameRef(ref.module)
     }
-
-    // ─── Instruction conversion ───────────────────────────
 
     private fun convertInstruction(
         flat: FlatInst,
@@ -167,12 +145,6 @@ class CfgConverter private constructor(parameters: List<FlatParameter>, qualifie
     }
 }
 
-/**
- * Assigns a unique [Int] index to each parameter and body-local of one
- * function. Parameters keep their signature order (0..N-1). Body locals
- * are indexed in first-appearance order starting at `parameters.size`,
- * so the param + local index space is disjoint within a function.
- */
 private class LocalIndexer(parameters: List<FlatParameter>, private val qualifiedName: String) {
     private val paramIndices: Map<String, Int> =
         parameters.withIndex().associate { (i, p) -> p.name to i }

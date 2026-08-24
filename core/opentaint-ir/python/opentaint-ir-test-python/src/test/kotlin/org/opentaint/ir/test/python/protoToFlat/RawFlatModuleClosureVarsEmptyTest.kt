@@ -7,12 +7,6 @@ import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import kotlin.test.assertTrue
 
-/**
- * Sanity invariant: the raw output of `ProtoToFlat.lowerModule` always has
- * `closureVars = emptySet()` for every function, including module init,
- * lambdas, and class methods. The closure transform (later phase) is the
- * only producer of populated closureVars.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RawFlatModuleClosureVarsEmptyTest : RawFlatModuleTestBase() {

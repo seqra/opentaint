@@ -20,15 +20,6 @@ import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Python intra-procedural alias query API. Subclasses the shared
- * [LocalAliasAnalysis], supplying the language-specific hooks and reusing its
- * `findAlias` / `findAliasAfterStatement` / conversion machinery. The DSU
- * simulator ([PIRDSUAliasAnalysis]) produces the raw per-statement states.
- *
- * Python's DSU has no pointers, so there is no `Ref` accessor; alloc/return/unknown
- * bases are dropped so only local/argument bases surface, matching downstream use.
- */
 class PIRLocalAliasAnalysis(
     private val entryPoint: PIRInstruction,
     private val graph: ApplicationGraph<CommonMethod, CommonInst>,

@@ -1,5 +1,4 @@
-"""PIRServiceServicer — implements all RPCs."""
-
+import os
 import sys
 import grpc
 from pir_server.proto import pir_pb2, pir_pb2_grpc
@@ -9,9 +8,6 @@ from pir_server.executor import execute_function
 
 class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
     def BuildProject(self, request, context):
-        """Stream MypyModuleProto messages (raw AST), one per module.
-        Kotlin side performs all CFG lowering.
-        Errors are handled per-module inside ProjectBuilder.build()."""
         builder = ProjectBuilder(
             sources=list(request.sources),
             mypy_flags=list(request.mypy_flags),
@@ -23,11 +19,9 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
 
     # Keep BuildProjectAst as alias for backward compatibility
     def BuildProjectAst(self, request, context):
-        """Alias for BuildProject — returns raw AST modules."""
         return self.BuildProject(request, context)
 
     def BuildModule(self, request, context):
-        """Build a single module."""
         try:
             builder = ProjectBuilder(
                 sources=[request.source_path],
@@ -47,7 +41,6 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
             return pir_pb2.MypyModuleProto()
 
     def ExecuteFunction(self, request, context):
-        """Execute a Python function — used by Tier 3 tests."""
         return execute_function(request)
 
     def Ping(self, request, context):
@@ -60,8 +53,7 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
         )
 
     def Shutdown(self, request, context):
-        """Graceful shutdown."""
         import threading
 
-        threading.Timer(0.1, lambda: sys.exit(0)).start()
+        threading.Timer(0.1, lambda: os._exit(0)).start()
         return pir_pb2.ShutdownResponse()

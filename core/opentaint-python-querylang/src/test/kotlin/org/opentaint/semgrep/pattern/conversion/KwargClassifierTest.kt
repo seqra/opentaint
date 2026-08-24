@@ -12,7 +12,6 @@ class KwargClassifierTest {
     }
 
     @Test fun `name returns null for non-kwarg classifiers`() {
-        // metavar name, positional classifier, and the reserved by-side-effect tag must not decode.
         assertNull(PythonLanguageStrategy.kwargClassifierNameOrNull("X"))
         assertNull(PythonLanguageStrategy.kwargClassifierNameOrNull("*->0"))
         assertNull(PythonLanguageStrategy.kwargClassifierNameOrNull("tainted"))

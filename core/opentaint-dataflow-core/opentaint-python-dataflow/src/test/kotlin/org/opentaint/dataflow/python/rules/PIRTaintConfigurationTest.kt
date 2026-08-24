@@ -78,8 +78,6 @@ class PIRTaintConfigurationTest {
     }
 }
 
-// region Stubs
-
 private fun stubMethod(
     qualifiedName: String,
     shortName: String,
@@ -121,5 +119,3 @@ private fun stubParam(name: String, index: Int, type: PIRType = PIRAnyType): PIR
         override val defaultValue get() = null
         override val index: Int = index
     }
-
-// endregion

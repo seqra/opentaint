@@ -53,12 +53,6 @@ internal data class PythonRegisterVarPosition(
     val positions: MutableSet<PositionBaseWithModifiers>,
 )
 
-/**
- * Collapses a method signature into the single dotted `function` string of a [PythonTarget.Function].
- * Python resolves calls by qualified name, so the enclosing dotted path (when concrete)
- * and the method name fold into one string. An instance call (`$X.method(...)`) has no enclosing name
- * and yields the short method name, which the resolver matches against the callee's trailing segment.
- */
 internal fun PythonTaintRuleGenerationCtx.evaluatePythonFunctionNames(
     methodName: SignatureName,
     enclosing: TypeConstraint,
@@ -83,8 +77,6 @@ internal fun PythonTaintRuleGenerationCtx.evaluatePythonFunctionNames(
             }
 
             constraint.constraint.toDNF().mapNotNull { cube ->
-                // A single positive concrete/regex per cube; negations and disjuncts within a
-                // name aren't representable as one function matcher, so drop them.
                 if (cube.negative.isNotEmpty() || cube.positive.size != 1) return@mapNotNull null
                 when (val c = cube.positive.single().constraint) {
                     is MetaVarConstraint.Concrete -> combinePythonFunctionName(prefix, c.value, isRegex = false)
@@ -98,7 +90,5 @@ internal fun PythonTaintRuleGenerationCtx.evaluatePythonFunctionNames(
 private fun combinePythonFunctionName(prefix: String?, name: String, isRegex: Boolean): String = when {
     prefix == null -> name
     !isRegex -> "$prefix.$name"
-    // A regex name combined with a concrete prefix must stay a single regex matched against the
-    // qualified callee, so escape the prefix's dots.
     else -> "${prefix.replace(".", "\\.")}\\.$name"
 }

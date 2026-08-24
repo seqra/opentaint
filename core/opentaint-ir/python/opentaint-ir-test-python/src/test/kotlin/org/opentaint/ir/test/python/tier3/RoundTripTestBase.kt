@@ -12,12 +12,6 @@ import org.opentaint.ir.test.python.PIRTestBase
 import java.io.File
 import java.nio.file.Files
 
-/**
- * Base class for round-trip tests.
- *
- * Subclasses provide [allSources] — a single Python module containing all test functions.
- * The base class handles classpath creation, function execution, and round-trip verification.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class RoundTripTestBase : PIRTestBase() {
 
@@ -25,7 +19,6 @@ abstract class RoundTripTestBase : PIRTestBase() {
     protected val gson = Gson()
     protected lateinit var cp: PIRClasspathImpl
 
-    /** All Python source functions concatenated into one module. */
     abstract val allSources: String
 
     @BeforeAll
@@ -63,13 +56,6 @@ abstract class RoundTripTestBase : PIRTestBase() {
         return gson.fromJson(response.resultsJson, type)
     }
 
-    /**
-     * Core round-trip verification:
-     * 1. Look up function in PIR classpath
-     * 2. Reconstruct Python from CFG
-     * 3. Execute both original and reconstructed with same inputs
-     * 4. Assert outputs match
-     */
     protected fun roundTrip(
         funcName: String,
         inputs: List<Pair<List<Any?>, Map<String, Any?>>>
@@ -100,11 +86,6 @@ abstract class RoundTripTestBase : PIRTestBase() {
         }
     }
 
-    /**
-     * Round-trip verification for functions that contain lambda expressions.
-     * Uses [PIRReconstructor.reconstructWithLambdas] to also emit reconstructed
-     * lambda functions referenced from the main function's CFG.
-     */
     protected fun roundTripWithLambdas(
         funcName: String,
         inputs: List<Pair<List<Any?>, Map<String, Any?>>>
@@ -116,7 +97,6 @@ abstract class RoundTripTestBase : PIRTestBase() {
         val reconstructed = reconstructor.reconstructWithLambdas(func!!, cp)
 
         val originalResults = executeFunction(allSources, funcName, inputs)
-        // The reconstructed function name is sanitized the same way
         val reconstructedResults = executeFunction(reconstructed, funcName, inputs)
 
         for ((i, input) in inputs.withIndex()) {
@@ -136,7 +116,6 @@ abstract class RoundTripTestBase : PIRTestBase() {
         }
     }
 
-    /** Helper to create positional-only argument sets. */
     protected fun posArgs(vararg argSets: List<Any?>): List<Pair<List<Any?>, Map<String, Any?>>> {
         return argSets.map { it to emptyMap() }
     }

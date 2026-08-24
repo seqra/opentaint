@@ -44,27 +44,10 @@ import org.opentaint.ir.impl.python.flat.FlatYieldFrom
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-/**
- * Experimental probe: how does mypy's name resolution surface in raw Flat IR?
- *
- * The closure analyzer assumes that anything mypy could resolve to a module
- * (globals, builtins, imports) lands as `FlatGlobalRef` and is therefore
- * invisible to closure analysis. The closure-root override exists partly as
- * defense for cases mypy *didn't* resolve. These tests measure how often
- * that defense actually fires, by walking each function's instructions and
- * collecting the names that surface as `FlatLocal` operands.
- *
- * Each test prints what it observes via assertion messages — failures are
- * the data, not a regression. Fix the assertion to match observation if
- * you're using these to learn what mypy does.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-class MypyResolutionProbeTest : RawFlatModuleTestBase() {
+class MypyNameResolutionTest : RawFlatModuleTestBase() {
 
-    /* ---------- helpers ---------- */
-
-    /** Every name that appears as a `FlatLocal` *operand* (read position) in the function body. */
     private fun localReads(fn: FlatFunctionIR): Set<String> {
         val out = HashSet<String>()
         for (block in fn.cfg.blocks) {
@@ -75,7 +58,6 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         return out
     }
 
-    /** Every name that appears as a `FlatGlobalRef` operand (any position) in the function body. */
     private fun globalRefs(fn: FlatFunctionIR): Set<Pair<String, String>> {
         val out = HashSet<Pair<String, String>>()
         for (block in fn.cfg.blocks) {
@@ -102,7 +84,6 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         }
     }
 
-    /** Walk every operand (read position) of [inst]. Mirrors `ClosureAnalyzer.addOperandReads`. */
     private inline fun forEachOperand(inst: FlatInst, f: (FlatValue) -> Unit) {
         when (inst) {
             is FlatAssign -> f(inst.source)
@@ -149,10 +130,8 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
     private fun fn(module: FlatModuleIR, qualifiedSuffix: String): FlatFunctionIR =
         allFunctions(module).first { it.qualifiedName.endsWith(qualifiedSuffix) }
 
-    /* ---------- Probe 1: top-level function reading a module global ---------- */
-
     @Test
-    fun `H1 module-level global referenced from top-level function`() {
+    fun `module-level global reads as FlatGlobalRef, not FlatLocal`() {
         val source = """
             x = 42
 
@@ -164,22 +143,18 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(reader)
         val globals = globalRefs(reader)
-        // Hypothesis: mypy resolves `x` to module-level, so it's a FlatGlobalRef.
         assertTrue(
             "x" !in locals,
-            "EXPECTED: 'x' is FlatGlobalRef (mypy resolved). " +
-                "OBSERVED locals=$locals, globals=$globals",
+            "'x' must resolve to a global, not a local. locals=$locals, globals=$globals",
         )
         assertTrue(
             globals.any { it.first == "x" },
-            "EXPECTED: 'x' appears in globalRefs. globals=$globals",
+            "'x' must appear in globalRefs. globals=$globals",
         )
     }
 
-    /* ---------- Probe 2: nested def captures an enclosing function local ---------- */
-
     @Test
-    fun `H2 enclosing-function local referenced from nested def`() {
+    fun `enclosing-function local stays FlatLocal inside a nested def`() {
         val source = """
             def outer():
                 value = 1
@@ -192,18 +167,14 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(inner)
         val globals = globalRefs(inner)
-        // Hypothesis: enclosing-fn locals stay as FlatLocal (mypy doesn't dot-qualify them).
         assertTrue(
             "value" in locals,
-            "EXPECTED: 'value' is FlatLocal (genuine capture). " +
-                "OBSERVED locals=$locals, globals=$globals",
+            "'value' is a genuine capture and must stay a local. locals=$locals, globals=$globals",
         )
     }
 
-    /* ---------- Probe 3: nested def reads a module global ---------- */
-
     @Test
-    fun `H3 module-level global read from nested def`() {
+    fun `module-level global stays FlatGlobalRef inside a nested def`() {
         val source = """
             CONST = 99
 
@@ -217,18 +188,14 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(inner)
         val globals = globalRefs(inner)
-        // Hypothesis: mypy resolves CONST to module-level → FlatGlobalRef.
         assertTrue(
             "CONST" !in locals,
-            "EXPECTED: 'CONST' resolves to FlatGlobalRef even from nested. " +
-                "OBSERVED locals=$locals, globals=$globals",
+            "'CONST' must resolve to a global even from a nested def. locals=$locals, globals=$globals",
         )
     }
 
-    /* ---------- Probe 4: builtin reference ---------- */
-
     @Test
-    fun `H4 builtin print referenced from top-level function`() {
+    fun `builtin resolves to FlatGlobalRef in module builtins`() {
         val source = """
             def f(x):
                 return print(x)
@@ -238,22 +205,19 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(f)
         val globals = globalRefs(f)
-        // Hypothesis: builtins resolve to FlatGlobalRef("print", "builtins").
         assertTrue(
             "print" !in locals,
-            "EXPECTED: 'print' is FlatGlobalRef. OBSERVED locals=$locals, globals=$globals",
+            "'print' must resolve to a global. locals=$locals, globals=$globals",
         )
         assertEquals(
             setOf("print" to "builtins"),
             globals.filter { it.first == "print" }.toSet(),
-            "EXPECTED: print resolves to module 'builtins'. globals=$globals",
+            "'print' must resolve to module 'builtins'. globals=$globals",
         )
     }
 
-    /* ---------- Probe 5: method reading a module global ---------- */
-
     @Test
-    fun `H5 module-level global referenced from method`() {
+    fun `module-level global reads as FlatGlobalRef from a method`() {
         val source = """
             CONFIG = 1
 
@@ -268,42 +232,12 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         val globals = globalRefs(m)
         assertTrue(
             "CONFIG" !in locals,
-            "EXPECTED: 'CONFIG' is FlatGlobalRef from method. " +
-                "OBSERVED locals=$locals, globals=$globals",
+            "'CONFIG' must resolve to a global from a method. locals=$locals, globals=$globals",
         )
     }
 
-    /* ---------- Probe 6: undefined / unbound name ---------- */
-
     @Test
-    fun `H6 undefined name in top-level function`() {
-        val source = """
-            def f():
-                return undefined_name
-        """
-        val mod = lowerSourceToFlat(source)
-        val f = fn(mod, ".f")
-
-        val locals = localReads(f)
-        val globals = globalRefs(f)
-        // Open question: does mypy still attach a fullname for unresolved names?
-        // If yes → globalRef; if no → FlatLocal (the override would matter here).
-        // The failure message tells us which.
-        assertTrue(
-            true,
-            "PROBE: undefined_name surfaced as locals=$locals, globals=$globals. " +
-                "If 'undefined_name' is in locals, the closure-root override IS doing real work " +
-                "for unbound-name cases. If in globals, mypy resolved it anyway.",
-        )
-        println(
-            "[H6] undefined_name: locals=$locals, globals=$globals",
-        )
-    }
-
-    /* ---------- Probe 7: top-level function referencing another top-level function ---------- */
-
-    @Test
-    fun `H7 top-level function referenced from another top-level function`() {
+    fun `sibling top-level function reads as FlatGlobalRef`() {
         val source = """
             def helper():
                 return 1
@@ -318,14 +252,12 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         val globals = globalRefs(caller)
         assertTrue(
             "helper" !in locals,
-            "EXPECTED: 'helper' is FlatGlobalRef. OBSERVED locals=$locals, globals=$globals",
+            "'helper' must resolve to a global. locals=$locals, globals=$globals",
         )
     }
 
-    /* ---------- Probe 8: imported name ---------- */
-
     @Test
-    fun `H8 imported name referenced from top-level function`() {
+    fun `imported module name reads as FlatGlobalRef`() {
         val source = """
             import os
 
@@ -339,14 +271,12 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         val globals = globalRefs(f)
         assertTrue(
             "os" !in locals,
-            "EXPECTED: 'os' is FlatGlobalRef. OBSERVED locals=$locals, globals=$globals",
+            "'os' must resolve to a global. locals=$locals, globals=$globals",
         )
     }
 
-    /* ---------- Probe 9: simulate Option 1a — recompute closureVars without the override ---------- */
-
     @Test
-    fun `H9 closure analyzer with override removed - top-level reading global stays empty`() {
+    fun `top-level function reading a module global has no free names`() {
         val source = """
             x = 1
             def f():
@@ -355,25 +285,18 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         val mod = lowerSourceToFlat(source)
         val f = fn(mod, ".f")
 
-        // Simulate the analyzer's directFree computation without the override.
-        // If mypy resolved 'x' to a global, this should be empty.
         val locals = localReads(f)
         val params = f.parameters.map { it.name }.toSet()
         val owned = params + collectLocalDefs(f)
-        // BUILTIN_NAMES omitted on purpose — we want to see what's left.
         val directFree = locals - owned - f.globalNames
         assertTrue(
             directFree.isEmpty(),
-            "Without the override, top-level f() would have directFree=$directFree. " +
-                "If non-empty, the override is load-bearing for this case. " +
-                "OBSERVED locals=$locals, globals=${globalRefs(f)}",
+            "f() must have no free names; got directFree=$directFree, locals=$locals, globals=${globalRefs(f)}",
         )
     }
 
-    /* ---------- Probe 10: same simulation, but for a method ---------- */
-
     @Test
-    fun `H10 closure analyzer with override removed - method reading global stays empty`() {
+    fun `method reading a module global has no free names`() {
         val source = """
             CONFIG = 1
             class A:
@@ -389,16 +312,12 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
         val directFree = locals - owned - m.globalNames
         assertTrue(
             directFree.isEmpty(),
-            "Without the METHOD override, A.m would have directFree=$directFree. " +
-                "If non-empty, dropping the METHOD override breaks this case. " +
-                "OBSERVED locals=$locals, globals=${globalRefs(m)}",
+            "A.m must have no free names; got directFree=$directFree, locals=$locals, globals=${globalRefs(m)}",
         )
     }
 
-    /* ---------- Probe 11: full chain — outer.inner with mixed captures + globals ---------- */
-
     @Test
-    fun `H11 nested def mixes a real capture with a real global`() {
+    fun `nested def separates a genuine capture from a module global`() {
         val source = """
             G = 100
 
@@ -413,23 +332,19 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(inner)
         val globals = globalRefs(inner)
-        // We expect locals = {local_x}, globals contains G.
         assertEquals(
             setOf("local_x"),
             locals.filter { !it.startsWith("$") }.toSet(),
-            "EXPECTED inner locals to be just {local_x} (G is a global). " +
-                "OBSERVED locals=$locals, globals=$globals",
+            "inner locals must be just {local_x}; G is a global. locals=$locals, globals=$globals",
         )
         assertTrue(
             globals.any { it.first == "G" },
-            "EXPECTED 'G' in globals. OBSERVED globals=$globals",
+            "'G' must appear in globals. globals=$globals",
         )
     }
 
-    /* ---------- Probe 12: nested def reads an imported module ---------- */
-
     @Test
-    fun `H12 nested def reads imported name`() {
+    fun `imported module stays FlatGlobalRef inside a nested def`() {
         val source = """
             import os
 
@@ -443,68 +358,12 @@ class MypyResolutionProbeTest : RawFlatModuleTestBase() {
 
         val locals = localReads(inner)
         val globals = globalRefs(inner)
-        // If 'os' is FlatLocal here, it propagates as a fake capture to outer.
-        // The closure-root override on outer (TOP_LEVEL) clamps outer.closureVars to ∅,
-        // but outer.cellVars = childNeeds ∩ ownedNames could still pick it up
-        // if outer happened to have a local named `os`. The real test is: does the
-        // formula without override emit a spurious capture for inner?
         assertTrue(
             "os" !in locals,
             "If 'os' appears in inner's FlatLocal reads, mypy did NOT resolve the import. " +
                 "OBSERVED locals=$locals, globals=$globals",
         )
     }
-
-    /* ---------- Probe 13: undefined name from a nested def — would the override save us? ---------- */
-
-    @Test
-    fun `H13 nested def references undefined name`() {
-        val source = """
-            def outer():
-                def inner():
-                    return undefined_thing
-                return inner
-        """
-        val mod = lowerSourceToFlat(source)
-        val inner = fn(mod, ".outer\$inner")
-        val outer = fn(mod, ".outer")
-
-        val innerLocals = localReads(inner)
-        val outerLocals = localReads(outer)
-        // If 'undefined_thing' is FlatLocal in inner, inner.directFree contains it,
-        // it propagates to outer.childNeeds, outer doesn't own it, so it lands in
-        // outer.closureVars (before the override clamps to ∅). With the METHOD
-        // override removed (Option 1a), this would fail to find a parent cell
-        // and the rewriter would crash/diagnostic.
-        println("[H13] inner FlatLocals=$innerLocals, outer FlatLocals=$outerLocals")
-        // No assertion — observational only.
-    }
-
-    /* ---------- Probe 14: full pipeline — does importing os in outer trigger a diagnostic? ---------- */
-
-    @Test
-    fun `H14 import in outer with nested def using it triggers closure transformer`() {
-        val source = """
-            import os
-
-            def outer():
-                def inner():
-                    return os.getcwd()
-                return inner
-        """
-        val mod = lowerSourceToFlat(source)
-        val transformed = org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer.transform(mod)
-        val inner = fn(transformed, ".outer\$inner")
-        val outer = fn(transformed, ".outer")
-
-        println("[H14] inner.closureVars=${inner.closureVars}")
-        println("[H14] outer.closureVars=${outer.closureVars}")
-        println("[H14] inner.parameters=${inner.parameters.map { it.name }}")
-        println("[H14] outer.parameters=${outer.parameters.map { it.name }}")
-        println("[H14] diagnostics=${transformed.diagnostics.map { it.message }}")
-    }
-
-    /* ---------- collectLocalDefs (mirror of ClosureAnalyzer's logic, simplified) ---------- */
 
     private fun collectLocalDefs(fn: FlatFunctionIR): Set<String> {
         val out = HashSet<String>()

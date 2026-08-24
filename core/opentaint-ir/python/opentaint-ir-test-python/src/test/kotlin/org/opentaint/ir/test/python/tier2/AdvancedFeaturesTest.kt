@@ -5,10 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for advanced features: super(), slice with step, multiple decorators,
- * dict splat (**d), closure patterns, property setter, del tuple, star in calls.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class AdvancedFeaturesTest : PIRTestBase() {
@@ -182,8 +178,6 @@ def af_isinstance_tuple(x: object) -> bool:
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Super expression tests ────────────────────────────
-
     @Test fun `child super call produces PIRCall`() {
         val child = cp.findFunctionOrNull("__test__.AFChild.method")
         assertNotNull(child, "AFChild.method not found")
@@ -211,8 +205,6 @@ def af_isinstance_tuple(x: object) -> bool:
         assertTrue(cls!!.methods.size >= 2,
             "Expected >= 2 methods in AFBase, got ${cls.methods.size}")
     }
-
-    // ─── Slice tests ───────────────────────────────────────
 
     @Test fun `slice with step produces BuildSlice`() {
         val slices = insts("af_slice_step").filterAssignOf<PIRSliceExpr>()
@@ -242,8 +234,6 @@ def af_isinstance_tuple(x: object) -> bool:
             "Expected PIRBuildSlice or LoadSubscript for items[-3:]")
     }
 
-    // ─── Multiple decorators ───────────────────────────────
-
     @Test fun `static method is flagged`() {
         val f = cp.findFunctionOrNull("__test__.AFDecorated.static_func")
         assertNotNull(f)
@@ -269,8 +259,6 @@ def af_isinstance_tuple(x: object) -> bool:
             "Expected >= 3 methods in AFDecorated, got ${cls.methods.size}")
     }
 
-    // ─── Dict splat tests ──────────────────────────────────
-
     @Test fun `dict splat produces BuildDict`() {
         val builds = insts("af_dict_splat").filterAssignOf<PIRDictExpr>()
         assertTrue(builds.isNotEmpty(), "Expected PIRBuildDict for dict splat")
@@ -280,8 +268,6 @@ def af_isinstance_tuple(x: object) -> bool:
         assertTrue(func("af_dict_splat_override").instList.isNotEmpty())
     }
 
-    // ─── Del tests ─────────────────────────────────────────
-
     @Test fun `del single produces DeleteLocal`() {
         assertTrue(insts("af_del_single").any { it is PIRDeleteLocal })
     }
@@ -290,8 +276,6 @@ def af_isinstance_tuple(x: object) -> bool:
         val dels = insts("af_del_multiple").filterIsInstance<PIRDeleteLocal>()
         assertEquals(3, dels.size, "Expected 3 PIRDeleteLocal for del a, del b, del c")
     }
-
-    // ─── Augmented assignment tests ────────────────────────
 
     @Test fun `augmented all produces multiple BinOps`() {
         val binOps = insts("af_augmented_all").filterAssignOf<PIRBinaryExpr>()
@@ -306,8 +290,6 @@ def af_isinstance_tuple(x: object) -> bool:
             "Expected >= 4 different op types, got: $ops")
     }
 
-    // ─── String formatting tests ───────────────────────────
-
     @Test fun `fstring complex produces BuildString or calls`() {
         val allInsts = insts("af_fstring_complex")
         assertTrue(allInsts.any { it.isAssignOf<PIRStringExpr>() } || allInsts.any { it is PIRCall },
@@ -320,8 +302,6 @@ def af_isinstance_tuple(x: object) -> bool:
             "Expected >= 4 calls for upper, lower, strip, split, got ${calls.size}")
     }
 
-    // ─── Type check tests ──────────────────────────────────
-
     @Test fun `isinstance produces call`() {
         val calls = insts("af_isinstance_check").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for isinstance()")
@@ -331,8 +311,6 @@ def af_isinstance_tuple(x: object) -> bool:
         val calls = insts("af_isinstance_tuple").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for isinstance() with tuple")
     }
-
-    // ─── Structural validity ───────────────────────────────
 
     @Test fun `all advanced functions have valid CFGs`() {
         val funcNames = listOf(

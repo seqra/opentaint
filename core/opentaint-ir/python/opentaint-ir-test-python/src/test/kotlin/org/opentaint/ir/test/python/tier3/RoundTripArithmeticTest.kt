@@ -3,10 +3,6 @@ package org.opentaint.ir.test.python.tier3
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 
-/**
- * Round-trip tests for arithmetic and numeric operations.
- * 55 test cases covering basic math, integer operations, and numeric algorithms.
- */
 @Tag("tier3")
 class RoundTripArithmeticTest : RoundTripTestBase() {
 
@@ -364,8 +360,6 @@ def rta_left_shift(x: int, n: int) -> int:
 def rta_right_shift(x: int, n: int) -> int:
     return x >> n
     """.trimIndent()
-
-    // ─── Tests ───────────────────────────────────────────────
 
     @Test fun `arithmetic - add`() = roundTrip("rta_add",
         posArgs(listOf(1, 2), listOf(0, 0), listOf(-3, 5), listOf(100, -100)))

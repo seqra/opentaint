@@ -87,7 +87,6 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         )
     }
 
-    /** The call to resolve `kwarg(name)` positions against; null for attribute loads (no kwargs). */
     protected open val positionCall: PIRCall? get() = null
 
     override fun applySourceAction(

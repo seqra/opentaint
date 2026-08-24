@@ -10,12 +10,6 @@ import org.opentaint.ir.impl.python.proto.PIRServiceGrpc
 import org.opentaint.ir.impl.python.proto.PingRequest
 import java.util.concurrent.TimeUnit
 
-/**
- * Test-only helper. Boots the `pir_server` subprocess, performs the
- * ProtoToFlat lowering, and returns the raw `FlatModuleIR` list — without
- * passing the result through `FlatToPirConverter`. Used by tests that need
- * to assert on Flat IR directly.
- */
 object PIRRawFlatLoader {
     fun loadRawFlatModules(settings: PIRSettings): List<FlatModuleIR> {
         val processManager = PIRProcessManager(
@@ -35,7 +29,6 @@ object PIRRawFlatLoader {
             val stub = PIRServiceGrpc.newBlockingStub(channel)
                 .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
 
-            // Handshake — same retry pattern as PIRClasspathLoader.
             var lastException: Exception? = null
             for (attempt in 1..5) {
                 if (!processManager.isRunning) error("pir_server died before ping")

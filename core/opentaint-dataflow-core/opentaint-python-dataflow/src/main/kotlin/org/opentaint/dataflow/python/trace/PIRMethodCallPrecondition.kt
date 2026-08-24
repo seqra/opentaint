@@ -33,12 +33,6 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.util.Maybe
 
-/**
- * Inverse of [org.opentaint.dataflow.python.analysis.PIRMethodCallFlowFunction]:
- * for [fact] holding after the call [statement], the facts/rules in the caller
- * frame (and the callee-start facts) that could have produced it. Mirrors
- * `GoMethodCallPrecondition`.
- */
 class PIRMethodCallPrecondition(
     override val apManager: ApManager,
     private val statement: PIRCall,

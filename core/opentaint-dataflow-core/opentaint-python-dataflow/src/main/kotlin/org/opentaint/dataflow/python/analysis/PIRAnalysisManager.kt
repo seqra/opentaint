@@ -211,12 +211,10 @@ class PIRAnalysisManager(
     ): Boolean = when (fact.base) {
         is AccessPathBase.LocalVar -> false
         is AccessPathBase.Return -> true
-        is AccessPathBase.Argument -> true  // Arguments can flow back (aliased)
+        is AccessPathBase.Argument -> true
         is AccessPathBase.ClassStatic -> true
         else -> false
     }
 
-    override fun onInstructionReached(inst: CommonInst) {
-        // No-op
-    }
+    override fun onInstructionReached(inst: CommonInst) { }
 }

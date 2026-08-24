@@ -5,10 +5,6 @@ import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Tests for special constant types: complex numbers, bytes, ellipsis,
- * very large ints, and other literal edge cases.
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ConstantTypesTest : PIRTestBase() {
@@ -99,8 +95,6 @@ def ct_mixed_types():
 
     private fun insts(name: String) = func(name).instList
 
-    // ─── Complex number tests ──────────────────────────────
-
     @Test fun `complex literal has CFG`() {
         val f = func("ct_complex_literal")
         assertTrue(f.instList.isNotEmpty())
@@ -117,8 +111,6 @@ def ct_mixed_types():
         assertTrue(f.instList.isNotEmpty())
     }
 
-    // ─── Bytes tests ───────────────────────────────────────
-
     @Test fun `bytes literal has CFG`() {
         val f = func("ct_bytes_literal")
         assertTrue(f.instList.isNotEmpty())
@@ -133,15 +125,11 @@ def ct_mixed_types():
         assertTrue(func("ct_bytes_escape").instList.isNotEmpty())
     }
 
-    // ─── Ellipsis tests ────────────────────────────────────
-
     @Test fun `ellipsis literal has CFG`() {
         val f = func("ct_ellipsis")
         assertTrue(f.instList.isNotEmpty())
         assertTrue(insts("ct_ellipsis").any { it is PIRReturn })
     }
-
-    // ─── Large int tests ───────────────────────────────────
 
     @Test fun `large int has CFG`() {
         assertTrue(func("ct_large_int").instList.isNotEmpty())
@@ -150,8 +138,6 @@ def ct_mixed_types():
     @Test fun `negative large int has CFG`() {
         assertTrue(func("ct_negative_large_int").instList.isNotEmpty())
     }
-
-    // ─── Basic type tests ──────────────────────────────────
 
     @Test fun `zero returns correctly`() {
         assertTrue(insts("ct_zero").any { it is PIRReturn })
@@ -169,8 +155,6 @@ def ct_mixed_types():
         assertTrue(insts("ct_false").any { it is PIRReturn })
     }
 
-    // ─── String tests ──────────────────────────────────────
-
     @Test fun `empty string has CFG`() {
         assertTrue(func("ct_string_empty").instList.isNotEmpty())
     }
@@ -182,8 +166,6 @@ def ct_mixed_types():
     @Test fun `multiline string has CFG`() {
         assertTrue(func("ct_multiline").instList.isNotEmpty())
     }
-
-    // ─── Collection literal tests ──────────────────────────
 
     @Test fun `tuple literal produces BuildTuple`() {
         val builds = insts("ct_tuple_literal").filterAssignOf<PIRTupleExpr>()
@@ -216,14 +198,10 @@ def ct_mixed_types():
         assertTrue(builds.isNotEmpty(), "Expected PIRBuildList for mixed type list")
     }
 
-    // ─── Float inf test ────────────────────────────────────
-
     @Test fun `float inf produces call`() {
         val calls = insts("ct_float_inf").filterIsInstance<PIRCall>()
         assertTrue(calls.isNotEmpty(), "Expected PIRCall for float('inf')")
     }
-
-    // ─── Structural validity ───────────────────────────────
 
     @Test fun `all constant functions have valid CFGs`() {
         val funcNames = listOf(

@@ -4,22 +4,12 @@ import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Tag
 import kotlin.test.Ignore
 
-/**
- * Tier 1: Real-world web application benchmarks.
- *
- * Analyzes cloned web application projects (Django, Flask, FastAPI, etc.)
- * through the full PIR pipeline. Uses the same strict assertions as
- * [BenchmarkTest] via [BenchmarkTestBase].
- * Entity counts are exact expected values.
- */
 @Tag("tier1")
 class WebAppBenchmarkTest : BenchmarkTestBase() {
 
     companion object {
         private const val WEB_PROJECTS_DIR = "/home/pvl/folder/projects/web-projects"
     }
-
-    // ─── Django Web Applications ─────────────────────────────
 
     @Test @Timeout(600) fun `webapp - saleor (Django e-commerce)`() =
         analyzeDir("saleor", "$WEB_PROJECTS_DIR/saleor/saleor", 1121, 2432, 8982)
@@ -72,8 +62,6 @@ class WebAppBenchmarkTest : BenchmarkTestBase() {
     @Test @Timeout(600) fun `webapp - sentry (Django error tracking)`() =
         analyzeDir("sentry", "$WEB_PROJECTS_DIR/sentry/src", 4260, 6991, 30006)
 
-    // ─── Flask Web Applications ──────────────────────────────
-
     @Test @Timeout(600) fun `webapp - superset (Flask BI platform)`() =
         analyzeDir("superset", "$WEB_PROJECTS_DIR/superset/superset", 1164, 1746, 6955)
 
@@ -88,8 +76,6 @@ class WebAppBenchmarkTest : BenchmarkTestBase() {
 
     @Test @Timeout(600) fun `webapp - lemur (Flask certificate manager)`() =
         analyzeDir("lemur", "$WEB_PROJECTS_DIR/lemur/lemur", 247, 257, 1551)
-
-    // ─── FastAPI Web Applications ────────────────────────────
 
     @Test @Timeout(600) fun `webapp - mealie (FastAPI recipe manager)`() =
         analyzeDir("mealie", "$WEB_PROJECTS_DIR/mealie/mealie", 404, 630, 2880)

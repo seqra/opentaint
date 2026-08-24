@@ -22,7 +22,6 @@ import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.python.PIRCall
 
 object PIRFlowFunctionUtils {
-    /** `kwarg(name)` resolves only when [call] is in scope, to the raw [PIRCall.args] slot of the matching keyword. */
     fun Position.resolveAp(call: PIRCall? = null): PositionAccess? = resolveBaseAp(call)?.let { resolveAp(it) }
 
     fun Position.resolveAp(baseAp: AccessPathBase): PositionAccess? = when (this) {
@@ -74,12 +73,6 @@ object PIRFlowFunctionUtils {
         else -> isAbstract() && accessor !in exclusions
     }
 
-    /**
-     * Single source of truth for Python attribute accessors. Python attribute
-     * matching is name-only — the mypy-derived className/fieldType slots are left
-     * empty, so store-created facts and load reads align by name and aren't subject
-     * to the store/load type asymmetry of exact [FieldAccessor] equality.
-     */
     fun mkFieldAccessor(fieldName: String): FieldAccessor = FieldAccessor("", fieldName, "")
 
     object DummyPositionTypeResolver : PositionTypeResolver {

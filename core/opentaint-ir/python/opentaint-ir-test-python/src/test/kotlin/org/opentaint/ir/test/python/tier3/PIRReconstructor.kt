@@ -3,35 +3,10 @@ package org.opentaint.ir.test.python.tier3
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
 
-/**
- * Converts a PIRFunction's CFG back into executable Python code.
- *
- * Uses a while-True + __state variable pattern to simulate basic-block jumps:
- *
- *     def reconstructed(args):
- *         __state = 0
- *         while True:
- *             if __state == 0:
- *                 ...
- *                 __state = 1
- *             elif __state == 1:
- *                 ...
- */
 class PIRReconstructor {
 
-    // Names of functions emitted as top-level defs (lambdas and nested functions).
-    // When reconstructing an outer function, assignments like `inner = inner` (GlobalRef)
-    // should be skipped since `inner` is already available from module scope.
     private var currentEmittedFuncNames: Set<String> = emptySet()
 
-    /**
-     * Global names of closure-bearing functions visible from the function
-     * currently being reconstructed. At a `PIRBindFunctionExpr` whose function
-     * is in this set, the bind site emits `target = name()` to instantiate a
-     * fresh `_closure_class` wrapper (rather than `target = name`). Call sites
-     * don't consult this set — `__call__` on the wrapper forwards `<self>`
-     * automatically.
-     */
     private var closureBearingNames: Set<String> = emptySet()
 
     fun reconstruct(func: PIRFunction): String {
@@ -40,15 +15,6 @@ class PIRReconstructor {
         return MODULE_PRELUDE + reconstructSingle(func)
     }
 
-    /**
-     * Emit Python source for a synthetic adapter class produced by the
-     * callable-shim closure refactor. Only handles the two known synthetic
-     * shapes: `__init__(self, _closure_env_)` storing the env, and
-     * `__call__(self, …)` forwarding to the impl.
-     *
-     * Real (user-defined) classes are not the concern of this reconstructor —
-     * round-trip tests today are function-only.
-     */
     private fun reconstructAdapterClass(cls: PIRClass): String {
         val sb = StringBuilder()
         val sanitizedClassName = sanitizeFuncName(cls.name)
@@ -59,7 +25,7 @@ class PIRReconstructor {
                 when (p.kind) {
                     PIRParameterKind.VAR_POSITIONAL -> "*$pname"
                     PIRParameterKind.VAR_KEYWORD -> "**$pname"
-                    PIRParameterKind.KEYWORD_ONLY -> pname  // Caller passes by kw; def is just `name=`
+                    PIRParameterKind.KEYWORD_ONLY -> pname
                     PIRParameterKind.POSITIONAL_OR_KEYWORD,
                     PIRParameterKind.POSITIONAL_ONLY -> pname
                 }
@@ -85,22 +51,10 @@ class PIRReconstructor {
         return sb.toString()
     }
 
-    /**
-     * Reconstruct a function along with any lambda/nested functions it references.
-     *
-     * Closure semantics are encoded in the IR: capturing functions take `<self>`
-     * and read captured vars via cell loads (`<self>._closure_env_['x'].value`).
-     * The reconstructor only has to thread the function value into `<self>` at
-     * call sites — the rest falls out of the IR shape.
-     */
     fun reconstructWithLambdas(func: PIRFunction, cp: PIRClasspath): String {
         val sb = StringBuilder()
         sb.append(MODULE_PRELUDE)
 
-        // Find all referenced lambda/nested functions, transitively. A nested
-        // function may itself reference further nested functions (factory
-        // pattern, three-level nesting), and all of them need to land at module
-        // scope or the call chain breaks at runtime.
         val emittedFuncNames = mutableSetOf<String>()
         val closureBearingFuncs = mutableSetOf<String>()
         val resolvedFuncs = mutableListOf<PIRFunction>()
@@ -124,15 +78,8 @@ class PIRReconstructor {
             }
         }
 
-        // Synthetic adapter classes from the callable-shim refactor. The bind
-        // sites for capturing nested defs are PIRCalls to these classes, so
-        // they must be visible at module scope in the reconstructed source.
-        // Adapter class names start with `<closure_` and are not user-defined.
-        // Also pull in the matching `<closure_X_impl>` functions, which the
-        // adapter's __call__ forwards to.
         val moduleClasses = func.module.classes.filter { it.name.startsWith("<closure_") }
         for (cls in moduleClasses) {
-            // Walk the adapter's __call__ to find the impl function it forwards to.
             for (method in cls.methods) {
                 val readNames = method.cfg.instList
                     .filterIsInstance<PIRAssign>()
@@ -167,44 +114,25 @@ class PIRReconstructor {
             sb.appendLine()
         }
 
-        // Reconstruct each nested/lambda function
         closureBearingNames = closureBearingFuncs
         for (lambdaFunc in resolvedFuncs) {
             sb.append(reconstructSingle(lambdaFunc, emittedFuncNames))
             sb.appendLine()
         }
 
-        // Reconstruct the outer function. Bind sites — `PIRAssign(local,
-        // PIRBindFunctionExpr(closure_bearing))` — instantiate the wrapper
-        // class so each bind owns its own `_closure_env_`.
         sb.append(reconstructSingle(func, emittedFuncNames))
         closureBearingNames = emptySet()
         return sb.toString()
     }
 
-    /**
-     * A function is closure-bearing iff it carries the synthetic `<self>`
-     * parameter. With the callable-shim refactor, capturing impls keep
-     * `<self>` but are invoked *through* an adapter class — the adapter's
-     * `__call__` forwards `self` (the adapter instance) as the impl's
-     * `<self>`. So impl functions named `<closure_X_impl>` are NOT wrapped
-     * in `@_closure_class`; they're plain functions called directly by the
-     * adapter.
-     */
     private fun isClosureBearing(func: PIRFunction): Boolean {
         val hasSelf = func.parameters.firstOrNull()?.name == SELF_PARAM_RAW
         if (!hasSelf) return false
         val n = func.name
-        // Callable-shim impls: invoked directly by the adapter, not wrapped.
         if (n.startsWith("<closure_") && n.endsWith("_impl>")) return false
         return true
     }
 
-    /**
-     * Resolve a `<lambda>$N` / nested-function name to its `PIRFunction`. First
-     * tries the qualified name in the requesting module, then falls back to a
-     * scan across all modules for a bare-name match.
-     */
     private fun resolveLambda(name: String, cp: PIRClasspath, moduleName: String): PIRFunction? {
         cp.findFunctionOrNull("$moduleName.$name")?.let { return it }
         for (mod in cp.modules) {
@@ -214,28 +142,10 @@ class PIRReconstructor {
     }
 
     companion object {
-        /** Synthetic parameter name injected by closure lowering. Invalid Python identifier. */
         private const val SELF_PARAM_RAW = ClosureRuntime.SELF_PARAM_NAME
 
-        /** Sanitised replacement for [SELF_PARAM_RAW] in reconstructed Python source. */
         private const val SELF_PARAM_SAFE = "__self__"
 
-        /**
-         * Module-level definitions every reconstructed module needs:
-         *
-         * - `__pir_cell__`: a plain class. The IR allocates cells via
-         *   `PIRCall(callee = builtins.__pir_cell__)`; instances of this class
-         *   carry the mutable `.value` attribute.
-         *
-         * - `_closure_class`: the closure-binding decorator. Applied to every
-         *   closure-bearing function so the global name refers to a *class*,
-         *   not the raw function. The bind site instantiates the class
-         *   (`inc = inc_local0()`) — each bind gets its own wrapper, so binds
-         *   that share a lifted function but have different `_closure_env_`s
-         *   (e.g. two `make_adder` invocations) don't clobber each other.
-         *   Calling the wrapper dispatches through `__call__`, which forwards
-         *   the wrapper instance as `<self>` to the underlying function.
-         */
         private const val MODULE_PRELUDE = """class __pir_cell__:
     pass
 
@@ -265,10 +175,6 @@ def _closure_class(f):
                 pname
             }
         }
-        // Closure-bearing functions get wrapped in @_closure_class so their
-        // global name resolves to a class. The bind site instantiates the class
-        // per bind, giving each bind a fresh wrapper that owns its own
-        // `_closure_env_`.
         if (isClosureBearing(func)) {
             sb.appendLine("@_closure_class")
         }
@@ -280,7 +186,6 @@ def _closure_class(f):
             return sb.toString()
         }
 
-        // Collect all locals used (except parameters and emitted function names).
         val locals = mutableSetOf<String>()
         for (inst in func.instList) {
             collectLocals(inst, locals)
@@ -289,12 +194,10 @@ def _closure_class(f):
         locals.removeAll(emittedFuncNames)
         locals.remove("")
 
-        // Declare locals
         for (local in locals.sorted()) {
             sb.appendLine("    ${sanitizeLocal(local)} = None")
         }
 
-        // Build a label->block map for looking up handler blocks
         val blockByLabel = blocks.associateBy { it.label }
 
         sb.appendLine("    __state = ${blocks.first().label}")
@@ -302,7 +205,6 @@ def _closure_class(f):
 
         for (block in blocks) {
             val hasHandlers = block.exceptionHandlers.isNotEmpty()
-            // Find the first handler label (the one to jump to on exception)
             val handlerLabel = if (hasHandlers) block.exceptionHandlers.first() else -1
 
             sb.appendLine("        if __state == ${block.label}:")
@@ -335,12 +237,6 @@ def _closure_class(f):
         return sb.toString()
     }
 
-    /**
-     * Collect all lambda or nested function references emitted by [func].
-     * Sources are (a) `PIRReadNameExpr` reads with a [PIRGlobalNameRef]
-     * pointing at the same module / a lambda, and (b) `PIRBindFunctionExpr`
-     * references to lifted functions.
-     */
     private fun collectLambdaRefs(func: PIRFunction, moduleName: String = ""): Set<String> {
         val refs = mutableSetOf<String>()
         fun addQn(qn: String) {
@@ -365,10 +261,6 @@ def _closure_class(f):
             is PIRAssign -> reconstructAssign(inst)
             is PIRLoadAttr -> listOf("${val_(inst.target)} = ${val_(inst.obj)}.${inst.attribute}")
             is PIRCall -> {
-                // Closure-bearing callees route through their `_closure_class`
-                // wrapper's `__call__`, which forwards the wrapper as `<self>`
-                // automatically. Plain functions call as written. Either way,
-                // the call site emits user arguments only.
                 val args = inst.args.joinToString(", ") { callArg(it) }
                 val call = "${val_(inst.callee)}($args)"
                 val t = inst.target
@@ -408,7 +300,6 @@ def _closure_class(f):
                 else listOf("raise")
             }
             is PIRExceptHandler -> {
-                // This marks the start of a handler block — it's a declaration, not executable
                 if (inst.target != null) listOf("# except handler -> ${val_(inst.target!!)}")
                 else listOf("# except handler")
             }
@@ -440,9 +331,6 @@ def _closure_class(f):
         }
     }
 
-    /**
-     * Reconstruct a PIRAssign instruction by dispatching on the expression type.
-     */
     private fun reconstructAssign(inst: PIRAssign): List<String> {
         val target = val_(inst.target)
         val exprLines = when (val expr = inst.expr) {
@@ -483,23 +371,6 @@ def _closure_class(f):
             is PIRIterExpr -> listOf("$target = iter(${val_(expr.iterable)})")
             is PIRTypeCheckExpr -> listOf("$target = isinstance(${val_(expr.value)}, object)")
             is PIRBindFunctionExpr -> {
-                // Bind site for a nested function. Two cases:
-                //
-                //  - Closure-bearing: the global resolves to a
-                //    `_closure_class`-decorated wrapper *class*, so instantiate
-                //    it. Each bind gets a fresh wrapper that owns its own
-                //    `_closure_env_`, so two binds of the same lifted function
-                //    (e.g. two `make_adder(n)` invocations) don't share state.
-                //    Note: a *capturing recursive inner* (a closure-bearing
-                //    function whose body re-binds itself) would re-instantiate
-                //    the wrapper inside its own body and lose its
-                //    `_closure_env_` — currently unreachable because the
-                //    only recursive-inner test (`rtlf_recursive_inner`)
-                //    doesn't capture, but worth knowing if such a test is added.
-                //
-                //  - Plain: `target = name` is a regular function-value alias.
-                //    Skip when the bound function's name equals the target
-                //    local (`inner = inner` is implicit for nested defs).
                 val fnName = expr.function.qualifiedName.substringAfterLast('.')
                 if (fnName in closureBearingNames) {
                     return listOf("$target = ${sanitizeFuncName(fnName)}()")
@@ -538,11 +409,6 @@ def _closure_class(f):
         }
     }
 
-    /**
-     * Sanitize a local variable / parameter name to a valid Python identifier.
-     * Handles synthetic closure-lowered names: `$cell$x` → `__cell__x`,
-     * `<self>` → `__self__`.
-     */
     private fun sanitizeLocal(name: String): String {
         if (name == SELF_PARAM_RAW) return SELF_PARAM_SAFE
         return name
@@ -551,10 +417,6 @@ def _closure_class(f):
             .replace(">", "__")
     }
 
-    /**
-     * Sanitize function names that contain invalid Python characters.
-     * `<lambda>$0` -> `__lambda___0`
-     */
     private fun sanitizeFuncName(name: String): String {
         return name
             .replace("<", "__")
