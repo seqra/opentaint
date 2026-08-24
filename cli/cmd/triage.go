@@ -36,34 +36,44 @@ var triageCmd = &cobra.Command{
 	Use:   "triage <sarif-report>",
 	Short: "Compare a report against a baseline and record suppressions",
 	Args:  cobra.ExactArgs(1),
-	Long: `Compare a SARIF report against a baseline and record triage decisions. Accepting a finding means it will not be fixed. Deferring means it is not being fixed for now. Both are recorded as SARIF suppressions, which any SARIF consumer honors.
+	Long: `Compare a SARIF report with a baseline and record triage decisions. To accept a finding means: the team will not fix it. To defer a finding means: the team will not fix it now. Both decisions become SARIF suppressions. All SARIF tools obey them.
 
-The required positional argument is the path to the SARIF report to triage, such as one written by opentaint scan. Findings are identified by fingerprint, so a decision survives edits elsewhere in the code. Nothing is ever deleted: an accepted or deferred finding stays in the report, marked with a suppression that records the decision and its justification.
+The sarif-report argument is the path to the report to triage. It is required. Use a report from "opentaint scan". A fingerprint identifies each finding. Thus a decision stays attached when other code changes. The command deletes nothing. An accepted or deferred finding stays in the report. A suppression marks it and keeps the decision and its justification.
 
-Name a finding by a fingerprint prefix, git-style: the value shown as "Fingerprint:" by opentaint summary --show-findings. Both commands read the same key, so the value on screen is the value to paste here. The --fingerprint-key flag changes it on both sides. An ambiguous or unknown prefix is an error, never a guess.
+To name a finding, give a prefix of its fingerprint, as with a git hash. Use the value that "opentaint summary --show-findings" shows as "Fingerprint:". The two commands read the same key. Thus the value on the screen is the value to paste. The --fingerprint-key flag changes the key for both commands. A prefix that is unknown, or that matches two different values, causes an error. The command does not guess.
 
-The triaged report is rewritten in place, or written to --output when set. With --baseline, decisions recorded in the baseline are inherited by the matching findings first, so a chain of reports carries its triage history forward.
+The command writes the triaged report in place. To write it to a different path, use --output. With --baseline, findings first get the decisions that the baseline recorded for them. Thus a sequence of reports keeps its triage history.
 
-Run opentaint scan to produce the report this command triages. Review the result with opentaint summary.
+Use "opentaint scan" to make the report that this command triages. To read the result, use "opentaint summary".
 
 Exit codes:
   0    Triage completed
   1    General failure (bad input, unreadable report)
   2    Findings remain and --error-on-findings was set`,
-	Example: `  # See what changed since the last release, without modifying anything
+	Example: `  # See what changed since the last release, without a change to the files
   opentaint triage report.sarif --baseline release.sarif
 
   # Record that a finding will not be fixed
   opentaint triage report.sarif --accept q3Vf9k --justification "sink is a constant"
 
-  # Record that a finding is not being fixed for now
+  # Record that a finding will not be fixed now
   opentaint triage report.sarif --defer 8bc1d2 --justification "waiting on OT-412"
 
   # Remove an earlier decision
   opentaint triage report.sarif --unsuppress q3Vf9k
 
-  # Carry decisions forward and fail if anything new turned up
-  opentaint triage report.sarif --baseline release.sarif -o triaged.sarif --error-on-findings`,
+  # Keep earlier decisions and fail if a new finding appeared
+  opentaint triage report.sarif --baseline release.sarif -o triaged.sarif --error-on-findings
+
+  # Recipe: triage a fresh report, one decision at a time
+  opentaint summary report.sarif --show-findings
+  opentaint triage report.sarif --accept <fingerprint> --justification "why it is safe"
+  opentaint triage report.sarif --defer <fingerprint> --justification "why it can wait"
+  opentaint summary report.sarif --suppressed
+
+  # Recipe: roll the baseline forward after a release
+  opentaint triage report.sarif --baseline baselines/main.sarif -o triaged.sarif
+  cp triaged.sarif baselines/main.sarif`,
 
 	Run: func(cmd *cobra.Command, args []string) {
 		runTriage(triageFlags, args[0])
