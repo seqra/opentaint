@@ -111,7 +111,7 @@ Each finding includes the HTTP endpoint, making it easy to map your application'
 | **Docker** | See [Docker docs](docker.md) |
 | **Binary** | [Download from releases](https://github.com/seqra/opentaint/releases/latest) |
 
-Release archives come in three variants: **`opentaint-full`** (binary + JARs + rules + JRE), **`opentaint`** (binary + JARs + rules), and **`opentaint-cli`** (binary only). Homebrew and install scripts default to `full`.
+Release archives come in three variants: **`opentaint-full`** (binary + JARs + rules + go-ssa-server + JRE), **`opentaint`** (binary + JARs + rules + go-ssa-server), and **`opentaint-cli`** (binary only). Homebrew and install scripts default to `full`.
 
 For detailed instructions, see [Installation Guide](installation.md).
 
