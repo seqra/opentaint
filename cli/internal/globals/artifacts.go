@@ -43,9 +43,10 @@ func (a ArtifactDef) WithVersion(v string) ArtifactDef {
 // Artifacts returns the list of artifact definitions, reading current globals and Config.
 // This is a function (not a var) so it picks up mutable bind version vars and Config at call time.
 func Artifacts() []ArtifactDef {
-	// go-ssa-server is a single native binary (Unpack:false). Bundled/install tiers store it
-	// under its platform asset name; the per-machine cache file carries the windows .exe suffix
-	// so the resolved path stays executable on windows.
+	// go-ssa-server is a single native binary (Unpack:false). The bundled and
+	// install tiers store it under its platform asset name. The per-machine
+	// cache file keeps the windows .exe suffix. Thus the resolved path stays
+	// executable on windows.
 	goServerCacheSuffix := ""
 	if runtime.GOOS == "windows" {
 		goServerCacheSuffix = ".exe"
