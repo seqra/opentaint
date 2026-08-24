@@ -202,7 +202,40 @@ func TestDisplayFingerprintIsTheOneTriageResolves(t *testing.T) {
 	if err != nil {
 		t.Fatalf("the fingerprint the listing shows does not resolve: %v", err)
 	}
-	if got, _ := Identity(resolved, DefaultIdentityKey); got != "sink-of-source-sink-value" {
+	if len(resolved) != 1 {
+		t.Fatalf("resolved %d results, want 1", len(resolved))
+	}
+	if got, _ := Identity(resolved[0], DefaultIdentityKey); got != "sink-of-source-sink-value" {
 		t.Errorf("resolved %q, want the value under the default key", got)
+	}
+}
+
+// Filtering must not hide what moved under an updated finding: the filtered
+// results are copies, so the attribution is recovered by identity value.
+func TestRestrictKeepsChangeAttribution(t *testing.T) {
+	baseline := makeReport(
+		makeResult("sql", Error, "a.java", 1, fp("id-a", "trace-a")),
+		makeResult("xss", Warning, "b.java", 2, fp("id-b", "trace-b")),
+	)
+	current := withRules(makeReport(
+		makeResult("sql", Error, "a.java", 1, fp("id-a", "trace-a-moved")),
+		makeResult("xss", Warning, "b.java", 2, fp("id-b", "trace-b")),
+	), "sql", "xss")
+
+	cmp, err := CompareToBaseline(current, baseline, SourceSinkFingerprintKey)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	cmp.Apply(current)
+	view := &TriageView{Comparison: cmp}
+
+	filters := Filters{Severities: []string{"error"}}
+	restricted := view.Restrict(current.Filter(filters), filters)
+
+	if got := restricted.Comparison.Counts[Updated]; got != 1 {
+		t.Fatalf("Updated = %d, want 1", got)
+	}
+	if got := restricted.Comparison.ChangeCounts[ChangePath]; got != 1 {
+		t.Errorf("path-changed attribution lost under filter: ChangeCounts = %v", restricted.Comparison.ChangeCounts)
 	}
 }

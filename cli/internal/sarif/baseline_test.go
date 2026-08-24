@@ -445,3 +445,16 @@ func TestChangeUnderTraceIdentityIsAlwaysNone(t *testing.T) {
 		t.Errorf("change = %q, want none", got)
 	}
 }
+
+func TestCheckBaselineIdentity(t *testing.T) {
+	if err := CheckBaselineIdentity(&Report{}, SourceSinkFingerprintKey); err != nil {
+		t.Errorf("an empty baseline is comparable: %v", err)
+	}
+	carrying := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
+	if err := CheckBaselineIdentity(carrying, SourceSinkFingerprintKey); err != nil {
+		t.Errorf("baseline carries the key: %v", err)
+	}
+	if err := CheckBaselineIdentity(carrying, "some-other-key/v1"); err == nil {
+		t.Error("expected an error for a key no baseline result carries")
+	}
+}

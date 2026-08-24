@@ -52,3 +52,26 @@ func TestRequireBaselineStatesAcceptsAPersistedReport(t *testing.T) {
 		t.Errorf("a report carrying states filters without a baseline: %v", err)
 	}
 }
+
+func TestRequireBaselineStatesAbsentAlwaysNeedsABaseline(t *testing.T) {
+	// Persisted states satisfy the guard for new/unchanged/updated, but absent
+	// findings are never written into a report, so the filter can only ever be
+	// served by a live comparison.
+	state := sarif.New
+	report := &sarif.Report{Runs: []sarif.Run{{Results: []sarif.Result{{BaselineState: &state}}}}}
+
+	err := requireBaselineStates(report, []string{"absent"}, "")
+	if err == nil {
+		t.Fatal("absent without --baseline silently lists nothing and must be refused")
+	}
+	if !strings.Contains(err.Error(), "--baseline") {
+		t.Errorf("the error should point at --baseline: %v", err)
+	}
+
+	if err := requireBaselineStates(report, []string{"absent"}, "baseline.sarif"); err != nil {
+		t.Errorf("with --baseline the comparison supplies absent findings: %v", err)
+	}
+	if err := requireBaselineStates(report, []string{"new", "absent"}, ""); err == nil {
+		t.Error("a mixed filter naming absent still needs --baseline")
+	}
+}

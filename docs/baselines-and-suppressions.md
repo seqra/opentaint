@@ -72,7 +72,8 @@ opentaint triage baselines/main.sarif \
 
 A finding is named by a **fingerprint prefix**, git-style — the value shown as
 `Fingerprint:` by `opentaint summary --show-findings`. An ambiguous or unknown
-prefix is an error, never a guess. `--accept`, `--defer`, and `--unsuppress` are
+prefix is an error, never a guess. Several results carrying the same
+fingerprint are the same finding, and one decision covers them all. `--accept`, `--defer`, and `--unsuppress` are
 repeatable. One `--justification` applies to every decision in the invocation,
 and passing it twice is an error rather than a silent "last one wins" — run
 `triage` once per reason.

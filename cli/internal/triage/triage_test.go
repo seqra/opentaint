@@ -257,3 +257,31 @@ func TestApplyReadOnlyStillInheritsSuppressions(t *testing.T) {
 		t.Error("read-only mode must not mark the report as changed")
 	}
 }
+
+// Two results sharing one identity value are the same finding to a decision,
+// so accepting that fingerprint suppresses both. Under the coarse default key
+// such duplicates are legitimate and no longer prefix could separate them.
+func TestApplyAcceptCoversAllDuplicatesOfOneIdentity(t *testing.T) {
+	current := report(
+		result("a", "id-same", "trace-1"),
+		result("a", "id-same", "trace-2"),
+		result("b", "id-other", "trace-b"),
+	)
+	out, err := Apply(current, Options{
+		Accept:        []string{"id-same"},
+		Justification: "sink is a constant",
+	})
+	if err != nil {
+		t.Fatalf("apply: %v", err)
+	}
+	if out.View.Added != 2 {
+		t.Errorf("added: got %d, want both duplicates", out.View.Added)
+	}
+	results := current.Results()
+	if !sarif.IsSuppressed(results[0]) || !sarif.IsSuppressed(results[1]) {
+		t.Error("both duplicates must carry the suppression")
+	}
+	if sarif.IsSuppressed(results[2]) {
+		t.Error("the other finding must be untouched")
+	}
+}

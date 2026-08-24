@@ -239,3 +239,35 @@ func TestUnmatchedIsEmptyWhenEverythingMatches(t *testing.T) {
 		t.Errorf("got %v, want nil", got)
 	}
 }
+
+// A ruleset root that is a single YAML file has no relative path, and the
+// analyzer names such a ruleset "" — its ids are ":<id>". The CLI must produce
+// the same form or every exclusion against a file ruleset silently misses.
+func TestListRuleIDsFileRootMatchesAnalyzerForm(t *testing.T) {
+	root := ruleset(t, map[string]string{
+		"my-rules.yaml": "rules:\n  - id: rule-one\n  - id: rule-two\n",
+	})
+	file := filepath.Join(root, "my-rules.yaml")
+
+	got := ListRuleIDs([]string{file})
+	sort.Strings(got)
+	want := []string{":rule-one", ":rule-two"}
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("got:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+func TestSelectExcludeOnFileRulesetResolvesToAnalyzerIDs(t *testing.T) {
+	root := ruleset(t, map[string]string{
+		"my-rules.yaml": "rules:\n  - id: rule-one\n  - id: rule-two\n",
+	})
+	file := filepath.Join(root, "my-rules.yaml")
+
+	resolved, err := Select(Selection{Exclude: []string{"rule-one"}}, []string{file})
+	if err != nil {
+		t.Fatalf("select: %v", err)
+	}
+	if len(resolved.Exclude) != 1 || resolved.Exclude[0] != ":rule-one" {
+		t.Errorf("exclusion resolved to %v, want [:rule-one]", resolved.Exclude)
+	}
+}

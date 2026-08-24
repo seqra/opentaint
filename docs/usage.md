@@ -226,7 +226,7 @@ reflects the full set the tool ran.
 | `--group-by` | Group the `--show-findings` listing by `severity`, `rule-id`, or `file-path` (default `file-path`) |
 | `--code-flow` | Render code flows: `all`, a 1-based index, or unset (first flow only). On multi-flow findings the listing also shows a `Code flows: <N>` field. |
 | `--baseline` | Compare against this SARIF report and show new/unchanged/updated/fixed counts. The file is never modified. |
-| `--baseline-state` | Show only findings in these baseline states: `new`, `unchanged`, `updated`, `absent` (repeatable). Reads the states written by `--write-baseline-state`, or the ones `--baseline` computes now. `absent` lists the fixed findings from the baseline. |
+| `--baseline-state` | Show only findings in these baseline states: `new`, `unchanged`, `updated`, `absent` (repeatable). Reads the states written by `--write-baseline-state`, or the ones `--baseline` computes now. `absent` lists the fixed findings from the baseline and always needs `--baseline`. |
 | `--suppressed` | Include suppressed findings in the listing (hidden by default) |
 | `--fingerprint-key` | Which fingerprint identifies a finding: `trace` (exact), `source-sink`, `sink` (rule and sink only, the default), or a full partialFingerprints key. One key governs baseline matching, the `Fingerprint:` value shown, `--partial-fingerprint`, and the prefix `triage` resolves. |
 
