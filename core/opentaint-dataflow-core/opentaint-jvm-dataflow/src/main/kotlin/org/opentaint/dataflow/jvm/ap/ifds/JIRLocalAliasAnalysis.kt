@@ -76,13 +76,13 @@ class JIRLocalAliasAnalysis(
         .filterNot { it is AliasApInfo && !isValidBaseAccessorTransition(it) }
 
     private fun isValidAccessorTransition(previous: AliasAccessor?, next: AliasAccessor): Boolean =
-        isValidAliasAccessorTransition(previous, next, factTypeChecker::typeMayHaveSubtypeOf)
+        isValidAliasAccessorTransition(previous, next, factTypeChecker::typesMayOverlap)
 
     private fun isValidBaseAccessorTransition(alias: AliasApInfo): Boolean {
         return isValidAliasBaseAccessorTransition(
             alias.base.typeName(),
             alias.accessors.firstOrNull(),
-            factTypeChecker::typeMayHaveSubtypeOf,
+            factTypeChecker::typesMayOverlap,
         )
     }
 
@@ -101,8 +101,8 @@ class JIRLocalAliasAnalysis(
     override fun filterAliases(query: AAInfo, aliases: List<AliasInfo>): List<AliasInfo> {
         val queryType = query.typeName() ?: return aliases
         return aliases.filter { alias ->
-            val aliasType = (alias as? AliasApInfo)?.typeName() ?: return@filter true
-            isAliasResultTypeCompatible(queryType, aliasType, factTypeChecker::typeMayHaveSubtypeOf)
+            val aliasType = (alias as? AliasApInfo)?.heapResultTypeName() ?: return@filter true
+            isAliasResultTypeCompatible(queryType, aliasType, factTypeChecker::typesMayOverlap)
         }
     }
 
@@ -110,13 +110,6 @@ class JIRLocalAliasAnalysis(
         is LocalAlias.SimpleLoc -> loc.typeName()
         is HeapAlias -> (heapAccessor as? FieldAlias)?.field?.fieldType
         else -> null
-    }
-
-    private fun AliasApInfo.typeName(): String? = when (val accessor = accessors.lastOrNull()) {
-        is AliasAccessor.Field -> accessor.fieldType
-        is AliasAccessor.Static -> accessor.typeName
-        is AliasAccessor.Array -> null
-        null -> base.typeName()
     }
 
     private fun RefValue.typeName(): String? = when (this) {
@@ -211,6 +204,14 @@ class JIRLocalAliasAnalysis(
 
     data class AliasAllocInfo(val allocInst: Int) : AliasInfo
 }
+
+internal fun JIRLocalAliasAnalysis.AliasApInfo.heapResultTypeName(): String? =
+    when (val accessor = accessors.lastOrNull()) {
+        is AliasAccessor.Field -> accessor.fieldType
+        is AliasAccessor.Static -> accessor.typeName
+        // Direct alias sets can model value propagation between different runtime types.
+        is AliasAccessor.Array, null -> null
+    }
 
 internal fun isValidAliasAccessorTransition(
     previous: AliasAccessor?,

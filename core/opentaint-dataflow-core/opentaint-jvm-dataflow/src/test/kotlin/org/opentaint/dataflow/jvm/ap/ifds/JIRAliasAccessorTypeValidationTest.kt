@@ -1,7 +1,10 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import kotlin.test.Test
+import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -141,6 +144,23 @@ class JIRAliasAccessorTypeValidationTest {
     @Test
     fun `accepts equivalent nested class type names`() {
         assertTrue(isAliasResultTypeCompatible("sample.Outer.Node", "sample.Outer\$Node") { _, _ -> false })
+    }
+
+    @Test
+    fun `does not infer a result type for a direct alias`() {
+        val alias = AliasApInfo(AccessPathBase.LocalVar(1), emptyList())
+
+        assertEquals(null, alias.heapResultTypeName())
+    }
+
+    @Test
+    fun `uses the last heap field type as the alias result type`() {
+        val alias = AliasApInfo(
+            AccessPathBase.LocalVar(1),
+            listOf(field("test.Container", "value", "test.Value")),
+        )
+
+        assertEquals("test.Value", alias.heapResultTypeName())
     }
 
     private fun field(className: String, fieldName: String, fieldType: String) =
