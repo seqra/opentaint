@@ -137,6 +137,11 @@ interface MethodCallSummaryHandler {
             is EdgeRefinement.IdRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
                 handleSummaryEdge(currentFactAp.exclusions, it.replaceExclusions(currentFactAp.exclusions))
             }
+
+            is EdgeRefinement.ForcedRefinement -> mappedSummaryFacts.mapTo(hashSetOf()) {
+                val requiredExclusions = summaryEffect.requiredExclusions
+                handleSummaryEdge(requiredExclusions, it.replaceExclusions(requiredExclusions))
+            }
         }
     }
 }

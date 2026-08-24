@@ -7,6 +7,7 @@ object MethodSummaryEdgeApplicationUtils {
     sealed interface EdgeRefinement {
         data object UniverseRefinement : EdgeRefinement
         data object IdRefinement : EdgeRefinement
+        data class ForcedRefinement(val requiredExclusions: ExclusionSet) : EdgeRefinement
     }
 
     sealed interface SummaryEdgeApplication: EdgeRefinement {
