@@ -15,6 +15,7 @@ var (
 	healthAutobuilder bool
 	healthAnalyzer    bool
 	healthRules       bool
+	healthGoServer    bool
 	healthRuntime     bool
 )
 
@@ -28,9 +29,9 @@ type healthComponent struct {
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Show dependency paths and report missing components",
-	Long: `Show the paths of the components on this computer. The components are the autobuilder, the analyzer, the built-in rules, and the Java runtime. The command shows if each component is present.
+	Long: `Show the paths of the components on this computer. The components are the autobuilder, the analyzer, the built-in rules, the go-ssa-server, and the Java runtime. The command shows if each component is present.
 
-To select components, use --autobuilder, --analyzer, --rules, or --runtime. With no flag, the command shows all four components. If you select exactly one component, only its path is printed. This output is good for scripts.
+To select components, use --autobuilder, --analyzer, --rules, --go-server, or --runtime. With no flag, the command shows all five components. If you select exactly one component, only its path is printed. This output is good for scripts.
 
 Only the built-in rules are downloaded when they are missing. No other component is downloaded.
 
@@ -43,6 +44,9 @@ If a selected component is missing, the command exits with a code that is not ze
 
   # Make sure the Java runtime is present
   opentaint health --runtime
+
+  # Make sure the go-ssa-server for Go analysis is present
+  opentaint health --go-server
 
   # Recipe: use the built-in rules path in a script
   RULES=$(opentaint health --rules)
@@ -58,6 +62,7 @@ func init() {
 	healthCmd.Flags().BoolVar(&healthAutobuilder, "autobuilder", false, "Print only the autobuilder JAR path")
 	healthCmd.Flags().BoolVar(&healthAnalyzer, "analyzer", false, "Print only the analyzer JAR path")
 	healthCmd.Flags().BoolVar(&healthRules, "rules", false, "Print only the built-in rules path, downloading rules if needed")
+	healthCmd.Flags().BoolVar(&healthGoServer, "go-server", false, "Print only the go-ssa-server binary path")
 	healthCmd.Flags().BoolVar(&healthRuntime, "runtime", false, "Print only the Java runtime path")
 }
 
@@ -72,11 +77,14 @@ func runHealth() error {
 	if healthRules {
 		requested = append(requested, "rules")
 	}
+	if healthGoServer {
+		requested = append(requested, "goserver")
+	}
 	if healthRuntime {
 		requested = append(requested, "runtime")
 	}
 	if len(requested) == 0 {
-		requested = []string{"autobuilder", "analyzer", "rules", "runtime"}
+		requested = []string{"autobuilder", "analyzer", "rules", "goserver", "runtime"}
 	}
 
 	components := make([]healthComponent, 0, len(requested))
@@ -124,8 +132,8 @@ func runHealth() error {
 
 func resolveHealthComponent(key string) healthComponent {
 	switch key {
-	case "autobuilder", "analyzer":
-		return resolveJarComponent(key)
+	case "autobuilder", "analyzer", "goserver":
+		return resolveArtifactComponent(key)
 	case "rules":
 		return resolveRulesComponent()
 	case "runtime":
@@ -135,7 +143,9 @@ func resolveHealthComponent(key string) healthComponent {
 	}
 }
 
-func resolveJarComponent(kind string) healthComponent {
+// resolveArtifactComponent resolves a downloadable artifact (a JAR or the
+// go-ssa-server binary) through the standard tiers and the dev override.
+func resolveArtifactComponent(kind string) healthComponent {
 	def := globals.ArtifactByKind(kind)
 	path, err := utils.ResolveJarPath(def)
 	version := utils.ArtifactVersion(def)
