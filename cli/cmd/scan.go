@@ -75,29 +75,38 @@ var scanCmd = &cobra.Command{
 	Use:   "scan [source-path]",
 	Short: "Scan a project for vulnerabilities",
 	Args:  cobra.MaximumNArgs(1),
-	Long: `Scan a project for vulnerabilities. OpenTaint detects the build system, builds the project, and runs taint analysis over the result.
+	Long: `Scan a project and find vulnerabilities. OpenTaint finds the build system, builds the project, and does a taint analysis.
 
-The optional source-path argument is the project root and defaults to the current directory. Pass --project-model to analyze a pre-compiled project model instead of building. The source-path argument and --project-model are mutually exclusive.
+The source-path argument is the project root. It is optional. The default is the current directory. To scan a project model that is already compiled, use --project-model. Do not give source-path and --project-model together.
 
-Findings are written as a SARIF report to --output, or into the project model directory when unset, and summarized on completion.
+OpenTaint writes the findings to a SARIF report. Use --output to set the report path. If --output is not set, the report goes into the project model directory. A summary is shown when the scan completes.
 
-Run opentaint pull once before your first scan to fetch the toolchain. Re-inspect a report later with opentaint summary.
+Before your first scan, run "opentaint pull" one time. To read a report again later, use "opentaint summary".
 
 ` + scanExitCodesHelp("Scan completed"),
 	Example: `  # Scan the current directory with the built-in rules
   opentaint scan .
 
-  # Scan a project and write a SARIF report
+  # Scan a project and write the report to a known path
   opentaint scan ./my-app -o report.sarif
 
-  # Analyze a pre-compiled project model instead of building
+  # Scan a project model that is already compiled
   opentaint scan --project-model ./model -o report.sarif
 
-  # Run a custom ruleset and report only errors
+  # Use your own rules and show only errors
   opentaint scan . --ruleset ./rules --severity error -o report.sarif
 
   # Give a large project more time and memory
-  opentaint scan . --timeout 30m --max-memory 16G -o report.sarif`,
+  opentaint scan . --timeout 30m --max-memory 16G -o report.sarif
+
+  # Recipe: first scan on a new machine
+  opentaint pull
+  opentaint scan . -o report.sarif
+  opentaint summary report.sarif --show-findings
+
+  # Recipe: build one time, then scan many times
+  opentaint compile ./my-app -o ./model
+  opentaint scan --project-model ./model -o report.sarif`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		runScan(cmd, prepareScanConfig(scanFlags, args))

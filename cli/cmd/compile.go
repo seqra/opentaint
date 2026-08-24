@@ -42,18 +42,23 @@ var compileCmd = &cobra.Command{
 	Use:   "compile <project>",
 	Short: "Compile a project into a reusable project model",
 	Args:  cobra.ExactArgs(1), // require exactly one argument
-	Long: `OpenTaint detects the build system, resolves the project's modules and dependencies, and compiles the project into a reusable model.
+	Long: `Compile a project into a project model that you can scan many times. OpenTaint finds the build system, collects the modules and dependencies, and builds the project.
 
-The project argument is the path to the project root and is required. Pass --output to name the project model directory to create. It must not already exist.
+The project argument is the path to the project root. It is required. Use --output to set the project model directory. This directory must not exist before the command runs.
 
-The project model is written to the --output directory and can be reused by later scans without rebuilding.
+Later scans can use the model without a new build. This makes repeated scans fast.
 
-Run opentaint pull once before your first compile to fetch the toolchain. Analyze the resulting project model with opentaint scan --project-model.`,
+Before your first compile, run "opentaint pull" one time. To scan the model, use "opentaint scan --project-model".`,
 	Example: `  # Compile the current directory into a project model
   opentaint compile . -o ./model
 
-  # Validate inputs without compiling
-  opentaint compile . -o ./model --dry-run`,
+  # Make sure the inputs are correct, without a build
+  opentaint compile . -o ./model --dry-run
+
+  # Recipe: compile one time, then scan with different settings
+  opentaint compile ./my-app -o ./model
+  opentaint scan --project-model ./model --ruleset ./team-rules -o team.sarif
+  opentaint scan --project-model ./model --severity error -o errors.sarif`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		ProjectPath = args[0]

@@ -57,23 +57,27 @@ func resolveCategories() (utils.PruneCategory, error) {
 
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
-	Short: "Remove stale downloaded artifacts from the cache",
-	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint): superseded analyzer and autobuilder JARs, old rules, JDK and JRE versions that no longer match the configured one, and cached project models.
+	Short: "Remove old downloaded artifacts from the cache",
+	Long: `Remove old downloaded artifacts from the local cache (~/.opentaint). The command removes analyzer and autobuilder JARs that a newer version replaced, old rules, JDK and JRE versions that do not match the configuration, and cached project models.
 
-Select categories with --artifacts, --rules, --jdk, --models, --logs, or --install. Without a category flag, prune removes artifacts, rules, jdk, and models. The --all flag removes everything, including logs and install-tier artifacts, and cannot be combined with a specific category flag.
+To select categories, use --artifacts, --rules, --jdk, --models, --logs, or --install. With no category flag, the command removes artifacts, rules, jdk, and models. The --all flag removes everything, with logs and install-tier artifacts included. Do not give --all together with a category flag.
 
-Preview the deletions with --dry-run, and skip the confirmation prompt with --yes. Restore install-tier artifacts afterward with opentaint pull.`,
-	Example: `  # Prune the default categories after confirming
+To see the deletions without a removal, use --dry-run. To skip the confirmation prompt, use --yes. To download the toolchain again, run "opentaint pull".`,
+	Example: `  # Remove the default categories, with a confirmation prompt
   opentaint prune
 
-  # Prune only old JDK and JRE versions
+  # Remove only the old JDK and JRE versions
   opentaint prune --jdk
 
-  # Prune everything, including logs and install-tier artifacts
+  # Remove everything, with logs and install-tier artifacts included
   opentaint prune --all
 
-  # Preview what would be deleted without deleting
-  opentaint prune --dry-run`,
+  # See what the command would delete, without a deletion
+  opentaint prune --dry-run
+
+  # Recipe: get disk space back, keep the current toolchain
+  opentaint prune --dry-run
+  opentaint prune --yes`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {

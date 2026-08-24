@@ -26,23 +26,27 @@ var (
 var testRuleRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
 	Short: "Run detection-rule tests on a compiled project model",
-	Long: `Run detection rules against the samples declared in rule-test.yaml and report which passed. The built-in rules are always included.
+	Long: `Run detection rules on the samples that rule-test.yaml declares. The command reports which samples passed. The built-in rules are always included.
 
-The project-model argument is a compiled project model directory, produced by opentaint compile. Add your own rules with --ruleset, narrow the run to specific rules with --rule-id, and apply models with --java-models or --passthrough-models.
+The project-model argument is a compiled project model directory from "opentaint compile". To add your own rules, use --ruleset. To run only specified rules, use --rule-id. To apply models, use --java-models or --passthrough-models.
 
-Results are written as test-result.json and a test-results.sarif report to --output, or to a temporary directory when unset.
+The command writes test-result.json and a test-results.sarif report to --output. If --output is not set, it writes to a temporary directory.
 
-Compile the test project with opentaint compile before running. Inspect the results afterward with opentaint summary.
+Compile the test project before you run the tests. To read the results, use "opentaint summary".
 
 ` + testExitCodesHelp("All rule tests passed"),
-	Example: `  # Run the built-in rules against a compiled model
+	Example: `  # Run the built-in rules on a compiled model
   opentaint test rule run ./rule-tests/sinks/model
 
-  # Test a custom ruleset and write results to a directory
+  # Test your own rules and write the results to a directory
   opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results
 
   # Run only one rule
-  opentaint test rule run ./rule-tests/sinks/model --rule-id <rule-id>`,
+  opentaint test rule run ./rule-tests/sinks/model --rule-id <rule-id>
+
+  # Recipe: change a rule, then make sure the tests stay green
+  opentaint test rule run ./rule-tests/sinks/model --ruleset ./rules -o ./results
+  opentaint summary ./results/test-results.sarif --show-findings`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		runTestProject(args[0], testProjectOptions{

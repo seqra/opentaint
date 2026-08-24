@@ -220,21 +220,27 @@ var (
 var projectCmd = &cobra.Command{
 	Use:   "project",
 	Short: "Create a project model from precompiled JARs or classes",
-	Long: `Create a project model directly from precompiled JARs or classes, without running a build. OpenTaint inspects the supplied classpath, detects the modules and dependencies, and writes a project.yaml describing the project for later analysis. Use this when you already have compiled artifacts. To build a model from sources, use opentaint compile instead.
+	Long: `Create a project model from JARs or classes that are already compiled. No build occurs. OpenTaint examines the classpath, finds the modules and dependencies, and writes a project.yaml file.
 
-All inputs are supplied as flags. Provide --source-root for the project sources, one or more --classpath entries for the compiled classes or JARs, and one or more --package names to include. Add --dependency for extra JAR files on the compile classpath.
+Use this command when you have compiled artifacts but no build. To build a model from sources, use "opentaint compile".
 
-The project model is written to the required --output directory, which must not already exist, and contains the generated project.yaml.
+All inputs are flags. Give the source path with --source-root. Give the compiled classes or JARs with --classpath. Give the packages to include with --package. Add more JAR files with --dependency.
 
-Run opentaint pull once beforehand to fetch the autobuilder. Scan the generated model with opentaint scan --project-model <output-dir>.`,
-	Example: `  # Generate a project model from a compiled JAR
+Use --output to set the project model directory. This directory must not exist before the command runs.
+
+Before the first run, run "opentaint pull" one time. To scan the model, use "opentaint scan --project-model".`,
+	Example: `  # Create a project model from a compiled JAR
   opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model
 
-  # Add extra dependency JARs to the classpath
+  # Add more dependency JARs to the classpath
   opentaint project --source-root ./src --classpath ./app.jar --dependency ./lib.jar --package com.example -o ./model
 
-  # Validate the inputs without generating anything
-  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model --dry-run`,
+  # Make sure the inputs are correct, without a model
+  opentaint project --source-root ./src --classpath ./app.jar --package com.example -o ./model --dry-run
+
+  # Recipe: scan a vendor JAR that you cannot build
+  opentaint project --source-root ./src --classpath ./vendor-app.jar --package com.vendor -o ./model
+  opentaint scan --project-model ./model -o report.sarif`,
 	Run: func(cmd *cobra.Command, args []string) {
 		config := NewJavaAutobuilder().
 			WithOutputDir(OutputDir).

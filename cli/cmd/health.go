@@ -28,19 +28,25 @@ type healthComponent struct {
 var healthCmd = &cobra.Command{
 	Use:   "health",
 	Short: "Show dependency paths and report missing components",
-	Long: `Show the on-disk paths for the autobuilder, analyzer, built-in rules, and Java runtime, and report whether each component is present.
+	Long: `Show the paths of the components on this computer. The components are the autobuilder, the analyzer, the built-in rules, and the Java runtime. The command shows if each component is present.
 
-Select components with --autobuilder, --analyzer, --rules, or --runtime. With no flag, all four are reported. When exactly one component is selected, only its path is printed, which suits scripting. Only the built-in rules are fetched on demand. No other artifact is downloaded.
+To select components, use --autobuilder, --analyzer, --rules, or --runtime. With no flag, the command shows all four components. If you select exactly one component, only its path is printed. This output is good for scripts.
 
-The command exits non-zero when any selected component is missing. Download the missing components with opentaint pull.`,
-	Example: `  # Report all components and their paths
+Only the built-in rules are downloaded when they are missing. No other component is downloaded.
+
+If a selected component is missing, the command exits with a code that is not zero. To download the missing components, run "opentaint pull".`,
+	Example: `  # Show all components and their paths
   opentaint health
 
-  # Print only the analyzer JAR path, for scripting
+  # Print only the analyzer JAR path, for a script
   opentaint health --analyzer
 
-  # Check the Java runtime
-  opentaint health --runtime`,
+  # Make sure the Java runtime is present
+  opentaint health --runtime
+
+  # Recipe: use the built-in rules path in a script
+  RULES=$(opentaint health --rules)
+  opentaint scan . --ruleset "$RULES" --ruleset ./extra-rules -o report.sarif`,
 	Args: cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return runHealth()
