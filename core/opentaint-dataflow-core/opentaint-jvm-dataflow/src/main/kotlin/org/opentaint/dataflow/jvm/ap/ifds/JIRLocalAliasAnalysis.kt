@@ -76,13 +76,13 @@ class JIRLocalAliasAnalysis(
         .filterNot { it is AliasApInfo && !isValidBaseAccessorTransition(it) }
 
     private fun isValidAccessorTransition(previous: AliasAccessor?, next: AliasAccessor): Boolean =
-        isValidAliasAccessorTransition(previous, next, factTypeChecker::typeIsAssignableTo)
+        isValidAliasAccessorTransition(previous, next, factTypeChecker::typeMayHaveSubtypeOf)
 
     private fun isValidBaseAccessorTransition(alias: AliasApInfo): Boolean {
         return isValidAliasBaseAccessorTransition(
             alias.base.typeName(),
             alias.accessors.firstOrNull(),
-            factTypeChecker::typeIsAssignableTo,
+            factTypeChecker::typeMayHaveSubtypeOf,
         )
     }
 

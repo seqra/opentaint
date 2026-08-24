@@ -21,7 +21,7 @@ class JIRAliasAccessorTypeValidationTest {
     }
 
     @Test
-    fun `accepts field access when receiver is assignable to field owner`() {
+    fun `accepts field access when receiver and field owner may overlap`() {
         val previous = field("org.example.Container", "value", "org.example.HasTenant")
         val next = field("org.example.Settings", "tenantId", "org.example.TenantId")
 
@@ -29,12 +29,15 @@ class JIRAliasAccessorTypeValidationTest {
     }
 
     @Test
-    fun `rejects subtype-only field on a supertype receiver`() {
-        val previous = field("org.example.Container", "value", "org.example.HasName")
-        val next = field("org.example.Customer", "title", "java.lang.String")
+    fun `accepts field owner connected to receiver through a common subtype`() {
+        val previous = field("org.example.Container", "a", "org.example.A")
+        val next = field("org.example.X", "value", "java.lang.Object")
 
-        assertFalse(isValidAliasAccessorTransition(previous, next) { actual, owner ->
-            actual != "org.example.HasName" || owner != "org.example.Customer"
+        assertTrue(isValidAliasAccessorTransition(previous, next) { receiver, owner ->
+            assertTrue(receiver == "org.example.A")
+            assertTrue(owner == "org.example.X")
+            // Y extends X and implements A, although X itself is not assignable to A.
+            true
         })
     }
 
@@ -114,6 +117,15 @@ class JIRAliasAccessorTypeValidationTest {
         val first = field("java.util.Optional", "Element", "java.lang.Object")
 
         assertTrue(isValidAliasBaseAccessorTransition(null, first) { _, _ -> false })
+    }
+
+    @Test
+    fun `accepts first field when base and owner have a common subtype`() {
+        val first = field("org.example.X", "value", "java.lang.Object")
+
+        assertTrue(isValidAliasBaseAccessorTransition("org.example.A", first) { base, owner ->
+            base == "org.example.A" && owner == "org.example.X"
+        })
     }
 
     @Test
