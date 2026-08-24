@@ -62,11 +62,12 @@ class TreeInitialFactAbstraction(
 
         // note: we can ignore fact exclusions here
         val facts = initialFacts.getOrPut(factAp.base)
-        val addedFact = facts.addInitialFact(factAp.access, interner) ?: return emptyList()
+        val stats = baseStats(factAp.base)
+        val addedFact = facts.addInitialFact(factAp.access, interner, stats) ?: return emptyList()
 
         if (TifaDiagnostics.enabled) {
             TifaDiagnostics.addDeltas.incrementAndGet()
-            baseStats(factAp.base)?.recordAdded(facts.allAddedFacts())
+            stats?.recordAdded(facts.allAddedFacts())
         }
 
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
@@ -502,11 +503,17 @@ class TreeInitialFactAbstraction(
     ) {
         fun allAddedFacts(): AccessTreeNode = added ?: manager.create()
 
-        fun addInitialFact(ap: AccessTreeNode, interner: AccessTreeSoftInterner): AccessTreeNode? {
+        fun addInitialFact(
+            ap: AccessTreeNode,
+            interner: AccessTreeSoftInterner,
+            stats: BaseStats? = null,
+        ): AccessTreeNode? {
             val currentNode = added ?: manager.create()
             val (updatedAddedNode, addedInitial) = currentNode.mergeAddDelta(ap, foldToAny = false)
 
             if (addedInitial == null) return null
+
+            stats?.recordArrival(currentNode, ap, updatedAddedNode)
 
             this.added = internIfRequired(interner, updatedAddedNode)
 

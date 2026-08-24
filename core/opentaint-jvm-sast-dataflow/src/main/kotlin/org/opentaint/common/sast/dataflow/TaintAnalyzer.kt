@@ -143,6 +143,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             val report = TifaDiagnostics.report(topN = 20)
             logger.info { report }
             report.lineSequence().forEach { if (it.isNotBlank()) println("TIFA $it") }
+
+            val dump = TifaDiagnostics.dumpLargest()
+            logger.info { dump }
+            dump.lineSequence().forEach { if (it.isNotBlank()) println("TIFATREE $it") }
         }
 
         if (SummaryPremiseDiagnostics.enabled) {
