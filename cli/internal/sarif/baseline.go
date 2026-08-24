@@ -12,6 +12,13 @@ type Comparison struct {
 	states  map[*Result]BaselineState
 	changes map[*Result]Change
 
+	// key is the identity fingerprint the comparison ran under, and
+	// changesByIdentity records what moved per identity value. Together they
+	// let a filtered view — which holds copies of the classified results —
+	// recover the change attribution by fingerprint rather than by pointer.
+	key               string
+	changesByIdentity map[string]Change
+
 	// Counts holds the number of current results in each state, plus the number
 	// of baseline results with no match in the current report under Absent.
 	Counts map[BaselineState]int
@@ -33,12 +40,20 @@ type Comparison struct {
 }
 
 // StateOf returns the state computed for a result, or "" when the result could
-// not be matched (no identity fingerprint).
+// not be matched (no identity fingerprint). Results that are copies of the
+// classified ones — a filtered listing copies results — miss the pointer map,
+// so the state the comparison wrote onto the result itself is the fallback.
 func (c *Comparison) StateOf(r *Result) BaselineState {
 	if c == nil {
 		return ""
 	}
-	return c.states[r]
+	if state, ok := c.states[r]; ok {
+		return state
+	}
+	if r != nil && r.BaselineState != nil {
+		return *r.BaselineState
+	}
+	return ""
 }
 
 // Change says what moved underneath the identity of a finding that matched the
@@ -80,6 +95,21 @@ func (c *Comparison) ChangeOf(r *Result) Change {
 	return c.changes[r]
 }
 
+// changeOfIdentity looks up what moved under a result by its identity value,
+// for results that are copies of the ones the comparison classified and so
+// miss the pointer-keyed map. Two updated results sharing one identity share
+// one recorded change, which is the coarse key's usual granularity.
+func (c *Comparison) changeOfIdentity(r *Result) Change {
+	if c == nil || c.changesByIdentity == nil {
+		return ChangeNone
+	}
+	id, ok := Identity(r, c.key)
+	if !ok {
+		return ChangeNone
+	}
+	return c.changesByIdentity[id]
+}
+
 // CompareToBaseline classifies every result in current against baseline, using
 // key as the identity fingerprint. Results that match are additionally compared
 // on the full-trace fingerprint to tell "unchanged" from "updated".
@@ -87,6 +117,26 @@ func (c *Comparison) ChangeOf(r *Result) Change {
 // A baseline that holds results but none carrying key is rejected: silently
 // classifying everything as new would hide exactly the findings a baseline
 // exists to remember.
+// CheckBaselineIdentity reports whether the baseline can be compared under the
+// given identity key. A baseline that holds results but none carrying the key
+// was produced with a different fingerprint key or without fingerprints, and
+// comparing against it would silently classify every finding as new. The check
+// is cheap, so callers that pay for a scan before comparing can run it first.
+func CheckBaselineIdentity(baseline *Report, key string) error {
+	results := baseline.Results()
+	if len(results) == 0 {
+		return nil
+	}
+	for _, r := range results {
+		if _, ok := Identity(r, key); ok {
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		"no result in the baseline carries the %q fingerprint: "+
+			"it was produced with a different fingerprint key or without fingerprints", key)
+}
+
 func CompareToBaseline(current, baseline *Report, key string) (*Comparison, error) {
 	baselineResults := baseline.Results()
 
@@ -99,17 +149,17 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 		byIdentity[id] = append(byIdentity[id], r)
 	}
 	if len(baselineResults) > 0 && len(byIdentity) == 0 {
-		return nil, fmt.Errorf(
-			"no result in the baseline carries the %q fingerprint: "+
-				"it was produced with a different fingerprint key or without fingerprints", key)
+		return nil, CheckBaselineIdentity(baseline, key)
 	}
 
 	cmp := &Comparison{
-		states:       make(map[*Result]BaselineState),
-		changes:      make(map[*Result]Change),
-		Counts:       make(map[BaselineState]int),
-		ChangeCounts: make(map[Change]int),
-		BaselineGUID: baseline.RunGUID(),
+		states:            make(map[*Result]BaselineState),
+		changes:           make(map[*Result]Change),
+		key:               key,
+		changesByIdentity: make(map[string]Change),
+		Counts:            make(map[BaselineState]int),
+		ChangeCounts:      make(map[Change]int),
+		BaselineGUID:      baseline.RunGUID(),
 	}
 
 	refinements := finerKeys(key)
@@ -135,6 +185,7 @@ func CompareToBaseline(current, baseline *Report, key string) (*Comparison, erro
 			state = Unchanged
 		} else {
 			cmp.changes[r] = change
+			cmp.changesByIdentity[id] = change
 			cmp.ChangeCounts[change]++
 		}
 		cmp.states[r] = state

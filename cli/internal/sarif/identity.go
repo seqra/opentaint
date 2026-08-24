@@ -104,33 +104,40 @@ func (report *Report) Results() []*Result {
 	return out
 }
 
-// ResolvePrefix finds the single result whose identity fingerprint starts with
-// prefix, git-style. An empty, unmatched, or ambiguous prefix is an error: a
-// suppression must name exactly one finding, never "whichever matched first".
-func ResolvePrefix(report *Report, key, prefix string) (*Result, error) {
+// ResolvePrefix finds the results whose identity fingerprint starts with
+// prefix, git-style. All matches must share one fingerprint value: results
+// with the same identity are the same finding to a decision, and under the
+// coarse default key one sink legitimately appears on several results. A
+// prefix matching two distinct values is ambiguous, and an empty or unmatched
+// prefix is an error — a decision names a finding, never "whichever matched
+// first".
+func ResolvePrefix(report *Report, key, prefix string) ([]*Result, error) {
 	if prefix == "" {
 		return nil, fmt.Errorf("fingerprint prefix must not be empty")
 	}
 
 	var matches []*Result
-	var values []string
+	distinct := map[string]bool{}
 	for _, r := range report.Results() {
 		fp, ok := Identity(r, key)
 		if !ok || !strings.HasPrefix(fp, prefix) {
 			continue
 		}
 		matches = append(matches, r)
-		values = append(values, fp)
+		distinct[fp] = true
 	}
 
-	switch len(matches) {
-	case 0:
+	if len(matches) == 0 {
 		return nil, fmt.Errorf("no finding matches fingerprint %q (key %s)", prefix, key)
-	case 1:
-		return matches[0], nil
-	default:
+	}
+	if len(distinct) > 1 {
+		values := make([]string, 0, len(distinct))
+		for v := range distinct {
+			values = append(values, v)
+		}
 		sort.Strings(values)
 		return nil, fmt.Errorf("fingerprint %q is ambiguous, it matches %d findings: %s",
 			prefix, len(matches), strings.Join(values, ", "))
 	}
+	return matches, nil
 }

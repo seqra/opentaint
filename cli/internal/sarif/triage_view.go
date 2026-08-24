@@ -56,9 +56,13 @@ func (c *Comparison) restrict(filtered *Report, f Filters) *Comparison {
 		return nil
 	}
 	out := &Comparison{
-		states:       c.states,
-		Counts:       make(map[BaselineState]int),
-		BaselineGUID: c.BaselineGUID,
+		states:            c.states,
+		changes:           c.changes,
+		key:               c.key,
+		changesByIdentity: c.changesByIdentity,
+		Counts:            make(map[BaselineState]int),
+		ChangeCounts:      make(map[Change]int),
+		BaselineGUID:      c.BaselineGUID,
 	}
 	for _, r := range filtered.Results() {
 		if r.BaselineState == nil {
@@ -66,6 +70,13 @@ func (c *Comparison) restrict(filtered *Report, f Filters) *Comparison {
 			continue
 		}
 		out.Counts[*r.BaselineState]++
+		// The filtered results are copies, so the change attribution is
+		// recovered by identity value rather than by pointer.
+		if *r.BaselineState == Updated {
+			if change := c.changeOfIdentity(r); change != ChangeNone {
+				out.ChangeCounts[change]++
+			}
+		}
 	}
 	for _, r := range c.Absent {
 		if f.matchesAs(r, Absent) {

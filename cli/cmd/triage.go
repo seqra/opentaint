@@ -107,9 +107,16 @@ func runTriage(cfg TriageConfig, reportPath string) {
 		out.Fatalf("Failed to load SARIF report: %s", err)
 	}
 
+	// The aliases (sink, source-sink, trace) are expanded once here, so the
+	// listing shows fingerprints under the same full key the decisions resolve.
+	identityKey, err := sarif.ResolveIdentityKey(cfg.FingerprintKey)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+
 	opts := triage.Options{
 		WriteBaselineState: cfg.WriteBaselineState,
-		FingerprintKey:     cfg.FingerprintKey,
+		FingerprintKey:     identityKey,
 		Accept:             cfg.Accept,
 		Defer:              cfg.Defer,
 		Unsuppress:         cfg.Unsuppress,
@@ -121,15 +128,23 @@ func runTriage(cfg TriageConfig, reportPath string) {
 		out.Fatalf("--write-baseline-state needs a --baseline to compare against")
 	}
 
+	outputPath := absReportPath
+	if cfg.Output != "" {
+		outputPath = log.AbsPathOrExit(cfg.Output, "output")
+	}
+	// Overwriting the baseline would destroy the history the comparison and
+	// the inherited suppressions are anchored to. The input side of the same
+	// mistake is rejected in loadBaselineOrExit.
+	if cfg.Baseline != "" && outputPath == opts.BaselinePath {
+		out.Fatalf("--output would overwrite the baseline: %s\n"+
+			"Write the triaged report to another path", outputPath)
+	}
+
 	outcome, err := triage.Apply(report, opts)
 	if err != nil {
 		out.Fatalf("%s", err)
 	}
 
-	outputPath := absReportPath
-	if cfg.Output != "" {
-		outputPath = log.AbsPathOrExit(cfg.Output, "output")
-	}
 	// Writing an unchanged report to its own path would be pure churn, but an
 	// explicit -o means "put a copy here" and is always honored.
 	if outcome.Changed || outputPath != absReportPath {
@@ -141,7 +156,7 @@ func runTriage(cfg TriageConfig, reportPath string) {
 	printSarifSummary(report, outputPath, sarif.Filters{}, sarif.ListingOptions{
 		MaxNestingLevel: -1,
 		ShowSuppressed:  cfg.ShowSuppressed,
-		FingerprintKey:  cfg.FingerprintKey,
+		FingerprintKey:  identityKey,
 	}, outcome.View, cfg.ShowFindings)
 
 	exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report, outcome.View)

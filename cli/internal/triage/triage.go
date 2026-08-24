@@ -119,18 +119,22 @@ func applyDecisions(report *sarif.Report, key string, opts Options) (int, error)
 
 	var decisions []decision
 	for _, prefix := range opts.Accept {
-		r, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, key, prefix)
 		if err != nil {
 			return 0, err
 		}
-		decisions = append(decisions, decision{result: r, accept: true})
+		for _, r := range matched {
+			decisions = append(decisions, decision{result: r, accept: true})
+		}
 	}
 	for _, prefix := range opts.Defer {
-		r, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, key, prefix)
 		if err != nil {
 			return 0, err
 		}
-		decisions = append(decisions, decision{result: r})
+		for _, r := range matched {
+			decisions = append(decisions, decision{result: r})
+		}
 	}
 
 	for _, d := range decisions {
@@ -152,11 +156,11 @@ func applyDecisions(report *sarif.Report, key string, opts Options) (int, error)
 func applyUnsuppressions(report *sarif.Report, key string, prefixes []string) (int, error) {
 	var targets []*sarif.Result
 	for _, prefix := range prefixes {
-		r, err := sarif.ResolvePrefix(report, key, prefix)
+		matched, err := sarif.ResolvePrefix(report, key, prefix)
 		if err != nil {
 			return 0, err
 		}
-		targets = append(targets, r)
+		targets = append(targets, matched...)
 	}
 
 	removed := 0

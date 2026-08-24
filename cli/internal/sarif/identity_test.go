@@ -79,12 +79,30 @@ func TestResolvePrefixFindsUniqueMatch(t *testing.T) {
 		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9k2nAAA"}),
 		makeResult("b", Error, "b.java", 2, map[string]string{SourceSinkFingerprintKey: "8bc1d2xxBBB"}),
 	)
-	r, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9k")
+	matched, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9k")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if *r.RuleID != "a" {
-		t.Errorf("resolved to rule %q, want a", *r.RuleID)
+	if len(matched) != 1 || *matched[0].RuleID != "a" {
+		t.Errorf("resolved %d results, want the one with rule a", len(matched))
+	}
+}
+
+// Two results sharing one identity value are the same finding to a decision,
+// so an exact or prefix match on that value resolves to both rather than
+// erroring as ambiguous — under the coarse sink key such duplicates are
+// legitimate, and no longer prefix could ever separate them.
+func TestResolvePrefixReturnsAllDuplicatesOfOneIdentity(t *testing.T) {
+	report := makeReport(
+		makeResult("a", Error, "a.java", 1, map[string]string{SourceSinkFingerprintKey: "q3Vf9kSAME"}),
+		makeResult("a", Error, "a.java", 9, map[string]string{SourceSinkFingerprintKey: "q3Vf9kSAME"}),
+	)
+	matched, err := ResolvePrefix(report, SourceSinkFingerprintKey, "q3Vf9kSAME")
+	if err != nil {
+		t.Fatalf("duplicates of one identity must resolve, got: %v", err)
+	}
+	if len(matched) != 2 {
+		t.Errorf("got %d results, want both duplicates", len(matched))
 	}
 }
 

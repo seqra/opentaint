@@ -101,17 +101,32 @@ This command only reads the report. It does not write files. To record decisions
 // --partial-fingerprint-key into the single key summary uses for everything it
 // does with fingerprints: baseline matching, --partial-fingerprint, and the
 // value printed as "Fingerprint:". One key means the fingerprint the listing
-// shows is always the one `triage --accept` resolves.
+// shows is always the one `triage --accept` resolves. The short aliases
+// (sink, source-sink, trace) are expanded here, so the listing and filter
+// paths — which look the key up verbatim in partialFingerprints — see the
+// same full key the triage engine resolves.
 func resolveSummaryFingerprintKey() {
-	if summaryPartialFingerprintKey == "" {
-		return
+	full := func(key string) string {
+		if key == "" {
+			return ""
+		}
+		resolved, err := sarif.ResolveIdentityKey(key)
+		if err != nil {
+			out.Fatalf("%s", err)
+		}
+		return resolved
 	}
-	if summaryFingerprintKey != "" && summaryFingerprintKey != summaryPartialFingerprintKey {
-		out.Fatalf("--fingerprint-key %q and --partial-fingerprint-key %q disagree: pass --fingerprint-key alone",
-			summaryFingerprintKey, summaryPartialFingerprintKey)
+
+	newKey, oldKey := full(summaryFingerprintKey), full(summaryPartialFingerprintKey)
+	if oldKey != "" {
+		if newKey != "" && newKey != oldKey {
+			out.Fatalf("--fingerprint-key %q and --partial-fingerprint-key %q disagree: pass --fingerprint-key alone",
+				summaryFingerprintKey, summaryPartialFingerprintKey)
+		}
+		// cobra already prints the deprecation notice for the flag itself.
+		newKey = oldKey
 	}
-	// cobra already prints the deprecation notice for the flag itself.
-	summaryFingerprintKey = summaryPartialFingerprintKey
+	summaryFingerprintKey = newKey
 }
 
 // requireBaselineStates refuses a --baseline-state filter that cannot mean
@@ -122,6 +137,15 @@ func resolveSummaryFingerprintKey() {
 func requireBaselineStates(report *sarif.Report, states []string, baseline string) error {
 	if len(states) == 0 || baseline != "" {
 		return nil
+	}
+	// The absent state can never be satisfied from the report alone: fixed
+	// findings live only in the baseline, and --write-baseline-state never
+	// writes them into the current report.
+	for _, state := range states {
+		if state == string(sarif.Absent) {
+			return fmt.Errorf("--baseline-state absent needs --baseline <report>: " +
+				"fixed findings live in the baseline and are never written into the current report")
+		}
 	}
 	for _, r := range report.Results() {
 		if r.BaselineState != nil {
@@ -231,7 +255,9 @@ func currentSummaryBuilder(sarifPath string) *utils.OpentaintCommandBuilder {
 	builder.WithSeverity(summarySeverities)
 	builder.WithRuleID(summaryRuleIDs)
 	builder.WithPartialFingerprint(summaryFingerprints)
-	builder.WithPartialFingerprintKey(summaryPartialFingerprintKey)
+	// The deprecated --partial-fingerprint-key is not re-suggested: its value
+	// was folded into summaryFingerprintKey, which the line below emits under
+	// the flag's current name.
 	builder.WithMaxNestingLevel(summaryMaxNestingLevel)
 	builder.WithGroupBy(summaryGroupBy)
 	builder.WithCodeFlow(summaryCodeFlow)

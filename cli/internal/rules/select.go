@@ -48,11 +48,18 @@ func ListRuleIDs(roots []string) []string {
 			if yaml.Unmarshal(data, &rf) != nil {
 				return nil
 			}
+			prefix := filepath.ToSlash(relPath)
+			if prefix == "." {
+				// A root that is a single rule file has no relative path. The
+				// analyzer names such a ruleset by Path.relativeTo(root), which
+				// is empty for the root itself, so the id it matches is ":<id>".
+				prefix = ""
+			}
 			for _, r := range rf.Rules {
 				if r.ID == "" {
 					continue
 				}
-				ids = append(ids, filepath.ToSlash(relPath)+":"+r.ID)
+				ids = append(ids, prefix+":"+r.ID)
 			}
 			return nil
 		})

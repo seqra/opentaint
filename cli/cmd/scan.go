@@ -261,6 +261,13 @@ func warnUnmatchedRulePatterns(selection rules.Selection, all []string) {
 // configuredRuleSelection merges the rules.only / rules.exclude lists from the
 // configuration file with the --exclude-rule-id flag, which overrides the
 // configured exclude list when set.
+// ruleSelectionActive reports whether any rule allow/deny input is in play —
+// the flags or the config lists. Only then does rule resolution read the
+// ruleset from disk.
+func ruleSelectionActive(cfg ScanConfig) bool {
+	return len(cfg.RuleID) > 0 || len(cfg.ExcludeRuleID) > 0 || configuredRuleSelection(cfg).Active()
+}
+
 func configuredRuleSelection(cfg ScanConfig) rules.Selection {
 	selection := rules.Selection{
 		Only:    globals.Config.Rules.Only,
@@ -357,6 +364,13 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	var absBaselinePath string
 	if cfg.Baseline != "" {
 		baseline, absBaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
+		identityKey, keyErr := sarif.ResolveIdentityKey(cfg.FingerprintKey)
+		if keyErr != nil {
+			out.Fatalf("%s", keyErr)
+		}
+		if err := sarif.CheckBaselineIdentity(baseline, identityKey); err != nil {
+			out.Fatalf("%s", err)
+		}
 	}
 
 	sarifReportName := filepath.Base(absSarifReportPath)
@@ -404,6 +418,23 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Fatalf("Input validation failed: %s", err)
 	}
 
+	hasBuiltin := false
+	for _, ruleSetPath := range absRuleSetPaths {
+		if ruleSetPath.Builtin {
+			hasBuiltin = true
+			break
+		}
+	}
+
+	// Rule selections resolve against the rule files on disk, so the built-in
+	// rules must be fetched before an active selection is resolved — a fresh
+	// install has not downloaded them yet.
+	if hasBuiltin && ruleSelectionActive(cfg) {
+		if _, err := utils.EnsureRulesPath(out); err != nil {
+			failf("Failed to prepare built-in rules: %s", err)
+		}
+	}
+
 	// Resolve the active rules before the dry-run bail-out, so that a bad
 	// rules.only/rules.exclude list is reported by --dry-run and never after a
 	// full compile.
@@ -414,13 +445,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		return
 	}
 
-	hasBuiltin := false
-	for _, ruleSetPath := range absRuleSetPaths {
-		if ruleSetPath.Builtin {
-			hasBuiltin = true
-			break
-		}
-	}
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
 			failf("Failed to prepare built-in rules: %s", err)
