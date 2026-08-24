@@ -19,21 +19,26 @@ var initRuleSourcesOnly bool
 var testRuleInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create rule test projects with source and sink harnesses",
-	Long: `Create one or two Gradle test projects for detection-rule tests. The sinks project tests sink rules against a generic taint source. The sources project tests source rules against a generic taint sink.
+	Long: `Create one or two Gradle test projects for detection-rule tests. The sinks project tests sink rules with a generic taint source. The sources project tests source rules with a generic taint sink.
 
-The output-dir argument is the parent directory the projects are created under. By default both are scaffolded, as output-dir/sinks and output-dir/sources. Pass --sinks-only or --sources-only to create just one. Use --dependency to add compile-only Maven dependencies for the samples.
+The output-dir argument is the parent directory for the new projects. The default creates the two projects, in output-dir/sinks and output-dir/sources. To create one project only, use --sinks-only or --sources-only. To add compile-only Maven dependencies for the samples, use --dependency.
 
-Each project ships a rule-test.yaml where you declare the positive and negative samples, plus a Taint.java source and sink harness.
+Each project contains a rule-test.yaml file and a Taint.java harness. Declare your positive and negative samples in rule-test.yaml.
 
-After editing rule-test.yaml, compile the project with opentaint compile and run the samples with opentaint test rule run.`,
-	Example: `  # Scaffold both the sinks and sources test projects
+Then compile the project with "opentaint compile" and run the samples with "opentaint test rule run".`,
+	Example: `  # Create the sinks and the sources test projects
   opentaint test rule init ./rule-tests
 
-  # Scaffold only the sinks project
+  # Create only the sinks project
   opentaint test rule init ./rule-tests --sinks-only
 
   # Add a compile-only dependency for the samples
-  opentaint test rule init ./rule-tests --dependency <group:artifact:version>`,
+  opentaint test rule init ./rule-tests --dependency <group:artifact:version>
+
+  # Recipe: from an empty directory to a first test run
+  opentaint test rule init ./rule-tests
+  opentaint compile ./rule-tests/sinks -o ./rule-tests/sinks/model
+  opentaint test rule run ./rule-tests/sinks/model --ruleset ./my-rules`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if initRuleSinksOnly && initRuleSourcesOnly {
@@ -68,18 +73,23 @@ After editing rule-test.yaml, compile the project with opentaint compile and run
 var testApproximationInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
 	Short: "Create a dataflow-approximation test project",
-	Long: `Create a Gradle test project for dataflow-approximation tests. The project pins a fixed source-to-sink rule that the samples are checked against.
+	Long: `Create a Gradle test project for dataflow-approximation tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
 
-The output-dir argument is the directory the project is created in. Use --dependency to add compile-only Maven dependencies for the samples. The approximation under test is not baked in. Supply it at run time with --java-models.
+The output-dir argument is the directory for the new project. To add compile-only Maven dependencies for the samples, use --dependency. The approximation under test is not part of the project. Give it at run time with --java-models.
 
-The project ships a rule-test.yaml where you declare the positive and negative samples, plus a Taint.java source and sink and the fixed approximation-rule.yaml.
+The project contains a rule-test.yaml file, a Taint.java source and sink, and the fixed approximation-rule.yaml. Declare your positive and negative samples in rule-test.yaml.
 
-After editing rule-test.yaml, compile the project with opentaint compile and run the samples with opentaint test approximation run.`,
-	Example: `  # Scaffold an approximation test project
+Then compile the project with "opentaint compile" and run the samples with "opentaint test approximation run".`,
+	Example: `  # Create an approximation test project
   opentaint test approximation init ./approx-test
 
   # Add a compile-only dependency for the samples
-  opentaint test approximation init ./approx-test --dependency <group:artifact:version>`,
+  opentaint test approximation init ./approx-test --dependency <group:artifact:version>
+
+  # Recipe: from an empty directory to a first test run
+  opentaint test approximation init ./approx-test
+  opentaint compile ./approx-test -o ./approx-test/model
+  opentaint test approximation run ./approx-test/model --java-models ./my-approximation`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
