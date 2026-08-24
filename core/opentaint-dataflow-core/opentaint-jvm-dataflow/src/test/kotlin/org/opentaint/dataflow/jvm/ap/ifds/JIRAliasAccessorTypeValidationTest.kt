@@ -45,14 +45,6 @@ class JIRAliasAccessorTypeValidationTest {
     }
 
     @Test
-    fun `accepts equivalent nested class names between accessors`() {
-        val previous = field("test.Outer", "value", "test.Outer.Level")
-        val next = field("test.Outer\$Level", "nested", "java.lang.Object")
-
-        assertTrue(isValidAliasAccessorTransition(previous, next) { _, _ -> false })
-    }
-
-    @Test
     fun `validates a field following a static base`() {
         val previous = AliasAccessor.Static("org.example.Settings")
         val next = field("org.example.Settings", "DEFAULT", "org.example.Settings")
@@ -140,13 +132,6 @@ class JIRAliasAccessorTypeValidationTest {
     }
 
     @Test
-    fun `accepts equivalent nested class names at alias base`() {
-        val first = field("test.Outer\$Node", "value", "java.lang.Object")
-
-        assertTrue(isValidAliasBaseAccessorTransition("test.Outer.Node", first) { _, _ -> false })
-    }
-
-    @Test
     fun `rejects an alias whose result type cannot match the query type`() {
         assertFalse(isAliasResultTypeCompatible("org.example.HasName", "java.lang.String") { _, _ -> false })
     }
@@ -154,11 +139,6 @@ class JIRAliasAccessorTypeValidationTest {
     @Test
     fun `accepts an alias whose result type may match the query type`() {
         assertTrue(isAliasResultTypeCompatible("org.example.HasName", "org.example.Customer") { _, _ -> true })
-    }
-
-    @Test
-    fun `accepts equivalent nested class type names`() {
-        assertTrue(isAliasResultTypeCompatible("sample.Outer.Node", "sample.Outer\$Node") { _, _ -> false })
     }
 
     @Test

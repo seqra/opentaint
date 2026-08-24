@@ -238,8 +238,7 @@ internal fun isValidAliasAccessorTransition(
         is AliasAccessor.Array -> error("handled above")
         null -> return true
     }
-    return equivalentJvmTypeNames(previousType, field.className) ||
-        typesMayOverlap(previousType, field.className)
+    return typesMayOverlap(previousType, field.className)
 }
 
 private fun String.isArrayTypeName(): Boolean = endsWith("[]") || startsWith("[")
@@ -256,16 +255,12 @@ internal fun isValidAliasBaseAccessorTransition(
     typesMayOverlap: (String, String) -> Boolean,
 ): Boolean {
     val field = first as? AliasAccessor.Field ?: return true
-    return baseType == null || equivalentJvmTypeNames(baseType, field.className) ||
-        typesMayOverlap(baseType, field.className)
+    return baseType == null || typesMayOverlap(baseType, field.className)
 }
 
 internal fun isAliasResultTypeCompatible(
     queryType: String,
     aliasType: String,
     typesMayOverlap: (String, String) -> Boolean,
-): Boolean = equivalentJvmTypeNames(queryType, aliasType) ||
+): Boolean = queryType == aliasType ||
     typesMayOverlap(queryType, aliasType)
-
-private fun equivalentJvmTypeNames(first: String, second: String): Boolean =
-    first == second || first.replace('$', '.') == second.replace('$', '.')
