@@ -113,3 +113,31 @@ func TestRetrySuggestion(t *testing.T) {
 		t.Fatal("exception exit code must not produce a retry suggestion")
 	}
 }
+
+func TestShellQuoteLeavesInertArgumentsAlone(t *testing.T) {
+	for _, arg := range []string{"opentaint", "report.sarif", "--max-memory=8G", "path/to/file.yaml", "a-b_c.d,e:f@g%h+i"} {
+		if got := shellQuote(arg); got != arg {
+			t.Errorf("shellQuote(%q) = %q, want unchanged", arg, got)
+		}
+	}
+}
+
+func TestShellQuoteQuotesShellMetacharacters(t *testing.T) {
+	cases := map[string]string{
+		"demo-rule-*":      "'demo-rule-*'",
+		"java/security/**": "'java/security/**'",
+		"$HOME":            "'$HOME'",
+		"a;b":              "'a;b'",
+		"a|b":              "'a|b'",
+		"a b":              "'a b'",
+		"it's":             `'it'\''s'`,
+		"":                 "''",
+		"a>b":              "'a>b'",
+		"`cmd`":            "'`cmd`'",
+	}
+	for in, want := range cases {
+		if got := shellQuote(in); got != want {
+			t.Errorf("shellQuote(%q) = %q, want %q", in, got, want)
+		}
+	}
+}

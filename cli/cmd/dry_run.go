@@ -34,10 +34,23 @@ func rerunWithoutDryRun() string {
 }
 
 // shellQuote single-quotes an argument that would break when copy-pasted into
-// a shell (spaces, quotes). Plain arguments pass through unchanged.
+// a shell. Only arguments made of known-inert characters pass through
+// unchanged, so globs, variables, and separators survive the round trip.
 func shellQuote(arg string) string {
-	if arg != "" && !strings.ContainsAny(arg, " \t'\"") {
+	if arg != "" && !strings.ContainsFunc(arg, shellUnsafe) {
 		return arg
 	}
 	return "'" + strings.ReplaceAll(arg, "'", `'\''`) + "'"
+}
+
+// shellUnsafe reports whether a character can change the meaning of an
+// unquoted shell word. The safe set mirrors Python's shlex.quote.
+func shellUnsafe(r rune) bool {
+	switch {
+	case r >= 'a' && r <= 'z', r >= 'A' && r <= 'Z', r >= '0' && r <= '9':
+		return false
+	case strings.ContainsRune("_@%+=:,./-", r):
+		return false
+	}
+	return true
 }
