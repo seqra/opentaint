@@ -8,7 +8,8 @@ a charge"; §1 shows why that is the gap. M§5.3 triggers absorption on the *pot
 replaces that with a per-state trigger that can tell a round trip from real structure.
 
 **How to read it.** §4 is the semantic contract — the section to argue with. §5–§8 are the mechanism,
-§9 the correctness argument, §11 the two knobs, §14 the validation. Appendices A–E are measurements
+§9 the correctness argument, §11 the three knobs, §14 the validation. §5.8 is separable: it answers
+the fork in the reversed automaton and ships only if step 4's counter says the fork is real. Appendices A–E are measurements
 taken against the current tree; Appendix F records what an adversarial review changed and is the only
 place this document discusses its own history.
 
@@ -80,7 +81,7 @@ what makes the backward query cheap and complete.
 
 **(2) The state records how it was obtained.** `AnyUnrollState` gains a `kind`: `ORIGIN` for a start
 state, `PAID` while the pot has budget, `CREDIT` once it does not. Written once at the mint; what a
-union does with it is the one open question and is therefore a knob (§5.4, §11.2).
+union does with it is the one open question and is therefore a knob (§5.4, §11).
 
 **(3) The read never refuses.** Past `total ≥ L`, `readChild` mints a `CREDIT` successor rather than
 returning `null`, and charges nothing for it. A refused read leaves the fact holding the *parent*
@@ -111,6 +112,13 @@ lap 1   ret.[any]ᵖ.*                                     ← same state, same 
 ```
 
 The ratchet becomes a loop.
+
+**(5) The position is a set when it has to be.** The forward automaton is a DFA; the reversed one is
+not, and `mergeStates` forks it on the operation that dominates the manager's traffic. Asking *is `a`
+an incoming edge* is then single-path search on an NFA, which dead-ends on paths that exist. §5.8
+replaces the pick with a **lazy, interned subset construction**: a fact's `[any]` carries a state, or
+— after a fork — a capped set of them. `clusterMax = 1` recovers the pick exactly, so which of the
+two ships is a measurement (§5.8i), not an argument.
 
 ---
 
@@ -315,25 +323,28 @@ fun writesAbove(state: AnyUnrollState?): Boolean {
 
 Deliberately *not* `budgetExhausted` — §2.
 
-### 5.3 The backward query
+### 5.3 The backward query, and why it is not a lookup
 
-The prepend must answer *is `a` an incoming edge of `s`?* at a site with no access to the read that
-created `s`. Compression (§5.5) maintains a reverse index for its own reasons, so it is a lookup:
+The prepend must answer *is `a` an incoming edge of the position the fact's `[any]` carries?* at a
+site with no access to the read that created it. Compression (§5.5) maintains a reverse index, so the
+raw question is a lookup — but the answer is a **set**, and that is the whole of §5.8:
 
 ```kotlin
-/** The predecessor to move to, or null when [accessor] is not an incoming edge of [state] at all. */
-fun absorbInto(state: AnyUnrollState, accessor: AccessorIdx): AnyUnrollState? {
-    val cur = state.find()
-    val preds = cur.parents?.get(accessor) ?: return null
-    // Several predecessors are all valid backward steps -- absorption is sound at ANY state (§9.1) --
-    // so the choice only has to be REPRODUCIBLE. Smallest id is the oldest state, hence nearest the
-    // origin, hence the one that shortens the fact most.
-    return preds.minByOrNull { it.find().id }?.find()
-}
+/** The position to move to, or null when [accessor] is not an incoming edge at all. */
+fun absorbInto(pos: AnyUnrollPos, accessor: AccessorIdx): AnyUnrollPos?
 ```
 
-**Null rather than the state itself, and that is load-bearing.** A caller testing
-`result === state.find()` to mean "not from this `[any]`" would conflate two opposite situations: on
+**The forward automaton is a DFA and the reversed one is not.** `readChild` gives at most one
+successor per (state, accessor) — `mergeStates` enforces it by queueing conflicting targets for
+merging rather than keeping both (`AnyUnroll.kt:394-397`), and the comment there says why: *"an NFA
+here would make every lookup explore a SET of states, re-derivation would stop being free, and the
+whole design collapses."* Nothing gives a state at most one **predecessor** per accessor, and the same
+function is what breaks it: `y.parent = x` re-points every predecessor of `y` onto `x`, so if both
+had an `a`-predecessor, `x.parents[a]` now holds two. §5.8 takes the fork seriously; the paragraph
+below survives it unchanged.
+
+**Null rather than the position itself, and that is load-bearing.** A caller testing
+`result === pos.find()` to mean "not from this `[any]`" would conflate two opposite situations: on
 a **self-loop** `p --a--> p`, `parents[a]` contains `p`, so the correct answer is `p` — absorb,
 staying put — while the identity test reads it as "no incoming edge" and *writes* the accessor. A
 self-loop is precisely the automaton saying `a` is already folded into the `[any]`
@@ -341,8 +352,9 @@ self-loop is precisely the automaton saying `a` is already folded into the `[any
 `union(installed, found)` (`:2783`) joins the installed state with every state collected from the
 subtree *below* it, an ancestor/descendant union by construction.
 
-Nothing depends on the query being *complete* — only on it being *correct*, which §9.2 proves and
-Appendix A executes.
+Nothing depends on the query being *sound* in the sense of naming the one true predecessor —
+absorption is correct at any state (§9.1). What it must be is **reproducible**, and — for the
+telescope to close — **complete**: §5.8 is what buys the second.
 
 ### 5.4 The union: two decisions, and only one is a preference
 
@@ -359,6 +371,10 @@ program would cost an extra lap.**
 
 The obligation is on the callers: **the accumulated side is always the receiver.** §8.4 audits every
 site, because a reversed pair is not a crash and not a wrong answer — it is a silent extra lap.
+
+Under §5.8 this obligation is **subsumed rather than met**: set union is idempotent, so an arrival
+that adds nothing returns the receiver object from either side. The audit stays worth having for the
+state DSU underneath, which the pot still uses.
 
 #### (b) What kind the survivor carries — a strategy, because the answer is not known
 
@@ -526,7 +542,164 @@ design targets do not exhibit a state-population problem.** The measured pressur
 mass, not automaton mass, so the sink was a static backstop for a failure mode nobody has observed,
 bought with a second ceiling and a fourth kind. §9.3(a) is the argument for why it should settle;
 `maxStatesPerDag` and `statesLive` (§12, §14.4) keep the assumption falsifiable for two counters'
-worth of cost; R3 is the repair if a workload ever contradicts it.
+worth of cost; R3 is the repair if a workload ever contradicts it. §5.8 adds a second population on
+top of this one, with its own cap and its own counters.
+
+### 5.8 The fork: a lazy subset construction on the reversed automaton
+
+#### (a) The fork is the normal case, not an edge case
+
+`mergeStates` creates it twice over. `y.parent = x` re-points every predecessor of `y` onto `x`, so
+two automata that each had an `a`-predecessor now leave `x.parents[a]` holding both; and the conflict
+arm queues `(existing, target)` for merging (`AnyUnroll.kt:394-397`), cascading the same forking down
+both child maps. M§2.6's measurement is therefore a prediction about the reverse index:
+**11,482 of 11,625 thingsboard unions are cross-dag fusions**, each cascading pairwise from two start
+states. A fork on a shared accessor is what that operation *does*.
+
+And the two predecessors generally belong to **different origins**, so a greedy pick can move a
+fact's `[any]` into the automaton of an unrelated program location — sound (§9.1), but the telescope
+then follows edges that have nothing to do with the round trip it is trying to close.
+
+#### (b) Greedy is single-path search on an NFA
+
+§5.3's `minByOrNull { it.find().id }` answers *"pick a predecessor"*. The telescope asks a different
+question — *"is there a **path** back through `aₖ … a₁`?"* — and greedy answers it wrongly:
+
+```
+q₀ --a--> q₁ --b--> t        the path the fact actually took
+p₀ ---------b-----> t        another b-predecessor of t, smaller id, no incoming a
+```
+
+Telescoping `ret.a.b.[any]ᵗ` takes `pred_b` then `pred_a`. Greedy goes to `p₀`, finds no `a` edge,
+stalls, and writes `ret.a.[any]`. **A path existed and was not found**, so the fact keeps a link it
+should have shed — on every lap. That is the growth mode strategy 1 pays for, and no tie-break fixes
+it: the defect is choosing before the rest of the word is known.
+
+The textbook answer is the subset construction, and two properties make it affordable here: it is
+built **lazily** (only subsets actually reached exist) and **interned** (one object per subset, so
+`===` identity — which §5.6 needs — survives).
+
+#### (c) Positions
+
+```kotlin
+/** What a fact's `[any]` carries. One id space, so `AccessNode.hash` (§5.6) is untouched. */
+sealed interface AnyUnrollPos {
+    val id: Int
+    fun find(): AnyUnrollPos
+}
+
+class AnyUnrollState(override val id: Int, …) : AnyUnrollPos       // today's, unchanged
+
+/**
+ * Two or more states the `[any]` may equally be at. Members are REPRESENTATIVES at intern time,
+ * sorted by id, immutable, `2 <= size <= clusterMax`. Produced only by a fork; a singleton is never
+ * a cluster, so a fact that never forks pays a type check and nothing else.
+ */
+class AnyUnrollCluster(override val id: Int, @JvmField val members: Array<AnyUnrollState>) : AnyUnrollPos
+```
+
+`find()` on a cluster resolves every member; if none moved it returns `this`, and if any did it
+re-interns under the new key and links `parent` to the result — the same lazy-canonicalisation
+discipline §5.5's invariant (I) states for `children`/`parents`, for the same reason. A cluster whose
+members collapse to one representative **degenerates to that state**, so the representation
+self-simplifies as the automaton coarsens.
+
+#### (d) The three operations
+
+```kotlin
+/** FORWARD: the subset step. Mints only when NOTHING can move -- see (e). */
+fun readChild(pos: AnyUnrollPos?, a: AccessorIdx): AnyUnrollPos? {
+    val cur = pos?.find() ?: return pos
+    if (cur is AnyUnrollState) return readChildSingle(cur, a)          // today's path, untouched
+    val moved = cur.members.mapNotNull { it.find().children?.get(a)?.find() }
+    if (moved.isNotEmpty()) return intern(moved)                       // no mint, no charge
+    return readChildSingle(cur.members.minBy { it.id }, a)             // §5.3's tie-break
+}
+
+/** BACKWARD: the subset step. Null iff NO member has an incoming [a]. */
+fun absorbInto(pos: AnyUnrollPos, a: AccessorIdx): AnyUnrollPos? {
+    val preds = pos.find().eachMember { it.parents?.get(a).orEmpty() }.mapTo(sorted) { it.find() }
+    return if (preds.isEmpty()) null else intern(preds)
+}
+
+/** MERGE: set union. The identity case returns the RECEIVER OBJECT -- §5.4(a) is subsumed. */
+fun union(x: AnyUnrollPos?, y: AnyUnrollPos?): AnyUnrollPos? =
+    when {
+        x == null || y == null -> x ?: y
+        members(y) ⊆ members(x) -> x                                   // guard fires, no lap
+        else -> intern(members(x) + members(y))
+    }
+```
+
+**`union` gets simpler, not harder.** §5.4(a) makes "the accumulated side is the receiver" a
+correctness obligation because a DSU union moves a representative and a moved reference costs a lap
+on every folded loop in the program. Set union is **idempotent and monotone**: when the arrival adds
+nothing the receiver object comes back unchanged whichever side it was passed on, and when it does
+add something the position genuinely changed and a lap is owed. The obligation and its silent failure
+mode both dissolve — §8.4's audit stays worth having for the *state* DSU underneath, which the pot
+still uses.
+
+#### (e) Minting only when stuck is the cluster's self-loop
+
+M§2's program loop produces `union(m, m·a)`, and today the destructive merge's self-loop is what
+closes it. Under positions it is the cluster `C = {m, m·a}`, and the next lap reads `a` from `C`:
+`m` can step (to `m·a`), so **nothing is minted** and the result is the singleton `{m·a}`; merging
+that back into the stored `C` returns `C` — the same interned object, so `mergeAdd`'s guard fires and
+the lap is free. Had the read instead minted from every stuck member, the loop would have produced
+`m·a·a` and gone round forever. The rule is not an optimisation.
+
+#### (f) What the subset step buys, precisely
+
+Write `step_a(S) = {s ∈ S : s.children[a] ≠ null}` and `hasPred_a(S) = {s ∈ S : parents_a(s) ≠ ∅}`.
+
+> **Lemma (round trip).** `pred_a(succ_a(S)) ⊇ step_a(S)` and `succ_a(pred_a(S)) ⊇ hasPred_a(S)`.
+> **Corollary (telescope).** The backward run of `aₖ … a₁` from `T` is non-empty **iff** there is a
+> path `q₀ --a₁--> … --aₖ--> t` with `t ∈ T`.
+
+*Proof.* `succ` is a function on states and `pred` its relational inverse; both identities are the
+subset construction's, and the corollary is Rabin–Scott applied to the reversed automaton. ∎
+
+Greedy decides a strictly weaker predicate, and the Lemma is what §9.4(ii) needs: the absorb is the
+inverse of the read **up to the coarsening the fork already introduced**, rather than up to an
+arbitrary choice among forks.
+
+#### (g) The cap, and why it truncates rather than merges
+
+`clusterMax` (default 8). A set larger than that is **truncated to its min-id member** — reproducible,
+and exactly strategy 1's behaviour, so `clusterMax = 1` *is* strategy 1 and the two seed strategies
+are one code path at two settings. The choice between them becomes a measurement.
+
+It deliberately does **not** collapse the members with a destructive `union`. That would be cheap and
+would bound the cluster count harder, but it pushes a **local** ambiguity into the **global**
+automaton, and §5.4(c) is the record of what happens next: with fusion traffic at 98.8% the
+coarsening spreads by contagion until the fusion rate decides the cut instead of the knob. Truncation
+loses precision only where it is applied.
+
+#### (h) The interactions worth naming
+
+**The kind fold can switch the mechanism off.** `kind(C)` folds the members under §5.4(b)'s strategy,
+computed on demand and never cached (member kinds move under union). Under the default `PreferBelow`
+that is the meet, so **one `PAID` member makes the whole cluster writable and the telescope stops**.
+This is the one place where a larger cluster is less absorbing rather than sharper.
+`absorbSkippedWritableCluster` counts it; if it dominates, the answer is a lower `clusterMax`, not a
+different fold — a fold that ignored the knob would make the knob mean two different things at
+singletons and at clusters.
+
+**The forward automaton stays a DFA.** `AnyUnroll.kt:394-397`'s comment — *"an NFA here would make
+every lookup explore a SET of states"* — is about the automaton, and it still holds: the conflict arm
+still merges conflicting targets, and no state gains a second `a`-successor. What may be a set is the
+**position a fact carries**, bounded by `clusterMax`, interned, and reached only after a fork. A
+lookup on a singleton is unchanged; re-derivation stays free because the interned object is `===`.
+
+**Memory** adds one object per reachable subset plus the intern map, ≤ 8 members each — on top of
+§5.7, and measured by the same counters.
+
+#### (i) Build the counter before the mechanism
+
+`absorbForkHits` (absorbs where `|preds| > 1`) and `telescopeStalls` (a fold that stopped absorbing
+with links still above it) need only the `parents` index step 1 already builds. **If forks are rare,
+none of §5.8 should ship** and §5.3's greedy pick is the design. (a) predicts they are common; that
+prediction costs two counters to falsify and a subset construction to assume.
 
 ---
 
@@ -638,15 +811,17 @@ and a recorded-but-unpaid one exists only to be absorbed.
 private fun AccessNode.installAbove(accessor: AccessorIdx, anyState: AnyUnrollState?): AccessNode {
     val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return createRaw(accessor, this, anyState)
     if (accessor == ANY_ACCESSOR_IDX) return createRaw(accessor, this, anyState)
-    val state = anyId ?: return createRaw(accessor, this, anyState)
-    if (manager.anyUnroll.writesAbove(state)) return createRaw(accessor, this, anyState)
+    val pos = anyId ?: return createRaw(accessor, this, anyState)          // AnyUnrollPos?, §5.8c
+    if (manager.anyUnroll.writesAbove(pos)) return createRaw(accessor, this, anyState)
     if (anyNode.getNodeByAccessor(accessor) != null) return createRaw(accessor, this, anyState)  // §4.3
     if (!manager.isCoveredByAny(accessor)) return createRaw(accessor, this, anyState)
 
-    // A `CREDIT` state with no incoming edge on this accessor: it did not come out of this `[any]`,
-    // and keeping it is the whole point of the targeting -- §2. A SELF-LOOP is not this case: `pred`
-    // is then non-null and equal to the state itself, and the step is absorbed in place.
-    val pred = manager.anyUnroll.absorbInto(state.find(), accessor)
+    // A `CREDIT` position with no incoming edge on this accessor ANYWHERE IN IT: the step did not
+    // come out of this `[any]`, and keeping it is the whole point of the targeting -- §2. A SELF-LOOP
+    // is not this case: `pred` is then non-null and contains the state itself, and the step is
+    // absorbed in place. Nor is a FORK: `pred` is then the set of predecessors, and carrying all of
+    // them is what lets the next accessor up telescope through the one that has it (§5.8b).
+    val pred = manager.anyUnroll.absorbInto(pos.find(), accessor)
         ?: return createRaw(accessor, this, anyState)
 
     val absorbed = createRaw(ANY_ACCESSOR_IDX, anyNode, pred)
@@ -866,6 +1041,9 @@ and a cross-dag fusion cascading through the start states. The sixth pins the de
 
 Under compression the lemma extends to `parents` by the same argument, and the forward re-check
 becomes what it should be: a defence against the racing window of §5.5, not a repair for a merge.
+Under §5.8 it extends memberwise: a cluster is a set of states each satisfying the lemma, so the
+subset step is exact on a structure the lemma already covers — which is why §5.8 needs no new
+theorem, only Rabin–Scott applied to it.
 
 ### 9.3 Termination and the population bound
 
@@ -928,7 +1106,9 @@ Independent of the kind.
 state after the read, at `AccessTree.kt:942`, although its one caller has the predecessor in hand
 three lines away (§8.1) — bounds depth but leaves each lap tagged with
 whatever state the read reached, so the population of distinct facts stays high though none is deep.
-Moving to the predecessor returns the fact to a state already seen at that position.
+Moving to the predecessor returns the fact to a state already seen at that position — and
+**only the subset step makes that true past the first link**, since a greedy pick can stall the
+telescope on a fork and leave the prefix half-absorbed (§5.8b, §5.8f).
 
 One qualification: the re-derived subtree is not byte-identical, because `getChild` returns
 `clearChild(accessor)` under the rebuilt `[any]`. The round trip returns a **subset** of the fact it
@@ -972,7 +1152,10 @@ Outer bounds unchanged: order can move the false-positive count but never the tr
 4. `PreferBeyond`'s cost is bounded but not estimated — which is what makes it an experiment.
 5. The non-monotone-consumer audit is not exhaustive. §4.5 checks eleven operations and finds one;
    nothing proves there is not a twelfth.
-6. No provenance links the graft's node mass to the round trip.
+6. **The fork is predicted, not measured.** §5.8(a) infers from the fusion rate that the reverse
+   index is nondeterministic almost everywhere; `absorbForkHits` is what would establish it, and the
+   whole of §5.8 is conditional on that number.
+7. No provenance links the graft's node mass to the round trip.
    `2026-08-25-why-concat-grows-the-fact.md` attributes 98% of node creation to `concat` and shows the
    graft *relocating* 53% of the caller's fact under a small conclusion, 78% of it attaching at one
    point. Whether that relocation is the round trip in disguise is not established by any counter.
@@ -1044,6 +1227,12 @@ two existing knobs, so a typo falls back to the default; a bare `enumValueOf` wo
 `-D` into a class-initialisation failure, which for a knob read at class-init means the analyzer does
 not start. This is the module's first enum-valued knob — `grep -rn "enumValueOf\|enumValues"` over
 `opentaint-dataflow-core` returns nothing — so it sets the precedent.
+
+**`opentaint.anyUnrollClusterMax`** — §5.8(g), default `8`, parsed with the same strict
+`toIntOrNull` fallback. `1` is strategy 1 exactly (pick the min-id predecessor, never carry a set),
+which makes the two candidate designs one code path at two settings and the choice between them a
+measurement. Values above ~16 are not expected to be useful: a fact whose `[any]` could be at
+seventeen places is one the cut has already lost.
 
 **Not offered:** a switch for receiver preference in `union`. §5.4(a) is a correctness requirement,
 its failure mode is invisible, and a knob would imply the question is open.
@@ -1131,14 +1320,17 @@ legible at all.
 | 1 | **Compression (§5.5)** — `parents`, the two remap loops, invariant (I) as a debug check. Repairs the retention hole on its own; measure the fusion path here (R8) | no (except memory) |
 | 2 | **`AnyUnrollKind`, the `kind` field, `AnyUnrollKindMerge`** and its plumbing. Nothing reads `kind` yet | no |
 | 3 | **`readChild` stops refusing** + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
-| 4 | **`writesAbove` / `absorbInto`** with counters. Still nothing calls them | no |
+| 4 | **`writesAbove` / `absorbInto`** with counters, **`absorbForkHits` among them**. Still nothing calls them — and this is where §5.8(i)'s measurement is taken, on the real workload, before any of §5.8 is written | no |
+| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then the three operations, the intern table and `clusterMax` | no |
 | 5 | **`create` becomes `installAbove`**, `addParentAbsorbingAny` deleted, `mergeAddMaybeNull`'s parameters renamed (R9). Covers census rows 1, 3, 4, 6 | **yes** |
 | 6 | **`bulkMergeAddAccessors` pre-pass** — row 2, the graft. The commit the design exists for | **yes** |
 
 Steps −1 to 4 need no gate beyond the unit tests. Steps 5 and 6 each need their own SARIF comparison
 against the same arm, and each needs both `AnyUnrollKindMerge` settings measured. **1 before 4**:
 `absorbInto` is written against `parents`, and without compression it would need a single-witness
-fallback, which is a different design with a different proof.
+fallback, which is a different design with a different proof. **4 before 4b**: step 4's counter is
+what decides whether 4b is built at all, and it costs one increment on a path that already takes the
+lock.
 ---
 
 ## 14. Validation
@@ -1164,6 +1356,13 @@ fallback, which is a different design with a different proof.
 | `a merged-away state with an incoming edge becomes unreachable` | §5.5 — the inverse of Appendix C's second |
 | `no map holds a non-representative after a cascade` | walk from `dag.rootState` after a fusion; `find() === it` for every key and value |
 | `the parents index survives a conflicting union` | §5.5 loop (2) |
+| `a fusion forks the reverse index` | after a cross-dag fusion `parents[a]` holds two — §5.8(a), the premise the section rests on |
+| `the telescope survives a fork` | `q₀-a→q₁-b→t` plus `p₀-b→t` with `p₀.id < q₁.id`: at `clusterMax = 1` the fold stalls one link up, at `8` it telescopes home — **the test §5.8 exists for** |
+| `the forward step mints only when no member can move` | `{m, m·a}` reads `a` to `{m·a}`, `total` unchanged — §5.8(e) |
+| `a program loop closes as a cluster` | the merge returns the same interned object, so the guard fires and the lap is free |
+| `a cluster degenerates when its members merge` | `find()` returns the state itself, never a size-1 cluster |
+| `union returns the receiver when the arrival adds nothing` | §5.8(d) — §5.4(a)'s obligation subsumed, checked from both argument orders |
+| `the cap truncates to the min-id member` | `clusterMax = 1` reproduces strategy 1 exactly, on the same fixture as the telescope test |
 
 **`AnyUnrollFactTest`** — the manager as the fact tree uses it; the idiom is already there
 (`TreeApManager(…, configuredLimit)` behind a `check(!managerCreated)` guard).
@@ -1233,12 +1432,16 @@ four progress-log counters of §12 are separate and unconditional.
 | `tifaAbsorbsOwnUnroll` | §8.3 | **must stay zero** — non-zero means row 5 leaked into the funnel |
 | `witnessForwardCheckFailed` | Lemma 9.2 and §5.5's racing window | should be small; a rising count means loop (2) is wrong |
 | `witnessDisagreesWithThreadedState` | the §8.1 identity, asserted on real workloads rather than in a unit test: at `filterStartsWith`'s fold the query must return the state the caller already threaded | **must stay zero** — non-zero falsifies Lemma 9.2 in production, where no test reaches |
+| `absorbForkHits` | §5.8(a) — **is the fork real?** | ≈ 0 ⇒ do not build §5.8 at all; this is step 4's whole purpose |
+| `telescopeStalls` | folds that stopped absorbing with links still above them | falling after step 4b is §5.8 working; flat means the fork was not the obstacle |
+| `clusterRate`, `clusterMaxSize`, `clusterTruncations` | what the subset construction costs | truncations dominant ⇒ `clusterMax` too low, or the automaton is too fused to telescope |
+| `absorbSkippedWritableCluster` | §5.8(h) — the kind fold switching the mechanism off | dominant under `PreferBelow` ⇒ lower `clusterMax`, not a different fold |
 | `elementPrependOverAny` | element absorption is ON (§7) | it is the `[].[any].[]` case the GUARD covers |
 | `paidPrefixWritten` | §9.3(d) | growing without bound ⇒ take the self-loop guard |
 | `remapsIncoming` / `remapsOutgoing` | the work §5.5 adds to the fusion path | R8 |
 | `statesLive`, `maxStatesPerDag` | §5.7 — the assumption that dropping the static bound is free | either failing to settle over a run ⇒ R3 |
 
-Plus the existing `ApOpDiagnostics` C-block re-run against the same arm, since §9.6(5) is answerable
+Plus the existing `ApOpDiagnostics` C-block re-run against the same arm, since §9.6(7) is answerable
 only by comparing it before and after step 6. `statesReclaimed` is deliberately **not** a counter — it
 is unmeasurable without the registry the design refuses, so §5.5's memory claim is gated on the heap
 number.
@@ -1247,18 +1450,25 @@ number.
 
 `scoped-harness/gate.sh` (3,441 tests, 2 pre-existing failures), plus the conductor single-endpoint
 arm across `anyUnrollLimit ∈ {-1, 0, 8, 100} × anyUnrollKindMerge ∈ {below, beyond}` with both
-diagnostics on, plus a SARIF comparison on the star/no-star control (which converges in 38.6 s and is
-the only arm where "byte-identical findings" is meaningful).
+diagnostics on, plus `anyUnrollClusterMax ∈ {1, 8}` **at the chosen `L` only** — the full cross
+product is sixteen arms, and that the two knobs do not interact is itself a claim, cheaply checked by
+comparing `absorbForkHits` across the `kindMerge` pair. Plus a SARIF comparison on the star/no-star
+control, which converges in 38.6 s and is the only arm where "byte-identical findings" is meaningful.
 
 **Prediction 1.** At `L = 8` the conductor arm's `concat` result-node total falls materially below
 the 136.0 M it records today, and the SARIF is a superset of the `L = -1` arm's. If the total is
 conserved again — as it was across off/100/0 for the read-side cut — the round trip is not the
-channel, §9.6(5) is the answer instead, and steps 5–6 should be reverted rather than tuned.
+channel, §9.6(7) is the answer instead, and steps 5–6 should be reverted rather than tuned.
 
 **Prediction 2.** `PreferBeyond` shows a lower node total and a higher `rederivationsAfterKindChange`
 than `PreferBelow` at the same `L`. If it shows a lower total *and* no more re-derivation, the default
 is wrong and should be flipped. If it shows more re-derivation and no less node mass, the knob should
 be deleted rather than left as a trap.
+
+**Prediction 3.** `clusterMax = 8` shows fewer `telescopeStalls` and a lower `concat` node total than
+`clusterMax = 1` at the same `L`. If the stalls do not fall, the fork was not what stopped the
+telescope and §5.8 should be deleted rather than tuned. If the stalls fall and the node total does
+not, the telescope was closing on facts nobody re-derives — which is R1 again, not a §5.8 result.
 
 ---
 
@@ -1320,6 +1530,21 @@ way.
 **R11. Four test files inherit the knobs from system properties** (§14.3), so the gate cannot tell a
 regression from a setting until they take explicit values.
 
+**R12. The subset construction can blow up**, in cluster count rather than size — `clusterMax` bounds
+each set but not how many distinct sets are reached. The lazy construction only builds what is
+touched, and the intern table shares aggressively, but nothing proves a bound; `clusterRate` and
+`clusterMaxSize` are the measurement and `clusterMax` is the throttle. Reaching for a smaller
+`clusterMax` costs precision monotonically, which is the right shape for a throttle.
+
+**R13. The kind fold can switch the absorption off exactly where the fork is worst** (§5.8h). Under
+the default `PreferBelow` one `PAID` member makes a whole cluster writable, so a bigger set is *less*
+absorbing — the opposite of the intent. Counted, and the response is `clusterMax`, not a special-case
+fold.
+
+**R14. §5.8 is conditional on a number nobody has yet taken.** Step 4 exists to take it before step
+4b is written, and the plan is ordered so that finding `absorbForkHits ≈ 0` costs one counter rather
+than a subsystem.
+
 ---
 
 ## 16. What this design does not do
@@ -1329,9 +1554,12 @@ regression from a setting until they take explicit values.
   `2026-08-25-conductor-fact-explosion-summary.md`'s ranked list, and orthogonal to this.
 - It does not touch the **`ClassStatic` broadcast** (46%) or the **star sources**.
 - It does not make the graft cheaper. It removes links from what the graft installs; the 6.0 M grafts
-  and their 131.6 M nodes are a separate question (§9.6(5)).
+  and their 131.6 M nodes are a separate question (§9.6(7)).
 - It does not change the premise side, the depth gate, `limitFieldAccess`, or any storage.
 - It does not bound the automaton's *language* — only what may be written above an `[any]` in a fact.
+- It does not make the automaton an NFA. §5.8 puts a bounded set on the **fact's position**; the
+  transition relation stays deterministic, conflicting targets are still merged, and the warning at
+  `AnyUnroll.kt:394-397` still holds as written.
 
 ---
 
