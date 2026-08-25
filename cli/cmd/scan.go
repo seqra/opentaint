@@ -77,8 +77,8 @@ func (p scanPlan) title() string {
 // scanCmd represents the scan command
 var scanCmd = &cobra.Command{
 	Use:   "scan [<source-path>]",
-	Short: "Scan a Java or Kotlin project for vulnerabilities",
-	Long:  "Build a Java or Kotlin project and scan it for vulnerabilities.\n\nArguments:\n  [<source-path>]  Project root (default: the current directory)",
+	Short: "Scan a Java, Kotlin, or Go project for vulnerabilities",
+	Long:  "Build a Java, Kotlin, or Go project and scan it for vulnerabilities.\n\nArguments:\n  [<source-path>]  Project root (default: the current directory)",
 	Example: `  # Scan the project in the current directory
   opentaint scan . -o .opentaint/results/report.sarif
 

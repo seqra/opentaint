@@ -35,8 +35,8 @@ var updateHintCh = make(chan string, 1)
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:           "opentaint",
-	Short:         "Find vulnerabilities in Java and Kotlin projects",
-	Long:          "OpenTaint is a taint analysis engine for Java and Kotlin projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
+	Short:         "Find vulnerabilities in Java, Kotlin, and Go projects",
+	Long:          "OpenTaint is a taint analysis engine for Java, Kotlin, and Go projects.\n\nQuick start:\n  # Scan the project in the current directory\n  opentaint scan . -o .opentaint/results/report.sarif\n\n  # List the findings\n  opentaint summary .opentaint/results/report.sarif --show-findings",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 
