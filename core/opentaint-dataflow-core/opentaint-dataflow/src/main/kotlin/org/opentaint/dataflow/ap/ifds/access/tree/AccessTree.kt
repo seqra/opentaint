@@ -207,6 +207,27 @@ class AccessTree(
 
         if (base != other.base) return emptyList()
 
+        val deltaResult = deltaImpl(other)
+
+        if (ApOpDiagnostics.enabled) {
+            var links = 0
+            var carriesAny = false
+            other.access?.toList()?.forEachInt { a ->
+                links++
+                if (a == ANY_ACCESSOR_IDX) carriesAny = true
+            }
+            ApOpDiagnostics.recordDelta(
+                premiseCarriesAny = carriesAny,
+                factNodes = access.size,
+                premiseLinks = links,
+                resultNodes = deltaResult.sumOf { (it as? NodeAccessTreeDelta)?.node?.size ?: 0L },
+            )
+        }
+
+        return deltaResult
+    }
+
+    private fun deltaImpl(other: AccessPath): List<FinalFactAp.Delta> {
         var node = access
         val access = other.access
         access?.toList()?.forEachInt { accessor ->
@@ -479,6 +500,21 @@ class AccessTree(
 
             if (!accessors.contentEquals(other.accessors)) return false
             return accessorNodes.contentEquals(other.accessorNodes)
+        }
+
+        /** Distinct nodes whose `isAbstract` is set -- the graft's candidate attachment points. */
+        fun countAbstractNodes(): Int {
+            val visited = IdentityHashMap<AccessNode, Unit>()
+            var abstract = 0
+            val stack = ArrayList<AccessNode>()
+            stack.add(this)
+            while (stack.isNotEmpty()) {
+                val n = stack.removeLast()
+                if (visited.put(n, Unit) != null) continue
+                if (n.isAbstract) abstract++
+                n.forEachAccessor { _, c -> stack.add(c) }
+            }
+            return abstract
         }
 
         fun countNodes(visited: IdentityHashMap<AccessNode, Unit> = IdentityHashMap()): Int {
@@ -1741,10 +1777,30 @@ class AccessTree(
         ): AccessNode? {
             val filteredOther = FilteredNode.create(manager, other)
 
+            val graftCounter = if (ApOpDiagnostics.enabled) {
+                ApOpDiagnostics.graftPointCounter.get().also { it.value = 0 }
+            } else null
+
             val result = concatToLeafAbstractNodes(
                 typeChecker, filteredOther, IntArrayList(), SUBSEQUENT_ARRAY_ELEMENTS_LIMIT,
                 parentEdgeIsAny = false,
             )
+
+            if (ApOpDiagnostics.enabled) {
+                val out0 = result?.size ?: 0L
+                ApOpDiagnostics.recordConcatShape(graftCounter?.value ?: 0, maxOf(0L, out0 - this.size))
+
+                if (ApOpDiagnostics.concatShouldSample()) {
+                    ApOpDiagnostics.concatSamples.incrementAndGet()
+                    ApOpDiagnostics.concatSampleRecvSize.addAndGet(this.size)
+                    ApOpDiagnostics.concatSampleRecvDistinct.addAndGet(this.countNodes().toLong())
+                    ApOpDiagnostics.concatSampleRecvAbstract.addAndGet(countAbstractNodes().toLong())
+                    ApOpDiagnostics.concatSampleDeltaSize.addAndGet(other.size)
+                    ApOpDiagnostics.concatSampleDeltaDistinct.addAndGet(other.countNodes().toLong())
+                    ApOpDiagnostics.concatSampleResultSize.addAndGet(out0)
+                    ApOpDiagnostics.concatSampleResultDistinct.addAndGet(result?.countNodes()?.toLong() ?: 0L)
+                }
+            }
 
             if (ApOpDiagnostics.enabled) {
                 val out = result?.size ?: 0L
@@ -1970,6 +2026,13 @@ class AccessTree(
             parentEdgeIsAny: Boolean,
         ): AccessNode? {
             manager.cancellation.checkpoint()
+
+            if (ApOpDiagnostics.enabled && isAbstract && other != null) {
+                // One increment per abstract node the delta is actually offered to. `k` in
+                // `|result| ~ |receiver| + k * |delta|`, and the only number that separates
+                // "the graft multiplies" from "the graft relocates the caller's remainder once".
+                ApOpDiagnostics.graftPointCounter.get().value++
+            }
 
             val concatNode = if (isAbstract && other != null) {
                 // C0: filterTypes stays first and at full precision -- it reads the delta's real

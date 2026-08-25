@@ -94,6 +94,108 @@ object ApOpDiagnostics {
     val concatGrew = AtomicLong()
     val concatGrowth = AtomicLong()
 
+    // ---- C, in detail: what the graft actually does --------------------------------------------
+
+    /**
+     * How many abstract nodes of the receiver the delta was actually attached at, per call.
+     *
+     * This is the multiplier in `|result| ~ |receiver| + k * |delta|`. Counted exactly rather than
+     * sampled, because the whole question is whether the graft MULTIPLIES (k large) or merely
+     * RELOCATES the caller's remainder to a new prefix (k = 1).
+     */
+    val concatGraftPoints = AtomicLong()
+    val concatGraftPointsMax = AtomicLong()
+
+    /** Calls by graft-point count, so a heavy tail cannot hide behind a mean of 1. */
+    val concatGraftPointBuckets = AtomicLongArray(DEPTH_BUCKETS)
+
+    /** Calls by log2 of growth: the shape of the distribution, not just its mean. */
+    val concatGrowthBuckets = AtomicLongArray(DEPTH_BUCKETS)
+
+    /**
+     * Deep profile, sampled 1 call in [CONCAT_SAMPLE_RATE].
+     *
+     * `AccessNode.size` counts with MULTIPLICITY, and `FilteredNode.create` interns the delta before
+     * grafting, so a graft can multiply `size` while allocating almost nothing. Distinct-node counts
+     * are the only way to tell those two apart, and `countNodes()` is O(n) -- hence the sampling.
+     */
+    const val CONCAT_SAMPLE_RATE = 512
+    val concatSamples = AtomicLong()
+    val concatSampleRecvSize = AtomicLong()
+    val concatSampleRecvDistinct = AtomicLong()
+    val concatSampleDeltaSize = AtomicLong()
+    val concatSampleDeltaDistinct = AtomicLong()
+    val concatSampleResultSize = AtomicLong()
+    val concatSampleResultDistinct = AtomicLong()
+    val concatSampleRecvAbstract = AtomicLong()
+
+    private val concatCallCounter = AtomicLong()
+
+    /** Mutable per-thread box: the recursion is hot, so this must not allocate per call. */
+    class IntBox { @JvmField var value: Int = 0 }
+
+    val graftPointCounter: ThreadLocal<IntBox> = ThreadLocal.withInitial { IntBox() }
+
+    fun concatShouldSample(): Boolean =
+        enabled && concatCallCounter.incrementAndGet() % CONCAT_SAMPLE_RATE == 0L
+
+    fun recordConcatShape(graftPoints: Int, growth: Long) {
+        concatGraftPoints.addAndGet(graftPoints.toLong())
+        concatGraftPointsMax.updateAndGet { maxOf(it, graftPoints.toLong()) }
+        concatGraftPointBuckets.incrementAndGet(graftPoints.coerceIn(0, DEPTH_BUCKETS - 1))
+        concatGrowthBuckets.incrementAndGet(log2Bucket(growth))
+    }
+
+    private fun log2Bucket(v: Long): Int {
+        if (v <= 0) return 0
+        var b = 0
+        var x = v
+        while (x > 1 && b < DEPTH_BUCKETS - 1) { x = x shr 1; b++ }
+        return b
+    }
+
+    // ---- E: delta(), which produces what C grafts ----------------------------------------------
+
+    /**
+     * `AccessTree.delta(premise)` decides what a graft receives: it walks the caller's fact DOWN the
+     * summary's premise and returns what is left hanging below it.
+     *
+     * The walk uses `getChildRecording`, and a step through an `[any]` CONSUMES NOTHING -- the
+     * `isCoveredByAny` arm returns the node it read from, re-wrapped. So a premise carrying an
+     * `[any]` leaves nearly the whole caller fact as the remainder, and `concat` then re-attaches
+     * that whole fact under the conclusion instead of advancing past it. Splitting the counters by
+     * whether the premise carries an `[any]` is the only way to see that.
+     */
+    val deltaCalls = AtomicLong()
+    val deltaFactNodes = AtomicLong()
+    val deltaResultNodes = AtomicLong()
+    val deltaPremiseLinks = AtomicLong()
+
+    val deltaAnyCalls = AtomicLong()
+    val deltaAnyFactNodes = AtomicLong()
+    val deltaAnyResultNodes = AtomicLong()
+    val deltaAnyPremiseLinks = AtomicLong()
+
+    /** Calls where the remainder is at least as large as the fact it was cut from. */
+    val deltaNotSmaller = AtomicLong()
+    val deltaAnyNotSmaller = AtomicLong()
+
+    fun recordDelta(premiseCarriesAny: Boolean, factNodes: Long, premiseLinks: Int, resultNodes: Long) {
+        if (premiseCarriesAny) {
+            deltaAnyCalls.incrementAndGet()
+            deltaAnyFactNodes.addAndGet(factNodes)
+            deltaAnyResultNodes.addAndGet(resultNodes)
+            deltaAnyPremiseLinks.addAndGet(premiseLinks.toLong())
+            if (resultNodes >= factNodes) deltaAnyNotSmaller.incrementAndGet()
+        } else {
+            deltaCalls.incrementAndGet()
+            deltaFactNodes.addAndGet(factNodes)
+            deltaResultNodes.addAndGet(resultNodes)
+            deltaPremiseLinks.addAndGet(premiseLinks.toLong())
+            if (resultNodes >= factNodes) deltaNotSmaller.incrementAndGet()
+        }
+    }
+
     // ---- D: filterStartsWith -------------------------------------------------------------------
 
     val fswCalls = AtomicLong()
@@ -182,6 +284,34 @@ object ApOpDiagnostics {
                 " deltaNodes=${concatDeltaNodes.get()} resultNodes=${concatResultNodes.get()}" +
                 " grew=${concatGrew.get()} growth=${concatGrowth.get()}" +
                 " growthPerCall=${ratio(concatGrowth.get(), concatCalls.get())}"
+        )
+        appendLine(
+            "apop C-graft points=${concatGraftPoints.get()} max=${concatGraftPointsMax.get()}" +
+                " pointsPerCall=${ratio(concatGraftPoints.get(), concatCalls.get())}" +
+                " actualGrowth=${concatGrowth.get()}" +
+                " deltaNodes=${concatDeltaNodes.get()}"
+        )
+        appendLine("apop C-graft pointsByCount=[${concatGraftPointBuckets.render()}]")
+        appendLine("apop C-graft growthByLog2=[${concatGrowthBuckets.render()}]")
+        appendLine(
+            "apop C-sample n=${concatSamples.get()}" +
+                " recv size/distinct/abstract=${concatSampleRecvSize.get()}/${concatSampleRecvDistinct.get()}/${concatSampleRecvAbstract.get()}" +
+                " delta size/distinct=${concatSampleDeltaSize.get()}/${concatSampleDeltaDistinct.get()}" +
+                " result size/distinct=${concatSampleResultSize.get()}/${concatSampleResultDistinct.get()}" +
+                " distinctGrowthPerSample=${ratio(concatSampleResultDistinct.get() - concatSampleRecvDistinct.get(), concatSamples.get())}" +
+                " sizeGrowthPerSample=${ratio(concatSampleResultSize.get() - concatSampleRecvSize.get(), concatSamples.get())}"
+        )
+        appendLine(
+            "apop E-delta concretePremise calls=${deltaCalls.get()} factNodes=${deltaFactNodes.get()}" +
+                " remainderNodes=${deltaResultNodes.get()} premiseLinks=${deltaPremiseLinks.get()}" +
+                " remainderPerFact=${ratio(deltaResultNodes.get(), deltaFactNodes.get())}" +
+                " notSmaller=${deltaNotSmaller.get()}"
+        )
+        appendLine(
+            "apop E-delta anyPremise      calls=${deltaAnyCalls.get()} factNodes=${deltaAnyFactNodes.get()}" +
+                " remainderNodes=${deltaAnyResultNodes.get()} premiseLinks=${deltaAnyPremiseLinks.get()}" +
+                " remainderPerFact=${ratio(deltaAnyResultNodes.get(), deltaAnyFactNodes.get())}" +
+                " notSmaller=${deltaAnyNotSmaller.get()}"
         )
         appendLine(
             "apop D-filterStartsWith calls=${fswCalls.get()} inNodes=${fswInNodes.get()}" +
