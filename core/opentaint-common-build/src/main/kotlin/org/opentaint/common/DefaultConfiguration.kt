@@ -65,6 +65,7 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.anyUnrollLimit",
     // AnyUnrollManager: what kind the survivor of a union carries. `below` unless set.
     "opentaint.anyUnrollKindMerge",
+    "opentaint.anyUnrollKindPolicy",
 )
 
 fun Project.configureDefaultTest() {

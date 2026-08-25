@@ -63,6 +63,24 @@ enum class AnyUnrollKind {
 enum class AnyUnrollKindMerge { PreferBelow, PreferBeyond }
 
 /**
+ * What `L` is a budget FOR: one pot per origin-component, or one pot for the whole run.
+ *
+ * [PerDag] is the shipped rule and the one the design argues for -- a population bound per `[any]`
+ * origin. It has a measured consequence that the design did not anticipate: on conductor the run
+ * creates 141 origin-components and **one** of them ever reaches `L`, because the components are
+ * tiny (mean 2.3 states) while the automaton in aggregate is not. The effective budget is therefore
+ * `141 x L`, and almost every state is stamped `PAID` for good.
+ *
+ * [Global] changes only which counter the mint compares against, so the difference between the two
+ * arms is exactly the unit of the bound and nothing else. It is an EXPERIMENT, not a
+ * recommendation: `budgetExhausted`, which governs the initial-fact abstraction's unroll, stays on
+ * the per-dag rule under both, so the arms differ in kind assignment alone.
+ *
+ * `-Dopentaint.anyUnrollKindPolicy=perDag|global`.
+ */
+enum class AnyUnrollKindPolicy { PerDag, Global, AlwaysCredit }
+
+/**
  * The budget pot shared by every `[any]` position descended from one origin.
  *
  * One dag per `[any]` ORIGIN -- the point where an `[any]` edge was created with no predecessor to
@@ -181,6 +199,18 @@ class AnyUnrollState(
     var kind: AnyUnrollKind = AnyUnrollKind.ORIGIN
 
     /**
+     * Diagnostics only: minted by `readChildPaidOnly`, the initial-fact abstraction's unroll.
+     *
+     * That entry point passes `paid = true` unconditionally and has no CREDIT branch at all -- past
+     * the limit it REFUSES rather than crediting. So a state it minted is `PAID` for the rest of the
+     * run whatever budget policy the fact-side read uses, and separating the two provenances is the
+     * difference between "the pot was too generous" and "this state was never eligible".
+     */
+    @Volatile
+    @JvmField
+    var mintedByUnroll: Boolean = false
+
+    /**
      * The transitions out of this state: at most one successor per accessor, which is what keeps the
      * structure deterministic and re-derivation free.
      *
@@ -287,6 +317,12 @@ object AnyUnrollDiagnostics {
     val collapses = AtomicLong()
 
     /**
+     * Of [paidMints], how many came from `readChildPaidOnly` -- the unroll, which stamps `PAID`
+     * unconditionally and so cannot be demoted by any policy applied to the fact-side read.
+     */
+    val paidMintsFromUnroll = AtomicLong()
+
+    /**
      * The COUNTERFACTUAL: for each prepend the kind gate declined, what would have happened if the
      * gate had been open.
      *
@@ -304,6 +340,32 @@ object AnyUnrollDiagnostics {
     val cfNoPredecessor = AtomicLong()
     val cfWouldStay = AtomicLong()
     val cfWouldMove = AtomicLong()
+
+    /**
+     * Which STATE declined, and how often.
+     *
+     * The kind is a property of an automaton state, and there are a few hundred of them against
+     * millions of prepends, so "how many states decline" and "how many prepends are declined" are
+     * different questions with very different answers. Keyed by state id, which is assignment order,
+     * so the row also says whether the hot decliners are early mints.
+     */
+    private val declinesByState = java.util.concurrent.ConcurrentHashMap<Int, java.util.concurrent.atomic.LongAdder>()
+    private val declineStateKind = java.util.concurrent.ConcurrentHashMap<Int, String>()
+
+    fun recordDeclineByState(id: Int, kind: String) {
+        declinesByState.computeIfAbsent(id) { java.util.concurrent.atomic.LongAdder() }.increment()
+        declineStateKind[id] = kind
+    }
+
+    private fun declineReport(): String = buildString {
+        val all = declinesByState.entries.sortedByDescending { it.value.sum() }
+        val total = all.sumOf { it.value.sum() }
+        appendLine("ANYUNROLL cf decliningStates=${all.size} declines=$total")
+        all.take(12).forEach { (id, n) ->
+            val pct = if (total == 0L) "-" else String.format("%.1f%%", 100.0 * n.sum() / total)
+            appendLine("ANYUNROLL cf   state#$id kind=${declineStateKind[id]} declines=${n.sum()} ($pct)")
+        }
+    }
 
     /** One line per distinct `(outcome, accessor)`, so the fact PATTERN is on the page, not inferred. */
     private const val CF_SAMPLES = 40
@@ -324,6 +386,7 @@ object AnyUnrollDiagnostics {
                 "noPredecessor:${cfNoPredecessor.get()},wouldStay:${cfWouldStay.get()}," +
                 "wouldMove:${cfWouldMove.get()}]"
         )
+        append(declineReport())
         synchronized(cfSamples) { cfSamples.forEach { (k, v) -> appendLine("ANYUNROLL cf   $k | $v") } }
     }
 
@@ -513,6 +576,7 @@ object AnyUnrollDiagnostics {
         append("]")
         append(" queryReads=").append(queryReads.get())
         append(" mintKind=[paid:").append(paidMints.get())
+        append("(unroll:").append(paidMintsFromUnroll.get()).append(")")
         append(",credit:").append(creditMints.get())
         append("]")
         append(" prepend=[absorbExact:").append(absorbExact.get())
@@ -570,6 +634,8 @@ class AnyUnrollManager(
      * would break.
      */
     @JvmField val kindMerge: AnyUnrollKindMerge = DEFAULT_KIND_MERGE,
+    /** Which pot the mint compares against; see [AnyUnrollKindPolicy]. Fixed for the run. */
+    @JvmField val kindPolicy: AnyUnrollKindPolicy = DEFAULT_KIND_POLICY,
 ) {
     val enabled: Boolean get() = limit >= 0
 
@@ -614,6 +680,9 @@ class AnyUnrollManager(
 
     /** `pathCount` saturates here: past `L` the state refuses everything anyway. */
     private val pathCountCeiling: Int = if (limit <= 0) 1 else limit
+
+    /** The [AnyUnrollKindPolicy.Global] pot. Written only under [lock], beside `dag.total`. */
+    private var globalSpend: Int = 0
 
     /** R1: a fresh origin -- a new dag with `total = 0` and its root state with `pathCount = 1`. */
     fun newOrigin(site: Int): AnyUnrollState? {
@@ -972,7 +1041,14 @@ class AnyUnrollManager(
             }
 
             val dag = current.dag.find()
-            val paid = dag.total < limit                     // the ONLY thing the pot decides
+            val paid = when (kindPolicy) {
+                AnyUnrollKindPolicy.PerDag -> dag.total < limit   // the ONLY thing the pot decides
+                AnyUnrollKindPolicy.Global -> globalSpend < limit
+                // The CEILING arm. Every rescue strategy for a state that was stamped `PAID` too
+                // early -- a global pot, a BFS re-score, anything -- demotes SOME states to `CREDIT`.
+                // This demotes all of them, so whatever it fails to buy, none of them can buy either.
+                AnyUnrollKindPolicy.AlwaysCredit -> false
+            }
             val child = mint(current, accessor, dag, paid)
 
             if (AnyUnrollDiagnostics.enabled) {
@@ -1038,7 +1114,11 @@ class AnyUnrollManager(
             }
 
             val child = mint(current, accessor, dag, paid = true)
-            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.paidMints.incrementAndGet()
+            child.mintedByUnroll = true
+            if (AnyUnrollDiagnostics.enabled) {
+                AnyUnrollDiagnostics.paidMints.incrementAndGet()
+                AnyUnrollDiagnostics.paidMintsFromUnroll.incrementAndGet()
+            }
             return child
         }
     }
@@ -1054,7 +1134,11 @@ class AnyUnrollManager(
         child.kind = if (paid) AnyUnrollKind.PAID else AnyUnrollKind.CREDIT
         child.pathCount = current.pathCount
         putTransition(current, accessor, child)
-        if (paid) dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+        if (paid) {
+            dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+            // Charged under the manager lock beside `dag.total`, so a plain Int is enough.
+            globalSpend = satAdd(globalSpend, current.pathCount, Int.MAX_VALUE)
+        }
         statesMinted.incrementAndGet()
         dag.states++
         noteMaxStates(dag.states)
@@ -1240,6 +1324,14 @@ class AnyUnrollManager(
                         it.name.removePrefix("Prefer").equals(raw, ignoreCase = true)
                     }
             } ?: AnyUnrollKindMerge.PreferBelow
+
+        const val ANY_UNROLL_KIND_POLICY_PROPERTY = "opentaint.anyUnrollKindPolicy"
+
+        /** `-Dopentaint.anyUnrollKindPolicy=perDag|global`, default `perDag`. Parsed as above. */
+        val DEFAULT_KIND_POLICY: AnyUnrollKindPolicy =
+            System.getProperty(ANY_UNROLL_KIND_POLICY_PROPERTY)?.trim()?.let { raw ->
+                AnyUnrollKindPolicy.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
+            } ?: AnyUnrollKindPolicy.PerDag
 
         // Mint sites, for §12.1(a): "distinct managers per origin, BY ALLOCATING SITE". The count
         // alone does not say which site leaked.

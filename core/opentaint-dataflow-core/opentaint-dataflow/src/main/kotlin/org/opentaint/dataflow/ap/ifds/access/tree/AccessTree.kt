@@ -1625,10 +1625,16 @@ class AccessTree(
          * self-loop, is not structure the gate is holding back.
          */
         private fun recordDeclinedPrepend(accessor: AccessorIdx, node: AccessNode, pos: AnyUnrollState) {
-            when (manager.anyUnroll.kindOf(pos)) {
+            val kind = manager.anyUnroll.kindOf(pos)
+            when (kind) {
                 AnyUnrollKind.ORIGIN -> AnyUnrollDiagnostics.cfDeclinedOrigin
                 else -> AnyUnrollDiagnostics.cfDeclinedPaid
             }.incrementAndGet()
+            val state = pos.find()
+            AnyUnrollDiagnostics.recordDeclineByState(
+                state.id,
+                if (state.mintedByUnroll) "$kind/unroll" else "$kind/read"
+            )
 
             val anyNode = node.getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return
             val name = with(manager) { accessor.accessor }.toSuffix()
