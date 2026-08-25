@@ -361,6 +361,29 @@ object AnyUnrollDiagnostics {
     val graftAbsorbs = AtomicLong()
     val graftAbsorbUnderClaim = AtomicLong()
 
+    /**
+     * Absorptions taken while folding a premise chain back into a fact
+     * (`createAbstractNodeFromReversedAp` / `createAbstractNodeFromAccessors`).
+     *
+     * Census row 1 puts both folds in the funnel, and the fold that matters is the initial-fact
+     * abstraction's emission: read and prepend are co-located there too, so the rule will fire, and
+     * firing UNDOES the enumeration the abstraction just paid for. Sound -- coarsening an emitted
+     * fact is a superset -- but it is the same shape row 5 is excluded for, one level up. Counted
+     * separately so the two are not confused in `absorptions`.
+     */
+    val chainFoldAbsorbs = AtomicLong()
+
+    /**
+     * What the row-5 exclusion actually saved: prepends where the abstraction's own unroll WOULD have
+     * absorbed the accessor it had just read.
+     *
+     * Deliberately not a "must stay zero" counter. Because the abstraction passes `absorbing = false`
+     * the funnel is structurally unreachable from it, so a zero would be guaranteed by construction
+     * and would say nothing -- the failure mode an earlier mint-site split already hit. This measures
+     * the exclusion instead of asserting it.
+     */
+    val tifaAbsorbSuppressed = AtomicLong()
+
     /** Lemma 9.2 and the racing window of the incoming remap. Should be small. */
     val witnessForwardCheckFailed = AtomicLong()
 
@@ -459,6 +482,8 @@ object AnyUnrollDiagnostics {
         append(",uncovered:").append(prependUncovered.get())
         append(",element:").append(elementPrependOverAny.get())
         append(",graft:").append(graftAbsorbs.get())
+        append(",chainFold:").append(chainFoldAbsorbs.get())
+        append(",tifaSuppressed:").append(tifaAbsorbSuppressed.get())
         append(",graftUnderClaim:").append(graftAbsorbUnderClaim.get())
         append("]")
         append(" fork=[hits:").append(absorbForkHits.get())

@@ -749,6 +749,15 @@ class AccessTree(
         ): AccessNode? {
             if (containsStatic) return null
 
+            if (!absorbing && AnyUnrollDiagnostics.enabled && manager.anyUnroll.enabled) {
+                // What the exclusion actually saved. A "must stay zero" counter here would be
+                // guaranteed zero by construction -- the funnel is unreachable from the excluded
+                // caller -- and would therefore say nothing.
+                if (absorbTargetFor(accessor, this, count = false) != null) {
+                    AnyUnrollDiagnostics.tifaAbsorbSuppressed.incrementAndGet()
+                }
+            }
+
             return when {
                 accessor == FINAL_ACCESSOR_IDX -> null
                 accessor == ELEMENT_ACCESSOR_IDX -> manager.create(
@@ -1591,28 +1600,39 @@ class AccessTree(
             return (rewritten ?: accessors) to absorbedState
         }
 
-        /** The guard chain of the absorbing prepend, in the order the throwing query requires. */
-        private fun absorbTargetFor(accessor: AccessorIdx, node: AccessNode): AnyUnrollState? {
+        /**
+         * The guard chain of the absorbing prepend, in the order the throwing query requires.
+         *
+         * @param count whether to record the outcome. The excluded caller runs this probe purely to
+         *   measure what its exclusion saves, and counting there would put its non-events into the
+         *   same buckets as the real ones.
+         */
+        private fun absorbTargetFor(
+            accessor: AccessorIdx,
+            node: AccessNode,
+            count: Boolean = true,
+        ): AnyUnrollState? {
             val pos = node.anyId ?: return null
             if (accessor == ANY_ACCESSOR_IDX) return null
+            val counting = count && AnyUnrollDiagnostics.enabled
 
             if (manager.anyUnroll.writesAbove(pos)) {
-                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
+                if (counting) AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
                 return null
             }
             // By the node invariant `anyId != null` iff there is an `[any]` edge, so this is non-null.
             val anyNode = node.getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return null
             if (anyNode.getNodeByAccessor(accessor) != null) {
-                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependGuardBlocked.incrementAndGet()
+                if (counting) AnyUnrollDiagnostics.prependGuardBlocked.incrementAndGet()
                 return null
             }
             if (!manager.isCoveredByAny(accessor)) {
-                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependUncovered.incrementAndGet()
+                if (counting) AnyUnrollDiagnostics.prependUncovered.incrementAndGet()
                 return null
             }
 
             val pred = manager.anyUnroll.absorbInto(pos, accessor)
-            if (AnyUnrollDiagnostics.enabled) {
+            if (counting) {
                 when {
                     pred == null -> AnyUnrollDiagnostics.prependWrittenCreditMismatch
                     pred === pos.find() -> AnyUnrollDiagnostics.absorbStay
@@ -3111,6 +3131,26 @@ class AccessTree(
              * restore a per-premise budget, which is the failure the per-context counter was
              * rejected for arriving through a side door.
              */
+            /**
+             * [create] with the chain-fold absorptions counted separately.
+             *
+             * Both premise chain folds are census row 1 and go through the funnel. The one that
+             * matters is the initial-fact abstraction's emission, where read and prepend are
+             * co-located exactly as they are in `filterStartsWith` -- so the rule fires, and firing
+             * UNDOES the enumeration the abstraction just paid for. Sound, but the same shape the
+             * abstraction's OTHER prepend is excluded for, so it is measured rather than assumed.
+             */
+            @JvmStatic
+            private fun createCountingChainFold(accessor: AccessorIdx, node: AccessNode): AccessNode {
+                if (!AnyUnrollDiagnostics.enabled) return create(accessor, node)
+                val before = AnyUnrollDiagnostics.absorptions.get()
+                val result = create(accessor, node)
+                if (AnyUnrollDiagnostics.absorptions.get() != before) {
+                    AnyUnrollDiagnostics.chainFoldAbsorbs.incrementAndGet()
+                }
+                return result
+            }
+
             @JvmStatic
             fun TreeApManager.createAbstractNodeFromReversedAp(
                 reversedAp: ReversedApNode?,
@@ -3124,7 +3164,7 @@ class AccessTree(
                             if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_RAW_EDGE)
                             create(accessor, node, foldState)
                         }
-                        else -> create(accessor, node)
+                        else -> createCountingChainFold(accessor, node)
                     }
                 }
             }
@@ -3143,7 +3183,7 @@ class AccessTree(
                             if (foldState == null) foldState = anyUnroll.newOrigin(AnyUnrollManager.MINT_RAW_EDGE)
                             create(accessor, result, foldState)
                         }
-                        else -> create(accessor, result)
+                        else -> createCountingChainFold(accessor, result)
                     }
                 }
 
