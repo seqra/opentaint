@@ -97,6 +97,7 @@ class AnyUnrollManagerTest {
         assertNull(m.newOrigin(MINT_TEST))
         assertNull(m.union(null, null))
         assertNull(m.readChild(null, A))
+        assertNull(m.readChildPaidOnly(null, A))
         assertFalse(m.budgetExhausted(null))
     }
 
@@ -243,8 +244,13 @@ class AnyUnrollManagerTest {
 
     /* ---------- the budget ---------- */
 
+    /**
+     * A CONTRACT CHANGE, and it should be visible in the diff as one: these three cases used to pin
+     * the refusal. The read now records past the limit and labels the record `CREDIT`; the pot
+     * decides only the label.
+     */
     @Test
-    fun `the pot refuses once it is spent`() {
+    fun `a mint past the limit is credit, not a refusal`() {
         val m = manager(limit = 2)
         val root = m.origin()
 
@@ -252,9 +258,12 @@ class AnyUnrollManagerTest {
         assertNotNull(m.readChild(root, B))
         assertEquals(2, m.totalOf(root))
         assertTrue(m.budgetExhausted(root))
+        assertEquals(AnyUnrollKind.PAID, a.kind)
 
-        assertNull(m.readChild(root, C), "a spent pot refuses a new accessor")
-        assertSame(a, m.readChild(root, A), "but an already-recorded one is still free")
+        val c = assertNotNull(m.readChild(root, C), "the read never refuses")
+        assertEquals(AnyUnrollKind.CREDIT, c.kind)
+        assertEquals(2, m.totalOf(root), "and a credit mint charges nothing")
+        assertSame(a, m.readChild(root, A), "an already-recorded accessor is still free")
     }
 
     @Test
@@ -266,16 +275,60 @@ class AnyUnrollManagerTest {
         assertTrue(m.budgetExhausted(root))
 
         assertSame(a, m.readChild(root, A), "reuse is free even past the limit")
-        assertNull(m.readChild(root, B), "a new accessor is not")
+        assertEquals(AnyUnrollKind.CREDIT, assertNotNull(m.readChild(root, B)).kind)
+        assertEquals(1, m.totalOf(root))
     }
 
+    /**
+     * The defect class an earlier draft shipped: a second ceiling tested as `credit < limit`
+     * evaluates `0 < 0`, so at `L = 0` the mechanism was simply off -- while three prose claims and
+     * five test specifications said that value exercised it. `readChild` now has ONE comparison and
+     * no value of `L` at which a read stops recording.
+     */
     @Test
-    fun `limit zero refuses from the start`() {
+    fun `at L equals 0 the first read still mints`() {
         val m = manager(limit = 0)
         val root = m.origin()
 
         assertTrue(m.budgetExhausted(root))
-        assertNull(m.readChild(root, A))
+        val a = assertNotNull(m.readChild(root, A))
+        assertEquals(AnyUnrollKind.CREDIT, a.kind)
+        assertEquals(0, m.totalOf(root))
+        assertEquals(listOf(root), a.preds(A), "and it records its incoming edge like any other")
+    }
+
+    @Test
+    fun `a recorded sequence mints nothing on re-read`() {
+        val m = manager(limit = 0)
+        val root = m.origin()
+
+        val first = assertNotNull(m.readChild(root, A))
+        val before = m.liveStats().states
+        assertSame(first, m.readChild(root, A), "the sharing the population bound rests on")
+        assertEquals(before, m.liveStats().states)
+    }
+
+    /**
+     * The premise side keeps the pre-credit contract exactly, or accessors granted today are
+     * silently refused -- a narrowing nothing would report.
+     */
+    @Test
+    fun `the paid-only read keeps the old contract`() {
+        val m = manager(limit = 1)
+        val root = m.origin()
+
+        val a = assertNotNull(m.readChildPaidOnly(root, A))
+        assertTrue(m.budgetExhausted(root))
+
+        assertSame(a, m.readChildPaidOnly(root, A), "a RECORDED transition is free past the limit")
+        assertNull(m.readChildPaidOnly(root, B), "a new one is refused, as before")
+        assertNull(m.readChildPaidOnly(root, C))
+    }
+
+    @Test
+    fun `the paid-only read at limit zero refuses from the start`() {
+        val m = manager(limit = 0)
+        assertNull(m.readChildPaidOnly(m.origin(), A))
     }
 
     @Test

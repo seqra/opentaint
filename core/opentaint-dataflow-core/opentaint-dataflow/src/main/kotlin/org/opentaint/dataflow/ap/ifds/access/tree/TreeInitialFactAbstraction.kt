@@ -207,7 +207,14 @@ class TreeInitialFactAbstraction(
                 // free, and the automaton stays one level deep however wide the fan-out. Advancing,
                 // they record `child(f).child(p)` and `child(g).child(p)` -- two paths, two
                 // accessors, which is the population the bound is about.
-                val childAnyState = anyUnroll.readChild(parentAnyState, accessor)
+                // The PAID-ONLY read. Two things ride on it. The premise-side cut must keep its
+                // pre-credit contract, or accessors that are granted today are silently refused;
+                // and this loop must not absorb -- it prepends exactly the accessor it just read
+                // (`prefix = ReversedApNode(accessor, currentAp)` below), so an absorbing prepend
+                // would match perfectly, fire, and telescope away the `filterAccessNode` copy this
+                // loop just paid for. The rewrite exists to stop the graft re-installing what the
+                // delta read, not to cancel the unroll.
+                val childAnyState = anyUnroll.readChildPaidOnly(parentAnyState, accessor)
                 if (anyUnroll.enabled && parentAnyState != null && childAnyState == null) {
                     // Counted SEPARATELY from every other refusal. `readsRefused` mixes this with
                     // `getChild`'s arm, and reading the mixed number as if it were this one is

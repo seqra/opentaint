@@ -295,6 +295,10 @@ object AnyUnrollDiagnostics {
      * the knob: a `PAID` state in one automaton paired with a `CREDIT` state in the other, requiring
      * both to have materialised the same sequence, one before its ceiling and one after.
      */
+    /** How much of the automaton is unpaid. `creditMints >> paidMints` means `L` is small for the workload. */
+    val paidMints = AtomicLong()
+    val creditMints = AtomicLong()
+
     val kindPromotions = AtomicLong()
     val kindDemotionsGenuine = AtomicLong()
     val kindDemotionsFromOrigin = AtomicLong()
@@ -367,6 +371,9 @@ object AnyUnrollDiagnostics {
         append(",other:").append(unionWithoutCollapseOther.get())
         append("]")
         append(" queryReads=").append(queryReads.get())
+        append(" mintKind=[paid:").append(paidMints.get())
+        append(",credit:").append(creditMints.get())
+        append("]")
         append(" kind=[promote:").append(kindPromotions.get())
         append(",demoteGenuine:").append(kindDemotionsGenuine.get())
         append(",demoteFromOrigin:").append(kindDemotionsFromOrigin.get())
@@ -744,13 +751,29 @@ class AnyUnrollManager(
     }
 
     /**
-     * R4/R5: an accessor is read THROUGH an `[any]` whose position is [state].
+     * R4/R5: an accessor is read THROUGH an `[any]` whose position is [state]. The BUILD entry point.
      *
      * If the transition already exists it is reused FREE -- that is not an optimisation, it is the
-     * termination argument. Otherwise a successor is minted and `pathCount` is charged to the pot.
+     * termination argument. Otherwise a successor is minted; the pot decides only whether it is
+     * `PAID` or `CREDIT`, never whether it exists.
      *
-     * Returns `null` when the pot is exhausted, which the caller turns into an ABSORPTION rather than
-     * a truncation (see `AccessNode.addParentAbsorbingAny`).
+     * **The read never refuses, and that is the whole point.** Refusal leaves the fact holding the
+     * state BEFORE the read. That is a correct residual -- the `[any]` branch of `a^-1(SIGMA*.R)` is
+     * `SIGMA*.R` itself, which is why refusal is absorption rather than truncation -- but it is lossy
+     * in the one dimension the prepend needs: afterwards the fact cannot distinguish "nothing was
+     * read here" from "`a` was read here and we declined to pay", so the prepend has nothing to key
+     * on. The credit state is the message the read leaves for the prepend.
+     *
+     * **A `CREDIT` mint is free, and that is deliberate.** The pot is charged exactly as before --
+     * only for `PAID` mints -- so `total` still stops just past `L` and [budgetExhausted] answers the
+     * same question for every existing caller. Charging unpaid mints would make `total` a mixture of
+     * two quantities and would shorten the initial-fact abstraction's paid window as a side effect of
+     * what `getChild` did.
+     *
+     * There is no second ceiling and no sink. Two ceilings would have to answer "how much automaton
+     * is worth recording for recognition" -- a budget in a different unit from the precision budget
+     * `L`, with its own default to defend and its own `0 < 0` edge. One ceiling has no such question,
+     * and every value of `L`, `0` included, leaves the mechanism operating.
      */
     fun readChild(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
         if (!enabled || state == null) return state
@@ -759,6 +782,62 @@ class AnyUnrollManager(
 
         // Fast path: the transition already exists. Lock-free, allocation-free, and by far the
         // common case -- which is the whole reason the automaton exists.
+        state.find().children?.get(accessor)?.let {
+            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.readsReusedFree.incrementAndGet()
+            return it.find()
+        }
+
+        synchronized(lock) {
+            val current = state.find()
+            current.children?.get(accessor)?.let {
+                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.readsReusedFree.incrementAndGet()
+                return it.find()
+            }
+
+            val dag = current.dag.find()
+            val paid = dag.total < limit                     // the ONLY thing the pot decides
+            val child = mint(current, accessor, dag, paid)
+
+            if (AnyUnrollDiagnostics.enabled) {
+                if (paid) AnyUnrollDiagnostics.paidMints.incrementAndGet()
+                else AnyUnrollDiagnostics.creditMints.incrementAndGet()
+            }
+            return child
+        }
+    }
+
+    /**
+     * The QUERY counterpart of [readChild]: reuse an existing transition, otherwise stay put. Never
+     * mints, never charges, never refuses -- a caller that only answers a boolean must not move the
+     * budget, and misclassifying a query as a build would trip the cut early and coarsen facts that
+     * were never growing.
+     */
+    fun peekChild(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
+        if (!enabled || state == null) return state
+        if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.queryReads.incrementAndGet()
+        return state.find().children?.get(accessor)?.find() ?: state
+    }
+
+    /**
+     * EXACTLY the pre-credit contract: reuse free at any pot level, mint only while paid, else null.
+     *
+     * The initial-fact abstraction needs it, and the reason is a contract detail rather than a
+     * preference. Today's read answers a RECORDED transition free, past the limit, BEFORE consulting
+     * the pot, and two tests pin that. So moving the abstraction's cut to a `budgetExhausted` test
+     * before the read would refuse accessors that are currently granted, silently narrowing the
+     * premise side. The split is a second entry point, the same shape the query/build split already
+     * uses.
+     *
+     * It must also never absorb: the abstraction's unroll re-roots the materialised copy and then
+     * prepends the accessor it just read, so the backward query would match perfectly, the absorption
+     * would fire, and the fold would take the whole prefix away -- throwing away the `filterAccessNode`
+     * copy, the most expensive thing in that loop, AFTER paying for the transition.
+     */
+    fun readChildPaidOnly(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
+        if (!enabled || state == null) return state
+
+        if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.reads.incrementAndGet()
+
         state.find().children?.get(accessor)?.let {
             if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.readsReusedFree.incrementAndGet()
             return it.find()
@@ -781,34 +860,34 @@ class AnyUnrollManager(
                 return null
             }
 
-            val child = AnyUnrollState(stateIds.incrementAndGet(), dag)
-            // Every mint that reaches here is below the ceiling, so the pot paid for it.
-            child.kind = AnyUnrollKind.PAID
-            child.pathCount = current.pathCount
-            putTransition(current, accessor, child)
-            dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
-            statesMinted.incrementAndGet()
-            dag.states++
-            noteMaxStates(dag.states)
-            noteTotal(dag)
-            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.recordPot(dag.total)
-
-            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.transitionsCreated.incrementAndGet()
-
+            val child = mint(current, accessor, dag, paid = true)
+            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.paidMints.incrementAndGet()
             return child
         }
     }
 
-    /**
-     * The query counterpart of [readChild]: reuse an existing transition, otherwise stay put. Never
-     * mints, never charges, never refuses -- a caller that only answers a boolean must not move the
-     * budget (§5.2), and misclassifying a query as a build would trip the cut early and coarsen facts
-     * that were never growing.
-     */
-    fun peekChild(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
-        if (!enabled || state == null) return state
-        if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.queryReads.incrementAndGet()
-        return state.find().children?.get(accessor)?.find() ?: state
+    /** The one mint. Caller holds [lock] and has already established there is no transition. */
+    private fun mint(
+        current: AnyUnrollState,
+        accessor: AccessorIdx,
+        dag: AnyUnrollDag,
+        paid: Boolean,
+    ): AnyUnrollState {
+        val child = AnyUnrollState(stateIds.incrementAndGet(), dag)
+        child.kind = if (paid) AnyUnrollKind.PAID else AnyUnrollKind.CREDIT
+        child.pathCount = current.pathCount
+        putTransition(current, accessor, child)
+        if (paid) dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+        statesMinted.incrementAndGet()
+        dag.states++
+        noteMaxStates(dag.states)
+        noteTotal(dag)
+
+        if (AnyUnrollDiagnostics.enabled) {
+            AnyUnrollDiagnostics.recordPot(dag.total)
+            AnyUnrollDiagnostics.transitionsCreated.incrementAndGet()
+        }
+        return child
     }
 
     /** Whether the pot behind [state] is spent, i.e. whether an accessor may still be written above it. */
