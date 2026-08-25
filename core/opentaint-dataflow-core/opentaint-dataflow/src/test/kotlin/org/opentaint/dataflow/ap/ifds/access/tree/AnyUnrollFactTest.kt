@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.createNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createRaw
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
@@ -381,6 +382,159 @@ class AnyUnrollFactTest {
         assertEquals(
             listOf(ANY_ACCESSOR_IDX), filtered.accessors!!.toList(),
             "the `f` step is absorbed into the `[any]` that already denotes it -- got $filtered"
+        )
+    }
+
+    /**
+     * THE TARGETING TEST -- the one the whole design exists for.
+     *
+     * `budgetExhausted` is a property of the POT, shared by every `[any]` descended from one origin,
+     * so once it fires it drops every covered accessor prepended above any of them -- including ones
+     * the callee genuinely produced. The automaton can draw the distinction the pot cannot: `f` is a
+     * transition out of the state this fact's `[any]` carries, and `g` is not.
+     */
+    @Test
+    fun `a credit any keeps a step it did not sell`() {
+        limit(0)
+
+        val fact = abstractFact(AnyAccessor)                     // this.[any].*
+        val origin = assertNotNull(fact.access.anyId)
+
+        // Read `f` through the `[any]`: past the limit, so the successor is CREDIT, and the
+        // automaton now holds `origin --f--> credit`.
+        val afterF = assertNotNull(fact.readAccessor(FIELD_F) as AccessTree?)
+        val credit = assertNotNull(afterF.access.anyId)
+        assertEquals(AnyUnrollKind.CREDIT, credit.find().kind)
+        assertFalse(manager.anyUnroll.writesAbove(credit))
+
+        // `f` came out of this `[any]` -- absorb it.
+        val soldBack = assertNotNull(afterF.access.addParentIfPossible(idx(FIELD_F)))
+        assertEquals(
+            listOf(ANY_ACCESSOR_IDX), soldBack.accessors!!.toList(),
+            "the step this `[any]` sold is folded back into it -- got $soldBack"
+        )
+        assertSame(origin.find(), soldBack.anyId!!.find(), "and the state walks back to the predecessor")
+
+        // `g` did not. Keeping it is the whole point: dropping it would turn `g.X` into `[any].X`,
+        // which activates every premise rooted here.
+        val notSold = assertNotNull(afterF.access.addParentIfPossible(idx(FIELD_G)))
+        assertTrue(
+            notSold.accessors!!.toList().contains(idx(FIELD_G)),
+            "`g` is not a transition out of this state, so it is real structure -- got $notSold"
+        )
+    }
+
+    @Test
+    fun `a paid any keeps the step, a credit any does not`() {
+        limit(1)
+
+        val fact = abstractFact(AnyAccessor)
+        val origin = assertNotNull(fact.access.anyId)
+
+        val paid = assertNotNull((fact.readAccessor(FIELD_F) as AccessTree?)).access.anyId!!
+        assertEquals(AnyUnrollKind.PAID, paid.find().kind, "the first read is inside the budget")
+        assertEquals(1, manager.anyUnroll.totalOf(origin))
+
+        val credit = assertNotNull((fact.readAccessor(FIELD_G) as AccessTree?)).access.anyId!!
+        assertEquals(AnyUnrollKind.CREDIT, credit.find().kind, "the second is not")
+        assertEquals(1, manager.anyUnroll.totalOf(origin), "and it charged nothing")
+
+        val paidNode = assertNotNull((fact.readAccessor(FIELD_F) as AccessTree?)).access
+        assertTrue(
+            assertNotNull(paidNode.addParentIfPossible(idx(FIELD_F))).accessors!!.toList().contains(idx(FIELD_F)),
+            "a PAID state still writes -- the boundary L = 0 cannot reach"
+        )
+
+        val creditNode = assertNotNull((fact.readAccessor(FIELD_G) as AccessTree?)).access
+        assertEquals(
+            listOf(ANY_ACCESSOR_IDX),
+            assertNotNull(creditNode.addParentIfPossible(idx(FIELD_G))).accessors!!.toList(),
+            "a CREDIT state does not"
+        )
+    }
+
+    /**
+     * §4.3's GUARD, in the one shape the engine can actually build it: `[].[any].[]`.
+     *
+     * `getChild`'s covered arm drops `SIGMA*.a.L(R_a)`, so reading `a` off `[any].R` is a NARROWING
+     * and absorbing `a` into an `[any]` whose subtree already has an `a` child loses those paths on
+     * the next read. For FIELDS the shape is unconstructible -- `limitFieldAccessCached` cuts every
+     * occurrence at any depth, `[any]` included -- but `limitElementAccess` caps only CONSECUTIVE
+     * runs, so the element case is real and the guard has to be a subtree condition.
+     */
+    @Test
+    fun `an any whose subtree already has the accessor does not absorb`() {
+        limit(0)
+
+        // this.[any].[].$ , with the `[any]` forced onto a CREDIT state so only the guard can stop it.
+        val inner = node(ElementAccessor to manager.finalNode)
+        val withAny = node(AnyAccessor to inner)
+        val state = assertNotNull(withAny.anyId)
+        state.find().kind = AnyUnrollKind.CREDIT
+        // Make the accessor a genuine incoming edge, so the ONLY remaining guard is the subtree probe.
+        assertNotNull(manager.anyUnroll.readChild(state, idx(ElementAccessor)))
+        val advanced = assertNotNull(manager.anyUnroll.readChild(state, idx(ElementAccessor)))
+        advanced.find().kind = AnyUnrollKind.CREDIT
+
+        val onAdvanced = assertNotNull(withAny.withAnyState(advanced))
+        assertNotNull(manager.anyUnroll.absorbInto(advanced, idx(ElementAccessor)), "the edge is there")
+
+        val prepended = assertNotNull(onAdvanced.addParentIfPossible(idx(ElementAccessor)))
+        assertTrue(
+            prepended.accessors!!.toList().contains(idx(ElementAccessor)),
+            "the `[any]`'s subtree already has an `[]` child, so absorbing would lose " +
+                "`SIGMA*.[].$` on the next read -- got $prepended"
+        )
+    }
+
+    /**
+     * The site where both ends of the round trip are visible three lines apart, used as a check on
+     * the automaton: the state `filterStartsWith` threads by hand must be what the backward query
+     * derives. `===` here, because read and prepend are co-located so there is exactly one path.
+     */
+    @Test
+    fun `the automaton derives what filterStartsWith threads by hand`() {
+        limit(0)
+
+        val fact = abstractFact(AnyAccessor)
+        val origin = assertNotNull(fact.access.anyId)
+
+        val filtered = assertNotNull(fact.access.filterStartsWith(premiseChain(FIELD_F, FIELD_G)))
+
+        assertEquals(
+            listOf(ANY_ACCESSOR_IDX), filtered.accessors!!.toList(),
+            "a two-link fold telescopes all the way home -- got $filtered"
+        )
+        assertSame(
+            origin.find(), filtered.anyId!!.find(),
+            "and lands back on the state it started from, which is what closes the fixed point"
+        )
+    }
+
+    /**
+     * The positive half of the GUARD: with no `f` child below the `[any]`, the absorbed and the
+     * unabsorbed fact answer the read of `f` IDENTICALLY. The dropped term is `SIGMA*.f.EMPTY`.
+     *
+     * `createRaw` on the right-hand side deliberately -- `create` is the absorbing funnel now, so
+     * building the control through it would compare a thing with itself.
+     */
+    @Test
+    fun `absorbing leaves the read unchanged`() {
+        limit(0)
+
+        val fact = abstractFact(AnyAccessor, FIELD_G)                     // this.[any].g.*
+        val absorbed = assertNotNull(fact.access.filterStartsWith(premiseChain(FIELD_F)))
+        assertEquals(listOf(ANY_ACCESSOR_IDX), absorbed.accessors!!.toList(), "f really was absorbed")
+
+        val unabsorbed = createRaw(idx(FIELD_F), fact.access)             // this.f.[any].g.*
+        assertEquals(listOf(idx(FIELD_F)), unabsorbed.accessors!!.toList())
+
+        val fromAbsorbed = assertNotNull(absorbed.getChildRecordingForTest(idx(FIELD_F)))
+        val fromUnabsorbed = assertNotNull(unabsorbed.getChildRecordingForTest(idx(FIELD_F)))
+        assertEquals(
+            fromUnabsorbed.toString(), fromAbsorbed.toString(),
+            "the read after the rewrite must equal the read before it, or 'the result is a " +
+                "superset' is not a soundness argument at all"
         )
     }
 

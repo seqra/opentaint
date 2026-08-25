@@ -305,7 +305,13 @@ class TreeInitialFactAbstraction(
             // -- and re-creating that edge with no state would derive R1/R2 from the subtree. That
             // is a full fresh pot whenever the type filter has already stripped the subtree's own
             // `[any]`, which is exactly the refill the rest of this file is threaded to avoid.
-            node.addParentIfPossible(accessor, governingAnyId) ?: return null
+            // NON-ABSORBING -- the one caller that opts out. This loop prepends exactly the
+            // accessor it just read, so the backward query would match perfectly, the absorption
+            // would fire, and the fold would telescope the whole prefix away: throwing out the
+            // `filterAccessNode` copy, the most expensive thing in the loop, AFTER paying for the
+            // transition. The rewrite exists to stop the graft re-installing what the delta read,
+            // not to cancel the unroll.
+            node.addParentIfPossible(accessor, governingAnyId, absorbing = false) ?: return null
         }
 
     data class AbstractionState(

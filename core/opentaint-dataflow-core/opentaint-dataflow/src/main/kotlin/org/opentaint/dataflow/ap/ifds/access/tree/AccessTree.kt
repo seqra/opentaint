@@ -641,12 +641,22 @@ class AccessTree(
             }
         }
 
-        private fun mergeAddMaybeNull(l: AccessNode?, r: AccessNode?): AccessNode? {
-            if (l == null)
-                return r
-            if (r == null)
-                return l
-            return r.mergeAdd(l)
+        /**
+         * [receiver] `mergeAdd` [arrival], tolerating either side being null.
+         *
+         * The parameters are named rather than positional-by-convention because the body INVERTS
+         * them: the SECOND argument is the receiver. Written as `l`/`r` this reads as
+         * receiver/argument and does the opposite, so a new call site written on the obvious
+         * assumption gets the arrival as receiver -- and the receiver is what `union` keeps the
+         * representative of, so that mistake costs an extra fixpoint lap on every folded loop in the
+         * program rather than producing a wrong answer.
+         */
+        private fun mergeAddMaybeNull(arrival: AccessNode?, receiver: AccessNode?): AccessNode? {
+            if (arrival == null)
+                return receiver
+            if (receiver == null)
+                return arrival
+            return receiver.mergeAdd(arrival)
         }
 
         /**
@@ -725,15 +735,27 @@ class AccessTree(
             return resultNode
         }
 
-        fun addParentIfPossible(accessor: AccessorIdx, anyState: AnyUnrollState? = null): AccessNode? {
+        /**
+         * @param absorbing whether a covered accessor may be absorbed into an `[any]` at the root of
+         *   this node instead of being written above it. Only the ELEMENT and FIELD arms can absorb;
+         *   the rest carry uncovered accessors, which the rule declines to touch anyway. The one
+         *   caller that passes `false` is the initial-fact abstraction, which prepends exactly the
+         *   accessor it just read.
+         */
+        fun addParentIfPossible(
+            accessor: AccessorIdx,
+            anyState: AnyUnrollState? = null,
+            absorbing: Boolean = true,
+        ): AccessNode? {
             if (containsStatic) return null
 
             return when {
                 accessor == FINAL_ACCESSOR_IDX -> null
                 accessor == ELEMENT_ACCESSOR_IDX -> manager.create(
-                    elementAccess = limitElementAccess(limit = SUBSEQUENT_ARRAY_ELEMENTS_LIMIT)
+                    elementAccess = limitElementAccess(limit = SUBSEQUENT_ARRAY_ELEMENTS_LIMIT),
+                    absorbing = absorbing,
                 )
-                accessor.isFieldAccessor() -> addParentFieldAccess(accessor)
+                accessor.isFieldAccessor() -> addParentFieldAccess(accessor, absorbing)
                 accessor.isStaticAccessor() -> create(accessor, this)
                 accessor == VALUE_ACCESSOR_IDX -> {
                     if (accessors?.any { !it.isTaintMarkAccessor() } == true) {
@@ -914,95 +936,55 @@ class AccessTree(
                 ?: error("Impossible accessor")
 
         /**
-         * Prepend [accessor] above this node, EXCEPT on the branch an `[any]` at this node's root
-         * already denotes -- and only once that `[any]`'s pot is spent.
+         * Install [accessor] above this node, absorbing it into an `[any]` at this node's root when
+         * that `[any]` is no longer entitled to carry a concrete step above it.
          *
-         * `a.[any].R` is a subset of `[any].R` for covered `a`, so declining to materialise `a`
-         * asserts MORE, not less: refusal is absorption, not truncation, and no value of `L`
-         * including 0 can lose a finding relative to no limit at all.
+         * `a.[any].R` is a subset of `[any].R` for covered `a`, so declining to write the step
+         * asserts MORE, not less: absorption, not truncation, and no configuration can lose a
+         * finding relative to no limit at all -- GIVEN the subtree probe below.
          *
-         * The naive form of this is unsound and the trap is worth naming: the node this runs on is
-         * generally a MERGE of the `[any]` branch and concrete branches, and dropping the step
-         * across the whole node would rewrite `a.f.S` as `f.S` on the concrete ones -- neither a
-         * superset nor a subset, so a genuine loss. Hence the split: skip the step only on the
-         * `[any]`-rooted branch, keep it everywhere else.
+         * **Which state the surviving `[any]` takes is where this differs from a budget-only form.**
+         * Moving to the PREDECESSOR makes the absorption the exact inverse of the read that bought
+         * the accessor, so a delta/concat round trip returns the fact to the state it started from
+         * and the fixed point closes. Keeping the state would bound the DEPTH while leaving every lap
+         * tagged with a different state, i.e. a different node, i.e. more work. The shipped absorb
+         * kept the state, at a site whose caller had the predecessor in hand three lines away.
          *
-         * The coverage query is reached only AFTER an `[any]` edge has been proved to exist. That is
-         * not tidiness: `isCoveredByAny` delegates straight to the injected strategy, and the one
-         * installed for the whole prescan phase THROWS rather than returning false.
+         * Two traps. The SPLIT: this node is generally a MERGE of the `[any]` branch and concrete
+         * branches, and dropping the step across the whole node rewrites `a.f.S` as `f.S` on the
+         * concrete ones -- neither superset nor subset. The SUBTREE PROBE: `getChild`'s covered arm
+         * returns `anyAccessorNode.clearChild(a)`, so it drops `SIGMA*.a.L(R_a)` and reading `a` off
+         * `[any].R` is a NARROWING; a narrowing means a coarser fact can answer a read with LESS, so
+         * absorbing `a` into an `[any]` whose subtree already has an `a` child loses those paths on
+         * the next read. With no `a` child the dropped term is empty and the read after the rewrite
+         * equals the read before it. The condition is on the SUBTREE rather than an appeal to
+         * `limitFieldAccess` -- that limiter cuts every occurrence of a field at any depth, `[any]`
+         * included, so `a.[any].a...` is unconstructible for fields, but `limitElementAccess` caps
+         * only CONSECUTIVE element runs and `[].[any].[]` is not consecutive.
+         *
+         * **Guard order is load-bearing.** The first four are O(1) field and array probes and are the
+         * overwhelmingly common exits; `isCoveredByAny` is last because it delegates straight to the
+         * injected strategy, and the one installed for the whole prescan phase THROWS rather than
+         * returning false.
          */
-        private fun addParentAbsorbingAny(accessor: AccessorIdx, anyState: AnyUnrollState?): AccessNode {
-            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return create(accessor, this, anyState)
-            if (!manager.anyUnroll.budgetExhausted(anyId)) return create(accessor, this, anyState)
-            if (accessor == ANY_ACCESSOR_IDX) return create(accessor, this, anyState)
-            // The SUBTREE PROBE. `getChild`'s covered arm returns `anyAccessorNode.clearChild(a)`
-            // under the rebuilt `[any]`, so it drops `SIGMA*.a.L(R_a)`: reading `a` off `[any].R` is a
-            // NARROWING, and a narrowing means the coarser fact can answer the read with LESS.
-            // Absorbing `a` into an `[any]` whose subtree already has an `a` child therefore loses
-            // exactly those paths on the next read -- `a.[any].a.![m]` collapses to `[any].a.![m]`,
-            // and reading `a` off that returns `![m]`, which no longer denotes `g.a.m`.
-            //
-            // With no `a` child the dropped term is `SIGMA*.a.EMPTY = EMPTY` and the read after the
-            // rewrite equals the read before it, which is what makes "the result is a superset"
-            // sufficient. The condition is on the SUBTREE and not an appeal to `limitFieldAccess`:
-            // that limiter cuts every occurrence of a FIELD at any depth, `[any]` included, so
-            // `a.[any].a...` is unconstructible for fields -- but `limitElementAccess` caps only
-            // CONSECUTIVE element runs, and `[].[any].[]` is not consecutive.
-            if (anyNode.getNodeByAccessor(accessor) != null) return create(accessor, this, anyState)
-            if (!manager.isCoveredByAny(accessor)) return create(accessor, this, anyState)
+        private fun installAbove(accessor: AccessorIdx, anyState: AnyUnrollState?): AccessNode {
+            // A `CREDIT` position with no incoming edge on this accessor ANYWHERE IN IT: the step did
+            // not come out of this `[any]`, and keeping it is the whole point of the targeting. A
+            // SELF-LOOP is not that case -- `pred` is then non-null and is the state itself, and the
+            // step is absorbed in place.
+            val pred = absorbTargetFor(accessor, this) ?: return createRaw(accessor, this, anyState)
+            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)!!
 
-            if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.absorptions.incrementAndGet()
+            if (AnyUnrollDiagnostics.enabled) {
+                AnyUnrollDiagnostics.absorptions.incrementAndGet()
+                if (accessor == ELEMENT_ACCESSOR_IDX) {
+                    AnyUnrollDiagnostics.elementPrependOverAny.incrementAndGet()
+                }
+            }
 
-            val absorbed = create(ANY_ACCESSOR_IDX, anyNode, anyId)
+            val absorbed = createRaw(ANY_ACCESSOR_IDX, anyNode, pred)
             val rest = clearChild(ANY_ACCESSOR_IDX).takeIf { !it.isEmpty } ?: return absorbed
-            return create(accessor, rest).mergeAdd(absorbed)
-        }
-
-        /**
-         * DIAGNOSTICS ONLY: what the absorbing prepend WOULD do here. Changes nothing.
-         *
-         * Step 4 of the design takes its measurement before step 5 writes the behaviour, so the
-         * decision about the subset construction is made against a number rather than an argument.
-         * The guard order is the real one, for the real reason: the first probes are O(1) field and
-         * array reads and are the overwhelmingly common exits, and `isCoveredByAny` is last because
-         * reaching it on a tree with no `[any]` throws during prescan.
-         */
-        internal fun probePrepend(accessor: AccessorIdx, threaded: AnyUnrollState?) {
-            if (!AnyUnrollDiagnostics.enabled || !manager.anyUnroll.enabled) return
-
-            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return
-            if (accessor == ANY_ACCESSOR_IDX) return
-            val pos = anyId ?: return
-
-            if (manager.anyUnroll.writesAbove(pos)) {
-                AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
-                return
-            }
-            if (anyNode.getNodeByAccessor(accessor) != null) {
-                AnyUnrollDiagnostics.prependGuardBlocked.incrementAndGet()
-                return
-            }
-            if (!manager.isCoveredByAny(accessor)) {
-                AnyUnrollDiagnostics.prependUncovered.incrementAndGet()
-                return
-            }
-
-            val pred = manager.anyUnroll.absorbInto(pos, accessor)
-            if (pred == null) {
-                // The targeting: a `CREDIT` position with no incoming edge on this accessor. The
-                // step did not come out of this `[any]`, and keeping it is the whole point.
-                AnyUnrollDiagnostics.prependWrittenCreditMismatch.incrementAndGet()
-                return
-            }
-
-            if (pred === pos.find()) {
-                AnyUnrollDiagnostics.absorbStay.incrementAndGet()
-            } else {
-                AnyUnrollDiagnostics.absorbExact.incrementAndGet()
-            }
-            if (threaded != null && threaded.find() !== pred.find()) {
-                AnyUnrollDiagnostics.witnessDisagreesWithThreadedState.incrementAndGet()
-            }
+            return createRaw(accessor, rest).mergeAdd(absorbed)
         }
 
         fun removeAbstraction(): AccessNode =
@@ -1326,20 +1308,26 @@ class AccessTree(
         }
 
         private fun addParentFieldAccess(
-            newRootField: AccessorIdx
+            newRootField: AccessorIdx,
+            absorbing: Boolean = true,
         ): AccessNode {
             val filteredNodes = mutableListOf<IntObjectImmutablePair<AccessNode>>()
             val limitedThis = limitFieldAccess(newRootField, filteredNodes)
 
+            // The hottest covered prepend in the engine: `limitedThis` routinely owns an `[any]`,
+            // because `limitFieldAccessCached` recurses through every child, `ANY_ACCESSOR_IDX`
+            // included, stripping only `newRootField`. Reached from the public `prependAccessor`,
+            // hence Cleaner, AliasUtil, RulePreconditionUtils and the initial-fact abstraction.
             val resultNode = if (limitedThis != null) {
-                create(newRootField, limitedThis)
+                if (absorbing) create(newRootField, limitedThis) else createRaw(newRootField, limitedThis)
             } else {
                 manager.emptyNode
             }
 
             // limitFieldAccess only ever extracts entries keyed by a FIELD accessor, so no `[any]`
-            // edge can arrive through this list.
-            return resultNode.bulkMergeAddAccessors(filteredNodes, entryAnyState = null)
+            // edge can arrive through this list -- the comment is about the entry LIST, not about the
+            // `create` above.
+            return resultNode.bulkMergeAddAccessors(filteredNodes, entryAnyState = null, absorbing = absorbing)
                 .also { check(!it.isEmpty) { "Empty node after field normalization" } }
         }
 
@@ -1486,20 +1474,24 @@ class AccessTree(
         private fun bulkMergeAddAccessors(
             accessors: List<IntObjectImmutablePair<AccessNode>>,
             entryAnyState: AnyUnrollState?,
+            absorbing: Boolean = true,
         ): AccessNode {
+            // THE GRAFT. `concat` rebuilds the receiver's spine through here, so this is the site
+            // the design exists for: `arg0.[any].*` reads `a` for premise `arg0.a`, and the
+            // remainder -- which still carries the `[any]` -- is re-installed under conclusion
+            // `ret.a.*`, giving `ret.a.[any].*`. Same number of `[any]` edges, one more link, every
+            // lap. The budget stops the operation that is free and never looks at this one.
+            val (entries, absorbedState) = absorbBeyondAnyEntries(accessors, absorbing)
+
             // Unconditional and BEFORE the early return: the union is a side effect of the merge,
             // and an implementation that short-circuits past it loses the transition that makes a
             // program loop reach its fixed point.
-            val mergedAnyId = manager.anyUnroll.union(anyId, entryAnyState)
+            val mergedAnyId = manager.anyUnroll.union(manager.anyUnroll.union(anyId, entryAnyState), absorbedState)
 
-            if (AnyUnrollDiagnostics.enabled) {
-                accessors.forEach { it.right().probePrepend(it.leftInt(), entryAnyState) }
-            }
-
-            if (accessors.isEmpty()) return this
+            if (entries.isEmpty()) return this
 
             val groupedUniqueAccessors = Int2ObjectOpenHashMap<MutableList<AccessNode>>()
-            accessors.forEach { accessorWithNode ->
+            entries.forEach { accessorWithNode ->
                 val group = groupedUniqueAccessors.getOrCreate(accessorWithNode.leftInt(), ::mutableListOf)
                 group.add(accessorWithNode.right())
             }
@@ -1526,6 +1518,108 @@ class AccessTree(
                 isAbstract, isFinal, deepAccessorExclusion, mergedAccessors.first, mergedAccessors.second,
                 anyStateIfPresent(mergedAccessors.first, mergedAnyId),
             )
+        }
+
+        /**
+         * The list-to-list form of the absorbing prepend, for the one funnel that takes a list.
+         *
+         * Returns the rewritten entries and the union of every predecessor absorbed into, which the
+         * caller must fold into the state of the resulting `[any]` slot -- the entry's own state
+         * disappears with the edge otherwise.
+         *
+         * **The guard order is not stylistic.** `isCoveredByAny` delegates straight to the injected
+         * strategy and the one installed for the whole prescan phase THROWS rather than returning
+         * false -- and both callers run during prescan. Probing `node.anyId != null` first makes the
+         * coverage query unreachable there, because with the manager disabled every `anyId` is null.
+         * `normaliseUnderAny` carries a dedicated short-circuit for exactly the same reason.
+         *
+         * **On the depth-relative claim.** `DeepAccessorExclusion` is depth-relative and this rewrite
+         * hoists, so in principle it owes the same report `absorbCoveredByAnyPrefix` makes. It does
+         * not, because of where it runs: in `concat` the receiver is a freshly created node with
+         * `deepAccessorExclusion = null` and the delta's flag is computed on `concatNode`, a disjoint
+         * object filtered in the same frame; in `addParentFieldAccess` the receiver comes out of
+         * `create`, which sets it null too. `graftAbsorbUnderClaim` is the falsifier -- it must stay
+         * zero, and a non-zero reading means a receiver carrying a claim reached this rewrite and the
+         * report is genuinely owed.
+         */
+        private fun absorbBeyondAnyEntries(
+            accessors: List<IntObjectImmutablePair<AccessNode>>,
+            absorbing: Boolean,
+        ): Pair<List<IntObjectImmutablePair<AccessNode>>, AnyUnrollState?> {
+            if (!absorbing || !manager.anyUnroll.enabled || accessors.isEmpty()) return accessors to null
+
+            var rewritten: MutableList<IntObjectImmutablePair<AccessNode>>? = null
+            var absorbedState: AnyUnrollState? = null
+
+            for (i in accessors.indices) {
+                val entry = accessors[i]
+                val accessor = entry.leftInt()
+                val node = entry.right()
+
+                val pred = absorbTargetFor(accessor, node)
+                if (pred == null) {
+                    rewritten?.add(entry)
+                    continue
+                }
+
+                if (rewritten == null) {
+                    rewritten = ArrayList(accessors.size + 1)
+                    for (j in 0 until i) rewritten.add(accessors[j])
+                }
+
+                if (AnyUnrollDiagnostics.enabled) {
+                    AnyUnrollDiagnostics.absorptions.incrementAndGet()
+                    AnyUnrollDiagnostics.graftAbsorbs.incrementAndGet()
+                    if (deepAccessorExclusion != null) {
+                        AnyUnrollDiagnostics.graftAbsorbUnderClaim.incrementAndGet()
+                    }
+                }
+
+                // The SPLIT, in list form: the step is dropped only on the `[any]`-rooted branch and
+                // kept on every concrete sibling, because dropping it across the whole entry would
+                // rewrite `a.f.S` as `f.S` -- neither superset nor subset.
+                val anyChild = node.getNodeByAccessor(ANY_ACCESSOR_IDX)!!
+                val rest = node.clearChild(ANY_ACCESSOR_IDX)
+                if (!rest.isEmpty) rewritten.add(IntObjectImmutablePair(accessor, rest))
+                rewritten.add(IntObjectImmutablePair(ANY_ACCESSOR_IDX, anyChild))
+
+                // The receiver is the ACCUMULATED side, so its representative is the one that
+                // survives -- the same obligation every `mergeAdd` call site here carries.
+                absorbedState = manager.anyUnroll.union(absorbedState, pred)
+            }
+
+            return (rewritten ?: accessors) to absorbedState
+        }
+
+        /** The guard chain of the absorbing prepend, in the order the throwing query requires. */
+        private fun absorbTargetFor(accessor: AccessorIdx, node: AccessNode): AnyUnrollState? {
+            val pos = node.anyId ?: return null
+            if (accessor == ANY_ACCESSOR_IDX) return null
+
+            if (manager.anyUnroll.writesAbove(pos)) {
+                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
+                return null
+            }
+            // By the node invariant `anyId != null` iff there is an `[any]` edge, so this is non-null.
+            val anyNode = node.getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return null
+            if (anyNode.getNodeByAccessor(accessor) != null) {
+                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependGuardBlocked.incrementAndGet()
+                return null
+            }
+            if (!manager.isCoveredByAny(accessor)) {
+                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.prependUncovered.incrementAndGet()
+                return null
+            }
+
+            val pred = manager.anyUnroll.absorbInto(pos, accessor)
+            if (AnyUnrollDiagnostics.enabled) {
+                when {
+                    pred == null -> AnyUnrollDiagnostics.prependWrittenCreditMismatch
+                    pred === pos.find() -> AnyUnrollDiagnostics.absorbStay
+                    else -> AnyUnrollDiagnostics.absorbExact
+                }.incrementAndGet()
+            }
+            return pred
         }
 
         private data class AccessNodeMergePair(val left: AccessNode, val right: AccessNode) {
@@ -2299,7 +2393,12 @@ class AccessTree(
 
             var result = filteredTreeNode
             for (i in parentAccessors.size - 1 downTo 0) {
-                result = result.addParentAbsorbingAny(parentAccessors.getInt(i), parentAnyStates[i])
+                // This design in miniature, hand-wired. The descent above used `getChildRecording`,
+                // so every accessor folded back here is an incoming edge of the state the fact
+                // carries BY CONSTRUCTION -- the backward query cannot miss, and the rule absorbs
+                // exactly the set the spent pot used to drop. The threaded state is the predecessor,
+                // in hand three lines away, and the shipped absorb installed the SUCCESSOR instead.
+                result = create(parentAccessors.getInt(i), result, parentAnyStates[i])
             }
             return result
         }
@@ -2799,13 +2898,42 @@ class AccessTree(
             )
 
             @JvmStatic
-            private fun TreeApManager.create(elementAccess: AccessNode?): AccessNode =
+            private fun TreeApManager.create(elementAccess: AccessNode?, absorbing: Boolean): AccessNode =
                 elementAccess?.let { access ->
-                    create(ELEMENT_ACCESSOR_IDX, access)
+                    // `limitElementAccess` never returns null, so the element arm DOES go through the
+                    // funnel, and `ElementAccessor` is covered -- element absorption is on. The
+                    // subtree probe is what makes that safe: `[].[any].[]` is the one
+                    // repeated-accessor-across-an-`[any]` shape the engine does not collapse at
+                    // construction, because `limitElementAccess` caps only CONSECUTIVE runs.
+                    if (absorbing) create(ELEMENT_ACCESSOR_IDX, access) else createRaw(ELEMENT_ACCESSOR_IDX, access)
                 } ?: emptyNode
 
+            /**
+             * The single-edge build, and the funnel the absorbing prepend lives in.
+             *
+             * Putting the rule here rather than in one caller covers every caller at once and stays
+             * covered as callers are added -- the same structural argument that put the READ record
+             * in `getChild`. It serves `reconstructRemainder`, both premise chain folds, and
+             * `addParentIfPossible`'s static / mark / type-info / `[value]` arms; the field and
+             * element arms reach it too, and they are the two carrying COVERED accessors, so they are
+             * exactly the ones that will absorb.
+             */
             @JvmStatic
-            fun create(accessor: AccessorIdx, node: AccessNode, anyState: AnyUnrollState? = null): AccessNode {
+            fun create(accessor: AccessorIdx, node: AccessNode, anyState: AnyUnrollState? = null): AccessNode =
+                node.installAbove(accessor, anyState)
+
+            /**
+             * [create] without the absorption: today's body, unchanged.
+             *
+             * Two functions rather than a flag because the initial-fact abstraction must be able to
+             * reach `addParentIfPossible` in BOTH modes. Its unroll re-roots the materialised copy
+             * and then prepends the accessor it just read, so the backward query would match
+             * perfectly, the absorption would fire, and the fold would telescope away the
+             * `filterAccessNode` copy it just paid for -- undoing a deliberate enumeration AFTER
+             * paying for it.
+             */
+            @JvmStatic
+            fun createRaw(accessor: AccessorIdx, node: AccessNode, anyState: AnyUnrollState? = null): AccessNode {
                 // The single choke point for every raw single-edge build, including
                 // createAbstractNodeFromReversedAp / createAbstractNodeFromAccessors, which fold an
                 // arbitrary accessor chain straight through here. A taint mark is a leaf marker:
@@ -2826,8 +2954,6 @@ class AccessTree(
                 // `[any].{T}.[any]` therefore follows from one more prepend, which is why the
                 // union-without-collapse arm below is load-bearing rather than defensive, and why
                 // §12.1 counts it by separating accessor rather than assuming it empty.
-
-                node.probePrepend(accessor, anyState)
 
                 if (accessor == ANY_ACCESSOR_IDX) {
                     return createAnyEdge(node, anyState, AnyUnrollManager.MINT_RAW_EDGE)

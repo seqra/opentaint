@@ -330,6 +330,28 @@ object AnyUnrollDiagnostics {
     val prependGuardBlocked = AtomicLong()
     val prependUncovered = AtomicLong()
 
+    /**
+     * Element absorption is ON, and this is the `[].[any].[]` case the subtree probe covers.
+     *
+     * `manager.create(elementAccess = limitElementAccess(...))` resolves to
+     * `create(ELEMENT_ACCESSOR_IDX, it)` and `limitElementAccess` never returns null, so the element
+     * arm goes through the funnel; `ElementAccessor` is covered. `limitElementAccess` caps only
+     * CONSECUTIVE element runs, so unlike fields this shape really is constructible.
+     */
+    val elementPrependOverAny = AtomicLong()
+
+    /**
+     * The graft pre-pass: absorptions taken in `bulkMergeAddAccessors`, the commit the design exists
+     * for, and the falsifier for the depth-relative claim it does not report.
+     *
+     * [graftAbsorbUnderClaim] MUST STAY ZERO. Both callers hand this rewrite a receiver whose own
+     * `deepAccessorExclusion` is null -- `concat`'s is a freshly created node, `addParentFieldAccess`'s
+     * comes out of `create` -- so no depth-1 claim is in scope to be disturbed. A non-zero reading
+     * means one reached it after all, and the per-branch report is genuinely owed.
+     */
+    val graftAbsorbs = AtomicLong()
+    val graftAbsorbUnderClaim = AtomicLong()
+
     /** Lemma 9.2 and the racing window of the incoming remap. Should be small. */
     val witnessForwardCheckFailed = AtomicLong()
 
@@ -426,6 +448,9 @@ object AnyUnrollDiagnostics {
         append(",writtenMismatch:").append(prependWrittenCreditMismatch.get())
         append(",guardBlocked:").append(prependGuardBlocked.get())
         append(",uncovered:").append(prependUncovered.get())
+        append(",element:").append(elementPrependOverAny.get())
+        append(",graft:").append(graftAbsorbs.get())
+        append(",graftUnderClaim:").append(graftAbsorbUnderClaim.get())
         append("]")
         append(" fork=[hits:").append(absorbForkHits.get())
         append(",maxWidth:").append(absorbForkMaxWidth.get())
