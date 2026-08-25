@@ -92,7 +92,7 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 
 ### opentaint scan
 
-Automatically detects the project's build system (Maven or Gradle), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
+Automatically detects the project's build system (Maven, Gradle, or go.mod), builds the project, and runs taint analysis over the result. The source path defaults to the current directory when omitted.
 
 Go projects need the `go` command on `PATH`. The first Go scan downloads the `go-ssa-server` component. A project can mix languages. If `go` is missing in a mixed project, the scan skips the Go code and shows a warning.
 
@@ -194,7 +194,7 @@ Rule and approximation test runs write `test-result.json` and `test-results.sari
 
 ### opentaint compile
 
-Compiles Java and Kotlin projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
+Compiles Java, Kotlin, and Go projects and generates project models for analysis. Useful when you want to separate compilation from scanning or need to inspect the project model.
 
 ```bash
 opentaint compile --output ./my-project-model /path/to/project
