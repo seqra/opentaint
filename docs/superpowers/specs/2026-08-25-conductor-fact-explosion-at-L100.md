@@ -468,7 +468,121 @@ is not the hoist (1.0 %). What it does is make the FACT big — 7.1× fan-out pe
 premise each. `decide(WorkflowModel)` goes 373 → 6,537 premises between the control and the star arm
 without the premises themselves ever mentioning an `[any]`.
 
-## 10. Caveats
+## 10. Why the manager's limit does not guard the fan-out
+
+The `[any]` manager was built on the hypothesis that a budget would make the absorbing prepend start
+folding accessors back into the `[any]` and hold the tree down. §9.2 says the tree's cost is fan-out —
+10.50 children per `[any]`-owning node. This section is why `L = 100` does not touch that, in four
+steps, each one measured.
+
+### 10.1 The fact-side read cannot refuse
+
+`AccessNode.getChild`'s `isCoveredByAny` arm is the only place a concrete accessor is synthesised out
+of an `[any]`. It consults the manager — and then ignores the answer:
+
+```kotlin
+val childState = if (record) manager.anyUnroll.readChild(anyId, accessor) else manager.anyUnroll.peekChild(anyId, accessor)
+val anyAccessorNoRepeats = anyAccessorNode.clearChild(accessor)
+val originalAnyNoRepeats = anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX, childState ?: anyId)
+```
+
+`childState` is used only as the state *tag* on the rebuilt `[any]` edge, and `childState ?: anyId`
+falls back to the parent state. `resultNode` was already computed a few lines above with no manager
+involvement. And `readChild` itself never returns null on the enabled path — that is step 3 of the
+absorbing-prepend design, "the read records past the limit instead of refusing":
+
+```kotlin
+val dag = current.dag.find()
+val paid = dag.total < limit                     // the ONLY thing the pot decides
+val child = mint(current, accessor, dag, paid)
+```
+
+The one entry point that *does* refuse is `readChildPaidOnly`, used solely by the initial-fact
+abstraction's unroll. That is the entire meaning of `refused = 50`.
+
+### 10.2 …and 99.9 % of reads never reach the pot anyway
+
+`readChild`'s fast path returns an existing transition before `dag` is even resolved:
+
+| arm | reads | reused free | reads that reached `dag.total < limit` |
+|---|---|---|---|
+| `L = 100` | 556,279 | **99.88 %** | 601 |
+| `L = 8` | 631,193 | **99.91 %** | 560 |
+| `L = 0` | 1,737,057 | **99.98 %** | 386 |
+
+Whatever `L` is set to, it can influence **at most one read in eight hundred**, and even then it
+changes a label rather than an outcome.
+
+### 10.3 Absorption is switched OFF while the budget is unspent
+
+```kotlin
+fun writesAbove(state: AnyUnrollState?): Boolean {
+    if (!enabled || state == null) return true
+    val kind = state.find().kind
+    return kind == AnyUnrollKind.ORIGIN || kind == AnyUnrollKind.PAID
+}
+```
+
+`true` means "write the step, do not absorb". Only `CREDIT` states — states minted *after* the pot was
+spent — may absorb. So the knob runs backwards from the hypothesis: **a higher limit keeps states
+`PAID` for longer and makes absorption strictly less likely.**
+
+| arm | absorptions | of which `absorbStay` (self-loop, no structural change) | prepends declined by `writesAbove` |
+|---|---|---|---|
+| `L = 100` | 54,579 | 0.1 % | **20,876,190** |
+| `L = 8` | 88,199 | 0.0 % | **26,533,199** |
+| `L = 0` | 14,355,560 | **99.7 %** | 8,783 |
+
+At `L = 100`, `writesAbove` accounts for 99.7 % of every decline; `guardBlocked` and `uncovered` are
+both **0**, so §4.3's subtree probe and the coverage test exonerate themselves. And `L = 0`, the only
+setting that turns absorption on in volume, spends 99.7 % of it on self-loops — absorbing in place,
+which rewrites nothing.
+
+### 10.4 …and an absorption could not remove a child even if it fired
+
+`installAbove` takes a node `N` with children `{[any] → A} ∪ C` and a step `a` to install above it:
+
+- without absorption: `a.N` — the parent has **one** child;
+- with absorption: `a.rest ⊕ [any]@pred.A` — the parent has **two**, unless `C` is empty.
+
+It removes one level of **depth on the `[any]`-rooted branch** and, where the node has concrete
+siblings, it *raises* the parent's child count from 1 to 2 (§4.4's SPLIT, which exists precisely so
+that dropping the step does not silently rewrite the concrete siblings too). Nothing in the manager or
+the tree caps a node's child count; the only limiters in the package are
+`SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2`, `limitFieldAccess` (repeats of *one* field), and a query visit
+budget.
+
+### 10.5 The measurement
+
+Out-degree of `[any]`-owning nodes in the largest retained tree, across four limits:
+
+| arm | rc | progress | tree | `[any]`-owning | mean out | max | other | mean out |
+|---|---|---|---|---|---|---|---|---|
+| `L = 100` | 254 | 789,495 | 538 | 452 | **10.50** | 77 | 86 | 1.47 |
+| `L = 8` | 254 | 911,879 | 252 | 199 | **14.48** | 54 | 53 | 1.08 |
+| `L = 0` | 254 | 682,656 | 415 | 276 | **8.36** | 55 | 139 | 11.75 |
+| `L = -1` (off) | 253 | 2,127,666 | 2,599 | **0** | — | — | 2,599 | **15.45** |
+
+**Tightening the limit does not reduce the fan-out.** `L = 8` is *higher* than `L = 100`. At `L = 0`
+the `[any]` nodes thin out and the fan-out simply moves onto the concrete ones (139 nodes at 11.75).
+With the manager off the `[any]` is gone from the tree entirely — the unroll converted it — and
+out-degree is 15.45, the highest of the four. Every arm sits in the same 8–15 band.
+
+### 10.6 What the manager does bound, and why that is a different axis
+
+The hypothesis was not wrong about the mechanism it was built for. That mechanism is **depth**: the
+delta/concat round trip, where a premise reads through an `[any]`, consumes nothing, and the graft
+re-attaches the remainder under the conclusion's prefix — one concrete link longer, `[any]` intact,
+per lap. The manager does bound it: `AnyDeltaConcatRoundTripTest` closes four laps into a loop with
+depth constant, and `depthGain` fell 19.87 M → 16.34 M at `L = 8` on this workload.
+
+Conductor's cost is **breadth**. A node that owns an `[any]` answers every read anyone ever makes, so
+it collects one child per demanded accessor — 10.50 of them, untyped (§5.1, §9.2) — and the path count
+is the product of those degrees. The manager has exactly one lever on the tree, the state tag on an
+`[any]` edge, and by §10.1 that tag cannot decline a child. Depth and breadth are different axes, and
+the budget is an instrument on the wrong one.
+
+## 11. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -499,3 +613,9 @@ without the premises themselves ever mentioning an `[any]`.
 - **§9.2's out-degree is one retained tree.** It is the largest one the run kept, 538 distinct nodes;
   the profile lines of §9.1 corroborate the share of `[any]`-owning nodes across five more trees, but
   the fan-out ratio itself is a single sample.
+- **§10.5 compares four different trees.** Each arm retains its own largest `added`, so the rows are
+  not the same object seen under four settings. What the table licenses is that the fan-out never
+  leaves the 8–15 band, not a per-tree delta.
+- **`mints` counts origins, not transitions.** `mints = 195` at `L = 100` is the number of `[any]`
+  origins created; the per-transition mint does not touch that counter, which is why `transitions`
+  (601) is the number to compare against `reads`.
