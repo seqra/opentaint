@@ -287,6 +287,47 @@ object AnyUnrollDiagnostics {
     val collapses = AtomicLong()
 
     /**
+     * The COUNTERFACTUAL: for each prepend the kind gate declined, what would have happened if the
+     * gate had been open.
+     *
+     * `writesAbove` returning true is the reason 99.7% of prepends write their step, but "the gate
+     * declined" and "the gate is what is costing us" are different claims. These run the rest of the
+     * probe -- subtree guard, coverage, and the backward step -- on every declined prepend and record
+     * where it would have landed. `cfNoPredecessor` and `cfWouldStay` are the two outcomes that mean
+     * the fact pattern was never absorbable in the first place; only `cfWouldMove` is structure the
+     * gate is actually holding back.
+     */
+    val cfDeclinedOrigin = AtomicLong()
+    val cfDeclinedPaid = AtomicLong()
+    val cfGuardBlocked = AtomicLong()
+    val cfUncovered = AtomicLong()
+    val cfNoPredecessor = AtomicLong()
+    val cfWouldStay = AtomicLong()
+    val cfWouldMove = AtomicLong()
+
+    /** One line per distinct `(outcome, accessor)`, so the fact PATTERN is on the page, not inferred. */
+    private const val CF_SAMPLES = 40
+    private val cfSamples = java.util.Collections.synchronizedMap(LinkedHashMap<String, String>())
+
+    fun sampleCounterfactual(key: String, render: () -> String) {
+        if (!enabled) return
+        synchronized(cfSamples) {
+            if (cfSamples.size >= CF_SAMPLES || cfSamples.containsKey(key)) return
+            cfSamples[key] = render().take(300)
+        }
+    }
+
+    fun counterfactualReport(): String = buildString {
+        appendLine(
+            "ANYUNROLL cf declined=[origin:${cfDeclinedOrigin.get()},paid:${cfDeclinedPaid.get()}]" +
+                " outcome=[guardBlocked:${cfGuardBlocked.get()},uncovered:${cfUncovered.get()}," +
+                "noPredecessor:${cfNoPredecessor.get()},wouldStay:${cfWouldStay.get()}," +
+                "wouldMove:${cfWouldMove.get()}]"
+        )
+        synchronized(cfSamples) { cfSamples.forEach { (k, v) -> appendLine("ANYUNROLL cf   $k | $v") } }
+    }
+
+    /**
      * How fast unions move the cut, and in which direction.
      *
      * [kindDemotionsFromOrigin] must read ZERO once `ORIGIN` is neutral -- non-zero means a fresh
@@ -1033,6 +1074,10 @@ class AnyUnrollManager(
      * descended from one origin, and it cannot tell a step the callee genuinely produced from a step
      * this `[any]` sold.
      */
+    /** The kind of an `[any]` position, for diagnostics that need to say WHY a write was written. */
+    fun kindOf(state: AnyUnrollState?): AnyUnrollKind? =
+        if (!enabled || state == null) null else state.find().kind
+
     fun writesAbove(state: AnyUnrollState?): Boolean {
         if (!enabled || state == null) return true
         val kind = state.find().kind
@@ -1054,7 +1099,7 @@ class AnyUnrollManager(
      * What it must be is REPRODUCIBLE, hence the id tie-break, and -- for a telescoping fold to close
      * -- COMPLETE, which is what the fork counter is about.
      */
-    fun absorbInto(state: AnyUnrollState, accessor: AccessorIdx): AnyUnrollState? {
+    fun absorbInto(state: AnyUnrollState, accessor: AccessorIdx, count: Boolean = true): AnyUnrollState? {
         if (!enabled) return null
 
         val current = state.find()
@@ -1070,7 +1115,7 @@ class AnyUnrollManager(
             // `pending` a lock-free scan can observe a predecessor whose forward edge does not yet
             // resolve back. This turns that window into a MISS rather than a wrong predecessor.
             if (pred.children?.get(accessor)?.find() !== current) {
-                if (AnyUnrollDiagnostics.enabled) {
+                if (count && AnyUnrollDiagnostics.enabled) {
                     AnyUnrollDiagnostics.witnessForwardCheckFailed.incrementAndGet()
                 }
                 continue
@@ -1080,7 +1125,7 @@ class AnyUnrollManager(
             if (best == null || pred.id < best.id) best = pred
         }
 
-        if (AnyUnrollDiagnostics.enabled && hits > 1) {
+        if (count && AnyUnrollDiagnostics.enabled && hits > 1) {
             AnyUnrollDiagnostics.absorbForkHits.incrementAndGet()
             AnyUnrollDiagnostics.recordFork(hits)
         }

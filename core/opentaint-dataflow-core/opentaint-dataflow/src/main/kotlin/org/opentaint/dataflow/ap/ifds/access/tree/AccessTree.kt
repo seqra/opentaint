@@ -1615,6 +1615,55 @@ class AccessTree(
          *   measure what its exclusion saves, and counting there would put its non-events into the
          *   same buckets as the real ones.
          */
+        /**
+         * What the declined prepend WOULD have done, had the kind gate been open.
+         *
+         * The gate is the reason 99.7% of prepends write their step, which is a fact about the
+         * gate and not yet a fact about the cost. Running the rest of the probe here separates
+         * "the pattern was absorbable and the gate refused it" from "there was nothing to absorb":
+         * a position with no incoming edge for this accessor, or one whose only incoming edge is a
+         * self-loop, is not structure the gate is holding back.
+         */
+        private fun recordDeclinedPrepend(accessor: AccessorIdx, node: AccessNode, pos: AnyUnrollState) {
+            when (manager.anyUnroll.kindOf(pos)) {
+                AnyUnrollKind.ORIGIN -> AnyUnrollDiagnostics.cfDeclinedOrigin
+                else -> AnyUnrollDiagnostics.cfDeclinedPaid
+            }.incrementAndGet()
+
+            val anyNode = node.getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return
+            val name = with(manager) { accessor.accessor }.toSuffix()
+
+            if (anyNode.getNodeByAccessor(accessor) != null) {
+                AnyUnrollDiagnostics.cfGuardBlocked.incrementAndGet()
+                AnyUnrollDiagnostics.sampleCounterfactual("guardBlocked $name") { anyNode.render() }
+                return
+            }
+            if (!manager.isCoveredByAny(accessor)) {
+                AnyUnrollDiagnostics.cfUncovered.incrementAndGet()
+                AnyUnrollDiagnostics.sampleCounterfactual("uncovered $name") { anyNode.render() }
+                return
+            }
+
+            val pred = manager.anyUnroll.absorbInto(pos, accessor, count = false)
+            when {
+                pred == null -> {
+                    AnyUnrollDiagnostics.cfNoPredecessor.incrementAndGet()
+                    AnyUnrollDiagnostics.sampleCounterfactual("noPredecessor $name") { anyNode.render() }
+                }
+                pred === pos.find() -> {
+                    AnyUnrollDiagnostics.cfWouldStay.incrementAndGet()
+                    AnyUnrollDiagnostics.sampleCounterfactual("wouldStay $name") { anyNode.render() }
+                }
+                else -> {
+                    AnyUnrollDiagnostics.cfWouldMove.incrementAndGet()
+                    AnyUnrollDiagnostics.sampleCounterfactual("wouldMove $name") { anyNode.render() }
+                }
+            }
+        }
+
+        private fun AccessNode.render(): String =
+            "kind=" + manager.anyUnroll.kindOf(anyId) + " anySubtree=" + toString().replace('\n', ' ')
+
         private fun absorbTargetFor(
             accessor: AccessorIdx,
             node: AccessNode,
@@ -1625,7 +1674,10 @@ class AccessTree(
             val counting = count && AnyUnrollDiagnostics.enabled
 
             if (manager.anyUnroll.writesAbove(pos)) {
-                if (counting) AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
+                if (counting) {
+                    AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
+                    recordDeclinedPrepend(accessor, node, pos)
+                }
                 return null
             }
             // By the node invariant `anyId != null` iff there is an `[any]` edge, so this is non-null.

@@ -138,6 +138,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             // Also on stdout: the benchmark harness scrapes console.log, and a counter that only
             // exists inside a log level nobody enabled is a counter nobody reads.
             println("ANYUNROLL $report")
+
+            val counterfactual = AnyUnrollDiagnostics.counterfactualReport()
+            logger.info { counterfactual }
+            counterfactual.lineSequence().forEach { if (it.isNotBlank()) println(it) }
         }
 
         if (TifaDiagnostics.enabled) {
