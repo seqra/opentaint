@@ -35,7 +35,7 @@ var updateHintCh = make(chan string, 1)
 var rootCmd = &cobra.Command{
 	Use:   "opentaint",
 	Short: "Find vulnerabilities in source code with taint analysis",
-	Long: `OpenTaint finds vulnerabilities in your code. It follows tainted data from untrusted sources to dangerous sinks. Java and Kotlin projects are supported.
+	Long: `OpenTaint finds vulnerabilities in your code. It follows tainted data from untrusted sources to dangerous sinks. Java, Kotlin, and Go projects are supported.
 
 Quick start:
   1. Run "opentaint pull" one time. This downloads the toolchain.
