@@ -120,6 +120,31 @@ class AnyUnrollState(
     var children: ConcurrentReadSafeInt2ObjectMap<AnyUnrollState>? = null
 
     /**
+     * Incoming edges: accessor -> the representatives with a transition on it INTO this state.
+     *
+     * The reverse of [children], and it exists because the prepend has to answer *is `a` an incoming
+     * edge of the position this fact's `[any]` carries?* at a site with no access to the read that
+     * created it. Without it that question needs a single-witness field on the fact, which a merge
+     * can silently replace.
+     *
+     * The value is an IMMUTABLE array, replaced wholesale under the lock, never mutated in place.
+     * [ConcurrentReadSafeInt2ObjectMap] re-checks its backing array lengths so a lock-free reader
+     * cannot straddle a rehash -- but that protects the MAP, not a mutable value hanging off it. A
+     * grow-in-place list would publish an incremented size before the element store was visible and
+     * the lock-free backward scan would dereference a null; an in-place `replace` would let a racing
+     * scan see one predecessor twice and another never, making the choice among them
+     * non-deterministic -- and that choice reaches `AccessNode.anyId`, hence `hash`, hence the merge
+     * guard.
+     *
+     * An accessor with no predecessors left is stored as an EMPTY array rather than removed: fastutil
+     * shifts keys on removal, which moves entries within arrays of unchanged length, and that is
+     * exactly the one mutation the map's length re-check does not cover.
+     */
+    @Volatile
+    @JvmField
+    var parents: ConcurrentReadSafeInt2ObjectMap<Array<AnyUnrollState>>? = null
+
+    /**
      * The representative of this state's DSU class, with path halving.
      *
      * Lock-free and best-effort: a lost halving write is harmless because both racing writers install
@@ -307,6 +332,9 @@ class AnyUnrollManager(
     private val maxStatesPerDag = AtomicInteger()
     private val transitionsInstalled = AtomicInteger()
 
+    /** Invariant (I) violations observed by the incoming remap. Must stay zero. */
+    private val remapConflicts = AtomicInteger()
+
     /** `pathCount` saturates here: past `L` the state refuses everything anyway. */
     private val pathCountCeiling: Int = if (limit <= 0) 1 else limit
 
@@ -457,6 +485,45 @@ class AnyUnrollManager(
                 maxOf(x.pathCount, y.pathCount)
             }
 
+            // (1) INCOMING. Nothing used to touch the states pointing AT `y`, so a predecessor's
+            // transition named the loser verbatim, forever -- and held it against the collector.
+            // Every such edge is re-pointed at `x`, which both closes that retention hole and makes
+            // the backward query complete, so no single-witness record is needed and no merge can
+            // silently replace one.
+            //
+            // This writes ANOTHER state's `children`, which is safe for the reason the outgoing fold
+            // below documents: if `pr` later loses root status, its children -- including the entry
+            // just written -- are folded into the new winner by exactly this code.
+            //
+            // `putTransition`, not `pr.children?.put`: the latter no-ops when `children` is null,
+            // which a representative that never carried transitions of its own legitimately is.
+            val incoming = y.parents
+            if (incoming != null) {
+                y.parents = null
+                val inKeys = incoming.keys.toIntArray()
+                for (accessor in inKeys) {
+                    val preds = incoming.get(accessor) ?: continue
+                    for (pred in preds) {
+                        // A self-loop on `y` resolves to `x` here and is reinstalled as a self-loop
+                        // on `x` -- which is what the loop it records means, and what makes the next
+                        // read of that accessor free.
+                        val pr = pred.find()
+                        val forward = pr.children?.get(accessor)
+                        if (forward == null || forward.find() === x) {
+                            putTransition(pr, accessor, x)
+                        } else {
+                            // Unreachable if the mirror is exact -- the outgoing loop below drops a
+                            // loser's name from its target's `parents` in the same step that folds
+                            // its children away, so a predecessor whose real edge goes elsewhere is
+                            // not listed here. Skipping rather than overwriting is the arm that
+                            // cannot DROP a transition, and the counter says if the reasoning is
+                            // wrong rather than leaving it to be discovered as a wrong answer.
+                            remapConflicts.incrementAndGet()
+                        }
+                    }
+                }
+            }
+
             val absorbed = y.children ?: continue
             y.children = null
 
@@ -466,12 +533,24 @@ class AnyUnrollManager(
             val keys = absorbed.keys.toIntArray()
             for (accessor in keys) {
                 val target = absorbed.get(accessor) ?: continue
+                val rep = target.find()
+
+                // (2) OUTGOING, the mirror only. `y` has stopped being a representative, so its name
+                // must not survive as a value in any `parents` array -- invariant (I). The new edge
+                // is added by the `putTransition` below, or is already there in the conflict arm.
+                removeParentEdge(rep, accessor, y)
+
                 val existing = x.children?.get(accessor)
                 if (existing == null) {
                     // One successor per accessor: an NFA here would make every lookup explore a SET
                     // of states, re-derivation would stop being free, and the whole design collapses.
-                    putTransition(x, accessor, target.find())
+                    putTransition(x, accessor, rep)
                 } else {
+                    // The conflict arm does NOT call `putTransition` -- it queues the pair -- so
+                    // between here and the drain of `pending` a lock-free backward scan can observe
+                    // a predecessor whose forward edge does not yet resolve back. Sound, and it is
+                    // why the backward query re-checks the forward direction: that turns the window
+                    // into a MISS rather than a wrong predecessor.
                     pending.addLast(existing)
                     pending.addLast(target)
                 }
@@ -481,16 +560,67 @@ class AnyUnrollManager(
         return x0.find()
     }
 
+    /**
+     * Install `state --accessor--> target`, and its mirror in [AnyUnrollState.parents].
+     *
+     * The two directions are written together at every call site, which is what makes invariant (I)
+     * a property of one function rather than a convention spread over the file.
+     */
     private fun putTransition(state: AnyUnrollState, accessor: AccessorIdx, target: AnyUnrollState) {
         val existing = state.children
         if (existing != null) {
             if (existing.put(accessor, target) == null) transitionsInstalled.incrementAndGet()
+        } else {
+            val map = ConcurrentReadSafeInt2ObjectMap<AnyUnrollState>()
+            map.put(accessor, target)
+            transitionsInstalled.incrementAndGet()
+            state.children = map
+        }
+        addParentEdge(target, accessor, state)
+    }
+
+    /** Copy-on-write: the array a lock-free scan may already be holding is never touched. */
+    private fun addParentEdge(state: AnyUnrollState, accessor: AccessorIdx, pred: AnyUnrollState) {
+        val map = state.parents
+        if (map == null) {
+            val fresh = ConcurrentReadSafeInt2ObjectMap<Array<AnyUnrollState>>()
+            fresh.put(accessor, arrayOf(pred))
+            state.parents = fresh
             return
         }
-        val map = ConcurrentReadSafeInt2ObjectMap<AnyUnrollState>()
-        map.put(accessor, target)
-        transitionsInstalled.incrementAndGet()
-        state.children = map
+
+        val existing = map.get(accessor)
+        if (existing == null) {
+            map.put(accessor, arrayOf(pred))
+            return
+        }
+        for (p in existing) if (p === pred) return
+        map.put(accessor, existing + pred)
+    }
+
+    /**
+     * Drop [pred] from [state]'s incoming edges on [accessor], leaving an EMPTY array behind rather
+     * than removing the key -- see [AnyUnrollState.parents] for why a removal is the one map mutation
+     * a lock-free reader cannot be made safe against.
+     */
+    private fun removeParentEdge(state: AnyUnrollState, accessor: AccessorIdx, pred: AnyUnrollState) {
+        val map = state.parents ?: return
+        val existing = map.get(accessor) ?: return
+
+        var idx = -1
+        for (i in existing.indices) {
+            if (existing[i] === pred) {
+                idx = i
+                break
+            }
+        }
+        if (idx < 0) return
+
+        val next = arrayOfNulls<AnyUnrollState>(existing.size - 1)
+        System.arraycopy(existing, 0, next, 0, idx)
+        System.arraycopy(existing, idx + 1, next, idx, existing.size - idx - 1)
+        @Suppress("UNCHECKED_CAST")
+        map.put(accessor, next as Array<AnyUnrollState>)
     }
 
     /**
@@ -607,7 +737,11 @@ class AnyUnrollManager(
 
         // An invariant of the scheme, not a defensive check: a violation means the fusion accounting
         // is wrong, which is otherwise a silent, slowly drifting number that would be believed.
-        val consistent = if (s.beyond <= s.liveRoots) "" else " INCONSISTENT(beyond>live)"
+        val consistent = when {
+            s.beyond > s.liveRoots -> " INCONSISTENT(beyond>live)"
+            remapConflicts.get() > 0 -> " REMAP_CONFLICTS(${remapConflicts.get()})"
+            else -> ""
+        }
 
         return "[any] roots: ${s.liveRoots} live, ${s.beyond} beyond, ${s.states} states " +
             "(max/dag ${s.maxStatesPerDag}), transitions ${s.transitions}" + consistent

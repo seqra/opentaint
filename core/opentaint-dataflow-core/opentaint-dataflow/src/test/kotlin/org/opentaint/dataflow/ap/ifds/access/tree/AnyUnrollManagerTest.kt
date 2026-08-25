@@ -292,6 +292,246 @@ class AnyUnrollManagerTest {
         assertEquals(1, m.totalOf(root), "still only the build's charge")
     }
 
+    /* ---------- compression: only representatives appear in edges ---------- */
+
+    private fun AnyUnrollState.preds(accessor: Int): List<AnyUnrollState> =
+        find().parents?.get(accessor)?.map { it.find() }.orEmpty()
+
+    /**
+     * The inverse of the hole this closes. Before compression `mergeStates` folded only the OUTGOING
+     * direction, so after a union a predecessor's transition named the loser verbatim -- forever, and
+     * against the collector.
+     */
+    @Test
+    fun `a union remaps the predecessor's transition`() {
+        val m = manager()
+        val p = m.origin()
+        val s = m.readChild(p, A)!!
+        val t = m.readChild(p, B)!!
+
+        m.union(s, t)
+
+        assertSame(s, p.children!!.get(B), "the STORED value must be the winner, not the loser")
+        assertSame(s, p.transition(B))
+        assertEquals(listOf(p), s.preds(B), "and the mirror records the edge")
+        assertEquals(listOf(p), s.preds(A))
+    }
+
+    @Test
+    fun `a merged-away state with an incoming edge becomes unreachable`() {
+        val m = manager()
+        val p = m.origin()
+        val s = m.readChild(p, A)!!
+
+        var transient: AnyUnrollState? = m.readChild(p, B)
+        val ref = WeakReference(transient)
+        m.union(s, transient!!)
+        transient = null
+
+        var collected = false
+        for (attempt in 0 until 50) {
+            System.gc()
+            Thread.sleep(20)
+            if (ref.get() == null) {
+                collected = true
+                break
+            }
+        }
+
+        assertTrue(
+            collected,
+            "a state reachable only through a stale transition is exactly what the incoming remap " +
+                "exists to release"
+        )
+    }
+
+    @Test
+    fun `a paid mint records its incoming edge`() {
+        val m = manager()
+        val root = m.origin()
+        val a = m.readChild(root, A)!!
+
+        assertEquals(listOf(root), a.preds(A))
+        assertTrue(a.preds(B).isEmpty(), "and nothing it did not record")
+        assertTrue(root.preds(A).isEmpty(), "the origin has no incoming edge")
+    }
+
+    @Test
+    fun `a self-loop records itself as its own predecessor`() {
+        val m = manager()
+        val root = m.origin()
+        val successor = m.readChild(root, A)!!
+        m.union(root, successor)
+
+        assertSame(root, root.transition(A), "m --a--> m")
+        assertEquals(
+            listOf(root), root.preds(A),
+            "the automaton saying `a` is ALREADY folded into this `[any]`; an identity test would " +
+                "read this as 'no incoming edge' and write the accessor instead"
+        )
+    }
+
+    @Test
+    fun `the parents index survives a conflicting union`() {
+        val m = manager()
+        val root = m.origin()
+        val a = m.readChild(root, A)!!
+        val b = m.readChild(root, B)!!
+        val aC = m.readChild(a, C)!!
+        val bC = m.readChild(b, C)!!
+
+        // a and b both carry a C-edge, so the fold queues the two targets rather than keeping both.
+        m.union(a, b)
+
+        val rep = a.find()
+        assertSame(aC.find(), bC.find())
+        assertEquals(listOf(rep), aC.find().preds(C), "one predecessor, and it is the representative")
+        assertNoNonRepresentatives(root)
+    }
+
+    /**
+     * The premise the subset construction rests on: `y.parent = x` re-points every predecessor of `y`
+     * onto `x`, so two states reached on the SAME accessor from two DIFFERENT predecessors leave the
+     * winner with both. The reversed relation is an NFA even though the forward one is not.
+     */
+    @Test
+    fun `a union forks the reverse index`() {
+        val m = manager()
+        val root = m.origin()
+        val p = m.readChild(root, A)!!
+        val q = m.readChild(root, B)!!
+        val t1 = m.readChild(p, C)!!
+        val t2 = m.readChild(q, C)!!
+
+        m.union(t1, t2)
+
+        val preds = t1.preds(C)
+        assertEquals(2, preds.size, "two C-predecessors of one state -- the fork")
+        assertTrue(preds.containsAll(listOf(p.find(), q.find())))
+        assertNoNonRepresentatives(root)
+    }
+
+    @Test
+    fun `no map holds a non-representative after a cascade`() {
+        val m = manager()
+        val left = m.origin()
+        val right = m.origin()
+
+        val la = m.readChild(left, A)!!
+        m.readChild(la, B)
+        val ra = m.readChild(right, A)!!
+        m.readChild(ra, B)
+        m.readChild(right, C)
+
+        m.union(left, right)
+
+        assertNoNonRepresentatives(left)
+    }
+
+    private fun assertNoNonRepresentatives(seed: AnyUnrollState) {
+        val seen = java.util.IdentityHashMap<AnyUnrollState, Unit>()
+        val stack = ArrayDeque<AnyUnrollState>()
+        stack.addLast(seed.find())
+        while (stack.isNotEmpty()) {
+            val n = stack.removeLast()
+            if (seen.put(n, Unit) != null) continue
+            assertSame(n, n.find(), "a non-representative was reached: \$n")
+
+            n.children?.let { c ->
+                for (k in c.keys.toIntArray()) {
+                    val v = assertNotNull(c.get(k))
+                    assertSame(v, v.find(), "children[\$k] on \$n names a non-representative")
+                    stack.addLast(v)
+                }
+            }
+            n.parents?.let { pm ->
+                for (k in pm.keys.toIntArray()) {
+                    for (v in assertNotNull(pm.get(k))) {
+                        assertSame(v, v.find(), "parents[\$k] on \$n names a non-representative")
+                        stack.addLast(v)
+                    }
+                }
+            }
+        }
+    }
+
+    /* ---------- Lemma 9.2: a recorded edge stays a real edge of the quotient automaton ---------- */
+
+    private fun assertWitness(p: AnyUnrollState, accessor: Int, s: AnyUnrollState) {
+        assertSame(s.find(), p.find().children!!.get(accessor)!!.find())
+        assertTrue(p.find() in s.preds(accessor), "and the mirror agrees")
+    }
+
+    @Test
+    fun `the witness survives a union of the successor`() {
+        val m = manager()
+        val p = m.origin()
+        val s = m.readChild(p, A)!!
+        val other = m.readChild(p, B)!!
+        m.union(other, s)
+        assertWitness(p, A, s)
+    }
+
+    @Test
+    fun `the witness survives the predecessor losing root status`() {
+        val m = manager()
+        val root = m.origin()
+        val p = m.readChild(root, A)!!
+        val s = m.readChild(p, B)!!
+        m.union(root, p)
+        assertWitness(p, B, s)
+    }
+
+    @Test
+    fun `the witness survives a conflicting union of two predecessors`() {
+        val m = manager()
+        val root = m.origin()
+        val p = m.readChild(root, A)!!
+        val q = m.readChild(root, B)!!
+        val ps = m.readChild(p, C)!!
+        val qs = m.readChild(q, C)!!
+
+        m.union(p, q)
+
+        // The fold must MERGE the conflicting targets rather than drop one.
+        assertSame(ps.find(), qs.find())
+        assertWitness(p, C, ps)
+        assertWitness(q, C, qs)
+    }
+
+    @Test
+    fun `the witness survives a cross-dag fusion`() {
+        val m = manager()
+        val left = m.origin()
+        val right = m.origin()
+        val ls = m.readChild(left, A)!!
+        val rs = m.readChild(right, A)!!
+
+        m.union(left, right)
+
+        assertWitness(left, A, ls)
+        assertWitness(right, A, rs)
+    }
+
+    @Test
+    fun `the witness survives a self-loop`() {
+        val m = manager()
+        val root = m.origin()
+        val s = m.readChild(root, A)!!
+        m.union(root, s)
+        assertWitness(root, A, s)
+    }
+
+    @Test
+    fun `a read advances the state to the successor of the accessor read`() {
+        val m = manager()
+        val p = m.origin()
+        val s = assertNotNull(m.readChild(p, A))
+
+        assertFalse(s === p, "the read advances")
+        assertWitness(p, A, s)
+    }
+
     /* ---------- the population counts behind the progress line ---------- */
 
     /**
