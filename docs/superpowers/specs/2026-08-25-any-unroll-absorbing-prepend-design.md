@@ -697,7 +697,7 @@ census: sites that install an edge **above** a node that owns one.
 | 1 | `create(accessor, node, anyState)` — the raw single-edge choke point | `:2726` | itself | serves `reconstructRemainder` (`:905`), both chain folds (`:2900`, `:2919`), and `addParentIfPossible`'s static / mark / type-info / `[value]` arms |
 | 2 | `bulkMergeAddAccessors(entries, entryAnyState)` | `:1425` | `createElementAndField` | **the graft** — `concat`'s spine rebuild is `manager.create(...).bulkMergeAddAccessors(nestedAccessors, anyId)` at `:2131-2137` |
 | 3 | `addParentFieldAccess` | `:1267` | → 1 **and** → 2 | **the hottest covered prepend in the engine.** Its `create(newRootField, limitedThis)` at `:1274` installs a covered field above `limitedThis`, which routinely owns an `[any]` (`limitFieldAccessCached` recurses through every child, `ANY_ACCESSOR_IDX` included, stripping only `newRootField`). The comment at `:1279` is about the entry LIST, not this `create`. Reached from the public `prependAccessor`, hence `Cleaner`, `AliasUtil`, `RulePreconditionUtils`, TIFA |
-| 4 | `filterStartsWith`'s spine re-fold | `:2218-2222` | → 1 | already absorbing, on the wrong trigger |
+| 4 | `filterStartsWith`'s spine re-fold | `:2218-2222` | → 1 | already absorbing — on the wrong trigger **and into the wrong state**; the closing note below |
 | 5 | `TreeInitialFactAbstraction.addReversedApParents` | `TIFA:292-302` | **excluded** — §8.3 | |
 | 6 | `addParentIfPossible`'s element arm | `:733` | → 1 | see §7 |
 
@@ -709,11 +709,24 @@ engine, not a periphery (R4).
 The funnel argument is the structural one M§5.1 makes for putting the record in `getChild` rather
 than in one caller: it covers every caller at once and stays covered as callers are added.
 
-One piece of plumbing already exists and shows the shape is natural: `filterStartsWith` records
-`consumedAnyState = filteredTreeNode.anyId` **before** each read (`:2190`) and replays it into the
-fold — the predecessor state, threaded by hand, in the one function where read and prepend are
-co-located. This design puts the same information on the automaton so the sites where they are not
-co-located can use it.
+**Row 4 is this design in miniature, hand-wired, and it is the reason the rule is the right shape.**
+`filterStartsWith` descends with `getChildRecording` (`:2199`) — the recording read, so every step it
+takes is a transition the automaton now holds — and folds back up prepending the *same* accessors in
+reverse (`:2218-2222`). Read and prepend are co-located, so **every accessor it prepends is an
+incoming edge of the state the fact carries, by construction**: §7's query cannot miss there, and the
+rule absorbs exactly the set `budgetExhausted` drops today.
+
+It goes further. The function already captures `consumedAnyState = filteredTreeNode.anyId` *before*
+each read (`:2190`) and threads it down the fold — the predecessor state, in hand. Today it is not
+used for the absorption: `addParentAbsorbingAny` installs the surviving `[any]` with `anyId` (`:942`),
+the state *after* the read, and for a covered field the threaded value is inert anyway, since `create`
+consults `anyState` only when the accessor is `ANY_ACCESSOR_IDX` (`:2748`). So at the one site where
+both ends of the round trip are visible three lines apart, the fact still comes back tagged with the
+successor. §7 replaces `anyId` with `absorbInto(anyId, accessor)`, which at this site must return the
+value already sitting in `parentAnyStates[i]` — **a checkable identity**, and §14.1 checks it.
+
+This design puts on the automaton what one function threads by hand, so the sites where read and
+prepend are *not* co-located can use it.
 
 ### 8.2 Row 2 — the graft
 
@@ -879,11 +892,16 @@ the real benchmarks do not show, and R3 records the shape of the repair should o
 **(b) The written part is not bounded, it is targeted.** A `CREDIT` state absorbs only its own
 incoming accessors; a prepend whose accessor is not one is written — by design, since that accessor
 is real structure (§2). This narrows growth to "what the callee genuinely produced" without bounding
-it, and it has a consequence worth stating in the open: **this design can make a fact bigger than the
-shipped build makes it.** Today `filterStartsWith`'s absorb drops *every* covered accessor once the
-pot is spent; after step 5 it keeps the ones the automaton does not recognise. That is the intended
-precision gain (§2) and the one direction in which the change is not a restriction. Prediction 1 is
-where it gets measured.
+it.
+
+It does **not** make facts bigger than the shipped build makes them, and the reason is §8.1's closing
+note: the one site that absorbs today is `filterStartsWith`, where read and prepend are co-located, so
+every accessor it folds back is an incoming edge by construction and the rule absorbs exactly what
+`budgetExhausted` drops. Two exceptions, both wanted. §4.3's GUARD declines to absorb where the
+subtree already has that child — a **soundness fix**, shipped first as step −1, and the only change
+here that can gain a finding. And a backward-query miss inside §5.5's racing window writes what it
+cannot recognise, which `witnessForwardCheckFailed` counts. Everywhere else today absorbs nothing at
+all, so the rule can only remove links.
 
 **(c) The residual bounded by neither.** A walk over `PAID` transitions revisiting states
 through a cycle writes an unbounded prefix with every state on it `PAID`. Two things bound it in
@@ -906,8 +924,9 @@ Three mechanisms, and conflating them is how this gets got wrong.
 whose state *object* changed is new work. §5.4(a) is what stops that happening on every union.
 Independent of the kind.
 
-**(ii) The absorption closes the round trip.** Absorbing while *keeping* the state — what
-`addParentAbsorbingAny` does today — bounds depth but leaves each lap tagged with
+**(ii) The absorption closes the round trip.** Absorbing while *keeping* the state — `anyId`, the
+state after the read, at `AccessTree.kt:942`, although its one caller has the predecessor in hand
+three lines away (§8.1) — bounds depth but leaves each lap tagged with
 whatever state the read reached, so the population of distinct facts stays high though none is deep.
 Moving to the predecessor returns the fact to a state already seen at that position.
 
@@ -1158,6 +1177,7 @@ fallback, which is a different design with a different proof.
 | `an any whose subtree already has the accessor does not absorb` | §4.3's GUARD |
 | `absorbing leaves the read unchanged` | its positive half — Appendix E as a test |
 | `absorption keeps the step on branches an any does not denote` | the split (§4.4); the existing test generalises |
+| `the automaton derives what filterStartsWith threads by hand` | at every fold step `absorbInto(result.anyId, aᵢ)?.find() === parentAnyStates[i]?.find()` — Lemma 9.2 end-to-end on the engine's hottest read channel, against a value the engine computes independently (§8.1) |
 | `the graft absorbs through bulkMergeAddAccessors` | the graft, not only `filterStartsWith` |
 | `an absorbed step is reported to the deep exclusion filter` | §4.6 |
 | `a finer re-derivation is absorbed by the merge guard` / `a coarser one is not` | Appendix D — together they make `PreferBelow` the default |
@@ -1212,6 +1232,7 @@ four progress-log counters of §12 are separate and unconditional.
 | `rederivationsAfterKindChange` | the other factor of §9.4's bound | large under `PreferBeyond` ⇒ the experiment failed |
 | `tifaAbsorbsOwnUnroll` | §8.3 | **must stay zero** — non-zero means row 5 leaked into the funnel |
 | `witnessForwardCheckFailed` | Lemma 9.2 and §5.5's racing window | should be small; a rising count means loop (2) is wrong |
+| `witnessDisagreesWithThreadedState` | the §8.1 identity, asserted on real workloads rather than in a unit test: at `filterStartsWith`'s fold the query must return the state the caller already threaded | **must stay zero** — non-zero falsifies Lemma 9.2 in production, where no test reaches |
 | `elementPrependOverAny` | element absorption is ON (§7) | it is the `[].[any].[]` case the GUARD covers |
 | `paidPrefixWritten` | §9.3(d) | growing without bound ⇒ take the self-loop guard |
 | `remapsIncoming` / `remapsOutgoing` | the work §5.5 adds to the fusion path | R8 |
