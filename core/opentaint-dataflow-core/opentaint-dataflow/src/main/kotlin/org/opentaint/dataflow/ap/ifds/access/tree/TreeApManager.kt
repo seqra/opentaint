@@ -41,6 +41,8 @@ class TreeApManager(
      * [TreeInitialFactAbstraction] does.
      */
     anyUnrollLimit: Int = AnyUnrollManager.DEFAULT_ANY_UNROLL_LIMIT,
+    /** What kind the survivor of a union carries; a constructor parameter for the same reason. */
+    anyUnrollKindMerge: AnyUnrollKindMerge = AnyUnrollManager.DEFAULT_KIND_MERGE,
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
 
@@ -69,7 +71,7 @@ class TreeApManager(
      * failure that made the previous cap ineffective.
      */
     @JvmField
-    val anyUnroll = AnyUnrollManager(if (anyAccessorsQueryable) anyUnrollLimit else -1)
+    val anyUnroll = AnyUnrollManager(if (anyAccessorsQueryable) anyUnrollLimit else -1, anyUnrollKindMerge)
 
     val interner = AccessorInterner()
 

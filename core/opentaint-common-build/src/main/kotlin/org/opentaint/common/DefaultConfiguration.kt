@@ -63,6 +63,8 @@ fun Project.configureDefaultJvm() {
 private val FORWARDED_TEST_PROPERTIES = listOf(
     // TreeInitialFactAbstraction: the `[any]` unroll cap. Off unless set.
     "opentaint.anyUnrollLimit",
+    // AnyUnrollManager: what kind the survivor of a union carries. `below` unless set.
+    "opentaint.anyUnrollKindMerge",
 )
 
 fun Project.configureDefaultTest() {

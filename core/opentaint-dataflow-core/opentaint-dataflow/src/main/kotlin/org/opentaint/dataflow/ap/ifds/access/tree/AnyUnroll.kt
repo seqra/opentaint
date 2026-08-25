@@ -6,6 +6,63 @@ import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
 /**
+ * How a state was obtained, which is what the prepend keys on instead of the pot.
+ *
+ * `budgetExhausted` is a property of the POT, shared by every `[any]` position descended from one
+ * origin, so once it fires every covered accessor prepended above any `[any]` of that origin is
+ * dropped -- including ones the callee genuinely produced. Given a fact `x.[any]`, a premise
+ * `arg0.a.*` and a conclusion `ret.b.*`, `b` is not a step out of the caller's `[any]`: the callee
+ * wrote field `b` of the return value. Dropping it turns `ret.b.X` into `ret.[any].X`, which then
+ * activates every premise rooted at `ret` -- and coarsening a fact INCREASES the premises it matches.
+ *
+ * The automaton can draw the distinction the pot cannot: `a` is a transition out of the state the
+ * fact's `[any]` carries and `b` is not. Written once at the mint; a union is the only other writer.
+ *
+ * The three values are ordered writable-to-absorbing, which is what makes the `min`/`max` of
+ * [AnyUnrollKindMerge] mean what it says. There is no fourth: the read never stops recording, so
+ * there is no tier past `CREDIT` to reach.
+ */
+enum class AnyUnrollKind {
+    /**
+     * A start state. NEUTRAL in the merge and writable.
+     *
+     * Origins are minted constantly and 11,482 of 11,625 thingsboard unions are cross-dag fusions,
+     * each merging two start states. If origins carried `PAID`, `PreferBelow` would demote every
+     * `CREDIT` class on its first fusion with any fresh origin, irreversibly -- and the pot is
+     * untouched by a fusion, so `budgetExhausted` would say SPENT while the kind said WRITABLE and
+     * the absorption would never fire at all. Lowering `L` would not help: an origin is `PAID` at
+     * every `L`, including 0. `PreferBeyond` mirrors it, spreading `CREDIT` by contagion until every
+     * `[any]` in the program is absorption-eligible. Neither outcome is a knob working; both are the
+     * fusion rate deciding for it. A start state was never bought and has no opinion.
+     */
+    ORIGIN,
+
+    /** Minted while `dag.total < L`: the pot paid for it, so a step above it is still real structure. */
+    PAID,
+
+    /** Minted after the pot was spent. Absorption-eligible -- but only for accessors it recorded. */
+    CREDIT,
+}
+
+/**
+ * What kind the survivor of a union carries. `-Dopentaint.anyUnrollKindMerge=below|beyond`.
+ *
+ * A precision knob, never a soundness one: absorption is correct at any state, so this decides only
+ * WHICH superset is produced.
+ *
+ * `PreferBelow` is the meet -- only states that went on credit absorb -- so the decision over time is
+ * only ever finer and a re-derivation is a SUBSET of what is stored, which for a closed fact the
+ * merge guard absorbs outright. `PreferBeyond` is the join: storage changes in both shapes and the
+ * fact re-enters the worklist carrying an `[any]` matching strictly more premises.
+ *
+ * `PreferBeyond` cannot fail to terminate, and saying so precisely is what makes it an experiment
+ * rather than a fear: under a FIXED strategy the kind is monotone in one direction over a
+ * three-element lattice, so each state changes kind at most twice and each change re-derives a
+ * bounded fact population. The strategy must therefore be fixed for the run.
+ */
+enum class AnyUnrollKindMerge { PreferBelow, PreferBeyond }
+
+/**
  * The budget pot shared by every `[any]` position descended from one origin.
  *
  * One dag per `[any]` ORIGIN -- the point where an `[any]` edge was created with no predecessor to
@@ -107,6 +164,21 @@ class AnyUnrollState(
      */
     @JvmField
     var pathCount: Int = 1
+
+    /**
+     * How this state was obtained -- see [AnyUnrollKind].
+     *
+     * Mutable after construction, and deliberately OUTSIDE node identity: `AccessNode.hash` mixes
+     * only [id], which is immutable. A hash that moved under a live entry is the central hazard here
+     * -- the interner's buckets, the edge sets and the enqueued-unchanged set would each silently
+     * lose an entry the moment a union changed a kind.
+     *
+     * The corollary is that a kind change RE-PROPAGATES NOTHING: the merge guard returns the
+     * receiver, every storage `===` fires, stored facts are untouched. A coarsening or a refinement
+     * takes effect only for facts built after it.
+     */
+    @JvmField
+    var kind: AnyUnrollKind = AnyUnrollKind.ORIGIN
 
     /**
      * The transitions out of this state: at most one successor per accessor, which is what keeps the
@@ -215,6 +287,19 @@ object AnyUnrollDiagnostics {
     val collapses = AtomicLong()
 
     /**
+     * How fast unions move the cut, and in which direction.
+     *
+     * [kindDemotionsFromOrigin] must read ZERO once `ORIGIN` is neutral -- non-zero means a fresh
+     * start state is carrying an opinion it never bought, and at 98.8% cross-dag fusion traffic that
+     * one bug decides the cut instead of the knob. [kindDemotionsGenuine] is the only evidence about
+     * the knob: a `PAID` state in one automaton paired with a `CREDIT` state in the other, requiring
+     * both to have materialised the same sequence, one before its ceiling and one after.
+     */
+    val kindPromotions = AtomicLong()
+    val kindDemotionsGenuine = AtomicLong()
+    val kindDemotionsFromOrigin = AtomicLong()
+
+    /**
      * Facts materialised by the initial-fact abstraction's unroll -- one per `accountUnrolledFact()`
      * in the retired per-`(entry point, base)` counter.
      *
@@ -282,6 +367,10 @@ object AnyUnrollDiagnostics {
         append(",other:").append(unionWithoutCollapseOther.get())
         append("]")
         append(" queryReads=").append(queryReads.get())
+        append(" kind=[promote:").append(kindPromotions.get())
+        append(",demoteGenuine:").append(kindDemotionsGenuine.get())
+        append(",demoteFromOrigin:").append(kindDemotionsFromOrigin.get())
+        append("]")
     }
 }
 
@@ -306,6 +395,12 @@ object AnyUnrollDiagnostics {
 class AnyUnrollManager(
     /** `L`. Negative means the feature is off: no states, no records, no refusals. */
     @JvmField val limit: Int,
+    /**
+     * What kind the survivor of a union carries. Fixed for the run -- every termination argument
+     * here assumes at most two kind transitions per state, which a strategy that changed mid-run
+     * would break.
+     */
+    @JvmField val kindMerge: AnyUnrollKindMerge = DEFAULT_KIND_MERGE,
 ) {
     val enabled: Boolean get() = limit >= 0
 
@@ -477,6 +572,7 @@ class AnyUnrollManager(
             if (x === y) continue
 
             y.parent = x
+            mergeKind(x, y)
             statesMerged.incrementAndGet()
             x.dag.find().states--
             x.pathCount = if (accumulatePaths) {
@@ -579,6 +675,30 @@ class AnyUnrollManager(
         addParentEdge(target, accessor, state)
     }
 
+    /**
+     * The survivor's kind. This choice does NOT affect which object survives -- that is [union]'s
+     * receiver preference, a separate and non-negotiable requirement -- only what the survivor says
+     * about itself.
+     */
+    private fun mergeKind(x: AnyUnrollState, y: AnyUnrollState) {
+        val before = x.kind
+        val after = when {
+            x.kind == AnyUnrollKind.ORIGIN -> y.kind
+            y.kind == AnyUnrollKind.ORIGIN -> x.kind
+            kindMerge == AnyUnrollKindMerge.PreferBelow -> minOf(x.kind, y.kind)
+            else -> maxOf(x.kind, y.kind)
+        }
+        if (after == before) return
+        x.kind = after
+
+        if (!AnyUnrollDiagnostics.enabled) return
+        when {
+            after > before -> AnyUnrollDiagnostics.kindPromotions
+            before == AnyUnrollKind.ORIGIN -> AnyUnrollDiagnostics.kindDemotionsFromOrigin
+            else -> AnyUnrollDiagnostics.kindDemotionsGenuine
+        }.incrementAndGet()
+    }
+
     /** Copy-on-write: the array a lock-free scan may already be holding is never touched. */
     private fun addParentEdge(state: AnyUnrollState, accessor: AccessorIdx, pred: AnyUnrollState) {
         val map = state.parents
@@ -662,6 +782,8 @@ class AnyUnrollManager(
             }
 
             val child = AnyUnrollState(stateIds.incrementAndGet(), dag)
+            // Every mint that reaches here is below the ceiling, so the pot paid for it.
+            child.kind = AnyUnrollKind.PAID
             child.pathCount = current.pathCount
             putTransition(current, accessor, child)
             dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
@@ -777,6 +899,25 @@ class AnyUnrollManager(
          */
         val DEFAULT_ANY_UNROLL_LIMIT: Int =
             System.getProperty(ANY_UNROLL_LIMIT_PROPERTY)?.trim()?.toIntOrNull() ?: -1
+
+        const val ANY_UNROLL_KIND_MERGE_PROPERTY = "opentaint.anyUnrollKindMerge"
+
+        /**
+         * `-Dopentaint.anyUnrollKindMerge=below|beyond`, default `below`.
+         *
+         * Parsed null-returning and STRICTLY, matching `toBooleanStrictOrNull` / `toIntOrNull` at the
+         * knob above, so a typo falls back to the default. A bare `enumValueOf` would turn a
+         * misspelled `-D` into a class-initialisation failure -- and for a knob read at class-init
+         * that means the analyzer does not start. This is the module's first enum-valued knob, so it
+         * sets the precedent.
+         */
+        val DEFAULT_KIND_MERGE: AnyUnrollKindMerge =
+            System.getProperty(ANY_UNROLL_KIND_MERGE_PROPERTY)?.trim()?.let { raw ->
+                AnyUnrollKindMerge.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
+                    ?: AnyUnrollKindMerge.entries.firstOrNull {
+                        it.name.removePrefix("Prefer").equals(raw, ignoreCase = true)
+                    }
+            } ?: AnyUnrollKindMerge.PreferBelow
 
         // Mint sites, for §12.1(a): "distinct managers per origin, BY ALLOCATING SITE". The count
         // alone does not say which site leaked.

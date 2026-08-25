@@ -292,6 +292,94 @@ class AnyUnrollManagerTest {
         assertEquals(1, m.totalOf(root), "still only the build's charge")
     }
 
+    /* ---------- the kind, and what a union does to it ---------- */
+
+    private fun kindManager(merge: AnyUnrollKindMerge) = AnyUnrollManager(limit = 1_000, kindMerge = merge)
+
+    /**
+     * Origins are minted constantly and almost every union is a cross-dag fusion of two start
+     * states. If a fresh origin carried an opinion, the fusion rate would decide the cut instead of
+     * the knob -- in BOTH directions, which is why this is asserted under both strategies and both
+     * argument orders.
+     */
+    @Test
+    fun `an origin is neutral in the merge`() {
+        for (merge in AnyUnrollKindMerge.entries) {
+            val m = kindManager(merge)
+            val root = m.origin()
+            val credit = m.readChild(root, A)!!
+            credit.kind = AnyUnrollKind.CREDIT
+
+            val fresh = m.origin()
+            m.union(credit, fresh)
+            assertEquals(AnyUnrollKind.CREDIT, credit.find().kind, "$merge, credit as receiver")
+
+            val m2 = kindManager(merge)
+            val root2 = m2.origin()
+            val credit2 = m2.readChild(root2, A)!!
+            credit2.kind = AnyUnrollKind.CREDIT
+            val fresh2 = m2.origin()
+            m2.union(fresh2, credit2)
+            assertEquals(AnyUnrollKind.CREDIT, fresh2.find().kind, "$merge, origin as receiver")
+        }
+    }
+
+    @Test
+    fun `a union takes the meet under PreferBelow`() {
+        for (reversed in listOf(false, true)) {
+            val m = kindManager(AnyUnrollKindMerge.PreferBelow)
+            val root = m.origin()
+            val paid = m.readChild(root, A)!!
+            val credit = m.readChild(root, B)!!
+            credit.kind = AnyUnrollKind.CREDIT
+
+            if (reversed) m.union(credit, paid) else m.union(paid, credit)
+            assertEquals(
+                AnyUnrollKind.PAID, paid.find().kind,
+                "writable if ANY member is (reversed=$reversed)"
+            )
+        }
+    }
+
+    @Test
+    fun `a union takes the join under PreferBeyond`() {
+        for (reversed in listOf(false, true)) {
+            val m = kindManager(AnyUnrollKindMerge.PreferBeyond)
+            val root = m.origin()
+            val paid = m.readChild(root, A)!!
+            val credit = m.readChild(root, B)!!
+            credit.kind = AnyUnrollKind.CREDIT
+
+            if (reversed) m.union(credit, paid) else m.union(paid, credit)
+            assertEquals(
+                AnyUnrollKind.CREDIT, paid.find().kind,
+                "absorbing if ANY member is (reversed=$reversed)"
+            )
+        }
+    }
+
+    /** §5.4(a) is independent of §5.4(b): the kind decides what survives says, not which survives. */
+    @Test
+    fun `the kind merge does not change which object survives`() {
+        for (merge in AnyUnrollKindMerge.entries) {
+            val m = kindManager(merge)
+            val root = m.origin()
+            val x = m.readChild(root, A)!!
+            val y = m.readChild(root, B)!!
+            y.kind = AnyUnrollKind.CREDIT
+
+            assertSame(x, m.union(x, y), "$merge: the receiver's representative wins")
+            assertSame(x, y.find())
+        }
+    }
+
+    @Test
+    fun `the kind knob parses strictly and falls back rather than failing`() {
+        // A bare `enumValueOf` on a misspelled -D would fail class initialisation, and for a knob
+        // read at class-init that means the analyzer does not start.
+        assertEquals(AnyUnrollKindMerge.PreferBelow, AnyUnrollManager.DEFAULT_KIND_MERGE)
+    }
+
     /* ---------- compression: only representatives appear in edges ---------- */
 
     private fun AnyUnrollState.preds(accessor: Int): List<AnyUnrollState> =
