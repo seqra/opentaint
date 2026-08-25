@@ -596,6 +596,75 @@ class AnyUnrollManagerTest {
         }
     }
 
+    /* ---------- the backward step ---------- */
+
+    @Test
+    fun `absorbInto walks back exactly one step`() {
+        val m = manager()
+        val p = m.origin()
+        val pa = m.readChild(p, A)!!
+
+        assertSame(p, m.absorbInto(pa, A))
+        assertNull(m.absorbInto(pa, B), "an accessor this state did not record is not an incoming edge")
+        assertNull(m.absorbInto(p, A), "and an origin has no incoming edge at all")
+    }
+
+    @Test
+    fun `absorbInto survives a union of the predecessor`() {
+        val m = manager()
+        val root = m.origin()
+        val p = m.readChild(root, A)!!
+        val s = m.readChild(p, C)!!
+        val q = m.readChild(root, B)!!
+
+        m.union(q, p)
+
+        assertSame(q.find(), m.absorbInto(s, C), "the merged class answers, not the merged-away object")
+    }
+
+    /**
+     * The case an identity test would have got backwards. A self-loop is precisely the automaton
+     * saying the accessor is ALREADY folded into this `[any]`, so the answer is "absorb, staying
+     * put" -- and `result === state` reads that as "no incoming edge" and writes the accessor.
+     */
+    @Test
+    fun `absorbInto returns the state itself on a self-loop`() {
+        val m = manager()
+        val root = m.origin()
+        m.union(root, m.readChild(root, A)!!)
+
+        assertSame(root, m.absorbInto(root, A))
+    }
+
+    @Test
+    fun `absorbInto picks the same predecessor twice`() {
+        val m = manager()
+        val root = m.origin()
+        val p = m.readChild(root, A)!!
+        val q = m.readChild(root, B)!!
+        val t1 = m.readChild(p, C)!!
+        val t2 = m.readChild(q, C)!!
+        m.union(t1, t2)
+
+        val first = assertNotNull(m.absorbInto(t1, C))
+        assertSame(first, m.absorbInto(t1, C), "the tie-break must be reproducible")
+        assertSame(minOf(p.find(), q.find(), compareBy { it.id }), first, "and it is the lowest id")
+    }
+
+    @Test
+    fun `writesAbove follows the kind and not the pot`() {
+        val m = manager(limit = 1)
+        val root = m.origin()
+        val paid = m.readChild(root, A)!!
+        val credit = m.readChild(root, B)!!
+
+        assertTrue(m.budgetExhausted(root), "the pot is spent for the whole origin")
+        assertTrue(m.writesAbove(root), "but an origin was never bought and still writes")
+        assertTrue(m.writesAbove(paid))
+        assertFalse(m.writesAbove(credit), "only the state that went on credit absorbs")
+        assertTrue(m.writesAbove(null))
+    }
+
     /* ---------- Lemma 9.2: a recorded edge stays a real edge of the quotient automaton ---------- */
 
     private fun assertWitness(p: AnyUnrollState, accessor: Int, s: AnyUnrollState) {

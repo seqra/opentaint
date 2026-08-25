@@ -299,6 +299,52 @@ object AnyUnrollDiagnostics {
     val paidMints = AtomicLong()
     val creditMints = AtomicLong()
 
+    /**
+     * §5.8(i): IS THE FORK REAL? Absorbs where the backward step found more than one predecessor.
+     *
+     * `y.parent = x` re-points every predecessor of `y` onto `x`, so two automata that each had an
+     * `a`-predecessor leave `x.parents[a]` holding both -- and 11,482 of 11,625 thingsboard unions
+     * are cross-dag fusions. That is a PREDICTION about the reverse index, not a measurement, and
+     * these two counters are what would establish it. Near zero means a greedy pick is the design and
+     * the subset construction should not be built at all.
+     */
+    val absorbForkHits = AtomicLong()
+    val absorbForkMaxWidth = AtomicLong()
+
+    /** Folds that stopped absorbing with links still above them -- what the subset step should remove. */
+    val telescopeStalls = AtomicLong()
+    val telescopeSteps = AtomicLong()
+
+    /** Is the backward query hitting? `absorbStay` dominant means the compression did not land. */
+    val absorbExact = AtomicLong()
+    val absorbStay = AtomicLong()
+
+    /**
+     * The targeting split -- structure KEPT that a budget-only form would drop. This is the number
+     * that justifies the design over "route every prepend through the existing absorb".
+     */
+    val prependWrittenPaid = AtomicLong()
+    val prependWrittenCreditMismatch = AtomicLong()
+
+    /** §4.3's GUARD declining, and an uncovered accessor: both write, neither is a mismatch. */
+    val prependGuardBlocked = AtomicLong()
+    val prependUncovered = AtomicLong()
+
+    /** Lemma 9.2 and the racing window of the incoming remap. Should be small. */
+    val witnessForwardCheckFailed = AtomicLong()
+
+    /**
+     * The §8.1 identity, asserted on real workloads rather than in a unit test: at
+     * `filterStartsWith`'s fold the backward query must return the state the caller already threaded.
+     * MUST STAY ZERO -- a non-zero reading falsifies Lemma 9.2 in production, where no test reaches.
+     */
+    val witnessDisagreesWithThreadedState = AtomicLong()
+
+    fun recordFork(width: Int) {
+        var cur = absorbForkMaxWidth.get()
+        while (width > cur && !absorbForkMaxWidth.compareAndSet(cur, width.toLong())) cur = absorbForkMaxWidth.get()
+    }
+
     val kindPromotions = AtomicLong()
     val kindDemotionsGenuine = AtomicLong()
     val kindDemotionsFromOrigin = AtomicLong()
@@ -373,6 +419,21 @@ object AnyUnrollDiagnostics {
         append(" queryReads=").append(queryReads.get())
         append(" mintKind=[paid:").append(paidMints.get())
         append(",credit:").append(creditMints.get())
+        append("]")
+        append(" prepend=[absorbExact:").append(absorbExact.get())
+        append(",absorbStay:").append(absorbStay.get())
+        append(",writtenPaid:").append(prependWrittenPaid.get())
+        append(",writtenMismatch:").append(prependWrittenCreditMismatch.get())
+        append(",guardBlocked:").append(prependGuardBlocked.get())
+        append(",uncovered:").append(prependUncovered.get())
+        append("]")
+        append(" fork=[hits:").append(absorbForkHits.get())
+        append(",maxWidth:").append(absorbForkMaxWidth.get())
+        append(",telescopeSteps:").append(telescopeSteps.get())
+        append(",telescopeStalls:").append(telescopeStalls.get())
+        append("]")
+        append(" witness=[fwdCheckFailed:").append(witnessForwardCheckFailed.get())
+        append(",disagrees:").append(witnessDisagreesWithThreadedState.get())
         append("]")
         append(" kind=[promote:").append(kindPromotions.get())
         append(",demoteGenuine:").append(kindDemotionsGenuine.get())
@@ -888,6 +949,67 @@ class AnyUnrollManager(
             AnyUnrollDiagnostics.transitionsCreated.incrementAndGet()
         }
         return child
+    }
+
+    /**
+     * Whether a covered accessor may still be WRITTEN above an `[any]` sitting at [state].
+     *
+     * Deliberately NOT [budgetExhausted]: that is a property of the pot, shared by every `[any]`
+     * descended from one origin, and it cannot tell a step the callee genuinely produced from a step
+     * this `[any]` sold.
+     */
+    fun writesAbove(state: AnyUnrollState?): Boolean {
+        if (!enabled || state == null) return true
+        val kind = state.find().kind
+        return kind == AnyUnrollKind.ORIGIN || kind == AnyUnrollKind.PAID
+    }
+
+    /**
+     * The BACKWARD step: the position to move to when [accessor] is absorbed into an `[any]` sitting
+     * at [state], or `null` when it is not an incoming edge at all.
+     *
+     * **Null rather than the position itself, and that is load-bearing.** A caller testing
+     * `result === state` to mean "not from this `[any]`" would conflate two opposite situations: on a
+     * SELF-LOOP `p --a--> p` the correct answer is `p` -- absorb, staying put -- while the identity
+     * test reads it as "no incoming edge" and WRITES the accessor, precisely where the automaton says
+     * the accessor is already folded in. `createAnyEdge`'s `union(installed, found)` manufactures such
+     * loops itself, joining an installed state with states collected from the subtree below it.
+     *
+     * Nothing depends on this naming the ONE true predecessor -- absorption is correct at any state.
+     * What it must be is REPRODUCIBLE, hence the id tie-break, and -- for a telescoping fold to close
+     * -- COMPLETE, which is what the fork counter is about.
+     */
+    fun absorbInto(state: AnyUnrollState, accessor: AccessorIdx): AnyUnrollState? {
+        if (!enabled) return null
+
+        val current = state.find()
+        val preds = current.parents?.get(accessor) ?: return null
+
+        var best: AnyUnrollState? = null
+        var hits = 0
+        for (raw in preds) {
+            val pred = raw.find()
+
+            // Lemma 9.2's forward re-check. `mergeStates`'s conflict arm queues a pair for merging
+            // rather than writing the transition, so between that queueing and the drain of
+            // `pending` a lock-free scan can observe a predecessor whose forward edge does not yet
+            // resolve back. This turns that window into a MISS rather than a wrong predecessor.
+            if (pred.children?.get(accessor)?.find() !== current) {
+                if (AnyUnrollDiagnostics.enabled) {
+                    AnyUnrollDiagnostics.witnessForwardCheckFailed.incrementAndGet()
+                }
+                continue
+            }
+
+            hits++
+            if (best == null || pred.id < best.id) best = pred
+        }
+
+        if (AnyUnrollDiagnostics.enabled && hits > 1) {
+            AnyUnrollDiagnostics.absorbForkHits.incrementAndGet()
+            AnyUnrollDiagnostics.recordFork(hits)
+        }
+        return best
     }
 
     /** Whether the pot behind [state] is spent, i.e. whether an accessor may still be written above it. */

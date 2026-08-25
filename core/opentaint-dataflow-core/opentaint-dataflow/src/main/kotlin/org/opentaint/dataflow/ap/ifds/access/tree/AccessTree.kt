@@ -958,6 +958,53 @@ class AccessTree(
             return create(accessor, rest).mergeAdd(absorbed)
         }
 
+        /**
+         * DIAGNOSTICS ONLY: what the absorbing prepend WOULD do here. Changes nothing.
+         *
+         * Step 4 of the design takes its measurement before step 5 writes the behaviour, so the
+         * decision about the subset construction is made against a number rather than an argument.
+         * The guard order is the real one, for the real reason: the first probes are O(1) field and
+         * array reads and are the overwhelmingly common exits, and `isCoveredByAny` is last because
+         * reaching it on a tree with no `[any]` throws during prescan.
+         */
+        internal fun probePrepend(accessor: AccessorIdx, threaded: AnyUnrollState?) {
+            if (!AnyUnrollDiagnostics.enabled || !manager.anyUnroll.enabled) return
+
+            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return
+            if (accessor == ANY_ACCESSOR_IDX) return
+            val pos = anyId ?: return
+
+            if (manager.anyUnroll.writesAbove(pos)) {
+                AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
+                return
+            }
+            if (anyNode.getNodeByAccessor(accessor) != null) {
+                AnyUnrollDiagnostics.prependGuardBlocked.incrementAndGet()
+                return
+            }
+            if (!manager.isCoveredByAny(accessor)) {
+                AnyUnrollDiagnostics.prependUncovered.incrementAndGet()
+                return
+            }
+
+            val pred = manager.anyUnroll.absorbInto(pos, accessor)
+            if (pred == null) {
+                // The targeting: a `CREDIT` position with no incoming edge on this accessor. The
+                // step did not come out of this `[any]`, and keeping it is the whole point.
+                AnyUnrollDiagnostics.prependWrittenCreditMismatch.incrementAndGet()
+                return
+            }
+
+            if (pred === pos.find()) {
+                AnyUnrollDiagnostics.absorbStay.incrementAndGet()
+            } else {
+                AnyUnrollDiagnostics.absorbExact.incrementAndGet()
+            }
+            if (threaded != null && threaded.find() !== pred.find()) {
+                AnyUnrollDiagnostics.witnessDisagreesWithThreadedState.incrementAndGet()
+            }
+        }
+
         fun removeAbstraction(): AccessNode =
             recreate(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
 
@@ -1444,6 +1491,10 @@ class AccessTree(
             // and an implementation that short-circuits past it loses the transition that makes a
             // program loop reach its fixed point.
             val mergedAnyId = manager.anyUnroll.union(anyId, entryAnyState)
+
+            if (AnyUnrollDiagnostics.enabled) {
+                accessors.forEach { it.right().probePrepend(it.leftInt(), entryAnyState) }
+            }
 
             if (accessors.isEmpty()) return this
 
@@ -2229,6 +2280,23 @@ class AccessTree(
                 }
             }
 
+            // The shadow telescope: how far the backward run of `a_k ... a_1` gets before it
+            // dead-ends. A stall with links still above it is the growth mode a greedy pick pays
+            // for -- a path existed and was not found, so the fact keeps a link it should have shed,
+            // on every lap. Diagnostics only; it changes nothing below.
+            if (AnyUnrollDiagnostics.enabled && manager.anyUnroll.enabled) {
+                var probe = filteredTreeNode.anyId
+                for (i in parentAccessors.size - 1 downTo 0) {
+                    val next = probe?.let { manager.anyUnroll.absorbInto(it, parentAccessors.getInt(i)) }
+                    if (next == null) {
+                        if (i > 0) AnyUnrollDiagnostics.telescopeStalls.incrementAndGet()
+                        break
+                    }
+                    AnyUnrollDiagnostics.telescopeSteps.incrementAndGet()
+                    probe = next
+                }
+            }
+
             var result = filteredTreeNode
             for (i in parentAccessors.size - 1 downTo 0) {
                 result = result.addParentAbsorbingAny(parentAccessors.getInt(i), parentAnyStates[i])
@@ -2758,6 +2826,8 @@ class AccessTree(
                 // `[any].{T}.[any]` therefore follows from one more prepend, which is why the
                 // union-without-collapse arm below is load-bearing rather than defensive, and why
                 // §12.1 counts it by separating accessor rather than assuming it empty.
+
+                node.probePrepend(accessor, anyState)
 
                 if (accessor == ANY_ACCESSOR_IDX) {
                     return createAnyEdge(node, anyState, AnyUnrollManager.MINT_RAW_EDGE)
