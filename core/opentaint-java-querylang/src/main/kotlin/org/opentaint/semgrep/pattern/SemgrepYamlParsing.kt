@@ -61,6 +61,7 @@ data class SemgrepYamlJoinRuleRef(
     val tag: String? = null,
     @SerialName("as")
     val `as`: String,
+    val exclude: List<String> = emptyList(),
     val renames: List<SemgrepYamlJoinRuleRefRenames> = emptyList()
 )
 

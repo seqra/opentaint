@@ -273,6 +273,11 @@ class JoinRefAmbiguousTarget : RuleIssueBlockingMessage() {
         "Join ref must specify exactly one of 'rule' or 'tag', but both were given"
 }
 
+class JoinRefExcludeRequiresTag : RuleIssueBlockingMessage() {
+    override val message: String =
+        "Join ref 'exclude' is only valid with a 'tag' target"
+}
+
 class JoinRefToUnsupportedRuleKind(ruleId: String) : RuleIssueBlockingMessage() {
     override val message: String =
         "Join ref resolves to '$ruleId', which is a join rule; only search/taint rules may be wired into a join"

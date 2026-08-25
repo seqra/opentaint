@@ -488,6 +488,10 @@ class SemgrepRuleLoader(
         }
 
         if (hasRule) {
+            if (ref.exclude.isNotEmpty()) {
+                trace.error(JoinRefExcludeRequiresTag())
+                return null
+            }
             val ruleId = resolveRefRuleId(ref.rule!!, joinInfo.pathInfo.ruleRelativePath)
             return if (ruleId in excludedRuleIds) emptyList() else listOf(ruleId)
         }
@@ -502,7 +506,13 @@ class SemgrepRuleLoader(
             trace.error(EmptyTagExpansion(ref.tag!!, joinInfo.language))
             return null
         }
-        return matched.filterNot { it in excludedRuleIds }.distinct().sorted()
+        val locallyExcludedRuleIds = ref.exclude.mapTo(hashSetOf()) {
+            resolveRefRuleId(it, joinInfo.pathInfo.ruleRelativePath)
+        }
+        return matched
+            .filterNot { it in excludedRuleIds || it in locallyExcludedRuleIds }
+            .distinct()
+            .sorted()
     }
 
     private fun LanguageStrategy<*, *>.parseJoinMetaVarWithRenames(

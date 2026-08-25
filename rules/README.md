@@ -128,10 +128,22 @@ Semantics:
   - `tag` selects every enabled, non-excluded rule with that tag in the join's language. Adding the
     same tag to a custom rule extends the join.
   - `rule` selects one rule by `<path>#<rule-id>`.
+  - `exclude` removes specific rule references (`<rule-id>` in the same file or
+    `<path>#<rule-id>`) from a `tag` ref. It is not valid with `rule`, and its scope is limited to
+    that one ref.
   - `as` defines the alias used in `on`.
 - `on` correlates captures from the referenced rules. For example,
   `servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` requires dataflow from the source capture
   to the sink capture.
+
+For example, this tag ref uses every servlet source except the legacy implementation:
+
+```yaml
+- tag: servlet-untrusted-data-source
+  as: servlet-untrusted-data
+  exclude:
+    - java/lib/servlet.yaml#legacy-servlet-source
+```
 
 Built-in joins use language-scoped, per-source and per-sink tags. Use `rule` when a join must
 reference one specific rule.

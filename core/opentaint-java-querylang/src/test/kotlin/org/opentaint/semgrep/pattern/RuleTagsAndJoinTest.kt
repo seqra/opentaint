@@ -6,6 +6,7 @@ import org.opentaint.semgrep.pattern.conversion.LanguageStrategy
 import kotlin.io.path.Path
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 class RuleTagsAndJoinTest {
@@ -62,6 +63,9 @@ class RuleTagsAndJoinTest {
                   refs:
                     - tag: untrusted-data-source
                       as: untrusted-data
+                      exclude:
+                        - lib.yaml#legacy-source
+                        - custom.yaml#noisy-source
                     - rule: lib.yaml#sink
                       as: sink
                   on:
@@ -71,20 +75,23 @@ class RuleTagsAndJoinTest {
         val refs = rs.rules.single().join!!.refs
         assertEquals("untrusted-data-source", refs[0].tag)
         assertEquals(null, refs[0].rule)
+        assertEquals(listOf("lib.yaml#legacy-source", "custom.yaml#noisy-source"), refs[0].exclude)
         assertEquals("lib.yaml#sink", refs[1].rule)
         assertEquals(null, refs[1].tag)
+        assertTrue(refs[1].exclude.isEmpty())
     }
 
     private fun load(
         vararg files: Pair<String, String>,
-        strategies: List<LanguageStrategy<*, *>> = listOf(JavaLanguageStrategy())
+        strategies: List<LanguageStrategy<*, *>> = listOf(JavaLanguageStrategy()),
+        ruleIdExclude: List<String> = emptyList(),
     ): Pair<SemgrepRuleLoader.RuleLoadResult, SemgrepLoadTrace> {
         val trace = SemgrepLoadTrace()
         val loader = SemgrepRuleLoader(strategies)
         for ((path, text) in files) {
             loader.registerRuleSet(text, Path(path), Path("."), trace)
         }
-        return loader.loadRules() to trace
+        return loader.loadRules(ruleIdExclude = ruleIdExclude) to trace
     }
 
     private fun loadedRuleIds(r: SemgrepRuleLoader.RuleLoadResult): List<String> =
@@ -152,6 +159,68 @@ class RuleTagsAndJoinTest {
         val (result, trace) = load(sinkLib, servletSource, disabledSource, untrustedJoin)
         assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
         assertTrue("ssrf" in loadedRuleIds(result), "join rule should load; loaded=${loadedRuleIds(result)}")
+    }
+
+    @Test
+    fun `tag ref excludes a set of rules by id`() {
+        val sources = "lib/sources.yaml" to """
+            rules:
+              - id: source-a
+                options: { lib: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [java]
+                patterns: [ { pattern: ${'$'}X = sourceA() } ]
+              - id: source-b
+                options: { lib: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [java]
+                patterns: [ { pattern: ${'$'}X = sourceB() } ]
+              - id: source-c
+                options: { lib: true }
+                tags: [untrusted-data-source]
+                severity: NOTE
+                message: src
+                languages: [java]
+                patterns: [ { pattern: ${'$'}X = sourceC() } ]
+        """.trimIndent()
+        val join = "j.yaml" to """
+            rules:
+              - id: j
+                severity: ERROR
+                message: m
+                languages: [java]
+                mode: join
+                join:
+                  refs:
+                    - tag: untrusted-data-source
+                      as: src
+                      exclude:
+                        - lib/sources.yaml#source-a
+                        - lib/sources.yaml#source-b
+                    - rule: lib/sink.yaml#ssrf-sink
+                      as: sink
+                  on:
+                    - 'src.${'$'}X -> sink.${'$'}X'
+        """.trimIndent()
+
+        val (result, trace) = load(sources, sinkLib, join)
+        assertTrue(trace.errorMessages().isEmpty(), trace.errorMessages().toString())
+        val root = assertIs<TaintRuleFromSemgrep.Structure.Join<*>>(result.rulesWithMeta.single().first.root)
+        assertEquals(
+            setOf("lib/sources.yaml:source-c"),
+            root.branches.flatMap { it.leftOperands }.map { it.ruleId }.toSet(),
+        )
+
+        val (emptyResult, emptyTrace) = load(
+            sources, sinkLib, join,
+            ruleIdExclude = listOf("lib/sources.yaml:source-c"),
+        )
+        assertTrue(emptyResult.rulesWithMeta.isEmpty())
+        assertTrue(emptyTrace.errorMessages().isEmpty(), emptyTrace.errorMessages().toString())
     }
 
     @Test
@@ -240,6 +309,34 @@ class RuleTagsAndJoinTest {
             """.trimIndent()
         )
         assertTrue(trace.errorMessages().any { it.contains("both were given") }, trace.errorMessages().toString())
+    }
+
+    @Test
+    fun `exclude on a rule ref errors`() {
+        val (_, trace) = load(
+            sinkLib, servletSource,
+            "j.yaml" to """
+                rules:
+                  - id: j
+                    severity: ERROR
+                    message: m
+                    languages: [java]
+                    mode: join
+                    join:
+                      refs:
+                        - rule: lib/servlet.yaml#servlet-source
+                          as: src
+                          exclude: [lib/servlet.yaml#servlet-source]
+                        - rule: lib/sink.yaml#ssrf-sink
+                          as: sink
+                      on:
+                        - 'src.${'$'}X -> sink.${'$'}X'
+            """.trimIndent()
+        )
+        assertTrue(
+            trace.errorMessages().any { it.contains("only valid with a 'tag' target") },
+            trace.errorMessages().toString(),
+        )
     }
 
     @Test
