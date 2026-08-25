@@ -387,7 +387,88 @@ for its shape:
 `WorkflowTask.has()`/`next()` (`WorkflowTask.java:736-758`, `:661-734`), which recurse over
 `children()` again.
 
-## 9. Caveats
+## 9. What the `[any]` actually does to the premises
+
+The premises of §8 are 96 % `[any]`-free, and the trees that hold the facts behind them are made of
+almost nothing else. Both are true; this section is how they fit together.
+
+### 9.1 The trees are `[any]` structures
+
+Profiles of the largest `added` trees, `anyEdges` against the tree's DISTINCT node count:
+
+| base @ method | size | distinct | `[any]` edges | share of distinct | depth | emits |
+|---|---|---|---|---|---|---|
+| `<this>` @ `rerunWF` | 53,049 | 1,620 | 1,604 | **99.0 %** | 115 | 16 |
+| `<this>` @ `terminate` | 44,858 | 6,331 | 5,469 | 86.4 % | 115 | 14 |
+| `arg(2)` @ `DoWhile#execute` | 43,553 | 6,298 | 5,468 | 86.8 % | 115 | 14 |
+| `<static>` @ `rerunWF` | 10,216 | 107 | 95 | 88.8 % | 81 | 3,824 |
+| `<static>` @ `terminate` | 5,793 | 168 | 93 | 55.4 % | 82 | 1,145 |
+
+`.[any]` is the single most common accessor in every one of them, and `anyDepths` runs `[3 … 13]` —
+they are stacked at every level, which is also where the depth of 115 comes from
+(`ANY_ACCESSOR_DEPTH_CHARGE` is 10 per `[any]`-owning node).
+
+### 9.2 The `[any]` is what gives a node its fan-out
+
+Out-degree in the one tree retained in full — 538 distinct nodes carrying 22,211 paths:
+
+| | nodes | mean out-degree | max |
+|---|---|---|---|
+| owns an `[any]` edge | **452** (84 %) | **10.50** | 77 |
+| does not | 86 | **1.47** | 5 |
+
+**A node that owns an `[any]` has 7.1× the fan-out of one that does not.** That is the mechanism in
+one number. `AccessNode.getChild`'s `isCoveredByAny` arm answers *every* field read off such a node —
+`isCoveredByAny` is `true` for every `FieldAccessor` in production (`TaintAnalyzer.kt:75-77`) — with
+no type check (§5.1). So the node accumulates a child per accessor anyone ever demands, which is
+exactly §4.2's `.buffer` node with 17 children from 12 unrelated classes. Path count is the product
+of out-degrees along a path: 538 nodes, 22,211 paths.
+
+### 9.3 4 % of arrivals carry 52 % of the growth
+
+Arrivals at an initial-fact abstraction, split by whether the INCOMING fact carried an `[any]`:
+
+| | arrivals | incoming nodes | mean incoming | nodes actually added to `added` |
+|---|---|---|---|---|
+| incoming carries `[any]` | **12,570 (4.2 %)** | 18,463,174 | **1,469** | **2,160,332 (51.6 %)** |
+| incoming is concrete | 284,302 | 26,057,585 | 92 | 2,026,213 |
+| **control, both columns** | 43,549 | 311,762 | 7 | **64,131** |
+
+An `[any]`-carrying fact is **16× larger** on arrival and contributes **24× more** per arrival. The
+control's `added` grows by 64,131 nodes over the whole run against the star arm's 4,186,545 — **65×**.
+
+**So the user-visible claim is confirmed: the huge `added` trees are `[any]`-built.** Not by the
+unroll (330 copies, §5.3) and not by anything local to the abstraction, but by arrivals that are
+large *because* every node on them answers every read.
+
+### 9.4 …and then the `[any]` is spent, not stored
+
+The premise walk emits 87,535 premises. Split by how the `[any]` was involved:
+
+| | count | share |
+|---|---|---|
+| names an `[any]` in the emitted chain | 3,452 | 3.9 % |
+| walk was governed by an `[any]` (`governingAnyId != null`) | 3,452 | 3.9 % |
+| emitted from a HOISTED `[any]` subtree (the zero-times descent) | **854** | **1.0 %** |
+| plain concrete walk | ~83,000 | ~95 % |
+
+The first two columns being *identical* is itself a result: `governingAnyId` becomes non-null only on
+the descent that names the `[any]`, so "under an `[any]`" and "carries an `[any]`" are the same set.
+
+And the third column falsifies the obvious guess about the mechanism. `[any]` is zero-or-more, so
+`abstractAccessPath` also descends into the `[any]`'s subtree *without* extending the prefix
+(`TreeInitialFactAbstraction.kt`, the "`[any]` taken ZERO times" branch), which hoists everything
+below an `[any]` up to the current level as concrete premises. That descent fires 106,453 times
+(`anyDescents`) and produces **854 premises — 1 %**. It is not the multiplier.
+
+**The `[any]` is therefore entirely upstream of the premise.** It does not appear in what is stored
+(9 of `decide`'s 6,537, §8), it is not what the walk is standing under when it emits (3.9 %), and it
+is not the hoist (1.0 %). What it does is make the FACT big — 7.1× fan-out per node, 52 % of all
+`added` growth from 4 % of arrivals — and the walk then enumerates that fact's paths, concretely, one
+premise each. `decide(WorkflowModel)` goes 373 → 6,537 premises between the control and the star arm
+without the premises themselves ever mentioning an `[any]`.
+
+## 10. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -412,3 +493,9 @@ for its shape:
   appeared, not which caller asked for it; §8.2's ladder is what supplies the caller.
 - **`decide`'s premise count is the one number that moved between the two premise runs** — 6,537 and
   6,356 — which is within the run-to-run spread of everything else here.
+- **§9's arrival split counts nodes at merge time, not residency.** `addedDelta` is
+  `after.size - before.size` per arrival, so it double-counts nothing but says nothing about what
+  survives interning either.
+- **§9.2's out-degree is one retained tree.** It is the largest one the run kept, 538 distinct nodes;
+  the profile lines of §9.1 corroborate the share of `[any]`-owning nodes across five more trees, but
+  the fan-out ratio itself is a single sample.
