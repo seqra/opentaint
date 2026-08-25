@@ -1,7 +1,12 @@
 # The growth mechanics: which operation makes the nodes, and what the pattern is
 
 Companion to `2026-08-25-conductor-fact-explosion-trace.md`, which located the mass but not the
-operation. This answers "how does a fact grow in size" at the level of individual operations, with an
+operation.
+
+> **Scope, added after the fact:** every measurement below was taken with the `[any]` unroll manager
+> **disabled** — `opentaint.anyUnrollLimit` defaults to `-1` and the harness never set it. So these
+> are the unbudgeted numbers. Turning the budget on cuts the unroll 62× and makes the analysis
+> *worse*; see `2026-08-25-why-the-budget-does-not-help.md`, which is the other half of this story. This answers "how does a fact grow in size" at the level of individual operations, with an
 operation-level budget on the real workload, a control that zeroes it, and a deterministic unit
 reproducer of the pattern.
 
