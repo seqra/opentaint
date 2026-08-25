@@ -196,6 +196,43 @@ object ApOpDiagnostics {
         }
     }
 
+    // ---- F: the hypothesis -- delta reads THROUGH an [any] and concat prepends in front of it ---
+
+    /**
+     * The round trip `arg0.[any].*` + premise `arg0.a` -> conclusion `ret.a.*` => `ret.a.[any].*`.
+     *
+     * `getChild`'s `isCoveredByAny` arm returns the node it read FROM, re-wrapped in a fresh `[any]`:
+     * the read consumes nothing. So `delta()` against a concrete premise hands back a remainder that
+     * still carries the `[any]`, and `concat` re-attaches it below the conclusion's concrete prefix.
+     * Net effect of one summary application: the fact is one concrete link longer and still carries
+     * an `[any]` — a fixed point with a ratchet.
+     *
+     * These counters isolate exactly that round trip. [deltaThroughAnyKept] is the load-bearing one:
+     * a remainder that both crossed an `[any]` and still carries one is a step that made no progress.
+     */
+    val deltaThroughAny = AtomicLong()
+    val deltaThroughAnyKept = AtomicLong()
+    val deltaThroughAnyNotSmaller = AtomicLong()
+    val deltaThroughAnyFactNodes = AtomicLong()
+    val deltaThroughAnyRemainderNodes = AtomicLong()
+
+    /** Result depth minus receiver depth, for grafts whose delta carries an `[any]`. */
+    val concatAnyDeltaCalls = AtomicLong()
+    val concatAnyDeltaDepthGain = AtomicLong()
+    val concatAnyDeltaResultKeepsAny = AtomicLong()
+
+    /** Verbatim round trips: premise, fact, remainder, conclusion, result. */
+    private const val ROUNDTRIP_SAMPLES = 10
+    private val roundTrips = java.util.Collections.synchronizedList(ArrayList<String>())
+
+    fun sampleRoundTrip(render: () -> String) {
+        if (!enabled || roundTrips.size >= ROUNDTRIP_SAMPLES) return
+        roundTrips.add(render().take(520))
+    }
+
+    /** Set by `getChild`'s synthesis arm, read and cleared by `delta`. */
+    val crossedAnyFlag: ThreadLocal<IntBox> = ThreadLocal.withInitial { IntBox() }
+
     // ---- D: filterStartsWith -------------------------------------------------------------------
 
     val fswCalls = AtomicLong()
@@ -313,6 +350,22 @@ object ApOpDiagnostics {
                 " remainderPerFact=${ratio(deltaAnyResultNodes.get(), deltaAnyFactNodes.get())}" +
                 " notSmaller=${deltaAnyNotSmaller.get()}"
         )
+        appendLine(
+            "apop F-roundtrip deltaThroughAny=${deltaThroughAny.get()}" +
+                " remainderKeepsAny=${deltaThroughAnyKept.get()}" +
+                " remainderNotSmaller=${deltaThroughAnyNotSmaller.get()}" +
+                " factNodes=${deltaThroughAnyFactNodes.get()}" +
+                " remainderNodes=${deltaThroughAnyRemainderNodes.get()}" +
+                " remainderPerFact=${ratio(deltaThroughAnyRemainderNodes.get(), deltaThroughAnyFactNodes.get())}"
+        )
+        appendLine(
+            "apop F-roundtrip concatAnyDelta=${concatAnyDeltaCalls.get()}" +
+                " resultKeepsAny=${concatAnyDeltaResultKeepsAny.get()}" +
+                " depthGain=${concatAnyDeltaDepthGain.get()}" +
+                " depthGainPerCall=${ratio(concatAnyDeltaDepthGain.get(), concatAnyDeltaCalls.get())}"
+        )
+        appendLine("apop F-roundtrip --- verbatim round trips ---")
+        roundTrips.forEach { appendLine("apop   $it") }
         appendLine(
             "apop D-filterStartsWith calls=${fswCalls.get()} inNodes=${fswInNodes.get()}" +
                 " outNodes=${fswOutNodes.get()} grew=${fswGrew.get()} growth=${fswGrowth.get()}"

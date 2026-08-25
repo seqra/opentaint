@@ -207,6 +207,10 @@ class AccessTree(
 
         if (base != other.base) return emptyList()
 
+        val crossed = if (ApOpDiagnostics.enabled) {
+            ApOpDiagnostics.crossedAnyFlag.get().also { it.value = 0 }
+        } else null
+
         val deltaResult = deltaImpl(other)
 
         if (ApOpDiagnostics.enabled) {
@@ -216,12 +220,38 @@ class AccessTree(
                 links++
                 if (a == ANY_ACCESSOR_IDX) carriesAny = true
             }
+            val remainderNodes = deltaResult.sumOf { (it as? NodeAccessTreeDelta)?.node?.size ?: 0L }
             ApOpDiagnostics.recordDelta(
                 premiseCarriesAny = carriesAny,
                 factNodes = access.size,
                 premiseLinks = links,
-                resultNodes = deltaResult.sumOf { (it as? NodeAccessTreeDelta)?.node?.size ?: 0L },
+                resultNodes = remainderNodes,
             )
+
+            if ((crossed?.value ?: 0) > 0) {
+                val keepsAny = deltaResult.any {
+                    (it as? NodeAccessTreeDelta)?.node?.containsAnyInThisOrDeepNodes == true
+                }
+                ApOpDiagnostics.deltaThroughAny.incrementAndGet()
+                ApOpDiagnostics.deltaThroughAnyFactNodes.addAndGet(access.size)
+                ApOpDiagnostics.deltaThroughAnyRemainderNodes.addAndGet(remainderNodes)
+                if (keepsAny) ApOpDiagnostics.deltaThroughAnyKept.incrementAndGet()
+                if (remainderNodes >= access.size) ApOpDiagnostics.deltaThroughAnyNotSmaller.incrementAndGet()
+
+                if (keepsAny && !carriesAny) {
+                    // The exact hypothesis: a CONCRETE premise read through an `[any]` and the
+                    // `[any]` survived into the remainder. Record it verbatim, once, so the shape
+                    // can be read rather than inferred from counters.
+                    ApOpDiagnostics.sampleRoundTrip {
+                        "premise=" + other.toString().replace('\n', ' ').take(120) +
+                            " | fact=" + this.toString().replace('\n', ' ').take(160) +
+                            " | remainder=" + deltaResult.joinToString(" ; ") { d ->
+                                (d as? NodeAccessTreeDelta)?.node?.toString()?.replace('\n', ' ')?.take(160)
+                                    ?: "<empty>"
+                            }
+                    }
+                }
+            }
         }
 
         return deltaResult
@@ -671,6 +701,8 @@ class AccessTree(
                 resultNode = mergeAddMaybeNull(originalAnyNoRepeats, resultNode)
 
                 if (ApOpDiagnostics.enabled) {
+                    // Read back by `delta`, which is the caller that turns this into a round trip.
+                    ApOpDiagnostics.crossedAnyFlag.get().value++
                     val literal = node?.size ?: 0L
                     val result = resultNode?.size ?: 0L
                     ApOpDiagnostics.anyReadCalls.incrementAndGet()
@@ -1789,6 +1821,19 @@ class AccessTree(
             if (ApOpDiagnostics.enabled) {
                 val out0 = result?.size ?: 0L
                 ApOpDiagnostics.recordConcatShape(graftCounter?.value ?: 0, maxOf(0L, out0 - this.size))
+
+                if (other.containsAnyInThisOrDeepNodes) {
+                    // The other half of the round trip: the conclusion supplies a concrete prefix and
+                    // the `[any]`-carrying remainder is hung below it, so the fact comes out longer
+                    // AND still carrying an `[any]`.
+                    ApOpDiagnostics.concatAnyDeltaCalls.incrementAndGet()
+                    ApOpDiagnostics.concatAnyDeltaDepthGain.addAndGet(
+                        maxOf(0, (result?.maxDepth ?: 0) - this.maxDepth).toLong()
+                    )
+                    if (result?.containsAnyInThisOrDeepNodes == true) {
+                        ApOpDiagnostics.concatAnyDeltaResultKeepsAny.incrementAndGet()
+                    }
+                }
 
                 if (ApOpDiagnostics.concatShouldSample()) {
                     ApOpDiagnostics.concatSamples.incrementAndGet()
