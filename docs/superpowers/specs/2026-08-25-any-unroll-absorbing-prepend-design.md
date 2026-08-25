@@ -315,11 +315,14 @@ recording (§6.1). Written once at the mint; a union is the only other writer. T
 ordered writable-to-absorbing, which is what makes §5.4(b)'s `min`/`max` mean what it says.
 
 ```kotlin
-/** Whether a covered accessor may still be WRITTEN above an `[any]` sitting at [state]. */
-fun writesAbove(state: AnyUnrollState?): Boolean {
-    if (!enabled || state == null) return true
-    return state.find().kind.let { it == ORIGIN || it == PAID }
+/** Whether a covered accessor may still be WRITTEN above an `[any]` sitting at [pos]. */
+fun writesAbove(pos: AnyUnrollPos?): Boolean {
+    if (!enabled || pos == null) return true
+    return kindOf(pos).let { it == ORIGIN || it == PAID }
 }
+
+/** `find().kind` for a state; for a cluster, the members folded under §5.4(b)'s strategy (§5.8h). */
+fun kindOf(pos: AnyUnrollPos): AnyUnrollKind
 ```
 
 Deliberately *not* `budgetExhausted` — §2.
@@ -345,7 +348,7 @@ had an `a`-predecessor, `x.parents[a]` now holds two. §5.8 takes the fork serio
 below survives it unchanged.
 
 **Null rather than the position itself, and that is load-bearing.** A caller testing
-`result === pos.find()` to mean "not from this `[any]`" would conflate two opposite situations: on
+`result === pos` to mean "not from this `[any]`" would conflate two opposite situations: on
 a **self-loop** `p --a--> p`, `parents[a]` contains `p`, so the correct answer is `p` — absorb,
 staying put — while the identity test reads it as "no incoming edge" and *writes* the accessor. A
 self-loop is precisely the automaton saying `a` is already folded into the `[any]`
@@ -744,8 +747,9 @@ prediction costs two counters to falsify and a subset construction to assume.
 ### 6.1 The change
 
 ```kotlin
-fun readChild(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
-    if (!enabled || state == null) return state
+// Under §5.8 this body is `readChildSingle` and `readChild` becomes the dispatcher of §5.8(d);
+// the pot logic below is the same either way, and a cluster never reaches it.
+fun readChildSingle(state: AnyUnrollState, accessor: AccessorIdx): AnyUnrollState {
     // ... unchanged lock-free reuse fast path: an existing transition is free, and that is the
     // termination argument rather than an optimisation ...
     synchronized(lock) {
@@ -797,8 +801,11 @@ are granted, silently narrowing the premise side. The split is a second entry po
 M§5.2 uses for query-vs-build:
 
 ```kotlin
-/** Exactly today's contract: reuse free at any pot level, mint only while paid, else null. */
-fun readChildPaidOnly(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState?
+/**
+ * Exactly today's contract: reuse free at any pot level, mint only while paid, else null. It takes a
+ * position and dispatches like §5.8(d), but it never absorbs -- §8.3.
+ */
+fun readChildPaidOnly(pos: AnyUnrollPos?, accessor: AccessorIdx): AnyUnrollPos?
 ```
 
 `getChild` takes the credit-minting variant; TIFA takes this one and its truncating refusal arm
@@ -844,7 +851,7 @@ and a recorded-but-unpaid one exists only to be absorbed.
  * The coverage query is reached only AFTER an `[any]` edge has been proved to exist: `isCoveredByAny`
  * delegates straight to the injected strategy, and the prescan's THROWS rather than returning false.
  */
-private fun AccessNode.installAbove(accessor: AccessorIdx, anyState: AnyUnrollState?): AccessNode {
+private fun AccessNode.installAbove(accessor: AccessorIdx, anyState: AnyUnrollPos?): AccessNode {
     val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return createRaw(accessor, this, anyState)
     if (accessor == ANY_ACCESSOR_IDX) return createRaw(accessor, this, anyState)
     val pos = anyId ?: return createRaw(accessor, this, anyState)          // AnyUnrollPos?, §5.8c
@@ -944,7 +951,7 @@ prepend are *not* co-located can use it.
 `bulkMergeAddAccessors` takes a list, so the rule is a list-to-list pre-pass:
 
 ```kotlin
-private fun bulkMergeAddAccessors(accessors: List<...>, entryAnyState: AnyUnrollState?): AccessNode {
+private fun bulkMergeAddAccessors(accessors: List<...>, entryAnyState: AnyUnrollPos?): AccessNode {
     val (entries, absorbedState) = absorbBeyondAnyEntries(accessors)   // identity when the manager is off
     val mergedAnyId = manager.anyUnroll.union(manager.anyUnroll.union(anyId, entryAnyState), absorbedState)
     if (entries.isEmpty()) return this
@@ -1134,7 +1141,8 @@ risk is memory and time, not the existence of a fixed point.
 Three mechanisms, and conflating them is how this gets got wrong.
 
 **(i) The guard, protected by receiver preference.** The storage "unchanged" test is `===` on
-`mergeAdd`'s result, and `Edge` hashes its `FinalFactAp`, hence the node, hence `anyId.id`. A fact
+`mergeAdd`'s result, and `Edge` hashes its `FinalFactAp`, hence the node, hence `anyId.hashSeed`
+(§5.8c2). A fact
 whose state *object* changed is new work. §5.4(a) is what stops that happening on every union.
 Independent of the kind.
 
@@ -1224,8 +1232,9 @@ drops the state with the edge.
 exclusion flag and accessor ids (`:2422-2452`); a deserialised `[any]` takes one fresh origin per tree
 (`:2513-2519`). So a `CREDIT` state returns as an `ORIGIN` and a fact that was being absorbed
 becomes writable. Sound — a fresh budget means less coarsening — and already the documented behaviour
-for the pot. Extending the format is not proposed: `parents` names other states, which have no wire
-identity.
+for the pot; a **cluster** deserialises the same way and for the same reason — its members are
+automaton positions, not fact structure. Extending the format is not proposed: `parents` names other
+states, which have no wire identity.
 
 **The premise side needs nothing.** `AccessPath` carries no state and gains none (M§6): a premise
 `[any]` is a key, and a key materialises nothing. Premises are derived from facts, so a fact that
@@ -1292,8 +1301,8 @@ automata and cactus backends are untouched: `fun reportApStats(): String? = null
 gains no line.
 
 **Counting without a registry.** The manager holds no collection of states or dags — *"a registry of
-states is the one thing that would force weak references back into the design"* — and neither number
-needs one. Live roots are `dagsCreated - dagsFused`: `newOrigin` is the only creator, the cross-dag
+states is the one thing that would force weak references back into the design"*, the constraint
+§5.8(c) turns down interning to keep — and neither number needs one. Live roots are `dagsCreated - dagsFused`: `newOrigin` is the only creator, the cross-dag
 fusion the only destroyer, and a fusion removes exactly one representative. Exhaustion is a
 *transition*, so it needs a per-dag latch, written under the lock where the pot already is:
 
@@ -1357,7 +1366,7 @@ legible at all.
 | 2 | **`AnyUnrollKind`, the `kind` field, `AnyUnrollKindMerge`** and its plumbing. Nothing reads `kind` yet | no |
 | 3 | **`readChild` stops refusing** + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
 | 4 | **`writesAbove` / `absorbInto`** with counters, **`absorbForkHits` among them**. Still nothing calls them — and this is where §5.8(i)'s measurement is taken, on the real workload, before any of §5.8 is written | no |
-| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then `posOf`, the three operations and `clusterMax` — no table, no reclamation (§5.8c) | no |
+| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then the identity edit — `hash` to `hashSeed`, `equals` and `InternStrategy.equals` to by-value (§5.8c2, c3), the three sites §5.6 enumerates and the only delicate part of the step; then `posOf`, the three operations and `clusterMax`. No table, no reclamation | no |
 | 5 | **`create` becomes `installAbove`**, `addParentAbsorbingAny` deleted, `mergeAddMaybeNull`'s parameters renamed (R9). Covers census rows 1, 3, 4, 6 | **yes** |
 | 6 | **`bulkMergeAddAccessors` pre-pass** — row 2, the graft. The commit the design exists for | **yes** |
 
@@ -1414,7 +1423,7 @@ lock.
 | `an any whose subtree already has the accessor does not absorb` | §4.3's GUARD |
 | `absorbing leaves the read unchanged` | its positive half — Appendix E as a test |
 | `absorption keeps the step on branches an any does not denote` | the split (§4.4); the existing test generalises |
-| `the automaton derives what filterStartsWith threads by hand` | at every fold step `absorbInto(result.anyId, aᵢ)?.find() === parentAnyStates[i]?.find()` — Lemma 9.2 end-to-end on the engine's hottest read channel, against a value the engine computes independently (§8.1) |
+| `the automaton derives what filterStartsWith threads by hand` | at every fold step the threaded `parentAnyStates[i]` is a **member** of `absorbInto(result.anyId, aᵢ)` — `===` under greedy, membership once §5.8 lands, and the weaker form is the correct one: the fork means the query legitimately returns more than the one path taken (§8.1) |
 | `the graft absorbs through bulkMergeAddAccessors` | the graft, not only `filterStartsWith` |
 | `an absorbed step is reported to the deep exclusion filter` | §4.6 |
 | `a finer re-derivation is absorbed by the merge guard` / `a coarser one is not` | Appendix D — together they make `PreferBelow` the default |
