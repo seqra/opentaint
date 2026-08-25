@@ -163,9 +163,15 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
 
         if (SummaryPremiseDiagnostics.enabled) {
-            val report = SummaryPremiseDiagnostics.report(topN = 20)
+            val report = SummaryPremiseDiagnostics.report(SummaryPremiseDiagnostics.reportTopN)
             logger.info { report }
             report.lineSequence().forEach { if (it.isNotBlank()) println("SUMPREMISE $it") }
+
+            if (SummaryPremiseDiagnostics.traceKey != null) {
+                val trace = SummaryPremiseDiagnostics.dumpTargeted()
+                logger.info { trace }
+                trace.lineSequence().forEach { if (it.isNotBlank()) println("SUMPREMISETRACE $it") }
+            }
         }
 
         return fullScanResult

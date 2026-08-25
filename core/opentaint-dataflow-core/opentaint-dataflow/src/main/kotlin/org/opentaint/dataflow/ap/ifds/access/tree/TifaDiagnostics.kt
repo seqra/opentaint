@@ -101,9 +101,10 @@ object TifaDiagnostics {
      * Whether the call statement is parked at all.
      *
      * [ApOpDiagnostics] bills the summary graft to a line of the analysed program and reads the same
-     * thread local, so parking cannot be conditioned on `tifaDiag` alone.
+     * thread local, and [SummaryPremiseDiagnostics] bills a premise the same way, so parking cannot
+     * be conditioned on `tifaDiag` alone.
      */
-    val parkingEnabled: Boolean = enabled || ApOpDiagnostics.enabled
+    val parkingEnabled: Boolean = enabled || ApOpDiagnostics.enabled || SummaryPremiseDiagnostics.enabled
 
     /** Park [statement] for the duration of [body], restoring whatever was parked before. */
     inline fun <T> withCallSite(statement: Any?, body: () -> T): T {
