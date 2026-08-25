@@ -12,6 +12,8 @@ class GoSampleBasedTest: GoSampleBasedTestBase("GO_SAMPLES_DIR") {
 
     @Test fun passThrough() = runSample("PassThrough")
 
+    @Test fun dynamicFactoryCallResolution() = runSample("DynamicFactoryCallResolution")
+
     @Test fun sanitizer() = runSample("Sanitizer")
 
     @Test fun multiArgSink() = runSample("MultiArgSink")
