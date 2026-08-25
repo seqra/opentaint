@@ -97,6 +97,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
     }
 
+    /** The pot census, when the tree manager is the one running. Empty otherwise. */
+    private fun apManagerAnyUnrollCensus(): String =
+        (apManager as? TreeApManager)?.anyUnroll?.dagCensus().orEmpty()
+
     open fun summarySerializationContext(): SummarySerializationContext = DummySerializationContext
 
     private val summarySerializationContext by lazy {
@@ -138,6 +142,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             // Also on stdout: the benchmark harness scrapes console.log, and a counter that only
             // exists inside a log level nobody enabled is a counter nobody reads.
             println("ANYUNROLL $report")
+
+            val census = apManagerAnyUnrollCensus()
+            if (census.isNotBlank()) {
+                logger.info { census }
+                census.lineSequence().forEach { if (it.isNotBlank()) println(it) }
+            }
 
             val counterfactual = AnyUnrollDiagnostics.counterfactualReport()
             logger.info { counterfactual }

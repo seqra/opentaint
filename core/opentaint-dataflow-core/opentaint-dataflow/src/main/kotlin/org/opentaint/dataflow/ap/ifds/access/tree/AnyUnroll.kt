@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.util.ConcurrentReadSafeInt2ObjectMap
+import org.opentaint.dataflow.util.forEachEntry
 import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
 
@@ -78,7 +79,7 @@ enum class AnyUnrollKindMerge { PreferBelow, PreferBeyond }
  *
  * `-Dopentaint.anyUnrollKindPolicy=perDag|global`.
  */
-enum class AnyUnrollKindPolicy { PerDag, Global, AlwaysCredit }
+enum class AnyUnrollKindPolicy { PerDag, Global, AlwaysCredit, Rescore }
 
 /**
  * The budget pot shared by every `[any]` position descended from one origin.
@@ -127,6 +128,16 @@ class AnyUnrollDag(@JvmField val id: Int) {
      */
     @JvmField
     var states: Int = 0
+
+    /**
+     * The next `total` at which [AnyUnrollKindPolicy.Rescore] re-assigns this dag's kinds.
+     *
+     * Doubling rather than "every time it grows", so a dag is re-scored O(log total) times. The kind
+     * lattice's termination argument assumes a bounded number of kind changes per state; a re-score
+     * that fired on every mint would not have one.
+     */
+    @JvmField
+    var nextRescoreAt: Int = Int.MAX_VALUE
 
     /**
      * The automaton's start state, needed only to fuse two automata into one.
@@ -321,6 +332,12 @@ object AnyUnrollDiagnostics {
      * unconditionally and so cannot be demoted by any policy applied to the fact-side read.
      */
     val paidMintsFromUnroll = AtomicLong()
+
+    /** [AnyUnrollKindPolicy.Rescore]: how often a dag was re-scored, and what it changed. */
+    val rescores = AtomicLong()
+    val rescoreStatesVisited = AtomicLong()
+    val rescoreDemotions = AtomicLong()
+    val rescorePromotions = AtomicLong()
 
     /**
      * The COUNTERFACTUAL: for each prepend the kind gate declined, what would have happened if the
@@ -574,6 +591,11 @@ object AnyUnrollDiagnostics {
         append(",typeInfo:").append(unionWithoutCollapseTypeInfo.get())
         append(",other:").append(unionWithoutCollapseOther.get())
         append("]")
+        append(" rescore=[n:").append(rescores.get())
+        append(",visited:").append(rescoreStatesVisited.get())
+        append(",demote:").append(rescoreDemotions.get())
+        append(",promote:").append(rescorePromotions.get())
+        append("]")
         append(" queryReads=").append(queryReads.get())
         append(" mintKind=[paid:").append(paidMints.get())
         append("(unroll:").append(paidMintsFromUnroll.get()).append(")")
@@ -684,6 +706,56 @@ class AnyUnrollManager(
     /** The [AnyUnrollKindPolicy.Global] pot. Written only under [lock], beside `dag.total`. */
     private var globalSpend: Int = 0
 
+    /** Diagnostics only; see [newOrigin]. Keyed by the dag's own id, never by its representative. */
+    private val dagRegistry = java.util.concurrent.ConcurrentHashMap<Int, AnyUnrollDag>()
+
+    /**
+     * The pots, as they stand at the end of the run: one row per surviving representative.
+     *
+     * The question this exists for is whether a re-score triggered by "this dag's total crossed `L`"
+     * could ever reach the states that actually decline. It can only reach a state whose dag crossed,
+     * so the distribution of `total` across dags -- not the maximum, which is what the progress line
+     * reports -- is what decides it.
+     */
+    fun dagCensus(): String {
+        if (!enabled) return ""
+        val reps = LinkedHashMap<Int, AnyUnrollDag>()
+        for (dag in dagRegistry.values) {
+            val rep = dag.find()
+            reps[rep.id] = rep
+        }
+        val rows = reps.values.sortedByDescending { it.total }
+        val crossed = rows.count { it.total >= limit }
+        return buildString {
+            appendLine(
+                "ANYUNROLL dags live=${rows.size} crossedLimit=$crossed limit=$limit" +
+                    " totals=[${rows.take(12).joinToString(",") { "${it.total}/${it.states}" }}]" +
+                    " (total/states, largest first)"
+            )
+            val hist = IntArray(7)
+            for (r in rows) {
+                val b = when {
+                    r.total >= limit -> 6
+                    r.total >= limit / 2 -> 5
+                    r.total >= limit / 4 -> 4
+                    r.total >= limit / 8 -> 3
+                    r.total >= 4 -> 2
+                    r.total >= 2 -> 1
+                    else -> 0
+                }
+                hist[b]++
+            }
+            appendLine(
+                "ANYUNROLL dags byTotal=[<2:${hist[0]},2-3:${hist[1]},4-L/8:${hist[2]}," +
+                    "L/8-L/4:${hist[3]},L/4-L/2:${hist[4]},L/2-L:${hist[5]},>=L:${hist[6]}]"
+            )
+        }
+    }
+
+    /** The dag a state belongs to, for the decline census. */
+    fun dagOf(state: AnyUnrollState?): AnyUnrollDag? =
+        if (!enabled || state == null) null else state.find().dag.find()
+
     /** R1: a fresh origin -- a new dag with `total = 0` and its root state with `pathCount = 1`. */
     fun newOrigin(site: Int): AnyUnrollState? {
         if (!enabled) return null
@@ -692,6 +764,7 @@ class AnyUnrollManager(
         val root = AnyUnrollState(stateIds.incrementAndGet(), dag)
         dag.rootState = root
         dag.states = 1
+        dag.nextRescoreAt = maxOf(1, limit)
         dagsCreated.incrementAndGet()
         statesMinted.incrementAndGet()
         noteMaxStates(1)
@@ -702,6 +775,10 @@ class AnyUnrollManager(
         if (AnyUnrollDiagnostics.enabled) {
             AnyUnrollDiagnostics.mints.incrementAndGet()
             AnyUnrollDiagnostics.mintsBySite[site].incrementAndGet()
+            // The manager keeps no dag registry by design; this one exists only under the diagnostic
+            // flag, and only so the pots can be censused. `find()` at report time collapses the
+            // fused ones, so holding every dag ever created costs a few hundred entries.
+            dagRegistry[dag.id] = dag
         }
 
         return root
@@ -751,6 +828,9 @@ class AnyUnrollManager(
                 val dyRoot = dy.rootState
                 dy.parent = dx
                 dx.total = satAdd(dx.total, dy.total, Int.MAX_VALUE)
+            // A fusion is the other way a pot crosses its limit, and the one the design's own
+            // comment points at ("after merge the new total is more than the limit").
+            dx.nextRescoreAt = minOf(dx.nextRescoreAt, dy.nextRescoreAt)
                 dx.states = satAdd(dx.states, dy.states, Int.MAX_VALUE)
                 noteMaxStates(dx.states)
 
@@ -933,6 +1013,70 @@ class AnyUnrollManager(
      * receiver preference, a separate and non-negotiable requirement -- only what the survivor says
      * about itself.
      */
+    /**
+     * Re-assign this dag's kinds so that a BOUNDED sub-automaton stays `PAID` and the rest is
+     * `CREDIT`.
+     *
+     * The shipped rule stamps a kind at the mint and never revisits it, so a state minted while the
+     * pot was solvent stays `PAID` even after the pot has gone to four times the limit. On conductor
+     * that is not a corner case: one dag of 140 reaches `total = 401` against `L = 100`, and the
+     * states declining 82% of all absorptions live in it.
+     *
+     * The sub-automaton is chosen breadth-first from the root, charged the same `pathCount` the mint
+     * charges, so "the first `L` of spend, nearest the origin" stays `PAID`. Breadth-first and not
+     * depth-first on purpose: the automaton is allowed to be cyclic, and a depth-first walk down one
+     * arm would spend the whole budget on a single accessor sequence.
+     *
+     * Caller holds [lock]. `ORIGIN` is left alone -- it is the neutral element of the kind lattice
+     * and an origin has no predecessor to absorb into anyway.
+     */
+    private fun rescoreDag(dag: AnyUnrollDag) {
+        val root = dag.rootState?.find() ?: return
+
+        var budget = limit
+        val seen = java.util.Collections.newSetFromMap(java.util.IdentityHashMap<AnyUnrollState, Boolean>())
+        val queue = ArrayDeque<AnyUnrollState>()
+        queue.addLast(root)
+        seen.add(root)
+
+        var visited = 0
+        var demoted = 0
+        var promoted = 0
+
+        while (queue.isNotEmpty()) {
+            val state = queue.removeFirst()
+            visited++
+
+            if (state.kind != AnyUnrollKind.ORIGIN) {
+                val cost = state.pathCount
+                val before = state.kind
+                if (budget >= cost) {
+                    state.kind = AnyUnrollKind.PAID
+                    budget -= cost
+                } else {
+                    state.kind = AnyUnrollKind.CREDIT
+                }
+                if (state.kind != before) {
+                    if (state.kind == AnyUnrollKind.CREDIT) demoted++ else promoted++
+                }
+            }
+
+            state.children?.forEachEntry { _, child ->
+                val target = child.find()
+                if (seen.add(target)) queue.addLast(target)
+            }
+        }
+
+        dag.nextRescoreAt = maxOf(limit, satAdd(dag.total, dag.total, Int.MAX_VALUE))
+
+        if (AnyUnrollDiagnostics.enabled) {
+            AnyUnrollDiagnostics.rescores.incrementAndGet()
+            AnyUnrollDiagnostics.rescoreStatesVisited.addAndGet(visited.toLong())
+            AnyUnrollDiagnostics.rescoreDemotions.addAndGet(demoted.toLong())
+            AnyUnrollDiagnostics.rescorePromotions.addAndGet(promoted.toLong())
+        }
+    }
+
     private fun mergeKind(x: AnyUnrollState, y: AnyUnrollState) {
         val before = x.kind
         val after = when {
@@ -1042,7 +1186,11 @@ class AnyUnrollManager(
 
             val dag = current.dag.find()
             val paid = when (kindPolicy) {
-                AnyUnrollKindPolicy.PerDag -> dag.total < limit   // the ONLY thing the pot decides
+                // Rescore mints exactly as PerDag does; it differs only in revisiting the kind
+                // afterwards, which is the whole point -- a stamp cannot express "this state later
+                // ended up inside a pot four times the limit".
+                AnyUnrollKindPolicy.PerDag,
+                AnyUnrollKindPolicy.Rescore -> dag.total < limit  // the ONLY thing the pot decides
                 AnyUnrollKindPolicy.Global -> globalSpend < limit
                 // The CEILING arm. Every rescue strategy for a state that was stamped `PAID` too
                 // early -- a global pot, a BFS re-score, anything -- demotes SOME states to `CREDIT`.
@@ -1138,6 +1286,9 @@ class AnyUnrollManager(
             dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
             // Charged under the manager lock beside `dag.total`, so a plain Int is enough.
             globalSpend = satAdd(globalSpend, current.pathCount, Int.MAX_VALUE)
+        }
+        if (kindPolicy == AnyUnrollKindPolicy.Rescore && dag.total >= dag.nextRescoreAt) {
+            rescoreDag(dag)
         }
         statesMinted.incrementAndGet()
         dag.states++

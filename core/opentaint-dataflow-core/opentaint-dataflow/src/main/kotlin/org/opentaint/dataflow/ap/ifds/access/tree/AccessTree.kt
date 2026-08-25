@@ -1631,9 +1631,11 @@ class AccessTree(
                 else -> AnyUnrollDiagnostics.cfDeclinedPaid
             }.incrementAndGet()
             val state = pos.find()
+            val dag = manager.anyUnroll.dagOf(state)
             AnyUnrollDiagnostics.recordDeclineByState(
                 state.id,
-                if (state.mintedByUnroll) "$kind/unroll" else "$kind/read"
+                (if (state.mintedByUnroll) "$kind/unroll" else "$kind/read") +
+                    " dag#${dag?.id} total=${dag?.total} states=${dag?.states}"
             )
 
             val anyNode = node.getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return
