@@ -566,6 +566,11 @@ class TaintAnalysisUnitRunnerManager(
         val delta = totalProcessed - prevProgress.get()
         logger.info { "Progress: ${totalProcessed}/${totalEventsEnqueued.get()} (+$delta)" }
         logger.info { reportMemoryUsage() }
+        // Adjacent to the throughput line on purpose: `queued` is pinned near zero by construction,
+        // so `(+delta)` is the only readable throughput signal, and "beyond climbing while (+delta)
+        // falls" -- the cut firing and the work MOVING rather than going away -- is legible only
+        // when the two are read together.
+        activeApManager.reportApStats()?.let { stats -> logger.info { stats } }
 
         prevProgress.set(totalProcessed)
 

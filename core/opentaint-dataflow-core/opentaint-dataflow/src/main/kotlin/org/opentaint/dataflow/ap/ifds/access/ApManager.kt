@@ -37,6 +37,16 @@ interface ApManager {
     fun factSideEffectSummariesApStorage(methodInitialStatement: CommonInst): FactSideEffectSummariesApStorage
 
     fun listEdgeCompressionRequired(edge: Edge): Boolean = false
+
+    /**
+     * One line of backend-specific state for the periodic progress report, or `null` for none.
+     *
+     * Follows [listEdgeCompressionRequired]'s idiom -- a defaulted method rather than a cast at the
+     * call site -- so the automata and cactus backends are untouched and an unconfigured tree run
+     * gains no line.
+     */
+    fun reportApStats(): String? = null
+
     fun finalFactList(): FinalFactList
 
     fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp

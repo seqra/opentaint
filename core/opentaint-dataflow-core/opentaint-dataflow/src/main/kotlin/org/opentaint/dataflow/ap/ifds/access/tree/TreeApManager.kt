@@ -134,6 +134,8 @@ class TreeApManager(
         return TreeFinalFactList.factCompressionRequired(fact)
     }
 
+    override fun reportApStats(): String? = anyUnroll.liveReport()
+
     override fun finalFactList(): FinalFactList = TreeFinalFactList(this)
 
     override fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp =

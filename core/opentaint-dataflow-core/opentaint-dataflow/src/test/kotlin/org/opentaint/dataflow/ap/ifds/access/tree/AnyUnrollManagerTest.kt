@@ -292,6 +292,60 @@ class AnyUnrollManagerTest {
         assertEquals(1, m.totalOf(root), "still only the build's charge")
     }
 
+    /* ---------- the population counts behind the progress line ---------- */
+
+    /**
+     * The counting scheme holds no registry, so every number is a difference of two event counters
+     * and the fusion is the one place they can drift: the pots SUM, so a fusion can push the
+     * survivor past `L` on its own AND remove a dag that was already latched as exhausted.
+     */
+    @Test
+    fun `the live counts follow creation, fusion and merging`() {
+        val m = manager(limit = 2)
+
+        val left = m.origin()
+        val right = m.origin()
+        m.liveStats().let {
+            assertEquals(2, it.liveRoots)
+            assertEquals(0, it.beyond, "a fresh pot at L = 2 has spent nothing")
+            assertEquals(2, it.states)
+        }
+
+        m.readChild(left, A)
+        m.readChild(left, B)
+        m.liveStats().let {
+            assertEquals(2, it.liveRoots)
+            assertEquals(1, it.beyond, "left's pot reached L")
+            assertEquals(4, it.states)
+            assertEquals(3, it.maxStatesPerDag)
+            assertEquals(2, it.transitions)
+        }
+
+        // The fusion: one representative goes, the pots sum -- which pushes the survivor past L on
+        // its own -- and the two start states merge, so a state goes too.
+        m.union(right, left)
+        m.liveStats().let {
+            assertEquals(1, it.liveRoots, "one representative left")
+            assertEquals(1, it.beyond, "the count transfers rather than doubling")
+            assertEquals(3, it.states, "the two start states became one")
+            assertTrue(it.beyond <= it.liveRoots, "beyond can never exceed live")
+        }
+    }
+
+    @Test
+    fun `a pot born exhausted is counted`() {
+        val m = manager(limit = 0)
+        m.origin()
+
+        assertEquals(1, m.liveStats().beyond, "at L = 0 the origin is already at its limit")
+    }
+
+    @Test
+    fun `a disabled manager reports no line`() {
+        assertNull(AnyUnrollManager(limit = -1).liveReport())
+        assertNotNull(manager().liveReport())
+    }
+
     /* ---------- concurrency ---------- */
 
     /**

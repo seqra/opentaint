@@ -33,6 +33,27 @@ class AnyUnrollDag(@JvmField val id: Int) {
     var refusals: Int = 0
 
     /**
+     * Whether this pot has already been counted as exhausted, so the progress line counts a
+     * TRANSITION rather than a state.
+     *
+     * [total] is monotone and this latch is never cleared, so the reported figure only ever drifts
+     * downward at a fusion -- where the decrement is exactly the dag that ceased to exist. Written
+     * under the manager lock, beside [total].
+     */
+    @JvmField
+    var exhaustedCounted: Boolean = false
+
+    /**
+     * How many live states this pot's automaton holds.
+     *
+     * Maintained incrementally at the mint, at the fusion and at each productive state merge --
+     * never by traversal, for the reason [AnyUnrollState] gives: the automaton is allowed to be
+     * cyclic. It exists so `maxStatesPerDag` can be reported without a registry.
+     */
+    @JvmField
+    var states: Int = 0
+
+    /**
      * The automaton's start state, needed only to fuse two automata into one.
      *
      * Closes a reference cycle (dag -> root state -> dag) that the collector handles without help.
@@ -128,6 +149,24 @@ fun AnyUnrollDag.find(): AnyUnrollDag {
         cur = grand
     }
 }
+
+/**
+ * The unconditional per-manager population counts behind the progress line.
+ *
+ * Every one is maintained incrementally at the event, because the manager holds no collection of
+ * states or dags -- a registry of states is the one thing that would force weak references back into
+ * the design.
+ */
+data class AnyUnrollLiveStats(
+    /** `dagsCreated - dagsFused`: live REPRESENTATIVES, not dags still reachable from a live fact. */
+    val liveRoots: Int,
+    /** Pots latched past `L`. A transition, not a state, so it needs the per-dag latch. */
+    val beyond: Int,
+    /** `statesMinted - statesMerged`; `mergeStates` is the only destroyer and removes exactly one. */
+    val states: Int,
+    val maxStatesPerDag: Int,
+    val transitions: Int,
+)
 
 /**
  * Process-wide counters for the `[any]` unroll manager, enabled by `-Dopentaint.anyManagerDiag=true`.
@@ -249,6 +288,25 @@ class AnyUnrollManager(
     private val stateIds = AtomicInteger()
     private val dagIds = AtomicInteger()
 
+    /* ---------- the progress-line counters (unconditional, per manager) ---------- */
+
+    // Four increments on paths that already do atomic work, and they are NOT gated on
+    // `anyManagerDiag`: the line they feed is the only thing that separates failure modes an
+    // aggregate cannot -- "origins proliferating, none spending" from "a few origins absorbing the
+    // whole program" -- and a diagnostic nobody turns on does not separate them on a real run.
+    //
+    // Counting without a registry. `newOrigin` is the only creator of a dag and the cross-dag fusion
+    // the only destroyer, and a fusion removes exactly one representative, so live roots are
+    // `dagsCreated - dagsFused`. States follow the same shape against `mergeStates`. Exhaustion is a
+    // TRANSITION rather than a state, so it needs the per-dag latch [AnyUnrollDag.exhaustedCounted].
+    private val dagsCreated = AtomicInteger()
+    private val dagsFused = AtomicInteger()
+    private val dagsExhausted = AtomicInteger()
+    private val statesMinted = AtomicInteger()
+    private val statesMerged = AtomicInteger()
+    private val maxStatesPerDag = AtomicInteger()
+    private val transitionsInstalled = AtomicInteger()
+
     /** `pathCount` saturates here: past `L` the state refuses everything anyway. */
     private val pathCountCeiling: Int = if (limit <= 0) 1 else limit
 
@@ -259,6 +317,13 @@ class AnyUnrollManager(
         val dag = AnyUnrollDag(dagIds.incrementAndGet())
         val root = AnyUnrollState(stateIds.incrementAndGet(), dag)
         dag.rootState = root
+        dag.states = 1
+        dagsCreated.incrementAndGet()
+        statesMinted.incrementAndGet()
+        noteMaxStates(1)
+        // A fresh pot can be born exhausted: at `L = 0` every origin is already at its limit, and
+        // the latch has to see that or `beyond` reads zero on the arm where it matters most.
+        noteTotal(dag)
 
         if (AnyUnrollDiagnostics.enabled) {
             AnyUnrollDiagnostics.mints.incrementAndGet()
@@ -312,6 +377,17 @@ class AnyUnrollManager(
                 val dyRoot = dy.rootState
                 dy.parent = dx
                 dx.total = satAdd(dx.total, dy.total, Int.MAX_VALUE)
+                dx.states = satAdd(dx.states, dy.states, Int.MAX_VALUE)
+                noteMaxStates(dx.states)
+
+                // The part that is easy to get wrong: the pots SUM, so a fusion can push the
+                // survivor over the limit on its own AND remove a dag that was already counted.
+                dagsFused.incrementAndGet()
+                when {
+                    dy.exhaustedCounted && dx.exhaustedCounted -> dagsExhausted.decrementAndGet()
+                    dy.exhaustedCounted -> dx.exhaustedCounted = true
+                }
+                noteTotal(dx)
 
                 if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.dagFusions.incrementAndGet()
 
@@ -373,6 +449,8 @@ class AnyUnrollManager(
             if (x === y) continue
 
             y.parent = x
+            statesMerged.incrementAndGet()
+            x.dag.find().states--
             x.pathCount = if (accumulatePaths) {
                 satAdd(x.pathCount, y.pathCount, pathCountCeiling)
             } else {
@@ -406,11 +484,12 @@ class AnyUnrollManager(
     private fun putTransition(state: AnyUnrollState, accessor: AccessorIdx, target: AnyUnrollState) {
         val existing = state.children
         if (existing != null) {
-            existing.put(accessor, target)
+            if (existing.put(accessor, target) == null) transitionsInstalled.incrementAndGet()
             return
         }
         val map = ConcurrentReadSafeInt2ObjectMap<AnyUnrollState>()
         map.put(accessor, target)
+        transitionsInstalled.incrementAndGet()
         state.children = map
     }
 
@@ -456,6 +535,10 @@ class AnyUnrollManager(
             child.pathCount = current.pathCount
             putTransition(current, accessor, child)
             dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+            statesMinted.incrementAndGet()
+            dag.states++
+            noteMaxStates(dag.states)
+            noteTotal(dag)
             if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.recordPot(dag.total)
 
             if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.transitionsCreated.incrementAndGet()
@@ -484,6 +567,60 @@ class AnyUnrollManager(
 
     /** For tests and diagnostics only. */
     fun totalOf(state: AnyUnrollState): Int = state.find().dag.find().total
+
+    /**
+     * Latch the exhaustion TRANSITION. Called under [lock], wherever [AnyUnrollDag.total] is written.
+     *
+     * `total` is monotone and the latch is never cleared, so nothing drifts downward except at the
+     * fusion, where the decrement is exactly the dag that ceased to exist.
+     */
+    private fun noteTotal(dag: AnyUnrollDag) {
+        if (!dag.exhaustedCounted && dag.total >= limit) {
+            dag.exhaustedCounted = true
+            dagsExhausted.incrementAndGet()
+        }
+    }
+
+    private fun noteMaxStates(candidate: Int) {
+        var cur = maxStatesPerDag.get()
+        while (candidate > cur && !maxStatesPerDag.compareAndSet(cur, candidate)) cur = maxStatesPerDag.get()
+    }
+
+    /**
+     * The `[any]` line of the periodic progress report, or `null` when the feature is off.
+     *
+     * What it is for is separating failure modes the aggregates cannot:
+     *
+     * | reading | means | lever |
+     * |---|---|---|
+     * | `live` large, `beyond` ~ 0 | origins proliferating, none spending | the mint sites, not `L` |
+     * | `live` small, `beyond` ~ `live` | a few origins absorbing the whole program | `L`, or that origin |
+     * | `beyond` climbing while `(+delta)` falls | the cut fires and the work MOVES | the L=100 shape |
+     *
+     * `live` honestly means live REPRESENTATIVES, not dags still reachable from a live fact: a pot
+     * whose facts have all been dropped still counts. Making it mean the latter needs the weak
+     * registry this design refuses, so the counter over-reports by exactly the un-reclaimed amount.
+     */
+    fun liveReport(): String? {
+        if (!enabled) return null
+        val s = liveStats()
+
+        // An invariant of the scheme, not a defensive check: a violation means the fusion accounting
+        // is wrong, which is otherwise a silent, slowly drifting number that would be believed.
+        val consistent = if (s.beyond <= s.liveRoots) "" else " INCONSISTENT(beyond>live)"
+
+        return "[any] roots: ${s.liveRoots} live, ${s.beyond} beyond, ${s.states} states " +
+            "(max/dag ${s.maxStatesPerDag}), transitions ${s.transitions}" + consistent
+    }
+
+    /** The same numbers unformatted, so a test can assert the fusion accounting rather than a string. */
+    fun liveStats(): AnyUnrollLiveStats = AnyUnrollLiveStats(
+        liveRoots = dagsCreated.get() - dagsFused.get(),
+        beyond = dagsExhausted.get(),
+        states = statesMinted.get() - statesMerged.get(),
+        maxStatesPerDag = maxStatesPerDag.get(),
+        transitions = transitionsInstalled.get(),
+    )
 
     private fun satAdd(a: Int, b: Int, ceiling: Int): Int {
         val sum = a.toLong() + b.toLong()
