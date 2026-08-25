@@ -125,8 +125,8 @@ Semantics:
 
 - `mode: join` derives a composite rule from other rules referenced in `join.refs`.
 - Each `ref` selects a library rule and assigns a local alias:
-  - `tag` selects every enabled rule with that tag in the join's language. Adding the same tag to a
-    custom rule extends the join.
+  - `tag` selects every enabled, non-excluded rule with that tag in the join's language. Adding the
+    same tag to a custom rule extends the join.
   - `rule` selects one rule by `<path>#<rule-id>`.
   - `as` defines the alias used in `on`.
 - `on` correlates captures from the referenced rules. For example,
