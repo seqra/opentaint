@@ -52,7 +52,12 @@ class AccessBasedStorageAnyLookupTest {
             accessor is FieldAccessor || accessor is ElementAccessor
     }
 
-    private val manager = TreeApManager(UnrollStrategy, RefManager(), Cancellation())
+    // An EXPLICIT limit. Without one this manager inherits `-Dopentaint.anyUnrollLimit` from the
+    // Gradle JVM, which `configureDefaultTest` forwards into the forked test worker AND declares a
+    // task input -- so these representation constraints would be silently sensitive to a knob, and a
+    // gate run could not tell a regression from a setting. `-1` is the feature off, which is what
+    // every assertion in this file is about.
+    private val manager = TreeApManager(UnrollStrategy, RefManager(), Cancellation(), -1)
 
     private val base = AccessPathBase.This
 

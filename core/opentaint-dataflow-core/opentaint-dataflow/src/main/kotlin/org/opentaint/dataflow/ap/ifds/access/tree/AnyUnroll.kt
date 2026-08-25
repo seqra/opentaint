@@ -311,8 +311,17 @@ object AnyUnrollDiagnostics {
     val absorbForkHits = AtomicLong()
     val absorbForkMaxWidth = AtomicLong()
 
-    /** Folds that stopped absorbing with links still above them -- what the subset step should remove. */
+    /**
+     * Folds that stopped absorbing with links still above them -- what the subset step should remove.
+     *
+     * The split is the decisive one for §5.8. A fold that stalls having made NO step was standing on
+     * a single state, where a set of positions cannot exist yet and the subset construction can do
+     * nothing. Only [telescopeStallsAfterStep] -- a fold that got somewhere and then dead-ended -- is
+     * the population a lazy determinisation could rescue, and the fork is a candidate explanation for
+     * it only there.
+     */
     val telescopeStalls = AtomicLong()
+    val telescopeStallsAfterStep = AtomicLong()
     val telescopeSteps = AtomicLong()
 
     /** Is the backward query hitting? `absorbStay` dominant means the compression did not land. */
@@ -456,6 +465,7 @@ object AnyUnrollDiagnostics {
         append(",maxWidth:").append(absorbForkMaxWidth.get())
         append(",telescopeSteps:").append(telescopeSteps.get())
         append(",telescopeStalls:").append(telescopeStalls.get())
+        append(",telescopeStallsAfterStep:").append(telescopeStallsAfterStep.get())
         append("]")
         append(" witness=[fwdCheckFailed:").append(witnessForwardCheckFailed.get())
         append(",disagrees:").append(witnessDisagreesWithThreadedState.get())

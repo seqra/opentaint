@@ -2380,13 +2380,21 @@ class AccessTree(
             // on every lap. Diagnostics only; it changes nothing below.
             if (AnyUnrollDiagnostics.enabled && manager.anyUnroll.enabled) {
                 var probe = filteredTreeNode.anyId
+                var stepped = 0
                 for (i in parentAccessors.size - 1 downTo 0) {
                     val next = probe?.let { manager.anyUnroll.absorbInto(it, parentAccessors.getInt(i)) }
                     if (next == null) {
-                        if (i > 0) AnyUnrollDiagnostics.telescopeStalls.incrementAndGet()
+                        if (i > 0) {
+                            AnyUnrollDiagnostics.telescopeStalls.incrementAndGet()
+                            // The only population a subset construction could rescue: a fold that
+                            // GOT somewhere and then dead-ended. One that stalls immediately was
+                            // standing on a single state, where no set of positions exists yet.
+                            if (stepped > 0) AnyUnrollDiagnostics.telescopeStallsAfterStep.incrementAndGet()
+                        }
                         break
                     }
                     AnyUnrollDiagnostics.telescopeSteps.incrementAndGet()
+                    stepped++
                     probe = next
                 }
             }

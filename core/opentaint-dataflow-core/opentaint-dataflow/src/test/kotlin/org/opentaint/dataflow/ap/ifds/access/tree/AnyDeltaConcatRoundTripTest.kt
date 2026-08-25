@@ -146,4 +146,65 @@ class AnyDeltaConcatRoundTripTest {
             "expected arg0.a.b.c.d.[any].*; shapes=$shapes"
         )
     }
+
+    /**
+     * The same four laps with the manager ON. The three tests above keep `anyUnrollLimit = -1` and
+     * keep asserting the ratchet -- they are the control and must not change.
+     *
+     * The read records `p --a--> s` and hands the remainder `s`; the graft prepends `a` above an
+     * `[any]` sitting at `s`, the backward query says `a` IS an incoming edge of `s`, and the step is
+     * absorbed back into the `[any]` at `p`. Same state, same depth, every lap: the ratchet becomes a
+     * loop, and the fixed point closes because the fact stops changing rather than because a budget
+     * ran out.
+     */
+    @Test
+    fun `with the manager on the ratchet becomes a loop`() {
+        val m = TreeApManager(UnrollStrategy, RefManager(), Cancellation(), 0)
+
+        fun open(base: AccessPathBase, vararg accessors: Accessor): FinalFactAp {
+            var f = m.mostAbstractFinalAp(base)
+            accessors.reversed().forEach { f = f.prependAccessor(it) }
+            return f
+        }
+
+        fun prem(base: AccessPathBase, vararg accessors: Accessor): InitialFactAp {
+            var p = m.mostAbstractInitialAp(base)
+            accessors.reversed().forEach { p = p.prependAccessor(it) }
+            return p
+        }
+
+        var chain = emptyList<Accessor>()
+        var fact = open(arg0, AnyAccessor)                      // arg0.[any].*
+        val origin = (fact as AccessTree).access.anyId
+
+        val depths = mutableListOf(fact.depth)
+        val shapes = mutableListOf(fact.render())
+
+        for ((lap, next) in listOf(A, B, C, D).withIndex()) {
+            val premiseChain = chain + next
+            val delta = fact.delta(prem(arg0, *premiseChain.toTypedArray())).singleOrNull()
+                ?: error("lap $lap: expected one remainder; fact=${fact.render()}")
+
+            val conclusion = open(arg0, *premiseChain.toTypedArray())
+            fact = conclusion.concat(FactTypeChecker.Dummy, delta)
+                ?: error("lap $lap: the graft returned null")
+
+            chain = premiseChain
+            depths += fact.depth
+            shapes += fact.render()
+        }
+
+        assertEquals(
+            open(arg0, AnyAccessor).render(), fact.render(),
+            "expected arg0.[any].* -- the ratchet closed into a loop; shapes=$shapes"
+        )
+        assertTrue(
+            depths.all { it == depths.first() },
+            "the depth must not move at all; depths=$depths shapes=$shapes"
+        )
+        assertEquals(
+            origin?.find(), (fact as AccessTree).access.anyId?.find(),
+            "and the state is back where it started, which is what makes the merge guard fire"
+        )
+    }
 }
