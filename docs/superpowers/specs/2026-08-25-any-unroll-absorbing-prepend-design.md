@@ -116,8 +116,9 @@ The ratchet becomes a loop.
 **(5) The position is a set when it has to be.** The forward automaton is a DFA; the reversed one is
 not, and `mergeStates` forks it on the operation that dominates the manager's traffic. Asking *is `a`
 an incoming edge* is then single-path search on an NFA, which dead-ends on paths that exist. §5.8
-replaces the pick with a **lazy, interned subset construction**: a fact's `[any]` carries a state, or
-— after a fork — a capped set of them. `clusterMax = 1` recovers the pick exactly, so which of the
+replaces the pick with a **lazy subset construction**: a fact's `[any]` carries a state, or — after a
+fork — an immutable, capped set of them, allocated at the point of use and owned by the fact node
+(no registry, §5.8c). `clusterMax = 1` recovers the pick exactly, so which of the
 two ships is a measurement (§5.8i), not an argument.
 
 ---
@@ -513,7 +514,9 @@ Both measured at step 1, before anything depends on them (R8).
 
 Neither `kind` nor `parents` enters `AccessNode.hash` (`:465`), `equals` (`:529`) or
 `AccessTreeInterner.InternStrategy.equals` (`AccessTreeInterner.kt:31`). Only `AnyUnrollState.id`
-does, and it is immutable.
+does, and it is immutable. §5.8 widens that to `AnyUnrollPos.hashSeed` and to a by-value comparison
+for clusters — both computed from immutable stored data and never from `find()`, so the property that
+matters here is preserved exactly: **nothing that enters a hash ever moves under a live entry.**
 
 This matters more than it looks: `kind` is mutable after construction, and M§3.4's central hazard is a
 hash that moves under a live entry — `AccessTreeInterner`'s buckets, `EdgeSet`
@@ -575,59 +578,89 @@ stalls, and writes `ret.a.[any]`. **A path existed and was not found**, so the f
 should have shed — on every lap. That is the growth mode strategy 1 pays for, and no tie-break fixes
 it: the defect is choosing before the rest of the word is known.
 
-The textbook answer is the subset construction, and two properties make it affordable here: it is
-built **lazily** (only subsets actually reached exist) and **interned** (one object per subset, so
-`===` identity — which §5.6 needs — survives).
+The textbook answer is the subset construction, and one property makes it affordable: it is built
+**lazily**, so only the subsets actually reached exist. It needs no interning and no registry — (c).
 
-#### (c) Positions
+#### (c) Positions are values, not interned objects
 
 ```kotlin
-/** What a fact's `[any]` carries. One id space, so `AccessNode.hash` (§5.6) is untouched. */
-sealed interface AnyUnrollPos {
-    val id: Int
-    fun find(): AnyUnrollPos
+/** What a fact's `[any]` carries. `hashSeed` is what `AccessNode.hash` mixes in -- §5.6. */
+sealed interface AnyUnrollPos { val hashSeed: Int }
+
+class AnyUnrollState(@JvmField val id: Int, …) : AnyUnrollPos {    // today's, unchanged
+    override val hashSeed get() = id
 }
 
-class AnyUnrollState(override val id: Int, …) : AnyUnrollPos       // today's, unchanged
-
 /**
- * Two or more states the `[any]` may equally be at. Members are REPRESENTATIVES at intern time,
- * sorted by id, immutable, `2 <= size <= clusterMax`. Produced only by a fork; a singleton is never
- * a cluster, so a fact that never forks pays a type check and nothing else.
+ * Two or more states the `[any]` may equally be at: an immutable VALUE, allocated at the point of
+ * use and owned by the fact node that holds it. Members are resolved through `find()` and sorted by
+ * id at construction, `2 <= size <= clusterMax`. A singleton is never a cluster, so a fact that
+ * never forks pays one type check and nothing else.
  */
-class AnyUnrollCluster(override val id: Int, @JvmField val members: Array<AnyUnrollState>) : AnyUnrollPos
+class AnyUnrollCluster(@JvmField val members: Array<AnyUnrollState>) : AnyUnrollPos {
+    override val hashSeed = members.fold(0) { h, m -> h * 31 + m.id }   // computed once, immutable
+}
 ```
 
-`find()` on a cluster resolves every member; if none moved it returns `this`, and if any did it
-re-interns under the new key and links `parent` to the result — the same lazy-canonicalisation
-discipline §5.5's invariant (I) states for `children`/`parents`, for the same reason. A cluster whose
-members collapse to one representative **degenerates to that state**, so the representation
-self-simplifies as the automaton coarsens.
+**There is no intern table and no cluster DSU**, and that is a deliberate reversal of the obvious
+design. Interning would buy `===` on equal subsets, but it is a *registry of states* — §12's
+"the one thing that would force weak references back into the design" — and it would own the
+reclamation problem §5.5 exists to close. A cluster instead dies with the last fact node that
+references it, under the ordinary collector.
+
+Nothing re-canonicalises a cluster after construction, because nothing needs to: **every operation
+resolves members through `find()` at the point of use** (`readChild`, `absorbInto`, `writesAbove`,
+`union`), so a stale member is exactly as harmless as the stale state reference a fact carries today.
+When the automaton coarsens under a cluster, the next derivation builds the canonical value and the
+two converge one lap later — which is the trade-off `AccessNode.equals` already documents for states:
+*"Two nodes whose states have since been unioned stay unequal; they are structural duplicates that
+the next rebuild removes, which is cheaper than a hash that moves under a live entry."* A cluster
+whose members collapse to one representative is simply built as that state.
+
+**Three identity obligations**, and they are what replace interning:
+
+1. **`union` returns the receiver *object* when the arrival adds nothing** — (d). This is the one that
+   carries the fixpoint: the re-derived fact merges into the stored one, the union sees a subset,
+   the stored position comes back unchanged, `mergeAddStep`'s guard returns `this`, and no work is
+   queued. Without it a fresh-but-equal cluster on every lap would re-enter the worklist forever;
+   with it, allocating fresh in `absorbInto` costs nothing but the allocation.
+2. **`AccessNode.hash` mixes `pos.hashSeed`** instead of `anyId.id`. Identical for a state, and for a
+   cluster a deterministic digest of member ids — so the existing property that the hash "adds no
+   run-to-run variation" (`:463-465`) survives, which an identity hash would have destroyed.
+3. **`AccessNode.equals` and `InternStrategy.equals` compare positions by value**:
+   `a === b || (both clusters && members.contentIdentityEquals)`, reusing the helper already in
+   `AccessTreeInterner.kt`. The singleton case short-circuits on `===`, so the hot path is unchanged.
+   This is not needed for termination — (1) is — but without it two structurally equal facts occupy
+   two nodes. Note it keeps the interner's explicit comparison rather than leaning on the hash, which
+   its own comment requires: a collision must never fuse two pots.
 
 #### (d) The three operations
 
 ```kotlin
 /** FORWARD: the subset step. Mints only when NOTHING can move -- see (e). */
 fun readChild(pos: AnyUnrollPos?, a: AccessorIdx): AnyUnrollPos? {
-    val cur = pos?.find() ?: return pos
-    if (cur is AnyUnrollState) return readChildSingle(cur, a)          // today's path, untouched
-    val moved = cur.members.mapNotNull { it.find().children?.get(a)?.find() }
-    if (moved.isNotEmpty()) return intern(moved)                       // no mint, no charge
-    return readChildSingle(cur.members.minBy { it.id }, a)             // §5.3's tie-break
+    if (!enabled || pos == null) return pos
+    if (pos is AnyUnrollState) return readChildSingle(pos.find(), a)   // today's path, untouched
+    val moved = pos.members.mapNotNull { it.find().children?.get(a)?.find() }
+    if (moved.isNotEmpty()) return posOf(moved)                        // no mint, no charge
+    return readChildSingle(pos.members.minBy { it.id }.find(), a)      // §5.3's tie-break
 }
 
 /** BACKWARD: the subset step. Null iff NO member has an incoming [a]. */
 fun absorbInto(pos: AnyUnrollPos, a: AccessorIdx): AnyUnrollPos? {
-    val preds = pos.find().eachMember { it.parents?.get(a).orEmpty() }.mapTo(sorted) { it.find() }
-    return if (preds.isEmpty()) null else intern(preds)
+    val preds = pos.eachMember { it.find().parents?.get(a).orEmpty() }.mapTo(sorted) { it.find() }
+    return if (preds.isEmpty()) null else posOf(preds)
 }
 
-/** MERGE: set union. The identity case returns the RECEIVER OBJECT -- §5.4(a) is subsumed. */
+/** The only constructor. Dedups, sorts, degenerates a singleton to the state, applies the cap (g). */
+private fun posOf(states: Collection<AnyUnrollState>): AnyUnrollPos
+
+/** MERGE: set union. The subset case returns the RECEIVER OBJECT -- the fixpoint, §5.8(c1). */
 fun union(x: AnyUnrollPos?, y: AnyUnrollPos?): AnyUnrollPos? =
     when {
-        x == null || y == null -> x ?: y
-        members(y) ⊆ members(x) -> x                                   // guard fires, no lap
-        else -> intern(members(x) + members(y))
+        x == null || y == null  -> x ?: y
+        members(y) ⊆ members(x) -> x                     // the SAME object: guard fires, no lap
+        else                    -> posOf(members(x) ∪ members(y))       // a real change, one lap
     }
 ```
 
@@ -644,8 +677,8 @@ still uses.
 M§2's program loop produces `union(m, m·a)`, and today the destructive merge's self-loop is what
 closes it. Under positions it is the cluster `C = {m, m·a}`, and the next lap reads `a` from `C`:
 `m` can step (to `m·a`), so **nothing is minted** and the result is the singleton `{m·a}`; merging
-that back into the stored `C` returns `C` — the same interned object, so `mergeAdd`'s guard fires and
-the lap is free. Had the read instead minted from every stuck member, the loop would have produced
+that back into the stored `C` hits `union`'s subset case and returns `C` — the receiver object
+itself — so `mergeAdd`'s guard fires and the lap is free. Had the read instead minted from every stuck member, the loop would have produced
 `m·a·a` and gone round forever. The rule is not an optimisation.
 
 #### (f) What the subset step buys, precisely
@@ -688,11 +721,14 @@ singletons and at clusters.
 **The forward automaton stays a DFA.** `AnyUnroll.kt:394-397`'s comment — *"an NFA here would make
 every lookup explore a SET of states"* — is about the automaton, and it still holds: the conflict arm
 still merges conflicting targets, and no state gains a second `a`-successor. What may be a set is the
-**position a fact carries**, bounded by `clusterMax`, interned, and reached only after a fork. A
-lookup on a singleton is unchanged; re-derivation stays free because the interned object is `===`.
+**position a fact carries**, bounded by `clusterMax` and reached only after a fork. A lookup on a
+singleton is unchanged; re-derivation stays free because `union`'s subset case hands back the stored
+position itself (c1) rather than because the sets were shared.
 
-**Memory** adds one object per reachable subset plus the intern map, ≤ 8 members each — on top of
-§5.7, and measured by the same counters.
+**Memory** adds one small immutable object per cluster-carrying fact node, ≤ 8 references each,
+reclaimed with the node. There is nothing to reclaim *separately* — no table, no weak references, no
+second population to bound — which is the practical payoff of (c) and the reason §5.7's numbers do not
+move. What clusters can cost instead is allocation churn, and `clusterRate` is what measures it.
 
 #### (i) Build the counter before the mechanism
 
@@ -821,7 +857,7 @@ private fun AccessNode.installAbove(accessor: AccessorIdx, anyState: AnyUnrollSt
     // is not this case: `pred` is then non-null and contains the state itself, and the step is
     // absorbed in place. Nor is a FORK: `pred` is then the set of predecessors, and carrying all of
     // them is what lets the next accessor up telescope through the one that has it (§5.8b).
-    val pred = manager.anyUnroll.absorbInto(pos.find(), accessor)
+    val pred = manager.anyUnroll.absorbInto(pos, accessor)      // resolves members internally
         ?: return createRaw(accessor, this, anyState)
 
     val absorbed = createRaw(ANY_ACCESSOR_IDX, anyNode, pred)
@@ -1321,7 +1357,7 @@ legible at all.
 | 2 | **`AnyUnrollKind`, the `kind` field, `AnyUnrollKindMerge`** and its plumbing. Nothing reads `kind` yet | no |
 | 3 | **`readChild` stops refusing** + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
 | 4 | **`writesAbove` / `absorbInto`** with counters, **`absorbForkHits` among them**. Still nothing calls them — and this is where §5.8(i)'s measurement is taken, on the real workload, before any of §5.8 is written | no |
-| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then the three operations, the intern table and `clusterMax` | no |
+| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then `posOf`, the three operations and `clusterMax` — no table, no reclamation (§5.8c) | no |
 | 5 | **`create` becomes `installAbove`**, `addParentAbsorbingAny` deleted, `mergeAddMaybeNull`'s parameters renamed (R9). Covers census rows 1, 3, 4, 6 | **yes** |
 | 6 | **`bulkMergeAddAccessors` pre-pass** — row 2, the graft. The commit the design exists for | **yes** |
 
@@ -1359,9 +1395,11 @@ lock.
 | `a fusion forks the reverse index` | after a cross-dag fusion `parents[a]` holds two — §5.8(a), the premise the section rests on |
 | `the telescope survives a fork` | `q₀-a→q₁-b→t` plus `p₀-b→t` with `p₀.id < q₁.id`: at `clusterMax = 1` the fold stalls one link up, at `8` it telescopes home — **the test §5.8 exists for** |
 | `the forward step mints only when no member can move` | `{m, m·a}` reads `a` to `{m·a}`, `total` unchanged — §5.8(e) |
-| `a program loop closes as a cluster` | the merge returns the same interned object, so the guard fires and the lap is free |
-| `a cluster degenerates when its members merge` | `find()` returns the state itself, never a size-1 cluster |
-| `union returns the receiver when the arrival adds nothing` | §5.8(d) — §5.4(a)'s obligation subsumed, checked from both argument orders |
+| `a program loop closes as a cluster` | `union`'s subset case returns the receiver object, so the guard fires and the lap is free |
+| `a cluster is never built with one member` | a fork whose members have since merged yields the state itself |
+| `union returns the receiver object when the arrival adds nothing` | `assertSame` — §5.8(c1), the obligation that replaces interning, from both argument orders |
+| `a re-derived equal cluster queues no work` | build the same set twice from separate `absorbInto` calls, merge the second into the first, `assertSame` on `mergeAdd`'s result — the test that would fail if (c1) were dropped |
+| `two nodes carrying equal clusters are equal` | `AccessNode.equals` and the interner strategy, by value — §5.8(c3) |
 | `the cap truncates to the min-id member` | `clusterMax = 1` reproduces strategy 1 exactly, on the same fixture as the telescope test |
 
 **`AnyUnrollFactTest`** — the manager as the fact tree uses it; the idiom is already there
@@ -1531,10 +1569,11 @@ way.
 regression from a setting until they take explicit values.
 
 **R12. The subset construction can blow up**, in cluster count rather than size — `clusterMax` bounds
-each set but not how many distinct sets are reached. The lazy construction only builds what is
-touched, and the intern table shares aggressively, but nothing proves a bound; `clusterRate` and
-`clusterMaxSize` are the measurement and `clusterMax` is the throttle. Reaching for a smaller
-`clusterMax` costs precision monotonically, which is the right shape for a throttle.
+each set but not how many distinct sets are reached. Since clusters are values owned by their fact
+nodes (§5.8c) this is allocation churn on a hot path rather than a growing table, which is the
+cheaper failure and the easier one to read: `clusterRate` and `clusterMaxSize` measure it and
+`clusterMax` throttles it, and a smaller `clusterMax` costs precision monotonically — the right shape
+for a throttle.
 
 **R13. The kind fold can switch the absorption off exactly where the fork is worst** (§5.8h). Under
 the default `PreferBelow` one `PAID` member makes a whole cluster writable, so a bigger set is *less*
