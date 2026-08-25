@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.AnyUnrollDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.SummaryPremiseDiagnostics
+import org.opentaint.dataflow.ap.ifds.access.tree.ApOpDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.TifaDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -153,6 +154,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 logger.info { trace }
                 trace.lineSequence().forEach { if (it.isNotBlank()) println("TIFATRACE $it") }
             }
+        }
+
+        if (ApOpDiagnostics.enabled) {
+            val report = ApOpDiagnostics.report()
+            logger.info { report }
+            report.lineSequence().forEach { if (it.isNotBlank()) println("APOP $it") }
         }
 
         if (SummaryPremiseDiagnostics.enabled) {

@@ -633,6 +633,25 @@ class AccessTree(
                 val originalAnyNoRepeats =
                     anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX, childState ?: anyId)
                 resultNode = mergeAddMaybeNull(originalAnyNoRepeats, resultNode)
+
+                if (ApOpDiagnostics.enabled) {
+                    val literal = node?.size ?: 0L
+                    val result = resultNode?.size ?: 0L
+                    ApOpDiagnostics.anyReadCalls.incrementAndGet()
+                    ApOpDiagnostics.anyReadLiteralNodes.addAndGet(literal)
+                    ApOpDiagnostics.anyReadResultNodes.addAndGet(result)
+                    if (node == null) ApOpDiagnostics.anyReadFromNothing.incrementAndGet()
+                    if (result > literal) {
+                        ApOpDiagnostics.anyReadGrew.incrementAndGet()
+                        ApOpDiagnostics.anyReadGrowth.addAndGet(result - literal)
+                        ApOpDiagnostics.example("B-getChildAny", result - literal) {
+                            "read " + with(manager) { accessor.accessor }.toSuffix() +
+                                " off a node that owns an [any]: literal=" + literal +
+                                " -> returned=" + result + "; owner=" +
+                                this.toString().replace('\n', ' ')
+                        }
+                    }
+                }
             }
 
             return resultNode
@@ -1722,10 +1741,28 @@ class AccessTree(
         ): AccessNode? {
             val filteredOther = FilteredNode.create(manager, other)
 
-            return concatToLeafAbstractNodes(
+            val result = concatToLeafAbstractNodes(
                 typeChecker, filteredOther, IntArrayList(), SUBSEQUENT_ARRAY_ELEMENTS_LIMIT,
                 parentEdgeIsAny = false,
             )
+
+            if (ApOpDiagnostics.enabled) {
+                val out = result?.size ?: 0L
+                ApOpDiagnostics.concatCalls.incrementAndGet()
+                ApOpDiagnostics.concatReceiverNodes.addAndGet(this.size)
+                ApOpDiagnostics.concatDeltaNodes.addAndGet(other.size)
+                ApOpDiagnostics.concatResultNodes.addAndGet(out)
+                if (out > this.size) {
+                    ApOpDiagnostics.concatGrew.incrementAndGet()
+                    ApOpDiagnostics.concatGrowth.addAndGet(out - this.size)
+                    ApOpDiagnostics.example("C-concat", out - this.size) {
+                        "graft delta(size=" + other.size + ") onto receiver(size=" + this.size +
+                            ") -> " + out + "; delta=" + other.toString().replace('\n', ' ')
+                    }
+                }
+            }
+
+            return result
         }
 
         fun internNodes(
@@ -1997,6 +2034,27 @@ class AccessTree(
         }
 
         fun filterStartsWith(accessPath: AccessPath.AccessNode?): AccessNode? {
+            if (ApOpDiagnostics.enabled) {
+                ApOpDiagnostics.fswCalls.incrementAndGet()
+                ApOpDiagnostics.fswInNodes.addAndGet(this.size)
+            }
+            val fswResult = filterStartsWithImpl(accessPath)
+            if (ApOpDiagnostics.enabled) {
+                val out = fswResult?.size ?: 0L
+                ApOpDiagnostics.fswOutNodes.addAndGet(out)
+                if (out > this.size) {
+                    ApOpDiagnostics.fswGrew.incrementAndGet()
+                    ApOpDiagnostics.fswGrowth.addAndGet(out - this.size)
+                    ApOpDiagnostics.example("D-filterStartsWith", out - this.size) {
+                        "match premise(len=" + (accessPath?.size ?: 0) + ") against fact(size=" +
+                            this.size + ") -> " + out
+                    }
+                }
+            }
+            return fswResult
+        }
+
+        private fun filterStartsWithImpl(accessPath: AccessPath.AccessNode?): AccessNode? {
             if (accessPath == null) return this
 
             // Soundness-critical prefilter, not a cost gate: the walk below descends with getChild,

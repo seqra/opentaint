@@ -168,6 +168,8 @@ class TreeInitialFactAbstraction(
     ): UnrollResult {
         if (unrollRequests.isEmpty()) return UnrollResult(null, budgetSpent = false)
 
+        if (ApOpDiagnostics.enabled) ApOpDiagnostics.unrollCalls.incrementAndGet()
+
         val unrollStrategy = apManager.anyAccessorUnrollStrategy
 
         var budgetSpent = false
@@ -178,6 +180,20 @@ class TreeInitialFactAbstraction(
             // The state of the `[any]` edge this request is unrolling. The request captures the node
             // that CARRIES the edge, not the `[any]` subtree, so this is the right one.
             val parentAnyState = unrollRequest.node.anyId
+
+            val prefixDepth = if (ApOpDiagnostics.enabled) {
+                var d = 0
+                unrollRequest.currentAp.foldRight(Unit) { _, _ -> d++ }
+                ApOpDiagnostics.recordUnrollRequest(
+                    prefixDepth = d,
+                    offered = unrollRequest.accessors.size,
+                    // What the unroll re-roots is the CARRIER, not the `[any]` subtree. Both are
+                    // recorded so the reader can see which one the cost follows.
+                    carrier = unrollRequest.node.size,
+                    anyChild = unrollRequest.node.getChild(ANY_ACCESSOR_IDX)?.size ?: 0L,
+                )
+                d
+            } else 0
 
             unrollRequest.accessors.forEachInt { accessor ->
                 val accessorInstance = with(apManager) { accessor.accessor }
@@ -221,6 +237,26 @@ class TreeInitialFactAbstraction(
                     .addReversedApParents(prefix, unrollRequest.governingAnyId)
                     ?: return@forEachInt
 
+                if (ApOpDiagnostics.enabled) {
+                    ApOpDiagnostics.samplePrefix(prefixDepth + 1) {
+                        val names = mutableListOf<String>()
+                        prefix.foldRight(Unit) { a, _ -> names.add(with(apManager) { a.accessor }.toSuffix()) }
+                        names.asReversed().joinToString("")
+                    }
+                    // The decisive bit: does the COPY still carry an `[any]` of its own? If it does,
+                    // the next round unrolls it again one accessor deeper, and the fixed point is
+                    // every non-repeating sequence over the demand set rather than one level of it.
+                    ApOpDiagnostics.recordUnrollMaterialised(prefixDepth, filteredNode.containsAnyAccessor())
+                    ApOpDiagnostics.example("A-unroll", filteredNode.size) {
+                        val acc = with(apManager) { accessor.accessor }
+                        "re-root carrier (size=${unrollRequest.node.size}, " +
+                            "anyChild=${unrollRequest.node.getChild(ANY_ACCESSOR_IDX)?.size ?: 0}) " +
+                            "under prefix depth $prefixDepth + ${acc.toSuffix()} " +
+                            "-> copy size=${filteredNode.size} carriesAny=${filteredNode.containsAnyAccessor()}; " +
+                            "carrier=" + unrollRequest.node.toString().replace('\n', ' ')
+                    }
+                }
+
                 // The event the retired per-base counter charged for. Counted, not charged: the gap
                 // between this and `transitions` is how much weaker the per-origin bound is per unit
                 // of work than the counter it replaces.
@@ -236,7 +272,11 @@ class TreeInitialFactAbstraction(
         val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f, foldToAny = false) }
             ?: return UnrollResult(null, budgetSpent)
 
-        return UnrollResult(facts.addInitialFact(mergedNewFacts, interner), budgetSpent)
+        if (ApOpDiagnostics.enabled) ApOpDiagnostics.unrollMergedNodes.addAndGet(mergedNewFacts.size)
+
+        val delta = facts.addInitialFact(mergedNewFacts, interner)
+        if (ApOpDiagnostics.enabled && delta != null) ApOpDiagnostics.unrollAddedDelta.addAndGet(delta.size)
+        return UnrollResult(delta, budgetSpent)
     }
 
     private fun ReversedApNode?.createFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactApFilter {
