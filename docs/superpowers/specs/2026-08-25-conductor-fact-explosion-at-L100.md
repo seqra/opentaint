@@ -293,7 +293,101 @@ All in `ApOpDiagnostics` (`-Dopentaint.apOpDiag=true`), all off by default.
 
 ---
 
-## 8. Caveats
+## 8. Premise population: the top five methods, and the facts behind them
+
+The graft answers "where do the NODES come from". A separate question is where the **premises** come
+from — the initial facts a method's summaries are keyed on, one storage entry each
+(`-Dopentaint.summaryPremiseDiag=true`, `MethodInitialToFinalApSummaries`).
+
+**54,169 premises over 14,696 methods.** Top five:
+
+| # | premises | id | ap | carry `[any]` | maxLinks | method |
+|---|---|---|---|---|---|---|
+| 1 | **6,537** | 434 | 6,103 | **9** | 11 | `WorkflowExecutorOps#decide(WorkflowModel)` |
+| 2 | 1,882 | 35 | 1,847 | 0 | 9 | `WorkflowExecutorOps#rerunWF(String, String, Map, Map, String)` |
+| 3 | 1,548 | 42 | 1,506 | 17 | 11 | `DoWhile#execute(WorkflowModel, TaskModel, WorkflowExecutor)` |
+| 4 | 1,263 | 42 | 1,221 | 7 | 11 | `WorkflowExecutorOps#terminate(WorkflowModel, TerminateWorkflowException)` |
+| 5 | 1,241 | 16 | 1,225 | 4 | 11 | `WorkflowExecutorOps#terminateWorkflow(WorkflowModel, String, String)` |
+
+The top five hold **23 %** of every premise in the run, and eleven of the top twelve are
+`WorkflowExecutorOps` methods or a `WorkflowSystemTask` taking a `WorkflowExecutor`. The control has
+25,581 premises over the same 14,696 methods, its top method is `Stream#map` with 835 (820 of them
+identity), and `decide(WorkflowModel)` falls from **6,537 to 373** — a 17.5× cut, with `maxLinks`
+11 → 5.
+
+**The premises do not carry `[any]`** — 9 of 6,537. This is the load-bearing observation of this
+section. The star does not fill summary storage with wildcards; it fills it with **concrete
+enumerations of the paths a wildcard denotes**. Across 4,000 traced premises of `decide` there are
+only **61 distinct accessor labels**, and the population is (a subset of) the sequences over that
+alphabet: `.headerValues` 716, `.Element` 670, `.headerValue` 634, `.inputPayload` 415, `.inputData`
+357, `.workflowTask` 212, `.inputParameters` 157, `.outputPayload` 148, `.workflowDefinition` 100,
+`.outputData` 93, `.buffer` 91. `headerValue`/`headerValues` are fields of
+`org.springframework.http.HttpHeaders` — 1,350 links of premises *about conductor's workflow model*
+are Spring HTTP header fields, which is §4.2's erasure seen from the storage side.
+
+### 8.1 The fact behind them: small trees emit, big trees do not
+
+`tifaDiag` reports, per `(base, method)`, the size of the accumulated fact (`added`) and how many
+premises walking it emitted (`emits`). Lining the two up inverts the obvious guess:
+
+| method | base | `added` | `adds` | **`emits`** |
+|---|---|---|---|---|
+| `decide(WorkflowModel)` | **arg(0)** | **414** | 372 | **5,667** |
+| `decide(WorkflowModel)` | `<static>` | 310 | 520 | 1,252 |
+| `decide(WorkflowModel)` | `<this>` | 62 | 70 | 14 |
+| `rerunWF` | `<this>` | **56,729** | 3,203 | **16** |
+| `rerunWF` | `<static>` | 10,216 | 1,654 | 3,824 |
+| `DoWhile#execute` | **arg(2)** | **64,583** | 3,052 | **14** |
+| `terminate` | `<this>` | **65,407** | 3,901 | **14** |
+| `terminateWorkflow` | arg(0) | 304 | 374 | 1,408 |
+
+**A 414-node fact emits 5,667 premises; a 65,407-node fact emits 14.** The god-object trees of §4 —
+`<this>`, and the `arg(2)` executor — are the biggest objects in the run and they are nearly silent,
+because nothing downstream demands paths into them. Premise population is driven by **demand**, not
+by fact size, and the demanded base is `arg(0)`: the `WorkflowModel`.
+
+`TreeInitialFactAbstraction.addAbstractInitialFact` re-walks `facts.allAddedFacts()` — the whole
+accumulated tree — on **every** registration, emitting one premise per abstract path found. So
+`emits ≈ adds × paths`, and `paths` is the multiplicity of §4.1's DAG, not its node count.
+
+### 8.2 Where the arg(0) fact comes from
+
+The full arrival ladder for `arg(0) @ WorkflowExecutorOps#decide(WorkflowModel)`:
+
+- **222 arrivals, from exactly two call sites** — `WorkflowExecutorOps#decide(String):1137`
+  (`this.decide(workflow)`, 128 arrivals) and `#createAndEvaluateWithLock:2185` (`this.decide(workflow)`,
+  94). Both are inside the mutual-recursion SCC of §3.
+- It ends at **93 distinct nodes carrying 370 paths**, depth 66.
+- **71.2 % of arrivals add no new distinct node** — the same re-derivation ratio as §4.1.
+
+So the whole 6,537-premise population of the run's largest premise holder rests on a 93-node fact
+delivered by two statements, walked 372 times.
+
+### 8.3 What demands 61 labels
+
+`decide` itself reads only five paths off its argument (`WorkflowExecutorOps.java:1170`, `:1211`,
+`:1212`, `:1237`, `:1249`). The demand comes from underneath it, and two conductor patterns account
+for its shape:
+
+- **Recursive traversal of the task tree.** `DeciderService` reaches `WorkflowDef.getTasks()` at
+  `:359`, `:366`, `:490`, and everything routing through `WorkflowDef.collectTasks()`
+  (`WorkflowDef.java:445-451`) into `WorkflowTask.collectTasks()` (`WorkflowTask.java:650-659`),
+  which recurses through `children()` (`:629-648`) — `decisionCases.values()`, `defaultCase`,
+  `forkTasks`, `loopOver`. Those are exactly §4.2's four one-step cycles, walked by real code.
+- **Generic iteration of an erased map.** `ParametersUtils.replace(Map<String, Object>)`
+  (`ParametersUtils.java:187-207`) is mutually recursive with `replaceList(List<?>)` (`:209-226`):
+  it iterates arbitrary keys, recurses into any nested `Map`, and recurses into any nested `List`.
+  It is reached from `DeciderService:702-707` and `:978-980` with
+  `WorkflowTask.getInputParameters()`. That is the code that turns one map into "any key, any value,
+  at any depth" — and `WorkflowTask` has 35 fields, `TaskModel` 53, `WorkflowModel` 30,
+  `WorkflowDef` 28.
+
+`DoWhile#execute` (rank 3) is the same shape at the task level: it iterates
+`doWhileTaskModel.getWorkflowTask().getLoopOver()` (`DoWhile.java:287-294`) and drives
+`WorkflowTask.has()`/`next()` (`WorkflowTask.java:736-758`, `:661-734`), which recurse over
+`children()` again.
+
+## 9. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -311,3 +405,10 @@ All in `ApOpDiagnostics` (`-Dopentaint.apOpDiag=true`), all off by default.
   `filterStartsWith`'s fold and the concat graft actually did.
 - **Scoping the entry point does not scope the sources** — `WorkflowTestService#testWorkflow` is
   5.5–18.8 % of the graft mass and is not reachable from `rerun`. It is a source in its own right.
+- **Premises are minted at the method exit, so they have no call site.** All 4,000 traced premises
+  of `decide` report `no-call-site`, and every captured stack is the same:
+  `NormalMethodAnalyzer.flushPendingSummaryEdges` (`MethodAnalyzer.kt:734`) ←
+  `tabulationAlgorithmStep`. The trace therefore says WHAT each premise spells and in what order they
+  appeared, not which caller asked for it; §8.2's ladder is what supplies the caller.
+- **`decide`'s premise count is the one number that moved between the two premise runs** — 6,537 and
+  6,356 — which is within the run-to-run spread of everything else here.
