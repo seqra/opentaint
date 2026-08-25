@@ -857,7 +857,118 @@ absorptions into 2.7 M is the mechanism working as designed, and it moves the th
 12 % — against a workload that needs a factor of several. The ceiling of §12.5 stands: about a third
 of declines are movable, and the rest are self-loops and missing edges that no kind policy reaches.
 
-## 14. Caveats
+## 14. The investigation re-run with the re-score on
+
+Everything above was measured with the shipped policy. This section repeats the three questions —
+which methods hold the premises, where their facts come from, and what the biggest fact looks like —
+at `L = 100` with `-Dopentaint.anyUnrollKindPolicy=rescore`, and answers the standing question for
+the biggest fact: **why is it not absorbed?**
+
+### 14.1 Premises
+
+**49,749 over 14,696 methods**, against 54,169 without the re-score.
+
+| # | premises | of which carry `[any]` | method | without re-score |
+|---|---|---|---|---|
+| 1 | **4,684** | **152** | `WorkflowExecutorOps#decide(WorkflowModel)` | 6,537 / any 9 |
+| 2 | 1,464 | 117 | `DoWhile#execute(WorkflowModel, TaskModel, WorkflowExecutor)` | 1,548 / any 17 |
+| 3 | 1,078 | 61 | `WorkflowExecutorOps#terminateWorkflow` | 1,241 / any 4 |
+| 4 | 1,054 | 78 | `WorkflowExecutorOps#terminate` | 1,263 / any 7 |
+| 5 | 973 | 13 | `virtual Stream#map` (914 identity) | 966 |
+| 6 | 907 | 4 | `WorkflowExecutorOps#rerunWF` | 1,882 |
+
+The cast is unchanged, the counts fall 8 % overall and 28 % at the top — and the `[any]`-carrying
+column rises **17×** at `decide`. That is the mechanism visible in the storage: the re-score converts
+concrete enumerations into the wildcard they were enumerating. `decide`'s link histogram loses its
+peak, `2,066 → 835` premises of five links.
+
+### 14.2 Where the facts come from — the same inversion, sharper
+
+| method | base | `added` | `adds` | `emits` | arrivals any/concrete | delta nodes any/concrete |
+|---|---|---|---|---|---|---|
+| `decide(WorkflowModel)` | **arg(0)** | **328** | 324 | **4,592** | 32 / 169 | 69 / 258 |
+| `terminateWorkflow` | arg(0) | 334 | 393 | 1,561 | 54 / 208 | 75 / 258 |
+| `rerunWF` | `<static>` | 1,859 | 773 | 2,397 | 10 / 177 | 795 / 1,064 |
+| **`terminate`** | **`<this>`** | **26,189** | 2,742 | **16** | 30 / 796 | **8,463 / 17,725** |
+| `DoWhile#execute` | **arg(2)** | **25,005** | 1,993 | **16** | 21 / 642 | **7,899 / 17,105** |
+
+A 328-node fact emits 4,592 premises; a 26,189-node fact emits 16. And in both huge rows, **3–4 % of
+arrivals carry an `[any]` and deliver 32 % of the growth**.
+
+### 14.3 The biggest fact, and why it is not absorbed
+
+Target: `<this> @ WorkflowExecutorOps#terminate(WorkflowModel, TerminateWorkflowException)`, retained
+in full — **40,262 nodes by multiplicity, 7,296 distinct, depth 115**.
+
+**Where it comes from.** 1,169 arrivals, and **1,168 of them from one statement**:
+`WorkflowExecutorOps.java:1271`, the `terminate(workflow, twe)` in `decide`'s
+`catch (TerminateWorkflowException twe)`. 70.1 % of arrivals add no new distinct node. The two
+biggest arrivals bring 11,575 and 20,027 nodes already assembled, rooted at
+`.metadataMapperService.metadataDAO.conductorProperties.stack.[any]` and
+`.stack.buffer.Element.[any]` — §4.2's `String` → `Object` erasure, still the spine.
+
+**Why `<this>` is a big object at all.** `WorkflowExecutorOps` has 13 injected fields, five of them
+interface-typed with 6, 6, 8, 2 and 2 implementations, plus `ExecutionDAO` with 5 behind the facade.
+And there is **no field-level cycle** back to the executor — the recursion is at the **parameter**
+level: `this` is passed out at five call sites (`:1216`, `:1393`, `:1740`, `:1958`, `:2030`) into
+`WorkflowSystemTask.execute/start/cancel` over 21 implementations, and five of those call back
+(`SubWorkflow` → `terminateWorkflow`, `DoWhile` → `scheduleNextIteration`, `StartWorkflow` →
+`startWorkflow`, …). `terminate` sits on that loop twice.
+
+**Why it is not absorbed — the exact answer.** The tree dump now annotates every `[any]`-owning node
+with its manager state, kind and pot:
+
+| | count | share |
+|---|---|---|
+| distinct nodes | 7,296 | |
+| **own an `[any]` edge** | **6,570** | **90 %** |
+| mean out-degree, `[any]`-owning | **4.96** (max 94) | |
+| mean out-degree, others | 0.39 | |
+| **distinct `[any]` states governing all 6,570** | **2** | |
+| governed by `s731`, kind **`PAID`** | **6,544** | **99.6 %** |
+| governed by `s536`, kind `CREDIT` | 26 | 0.4 % |
+| pots involved | **`dag#106`, total 400, limit 100** | |
+
+**One state, `s731`, governs 99.6 % of every `[any]` position in a 40,262-node fact, and it is
+`PAID`.** So `writesAbove` declines every prepend above any of those 6,544 nodes and the fact keeps
+every step it was ever given.
+
+And `s731` is not a bystander — it is **the top decliner of the entire run**:
+
+| state | kind / minted by | dag | pot | declines | share |
+|---|---|---|---|---|---|
+| **#731** | `PAID` / read | #106 | **400** | **8,598,933** | **46.1 %** |
+| #732 | `PAID` / read | #106 | **400** | 8,503,102 | 45.6 % |
+| #509 | `PAID` / unroll | #106 | 400 | 1,207,186 | 6.5 % |
+
+Two states are 91.7 % of all 18.6 M declines, and one of them is the state this fact is made of.
+
+**And the re-score ran.** Nine times, 601 states visited, **103 demoted** — and it kept `s731` `PAID`.
+That is not a bug in the implementation; it is what breadth-first from the root *means*. `s731` is
+shallow, so the BFS reaches it while the budget is still intact and spends the budget on it. **The
+states nearest the origin are the ones that govern the most facts, and BFS-from-root is exactly the
+order that protects them.**
+
+The cost model is the reason: the re-score charges `pathCount`, which counts paths **in the
+automaton**. It has no way to see that `s731` governs 6,544 nodes of one fact and declines 8.6 M
+prepends, while a sibling governing one node costs the same. A re-score weighted by governed
+population — for which the decline count is a ready proxy — would demote `s731` first rather than
+last.
+
+### 14.4 The standing question, as a recipe
+
+For any large fact, the three numbers that answer "why was this not absorbed" are now on one line of
+the tree dump:
+
+1. **How many of its nodes own an `[any]`** — 90 % here; if low, the fact is not an `[any]` structure
+   and the manager is not the relevant instrument.
+2. **How many distinct states govern them** — 2 here. A small number means one kind decision decides
+   the whole fact.
+3. **The kind of the governing state, and its pot** — `PAID`, `dag#106` at 400 against a limit of
+   100. `PAID` with a pot over the limit is the diagnostic signature of a state the re-score chose to
+   protect.
+
+## 15. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -912,3 +1023,8 @@ of declines are movable, and the rest are self-loops and missing edges that no k
 - **The re-score is behind a flag and off by default.** It changes kinds after facts have been built
   with the old ones; the design's argument that a state changes kind at most twice no longer holds,
   and the doubling threshold is what replaces it. That trade has not been re-derived, only bounded.
+- **§14.3's fact is one retained tree from one run.** The concentration it shows — 90 % `[any]`-owning,
+  two governing states, one of them `PAID` — is corroborated by the run-wide decline census, where the
+  same two states are 91.7 % of all declines, but the tree itself is a single sample.
+- **§14.1's `[any]`-carrying premise column is the clearest signal the re-score works**, and it is one
+  run against one run. The absorption and throughput separations of §13.3 are the replicated claims.
