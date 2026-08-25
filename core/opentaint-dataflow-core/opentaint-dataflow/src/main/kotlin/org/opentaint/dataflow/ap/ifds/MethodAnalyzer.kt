@@ -371,13 +371,8 @@ class NormalMethodAnalyzer(
      * arrival raised OUTSIDE a call step is attributed to nothing rather than to a stale statement.
      */
     private fun callStatementStep(callExpr: CommonCallExpr, edge: Edge) {
-        if (!TifaDiagnostics.enabled) return callStatementStepImpl(callExpr, edge)
-
-        TifaDiagnostics.callSite.set(edge.statement)
-        try {
+        TifaDiagnostics.withCallSite(edge.statement) {
             callStatementStepImpl(callExpr, edge)
-        } finally {
-            TifaDiagnostics.callSite.set(null)
         }
     }
 
@@ -1156,22 +1151,26 @@ class NormalMethodAnalyzer(
         getSummaryInitialFact: (S) -> InitialFactAp,
         handleSummary: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, S) -> Set<Sequent>
     ) {
-        val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
+        // The graft runs in here, and this is the only frame that still knows which call
+        // statement it is running for -- see ApOpDiagnostics' site attribution.
+        TifaDiagnostics.withCallSite(currentEdge.statement) {
+            val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
 
-        val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
-        for ((summaryInitialFact, summaryEdges) in summaries) {
-            if (!cancellation.isActive()) return
+            val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
+            for ((summaryInitialFact, summaryEdges) in summaries) {
+                if (!cancellation.isActive()) return
 
-            val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
-                methodInitialFact, summaryInitialFact
-            )
+                val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
+                    methodInitialFact, summaryInitialFact
+                )
 
-            for (summaryEdgeEffect in summaryEdgeEffects) {
-                for (methodSummary in summaryEdges) {
-                    if (!cancellation.isActive()) return
+                for (summaryEdgeEffect in summaryEdgeEffects) {
+                    for (methodSummary in summaryEdges) {
+                        if (!cancellation.isActive()) return
 
-                    val sf = handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
-                    handleSequentFact(currentEdge, sf)
+                        val sf = handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
+                        handleSequentFact(currentEdge, sf)
+                    }
                 }
             }
         }

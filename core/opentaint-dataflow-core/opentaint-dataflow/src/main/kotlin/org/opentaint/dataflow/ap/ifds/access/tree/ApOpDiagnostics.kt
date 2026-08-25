@@ -291,6 +291,196 @@ object ApOpDiagnostics {
         if (copyCarriesAny) unrollCopyCarriesAny.incrementAndGet() else unrollCopyAnyFree.incrementAndGet()
     }
 
+    // ---- I: can the type filter at a graft point reject anything at all? -----------------------
+
+    /**
+     * The shape of the accessor path the graft hands to `FactTypeChecker.accessPathFilter`.
+     *
+     * `JIRFactTypeChecker.accessorActualType` reads ONLY `accessPath.lastOrNull()`, and returns
+     * `null` -- i.e. an always-accept filter -- for an empty path and for a path whose last step is
+     * `[any]`. So at those graft points the delta is attached with no type test whatsoever, and the
+     * `[any]` does not merely widen the fact: it switches the type system off for what comes next.
+     *
+     * Counting the three cases separately turns that from a code reading into a measurement.
+     */
+    val graftFilterEmptyPath = AtomicLong()
+    val graftFilterAnyTail = AtomicLong()
+    val graftFilterTyped = AtomicLong()
+    val graftFilterEmptyPathDeltaNodes = AtomicLong()
+    val graftFilterAnyTailDeltaNodes = AtomicLong()
+    val graftFilterTypedDeltaNodes = AtomicLong()
+
+    fun recordGraftFilterShape(pathEmpty: Boolean, pathEndsAny: Boolean, deltaNodes: Long) {
+        when {
+            pathEmpty -> {
+                graftFilterEmptyPath.incrementAndGet()
+                graftFilterEmptyPathDeltaNodes.addAndGet(deltaNodes)
+            }
+            pathEndsAny -> {
+                graftFilterAnyTail.incrementAndGet()
+                graftFilterAnyTailDeltaNodes.addAndGet(deltaNodes)
+            }
+            else -> {
+                graftFilterTyped.incrementAndGet()
+                graftFilterTypedDeltaNodes.addAndGet(deltaNodes)
+            }
+        }
+    }
+
+    // ---- G: which LINE OF THE ANALYSED PROGRAM the graft ran for -------------------------------
+
+    /**
+     * The graft, billed to the call statement whose summary application ran it.
+     *
+     * Every counter above says WHAT the engine did. None of them says WHERE in the analysed program
+     * it was doing it, and "which code pattern explodes" is a question about the analysed program,
+     * not about the engine. A summary is applied at a call statement; [MethodAnalyzer] parks that
+     * statement in [TifaDiagnostics.callSite] around the application, so the graft can read it back
+     * and attribute the nodes it manufactured to a `<caller method>:<line>`.
+     *
+     * Keyed by the statement's IDENTITY. Instructions are per-method singletons, so the map stays
+     * the size of the reached call graph, and no IR `equals` runs on a path taken millions of times.
+     * Formatting happens once, at report time.
+     */
+    class SiteStats {
+        @JvmField val calls = java.util.concurrent.atomic.LongAdder()
+        @JvmField val receiverNodes = java.util.concurrent.atomic.LongAdder()
+        @JvmField val resultNodes = java.util.concurrent.atomic.LongAdder()
+        @JvmField val growth = java.util.concurrent.atomic.LongAdder()
+        @JvmField val graftPoints = java.util.concurrent.atomic.LongAdder()
+        @JvmField val anyDeltaCalls = java.util.concurrent.atomic.LongAdder()
+        @JvmField val maxResult = AtomicLong()
+
+        /** The biggest single graft seen here, verbatim -- what the ratio cannot show. */
+        @Volatile
+        @JvmField
+        var sample: String? = null
+    }
+
+    private class IdKey(@JvmField val statement: Any) {
+        override fun hashCode(): Int = System.identityHashCode(statement)
+        override fun equals(other: Any?): Boolean = other is IdKey && other.statement === statement
+    }
+
+    private val perSite = java.util.concurrent.ConcurrentHashMap<IdKey, SiteStats>()
+
+    /** Grafts that ran with nothing parked -- billed to nobody rather than to a guess. */
+    val concatNoSite = AtomicLong()
+    val concatNoSiteResultNodes = AtomicLong()
+
+    fun recordConcatSite(
+        receiver: Long,
+        result: Long,
+        graftPoints: Int,
+        deltaCarriesAny: Boolean,
+        render: () -> String,
+    ) {
+        val statement = TifaDiagnostics.callSite.get()
+        if (statement == null) {
+            concatNoSite.incrementAndGet()
+            concatNoSiteResultNodes.addAndGet(result)
+            return
+        }
+
+        val stats = perSite.computeIfAbsent(IdKey(statement)) { SiteStats() }
+        stats.calls.increment()
+        stats.receiverNodes.add(receiver)
+        stats.resultNodes.add(result)
+        stats.growth.add(maxOf(0L, result - receiver))
+        stats.graftPoints.add(graftPoints.toLong())
+        if (deltaCarriesAny) stats.anyDeltaCalls.increment()
+
+        var seen = stats.maxResult.get()
+        while (result > seen && !stats.maxResult.compareAndSet(seen, result)) seen = stats.maxResult.get()
+        if (result > seen) stats.sample = render().take(600)
+    }
+
+    /**
+     * The same graft, split by the ROOT the receiver fact hangs off.
+     *
+     * The site attribution says which call statement ran the graft; this says which family of facts
+     * it ran on. `<static>` is one global base for every static of every class
+     * (`AccessPathBase.ClassStatic` is a `data object`), so a single row here covers a tree that is
+     * delivered to every method -- a distinction the site rows cannot draw.
+     */
+    class BaseStats {
+        @JvmField val calls = java.util.concurrent.atomic.LongAdder()
+        @JvmField val receiverNodes = java.util.concurrent.atomic.LongAdder()
+        @JvmField val resultNodes = java.util.concurrent.atomic.LongAdder()
+        @JvmField val receiverCarriesAny = java.util.concurrent.atomic.LongAdder()
+        @JvmField val maxResult = AtomicLong()
+    }
+
+    private val perBaseKind = java.util.concurrent.ConcurrentHashMap<String, BaseStats>()
+
+    fun recordConcatBase(baseKind: String, receiver: Long, result: Long, receiverCarriesAny: Boolean) {
+        val stats = perBaseKind.computeIfAbsent(baseKind) { BaseStats() }
+        stats.calls.increment()
+        stats.receiverNodes.add(receiver)
+        stats.resultNodes.add(result)
+        if (receiverCarriesAny) stats.receiverCarriesAny.increment()
+        var seen = stats.maxResult.get()
+        while (result > seen && !stats.maxResult.compareAndSet(seen, result)) seen = stats.maxResult.get()
+    }
+
+    private fun baseReport(): String = buildString {
+        val all = perBaseKind.entries.sortedByDescending { it.value.resultNodes.sum() }
+        val total = all.sumOf { it.value.resultNodes.sum() }
+        appendLine("apop H-base total=$total")
+        all.forEach { (kind, v) ->
+            val calls = v.calls.sum()
+            appendLine(
+                "apop H-base $kind resultNodes=${v.resultNodes.sum()}" +
+                    " (${if (total == 0L) "-" else String.format("%.1f%%", 100.0 * v.resultNodes.sum() / total)})" +
+                    " calls=$calls nodesPerCall=${ratio(v.resultNodes.sum(), calls)}" +
+                    " receiverNodes=${v.receiverNodes.sum()}" +
+                    " receiverCarriesAny=${v.receiverCarriesAny.sum()} maxResult=${v.maxResult.get()}"
+            )
+        }
+    }
+
+    private const val SITE_TOP_N = 30
+
+    private fun siteReport(): String = buildString {
+        val all = perSite.entries.sortedByDescending { it.value.resultNodes.sum() }
+        val total = all.sumOf { it.value.resultNodes.sum() }
+        appendLine(
+            "apop G-site sites=${all.size} attributedResultNodes=$total" +
+                " noSite=${concatNoSite.get()} noSiteResultNodes=${concatNoSiteResultNodes.get()}"
+        )
+
+        // The per-line rows below are the top [SITE_TOP_N] only; this rollup is over ALL of them, so
+        // "how much of the node mass is made inside one METHOD" is a total rather than a lower bound.
+        val byMethod = HashMap<String, LongArray>()
+        for ((key, v) in perSite.entries) {
+            val method = TifaDiagnostics.siteOf(key.statement).substringBeforeLast(':')
+            val row = byMethod.getOrPut(method) { LongArray(3) }
+            row[0] += v.resultNodes.sum()
+            row[1] += v.calls.sum()
+            row[2] += 1
+        }
+        byMethod.entries.sortedByDescending { it.value[0] }.take(SITE_TOP_N).forEachIndexed { i, (m, r) ->
+            appendLine(
+                "apop G-method #$i resultNodes=${r[0]}" +
+                    " (${if (total == 0L) "-" else String.format("%.1f%%", 100.0 * r[0] / total)})" +
+                    " calls=${r[1]} sites=${r[2]} nodesPerCall=${ratio(r[0], r[1])} | $m"
+            )
+        }
+        all.take(SITE_TOP_N).forEachIndexed { i, (key, v) ->
+            val calls = v.calls.sum()
+            appendLine(
+                "apop G-site #$i resultNodes=${v.resultNodes.sum()}" +
+                    " (${if (total == 0L) "-" else String.format("%.1f%%", 100.0 * v.resultNodes.sum() / total)})" +
+                    " calls=$calls nodesPerCall=${ratio(v.resultNodes.sum(), calls)}" +
+                    " growth=${v.growth.sum()} pointsPerCall=${ratio(v.graftPoints.sum(), calls)}" +
+                    " anyDelta=${v.anyDeltaCalls.sum()} maxResult=${v.maxResult.get()}" +
+                    " | ${TifaDiagnostics.siteOf(key.statement)}" +
+                    " | ${key.statement.toString().replace('\n', ' ').take(200)}"
+            )
+            v.sample?.let { appendLine("apop G-site #$i biggest: ${it.replace('\n', ' ')}") }
+        }
+    }
+
     private fun AtomicLongArray.render(): String =
         (0 until DEPTH_BUCKETS).map { get(it) }.dropLastWhile { it == 0L }.joinToString(",")
 
@@ -372,6 +562,14 @@ object ApOpDiagnostics {
         )
         appendLine("apop --- biggest single event of each kind ---")
         biggest.forEach { (kind, e) -> appendLine("apop   [$kind +${e.first}] ${e.second}") }
+        appendLine(
+            "apop I-filter emptyPath=${graftFilterEmptyPath.get()} anyTail=${graftFilterAnyTail.get()}" +
+                " typed=${graftFilterTyped.get()}" +
+                " deltaNodes empty/anyTail/typed=${graftFilterEmptyPathDeltaNodes.get()}" +
+                "/${graftFilterAnyTailDeltaNodes.get()}/${graftFilterTypedDeltaNodes.get()}"
+        )
+        append(baseReport())
+        append(siteReport())
         appendLine("apop --- unroll prefixes at depth >= $PREFIX_SAMPLE_MIN_DEPTH ---")
         prefixSamples.forEach { appendLine("apop   $it") }
     }

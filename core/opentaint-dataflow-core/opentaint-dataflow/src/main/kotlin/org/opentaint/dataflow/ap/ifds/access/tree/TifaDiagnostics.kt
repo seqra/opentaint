@@ -90,9 +90,32 @@ object TifaDiagnostics {
      * millions of times and an arrival is recorded thousands of times, so the formatting has to
      * happen on the rare side.
      *
-     * Written only when [enabled], and cleared by the same `finally` that set it.
+     * Written only when [parkingEnabled], and restored by the same `finally` that set it. Restored
+     * rather than cleared: a summary application parks its own call statement INSIDE a call step
+     * that has already parked one, and clearing would leave the outer step attributing its
+     * remaining work to nothing.
      */
     val callSite: ThreadLocal<Any?> = ThreadLocal()
+
+    /**
+     * Whether the call statement is parked at all.
+     *
+     * [ApOpDiagnostics] bills the summary graft to a line of the analysed program and reads the same
+     * thread local, so parking cannot be conditioned on `tifaDiag` alone.
+     */
+    val parkingEnabled: Boolean = enabled || ApOpDiagnostics.enabled
+
+    /** Park [statement] for the duration of [body], restoring whatever was parked before. */
+    inline fun <T> withCallSite(statement: Any?, body: () -> T): T {
+        if (!parkingEnabled) return body()
+        val previous = callSite.get()
+        callSite.set(statement)
+        try {
+            return body()
+        } finally {
+            callSite.set(previous)
+        }
+    }
 
     private val locationAccessors = ConcurrentHashMap<Class<*>, Array<java.lang.reflect.Method?>>()
 

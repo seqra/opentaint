@@ -298,6 +298,14 @@ class AccessTree(
             is NodeAccessTreeDelta -> {
                 val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node)
                     ?: return null
+                if (ApOpDiagnostics.enabled) {
+                    ApOpDiagnostics.recordConcatBase(
+                        baseKind = if (base is AccessPathBase.ClassStatic) "<static>" else base.javaClass.simpleName,
+                        receiver = access.size,
+                        result = concatenatedAccess.size,
+                        receiverCarriesAny = access.containsAnyInThisOrDeepNodes,
+                    )
+                }
                 return AccessTree(apManager, base, concatenatedAccess, exclusions)
             }
         }
@@ -2032,6 +2040,15 @@ class AccessTree(
                 ApOpDiagnostics.concatReceiverNodes.addAndGet(this.size)
                 ApOpDiagnostics.concatDeltaNodes.addAndGet(other.size)
                 ApOpDiagnostics.concatResultNodes.addAndGet(out)
+                ApOpDiagnostics.recordConcatSite(
+                    receiver = this.size,
+                    result = out,
+                    graftPoints = graftCounter?.value ?: 0,
+                    deltaCarriesAny = other.containsAnyInThisOrDeepNodes,
+                ) {
+                    "receiver(size=" + this.size + ") + delta(size=" + other.size + ") -> " + out +
+                        "; delta=" + other.toString().replace('\n', ' ')
+                }
                 if (out > this.size) {
                     ApOpDiagnostics.concatGrew.incrementAndGet()
                     ApOpDiagnostics.concatGrowth.addAndGet(out - this.size)
@@ -2256,6 +2273,13 @@ class AccessTree(
                 // `|result| ~ |receiver| + k * |delta|`, and the only number that separates
                 // "the graft multiplies" from "the graft relocates the caller's remainder once".
                 ApOpDiagnostics.graftPointCounter.get().value++
+
+                // ... and whether the filter about to run here can reject anything: see I-filter.
+                ApOpDiagnostics.recordGraftFilterShape(
+                    pathEmpty = path.size == 0,
+                    pathEndsAny = path.size > 0 && path.getInt(path.size - 1) == ANY_ACCESSOR_IDX,
+                    deltaNodes = other.node.size,
+                )
             }
 
             val concatNode = if (isAbstract && other != null) {
