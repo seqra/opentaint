@@ -538,6 +538,52 @@ class AnyUnrollFactTest {
         )
     }
 
+    /**
+     * Why the kind merge takes the MEET by default. A kind change rewrites nothing already stored --
+     * the merge guard ignores the state -- so what matters is the NEXT derivation merged into what is
+     * there, and the two directions are not symmetric.
+     *
+     * The finer (more concrete) arrival merged into a stored coarse fact is free for a CLOSED fact:
+     * the merge-time trim folds the covered prefix into the `[any]` that already denotes it, and the
+     * receiver object comes straight back. The coarse arrival merged into a stored fine fact never
+     * does -- storage changes, and the fact re-enters the worklist carrying an `[any]` that matches
+     * strictly more premises.
+     */
+    @Test
+    fun `a finer re-derivation is absorbed by the merge guard and a coarser one is not`() {
+        limit(-1)
+
+        val coarse = concreteFact(AnyAccessor).access                       // this.[any].$
+        val fine = concreteFact(FIELD_F, AnyAccessor).access                // this.f.[any].$
+
+        assertSame(
+            coarse, coarse.mergeAdd(fine),
+            "the ALLOWED direction is free for a closed fact -- the guard returns the receiver"
+        )
+        assertFalse(
+            fine === fine.mergeAdd(coarse),
+            "the FORBIDDEN direction always costs a lap, which is why the kind takes the meet"
+        )
+    }
+
+    /**
+     * ...and it is NOT free for an OPEN fact, which is the summary-exit shape and hence the
+     * round-trip shape. The trim collapses a covered prefix under a CLOSED `[any]` and not under an
+     * open one, so the finer re-derivation adds a branch instead of being absorbed. That is the
+     * residual cost of the strategy, and it lands exactly on the facts this design is about.
+     */
+    @Test
+    fun `the finer re-derivation is not free for an open fact`() {
+        limit(-1)
+
+        val coarse = abstractFact(AnyAccessor).access                       // this.[any].*
+        val fine = abstractFact(FIELD_F, AnyAccessor).access                // this.f.[any].*
+
+        val merged = coarse.mergeAdd(fine)
+        assertFalse(coarse === merged, "an open `[any]` keeps both branches -- got $merged")
+        assertTrue(merged.accessors!!.toList().containsAll(listOf(ANY_ACCESSOR_IDX, idx(FIELD_F))))
+    }
+
     @Test
     fun `an unspent pot writes the step`() {
         val fact = abstractFact(AnyAccessor)

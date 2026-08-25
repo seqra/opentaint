@@ -3070,6 +3070,12 @@ class AccessTree(
                 if (anyIdx >= 0) {
                     val child = nonEmptyAccessorNodes!![anyIdx]
                     val (normalised, found) = child.normaliseUnderAny()
+                    // The union INVERTS the usual receiver preference on purpose, exactly as
+                    // `createAnyEdge` does and for the same reason: the caller-supplied state is the
+                    // one the construction is about, and an `[any]` found in the subtree below is the
+                    // incumbent being absorbed into it. `bulkMergeAddAccessors` now folds a third
+                    // state in here -- the predecessors its pre-pass absorbed into -- and it does so
+                    // BEFORE this call, so what arrives as [anyState] is already the accumulated side.
                     state = when {
                         !manager.anyUnroll.enabled -> null
                         anyState != null -> manager.anyUnroll.union(anyState, found)
