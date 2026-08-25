@@ -8,7 +8,7 @@ a charge"; §1 shows why that is the gap. M§5.3 triggers absorption on the *pot
 replaces that with a per-state trigger that can tell a round trip from real structure.
 
 **How to read it.** §4 is the semantic contract — the section to argue with. §5–§8 are the mechanism,
-§9 the correctness argument, §11 the three knobs, §14 the validation. §5.8 is separable: it answers
+§9 the correctness argument, §11 the two knobs, §14 the validation. §5.8 is separable: it answers
 the fork in the reversed automaton and ships only if step 4's counter says the fork is real. Appendices A–E are measurements
 taken against the current tree; Appendix F records what an adversarial review changed and is the only
 place this document discusses its own history.
@@ -117,9 +117,9 @@ The ratchet becomes a loop.
 not, and `mergeStates` forks it on the operation that dominates the manager's traffic. Asking *is `a`
 an incoming edge* is then single-path search on an NFA, which dead-ends on paths that exist. §5.8
 replaces the pick with a **lazy subset construction**: a fact's `[any]` carries a state, or — after a
-fork — an immutable, capped set of them, allocated at the point of use and owned by the fact node
-(no registry, §5.8c). `clusterMax = 1` recovers the pick exactly, so which of the
-two ships is a measurement (§5.8i), not an argument.
+fork — an immutable set of them, allocated at the point of use and owned by the fact node (no
+registry and no cap, §5.8c). Whether any of it ships is decided by one counter taken in step 4
+(§5.8i), not by an argument.
 
 ---
 
@@ -596,9 +596,9 @@ class AnyUnrollState(@JvmField val id: Int, …) : AnyUnrollPos {    // today's,
 
 /**
  * Two or more states the `[any]` may equally be at: an immutable VALUE, allocated at the point of
- * use and owned by the fact node that holds it. Members are resolved through `find()` and sorted by
- * id at construction, `2 <= size <= clusterMax`. A singleton is never a cluster, so a fact that
- * never forks pays one type check and nothing else.
+ * use and owned by the fact node that holds it. Members are resolved through `find()`, deduped and
+ * sorted by id at construction; a singleton is never a cluster, so a fact that never forks pays one
+ * type check and nothing else. The size is not capped -- (g).
  */
 class AnyUnrollCluster(@JvmField val members: Array<AnyUnrollState>) : AnyUnrollPos {
     override val hashSeed = members.fold(0) { h, m -> h * 31 + m.id }   // computed once, immutable
@@ -655,7 +655,7 @@ fun absorbInto(pos: AnyUnrollPos, a: AccessorIdx): AnyUnrollPos? {
     return if (preds.isEmpty()) null else posOf(preds)
 }
 
-/** The only constructor. Dedups, sorts, degenerates a singleton to the state, applies the cap (g). */
+/** The only constructor. Resolves, dedups, sorts; a one-element result degenerates to the state. */
 private fun posOf(states: Collection<AnyUnrollState>): AnyUnrollPos
 
 /** MERGE: set union. The subset case returns the RECEIVER OBJECT -- the fixpoint, §5.8(c1). */
@@ -699,17 +699,26 @@ Greedy decides a strictly weaker predicate, and the Lemma is what §9.4(ii) need
 inverse of the read **up to the coarsening the fork already introduced**, rather than up to an
 arbitrary choice among forks.
 
-#### (g) The cap, and why it truncates rather than merges
+#### (g) There is no cap on the set, and that is deliberate
 
-`clusterMax` (default 8). A set larger than that is **truncated to its min-id member** — reproducible,
-and exactly strategy 1's behaviour, so `clusterMax = 1` *is* strategy 1 and the two seed strategies
-are one code path at two settings. The choice between them becomes a measurement.
+A cap was drafted and removed. It is the same shape as the `SINK` tier (R10, Appendix F): a static
+bound on a population nobody has measured, bought with a knob, a branch, a degradation semantics and
+a test — and this one is worse than the sink was, because **its degradation is the defect the section
+exists to remove.** Truncating a pred set drops predecessors, a dropped predecessor stalls the
+telescope, and the stall is exactly strategy 1's failure (b) — arriving precisely where sets are
+largest, i.e. at the most heavily fused states, i.e. where the fork hurts most. A bound whose
+fallback is "become the broken thing again" is not a safety net.
 
-It deliberately does **not** collapse the members with a destructive `union`. That would be cheap and
-would bound the cluster count harder, but it pushes a **local** ambiguity into the **global**
-automaton, and §5.4(c) is the record of what happens next: with fusion traffic at 98.8% the
-coarsening spreads by contagion until the fusion rate decides the cut instead of the knob. Truncation
-loses precision only where it is applied.
+What replaces it is a counter. `clusterMaxSize` says how large sets actually get; the cost of a large
+one is `O(|S|)` on `readChild`, `absorbInto` and `AccessNode.equals`, so it is a throughput number
+and it will show up in `(+delta)` long before it shows up in memory.
+
+If measurement ever demands a bound, two things are already known about its shape. It must **not** be
+a destructive `union` of the members: that pushes a *local* ambiguity into the *global* automaton,
+and §5.4(c) records what happens next — at 98.8% fusion traffic the coarsening spreads by contagion
+until the fusion rate decides the cut. And declining to absorb at all (write the accessor, keep the
+fact one link longer) is a better fallback than truncating, because it stalls the telescope without
+also carrying a position the fact never occupied.
 
 #### (h) The interactions worth naming
 
@@ -717,14 +726,15 @@ loses precision only where it is applied.
 computed on demand and never cached (member kinds move under union). Under the default `PreferBelow`
 that is the meet, so **one `PAID` member makes the whole cluster writable and the telescope stops**.
 This is the one place where a larger cluster is less absorbing rather than sharper.
-`absorbSkippedWritableCluster` counts it; if it dominates, the answer is a lower `clusterMax`, not a
-different fold — a fold that ignored the knob would make the knob mean two different things at
-singletons and at clusters.
+`absorbSkippedWritableCluster` counts it, and the lever is one that already exists:
+`PreferBeyond` makes a single `CREDIT` member sufficient. Not a special-case fold — a fold that
+ignored `anyUnrollKindMerge` would make that knob mean two different things at singletons and at
+clusters, which is how a knob stops being measurable.
 
 **The forward automaton stays a DFA.** `AnyUnroll.kt:394-397`'s comment — *"an NFA here would make
 every lookup explore a SET of states"* — is about the automaton, and it still holds: the conflict arm
 still merges conflicting targets, and no state gains a second `a`-successor. What may be a set is the
-**position a fact carries**, bounded by `clusterMax` and reached only after a fork. A lookup on a
+**position a fact carries**, reached only after a fork and bounded by nothing (g). A lookup on a
 singleton is unchanged; re-derivation stays free because `union`'s subset case hands back the stored
 position itself (c1) rather than because the sets were shared.
 
@@ -1273,14 +1283,11 @@ two existing knobs, so a typo falls back to the default; a bare `enumValueOf` wo
 not start. This is the module's first enum-valued knob — `grep -rn "enumValueOf\|enumValues"` over
 `opentaint-dataflow-core` returns nothing — so it sets the precedent.
 
-**`opentaint.anyUnrollClusterMax`** — §5.8(g), default `8`, parsed with the same strict
-`toIntOrNull` fallback. `1` is strategy 1 exactly (pick the min-id predecessor, never carry a set),
-which makes the two candidate designs one code path at two settings and the choice between them a
-measurement. Values above ~16 are not expected to be useful: a fact whose `[any]` could be at
-seventeen places is one the cut has already lost.
-
 **Not offered:** a switch for receiver preference in `union`. §5.4(a) is a correctness requirement,
 its failure mode is invisible, and a knob would imply the question is open.
+
+**Not offered:** a cap on the cluster size (§5.8g) — a knob whose degradation is the defect §5.8
+exists to remove, throttling a population nobody has measured. `clusterMaxSize` measures it instead.
 
 ---
 
@@ -1366,7 +1373,7 @@ legible at all.
 | 2 | **`AnyUnrollKind`, the `kind` field, `AnyUnrollKindMerge`** and its plumbing. Nothing reads `kind` yet | no |
 | 3 | **`readChild` stops refusing** + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
 | 4 | **`writesAbove` / `absorbInto`** with counters, **`absorbForkHits` among them**. Still nothing calls them — and this is where §5.8(i)'s measurement is taken, on the real workload, before any of §5.8 is written | no |
-| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then the identity edit — `hash` to `hashSeed`, `equals` and `InternStrategy.equals` to by-value (§5.8c2, c3), the three sites §5.6 enumerates and the only delicate part of the step; then `posOf`, the three operations and `clusterMax`. No table, no reclamation | no |
+| 4b | **Positions and clusters (§5.8)** — *only if step 4 says forks are common.* `AccessNode.anyIdRaw` widens to `AnyUnrollPos?`, a type change across `AccessTree` with no behaviour of its own; then the identity edit — `hash` to `hashSeed`, `equals` and `InternStrategy.equals` to by-value (§5.8c2, c3), the three sites §5.6 enumerates and the only delicate part of the step; then `posOf` and the three operations. No table, no cap, no reclamation | no |
 | 5 | **`create` becomes `installAbove`**, `addParentAbsorbingAny` deleted, `mergeAddMaybeNull`'s parameters renamed (R9). Covers census rows 1, 3, 4, 6 | **yes** |
 | 6 | **`bulkMergeAddAccessors` pre-pass** — row 2, the graft. The commit the design exists for | **yes** |
 
@@ -1402,14 +1409,13 @@ lock.
 | `no map holds a non-representative after a cascade` | walk from `dag.rootState` after a fusion; `find() === it` for every key and value |
 | `the parents index survives a conflicting union` | §5.5 loop (2) |
 | `a fusion forks the reverse index` | after a cross-dag fusion `parents[a]` holds two — §5.8(a), the premise the section rests on |
-| `the telescope survives a fork` | `q₀-a→q₁-b→t` plus `p₀-b→t` with `p₀.id < q₁.id`: at `clusterMax = 1` the fold stalls one link up, at `8` it telescopes home — **the test §5.8 exists for** |
+| `the telescope survives a fork` | `q₀-a→q₁-b→t` plus `p₀-b→t` with `p₀.id < q₁.id`, so the min-id `b`-predecessor has no incoming `a`: the two-link fold reaches depth 0 — **the test §5.8 exists for**, and the fixture is itself the proof that a greedy pick stalls |
 | `the forward step mints only when no member can move` | `{m, m·a}` reads `a` to `{m·a}`, `total` unchanged — §5.8(e) |
 | `a program loop closes as a cluster` | `union`'s subset case returns the receiver object, so the guard fires and the lap is free |
 | `a cluster is never built with one member` | a fork whose members have since merged yields the state itself |
 | `union returns the receiver object when the arrival adds nothing` | `assertSame` — §5.8(c1), the obligation that replaces interning, from both argument orders |
 | `a re-derived equal cluster queues no work` | build the same set twice from separate `absorbInto` calls, merge the second into the first, `assertSame` on `mergeAdd`'s result — the test that would fail if (c1) were dropped |
 | `two nodes carrying equal clusters are equal` | `AccessNode.equals` and the interner strategy, by value — §5.8(c3) |
-| `the cap truncates to the min-id member` | `clusterMax = 1` reproduces strategy 1 exactly, on the same fixture as the telescope test |
 
 **`AnyUnrollFactTest`** — the manager as the fact tree uses it; the idiom is already there
 (`TreeApManager(…, configuredLimit)` behind a `check(!managerCreated)` guard).
@@ -1481,8 +1487,8 @@ four progress-log counters of §12 are separate and unconditional.
 | `witnessDisagreesWithThreadedState` | the §8.1 identity, asserted on real workloads rather than in a unit test: at `filterStartsWith`'s fold the query must return the state the caller already threaded | **must stay zero** — non-zero falsifies Lemma 9.2 in production, where no test reaches |
 | `absorbForkHits` | §5.8(a) — **is the fork real?** | ≈ 0 ⇒ do not build §5.8 at all; this is step 4's whole purpose |
 | `telescopeStalls` | folds that stopped absorbing with links still above them | falling after step 4b is §5.8 working; flat means the fork was not the obstacle |
-| `clusterRate`, `clusterMaxSize`, `clusterTruncations` | what the subset construction costs | truncations dominant ⇒ `clusterMax` too low, or the automaton is too fused to telescope |
-| `absorbSkippedWritableCluster` | §5.8(h) — the kind fold switching the mechanism off | dominant under `PreferBelow` ⇒ lower `clusterMax`, not a different fold |
+| `clusterRate`, `clusterMaxSize` | what the subset construction costs, and the population §5.8(g) declines to cap | `clusterMaxSize` climbing ⇒ the `O(\|S\|)` operations are the throughput story, visible in `(+delta)` |
+| `absorbSkippedWritableCluster` | §5.8(h) — the kind fold switching the mechanism off | dominant under `PreferBelow` ⇒ try `PreferBeyond`, not a special-case fold |
 | `elementPrependOverAny` | element absorption is ON (§7) | it is the `[].[any].[]` case the GUARD covers |
 | `paidPrefixWritten` | §9.3(d) | growing without bound ⇒ take the self-loop guard |
 | `remapsIncoming` / `remapsOutgoing` | the work §5.5 adds to the fusion path | R8 |
@@ -1497,9 +1503,9 @@ number.
 
 `scoped-harness/gate.sh` (3,441 tests, 2 pre-existing failures), plus the conductor single-endpoint
 arm across `anyUnrollLimit ∈ {-1, 0, 8, 100} × anyUnrollKindMerge ∈ {below, beyond}` with both
-diagnostics on, plus `anyUnrollClusterMax ∈ {1, 8}` **at the chosen `L` only** — the full cross
-product is sixteen arms, and that the two knobs do not interact is itself a claim, cheaply checked by
-comparing `absorbForkHits` across the `kindMerge` pair. Plus a SARIF comparison on the star/no-star
+diagnostics on, — and, for §5.8, the same `L` measured **before and after step 4b**
+rather than across a knob, since there is no longer a setting that turns the subset construction into
+the greedy one. Plus a SARIF comparison on the star/no-star
 control, which converges in 38.6 s and is the only arm where "byte-identical findings" is meaningful.
 
 **Prediction 1.** At `L = 8` the conductor arm's `concat` result-node total falls materially below
@@ -1512,10 +1518,10 @@ than `PreferBelow` at the same `L`. If it shows a lower total *and* no more re-d
 is wrong and should be flipped. If it shows more re-derivation and no less node mass, the knob should
 be deleted rather than left as a trap.
 
-**Prediction 3.** `clusterMax = 8` shows fewer `telescopeStalls` and a lower `concat` node total than
-`clusterMax = 1` at the same `L`. If the stalls do not fall, the fork was not what stopped the
-telescope and §5.8 should be deleted rather than tuned. If the stalls fall and the node total does
-not, the telescope was closing on facts nobody re-derives — which is R1 again, not a §5.8 result.
+**Prediction 3.** Step 4b shows fewer `telescopeStalls` and a lower `concat` node total than step 4
+at the same `L`. If the stalls do not fall, the fork was not what stopped the telescope and §5.8
+should be reverted rather than tuned. If the stalls fall and the node total does not, the telescope
+was closing on facts nobody re-derives — which is R1 again, not a §5.8 result.
 
 ---
 
@@ -1577,17 +1583,18 @@ way.
 **R11. Four test files inherit the knobs from system properties** (§14.3), so the gate cannot tell a
 regression from a setting until they take explicit values.
 
-**R12. The subset construction can blow up**, in cluster count rather than size — `clusterMax` bounds
-each set but not how many distinct sets are reached. Since clusters are values owned by their fact
-nodes (§5.8c) this is allocation churn on a hot path rather than a growing table, which is the
-cheaper failure and the easier one to read: `clusterRate` and `clusterMaxSize` measure it and
-`clusterMax` throttles it, and a smaller `clusterMax` costs precision monotonically — the right shape
-for a throttle.
+**R12. The subset construction is bounded by nothing**, in set size or in set count, and §5.8(g) is
+the argument for accepting that rather than an oversight — the same argument R3 makes for the state
+population, and it fails the same way if the benchmarks turn out different. Since clusters are values
+owned by their fact nodes (§5.8c), the failure is `O(|S|)` on three hot operations plus allocation
+churn, not a growing table: a throughput regression visible in `(+delta)`, not a heap one.
+`clusterRate` and `clusterMaxSize` are the measurement, and §5.8(g) already says what the repair may
+and may not be.
 
 **R13. The kind fold can switch the absorption off exactly where the fork is worst** (§5.8h). Under
 the default `PreferBelow` one `PAID` member makes a whole cluster writable, so a bigger set is *less*
-absorbing — the opposite of the intent. Counted, and the response is `clusterMax`, not a special-case
-fold.
+absorbing — the opposite of the intent. Counted, and the response is `PreferBeyond` — an existing
+knob — not a special-case fold.
 
 **R14. §5.8 is conditional on a number nobody has yet taken.** Step 4 exists to take it before step
 4b is written, and the plan is ordered so that finding `absorbForkHits ≈ 0` costs one counter rather
