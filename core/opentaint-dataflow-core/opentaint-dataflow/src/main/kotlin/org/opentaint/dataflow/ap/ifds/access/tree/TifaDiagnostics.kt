@@ -393,7 +393,21 @@ class BaseStats(private val key: String) {
                     if (n.isFinal) append("$")
                     if (n.deepAccessorExclusion != null) append("[excl]")
                 }
-                appendLine("  n${ids[n]}$flags")
+
+                // The `[any]` manager position this node sits at, and its kind.
+                //
+                // Without it the dump can say a node owns an `[any]` but not why nothing absorbed
+                // into it, which is the question every large fact raises. `PAID` here means every
+                // prepend above this node wrote its step; `CREDIT` means the node was eligible and
+                // something else declined.
+                val any = n.anyId?.let { state ->
+                    val manager = n.manager.anyUnroll
+                    val dag = manager.dagOf(state)
+                    " [any]@s${state.find().id}/${manager.kindOf(state)}" +
+                        (dag?.let { " dag#${it.id}(total=${it.total},states=${it.states})" } ?: "")
+                }.orEmpty()
+
+                appendLine("  n${ids[n]}$flags$any")
                 n.forEachAccessor { accessor, child ->
                     val a = with(n.manager) { accessor.accessor }
                     val name = if (TifaDiagnostics.longLabels && a is org.opentaint.dataflow.ap.ifds.FieldAccessor) {
