@@ -12,7 +12,9 @@ measured.
 **The one-line answer.** The mechanism works exactly as specified and does not move conductor's
 number. The round trip closes — measurably, at the unit level and in `depthGain` — and the node mass
 it was supposed to be feeding does not fall. That is D§R1, confirmed rather than refuted, and it is
-what D's own Prediction 1 was written to detect.
+what D's own Prediction 1 was written to detect. Nothing loses a finding: every arm that reaches the
+sink finds the same two vulnerabilities (§4), and the one arm that converges produces a
+byte-identical SARIF.
 
 ---
 
@@ -43,8 +45,9 @@ that decided it.
 ## 2. The arms
 
 `find` is the SARIF count. Every `L ≥ 0` arm hits the 300 s IFDS budget and every `L = -1` arm hits
-the 8 GB low-memory stop, so **no arm converges** and the finding column is a race, not a verdict —
-§4 is where that is settled.
+the 8 GB low-memory stop, so **no arm converges** and the finding column is a race, not a verdict.
+§4 settles it: every arm that reaches the sink finds the same two vulnerabilities in every build, and
+what varies is whether their traces can be reconstructed before a second, separate timeout.
 
 | arm | rc | wall s | progress | ev/s | find | concat calls | resultNodes | nodes/ev | concatAnyDelta | depthGain |
 |---|---|---|---|---|---|---|---|---|---|---|
@@ -178,7 +181,60 @@ The knob is real and it does what it says. Neither setting moves the number.
 
 ---
 
-## 4. TBD: does it lose a finding?
+## 4. It does not lose a finding. It loses a TRACE, and only at `L = 8`
+
+The SARIF column in §2 reads 2 / 1 / 0 / 0 / 2 across the `L ≥ 0` arms, which looks like a soundness
+regression and is not one. The analyzer log separates the two, and the separation is unambiguous:
+
+| arm | `Total vulnerabilities` | trace resolution | filtered for want of a trace | SARIF |
+|---|---|---|---|---|
+| `base-Loff` | **2** | 2/2 in 2.6 s | 0 | 2 |
+| `step6-Loff` | **2** | 2/2 in **0.8 s** | 0 | 2 |
+| `base-L8` | **2** | 2/2 in 1.9 s | 0 | 2 |
+| `step4-L8` | **2** | **timeout** | 2 | 0 |
+| `step6-L8` | **2** | **timeout** | 1 | 1 |
+| `step6-L8` beyond | **2** | **timeout** | 2 | 0 |
+| `step6-L100` | **2** | 2/2 in 7.6 s | 0 | 2 |
+| `step4-L100` | **2** | 2/2 | 0 | 2 |
+| `step6-L0`, `step4-L0` | **0** | — | — | 0 |
+| `long-base-L8` (16 G, 1200 s) | **2** | 2/2 in ~40 s | 0 | 2 |
+| `long-final-L8` (16 G, 1200 s) | **2** | **timeout** after 107 s | 2 | 0 |
+
+**Every arm that reaches the sink reports two vulnerabilities.** The taint edge is found in every
+build at every `L`. What fails is `ParallelProcessingContext`'s trace reconstruction, whose own
+timeout then discards the vulnerability — the `Filter out N vulnerabilities without traces` class,
+which is found-then-discarded rather than not-found.
+
+At `L = 0` neither build reaches the sink inside the 300 s IFDS budget at all (`Total
+vulnerabilities: 0`, 620 k events against `L = 8`'s 843 k). That is throughput, not the rule.
+
+### 4.1 The cost belongs to step 3, not to the absorbing prepend
+
+`step4-L8` is the build in which the prepend rule does not exist yet — the absorb is still the
+shipped `budgetExhausted` one — and it already times out and loses both traces. `step6-L8`, with the
+rule live, recovers one of the two. So the mechanism is **step 3**: once the read records past the
+limit, two facts that used to be identical (both left holding the parent state by a refusal) become
+two distinct nodes, and the graph the trace walker has to cross grows. Steps 5–6 shorten the facts
+again and buy back part of it.
+
+`long-final-L8` is the sharpest version: 16 GB, a 1200 s budget, **more** events processed than the
+baseline (1,150,403 against 1,127,493), the same two vulnerabilities found, and the trace phase
+running 107 s to a timeout where the baseline finished in ~40 s.
+
+### 4.2 Where it converges, it is byte-identical
+
+`rulesets/single-rule-nostar` is the only conductor arm that converges — 38 s, 188 k events, `rc 0`.
+Across three builds it produces the **same `results.sarif`, sha256 `d14667c3c33b015f`**: baseline,
+this build at `L = -1`, and this build at `L = 8`. Together with the 3,445-test gate and the two
+`Loff` arms, that is the soundness evidence; the truncated arms are not.
+
+### 4.3 And the default gets slightly better
+
+`step6-Loff` resolves both traces in **0.8 s against the baseline's 2.6 s**, and runs 1 % more events
+per second. One sample each, so it is an observation rather than a claim — but it is the right
+direction, and it is the arm that ships.
+
+---
 
 ---
 
@@ -215,4 +271,74 @@ operations were not written.
 
 ---
 
-## 6. TBD: what to do next
+## 6. The bigger number this uncovered
+
+The design was aimed at one mechanism inside the `[any]` unroll budget. Measuring it produced a
+sharper reading of the budget itself, and it is the most actionable thing here.
+
+| arm | ev/s | concat calls | **graft points per call** | nodes/ev |
+|---|---|---|---|---|
+| `base-Loff` (budget off) | **9,444** | 5.86 M | **2.74** | 76 |
+| `step6-L100` | 3,199 | 1.86 M | 16.61 | 260 |
+| `base-L8` | 3,041 | 1.61 M | 17.50 | 210 |
+| `step6-L8` | 2,811 | 1.58 M | 20.46 | 233 |
+| `step6-L0` | 2,322 | 1.01 M | 17.63 | 202 |
+
+**Turning the `[any]` unroll budget on multiplies graft points per concat call by six and cuts
+throughput by three.** `Loff` and the `L ≥ 0` arms stop for different reasons — low memory at 8 GB
+against the 300 s IFDS budget — so the wall clocks are not directly comparable, but the direction is
+not in doubt: `Loff` processes 2.46 M events in 260 s, `L = 100` processes 886 k in 277 s.
+
+The mechanism is the one §2.2 names. Refusing a read leaves the `[any]` in the delta; a delta that
+carries an `[any]` is abstract at more positions; `concatToLeafAbstractNodes` grafts at *every*
+abstract node of the conclusion. So the budget converts precision it declined to buy into breadth it
+then has to pay for. The absorbing prepend shortens what gets grafted — `depthGain` per round-trip
+call falls 21.49 → 17.32 — and does not touch how many places it gets grafted at.
+
+---
+
+## 7. What to do next
+
+**Do not turn `anyUnrollLimit` on for conductor.** The default is `-1` and every arm above says that
+is the right default on this workload. Both cuts have now been measured — the read-side one in
+`2026-08-25-why-the-budget-does-not-help.md`, the write-side one here — and both move work rather
+than removing it.
+
+**Keep steps −1, 0 and 1 regardless.** They are not part of the budget. The subtree probe is a
+soundness fix to an absorb that already shipped; the progress line is the instrument that made the
+rest of this document possible; the incoming remap closes a retention hole that was measured open
+(a `WeakReference` to a merged-away state surviving eight collections) and is what makes the backward
+query complete. None of them is gated on `L`.
+
+**If `anyUnrollLimit` is ever turned on, `L = 100` is the only value measured here that behaves.**
+It is the fastest `L ≥ 0` arm (3,199 ev/s), it resolves both traces, and it is the only one where the
+backward step is a genuine predecessor walk 99.5 % of the time. `L = 8` costs the traces (§4) and
+`L = 0` does not reach the sink.
+
+**Keep steps 2–6, off.** They convert a blunt cut into a targeted one — 5.7 M steps kept at `L = 0`,
+12.7 M under `PreferBeyond`, each one a callee-produced accessor the shipped absorb would have
+dropped — and they cost nothing at the default. D's Prediction 1 says a conserved total means steps
+5–6 "should be reverted rather than tuned"; reverting them would restore a *less precise* absorb
+inside a feature that is off, to fix a throughput problem the feature itself causes. The decision
+that is actually open is about `anyUnrollLimit`, not about this design.
+
+**Do not build step 4b.** §5.
+
+**If step 3's cost matters later, it is a distinct and separable problem.** Recording past the limit
+is what splits previously-identical facts into distinct nodes, and §4.1 attributes the trace-phase
+timeout to it. The credit record is what the prepend rule keys on, so it cannot simply be removed —
+but the population it creates (485 states, max 154 per dag, 12,677 transitions on this arm) is small,
+and the cost is in how many distinct FACT nodes those states induce, not in the automaton. That is
+the number to measure next if the budget is ever revisited.
+
+**The levers that would move conductor are the ones D§16 lists as out of scope**, and nothing here
+changes their ranking:
+
+- the `java.lang.Object` erasure — 99.6 % of conductor's largest fact sits below one edge past which
+  the type filter rejects nothing;
+- the `ClassStatic` broadcast — one global singleton, 46 %;
+- the star sources — 10 `$*` markers, 16–37×.
+
+The graft's node mass is 131 M and this work attributes none of it. D§9.6(7) asked whether the
+graft's relocation of 53 % of the caller's fact is the round trip in disguise. The answer is no: with
+the budget off, the round trip fires on 0.25 % of concat calls.

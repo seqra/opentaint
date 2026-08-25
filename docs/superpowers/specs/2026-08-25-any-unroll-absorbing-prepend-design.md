@@ -1,6 +1,10 @@
 # Absorbing the prepend: making the `[any]` unroll budget see the operation that grows the fact
 
-**Status:** design. Nothing implemented. Self-contained — it restates what it needs from
+**Status:** IMPLEMENTED, steps −1 through 6, and measured on conductor. §5.8 was deliberately NOT
+built -- step 4's counter said the fork is real but is not what stops the telescope. What was built,
+what the arms measured, and which of the three predictions survived are in
+`2026-08-25-any-unroll-absorbing-prepend-results.md`; read that before acting on anything here.
+Self-contained — it restates what it needs from
 `2026-08-24-any-unroll-manager-design.md` (**M§n**) rather than assuming it.
 
 **What it changes in the shipped design.** M§4.4 concluded the `concat` graft "needs propagation, not
