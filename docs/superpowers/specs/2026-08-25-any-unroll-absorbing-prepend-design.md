@@ -79,14 +79,14 @@ union remaps them (§5.5). Worth doing on its own — it closes a measured reten
 what makes the backward query cheap and complete.
 
 **(2) The state records how it was obtained.** `AnyUnrollState` gains a `kind`: `ORIGIN` for a start
-state, `PAID` while the pot has budget, `CREDIT` once it does not, `SINK` past a second ceiling.
-Written once at the mint; what a union does with it is the one open question and is therefore a knob
-(§5.4, §11.2).
+state, `PAID` while the pot has budget, `CREDIT` once it does not. Written once at the mint; what a
+union does with it is the one open question and is therefore a knob (§5.4, §11.2).
 
-**(3) The read mints on credit instead of refusing.** Past `total ≥ L`, `readChild` mints a `CREDIT`
-successor rather than returning `null`. A refused read leaves the fact holding the *parent* state,
-erasing the fact that a read happened, so the prepend has nothing to key on. Past `creditLimit` it
-returns the dag's `SINK`, restoring today's behaviour and the memory bound.
+**(3) The read never refuses.** Past `total ≥ L`, `readChild` mints a `CREDIT` successor rather than
+returning `null`, and charges nothing for it. A refused read leaves the fact holding the *parent*
+state, erasing the fact that a read happened, so the prepend has nothing to key on. There is no
+second ceiling and no sink: the automaton records every accessor it is asked for, and the pot decides
+only how that record is **labelled**. One boundary, not two.
 
 **(4) The prepend consults the state.** Installing a covered `a` directly above an `[any]` at state
 `s`, where the `[any]`'s subtree has no `a` child (§4.3):
@@ -96,7 +96,6 @@ returns the dag's `SINK`, restoring today's behaviour and the memory bound.
 | `ORIGIN` / `PAID` | — | `a.[any]ˢ.R` — write it, unchanged from today |
 | `CREDIT` | yes (self-loop included) | **absorb**: `[any]ᵖ.R`, `p` the predecessor |
 | `CREDIT` | no | `a.[any]ˢ.R` — this accessor did not come out of this `[any]` |
-| `SINK` | — | **absorb**: `[any]ˢ.R`, state unmoved |
 
 with §4.4's split preserved: the step is dropped only on the `[any]`-rooted branch and kept on every
 concrete sibling. The rule lives in two funnels, `create(accessor, node, anyState)` and
@@ -297,13 +296,14 @@ A fact node carries a state reference iff it owns an `[any]` edge (`AccessNode.a
 ### 5.2 `kind`
 
 ```kotlin
-enum class AnyUnrollKind { ORIGIN, PAID, CREDIT, SINK }
+enum class AnyUnrollKind { ORIGIN, PAID, CREDIT }
 ```
 
 `ORIGIN` is a start state: **neutral in the merge** (`merge(ORIGIN, k) = k` under either strategy)
 and writable, for the reason §5.4(c) gives. `PAID` is every state minted while `dag.total < L`,
-`CREDIT` every state minted after that up to `creditLimit`, `SINK` the one distinguished state per
-dag (§6.3). Written once at the mint; a union is the only other writer.
+`CREDIT` every state minted after that — there is no further tier, because the read never stops
+recording (§6.1). Written once at the mint; a union is the only other writer. The three values are
+ordered writable-to-absorbing, which is what makes §5.4(b)'s `min`/`max` mean what it says.
 
 ```kotlin
 /** Whether a covered accessor may still be WRITTEN above an `[any]` sitting at [state]. */
@@ -391,11 +391,11 @@ fact re-enters the worklist carrying an `[any]` matching strictly more premises 
 `2026-08-25-why-the-budget-does-not-help.md` measured as "the work moves rather than going away".
 
 **`PreferBeyond` cannot fail to terminate**, and saying so precisely is what makes it an experiment
-rather than a fear. Under a *fixed* strategy the kind is monotone in one direction, so each state
-changes kind at most twice; states are bounded at `L + creditLimit + 2` per dag and dags by the mint
-count, so total kind changes are bounded by `2 × states`, each triggering a re-derivation of the
-facts carrying that state, and the fact population is itself bounded (§9.3). The cost is
-`promotions × facts-per-state`, both counted by §14.4. `PreferBeyond` risks a *worse answer, more
+rather than a fear. Under a *fixed* strategy the kind is monotone in one direction over a
+three-element lattice, so each state changes kind **at most twice** — once out of `ORIGIN`, once
+between `PAID` and `CREDIT` — and each change triggers a re-derivation of the facts carrying that
+state. The cost is `promotions × facts-per-state`, both counted by §14.4; §9.4iii is where the
+product is bounded. `PreferBeyond` risks a *worse answer, more
 slowly* — never a run that does not end.
 
 **The strategy must be fixed for the run**; every argument above assumes at most two transitions per
@@ -411,9 +411,12 @@ If origins carried `PAID`, `PreferBelow` would demote every `CREDIT` class on it
 any fresh origin, irreversibly (§9.4iii). The pot is untouched by a fusion —
 `dx.total = satAdd(dx.total, dy.total, …)` stays ≥ `L` — so `budgetExhausted` would say *spent* while
 `writesAbove` said *writable*, and **the absorption would never fire at all**. "Lower `L`" would not
-help: an origin is `PAID` at every `L`, including 0. `PreferBeyond` mirrors it — one sunk origin
-promotes the fresh cascade to `SINK`, which then spreads by contagion across those same fusions until
-every `[any]` absorbs unconditionally, which `cap0-concrete-premises` records as losing findings.
+help: an origin is `PAID` at every `L`, including 0. `PreferBeyond` mirrors it — one spent origin
+promotes the fresh cascade to `CREDIT`, which then spreads by contagion across those same fusions
+until every `[any]` in the program is absorption-*eligible*. Removing the `SINK` tier makes that
+milder than it reads: a `CREDIT` state still absorbs only accessors it recorded, so the failure is a
+cut decided by the fusion rate rather than the indiscriminate collapse `cap0-concrete-premises`
+records as losing findings.
 
 Neither outcome is a knob working; both are the fusion rate deciding for it. A start state was never
 bought and has no opinion, so `merge(ORIGIN, k) = k`. What remains is the genuine case — a `PAID`
@@ -507,20 +510,27 @@ for facts built after it.
 
 ### 5.7 Memory
 
-M§3.8's bound is `live origins × (L + 1) × ~48 B` and rests entirely on `readChild` refusing. Minting
-on credit destroys it unless the `SINK` tier restores it: paid mints stop at `L`, credit mints at
-`creditLimit`, everything after is one shared sink.
+M§3.8's bound is `live origins × (L + 1) × ~48 B` and rests entirely on `readChild` refusing.
+**This design gives that bound up, and that is the price of having one boundary instead of two.**
+A dag now holds one state per distinct covered sequence read out of its origin; `L` caps how many of
+them are `PAID`, not how many exist.
 
 ```
-live origins × (L + max(L, MIN_CREDIT) + 2) × ~64 B
+live origins × states-per-origin × ~64 B
 ```
 
-At `L = 8` that is 26 states per origin, ~35 MB on the conductor witness's ~40k mint sites; at
-`L = 100`, ~510 MB. Not free, and §14.4 watches it.
+`~64 B` is the per-state cost including the `parents` map. The middle factor is the one nothing
+proves — ten states per origin is ~26 MB on the conductor witness's ~40k live origins, a hundred is
+~260 MB — and the reason that is acceptable rather than alarming is empirical: **the benchmarks this
+design targets do not exhibit a state-population problem.** The measured pressure is fact and premise
+mass, not automaton mass, so the sink was a static backstop for a failure mode nobody has observed,
+bought with a second ceiling and a fourth kind. §9.3(a) is the argument for why it should settle;
+`maxStatesPerDag` and `statesLive` (§12, §14.4) keep the assumption falsifiable for two counters'
+worth of cost; R3 is the repair if a workload ever contradicts it.
 
 ---
 
-## 6. The read: mint on credit instead of refusing
+## 6. The read never refuses
 
 ### 6.1 The change
 
@@ -534,22 +544,22 @@ fun readChild(state: AnyUnrollState?, accessor: AccessorIdx): AnyUnrollState? {
         current.children?.get(accessor)?.let { return it.find() }
 
         val dag = current.dag.find()
-        val kind = when {
-            dag.total  < limit       -> AnyUnrollKind.PAID
-            dag.credit < creditLimit -> AnyUnrollKind.CREDIT     // NOT `limit` -- §6.2
-            else                     -> return dag.sink()        // §6.3
-        }
+        val paid = dag.total < limit                        // the ONLY thing the pot decides
 
         val child = AnyUnrollState(stateIds.incrementAndGet(), dag)
-        child.kind = kind
+        child.kind = if (paid) AnyUnrollKind.PAID else AnyUnrollKind.CREDIT
         child.pathCount = current.pathCount
-        putTransition(current, accessor, child)                  // and the parents mirror, §5.5
-        if (kind == AnyUnrollKind.PAID) dag.total  = satAdd(dag.total,  current.pathCount, Int.MAX_VALUE)
-        else                            dag.credit = satAdd(dag.credit, current.pathCount, Int.MAX_VALUE)
+        putTransition(current, accessor, child)             // and the parents mirror, §5.5
+        if (paid) dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
         return child
     }
 }
 ```
+
+**A `CREDIT` mint is free, and that is deliberate.** The pot is charged exactly as today — only for
+`PAID` mints — so `total` still stops just past `L` and `budgetExhausted` answers the same question
+for every existing caller. Charging unpaid mints would make `total` a mixture of two quantities and
+would shorten TIFA's paid window as a side effect of what `getChild` did (§6.2).
 
 **Why refusal was the wrong shape.** Refusal keeps the fact at `[any]ᵖ`, the state before the read.
 That is a *correct* residual — the `[any]` branch of `a⁻¹(Σ*·R)` is `Σ*·R` itself — which is why
@@ -561,37 +571,15 @@ read leaves for the prepend.**
 `readChild` no longer returns `null` on the enabled path. `getChild`'s `childState ?: anyId` keeps its
 Elvis for the disabled case only.
 
-### 6.2 The credit ceiling is not `L`
+**No second ceiling, and no sink.** Every accessor asked for is recorded; the pot decides only
+whether the state that records it may still be written above (§7). Two ceilings would have to answer
+the question "how much automaton is worth recording for recognition" — a budget in a different unit
+from the precision budget `L`, with its own default to defend and its own `0 < 0` edge (R10). One
+ceiling has no such question. What it costs is §5.7's memory bound and §9.3(a)'s population
+statement; what it buys is that **the prepend rule has a defined answer for every `[any]` in the
+program at every pot level**, which is exactly the property the refusal lacked.
 
-At `L = 0` a fresh dag has `total = 0` and `credit = 0`, so `dag.credit < limit` fails and the very
-first read returns the sink — no `CREDIT` state, no recorded edge, every prepend on the indiscriminate
-arm, i.e. §2's null hypothesis. The two ceilings measure different things:
-
-```kotlin
-/**
- * The paid window is the PRECISION budget: how many concrete accessors may be materialised into
- * premises out of one origin. The credit window is a RECOGNITION budget: how much automaton must be
- * recorded for a prepend to tell a round trip from real structure. `L = 0` is a meaningful setting
- * for the first -- "never pay" -- and a meaningless one for the second.
- */
-@JvmField val creditLimit: Int = maxOf(limit, MIN_CREDIT)      // MIN_CREDIT = 16
-```
-
-With it, `L = 0` means "nothing is bought, and the round trip is still recognised and absorbed".
-`L = 100` leaves the credit window at 100.
-
-### 6.3 The sink
-
-Each dag gains one lazily created `sink`, `kind = SINK`, with no incoming edges: a covered read at a
-sink returns the sink, `absorbInto` on it returns null, and the `SINK` arm of §7 absorbs with the
-state unmoved. Two sinks are `union`ed on a dag fusion like any other pair.
-
-It is the **unconditional** backstop for the memory bound: past `L + creditLimit` recorded
-transitions no new state is minted for that origin, and that is a property of the pot, which is
-monotone. It is **not** an unconditional backstop for depth — §9.3 says why that is the right way
-round.
-
-### 6.4 TIFA needs the old contract, and must not absorb
+### 6.2 TIFA needs the old contract, and must not absorb
 
 Today's `readChild` answers a *recorded* transition free, past the limit, **before** consulting the
 pot — twice, at `AnyUnroll.kt:433-436` and `:440-443`, both above `:446`. Two existing tests pin it.
@@ -614,12 +602,12 @@ fire, and §7's telescoping would take the whole prefix away — throwing away t
 the most expensive thing in that loop, *after* paying for the transition. Census row 5 is therefore
 excluded from the funnel (§8.3).
 
-### 6.5 What credit does not buy
+### 6.3 What credit does not buy
 
 It does not relax the precision cut: `dag.total` still stops at `L`, `budgetExhausted` answers the
 same question, and a `CREDIT` transition materialises no premise. M§8.1's headline restated: at most
-`L` prefixes are **materialised into premises**; up to `L + creditLimit` are **recorded**, and the
-recorded-but-unpaid ones exist only to be absorbed.
+`L` prefixes are **materialised into premises**; every prefix read is **recorded and nothing else**,
+and a recorded-but-unpaid one exists only to be absorbed.
 ---
 
 ## 7. The prepend rule
@@ -655,16 +643,13 @@ private fun AccessNode.installAbove(accessor: AccessorIdx, anyState: AnyUnrollSt
     if (anyNode.getNodeByAccessor(accessor) != null) return createRaw(accessor, this, anyState)  // §4.3
     if (!manager.isCoveredByAny(accessor)) return createRaw(accessor, this, anyState)
 
-    val resolved = state.find()
-    val pred = manager.anyUnroll.absorbInto(resolved, accessor)
-    if (pred == null && resolved.kind != AnyUnrollKind.SINK) {
-        // CREDIT with no incoming edge on this accessor: it did not come out of this `[any]`, and
-        // keeping it is the whole point of the targeting -- §2. A SELF-LOOP is not this case:
-        // `pred` is then non-null and equal to `resolved`, and the step is absorbed in place.
-        return createRaw(accessor, this, anyState)
-    }
+    // A `CREDIT` state with no incoming edge on this accessor: it did not come out of this `[any]`,
+    // and keeping it is the whole point of the targeting -- §2. A SELF-LOOP is not this case: `pred`
+    // is then non-null and equal to the state itself, and the step is absorbed in place.
+    val pred = manager.anyUnroll.absorbInto(state.find(), accessor)
+        ?: return createRaw(accessor, this, anyState)
 
-    val absorbed = createRaw(ANY_ACCESSOR_IDX, anyNode, pred ?: resolved)
+    val absorbed = createRaw(ANY_ACCESSOR_IDX, anyNode, pred)
     val rest = clearChild(ANY_ACCESSOR_IDX).takeIf { !it.isEmpty } ?: return absorbed
     return createRaw(accessor, rest).mergeAdd(absorbed)
 }
@@ -765,7 +750,7 @@ that makes a program loop reach its fixed point.
 
 ### 8.3 The one row that must be excluded
 
-Census row 5 keeps `createRaw`. §6.4 has the argument: TIFA prepends exactly the accessor it just
+Census row 5 keeps `createRaw`. §6.2 has the argument: TIFA prepends exactly the accessor it just
 read, so the absorption would match, fire, and telescope away the copy `filterAccessNode` had just
 built — undoing a deliberate enumeration *after* paying for it. The rewrite exists to stop the graft
 re-installing what the delta read, not to cancel the unroll.
@@ -841,8 +826,8 @@ Together they are the soundness argument. Three consequences:
   from, a missing entry, a stale read racing a remap — each changes only *which* superset is produced
   or *whether* the coarsening fires. That is why §5.3 picks `minByOrNull` for reproducibility rather
   than correctness, and why `AnyUnrollKindMerge` is a precision knob and not a soundness one.
-- **No configuration can lose a finding** — `L = 0`, `PreferBeyond`, a permanently sunk pot — *given
-  the guard*. M§8.2 states this for the shipped design; it survives here only because Claim 2 restores
+- **No configuration can lose a finding** — `L = 0`, `PreferBeyond`, a pot spent on the first read —
+  *given the guard*. M§8.2 states this for the shipped design; it survives here only because Claim 2 restores
   the premise it rests on. Without the guard it is false, and false for the shipped
   `addParentAbsorbingAny` too.
 - **The split is where the rest of soundness lives** (§4.4).
@@ -877,31 +862,40 @@ be proved. The concrete prefix above an `[any]` contains **no repeated field** �
 `limitFieldAccessCached` cuts through it (`:2333`, measured in Appendix E) — so its length is bounded
 by the number of distinct field accessors. Finite, and `AnyUnrollGrowthPatternTest` measures what that
 is worth: every non-repeating sequence. **The engine terminates in theory and not in practice.** What
-is owed is therefore a population statement, in four parts.
+is owed is therefore a population statement, in three parts.
 
-**(a) The recorded part is bounded unconditionally.** Past both ceilings `readChild` returns the sink
-and no new state is minted for that origin — a property of the monotone pot, hence permanent, and
-what §5.7's memory bound rests on.
+**(a) The recorded part is bounded by what is read, and by nothing else.** This is the price of
+removing the refusal and it should be stated plainly: with no second ceiling, a dag mints a state for
+every distinct covered sequence the analysis actually reads out of that origin. Three things keep
+that finite and **none of them is a static cap**. The automaton is *deterministic and shared* — a
+sequence already recorded costs a lookup and mints nothing, which is what makes a program loop close
+into a self-loop (§5.1). The *repeated-field collapse* bounds what can be read off one fact. And the
+design's own effect is the third: once the round trip closes (§9.4ii) it stops generating new
+sequences, so what remains is what the callee genuinely produced. The first two are properties of
+existing code; the third is the thing being tested. `statesLive` and `maxStatesPerDag` are carried so
+the assumption stays falsifiable — **not as a gate**. A static cap is not being kept for a growth mode
+the real benchmarks do not show, and R3 records the shape of the repair should one ever appear.
 
-**(b) The written part is bounded conditionally, and the condition is the strategy.** A `SINK`-carrying
-`[any]` absorbs every covered prepend. Under `PreferBeyond` a sink stays a sink and the depth above
-that origin is frozen. Under `PreferBelow` a union with a `PAID` class demotes it and it becomes
-writable again. That the default is the weaker one is deliberate, because **termination never rested
-on the sink** — (a) plus the repeated-field collapse is where it comes from, and neither is touched.
-Buying an unconditional freeze would cost the fixpoint property of §9.4.
-
-**(c) The targeted part is not a bound.** In the credit window a `CREDIT` state absorbs only its own
+**(b) The written part is not bounded, it is targeted.** A `CREDIT` state absorbs only its own
 incoming accessors; a prepend whose accessor is not one is written — by design, since that accessor
-is real structure (§2). The window narrows growth to "what the callee genuinely produced" without
-bounding it.
+is real structure (§2). This narrows growth to "what the callee genuinely produced" without bounding
+it, and it has a consequence worth stating in the open: **this design can make a fact bigger than the
+shipped build makes it.** Today `filterStartsWith`'s absorb drops *every* covered accessor once the
+pot is spent; after step 5 it keeps the ones the automaton does not recognise. That is the intended
+precision gain (§2) and the one direction in which the change is not a restriction. Prediction 1 is
+where it gets measured.
 
-**(d) The residual bounded by none of the above.** A walk over `PAID` transitions revisiting states
+**(c) The residual bounded by neither.** A walk over `PAID` transitions revisiting states
 through a cycle writes an unbounded prefix with every state on it `PAID`. Two things bound it in
 practice and neither is a proof: the repeated-field collapse (a self-loop on `a` would need the fact
 to write `a.a`) and the depth gate. If `paidPrefixWritten` grows, the repair is one clause in §7's
 guard — `writesAbove(state) && children[accessor].find() !== state.find()` — one map lookup on a path
 that already does one. It is out of the primary design because it changes behaviour *below* the
 limit, and the central claim is that below the limit nothing changes.
+
+**Termination itself never rested on any of this**, which is why removing the sink does not endanger
+it: it comes from the repeated-field collapse plus the depth gate, both untouched. What (a) puts at
+risk is memory and time, not the existence of a fixed point.
 
 ### 9.4 The fixpoint
 
@@ -912,8 +906,8 @@ Three mechanisms, and conflating them is how this gets got wrong.
 whose state *object* changed is new work. §5.4(a) is what stops that happening on every union.
 Independent of the kind.
 
-**(ii) The absorption closes the round trip.** Absorbing while *keeping* the state — the `SINK`
-behaviour, and what `addParentAbsorbingAny` does today — bounds depth but leaves each lap tagged with
+**(ii) The absorption closes the round trip.** Absorbing while *keeping* the state — what
+`addParentAbsorbingAny` does today — bounds depth but leaves each lap tagged with
 whatever state the read reached, so the population of distinct facts stays high though none is deep.
 Moving to the predecessor returns the fact to a state already seen at that position.
 
@@ -923,10 +917,12 @@ started from — which is what makes the guard fire for a closed fact — so the
 changing", not "the fact is restored".
 
 **(iii) The kind change.** §5.4(b) has the measurement; the bound is: under a fixed strategy the kind
-is monotone in one direction, so each state changes kind at most twice, states are bounded at
-`L + creditLimit + 2` per dag and dags by the mint count, so total kind changes are bounded by
-`2 × states`, each triggering a re-derivation of a bounded fact population. `PreferBeyond`'s risk is
-therefore `promotions × facts-per-state` of extra work — never a run that does not end.
+is monotone in one direction over a three-element lattice, so each state changes kind at most twice,
+and total kind changes are `2 × states`, each triggering a re-derivation of a bounded fact population.
+That second factor is now *states actually minted* rather than a static per-dag cap, so it inherits
+§9.3(a) and is counted rather than proved — but the per-state factor of 2 is what the termination
+claim needs, and it is unaffected. `PreferBeyond`'s risk is therefore `promotions × facts-per-state`
+of extra work — never a run that does not end.
 `PreferBelow`'s opposite risk is that unions dissolve the cut and the design achieves nothing. The
 same two counters detect both.
 
@@ -938,21 +934,26 @@ behind it — the analysis runs on `newFixedThreadPoolContext(availableProcessor
 `PriorityQueue` is not a stable order, accessor indices come from a first-encounter interner, and
 across ten same-config runs one codeFlow flipped between `MiscUtils.java:91` and `:94`.
 
-One source is added — the credit ceiling is a second boundary at which behaviour changes — and one is
-removed: the kind is combined with `min`/`max`, both **symmetric**, so unlike every receiver-preferred
-choice around it the merged kind does not depend on which side of a union a fact arrives from.
+No source is added — `L` was already such a boundary and there is no second one — and one is removed:
+the kind is combined with `min`/`max`, both **symmetric**, so unlike every receiver-preferred choice
+around it the merged kind does not depend on which side of a union a fact arrives from.
 
 Outer bounds unchanged: order can move the false-positive count but never the true-positive set, and
 `ci-analyzer-owasp.yaml` asserts `EXPECTED_TRACES: 2633` on every push to main.
 
 ### 9.6 What is not proved
 
-1. Growth in the credit window is not bounded, only narrowed (§9.3c).
-2. The `PAID` cyclic case is not bounded (§9.3d); the repair is written out and deliberately not taken.
-3. `PreferBeyond`'s cost is bounded but not estimated — which is what makes it an experiment.
-4. The non-monotone-consumer audit is not exhaustive. §4.5 checks eleven operations and finds one;
+1. **The automaton has no static bound** (§9.3a) — deliberately: the growth a static cap would stop
+   is not one the benchmarks exhibit, and the design's own effect is what should settle it. Watched,
+   not proved, and the memory number is therefore evidence about the design rather than a
+   precondition for it.
+2. Growth above an `[any]` past the limit is not bounded, only targeted (§9.3b), and past the limit
+   `filterStartsWith` keeps steps it drops today.
+3. The `PAID` cyclic case is not bounded (§9.3c); the repair is written out and deliberately not taken.
+4. `PreferBeyond`'s cost is bounded but not estimated — which is what makes it an experiment.
+5. The non-monotone-consumer audit is not exhaustive. §4.5 checks eleven operations and finds one;
    nothing proves there is not a twelfth.
-5. No provenance links the graft's node mass to the round trip.
+6. No provenance links the graft's node mass to the round trip.
    `2026-08-25-why-concat-grows-the-fact.md` attributes 98% of node creation to `concat` and shows the
    graft *relocating* 53% of the caller's fact under a small conclusion, 78% of it attaching at one
    point. Whether that relocation is the round trip in disguise is not established by any counter.
@@ -983,7 +984,7 @@ drops the state with the edge.
 
 **Serialization drops the new fields.** The wire format carries only `isFinal`, `isAbstract`, the
 exclusion flag and accessor ids (`:2422-2452`); a deserialised `[any]` takes one fresh origin per tree
-(`:2513-2519`). So a `CREDIT` or `SINK` state returns as an `ORIGIN` and a fact that was being absorbed
+(`:2513-2519`). So a `CREDIT` state returns as an `ORIGIN` and a fact that was being absorbed
 becomes writable. Sound — a fresh budget means less coarsening — and already the documented behaviour
 for the pot. Extending the format is not proposed: `parents` names other states, which have no wire
 identity.
@@ -1001,8 +1002,10 @@ why a shallower tree cannot cause a wrong rejection.
 ## 11. Configuration
 
 **`opentaint.anyUnrollLimit`** — unchanged in meaning and default. `L < 0` is "off entirely": no
-states, no kinds, no `parents`, no absorption, bit-identical to a build without the feature. The
-credit window is `max(L, MIN_CREDIT)` rather than a second knob, for the reason in §6.2.
+states, no kinds, no `parents`, no absorption, bit-identical to a build without the feature. There is
+**no second window and no second knob**: past `L` the read still records, it just records as `CREDIT`
+(§6.1). `L` therefore keeps a single meaning — how much is materialised into premises — and every
+value of it, `0` included, leaves the mechanism operating.
 
 **`opentaint.anyUnrollKindMerge=below|beyond`** — §5.4(b), default `below`. Threaded the way `L`
 already is, as a `TreeApManager` constructor parameter defaulted from the property "so a test can pin
@@ -1035,7 +1038,7 @@ its failure mode is invisible, and a knob would imply the question is open.
 ```
 Progress: 128413/128571 (+2044)
 Memory usage: 6.1G/8.0G (76%)
-[any] roots: 41207 live, 38994 beyond (credit 37110, sunk 1884), transitions 4.1M
+[any] roots: 41207 live, 38994 beyond, 512k states (max/dag 47), transitions 4.1M
 ```
 
 The plumbing follows the idiom `ApManager` already uses for optional backend behaviour —
@@ -1069,11 +1072,14 @@ when {
 noteTotal(dx)                                                                      // the sum may newly cross
 ```
 
-`credit`/`dagsSunk` get identical treatment. Both pots are monotone and a latch is never cleared, so
+One pot and one latch is the whole scheme. `total` is monotone and the latch is never cleared, so
 nothing drifts downward except at the fusion, where the decrement is exactly the dag that ceased to
-exist. **Assert `dagsExhausted + dagsSunk ≤ dagsCreated - dagsFused`** once per tick: it is an
-invariant of the scheme and a violation means the fusion accounting is wrong, which is otherwise a
-silent, slowly drifting number that would be believed.
+exist. The state counts follow the same shape: `statesMinted - statesMerged` is live states, because
+`mergeStates` is the only destroyer and removes exactly one representative; `maxStatesPerDag` needs a
+per-dag counter incremented beside `total` and summed at the fusion like the pot. **Assert
+`dagsExhausted ≤ dagsCreated - dagsFused`** once per tick: it is an invariant of the scheme and a
+violation means the fusion accounting is wrong, which is otherwise a silent, slowly drifting number
+that would be believed.
 
 **What "live" honestly means.** `dagsCreated - dagsFused` counts live *representatives*, not dags
 still reachable from a live fact — a pot whose facts have all been dropped still counts. Making it
@@ -1105,7 +1111,7 @@ legible at all.
 | 0 | **The progress log (§12).** The instrument for reading whether any later step worked | no |
 | 1 | **Compression (§5.5)** — `parents`, the two remap loops, invariant (I) as a debug check. Repairs the retention hole on its own; measure the fusion path here (R8) | no (except memory) |
 | 2 | **`AnyUnrollKind`, the `kind` field, `AnyUnrollKindMerge`** and its plumbing. Nothing reads `kind` yet | no |
-| 3 | **`readChild` mints on credit** + `creditLimit` + the `SINK` tier + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
+| 3 | **`readChild` stops refusing** + `readChildPaidOnly` for TIFA, **in one commit** — split them and the premise-abstraction cut silently changes | no |
 | 4 | **`writesAbove` / `absorbInto`** with counters. Still nothing calls them | no |
 | 5 | **`create` becomes `installAbove`**, `addParentAbsorbingAny` deleted, `mergeAddMaybeNull`'s parameters renamed (R9). Covers census rows 1, 3, 4, 6 | **yes** |
 | 6 | **`bulkMergeAddAccessors` pre-pass** — row 2, the graft. The commit the design exists for | **yes** |
@@ -1126,7 +1132,8 @@ fallback, which is a different design with a different proof.
 |---|---|
 | `a paid mint records its incoming edge` | `parents[a]` contains the origin; `kind == PAID` |
 | `a mint past the limit is credit, not a refusal` | non-null at `total == L`; `kind == CREDIT`; `total` unchanged |
-| `the sink is not reachable at L = 0` | `readChild` at `L = 0` returns `CREDIT`, not `dag.sink()` — §6.2 |
+| `at L = 0 the first read still mints` | non-null and `CREDIT` — R10's defect class, gone by construction |
+| `a recorded sequence mints nothing on re-read` | the sharing §9.3(a) rests on: second read of the same accessor is a lookup |
 | `absorbInto walks back exactly one step` | `absorbInto(p·a, a) === p`; `absorbInto(p·a, b) == null` |
 | `absorbInto survives a union of the predecessor` | union `p` into `q`, then `absorbInto(s, a) === find(q)` — §9.2 |
 | `absorbInto returns the state itself on a self-loop` | non-null and equal to the state — the case an identity test would have written |
@@ -1134,8 +1141,6 @@ fallback, which is a different design with a different proof.
 | `an origin is neutral in the merge` | `merge(ORIGIN, CREDIT) == CREDIT` under **both** strategies, both argument orders — §5.4(c) |
 | `a union takes the meet under PreferBelow` / `the join under PreferBeyond` | both orders |
 | `the kind merge does not change which object survives` | under both strategies `union(x, y) === x` — §5.4(a) is independent of §5.4(b) |
-| `the sink absorbs every accessor and stays put` | past `L + creditLimit` |
-| `two fused dags share one sink` | |
 | `a union remaps the predecessor's transition` | §5.5 — the inverse of Appendix C's first test |
 | `a merged-away state with an incoming edge becomes unreachable` | §5.5 — the inverse of Appendix C's second |
 | `no map holds a non-representative after a cascade` | walk from `dag.rootState` after a fusion; `find() === it` for every key and value |
@@ -1200,7 +1205,7 @@ four progress-log counters of §12 are separate and unconditional.
 
 | counter | question | red flag |
 |---|---|---|
-| `creditMints`, `sinkReads` | how much of the automaton is unpaid | `sinkReads` large ⇒ `L` too small |
+| `paidMints`, `creditMints` | how much of the automaton is unpaid | `creditMints ≫ paidMints` ⇒ `L` too small for the workload |
 | `absorbExact` vs `absorbStay` | is the backward query hitting? | `absorbStay` dominant ⇒ check §5.5 landed |
 | `prependWritten{Paid,CreditMismatch}` | the targeting split — structure **kept** that a budget-only form would drop | the number justifying this over §2's null hypothesis |
 | `kindPromotions` / `kindDemotionsGenuine` / `kindDemotionsFromOrigin` | how fast unions move the cut | the last should be **zero** once `ORIGIN` is neutral; the middle is the evidence about the knob |
@@ -1210,7 +1215,7 @@ four progress-log counters of §12 are separate and unconditional.
 | `elementPrependOverAny` | element absorption is ON (§7) | it is the `[].[any].[]` case the GUARD covers |
 | `paidPrefixWritten` | §9.3(d) | growing without bound ⇒ take the self-loop guard |
 | `remapsIncoming` / `remapsOutgoing` | the work §5.5 adds to the fusion path | R8 |
-| `maxPotCredit` | §5.7's memory bound | |
+| `statesLive`, `maxStatesPerDag` | §5.7 — the assumption that dropping the static bound is free | either failing to settle over a run ⇒ R3 |
 
 Plus the existing `ApOpDiagnostics` C-block re-run against the same arm, since §9.6(5) is answerable
 only by comparing it before and after step 6. `statesReclaimed` is deliberately **not** a counter — it
@@ -1247,7 +1252,15 @@ this is the largest risk here — the correctness risks have answers, this one h
 shape Appendix E exercises. §4.5 audits eleven operations and finds one non-monotone consumer;
 nothing proves there is not a twelfth.
 
-**R3. Credit minting is unbounded memory until the sink is in.** Step 3 lands both or neither.
+**R3. The automaton has no static bound.** Removing the refusal removes M§3.8's memory bound (§5.7),
+and this is a deliberate simplification rather than an oversight: the sink capped a state population
+the real benchmarks do not exhibit, so it bought a proof about a failure mode nobody has measured, at
+the cost of a second ceiling, a fourth kind and a second `0 < 0` edge. Two counters keep it
+falsifiable. If a workload ever does contradict it, the repair is *not* the two-ceiling scheme but a
+per-dag state cap under which `readChild` folds the transition into a **self-loop** on the current
+state instead of minting: the read stays put, `absorbInto` returns the state itself, and the prepend
+absorbs in place — today's `addParentAbsorbingAny` behaviour, reached without a fourth kind and
+without a second boundary.
 
 **R4. `create` becoming absorbing is a wide blast radius**, wider than an arms-count suggests: the two
 arms of `addParentIfPossible` that carry *covered* accessors (field, element) are the ones that will
@@ -1275,10 +1288,13 @@ stop.
 **R9. `mergeAddMaybeNull`'s inverted parameters are a trap for the new call sites** (§8.4a). Renaming
 them is a prerequisite for step 5, not a later cleanup.
 
-**R10. `L = 0` was the sink, not the credit window**, in an earlier draft. The class of defect matters
-more than the instance: three prose claims and five test specifications all said `L = 0` exercises the
-credit window, and none of them evaluated `0 < 0`. `the sink is not reachable at L = 0` is the test
-that would have.
+**R10. `L = 0` was the sink, not the credit window**, in an earlier draft whose second ceiling was
+tested as `dag.credit < limit` — which evaluates `0 < 0`, so at `L = 0` the mechanism was simply off.
+Three prose claims and five test specifications said that value exercised the credit window and none
+evaluated the expression. The instance was first fixed with a decoupled ceiling; this revision
+removes the ceiling, and with it the class — `readChild` now has one comparison and no value of `L`
+at which a read stops recording. `at L = 0 the first read still mints` is the test that keeps it that
+way.
 
 **R11. Four test files inherit the knobs from system properties** (§14.3), so the gate cannot tell a
 regression from a setting until they take explicit values.
@@ -1444,13 +1460,13 @@ places the draft cited a section, a comment or a KDoc instead of evaluating the 
 
 | # | attack | verdict | where it went |
 |---|---|---|---|
-| 1 | `L = 0` never mints a `CREDIT` state — `0 < 0` fails twice — so every test demonstrating the mechanism was specified at the one value that disabled it | **landed** | §6.2, R10, `the sink is not reachable at L = 0` |
-| 2 | fresh origins were `PAID` and 98.8% of unions are cross-dag fusions, so `PreferBelow` demoted every class on first fusion and `PreferBeyond` spread `SINK` by contagion | **landed** | §5.4(c) — `ORIGIN` becomes neutral |
+| 1 | `L = 0` never mints a `CREDIT` state — `0 < 0` fails twice — so every test demonstrating the mechanism was specified at the one value that disabled it | **landed** | first a decoupled ceiling; now §6.1 — the ceiling is gone (R10) |
+| 2 | fresh origins were `PAID` and 98.8% of unions are cross-dag fusions, so `PreferBelow` demoted every class on first fusion and `PreferBeyond` spread `SINK` by contagion | **landed** | §5.4(c) — `ORIGIN` becomes neutral; the contagion arm now reads `CREDIT` for `SINK` and is milder for it |
 | 3 | on a self-loop `absorbInto` returned the state itself, the identity test read that as "not from this `[any]`", and the rewrite *wrote* — precisely where the automaton says the accessor is already folded in | **landed** | §5.3 — returns null instead |
 | 4 | the census was wrong at both rows carrying *covered* accessors: the element arm does go through the funnel, and `addParentFieldAccess` has its own `create` | **landed** | §8.1 rows 3 and 6, §7, R4 |
 | 5 | the named soundness boundary was the wrong test — it pins C4, not the split | **landed** | §4.4 |
 | 6 | the reverse index was read lock-free with a value mutated in place; the map's array re-check does not protect a mutable value. NPE and non-determinism | **landed** | §5.5 — copy-on-write |
-| 7 | TIFA: a pot test before the read refuses transitions today grants free; and the absorption would undo TIFA's own unroll after paying for it | **landed** | §6.4, §8.3 |
+| 7 | TIFA: a pot test before the read refuses transitions today grants free; and the absorption would undo TIFA's own unroll after paying for it | **landed** | §6.2, §8.3 |
 | 8 | §8.2's pre-pass tested coverage first, which throws during prescan | **landed** | §8.2 |
 | 9 | soundness of `Σ·Σ* ⊆ Σ*` and of the split | **survives** | — |
 | 10 | serialization / cache round trip | **survives** | — |
@@ -1459,6 +1475,13 @@ Two observations worth keeping. **The two surviving attacks are the two argued f
 principles**; the eight that landed were all argued from a citation — attack 1 sharpest, where three
 prose claims and five test specifications said `L = 0` exercises the credit window and none evaluated
 `0 < 0`.
+
+**Two of the ten were later answered by deletion rather than by repair.** Attacks 1 and — half of —
+2 were both about the `SINK` tier and the second ceiling that fed it, machinery whose only job was a
+static bound on a state population the benchmarks do not show growing. Removing it removed both
+defect surfaces along with the fourth kind, the second pot, the second knob-shaped constant and the
+`0 < 0` edge. Worth noting as a pattern: a mechanism that exists to prove a bound against an
+unobserved failure mode is also a mechanism that has to be got right everywhere else.
 
 And the reviews found each other's mitigations. §4.3's GUARD came from a *different* review's
 objection (Appendix E) and turns out to be exactly what makes attack 4's correction safe: element
