@@ -417,12 +417,20 @@ Out-degree in the one tree retained in full — 538 distinct nodes carrying 22,2
 | owns an `[any]` edge | **452** (84 %) | **10.50** | 77 |
 | does not | 86 | **1.47** | 5 |
 
-**A node that owns an `[any]` has 7.1× the fan-out of one that does not.** That is the mechanism in
-one number. `AccessNode.getChild`'s `isCoveredByAny` arm answers *every* field read off such a node —
-`isCoveredByAny` is `true` for every `FieldAccessor` in production (`TaintAnalyzer.kt:75-77`) — with
-no type check (§5.1). So the node accumulates a child per accessor anyone ever demands, which is
-exactly §4.2's `.buffer` node with 17 children from 12 unrelated classes. Path count is the product
-of out-degrees along a path: 538 nodes, 22,211 paths.
+**A node that owns an `[any]` has 7.1× the fan-out of one that does not.**
+
+A correction to the first version of this paragraph, which attributed that fan-out to
+`AccessNode.getChild`'s `isCoveredByAny` arm: **a read cannot grow a stored fact.** `getChild`
+returns a node assembled from subtrees of the receiver, and the receiver is unchanged. The only
+operations that give an existing node another child are the merges — `mergeAdd` of arrivals into
+`added`, the graft at an abstract node, and `filterStartsWith`'s re-prepend. Fan-out is built by
+prepend and concat; what the untyped read (§5.1) does is let an `[any]`-carrying fact *answer* a
+demand, so that the fact is derived and delivered at all.
+
+What survives the correction is the association and its size: nodes that own an `[any]` are the ones
+many facts converge on, and `added` is their union — §4.2's `.buffer` node with 17 children from 12
+unrelated classes is what that union looks like. Path count is the product of out-degrees along a
+path: 538 nodes, 22,211 paths.
 
 ### 9.3 4 % of arrivals carry 52 % of the growth
 
@@ -582,7 +590,90 @@ is the product of those degrees. The manager has exactly one lever on the tree, 
 `[any]` edge, and by §10.1 that tag cannot decline a child. Depth and breadth are different axes, and
 the budget is an instrument on the wrong one.
 
-## 11. Caveats
+## 11. Why absorption does not fire, at L = 100
+
+§10 answered a question about the knob. This is the question about the **fact patterns**: with the
+limit left at 100, what do the declining prepends actually look like, and would absorption have had
+anything to do had it been allowed?
+
+A counterfactual probe answers it directly. Every prepend the kind gate declines now runs the *rest*
+of the probe — subtree guard, coverage, backward step — with the counters suppressed, and records
+where it would have landed.
+
+### 11.1 The result
+
+11,126,048 prepends declined, and the kind that declined them is not the one the design's argument
+leaned on:
+
+| declined at a state whose kind is | count |
+|---|---|
+| `ORIGIN` | **507** |
+| `PAID` | **11,125,541** |
+
+Had the gate been open:
+
+| would have | count | share |
+|---|---|---|
+| **moved to a real predecessor** | **3,562,561** | **32.0 %** |
+| absorbed into ITSELF (self-loop, rewrites nothing) | **6,505,790** | **58.5 %** |
+| found no incoming edge for that accessor at all | 1,057,697 | 9.5 % |
+| been stopped by the §4.3 subtree guard | **0** | — |
+| been stopped by coverage | **0** | — |
+
+**Two thirds of the declined prepends were never absorbable.** The automaton either had no transition
+labelled with that accessor into that position (9.5 %), or the only one it had was a self-loop
+`p --a--> p`, where absorbing means staying put and the fact comes out unchanged (58.5 %). Only
+**32 %** is structure the kind gate is genuinely holding back — and that is the ceiling on what this
+mechanism could remove here, before any question of whether removing it would help.
+
+### 11.2 The fact pattern is always the same
+
+Every sampled `[any]` position — 80 of 80, across both sampled outcomes and every accessor — has the
+same subtree:
+
+```
+prepend .Element   above a node whose [any] subtree is   ![MARK].$
+prepend .tasks     above a node whose [any] subtree is   ![MARK].$
+prepend .MapValue  above a node whose [any] subtree is   ![MARK].$
+```
+
+The `[any]` carries **the taint mark and nothing else** — the seed shape the star source produces,
+`arg(i).[any]![mark]`, arriving unchanged at a prepend millions of times. Two consequences follow:
+
+- The §4.3 subtree guard can never fire, because the `[any]` subtree has no field children to collide
+  with. `guardBlocked = 0` is structural, not luck. Same for coverage: every sampled accessor is a
+  field or an element.
+- The accessors split cleanly by whether they were ever *read* through this position. Would-move:
+  `.Element`, `.MapKey`, `.MapValue`, `.tasks`, `.input`, `.workflowDef`, `.taskId`, `.partETags`,
+  `.contentType`, `.event`. No-predecessor: `.entries`, `.outputData`, `.status`, `.name`,
+  `.payload`, `.workerId`, `.uploadUrl`, `.fileHandleId`, `.lambdaCSArg$0/$2/$3`. The first list is
+  the hot model spine; the second is what one caller demanded once and no read ever crossed an
+  `[any]` with.
+
+### 11.3 One state decides for millions of facts
+
+The kind is a property of an **automaton state**. This run has 159 origins and 596 transitions, 439
+of them tagged `PAID` — and those few hundred states are the positions of **11.1 million** prepends.
+A single state tagged `PAID` declines millions of rewrites at once.
+
+That is why the gate dominates the counters. It is not that the budget was set badly: `writesAbove`
+makes a per-state decision on behalf of a fact population four orders of magnitude larger, and a
+state stays `PAID` for as long as its origin-component's pot is solvent. The pots *do* cross —
+`maxPotTotal = 400` against `limit = 100` — but crossing only tags the transitions minted afterwards
+(`mintKind = [paid: 439, credit: 157]`), and the states already stamped `PAID` keep the stamp.
+
+### 11.4 What this leaves
+
+Three obstacles, and they are not the same size:
+
+1. **58.5 % self-loops.** The automaton says reading `a` from this position returns to this position;
+   absorbing is a no-op. Nothing done to the gate reaches these.
+2. **9.5 % no incoming edge.** Reads mint transitions, and with 596 transitions in the whole run
+   against millions of prepends, most prepended accessors have never been read through an `[any]`.
+3. **32.0 % blocked by the kind gate alone.** The only part where opening the gate changes the
+   output.
+
+## 12. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -619,3 +710,10 @@ the budget is an instrument on the wrong one.
 - **`mints` counts origins, not transitions.** `mints = 195` at `L = 100` is the number of `[any]`
   origins created; the per-transition mint does not touch that counter, which is why `transitions`
   (601) is the number to compare against `reads`.
+- **§11's counterfactual is a probe, not a simulation.** It asks where each declined prepend *would*
+  have landed given the automaton as it stands at that moment. Absorbing for real would change both
+  the automaton and the facts, so the 32 % is an upper bound on reachable structure, not a prediction
+  of what a rerun with the gate open would produce.
+- **`wouldStay` drew no verbatim sample.** The 40-slot sample map filled with `noPredecessor` and
+  `wouldMove` keys before the first self-loop arrived, so §11.2's shapes cover two of the three
+  outcomes; the counts cover all three.
