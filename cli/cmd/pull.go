@@ -18,7 +18,7 @@ import (
 var pullCmd = &cobra.Command{
 	Use:   "pull",
 	Short: "Download the analysis toolchain and Java runtime",
-	Long: `Download the toolchain into the local cache. The toolchain contains the analyzer, the autobuilder, the built-in rules, the go-ssa-server, and a Java runtime. After the download, OpenTaint can build and scan projects without network access.
+	Long: `Download the toolchain into the local cache. The toolchain contains the analyzer, the autobuilder, the built-in rules, and a Java runtime. After the download, OpenTaint can build and scan projects without network access.
 
 If a release archive supplied bundled artifacts, OpenTaint uses them. They are not downloaded again.
 
