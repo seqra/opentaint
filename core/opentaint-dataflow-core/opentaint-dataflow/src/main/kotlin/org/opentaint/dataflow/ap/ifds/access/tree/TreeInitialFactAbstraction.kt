@@ -112,12 +112,40 @@ class TreeInitialFactAbstraction(
         var enumerateAnyFrontier = true
         while (true) {
             val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
-            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier) { abstractAccess, governingAnyId ->
+            abstractAccessPath(
+                facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier
+            ) { abstractAccess, governingAnyId, hoistedAny ->
                 apManager.cancellation.checkpoint()
 
                 if (TifaDiagnostics.enabled) {
                     TifaDiagnostics.emits.incrementAndGet()
-                    baseStats(concreteFactBase)?.emits?.incrementAndGet()
+                    val stats = baseStats(concreteFactBase)
+                    stats?.emits?.incrementAndGet()
+
+                    // Two different claims about the `[any]`, and they come apart on this workload.
+                    // `governingAnyId != null` means the walk reached this position BY crossing an
+                    // `[any]`; the chain check means the `[any]` is still in what gets stored.
+                    if (governingAnyId != null) {
+                        TifaDiagnostics.emitsUnderAny.incrementAndGet()
+                        stats?.emitsUnderAny?.incrementAndGet()
+                    }
+                    if (hoistedAny) {
+                        TifaDiagnostics.emitsHoistedFromAny.incrementAndGet()
+                        stats?.emitsHoistedFromAny?.incrementAndGet()
+                    }
+                    var chainNode = abstractAccess
+                    var chainCarriesAny = false
+                    while (chainNode != null) {
+                        if (chainNode.accessor == ANY_ACCESSOR_IDX) {
+                            chainCarriesAny = true
+                            break
+                        }
+                        chainNode = chainNode.prev
+                    }
+                    if (chainCarriesAny) {
+                        TifaDiagnostics.emitsWithAnyInChain.incrementAndGet()
+                        stats?.emitsWithAnyInChain?.incrementAndGet()
+                    }
                 }
 
                 val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
@@ -328,6 +356,17 @@ class TreeInitialFactAbstraction(
          * demands.
          */
         val governingAnyId: AnyUnrollState?,
+        /**
+         * Diagnostics only: whether this state was reached by HOISTING an `[any]` subtree -- the
+         * "`[any]` taken zero times" descent, which keeps the prefix and the trie node and swaps in
+         * the `[any]`'s child.
+         *
+         * That descent is invisible to [governingAnyId] (which it deliberately leaves alone) and to
+         * the emitted chain (which it deliberately does not extend), so without this flag a premise
+         * that exists only because an `[any]` was hoisted is indistinguishable from one the fact
+         * literally held.
+         */
+        val hoistedAny: Boolean = false,
     )
 
     data class AnyAccessorUnrollRequest(
@@ -343,7 +382,7 @@ class TreeInitialFactAbstraction(
         initialAdded: AccessTreeNode,
         unrollRequests: MutableList<AnyAccessorUnrollRequest>,
         enumerateAnyFrontier: Boolean,
-        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?, Boolean) -> Unit
     ) {
         val unprocessed = mutableListOf<AbstractionState>()
         unprocessed.add(AbstractionState(initialAnalyzedTrieRoot, initialAdded, currentAp = null, governingAnyId = null))
@@ -355,7 +394,7 @@ class TreeInitialFactAbstraction(
 
             val currentLevelExclusions = state.analyzedTrieRoot.exclusions()
             if (currentLevelExclusions == null) {
-                createAbstractAp(state.currentAp, state.governingAnyId)
+                createAbstractAp(state.currentAp, state.governingAnyId, state.hoistedAny)
                 continue
             }
 
@@ -391,7 +430,9 @@ class TreeInitialFactAbstraction(
                 // `root -> mark`, and a fact `this.[any].![m].$` has no mark child of its own, so the
                 // mark is reachable in the walk only through here. Dropping it is the shape that lost
                 // conductor's `ssrf` and `path-traversal` in the earlier prototypes (§3.2).
-                unprocessed += AbstractionState(state.analyzedTrieRoot, anyBranch, state.currentAp, state.governingAnyId)
+                unprocessed += AbstractionState(
+                    state.analyzedTrieRoot, anyBranch, state.currentAp, state.governingAnyId, hoistedAny = true
+                )
 
                 // (2) The `[any]` as an ordinary accessor (§3.1): descend the trie THROUGH it, so the
                 // prefix and the trie node stay in step, and premises emitted below it name the
@@ -421,8 +462,10 @@ class TreeInitialFactAbstraction(
                 // state of the edge just crossed.
                 val anyGoverning = state.added.anyId ?: state.governingAnyId
                 when {
-                    anyTrieRoot != null -> unprocessed += AbstractionState(anyTrieRoot, anyBranch, anyAp, anyGoverning)
-                    !enumerateHere && currentLevelExclusions.isNotEmpty() -> createAbstractAp(anyAp, anyGoverning)
+                    anyTrieRoot != null ->
+                        unprocessed += AbstractionState(anyTrieRoot, anyBranch, anyAp, anyGoverning, state.hoistedAny)
+                    !enumerateHere && currentLevelExclusions.isNotEmpty() ->
+                        createAbstractAp(anyAp, anyGoverning, state.hoistedAny)
                 }
             }
 
@@ -445,7 +488,7 @@ class TreeInitialFactAbstraction(
                 if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
 
                 abstractAccessPath(
-                    state.analyzedTrieRoot, accessor, node, state.currentAp, state.governingAnyId,
+                    state.analyzedTrieRoot, accessor, node, state.currentAp, state.governingAnyId, state.hoistedAny,
                     unprocessed, createAbstractAp,
                 )
             }
@@ -458,18 +501,19 @@ class TreeInitialFactAbstraction(
         addedNode: AccessTreeNode,
         currentAp: ReversedApNode?,
         governingAnyId: AnyUnrollState?,
+        hoistedAny: Boolean,
         unprocessed: MutableList<AbstractionState>,
-        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?, Boolean) -> Unit
     ) {
         val node = analyzedTrieRoot.child(accessor)
         if (node != null) {
             val apWithAccessor = ReversedApNode(accessor, currentAp)
             if (accessor.isAlwaysUnrollNext()) {
                 abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
-                    createAbstractAp(ap, governing)
+                    createAbstractAp(ap, governing, hoistedAny)
                 }
             } else {
-                unprocessed += AbstractionState(node, addedNode, apWithAccessor, governingAnyId)
+                unprocessed += AbstractionState(node, addedNode, apWithAccessor, governingAnyId, hoistedAny)
             }
             return
         }
@@ -478,7 +522,7 @@ class TreeInitialFactAbstraction(
 
         // We have no excludes -> continue with the most abstract fact
         if (exclusions == null) {
-            createAbstractAp(currentAp, governingAnyId)
+            createAbstractAp(currentAp, governingAnyId, hoistedAny)
             return
         }
 
@@ -492,13 +536,13 @@ class TreeInitialFactAbstraction(
         // We have initial fact that exclude {b} and we have no a.b fact yet
         if (!accessor.isAlwaysUnrollNext()) {
             // Return a.b.* {}
-            createAbstractAp(ReversedApNode(accessor, currentAp), governingAnyId)
+            createAbstractAp(ReversedApNode(accessor, currentAp), governingAnyId, hoistedAny)
             return
         }
 
         val apWithAccessor = ReversedApNode(accessor, currentAp)
         abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
-            createAbstractAp(ap, governing)
+            createAbstractAp(ap, governing, hoistedAny)
         }
     }
 

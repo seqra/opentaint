@@ -32,6 +32,44 @@ object TifaDiagnostics {
     val emits = AtomicLong()
     val anyDescents = AtomicLong()
 
+    /**
+     * The two ways an `[any]` can be responsible for a premise, separated.
+     *
+     * [emitsUnderAny] is a premise the walk produced while STANDING under an `[any]` -- the position
+     * was reached by crossing one, so the `[any]` is what made the path reachable at all.
+     * [emitsWithAnyInChain] is the narrower case where the `[any]` also survives INTO the emitted
+     * chain. The premise census says almost no stored premise carries an `[any]`, so the gap between
+     * these two columns is the whole question: it is the count of premises the `[any]` produced and
+     * then vanished from.
+     */
+    val emitsUnderAny = AtomicLong()
+    val emitsWithAnyInChain = AtomicLong()
+
+    /**
+     * Premises produced from a HOISTED `[any]` subtree -- the third and, on conductor, the only one
+     * that is large.
+     *
+     * `[any]` is zero-or-more, so the walk descends into the `[any]`'s subtree WITHOUT extending the
+     * prefix and without adopting the `[any]`'s manager state. Everything below the `[any]` is then
+     * emitted at the CURRENT prefix, as an ordinary concrete premise. That is how an `[any]` turns
+     * into premises that do not mention it.
+     */
+    val emitsHoistedFromAny = AtomicLong()
+
+    /**
+     * Arrivals at an initial-fact abstraction, split by whether the INCOMING fact carried an `[any]`,
+     * and how many nodes each kind actually contributed.
+     *
+     * `added` is the union of arrivals, so this is where a tree that is 86-99% `[any]`-owning has to
+     * come from -- either the arrivals carry it or something local manufactures it.
+     */
+    val arrivalsWithAny = AtomicLong()
+    val arrivalNodesWithAny = AtomicLong()
+    val arrivalDeltaWithAny = AtomicLong()
+    val arrivalsConcrete = AtomicLong()
+    val arrivalNodesConcrete = AtomicLong()
+    val arrivalDeltaConcrete = AtomicLong()
+
     /** The unroll, separated from every other refusal so the two are not confused again. */
     val unrollRequests = AtomicLong()
     val unrollAccessorsOffered = AtomicLong()
@@ -192,6 +230,13 @@ object TifaDiagnostics {
             append(" materialised=").append(unrollMaterialised.get())
             append(" refusedByBudget=").append(unrollRefusedByBudget.get())
             appendLine()
+            append("tifa emitsHoisted=").append(emitsHoistedFromAny.get())
+            append(" emitsUnderAny=").append(emitsUnderAny.get())
+            append(" emitsWithAnyInChain=").append(emitsWithAnyInChain.get())
+            append(" | arrivals any/concrete=").append(arrivalsWithAny.get()).append("/").append(arrivalsConcrete.get())
+            append(" incomingNodes any/concrete=").append(arrivalNodesWithAny.get()).append("/").append(arrivalNodesConcrete.get())
+            append(" addedDelta any/concrete=").append(arrivalDeltaWithAny.get()).append("/").append(arrivalDeltaConcrete.get())
+            appendLine()
             appendLine("added trees: ${all.size} (method, base) pairs")
             all.take(topN).forEach { appendLine("  $it") }
         }
@@ -213,6 +258,15 @@ class BaseStats(private val key: String) {
 
     @JvmField val addCalls = AtomicLong()
     @JvmField val emits = AtomicLong()
+
+    /** The same `[any]` split as [TifaDiagnostics], per base -- see the doc there. */
+    @JvmField val emitsUnderAny = AtomicLong()
+    @JvmField val emitsWithAnyInChain = AtomicLong()
+    @JvmField val emitsHoistedFromAny = AtomicLong()
+    @JvmField val arrivalsWithAny = AtomicLong()
+    @JvmField val arrivalDeltaWithAny = AtomicLong()
+    @JvmField val arrivalsConcrete = AtomicLong()
+    @JvmField val arrivalDeltaConcrete = AtomicLong()
 
     /**
      * A structural profile of the largest `added` seen, recomputed only when the tree DOUBLES past
@@ -244,6 +298,21 @@ class BaseStats(private val key: String) {
     private val stacks = java.util.Collections.synchronizedList(ArrayList<String>())
 
     fun recordArrival(before: AccessTree.AccessNode?, incoming: AccessTree.AccessNode, after: AccessTree.AccessNode) {
+        val delta = after.size - (before?.size ?: 0)
+        if (incoming.containsAnyInThisOrDeepNodes) {
+            arrivalsWithAny.incrementAndGet()
+            arrivalDeltaWithAny.addAndGet(delta)
+            TifaDiagnostics.arrivalsWithAny.incrementAndGet()
+            TifaDiagnostics.arrivalNodesWithAny.addAndGet(incoming.size)
+            TifaDiagnostics.arrivalDeltaWithAny.addAndGet(delta)
+        } else {
+            arrivalsConcrete.incrementAndGet()
+            arrivalDeltaConcrete.addAndGet(delta)
+            TifaDiagnostics.arrivalsConcrete.incrementAndGet()
+            TifaDiagnostics.arrivalNodesConcrete.addAndGet(incoming.size)
+            TifaDiagnostics.arrivalDeltaConcrete.addAndGet(delta)
+        }
+
         if (firstArrival == null) {
             firstArrival = "at ${TifaDiagnostics.siteOf(TifaDiagnostics.callSite.get())}: " +
                 incoming.toString().replace('\n', ' ').take(300)
@@ -435,6 +504,11 @@ class BaseStats(private val key: String) {
         append(" | any: ").append(everCarriedAny.get())
         append(" | adds: ").append(addCalls.get())
         append(" | emits: ").append(emits.get())
+        append(" | hoisted: ").append(emitsHoistedFromAny.get())
+        append(" | underAny: ").append(emitsUnderAny.get())
+        append(" | inChain: ").append(emitsWithAnyInChain.get())
+        append(" | arr any/con: ").append(arrivalsWithAny.get()).append("/").append(arrivalsConcrete.get())
+        append(" | dNodes any/con: ").append(arrivalDeltaWithAny.get()).append("/").append(arrivalDeltaConcrete.get())
         append(" | ").append(key)
         firstArrival?.let { append("\n      SEED ").append(it) }
         profile?.let { append("\n      PROFILE ").append(it) }
