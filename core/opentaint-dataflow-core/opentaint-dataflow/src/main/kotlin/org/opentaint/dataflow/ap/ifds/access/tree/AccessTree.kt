@@ -935,6 +935,20 @@ class AccessTree(
             val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX) ?: return create(accessor, this, anyState)
             if (!manager.anyUnroll.budgetExhausted(anyId)) return create(accessor, this, anyState)
             if (accessor == ANY_ACCESSOR_IDX) return create(accessor, this, anyState)
+            // The SUBTREE PROBE. `getChild`'s covered arm returns `anyAccessorNode.clearChild(a)`
+            // under the rebuilt `[any]`, so it drops `SIGMA*.a.L(R_a)`: reading `a` off `[any].R` is a
+            // NARROWING, and a narrowing means the coarser fact can answer the read with LESS.
+            // Absorbing `a` into an `[any]` whose subtree already has an `a` child therefore loses
+            // exactly those paths on the next read -- `a.[any].a.![m]` collapses to `[any].a.![m]`,
+            // and reading `a` off that returns `![m]`, which no longer denotes `g.a.m`.
+            //
+            // With no `a` child the dropped term is `SIGMA*.a.EMPTY = EMPTY` and the read after the
+            // rewrite equals the read before it, which is what makes "the result is a superset"
+            // sufficient. The condition is on the SUBTREE and not an appeal to `limitFieldAccess`:
+            // that limiter cuts every occurrence of a FIELD at any depth, `[any]` included, so
+            // `a.[any].a...` is unconstructible for fields -- but `limitElementAccess` caps only
+            // CONSECUTIVE element runs, and `[].[any].[]` is not consecutive.
+            if (anyNode.getNodeByAccessor(accessor) != null) return create(accessor, this, anyState)
             if (!manager.isCoveredByAny(accessor)) return create(accessor, this, anyState)
 
             if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.absorptions.incrementAndGet()
