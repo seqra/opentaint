@@ -83,11 +83,38 @@ const val GeneratedSpringControllerDispatcherCleanupMethod = "__cleanup__"
 const val GeneratedSpringControllerDispatcherInitMethod = "__init__"
 const val GeneratedSpringControllerDispatcherSelectMethod = "__select__"
 
+/**
+ * Diagnostic-only: keep just the handlers whose `<class>#<method>` contains this string.
+ *
+ * `--debug-run-analysis-on-selected-entry-points` cannot restrict a Spring project. It filters
+ * [ProjectClasses.projectAllAnalyzableClasses] only, while the real entry point of a handler is the
+ * generated `__spring_dispatcher__`, which is appended unconditionally and fans out to EVERY
+ * controller. Restricting the fan-out has to happen where the handler set is built, which is here.
+ *
+ * `-Dopentaint.springEpFilter=com.example.FooResource#bar`.
+ */
+private val springEpFilter: String? =
+    System.getProperty("opentaint.springEpFilter")?.trim()?.takeIf { it.isNotEmpty() }
+
 fun ProjectClasses.createSpringProjectContext(): SpringWebProjectContext? {
-    val springControllerMethods = allProjectClasses()
+    val allSpringControllerMethods = allProjectClasses()
         .filter { it.matchedAnnotations(String::isSpringControllerClassAnnotation).isNotEmpty() }
         .flatMap { it.publicAndProtectedMethods() }
         .filterTo(mutableSetOf()) { it.isSpringControllerMethod() }
+
+    val springControllerMethods = if (springEpFilter == null) {
+        allSpringControllerMethods
+    } else {
+        allSpringControllerMethods.filterTo(mutableSetOf()) {
+            "${it.enclosingClass.name}#${it.name}".contains(springEpFilter)
+        }.also {
+            logger.info {
+                "Spring entry point filter '$springEpFilter': " +
+                    "${it.size} of ${allSpringControllerMethods.size} handlers kept -- " +
+                    it.joinToString { m -> "${m.enclosingClass.name}#${m.name}" }
+            }
+        }
+    }
 
     if (springControllerMethods.isEmpty()) return null
 

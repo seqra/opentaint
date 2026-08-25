@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryE
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.tree.TifaDiagnostics
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
@@ -361,7 +362,26 @@ class NormalMethodAnalyzer(
         handleStatementEdge(edge, edgeAfterStatement)
     }
 
+    /**
+     * Parks the call statement for [TifaDiagnostics] before running the real step.
+     *
+     * An arrival at a callee's initial-fact abstraction is caused by a caller subscribing here, and
+     * this statement is the only object on that path that names a line of the analysed program. The
+     * abstraction cannot reach it, so it travels in a thread local. Cleared in `finally` so that an
+     * arrival raised OUTSIDE a call step is attributed to nothing rather than to a stale statement.
+     */
     private fun callStatementStep(callExpr: CommonCallExpr, edge: Edge) {
+        if (!TifaDiagnostics.enabled) return callStatementStepImpl(callExpr, edge)
+
+        TifaDiagnostics.callSite.set(edge.statement)
+        try {
+            callStatementStepImpl(callExpr, edge)
+        } finally {
+            TifaDiagnostics.callSite.set(null)
+        }
+    }
+
+    private fun callStatementStepImpl(callExpr: CommonCallExpr, edge: Edge) {
         val returnValue: CommonValue? = (edge.statement as? CommonAssignInst)?.lhv
 
         val flowFunction = analysisManager.getMethodCallFlowFunction(

@@ -48,9 +48,106 @@ object TifaDiagnostics {
     const val TRACE_MAX_ARRIVALS = 80
     const val TRACE_MAX_STACKS = 12
 
+    /**
+     * The TARGETED trace: a substring of the `"<base> @ <method>"` key. Every base whose key
+     * contains it records EVERY arrival from the very first one, each attributed to the call site
+     * that produced it.
+     *
+     * [TRACE_MIN_SIZE] exists so that a whole-project run does not retain thousands of trees, but
+     * it means the recorded ladder starts at 5,000 nodes -- it can only ever show the TAIL of an
+     * explosion. Answering "where did this tree come from" needs the ladder to start at the seed,
+     * which is what this does, for one base chosen up front.
+     *
+     * `-Dopentaint.tifaTrace=<substring of the key>`.
+     */
+    val traceKey: String? = System.getProperty("opentaint.tifaTrace")?.trim()?.takeIf { it.isNotEmpty() }
+
+    /** Arrivals kept for a targeted base. Deliberately large: the ladder IS the result. */
+    const val TRACE_TARGET_MAX = 6_000
+
+    /** Matching bases dumped in full; the rest are listed as one summary line each. */
+    const val TRACE_TARGET_DUMPS = 2
+
+    /**
+     * Render field edges as `className#fieldName:fieldType` instead of `.fieldName`.
+     *
+     * `FieldAccessor.toSuffix()` is `".$fieldName"` and drops the declaring class, so the dump
+     * cannot distinguish two different classes' identically-named fields -- and, more importantly,
+     * cannot show whether a chain is type-feasible. `-Dopentaint.tifaLongLabels=true`.
+     */
+    val longLabels: Boolean = System.getProperty("opentaint.tifaLongLabels")?.trim().toBoolean()
+
+    /** How many bases the end-of-run report lists. `-Dopentaint.tifaTop=N`. */
+    val reportTopN: Int = System.getProperty("opentaint.tifaTop")?.trim()?.toIntOrNull() ?: 20
+
+    /**
+     * The call statement currently being propagated by [org.opentaint.dataflow.ap.ifds.MethodAnalyzer].
+     *
+     * An arrival at a callee's `added` is caused by a caller subscribing at a call site, and that
+     * call site is the only object in the whole chain that names a line of the ANALYSED PROGRAM.
+     * It is not reachable from the abstraction, so the call step parks it here and the arrival
+     * reads it back. The statement object is parked, not a string: [callStatementStep] runs
+     * millions of times and an arrival is recorded thousands of times, so the formatting has to
+     * happen on the rare side.
+     *
+     * Written only when [enabled], and cleared by the same `finally` that set it.
+     */
+    val callSite: ThreadLocal<Any?> = ThreadLocal()
+
+    private val locationAccessors = ConcurrentHashMap<Class<*>, Array<java.lang.reflect.Method?>>()
+
+    /**
+     * `<declaring method>:<line>` for an instruction, best effort.
+     *
+     * Reflective because `CommonInstLocation` carries only `method` and `index` -- the line number
+     * exists on the JVM implementation and this module cannot see that type. A wrong guess here
+     * costs a "?" in a diagnostic, so the failure mode is acceptable; being unable to name a line
+     * of the analysed program is not.
+     */
+    fun siteOf(statement: Any?): String {
+        if (statement == null) return "no-call-site"
+        return runCatching {
+            val acc = locationAccessors.computeIfAbsent(statement.javaClass) { cls ->
+                val getLocation = runCatching { cls.getMethod("getLocation") }.getOrNull()
+                    ?.also { it.isAccessible = true }
+                val loc = getLocation?.invoke(statement)
+                val getMethod = loc?.let { runCatching { it.javaClass.getMethod("getMethod") }.getOrNull() }
+                    ?.also { it.isAccessible = true }
+                val getLine = loc?.let { runCatching { it.javaClass.getMethod("getLineNumber") }.getOrNull() }
+                    ?.also { it.isAccessible = true }
+                arrayOf(getLocation, getMethod, getLine)
+            }
+            val loc = acc[0]?.invoke(statement) ?: return "?"
+            val method = acc[1]?.invoke(loc)?.toString() ?: "?"
+            val line = acc[2]?.invoke(loc)?.toString() ?: "?"
+            "$method:$line"
+        }.getOrElse { "?" }
+    }
+
     private val perBase = ConcurrentHashMap<String, BaseStats>()
 
     fun baseStats(key: String): BaseStats = perBase.computeIfAbsent(key) { BaseStats(it) }
+
+    /**
+     * The full ladder for every base matching [traceKey], largest first.
+     *
+     * The top [TRACE_TARGET_DUMPS] get the whole DAG plus every arrival; the rest get one line, so
+     * that a loose key degrades into a census rather than into gigabytes of output.
+     */
+    fun dumpTargeted(): String {
+        val key = traceKey ?: return "no trace key set"
+        val hits = perBase.entries.filter { it.key.contains(key) }
+            .sortedByDescending { it.value.maxAddedSize.get() }
+        if (hits.isEmpty()) return "no (base, method) pair matched trace key '$key'"
+        return buildString {
+            appendLine("TARGETED TRACE for '$key' -- ${hits.size} matching (base, method) pairs")
+            hits.take(TRACE_TARGET_DUMPS).forEach { appendLine(it.value.dumpTree()) }
+            if (hits.size > TRACE_TARGET_DUMPS) {
+                appendLine("  --- ${hits.size - TRACE_TARGET_DUMPS} further matches, summary only ---")
+                hits.drop(TRACE_TARGET_DUMPS).forEach { appendLine("    ${it.value}") }
+            }
+        }
+    }
 
     /** The exact shape and content of the single largest `added`, plus how it got there. */
     fun dumpLargest(): String {
@@ -78,6 +175,9 @@ object TifaDiagnostics {
 }
 
 class BaseStats(private val key: String) {
+    /** Whether this base is the one [TifaDiagnostics.traceKey] asked for the full ladder of. */
+    private val targeted: Boolean = TifaDiagnostics.traceKey?.let { key.contains(it) } == true
+
     /** Nodes in `added`, counted with multiplicity -- the precomputed subtree size. */
     @JvmField val maxAddedSize = AtomicLong()
 
@@ -105,11 +205,31 @@ class BaseStats(private val key: String) {
     @Volatile
     private var retained: AccessTree.AccessNode? = null
 
+    /**
+     * The SEED: the very first fact that ever arrived at this base, recorded for every base.
+     *
+     * One string per base, so it is affordable everywhere, and it is the only way to see where a
+     * tree STARTED -- every other record here is thresholded and therefore shows only the tail.
+     */
+    @Volatile
+    @JvmField
+    var firstArrival: String? = null
+
     /** What arrived, in order: `size-before -> size-after  <the incoming fact>`. */
     private val arrivals = java.util.Collections.synchronizedList(ArrayList<String>())
     private val stacks = java.util.Collections.synchronizedList(ArrayList<String>())
 
     fun recordArrival(before: AccessTree.AccessNode?, incoming: AccessTree.AccessNode, after: AccessTree.AccessNode) {
+        if (firstArrival == null) {
+            firstArrival = "at ${TifaDiagnostics.siteOf(TifaDiagnostics.callSite.get())}: " +
+                incoming.toString().replace('\n', ' ').take(300)
+        }
+
+        if (targeted) {
+            recordTargetedArrival(before, incoming, after)
+            return
+        }
+
         if (after.size < TifaDiagnostics.TRACE_MIN_SIZE) return
 
         if (arrivals.size < TifaDiagnostics.TRACE_MAX_ARRIVALS) {
@@ -129,6 +249,34 @@ class BaseStats(private val key: String) {
                 .joinToString("\n        ")
             stacks.add("at added.size=${after.size}\n        $frames")
         }
+    }
+
+    /**
+     * Every arrival, numbered, with the call site that caused it and the distinct-node count.
+     *
+     * `distinct` rather than `size` is what makes this readable: `size` counts with multiplicity,
+     * so a tree can triple in `size` without a single new node being allocated. A step where
+     * `distinct` moves is a step where the fact learned a new SHAPE; a step where only `size`
+     * moves is the same shape reached along more paths.
+     */
+    private fun recordTargetedArrival(
+        before: AccessTree.AccessNode?,
+        incoming: AccessTree.AccessNode,
+        after: AccessTree.AccessNode,
+    ) {
+        if (arrivals.size >= TifaDiagnostics.TRACE_TARGET_MAX) return
+        val beforeSize = before?.size ?: 0
+        val beforeDistinct = before?.countNodes() ?: 0
+        val afterDistinct = after.countNodes()
+        arrivals.add(
+            "#${arrivals.size} size ${beforeSize}->${after.size} (+${after.size - beforeSize})" +
+                " distinct ${beforeDistinct}->${afterDistinct} (+${afterDistinct - beforeDistinct})" +
+                " depth=${after.maxDepth}" +
+                " | at ${TifaDiagnostics.siteOf(TifaDiagnostics.callSite.get())}" +
+                " | incoming size=${incoming.size} distinct=${incoming.countNodes()}" +
+                " depth=${incoming.maxDepth}: " +
+                incoming.toString().replace('\n', ' ').take(320)
+        )
     }
 
     fun dumpTree(): String {
@@ -154,11 +302,22 @@ class BaseStats(private val key: String) {
                 }
                 appendLine("  n${ids[n]}$flags")
                 n.forEachAccessor { accessor, child ->
-                    val name = with(n.manager) { accessor.accessor }.toSuffix()
+                    val a = with(n.manager) { accessor.accessor }
+                    val name = if (TifaDiagnostics.longLabels && a is org.opentaint.dataflow.ap.ifds.FieldAccessor) {
+                        ".${a.fieldName} {${a.className} : ${a.fieldType}}"
+                    } else {
+                        a.toSuffix()
+                    }
                     appendLine("      $name => n${ids[child]}")
                 }
             }
-            appendLine("  --- how it grew: the first ${arrivals.size} arrivals that reached the threshold ---")
+            appendLine("  --- the seed: ${firstArrival ?: "never recorded"} ---")
+            val how = if (targeted) {
+                "  --- how it grew: all ${arrivals.size} arrivals, from the seed ---"
+            } else {
+                "  --- how it grew: the first ${arrivals.size} arrivals that reached the threshold ---"
+            }
+            appendLine(how)
             arrivals.forEach { appendLine("    $it") }
             appendLine("  --- who added them ---")
             stacks.forEach { appendLine("    $it") }
@@ -182,7 +341,7 @@ class BaseStats(private val key: String) {
         // Always the LATEST tree over the threshold, not a doubling snapshot: the previous instrument
         // caught this base at 20,601 and reported `anyEdges=0`, while its recorded max depth of 127
         // implies about eleven `[any]` edges stacked on one path in the version that actually mattered.
-        if (node.size >= TifaDiagnostics.TRACE_MIN_SIZE) retained = node
+        if (targeted || node.size >= TifaDiagnostics.TRACE_MIN_SIZE) retained = node
     }
 
     private fun profileOf(root: AccessTree.AccessNode): String {
@@ -253,6 +412,7 @@ class BaseStats(private val key: String) {
         append(" | adds: ").append(addCalls.get())
         append(" | emits: ").append(emits.get())
         append(" | ").append(key)
+        firstArrival?.let { append("\n      SEED ").append(it) }
         profile?.let { append("\n      PROFILE ").append(it) }
     }
 }
