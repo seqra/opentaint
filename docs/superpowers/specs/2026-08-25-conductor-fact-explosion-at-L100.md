@@ -768,11 +768,96 @@ every declining state been `CREDIT`,
 Two independent runs put the movable fraction at 31.4 % and 32.0 %; a third, with a larger decline
 count, put it at 5.3 %. So the prize is **at most about a third of the declines**, and two thirds of
 them are patterns nothing can absorb. A re-score should be scoped against that number, not against
-the 8–18 M decline count — and, on this evidence, the cheaper first move is to give
-`readChildPaidOnly` a `CREDIT` branch, since 427 of 429 `PAID` states come from a single call site
-that never asked the policy at all.
+the 8–18 M decline count.
 
-## 13. Caveats
+**Correction to the first version of this section**, which proposed giving `readChildPaidOnly` a
+`CREDIT` branch. That is wrong, and the refusal is the intended behaviour: the unroll must not
+materialise a state it cannot pay for — when the pot is spent it aborts the enumeration and the walk
+emits the coarse `[any]` premise instead (§5.3's `enumerateAnyFrontier` arm). Crediting there would
+put unpaid concrete states into the automaton, which is the population the budget exists to bound.
+The re-score is the right instrument, and §13 builds it.
+
+## 13. The dag-local re-score
+
+§12 left one question open: the kind is stamped at the mint and never revisited, so a state minted
+while its pot was solvent stays `PAID` after the pot has gone past `L`. Can a re-score reach the
+states that matter?
+
+### 13.1 It can — the pots are bimodal, and the hot states are in the one that crossed
+
+A census of every pot at the end of the run, which the manager keeps no registry for and which the
+progress line summarises only by its maximum:
+
+```
+dags live=140 crossedLimit=1 limit=100
+  totals=[401/65, 6/7, 6/7, 6/7, 6/7, 5/3, 5/6, 4/5, 4/4, 4/5, 3/4, 3/4]   (total/states)
+  byTotal=[<2:112, 2-3:18, 4-L/8:9, L/8-L/4:0, L/4-L/2:0, L/2-L:0, >=L:1]
+```
+
+One pot at **401 against a limit of 100**; the other 139 at 12 or below, 112 of them below 2. Nothing
+in between. And the states doing the declining are all in the pot that crossed:
+
+| state | kind / minted by | dag | dag total | declines |
+|---|---|---|---|---|
+| #705 | `PAID` / read | #43 | **401** | 26.7 % |
+| #428 | `PAID` / **unroll** | #43 | **401** | 23.6 % |
+| #46 | `PAID` / read | #46 | **401** | 17.8 % |
+| #733 | `PAID` / read | #46 | **401** | 6.3 % |
+
+**This corrects §12.1's reading.** "141 components and only one crosses" is true, and I took it to
+mean the budget never bites. It bites in exactly the place that matters: the 139 small pots are
+irrelevant, and the one that governs 82 % of all declines is at four times its limit with its states
+still stamped `PAID`.
+
+### 13.2 The implementation
+
+`-Dopentaint.anyUnrollKindPolicy=rescore` mints exactly as `perDag` does and adds one rule: when a
+dag's `total` reaches a threshold, re-assign the whole dag's kinds — breadth-first from the root,
+charging the same `pathCount` the mint charges, keeping states `PAID` while a budget of `L` lasts and
+demoting the rest to `CREDIT`.
+
+Breadth-first and not depth-first because the automaton is allowed to be cyclic and a depth-first
+walk would spend the whole budget down one accessor sequence. The threshold doubles after each
+re-score, so a dag is re-scored O(log total) times — the kind lattice's termination argument assumes
+a bounded number of kind changes per state, and a re-score firing on every mint would not have one.
+A fusion takes the lower of the two thresholds, which is the "after merge the new total is more than
+the limit" case.
+
+### 13.3 It works
+
+Three replicates each, `L = 100` throughout, same jar, arms differing only in the policy:
+
+| | off (`perDag`) | on (`rescore`) |
+|---|---|---|
+| **absorptions** | 75,268 / 76,303 / 20,019 | **2,664,161 / 3,369,619 / 5,063,899** |
+| **IFDS progress** | 808,696 / 784,539 / 875,157 | **911,332 / 958,979 / 941,602** |
+| prepends declined | 27.3 M / 24.8 M / 15.0 M | 10.8 M / 14.8 M / 21.6 M |
+| concat resultNodes | 211 M / 202 M / 226 M | 198 M / 240 M / 225 M |
+| graft points per call | 20.40 / 19.95 / 16.11 | 15.46 / 17.30 / 17.50 |
+| SARIF findings | 2 / 0 / 2 | 2 / 2 / 2 |
+| rc | 254 | 254 |
+
+Two columns separate cleanly:
+
+- **Absorptions rise 35–250×**, and the ranges do not overlap. Every earlier `L = 100` arm in this
+  document sits in the 15 k–90 k band; the re-score arms are 2.7 M–5.1 M.
+- **Progress rises about 12 %** on the means, 823 k → 937 k, and the ranges do not overlap.
+
+Two do not: `resultNodes` and `pointsPerCall` overlap between arms, so on three replicates the
+re-score **does not reduce the graft's node mass** — the same conservation every other lever in this
+document ran into. What it buys is throughput at unchanged mass, which is a different and smaller
+claim than the design hoped for.
+
+The cost is nothing: **9 re-scores, 613 states visited, 84 demotions** across a whole run.
+
+### 13.4 What it does not do
+
+No arm converges; every one still stops on the IFDS timeout at rc 254. 84 demotions turning 75 k
+absorptions into 2.7 M is the mechanism working as designed, and it moves the throughput needle by
+12 % — against a workload that needs a factor of several. The ceiling of §12.5 stands: about a third
+of declines are movable, and the rest are self-loops and missing edges that no kind policy reaches.
+
+## 14. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -822,3 +907,8 @@ that never asked the policy at all.
 - **`alwaysCredit` and `global` are experiments, not proposals.** `budgetExhausted`, which governs the
   unroll, stays on the per-dag rule in every arm, so the arms differ in kind assignment alone — which
   is what makes §12.3's reading valid, and also what makes them silent about the unroll's own budget.
+- **§13.3's two clean separations are three replicates each**, which is enough to separate
+  non-overlapping ranges and not enough to put a confidence interval on the 12 %.
+- **The re-score is behind a flag and off by default.** It changes kinds after facts have been built
+  with the old ones; the design's argument that a state changes kind at most twice no longer holds,
+  and the doubling threshold is what replaces it. That trade has not been re-derived, only bounded.
