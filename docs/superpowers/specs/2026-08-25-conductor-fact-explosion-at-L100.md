@@ -673,7 +673,106 @@ Three obstacles, and they are not the same size:
 3. **32.0 % blocked by the kind gate alone.** The only part where opening the gate changes the
    output.
 
-## 12. Caveats
+## 12. Why the states are `PAID` — it is not the pot
+
+§11 left the gate declining 11–18 M prepends at `PAID` states and did not say why those states were
+`PAID` when the automaton is far larger than `L`. Four arms answer it, all at `L = 100`.
+
+### 12.1 The pot is per component, and the components are tiny
+
+The `[any]` progress line, which reports the pots directly:
+
+| arm | live origin-components | **components that ever reached `L`** | states | max states/dag | transitions |
+|---|---|---|---|---|---|
+| `L = 100` | 141 | **1** | 321 | 123 | 3,773 |
+| `L = 8` | 249 | **2** | 497 | 147 | 9,977 |
+| `L = 0` | 264 | 264 | 452 | 154 | 11,099 |
+
+One pot of 141 crosses. Mean 2.3 states per component against a quota of 100 — so the aggregate
+budget is `141 × L`, and `total` is not computing a wrong number, it is correctly counting the wrong
+unit.
+
+### 12.2 Changing the unit is not the fix — measured
+
+`-Dopentaint.anyUnrollKindPolicy=global` makes the mint compare against one run-wide pot instead of
+the component's, changing nothing else:
+
+| | `perDag` | `global` |
+|---|---|---|
+| mints paid / credit | 399 / 159 | 393 / **241** |
+| absorptions | 50,234 | **79,857** |
+| absorptions as a share of prepends | 0.28 % | **0.37 %** |
+| progress | 755,686 | 771,515 |
+| rc | 254 | 254 |
+
+52 % more `CREDIT` states, 59 % more absorptions, and the arm still does not converge.
+
+### 12.3 The ceiling arm gives it away
+
+`alwaysCredit` forces the fact-side read to mint `CREDIT` unconditionally — the strict upper bound of
+any rescue strategy, since nothing can demote more than everything. It reported
+`mintKind = [paid: 437, credit: 142]`.
+
+**437 `PAID` mints, with the fact-side read minting none.** So they are not coming from `readChild`
+at all, and no policy on `readChild` can reach them.
+
+### 12.4 Where they come from
+
+A provenance flag on the state settles it:
+
+```
+mintKind=[paid:429(unroll:427), credit:120]
+```
+
+**427 of 429 `PAID` mints come from `readChildPaidOnly`** — the initial-fact abstraction's unroll.
+That entry point passes `paid = true` unconditionally and has no `CREDIT` branch at all: past the
+limit it **refuses** rather than crediting.
+
+```kotlin
+val dag = current.dag.find()
+if (dag.total >= limit) { ...; return null }          // refuse -- not credit
+val child = mint(current, accessor, dag, paid = true) // otherwise always PAID
+```
+
+And those are the states doing the declining. Top decliners, with provenance:
+
+| state | kind / minted by | declines | share |
+|---|---|---|---|
+| #423 | `PAID` / **unroll** | 5,617,401 | **67.5 %** |
+| #181 | `PAID` / **unroll** | 246,977 | 3.0 % |
+| #319 | `PAID` / **unroll** | 238,884 | 2.9 % |
+| #421 | `PAID` / **unroll** | 234,930 | 2.8 % |
+| #392 | `PAID` / **unroll** | 196,799 | 2.4 % |
+| #659 | `PAID` / read | 175,002 | 2.1 % |
+
+Six of the top seven were minted by the unroll, and one state carries two thirds of every decline in
+the run. An earlier arm without the provenance flag showed the same concentration — three states,
+95.7 % of 18 M declines.
+
+**So the answer to "why so many `PAID`" is not the budget.** It is that the unroll's mint is
+`PAID`-by-construction, its states are the hot positions of the whole fact population, and a kind is
+stamped once at mint and never revisited.
+
+### 12.5 What a re-score would be worth
+
+A re-score is the only proposal that can reach state #423, because #423 already exists and every
+budget policy acts on mints. Its ceiling is measurable, and the counterfactual of §11 gives it: had
+every declining state been `CREDIT`,
+
+| | share of declines |
+|---|---|
+| would have moved to a real predecessor | **31.4 %** (2,608,808 of 8,319,534) |
+| would have absorbed into itself — self-loop | 56.7 % |
+| had no incoming edge for that accessor | 11.9 % |
+
+Two independent runs put the movable fraction at 31.4 % and 32.0 %; a third, with a larger decline
+count, put it at 5.3 %. So the prize is **at most about a third of the declines**, and two thirds of
+them are patterns nothing can absorb. A re-score should be scoped against that number, not against
+the 8–18 M decline count — and, on this evidence, the cheaper first move is to give
+`readChildPaidOnly` a `CREDIT` branch, since 427 of 429 `PAID` states come from a single call site
+that never asked the policy at all.
+
+## 13. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -717,3 +816,9 @@ Three obstacles, and they are not the same size:
 - **`wouldStay` drew no verbatim sample.** The 40-slot sample map filled with `noPredecessor` and
   `wouldMove` keys before the first self-loop arrived, so §11.2's shapes cover two of the three
   outcomes; the counts cover all three.
+- **§12.5's movable fraction is unstable across runs** — 31.4 %, 32.0 % and 5.3 % on three arms with
+  decline counts of 8.3 M, 11.1 M and 18.1 M. The ordering (self-loops ≫ movable) holds in all three;
+  the ratio does not.
+- **`alwaysCredit` and `global` are experiments, not proposals.** `budgetExhausted`, which governs the
+  unroll, stays on the per-dag rule in every arm, so the arms differ in kind assignment alone — which
+  is what makes §12.3's reading valid, and also what makes them silent about the unroll's own budget.
