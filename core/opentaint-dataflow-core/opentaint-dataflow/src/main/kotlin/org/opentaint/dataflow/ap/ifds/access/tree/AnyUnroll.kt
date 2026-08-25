@@ -555,7 +555,20 @@ class AnyUnrollManager(
     private val maxStatesPerDag = AtomicInteger()
     private val transitionsInstalled = AtomicInteger()
 
-    /** Invariant (I) violations observed by the incoming remap. Must stay zero. */
+    /**
+     * Incoming-remap steps declined because the predecessor's real forward edge resolved elsewhere.
+     *
+     * MEASURED, NOT ZERO: 17 in a conductor run holding 12,677 transitions, 0.13%. An earlier comment
+     * here claimed the case was unreachable if the mirror was exact; it is not. It is the drain
+     * window `mergeStates` opens on itself -- the conflict arm QUEUES a pair rather than writing the
+     * transition, so between the queueing and the drain a predecessor listed in `parents` genuinely
+     * does point somewhere that has not been unified yet.
+     *
+     * Skipping is the arm that cannot DROP a transition, and it is self-healing: the queued merge
+     * eventually runs, and its own incoming remap moves that predecessor onto the winner. Until then
+     * the backward query simply misses the edge, which makes it decline to absorb -- the sound
+     * direction.
+     */
     private val remapConflicts = AtomicInteger()
 
     /** `pathCount` saturates here: past `L` the state refuses everything anyway. */
@@ -736,12 +749,14 @@ class AnyUnrollManager(
                         if (forward == null || forward.find() === x) {
                             putTransition(pr, accessor, x)
                         } else {
-                            // Unreachable if the mirror is exact -- the outgoing loop below drops a
-                            // loser's name from its target's `parents` in the same step that folds
-                            // its children away, so a predecessor whose real edge goes elsewhere is
-                            // not listed here. Skipping rather than overwriting is the arm that
-                            // cannot DROP a transition, and the counter says if the reasoning is
-                            // wrong rather than leaving it to be discovered as a wrong answer.
+                            // The drain window this loop opens on itself: the conflict arm below
+                            // QUEUES a pair rather than writing the transition, so a predecessor
+                            // listed in `y.parents` can genuinely point at a state that has not been
+                            // unified with `x` yet. Skipping rather than overwriting is the arm that
+                            // cannot DROP a transition, and it is self-healing -- the queued merge
+                            // runs later and its own remap moves that predecessor onto the winner.
+                            // Until then the backward query misses the edge and declines to absorb,
+                            // which is the sound direction. Measured at 0.13% of transitions.
                             remapConflicts.incrementAndGet()
                         }
                     }
@@ -1120,14 +1135,15 @@ class AnyUnrollManager(
 
         // An invariant of the scheme, not a defensive check: a violation means the fusion accounting
         // is wrong, which is otherwise a silent, slowly drifting number that would be believed.
-        val consistent = when {
-            s.beyond > s.liveRoots -> " INCONSISTENT(beyond>live)"
-            remapConflicts.get() > 0 -> " REMAP_CONFLICTS(${remapConflicts.get()})"
-            else -> ""
-        }
+        // `beyond > live` IS an alarm -- it is an invariant of the counting scheme, and a violation
+        // means the fusion accounting is wrong, which is otherwise a silent, slowly drifting number
+        // that would be believed. `remapDeferred` is NOT: it is a magnitude, reported so the drain
+        // window stays visible rather than assumed away.
+        val alarm = if (s.beyond > s.liveRoots) " INCONSISTENT(beyond>live)" else ""
 
         return "[any] roots: ${s.liveRoots} live, ${s.beyond} beyond, ${s.states} states " +
-            "(max/dag ${s.maxStatesPerDag}), transitions ${s.transitions}" + consistent
+            "(max/dag ${s.maxStatesPerDag}), transitions ${s.transitions}, " +
+            "remapDeferred ${remapConflicts.get()}" + alarm
     }
 
     /** The same numbers unformatted, so a test can assert the fusion accounting rather than a string. */
