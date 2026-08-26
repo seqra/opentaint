@@ -411,8 +411,8 @@ Three things this settles.
 **The type filter is 28% of CPU, and the largest single frame in the whole recording is
 `JIRClasspathImpl.findClassWithCache` at 7.6% self.** Despite the name it is not a map lookup:
 `JIRClasspathImpl.kt:81` walks `featuresChain.call { it.tryFindClass(...) }`, once per accessor per
-filtered fact. `JIRFactTypeChecker.fieldClassType` calls it on every field step -- 75.8M times in
-`census-D`. **Memoising the accessor -> declaring-class resolution is a pure-performance change worth
+filtered fact. `JIRFactTypeChecker.fieldClassType` calls it on every field step that reaches it -- 68.4M times in
+`census-D` (75.8M field decisions less the 7.3M refused before the lookup). **Memoising the accessor -> declaring-class resolution is a pure-performance change worth
 most of that 7.6%**, and it belongs in M5.
 
 **The hot leaves are proportional to WIDTH, not depth.** The two hottest JDK frames are
@@ -612,7 +612,7 @@ to idle -- should not remain implicit.
 ### M5. Performance-only, no semantic change
 
 - **Memoise `FieldAccessor -> declaring class`.** `JIRFactTypeChecker.fieldClassType` calls
-  `cp.findTypeOrNull(accessor.className)` on every field step -- 75.8M times in `census-D` -- and
+  `cp.findTypeOrNull(accessor.className)` on every field step -- 68.4M times in `census-D` -- and
   `JIRClasspathImpl.findClassWithCache` is a `featuresChain` walk, not a map lookup. It is **the
   single largest frame in the JFR recording at 7.6% self**, inside a 28% type-resolution bucket. A
   `ConcurrentHashMap<FieldAccessor, JIRClassType?>` is the whole change. Do this one first: it is
