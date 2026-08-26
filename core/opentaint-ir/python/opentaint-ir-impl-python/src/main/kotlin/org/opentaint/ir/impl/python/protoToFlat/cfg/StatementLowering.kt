@@ -4,6 +4,8 @@ import org.opentaint.ir.api.python.PIRPhysicalLocation
 import org.opentaint.ir.impl.python.flat.*
 import org.opentaint.ir.impl.python.protoToFlat.DecoratorLowering
 import org.opentaint.ir.impl.python.protoToFlat.FunctionLowering
+import org.opentaint.ir.impl.python.protoToFlat.dottedPath
+import org.opentaint.ir.impl.python.protoToFlat.qualify
 import org.opentaint.ir.impl.python.protoToFlat.toPhysicalLocation
 import org.opentaint.ir.impl.python.proto.*
 import org.opentaint.ir.impl.python.protoToFlat.recordImports
@@ -335,19 +337,18 @@ private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLoc
     activate(endBlock)
 }
 
-private fun resolveExceptTypes(typeExpr: MypyExprProto): List<FlatType> {
+private fun CfgSession.resolveExceptTypes(typeExpr: MypyExprProto): List<FlatType> {
     val result = mutableListOf<FlatType>()
     when {
         typeExpr.hasTupleExpr() -> {
             for (item in typeExpr.tupleExpr.itemsList) result.addAll(resolveExceptTypes(item))
         }
         typeExpr.hasNameExpr() -> {
-            val fullname = typeExpr.nameExpr.fullname.ifBlank { "builtins.${typeExpr.nameExpr.name}" }
-            result.add(FlatClassType(fullname))
+            val ne = typeExpr.nameExpr
+            result.add(FlatClassType(imports.qualify(ne) ?: "builtins.${ne.name}"))
         }
         typeExpr.hasMemberExpr() -> {
-            val fullname = typeExpr.memberExpr.fullname.ifBlank { typeExpr.memberExpr.name }
-            result.add(FlatClassType(fullname))
+            result.add(FlatClassType(imports.dottedPath(typeExpr.memberExpr)))
         }
         else -> result.add(FlatClassType("builtins.Exception"))
     }
@@ -444,7 +445,7 @@ private fun CfgSession.visitNestedFuncDef(
     // Decorators on nested defs reach us only via `MypyDecoratorDefProto.originalDecorators`.
     // For a bare nested `FuncDef` the list is empty (the serializer doesn't populate
     // `MypyFuncDefProto.decorators` for nested-def nodes).
-    val decorators = decoratorExprs.map { DecoratorLowering.fromExpr(it) }
+    val decorators = decoratorExprs.map { DecoratorLowering.fromExpr(it, imports) }
 
     val enclosing = requireNotNull(currentFunctionQualifiedName) {
         "visitNestedFuncDef invoked outside a function scope"

@@ -1,5 +1,7 @@
 package org.opentaint.ir.impl.python.protoToFlat
 
+import mu.KLogging
+
 internal sealed interface ImportBinding {
     data class Module(val name: String) : ImportBinding {
         init {
@@ -11,7 +13,6 @@ internal sealed interface ImportBinding {
             require('.' !in name) { "Attr.name must be a single segment, got '$name'" }
         }
     }
-    data class BareGlobal(val name: String) : ImportBinding
 }
 
 internal class ImportManager(private val parent: ImportManager? = null) {
@@ -31,18 +32,19 @@ internal class ImportManager(private val parent: ImportManager? = null) {
         bindings[bound] = binding
     }
 
-    /**
-     * [module] is the already-resolved absolute module path.
-     * An empty [module] (mypy errored) binds a [ImportBinding.BareGlobal].
-     */
     fun recordImportFrom(module: String, name: String, alias: String) {
         require(name.isNotEmpty()) { "recordImportFrom: `name` must not be empty" }
-        val bound = alias.ifEmpty { name }
-        bindings[bound] = if (module.isEmpty()) {
-            ImportBinding.BareGlobal(name)
-        } else {
-            ImportBinding.Attr(moduleChain(module), name)
+
+        // [module] is the already-resolved absolute module path
+
+        if (module.isEmpty()) {
+            // an over-relative import (`from . import X`) resolves to no module
+            logger.warn { "Skipping import of '$name' with unresolved module" }
+            return
         }
+
+        val symbol = alias.ifEmpty { name }
+        bindings[symbol] = ImportBinding.Attr(moduleChain(module), name)
     }
 
     fun resolve(name: String): ImportBinding? {
@@ -51,6 +53,10 @@ internal class ImportManager(private val parent: ImportManager? = null) {
     }
 
     fun nestedChild(): ImportManager = ImportManager(parent = this)
+
+    companion object {
+        val logger = object : KLogging() {}.logger
+    }
 }
 
 internal fun moduleChain(dottedPath: String): ImportBinding {

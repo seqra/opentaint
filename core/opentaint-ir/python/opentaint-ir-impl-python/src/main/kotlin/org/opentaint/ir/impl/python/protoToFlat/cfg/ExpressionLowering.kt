@@ -96,25 +96,9 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
     return when (expr.nameKind) {
         MypyNameKind.NAME_MODULE ->
             materializeImport(moduleChain(expr.fullname.ifEmpty { name }), location)
-        //
-        // Exception: a module-scope `import missing_pkg` where mypy can't
-        // resolve `missing_pkg` falls through to `add_unknown_imported_symbol`,
-        // which creates a GDEF binding with a scope-prefixed fullname
-        // (`__test__.missing_pkg`) — looks dotted, but the dot is the
-        // enclosing module path, not the import target. We detect this by
-        // consulting the import-scope maps populated from `Import` /
-        // `ImportFrom` statements; for genuinely resolved GDEF bindings the
-        // maps don't contain the bound name, so the override is a no-op.
-        //
-        // Cross-module invariant: a `FlatGlobalRef` names a symbol of the
-        // *current* module. References to symbols of any other user module
-        // are split into `ModuleRef(owner) + LoadAttr(name)` — this happens
-        // both via the `imports.resolve` path (recorded `from m import n`)
-        // and as a fallback for dotted GDEF fullnames whose owner is not
-        // the current module. Builtins (`builtins.*`) are exempt — they're
-        // ambient, not imported, and downstream passes already special-case
-        // the `builtins.` prefix.
         MypyNameKind.NAME_GLOBAL -> {
+            // mypy's fullname for a suppressed import is the enclosing scope plus the bound name
+            // (`<module>.missing_pkg`) — no such symbol. The import scope has the real target.
             imports.resolve(name)?.let { return materializeImport(it, location) }
             val fullname = expr.fullname
             check('.' in fullname) {
@@ -123,11 +107,8 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
             lowerGlobalFullname(fullname, location)
         }
         else -> {
-            // Function-scope suppressed imports surface as LDEF with a
-            // single-segment fullname (or, after a rebind, a bound `Var`
-            // whose canonical target was discarded by mypy). The import-scope
-            // chain recovers the original canonical name; if there's no
-            // entry, this is a real local.
+            // A function-scope suppressed import is LDEF with a single-segment fullname,
+            // indistinguishable from a local. The import scope has the real target.
             imports.resolve(name)?.let { return materializeImport(it, location) }
             FlatLocal(scope.resolveLocal(name))
         }
@@ -147,11 +128,6 @@ private fun CfgSession.materializeImport(
         val parentVal = materializeImport(binding.parent, location)
         val tmp = newTempValue()
         emit(FlatLoadAttr(tmp, parentVal, binding.name, physicalLocation = location))
-        tmp
-    }
-    is ImportBinding.BareGlobal -> {
-        val tmp = newTempValue()
-        emit(FlatReadName(tmp, FlatGlobalNameRef(binding.name), physicalLocation = location))
         tmp
     }
 }

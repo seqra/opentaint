@@ -17,6 +17,7 @@ dependencies {
     implementation("com.google.protobuf:protobuf-java:3.25.3")
 
     implementation(KotlinDependency.Libs.kotlinx_coroutines_core)
+    implementation(KotlinDependency.Libs.kotlin_logging)
 
     // Required for javax.annotation used by generated gRPC stubs
     compileOnly("org.apache.tomcat:annotations-api:6.0.53")

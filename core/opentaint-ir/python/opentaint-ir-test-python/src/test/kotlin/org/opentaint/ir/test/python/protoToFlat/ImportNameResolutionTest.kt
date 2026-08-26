@@ -16,10 +16,12 @@ import org.opentaint.ir.impl.python.flat.FlatBuildString
 import org.opentaint.ir.impl.python.flat.FlatBuildTuple
 import org.opentaint.ir.impl.python.flat.FlatCall
 import org.opentaint.ir.impl.python.flat.FlatClass
+import org.opentaint.ir.impl.python.flat.FlatClassType
 import org.opentaint.ir.impl.python.flat.FlatCompare
 import org.opentaint.ir.impl.python.flat.FlatDeleteAttr
 import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
 import org.opentaint.ir.impl.python.flat.FlatDeleteSubscript
+import org.opentaint.ir.impl.python.flat.FlatExceptHandler
 import org.opentaint.ir.impl.python.flat.FlatFunctionIR
 import org.opentaint.ir.impl.python.flat.FlatFunctionKind
 import org.opentaint.ir.impl.python.flat.FlatGetIter
@@ -787,5 +789,187 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
             iterableLoad.obj is FlatLocal,
             "the `Iterable` LoadAttr's obj must be the FlatLocal temp returned by the previous LoadAttr; got ${iterableLoad.obj}",
         )
+    }
+
+    private fun decoratorNames(fn: FlatFunctionIR): Set<String> =
+        fn.decorators.mapTo(HashSet()) { it.qualifiedName }
+
+    private fun exceptTypes(fn: FlatFunctionIR): Set<String> {
+        val out = HashSet<String>()
+        for (block in fn.cfg.blocks) {
+            for (inst in block.instructions) {
+                if (inst is FlatExceptHandler) {
+                    inst.exceptionTypes.filterIsInstance<FlatClassType>().mapTo(out) { it.qualifiedName }
+                }
+            }
+        }
+        return out
+    }
+
+    @Test
+    fun `decorator from suppressed import keeps canonical qualified name`() {
+        val source = """
+            from missing_pkg import deco
+
+            @deco
+            def f():
+                return 1
+        """
+        val mod = lowerSourceToFlat(source)
+        val names = decoratorNames(fn(mod, ".f"))
+
+        assertTrue(
+            "missing_pkg.deco" in names,
+            "decorator from an unresolved module must qualify to `missing_pkg.deco`; got $names",
+        )
+        assertFalse(
+            "__test__.deco" in names,
+            "the scope-prefixed suppressed-import fullname must not reach the decorator FQN; got $names",
+        )
+    }
+
+    @Test
+    fun `member decorator on suppressed module qualifies through the import map`() {
+        val source = """
+            import missing_pkg
+
+            @missing_pkg.route("/x")
+            def f():
+                return 1
+        """
+        val mod = lowerSourceToFlat(source)
+        val names = decoratorNames(fn(mod, ".f"))
+
+        assertTrue(
+            "missing_pkg.route" in names,
+            "a call-expr decorator on an unresolved module must unwrap to `missing_pkg.route`; got $names",
+        )
+        assertFalse(
+            names.any { it.startsWith("__test__.") },
+            "no decorator FQN may carry the enclosing-module prefix; got $names",
+        )
+    }
+
+    @Test
+    fun `nested def decorator from suppressed import keeps canonical qualified name`() {
+        val source = """
+            from missing_pkg import deco
+
+            def outer():
+                @deco
+                def inner():
+                    return 1
+                return inner
+        """
+        val mod = lowerSourceToFlat(source)
+        val names = decoratorNames(fn(mod, "inner"))
+
+        assertTrue(
+            "missing_pkg.deco" in names,
+            "nested-def decorators go through a different lowering path and must qualify too; got $names",
+        )
+    }
+
+    @Test
+    fun `same-module decorator keeps its own module prefix`() {
+        val source = """
+            def deco(f):
+                return f
+
+            @deco
+            def f():
+                return 1
+        """
+        val mod = lowerSourceToFlat(source)
+        val names = decoratorNames(fn(mod, ".f"))
+
+        assertTrue(
+            "__test__.deco" in names,
+            "a decorator defined in this module keeps its own qualified name; got $names",
+        )
+    }
+
+    @Test
+    fun `except clause from suppressed import keeps canonical class type`() {
+        val source = """
+            from missing_pkg import MyError
+
+            def f():
+                try:
+                    pass
+                except MyError:
+                    pass
+        """
+        val mod = lowerSourceToFlat(source)
+        val types = exceptTypes(fn(mod, ".f"))
+
+        assertTrue(
+            "missing_pkg.MyError" in types,
+            "an except clause naming an unresolved import must qualify to `missing_pkg.MyError`; got $types",
+        )
+        assertFalse(
+            "__test__.MyError" in types,
+            "the scope-prefixed suppressed-import fullname must not reach the handler type; got $types",
+        )
+    }
+
+    @Test
+    fun `except clause on a suppressed module attribute keeps canonical class type`() {
+        val source = """
+            import missing_pkg
+
+            def f():
+                try:
+                    pass
+                except missing_pkg.MyError:
+                    pass
+        """
+        val mod = lowerSourceToFlat(source)
+        val types = exceptTypes(fn(mod, ".f"))
+
+        assertTrue(
+            "missing_pkg.MyError" in types,
+            "a member-expr except clause must keep the module prefix, not collapse to a bare name; got $types",
+        )
+    }
+
+    @Test
+    fun `resolved re-export uses the surface import path, not the defining module`() {
+        val source = """
+            from os.path import join
+
+            @join
+            def f():
+                return 1
+        """
+        val mod = lowerSourceToFlat(source)
+        val names = decoratorNames(fn(mod, ".f"))
+
+        assertTrue(
+            "os.path.join" in names,
+            "the import path must win over mypy's defining-module fullname, which is " +
+                "platform-dependent (`posixpath.join` / `ntpath.join`); got $names",
+        )
+    }
+
+    @Test
+    fun `except clause on builtin and same-module classes is unchanged`() {
+        val source = """
+            class MyError(Exception):
+                pass
+
+            def f():
+                try:
+                    pass
+                except ValueError:
+                    pass
+                except MyError:
+                    pass
+        """
+        val mod = lowerSourceToFlat(source)
+        val types = exceptTypes(fn(mod, ".f"))
+
+        assertTrue("builtins.ValueError" in types, "builtin exception types stay builtin-qualified; got $types")
+        assertTrue("__test__.MyError" in types, "same-module exception classes keep their own prefix; got $types")
     }
 }

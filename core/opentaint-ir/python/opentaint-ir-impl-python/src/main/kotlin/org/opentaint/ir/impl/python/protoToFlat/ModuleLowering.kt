@@ -145,7 +145,7 @@ internal object ModuleLowering {
         MypyDefinitionProto.KindCase.DECORATOR -> FunctionLowering.lowerTopLevel(
             module = context,
             funcDef = def.decorator.func,
-            decorators = DecoratorLowering.fromDecoratorDef(def.decorator),
+            decorators = DecoratorLowering.fromDecoratorDef(def.decorator, context.imports),
             enclosingClassQualifiedName = enclosingClassQualifiedName,
         )
         else -> error("lowerFuncOrDecorator: unexpected kind ${def.kindCase}")
