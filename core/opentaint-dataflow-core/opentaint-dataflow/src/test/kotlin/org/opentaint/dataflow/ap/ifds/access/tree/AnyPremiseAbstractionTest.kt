@@ -56,32 +56,20 @@ class AnyPremiseAbstractionTest {
      * never be mixed across two of them -- hence one manager per test rather than one per limit.
      */
     private var configuredLimit: Int = -1
-
-    /**
-     * R3a ships OFF (`TreeInitialFactAbstraction.ANY_FRONTIER_PREMISE`), because a coarse `[any]`
-     * premise resurrects a cleaned field. This class is the one that pins the SHAPE of that premise,
-     * so it turns the arm on -- through the manager, so no global state moves and the rest of the
-     * suite still sees the production default.
-     */
-    private var configuredFrontier: Boolean = true
     private var managerCreated = false
 
     private val manager: TreeApManager by lazy {
         managerCreated = true
-        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit, anyFrontierPremise = configuredFrontier)
+        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit)
     }
 
     private val base = AccessPathBase.This
 
-    private fun abstraction(
-        anyUnrollLimit: Int = -1,
-        anyFrontierPremise: Boolean = true,
-    ): TreeInitialFactAbstraction {
-        check(!managerCreated || (anyUnrollLimit == configuredLimit && anyFrontierPremise == configuredFrontier)) {
-            "the manager owns the [any] budget and the frontier arm, so both must be chosen before the first fact"
+    private fun abstraction(anyUnrollLimit: Int = -1): TreeInitialFactAbstraction {
+        check(!managerCreated || anyUnrollLimit == configuredLimit) {
+            "the manager owns the [any] budget, so the limit must be chosen before the first fact is built"
         }
         configuredLimit = anyUnrollLimit
-        configuredFrontier = anyFrontierPremise
         return TreeInitialFactAbstraction(manager)
     }
 
@@ -449,25 +437,6 @@ class AnyPremiseAbstractionTest {
     }
 
     /* ---------- 7: never unroll -- the rules that replace it ---------- */
-
-    /**
-     * The production default. R3a is off, so the demand is answered by R3c alone -- precisely, and
-     * without the coarse edge whose entry fact cannot carry a node deletion.
-     */
-    @Test
-    fun `by default the frontier is answered precisely and no any premise is emitted`() {
-        val abstraction = abstraction(anyFrontierPremise = false)
-        abstraction.register(premise().exclude(FIELD_A))
-
-        val produced = abstraction.add(fact(AnyAccessor, FIELD_C))
-
-        produced.assertIdentityPair(premise(FIELD_A))
-        assertFalse(
-            produced.premises().contains(premise(AnyAccessor)),
-            "the coarse edge only adds false positives while R3c is still answering; " +
-                "produced=${produced.premises()}"
-        )
-    }
 
     /**
      * R3b. `[any]` is zero-or-more steps over FIELD and ELEMENT, so a taint mark below one is not

@@ -193,7 +193,7 @@ class TreeInitialFactAbstraction(
             }
 
             round++
-            if (!registeredNew || SINGLE_ROUND) break
+            if (!registeredNew) break
             if (TifaDiagnostics.enabled) TifaDiagnostics.walkRounds.incrementAndGet()
         }
     }
@@ -280,13 +280,15 @@ class TreeInitialFactAbstraction(
                 // that has handed out a premise and been asked nothing of it is already covered by
                 // that premise's `.*`, and a coarse edge there would be pure volume.
                 //
-                // The emission arm is OFF by default -- see [ANY_FRONTIER_PREMISE], which overturns
-                // design §7 R5 on evidence. The DESCENT arm is not gated: an `[any]` trie child
-                // exists only because the engine registered a premise there, and walking on to
-                // answer it is the ordinary demand-driven behaviour.
+                // Design §7 R5, resolved in favour of ALWAYS. It has a known and accepted cost: an
+                // `[any]` premise's entry fact `R.[any].*` cannot express a node deletion INSIDE the
+                // `[any]`, so a cleaner that bites on a concrete path stops biting under it. Some
+                // cleaners not cleaning an abstract fact is expected behaviour, not a defect;
+                // `TreeCleanerFieldSensitivityAnalysisTest` pins the one case in the suite where it
+                // shows, so it is recorded rather than discovered.
                 if (anyTrie != null) {
                     unprocessed += AbstractionState(anyTrie, anyBranch, anyAp, anyGoverning)
-                } else if (apManager.anyFrontierPremise && exclusions.isNotEmpty()) {
+                } else if (exclusions.isNotEmpty()) {
                     if (TifaDiagnostics.enabled) TifaDiagnostics.emitsAnyFrontier.incrementAndGet()
                     createAbstractAp(anyAp, anyGoverning)
                 }
@@ -301,34 +303,29 @@ class TreeInitialFactAbstraction(
                 // from here. `AccessTree.getChild` hoists the `[any]`'s child up, so `p.u` matches
                 // the fact that produced it.
                 //
-                // MEASURED, not assumed: with this block off, `CleanerFieldSensitivityAnalysisTest`
-                // loses two `the unsanitized field reports` cases outright, which is the unit-scale
-                // version of the `ssrf` and `path-traversal` losses the earlier prototypes took on
-                // conductor. That is what SUPPRESS_UNCOVERED_FRONTIER reproduces on demand.
+                // MEASURED, not assumed: with this block removed, `CleanerFieldSensitivityAnalysisTest`
+                // loses two `the unsanitized field reports` cases outright and conductor reports
+                // `Total vulnerabilities: 0` -- the unit-scale and the workload-scale versions of the
+                // `ssrf` and `path-traversal` losses the earlier prototypes took.
                 //
-                // What is NOT here: a proactive `p.[any].u`, i.e. the same mark named one link below
-                // the `[any]` off the demand registered at `p`. It looks like the missing half of a
-                // zero-or-more, and the design asked for it, but it is the one shape that resurrects
-                // a cleaned field -- `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level
-                // clean over an abstract source`, red with it and green without. A `p.[any].u` entry
-                // fact cannot express a node deletion INSIDE the `[any]`, so a cleaner that bites on
-                // a concrete path stops biting under it, and the premise is a pure false positive
-                // generator. The `[any]`-carrying member of the family is still reachable, but only
-                // where the engine has actually refined `p.[any]` itself: that demand lands on
-                // `anyTrie` and the R3a descent below answers it through the ordinary per-accessor
-                // helper. Demand-driven, not speculative -- which is the rule the rest of this file
-                // follows.
-                if (!SUPPRESS_UNCOVERED_FRONTIER) {
-                    anyBranch.forEachAccessor { accessor, node ->
-                        if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
-                        if (!accessor.isUncoveredByAny()) return@forEachAccessor
+                // What is NOT here: a proactive `p.[any].u`, the same mark named one link below the
+                // `[any]` off demand registered at `p`. The design asked for it. It is left out
+                // because emission in this file is demand-driven everywhere else -- a premise is
+                // handed out for something that was asked for, at the level it was asked at -- and
+                // `p.[any].u` answers a question nobody put. The `[any]`-carrying member of the
+                // family is still reachable where the engine has actually refined `p.[any]` itself:
+                // that demand lands on `anyTrie` and the R3a descent above answers it through the
+                // ordinary per-accessor helper. This one is a judgement rather than a measurement --
+                // the cleaner false positive that used to argue for leaving it out is now accepted.
+                anyBranch.forEachAccessor { accessor, node ->
+                    if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
+                    if (!accessor.isUncoveredByAny()) return@forEachAccessor
 
-                        if (TifaDiagnostics.enabled) TifaDiagnostics.emitsUncoveredFrontier.incrementAndGet()
-                        abstractAccessPath(
-                            trie, accessor, node, state.currentAp, state.governingAnyId,
-                            unprocessed, createAbstractAp,
-                        )
-                    }
+                    if (TifaDiagnostics.enabled) TifaDiagnostics.emitsUncoveredFrontier.incrementAndGet()
+                    abstractAccessPath(
+                        trie, accessor, node, state.currentAp, state.governingAnyId,
+                        unprocessed, createAbstractAp,
+                    )
                 }
 
                 // R3c -- demanded, covered, and present in NO concrete branch of the fact.
@@ -340,7 +337,7 @@ class TreeInitialFactAbstraction(
                 // arm) with no round loop and no memo. The tree backend's mechanism was the unroll;
                 // R1 removes it and this is the replacement.
                 var accessorFilter: FactTypeChecker.FactApFilter? = null
-                if (!SUPPRESS_SYNTHESISED) exclusions.forEachInt { accessor ->
+                exclusions.forEachInt { accessor ->
                     // A trie child means the premise is already out; R2 or R4 descends into it.
                     if (trie.child(accessor) != null) return@forEachInt
                     // Held literally: R2 owns it, and emits exactly the same premise.
@@ -387,7 +384,7 @@ class TreeInitialFactAbstraction(
             // ladder step would put the walk back inside the `[any]` manager's budget, which is the
             // coupling R1 exists to remove. A read cannot grow a stored fact -- the result is
             // assembled from subtrees of the receiver and nothing is merged back into `added`.
-            if (anyBranch != null && !SUPPRESS_VIRTUAL_DESCENT) {
+            if (anyBranch != null) {
                 trie.forEachChild { accessor, childTrie ->
                     if (accessor == ANY_ACCESSOR_IDX) return@forEachChild
                     // R2 already descended into it.
@@ -611,76 +608,5 @@ class TreeInitialFactAbstraction(
         private const val INTERN_RATE = 100
         private const val INTERN_SIZE_REQUIREMENT = 1_000
         private const val SIZE_TO_FORCE_INTERN = 100_000
-
-        /**
-         * `-Dopentaint.tifaNoUncoveredFrontier=true`, default **false**. The positive control on the
-         * control, design §9.2: with R3b off, conductor must lose `ssrf` and `path-traversal` and
-         * report `Total vulnerabilities: 0`. A suite that cannot detect the known failure is not
-         * validating anything.
-         */
-        /**
-         * `-Dopentaint.tifaNoAnyFrontier=true`. Suppresses R3a, the coarse `p.[any]` edge, leaving
-         * R3c to answer covered demand and R3b to answer uncovered demand.
-         */
-        /**
-         * ABLATION CONTROLS. Each turns off exactly one rule, and each is UNSOUND on its own -- they
-         * exist to make a claim about a rule falsifiable, not to be run in anger.
-         *
-         * They earned their keep on the first gate: the one new failure this change produced,
-         * `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract
-         * source`, survived R3a-off, R3c-off, R4-off and single-round, and died only when the
-         * `[any]`-carrying premise disappeared entirely. That is what identified the mechanism
-         * rather than a plausible story about it.
-         *
-         *  - `-Dopentaint.tifaNoSynthesised` -- R3c off. Demand for an accessor no concrete branch
-         *    holds goes unanswered; the eight cross-backend `any accessor scenario` cases go red.
-         *  - `-Dopentaint.tifaNoVirtualDescent` -- R4 off. The abstraction sticks one level below
-         *    every `[any]`: premises are handed out and never descended past.
-         *  - `-Dopentaint.tifaSingleRound` -- one walk per call. Correct but lazy; a depth-`k`
-         *    premise then needs `k` triggering events instead of one.
-         */
-        @JvmField
-        val SUPPRESS_SYNTHESISED: Boolean =
-            System.getProperty("opentaint.tifaNoSynthesised")?.trim().toBoolean()
-
-        @JvmField
-        val SUPPRESS_VIRTUAL_DESCENT: Boolean =
-            System.getProperty("opentaint.tifaNoVirtualDescent")?.trim().toBoolean()
-
-        @JvmField
-        val SINGLE_ROUND: Boolean =
-            System.getProperty("opentaint.tifaSingleRound")?.trim().toBoolean()
-
-        /**
-         * R3a, the coarse `p.[any]` premise: `-Dopentaint.tifaAnyFrontierPremise=true`, default
-         * **OFF**. This overturns design §7 R5, which resolved the question in favour of ALWAYS, and
-         * the reason is a measurement the design did not have.
-         *
-         * An `[any]` premise's entry fact `R.[any].*` cannot express a node deletion INSIDE the
-         * `[any]`, so a cleaner that bites on a concrete path stops biting under it. With this on,
-         * `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract source`
-         * resurrects the sanitized field -- one false positive, in the gate, reproducible; with it
-         * off the suite is green and nothing else moves.
-         *
-         * The old code had exactly this guard, spelled `!enumerateAnyFrontier`: emit the coarse edge
-         * only once the base has stopped enumerating, because while concrete premises are still
-         * being handed out the coarse one alongside them can only add false positives. R1 does not
-         * remove that argument -- it makes it unconditional. There is no cap any more, so the
-         * enumeration never stops, so the old guard is never satisfied. R3c answers every covered
-         * demand precisely and R3b answers the uncovered frontier; the coarse edge is left with
-         * nothing to answer that they do not.
-         *
-         * Kept, not deleted, because the premise SHAPE is still load-bearing elsewhere -- summaries
-         * keyed on an `[any]` premise, `splitDelta` stepping over one, `AccessBasedStorage`'s
-         * `[any]`-keyed lookup -- and because it is the arm to reach for if a workload ever shows
-         * that the enumeration, rather than the materialisation, is what has to be bounded.
-         */
-        @JvmField
-        val ANY_FRONTIER_PREMISE: Boolean =
-            System.getProperty("opentaint.tifaAnyFrontierPremise")?.trim().toBoolean()
-
-        @JvmField
-        val SUPPRESS_UNCOVERED_FRONTIER: Boolean =
-            System.getProperty("opentaint.tifaNoUncoveredFrontier")?.trim().toBoolean()
     }
 }

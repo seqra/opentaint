@@ -43,14 +43,6 @@ class TreeApManager(
     anyUnrollLimit: Int = AnyUnrollManager.DEFAULT_ANY_UNROLL_LIMIT,
     /** What kind the survivor of a union carries; a constructor parameter for the same reason. */
     anyUnrollKindMerge: AnyUnrollKindMerge = AnyUnrollManager.DEFAULT_KIND_MERGE,
-    /**
-     * R3a, the coarse `p.[any]` premise. A constructor parameter for the same reason again -- the
-     * two tests that pin the shape have to turn it on without turning it on for the whole JVM.
-     *
-     * See [TreeInitialFactAbstraction.ANY_FRONTIER_PREMISE] for why it defaults OFF.
-     */
-    @JvmField
-    val anyFrontierPremise: Boolean = TreeInitialFactAbstraction.ANY_FRONTIER_PREMISE,
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
 

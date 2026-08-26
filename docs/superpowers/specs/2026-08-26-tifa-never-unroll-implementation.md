@@ -8,11 +8,10 @@ Frontier analyzer throughout: `anyUnrollLimit=100`, `anyUnrollKindPolicy=rescore
 `anyUnrollRescoreStrategy=bfs`, conductor, one Spring handler (`WorkflowResource#rerun`), one taint
 rule, 8 GB, 300 s IFDS budget. Harness `scoped-harness/scoped-run.sh`, jars
 `tifabase-75d028a7aa0b4a67` (HEAD before the change, i.e. the memo build) and
-`tifanew-597677812a956476`. `tifafinal-e10d579baf6f1dc1` is the same code with two comment blocks
-and one dead private method different, rebuilt from the committed tree and re-gated; §4 carries its
-confirmation run.
+`tifanew-597677812a956476`. `tifaclean-638d876b958908aa` is the shipped configuration — same rules,
+no flags, R3a unconditional — and §4 carries its confirmation runs.
 
-**Gate: 3,485 tests, 3,452 passed, 2 failures**, both the pre-existing
+**Gate: 3,484 tests, 3,451 passed, 2 failures**, both the pre-existing
 `JIRFactTypeCheckerUnrollFilterTest` ones (`gate-review.log` and `gate-inv.log` from earlier sessions
 carry the same two).
 
@@ -28,7 +27,7 @@ materialisation anywhere:
 | R0 | `E == null` | emit `p` |
 | R1 | — | nothing is ever written into `added` from an `[any]` |
 | R2 | `a` held literally | descend if `T.child(a)`, else emit `p.a` if `a ∈ E` |
-| R3a | `N` owns `[any]`, `E ≠ ∅`, no `[any]` trie child | emit `p.[any]` — **off by default**, §3 |
+| R3a | `N` owns `[any]`, `E ≠ ∅`, no `[any]` trie child | emit `p.[any]` |
 | R3b | `u ∈ U` in the `[any]` subtree | run the per-accessor helper at **this** prefix |
 | R3c | `a ∈ E`, covered, absent, type-accepted | emit `p.a` |
 | R4 | trie child `a`, not held literally, covered | descend into `N.getChild(a)` |
@@ -45,14 +44,12 @@ a trie node the walk itself created can never satisfy R3a, R3c or R2's emit arm 
 registered from outside carry demand, and the rounds are bounded by the depth of that externally
 registered trie, not by the shape of the fact.
 
-## 2. What the design got wrong, and how it was found
+## 2. The `[any]` premise, and the cleaner it defeats
 
-Two of the design's rules had to be cut, and both cuts came from the same failure — the only new one
-the gate produced.
-
+The gate produced exactly one new failure:
 `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract source — the
-sanitized field is silent` went red: **one false positive**, a cleaned field resurrected. The test's
-own comment says what it depends on:
+sanitized field is silent`. One false positive, a cleaned field resurrected. The test's own comment
+says what it used to depend on:
 
 > The source is any-field, so the cleaner's path does not exist as a fact until the demand-driven
 > refinement produces it. Once it does, the clean is a node deletion again and field sensitivity
@@ -62,42 +59,39 @@ own comment says what it depends on:
 
 The mechanism is not the missing materialisation, though. It is the premise **shape**: an entry fact
 `R.[any].*` cannot express a node deletion inside the `[any]`, so a cleaner that bites on a concrete
-path stops biting under it, and any `[any]`-carrying premise is a false-positive generator while
-concrete premises are still being handed out.
+path stops biting under it. **This is expected — a cleaner does not clean an abstract fact — and it
+is accepted.** R3a ships unconditional, which is design §7 R5 as written.
 
 That was **identified, not guessed**, and the ablation controls are how. The failure survived R3a
-off, R3c off, R4 off, and single-round; it died only when the `[any]`-carrying premise disappeared
+off, R3c off, R4 off and single-round; it died only when the `[any]`-carrying premise disappeared
 from both of its producers:
 
 | arm | `sanitized field is silent` | `unsanitized field reports` |
 |---|---|---|
-| R3a on, speculative `p.[any].u` on | **FAIL** | pass |
-| R3a **off**, speculative `p.[any].u` on | **FAIL** | pass |
-| R3a on, speculative `p.[any].u` removed | **FAIL** | pass |
-| R3a off, R3b off entirely | pass | **FAIL ×2** |
-| **R3a off, R3b at this prefix only** | **pass** | **pass** |
+| R3a on, speculative `p.[any].u` on | FP | pass |
+| R3a off, speculative `p.[any].u` on | FP | pass |
+| **R3a on, speculative `p.[any].u` removed** | **FP — shipped, and pinned** | **pass** |
+| R3a off, R3b off entirely | no FP | **loses both** |
 
-The last row is what shipped. Two consequences:
+Row 4 is design §9.2's positive control at unit scale, and it is the row that matters for soundness:
+with R3b off the suite loses two `the unsanitized field reports` cases outright. Losing a finding is
+not acceptable; a coarse premise that stops a cleaner is. The controls did their job and were then
+deleted along with the rest of the flags, once the questions they existed to answer were settled.
 
-**R3a ships off**, overturning design §7 R5's "always". The old code had exactly this guard, spelled
-`!enumerateAnyFrontier` — emit the coarse edge only once the base has stopped enumerating. R1 does
-not remove that argument, it makes it *unconditional*: there is no cap any more, so the enumeration
-never stops, so the guard is never satisfied. R3c answers every covered demand precisely and R3b
-answers the uncovered frontier; the coarse edge has nothing left to answer that they do not. It is
-kept behind `TreeApManager.anyFrontierPremise` because the premise shape is still load-bearing
-elsewhere (summaries keyed on an `[any]` premise, `splitDelta` stepping over one,
-`AccessBasedStorage`'s `[any]`-keyed lookup) and because it is the arm to reach for if a workload
-ever shows that the *enumeration*, rather than the materialisation, is what has to be bounded.
+**The failing case is inverted, not suppressed.** `TreeCleanerFieldSensitivityAnalysisTest` now
+overrides it with `assertReachable` and a comment saying why. The automata backend — which has no
+`[any]` premises — still runs the base class's `assertNotReachable`, so the divergence reads as a
+difference between the two backends rather than as a hole in the suite, and the case still fails
+loudly if the coarse premise ever stops being emitted.
 
 **R3b emits one edge, not two.** The design asked for both `p.u` and `p.[any].u`. The
-`[any]`-carrying half is speculative — it names a mark one link below the `[any]` off demand
-registered at `p` — and it is the same false-positive generator. It is still reachable, but only
-where the engine has actually refined `p.[any]` itself, which lands demand on the `[any]` trie child
-and is answered by the ordinary descent. Demand-driven, not speculative.
-
-Row 4 of that table is also design §9.2's positive control, at unit scale: with R3b off, the suite
-loses two `the unsanitized field reports` cases outright. A suite that cannot detect the known
-failure is not validating anything, and this one can.
+`[any]`-carrying half is left out on a **design judgement, not a measurement**: emission in TIFA is
+demand-driven everywhere else — a premise is handed out for something that was asked for, at the
+level it was asked at — and `p.[any].u` names a mark one link below the `[any]` off demand registered
+at `p`, which nobody put. It is still reachable where the engine actually refines `p.[any]` itself,
+through the ordinary descent. The cleaner false positive that used to argue for leaving it out no
+longer argues anything, since that cost is now accepted; if the speculative edge is wanted, it is a
+few lines and its own measurement.
 
 ## 3. The result the design did not predict
 
@@ -125,19 +119,25 @@ Two replicates per arm. Volume counters span up to 5x across replicates of the s
 workload (the interner race), so everything below is a range, and the structural ratios are what the
 argument rests on.
 
-| arm | rc | stopped by | fwd scan | events | events/s | `Total vulns` | SARIF |
-|---|---|---|---|---|---|---|---|
-| base-1 | 253 | low memory | 134.1 s | 906,715 | 6,761 | **2** | 2 |
-| base-2 | 253 | low memory | 144.6 s | 900,096 | 6,225 | **2** | 2 |
-| **new-1** | 253 | low memory | 190.2 s | **2,284,701** | **12,012** | **2** | 2 |
-| **new-2** | 254 | the clock | 233.1 s | **2,334,753** | **10,016** | **2** | 2 |
-| new + R3a on | 254 | the clock | 233.2 s | 2,276,357 | 9,761 | **2** | 2 |
-| new-3 | 253 | low memory | 196.8 s | **2,343,977** | **11,910** | **2** | 2 |
-| new + R3a on | 254 | the clock | 233.2 s | 2,276,357 | 9,761 | **2** | 2 |
-| new, R3b off | 254 | the clock | 233.1 s | 2,313,405 | 9,925 | **0** | 0 |
-| base @ 16 GB | 254 | the clock | 233.9 s | 980,043 | 4,190 | **2** | 2 |
-| **new @ 16 GB** | 254 | the clock | 233.7 s | **2,775,222** | **11,875** | **2** | 2 |
-| final jar, committed tree | 254 | the clock | 233.2 s | 2,337,936 | 10,025 | **2** | 2 |
+| arm | R3a | rc | stopped by | fwd scan | events | events/s | `Total vulns` | SARIF |
+|---|---|---|---|---|---|---|---|---|
+| base-1 | — | 253 | low memory | 134.1 s | 906,715 | 6,761 | **2** | 2 |
+| base-2 | — | 253 | low memory | 144.6 s | 900,096 | 6,225 | **2** | 2 |
+| **clean-1 (shipped)** | on | 254 | the clock | 233.2 s | **2,333,403** | **10,006** | **2** | 2 |
+| **clean-2 (shipped)** | on | 253 | low memory | 189.5 s | **2,311,940** | **12,200** | **2** | 2 |
+| r3a-1 | on | 254 | the clock | 233.2 s | 2,276,357 | 9,761 | **2** | 2 |
+| new-1 | off | 253 | low memory | 190.2 s | 2,284,701 | 12,012 | **2** | 2 |
+| new-2 | off | 254 | the clock | 233.1 s | 2,334,753 | 10,016 | **2** | 2 |
+| new-3 | off | 253 | low memory | 196.8 s | 2,343,977 | 11,910 | **2** | 2 |
+| R3b off (control) | off | 254 | the clock | 233.1 s | 2,313,405 | 9,925 | **0** | 0 |
+| base @ 16 GB | — | 254 | the clock | 233.9 s | 980,043 | 4,190 | **2** | 2 |
+| **new @ 16 GB** | off | 254 | the clock | 233.7 s | **2,775,222** | **11,875** | **2** | 2 |
+
+The `R3a` column matters for reading the table but not for the conclusion: turning the coarse `[any]`
+premise on costs 2-3% of throughput and is inside replicate noise on every volume counter. The three
+R3a-on arms (2.28M-2.33M events, 9,761-12,200 events/s) and the four R3a-off arms (2.28M-2.34M,
+10,016-12,012) are the same measurement. The 16 GB pair was taken before R3a was made unconditional
+and was not re-run, since the 8 GB pairs show the arm makes no difference to volume.
 
 - **Events to the stop: 2.5-2.6x at 8 GB, 2.8x at 16 GB.** 900k-907k -> 2.28M-2.34M; 980k -> 2.78M.
 - **Throughput: 1.5-1.9x at 8 GB, 2.8x at 16 GB.** 6,225-6,761 -> 10,016-12,012 events/s; 4,190 ->
@@ -156,7 +156,7 @@ argument rests on.
   more events. So the change does not only move the wall further out; it changes whether buying more
   memory is worth anything.
 
-**The positive control fires.** `-Dopentaint.tifaNoUncoveredFrontier=true` -- R3b off -- reports
+**The positive control fired, on the build that still had the flag.** `-Dopentaint.tifaNoUncoveredFrontier=true` -- R3b off -- reports
 `Total vulnerabilities: 0`, losing both findings while running at the same speed. Design §9.2 asked
 for exactly this: a suite that cannot detect the known failure is not validating anything, and this
 one detects it at both scales (two red `unsanitized field reports` cases in the unit gate, both
@@ -250,10 +250,11 @@ feed the accumulator that made the merge expensive.
 ## 6. What this leaves
 
 1. **The premise enumeration is untouched, and it is now the only thing left.** §3. `limitFieldAccess`
-   still bounds a concrete chain at `N!` rather than at infinity, and with R3a off almost no premise
-   carries an `[any]`, so the design's §8.1 worry -- that putting `[any]` into a majority of premises
-   would remove the bound from a majority of chains -- did not materialise. It comes back the moment
-   `anyFrontierPremise` is turned on, and there is still no replacement bound.
+   still bounds a concrete chain at `N!` rather than at infinity, but it returns unchanged the moment
+   it meets an `[any]` -- so with R3a shipping on, design §8.1's worry is live: the chains that carry
+   an `[any]` have no length bound at all. On conductor that is 3,008 premises out of ~112k and the
+   longest chain still fell from 10 links to 7, so it is not biting here. **There is still no
+   replacement bound**, and this is the most serious open item.
 2. **Memory is still the binding constraint, but no longer reliably.** One new replicate dies of the
    low-memory stop at 190 s and the other reaches the full budget. Whether the remaining pressure is
    the premise population or the fact store is the next thing to separate; the 16 GB pair in §4 is
@@ -264,9 +265,11 @@ feed the accumulator that made the merge expensive.
    whether the absorbing prepend may fire. The whole L-sweep of the previous investigations is a
    sweep over that, not over the abstraction.
 4. **The two consumers keyed on premise shape, design §8.3, were not touched** --
-   `MethodSideEffectHandlerWithAnyAccessorRequestHandling.kt:55` and `taint/Source.kt:44-58`. With
-   R3a off, TIFA produces no `[any]` premises at all, so neither is reachable from this file any
-   more; both become live again if `anyFrontierPremise` is turned on.
+   `MethodSideEffectHandlerWithAnyAccessorRequestHandling.kt:55`, which answers an unfold request only
+   when EVERY accessor is an `AnyAccessor` and so stops answering a mixed `arg0.f.[any]`; and
+   `taint/Source.kt:44-58`, whose fallback comment says it *"must stay until step 5 puts a PRODUCER
+   of `[any]` premises in place"*. R3a is that producer and it now ships on, so both are live and
+   neither was reviewed here.
 5. **The design's §9.1 order was not followed.** R3b's test was written after the change, not before.
    The failure it would have caught was caught anyway, by the gate rather than by the unit test.
 
@@ -274,22 +277,21 @@ feed the accumulator that made the merge expensive.
 
 ```bash
 cd /drive-testcomp/opentaint-go-rules/opentaint-w3-benchmark-results/scoped-harness
-./buildjar.sh tifanew                       # -> jars/tifanew-<sha16>.jar
+./buildjar.sh tifaclean                     # -> jars/tifaclean-<sha16>.jar
 FLAGS="-Dopentaint.anyUnrollLimit=100 -Dopentaint.anyUnrollKindPolicy=rescore \
        -Dopentaint.anyUnrollRescoreStrategy=bfs -Dopentaint.anyManagerDiag=true \
        -Dopentaint.apOpDiag=true -Dopentaint.tifaDiag=true"
 
-./scoped-run.sh new-1 jars/tifanew-<sha>.jar $FLAGS                              # the arm
-./scoped-run.sh ctl-1 jars/tifanew-<sha>.jar $FLAGS \
-    -Dopentaint.tifaNoUncoveredFrontier=true                                     # must report 0
+./scoped-run.sh clean-1 jars/tifaclean-<sha>.jar $FLAGS                          # the arm
 RULES=$PWD/rulesets/single-rule-nostar ./scoped-run.sh id-1 jars/... $FLAGS      # byte identity
-./gate.sh tifa                                                                   # 3,485 tests
+./gate.sh tifa                                                                   # 3,484 tests
 ```
 
 Read `Total vulnerabilities` in `analyzer.log` before the SARIF count: every non-converging arm can
 lose traces to the clock, and a SARIF count read as a soundness signal has produced a false alarm on
 this workload before.
 
-Ablation controls, all default off and all unsound alone: `-Dopentaint.tifaAnyFrontierPremise`
-(R3a on), `-Dopentaint.tifaNoUncoveredFrontier` (R3b off), `-Dopentaint.tifaNoSynthesised` (R3c off),
-`-Dopentaint.tifaNoVirtualDescent` (R4 off), `-Dopentaint.tifaSingleRound` (one walk per call).
+TIFA has no configuration of its own any more. The five ablation controls that identified §2's
+mechanism (`tifaAnyFrontierPremise`, `tifaNoUncoveredFrontier`, `tifaNoSynthesised`,
+`tifaNoVirtualDescent`, `tifaSingleRound`) were deleted once the questions they existed to answer
+were settled; `git show` on this branch has them if a rule ever needs re-falsifying.

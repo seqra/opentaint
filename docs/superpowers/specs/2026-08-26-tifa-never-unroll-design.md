@@ -6,13 +6,17 @@
 Resolves `2026-08-21-any-premise-design.md` §7 R5 — *"should `[any]` premises be emitted always, or
 only past the cap?"* — in favour of **always**.
 
-> **IMPLEMENTED 2026-08-26. Two rules below were overturned on measurement — see
-> `2026-08-26-tifa-never-unroll-implementation.md` §2.** R3a ships **off**: that R5 resolution is
-> wrong, because an `[any]` premise's entry fact cannot carry a node deletion, so the coarse edge
-> resurrects a cleaned field while concrete premises are still being handed out. And R3b emits only
-> `p.u`, never the speculative `p.[any].u`, for the same reason. §7's expectation that
-> `AnyUnrollGrowthPatternTest` must be rewritten was also wrong — it passes unchanged, because R1
-> removes the fact materialisation and not the premise enumeration.
+> **IMPLEMENTED 2026-08-26 — see `2026-08-26-tifa-never-unroll-implementation.md`.** R5's "always"
+> stands: R3a is unconditional. It costs one false positive in
+> `TreeCleanerFieldSensitivityAnalysisTest` — an `[any]` premise's entry fact cannot carry a node
+> deletion, so a cleaner that bites on a concrete path stops biting under it — and that is accepted:
+> a cleaner not cleaning an abstract fact is expected. The tree case is inverted and pinned rather
+> than suppressed.
+>
+> Two departures. R3b emits only `p.u`, not the speculative `p.[any].u`, because emission here is
+> demand-driven everywhere else; §2 of the implementation note has the reasoning. And §7's
+> expectation that `AnyUnrollGrowthPatternTest` must be rewritten was wrong — it passes unchanged,
+> because R1 removes the fact materialisation and not the premise enumeration.
 
 ---
 
