@@ -31,14 +31,12 @@ class PIRReconstructor {
                 }
             }
             sb.appendLine("    def ${method.name}($paramList):")
-            // Each method has a tiny CFG built by the rewriter — emit its instructions
-            // directly with 8-space indent. The IR injects `return self` into `__init__`
-            // to model constructor semantics for the analysis; that's a TypeError in a real
-            // constructor, so drop returns when emitting `__init__`.
+
             val isCtor = method.name == "__init__"
             var emittedBody = false
             for (block in method.cfg.blocks) {
                 for (inst in block.instructions) {
+                    // drop synthetic `return self`
                     if (isCtor && inst is PIRReturn) continue
                     for (line in reconstructInstruction(inst)) {
                         sb.appendLine("        $line")

@@ -14,38 +14,8 @@ import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
 
 internal const val ANY_PYTHON_FUNCTION = ".*"
 
-// And-of-nothing is true and Or-of-nothing is false — honored by the runtime's
-// RuleConditionRewriter (empty arg lists rewrite to the default true/false expr).
-internal val PYTHON_TRUE: SerializedPythonCondition = SerializedPythonCondition.And(emptyList())
-internal val PYTHON_FALSE: SerializedPythonCondition = SerializedPythonCondition.Or(emptyList())
-
-internal fun pythonAnd(args: List<SerializedPythonCondition>): SerializedPythonCondition {
-    val flat = mutableListOf<SerializedPythonCondition>()
-    for (a in args) {
-        when {
-            a == PYTHON_FALSE -> return PYTHON_FALSE
-            a == PYTHON_TRUE -> {}
-            a is SerializedPythonCondition.And -> flat += a.allOf
-            else -> flat += a
-        }
-    }
-    return if (flat.size == 1) flat.single() else SerializedPythonCondition.And(flat)
-}
-
-internal fun pythonOr(args: List<SerializedPythonCondition>): SerializedPythonCondition {
-    val flat = mutableListOf<SerializedPythonCondition>()
-    for (a in args) {
-        when {
-            a == PYTHON_TRUE -> return PYTHON_TRUE
-            a == PYTHON_FALSE -> {}
-            a is SerializedPythonCondition.Or -> flat += a.anyOf
-            else -> flat += a
-        }
-    }
-    return if (flat.size == 1) flat.single() else SerializedPythonCondition.Or(flat)
-}
-
-internal fun SerializedPythonCondition.nullIfTrue(): SerializedPythonCondition? = takeUnless { it == PYTHON_TRUE }
+internal fun SerializedPythonCondition.nullIfTrue(): SerializedPythonCondition? =
+    takeUnless { it == SerializedPythonCondition.True }
 
 internal fun PositionBaseWithModifiers.toPythonPosition(): PythonPosition = when (this) {
     is PositionBaseWithModifiers.BaseOnly -> PythonPosition.BaseOnly(base.toPythonPositionBase())

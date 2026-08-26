@@ -197,7 +197,7 @@ abstract class AnalysisTest {
         return analyzer.use { it.analyzeWithIfds(listOf(entryPoint)).first }
     }
 
-    // region Test-only rule builders: declare per-fixture source / sink rules
+    // region Test-only rule builders
     protected fun source(function: String, mark: String, pos: Position): TestSource =
         TestSource.Method(function, mark, pos)
 

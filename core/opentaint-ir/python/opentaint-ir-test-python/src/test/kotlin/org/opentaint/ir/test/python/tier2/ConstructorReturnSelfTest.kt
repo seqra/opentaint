@@ -5,13 +5,6 @@ import org.junit.jupiter.api.Tag
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.test.python.PIRTestBase
 
-/**
- * Every class `__init__` must exit with `return self` rather than a value-less
- * `return`. Python's `__init__` syntactically returns `None`, but `C(...)`
- * yields the constructed instance; the builder lowers each bare/implicit return
- * in a constructor to `return <first-param>` so the "self is the result"
- * mapping is explicit in the IR (see `CfgSession.constructorSelf`).
- */
 @Tag("tier2")
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ConstructorReturnSelfTest : PIRTestBase() {

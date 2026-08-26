@@ -195,7 +195,7 @@ private fun PythonEvaluatedEdgeCondition.addPythonStateCheck(
 
     if (stateChecks.isEmpty()) return this
 
-    val combined = pythonAnd(listOf(pythonOr(stateChecks), ruleCondition.condition))
+    val combined = SerializedPythonCondition.and(listOf(SerializedPythonCondition.or(stateChecks), ruleCondition.condition))
     return copy(ruleCondition = ruleCondition.copy(condition = combined))
 }
 
@@ -301,8 +301,8 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonEdgePredicateConstraint(
     } else {
         val negatedConditions = mutableListOf<SerializedPythonCondition>()
         evaluatePythonMethodConstraints(edgeState, constraint, resultModifiers, negatedConditions, trace)
-        val body = pythonAnd(negatedConditions)
-        if (body == PYTHON_TRUE) {
+        val body = SerializedPythonCondition.and(negatedConditions)
+        if (body == SerializedPythonCondition.True) {
             trace.error(FailedToCreateTaintRules("Negated predicate has no Python condition representation"))
         }
         conditions += SerializedPythonCondition.Not(body)
@@ -322,7 +322,7 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
             val cond = evaluatePythonParamCondition(
                 edgeState, constraint.position.toPositionWithModifiers(resultModifiers), constraint, trace,
             )
-            if (cond != PYTHON_TRUE) conditions += cond
+            if (cond != SerializedPythonCondition.True) conditions += cond
         }
         is NumberOfArgsConstraint -> conditions += SerializedPythonCondition.NumberOfArgs(constraint.num) // TODO kw-args are not supported
         is MethodModifierConstraint -> conditions += pythonDecoratorCondition(constraint.modifier, trace)
@@ -332,12 +332,6 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonMethodConstraints(
     }
 }
 
-/**
- * An unresolvable decorator name (`@$DEC`) yields a never-matching rule rather than an ungated one:
- * dropping the gate would make `@dec def f($P)` taint the parameter of *every* function. Decorator
- * arguments (`@app.route("/p")`) have no condition form, so the name alone matches and the rule
- * widens to every use of the decorator instead of being dropped.
- */
 private fun pythonDecoratorCondition(
     modifier: SignatureModifier,
     trace: SemgrepRuleLoadStepTrace,
@@ -345,8 +339,9 @@ private fun pythonDecoratorCondition(
     val name = ((modifier.type as? TypeConstraint.Concrete)?.type as? PythonConcreteType.Named)?.name
 
     if (name == null) {
+        // never-matching rule
         trace.error(FailedToCreateTaintRules("Decorator name is not concrete and cannot be scoped"))
-        return PYTHON_FALSE
+        return SerializedPythonCondition.mkFalse()
     }
 
     if (modifier.value !is SignatureModifierValue.NoValue && modifier.value !is SignatureModifierValue.AnyValue) {
@@ -370,8 +365,7 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
     is SpecificStringValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Str, condition.value)
     is SpecificIntValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Int, condition.value.toString())
     is SpecificBoolValue -> mkConstantCmp(position, SerializedPythonCondition.ConstantType.Bool, condition.value.toString())
-    // Any string literal — the argument must be a string constant (mirrors Go's `ConstantMatches(".*")`).
-    // `(?s)` so the match also covers multi-line string literals (`.` skips `\n` otherwise).
+
     ParamCondition.AnyStringLiteral ->
         SerializedPythonCondition.ConstantMatches(position.toPythonPosition(), "(?s).*")
 
@@ -379,7 +373,7 @@ private fun PythonTaintRuleGenerationCtx.evaluatePythonParamCondition(
     is ParamCondition.StringValueMetaVar,
     is ParamCondition.ParamModifier,
     is ParamCondition.SpecificStaticFieldValue,
-    SpecificNullValue -> PYTHON_TRUE
+    SpecificNullValue -> SerializedPythonCondition.True
 }
 
 private fun mkConstantCmp(
@@ -424,6 +418,7 @@ private fun Position.toAbstractPosition(): PositionBase = when (this) {
 }
 
 private fun SerializedPythonCondition.rewriteAsEndCondition(): SerializedPythonCondition = when (this) {
+    is SerializedPythonCondition.True -> this
     is SerializedPythonCondition.And -> SerializedPythonCondition.And(allOf.map { it.rewriteAsEndCondition() })
     is SerializedPythonCondition.Or -> SerializedPythonCondition.Or(anyOf.map { it.rewriteAsEndCondition() })
     is SerializedPythonCondition.Not -> SerializedPythonCondition.Not(not.rewriteAsEndCondition())
@@ -431,7 +426,7 @@ private fun SerializedPythonCondition.rewriteAsEndCondition(): SerializedPythonC
     is SerializedPythonCondition.ContainsMarkOnAnyAccessor -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedPythonCondition.ConstantCmp -> copy(pos = pos.rewriteAsEndPosition())
     is SerializedPythonCondition.ConstantMatches -> copy(pos = pos.rewriteAsEndPosition())
-    is SerializedPythonCondition.NumberOfArgs -> PYTHON_TRUE
+    is SerializedPythonCondition.NumberOfArgs -> SerializedPythonCondition.True
     is SerializedPythonCondition.MethodDecorated,
     is SerializedPythonCondition.ClassExtends -> this
 }

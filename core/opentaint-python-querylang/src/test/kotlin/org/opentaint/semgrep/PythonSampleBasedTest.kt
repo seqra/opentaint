@@ -40,15 +40,8 @@ import kotlin.io.path.absolutePathString
 import kotlin.test.Ignore
 import kotlin.test.assertTrue
 import kotlin.test.fail
-import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
-/**
- * Convention: `core/opentaint-python-querylang/samples-py/<RuleName>/` holds `rule.yaml` plus a
- * `sample.py` whose `Positive_*` functions must report ≥1 vulnerability as entrypoint and whose
- * `Negative_*` functions must report 0. Each sample gets its own [PIRClasspath] — every file is
- * named `sample.py`, so they cannot share one.
- */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class PythonSampleBasedTest {
 

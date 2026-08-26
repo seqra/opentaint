@@ -9,8 +9,7 @@ import org.opentaint.ir.impl.python.flat.FlatModuleIR
 
 /**
  * Rewrites `resolvedCallee` from mypy's dotted qualified name for a nested def (`m.outer.inner`)
- * into the lifter's `$`-scoped encoding (`m.outer$inner`). A name that matches nothing declared in
- * this module — a builtin or a cross-module symbol — is passed through unchanged.
+ * into the lifter's `$`-scoped encoding (`m.outer$inner`)
  */
 internal object ResolvedCalleeNormalizer {
 

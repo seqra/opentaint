@@ -12,15 +12,11 @@ import org.opentaint.semgrep.pattern.TaintRuleMatchAnything
 import org.opentaint.semgrep.pattern.conversion.LanguageStrategy.SinkDiscardMode
 import org.opentaint.semgrep.pattern.conversion.python.ANY_PYTHON_FUNCTION
 import org.opentaint.semgrep.pattern.conversion.python.PythonTaintRuleGenerationCtx
-import org.opentaint.semgrep.pattern.conversion.python.PYTHON_FALSE
-import org.opentaint.semgrep.pattern.conversion.python.PYTHON_TRUE
 import org.opentaint.semgrep.pattern.conversion.python.emitPythonTaintRules
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonAssignMark
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonCleanMark
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonContainsMark
 import org.opentaint.semgrep.pattern.conversion.python.mkPythonContainsMarkOnAnyAccessor
-import org.opentaint.semgrep.pattern.conversion.python.pythonAnd
-import org.opentaint.semgrep.pattern.conversion.python.pythonOr
 import org.opentaint.semgrep.pattern.conversion.taint.MarkConditionBuilder
 import org.opentaint.semgrep.pattern.conversion.taint.RuleConversionCtx
 import org.opentaint.semgrep.pattern.conversion.taint.TaintRuleGenerationCtx
@@ -57,10 +53,10 @@ data object PythonTaintStrategy :
         override fun negate(cond: SerializedPythonCondition): SerializedPythonCondition =
             SerializedPythonCondition.Not(cond)
 
-        override fun and(args: List<SerializedPythonCondition>): SerializedPythonCondition = pythonAnd(args)
-        override fun or(args: List<SerializedPythonCondition>): SerializedPythonCondition = pythonOr(args)
-        override fun mkTrue(): SerializedPythonCondition = PYTHON_TRUE
-        override fun mkFalse(): SerializedPythonCondition = PYTHON_FALSE
+        override fun and(args: List<SerializedPythonCondition>): SerializedPythonCondition = SerializedPythonCondition.and(args)
+        override fun or(args: List<SerializedPythonCondition>): SerializedPythonCondition = SerializedPythonCondition.or(args)
+        override fun mkTrue(): SerializedPythonCondition = SerializedPythonCondition.True
+        override fun mkFalse(): SerializedPythonCondition = SerializedPythonCondition.mkFalse()
     }
 
     override fun serializedItemId(item: SerializedPythonRule): String? = item.serializedId
@@ -70,7 +66,7 @@ data object PythonTaintStrategy :
     override fun posContainsAnyMark(
         pos: PositionBaseWithModifiers,
         marks: Set<Mark.GeneratedMark>,
-    ): SerializedPythonCondition = pythonOr(marks.map { it.mkPythonContainsMark(pos) })
+    ): SerializedPythonCondition = SerializedPythonCondition.or(marks.map { it.mkPythonContainsMark(pos) })
 
     override fun createCleanAction(
         mark: Mark.GeneratedMark,

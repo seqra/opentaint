@@ -39,7 +39,7 @@ internal class PythonRuleConditionBuilder {
 
     fun build(): PythonRuleConditionData = PythonRuleConditionData(
         function = function ?: ANY_PYTHON_FUNCTION,
-        condition = pythonAnd(conditions),
+        condition = SerializedPythonCondition.and(conditions),
     )
 }
 

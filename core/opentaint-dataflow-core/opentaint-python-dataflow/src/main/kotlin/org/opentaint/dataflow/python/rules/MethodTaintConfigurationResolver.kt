@@ -349,6 +349,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
 
     private fun convertCondition(c: SerializedPythonCondition?): PIRCondition = when (c) {
         null -> mkTrue()
+        is SerializedPythonCondition.True -> mkTrue()
         is SerializedPythonCondition.Or -> CommonCondition.Or(c.anyOf.map { convertCondition(it) })
         is SerializedPythonCondition.And -> CommonCondition.And(c.allOf.map { convertCondition(it) })
         is SerializedPythonCondition.Not -> CommonCondition.Not(convertCondition(c.not))

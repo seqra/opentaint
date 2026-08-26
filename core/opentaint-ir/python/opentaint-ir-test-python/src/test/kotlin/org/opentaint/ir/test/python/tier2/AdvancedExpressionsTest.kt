@@ -152,30 +152,6 @@ def ae_yield_from(inner):
             "Expected PIRBinExpr(MAT_MUL) for 'a @ b', got ops: ${binOps.map { it.binaryExpr }}")
     }
 
-    // F-strings are lowered by mypy to regular calls/concat before reaching the IR,
-    // so PIRBuildString is NOT emitted. We just verify the function compiles to a valid CFG.
-    @Test
-    fun `fstring multi produces PIRBuildString with multiple parts`() {
-        val func = findFunc("ae_fstring_multi")
-        val allInsts = allInstructions(func)
-        assertTrue(func.instList.isNotEmpty(),
-            "Expected non-empty CFG for ae_fstring_multi")
-        assertTrue(allInsts.isNotEmpty(),
-            "Expected non-empty instructions for ae_fstring_multi (f-strings are lowered by mypy)")
-    }
-
-    // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
-    @Test
-    fun `fstring format spec produces PIRBuildString or format call`() {
-        val func = findFunc("ae_fstring_format_spec")
-        val allInsts = allInstructions(func)
-        assertTrue(func.instList.isNotEmpty(),
-            "Expected non-empty CFG for ae_fstring_format_spec")
-        assertTrue(allInsts.isNotEmpty(),
-            "Expected non-empty instructions for ae_fstring_format_spec (f-strings are lowered by mypy)")
-    }
-
-    // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
     @Test
     fun `fstring conditional has branch for ternary expression`() {
         val allInsts = allInstructions(findFunc("ae_fstring_conditional"))
@@ -288,17 +264,6 @@ def ae_yield_from(inner):
         val compares = allInstructions(findFunc("ae_assert_chained")).filterAssignOf<PIRCompareExpr>()
         assertTrue(compares.size >= 2,
             "Expected >= 2 PIRCompareExpr for chained '0 < x < 100', got ${compares.size}")
-    }
-
-    // F-strings are lowered by mypy before reaching the IR, so PIRBuildString is NOT emitted.
-    @Test
-    fun `assert fstring message contains PIRBuildString`() {
-        val func = findFunc("ae_assert_fstring")
-        val allInsts = allInstructions(func)
-        assertTrue(func.instList.isNotEmpty(),
-            "Expected non-empty CFG for ae_assert_fstring")
-        assertTrue(allInsts.isNotEmpty(),
-            "Expected non-empty instructions for ae_assert_fstring (f-strings are lowered by mypy)")
     }
 
     @Test

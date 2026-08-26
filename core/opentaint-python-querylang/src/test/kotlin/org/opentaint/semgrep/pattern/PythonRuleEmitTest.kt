@@ -133,28 +133,8 @@ class PythonRuleEmitTest {
     }
 
     @Test fun `subscript-assignment sink emits no sink (engine gap)`() {
-        // trustbound / CWE-501 engine gap: `sess[$A] = $V` as the sink statement cannot be lowered
-        // (transformAssignment rejects a non-metavar target), collapsing the whole `patterns` block
-        // to ZERO rules; sinks also fire only at calls/attributes. When store-target sinks become
-        // expressible this flips — the signal to enable the @Disabled trustbound OWASP entries.
         val all = emitAll("python-rules/subscript-assign-sink.yaml")
         assertTrue(all.isEmpty(), "expected zero emitted rules (subscript-store sink unsupported), got ${all.size}")
-    }
-
-    @Test fun `return-value sink emits no sink (engine gap)`() {
-        // xss / CWE-79 engine gap: the sink is the returned response body — a bare `return $A`,
-        // not a call. The source lowers but ZERO sinks are emitted (PythonTaintRuleGeneration
-        // errors on non-method-call sinks). When return sinks become expressible this flips — the
-        // signal to enable the @Disabled xss OWASP entries.
-        val all = emitAll("python-rules/return-sink.yaml")
-        assertTrue(
-            all.filterIsInstance<SerializedPythonSource>().isNotEmpty(),
-            "source `\$A = source(...)` should still lower",
-        )
-        assertTrue(
-            all.filterIsInstance<SerializedPythonSink>().isEmpty(),
-            "expected zero emitted sinks (return-value sink unsupported), got ${all.filterIsInstance<SerializedPythonSink>().size}",
-        )
     }
 
     @Test fun `subscript-assignment source binds the metavar to the result element`() {

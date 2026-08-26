@@ -442,9 +442,6 @@ private fun CfgSession.visitNestedFuncDef(
     decoratorExprs: List<MypyExprProto>,
     location: PIRPhysicalLocation?,
 ) {
-    // Decorators on nested defs reach us only via `MypyDecoratorDefProto.originalDecorators`.
-    // For a bare nested `FuncDef` the list is empty (the serializer doesn't populate
-    // `MypyFuncDefProto.decorators` for nested-def nodes).
     val decorators = decoratorExprs.map { DecoratorLowering.fromExpr(it, imports) }
 
     val enclosing = requireNotNull(currentFunctionQualifiedName) {

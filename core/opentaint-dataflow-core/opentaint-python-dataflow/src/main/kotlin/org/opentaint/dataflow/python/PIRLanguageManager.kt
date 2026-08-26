@@ -43,10 +43,8 @@ open class PIRLanguageManager(
 
         cp.findFunctionOrNull(qualifiedName)?.let { return it }
 
-        // Fallback: for nested function calls, mypy may set resolvedCallee to just
-        // the short name (e.g. "process" instead of "Module.outer.process").
-        // Try prepending the enclosing method's qualified name.
         if ("." !in qualifiedName) {
+            // hack: for nested function calls, mypy may set resolvedCallee to just simple name
             val enclosingMethod = (call as PIRInstruction).location.method
             val candidate = "${enclosingMethod.qualifiedName}.$qualifiedName"
             cp.findFunctionOrNull(candidate)?.let { return it }

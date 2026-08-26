@@ -336,9 +336,6 @@ class PythonPatternToActionListConverter : ActionListBuilder<SemgrepPythonPatter
             ?: transformationFailed("NumberLiteral_not_int: ${pattern.text}")
         is BoolLiteral -> SpecificBoolValue(pattern.value)
         is NoneLiteral -> SpecificNullValue
-        // `True`/`False` lex via the grammar's `name` rule, so the parser emits Identifier
-        // here (never BoolLiteral). Other bare identifiers are not simple values and fall
-        // through to null.
         is Identifier -> when ((pattern.name as? ConcreteName)?.name) {
             "True" -> SpecificBoolValue(true)
             "False" -> SpecificBoolValue(false)
