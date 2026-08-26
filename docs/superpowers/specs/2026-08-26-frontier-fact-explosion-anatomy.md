@@ -447,19 +447,23 @@ Allocation and GC say the run is not CPU-bound at all:
 one arm that converges. It finishes in **38.4 s with `rc 0`** and reports **0 findings**, so it is a
 control, not an option; the star source is what finds the two vulnerabilities.
 
-| counter | star (`census-D`) | `ctrl-nostar` | ratio |
+Volume counters span replicates on this workload (the interner race,
+[[interner-data-race]]), so each star-arm row below names the run it comes from and the ratios are
+the argument, not the absolute values.
+
+| counter | star arm | `ctrl-nostar` | ratio |
 |---|---:|---:|---:|
-| events | 2,272,533 | 188,730 | 12.0x |
-| edge-store `add` calls | 8,075,582 | 845,726 | 9.5x |
-| **slots opened** | **1,833,541** | **107,062** | **17.1x** |
-| **stored nodes** | **78,315,691** | **648,778** | **120.7x** |
-| propagated nodes | 170,245,017 | 1,932,039 | 88.1x |
-| merges per slot | 0.84 | 0.26 | 3.2x |
-| TIFA walk states | 48,701,254 | 147,996 | **329x** |
-| `[any]` descents | 25,625,872 | **0** | -- |
-| field steps accepted | 2,469,697 | 20,184 | 122x |
-| field steps rejected | 73,303,630 | 3,842 | **19,079x** |
-| SUMMARY share of propagated mass | 85.2% | 79.4% | -- |
+| events (`census-D`) | 2,272,533 | 188,730 | 12.0x |
+| edge-store `add` calls (`census-D`) | 8,075,582 | 845,726 | 9.5x |
+| **slots opened** (`census-D`) | **1,833,541** | **107,062** | **17.1x** |
+| **stored nodes** (`census-D`) | **78,315,691** | **648,778** | **120.7x** |
+| propagated nodes (`census-D`) | 170,245,017 | 1,932,039 | 88.1x |
+| merges per slot (`census-D`) | 0.84 | 0.26 | 3.2x |
+| TIFA walk states (`census-C`) | 48,701,254 | 147,996 | **329x** |
+| `[any]` descents (`census-C`) | 25,625,872 | **0** | -- |
+| field steps accepted (`census-D`) | 2,469,697 | 20,184 | 122x |
+| field steps rejected (`census-D`) | 73,303,630 | 3,842 | **19,079x** |
+| SUMMARY share of propagated mass | 84.3-85.2% | 79.4% | -- |
 | highest fact-depth limit | **8-9** | **18** | -- |
 
 Two things stand out. **Stored mass grows 121x for 12x the events** -- the per-event cost of the star
