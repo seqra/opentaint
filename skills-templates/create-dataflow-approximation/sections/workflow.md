@@ -4,7 +4,7 @@ Find and read each dataflow method's real source: take methods not yet in `build
 
 ### 2. Write the approximation
 
-Reproduce that propagation as code in the batch's approximation project at `.opentaint/dataflow/<batch>` — a project of its own, pinning the libraries the models are written against at the same versions the test project takes, because a model references the library type it models. Scaffold it if it doesn't exist yet (the language reference has the command), then write one `@Approximate` class per target class under its source root. Cover every assigned dataflow method and overload; repair an explicitly handed method in the existing source, and add new methods there rather than rewriting the file. The engine is field-sensitive — taint is tracked per field — so route data field-to-field exactly as the source does rather than tainting the whole object. The test project's negative samples (if present) verify this by storing taint in one field and reading another, so an over-broad model makes them fire. The code form, annotations, and patterns are in the language reference.
+Write the propagation in the batch approximation project at `.opentaint/dataflow/<batch>`. Pin each library at the version that the test project uses. Scaffold the project if it does not exist. Then write one `opentaint.<target-package>.<TargetClass>` model for each target class. Cover each assigned method and overload. Change only the requested existing methods. Add new methods to the existing model. The engine tracks taint for each field. Route data through the same fields as the source. The negative samples check this behavior. See the language reference for the code patterns.
 
 ### 3. Test against the test project
 
