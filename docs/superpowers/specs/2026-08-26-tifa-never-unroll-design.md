@@ -10,9 +10,10 @@ the cap?"* — proposed the second and noted the first was "worth measuring as a
 feature works, because it would delete the round loop, `unrollAnyAccessors`, and the `unrolled` memo
 outright". This design takes the first.
 
-Contents: §1 the three rules · §2 what TIFA does today · §3 the design · §4 the frontier split, and
-why rule 3 needs it · §5 what is deleted · §6 what it does to the `[any]` manager · §7 soundness ·
-§8 precision cost · §9 predictions · §10 risks · §11 validation
+Contents: §1 the three rules · §2 what TIFA does today · §3 the design (R0–R4) · §4 the frontier
+split, and why rule 3 needs it · §5 what is deleted · §6 what it does to the `[any]` manager ·
+§7 soundness · §8 precision cost and R3c · §9 test impact · §10 predictions · §11 risks ·
+§12 validation
 
 ---
 
@@ -139,8 +140,17 @@ At a walk state `(T, N, p)` — trie node `T`, fact node `N`, prefix `p` — wit
   **Both, not one**: §4.3 establishes that an `[any]` premise is unreachable for a caller fact with
   no literal `[any]` at that position, so `p.[any].u` does not subsume `p.u`. The second edge is the
   hoist, restricted to `U`.
+- **R3c (demanded, covered, not present) — required, not optional.** For each `a ∈ E` that `N` does
+  not hold literally, where `N` owns an `[any]`, `isCoveredByAny(a)`, and `p`'s type filter accepts
+  `a` → emit `p.a`. §8 is the evidence; the short version is that seven shared cross-backend tests
+  demand exactly this and the automata backend already passes them this way.
+- **R4 (the virtual descent) — the piece that keeps the ladder climbing.** Where the walk today
+  reaches a deeper trie node only because the unroll *materialised* a fact under it, descend through
+  `N.getChild(a)` instead: for a trie child `a` that `N` does not hold literally but whose `[any]`
+  can reach, push `(T.child(a), N.getChild(a), p.a)`.
 
-R3b is the part that is not simply "delete code", and §4 is why it has to exist.
+R3b and R4 are the parts that are not simply "delete code". §4 is why R3b has to exist; §3.4 is why
+R4 does.
 
 ### 3.2 Why R3a and R3b are the whole frontier
 
@@ -170,7 +180,47 @@ smaller fact subtree. Without it, a depth-`k` premise needs `k` triggering event
 events always arrive is exactly the kind of thing that is invisible until a rule silently stops
 firing. **Recommendation: keep the loop, on the new termination argument.**
 
-### 3.4 The shape of the diff
+### 3.4 R4: `getChild` is the unroll, minus the copy
+
+The sharpest objection to "never unroll" is not soundness, it is that **the demand ladder stops
+climbing**. Today the ladder below an `[any]` works like this: the unroll materialises
+`arg0.f.[any]…` into `added`; the *next* walk's `state.added.forEachAccessor` then sees a literal `f`,
+routes to trie node `f`, and can emit `arg0.f.g`. Emit `arg0.f` without materialising anything and
+`added` never acquires an `f` child, so no later walk is ever routed to trie node `f`. The abstraction
+would be stuck one level below every `[any]`.
+
+The fix is already in the engine and TIFA simply does not use it. The walk descends by **literal**
+accessors (`forEachAccessor`) everywhere except the single `getChild(ANY_ACCESSOR_IDX)` at
+`TIFA:423`. But `AccessTree.AccessNode.getChild(a)` is documented as *"the unique point at which a
+concrete accessor is SYNTHESISED out of an `[any]`"* (`AccessTree.kt:710-740`): for a node owning an
+`[any]` it returns the merge of the literal `a` child, the `[any]` subtree's `a` child, and the
+`[any]` re-installed below — which is **exactly the node the unroll builds by copying the carrier**,
+without the copy.
+
+So R4 is:
+
+> where the trie has a child `a` that the fact node does not hold literally, and the fact node owns an
+> `[any]`, descend with `(T.child(a), N.getChild(a), p.a)`.
+
+**Why this is not unrolling.** A read cannot grow a stored fact: `getChild` returns a node assembled
+from subtrees of the receiver, and nothing is merged back into `added`. The unroll's cost is the
+materialisation — `filterAccessNode` copies the carrier per demanded accessor and merges the copies
+into the accumulator (`carrierPerRequest = 10.72`, `nodesPerMaterialised = 5.91`), and it is that copy
+which still owns an `[any]` and so re-arms the next round. That feedback is what
+`AnyUnrollGrowthPatternTest` pins at `Σ n!/(n−k)!` — 4, 15, 64 premises for demand sets of size 2, 3,
+4. R4 walks the same shapes and stores none of them.
+
+**R3c and R4 are the two halves of one mechanism**: R3c hands out the premise `p.a` the first time `a`
+is demanded, which registers `T.child(a)`; R4 is what makes the *next* walk descend there. Neither
+works without the other, and together they are the unroll's precision at the unroll's semantics
+minus the unroll's accumulator.
+
+**One thing to settle in code, not here**: `getChild` has a `record` parameter that decides between
+`readChild` and `peekChild` on the `[any]` manager. TIFA's walk is not a fact derivation and should
+almost certainly `peek` — recording a transition per premise-ladder step would put the walk back into
+the automaton's budget, which is the coupling rule 1 exists to remove.
+
+### 3.5 The shape of the diff
 
 | today | after |
 |---|---|
@@ -341,22 +391,44 @@ four design documents no longer describes anything TIFA does.
 TIFA must not lose a flow. Concretely: for every concrete fact `F` that reaches the abstraction, the
 emitted set of `(P, A)` pairs must be such that any caller fact that would have activated a summary
 under the old TIFA still activates one, and the activated conclusion still denotes at least what it
-denoted before. Coarsening a premise adds callers; coarsening the paired fact adds paths. Both are
-over-approximations, so **every rule here is sound in the direction it moves** — provided the demand
-is still *answered at all*.
+denoted before.
 
-"Answered at all" is the whole risk, and it has exactly two failure modes:
+**And here is the trap, which I got wrong on the first pass and §4.3 corrects: an `[any]` premise is
+a NARROWING, not a widening.** `X.[any].*` is a strictly *stronger* assertion than `X.*`
+(`2026-08-21-any-premise-design.md` §3.5), and the matching side agrees: a premise `[any]` link is
+only reachable from a caller fact that carries a literal `[any]` there. So the usual reasoning —
+"coarsening a premise admits more callers, therefore it is safe" — **does not apply to rule 3**.
+
+The correct statement of the obligation is:
+
+> **Rule 3 may only ADD an `[any]` premise, or replace a premise that only `[any]`-carrying caller
+> facts could ever have matched. It may never replace a premise a concrete caller fact needs.**
+
+That is why R3b emits two edges, and it is the reason R3c is required rather than recommended (§8).
+Coarsening the paired **fact** is a different matter and is safe in the usual direction: a larger
+entry state yields a superset of derivations, which costs precision and not recall
+(`2026-08-21-any-premise-design.md` §S3).
+
+"Answered at all" is the whole risk, and it has exactly three failure modes:
 
 - **F1 — the demand is never reached.** The walk stops at a level and never emits anything naming the
   demanded accessor. This is what killed the naive collapse (§4): a mark below an `[any]`, with the
   hoist removed and nothing put in its place.
 - **F2 — the premise is emitted but cannot match.** The endpoint is not `isAbstract`, so the delta is
-  discarded (`2026-08-21-any-premise-design.md` §2.4); or `[any]` in a premise does not match a
-  caller fact lacking a literal `[any]` edge (§4.3, O1).
+  discarded (`2026-08-21-any-premise-design.md` §2.4).
+- **F3 — a concrete premise is replaced by a strictly narrower `[any]` one.** The caller fact that
+  needed the concrete premise now matches nothing more specific than the base, and the flow is
+  answered too coarsely to be a finding. This is F1's quieter sibling: nothing is lost from the
+  *analysis*, only from the *answer*.
 
-R3b addresses F1 by construction. F2 is addressed for the endpoint by
-`createAbstractNodeFromReversedAp`'s fold over `abstractNode` (§2.3) and is **open** for the
-zero-times case (O1).
+R3b addresses F1 and F3 by construction (two edges). F2 is addressed by
+`createAbstractNodeFromReversedAp`'s fold over `abstractNode` (§2.3), which puts the `*` below the
+`[any]` rather than at it.
+
+**The safety net that makes F3 a precision loss rather than a soundness one**: the trie starts empty,
+so the first walk for any base hits R0 and emits the bare `base` premise, which matches every fact on
+that base. Every base therefore always has a matching premise. If the redesign ever changes the
+first-emission path, that stops being true and F3 becomes a genuine loss.
 
 ### 7.2 Why never unrolling is sound
 
@@ -378,7 +450,7 @@ deep the walk could go.
 
 ---
 
-## 8. Precision cost, and one variant worth considering
+## 8. Precision cost, and the rule that pays it back
 
 ### 8.1 The cost is field sensitivity under an abstract source
 
@@ -401,7 +473,7 @@ comment at `TIFA:441-450` describes the same effect from the other direction: an
 "cannot express a node deletion inside the `[any]`, so a cleaner that bites on a concrete path stops
 biting under it", and names this test.
 
-### 8.2 Variant A — emit the demanded accessor without materialising it
+### 8.2 R3c — emit the demanded accessor without materialising it. Required.
 
 **The automata backend already does this, and passes every one of these tests.**
 `AutomataInitialFactAbstraction.abstractGraph` (`:193-236`):
@@ -447,10 +519,18 @@ With R3c the four rules compose cleanly:
 | anything else the `[any]` covers | R3a | `p.[any]` | `p.[any].*` |
 | an uncovered accessor under the `[any]` | R3b | `p.[any].u` | `p.[any].u.*` |
 
-**Recommendation: build R2 + R3a + R3b as specified, and build R3c too, behind a flag that defaults
-ON.** The literal three-rule design is then one flag flip away and can be measured as its own arm —
-which is exactly the ablation §7 R5 of the 2026-08-21 design asked for, done properly. If the cleaner
-tests pass with the flag off, turn it off and delete it.
+**R3c is required by the shared cross-backend test suite, not merely advisable.**
+`InitialFactAbstractionTest` runs every scenario against both the tree and the automata backends, and
+seven of them — `any accessor scenario 1…7` at `:419, :427, :435, :443, :451, :459, :467` — assert a
+premise naming an accessor that **exists in no concrete branch of the fact**. `:443` is the sharpest:
+exclusion `{e}` over a fact with no `e` anywhere must yield `this.b.e`. So does `:375`
+(`scenario 36`), the one merged scenario whose demanded accessor is absent from every concrete branch.
+The automata backend passes all eight through the non-materialising emission quoted above. The tree
+backend passes them today through the unroll. **Rule 1 removes the tree backend's mechanism, and R3c
+is the only replacement that keeps those eight green.**
+
+Build it unconditionally. If it must be flag-guarded for an ablation, default it ON and expect those
+eight tests to fail with it off — that is the ablation's *result*, not a bug in it.
 
 §4.3 makes the case for R3c stronger than "it keeps a test green". Because an `[any]` premise is only
 reachable from an `[any]`-shaped caller fact, a callee whose `added` is `[any]`-shaped and whose
@@ -461,7 +541,46 @@ unroll — it is coarser in a way the matching side cannot recover from.
 
 ---
 
-## 9. Predictions
+## 9. Test impact, stated up front
+
+Nothing in the repo names `unrollAnyAccessors`, `AnyAccessorUnrollRequest`, `AccessPathTrieNode`,
+`enumerateAnyFrontier` or `AbstractionState`. The machinery is pinned only through the two public
+methods, which is good news for the diff and bad news for the review: **the tests that break are
+behavioural, and each one has to be argued rather than mechanically updated.**
+
+### Must stay green — these are the correctness net
+
+| test | what it pins |
+|---|---|
+| `InitialFactAbstractionTest` `any accessor scenario 1…7` (`:419-467`) and `scenario 36` (`:375`) | a premise naming an accessor absent from every concrete branch. **R3c exists for these.** They run on both backends |
+| the 19 `expectedEmpty` scenarios | `abstractionIsEmpty` tolerates **only** a size-0 premise (`:525-526`), so an `[any]` premise emitted where the level carries no demand fails them. R3a's `E ≠ ∅` guard is what keeps them green |
+| `AnyPremiseAbstractionTest:142` `no any premise is emitted where the level carries no demand` | the same guard, stated directly |
+| `AnyPremiseAbstractionTest:188` the zero-times descent | R3b's obligation |
+| `AnyPremiseAbstractionTest:174` a mark below an `[any]` is named | R3b again |
+| `AccessBasedStorageAnyLookupTest:330` `a plain fact does not reach a premise any` | §4.3 — do not "fix" this while making rule 3 fire more |
+| `AnyAccessorCollapseTest:199` `filterStartsWith` matches a 16-link premise against `base.[any].*` | `AccessPath.size` must keep counting `[any]` as 1 |
+| `CleanerFieldSensitivityAnalysisTest` (both backends, 4 deep-clean cases) | field sensitivity under an abstract source — §8.1 |
+| `StarOperatorTest` (16 tests) | its header says outright that *"a concrete field read only inherits that taint once the any-accessor is unrolled to a field read"* — R3c + R4 must reproduce that |
+| the Go sample suites (318 `traceResolved` assertions) | the largest net, and the one that catches trace loss |
+
+### Must be deliberately rewritten — they assert the mechanism being removed
+
+| test | why |
+|---|---|
+| `AnyUnrollGrowthPatternTest:186` `the fixed point is every non-repeating sequence over the demand set` | asserts **exactly** 4 / 15 / 64 concrete premises at closure. It pins the explosion; rule 1 is meant to invalidate it |
+| `AnyUnrollGrowthPatternTest:202` `growth is superexponential in the size of the demand set` | same |
+| `AnyPremiseAbstractionTest:159` `while the base still unrolls no any premise is emitted` | there is no "still unrolls" any more. The premise it forbids is the one R3a now emits |
+| `AnyPremiseAbstractionTest:361, :375, :417` (the cap) | the cap is what rule 1 replaces |
+| `AnyUnrollManagerTest:316` `readChildPaidOnly`'s pre-credit contract | the method's only caller is being deleted |
+| `JIRFactTypeCheckerUnrollFilterTest` (3 tests, currently failing) | the filter the unroll consults. If the unroll goes, decide whether R3c keeps consulting it — §10 O7 |
+
+**Rewriting a test that asserts the explosion is the right move, and it must be visible in the diff.**
+An assertion changed from 64 to 3 in the same commit that changes the behaviour is fine; an assertion
+deleted is not.
+
+---
+
+## 10. Predictions
 
 Falsifiable, against the frontier arm (`L=100`, `rescore`/`bfs`, conductor, one endpoint, one rule).
 Baselines are `scoped-runs/rev-bfs-1` and `rev-bfs-2` unless stated.
@@ -477,19 +596,36 @@ does not touch.
 **P2 — the `[any]` share inverts.** `emitsWithAnyInChain` is 3.9% of emitted premises today, and the
 "`[any]` taken zero times" hoist yields 1.0%. **Predict a majority of premises carry an `[any]`.**
 
-**P3 — the graft's delta shrinks, and this is the one that matters.** `E-delta` splits by premise
-kind, and the two rows do not resemble each other:
+**P3 — the graft's delta GROWS, and this is the risk, not the reward.** I first read the `E-delta`
+split the other way round and it is worth recording why that reading is wrong, because the counter
+invites it:
 
 ```
 E-delta concretePremise calls=3,689,728  factNodes=327,749,644  remainderNodes=131,355,222  remainderPerFact=0.40
 E-delta anyPremise      calls=1,735      factNodes=11,141       remainderNodes=34           remainderPerFact=0.00
 ```
 
-An `[any]` premise consumes essentially the **whole** caller fact and leaves no remainder — and the
-remainder is exactly what `concatToLeafAbstractNodes` grafts. `[any]` premises are 0.05% of matches
-today. **Predict `remainderPerFact` falls well below 0.40 and `concat deltaNodes` (96.7M) falls with
-it.** This is the mechanism by which a premise-side change could touch the fact-side explosion, and it
-is the strongest reason to try this design at all.
+The `anyPremise` row does **not** say "an `[any]` premise consumes the fact and leaves nothing". It
+says three other things at once:
+
+1. **Most of those calls do not match at all.** `getChild(ANY)` returns `null` unless the fact carries
+   a literal `[any]` edge, so `deltaImpl` returns `emptyList()` — which still counts `calls + 1` and
+   still adds the whole tree to `factNodes`, while adding **0** to `remainderNodes`.
+2. **When it does match, the landing node is a bare abstract leaf.** A summary keyed on `[any]`
+   carries exit fact `X.[any].*`, so `removeAbstraction()` leaves an empty node and only
+   `EmptyAccessTreeDelta` comes back — which scores 0 by construction.
+3. `[any]` premises are **0.047%** of all delta calls, and their mean fact is **6.4 nodes** against
+   the concrete row's **88.8**. It is not a sample of the same population.
+
+The mechanism runs the other way: **a coarser premise lands SHALLOWER, so it leaves a BIGGER
+remainder**, and the remainder is exactly what `concatToLeafAbstractNodes` grafts at every abstract
+node of the conclusion. **Predict `remainderPerFact` rises above 0.40 and `concat deltaNodes` (96.7M)
+rises with it.** A fall would be a genuine surprise and would need explaining before being believed.
+
+`remainderPerFact` is therefore the design's **acceptance metric**, not its selling point. Also note
+the stale comment at `ApOpDiagnostics.kt:196-205`, which claims an `[any]` premise "leaves nearly the
+whole caller fact as the remainder" — that describes the `F-roundtrip` bucket (a *concrete* accessor
+read *through* an `[any]`), not this one, and it is what led me astray.
 
 **P4 — the manager's kind distribution is unpredictable; measure it.** `mintKind=[paid:420(unroll:418),
 credit:149]` today. With `readChildPaidOnly` gone, `unroll:` goes to 0 by construction. Whether
@@ -515,7 +651,7 @@ magnitude.
 
 ---
 
-## 10. Risks and open questions
+## 11. Risks and open questions
 
 **O1 — settled, and it changed the design.** An `[any]` premise does not match a caller fact with no
 literal `[any]` at that position (§4.3, `AccessBasedStorage.kt:87-128`). R3b therefore emits two
@@ -543,7 +679,55 @@ and needs a counter (premises emitted per round, and rounds per call).
 four design documents say it does is a documentation hazard; either rename it or write the change
 into its KDoc in the same commit.
 
-**O6 — `MethodSameBaseInitialFact.addInitialFact` still merges with `foldToAny = false`.** This
+**O7 — the `[any]` depth charge will park most initial edges.** `AccessPath.AccessNode.depth`
+charges an `[any]` link **10** (`AccessPath.kt:489`, `AccessTree.kt:2963`), and
+`MethodAnalyzer.edgeExceedLimit` gates on `initialFactAp.depth > factDepthLimit` with
+`INITIAL_ALLOWED_FACT_DEPTH = 3`, rising by one per delayed-resume round
+(`TaintAnalysisUnitRunner.kt:356`). If most premises carry an `[any]`, most initial edges are delayed
+for **at least seven rounds at every entry point**. This is arithmetic, not a measurement, and it is
+the most likely source of a "nothing happens for the first N seconds" regression. Either re-tune the
+charge in the same change or measure `delayedF2FInitialEdges` occupancy and the resume-round count.
+
+**O8 — the only bound on premise chain length does not survive an `[any]`.**
+`AccessPath.limitFieldAccess` returns the node **unchanged** the moment it meets an `[any]`
+(`AccessPath.kt:661-669`), and the repeated-field collapse it implements is the only thing bounding
+the premise family — `AnyUnrollGrowthPatternTest:147-148` says so in as many words: *"That is the
+ONLY thing bounding the enumeration below, and it bounds it at N! rather than at infinity."* A design
+that puts `[any]` into a majority of premises removes that bound from a majority of chains. **The
+design owes a replacement bound and does not currently have one.** This is the most serious
+unresolved item on the list.
+
+**O9 — more `[any]` in facts feeds the engine's hottest function.** Every emitted pair carries an
+`[any]`-bearing `FinalFactAp`, and `AccessTreeAnySuffixMatcher.getNonMatchingNode` — which runs on
+every merge of an `[any]`-carrying tree — was profiled at **73.6% of all analyser CPU and 83.5% of
+all allocation** in the late conductor window
+(`2026-08-26-any-manager-review-and-perf.md` §7.5). The memo landed on 2026-08-26 and buys 1.4–1.8×,
+but the walk still scales with how much `[any]` is in the facts. **Watch that function, not the
+premise store, for the performance outcome.**
+
+**O10 — two consumers key on premise shape and will change behaviour silently.**
+`MethodSideEffectHandlerWithAnyAccessorRequestHandling.kt:55` answers a taint-mark unfold request only
+when `getAllAccessors().all { it is AnyAccessor }`; a *mixed* premise such as `arg0.f.[any]` fails
+that test and stops answering, and its own KDoc warns this loses sinks. And `taint/Source.kt:44-58`
+carries a fallback that retries a lookup with a trailing `[any]` stripped, with a comment saying it
+*"must stay until step 5 puts a PRODUCER of `[any]` premises in place"* — this design is that
+producer, so leaving the fallback in turns it into unbounded over-matching. **Both must be handled in
+the same change.**
+
+**O11 — does R3c consult the type filter?** The automata backend does
+(`AutomataInitialFactAbstraction.kt:203-217`), and the unroll does
+(`accessorFilter.check(accessorInstance)`, `TIFA:255-268`). If R3c does not, it hands out premises for
+accessors the type system rejects. If it does, `JIRFactTypeCheckerUnrollFilterTest` keeps its purpose
+and its two standing failures become relevant again rather than pre-existing noise.
+
+**O12 — premise subsumption does not exist and cannot cheaply be added.** `AccessBasedStorage` is a
+trie of distinct keys; `NodeSubsumedException` is exclusion-based, identity-edge-only, and every read
+path bypasses the overrides by reading `children` directly. So a concrete premise and an `[any]`
+premise for the same flow both stand and both propagate (`MethodAnalyzer.kt:1159-1172` groups by
+premise equality). R3b emits two edges per uncovered accessor by design; that is a doubling nothing
+downstream will collapse.
+
+**O13 — `MethodSameBaseInitialFact.addInitialFact` still merges with `foldToAny = false`.** This
 design does not touch it. It is one of only two such call sites in the module, and the measured
 counterfactual (`J-trimCF keptFraction = 0.97`) says it is currently inert — but that measurement was
 taken with the trim's abstract-cancellation hole open, and closing that hole took the same figure to
@@ -552,7 +736,7 @@ and the measurement should be retaken rather than assumed.
 
 ---
 
-## 11. Validation plan
+## 12. Validation plan
 
 1. **Unit first.** Add tree-backend tests that pin each rule: R2 (concrete demanded), R3a (covered
    frontier), R3b (a mark under an `[any]` — the ssrf shape, as a unit test rather than an end-to-end
