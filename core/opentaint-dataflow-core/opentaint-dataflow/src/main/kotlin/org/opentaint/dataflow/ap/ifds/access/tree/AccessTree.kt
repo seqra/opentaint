@@ -1681,7 +1681,7 @@ class AccessTree(
             if (accessor == ANY_ACCESSOR_IDX) return null
             val counting = count && AnyUnrollDiagnostics.enabled
 
-            if (manager.anyUnroll.writesAbove(pos)) {
+            if (manager.anyUnroll.writesAbove(pos, count = count)) {
                 if (counting) {
                     AnyUnrollDiagnostics.prependWrittenPaid.incrementAndGet()
                     recordDeclinedPrepend(accessor, node, pos)

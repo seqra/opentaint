@@ -82,6 +82,23 @@ enum class AnyUnrollKindMerge { PreferBelow, PreferBeyond }
 enum class AnyUnrollKindPolicy { PerDag, Global, AlwaysCredit, Rescore }
 
 /**
+ * The order [AnyUnrollKindPolicy.Rescore] spends its budget in.
+ *
+ * [Bfs] keeps the states nearest the origin `PAID`. It is the obvious reading of "keep a bounded
+ * prefix precise", and on conductor it is the wrong one: the shallow states are the ones the whole
+ * fact population sits at, so breadth-first spends the entire budget protecting exactly the state
+ * that costs the most. Measured: one state governed 6,544 of the 6,570 `[any]` positions in a
+ * 40,262-node fact and declined 46% of every prepend in the run, and the re-score kept it `PAID`.
+ *
+ * [Population] spends the budget on the states that gate the LEAST traffic, so the heavily-trafficked
+ * ones are demoted to `CREDIT` and become eligible to absorb. Precision is kept where it is cheap.
+ * The weight is [AnyUnrollState.traffic]; see its doc for why an approximate count is enough.
+ *
+ * `-Dopentaint.anyUnrollRescoreStrategy=bfs|population`.
+ */
+enum class AnyUnrollRescoreStrategy { Bfs, Population }
+
+/**
  * The budget pot shared by every `[any]` position descended from one origin.
  *
  * One dag per `[any]` ORIGIN -- the point where an `[any]` edge was created with no predecessor to
@@ -222,6 +239,21 @@ class AnyUnrollState(
     var mintedByUnroll: Boolean = false
 
     /**
+     * How many prepends this position has gated, approximately.
+     *
+     * The population a state governs is the quantity the budget should be spending on, and the
+     * manager keeps no fact registry to measure it directly. This is the closest thing it can see:
+     * one increment per `writesAbove`, which is called once per prepend above an `[any]`-owning node.
+     *
+     * Deliberately a plain `Int` and deliberately racy. It is read only to ORDER states inside a
+     * re-score, a lost update costs a place in that order, and making it atomic would put a
+     * contended write on a path taken twenty million times. Saturating rather than wrapping, because
+     * a negative weight would sort a hot state to the front of the budget.
+     */
+    @JvmField
+    var traffic: Int = 0
+
+    /**
      * The transitions out of this state: at most one successor per accessor, which is what keeps the
      * structure deterministic and re-derivation free.
      *
@@ -338,6 +370,14 @@ object AnyUnrollDiagnostics {
     val rescoreStatesVisited = AtomicLong()
     val rescoreDemotions = AtomicLong()
     val rescorePromotions = AtomicLong()
+
+    /**
+     * The traffic weight the re-score actually saw: the largest on any state it visited, and the sum
+     * over the states it demoted. Together they say whether the population ordering reached the hot
+     * states or merely reshuffled cold ones.
+     */
+    val rescoreMaxTraffic = AtomicLong()
+    val rescoreDemotedTraffic = AtomicLong()
 
     /**
      * The COUNTERFACTUAL: for each prepend the kind gate declined, what would have happened if the
@@ -592,6 +632,8 @@ object AnyUnrollDiagnostics {
         append(",other:").append(unionWithoutCollapseOther.get())
         append("]")
         append(" rescore=[n:").append(rescores.get())
+        append(",maxTraffic:").append(rescoreMaxTraffic.get())
+        append(",demotedTraffic:").append(rescoreDemotedTraffic.get())
         append(",visited:").append(rescoreStatesVisited.get())
         append(",demote:").append(rescoreDemotions.get())
         append(",promote:").append(rescorePromotions.get())
@@ -658,6 +700,8 @@ class AnyUnrollManager(
     @JvmField val kindMerge: AnyUnrollKindMerge = DEFAULT_KIND_MERGE,
     /** Which pot the mint compares against; see [AnyUnrollKindPolicy]. Fixed for the run. */
     @JvmField val kindPolicy: AnyUnrollKindPolicy = DEFAULT_KIND_POLICY,
+    /** The order a re-score spends its budget in; see [AnyUnrollRescoreStrategy]. Fixed for the run. */
+    @JvmField val rescoreStrategy: AnyUnrollRescoreStrategy = DEFAULT_RESCORE_STRATEGY,
 ) {
     val enabled: Boolean get() = limit >= 0
 
@@ -828,9 +872,11 @@ class AnyUnrollManager(
                 val dyRoot = dy.rootState
                 dy.parent = dx
                 dx.total = satAdd(dx.total, dy.total, Int.MAX_VALUE)
-            // A fusion is the other way a pot crosses its limit, and the one the design's own
-            // comment points at ("after merge the new total is more than the limit").
-            dx.nextRescoreAt = minOf(dx.nextRescoreAt, dy.nextRescoreAt)
+            // A fusion is the other way a pot crosses its limit. `maxOf`, not `minOf`: a fresh `dy`
+            // carries `nextRescoreAt = L`, so taking the minimum would drag a survivor already at
+            // four times `L` back to re-scoring on its very next mint, once per fusion -- and a
+            // re-score is now a list allocation and a sort, under the global lock.
+            dx.nextRescoreAt = maxOf(dx.nextRescoreAt, dy.nextRescoreAt)
                 dx.states = satAdd(dx.states, dy.states, Int.MAX_VALUE)
                 noteMaxStates(dx.states)
 
@@ -911,6 +957,9 @@ class AnyUnrollManager(
             } else {
                 maxOf(x.pathCount, y.pathCount)
             }
+            // Traffic ALWAYS accumulates, however the paths merge: the merged state now gates every
+            // prepend both of them gated, which is exactly what the weight is meant to say.
+            x.traffic = satAdd(x.traffic, y.traffic, Int.MAX_VALUE)
 
             // (1) INCOMING. Nothing used to touch the states pointing AT `y`, so a predecessor's
             // transition named the loser verbatim, forever -- and held it against the collector.
@@ -1022,10 +1071,10 @@ class AnyUnrollManager(
      * that is not a corner case: one dag of 140 reaches `total = 401` against `L = 100`, and the
      * states declining 82% of all absorptions live in it.
      *
-     * The sub-automaton is chosen breadth-first from the root, charged the same `pathCount` the mint
-     * charges, so "the first `L` of spend, nearest the origin" stays `PAID`. Breadth-first and not
-     * depth-first on purpose: the automaton is allowed to be cyclic, and a depth-first walk down one
-     * arm would spend the whole budget on a single accessor sequence.
+     * The states are always ENUMERATED breadth-first -- the automaton is allowed to be cyclic, so the
+     * traversal needs the seen-set either way -- and [AnyUnrollRescoreStrategy] decides the order the
+     * budget is SPENT in. Each state is charged the same `pathCount` the mint charges, and the states
+     * the budget covers, as a prefix of that order, keep `PAID`.
      *
      * Caller holds [lock]. `ORIGIN` is left alone -- it is the neutral element of the kind lattice
      * and an origin has no predecessor to absorb into anyway.
@@ -1039,31 +1088,62 @@ class AnyUnrollManager(
         queue.addLast(root)
         seen.add(root)
 
+        // Enumerate breadth-first in both strategies -- the automaton may be cyclic, so the traversal
+        // needs the `seen` guard either way -- and let the strategy decide the SPENDING order.
+        val order = ArrayList<AnyUnrollState>()
+        while (queue.isNotEmpty()) {
+            val state = queue.removeFirst()
+            order.add(state)
+            state.children?.forEachEntry { _, child ->
+                val target = child.find()
+                if (seen.add(target)) queue.addLast(target)
+            }
+        }
+        if (rescoreStrategy == AnyUnrollRescoreStrategy.Population) {
+            // Least-trafficked first: the budget buys precision where precision is cheap, and the
+            // states gating millions of prepends fall out of it and become eligible to absorb.
+            //
+            // The key is SNAPSHOT, not read through the comparator. `traffic` is written lock-free by
+            // `writesAbove` while this runs under the lock, and a key that moves during a sort is an
+            // inconsistent comparator -- for 32 elements or more TimSort detects it and throws
+            // `IllegalArgumentException` out of the mint, which would abort `mint` after the
+            // transition was installed and leave `dag.states` permanently wrong.
+            val weight = java.util.IdentityHashMap<AnyUnrollState, Int>(order.size)
+            for (state in order) weight[state] = state.traffic
+            order.sortBy { weight[it] ?: 0 }
+        }
+
         var visited = 0
         var demoted = 0
         var promoted = 0
+        var demotedTraffic = 0L
+        var exhausted = false
 
-        while (queue.isNotEmpty()) {
-            val state = queue.removeFirst()
+        for (state in order) {
             visited++
 
             if (state.kind != AnyUnrollKind.ORIGIN) {
                 val cost = state.pathCount
                 val before = state.kind
-                if (budget >= cost) {
+                // A PREFIX, not a greedy knapsack. Once one state does not fit, every state after it
+                // in the order is `CREDIT` too -- otherwise a cheap state further down the order is
+                // still kept `PAID`, and under `Population` "further down the order" means "gates
+                // more traffic", which is exactly what the strategy exists to demote.
+                if (!exhausted && budget >= cost) {
                     state.kind = AnyUnrollKind.PAID
                     budget -= cost
                 } else {
+                    exhausted = true
                     state.kind = AnyUnrollKind.CREDIT
                 }
                 if (state.kind != before) {
-                    if (state.kind == AnyUnrollKind.CREDIT) demoted++ else promoted++
+                    if (state.kind == AnyUnrollKind.CREDIT) {
+                        demoted++
+                        demotedTraffic += state.traffic
+                    } else {
+                        promoted++
+                    }
                 }
-            }
-
-            state.children?.forEachEntry { _, child ->
-                val target = child.find()
-                if (seen.add(target)) queue.addLast(target)
             }
         }
 
@@ -1074,6 +1154,9 @@ class AnyUnrollManager(
             AnyUnrollDiagnostics.rescoreStatesVisited.addAndGet(visited.toLong())
             AnyUnrollDiagnostics.rescoreDemotions.addAndGet(demoted.toLong())
             AnyUnrollDiagnostics.rescorePromotions.addAndGet(promoted.toLong())
+            val maxTraffic = order.maxOfOrNull { it.traffic.toLong() } ?: 0L
+            AnyUnrollDiagnostics.rescoreMaxTraffic.updateAndGet { prev -> maxOf(prev, maxTraffic) }
+            AnyUnrollDiagnostics.rescoreDemotedTraffic.addAndGet(demotedTraffic)
         }
     }
 
@@ -1313,9 +1396,21 @@ class AnyUnrollManager(
     fun kindOf(state: AnyUnrollState?): AnyUnrollKind? =
         if (!enabled || state == null) null else state.find().kind
 
-    fun writesAbove(state: AnyUnrollState?): Boolean {
+    /**
+     * @param count whether this call is a real prepend and should be weighed. The one caller that
+     *   passes `false` is a diagnostic probe that runs only when `anyManagerDiag` is on; letting it
+     *   weigh would make the measurement flag change the ordering, the demotions and the findings.
+     */
+    fun writesAbove(state: AnyUnrollState?, count: Boolean = true): Boolean {
         if (!enabled || state == null) return true
-        val kind = state.find().kind
+        val current = state.find()
+        if (count) {
+            // One read, so the guard cannot be invalidated between the test and the increment: a
+            // torn guard would wrap to Int.MIN_VALUE and sort a hot state to the FRONT of the budget.
+            val seen = current.traffic
+            if (seen in 0 until Int.MAX_VALUE) current.traffic = seen + 1
+        }
+        val kind = current.kind
         return kind == AnyUnrollKind.ORIGIN || kind == AnyUnrollKind.PAID
     }
 
@@ -1483,6 +1578,14 @@ class AnyUnrollManager(
             System.getProperty(ANY_UNROLL_KIND_POLICY_PROPERTY)?.trim()?.let { raw ->
                 AnyUnrollKindPolicy.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
             } ?: AnyUnrollKindPolicy.PerDag
+
+        const val ANY_UNROLL_RESCORE_STRATEGY_PROPERTY = "opentaint.anyUnrollRescoreStrategy"
+
+        /** `-Dopentaint.anyUnrollRescoreStrategy=bfs|population`, default `bfs`. Parsed as above. */
+        val DEFAULT_RESCORE_STRATEGY: AnyUnrollRescoreStrategy =
+            System.getProperty(ANY_UNROLL_RESCORE_STRATEGY_PROPERTY)?.trim()?.let { raw ->
+                AnyUnrollRescoreStrategy.entries.firstOrNull { it.name.equals(raw, ignoreCase = true) }
+            } ?: AnyUnrollRescoreStrategy.Bfs
 
         // Mint sites, for §12.1(a): "distinct managers per origin, BY ALLOCATING SITE". The count
         // alone does not say which site leaked.
