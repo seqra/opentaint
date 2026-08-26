@@ -634,6 +634,19 @@ class AccessTree(
             accessorIndex(ANY_ACCESSOR_IDX) >= 0
 
         /**
+         * Whether this node holds [accessor] as an edge of its OWN, as opposed to denoting it
+         * through an `[any]`. The distinction is the whole difference between R2 and R3c/R4 in
+         * [TreeInitialFactAbstraction]: [getChild] answers what the fact DENOTES and synthesises a
+         * node for a covered accessor out of thin air, which is the right answer to "does the caller
+         * have this" and the wrong one to "have I already walked this branch".
+         *
+         * `[final]` is deliberately not special-cased: it is not an edge, it is [isFinal], and every
+         * caller here has excluded it as always-unroll-next before asking.
+         */
+        internal fun hasLiteralChild(accessor: AccessorIdx): Boolean =
+            accessorIndex(accessor) >= 0
+
+        /**
          * Diagnostics only: what the `[any]` subsumption trim would delete from [arrival], for the
          * one accumulator that runs the merge with `foldToAny = false`. Changes nothing.
          *

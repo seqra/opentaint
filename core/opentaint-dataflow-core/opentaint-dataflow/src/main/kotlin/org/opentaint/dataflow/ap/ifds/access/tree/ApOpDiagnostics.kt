@@ -31,42 +31,15 @@ object ApOpDiagnostics {
 
     private const val DEPTH_BUCKETS = 24
 
-    // ---- A: the TIFA [any] unroll -------------------------------------------------------------
-
-    /** Calls to `unrollAnyAccessors` that had at least one request. */
-    val unrollCalls = AtomicLong()
-
-    /** Requests seen, and accessors offered by the demand trie across them. */
-    val unrollRequests = AtomicLong()
-    val unrollOffered = AtomicLong()
-
-    /** Accessors that survived every filter and produced a re-rooted copy. */
-    val unrollMaterialised = AtomicLong()
-
-    /**
-     * Nodes in the object being re-rooted, summed over materialised accessors.
-     *
-     * Split deliberately: [unrollCarrierNodes] is the node that OWNS the `[any]` edge -- what the
-     * unroll actually copies -- and [unrollAnyChildNodes] is the `[any]` subtree alone, which is what
-     * "unrolling the `[any]`" sounds like it should copy. The gap between the two columns is the
-     * whole question.
-     */
-    val unrollCarrierNodes = AtomicLong()
-    val unrollAnyChildNodes = AtomicLong()
-
-    /** Nodes in the merged round result, and the delta it actually added to `added`. */
-    val unrollMergedNodes = AtomicLong()
-    val unrollAddedDelta = AtomicLong()
-
-    /** Whether the copy the unroll re-roots still carries an `[any]` of its own. */
-    val unrollCopyCarriesAny = AtomicLong()
-    val unrollCopyAnyFree = AtomicLong()
-
-    /** Requests by prefix depth: round r of the fixed point produces prefixes of depth r. */
-    val unrollPrefixDepth = AtomicLongArray(DEPTH_BUCKETS)
-
-    /** Materialised accessors by prefix depth, so the fan-out per level is visible. */
-    val unrollMaterialisedAtDepth = AtomicLongArray(DEPTH_BUCKETS)
+    // ---- A: the TIFA [any] unroll -- REMOVED ---------------------------------------------------
+    //
+    // There is no unroll any more. `TreeInitialFactAbstraction` never materialises an accessor out
+    // of an `[any]`, so `unrollCalls`, `unrollCarrierNodes`, `unrollCopyCarriesAny` and the two
+    // by-prefix-depth histograms have no producer. They are deleted rather than left reading zero:
+    // a counter that is zero by construction says nothing, and this file already carries the
+    // measurements they were taken for (`carrierPerRequest = 10.72`, `copyCarriesAny` 99.4%).
+    // The equivalent question is now `TIFA R3c` versus `R4` -- premises handed out versus walk
+    // states entered by reading -- and both live in `TifaDiagnostics`.
 
     // ---- B: the getChild [any] synthesis -------------------------------------------------------
 
@@ -340,37 +313,6 @@ object ApOpDiagnostics {
         }
     }
 
-    /**
-     * Distinct unroll prefixes at depth >= [PREFIX_SAMPLE_MIN_DEPTH].
-     *
-     * The counters say the ladder reaches depth 7; these say what a rung actually spells, which is
-     * what makes "every non-repeating sequence over the demand set" checkable against real data
-     * rather than against the unit reproducer alone.
-     */
-    const val PREFIX_SAMPLE_MIN_DEPTH = 5
-    private const val PREFIX_SAMPLES = 20
-    private val prefixSamples = java.util.Collections.synchronizedSet(LinkedHashSet<String>())
-
-    fun samplePrefix(depth: Int, render: () -> String) {
-        if (!enabled || depth < PREFIX_SAMPLE_MIN_DEPTH) return
-        if (prefixSamples.size >= PREFIX_SAMPLES) return
-        prefixSamples.add("d$depth ${render().take(300)}")
-    }
-
-    fun recordUnrollRequest(prefixDepth: Int, offered: Int, carrier: Long, anyChild: Long) {
-        unrollRequests.incrementAndGet()
-        unrollOffered.addAndGet(offered.toLong())
-        unrollCarrierNodes.addAndGet(carrier)
-        unrollAnyChildNodes.addAndGet(anyChild)
-        unrollPrefixDepth.incrementAndGet(prefixDepth.coerceIn(0, DEPTH_BUCKETS - 1))
-    }
-
-    fun recordUnrollMaterialised(prefixDepth: Int, copyCarriesAny: Boolean) {
-        unrollMaterialised.incrementAndGet()
-        unrollMaterialisedAtDepth.incrementAndGet(prefixDepth.coerceIn(0, DEPTH_BUCKETS - 1))
-        if (copyCarriesAny) unrollCopyCarriesAny.incrementAndGet() else unrollCopyAnyFree.incrementAndGet()
-    }
-
     // ---- I: can the type filter at a graft point reject anything at all? -----------------------
 
     /**
@@ -568,19 +510,6 @@ object ApOpDiagnostics {
 
     fun report(): String = buildString {
         appendLine(
-            "apop A-unroll calls=${unrollCalls.get()} requests=${unrollRequests.get()}" +
-                " offered=${unrollOffered.get()} materialised=${unrollMaterialised.get()}" +
-                " carrierNodes=${unrollCarrierNodes.get()} anyChildNodes=${unrollAnyChildNodes.get()}" +
-                " mergedNodes=${unrollMergedNodes.get()} addedDelta=${unrollAddedDelta.get()}"
-        )
-        appendLine(
-            "apop A-unroll copyCarriesAny=${unrollCopyCarriesAny.get()} copyAnyFree=${unrollCopyAnyFree.get()}" +
-                " carrierPerRequest=${ratio(unrollCarrierNodes.get(), unrollRequests.get())}" +
-                " nodesPerMaterialised=${ratio(unrollCarrierNodes.get(), unrollMaterialised.get())}"
-        )
-        appendLine("apop A-unroll requestsByPrefixDepth=[${unrollPrefixDepth.render()}]")
-        appendLine("apop A-unroll materialisedByPrefixDepth=[${unrollMaterialisedAtDepth.render()}]")
-        appendLine(
             "apop B-getChildAny calls=${anyReadCalls.get()} literalNodes=${anyReadLiteralNodes.get()}" +
                 " resultNodes=${anyReadResultNodes.get()} grew=${anyReadGrew.get()}" +
                 " growth=${anyReadGrowth.get()} fromNothing=${anyReadFromNothing.get()}" +
@@ -670,7 +599,5 @@ object ApOpDiagnostics {
         )
         append(baseReport())
         append(siteReport())
-        appendLine("apop --- unroll prefixes at depth >= $PREFIX_SAMPLE_MIN_DEPTH ---")
-        prefixSamples.forEach { appendLine("apop   $it") }
     }
 }

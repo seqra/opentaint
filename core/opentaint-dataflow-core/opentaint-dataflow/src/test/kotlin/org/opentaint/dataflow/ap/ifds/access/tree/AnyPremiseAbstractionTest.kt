@@ -35,13 +35,16 @@ class AnyPremiseAbstractionTest {
         val FIELD_B = FieldAccessor("A", "b", "B")
         val FIELD_C = FieldAccessor("B", "c", "C")
 
+        /** The one field [UnrollStrategy] declines to unroll, so an `[any]` does not cover it. */
+        val FIELD_NO_ANY = FieldAccessor("A", "<no-any>", "B")
+
         val MARK = TaintMarkAccessor("test-mark")
         val TYPE_A = TypeInfoAccessor("A")
     }
 
     private object UnrollStrategy : AnyAccessorUnrollStrategy {
         override fun unrollAccessor(accessor: Accessor): Boolean =
-            accessor is FieldAccessor || accessor is ElementAccessor
+            (accessor is FieldAccessor && accessor != FIELD_NO_ANY) || accessor is ElementAccessor
     }
 
     /**
@@ -53,20 +56,32 @@ class AnyPremiseAbstractionTest {
      * never be mixed across two of them -- hence one manager per test rather than one per limit.
      */
     private var configuredLimit: Int = -1
+
+    /**
+     * R3a ships OFF (`TreeInitialFactAbstraction.ANY_FRONTIER_PREMISE`), because a coarse `[any]`
+     * premise resurrects a cleaned field. This class is the one that pins the SHAPE of that premise,
+     * so it turns the arm on -- through the manager, so no global state moves and the rest of the
+     * suite still sees the production default.
+     */
+    private var configuredFrontier: Boolean = true
     private var managerCreated = false
 
     private val manager: TreeApManager by lazy {
         managerCreated = true
-        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit)
+        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit, anyFrontierPremise = configuredFrontier)
     }
 
     private val base = AccessPathBase.This
 
-    private fun abstraction(anyUnrollLimit: Int = -1): TreeInitialFactAbstraction {
-        check(!managerCreated || anyUnrollLimit == configuredLimit) {
-            "the manager owns the [any] budget, so the limit must be chosen before the first fact is built"
+    private fun abstraction(
+        anyUnrollLimit: Int = -1,
+        anyFrontierPremise: Boolean = true,
+    ): TreeInitialFactAbstraction {
+        check(!managerCreated || (anyUnrollLimit == configuredLimit && anyFrontierPremise == configuredFrontier)) {
+            "the manager owns the [any] budget and the frontier arm, so both must be chosen before the first fact"
         }
         configuredLimit = anyUnrollLimit
+        configuredFrontier = anyFrontierPremise
         return TreeInitialFactAbstraction(manager)
     }
 
@@ -156,17 +171,29 @@ class AnyPremiseAbstractionTest {
 
     /* ---------- 5B: `[any]` covers field and element steps only, so marks stay visible ---------- */
 
+    /**
+     * REWRITTEN for never-unroll. This test used to assert the opposite -- that while a base was
+     * still enumerating, the coarse `[any]` edge was suppressed because the concrete premises were
+     * strictly more precise and the coarse one alongside them could only add false positives.
+     *
+     * There is no enumeration any more. R3c names the demanded accessor without materialising it and
+     * R3a summarises the rest of the frontier; the two answer different callers, so both go out.
+     * Design §7 R5, resolved in favour of ALWAYS.
+     */
     @Test
-    fun `while the base still unrolls no any premise is emitted`() {
+    fun `the coarse edge and the named accessor are emitted together`() {
         val abstraction = abstraction(anyUnrollLimit = -1)
         abstraction.register(premise().exclude(FIELD_A))
 
         val produced = abstraction.add(fact(AnyAccessor, FIELD_C))
 
-        assertTrue(produced.premises().contains(premise(FIELD_A)), "the demand is answered by unrolling")
-        assertFalse(
+        assertTrue(
+            produced.premises().contains(premise(FIELD_A)),
+            "R3c answers the demand for `a`; produced=${produced.premises()}"
+        )
+        assertTrue(
             produced.premises().contains(premise(AnyAccessor)),
-            "the coarse edge alongside a live enumeration only costs precision; produced=${produced.premises()}"
+            "R3a summarises the frontier the demand did not name; produced=${produced.premises()}"
         )
     }
 
@@ -358,7 +385,7 @@ class AnyPremiseAbstractionTest {
     /* ---------- 6: the cap ---------- */
 
     @Test
-    fun `uncapped, every demanded accessor is unrolled into its own premise`() {
+    fun `every demanded accessor gets its own premise, with nothing materialised`() {
         val abstraction = abstraction(anyUnrollLimit = -1)
         abstraction.register(premise().exclude(FIELD_A))
         abstraction.add(fact(AnyAccessor, FIELD_C))
@@ -367,12 +394,21 @@ class AnyPremiseAbstractionTest {
 
         assertTrue(
             produced.premises().contains(premise(FIELD_B)),
-            "unrolling materialises `this.b.[any].*`, whose walk emits `this.b`; produced=${produced.premises()}"
+            "R3c emits `this.b` straight off the demand -- `added` still holds only `this.[any].c`; " +
+                "produced=${produced.premises()}"
         )
     }
 
+    /**
+     * REWRITTEN for never-unroll. This test used to assert that a spent pot stopped the second
+     * accessor from being handed out. `anyUnrollLimit` gated `readChildPaidOnly`, whose only caller
+     * in the engine was the unroll, so with R1 it no longer bounds the premise family at all -- it
+     * decides only whether a `readChild` mint is PAID or CREDIT, i.e. whether the absorbing prepend
+     * may fire. Kept, inverted, rather than deleted: the cap is still configurable, and a silent
+     * change of meaning is worse than a loud one.
+     */
     @Test
-    fun `at the cap the origin stops unrolling and the any premise stands in`() {
+    fun `the any unroll limit no longer bounds the premise walk`() {
         val abstraction = abstraction(anyUnrollLimit = 1)
         abstraction.register(premise().exclude(FIELD_A))
 
@@ -380,41 +416,167 @@ class AnyPremiseAbstractionTest {
         first.assertIdentityPair(premise(AnyAccessor))
         assertTrue(
             first.premises().contains(premise(FIELD_A)),
-            "the first unroll is still below the limit; produced=${first.premises()}"
+            "produced=${first.premises()}"
         )
 
-        // The origin's pot is spent. A second demand is not unrolled any more.
         val second = abstraction.register(premise().exclude(FIELD_B))
-        assertFalse(
+        assertTrue(
             second.premises().contains(premise(FIELD_B)),
-            "the pot is spent, so `this.b` is not materialised out of the `[any]`; produced=${second.premises()}"
+            "nothing was spent, because nothing was unrolled; produced=${second.premises()}"
         )
     }
 
     @Test
-    fun `the cap bounds the enumeration but does not close the frontier`() {
+    fun `an accessor demanded and then supplied is not emitted twice`() {
         val abstraction = abstraction(anyUnrollLimit = 1)
         abstraction.register(premise().exclude(FIELD_A))
         abstraction.add(fact(AnyAccessor, FIELD_C))
-        abstraction.register(premise().exclude(FIELD_B))
-
-        // A caller really does send taint at `this.b`: the ordinary demand-driven mechanism answers
-        // it, cut or not. The cap only stops the enumeration that starts from an `[any]`.
-        val produced = abstraction.add(fact(FIELD_B, FIELD_C))
-
+        val demanded = abstraction.register(premise().exclude(FIELD_B))
         assertTrue(
-            produced.premises().contains(premise(FIELD_B)),
-            "an accessor demanded later still gets its own premise; produced=${produced.premises()}"
+            demanded.premises().contains(premise(FIELD_B)),
+            "R3c hands it out before any fact supplies it; produced=${demanded.premises()}"
+        )
+
+        // The caller really does send taint at `this.b` now. `root.child(b)` exists, so R2 takes the
+        // descend arm: the self-registration at the emission site is the only de-duplication there
+        // is, and it keys on the PREMISE rather than on the demand.
+        val supplied = abstraction.add(fact(FIELD_B, FIELD_C))
+
+        assertFalse(
+            supplied.premises().contains(premise(FIELD_B)),
+            "already handed out; produced=${supplied.premises()}"
+        )
+    }
+
+    /* ---------- 7: never unroll -- the rules that replace it ---------- */
+
+    /**
+     * The production default. R3a is off, so the demand is answered by R3c alone -- precisely, and
+     * without the coarse edge whose entry fact cannot carry a node deletion.
+     */
+    @Test
+    fun `by default the frontier is answered precisely and no any premise is emitted`() {
+        val abstraction = abstraction(anyFrontierPremise = false)
+        abstraction.register(premise().exclude(FIELD_A))
+
+        val produced = abstraction.add(fact(AnyAccessor, FIELD_C))
+
+        produced.assertIdentityPair(premise(FIELD_A))
+        assertFalse(
+            produced.premises().contains(premise(AnyAccessor)),
+            "the coarse edge only adds false positives while R3c is still answering; " +
+                "produced=${produced.premises()}"
         )
     }
 
     /**
-     * The budget is per `[any]` ORIGIN, not per base -- which is the whole point of the change. A
-     * second base carries an independently created `[any]`, hence its own pot, so an origin that has
-     * spent its budget does not cut a base that still has one.
+     * R3b. `[any]` is zero-or-more steps over FIELD and ELEMENT, so a taint mark below one is not
+     * something `p.[any]` denotes -- and the mark is the finding. The demand sits at `p`, and the
+     * premise that answers it is `p.![m]`: `AccessTree.getChild` hoists the `[any]`'s child up, so
+     * the `[any]`-free premise matches the `[any]`-carrying fact that produced it.
+     *
+     * The `[any]`-CARRYING member of the family, `p.[any].![m]`, is deliberately not emitted here.
+     * Naming it speculatively off demand registered at `p` is what resurrected the cleaned field in
+     * `TreeCleanerFieldSensitivityAnalysisTest`: an entry fact `p.[any].![m].*` cannot express a
+     * node deletion inside the `[any]`. It is still reachable where the engine has actually refined
+     * `p.[any]` itself -- `a mark below an any is named by the premise`, above, is that case.
      */
     @Test
-    fun `the cap is keyed by origin, so a second base is unaffected`() {
+    fun `a demanded mark below an any is named at this prefix`() {
+        val abstraction = abstraction()
+        abstraction.register(premise().exclude(MARK))
+
+        val produced = abstraction.add(fact(AnyAccessor, MARK))
+
+        assertTrue(
+            produced.premises().contains(premise(MARK, FinalAccessor)),
+            "the `[any]` taken zero times; produced=${produced.premises()}"
+        )
+        assertFalse(
+            produced.premises().contains(premise(AnyAccessor, MARK, FinalAccessor)),
+            "not speculatively, off demand registered one level above; produced=${produced.premises()}"
+        )
+    }
+
+    /**
+     * R3c: the accessor is named although it exists in NO concrete branch of the fact, and nothing
+     * is written into `added`. This is what the automata backend has always done
+     * (`AutomataInitialFactAbstraction.abstractGraph`), and eight scenarios of the cross-backend
+     * `InitialFactAbstractionTest` assert it.
+     */
+    @Test
+    fun `a demanded accessor absent from the fact is named without being materialised`() {
+        val abstraction = abstraction()
+        abstraction.register(premise().exclude(FIELD_A))
+
+        val produced = abstraction.add(fact(AnyAccessor, FIELD_C))
+
+        produced.assertIdentityPair(premise(FIELD_A))
+
+        // Nothing was materialised: a second, unrelated demand still sees the same `[any]` frontier
+        // rather than a `this.a.[any].*` copy of it.
+        val second = abstraction.register(premise().exclude(FIELD_B))
+        second.assertIdentityPair(premise(FIELD_B))
+    }
+
+    /**
+     * R4. Emitting `this.a` registers the trie node but materialises nothing, so without the virtual
+     * descent the abstraction would stick one level below every `[any]` forever. `getChild`
+     * synthesises the node the unroll used to copy, and the walk descends into it.
+     */
+    @Test
+    fun `the ladder climbs through a synthesised node`() {
+        val abstraction = abstraction()
+        abstraction.register(premise().exclude(FIELD_A))
+        abstraction.add(fact(AnyAccessor, FIELD_C))
+
+        val second = abstraction.register(premise(FIELD_A).exclude(FIELD_C))
+
+        assertTrue(
+            second.premises().contains(premise(FIELD_A, FIELD_C)),
+            "the `[any]` re-installed below the synthesised `a` still answers demand; " +
+                "produced=${second.premises()}"
+        )
+    }
+
+    /**
+     * The invariant that makes rules 2 and 3 compose: emitting `p.[any]` answers the demand at that
+     * level FOR NOW, and must not retire it.
+     *
+     * `FIELD_NO_ANY` is the accessor this test needs: the strategy declines to unroll it, so it is
+     * NOT covered by the `[any]` and R3c cannot answer it eagerly. The coarse edge goes out, the
+     * `{<no-any>}` demand stays on the books, and when supply catches up R2 fires on the new fact
+     * exactly as if the `[any]` premise had never been emitted.
+     */
+    @Test
+    fun `the coarse any premise does not consume the demand`() {
+        val abstraction = abstraction()
+        abstraction.register(premise().exclude(FIELD_NO_ANY))
+
+        val coarse = abstraction.add(fact(AnyAccessor, FIELD_C))
+        assertTrue(
+            coarse.premises().contains(premise(AnyAccessor)),
+            "produced=${coarse.premises()}"
+        )
+        assertFalse(
+            coarse.premises().contains(premise(FIELD_NO_ANY)),
+            "the `[any]` does not cover it, so there is no evidence for it yet; produced=${coarse.premises()}"
+        )
+
+        val supplied = abstraction.add(fact(FIELD_NO_ANY, FIELD_C))
+
+        assertTrue(
+            supplied.premises().contains(premise(FIELD_NO_ANY)),
+            "the demand was never marked answered; produced=${supplied.premises()}"
+        )
+    }
+
+    /**
+     * Bases are independent, and stay so. Each holds its own `added` accumulator and its own demand
+     * trie, so a premise handed out at one says nothing about what the other has been asked.
+     */
+    @Test
+    fun `a second base gets its own premises`() {
         val abstraction = abstraction(anyUnrollLimit = 1)
 
         abstraction.register(premise().exclude(FIELD_A))

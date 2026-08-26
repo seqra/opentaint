@@ -19,27 +19,39 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
 /**
- * The budget this used to carry itself now lives on [TreeApManager.anyUnroll], keyed by `[any]`
- * ORIGIN rather than by `(method entry point, access-path base)`.
+ * Turns a concrete taint fact into premises, WITHOUT ever unrolling an `[any]`.
  *
- * That is not a refactor for tidiness. A single-rule, single-entry-point witness had 7,347 distinct
- * `(entry point, base)` pairs, so a limit of 100 was an effective global allowance of ~735,000: the
- * cap was not weak because 100 is a large number, it was weak because it was multiplied by seven
- * thousand independent buckets. And it could only ever see the ONE channel that reaches this file --
- * capping it did not remove work, it diverted it to the spine rebuilds and the summary graft, which
- * measured a TWELVEFOLD increase in total materialisation at cap 0.
+ * Design: `docs/superpowers/specs/2026-08-26-tifa-never-unroll-design.md`. At a walk state
+ * `(T, N, p)` -- trie node, fact node, prefix -- with `E = T.exclusions()`:
+ *
+ *  - **R0** `E == null` -- nothing has ever terminated here, so hand out `p`; `p.*` covers the rest.
+ *  - **R1** no accessor is ever materialised out of an `[any]` into `added`. That is the change.
+ *  - **R2** for each `a` the fact holds LITERALLY: descend if `T.child(a)` exists, else emit `p.a`
+ *    if `a in E`.
+ *  - **R3a** the covered frontier: one `[any]` edge for everything `[any]` denotes.
+ *  - **R3b** the uncovered frontier: `[any]` covers field and element steps only, so a taint mark
+ *    below one is NOT denoted by `p.[any]` and has to be named -- twice, once for each reading of
+ *    the zero-or-more.
+ *  - **R3c** demanded, covered, absent: emit `p.a` without materialising `a` anywhere. This is what
+ *    the automata backend has always done (`AutomataInitialFactAbstraction.abstractGraph`).
+ *  - **R4** the virtual descent: read `N.getChild(a)` rather than storing what the unroll copied.
+ *
+ * The unroll's real job was never precision -- it was putting a literal child into `added` so that a
+ * later walk's `forEachAccessor` would route to the deeper trie node. R3c hands out the premise,
+ * which registers the trie node; R4 is what makes the next walk descend there. The cost the unroll
+ * carried was the COPY (`carrierPerRequest = 10.72` nodes, of which 99.4% still owned an `[any]` and
+ * so re-armed the next round); R4 walks the same shapes and stores none of them.
  */
 class TreeInitialFactAbstraction(
     private val apManager: TreeApManager,
     methodInitialStatement: CommonInst? = null,
 ): InitialFactAbstraction {
-    private val anyUnroll = apManager.anyUnroll
-
     private val methodLabel: String? =
         if (TifaDiagnostics.enabled) methodInitialStatement?.location?.method?.toString() else null
 
@@ -108,13 +120,27 @@ class TreeInitialFactAbstraction(
         abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>,
         typeChecker: FactTypeChecker
     ) {
-        var concreteFactAccess = initialConcreteFact
-        var enumerateAnyFrontier = true
+        // The ladder, and the only loop left.
+        //
+        // A premise REGISTERS ITSELF at the emission site, so handing out `p` creates `p`'s trie
+        // path and the next walk descends past it instead of stopping there. One walk therefore
+        // climbs exactly one rung, and a demand registered `k` links down needs `k` walks. The old
+        // code got those extra walks for free from the unroll's round loop -- a round materialised a
+        // delta and the delta was walked again. With nothing materialised, the loop has to be driven
+        // by the only thing that still changes between rounds: whether the round registered a
+        // premise the trie did not already hold.
+        //
+        // It terminates, and the argument is not about fact shape. Every emission registers with an
+        // EMPTY exclusion set, so a trie node the walk itself created can never satisfy R3a
+        // (`E != {}`), R3c (`a in E`) or R2's emit arm. Only nodes registered from OUTSIDE, by
+        // `registerNewInitialFact`, carry demand, and the rounds are bounded by the depth of that
+        // externally registered trie.
+        var round = 0
         while (true) {
-            val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
-            abstractAccessPath(
-                facts.analyzed, concreteFactAccess, unrollRequests, enumerateAnyFrontier
-            ) { abstractAccess, governingAnyId, hoistedAny ->
+            var registeredNew = false
+            val firstRound = round == 0
+
+            abstractAccessPath(facts.analyzed, initialConcreteFact, typeChecker) { abstractAccess, governingAnyId ->
                 apManager.cancellation.checkpoint()
 
                 if (TifaDiagnostics.enabled) {
@@ -128,10 +154,6 @@ class TreeInitialFactAbstraction(
                     if (governingAnyId != null) {
                         TifaDiagnostics.emitsUnderAny.incrementAndGet()
                         stats?.emitsUnderAny?.incrementAndGet()
-                    }
-                    if (hoistedAny) {
-                        TifaDiagnostics.emitsHoistedFromAny.incrementAndGet()
-                        stats?.emitsHoistedFromAny?.incrementAndGet()
                     }
                     var chainNode = abstractAccess
                     var chainCarriesAny = false
@@ -159,159 +181,21 @@ class TreeInitialFactAbstraction(
                 val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess, governingAnyId)
                 val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
 
-                facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                val registered = facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
+                if (registered) registeredNew = true
+
+                // Round 0 reproduces the old contract exactly: everything the walk reaches is handed
+                // out, whether or not the trie already held it. Later rounds exist only to climb, so
+                // they contribute only what the trie did not have -- otherwise a chain below an
+                // always-unroll-next accessor, which no trie test gates, would be re-emitted once
+                // per round.
+                if (firstRound || registered) abstractFacts.add(initialAbstractAp to ap)
             }
 
-            if (!enumerateAnyFrontier) break
-
-            val unrolled = unrollAnyAccessors(facts, unrollRequests, typeChecker)
-
-            if (unrolled.budgetSpent) {
-                // A pot ran out during this round -- either an accessor was refused outright, or the
-                // last one it granted took the pot to its limit. Two things then have to happen at
-                // once, and neither survives simply breaking out of the loop.
-                //
-                // The refused accessors have already been consumed from `AccessPathTrieNode`'s
-                // one-shot memo, so nothing would answer them any more. And the round after this one
-                // would walk only the newly unrolled DELTA, whose root is a concrete accessor -- the
-                // `[any]` that needs summarising sits at the root of the base's whole fact set, not
-                // of the delta. So: walk the whole set once more, coarsely, which emits the `[any]`
-                // premise for every frontier that carries demand, and stop.
-                enumerateAnyFrontier = false
-                concreteFactAccess = facts.allAddedFacts()
-                continue
-            }
-
-            concreteFactAccess = unrolled.node ?: break
+            round++
+            if (!registeredNew || SINGLE_ROUND) break
+            if (TifaDiagnostics.enabled) TifaDiagnostics.walkRounds.incrementAndGet()
         }
-    }
-
-    private class UnrollResult(val node: AccessTreeNode?, val budgetSpent: Boolean)
-
-    private fun unrollAnyAccessors(
-        facts: MethodSameBaseInitialFact,
-        unrollRequests: List<AnyAccessorUnrollRequest>,
-        typeChecker: FactTypeChecker
-    ): UnrollResult {
-        if (unrollRequests.isEmpty()) return UnrollResult(null, budgetSpent = false)
-
-        if (ApOpDiagnostics.enabled) ApOpDiagnostics.unrollCalls.incrementAndGet()
-
-        val unrollStrategy = apManager.anyAccessorUnrollStrategy
-
-        var budgetSpent = false
-        val newFacts = mutableListOf<AccessTreeNode>()
-        for (unrollRequest in unrollRequests) {
-            apManager.cancellation.checkpoint()
-
-            // The state of the `[any]` edge this request is unrolling. The request captures the node
-            // that CARRIES the edge, not the `[any]` subtree, so this is the right one.
-            val parentAnyState = unrollRequest.node.anyId
-
-            val prefixDepth = if (ApOpDiagnostics.enabled) {
-                var d = 0
-                unrollRequest.currentAp.foldRight(Unit) { _, _ -> d++ }
-                ApOpDiagnostics.recordUnrollRequest(
-                    prefixDepth = d,
-                    offered = unrollRequest.accessors.size,
-                    // What the unroll re-roots is the CARRIER, not the `[any]` subtree. Both are
-                    // recorded so the reader can see which one the cost follows.
-                    carrier = unrollRequest.node.size,
-                    anyChild = unrollRequest.node.getChild(ANY_ACCESSOR_IDX)?.size ?: 0L,
-                )
-                d
-            } else 0
-
-            unrollRequest.accessors.forEachInt { accessor ->
-                val accessorInstance = with(apManager) { accessor.accessor }
-                if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachInt
-
-                // The unroll IS an R4 read: `R.[any]` denotes `R`, `R.x`, `R.x.y`, ... while
-                // `R.f.[any]` denotes `R.f`, `R.f.x`, ... -- a strict subset with exactly one step
-                // spent. It is tempting to read the surviving `[any]` edge as "duplicated, not
-                // consumed" and keep the parent's state; that is a refill. Unroll `f` then `g` and
-                // read `p` under each: keeping the parent, both record `child(p)`, the second is
-                // free, and the automaton stays one level deep however wide the fan-out. Advancing,
-                // they record `child(f).child(p)` and `child(g).child(p)` -- two paths, two
-                // accessors, which is the population the bound is about.
-                // The PAID-ONLY read. Two things ride on it. The premise-side cut must keep its
-                // pre-credit contract, or accessors that are granted today are silently refused;
-                // and this loop must not absorb -- it prepends exactly the accessor it just read
-                // (`prefix = ReversedApNode(accessor, currentAp)` below), so an absorbing prepend
-                // would match perfectly, fire, and telescope away the `filterAccessNode` copy this
-                // loop just paid for. The rewrite exists to stop the graft re-installing what the
-                // delta read, not to cancel the unroll.
-                val childAnyState = anyUnroll.readChildPaidOnly(parentAnyState, accessor)
-                if (anyUnroll.enabled && parentAnyState != null && childAnyState == null) {
-                    // Counted SEPARATELY from every other refusal. `readsRefused` mixes this with
-                    // `getChild`'s arm, and reading the mixed number as if it were this one is
-                    // exactly how a censored count gets mistaken for a small mechanism.
-                    if (TifaDiagnostics.enabled) TifaDiagnostics.unrollRefusedByBudget.incrementAndGet()
-                    budgetSpent = true
-                    return@forEachInt
-                }
-
-                val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
-                val accessorStatus = accessorFilter.check(accessorInstance)
-                when (accessorStatus) {
-                    is FactTypeChecker.FilterResult.Accept,
-                    is FactTypeChecker.FilterResult.FilterNext -> {
-                        // accept
-                    }
-
-                    is FactTypeChecker.FilterResult.Reject -> return@forEachInt
-                }
-
-                val prefix = ReversedApNode(accessor, unrollRequest.currentAp)
-
-                val nodeFilter = prefix.createFilter(typeChecker)
-                val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachInt
-
-                newFacts += filteredNode.withAnyState(childAnyState)
-                    .addReversedApParents(prefix, unrollRequest.governingAnyId)
-                    ?: return@forEachInt
-
-                if (ApOpDiagnostics.enabled) {
-                    ApOpDiagnostics.samplePrefix(prefixDepth + 1) {
-                        val names = mutableListOf<String>()
-                        prefix.foldRight(Unit) { a, _ -> names.add(with(apManager) { a.accessor }.toSuffix()) }
-                        names.asReversed().joinToString("")
-                    }
-                    // The decisive bit: does the COPY still carry an `[any]` of its own? If it does,
-                    // the next round unrolls it again one accessor deeper, and the fixed point is
-                    // every non-repeating sequence over the demand set rather than one level of it.
-                    ApOpDiagnostics.recordUnrollMaterialised(prefixDepth, filteredNode.containsAnyAccessor())
-                    ApOpDiagnostics.example("A-unroll", filteredNode.size) {
-                        val acc = with(apManager) { accessor.accessor }
-                        "re-root carrier (size=${unrollRequest.node.size}, " +
-                            "anyChild=${unrollRequest.node.getChild(ANY_ACCESSOR_IDX)?.size ?: 0}) " +
-                            "under prefix depth $prefixDepth + ${acc.toSuffix()} " +
-                            "-> copy size=${filteredNode.size} carriesAny=${filteredNode.containsAnyAccessor()}; " +
-                            "carrier=" + unrollRequest.node.toString().replace('\n', ' ')
-                    }
-                }
-
-                // The event the retired per-base counter charged for. Counted, not charged: the gap
-                // between this and `transitions` is how much weaker the per-origin bound is per unit
-                // of work than the counter it replaces.
-                if (AnyUnrollDiagnostics.enabled) AnyUnrollDiagnostics.tifaUnrolledFacts.incrementAndGet()
-                if (TifaDiagnostics.enabled) TifaDiagnostics.unrollMaterialised.incrementAndGet()
-            }
-
-            // Not only an outright refusal: an unroll that took the pot exactly to its limit leaves
-            // nothing for the next round either, and the coarse premise still has to be emitted.
-            if (anyUnroll.budgetExhausted(parentAnyState)) budgetSpent = true
-        }
-
-        val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f, foldToAny = false) }
-            ?: return UnrollResult(null, budgetSpent)
-
-        if (ApOpDiagnostics.enabled) ApOpDiagnostics.unrollMergedNodes.addAndGet(mergedNewFacts.size)
-
-        val delta = facts.addInitialFact(mergedNewFacts, interner)
-        if (ApOpDiagnostics.enabled && delta != null) ApOpDiagnostics.unrollAddedDelta.addAndGet(delta.size)
-        return UnrollResult(delta, budgetSpent)
     }
 
     private fun ReversedApNode?.createFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactApFilter {
@@ -324,23 +208,20 @@ class TreeInitialFactAbstraction(
         return typeChecker.accessPathFilter(accessors.asReversed())
     }
 
-    private fun AccessTreeNode.addReversedApParents(
-        ap: ReversedApNode,
-        governingAnyId: AnyUnrollState?,
-    ): AccessTreeNode? =
-        ap.foldRight(this) { accessor, node ->
-            // `currentAp` can carry an `[any]` link -- the walk pushes one at every `[any]` descent
-            // -- and re-creating that edge with no state would derive R1/R2 from the subtree. That
-            // is a full fresh pot whenever the type filter has already stripped the subtree's own
-            // `[any]`, which is exactly the refill the rest of this file is threaded to avoid.
-            // NON-ABSORBING -- the one caller that opts out. This loop prepends exactly the
-            // accessor it just read, so the backward query would match perfectly, the absorption
-            // would fire, and the fold would telescope the whole prefix away: throwing out the
-            // `filterAccessNode` copy, the most expensive thing in the loop, AFTER paying for the
-            // transition. The rewrite exists to stop the graft re-installing what the delta read,
-            // not to cancel the unroll.
-            node.addParentIfPossible(accessor, governingAnyId, absorbing = false) ?: return null
-        }
+    /**
+     * `U` -- the accessors an `[any]` does NOT cover, so the ones a `p.[any]` premise cannot stand in
+     * for. Taint marks, `[final]`, `[value]`, type-info accessors, class statics, and any field the
+     * strategy declines to unroll.
+     *
+     * The order of the three tests is load-bearing, not cosmetic.
+     * [AnyAccessorUnrollStrategy.AnyAccessorDisabled], installed for the whole prescan, does not
+     * return `false` from `unrollAccessor` -- it THROWS -- and several test strategies throw on
+     * `ValueAccessor` specifically. Every accessor that would provoke that is decided by
+     * [isAlwaysUnrollNext] or [isStaticAccessor] first, and no covered accessor is
+     * always-unroll-next, so the short circuit is exact rather than approximate.
+     */
+    private fun AccessorIdx.isUncoveredByAny(): Boolean =
+        isAlwaysUnrollNext() || isStaticAccessor() || !apManager.isCoveredByAny(this)
 
     data class AbstractionState(
         val analyzedTrieRoot: AccessPathTrieNode,
@@ -356,33 +237,13 @@ class TreeInitialFactAbstraction(
          * demands.
          */
         val governingAnyId: AnyUnrollState?,
-        /**
-         * Diagnostics only: whether this state was reached by HOISTING an `[any]` subtree -- the
-         * "`[any]` taken zero times" descent, which keeps the prefix and the trie node and swaps in
-         * the `[any]`'s child.
-         *
-         * That descent is invisible to [governingAnyId] (which it deliberately leaves alone) and to
-         * the emitted chain (which it deliberately does not extend), so without this flag a premise
-         * that exists only because an `[any]` was hoisted is indistinguishable from one the fact
-         * literally held.
-         */
-        val hoistedAny: Boolean = false,
-    )
-
-    data class AnyAccessorUnrollRequest(
-        val currentAp: ReversedApNode?,
-        val node: AccessTreeNode,
-        val accessors: IntOpenHashSet,
-        /** The state governing any `[any]` link already in [currentAp]; see [addReversedApParents]. */
-        val governingAnyId: AnyUnrollState?,
     )
 
     private inline fun abstractAccessPath(
         initialAnalyzedTrieRoot: AccessPathTrieNode,
         initialAdded: AccessTreeNode,
-        unrollRequests: MutableList<AnyAccessorUnrollRequest>,
-        enumerateAnyFrontier: Boolean,
-        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?, Boolean) -> Unit
+        typeChecker: FactTypeChecker,
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
     ) {
         val unprocessed = mutableListOf<AbstractionState>()
         unprocessed.add(AbstractionState(initialAnalyzedTrieRoot, initialAdded, currentAp = null, governingAnyId = null))
@@ -392,105 +253,155 @@ class TreeInitialFactAbstraction(
 
             if (TifaDiagnostics.enabled) TifaDiagnostics.walkStates.incrementAndGet()
 
-            val currentLevelExclusions = state.analyzedTrieRoot.exclusions()
-            if (currentLevelExclusions == null) {
-                createAbstractAp(state.currentAp, state.governingAnyId, state.hoistedAny)
+            val trie = state.analyzedTrieRoot
+            val added = state.added
+
+            // R0. No premise has ever terminated here, so `p` itself is the answer and its `.*`
+            // covers everything below. Emitting it is also what primes this level for the next walk.
+            val exclusions = trie.exclusions()
+            if (exclusions == null) {
+                createAbstractAp(state.currentAp, state.governingAnyId)
                 continue
             }
 
-            if (state.added.containsAnyAccessor()) {
+            val anyBranch = if (added.containsAnyAccessor()) added.getChild(ANY_ACCESSOR_IDX) else null
+            if (anyBranch != null) {
                 if (TifaDiagnostics.enabled) TifaDiagnostics.anyDescents.incrementAndGet()
 
-                // The budget is consulted BEFORE the memo, deliberately.
-                // `AccessPathTrieNode.unrollAccessors` commits as it reads and has no un-take, so
-                // collecting a request we will not honour burns demand that a later, better-funded
-                // state could have served.
-                val enumerateHere = enumerateAnyFrontier && !anyUnroll.budgetExhausted(state.added.anyId)
+                val anyAp = ReversedApNode(ANY_ACCESSOR_IDX, state.currentAp)
+                // The premise emitted below this point NAMES the `[any]`, so it is governed by the
+                // state of the edge just crossed.
+                val anyGoverning = added.anyId ?: state.governingAnyId
+                val anyTrie = trie.child(ANY_ACCESSOR_IDX)
 
-                if (enumerateHere) {
-                    val unrollAccessors = state.analyzedTrieRoot.unrollAccessors(currentLevelExclusions)
-                    if (unrollAccessors.isNotEmpty()) {
-                        if (TifaDiagnostics.enabled) {
-                            TifaDiagnostics.unrollRequests.incrementAndGet()
-                            TifaDiagnostics.unrollAccessorsOffered.addAndGet(unrollAccessors.size.toLong())
-                        }
-                        unrollRequests += AnyAccessorUnrollRequest(
-                            state.currentAp, state.added, unrollAccessors, state.governingAnyId,
+                // R3a -- the covered frontier, one edge for everything `[any]` denotes.
+                //
+                // The `E != {}` guard is what keeps the 19 `expectedEmpty` scenarios green: a level
+                // that has handed out a premise and been asked nothing of it is already covered by
+                // that premise's `.*`, and a coarse edge there would be pure volume.
+                //
+                // The emission arm is OFF by default -- see [ANY_FRONTIER_PREMISE], which overturns
+                // design §7 R5 on evidence. The DESCENT arm is not gated: an `[any]` trie child
+                // exists only because the engine registered a premise there, and walking on to
+                // answer it is the ordinary demand-driven behaviour.
+                if (anyTrie != null) {
+                    unprocessed += AbstractionState(anyTrie, anyBranch, anyAp, anyGoverning)
+                } else if (apManager.anyFrontierPremise && exclusions.isNotEmpty()) {
+                    if (TifaDiagnostics.enabled) TifaDiagnostics.emitsAnyFrontier.incrementAndGet()
+                    createAbstractAp(anyAp, anyGoverning)
+                }
+
+                // R3b -- the uncovered frontier, at THIS prefix.
+                //
+                // `[any]` is zero-or-more steps over FIELD and ELEMENT, so a taint mark below one is
+                // not something `p.[any]` denotes -- and the mark is the finding. `[any]` being
+                // zero-or-more is also what makes `p.u` the right premise for it: a sink
+                // precondition `<this>.![m].$` sits at `root -> mark` in the trie, and a fact
+                // `this.[any].![m].$` has no mark child of its own, so the demand is reachable only
+                // from here. `AccessTree.getChild` hoists the `[any]`'s child up, so `p.u` matches
+                // the fact that produced it.
+                //
+                // MEASURED, not assumed: with this block off, `CleanerFieldSensitivityAnalysisTest`
+                // loses two `the unsanitized field reports` cases outright, which is the unit-scale
+                // version of the `ssrf` and `path-traversal` losses the earlier prototypes took on
+                // conductor. That is what SUPPRESS_UNCOVERED_FRONTIER reproduces on demand.
+                //
+                // What is NOT here: a proactive `p.[any].u`, i.e. the same mark named one link below
+                // the `[any]` off the demand registered at `p`. It looks like the missing half of a
+                // zero-or-more, and the design asked for it, but it is the one shape that resurrects
+                // a cleaned field -- `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level
+                // clean over an abstract source`, red with it and green without. A `p.[any].u` entry
+                // fact cannot express a node deletion INSIDE the `[any]`, so a cleaner that bites on
+                // a concrete path stops biting under it, and the premise is a pure false positive
+                // generator. The `[any]`-carrying member of the family is still reachable, but only
+                // where the engine has actually refined `p.[any]` itself: that demand lands on
+                // `anyTrie` and the R3a descent below answers it through the ordinary per-accessor
+                // helper. Demand-driven, not speculative -- which is the rule the rest of this file
+                // follows.
+                if (!SUPPRESS_UNCOVERED_FRONTIER) {
+                    anyBranch.forEachAccessor { accessor, node ->
+                        if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
+                        if (!accessor.isUncoveredByAny()) return@forEachAccessor
+
+                        if (TifaDiagnostics.enabled) TifaDiagnostics.emitsUncoveredFrontier.incrementAndGet()
+                        abstractAccessPath(
+                            trie, accessor, node, state.currentAp, state.governingAnyId,
+                            unprocessed, createAbstractAp,
                         )
                     }
                 }
 
-                val anyBranch = state.added.getChild(ANY_ACCESSOR_IDX) ?: error("impossible")
-
-                // (1) The `[any]` taken ZERO times. `[any]` is zero-or-more (§3.5), so the fact also
-                // denotes every path that skips it, and `AccessTree.getChild` hoists a child of the
-                // `[any]` node up to this level -- which is exactly why an `[any]`-FREE premise
-                // matches an `[any]`-carrying fact. Keeping this descent is what keeps answering the
-                // demands registered at THIS trie level: a sink precondition `<this>.![m].$` sits at
-                // `root -> mark`, and a fact `this.[any].![m].$` has no mark child of its own, so the
-                // mark is reachable in the walk only through here. Dropping it is the shape that lost
-                // conductor's `ssrf` and `path-traversal` in the earlier prototypes (§3.2).
-                unprocessed += AbstractionState(
-                    state.analyzedTrieRoot, anyBranch, state.currentAp, state.governingAnyId, hoistedAny = true
-                )
-
-                // (2) The `[any]` as an ordinary accessor (§3.1): descend the trie THROUGH it, so the
-                // prefix and the trie node stay in step, and premises emitted below it name the
-                // `[any]`. The two descents are not redundant -- they walk different trie nodes and
-                // emit disjoint premise families, `[any]`-free above and `[any]`-carrying here.
+                // R3c -- demanded, covered, and present in NO concrete branch of the fact.
                 //
-                // The rule is the per-accessor helper's, with two substitutions. An analysed trie
-                // child means the premise was already handed out, so walk on -- unconditionally,
-                // because a premise below an `[any]` (a mark, §3.2) is demanded exactly as any other
-                // deeper premise is. Otherwise emit it, but only where the level carries demand AND
-                // this base has stopped enumerating. The helper tests `exclusions.contains(a)`,
-                // which can never hold for `[any]` (exclusion sets are only ever populated from
-                // concrete accessors), so the demand test here is that the level has ANY demand at
-                // all -- every excluded accessor is one this `[any]` covers.
-                //
-                // The `!enumerateAnyFrontier` half is design §7 R5, and it is not an optimisation.
-                // The `[any]` premise summarises the whole frontier in one coarse edge: its entry
-                // fact `R.[any].*` cannot express a node deletion inside the `[any]`, so a cleaner
-                // that bites on a concrete path stops biting under it. Emitting it ALONGSIDE the
-                // enumeration therefore only adds false positives -- measured:
-                // `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract
-                // source` resurrects the cleaned field. Past the cap the coarse edge is the only
-                // thing answering the demand, and the trade is then the point.
-                val anyAp = ReversedApNode(ANY_ACCESSOR_IDX, state.currentAp)
-                val anyTrieRoot = state.analyzedTrieRoot.child(ANY_ACCESSOR_IDX)
-                // The premise emitted below this point NAMES the `[any]`, so it is governed by the
-                // state of the edge just crossed.
-                val anyGoverning = state.added.anyId ?: state.governingAnyId
-                when {
-                    anyTrieRoot != null ->
-                        unprocessed += AbstractionState(anyTrieRoot, anyBranch, anyAp, anyGoverning, state.hoistedAny)
-                    !enumerateHere && currentLevelExclusions.isNotEmpty() ->
-                        createAbstractAp(anyAp, anyGoverning, state.hoistedAny)
+                // The premise is handed out without materialising the accessor anywhere. Eight
+                // scenarios in the cross-backend `InitialFactAbstractionTest` assert exactly this
+                // shape, and the automata backend has always answered them this way
+                // (`AutomataInitialFactAbstraction.abstractGraph`, the `startsWith(anyAccessorIdx)`
+                // arm) with no round loop and no memo. The tree backend's mechanism was the unroll;
+                // R1 removes it and this is the replacement.
+                var accessorFilter: FactTypeChecker.FactApFilter? = null
+                if (!SUPPRESS_SYNTHESISED) exclusions.forEachInt { accessor ->
+                    // A trie child means the premise is already out; R2 or R4 descends into it.
+                    if (trie.child(accessor) != null) return@forEachInt
+                    // Held literally: R2 owns it, and emits exactly the same premise.
+                    if (added.hasLiteralChild(accessor)) return@forEachInt
+                    if (accessor.isUncoveredByAny()) return@forEachInt
+
+                    val filter = accessorFilter
+                        ?: state.currentAp.createFilter(typeChecker).also { accessorFilter = it }
+                    when (filter.check(with(apManager) { accessor.accessor })) {
+                        is FactTypeChecker.FilterResult.Accept,
+                        is FactTypeChecker.FilterResult.FilterNext -> {
+                            // accept
+                        }
+
+                        is FactTypeChecker.FilterResult.Reject -> return@forEachInt
+                    }
+
+                    if (TifaDiagnostics.enabled) TifaDiagnostics.emitsSynthesised.incrementAndGet()
+                    createAbstractAp(ReversedApNode(accessor, state.currentAp), state.governingAnyId)
                 }
             }
 
-            // No `state.added.isFinal` branch here (§7 R7). It used to call the per-accessor helper
-            // with `FINAL_ACCESSOR_IDX` and an EMPTY node, and every path through the helper then
-            // emitted nothing: `[final]` is always-unroll-next, so it either descended into
-            // `abstractNextAccessPath` with a node that has no children and is not final, or returned
-            // on the exclusion test. It was dead in all four cases, so deleting it cannot change a
-            // result. The premise it looked like it was reaching for, `R.$`, is not needed either:
-            // the `.*` completion of the premise at `R` already covers `$`, and the only shape that
-            // would require naming it is an exclusion set containing `FinalAccessor`, which no flow
-            // function produces -- exclusions come from field/element assignment refinement
-            // (`propagateFactWithAccessorExclude`) and from `TypeInfoGroupAccessor`
-            // (`CallTypeInfoUtil`).
+            // R2 -- what the fact holds literally.
             state.added.forEachAccessor { accessor, node ->
                 // `[any]` is owned by the block above, which sees the same child through `getChild`.
-                // Routing it through the helper as well would be a plain duplicate: the helper pushes
-                // the identical state when `analyzedTrieRoot.child(ANY)` exists, and contributes
-                // nothing when it does not, since `exclusions.contains(ANY)` is never true.
                 if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
 
                 abstractAccessPath(
-                    state.analyzedTrieRoot, accessor, node, state.currentAp, state.governingAnyId, state.hoistedAny,
+                    trie, accessor, node, state.currentAp, state.governingAnyId,
                     unprocessed, createAbstractAp,
                 )
+            }
+
+            // R4 -- the virtual descent, and the reason R3c is enough on its own.
+            //
+            // Emitting `p.a` registers `T.child(a)` but materialises nothing, so without this the
+            // abstraction sticks one level below every `[any]` forever: no later walk is ever routed
+            // to trie node `a`. `AccessNode.getChild` is documented as the unique point at which a
+            // concrete accessor is SYNTHESISED out of an `[any]` -- for a node owning one it returns
+            // the merge of the literal `a` child, the `[any]` subtree's `a` child, and the `[any]`
+            // re-installed below. That is exactly the node the unroll built by copying the carrier.
+            //
+            // It reads through `getChild`, not `getChildRecording`: recording a transition per
+            // ladder step would put the walk back inside the `[any]` manager's budget, which is the
+            // coupling R1 exists to remove. A read cannot grow a stored fact -- the result is
+            // assembled from subtrees of the receiver and nothing is merged back into `added`.
+            if (anyBranch != null && !SUPPRESS_VIRTUAL_DESCENT) {
+                trie.forEachChild { accessor, childTrie ->
+                    if (accessor == ANY_ACCESSOR_IDX) return@forEachChild
+                    // R2 already descended into it.
+                    if (added.hasLiteralChild(accessor)) return@forEachChild
+                    // Only a covered accessor can be reached THROUGH the `[any]`; an uncovered one
+                    // under it is R3b's, at this prefix rather than one link deeper.
+                    if (accessor.isUncoveredByAny()) return@forEachChild
+
+                    val child = added.getChild(accessor) ?: return@forEachChild
+                    if (TifaDiagnostics.enabled) TifaDiagnostics.virtualDescents.incrementAndGet()
+                    unprocessed += AbstractionState(
+                        childTrie, child, ReversedApNode(accessor, state.currentAp), state.governingAnyId,
+                    )
+                }
             }
         }
     }
@@ -501,19 +412,18 @@ class TreeInitialFactAbstraction(
         addedNode: AccessTreeNode,
         currentAp: ReversedApNode?,
         governingAnyId: AnyUnrollState?,
-        hoistedAny: Boolean,
         unprocessed: MutableList<AbstractionState>,
-        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?, Boolean) -> Unit
+        crossinline createAbstractAp: (ReversedApNode?, AnyUnrollState?) -> Unit
     ) {
         val node = analyzedTrieRoot.child(accessor)
         if (node != null) {
             val apWithAccessor = ReversedApNode(accessor, currentAp)
             if (accessor.isAlwaysUnrollNext()) {
                 abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
-                    createAbstractAp(ap, governing, hoistedAny)
+                    createAbstractAp(ap, governing)
                 }
             } else {
-                unprocessed += AbstractionState(node, addedNode, apWithAccessor, governingAnyId, hoistedAny)
+                unprocessed += AbstractionState(node, addedNode, apWithAccessor, governingAnyId)
             }
             return
         }
@@ -522,7 +432,7 @@ class TreeInitialFactAbstraction(
 
         // We have no excludes -> continue with the most abstract fact
         if (exclusions == null) {
-            createAbstractAp(currentAp, governingAnyId, hoistedAny)
+            createAbstractAp(currentAp, governingAnyId)
             return
         }
 
@@ -536,13 +446,13 @@ class TreeInitialFactAbstraction(
         // We have initial fact that exclude {b} and we have no a.b fact yet
         if (!accessor.isAlwaysUnrollNext()) {
             // Return a.b.* {}
-            createAbstractAp(ReversedApNode(accessor, currentAp), governingAnyId, hoistedAny)
+            createAbstractAp(ReversedApNode(accessor, currentAp), governingAnyId)
             return
         }
 
         val apWithAccessor = ReversedApNode(accessor, currentAp)
         abstractNextAccessPath(addedNode, apWithAccessor, governingAnyId) { ap, governing ->
-            createAbstractAp(ap, governing, hoistedAny)
+            createAbstractAp(ap, governing)
         }
     }
 
@@ -552,10 +462,9 @@ class TreeInitialFactAbstraction(
      * an accessor, so every branch below it is emitted, and the recursion runs until it reaches one
      * that a premise may stop at.
      *
-     * `[any]` needs no case of its own (§7 R6, which the `TODO` this replaces stood for). It is not
-     * always-unroll-next, so the loop below emits `currentAp.[any]` and stops -- an ordinary
-     * accessor, the same shape [abstractAccessPath] emits, and its `.*` completion covers the whole
-     * subtree the `[any]` carried.
+     * `[any]` needs no case of its own. It is not always-unroll-next, so the loop below emits
+     * `currentAp.[any]` and stops -- an ordinary accessor, the same shape [abstractAccessPath]
+     * emits, and its `.*` completion covers the whole subtree the `[any]` carried.
      *
      * The reachable shapes are `[any]` under `[value]` or under a type-info accessor. `[any]` under a
      * taint mark is unconstructible -- `AccessTree.AccessNode.create` bans a mark above a structured
@@ -651,27 +560,26 @@ class TreeInitialFactAbstraction(
     class AccessPathTrieNode {
         private var children: Int2ObjectOpenHashMap<AccessPathTrieNode>? = null
         private var terminals: IntOpenHashSet? = null
-        private var unrolled: IntOpenHashSet? = null
 
         fun exclusions(): IntOpenHashSet? = terminals
 
         fun child(accessor: AccessorIdx): AccessPathTrieNode? =
             children?.get(accessor)
 
+        fun forEachChild(body: (AccessorIdx, AccessPathTrieNode) -> Unit) {
+            val children = this.children ?: return
+            val iterator = children.int2ObjectEntrySet().fastIterator()
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                body(entry.intKey, entry.value)
+            }
+        }
+
         private fun getTerminals(): IntOpenHashSet =
             terminals ?: IntOpenHashSet().also { terminals = it }
 
         private fun getChildren(): Int2ObjectOpenHashMap<AccessPathTrieNode> =
             children ?: Int2ObjectOpenHashMap<AccessPathTrieNode>().also { children = it }
-
-        fun unrollAccessors(accessors: IntOpenHashSet): IntOpenHashSet {
-            val current = unrolled ?: IntOpenHashSet().also { unrolled = it }
-            val result = IntOpenHashSet()
-            accessors.forEachInt {
-                if (current.add(it)) result.add(it)
-            }
-            return result
-        }
 
         companion object {
             fun empty() = AccessPathTrieNode()
@@ -703,5 +611,76 @@ class TreeInitialFactAbstraction(
         private const val INTERN_RATE = 100
         private const val INTERN_SIZE_REQUIREMENT = 1_000
         private const val SIZE_TO_FORCE_INTERN = 100_000
+
+        /**
+         * `-Dopentaint.tifaNoUncoveredFrontier=true`, default **false**. The positive control on the
+         * control, design §9.2: with R3b off, conductor must lose `ssrf` and `path-traversal` and
+         * report `Total vulnerabilities: 0`. A suite that cannot detect the known failure is not
+         * validating anything.
+         */
+        /**
+         * `-Dopentaint.tifaNoAnyFrontier=true`. Suppresses R3a, the coarse `p.[any]` edge, leaving
+         * R3c to answer covered demand and R3b to answer uncovered demand.
+         */
+        /**
+         * ABLATION CONTROLS. Each turns off exactly one rule, and each is UNSOUND on its own -- they
+         * exist to make a claim about a rule falsifiable, not to be run in anger.
+         *
+         * They earned their keep on the first gate: the one new failure this change produced,
+         * `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract
+         * source`, survived R3a-off, R3c-off, R4-off and single-round, and died only when the
+         * `[any]`-carrying premise disappeared entirely. That is what identified the mechanism
+         * rather than a plausible story about it.
+         *
+         *  - `-Dopentaint.tifaNoSynthesised` -- R3c off. Demand for an accessor no concrete branch
+         *    holds goes unanswered; the eight cross-backend `any accessor scenario` cases go red.
+         *  - `-Dopentaint.tifaNoVirtualDescent` -- R4 off. The abstraction sticks one level below
+         *    every `[any]`: premises are handed out and never descended past.
+         *  - `-Dopentaint.tifaSingleRound` -- one walk per call. Correct but lazy; a depth-`k`
+         *    premise then needs `k` triggering events instead of one.
+         */
+        @JvmField
+        val SUPPRESS_SYNTHESISED: Boolean =
+            System.getProperty("opentaint.tifaNoSynthesised")?.trim().toBoolean()
+
+        @JvmField
+        val SUPPRESS_VIRTUAL_DESCENT: Boolean =
+            System.getProperty("opentaint.tifaNoVirtualDescent")?.trim().toBoolean()
+
+        @JvmField
+        val SINGLE_ROUND: Boolean =
+            System.getProperty("opentaint.tifaSingleRound")?.trim().toBoolean()
+
+        /**
+         * R3a, the coarse `p.[any]` premise: `-Dopentaint.tifaAnyFrontierPremise=true`, default
+         * **OFF**. This overturns design §7 R5, which resolved the question in favour of ALWAYS, and
+         * the reason is a measurement the design did not have.
+         *
+         * An `[any]` premise's entry fact `R.[any].*` cannot express a node deletion INSIDE the
+         * `[any]`, so a cleaner that bites on a concrete path stops biting under it. With this on,
+         * `TreeCleanerFieldSensitivityAnalysisTest.concrete two-level clean over an abstract source`
+         * resurrects the sanitized field -- one false positive, in the gate, reproducible; with it
+         * off the suite is green and nothing else moves.
+         *
+         * The old code had exactly this guard, spelled `!enumerateAnyFrontier`: emit the coarse edge
+         * only once the base has stopped enumerating, because while concrete premises are still
+         * being handed out the coarse one alongside them can only add false positives. R1 does not
+         * remove that argument -- it makes it unconditional. There is no cap any more, so the
+         * enumeration never stops, so the old guard is never satisfied. R3c answers every covered
+         * demand precisely and R3b answers the uncovered frontier; the coarse edge is left with
+         * nothing to answer that they do not.
+         *
+         * Kept, not deleted, because the premise SHAPE is still load-bearing elsewhere -- summaries
+         * keyed on an `[any]` premise, `splitDelta` stepping over one, `AccessBasedStorage`'s
+         * `[any]`-keyed lookup -- and because it is the arm to reach for if a workload ever shows
+         * that the enumeration, rather than the materialisation, is what has to be bounded.
+         */
+        @JvmField
+        val ANY_FRONTIER_PREMISE: Boolean =
+            System.getProperty("opentaint.tifaAnyFrontierPremise")?.trim().toBoolean()
+
+        @JvmField
+        val SUPPRESS_UNCOVERED_FRONTIER: Boolean =
+            System.getProperty("opentaint.tifaNoUncoveredFrontier")?.trim().toBoolean()
     }
 }

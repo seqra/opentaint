@@ -69,6 +69,12 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.anyUnrollRescoreStrategy",
     // AccessTreeAnySuffixMatcher: whether the `[any]` trim cancels `isAbstract`. Off unless set.
     "opentaint.anyTrimAbstract",
+    // TreeInitialFactAbstraction: the two never-unroll controls, R3a and R3b. Off unless set.
+    "opentaint.tifaAnyFrontierPremise",
+    "opentaint.tifaNoUncoveredFrontier",
+    "opentaint.tifaNoSynthesised",
+    "opentaint.tifaNoVirtualDescent",
+    "opentaint.tifaSingleRound",
 )
 
 fun Project.configureDefaultTest() {

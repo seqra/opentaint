@@ -46,15 +46,30 @@ object TifaDiagnostics {
     val emitsWithAnyInChain = AtomicLong()
 
     /**
-     * Premises produced from a HOISTED `[any]` subtree -- the third and, on conductor, the only one
-     * that is large.
+     * The four `[any]` rules of the never-unroll walk, counted where they fire.
      *
-     * `[any]` is zero-or-more, so the walk descends into the `[any]`'s subtree WITHOUT extending the
-     * prefix and without adopting the `[any]`'s manager state. Everything below the `[any]` is then
-     * emitted at the CURRENT prefix, as an ordinary concrete premise. That is how an `[any]` turns
-     * into premises that do not mention it.
+     *  - [emitsAnyFrontier] R3a: one coarse `p.[any]` for a level that carries demand.
+     *  - [emitsUncoveredFrontier] R3b: `p.[any].u` for a mark, `[value]` or type-info accessor below
+     *    an `[any]`, which `p.[any]` does NOT denote. Its sibling `p.u` -- the zero-times reading --
+     *    goes through the ordinary per-accessor helper and is not separable here.
+     *  - [emitsSynthesised] R3c: `p.a` for an accessor demanded at this level, covered by the
+     *    `[any]`, and present in no concrete branch. This is the count that replaces
+     *    `unrollMaterialised`, and the comparison between them is the point of the change: the
+     *    unroll's version of this emitted the same premise AND copied the carrier.
+     *  - [virtualDescents] R4: a walk state entered through `getChild` rather than through an edge
+     *    the fact holds. Nothing is stored, so this is pure read.
      */
-    val emitsHoistedFromAny = AtomicLong()
+    val emitsAnyFrontier = AtomicLong()
+    val emitsUncoveredFrontier = AtomicLong()
+    val emitsSynthesised = AtomicLong()
+    val virtualDescents = AtomicLong()
+
+    /**
+     * Extra walks over the same fact, driven by "the last round registered a premise the trie did
+     * not hold". Round 0 is not counted, so this is the ladder's height above the ground: 0 means
+     * every base was answered in one pass.
+     */
+    val walkRounds = AtomicLong()
 
     /**
      * Arrivals at an initial-fact abstraction, split by whether the INCOMING fact carried an `[any]`,
@@ -70,11 +85,6 @@ object TifaDiagnostics {
     val arrivalNodesConcrete = AtomicLong()
     val arrivalDeltaConcrete = AtomicLong()
 
-    /** The unroll, separated from every other refusal so the two are not confused again. */
-    val unrollRequests = AtomicLong()
-    val unrollAccessorsOffered = AtomicLong()
-    val unrollMaterialised = AtomicLong()
-    val unrollRefusedByBudget = AtomicLong()
 
     /**
      * Bases over this size get their arrivals traced and their final tree retained for an exact dump.
@@ -225,13 +235,13 @@ object TifaDiagnostics {
             append(" walkStates=").append(walkStates.get())
             append(" emits=").append(emits.get())
             append(" anyDescents=").append(anyDescents.get())
-            append(" unrollRequests=").append(unrollRequests.get())
-            append(" accessorsOffered=").append(unrollAccessorsOffered.get())
-            append(" materialised=").append(unrollMaterialised.get())
-            append(" refusedByBudget=").append(unrollRefusedByBudget.get())
+            append(" walkRounds=").append(walkRounds.get())
+            append(" R3a=").append(emitsAnyFrontier.get())
+            append(" R3b=").append(emitsUncoveredFrontier.get())
+            append(" R3c=").append(emitsSynthesised.get())
+            append(" R4=").append(virtualDescents.get())
             appendLine()
-            append("tifa emitsHoisted=").append(emitsHoistedFromAny.get())
-            append(" emitsUnderAny=").append(emitsUnderAny.get())
+            append("tifa emitsUnderAny=").append(emitsUnderAny.get())
             append(" emitsWithAnyInChain=").append(emitsWithAnyInChain.get())
             append(" | arrivals any/concrete=").append(arrivalsWithAny.get()).append("/").append(arrivalsConcrete.get())
             append(" incomingNodes any/concrete=").append(arrivalNodesWithAny.get()).append("/").append(arrivalNodesConcrete.get())
@@ -262,7 +272,6 @@ class BaseStats(private val key: String) {
     /** The same `[any]` split as [TifaDiagnostics], per base -- see the doc there. */
     @JvmField val emitsUnderAny = AtomicLong()
     @JvmField val emitsWithAnyInChain = AtomicLong()
-    @JvmField val emitsHoistedFromAny = AtomicLong()
     @JvmField val arrivalsWithAny = AtomicLong()
     @JvmField val arrivalDeltaWithAny = AtomicLong()
     @JvmField val arrivalsConcrete = AtomicLong()
@@ -518,7 +527,6 @@ class BaseStats(private val key: String) {
         append(" | any: ").append(everCarriedAny.get())
         append(" | adds: ").append(addCalls.get())
         append(" | emits: ").append(emits.get())
-        append(" | hoisted: ").append(emitsHoistedFromAny.get())
         append(" | underAny: ").append(emitsUnderAny.get())
         append(" | inChain: ").append(emitsWithAnyInChain.get())
         append(" | arr any/con: ").append(arrivalsWithAny.get()).append("/").append(arrivalsConcrete.get())
