@@ -1062,7 +1062,52 @@ in one population arm, 0 in the others. And `ORIGIN` states are skipped by the r
 sound but means a fused super-origin cannot be demoted however much traffic it carries; on conductor
 the top decliners are `PAID`, not `ORIGIN`, so it does not bind here.
 
-## 16. Caveats
+## 16. Which phase actually runs out
+
+Worth pinning down, because "the run does not converge" and "the traces are lost" are two different
+failures and this document has used the same word for both.
+
+**The forward full scan is what times out, and it is what sets the exit code.**
+`AbstractAnalyzerRunner` maps `TIMEOUT -> -2` and `OOM -> -3`, i.e. **rc 254 = timeout, rc 253 = OOM**.
+Across every arm in this document:
+
+| | rc | `ifds_timeout` | `lowmem_stop` | peak RSS |
+|---|---|---|---|---|
+| every manager-on arm (`L >= 0`) | **254** | **1** | 0 | 9.1–9.4 GB |
+| the manager-off arms (`L = -1`) | **253** | 0 | **1** | 9.3 GB |
+| `nostar` control | **0** | 0 | 0 | 9.0 GB |
+
+So **with the manager on the run dies of the clock; with it off the run dies of memory.** No
+manager-on arm has ever hit `Running low on memory` — the heap sits just over the 8 GB `-Xmx` in RSS
+terms and never trips the low-memory stop.
+
+**Trace generation is a separate, later phase — but not a separate budget.** The order in the log is
+unambiguous:
+
+```
+Start full scan phase                      06:55:39
+Ifds analysis timeout                      06:59:27      <- the timeout, in the full scan
+Analysis done in 3m 47.345s
+Total vulnerabilities: 2                   06:59:27      <- the finding count, already final
+Start trace generation                     06:59:27
+Finish trace generation                    06:59:53
+Filter out 2 vulnerabilities without traces
+```
+
+`TaintAnalyzer` computes `leftTime = options.ifdsTimeout - analysisStart.elapsedNow()` and gives trace
+resolution 90 % of it. One 300-second envelope covers prescan, full scan and traces; the full scan
+always runs to its own timeout, so what is left for traces is roughly constant — about 50 s in these
+arms — and what varies is how much work the trace walker has to do in it.
+
+That is why §15.3's reading holds. `p2-bfs-1` and `p2-population-1` spend the same 3 m 47 s in the
+full scan and enter trace generation with the same remainder; the `bfs` arm finishes in **11.1 s with
+2 of 2 resolved**, and the `population` arm burns **25.5 s reporting `processed 0/2 items`** and is
+cancelled with `CancellationException: Channel was cancelled`. Same budget, different workload.
+
+And note where the finding count comes from: `Total vulnerabilities: 2` is logged **before**
+`Start trace generation`. The forward scan decides what is found; the trace phase can only subtract.
+
+## 17. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
