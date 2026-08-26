@@ -248,7 +248,7 @@ class NormalMethodAnalyzer(
     override fun allIntraProceduralFacts(): Map<CommonInst, Set<FinalFactAp>> =
         edges.reachedStatementsWithFact(analysisManager)
 
-    override fun addInitialZeroFact() {
+    override fun addInitialZeroFact() = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.START) {
         if (!zeroInitialFactProcessed) {
             zeroInitialFactProcessed = true
             val flowFunction = analysisManager.getMethodStartFlowFunction(apManager, analysisContext)
@@ -261,7 +261,7 @@ class NormalMethodAnalyzer(
         }
     }
 
-    override fun addInitialFact(factAp: FinalFactAp) {
+    override fun addInitialFact(factAp: FinalFactAp) = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.TIFA_SEED) {
         val flowFunction = analysisManager.getMethodStartFlowFunction(apManager, analysisContext)
         val startFacts = flowFunction.propagateFact(factAp)
         startFacts.forEach { startFact ->
@@ -318,7 +318,7 @@ class NormalMethodAnalyzer(
         flushPendingSideEffectSummaries()
     }
 
-    private fun simpleStatementStep(edge: Edge) {
+    private fun simpleStatementStep(edge: Edge) = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.SEQUENT) {
         // Simple (sequential) propagation to the next instruction:
         val flowFunction = analysisManager.getMethodSequentFlowFunction(apManager, analysisContext, edge.statement)
         val sequentialFacts = when (edge) {
@@ -372,7 +372,9 @@ class NormalMethodAnalyzer(
      */
     private fun callStatementStep(callExpr: CommonCallExpr, edge: Edge) {
         TifaDiagnostics.withCallSite(edge.statement) {
-            callStatementStepImpl(callExpr, edge)
+            EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.CALL) {
+                callStatementStepImpl(callExpr, edge)
+            }
         }
     }
 
@@ -575,6 +577,7 @@ class NormalMethodAnalyzer(
     private fun delayInitialEdge(edge: FactToFact): Boolean {
         if (!edgeExceedLimit(edge)) return false
 
+        if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.delayedInitialEdges.incrementAndGet()
         registerDelayed()
         delayedF2FInitialEdges.add(edge)
         return true
@@ -585,7 +588,7 @@ class NormalMethodAnalyzer(
         runner.registerDelayedAnalyzer(this)
     }
 
-    override fun updateFactDepthLimit(newLimit: Int) {
+    override fun updateFactDepthLimit(newLimit: Int) = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.DELAY_REPLAY) {
         factDepthLimit = newLimit
 
         val currentDelayedInitialF2F = delayedF2FInitialEdges
@@ -594,7 +597,10 @@ class NormalMethodAnalyzer(
         val currentDelayedSummaries = delayedF2FSummaries
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
 
-        currentDelayedInitialF2F.toList().forEach {
+        val replayed = currentDelayedInitialF2F.toList()
+        if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordLimitRaise(newLimit, replayed.size)
+
+        replayed.forEach {
             addInitialF2FEdge(it as FactToFact)
         }
 
@@ -617,7 +623,10 @@ class NormalMethodAnalyzer(
 
     private fun addSequentialUnchangedEdge(edge: Edge) {
         if (enqueuedUnchangedEdges.add(edge)) {
+            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.unchangedEnqueued.incrementAndGet()
             enqueueNewEdge(edge)
+        } else {
+            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.unchangedSuppressed.incrementAndGet()
         }
     }
 
@@ -632,8 +641,9 @@ class NormalMethodAnalyzer(
 
     private fun handleInputFactChange(originalInputFactAp: InitialFactAp, newInputFactAp: InitialFactAp) {
         if (originalInputFactAp == newInputFactAp) return
-        initialFacts.registerNewInitialFact(newInputFactAp, analysisManager.factTypeChecker).forEach { (initialFact, finalFact) ->
-            addInitialEdge(initialFact, finalFact)
+        EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.INPUT_REFINE) {
+            initialFacts.registerNewInitialFact(newInputFactAp, analysisManager.factTypeChecker)
+                .forEach { (initialFact, finalFact) -> addInitialEdge(initialFact, finalFact) }
         }
     }
 
@@ -937,7 +947,9 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSideEffectRequirement(curInitialFactAp: InitialFactAp, sideEffectRequirement: InitialFactAp) {
-        handleInputFactChange(curInitialFactAp, sideEffectRequirement)
+        EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.SIDE_EFFECT_REQ) {
+            handleInputFactChange(curInitialFactAp, sideEffectRequirement)
+        }
 
         pendingSideEffectRequirements.add(sideEffectRequirement)
 
@@ -1113,7 +1125,7 @@ class NormalMethodAnalyzer(
         methodInitialFactBase: AccessPathBase,
         methodSummaries: List<FactToFact>,
         handleSummaryEdge: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge) -> Set<Sequent>
-    ) {
+    ) = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.SUMMARY) {
         applyMethodAnySummaries(
             currentEdge,
             currentEdgeFactAp,
@@ -1131,7 +1143,7 @@ class NormalMethodAnalyzer(
         methodInitialFactBase: AccessPathBase,
         sideEffectSummaries: List<SideEffectSummary.FactSideEffectSummary>,
         handleSideEffect: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, kind: SideEffectKind) -> Set<Sequent>
-    ) {
+    ) = EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.SIDE_EFFECT) {
         applyMethodAnySummaries(
             currentEdge,
             currentEdgeFactAp,
@@ -1209,6 +1221,22 @@ class NormalMethodAnalyzer(
     }
 
     private fun applyMethodNDSummaries(
+        summaryHandler: MethodCallSummaryHandler,
+        currentEdge: Edge,
+        currentEdgeFactAp: FinalFactAp,
+        methodInitialFactBase: AccessPathBase,
+        methodSummaries: List<NDFactToFact>,
+    ) {
+        // Block body, not an expression body wrapping the tag: the loop below returns early on
+        // cancellation, and a non-local return is not allowed out of an expression body.
+        EdgeStoreDiagnostics.withProducer(EdgeStoreDiagnostics.Producer.SUMMARY) {
+            applyMethodNDSummariesTagged(
+                summaryHandler, currentEdge, currentEdgeFactAp, methodInitialFactBase, methodSummaries
+            )
+        }
+    }
+
+    private fun applyMethodNDSummariesTagged(
         summaryHandler: MethodCallSummaryHandler,
         currentEdge: Edge,
         currentEdgeFactAp: FinalFactAp,

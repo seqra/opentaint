@@ -583,6 +583,9 @@ class AccessTree(
             }
         }
 
+        /** Accessor edges held literally at this node -- the fact's branching factor here. */
+        fun accessorCount(): Int = accessors?.size ?: 0
+
         inline fun forEachAccessor(body: (AccessorIdx, AccessNode) -> Unit) {
             if (accessors != null) {
                 for (i in accessors.indices) {
@@ -2270,13 +2273,26 @@ class AccessTree(
                 val nodeCache = typeFilterCache.getOrPut(node, ::hashMapOf)
                 val filterCache = nodeCache[filter]
                 if (filterCache != null) {
-                    val filteredNode = filterCache.getOrNull()
-                        ?: return null
+                    val cachedNode = filterCache.getOrNull()
+                    if (ApOpDiagnostics.enabled) {
+                        ApOpDiagnostics.recordFilterTypes(
+                            hit = true, rejected = cachedNode == null, inNodes = 0, outNodes = 0
+                        )
+                    }
+                    if (cachedNode == null) return null
 
-                    return updateNode(filteredNode)
+                    return updateNode(cachedNode)
                 }
 
                 val filteredNode = node.filterAccessNode(filter)
+                if (ApOpDiagnostics.enabled) {
+                    ApOpDiagnostics.recordFilterTypes(
+                        hit = false,
+                        rejected = filteredNode == null,
+                        inNodes = node.size,
+                        outNodes = filteredNode?.size ?: 0,
+                    )
+                }
 
                 if (filteredNode == null) {
                     nodeCache[filter] = Optional.empty()

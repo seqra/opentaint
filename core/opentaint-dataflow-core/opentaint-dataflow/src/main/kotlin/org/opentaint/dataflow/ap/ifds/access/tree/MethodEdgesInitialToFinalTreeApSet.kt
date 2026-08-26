@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.EdgeStoreDiagnostics
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
@@ -89,6 +90,7 @@ class MethodEdgesInitialToFinalTreeApSet(
             if (currentExclusion == null) {
                 exclusions[edgeSetIdx] = accessWithExclusion.exclusion
                 edges[edgeSetIdx] = internIfRequired(accessWithExclusion.access)
+                if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordSlotOpened(accessWithExclusion.access.size)
                 return accessWithExclusion
             }
 
@@ -103,6 +105,7 @@ class MethodEdgesInitialToFinalTreeApSet(
                 return AccessWithExclusion(mergedAccess, mergedExclusion)
             }
 
+            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordMerge(currentAccess.size, mergedAccess.size)
             edges[edgeSetIdx] = internIfRequired(mergedAccess)
             intern(edgeSetIdx)
 

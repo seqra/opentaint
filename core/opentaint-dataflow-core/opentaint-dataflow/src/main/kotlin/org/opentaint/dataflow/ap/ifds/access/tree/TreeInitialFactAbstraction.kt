@@ -259,6 +259,9 @@ class TreeInitialFactAbstraction(
             // R0. No premise has ever terminated here, so `p` itself is the answer and its `.*`
             // covers everything below. Emitting it is also what primes this level for the next walk.
             val exclusions = trie.exclusions()
+            if (TifaDiagnostics.enabled) {
+                TifaDiagnostics.recordDemand(exclusions?.size ?: -1, trie.childCount(), added.accessorCount())
+            }
             if (exclusions == null) {
                 createAbstractAp(state.currentAp, state.governingAnyId)
                 continue
@@ -559,6 +562,9 @@ class TreeInitialFactAbstraction(
         private var terminals: IntOpenHashSet? = null
 
         fun exclusions(): IntOpenHashSet? = terminals
+
+        /** How many accessors this level has been asked to distinguish -- the branching factor. */
+        fun childCount(): Int = children?.size ?: 0
 
         fun child(accessor: AccessorIdx): AccessPathTrieNode? =
             children?.get(accessor)

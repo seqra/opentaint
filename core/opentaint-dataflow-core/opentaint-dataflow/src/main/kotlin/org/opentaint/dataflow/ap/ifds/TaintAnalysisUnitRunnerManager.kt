@@ -571,6 +571,10 @@ class TaintAnalysisUnitRunnerManager(
         // falls" -- the cut firing and the work MOVING rather than going away -- is legible only
         // when the two are read together.
         activeApManager.reportApStats()?.let { stats -> logger.info { stats } }
+        // Next to the throughput line for the same reason: the store totals are only readable as a
+        // CURVE. A single end-of-run figure cannot say whether the population is converging, and
+        // convergence is the whole question.
+        if (EdgeStoreDiagnostics.enabled) logger.info { EdgeStoreDiagnostics.liveReport() }
 
         prevProgress.set(totalProcessed)
 

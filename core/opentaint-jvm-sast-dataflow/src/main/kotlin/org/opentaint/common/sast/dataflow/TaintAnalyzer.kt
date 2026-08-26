@@ -21,6 +21,7 @@ import org.opentaint.dataflow.ap.ifds.ValueAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.tree.AnyUnrollDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.SummaryPremiseDiagnostics
+import org.opentaint.dataflow.ap.ifds.EdgeStoreDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.ApOpDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.TifaDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
@@ -168,6 +169,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 logger.info { trace }
                 trace.lineSequence().forEach { if (it.isNotBlank()) println("TIFATRACE $it") }
             }
+        }
+
+        if (EdgeStoreDiagnostics.enabled) {
+            val report = EdgeStoreDiagnostics.report(EdgeStoreDiagnostics.reportTopN)
+            logger.info { report }
+            report.lineSequence().forEach { if (it.isNotBlank()) println("EDGESTORE $it") }
         }
 
         if (ApOpDiagnostics.enabled) {

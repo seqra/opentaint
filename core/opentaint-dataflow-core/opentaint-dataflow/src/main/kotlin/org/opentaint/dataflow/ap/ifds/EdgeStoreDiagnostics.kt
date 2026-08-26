@@ -1,0 +1,405 @@
+package org.opentaint.dataflow.ap.ifds
+
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicLongArray
+
+/**
+ * Where stored facts come from, and what re-storing one costs.
+ *
+ * The per-statement fact store is not a SET of facts. `MethodEdgesFinalTreeApSet` and
+ * `MethodEdgesInitialToFinalTreeApSet` hold ONE MERGED TREE per slot, and `add` hands back that
+ * whole merged tree whenever the merge changed it. The returned edge -- not the edge that was
+ * offered -- is what gets enqueued, propagated to every CFG successor and grafted through `concat`.
+ * A slot that reaches S nodes over k growths therefore does not cost S; it costs the sum of its
+ * intermediate sizes, and that sum is the quantity nothing in the engine reports.
+ *
+ * Three masses separate the question:
+ *
+ *  * [storeMass] -- what is HELD. Incremented by the growth of each merge, so it ends as the exact
+ *    node total across every live slot.
+ *  * [propagatedMass] -- what is HANDED BACK. The whole merged tree at every growth.
+ *    `propagatedMass / storeMass` is the re-propagation factor, and it is the number this object
+ *    exists to produce.
+ *  * [offeredMass] -- what the producer BROUGHT. `storeMass / offeredMass` is how much of the
+ *    incoming work was new.
+ *
+ * Node mass is [AccessTree.AccessNode.size] -- the precomputed subtree size, with path
+ * multiplicity, an O(1) field read. `FinalFactAp.size` is `countNodes()` and walks the tree, so it
+ * is never called here.
+ *
+ * `-Dopentaint.edgeCensus=true`; rows `-Dopentaint.edgeCensusTop=N`.
+ */
+object EdgeStoreDiagnostics {
+    val enabled: Boolean = System.getProperty("opentaint.edgeCensus")?.trim().toBoolean()
+
+    val reportTopN: Int = System.getProperty("opentaint.edgeCensusTop")?.trim()?.toIntOrNull() ?: 25
+
+    /**
+     * The producer that is currently running, parked per thread.
+     *
+     * `Edge` carries no provenance and the storage cannot see the frame that reached it, so the
+     * producer travels the same way the call site does for [org.opentaint.dataflow.ap.ifds.access.tree.TifaDiagnostics].
+     * Nesting is real and intended: a call step that seeds a callee re-tags for the duration of the
+     * seed, so the callee's arrivals are billed to the seed and the caller's remaining adds are
+     * still billed to the call.
+     */
+    enum class Producer {
+        /** Method entry, zero fact. */
+        START,
+
+        /** A caller subscribed at a call site and the callee is seeded through the abstraction. */
+        TIFA_SEED,
+
+        /** An edge's initial fact was refined in place, so the abstraction re-registers it. */
+        INPUT_REFINE,
+
+        /** The fact-depth gate rose and delayed edges are replayed. */
+        DELAY_REPLAY,
+
+        /** Ordinary intra-procedural flow. */
+        SEQUENT,
+
+        /** Call-to-return, including the unresolved-call fallback. */
+        CALL,
+
+        /** A callee summary grafted onto a caller fact. */
+        SUMMARY,
+
+        /** A callee side-effect summary applied. */
+        SIDE_EFFECT,
+
+        /** A callee side-effect requirement propagated back. */
+        SIDE_EFFECT_REQ,
+
+        /** Anything that reached the store outside a tagged frame. */
+        OTHER,
+    }
+
+    private val producers = Producer.values()
+
+    private val producer: ThreadLocal<Producer> = ThreadLocal.withInitial { Producer.OTHER }
+
+    inline fun <T> withProducer(kind: Producer, body: () -> T): T {
+        if (!enabled) return body()
+        val previous = currentProducer()
+        setProducer(kind)
+        try {
+            return body()
+        } finally {
+            setProducer(previous)
+        }
+    }
+
+    @PublishedApi
+    internal fun currentProducer(): Producer = producer.get()
+
+    @PublishedApi
+    internal fun setProducer(kind: Producer) = producer.set(kind)
+
+    /** Edge kinds, in the order [MethodAnalyzerEdges.addEdge] dispatches them. */
+    enum class Kind { ZERO_TO_ZERO, ZERO_TO_FACT, FACT_TO_FACT, ND_FACT_TO_FACT }
+
+    private val kinds = Kind.values()
+
+    private val nKinds = kinds.size
+    private val nProducers = producers.size
+
+    /** `add` calls, and how each ended. Indexed `[producer * nKinds + kind]`. */
+    private val calls = AtomicLongArray(nProducers * nKinds)
+    private val firstInserts = AtomicLongArray(nProducers * nKinds)
+    private val growths = AtomicLongArray(nProducers * nKinds)
+    private val noops = AtomicLongArray(nProducers * nKinds)
+
+    private val offeredMassBy = AtomicLongArray(nProducers * nKinds)
+    private val storeMassBy = AtomicLongArray(nProducers * nKinds)
+    private val propagatedMassBy = AtomicLongArray(nProducers * nKinds)
+
+    val offeredMass = AtomicLong()
+    val storeMass = AtomicLong()
+    val propagatedMass = AtomicLong()
+
+    /** Merged-tree size at a growth, bucketed by `log2`. The tail is what re-propagation costs. */
+    private val growthSizeBuckets = AtomicLongArray(32)
+
+    /** The largest single tree ever handed back, and where. */
+    private val maxPropagated = AtomicLong()
+
+    @Volatile
+    private var maxPropagatedWhere: String? = null
+
+    private val perMethod = ConcurrentHashMap<String, MethodEdgeStats>()
+
+    private fun massOf(fact: FinalFactAp?): Long = when (fact) {
+        null -> 0L
+        is AccessTree -> fact.access.size
+        else -> 0L
+    }
+
+    private fun kindOf(edge: Edge): Kind = when (edge) {
+        is Edge.ZeroToZero -> Kind.ZERO_TO_ZERO
+        is Edge.ZeroToFact -> Kind.ZERO_TO_FACT
+        is Edge.FactToFact -> Kind.FACT_TO_FACT
+        is Edge.NDFactToFact -> Kind.ND_FACT_TO_FACT
+    }
+
+    private fun factOf(edge: Edge): FinalFactAp? = when (edge) {
+        is Edge.ZeroToZero -> null
+        is Edge.ZeroToFact -> edge.factAp
+        is Edge.FactToFact -> edge.factAp
+        is Edge.NDFactToFact -> edge.factAp
+    }
+
+    /**
+     * One `MethodAnalyzerEdges.add`.
+     *
+     * [produced] is what the storage handed back: empty means the merge changed nothing, a single
+     * element identical to [offered] means the slot was empty and the fact went in as-is, and
+     * anything else is a GROWTH whose element is the whole merged tree.
+     */
+    fun recordAdd(methodEntryPoint: MethodEntryPoint, offered: Edge, produced: List<Edge>) {
+        val kind = kindOf(offered)
+        val slot = currentProducer().ordinal * nKinds + kind.ordinal
+        calls.incrementAndGet(slot)
+
+        val offeredNodes = massOf(factOf(offered))
+        offeredMassBy.addAndGet(slot, offeredNodes)
+        offeredMass.addAndGet(offeredNodes)
+
+        val stats = perMethod.computeIfAbsent(methodEntryPoint.method.toString()) { MethodEdgeStats(it) }
+        stats.entryPoints.add(methodEntryPoint)
+        stats.calls.incrementAndGet()
+        stats.offeredMass.addAndGet(offeredNodes)
+
+        val result = produced.firstOrNull()
+        if (result == null) {
+            noops.incrementAndGet(slot)
+            stats.noops.incrementAndGet()
+            return
+        }
+
+        if (result === offered) {
+            firstInserts.incrementAndGet(slot)
+            storeMassBy.addAndGet(slot, offeredNodes)
+            propagatedMassBy.addAndGet(slot, offeredNodes)
+            propagatedMass.addAndGet(offeredNodes)
+            stats.firstInserts.incrementAndGet()
+            stats.storeMass.addAndGet(offeredNodes)
+            stats.propagatedMass.addAndGet(offeredNodes)
+            recordGrowthSize(offeredNodes)
+            return
+        }
+
+        val mergedNodes = massOf(factOf(result))
+        // What the slot actually GAINED is not visible here -- the storage returns the merged tree,
+        // not the tree it replaced -- so [recordMerge] supplies it from inside the merge. This site
+        // owns the propagation cost, which is the whole merged tree every time.
+        growths.incrementAndGet(slot)
+        propagatedMassBy.addAndGet(slot, mergedNodes)
+        propagatedMass.addAndGet(mergedNodes)
+        stats.growths.incrementAndGet()
+        stats.propagatedMass.addAndGet(mergedNodes)
+        recordGrowthSize(mergedNodes)
+
+        if (mergedNodes > stats.maxSlotMass.get()) stats.maxSlotMass.set(mergedNodes)
+
+        var currentMax = maxPropagated.get()
+        while (mergedNodes > currentMax) {
+            if (maxPropagated.compareAndSet(currentMax, mergedNodes)) {
+                maxPropagatedWhere = "${kind.name} in ${methodEntryPoint.method}"
+                break
+            }
+            currentMax = maxPropagated.get()
+        }
+    }
+
+    /**
+     * The one number the [recordAdd] site cannot see: how much the slot GAINED.
+     *
+     * Called from inside the merge, where the tree that is being replaced is still in hand. Summed
+     * over every merge it is the exact node total held across all slots, which is the denominator
+     * of the re-propagation factor.
+     */
+    fun recordMerge(previousNodes: Long, mergedNodes: Long) {
+        storeMass.addAndGet(mergedNodes - previousNodes)
+        slotMerges.incrementAndGet()
+        var currentMax = maxSlot.get()
+        while (mergedNodes > currentMax) {
+            if (maxSlot.compareAndSet(currentMax, mergedNodes)) break
+            currentMax = maxSlot.get()
+        }
+    }
+
+    /** New slots opened, i.e. distinct (base, premise, statement) keys the store ever held. */
+    fun recordSlotOpened(nodes: Long) {
+        slotsOpened.incrementAndGet()
+        storeMass.addAndGet(nodes)
+    }
+
+    val slotsOpened = AtomicLong()
+    val slotMerges = AtomicLong()
+    val maxSlot = AtomicLong()
+
+    private fun recordGrowthSize(nodes: Long) {
+        var bucket = 0
+        var value = nodes
+        while (value > 1 && bucket < 31) {
+            value = value shr 1
+            bucket++
+        }
+        growthSizeBuckets.incrementAndGet(bucket)
+    }
+
+    /** Edges a flow function reported unchanged: worklist cost that never reaches a store. */
+    val unchangedEnqueued = AtomicLong()
+    val unchangedSuppressed = AtomicLong()
+
+    /**
+     * The fact-depth gate, and what it parks.
+     *
+     * An entry edge deeper than the unit's current limit is put aside and replayed only when the
+     * limit rises, and the limit rises only when the unit runs out of work. On a workload that
+     * never runs out of work the limit freezes, and [delayedInitialEdges] minus [replayedEdges] is
+     * the backlog that is then never processed at all -- a bound that is silently doing the work no
+     * widening operator does, and doing it by dropping edges on the floor rather than by
+     * approximating them.
+     */
+    val delayedInitialEdges = AtomicLong()
+    val replayedEdges = AtomicLong()
+    val limitRaises = AtomicLong()
+    val maxLimit = AtomicLong()
+
+    fun recordLimitRaise(newLimit: Int, replayed: Int) {
+        limitRaises.incrementAndGet()
+        replayedEdges.addAndGet(replayed.toLong())
+        var current = maxLimit.get()
+        while (newLimit > current) {
+            if (maxLimit.compareAndSet(current, newLimit.toLong())) break
+            current = maxLimit.get()
+        }
+    }
+
+    private fun sum(a: AtomicLongArray): Long {
+        var total = 0L
+        for (i in 0 until a.length()) total += a.get(i)
+        return total
+    }
+
+    private fun ratio(a: Long, b: Long): String =
+        if (b == 0L) "-" else String.format("%.2f", a.toDouble() / b)
+
+    /** One line per progress tick, so the store totals can be read as a curve. */
+    fun liveReport(): String = buildString {
+        append("edgeStoreLive slots=").append(slotsOpened.get())
+        append(" merges=").append(slotMerges.get())
+        append(" storeMass=").append(storeMass.get())
+        append(" propagatedMass=").append(propagatedMass.get())
+        append(" offeredMass=").append(offeredMass.get())
+        append(" calls=").append(sum(calls))
+        append(" growths=").append(sum(growths))
+        append(" noops=").append(sum(noops))
+        append(" maxSlot=").append(maxSlot.get())
+    }
+
+    fun report(topN: Int): String = buildString {
+        val totalCalls = sum(calls)
+        val totalGrowths = sum(growths)
+        val totalFirst = sum(firstInserts)
+        val totalNoops = sum(noops)
+
+        append("edgeStore calls=").append(totalCalls)
+        append(" firstInserts=").append(totalFirst)
+        append(" growths=").append(totalGrowths)
+        append(" noops=").append(totalNoops)
+        append(" noopShare=").append(ratio(totalNoops * 100, totalCalls)).append('%')
+        appendLine()
+
+        append("edgeStore offeredMass=").append(offeredMass.get())
+        append(" storeMass=").append(storeMass.get())
+        append(" propagatedMass=").append(propagatedMass.get())
+        append(" propagatedPerStored=").append(ratio(propagatedMass.get(), storeMass.get()))
+        append(" propagatedPerGrowth=").append(ratio(propagatedMass.get(), totalFirst + totalGrowths))
+        appendLine()
+
+        append("edgeStore unchangedEnqueued=").append(unchangedEnqueued.get())
+        append(" unchangedSuppressed=").append(unchangedSuppressed.get())
+        append(" delayed=").append(delayedInitialEdges.get())
+        append(" replayed=").append(replayedEdges.get())
+        append(" stillParked=").append(delayedInitialEdges.get() - replayedEdges.get())
+        append(" limitRaises=").append(limitRaises.get())
+        append(" maxLimit=").append(maxLimit.get())
+        append(" slotsOpened=").append(slotsOpened.get())
+        append(" slotMerges=").append(slotMerges.get())
+        append(" mergesPerSlot=").append(ratio(slotMerges.get(), slotsOpened.get()))
+        append(" maxSlot=").append(maxSlot.get())
+        append(" maxPropagated=").append(maxPropagated.get())
+        append(" at ").append(maxPropagatedWhere ?: "-")
+        appendLine()
+
+        appendLine("edgeStore growthByLog2Size=" + (0 until 24).joinToString(",") { growthSizeBuckets.get(it).toString() })
+
+        appendLine("edgeStore --- by producer ---")
+        for (p in producers) {
+            var c = 0L; var f = 0L; var g = 0L; var n = 0L; var om = 0L; var pm = 0L
+            for (k in kinds) {
+                val i = p.ordinal * nKinds + k.ordinal
+                c += calls.get(i); f += firstInserts.get(i); g += growths.get(i); n += noops.get(i)
+                om += offeredMassBy.get(i); pm += propagatedMassBy.get(i)
+            }
+            if (c == 0L) continue
+            append("edgeStore   ").append(p.name.padEnd(16))
+            append(" calls=").append(c)
+            append(" (").append(ratio(c * 100, totalCalls)).append("%)")
+            append(" first=").append(f)
+            append(" growth=").append(g)
+            append(" noop=").append(n)
+            append(" offered=").append(om)
+            append(" propagated=").append(pm)
+            append(" (").append(ratio(pm * 100, propagatedMass.get())).append("%)")
+            appendLine()
+        }
+
+        appendLine("edgeStore --- by edge kind ---")
+        for (k in kinds) {
+            var c = 0L; var g = 0L; var pm = 0L
+            for (p in producers) {
+                val i = p.ordinal * nKinds + k.ordinal
+                c += calls.get(i); g += growths.get(i); pm += propagatedMassBy.get(i)
+            }
+            if (c == 0L) continue
+            append("edgeStore   ").append(k.name.padEnd(16))
+            append(" calls=").append(c).append(" growth=").append(g).append(" propagated=").append(pm)
+            appendLine()
+        }
+
+        val worst = perMethod.values.sortedByDescending { it.propagatedMass.get() }
+        appendLine("edgeStore --- ${perMethod.size} methods, top $topN by propagated mass ---")
+        worst.take(topN).forEach { appendLine("edgeStore   $it") }
+    }
+}
+
+class MethodEdgeStats(private val method: String) {
+    /** Distinct analyzers for this method: one per calling context. */
+    @JvmField val entryPoints: MutableSet<MethodEntryPoint> = ConcurrentHashMap.newKeySet()
+
+    @JvmField val calls = AtomicLong()
+    @JvmField val firstInserts = AtomicLong()
+    @JvmField val growths = AtomicLong()
+    @JvmField val noops = AtomicLong()
+    @JvmField val offeredMass = AtomicLong()
+    @JvmField val storeMass = AtomicLong()
+    @JvmField val propagatedMass = AtomicLong()
+    @JvmField val maxSlotMass = AtomicLong()
+
+    override fun toString(): String = buildString {
+        append("propagated=").append(propagatedMass.get())
+        append(" | calls=").append(calls.get())
+        append(" | growths=").append(growths.get())
+        append(" | noops=").append(noops.get())
+        append(" | maxSlot=").append(maxSlotMass.get())
+        append(" | eps=").append(entryPoints.size)
+        append(" | ").append(method)
+    }
+}

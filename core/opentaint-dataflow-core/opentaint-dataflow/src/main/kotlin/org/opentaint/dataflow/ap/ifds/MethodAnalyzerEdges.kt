@@ -26,7 +26,9 @@ class MethodAnalyzerEdges(
     fun add(edge: Edge): List<Edge> {
         check(edge.methodEntryPoint == methodEntryPoint)
 
-        return addEdge(edge)
+        val produced = addEdge(edge)
+        if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordAdd(methodEntryPoint, edge, produced)
+        return produced
     }
 
     fun reachedStatements() = zeroToZeroEdges.reachedStatements()

@@ -322,7 +322,55 @@ class JIRAnalysisManager(
                 append("compatibility $compatRejected/$compatTotal (${percentToString(compatRejected, compatTotal)})")
             }
         }
+        logger.debug {
+            // Why the access filter let a FIELD step through. `typed` is the only arm where the
+            // type system actually constrained anything; the two `vacuous` arms are positions where
+            // it cannot -- `java.lang.Object` admits every field in the program, an interface admits
+            // every field of every class that could implement it.
+            val typed = factTypeChecker.fieldAcceptTyped.sum()
+            val vObject = factTypeChecker.fieldAcceptVacuousObject.sum()
+            val vTypeVar = factTypeChecker.fieldAcceptVacuousTypeVar.sum()
+            val vInterface = factTypeChecker.fieldAcceptVacuousInterface.sum()
+            val unknown = factTypeChecker.fieldAcceptUnknownField.sum()
+            val rejectTyped = factTypeChecker.fieldRejectTyped.sum()
+            val rejectNotRef = factTypeChecker.fieldRejectNotRef.sum()
+            val accepted = typed + vObject + vTypeVar + vInterface + unknown
+            buildString {
+                append("Field steps: accepted $accepted ")
+                append("[typed $typed (${percentToString(typed, accepted)})")
+                append(", vacuousObject $vObject (${percentToString(vObject, accepted)})")
+                append(", vacuousTypeVar $vTypeVar (${percentToString(vTypeVar, accepted)})")
+                append(", vacuousInterface $vInterface (${percentToString(vInterface, accepted)})")
+                append(", unknownField $unknown (${percentToString(unknown, accepted)})]")
+                append(" | rejected typed $rejectTyped notRef $rejectNotRef")
+            }
+        }
+        logger.debug {
+            // What the access filter refused, split by accessor. A refused FIELD is a real pruning
+            // of the object graph; a refused `[value]` or `[]` is a step the generator proposed and
+            // could not have meant. They call for different fixes.
+            buildString {
+                append("Access rejects: field ${factTypeChecker.rejectByField.sum()}")
+                append(" element ${factTypeChecker.rejectByElement.sum()}")
+                append(" value ${factTypeChecker.rejectByValue.sum()}")
+                append(" any ${factTypeChecker.rejectByAny.sum()}")
+                append(" mark ${factTypeChecker.rejectByMark.sum()}")
+                append(" | acceptOther ${factTypeChecker.acceptOther.sum()}")
+                appendLine()
+                append("Vacuous accepts, top 25:")
+                appendLine()
+                append(factTypeChecker.vacuousAcceptReport(25))
+            }
+        }
     }
+
+    /**
+     * The positions where the type system stops constraining the walk, largest first.
+     *
+     * Printed once at the end rather than per tick: it is a table, and its content only becomes
+     * meaningful when the run has finished exploring.
+     */
+    fun vacuousAcceptReport(topN: Int): String = factTypeChecker.vacuousAcceptReport(topN)
 
     private fun percentToString(current: Long, total: Long): String {
         val percentValue = current.toDouble() / total

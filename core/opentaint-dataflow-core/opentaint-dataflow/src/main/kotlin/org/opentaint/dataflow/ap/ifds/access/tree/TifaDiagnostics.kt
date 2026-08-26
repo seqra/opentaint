@@ -66,6 +66,59 @@ object TifaDiagnostics {
     val virtualDescents = AtomicLong()
 
     /**
+     * The BRANCHING FACTOR, sampled at every walk state, three ways.
+     *
+     * The premise family this walk enumerates is sequences over the set of accessors demanded at a
+     * prefix, so its size is governed by how wide that set is -- not by how deep the walk goes. The
+     * depth gate (`MethodAnalyzer.factDepthLimit`) bounds depth and nothing bounds width, so these
+     * three histograms are the ones that say whether a mitigation has to attack width.
+     *
+     *  - [demandBuckets] `|E|`, the accessors a level has been asked to distinguish. Index 0 is
+     *    reserved for `E == null` (nothing has ever terminated here); `|E| = n` lands at `n + 1`.
+     *  - [trieChildBuckets] children of the demand trie node: how far the demand REACHES below here.
+     *  - [factChildBuckets] accessor edges the fact holds literally here.
+     */
+    val demandBuckets = java.util.concurrent.atomic.AtomicLongArray(BUCKETS)
+    val trieChildBuckets = java.util.concurrent.atomic.AtomicLongArray(BUCKETS)
+    val factChildBuckets = java.util.concurrent.atomic.AtomicLongArray(BUCKETS)
+
+    val demandTotal = AtomicLong()
+    val trieChildTotal = AtomicLong()
+    val factChildTotal = AtomicLong()
+    val maxDemand = AtomicLong()
+    val maxTrieChildren = AtomicLong()
+    val maxFactChildren = AtomicLong()
+
+    fun recordDemand(demand: Int, trieChildren: Int, factChildren: Int) {
+        demandBuckets.incrementAndGet(bucket(demand + 1))
+        trieChildBuckets.incrementAndGet(bucket(trieChildren))
+        factChildBuckets.incrementAndGet(bucket(factChildren))
+        if (demand > 0) demandTotal.addAndGet(demand.toLong())
+        trieChildTotal.addAndGet(trieChildren.toLong())
+        factChildTotal.addAndGet(factChildren.toLong())
+        maxOf(maxDemand, demand.toLong())
+        maxOf(maxTrieChildren, trieChildren.toLong())
+        maxOf(maxFactChildren, factChildren.toLong())
+    }
+
+    private fun maxOf(holder: AtomicLong, value: Long) {
+        var current = holder.get()
+        while (value > current) {
+            if (holder.compareAndSet(current, value)) return
+            current = holder.get()
+        }
+    }
+
+    /** Exact for 0..15, then one bucket per doubling -- the tail is what matters. */
+    private fun bucket(value: Int): Int {
+        if (value < 16) return value.coerceAtLeast(0)
+        var b = 16
+        var v = value shr 4
+        while (v > 1 && b < BUCKETS - 1) { v = v shr 1; b++ }
+        return b
+    }
+
+    /**
      * Extra walks over the same fact, driven by "the last round registered a premise the trie did
      * not hold". Round 0 is not counted, so this is the ladder's height above the ground: 0 means
      * every base was answered in one pass.
@@ -86,6 +139,8 @@ object TifaDiagnostics {
     val arrivalNodesConcrete = AtomicLong()
     val arrivalDeltaConcrete = AtomicLong()
 
+
+    const val BUCKETS = 32
 
     /**
      * Bases over this size get their arrivals traced and their final tree retained for an exact dump.
@@ -228,6 +283,15 @@ object TifaDiagnostics {
         return worst.dumpTree()
     }
 
+    private fun ratio(a: Long, b: Long): String =
+        if (b == 0L) "-" else String.format("%.2f", a.toDouble() / b)
+
+    private fun buckets(a: java.util.concurrent.atomic.AtomicLongArray): String {
+        var last = 0
+        for (i in 0 until a.length()) if (a.get(i) != 0L) last = i
+        return (0..last).joinToString(",") { a.get(it).toString() }
+    }
+
     fun report(topN: Int): String {
         val all = perBase.values.sortedByDescending { it.maxAddedSize.get() }
         return buildString {
@@ -248,6 +312,16 @@ object TifaDiagnostics {
             append(" incomingNodes any/concrete=").append(arrivalNodesWithAny.get()).append("/").append(arrivalNodesConcrete.get())
             append(" addedDelta any/concrete=").append(arrivalDeltaWithAny.get()).append("/").append(arrivalDeltaConcrete.get())
             appendLine()
+            append("tifa demand |E| mean=").append(ratio(demandTotal.get(), walkStates.get()))
+            append(" max=").append(maxDemand.get())
+            append(" | trieChildren mean=").append(ratio(trieChildTotal.get(), walkStates.get()))
+            append(" max=").append(maxTrieChildren.get())
+            append(" | factChildren mean=").append(ratio(factChildTotal.get(), walkStates.get()))
+            append(" max=").append(maxFactChildren.get())
+            appendLine()
+            appendLine("tifa demandBuckets=" + buckets(demandBuckets))
+            appendLine("tifa trieChildBuckets=" + buckets(trieChildBuckets))
+            appendLine("tifa factChildBuckets=" + buckets(factChildBuckets))
             appendLine("added trees: ${all.size} (method, base) pairs")
             all.take(topN).forEach { appendLine("  $it") }
         }

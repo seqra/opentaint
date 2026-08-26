@@ -316,6 +316,37 @@ object ApOpDiagnostics {
     // ---- I: can the type filter at a graft point reject anything at all? -----------------------
 
     /**
+     * The graft's type filter, counted where it actually costs.
+     *
+     * `filterTypes` memoises per (delta node, filter), and the filter's identity is the TYPE at the
+     * graft position -- not the path -- so two positions of the same type share an entry. A HIT is
+     * free. A MISS walks the whole delta subtree and calls `FactApFilter.check` once per accessor
+     * edge, which is what the engine-wide `access R/T` counter sees. [filterTypesInNodes] is the
+     * node mass those misses walked, and it is the number to compare against `concat resultNodes`:
+     * if it is the larger of the two, the graft spends more time deciding what to graft than
+     * grafting.
+     */
+    val filterTypesCalls = AtomicLong()
+    val filterTypesHits = AtomicLong()
+    val filterTypesRejectedHits = AtomicLong()
+    val filterTypesMisses = AtomicLong()
+    val filterTypesRejectedMisses = AtomicLong()
+    val filterTypesInNodes = AtomicLong()
+    val filterTypesOutNodes = AtomicLong()
+
+    fun recordFilterTypes(hit: Boolean, rejected: Boolean, inNodes: Long, outNodes: Long) {
+        filterTypesCalls.incrementAndGet()
+        if (hit) {
+            filterTypesHits.incrementAndGet()
+            if (rejected) filterTypesRejectedHits.incrementAndGet()
+            return
+        }
+        filterTypesMisses.incrementAndGet()
+        filterTypesInNodes.addAndGet(inNodes)
+        if (rejected) filterTypesRejectedMisses.incrementAndGet() else filterTypesOutNodes.addAndGet(outNodes)
+    }
+
+    /**
      * The shape of the accessor path the graft hands to `FactTypeChecker.accessPathFilter`.
      *
      * `JIRFactTypeChecker.accessorActualType` reads ONLY `accessPath.lastOrNull()`, and returns
@@ -590,6 +621,15 @@ object ApOpDiagnostics {
         appendLine(
             "apop J-trimMemo hits=${trimMemoHits.get()} misses=${trimMemoMisses.get()}" +
                 " hitRate=${ratio(trimMemoHits.get() * 100, trimMemoHits.get() + trimMemoMisses.get())}%"
+        )
+        appendLine(
+            "apop I-filterTypes calls=${filterTypesCalls.get()} hits=${filterTypesHits.get()}" +
+                " hitRate=${ratio(filterTypesHits.get() * 100, filterTypesCalls.get())}%" +
+                " misses=${filterTypesMisses.get()}" +
+                " rejectedHits=${filterTypesRejectedHits.get()}" +
+                " rejectedMisses=${filterTypesRejectedMisses.get()}" +
+                " inNodes=${filterTypesInNodes.get()} outNodes=${filterTypesOutNodes.get()}" +
+                " nodesPerMiss=${ratio(filterTypesInNodes.get(), filterTypesMisses.get())}"
         )
         appendLine(
             "apop I-filter emptyPath=${graftFilterEmptyPath.get()} anyTail=${graftFilterAnyTail.get()}" +

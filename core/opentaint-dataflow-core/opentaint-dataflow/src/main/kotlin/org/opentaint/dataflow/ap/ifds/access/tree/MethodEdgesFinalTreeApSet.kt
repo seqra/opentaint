@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
+import org.opentaint.dataflow.ap.ifds.EdgeStoreDiagnostics
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageIdx
 import org.opentaint.dataflow.ap.ifds.access.common.CommonZ2FSet
@@ -26,6 +27,7 @@ class MethodEdgesFinalTreeApSet(
 
             if (factSet == null) {
                 edges[factSetIdx] = internIfRequired(accessPath)
+                if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordSlotOpened(accessPath.size)
                 return accessPath
             }
 
@@ -34,6 +36,7 @@ class MethodEdgesFinalTreeApSet(
                 return null
             }
 
+            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordMerge(factSet.size, mergedFacts.size)
             edges[factSetIdx] = internIfRequired(mergedFacts)
             intern(factSetIdx)
             return mergedFacts

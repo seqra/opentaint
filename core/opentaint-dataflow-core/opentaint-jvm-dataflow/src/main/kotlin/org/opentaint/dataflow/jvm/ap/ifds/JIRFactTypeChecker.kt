@@ -62,6 +62,51 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         if (!isCorrect) accessRejected.increment()
     }
 
+    /**
+     * Why a FIELD step through the ACCESS filter was allowed, split by whether the type system
+     * actually said anything.
+     *
+     * The filter is the only thing that stops one field following another that could never follow
+     * it, so "how often does it reject" is not the interesting number -- "how often does it accept
+     * because it had nothing to say" is. A step is [fieldAcceptVacuousObject] when the type at the
+     * current position is `java.lang.Object` (or an unresolvable/variable type), which admits every
+     * field in the program; [fieldAcceptVacuousInterface] when it is an interface, where
+     * `interfaceMayHaveSubtypeOf` admits any class that could implement it; and
+     * [fieldAcceptTyped] only when a real class-to-class relation was checked and held.
+     */
+    val fieldAcceptTyped = LongAdder()
+    val fieldAcceptVacuousObject = LongAdder()
+    val fieldAcceptVacuousTypeVar = LongAdder()
+    val fieldAcceptVacuousInterface = LongAdder()
+    val fieldAcceptUnknownField = LongAdder()
+    val fieldRejectTyped = LongAdder()
+    val fieldRejectNotRef = LongAdder()
+
+    /**
+     * Access-filter rejections split by the accessor that was refused.
+     *
+     * The engine-wide `access R/T` line says 96% of everything is rejected but not WHAT: a field
+     * that cannot follow this type is a real pruning of the object graph, while a `[value]` refused
+     * on a reference is a step the generator should never have proposed. The two call for different
+     * fixes, so they are counted apart.
+     */
+    val rejectByField = LongAdder()
+    val rejectByElement = LongAdder()
+    val rejectByValue = LongAdder()
+    val rejectByAny = LongAdder()
+    val rejectByMark = LongAdder()
+    val acceptOther = LongAdder()
+
+    /**
+     * The (type at the position -> field) pairs the filter waves through without being able to
+     * check them, most frequent first.
+     *
+     * This is the table that names WHERE the type system stops constraining the walk. Bounded at
+     * [VACUOUS_SITE_LIMIT] distinct keys so a pathological program cannot turn a diagnostic into a
+     * leak; once full it keeps counting the keys it already has.
+     */
+    val vacuousAcceptSites = ConcurrentHashMap<String, LongAdder>()
+
     val compatibilityTotal = LongAdder()
     val compatibilityRejected = LongAdder()
 
@@ -81,39 +126,78 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
         private fun checkAccessor(accessor: Accessor): FilterResult {
             when (accessor) {
-                is FinalAccessor, is ClassStaticAccessor -> return FilterResult.Accept
+                is FinalAccessor, is ClassStaticAccessor -> {
+                    if (!isLocalCheck) acceptOther.increment()
+                    return FilterResult.Accept
+                }
 
                 is AnyAccessor -> {
                     if (actualType.unboxIfNeeded() is JIRPrimitiveType) {
+                        if (!isLocalCheck) rejectByAny.increment()
                         return FilterResult.Reject
                     }
 
+                    if (!isLocalCheck) acceptOther.increment()
                     return FilterResult.Accept
                 }
 
                 is TaintMarkAccessor -> {
                     if (actualType.unboxIfNeeded() is JIRPrimitiveType) {
                         if (!accessor.mark.endsWith(PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE)) {
+                            if (!isLocalCheck) rejectByMark.increment()
                             return FilterResult.Reject
                         }
                     }
 
+                    if (!isLocalCheck) acceptOther.increment()
                     return FilterResult.Accept
                 }
 
                 is FieldAccessor -> {
-                    if (actualType !is JIRRefType) return FilterResult.Reject
+                    if (actualType !is JIRRefType) {
+                        if (!isLocalCheck) {
+                            fieldRejectNotRef.increment()
+                            rejectByField.increment()
+                        }
+                        return FilterResult.Reject
+                    }
 
-                    val factType = fieldClassType(accessor) ?: return FilterResult.Accept
-                    if (!typeMayHaveSubtypeOf(actualType, factType)) return FilterResult.Reject
+                    val factType = fieldClassType(accessor)
+                    if (factType == null) {
+                        if (!isLocalCheck) fieldAcceptUnknownField.increment()
+                        return FilterResult.Accept
+                    }
+                    if (!typeMayHaveSubtypeOf(actualType, factType)) {
+                        if (!isLocalCheck) {
+                            fieldRejectTyped.increment()
+                            rejectByField.increment()
+                        }
+                        return FilterResult.Reject
+                    }
+                    val vacuous = classifyFieldAccept(actualType, accessor, count = !isLocalCheck)
+                    // MEASUREMENT ONLY, and unsound: refuse the steps the type system could not
+                    // justify, to put an upper bound on what constraining them could ever buy and a
+                    // lower bound on what it would cost in findings. A real fix widens such a
+                    // position instead of cutting it -- see the anatomy document, section 8.
+                    if (vacuous != Vacuity.NONE && rejectVacuous(vacuous)) return FilterResult.Reject
                     return FilterResult.Accept
                 }
 
                 ElementAccessor -> {
-                    if (actualType !is JIRRefType) return FilterResult.Reject
-                    if (!typeMayBeArrayType(actualType)) return FilterResult.Reject
+                    if (actualType !is JIRRefType) {
+                        if (!isLocalCheck) rejectByElement.increment()
+                        return FilterResult.Reject
+                    }
+                    if (!typeMayBeArrayType(actualType)) {
+                        if (!isLocalCheck) rejectByElement.increment()
+                        return FilterResult.Reject
+                    }
 
-                    val actualElementType = actualType.ifArrayGetElementType ?: return FilterResult.Accept
+                    val actualElementType = actualType.ifArrayGetElementType
+                    if (actualElementType == null) {
+                        if (!isLocalCheck) acceptOther.increment()
+                        return FilterResult.Accept
+                    }
 
                     return FilterResult.FilterNext(
                         AccessorFilter(actualElementType, isLocalCheck)
@@ -122,14 +206,22 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
 
                 ValueAccessor -> {
                     return if (actualType is JIRPrimitiveType) {
+                        if (!isLocalCheck) acceptOther.increment()
                         FilterResult.Accept
                     } else {
+                        if (!isLocalCheck) rejectByValue.increment()
                         FilterResult.Reject
                     }
                 }
 
-                is TypeInfoAccessor -> return FilterResult.Accept
-                TypeInfoGroupAccessor -> return FilterResult.Accept
+                is TypeInfoAccessor -> {
+                    if (!isLocalCheck) acceptOther.increment()
+                    return FilterResult.Accept
+                }
+                TypeInfoGroupAccessor -> {
+                    if (!isLocalCheck) acceptOther.increment()
+                    return FilterResult.Accept
+                }
             }
         }
 
@@ -151,6 +243,64 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
             return result
         }
     }
+
+    /**
+     * Which arm of [typeMayHaveSubtypeOf] said yes.
+     *
+     * `java.lang.Object` and a type variable admit everything; an interface admits every class that
+     * could implement it, which on a Spring project is most of them. Only the remaining arm is a
+     * check that could have failed.
+     */
+    /**
+     * Why a field step was allowed: which arm of the check had nothing to say.
+     *
+     * [OBJECT] and [TYPE_VAR] are positions with no nominal type at all -- `java.lang.Object`, a
+     * type variable, a wildcard -- and admit every field in the program. [INTERFACE] admits every
+     * field of every class that could implement it, which is weaker but still very wide on a Spring
+     * project. [NONE] is a check that could have failed and did not.
+     */
+    enum class Vacuity { NONE, OBJECT, TYPE_VAR, INTERFACE }
+
+    private fun classifyFieldAccept(actualType: JIRRefType, accessor: FieldAccessor, count: Boolean): Vacuity {
+        val vacuity = vacuityOf(actualType)
+        if (!count) return vacuity
+
+        when (vacuity) {
+            Vacuity.OBJECT -> fieldAcceptVacuousObject.increment()
+            Vacuity.TYPE_VAR -> fieldAcceptVacuousTypeVar.increment()
+            Vacuity.INTERFACE -> fieldAcceptVacuousInterface.increment()
+            Vacuity.NONE -> {
+                fieldAcceptTyped.increment()
+                return vacuity
+            }
+        }
+
+        val key = "$actualType -> ${accessor.className}#${accessor.fieldName}"
+        val counter = vacuousAcceptSites[key]
+        if (counter != null) {
+            counter.increment()
+            return vacuity
+        }
+        if (vacuousAcceptSites.size >= VACUOUS_SITE_LIMIT) return vacuity
+        vacuousAcceptSites.computeIfAbsent(key) { LongAdder() }.increment()
+        return vacuity
+    }
+
+    private fun vacuityOf(actualType: JIRRefType): Vacuity = when {
+        actualType is JIRClassType && actualType == objectType -> Vacuity.OBJECT
+        actualType is JIRClassType && actualType.jIRClass.isInterface -> Vacuity.INTERFACE
+        // A type variable, a wildcard, or anything else that is neither a class nor an array: the
+        // position has no nominal type, which is what a container's element or value accessor
+        // leaves behind after erasure.
+        actualType !is JIRClassType && actualType !is JIRArrayType -> Vacuity.TYPE_VAR
+        else -> Vacuity.NONE
+    }
+
+    /** Top [topN] positions where the type system had nothing to say, and how often. */
+    fun vacuousAcceptReport(topN: Int): String = vacuousAcceptSites.entries
+        .sortedByDescending { it.value.sum() }
+        .take(topN)
+        .joinToString("\n") { "  ${it.value.sum()} | ${it.key}" }
 
     private inner class AccessorCompatibilityFilter(
         private val actualType: JIRType
@@ -254,8 +404,31 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         else -> error("Unexpected type: $type")
     }
 
+    private fun rejectVacuous(vacuity: Vacuity): Boolean = when (REJECT_VACUOUS_MODE) {
+        "all", "true" -> true
+        "object" -> vacuity == Vacuity.OBJECT || vacuity == Vacuity.TYPE_VAR
+        "interface" -> vacuity == Vacuity.INTERFACE
+        else -> false
+    }
+
     // todo: cache limit?
     private val typeMayHaveSubtypeOfCache = ConcurrentHashMap<LongLongPair, Boolean>()
+
+    companion object {
+        /** Distinct (type, field) keys the vacuous-accept table will hold before it stops growing. */
+        const val VACUOUS_SITE_LIMIT = 20_000
+
+        /**
+         * Refuse the field steps the type system could not justify.
+         *
+         * `-Dopentaint.rejectVacuousFieldSteps=<mode>`, where mode is `object` (only positions with
+         * no nominal type), `interface`, or `all`. An ablation, not a fix: it is unsound, it loses
+         * every flow that passes through a container or an `Object`-typed field, and it is here to
+         * bound the size of the prize. A real fix WIDENS such a position instead of cutting it.
+         */
+        val REJECT_VACUOUS_MODE: String =
+            System.getProperty("opentaint.rejectVacuousFieldSteps")?.trim()?.lowercase().orEmpty()
+    }
 
     fun typeMayHaveSubtypeOf(typeName: String, requiredTypeName: String): Boolean {
         if (requiredTypeName == "java.lang.Object") return true
