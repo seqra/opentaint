@@ -48,10 +48,12 @@ object TifaDiagnostics {
     /**
      * The four `[any]` rules of the never-unroll walk, counted where they fire.
      *
-     *  - [emitsAnyFrontier] R3a: one coarse `p.[any]` for a level that carries demand.
-     *  - [emitsUncoveredFrontier] R3b: `p.[any].u` for a mark, `[value]` or type-info accessor below
-     *    an `[any]`, which `p.[any]` does NOT denote. Its sibling `p.u` -- the zero-times reading --
-     *    goes through the ordinary per-accessor helper and is not separable here.
+     *  - [emitsAnyFrontier] R3a: one coarse `p.[any]` for a level that carries demand. Zero unless
+     *    `TreeApManager.anyFrontierPremise` is on, which it is not by default.
+     *  - [emitsUncoveredFrontier] R3b: a mark, `[value]` or type-info accessor found below an
+     *    `[any]` and offered to the per-accessor helper AT THIS PREFIX. An offer, not an emission:
+     *    the helper still applies the demand test, so this is an upper bound on the premises R3b
+     *    produces and the gap between it and [emits] is how much of the frontier carries no demand.
      *  - [emitsSynthesised] R3c: `p.a` for an accessor demanded at this level, covered by the
      *    `[any]`, and present in no concrete branch. This is the count that replaces
      *    `unrollMaterialised`, and the comparison between them is the point of the change: the
