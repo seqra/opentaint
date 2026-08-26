@@ -1107,7 +1107,69 @@ cancelled with `CancellationException: Channel was cancelled`. Same budget, diff
 And note where the finding count comes from: `Total vulnerabilities: 2` is logged **before**
 `Start trace generation`. The forward scan decides what is found; the trace phase can only subtract.
 
-## 17. Caveats
+## 17. It is a throughput collapse, not a capacity limit
+
+§16 established that the forward scan runs out of clock, not memory. The obvious next question is
+whether more clock would finish it. One arm answers it: `L = 100`, `rescore`, `bfs`,
+`--ifds-analysis-timeout=1000`, everything else unchanged.
+
+| | 300 s budget (`p2-bfs-1`) | **1000 s budget** |
+|---|---|---|
+| full scan | 3 m 47 s | **13 m 13 s** |
+| events | 877,371 | **986,904** |
+| rc | 254 | **254** |
+| `lowmem_stop` / peak RSS | 0 / 9.3 GB | **0 / 9.8 GB** |
+| `Total vulnerabilities` | 2 | 2 |
+| SARIF traces | 2 | 2 |
+
+**3.4× the wall clock bought 12.5 % more work.**
+
+### 17.1 The curve
+
+Events per second, from the `Progress: N/M (+delta)` line:
+
+| t (s) | 11 | 31 | 61 | 101 | 203 | 324 | 527 | 609 | 794 |
+|---|---|---|---|---|---|---|---|---|---|
+| **ev/s** | **36,030** | 10,551 | 2,813 | 566 | 111 | 97 | 49 | **21** | 71 |
+
+Throughput falls **400–1,700×** in the first two hundred seconds and then sits on a floor of roughly
+50–100 ev/s for the remaining six hundred. It does not recover and it does not reach zero — it
+plateaus. At that floor another million events would take three to six hours.
+
+The 300 s arm shows the same shape inside its shorter window: 28,844 ev/s at t = 16 s down to 41 ev/s
+at t = 198 s.
+
+### 17.2 Three things it is not
+
+- **Not memory.** `lowmem_stop = 0` in both arms; the low-memory stop never fires. Only the
+  manager-OFF arms OOM (§16).
+- **Not GC.** Total pause over the 1000 s run is **20 s of 860 s — 2.3 %**, and never above 5 % in any
+  100-second window. In the 300 s arm it is 11.3 s of 290 s, and during the worst throughput window
+  (t = 137–208 s, 41–104 ev/s) GC is 2.6–7.4 %. The collector is keeping up throughout.
+- **Not queue starvation.** `queued` stays at 1–7 for the whole run. As
+  `[[queue-depth-hides-throughput-collapse]]` records, that column is pinned near zero by
+  construction; the `(+delta)` is the signal, and it is the one that falls.
+
+### 17.3 What it is
+
+| arm | events | concat calls | concat result nodes | **nodes per event** | calls per event |
+|---|---|---|---|---|---|
+| `p2-bfs-1` (300 s) | 877,371 | 1,868,960 | 194.9 M | **222.2** | 2.13 |
+| `p2-bfs-2` (300 s) | 944,874 | 2,084,352 | 227.9 M | **241.2** | 2.21 |
+| **`long-bfs-1000`** | 986,904 | 2,504,085 | **586.2 M** | **594.0** | 2.54 |
+
+**Nodes per event goes 222–241 → 594, while grafts per event barely moves (2.13 → 2.54).** It is not
+that a later event does more operations; it is that the same operations handle a much bigger fact.
+The facts grow monotonically, the per-event cost grows with them, and the event rate is the
+reciprocal.
+
+That reframes the whole document. The 300-second budget is not the binding constraint, and neither is
+the 8 GB heap — **the binding constraint is that per-event cost grows without bound**, so the run
+approaches an asymptote rather than a finish line. It also explains why every lever measured here
+moved throughput or node mass by tens of percent and none of them made an arm converge: a constant
+factor against a growing per-event cost buys a little more of the curve, not the end of it.
+
+## 18. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -1173,3 +1235,9 @@ And note where the finding count comes from: `Total vulnerabilities: 2` is logge
 - **The trace loss is 3 of 3, which is suggestive, not conclusive.** The mechanism is the documented
   one and the direction matches `pointsPerCall`, but three runs cannot distinguish "always" from
   "usually" on a timeout.
+- **§17 is one 1000-second arm.** The shape is corroborated by every 300-second arm in this document,
+  which all show the same collapse inside their shorter window, but the plateau itself is a single
+  sample.
+- **The nodes-per-event comparison mixes budgets.** `long-bfs-1000` ran the forward scan 3.5× longer,
+  so its totals cover a later part of the curve; that is the point being made, but it means the row is
+  not a like-for-like control against the 300 s rows.
