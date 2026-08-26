@@ -12,8 +12,8 @@ came from; ranges span replicates.
 Contents: §1 the question · §2 findings · §3 concat as bulk tree prepend · §4 the greedy predecessor
 · §5 the performance arithmetic · §6 the fixed point · §7 the measurements (7.1 graft anatomy · 7.2
 the two `⊑` holes · 7.3 the telescope · 7.4 the selector · 7.5 **the profile** · 7.6 the abstract
-cancellation · 7.7 **the memo**) · §8 what changed in the code · §8b what this leaves · §9
-corrections · §10 caveats
+cancellation · 7.7 **the memo**) · §8 what changed in the code · §9 what this leaves ·
+§10 corrections · §11 caveats
 
 ---
 
@@ -820,7 +820,7 @@ session. Both new tests pass.
 
 ---
 
-## 8b. What this leaves, ranked
+## 9. What this leaves, ranked
 
 1. **The DAG re-visit, in the two places it dominates.** 79–82% of the `[any]`-trim walk and **87.8%**
    of concat's graft points are re-derivations of a node already handled in the same call. The trim
@@ -846,7 +846,7 @@ session. Both new tests pass.
 
 ---
 
-## 9. Readings this document corrects
+## 10. Readings this document corrects
 
 | claim | where it was made | what is actually true |
 |---|---|---|
@@ -859,7 +859,7 @@ session. Both new tests pass.
 
 ---
 
-## 10. Caveats
+## 11. Caveats
 
 - **The window differential is a cross-run subtraction.** The two arms are separate runs of the same
   jar with the same flags; the late window uses the 300 s arm's totals as the state at t = 228 s.
