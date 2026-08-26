@@ -633,6 +633,27 @@ class AccessTree(
         fun containsAnyAccessor(): Boolean =
             accessorIndex(ANY_ACCESSOR_IDX) >= 0
 
+        /**
+         * Diagnostics only: what the `[any]` subsumption trim would delete from [arrival], for the
+         * one accumulator that runs the merge with `foldToAny = false`. Changes nothing.
+         *
+         * Reads the `[any]` edge LITERALLY rather than through `getChild`, so it cannot take the
+         * covered arm, cannot mint and cannot union -- a probe that perturbed the automaton would
+         * make the measurement flag change the run.
+         */
+        internal fun probeAnyTrim(arrival: AccessNode) {
+            val anyIdx = accessorIndex(ANY_ACCESSOR_IDX)
+            if (anyIdx < 0) {
+                ApOpDiagnostics.tifaTrimNoAny.incrementAndGet()
+                return
+            }
+            val kept = AccessTreeAnySuffixMatcher(accessorNodes!![anyIdx]).getNonMatchingNode(arrival)
+            ApOpDiagnostics.tifaTrimCalls.incrementAndGet()
+            ApOpDiagnostics.tifaTrimInNodes.addAndGet(arrival.size)
+            ApOpDiagnostics.tifaTrimKeptNodes.addAndGet(kept?.size ?: 0L)
+            if (kept == null || kept.isEmpty) ApOpDiagnostics.tifaTrimWouldDropAll.incrementAndGet()
+        }
+
         fun contains(accessor: AccessorIdx): Boolean {
             if (accessor == FINAL_ACCESSOR_IDX) return isFinal
 
@@ -2060,9 +2081,19 @@ class AccessTree(
                 ApOpDiagnostics.graftPointCounter.get().also { it.value = 0 }
             } else null
 
+            if (ApOpDiagnostics.enabled) {
+                // Cleared per top-level call, on the same single-thread-per-call assumption
+                // `graftPointCounter` already makes.
+                ApOpDiagnostics.graftSeen.get().clear()
+                // The ROOT predicate, which nothing measured: `concatAnyDeltaCalls` below tests
+                // `containsAnyInThisOrDeepNodes` and every fold of the receiver's spine into the
+                // delta's `[any]` needs this one instead.
+                if (other.anyId != null) ApOpDiagnostics.concatDeltaRootCarriesAny.incrementAndGet()
+            }
+
             val result = concatToLeafAbstractNodes(
                 typeChecker, filteredOther, IntArrayList(), SUBSEQUENT_ARRAY_ELEMENTS_LIMIT,
-                parentEdgeIsAny = false,
+                parentEdgeIsAny = false, underGraft = false,
             )
 
             if (ApOpDiagnostics.enabled) {
@@ -2325,6 +2356,7 @@ class AccessTree(
             path: IntArrayList,
             subsequentArrayElementLimit: Int,
             parentEdgeIsAny: Boolean,
+            underGraft: Boolean,
         ): AccessNode? {
             manager.cancellation.checkpoint()
 
@@ -2333,6 +2365,14 @@ class AccessTree(
                 // `|result| ~ |receiver| + k * |delta|`, and the only number that separates
                 // "the graft multiplies" from "the graft relocates the caller's remainder once".
                 ApOpDiagnostics.graftPointCounter.get().value++
+
+                // ... and the two mechanisms that make `k` large, separated. See the KDoc on
+                // `graftPointsRevisited`: a re-visit is answered by a memo, a nested point by a
+                // subsumption rule, and only one of them has ever been measured.
+                if (ApOpDiagnostics.graftSeen.get().put(this, this) != null) {
+                    ApOpDiagnostics.graftPointsRevisited.incrementAndGet()
+                }
+                if (underGraft) ApOpDiagnostics.graftPointsNested.incrementAndGet()
 
                 // ... and whether the filter about to run here can reject anything: see I-filter.
                 ApOpDiagnostics.recordGraftFilterShape(
@@ -2383,6 +2423,7 @@ class AccessTree(
                 val concatenatedNode = node.concatToLeafAbstractNodes(
                     typeChecker, filteredOther, path, newSubsequentArrayLimit,
                     parentEdgeIsAny = accessor == ANY_ACCESSOR_IDX,
+                    underGraft = underGraft || (isAbstract && other != null),
                 )
                 path.removeLast()
 
@@ -2482,24 +2523,66 @@ class AccessTree(
             // dead-ends. A stall with links still above it is the growth mode a greedy pick pays
             // for -- a path existed and was not found, so the fact keeps a link it should have shed,
             // on every lap. Diagnostics only; it changes nothing below.
+            //
+            // **The null position is counted separately** (2026-08-26). Until then a descent that
+            // ended on a node carrying NO `[any]` entered the loop, produced `next == null` at once
+            // and was recorded as a first-link stall. `filterStartsWith` is the largest read channel
+            // in the engine and null states are routine here -- `parentAnyStates` is a list of
+            // nullables for exactly that reason -- so that population inflated `telescopeStalls` and
+            // deflated `telescopeStallsAfterStep` AS A SHARE. It is not a targeting refusal; there
+            // was nothing to refuse.
             if (AnyUnrollDiagnostics.enabled && manager.anyUnroll.enabled) {
                 var probe = filteredTreeNode.anyId
-                var stepped = 0
-                for (i in parentAccessors.size - 1 downTo 0) {
-                    val next = probe?.let { manager.anyUnroll.absorbInto(it, parentAccessors.getInt(i)) }
-                    if (next == null) {
-                        if (i > 0) {
-                            AnyUnrollDiagnostics.telescopeStalls.incrementAndGet()
-                            // The only population a subset construction could rescue: a fold that
-                            // GOT somewhere and then dead-ended. One that stalls immediately was
-                            // standing on a single state, where no set of positions exists yet.
-                            if (stepped > 0) AnyUnrollDiagnostics.telescopeStallsAfterStep.incrementAndGet()
+                if (probe == null) {
+                    if (parentAccessors.size > 1) AnyUnrollDiagnostics.telescopeNoPosition.incrementAndGet()
+                } else {
+                    var stepped = 0
+                    var cameFromFork = false
+                    for (i in parentAccessors.size - 1 downTo 0) {
+                        val next = manager.anyUnroll.absorbInto(probe!!, parentAccessors.getInt(i))
+                        if (next == null) {
+                            if (i > 0) {
+                                AnyUnrollDiagnostics.telescopeStalls.incrementAndGet()
+                                // The population design §5.8 can rescue, isolated: a fold that had a
+                                // CHOICE one step back and then dead-ended. Everything else stalled
+                                // where no set of positions existed.
+                                if (cameFromFork) {
+                                    AnyUnrollDiagnostics.telescopeStallAfterFork.incrementAndGet()
+                                }
+                                // The only population a subset construction could rescue: a fold
+                                // that GOT somewhere and then dead-ended. One that stalls
+                                // immediately was standing on a single state, where no set of
+                                // positions exists yet.
+                                if (stepped > 0) {
+                                    AnyUnrollDiagnostics.telescopeStallsAfterStep.incrementAndGet()
+                                }
+                            }
+                            break
                         }
-                        break
+
+                        // Lemma 9.2's witness, wired at last. The descent used `getChildRecording`,
+                        // so the state threaded at this level IS a predecessor of the one below it
+                        // by construction; the backward query must name it. A disagreement is the
+                        // production falsifier the counter was declared for and never carried.
+                        //
+                        // A SELF-LOOP pick is excluded, and must be: the rank prefers one on purpose,
+                        // so it lands somewhere other than the threaded predecessor BY DESIGN and a
+                        // count there would measure the selector rather than the lemma.
+                        val threaded = parentAnyStates[i]
+                        if (threaded != null && next.find() !== threaded.find()) {
+                            if (next === probe!!.find() || next === probe) {
+                                AnyUnrollDiagnostics.witnessSelfLoopPreferred.incrementAndGet()
+                            } else {
+                                AnyUnrollDiagnostics.witnessDisagreesWithThreadedState.incrementAndGet()
+                            }
+                        }
+
+                        AnyUnrollDiagnostics.telescopeSteps.incrementAndGet()
+                        stepped++
+                        cameFromFork =
+                            (probe!!.find().parents?.get(parentAccessors.getInt(i))?.size ?: 0) > 1
+                        probe = next
                     }
-                    AnyUnrollDiagnostics.telescopeSteps.incrementAndGet()
-                    stepped++
-                    probe = next
                 }
             }
 

@@ -67,6 +67,8 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.anyUnrollKindMerge",
     "opentaint.anyUnrollKindPolicy",
     "opentaint.anyUnrollRescoreStrategy",
+    // AccessTreeAnySuffixMatcher: whether the `[any]` trim cancels `isAbstract`. Off unless set.
+    "opentaint.anyTrimAbstract",
 )
 
 fun Project.configureDefaultTest() {

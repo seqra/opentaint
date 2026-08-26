@@ -651,6 +651,66 @@ class AnyUnrollManagerTest {
         assertSame(minOf(p.find(), q.find(), compareBy { it.id }), first, "and it is the lowest id")
     }
 
+    /**
+     * The rank, in the one case where it differs from the id: a self-loop is preferred even when a
+     * genuine predecessor was minted earlier and would win on id.
+     *
+     * A self-loop is the automaton saying `A` is ALREADY folded into this `[any]`, so absorbing into
+     * it is the exact inverse of the read that put the fact here. Landing on `u` instead is sound --
+     * every candidate denotes the same language -- but it moves the fact onto a position with
+     * different transitions and possibly a different kind, for no reason beyond mint order.
+     */
+    @Test
+    fun `absorbInto prefers a self-loop to a lower-id predecessor`() {
+        val m = manager()
+        val root = m.origin()
+        val u = m.readChild(root, A)!!          // minted FIRST, so it wins on id
+        val p = m.readChild(root, B)!!
+        val q = m.readChild(p, C)!!
+        val t = m.readChild(q, A)!!             // q --A--> t
+        val v = m.readChild(u, A)!!             // u --A--> v
+
+        m.union(t, v)                           // now u is an A-predecessor of t's class too
+        m.union(t, q)                           // ancestor-descendant: q --A--> t becomes a self-loop
+
+        val cls = t.find()
+        assertTrue(u.find().id < cls.id, "the fork's other member really does win on id")
+        assertSame(cls, m.absorbInto(t, A), "the self-loop wins the rank")
+        assertSame(cls, m.absorbInto(t, A), "and the rank is still reproducible")
+    }
+
+    /**
+     * The structural fact that bounds how much the choice among a fork's members can matter: it can
+     * never move a fact between pots.
+     *
+     * `mint` gives a child its parent's dag and only `union` fuses dags, so a state's dag is its
+     * reachability component. A state with two predecessors is reachable from both, hence all three
+     * are in one component -- whatever the pick, `budgetExhausted`, the charge and the origin that
+     * pays are unchanged. This pins it, because the counter that would otherwise have measured it
+     * would have been structurally zero.
+     */
+    @Test
+    fun `every member of a fork shares the target's pot`() {
+        val m = manager()
+        val root = m.origin()
+        val other = m.origin()
+        val p = m.readChild(root, A)!!
+        val q = m.readChild(other, B)!!
+        val t1 = m.readChild(p, C)!!
+        val t2 = m.readChild(q, C)!!
+
+        assertFalse(m.dagOf(p) === m.dagOf(q), "two origins start in two components")
+
+        m.union(t1, t2)                         // the only way to build a fork -- and it fuses
+
+        val target = t1.find()
+        val preds = assertNotNull(target.parents?.get(C), "the fork is there")
+        assertEquals(2, preds.size)
+        for (pred in preds) {
+            assertSame(m.dagOf(target), m.dagOf(pred), "a fork cannot straddle two pots")
+        }
+    }
+
     @Test
     fun `writesAbove follows the kind and not the pot`() {
         val m = manager(limit = 1)

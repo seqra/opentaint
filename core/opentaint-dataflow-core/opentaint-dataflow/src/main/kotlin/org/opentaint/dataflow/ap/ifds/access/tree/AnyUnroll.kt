@@ -552,8 +552,62 @@ object AnyUnrollDiagnostics {
      * The §8.1 identity, asserted on real workloads rather than in a unit test: at
      * `filterStartsWith`'s fold the backward query must return the state the caller already threaded.
      * MUST STAY ZERO -- a non-zero reading falsifies Lemma 9.2 in production, where no test reaches.
+     *
+     * **It was structurally zero until 2026-08-26.** The counter was declared and reported and never
+     * incremented, so every result document that read its zero as evidence read nothing at all. It is
+     * wired at [AccessTree.AccessNode.filterStartsWithImpl]'s shadow telescope now.
      */
     val witnessDisagreesWithThreadedState = AtomicLong()
+
+    /**
+     * Forks whose candidates do NOT all carry the same [AnyUnrollKind] -- the ONLY consequence the
+     * choice among them can have.
+     *
+     * A fork cannot move a fact between pots: `mint` gives a child its parent's dag and only `union`
+     * fuses dags, so a state's dag IS its reachability component and every predecessor of a state is
+     * necessarily inside it. The pick therefore cannot change `budgetExhausted`, the charge, or which
+     * origin pays. What it CAN change is the kind of the position the fact lands on, and the kind is
+     * what [writesAbove] gates the NEXT prepend on. When every candidate agrees on kind, greedy and
+     * any other rule are indistinguishable to everything downstream.
+     *
+     * This is the number that decides whether design §5.8 has an unmeasured justification. The
+     * measurement that retired §5.8 counted STALLS, which bounds only telescope completeness -- a
+     * fork never stalls, it succeeds, at a state chosen for no reason.
+     */
+    val absorbForkKindSplit = AtomicLong()
+
+    /** Forks where a self-loop was among the candidates, i.e. where "absorb and stay" was available. */
+    val absorbForkSelfLoopPreferred = AtomicLong()
+
+    /**
+     * Forks where the ranked selector landed somewhere the old min-id pick would not have. The direct
+     * "did this change anything" number; bounded above by [absorbForkHits].
+     */
+    val absorbForkChoiceChanged = AtomicLong()
+
+    /**
+     * The population excluded from [witnessDisagreesWithThreadedState]: the backward query answered
+     * with a SELF-LOOP where the descent had threaded a different predecessor. The rank prefers the
+     * self-loop on purpose, so this is the selector working, not the lemma failing.
+     */
+    val witnessSelfLoopPreferred = AtomicLong()
+
+    /**
+     * A telescope that stalled one step after crossing a state that HAD a fork -- the only population
+     * design §5.8's subset construction can rescue, and the one thing [telescopeStallsAfterStep]
+     * was being read as a proxy for.
+     */
+    val telescopeStallAfterFork = AtomicLong()
+
+    /**
+     * Telescope probes that had no `[any]` position to start from at all (`probe == null`).
+     *
+     * Until 2026-08-26 these were counted as [telescopeStalls], which is why 97-98% of stalls looked
+     * like first-link stalls: a descent that ended on a node carrying no `[any]` cannot telescope and
+     * is not a targeting refusal. The two populations are separated now; only the remainder is a
+     * statement about the automaton.
+     */
+    val telescopeNoPosition = AtomicLong()
 
     fun recordFork(width: Int) {
         var cur = absorbForkMaxWidth.get()
@@ -660,9 +714,15 @@ object AnyUnrollDiagnostics {
         append(",telescopeSteps:").append(telescopeSteps.get())
         append(",telescopeStalls:").append(telescopeStalls.get())
         append(",telescopeStallsAfterStep:").append(telescopeStallsAfterStep.get())
+        append(",telescopeNoPosition:").append(telescopeNoPosition.get())
+        append(",kindSplit:").append(absorbForkKindSplit.get())
+        append(",selfLoopAvailable:").append(absorbForkSelfLoopPreferred.get())
+        append(",choiceChanged:").append(absorbForkChoiceChanged.get())
+        append(",stallAfterFork:").append(telescopeStallAfterFork.get())
         append("]")
         append(" witness=[fwdCheckFailed:").append(witnessForwardCheckFailed.get())
         append(",disagrees:").append(witnessDisagreesWithThreadedState.get())
+        append(",selfLoopPreferred:").append(witnessSelfLoopPreferred.get())
         append("]")
         append(" kind=[promote:").append(kindPromotions.get())
         append(",demoteGenuine:").append(kindDemotionsGenuine.get())
@@ -1425,9 +1485,33 @@ class AnyUnrollManager(
      * the accessor is already folded in. `createAnyEdge`'s `union(installed, found)` manufactures such
      * loops itself, joining an installed state with states collected from the subtree below it.
      *
-     * Nothing depends on this naming the ONE true predecessor -- absorption is correct at any state.
-     * What it must be is REPRODUCIBLE, hence the id tie-break, and -- for a telescoping fold to close
-     * -- COMPLETE, which is what the fork counter is about.
+     * Nothing depends on this naming the ONE true predecessor -- absorption is correct at any state,
+     * because the state does not enter the DENOTATION of an `[any]` edge. `[any]@r` is `SIGMA*` for
+     * every `r`; the state is a budget and provenance annotation, and every consumer that branches on
+     * it (`writesAbove`, `readChildPaidOnly`, `budgetExhausted`) is sound in BOTH branches. So the
+     * pick is a precision decision, never a soundness one.
+     *
+     * What it must be is REPRODUCIBLE, hence the total order below. It is NOT complete -- the set is
+     * enumerated and one member returned -- and design §5.8(b) is right that no tie-break can make it
+     * complete, because the backward run needs the rest of the word before it can choose. `§5.8` was
+     * measured and retired; see the results document for why that measurement bounded only the
+     * completeness half.
+     *
+     * **The order is ranked, not arbitrary** (2026-08-26), and the rank has exactly one level:
+     *
+     * 1. **a self-loop**, if one is a candidate. `p --a--> p` says `a` is ALREADY folded into this
+     *    `[any]`, so staying is the exact inverse of the read that put the fact here -- the fixpoint
+     *    condition, taken whenever it is on offer, instead of by whether its id happened to be low.
+     * 2. **min id**, unchanged, as the reproducible tie-break.
+     *
+     * A rank on "stay inside this pot" was considered and is NOT here, because it would be dead
+     * code: `mint` gives a child its parent's dag and only `union` fuses dags, so a state's dag is
+     * its reachability component and every candidate is inside it already. The greedy pick was never
+     * able to jump automata -- which retires, structurally, the sharpest harm one could attribute
+     * to it.
+     *
+     * This changes only WHERE a fork lands, never WHETHER it absorbs, so `absorptions` is unaffected
+     * by construction; the counters say how often the distinction could have mattered at all.
      */
     fun absorbInto(state: AnyUnrollState, accessor: AccessorIdx, count: Boolean = true): AnyUnrollState? {
         if (!enabled) return null
@@ -1436,7 +1520,13 @@ class AnyUnrollManager(
         val preds = current.parents?.get(accessor) ?: return null
 
         var best: AnyUnrollState? = null
+        var bestRank = Int.MAX_VALUE
         var hits = 0
+        var selfLoop = false
+        var firstKind: AnyUnrollKind? = null
+        var kindSplit = false
+        var minId: AnyUnrollState? = null
+
         for (raw in preds) {
             val pred = raw.find()
 
@@ -1444,6 +1534,8 @@ class AnyUnrollManager(
             // rather than writing the transition, so between that queueing and the drain of
             // `pending` a lock-free scan can observe a predecessor whose forward edge does not yet
             // resolve back. This turns that window into a MISS rather than a wrong predecessor.
+            // It must stay AHEAD of the ranking, or a predecessor inside that window could outrank
+            // a real one.
             if (pred.children?.get(accessor)?.find() !== current) {
                 if (count && AnyUnrollDiagnostics.enabled) {
                     AnyUnrollDiagnostics.witnessForwardCheckFailed.incrementAndGet()
@@ -1452,12 +1544,28 @@ class AnyUnrollManager(
             }
 
             hits++
-            if (best == null || pred.id < best.id) best = pred
+            val rank = if (pred === current) { selfLoop = true; 0 } else 1
+
+            if (best == null || rank < bestRank || (rank == bestRank && pred.id < best.id)) {
+                best = pred
+                bestRank = rank
+            }
+
+            if (count && AnyUnrollDiagnostics.enabled) {
+                val k = pred.kind
+                if (firstKind == null) firstKind = k else if (firstKind != k) kindSplit = true
+                if (minId == null || pred.id < minId.id) minId = pred
+            }
         }
 
         if (count && AnyUnrollDiagnostics.enabled && hits > 1) {
             AnyUnrollDiagnostics.absorbForkHits.incrementAndGet()
             AnyUnrollDiagnostics.recordFork(hits)
+            // Design §5.8's benefit B, measured for the first time -- see [absorbForkKindSplit] for
+            // why the kind is the only thing the choice can move.
+            if (kindSplit) AnyUnrollDiagnostics.absorbForkKindSplit.incrementAndGet()
+            if (selfLoop) AnyUnrollDiagnostics.absorbForkSelfLoopPreferred.incrementAndGet()
+            if (minId !== best) AnyUnrollDiagnostics.absorbForkChoiceChanged.incrementAndGet()
         }
         return best
     }

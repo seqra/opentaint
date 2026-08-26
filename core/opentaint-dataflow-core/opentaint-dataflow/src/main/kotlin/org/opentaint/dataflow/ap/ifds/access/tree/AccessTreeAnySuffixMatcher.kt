@@ -1,10 +1,29 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
+    companion object {
+        /**
+         * `-Dopentaint.anyTrimAbstract=true`, default **false**.
+         *
+         * The trim cancels `isFinal` and does not cancel `isAbstract`. With this on it cancels both,
+         * so `[any].*` subsumes a sibling `f.*` for covered `f` -- which it denotes, so the deletion
+         * is exact and not even a coarsening.
+         *
+         * OFF by default because it is a denotation change on the operator every storage channel's
+         * merge runs, and because it removes the abstract nodes that are the graft points: the
+         * counterfactual counts 2.2 BILLION single-node branches kept only by the missing clause on
+         * the frontier arm, so the blast radius is large in both directions.
+         */
+        @JvmField
+        val TRIM_ABSTRACT: Boolean =
+            System.getProperty("opentaint.anyTrimAbstract")?.trim().toBoolean()
+    }
+
     private val manager = suffixNode.manager
     private val root = TrieNode(suffixNode.isAbstract, suffixNode.isFinal, prefixLink = null, depth = 0)
 
@@ -120,12 +139,54 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         }
     }
 
+    /**
+     * Memo for ONE walk, keyed on `(trie, node)` per value of `prefixCoveredByAny`.
+     *
+     * The walk is a pure function of those three, and a fact is a DAG rather than a tree, so without
+     * a memo a shared subtree is re-derived once per path that reaches it. Identity keys throughout:
+     * `AccessNode.equals` is a deep structural comparison and `TrieNode` is a data class holding a
+     * child map, so value equality here would cost more than the walk it saves.
+     *
+     * Profiled 2026-08-26: `getNonMatchingNode` was **73.6% of all analyser CPU and 83.5% of all
+     * allocation** in the late window of the conductor arm, against 0 of 3,440 samples in the first
+     * 60 s. Nothing else in the engine grew superlinearly with fact size.
+     */
+    private val memoCovered = java.util.IdentityHashMap<TrieNode, java.util.IdentityHashMap<AccessTree.AccessNode, Any>>()
+    private val memoUncovered = java.util.IdentityHashMap<TrieNode, java.util.IdentityHashMap<AccessTree.AccessNode, Any>>()
+
+    private object Dropped
+
     fun getNonMatchingNode(node: AccessTree.AccessNode) =
         getNonMatchingNode(root, node, true) ?: manager.emptyNode
 
-    private fun getNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
-        val accessorIdx = mutableListOf<AccessorIdx>()
-        val accessorNodes = mutableListOf<AccessTree.AccessNode>()
+    private fun getNonMatchingNode(
+        trie: TrieNode,
+        node: AccessTree.AccessNode,
+        prefixCoveredByAny: Boolean,
+    ): AccessTree.AccessNode? {
+        val memo = (if (prefixCoveredByAny) memoCovered else memoUncovered)
+            .getOrPut(trie) { java.util.IdentityHashMap() }
+
+        val cached = memo[node]
+        if (cached != null) {
+            if (ApOpDiagnostics.enabled) ApOpDiagnostics.trimMemoHits.incrementAndGet()
+            @Suppress("UNCHECKED_CAST")
+            return if (cached === Dropped) null else cached as AccessTree.AccessNode
+        }
+        if (ApOpDiagnostics.enabled) ApOpDiagnostics.trimMemoMisses.incrementAndGet()
+
+        val result = computeNonMatchingNode(trie, node, prefixCoveredByAny)
+        memo[node] = result ?: Dropped
+        return result
+    }
+
+    private fun computeNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
+        // Presized and unboxed. These two lines were 45.8% of the whole run's allocation as
+        // `mutableListOf`: an `ArrayList<Int>` boxes every accessor index, and both lists grew from
+        // the default capacity on a walk that visits every node of the tree.
+        val width = node.accessors?.size ?: 0
+        val accessorIdx = IntArrayList(width)
+        val accessorNodes = ArrayList<AccessTree.AccessNode>(width)
         var areChildrenChanged = false
 
         node.forEachAccessor { accessor, accessorNode ->
@@ -150,16 +211,32 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
 
         val thisFinal = node.isFinal && !trie.isFinal
 
+        // The trim cancels `isFinal` and does NOT cancel `isAbstract`: there is no
+        // `thisAbstract = node.isAbstract && !trie.isAbstract` to mirror `thisFinal`, and the rebuild
+        // below passes `node.isAbstract` through unchanged. So `[any].*` does not subsume a sibling
+        // `f.*` whose node is abstract, even though it denotes a superset.
+        //
+        // Abstract nodes are exactly the graft points, and graft points per concat call is the
+        // quantity that runs away on conductor (15.7 -> 109.1 between the early and late windows).
+        // MEASURED HERE, NOT FIXED HERE: completing the predicate is a denotation change, and the
+        // matcher is used by the merge on every storage channel.
+        if (ApOpDiagnostics.enabled && node.isAbstract && trie.isAbstract && !thisFinal && accessorIdx.isEmpty()) {
+            ApOpDiagnostics.trimKeptForAbstract.incrementAndGet()
+            ApOpDiagnostics.trimKeptForAbstractNodes.addAndGet(node.size)
+        }
+
+        val thisAbstract = if (TRIM_ABSTRACT) node.isAbstract && !trie.isAbstract else node.isAbstract
+
         // all branches matched the any-suffix
-        if (!node.isAbstract && !thisFinal && accessorIdx.isEmpty())
+        if (!thisAbstract && !thisFinal && accessorIdx.isEmpty())
             return null
 
         // node is left unchanged
-        if (!areChildrenChanged && thisFinal == node.isFinal)
+        if (!areChildrenChanged && thisFinal == node.isFinal && thisAbstract == node.isAbstract)
             return node
 
         // Only ever DROPS branches and rebuilds under the same accessors, so the node's own `[any]`
         // state carries across -- and is dropped automatically when the trim removed that edge.
-        return node.recreate(node.isAbstract, thisFinal, node.deepAccessorExclusion, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
+        return node.recreate(thisAbstract, thisFinal, node.deepAccessorExclusion, accessorIdx.toIntArray(), accessorNodes.toTypedArray())
     }
 }

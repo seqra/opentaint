@@ -136,6 +136,43 @@ object ApOpDiagnostics {
 
     val graftPointCounter: ThreadLocal<IntBox> = ThreadLocal.withInitial { IntBox() }
 
+    /**
+     * Why `pointsPerCall` is large, split into the two mechanisms that produce it -- because they
+     * have different fixes and only one of them has ever been measured.
+     *
+     * The receiver is a DAG, not a tree. `size` counts nodes WITH path multiplicity while
+     * `countNodes()` counts distinct ones, and the sampled receiver holds 8.0 distinct nodes of
+     * which 2.1 are abstract, against 15.7 graft points per call. So a graft point is mostly a
+     * RE-VISIT of a node already grafted in this same call -- `manager.abstractNode` is a
+     * process-wide singleton, so every `*` leaf of a receiver is literally the same object -- and
+     * `concatToLeafAbstractNodes` memoises only the DELTA side, never its own result.
+     *
+     * - [graftPointsRevisited] counts points whose receiver node was already grafted in this call.
+     *   It is the ceiling on a receiver-side memo.
+     * - [graftPointsNested] counts points that sit strictly BELOW another graft point. It is the
+     *   population a subsumption rule ("the deep graft is covered by the shallow one") could skip.
+     *
+     * They overlap, and separating them is the point: a re-visit is answered by remembering, a
+     * nested point by not asking.
+     */
+    val graftPointsRevisited = AtomicLong()
+    val graftPointsNested = AtomicLong()
+
+    /**
+     * Deltas whose ROOT owns an `[any]` edge, as opposed to merely containing one somewhere.
+     *
+     * [concatAnyDeltaCalls] tests `containsAnyInThisOrDeepNodes`, which is strictly weaker, and every
+     * rule that wants to fold the receiver's spine into the delta's `[any]` -- the absorbing prepend
+     * at the graft, and any deep-graft subsumption -- needs the ROOT predicate. Rendered deltas on
+     * conductor show the common big shape carrying its `[any]` at depth 6-8 behind a concrete spine,
+     * so the two predicates are expected to disagree by a lot. Nothing measured which.
+     */
+    val concatDeltaRootCarriesAny = AtomicLong()
+
+    /** Per-thread identity set of receiver nodes already grafted in the current concat call. */
+    val graftSeen: ThreadLocal<java.util.IdentityHashMap<Any, Any>> =
+        ThreadLocal.withInitial { java.util.IdentityHashMap<Any, Any>() }
+
     fun concatShouldSample(): Boolean =
         enabled && concatCallCounter.incrementAndGet() % CONCAT_SAMPLE_RATE == 0L
 
@@ -240,6 +277,49 @@ object ApOpDiagnostics {
     val fswOutNodes = AtomicLong()
     val fswGrew = AtomicLong()
     val fswGrowth = AtomicLong()
+
+    // ---- J: the subsumption counterfactual -----------------------------------------------------
+
+    /**
+     * What the `[any]` subsumption trim WOULD remove from the initial-fact accumulator, which is the
+     * one storage in the module that switches it off.
+     *
+     * `mergeAdd`'s `foldToAny` arm runs `AccessTreeAnySuffixMatcher` over each side's `[any]` subtree
+     * and deletes from the other side every branch that suffix language already denotes -- a real
+     * `⊑` test, wired into the merge, on every path-edge, summary and subscription channel.
+     * `TreeInitialFactAbstraction` passes `foldToAny = false` at its two call sites, the only two in
+     * the module, and its `added` tree is exactly where an `[any]` and the concrete enumerations it
+     * denotes sit side by side.
+     *
+     * `keptFraction` is the reading. Near 1 means the accumulator's `[any]` does not cover what
+     * arrives and the growth is genuinely new structure; well under 1 means it is storing an
+     * enumeration of what it already says. **A root-level probe, so a LOWER BOUND** -- the real merge
+     * trims recursively at every pair.
+     */
+    val tifaTrimCalls = AtomicLong()
+    val tifaTrimNoAny = AtomicLong()
+    val tifaTrimInNodes = AtomicLong()
+    val tifaTrimKeptNodes = AtomicLong()
+    val tifaTrimWouldDropAll = AtomicLong()
+
+    /**
+     * Branches the trim kept ONLY because the node was abstract -- the hole in the `⊑` test.
+     *
+     * `AccessTreeAnySuffixMatcher` cancels `isFinal` (`thisFinal = node.isFinal && !trie.isFinal`)
+     * and has no mirror for `isAbstract`, so `[any].*` does not subsume a sibling `f.*` whose node is
+     * abstract even though it denotes a superset. Abstract nodes are the graft points, and graft
+     * points per concat call is the quantity that runs away.
+     */
+    val trimKeptForAbstract = AtomicLong()
+    val trimKeptForAbstractNodes = AtomicLong()
+
+    /**
+     * The `(trie, node)` memo inside one `[any]`-trim walk. The hit rate is how much of the walk was
+     * re-deriving a shared subtree it had already answered for -- a fact is a DAG, and the walk had
+     * no memo until 2026-08-26.
+     */
+    val trimMemoHits = AtomicLong()
+    val trimMemoMisses = AtomicLong()
 
     // ---- worked examples -----------------------------------------------------------------------
 
@@ -518,6 +598,12 @@ object ApOpDiagnostics {
                 " actualGrowth=${concatGrowth.get()}" +
                 " deltaNodes=${concatDeltaNodes.get()}"
         )
+        appendLine(
+            "apop C-graft revisited=${graftPointsRevisited.get()} nested=${graftPointsNested.get()}" +
+                " revisitedShare=${ratio(graftPointsRevisited.get() * 100, concatGraftPoints.get())}%" +
+                " nestedShare=${ratio(graftPointsNested.get() * 100, concatGraftPoints.get())}%" +
+                " deltaRootCarriesAny=${concatDeltaRootCarriesAny.get()}"
+        )
         appendLine("apop C-graft pointsByCount=[${concatGraftPointBuckets.render()}]")
         appendLine("apop C-graft growthByLog2=[${concatGrowthBuckets.render()}]")
         appendLine(
@@ -562,6 +648,20 @@ object ApOpDiagnostics {
         )
         appendLine("apop --- biggest single event of each kind ---")
         biggest.forEach { (kind, e) -> appendLine("apop   [$kind +${e.first}] ${e.second}") }
+        appendLine(
+            "apop J-trimCF tifaCalls=${tifaTrimCalls.get()} noAny=${tifaTrimNoAny.get()}" +
+                " inNodes=${tifaTrimInNodes.get()} keptNodes=${tifaTrimKeptNodes.get()}" +
+                " wouldDropAll=${tifaTrimWouldDropAll.get()}" +
+                " keptFraction=${ratio(tifaTrimKeptNodes.get(), tifaTrimInNodes.get())}"
+        )
+        appendLine(
+            "apop J-abstractHole keptForAbstract=${trimKeptForAbstract.get()}" +
+                " nodesKept=${trimKeptForAbstractNodes.get()}"
+        )
+        appendLine(
+            "apop J-trimMemo hits=${trimMemoHits.get()} misses=${trimMemoMisses.get()}" +
+                " hitRate=${ratio(trimMemoHits.get() * 100, trimMemoHits.get() + trimMemoMisses.get())}%"
+        )
         appendLine(
             "apop I-filter emptyPath=${graftFilterEmptyPath.get()} anyTail=${graftFilterAnyTail.get()}" +
                 " typed=${graftFilterTyped.get()}" +

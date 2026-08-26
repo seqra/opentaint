@@ -606,6 +606,14 @@ class TreeInitialFactAbstraction(
             stats: BaseStats? = null,
         ): AccessTreeNode? {
             val currentNode = added ?: manager.create()
+
+            // The `[any]` subsumption the merge performs everywhere else is switched OFF here --
+            // `foldToAny = false` appears at exactly two sites in this module and both are in this
+            // class. This is the accumulator that grows, and it is the one tree where an `[any]` and
+            // the concrete enumerations it already denotes sit side by side. The probe measures what
+            // the trim WOULD have removed; it changes nothing.
+            if (ApOpDiagnostics.enabled) currentNode.probeAnyTrim(ap)
+
             val (updatedAddedNode, addedInitial) = currentNode.mergeAddDelta(ap, foldToAny = false)
 
             if (addedInitial == null) return null
