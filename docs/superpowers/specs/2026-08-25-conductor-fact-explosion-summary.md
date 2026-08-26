@@ -3,6 +3,12 @@
 Index and synthesis for the five documents written on `saloed/31-any-unroll-manager-design` on
 2026-08-25. Read this one first; each section says which document holds the evidence.
 
+> **Superseded for `anyUnrollLimit = 100` by
+> `2026-08-25-conductor-fact-explosion-at-L100.md`.** Everything below is the `L = -1` arm, where the
+> unroll is the mechanism and the run dies of memory. At `L = 100` the unroll is 0.001 % of the node
+> mass, the run dies of the clock instead, and the binding constraint turns out to be a throughput
+> collapse rather than either. Read that document's §2 before reusing links 2–5 here.
+
 **One endpoint and one taint rule exhaust 8 GB on conductor.** Not the 66-rule ruleset, not 107
 handlers — one `@PostMapping` method and one join rule.
 

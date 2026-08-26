@@ -16,6 +16,25 @@ shape of the type filter that ran there. `noSite = 0`: every one of the 175 M no
 
 ---
 
+## How to read this
+
+The document grew as the investigation did, so it is chronological: each section states a question,
+the measurement that answered it, and — where it happened — the reading it overturned. If you want
+only the conclusions, §2 and §18 are the whole thing; §19 lists the levers with what each one bought,
+§20 the knobs, §21 the readings this document itself corrected.
+
+**Contents.** §1 arms · §2 findings · §3–4 where the nodes come from and what a fact looks like ·
+§5 the engine side · §6 the chain · §7 instrumentation · §8 premises · §9 what `[any]` does to them ·
+§10–12 why the manager's budget does not bite · §13 the dag-local re-score · §14 the investigation
+re-run with it on · §15 the population weighting · §16 which phase runs out · §17 the throughput
+collapse · §18 what to do with all this · §19 ledger · §20 knobs · §21 corrections · §22 caveats.
+
+Every number is from the scoped harness of §1 unless stated otherwise. Volume counters move 30 % and
+more between replicates of the same jar and arm; ranges are quoted for that reason, and a claim made
+on a single sample says so.
+
+---
+
 ## 1. Arms
 
 Harness `scoped-harness/scoped-run.sh` (see `[[conductor-single-endpoint-witness]]`): conductor,
@@ -40,19 +59,45 @@ both findings.
 
 ---
 
-## 2. The answer in one paragraph
+## 2. Findings
 
-The rule's `$*` seeds `arg(i).[any]` on both handler parameters. `[any]` is a wildcard the type
-checker cannot see through, so from that point the access-path language is no longer bounded by
-conductor's field types. Conductor then supplies three multipliers in the same class: a **self-
-recursive method that passes the tainted map to itself unchanged** (`WorkflowExecutorOps#rerunWF`,
-`:1891`), a **god object passed by reference into a 25-way virtual dispatch** (`decide:1216`,
+**The mechanism.** The rule's `$*` seeds `arg(i).[any]` on both handler parameters. `[any]` is a
+wildcard the type checker cannot see through, so past it the access-path language is no longer bounded
+by conductor's field types. Conductor supplies the multipliers, all in one class: a **self-recursive
+method that passes the tainted map to itself unchanged** (`WorkflowExecutorOps#rerunWF:1891`), a **god
+object handed into a 21-way virtual dispatch by parameter, not by field** (`decide:1216`,
 `scheduleTask:1740` — `workflowSystemTask.execute(workflow, task, this)`), and a **type graph with
-four one-step cycles and 21 erased slots**. The facts these produce are grafted by
+four one-step cycles and 21 erased slots**. The resulting facts are grafted by
 `concatToLeafAbstractNodes` at **every abstract node of the summary conclusion** — 12.6–17.2 of them
-per call instead of the control's 1.9–2.3 — and half the grafted node mass lands at a graft point
-where the type filter is an unconditional accept. **78–93 % of every node the graft creates is
-created inside `WorkflowExecutorOps`.**
+per call against the control's 1.9–2.3 — and **78–93 % of every node the graft creates is created
+inside `WorkflowExecutorOps`** (§3, §4, §5).
+
+**Removing the star fixes it and costs both findings.** One character class in the rule; the run
+converges in 62 s instead of exhausting the clock, and finds nothing (§5.1).
+
+**The `[any]` never appears in what is stored.** 3.9 % of emitted premises name one, and the hoist
+that looked like the multiplier produces 1.0 %. What it does is make the FACT big — 4 % of arrivals
+carry an `[any]`, are 16× larger, and deliver half of all growth — and the premise walk then
+enumerates that fact's paths concretely, one premise each (§9).
+
+**The budget does not bite where it matters, for four independent reasons.** The fact-side read cannot
+refuse; 99.9 % of reads never reach the pot; absorption is gated on `CREDIT` so a *higher* limit makes
+it *less* likely; and an absorption removes depth, never a child. 427 of 429 `PAID` mints come from
+the unroll, which stamps `PAID` unconditionally (§10, §11, §12).
+
+**The re-score is the lever that works, and its spending order matters more than its budget.**
+Re-assigning a dag's kinds when its pot passes the limit turns 75 k absorptions into 2.7–5.1 M and
+buys 12 % throughput (§13). Ordering that spend by **population** rather than by depth turns it into
+43.97–105.70 M and is **the only thing in this document that reduces concat's node mass** — 104–118 →
+87–102 per call — at the cost of the traces in 3 of 3 arms (§15).
+
+**And none of it converges, because the budget was never the constraint.** The forward scan runs out
+of clock, not memory (§16). Given 3.4× the clock it produces **12.5 % more work**: throughput falls
+from 36,030 ev/s to a floor of 21–100 and stays there, and it is not memory, not GC (2.3 % of wall)
+and not the queue. **Nodes per event goes 222–241 → 594 while operations per event barely moves.**
+Per-event cost grows with the facts, so the run approaches an asymptote rather than a finish line —
+which is why every lever here moved throughput or node mass by tens of percent and not one of them
+finished (§17).
 
 ---
 
@@ -1169,7 +1214,78 @@ approaches an asymptote rather than a finish line. It also explains why every le
 moved throughput or node mass by tens of percent and none of them made an arm converge: a constant
 factor against a growing per-event cost buys a little more of the curve, not the end of it.
 
-## 18. Caveats
+## 18. What this leaves
+
+Ranked by what the measurements support, not by what would be nice.
+
+1. **Nothing here converges, and nothing here would.** §17 is the governing fact: per-event cost grows
+   with the facts, so the run has an asymptote and not a finish line. Any further work on constant
+   factors — a better re-score, a cheaper graft, more heap, more clock — buys more of the curve. If
+   convergence is the goal, the thing that has to change is that facts grow without bound.
+2. **The two levers that do change the shape are both lossy, and both are already known.** Removing
+   the `$*` from the source converges in 62 s and finds nothing (§5.1). The population-weighted
+   re-score is the only measured reduction in the graft's node mass and it costs the traces (§15).
+   Neither is free; both are choices about what to give up.
+3. **The type filter is depth-1 and blind past `java.lang.Object`, and two standing tests already say
+   so.** §5.2's `emptyPath` hole carries half the grafted node mass, and §4.2's node has 17 children
+   from 12 unrelated classes. This is the largest untested lever left, and the reason it is untested is
+   that nobody has measured whether fixing it preserves findings.
+4. **`AccessPathBase.ClassStatic` is one global base broadcast unconditionally** (§4). 1,080 of the
+   top 2,500 `(method, base)` pairs and half their node mass. The cheap experiment — a reachability
+   test on the broadcast — has still not been run.
+5. **The unroll's `PAID` stamp has no counterpart on the fact side.** 427 of 429 `PAID` states come
+   from `readChildPaidOnly`, whose refusal is correct (§12.5) but whose stamp then outlives the pot it
+   was justified by. A re-score is the only thing that reaches those states, and §15 shows the
+   ordering is what decides whether it reaches the right ones.
+
+## 19. Ledger: what each lever bought
+
+All on the §1 arm, `L = 100` unless the row says otherwise. "converges" means rc 0.
+
+| lever | absorptions | concat nodes/call | throughput | traces | converges |
+|---|---|---|---|---|---|
+| remove `$*` from the source (control) | — (no `[any]` at all) | 12.7–15.6 | **62 s, done** | — | **yes**, and loses both findings |
+| manager off (`L = -1`) | — | 3.29 graft pts/call | 2.1 M events | 2 | no — **OOM** |
+| `L = 8` / `L = 0` | 88 k / 14.4 M (99.7 % self-loops) | — | — | — | no |
+| **shipped `L = 100`** | 15 k–90 k | 104–118 | baseline | 2 | no — timeout |
+| kind policy `global` | +59 % | — | — | — | no |
+| kind policy `alwaysCredit` (ceiling arm) | — | — | — | — | no |
+| **re-score, `bfs`** | **0.89–4.24 M** | 104–118 | **+12 % progress** | 2/2 | no |
+| **re-score, `population`** | **43.97–105.70 M** | **87–102 (−12 %)** | unchanged | **0 of 3** | no |
+| 1000 s budget instead of 300 s | — | 594 nodes **per event** | **+12.5 % events for 3.4× clock** | 2 | no |
+
+## 20. Knobs this investigation added
+
+All off or default-preserving; none changes behaviour unless set.
+
+| property | values | what it does |
+|---|---|---|
+| `opentaint.anyUnrollKindPolicy` | `perDag` (default), `global`, `alwaysCredit`, `rescore` | which pot the mint compares against, and whether kinds are revisited (§12.2, §12.3, §13.2) |
+| `opentaint.anyUnrollRescoreStrategy` | `bfs` (default), `population` | the order a re-score spends its budget in (§15) |
+| `opentaint.summaryPremiseTop` | N | how many methods the premise ranking lists |
+| `opentaint.summaryPremiseTrace` | substring | every premise of a matching method, verbatim, with its call site and builder stack (§8) |
+
+Diagnostic output added under existing flags: `apop G-site` / `G-method` / `H-base` / `I-filter`
+(§7); the `[any]` emit split and the hoist counter under `tifaDiag` (§9.4); the counterfactual probe,
+the dag census, the decline-by-state census and the `[any]` state/kind annotation on the tree dump
+under `anyManagerDiag` (§11, §13.1, §14.3).
+
+## 21. Readings this document corrected
+
+Kept because each one was believed, acted on, and then measured.
+
+| claimed | corrected by | actual |
+|---|---|---|
+| the fan-out comes from `getChild`'s untyped read | §9.2 | a read cannot grow a stored fact; the merges build fan-out |
+| the `[any]`-tailed graft point is where the type filter goes blind | §11.1 | 113 events of 26.9 M; the empty-path hole is the one that carries mass |
+| the "`[any]` taken zero times" hoist is what multiplies premises | §9.4 | 854 premises, 1.0 % |
+| trace resolution has its own timeout | §16 | it inherits 90 % of what the forward scan leaves of one 300 s envelope |
+| "141 components and one crosses" ⇒ the budget never bites | §13.1 | the pots are bimodal; the one that crossed holds 82 % of the declining states |
+| give `readChildPaidOnly` a `CREDIT` branch | §12.5 | the unroll must refuse, not credit — refusing is what emits the coarse `[any]` premise |
+| the budget is mis-united, so fixing the unit fixes it | §12.2 | a global pot moves absorption 0.28 % → 0.37 % and changes nothing else |
+| the run does not converge because the budget is too small | §17 | 3.4× the budget buys 12.5 % more work |
+
+## 22. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
