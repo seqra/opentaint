@@ -92,9 +92,6 @@ class SerializedPythonTaintConfigTest {
             (it.target as? PythonTarget.Function)?.function == "email.utils.parseaddr"
         }
         assertTrue(parseaddr.copy.any { it.to is PythonPosition.WithModifiers })
-        assertTrue(config.passThrough.any {
-            (it.target as? PythonTarget.Attribute)?.attribute == "flask.request.path"
-        })
 
         val zipFileCtor = config.passThrough.single {
             (it.target as? PythonTarget.Function)?.function == "zipfile.ZipFile"

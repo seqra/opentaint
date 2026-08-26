@@ -3,28 +3,27 @@ package org.opentaint.semgrep
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
-import org.opentaint.common.sast.dataflow.DummySerializationContext
-import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
-import org.opentaint.dataflow.ap.ifds.MethodWithContext
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
+import org.opentaint.common.sast.dataflow.TaintAnalyzer
+import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonRule
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
 import org.opentaint.dataflow.ifds.SingletonUnit
-import org.opentaint.dataflow.util.Cancellation
-import org.opentaint.dataflow.util.RefManager
+import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.python.analysis.PIRAnalysisManager
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.rules.PIRConfigTaintRulesProvider
 import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
-import org.opentaint.ir.api.common.CommonMethod
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
 import org.opentaint.semgrep.pattern.SemgrepLoadTrace
@@ -32,7 +31,6 @@ import org.opentaint.semgrep.pattern.SemgrepRuleLoader
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 import org.opentaint.semgrep.pattern.conversion.PythonLanguageStrategy
 import org.opentaint.semgrep.pattern.conversion.toSerializedPythonTaintConfig
-import org.opentaint.util.analysis.ApplicationGraph
 import java.io.File
 import java.nio.file.Path
 import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
@@ -242,28 +240,29 @@ class PythonSampleBasedTest {
         entryPoint: PIRFunction,
     ): List<TaintSinkTracker.TaintVulnerability> {
         val ifdsGraph = PIRApplicationGraph(cp)
+        val resolver = UnitResolver<PIRFunction> { SingletonUnit }
 
-        val refManager = RefManager()
-        val cancellation = Cancellation()
-
-        @Suppress("UNCHECKED_CAST")
-        val engine = TaintAnalysisUnitRunnerManager(
-            refManager, cancellation,
-            PIRAnalysisManager(cp, config),
-            ifdsGraph as ApplicationGraph<CommonMethod, CommonInst>,
-            unitResolver = { SingletonUnit },
-            summarySerializationContext = DummySerializationContext,
-            taintRulesStatsSamplingPeriod = null,
-        )
-        engine.resetApManager(
-            TreeApManager(AnyAccessorUnrollStrategy.AnyAccessorDisabled, refManager, cancellation)
+        val options = TaintAnalyzerOptions(
+            ifdsTimeout = 5.seconds,
+            ifdsApMode = ApMode.Tree,
         )
 
-        val startMethod = MethodWithContext(entryPoint, EmptyMethodContext)
-        return engine.use { eng ->
-            eng.runAnalysis(listOf(startMethod), timeout = 100.minutes, cancellationTimeout = 10.seconds)
-            eng.getVulnerabilities()
+        val analyzer = object : TaintAnalyzer<PIRFunction, PIRInstruction>(options) {
+            override val unrollStrategy: AnyAccessorUnrollStrategy get() = AnyUnrollStrategy
+            override fun analysisGraph() = ifdsGraph
+            override fun analysisManager() = PIRAnalysisManager(cp, config)
+            override fun unitResolver() = resolver
         }
+
+        return analyzer.use { eng ->
+            eng.analyzeWithIfds(listOf(entryPoint))
+            eng.ifdsEngine.getVulnerabilities()
+        }
+    }
+
+    private object AnyUnrollStrategy : AnyAccessorUnrollStrategy {
+        override fun unrollAccessor(accessor: Accessor): Boolean =
+            accessor is FieldAccessor || accessor is ElementAccessor
     }
 
     private fun PIRClass.allMethods(): List<PIRFunction> =
