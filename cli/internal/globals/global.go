@@ -44,6 +44,7 @@ type Scan struct {
 	Timeout       time.Duration `mapstructure:"timeout"`
 	MaxMemory     string        `mapstructure:"max_memory"`
 	CodeFlowLimit int64         `mapstructure:"code_flow_limit"`
+	Baseline      string        `mapstructure:"baseline"`
 }
 
 type Output struct {

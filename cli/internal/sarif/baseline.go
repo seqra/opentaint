@@ -373,56 +373,66 @@ func ranInCurrentScan(r *Result, executed map[string]bool) bool {
 // the most meaningful description of the change: a source that moved is worth
 // saying even though the path moved along with it.
 func changeUnder(current *Result, previous []*Result) Change {
+	candidates := previous
 	for _, key := range refiningKeys {
-		if sameUnder(current, previous, key) {
-			continue
-		}
-		switch key {
-		case SourceSinkFingerprintKey:
-			return ChangeSource
-		default:
-			return ChangePath
+		candidates = matchingUnder(current, candidates, key)
+		if len(candidates) == 0 {
+			switch key {
+			case SourceSinkFingerprintKey:
+				return ChangeSource
+			default:
+				return ChangePath
+			}
 		}
 	}
 	return ChangeNone
 }
 
-// sameUnder reports whether the current result's fingerprint under key equals
-// that of any baseline result sharing its identity. A missing fingerprint on
-// either side counts as the same: the finer comparison is unavailable, and
-// claiming a change on missing data would be noise.
-func sameUnder(current *Result, previous []*Result, key string) bool {
+// matchingUnder keeps baseline results compatible with current under one
+// refining key. The caller feeds the survivors into the next, finer key so a
+// source match from one duplicate and a trace match from another cannot be
+// combined into a false "unchanged" result. A missing fingerprint remains
+// compatible because the finer comparison is unavailable on that pair.
+func matchingUnder(current *Result, previous []*Result, key string) []*Result {
 	currentValue, ok := Identity(current, key)
 	if !ok {
-		return true
+		return previous
 	}
+	matches := make([]*Result, 0, len(previous))
 	for _, p := range previous {
 		previousValue, ok := Identity(p, key)
 		if !ok || previousValue == currentValue {
-			return true
+			matches = append(matches, p)
 		}
 	}
-	return false
+	return matches
 }
 
 // Apply writes the comparison into the report: result.baselineState on every
-// matched result, and run.baselineGuid on every run when the baseline had a
-// guid to cite. Unmatchable results are left untouched.
+// matched result, and run.baselineGuid when the baseline had a guid to cite and
+// every result in that run received a state. SARIF requires every result in a
+// run carrying baselineGuid to be classified, so a run with an unmatchable
+// result must not claim that link. Unmatchable results are left untouched.
 func (c *Comparison) Apply(report *Report) {
-	for _, r := range report.Results() {
-		state, ok := c.states[r]
-		if !ok {
-			continue
+	for runIdx := range report.Runs {
+		run := &report.Runs[runIdx]
+		complete := true
+		for resultIdx := range run.Results {
+			r := &run.Results[resultIdx]
+			state, ok := c.states[r]
+			if !ok {
+				complete = false
+				continue
+			}
+			value := state
+			r.BaselineState = &value
 		}
-		value := state
-		r.BaselineState = &value
-	}
-	if c.BaselineGUID == "" {
-		return
-	}
-	for i := range report.Runs {
-		guid := c.BaselineGUID
-		report.Runs[i].BaselineGUID = &guid
+		if c.BaselineGUID != "" && complete {
+			guid := c.BaselineGUID
+			run.BaselineGUID = &guid
+		} else {
+			run.BaselineGUID = nil
+		}
 	}
 }
 

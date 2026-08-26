@@ -17,6 +17,7 @@ opentaint scan --config /path/to/config.yaml /path/to/project
 scan:
   timeout: 15m
   max_memory: 16G
+  baseline: baselines/main.sarif
 
 # Output (terminal-side controls)
 output:
@@ -40,6 +41,7 @@ rules:
 |---------|-------------|---------|
 | `scan.timeout` | Analysis timeout duration | `15m` |
 | `scan.max_memory` | Maximum memory for analyzer (e.g., `8G`, `1024m`) | `8G` |
+| `scan.baseline` | Previous SARIF report used for comparison and suppression inheritance; relative paths resolve from the config file | none |
 | `output.debug` | Enable debug output (stream JAR subprocess output, show debug fields) | `false` |
 | `output.color` | Color mode: `auto`, `always`, `never` | `auto` |
 | `output.quiet` | Suppress interactive console output (spinners, progress bars, JAR streaming) | `false` |

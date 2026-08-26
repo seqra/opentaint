@@ -205,7 +205,9 @@ func TestApplyOmitsBaselineGUIDWhenBaselineHasNone(t *testing.T) {
 }
 
 func TestApplyLeavesUnmatchableResultsUnannotated(t *testing.T) {
+	guid := "11111111-2222-3333-4444-555555555555"
 	baseline := makeReport(makeResult("a", Error, "a.java", 1, fp("id-a", "trace-a")))
+	baseline.Runs[0].AutomationDetails = &RunAutomationDetails{GUID: &guid}
 	current := makeReport(makeResult("nofp", Error, "b.java", 2, nil))
 
 	cmp, err := CompareToBaseline(current, baseline)
@@ -216,6 +218,9 @@ func TestApplyLeavesUnmatchableResultsUnannotated(t *testing.T) {
 
 	if current.Results()[0].BaselineState != nil {
 		t.Errorf("unmatchable result was annotated: %v", *current.Results()[0].BaselineState)
+	}
+	if current.Runs[0].BaselineGUID != nil {
+		t.Errorf("baselineGuid was written although a result has no baselineState: %q", *current.Runs[0].BaselineGUID)
 	}
 }
 
@@ -392,6 +397,30 @@ func TestChangeReportsTheCoarsestThingThatMoved(t *testing.T) {
 	}
 	if got := cmp.ChangeOf(current.Results()[0]); got != ChangeSource {
 		t.Errorf("change = %q, want %q", got, ChangeSource)
+	}
+}
+
+// Matching each refining hash against a different duplicate is not enough to
+// prove that the current finding is unchanged. The source/trace pair must have
+// existed together on one baseline result.
+func TestChangeUnderDoesNotMixFingerprintsAcrossBaselineDuplicates(t *testing.T) {
+	baseline := makeReport(
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "source-1", "trace-1")),
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "source-2", "trace-2")),
+	)
+	current := makeReport(
+		makeResult("a", Error, "a.java", 1, fps("sink-a", "source-1", "trace-2")),
+	)
+
+	cmp, err := CompareToBaseline(current, baseline)
+	if err != nil {
+		t.Fatalf("compare: %v", err)
+	}
+	if got := cmp.StateOf(current.Results()[0]); got != Updated {
+		t.Errorf("state = %q, want updated: no baseline result has source-1 and trace-2 together", got)
+	}
+	if got := cmp.ChangeOf(current.Results()[0]); got != ChangePath {
+		t.Errorf("change = %q, want %q", got, ChangePath)
 	}
 }
 

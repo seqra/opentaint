@@ -152,3 +152,58 @@ func TestSaveReportOverwritesAtomically(t *testing.T) {
 		t.Errorf("overwritten file is not valid SARIF: %v", err)
 	}
 }
+
+func TestSaveReportPreservesExistingPermissions(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "private.sarif")
+	if err := os.WriteFile(path, []byte("stale contents"), 0o600); err != nil {
+		t.Fatalf("seed: %v", err)
+	}
+	report := makeReport(makeResult("a", Error, "a.java", 1, nil))
+	if err := SaveReport(report, path); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatalf("stat: %v", err)
+	}
+	if got := info.Mode().Perm(); got != 0o600 {
+		t.Errorf("permissions = %o, want 600", got)
+	}
+}
+
+func TestSaveReportWritesSuppressionAvailabilityForEveryResult(t *testing.T) {
+	report := makeReport(
+		makeResult("suppressed", Error, "a.java", 1, fp("a", "trace-a")),
+		makeResult("reported", Error, "b.java", 2, fp("b", "trace-b")),
+	)
+	if err := Accept(report.Results()[0], "reviewed"); err != nil {
+		t.Fatalf("accept: %v", err)
+	}
+
+	path := filepath.Join(t.TempDir(), "out.sarif")
+	if err := SaveReport(report, path); err != nil {
+		t.Fatalf("save: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	var raw struct {
+		Runs []struct {
+			Results []map[string]json.RawMessage `json:"results"`
+		} `json:"runs"`
+	}
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	for i, result := range raw.Runs[0].Results {
+		value, present := result["suppressions"]
+		if !present {
+			t.Errorf("result %d omits suppressions while another result supplies suppression information", i)
+			continue
+		}
+		if i == 1 && string(value) != "[]" {
+			t.Errorf("unsuppressed result has suppressions = %s, want []", value)
+		}
+	}
+}

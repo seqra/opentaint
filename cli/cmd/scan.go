@@ -17,6 +17,7 @@ import (
 
 	"github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
@@ -128,11 +129,12 @@ Before your first scan, run "opentaint pull" one time. To read a report again la
 		if scanFlags.DebugRunAnalysisOnSelectedEntryPoints != "" {
 			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
 		}
-		runScan(cmd, prepareScanConfig(scanFlags, args))
+		runScan(cmd, prepareScanConfig(cmd, scanFlags, args))
 	},
 }
 
-func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
+func prepareScanConfig(cmd *cobra.Command, cfg ScanConfig, args []string) ScanConfig {
+	cfg.Baseline = configuredScanBaseline(cmd, cfg.Baseline)
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Error("Cannot use both a source path argument and --project-model flag")
 		suggest("Use either a source path or --project-model:",
@@ -148,6 +150,33 @@ func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 		cfg.UserProjectPath = "."
 	}
 	return cfg
+}
+
+// configuredScanBaseline applies scan.baseline when --baseline was not given.
+// A path written in a config file is relative to that file; a flag or
+// OPENTAINT_SCAN_BASELINE value remains relative to the process working
+// directory. This keeps checked-in project configs relocatable without
+// changing the established meaning of command-line paths.
+func configuredScanBaseline(cmd *cobra.Command, flagValue string) string {
+	if flag := cmd.Flags().Lookup("baseline"); flag != nil && flag.Changed {
+		return flagValue
+	}
+
+	value := globals.Config.Scan.Baseline
+	if value == "" || filepath.IsAbs(value) {
+		return value
+	}
+	if _, fromEnvironment := os.LookupEnv("OPENTAINT_SCAN_BASELINE"); fromEnvironment {
+		return value
+	}
+	if viper.ConfigFileUsed() == "" {
+		return value
+	}
+	configPath, err := filepath.Abs(viper.ConfigFileUsed())
+	if err != nil {
+		return value
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(configPath), value))
 }
 
 func init() {
