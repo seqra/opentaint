@@ -8,7 +8,9 @@ import kotlin.test.Ignore
 class WebAppBenchmarkTest : BenchmarkTestBase() {
 
     companion object {
-        private const val WEB_PROJECTS_DIR = "/home/pvl/folder/projects/web-projects"
+        private val WEB_PROJECTS_DIR: String by lazy {
+            System.getProperty("WEB_PROJECTS_DIR") ?: error("WEB_PROJECTS_DIR not set")
+        }
     }
 
     @Test @Timeout(600) fun `webapp - saleor (Django e-commerce)`() =

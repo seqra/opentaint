@@ -18,6 +18,7 @@ tasks.withType<Test>().configureEach {
     dependsOn(":python:setupPirBenchmarkDeps")
     environment("PIR_SERVER_PYTHON", pirServerPython)
     environment("PYTHONPATH", pirPythonPath)
+    systemProperty("WEB_PROJECTS_DIR", webProjectsDir)
 }
 
 dependencies {
@@ -60,7 +61,8 @@ tasks.test {
 
 // ─── Web project setup for Tier-1 benchmarks ──────────────────────
 
-val webProjectsDir = layout.buildDirectory.dir("web-projects")
+val webProjectsDir = project.findProperty("pir.webprojects.dir")?.toString()
+    ?: layout.buildDirectory.dir("web-projects").get().asFile.absolutePath
 val webProjectsManifest = layout.projectDirectory.file("web-projects.txt")
 
 fun run(vararg args: String, dir: File? = null, ignoreExit: Boolean = false) {
@@ -91,10 +93,9 @@ val setupWebProjects = tasks.register("setupWebProjects") {
         println("Setting up ${entries.size} web projects")
 
         for ((name, commit, url) in entries) {
-            val projectDir = webProjectsDir.get().dir(name).asFile
+            val projectDir = File(webProjectsDir, name)
             if (projectDir.exists()) {
                 println("[$name] Already exists, checking out $commit")
-                run("git", "fetch", "--depth=1", "origin", commit, dir = projectDir, ignoreExit = true)
                 run("git", "checkout", commit, dir = projectDir)
             } else {
                 println("[$name] Cloning $url @ $commit")

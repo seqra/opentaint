@@ -1,6 +1,7 @@
 # Web application projects for Tier-1 benchmarks.
 # Format: name|commit|url
-# To set up:  gradle setupWebProjects
+# To set up:  ./gradlew :opentaint-ir:python:opentaint-ir-test-python:setupWebProjects
+# Override target dir with -Ppir.webprojects.dir=/custom/path
 CTFd|b5f0cf2b7f0e29f72c9227ea9bc08024230b4f06|https://github.com/CTFd/CTFd.git
 dispatch|dd2837e82a0bf5565b1b4b4b91ea30b7262d4061|https://github.com/Netflix/dispatch.git
 django-oscar|eeb5a7dd4af447f5fa9b08652e9a256bca326a56|https://github.com/django-oscar/django-oscar.git
