@@ -968,7 +968,101 @@ the tree dump:
    100. `PAID` with a pot over the limit is the diagnostic signature of a state the re-score chose to
    protect.
 
-## 15. Caveats
+## 15. Weighting the re-score by population
+
+§14 ended on a diagnosis: the re-score keeps the shallowest states `PAID`, and the shallowest state
+is the one that governs 99.6 % of the biggest fact. The cost model charges `pathCount`, which counts
+paths in the **automaton**, and cannot see the **fact population** a state governs.
+
+`-Dopentaint.anyUnrollRescoreStrategy=bfs|population` makes the spending order a choice.
+`AnyUnrollState.traffic` counts prepends the state has gated — one increment in `writesAbove`,
+deliberately racy, deliberately a plain `Int`, accumulated on merge — and `Population` sorts the dag's
+states by it **ascending**, so the budget buys precision where precision is cheap and the states
+gating millions of prepends fall out of it into `CREDIT`. `Bfs` remains the default.
+
+### 15.1 It targets what it was aimed at
+
+| | `bfs` | `population` |
+|---|---|---|
+| `maxTraffic` seen by a re-score | 272,229 | 972,936 / 1,553,013 |
+| `demotedTraffic` (sum over demoted states) | 77,623 | **1,073,103 / 1,630,676** |
+| ratio demoted/max | **0.29** | **1.05–1.10** |
+
+Under `bfs` the demoted states together carry less traffic than the single heaviest state — the
+heaviest is exactly the one kept. Under `population` the demoted traffic exceeds it, which is only
+possible if several of the heaviest went.
+
+### 15.2 The measurement
+
+Three replicates each, `L = 100`, `kindPolicy=rescore`, same jar, arms differing only in the strategy:
+
+| | `bfs` | `population` |
+|---|---|---|
+| **absorptions** | 888,565 / 2,835,513 / 4,238,301 | **43,972,033 / 50,484,754 / 105,697,396** |
+| **concat nodes per call** | 104.3 / 109.3 / 118.1 | **91.9 / 86.8 / 102.4** |
+| prepends declined | 11.4 M / 18.7 M / 26.1 M | 9.2 M / 11.2 M / 1.2 M |
+| residual movable declines | 3.6 % | **0.4 % / 2.4 %** |
+| graft points per call | 15.72 / 17.34 / 20.27 | 28.80 / 27.94 / 35.61 |
+| IFDS progress | 877 k / 945 k / 784 k | 806 k / 869 k / 1,006 k |
+| **`Total vulnerabilities`** | **2 / 2 / 2** | **2 / 2 / 2** |
+| **SARIF findings (traces resolved)** | **2 / 2 / 2** | **0 / 0 / 0** |
+| rc | 254 | 254 |
+
+Two clean separations, in opposite directions from everything before:
+
+- **Absorptions rise 15–100×**, ranges nowhere near overlapping.
+- **Concat's node mass per call falls, 104–118 → 87–102**, about 12 %, and the ranges do not overlap.
+  This is the **first lever in this entire document to move the graft's node mass down**. Everything
+  else — the read-side cut, the absorbing prepend, the budget's unit, the BFS re-score — relocated
+  work or bought throughput at unchanged mass.
+
+And the counterpart: `wouldMove` falls to 0.4–2.4 % of the remaining declines against `bfs`'s 3.6 %.
+After a population re-score there is almost nothing left that absorption could take, which is what
+"the mechanism reached its ceiling" looks like in a counter.
+
+### 15.3 What it costs
+
+**Every population arm loses both traces.** `Total vulnerabilities: 2` in all six runs — no finding is
+lost — but all three population arms log `Filter out 2 vulnerabilities without traces` while all three
+`bfs` arms resolve 2 of 2. This is the failure mode of
+`[[any-unroll-budget-trace-resolution-cost]]`, and here it is systematic rather than intermittent: a
+more absorbed fact is a coarser fact, and the trace walker has more graph to cross. `pointsPerCall`
+says the same thing from the other side — it rises 15.7–20.3 → 27.9–35.6, because a shorter fact is
+abstract at more positions. Node mass still falls, so the two effects do not cancel, but the graft is
+attaching in more places.
+
+**Throughput does not move.** The progress ranges overlap (784 k–945 k against 806 k–1,006 k). The
+`bfs` re-score's 12 % gain over no re-score at all (§13.3) is not compounded by the weighting.
+
+### 15.4 Defects found in review before the numbers were taken
+
+A review of the first implementation found five, and the measurement above is from the corrected
+build:
+
+1. **`sortBy { it.traffic }` read the racy key through the comparator.** For 32 states or more TimSort
+   detects the moving key and throws `IllegalArgumentException` out of the mint — after the transition
+   is installed and before `dag.states++`, so it would also corrupt the state count. The key is now
+   snapshot before the sort.
+2. **The budget loop was a greedy knapsack, not a prefix.** It kept spending after a state did not
+   fit, so a cheap state further down the order was still kept `PAID` — and under `Population`
+   "further down the order" means "gates more traffic", exactly what the strategy exists to demote.
+3. **The diagnostic flag perturbed the arm.** `absorbTargetFor(count = false)` runs only under
+   `anyManagerDiag` and reached `writesAbove`, so measuring the arm changed the weights. `writesAbove`
+   now takes the `count` flag.
+4. **The saturation guard was two reads**, so a racing merge could move `traffic` to `Int.MAX_VALUE`
+   between the test and the increment and wrap it negative — sorting a hot state to the front of the
+   budget, the exact failure the guard exists to prevent.
+5. **The fusion took `minOf` of the two re-score thresholds**, so a survivor already at four times `L`
+   re-scored on its very next mint, once per fusion — and a re-score is now a list allocation and a
+   sort under the global lock. It takes `maxOf` now.
+
+Two things review flagged that the measurement then settled: kind **oscillation** is possible
+(`PreferBelow` takes `minOf`, so a union re-promotes a demoted state) and it happens — `promote: 10`
+in one population arm, 0 in the others. And `ORIGIN` states are skipped by the re-score, which is
+sound but means a fused super-origin cannot be demoted however much traffic it carries; on conductor
+the top decliners are `PAID`, not `ORIGIN`, so it does not bind here.
+
+## 16. Caveats
 
 - **Volume counters move a lot.** Across five star replicates of the same build and arm,
   `B-getChildAny calls` spans 133 k–706 k and `concatAnyDelta` spans 4 %–29 % of concat calls. Ranges
@@ -1028,3 +1122,9 @@ the tree dump:
   same two states are 91.7 % of all declines, but the tree itself is a single sample.
 - **§14.1's `[any]`-carrying premise column is the clearest signal the re-score works**, and it is one
   run against one run. The absorption and throughput separations of §13.3 are the replicated claims.
+- **§15.2's two separations are three replicates each.** Absorption separates by more than an order of
+  magnitude; nodes-per-call separates by about 12 % with the nearest pair at 102.4 against 104.3, which
+  is a real but narrow gap on three samples.
+- **The trace loss is 3 of 3, which is suggestive, not conclusive.** The mechanism is the documented
+  one and the direction matches `pointsPerCall`, but three runs cannot distinguish "always" from
+  "usually" on a timeout.
