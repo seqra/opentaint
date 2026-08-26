@@ -1,6 +1,6 @@
 # TIFA without unrolling — implementation and measurement
 
-`saloed/7-fact-explosion-report`, 2026-08-26. Implements
+`saloed/31-any-unroll-manager-design`, 2026-08-26. Implements
 `2026-08-26-tifa-never-unroll-design.md` in
 `core/.../ap/ifds/access/tree/TreeInitialFactAbstraction.kt`.
 
