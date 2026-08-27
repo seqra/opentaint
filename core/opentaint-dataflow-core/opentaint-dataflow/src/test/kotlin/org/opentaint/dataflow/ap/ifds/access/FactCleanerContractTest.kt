@@ -135,11 +135,40 @@ class FactCleanerContractTest {
             val exactResult = fact.clean(exactCleaner)
             val anyFieldResult = fact.clean(anyFieldCleaner)
 
+            // CONTRACT CHANGE, 2026-08-27. This used to assert `exactResult.removedAlternative`
+            // uniformly. That is not a uniform property, and the load-bearing one is different.
+            //
+            // `<this>.[any].![m]` denotes the mark at zero covered steps -- which an exact cleaner
+            // DOES clean -- and at one-or-more -- which it must not. Whether a representation can
+            // separate them is a property OF the representation:
+            //
+            //  - the automata backend writes `[any]` as a self-loop on the initial state, so the
+            //    mark is reachable both through the loop and directly; deleting the loop leaves the
+            //    zero-step path behind and the alternative really is removed;
+            //  - the tree backend hangs the mark on the single node below one `[any]` edge, which
+            //    stands for every step count at once. There is no one-or-more accessor, so clearing
+            //    the mark discards the `>=1`-step readings too.
+            //
+            // Clearing it there cost real findings -- `CleanerDslAnalysisTest`'s AnyField matrix
+            // lost everything at every depth once `TreeInitialFactAbstraction`'s R3c/R4 ladder
+            // stopped materialising concrete rungs under the `[any]` for the survivors to live on.
+            // So the tree cleaner now leaves the branch alone and `removedAlternative` is false
+            // there, while automata still reports true. Both are correct for what they can express.
+            //
+            // What every backend MUST do is keep the mark reachable behind the `[any]` after an
+            // exact clean, and remove it under `ExactAndAnyField`. That is asserted here and below,
+            // and it is what the findings actually depend on.
+            //
+            // Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md` §2.6.
+            val requiredBehindAny = PositionAccess.Simple(base).withSuffix(listOf(mark))
             assertTrue(
-                exactResult.removedAlternative,
-                "${manager::class.simpleName} did not remove the exact alternative behind AnyField: " +
-                    "$fact -> $exactResult",
+                exactResult.survivingFacts.any {
+                    FinalFactReader(it, manager).containsAnyPosition(requiredBehindAny) != null
+                },
+                "${manager::class.simpleName} lost the one-or-more reading an exact cleaner must " +
+                    "not touch: $fact -> $exactResult",
             )
+
             assertTrue(
                 anyFieldResult.survivingFacts.isEmpty() ||
                     anyFieldResult.survivingFacts.none {

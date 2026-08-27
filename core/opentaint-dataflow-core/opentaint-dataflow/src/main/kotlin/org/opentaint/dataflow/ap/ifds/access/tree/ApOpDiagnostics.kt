@@ -58,6 +58,20 @@ object ApOpDiagnostics {
     /** Reads where the fact held no literal child at all -- the accessor is pure synthesis. */
     val anyReadFromNothing = AtomicLong()
 
+    /**
+     * The whole cost of the literal matching rule, counted at the exact point it is paid.
+     *
+     * Incremented by `AccessTree.AccessNode.getChildMatching` when a MATCHING read found neither a
+     * literal child nor a zero-step child for an accessor the `[any]` covers -- precisely the
+     * population the synthesising reader used to answer, and therefore precisely the set of premise
+     * matches the rule gives up. Against [anyReadCalls] (the same synthesis on the DENOTATION
+     * channels, which keep it) this says how much of the old traffic was matching and how much was
+     * denotation.
+     *
+     * Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`.
+     */
+    val matchRefusedAnySynthesis = AtomicLong()
+
     // ---- C: the summary graft ------------------------------------------------------------------
 
     val concatCalls = AtomicLong()
@@ -544,7 +558,8 @@ object ApOpDiagnostics {
             "apop B-getChildAny calls=${anyReadCalls.get()} literalNodes=${anyReadLiteralNodes.get()}" +
                 " resultNodes=${anyReadResultNodes.get()} grew=${anyReadGrew.get()}" +
                 " growth=${anyReadGrowth.get()} fromNothing=${anyReadFromNothing.get()}" +
-                " growthPerCall=${ratio(anyReadGrowth.get(), anyReadCalls.get())}"
+                " growthPerCall=${ratio(anyReadGrowth.get(), anyReadCalls.get())}" +
+                " matchRefused=${matchRefusedAnySynthesis.get()}"
         )
         appendLine(
             "apop C-concat calls=${concatCalls.get()} receiverNodes=${concatReceiverNodes.get()}" +

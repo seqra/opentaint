@@ -339,27 +339,45 @@ class TreeInitialFactAbstraction(
                 // (`AutomataInitialFactAbstraction.abstractGraph`, the `startsWith(anyAccessorIdx)`
                 // arm) with no round loop and no memo. The tree backend's mechanism was the unroll;
                 // R1 removes it and this is the replacement.
-                var accessorFilter: FactTypeChecker.FactApFilter? = null
-                exclusions.forEachInt { accessor ->
-                    // A trie child means the premise is already out; R2 or R4 descends into it.
-                    if (trie.child(accessor) != null) return@forEachInt
-                    // Held literally: R2 owns it, and emits exactly the same premise.
-                    if (added.hasLiteralChild(accessor)) return@forEachInt
-                    if (accessor.isUncoveredByAny()) return@forEachInt
+                // DELETED by the literal rule ([TreeApManager.literalAnyMatch]), and kept behind
+                // the flag so the two regimes can be run against each other on the harness.
+                //
+                // R3c is the premise half of the ratchet. It hands out a CONCRETE `p.a` for an
+                // accessor the fact reaches only through its `[any]`; the matching half --
+                // `getChild`'s synthesis term -- then matched that premise back against the same
+                // `[any]`, consuming nothing, and R4 below descended into it so the next level did
+                // it again. That is why `AnyUnrollGrowthPatternTest` still walked `sum n!/(n-k)!`
+                // after the unroll was removed: never-unroll took away the fact materialisation,
+                // not the premise enumeration. R3a has already emitted `p.[any]` at this level and
+                // its entry fact `p.[any].*` subsumes every `p.a.*` this loop would have asked for,
+                // so what is given up is precision, not reachability.
+                //
+                // The loop still RUNS under diagnostics so `emitsSynthesised` reports what the rule
+                // suppressed -- the effect size is then readable from the new arm alone.
+                if (!apManager.dropR3c || TifaDiagnostics.enabled) {
+                    var accessorFilter: FactTypeChecker.FactApFilter? = null
+                    exclusions.forEachInt { accessor ->
+                        // A trie child means the premise is already out; R2 descends into it.
+                        if (trie.child(accessor) != null) return@forEachInt
+                        // Held literally: R2 owns it, and emits exactly the same premise.
+                        if (added.hasLiteralChild(accessor)) return@forEachInt
+                        if (accessor.isUncoveredByAny()) return@forEachInt
 
-                    val filter = accessorFilter
-                        ?: state.currentAp.createFilter(typeChecker).also { accessorFilter = it }
-                    when (filter.check(with(apManager) { accessor.accessor })) {
-                        is FactTypeChecker.FilterResult.Accept,
-                        is FactTypeChecker.FilterResult.FilterNext -> {
-                            // accept
+                        val filter = accessorFilter
+                            ?: state.currentAp.createFilter(typeChecker).also { accessorFilter = it }
+                        when (filter.check(with(apManager) { accessor.accessor })) {
+                            is FactTypeChecker.FilterResult.Accept,
+                            is FactTypeChecker.FilterResult.FilterNext -> {
+                                // accept
+                            }
+
+                            is FactTypeChecker.FilterResult.Reject -> return@forEachInt
                         }
 
-                        is FactTypeChecker.FilterResult.Reject -> return@forEachInt
+                        if (TifaDiagnostics.enabled) TifaDiagnostics.emitsSynthesised.incrementAndGet()
+                        if (apManager.dropR3c) return@forEachInt
+                        createAbstractAp(ReversedApNode(accessor, state.currentAp), state.governingAnyId)
                     }
-
-                    if (TifaDiagnostics.enabled) TifaDiagnostics.emitsSynthesised.incrementAndGet()
-                    createAbstractAp(ReversedApNode(accessor, state.currentAp), state.governingAnyId)
                 }
             }
 
@@ -374,7 +392,13 @@ class TreeInitialFactAbstraction(
                 )
             }
 
-            // R4 -- the virtual descent, and the reason R3c is enough on its own.
+            // R4 -- the virtual descent. DELETED by the literal rule, with R3c: it is the only
+            // descent in this walk that enters a state the fact does not hold literally, and it
+            // enters it through the synthesis term `getChildMatching` no longer has. Without R3c
+            // there is nothing left for it to route to anyway -- the two rules only ever made sense
+            // as a pair.
+            //
+            // Below the flag, verbatim as it was.
             //
             // Emitting `p.a` registers `T.child(a)` but materialises nothing, so without this the
             // abstraction sticks one level below every `[any]` forever: no later walk is ever routed
@@ -387,7 +411,7 @@ class TreeInitialFactAbstraction(
             // ladder step would put the walk back inside the `[any]` manager's budget, which is the
             // coupling R1 exists to remove. A read cannot grow a stored fact -- the result is
             // assembled from subtrees of the receiver and nothing is merged back into `added`.
-            if (anyBranch != null) {
+            if (anyBranch != null && (!apManager.dropR4 || TifaDiagnostics.enabled)) {
                 trie.forEachChild { accessor, childTrie ->
                     if (accessor == ANY_ACCESSOR_IDX) return@forEachChild
                     // R2 already descended into it.
@@ -398,6 +422,7 @@ class TreeInitialFactAbstraction(
 
                     val child = added.getChild(accessor) ?: return@forEachChild
                     if (TifaDiagnostics.enabled) TifaDiagnostics.virtualDescents.incrementAndGet()
+                    if (apManager.dropR4) return@forEachChild
                     unprocessed += AbstractionState(
                         childTrie, child, ReversedApNode(accessor, state.currentAp), state.governingAnyId,
                     )

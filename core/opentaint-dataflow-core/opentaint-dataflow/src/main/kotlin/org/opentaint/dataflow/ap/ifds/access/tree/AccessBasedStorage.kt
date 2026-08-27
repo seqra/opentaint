@@ -121,6 +121,11 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
      *  - **expansion**: the `[any]` absorbs one covered step and stays in force below it, so every
      *    trie child keyed by a covered accessor is re-entered with the SAME `[any]`-rooted pattern.
      *    This is `getChild(c)`'s `anyAccessorNoRepeats.addParentIfPossible(ANY_ACCESSOR_IDX)` term.
+     *    **Under [TreeApManager.literalAnyMatch] this arm is gone**, exactly as the corresponding
+     *    term is gone from `AccessTree.AccessNode.getChildMatching`. It is the one arm that returns
+     *    a premise the fact does not hold literally, and it is the lookup half of the ratchet the
+     *    literal rule removes -- keeping it here would hand `delta` premises it now refuses, which
+     *    is pure work. The other two arms are what the fact really holds.
      *
      * A child keyed by an accessor [TreeApManager.isCoveredByAny] rejects -- a taint mark, a static,
      * a type-info accessor, `[value]`, `[final]` -- is NOT expanded into: the `[any]` provably
@@ -141,6 +146,8 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
         collectNodesContains(pattern, nodes)
 
         children.get(ANY_ACCESSOR_IDX)?.collectNodesContains(pattern, nodes)
+
+        if (manager.literalAnyLookup) return
 
         children.forEachEntry { accessor, child ->
             if (child == null) return@forEachEntry

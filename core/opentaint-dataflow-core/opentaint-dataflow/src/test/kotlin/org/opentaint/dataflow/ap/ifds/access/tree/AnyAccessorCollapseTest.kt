@@ -31,6 +31,12 @@ import kotlin.test.assertTrue
  * `[any]` denotes ZERO OR MORE covered steps, so `[any].x.y.z.[any].S` and `[any].S` denote the same
  * path set whenever `x`, `y`, `z` are covered -- the collapse is an identity, not an approximation.
  * The identity does not hold across an accessor `[any]` does not cover, so the collapse stops there.
+ *
+ * That zero-or-more reading is the DENOTATION, which `readAccessor` / `startsWithAccessor` still
+ * answer and which every collapse assertion below is about. MATCHING a premise is a different
+ * question and since 2026-08-27 gets a different answer: it reads `[any]` literally, which makes
+ * `maxDepth` an exact upper bound on reachable depth again and the `filterStartsWith` prefilter
+ * valid unconditionally rather than only on `[any]`-free trees.
  */
 class AnyAccessorCollapseTest {
 
@@ -195,8 +201,24 @@ class AnyAccessorCollapseTest {
 
     /* ---------- the maxDepth prefilter ---------- */
 
+    /**
+     * `maxDepth` is an EXACT upper bound on the depth a MATCH can reach, so the prefilter this test
+     * documents is valid unconditionally -- including with an `[any]` in reach, which is the one
+     * case that used to take the guarantee away.
+     *
+     * The synthesising reader manufactured a child OUT of an `[any]` edge without descending the
+     * fact, so an `[any]` fact reached a premise of arbitrary length while its `maxDepth` stayed at
+     * `1 + charge`. `maxDepth` therefore under-approximated the reachable depth and the prefilter had
+     * to be switched off wherever `containsAnyInThisOrDeepNodes` held -- an escape this test existed
+     * to pin. Under the literal rule every premise link consumes at least one literal edge (the
+     * zero-step term consumes two), so `maxDepth < accessPath.size` is a proof of no match and the
+     * escape is gone from `filterStartsWithImpl`.
+     *
+     * The unbounded reach the escape protected is precisely what the rule removed, so the assertion
+     * inverts. Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`.
+     */
     @Test
-    fun `filterStartsWith matches a premise longer than the any depth charge`() {
+    fun `filterStartsWith refuses a premise longer than the any depth charge`() {
         val fact = node(AnyAccessor to manager.abstractNode) // base.[any].*
 
         assertEquals(11, fact.maxDepth, "one step plus the [any] cost charge")
@@ -204,11 +226,20 @@ class AnyAccessorCollapseTest {
         val chain = premiseChain(16)
         assertTrue(chain.size > fact.maxDepth, "the premise must outrun the charged depth")
 
-        // getChild synthesises children through the [any] edge to arbitrary depth, so the maxDepth
-        // prefilter must not fire here -- doing so would lose the flow.
-        assertNotNull(fact.filterStartsWith(chain), "an [any] fact reaches an arbitrarily long premise")
+        assertEquals(
+            null, fact.filterStartsWith(chain),
+            "an [any] fact no longer reaches an arbitrarily long premise, so the prefilter may fire " +
+                    "here too"
+        )
 
-        // ... while the prefilter stays active where maxDepth really does bound the descent
+        // ... and it is the READER refusing, not the length: a one-link premise clears the prefilter
+        // (1 <= 11) and is still unmatched, because `[any].*` holds no `f0` edge of its own.
+        assertEquals(
+            null, fact.filterStartsWith(premiseChain(1)),
+            "the literal reader refuses the synthesis at any length, which is why maxDepth is exact"
+        )
+
+        // ... while the prefilter goes on pruning exactly where it always did
         val boundedFact = node(FIELD_X to manager.abstractNode)
         assertEquals(1, boundedFact.maxDepth)
         assertEquals(null, boundedFact.filterStartsWith(chain), "no [any]: the prefilter still prunes")

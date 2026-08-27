@@ -43,7 +43,58 @@ class TreeApManager(
     anyUnrollLimit: Int = AnyUnrollManager.DEFAULT_ANY_UNROLL_LIMIT,
     /** What kind the survivor of a union carries; a constructor parameter for the same reason. */
     anyUnrollKindMerge: AnyUnrollKindMerge = AnyUnrollManager.DEFAULT_KIND_MERGE,
+    /**
+     * Whether the MATCHING channels read `[any]` LITERALLY.
+     *
+     * `[any]` is read two different ways depending on the question being asked, and before this flag
+     * it was read the same way for both:
+     *
+     *  - **denotation** -- `readAccessor`, `startsWithAccessor`, `contains`/`equalTo`; the cleaner,
+     *    the rule preconditions, alias analysis, trace resolution. `[any]` is zero-or-more covered
+     *    steps. This flag does not touch them.
+     *  - **matching** -- which premise a fact activates: [AccessTree.delta],
+     *    [AccessTree.AccessNode.filterStartsWith], the [AccessBasedStorage] premise lookup, and the
+     *    initial-fact abstraction's descent. Here a premise link matches only a LITERAL child, or a
+     *    child sitting directly under the node's `[any]` edge (`[any]` taken zero times).
+     *
+     * The term this drops -- synthesising a concrete accessor OUT of an `[any]` -- is the unique
+     * step that consumes a premise link without descending the fact, which is what makes the
+     * summary-application round trip a ratchet (`AnyDeltaConcatRoundTripTest`) and what lets
+     * `TreeInitialFactAbstraction`'s R3c/R4 ladder walk `sum n!/(n-k)!` premises. With it gone a
+     * fact's premises are exactly its literal prefixes.
+     *
+     * Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`. A constructor
+     * parameter rather than a direct property read so a test can pin it without global state.
+     */
+    @JvmField
+    val literalAnyMatch: Boolean = DEFAULT_LITERAL_ANY_MATCH,
 ) : ApManager {
+    /**
+     * The rule, split into the three places it applies, so an ablation can attribute a lost finding
+     * to one of them instead of to "the change".
+     *
+     * Each defaults to [literalAnyMatch] and can be overridden on its own with
+     * `-Dopentaint.literalAnyMatch.reader|lookup|premises=true|false`. They are NOT independent
+     * settings a caller should ship: `premises` without `reader` emits premises nothing can match,
+     * and `reader` without `premises` leaves TIFA handing out concrete premises for no reason. They
+     * exist to bisect.
+     */
+    @JvmField
+    val literalAnyReader: Boolean = partOverride("reader", literalAnyMatch)
+
+    @JvmField
+    val literalAnyLookup: Boolean = partOverride("lookup", literalAnyMatch)
+
+    @JvmField
+    val literalAnyPremises: Boolean = partOverride("premises", literalAnyMatch)
+
+    /** Ablation only, one rung finer than [literalAnyPremises]: R3c, R4 and R3b's second edge. */
+    @JvmField
+    val dropR3c: Boolean = partOverride("premises.r3c", literalAnyPremises)
+
+    @JvmField
+    val dropR4: Boolean = partOverride("premises.r4", literalAnyPremises)
+
     val refManager = refManager.softRefManager("Tree")
 
     /**
@@ -175,4 +226,25 @@ class TreeApManager(
         this,
         isAbstract = true, isFinal = true,
     )
+
+    companion object {
+        const val LITERAL_ANY_MATCH_PROPERTY = "opentaint.literalAnyMatch"
+
+        /**
+         * Defaults to ON: the literal reading IS the behaviour, and the flag exists to restore the
+         * synthesising reader for a controlled A/B on the harness. Set
+         * `-Dopentaint.literalAnyMatch=false` to get the pre-2026-08-27 engine back.
+         */
+        @JvmStatic
+        val DEFAULT_LITERAL_ANY_MATCH: Boolean = boolProperty(LITERAL_ANY_MATCH_PROPERTY) ?: true
+
+        private fun boolProperty(name: String): Boolean? =
+            System.getProperty(name)?.trim()?.lowercase()
+                ?.let { it != "false" && it != "0" && it != "off" }
+
+        /** `-Dopentaint.literalAnyMatch.<part>`, falling back to the manager-wide setting. */
+        @JvmStatic
+        fun partOverride(part: String, fallback: Boolean): Boolean =
+            boolProperty("$LITERAL_ANY_MATCH_PROPERTY.$part") ?: fallback
+    }
 }

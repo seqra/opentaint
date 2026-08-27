@@ -54,16 +54,44 @@ class AnyUnrollFactTest {
     }
 
     private var configuredLimit: Int = 1_000
+
+    // EXPLICIT, for the same reason [configuredLimit] is: `-Dopentaint.literalAnyMatch` reaches the
+    // forked test worker, so a reading this file depends on must be pinned here and not inherited.
+    private var configuredLiteralAnyMatch: Boolean = true
     private var managerCreated = false
 
     private val manager: TreeApManager by lazy {
         managerCreated = true
-        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), configuredLimit)
+        TreeApManager(
+            UnrollStrategy, RefManager(), Cancellation(), configuredLimit,
+            literalAnyMatch = configuredLiteralAnyMatch,
+        )
     }
 
     private fun limit(value: Int) {
         check(!managerCreated) { "the limit must be chosen before the first fact is built" }
         configuredLimit = value
+    }
+
+    /**
+     * Read `[any]` the pre-2026-08-27 way on the MATCHING channels, i.e. let `filterStartsWith`
+     * synthesise a concrete accessor out of an `[any]` edge again.
+     *
+     * The absorption automaton (`AnyUnroll.kt`) is driven by that synthesis: `filterStartsWith`
+     * descends a concrete premise through the fact's `[any]`, and the fold on the way back out is
+     * where a spent pot absorbs the step instead of writing it. Under the literal rule
+     * (`docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`) a fact `this.[any].*` no
+     * longer matches a concrete premise at all, so those descents never start.
+     *
+     * The automaton is deliberately RETAINED -- both `concat` absorptions still use it, and deleting
+     * `AnyUnroll.kt` is a named follow-up (design §6.2) rather than part of that change -- so its
+     * contract is still worth pinning, and the only reader that can reach it is this one. Only the
+     * tests that genuinely need the synthesising reader call this, so which tests those are stays
+     * readable from the file.
+     */
+    private fun synthesisingAnyReader() {
+        check(!managerCreated) { "the reader must be chosen before the first fact is built" }
+        configuredLiteralAnyMatch = false
     }
 
     private val base = AccessPathBase.This
@@ -370,6 +398,7 @@ class AnyUnrollFactTest {
     @Test
     fun `a spent pot absorbs the step instead of writing it`() {
         limit(0)
+        synthesisingAnyReader()
 
         val fact = abstractFact(AnyAccessor)                     // this.[any].*
         assertTrue(manager.anyUnroll.budgetExhausted(fact.access.anyId))
@@ -495,6 +524,7 @@ class AnyUnrollFactTest {
     @Test
     fun `the automaton derives what filterStartsWith threads by hand`() {
         limit(0)
+        synthesisingAnyReader()
 
         val fact = abstractFact(AnyAccessor)
         val origin = assertNotNull(fact.access.anyId)
@@ -521,6 +551,7 @@ class AnyUnrollFactTest {
     @Test
     fun `absorbing leaves the read unchanged`() {
         limit(0)
+        synthesisingAnyReader()
 
         val fact = abstractFact(AnyAccessor, FIELD_G)                     // this.[any].g.*
         val absorbed = assertNotNull(fact.access.filterStartsWith(premiseChain(FIELD_F)))
@@ -586,6 +617,8 @@ class AnyUnrollFactTest {
 
     @Test
     fun `an unspent pot writes the step`() {
+        synthesisingAnyReader()
+
         val fact = abstractFact(AnyAccessor)
 
         val filtered = assertNotNull(fact.access.filterStartsWith(premiseChain(FIELD_F)))

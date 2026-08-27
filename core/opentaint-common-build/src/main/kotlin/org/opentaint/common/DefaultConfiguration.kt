@@ -69,6 +69,17 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.anyUnrollRescoreStrategy",
     // AccessTreeAnySuffixMatcher: whether the `[any]` trim cancels `isAbstract`. Off unless set.
     "opentaint.anyTrimAbstract",
+    // TreeApManager: whether the MATCHING channels read `[any]` literally. ON unless set to false;
+    // the three `.part` overrides exist to bisect a behaviour change across the places the rule
+    // applies and are not settings to ship. See
+    // `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`.
+    "opentaint.literalAnyMatch",
+    "opentaint.literalAnyMatch.reader",
+    "opentaint.literalAnyMatch.lookup",
+    "opentaint.literalAnyMatch.premises",
+    "opentaint.literalAnyMatch.premises.r3c",
+    "opentaint.literalAnyMatch.premises.r4",
+    "opentaint.exactCleanerKeepsAny",
 )
 
 fun Project.configureDefaultTest() {

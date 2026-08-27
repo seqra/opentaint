@@ -266,7 +266,7 @@ class AccessTree(
                 return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
             }
 
-            node = node.getChildRecording(accessor) ?: return emptyList()
+            node = node.getChildMatching(accessor) ?: return emptyList()
         }
 
         val filteredNode = when (val exclusion = other.exclusions) {
@@ -716,12 +716,64 @@ class AccessTree(
         fun getChild(accessor: AccessorIdx): AccessNode? = getChild(accessor, record = false)
 
         /**
-         * The BUILD entry point: [getChild] plus the R4 record.
+         * The BUILD entry point: [getChild] plus the unroll record.
          *
-         * Used by every caller whose result becomes part of a fact -- the two `readAccessor`s,
-         * [AccessTree.delta] and [filterStartsWith].
+         * Used by every DENOTATION caller whose result becomes part of a fact -- the two
+         * `readAccessor`s. The matching callers ([AccessTree.delta], [filterStartsWith]) use
+         * [getChildMatching] instead.
          */
         fun getChildRecording(accessor: AccessorIdx): AccessNode? = getChild(accessor, record = true)
+
+        /**
+         * The MATCHING entry point: what the fact holds at [accessor] WITHOUT synthesising it out of
+         * an `[any]`.
+         *
+         * [getChild] has three terms; this keeps two of them:
+         *
+         * ```
+         * literal(a)                  the fact holds `a` as an edge of its own                 KEEP
+         * any().literal(a)            `[any]` taken ZERO times, `a` on the node below it       KEEP
+         * any().reinstalled_below(a)  `a` SYNTHESISED out of the `[any]`                       DROP
+         * ```
+         *
+         * The dropped term is the unique step that consumes a premise link **without descending the
+         * fact**, so dropping it makes every consumed link strictly descend -- which is what makes
+         * `delta` unable to hand back a remainder as large as the fact it started from, and what
+         * makes the summary-application round trip (`AnyDeltaConcatRoundTripTest`) unconstructible.
+         *
+         * The zero-step term is NOT symmetry and must not be dropped with it: R3b of
+         * [TreeInitialFactAbstraction] emits `p.u` for a taint mark inside an `[any]` subtree and
+         * relies on exactly this hoist to match the fact that produced it. R3b off is measured at
+         * conductor `Total vulnerabilities: 2 -> 0`. Unlike the third term it descends strictly, so
+         * it cannot re-arm anything.
+         *
+         * No `record` flag: nothing here can spend the `[any]` unroll budget, because nothing here
+         * unrolls.
+         *
+         * Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`.
+         */
+        fun getChildMatching(accessor: AccessorIdx): AccessNode? {
+            if (!manager.literalAnyReader) return getChild(accessor, record = true)
+
+            if (accessor == FINAL_ACCESSOR_IDX) return manager.finalNode.takeIf { this.isFinal }
+
+            val node = getNodeByAccessor(accessor)
+
+            val anyAccessorNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
+                ?: return node
+
+            val anyChild = anyAccessorNode.getNodeByAccessor(accessor)
+            val resultNode = mergeAddMaybeNull(anyChild, node)
+
+            if (ApOpDiagnostics.enabled && resultNode == null && manager.isCoveredByAny(accessor)) {
+                // The whole cost of the literal rule, counted at the exact point it is paid: the
+                // synthesising reader would have returned the `[any]` re-installed below `accessor`
+                // here, and a premise link that used to be consumed for free is now refused.
+                ApOpDiagnostics.matchRefusedAnySynthesis.incrementAndGet()
+            }
+
+            return resultNode
+        }
 
         private fun getChild(accessor: AccessorIdx, record: Boolean): AccessNode? {
             if (accessor == FINAL_ACCESSOR_IDX) return manager.finalNode.takeIf { this.isFinal }
@@ -2498,20 +2550,27 @@ class AccessTree(
         private fun filterStartsWithImpl(accessPath: AccessPath.AccessNode?): AccessNode? {
             if (accessPath == null) return this
 
-            // Soundness-critical prefilter, not a cost gate: the walk below descends with getChild,
-            // which SYNTHESISES children through an `[any]` edge to arbitrary depth, so maxDepth
-            // under-approximates the reachable depth as soon as an `[any]` is in reach. Skipping a
-            // match here is a lost flow, so the prefilter must not fire in that case.
-            if (!containsAnyInThisOrDeepNodes && maxDepth < accessPath.size) {
+            // Soundness-critical prefilter, not a cost gate -- and under the literal rule it is
+            // simply VALID, which is the one thing `[any]` used to take away.
+            //
+            // The synthesising reader manufactures children through an `[any]` edge to arbitrary
+            // depth, so `maxDepth` under-approximates the reachable depth as soon as an `[any]` is
+            // in reach, and skipping a match there is a lost flow. [getChildMatching] cannot
+            // manufacture anything: every premise link consumes at least one literal edge (the
+            // zero-step term consumes two), so `maxDepth` is an upper bound on what the walk can
+            // reach and `maxDepth < accessPath.size` is a proof of no match.
+            if ((manager.literalAnyReader || !containsAnyInThisOrDeepNodes) && maxDepth < accessPath.size) {
                 return null
             }
 
             val parentAccessors = IntArrayList()
-            // The walk consumes an `[any]` edge at every step that crosses one, and the fold below
-            // re-creates those edges RAW. Minting there would refill the budget on every
+            // The walk crosses an `[any]` edge at every step that reads through one, and the fold
+            // below re-creates those edges RAW. Minting there would refill the budget on every
             // subscription match -- this is the single largest read channel in the engine -- and
             // dropping the state would strand every manager at the first storage hop. So the state
-            // consumed at each step travels alongside the accessor.
+            // crossed at each step travels alongside the accessor. Under the literal rule nothing
+            // here spends budget at all, but the states still have to be carried so the rebuilt
+            // spine is the same representation the fact went in with.
             val parentAnyStates = mutableListOf<AnyUnrollState?>()
 
             var filteredTreeNode = this
@@ -2529,7 +2588,7 @@ class AccessTree(
                     }
 
                     else -> {
-                        filteredTreeNode.getChildRecording(accessor)
+                        filteredTreeNode.getChildMatching(accessor)
                             ?.also {
                                 parentAccessors.add(accessor)
                                 parentAnyStates.add(consumedAnyState)
@@ -2540,10 +2599,10 @@ class AccessTree(
 
                 currentApNode = currentApNode.next ?: break
 
-                // Same soundness-critical prefilter as above, applied to the node reached so far:
-                // getChild can keep synthesising below an `[any]`, so maxDepth is only an upper
-                // bound on the reachable depth when no `[any]` is in reach from here.
-                if (!filteredTreeNode.containsAnyInThisOrDeepNodes && filteredTreeNode.maxDepth < currentApNode.size) {
+                // Same prefilter as above, applied to the node reached so far.
+                if ((manager.literalAnyReader || !filteredTreeNode.containsAnyInThisOrDeepNodes) &&
+                    filteredTreeNode.maxDepth < currentApNode.size
+                ) {
                     return null
                 }
             }
@@ -2589,7 +2648,7 @@ class AccessTree(
                             break
                         }
 
-                        // Lemma 9.2's witness, wired at last. The descent used `getChildRecording`,
+                        // Lemma 9.2's witness, wired at last. The descent used the matching reader,
                         // so the state threaded at this level IS a predecessor of the one below it
                         // by construction; the backward query must name it. A disagreement is the
                         // production falsifier the counter was declared for and never carried.
@@ -2617,7 +2676,7 @@ class AccessTree(
 
             var result = filteredTreeNode
             for (i in parentAccessors.size - 1 downTo 0) {
-                // This design in miniature, hand-wired. The descent above used `getChildRecording`,
+                // This design in miniature, hand-wired. The descent above used the matching reader,
                 // so every accessor folded back here is an incoming edge of the state the fact
                 // carries BY CONSTRUCTION -- the backward query cannot miss, and the rule absorbs
                 // exactly the set the spent pot used to drop. The threaded state is the predecessor,

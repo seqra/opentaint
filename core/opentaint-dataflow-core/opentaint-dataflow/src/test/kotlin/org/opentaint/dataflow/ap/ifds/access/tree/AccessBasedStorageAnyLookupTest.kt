@@ -26,14 +26,25 @@ import kotlin.test.assertTrue
  *
  * Until `[any]` became representable in a premise, `children.get(ANY_ACCESSOR_IDX)` was always null,
  * so the only override of `collectNodesContainsAccessor` compensated with a blanket
- * `nodes += allNodes()` -- the whole premise subtree, pattern discarded. These tests pin the rule
- * that replaces it: a STRUCTURAL arm matching the trie's literal `[any]` key pattern-directed, and
- * an EXPANSION arm restricted to accessors `[any]` can actually step over.
+ * `nodes += allNodes()` -- the whole premise subtree, pattern discarded. The rule that replaced it
+ * had THREE arms: ZERO-STEP (the `[any]` absorbs nothing, so the sub-pattern below it applies right
+ * here), STRUCTURAL (the trie's literal `[any]` key, descended pattern-directed) and EXPANSION (the
+ * `[any]` absorbs one covered step and stays in force below it, so every trie child keyed by an
+ * accessor `[any]` can step over is re-entered with the SAME `[any]`-rooted pattern).
  *
- * The rule mirrors `AccessTree.AccessNode.getChild`, which is what `AccessTree.delta` -- the exact
- * test applied downstream -- uses to decide whether an activated premise really applies. Anything
- * this lookup returns that `delta` rejects is wasted work; anything it fails to return is a lost
- * flow.
+ * **The expansion arm is gone under [TreeApManager.literalAnyMatch]** (2026-08-27, design
+ * `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`). It was the one arm that
+ * handed back a premise the fact does not hold LITERALLY, and it was the lookup half of a ratchet:
+ * a premise link consumed without descending the fact is what lets `sum n!/(n-k)!` premises be
+ * enumerated off a single `[any]`. `AccessTree.AccessNode.getChildMatching` -- the reader
+ * `AccessTree.delta` and `filterStartsWith` now use -- dropped the matching term this arm mirrored,
+ * so every premise the arm still produced would be refused downstream anyway.
+ *
+ * So these tests pin two arms and the ABSENCE of the third. The criterion is unchanged, because it
+ * was never about the arm count: the rule mirrors the fact-side reader, so anything this lookup
+ * returns that `delta` rejects is wasted work, and anything it fails to return is a lost flow. The
+ * two cases whose entire subject WAS the expansion arm keep it pinned through
+ * [synthesisingManager], for as long as the flag can still restore it.
  */
 class AccessBasedStorageAnyLookupTest {
 
@@ -59,9 +70,20 @@ class AccessBasedStorageAnyLookupTest {
     // every assertion in this file is about.
     private val manager = TreeApManager(UnrollStrategy, RefManager(), Cancellation(), -1)
 
+    /**
+     * The same fixture read the PRE-2026-08-27 way: `literalAnyMatch = false` restores the
+     * synthesising reader, and with it the EXPANSION arm of `collectNodesContainsAnyAccessor`.
+     *
+     * Only the two cases whose entire subject is that arm use this manager, so the file stays a
+     * statement about the shipped rule with the ablation pinned beside it rather than a file with
+     * two behaviours in it. When the flag goes, these companions go with it.
+     */
+    private val synthesisingManager =
+        TreeApManager(UnrollStrategy, RefManager(), Cancellation(), -1, literalAnyMatch = false)
+
     private val base = AccessPathBase.This
 
-    private fun idx(accessor: Accessor) = with(manager) { accessor.idx }
+    private fun TreeApManager.idxOf(accessor: Accessor) = accessor.idx
 
     /**
      * A storage whose payload is just the premise's own name, so a lookup result can be asserted as
@@ -79,31 +101,36 @@ class AccessBasedStorageAnyLookupTest {
         override fun printStorageNode(): String = premise.toString()
     }
 
-    private fun chain(accessors: List<Accessor>): AccessPath.AccessNode? {
+    private fun TreeApManager.chainOf(accessors: List<Accessor>): AccessPath.AccessNode? {
         if (accessors.isEmpty()) return null
 
         val indices = IntArrayList()
-        accessors.forEach { indices.add(idx(it)) }
-        return manager.createNodeFromAccessors(indices)
+        accessors.forEach { indices.add(idxOf(it)) }
+        return this.createNodeFromAccessors(indices)
     }
 
     private fun name(accessors: List<Accessor>): String =
         if (accessors.isEmpty()) "<root>" else accessors.joinToString("") { it.toSuffix() }
 
-    private fun trie(premises: List<List<Accessor>>): NamedStorage {
-        val root = NamedStorage(manager)
-        premises.forEach { root.getOrCreateNode(chain(it)).premise = name(it) }
+    private fun TreeApManager.trieOf(premises: List<List<Accessor>>): NamedStorage {
+        val root = NamedStorage(this)
+        premises.forEach { root.getOrCreateNode(chainOf(it)).premise = name(it) }
         return root
     }
 
     /** A caller fact `this.a1.a2...$`, built through the public prepend path. */
-    private fun fact(vararg accessors: Accessor): AccessTree.AccessNode {
-        var tree = manager.createFinalAp(base, ExclusionSet.Empty)
+    private fun TreeApManager.factOf(vararg accessors: Accessor): AccessTree.AccessNode {
+        var tree = createFinalAp(base, ExclusionSet.Empty)
         for (accessor in accessors.reversed()) {
             tree = tree.prependAccessor(accessor)
         }
         return (tree as AccessTree).access
     }
+
+    // The whole file except the two expansion-arm companions reads through the shipped manager.
+    private fun trie(premises: List<List<Accessor>>): NamedStorage = manager.trieOf(premises)
+
+    private fun fact(vararg accessors: Accessor): AccessTree.AccessNode = manager.factOf(*accessors)
 
     private fun NamedStorage.activated(pattern: AccessTree.AccessNode): List<NamedStorage> =
         filterContains(pattern).toList()
@@ -161,74 +188,111 @@ class AccessBasedStorageAnyLookupTest {
             )
         )
 
-        // this.[any].!m.$ -- `[any]` is zero-or-more, so every covered prefix carries the mark
+        // this.[any].!m.$ -- the mark is reached TWICE, once per surviving arm: with the `[any]`
+        // taken zero times (`!m` hoisted up, which is the hoist R3b of `TreeInitialFactAbstraction`
+        // depends on) and through the trie's own literal `[any]` key.
         val activated = root.activatedNames(fact(AnyAccessor, MARK))
 
         assertEquals(
             setOf(
                 name(listOf(MARK)),
                 name(listOf(AnyAccessor, MARK)),
-                name(listOf(FIELD_X, MARK)),
-                name(listOf(FIELD_X, FIELD_Y, MARK)),
             ),
-            activated
+            activated,
+            "`x.!m` and `x.y.!m` sit behind concrete links the fact does not hold -- reaching them " +
+                    "meant stepping the `[any]` over `x` and `y`, which is the expansion arm"
         )
     }
 
-    /* ---------- expansion arm: concrete premises the `[any]` can step over ---------- */
+    /* ---------- the arm that is GONE: concrete premises the `[any]` could step over ---------- */
 
+    /**
+     * The expansion arm's own case, inverted. A premise reachable ONLY by stepping the `[any]` over
+     * a covered accessor is a premise the fact does not hold literally, and it is no longer
+     * activated -- however covered the accessors leading to it are, and however deep the chain.
+     *
+     * This is the lookup half of the ratchet: `x`, `x.y`, `x.y.z` off one `[any]` is the shape that
+     * makes the premise count factorial in the demand set.
+     */
     @Test
-    fun `a fact any activates concrete premises reachable through covered accessors`() {
-        val root = trie(
-            listOf(
-                emptyList(),
-                listOf(FIELD_X),
-                listOf(FIELD_X, FIELD_Y),
-                listOf(FIELD_X, FIELD_Y, FIELD_Z),
-                listOf(ElementAccessor),
-                listOf(ElementAccessor, FIELD_X),
-            )
+    fun `a fact any does not activate concrete premises reachable through covered accessors`() {
+        val premises: List<List<Accessor>> = listOf(
+            emptyList(),
+            listOf(FIELD_X),
+            listOf(FIELD_X, FIELD_Y),
+            listOf(FIELD_X, FIELD_Y, FIELD_Z),
+            listOf(ElementAccessor),
+            listOf(ElementAccessor, FIELD_X),
         )
 
-        // this.[any].$ -- whole subtree tainted, as far as `[any]` reaches
-        val activated = root.activatedNames(fact(AnyAccessor))
+        // this.[any].$ -- the fact holds no concrete accessor of its own at all
+        val activated = manager.trieOf(premises).activatedNames(manager.factOf(AnyAccessor))
 
         assertEquals(
-            setOf(
-                name(emptyList()),
-                name(listOf(FIELD_X)),
-                name(listOf(FIELD_X, FIELD_Y)),
-                name(listOf(FIELD_X, FIELD_Y, FIELD_Z)),
-                name(listOf(ElementAccessor)),
-                name(listOf(ElementAccessor, FIELD_X)),
-            ),
-            activated
+            setOf(name(emptyList())),
+            activated,
+            "only the trie root, which is a literal prefix of every fact -- `x`, `x.y`, `x.y.z`, " +
+                    "`[*]` and `[*].x` were reachable only by synthesising a step out of the `[any]`"
+        )
+
+        // ... and the arm itself, still pinned for as long as the flag can restore it.
+        val underSynthesisingReader = synthesisingManager.trieOf(premises)
+            .activatedNames(synthesisingManager.factOf(AnyAccessor))
+
+        assertEquals(
+            premises.map { name(it) }.toSet(),
+            underSynthesisingReader,
+            "`literalAnyMatch = false` restores the expansion arm exactly: the whole covered subtree"
         )
     }
 
+    /**
+     * The compounding half of the same arm: expansion kept the `[any]` in force below the step it
+     * absorbed, so it could take several covered steps and then hand off to the structural arm. That
+     * is what made the arm unbounded rather than one level deep, and none of it survives.
+     */
     @Test
-    fun `expansion keeps the any in force, so it also reaches a deeper literal any premise`() {
-        val root = trie(
-            listOf(
-                listOf(FIELD_X, AnyAccessor),
-                listOf(FIELD_X, FIELD_Y, AnyAccessor, MARK),
-            )
+    fun `expansion is gone, so a literal any premise behind covered steps is not reached`() {
+        val premises: List<List<Accessor>> = listOf(
+            listOf(AnyAccessor),
+            listOf(FIELD_X, AnyAccessor),
+            listOf(FIELD_X, FIELD_Y, AnyAccessor, MARK),
         )
 
         // this.[any].!m.$
-        val activated = root.activatedNames(fact(AnyAccessor, MARK))
+        val activated = manager.trieOf(premises).activatedNames(manager.factOf(AnyAccessor, MARK))
 
-        assertTrue(name(listOf(FIELD_X, AnyAccessor)) in activated, "one expansion step, then the structural arm")
+        assertEquals(
+            setOf(name(listOf(AnyAccessor))),
+            activated,
+            "the structural arm still matches the trie's `[any]` key link for link; the two premises " +
+                    "behind a concrete `x` / `x.y` needed the `[any]` to step over them first"
+        )
+
+        // ... and the arm itself, still pinned for as long as the flag can restore it.
+        val underSynthesisingReader = synthesisingManager.trieOf(premises)
+            .activatedNames(synthesisingManager.factOf(AnyAccessor, MARK))
+
         assertTrue(
-            name(listOf(FIELD_X, FIELD_Y, AnyAccessor, MARK)) in activated,
-            "two expansion steps, then structural, then the mark"
+            name(listOf(FIELD_X, AnyAccessor)) in underSynthesisingReader,
+            "old reader: one expansion step, then the structural arm"
+        )
+        assertTrue(
+            name(listOf(FIELD_X, FIELD_Y, AnyAccessor, MARK)) in underSynthesisingReader,
+            "old reader: two expansion steps, then structural, then the mark"
         )
     }
 
-    /* ---------- the narrowing: uncovered accessors are unreachable for an `[any]` ---------- */
+    /* ---------- the narrowing, now total: no concrete premise is reachable for an `[any]` ------ */
 
+    /**
+     * The old rule already refused a premise behind an accessor `[any]` cannot step over -- a taint
+     * mark, a static, a type-info accessor, `[value]`. The literal rule subsumes that narrowing:
+     * coverage no longer decides anything here, because no concrete link is stepped over at all.
+     * The uncovered premises stay in the trie so the original narrowing keeps its witness.
+     */
     @Test
-    fun `a fact any does not activate a premise behind a mark, type-info or static key`() {
+    fun `a fact any activates no concrete premise, covered accessor or not`() {
         val premises = listOf(
             emptyList(),
             listOf(FIELD_X),
@@ -246,9 +310,10 @@ class AccessBasedStorageAnyLookupTest {
         val activated = root.activatedNames(fact(AnyAccessor))
 
         assertEquals(
-            setOf(name(emptyList()), name(listOf(FIELD_X)), name(listOf(FinalAccessor))),
+            setOf(name(emptyList()), name(listOf(FinalAccessor))),
             activated,
-            "`[any]` covers fields and elements only; `$` fires because the sub-pattern is final"
+            "`\$` fires because the sub-pattern is final and the trie holds that link literally; `x` " +
+                    "used to fire because `[any]` covers fields, and coverage no longer matters here"
         )
 
         val blanket = root.allNodes().mapNotNull { it.premise }.toSet()
@@ -349,10 +414,11 @@ class AccessBasedStorageAnyLookupTest {
     /* ---------- the rule is the base traversal's, not one storage's (design 6.7) ---------- */
 
     @Test
-    fun `a storage that adds no override at all still gets both arms`() {
-        // The shape of `FactSideEffectSummariesTreeApStorage` / `SideEffectRequirementTreeApStorage`:
-        // before the rule was hoisted, an `[any]` fact activated the root and the literal `[any]`
-        // key only, and every concrete side-effect premise below was silently missed.
+    fun `a storage that adds no override at all still gets the zero-step and structural arms`() {
+        // The shape of `FactSideEffectSummariesTreeApStorage` / `SideEffectRequirementTreeApStorage`.
+        // The point of hoisting the rule into the base traversal survives the literal rule and is
+        // what this pins: the two storages that never had an override get the SAME rule as the one
+        // that did, rather than whatever falling through happens to produce.
         val root = trie(
             listOf(
                 emptyList(),
@@ -367,12 +433,11 @@ class AccessBasedStorageAnyLookupTest {
         assertEquals(
             setOf(
                 name(emptyList()),
-                name(listOf(FIELD_X)),
-                name(listOf(FIELD_X, MARK)),
                 name(listOf(AnyAccessor, MARK)),
             ),
             activated,
-            "`x` and `x.!m` are reached only by the expansion arm"
+            "`<root>` is a literal prefix of every fact and `[any].!m` matches link for link; " +
+                    "`x` and `x.!m` were the expansion arm's, and the fact holds no `x`"
         )
     }
 }

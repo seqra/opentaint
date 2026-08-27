@@ -222,10 +222,28 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             val expected = buildSet {
                 for (case in matrixCases.filter { it.source == sourceReach }) {
                     for (point in matrixPoints) {
+                        // ACCEPTED DIVERGENCE, 2026-08-27. The trailing
+                        // `(sink == AnyField || fieldDepth > 0)` used to exclude one shape:
+                        // `AnyField-Plain-Plain-field-depth0`, a PLAIN sink reading the value
+                        // itself after a PLAIN cleaner had removed the mark from it.
+                        //
+                        // An exact cleaner cannot remove that reading any more. The fact's `[any]`
+                        // node carries the mark for every step count at once -- zero steps, which
+                        // the cleaner does clean, and one-or-more, which it must not -- and there
+                        // is no one-or-more accessor to split them with. Clearing the mark used to
+                        // work only because R3c/R4 materialised concrete rungs under the `[any]`
+                        // for the survivors to live on; with the ladder gone it removed EVERY
+                        // finding in this matrix, at every depth.
+                        //
+                        // So the cleaner keeps the branch, and this one shape is over-reported.
+                        // FP direction, on the same line already taken for
+                        // `TreeCleanerFieldSensitivityAnalysisTest`; the 688-test rule-level suite
+                        // is byte-identical either way. A red here means the cleaner started
+                        // clearing again -- check `EXACT_CLEANER_KEEPS_ANY`.
+                        //
+                        // Design: `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md`.
                         val survives =
-                            case.source == Reach.AnyField &&
-                                case.cleaner == Reach.Plain &&
-                                (case.sink == Reach.AnyField || point.fieldDepth > 0)
+                            case.source == Reach.AnyField && case.cleaner == Reach.Plain
 
                         if (survives) {
                             marks(markCount).mapTo(this) { mark ->
@@ -459,8 +477,14 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             ),
         )
 
+        // ACCEPTED DIVERGENCE, 2026-08-27, the second of two. `returning-cleaned-any` is the
+        // AnyField sink seeing the mark the exact cleaner nominally removed: the cleaner now leaves
+        // a mark sitting under an `[any]` alone, because clearing it also removed every
+        // one-or-more-step reading and those are the findings. The unrelated mark is untouched
+        // either way, which is what this test's name is really about. See the note on `survives` in
+        // the matrix test, and `EXACT_CLEANER_KEEPS_ANY` in `Cleaner.kt`.
         assertEquals(
-            setOf("returning-unrelated-exact"),
+            setOf("returning-unrelated-exact", "returning-cleaned-any"),
             findingIds(config, "returningPlainCleaner"),
         )
     }

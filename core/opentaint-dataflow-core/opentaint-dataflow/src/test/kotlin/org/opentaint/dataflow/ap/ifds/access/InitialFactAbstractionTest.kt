@@ -63,6 +63,27 @@ abstract class InitialFactAbstractionTest {
 
     abstract fun merge(fact: FinalFactAp, vararg facts: FinalFactAp): FinalFactAp
 
+    /**
+     * The accessor a backend names in the premise it emits for [accessor], when [accessor] is
+     * demanded at a level that the added fact holds ONLY under an `[any]` -- present in none of its
+     * own concrete branches.
+     *
+     * This is the single point where the two backends disagree, and it is the expectation fork for
+     * `docs/superpowers/specs/2026-08-27-literal-any-matching-design.md` (section 4, "Forks"):
+     *
+     *  - the AUTOMATA backend is unchanged. It still synthesises the demanded accessor out of the
+     *    `[any]` and emits the CONCRETE premise `p.a`, which is the default returned here;
+     *  - the TREE backend deleted that synthesis -- `TreeInitialFactAbstraction` R3c, which emitted
+     *    the concrete `p.a`, and R4, the virtual descent into it -- so it emits R3a's coarse
+     *    `p.[any]` instead.
+     *
+     * The tree premise SUBSUMES the automata one (`p.[any].*` denotes everything `p.a.*` does), so
+     * the divergence is a widening, not a lost premise. Every scenario below still pins one fully
+     * specified premise per backend; only this last accessor of it differs. The scenario names
+     * describe the concrete premise, i.e. the automata reading.
+     */
+    protected open fun premiseAccessorUnderAny(accessor: Accessor): Accessor = accessor
+
     private fun runScenario(
         name: String,
         analyzed: List<InitialFactAp>,
@@ -360,7 +381,7 @@ abstract class InitialFactAbstractionTest {
         "34 merged final with any branch and root exclusion on b returns a.b",
         listOf(initialFact(AccessPathBase.This).exclude(FIELD_A_B)),
         merge(finalFact(AccessPathBase.This, AnyAccessor, FIELD_B_C), finalFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C)),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, premiseAccessorUnderAny(FIELD_A_B)))
     )
 
     @Test
@@ -376,7 +397,7 @@ abstract class InitialFactAbstractionTest {
         "36 merged final any under b with non matching exclusion on e returns a.b.e",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_E)),
         merge(finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, MARK), finalFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C, FIELD_C_D)),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_E))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_E)))
     )
 
     @Test
@@ -420,7 +441,7 @@ abstract class InitialFactAbstractionTest {
         "any-1 analyzed excludes b, added any.c under root returns this.b",
         listOf(initialFact(AccessPathBase.This).exclude(FIELD_A_B)),
         finalFact(AccessPathBase.This, AnyAccessor, FIELD_B_C),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, premiseAccessorUnderAny(FIELD_A_B)))
     )
 
     @Test
@@ -428,7 +449,7 @@ abstract class InitialFactAbstractionTest {
         "any-2 analyzed excludes c under b, added b.any.mark returns this.b.c",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_C)),
         finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, MARK),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_C)))
     )
 
     @Test
@@ -436,7 +457,7 @@ abstract class InitialFactAbstractionTest {
         "any-3 analyzed excludes c under b, added b.any.d returns this.b.c",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_C)),
         finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, FIELD_C_D),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_C)))
     )
 
     @Test
@@ -444,7 +465,7 @@ abstract class InitialFactAbstractionTest {
         "any-4 analyzed excludes e under b, added b.any.mark returns this.b.e",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_E)),
         finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, MARK),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_E))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_E)))
     )
 
     @Test
@@ -452,7 +473,7 @@ abstract class InitialFactAbstractionTest {
         "any-5 analyzed excludes root b, added any.c",
         listOf(initialFact(AccessPathBase.This).exclude(FIELD_A_B)),
         finalFact(AccessPathBase.This, AnyAccessor, FIELD_B_C),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, premiseAccessorUnderAny(FIELD_A_B)))
     )
 
     @Test
@@ -460,7 +481,7 @@ abstract class InitialFactAbstractionTest {
         "any-6 analyzed excludes c under b, added b.any with rule-storage",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_C)),
         finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, FIELD_NO_ANY),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_C)))
     )
 
     @Test
@@ -468,7 +489,7 @@ abstract class InitialFactAbstractionTest {
         "any-7 analyzed excludes c under b, added b.any.value",
         listOf(initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_C)),
         finalFact(AccessPathBase.This, FIELD_A_B, AnyAccessor, ValueAccessor),
-        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
+        expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, premiseAccessorUnderAny(FIELD_B_C)))
     )
 
     @Test

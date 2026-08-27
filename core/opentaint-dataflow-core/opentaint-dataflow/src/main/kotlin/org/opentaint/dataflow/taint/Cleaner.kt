@@ -153,6 +153,20 @@ fun FinalFactAp.clean(cleaner: Cleaner): CleanResult {
     return cleanConcrete(cleaner)
 }
 
+/**
+ * Whether an EXACT cleaner leaves a mark sitting under an `[any]` alone. See the long note at its
+ * use site in [cleanConcrete].
+ *
+ * Defaults to whatever `opentaint.literalAnyMatch` is set to, because the two are one decision: the
+ * clearing behaviour is only sound while the premise ladder exists to represent the surviving
+ * `>=1`-step readings. `-Dopentaint.exactCleanerKeepsAny` overrides it for ablation.
+ */
+private val EXACT_CLEANER_KEEPS_ANY: Boolean =
+    boolProperty("opentaint.exactCleanerKeepsAny") ?: boolProperty("opentaint.literalAnyMatch") ?: true
+
+private fun boolProperty(name: String): Boolean? =
+    System.getProperty(name)?.trim()?.lowercase()?.let { it != "false" && it != "0" && it != "off" }
+
 private fun Cleaner.removePrefix(prefix: Accessor): Cleaner {
     val remainingPosition = position.removePrefix(prefix)
     return replacePosition(remainingPosition)
@@ -181,7 +195,28 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): CleanResult {
                     val factAfterAny = readAccessor(AnyAccessor)
                         ?: error("Impossible")
 
-                    val clearedAfterAny = factAfterAny.clearAccessor(head)
+                    // An EXACT cleaner cleans `x.![m]` and nothing deeper, but the fact's `[any]`
+                    // node carries the mark for EVERY step count at once: zero steps (which the
+                    // cleaner does remove) and one-or-more (which it must not). `[any]` is
+                    // zero-or-more, there is no one-or-more accessor, and the mark sits on a single
+                    // node -- so the two readings cannot be separated in this representation.
+                    //
+                    // Clearing keeps the cleaner precise and silently drops every >=1-step reading.
+                    // That was survivable only while `TreeInitialFactAbstraction`'s R3c/R4 ladder
+                    // materialised concrete rungs under the `[any]` for the survivors to live on.
+                    // With the ladder gone (see the literal-matching design) clearing collapses the
+                    // whole fact, and `CleanerDslAnalysisTest`'s AnyField matrix loses EVERY finding
+                    // at every depth -- measured, and attributed with
+                    // `-Dopentaint.literalAnyMatch.premises`.
+                    //
+                    // So keep the branch. The cost is exactly one shape: a plain sink reading the
+                    // value itself still sees a mark the cleaner nominally removed
+                    // (`AnyField-Plain-Plain-field-depth0`). That is the FP direction, it is the
+                    // already-accepted "a cleaner does not clean an abstract fact" line, and the
+                    // 688-test rule-level suite is byte-identical either way. Losing a finding is
+                    // not acceptable; being coarse here is.
+                    val clearedAfterAny =
+                        if (EXACT_CLEANER_KEEPS_ANY) factAfterAny else factAfterAny.clearAccessor(head)
                     val restoredAfterAny = clearedAfterAny?.prependAccessor(AnyAccessor)
 
                     val factWithoutAny = clearAccessor(AnyAccessor)
