@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import org.opentaint.dataflow.ap.ifds.EdgeStoreDiagnostics
 import it.unimi.dsi.fastutil.ints.IntList
 import it.unimi.dsi.fastutil.ints.IntObjectImmutablePair
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet
@@ -1412,6 +1413,122 @@ class AccessTree(
             }
 
             return current to absorbedAnyStep
+        }
+
+        /**
+         * Fold every COVERED sibling of this node's own `[any]` INTO that `[any]`'s subtree.
+         *
+         * ```
+         * N{ f -> T , [any] -> S }   ==>   N{ [any] -> (S | T) }        f covered
+         * ```
+         *
+         * Sound as a widening: `[any].(S|T)` denotes `<covered>*.(S|T)`, which contains `f.T` with
+         * the `[any]` taking the single step `f`, and contains the original `[any].S` with it taking
+         * zero. Nothing else at the node moves.
+         *
+         * **This ABSORBS, it does not delete.** The distinction is the whole point.
+         * [AccessTreeAnySuffixMatcher] removes a subsumed branch outright, which is exact and still
+         * costs every finding: the branch's contents are the NAMES `TreeInitialFactAbstraction`
+         * emits premises from, and an edge that is not there cannot be named. Merging `T` into `S`
+         * keeps them, and keeps them where they are most useful -- a mark at `f.T.![m]` lands at
+         * `[any].![m]`, one level under the `[any]`, which is exactly where R3b looks.
+         *
+         * Only covered accessors are eligible. A taint mark, a static, `[value]`, a type-info
+         * accessor and `[final]` are things an `[any]` provably cannot denote, so they stay as
+         * literal edges. `isFinal` is a FLAG, not an edge, and is carried through untouched.
+         *
+         * **Idempotent by identity**, which the storage layer requires: every storage decides
+         * "already known" with `merged === stored`, so a pass that rebuilt an unchanged node would
+         * make every re-derivation look new and re-propagate the whole tree. After one pass a node
+         * holds its `[any]` plus uncovered edges only, so the `hasCovered` test below fails and the
+         * node is returned unchanged; children are only rebuilt when a child actually changed.
+         */
+        /** Test-only literal child read; never synthesises through the `[any]`. */
+        internal fun getChildForTest(accessor: AccessorIdx): AccessNode? {
+            var found: AccessNode? = null
+            forEachAccessor { a, c -> if (a == accessor) found = c }
+            return found
+        }
+
+        fun compressAbsorbCoveredSiblings(): AccessNode =
+            compressAbsorbCoveredSiblings(IdentityHashMap())
+
+        private fun compressAbsorbCoveredSiblings(
+            memo: IdentityHashMap<AccessNode, AccessNode>,
+        ): AccessNode {
+            memo[this]?.let { return it }
+            manager.cancellation.checkpoint()
+
+            val accessors = this.accessors
+            if (accessors == null || !manager.anyAccessorsQueryable) {
+                memo[this] = this
+                return this
+            }
+            val nodes = this.accessorNodes!!
+
+            // Children first, so an absorbed subtree is already compressed when it is merged in.
+            var childrenChanged = false
+            val compressed = arrayOfNulls<AccessNode>(nodes.size)
+            for (i in nodes.indices) {
+                val c = nodes[i].compressAbsorbCoveredSiblings(memo)
+                compressed[i] = c
+                if (c !== nodes[i]) childrenChanged = true
+            }
+
+            var anyIdx = -1
+            var hasCovered = false
+            for (i in accessors.indices) {
+                val a = accessors[i]
+                if (a == ANY_ACCESSOR_IDX) anyIdx = i
+                else if (manager.isCoveredByAny(a)) hasCovered = true
+            }
+
+            if (anyIdx < 0 || !hasCovered) {
+                val result = if (!childrenChanged) {
+                    this
+                } else {
+                    @Suppress("UNCHECKED_CAST")
+                    recreate(
+                        isAbstract, isFinal, deepAccessorExclusion,
+                        accessors, compressed as Array<AccessNode>,
+                    )
+                }
+                memo[this] = result
+                return result
+            }
+
+            // The original array is sorted and we only ever DROP entries (the `[any]` is kept in
+            // place), so the surviving order is still sorted and needs no re-sort.
+            var newAny = compressed[anyIdx]!!
+            val keptAccessors = IntArrayList(accessors.size)
+            val keptNodes = ArrayList<AccessNode>(accessors.size)
+            for (i in accessors.indices) {
+                val a = accessors[i]
+                when {
+                    i == anyIdx -> {
+                        keptAccessors.add(a)
+                        keptNodes.add(manager.emptyNode) // placeholder, replaced below
+                    }
+                    manager.isCoveredByAny(a) -> {
+                        if (EdgeStoreDiagnostics.enabled) {
+                            EdgeStoreDiagnostics.recordSiblingAbsorbed(compressed[i]!!.size)
+                        }
+                        newAny = newAny.mergeAdd(compressed[i]!!)
+                    }
+                    else -> {
+                        keptAccessors.add(a)
+                        keptNodes.add(compressed[i]!!)
+                    }
+                }
+            }
+            keptNodes[keptAccessors.indexOf(ANY_ACCESSOR_IDX)] = newAny
+
+            val result = recreate(
+                isAbstract, isFinal, deepAccessorExclusion,
+                keptAccessors.toIntArray(), keptNodes.toTypedArray(),
+            )
+            memo[this] = result
+            return result
         }
 
         private fun limitElementAccess(limit: Int): AccessNode {

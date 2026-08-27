@@ -231,6 +231,14 @@ class TreeApManager(
         const val LITERAL_ANY_MATCH_PROPERTY = "opentaint.literalAnyMatch"
 
         /**
+         * `-Dopentaint.absorbSiblings=true`, default off. Fold every COVERED sibling of a node's own
+         * `[any]` into that `[any]`'s subtree, on the result of every edge-store merge. See
+         * `AccessTree.AccessNode.compressAbsorbCoveredSiblings`.
+         */
+        @JvmStatic
+        val ABSORB_SIBLINGS: Boolean = boolProperty("opentaint.absorbSiblings") ?: false
+
+        /**
          * Defaults to ON: the literal reading IS the behaviour, and the flag exists to restore the
          * synthesising reader for a controlled A/B on the harness. Set
          * `-Dopentaint.literalAnyMatch=false` to get the pre-2026-08-27 engine back.

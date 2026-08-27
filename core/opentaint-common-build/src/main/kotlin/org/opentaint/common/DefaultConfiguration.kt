@@ -84,6 +84,8 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     // edge costs against it. Both diagnostic; unset means "no ceiling" and "10", i.e. unchanged.
     "opentaint.factDepthCeiling",
     "opentaint.anyDepthCharge",
+    // AccessTree: fold covered siblings into a node's own `[any]` after each edge-store merge.
+    "opentaint.absorbSiblings",
 )
 
 fun Project.configureDefaultTest() {

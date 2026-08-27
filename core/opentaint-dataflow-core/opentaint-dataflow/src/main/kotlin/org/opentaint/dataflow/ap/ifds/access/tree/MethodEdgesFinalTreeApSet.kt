@@ -35,6 +35,7 @@ class MethodEdgesFinalTreeApSet(
             }
 
             val mergedFacts = factSet.mergeAdd(accessPath)
+                .let { if (TreeApManager.ABSORB_SIBLINGS) it.compressAbsorbCoveredSiblings() else it }
             if (mergedFacts === factSet) {
                 return null
             }

@@ -288,6 +288,15 @@ object EdgeStoreDiagnostics {
     val censusNotSubsumed = AtomicLong()
     val censusTotalSiblingMass = AtomicLong()
 
+    /** Covered sibling branches folded into a node's own `[any]`, and the node mass folded. */
+    val siblingsAbsorbed = AtomicLong()
+    val siblingAbsorbedMass = AtomicLong()
+
+    fun recordSiblingAbsorbed(mass: Long) {
+        siblingsAbsorbed.incrementAndGet()
+        siblingAbsorbedMass.addAndGet(mass)
+    }
+
     fun censusShouldSample(): Boolean =
         enabled && censusCounter.incrementAndGet() % CENSUS_RATE == 0L
 
@@ -467,6 +476,10 @@ object EdgeStoreDiagnostics {
             "edgeStore rootBreadth mean=" + ratio(rootBreadthTotal.get(), rootBreadthSamples.get()) +
                 " max=" + maxRootBreadth.get() +
                 " buckets=" + (0..31).joinToString(",") { rootBreadthBuckets.get(it).toString() }
+        )
+        appendLine(
+            "edgeStore siblingAbsorb folded=" + siblingsAbsorbed.get() +
+                " mass=" + siblingAbsorbedMass.get()
         )
         appendLine(
             "edgeStore selfSubsume facts=" + censusFacts.get() +
