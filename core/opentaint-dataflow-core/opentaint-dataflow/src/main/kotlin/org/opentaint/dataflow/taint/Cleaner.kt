@@ -3,6 +3,7 @@ package org.opentaint.dataflow.taint
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyMatchMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
@@ -157,15 +158,12 @@ fun FinalFactAp.clean(cleaner: Cleaner): CleanResult {
  * Whether an EXACT cleaner leaves a mark sitting under an `[any]` alone. See the long note at its
  * use site in [cleanConcrete].
  *
- * Defaults to whatever `opentaint.literalAnyMatch` is set to, because the two are one decision: the
- * clearing behaviour is only sound while the premise ladder exists to represent the surviving
- * `>=1`-step readings. `-Dopentaint.exactCleanerKeepsAny` overrides it for ablation.
+ * Read from [AnyMatchMode], not parsed here. This used to be its own `System.getProperty` on this
+ * file, which made it the one reader of the literal/denotational decision that no per-instance
+ * override could reach: `FinalFactAp.cleanConcrete` has no `ApManager` in scope, so a manager built
+ * with `literalAnyMatch = false` still got literal-era cleaning in the same JVM.
  */
-private val EXACT_CLEANER_KEEPS_ANY: Boolean =
-    boolProperty("opentaint.exactCleanerKeepsAny") ?: boolProperty("opentaint.literalAnyMatch") ?: true
-
-private fun boolProperty(name: String): Boolean? =
-    System.getProperty(name)?.trim()?.lowercase()?.let { it != "false" && it != "0" && it != "off" }
+private val EXACT_CLEANER_KEEPS_ANY: Boolean get() = AnyMatchMode.exactCleanerKeepsAny
 
 private fun Cleaner.removePrefix(prefix: Accessor): Cleaner {
     val remainingPosition = position.removePrefix(prefix)

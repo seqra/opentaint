@@ -33,7 +33,8 @@ class AnyUnrollManagerTest {
         const val C = 300
     }
 
-    private fun manager(limit: Int = 1_000) = AnyUnrollManager(limit)
+    private fun manager(limit: Int = 1_000, pathLengthCost: Boolean = true) =
+        AnyUnrollManager(limit, pathLengthCost = pathLengthCost)
 
     private fun AnyUnrollManager.origin() = assertNotNull(newOrigin(MINT_TEST), "the manager must be enabled")
 
@@ -116,8 +117,46 @@ class AnyUnrollManagerTest {
         assertEquals(1, m.totalOf(root), "re-derivation is free -- this is the termination argument")
     }
 
+    /* ---------- the cost: what `L` is a budget OF ---------- */
+
+    /**
+     * The pot counts ACCESSORS, not sequences: the charge for a transition is the total LENGTH of
+     * the words it authorises, so `total` is the sum of `|w|` over every word the automaton has
+     * materialised.
+     *
+     * A chain makes the two measures diverge maximally. `a`, `ab`, `abc` is three words -- the
+     * legacy measure's answer -- carrying six accessors, which is what the automaton actually built.
+     */
     @Test
-    fun `the charge is the path count, not one`() {
+    fun `the pot charges the LENGTH of every materialised sequence`() {
+        val m = manager()
+        val root = m.origin()
+
+        val a = assertNotNull(m.readChild(root, A))
+        assertEquals(1, m.totalOf(root), "word `a`, length 1")
+
+        val ab = assertNotNull(m.readChild(a, B))
+        assertEquals(3, m.totalOf(root), "plus `ab`, length 2")
+
+        m.readChild(ab, C)
+        assertEquals(6, m.totalOf(root), "plus `abc`, length 3 -- 1 + 2 + 3 over the acyclic paths")
+    }
+
+    /** The ablation, on the same shape: one unit per word, so the depth is invisible. */
+    @Test
+    fun `the legacy measure charges one per sequence however long`() {
+        val m = manager(pathLengthCost = false)
+        val root = m.origin()
+
+        val a = assertNotNull(m.readChild(root, A))
+        val ab = assertNotNull(m.readChild(a, B))
+        m.readChild(ab, C)
+
+        assertEquals(3, m.totalOf(root), "three words, and a 3-accessor chain bills the same as three first steps")
+    }
+
+    @Test
+    fun `the charge scales with the path count`() {
         val m = manager()
         val root = m.origin()
         val a = m.readChild(root, A)!!
@@ -126,12 +165,66 @@ class AnyUnrollManagerTest {
 
         val shared = assertNotNull(m.union(a, b))
         assertEquals(2, shared.pathCount)
+        assertEquals(2, shared.lengthSum, "two words of length 1 reach the merged state")
 
         m.readChild(shared, C)
         assertEquals(
-            4, m.totalOf(root),
-            "emitting `c` at a state two sequences reach authorises `ac` and `bc`, so it costs 2"
+            6, m.totalOf(root),
+            "emitting `c` at a state two sequences reach authorises `ac` and `bc` -- two words, four accessors"
         )
+
+        val legacy = manager(pathLengthCost = false)
+        val lRoot = legacy.origin()
+        val lShared = assertNotNull(legacy.union(legacy.readChild(lRoot, A), legacy.readChild(lRoot, B)))
+        legacy.readChild(lShared, C)
+        assertEquals(4, legacy.totalOf(lRoot), "the legacy measure counts the two words and not their letters")
+    }
+
+    /**
+     * A cycle is charged for at most ONE lap, which is what makes the measure finite where the
+     * accepted language is not.
+     *
+     * The transition that closes the loop was minted -- and charged -- as a fresh state before the
+     * union folded it into its own predecessor. Every later lap finds it already there.
+     */
+    @Test
+    fun `a cycle is charged at most one lap`() {
+        val m = manager()
+        val root = m.origin()
+        val a = assertNotNull(m.readChild(root, A))
+        assertEquals(1, m.totalOf(root))
+
+        assertSame(root, m.union(root, a), "m --a--> m")
+        val afterFold = m.totalOf(root)
+        assertEquals(1, afterFold, "the fold neither charges nor refunds")
+
+        repeat(10) { assertSame(root, m.readChild(root, A)) }
+        assertEquals(afterFold, m.totalOf(root), "and ten more laps cost nothing")
+    }
+
+    /**
+     * The property that rules out recomputing the cost from the current structure.
+     *
+     * `mergeStates` DESTROYS states, so "sum of path lengths over the automaton as it now stands"
+     * falls when a chain folds into a loop -- handing budget back, and a budget a program loop can
+     * refund never terminates. `total` accumulates over mint EVENTS, so no fold can lower it.
+     */
+    @Test
+    fun `folding a chain into a loop never lowers the pot`() {
+        val m = manager()
+        val root = m.origin()
+        val a = assertNotNull(m.readChild(root, A))
+        val ab = assertNotNull(m.readChild(a, B))
+        assertNotNull(m.readChild(ab, C))
+        val beforeFold = m.totalOf(root)
+        assertEquals(6, beforeFold)
+
+        // Collapse the whole chain onto its own origin: three states become one, and the structure
+        // that remains carries a single self-loop per accessor.
+        m.union(root, a)
+        m.union(root, ab)
+        assertTrue(m.totalOf(root) >= beforeFold, "the fold must not refund")
+        assertEquals(beforeFold, m.totalOf(root))
     }
 
     @Test

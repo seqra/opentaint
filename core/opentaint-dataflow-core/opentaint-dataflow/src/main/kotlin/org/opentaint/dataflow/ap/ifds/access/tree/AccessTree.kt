@@ -1415,6 +1415,13 @@ class AccessTree(
             return current to absorbedAnyStep
         }
 
+        /** Test-only literal child read; never synthesises through the `[any]`. */
+        internal fun getChildForTest(accessor: AccessorIdx): AccessNode? {
+            var found: AccessNode? = null
+            forEachAccessor { a, c -> if (a == accessor) found = c }
+            return found
+        }
+
         /**
          * Fold every COVERED sibling of this node's own `[any]` INTO that `[any]`'s subtree.
          *
@@ -1442,16 +1449,38 @@ class AccessTree(
          * make every re-derivation look new and re-propagate the whole tree. After one pass a node
          * holds its `[any]` plus uncovered edges only, so the `hasCovered` test below fails and the
          * node is returned unchanged; children are only rebuilt when a child actually changed.
+         *
+         * **One pass is not that fixpoint**, which is why this entry point loops. The fold MERGES
+         * the absorbed sibling into the `[any]` subtree, and a merge can put a covered edge back
+         * beside an `[any]` one level down:
+         *
+         * ```
+         * { f -> {T}.g.* , [any] -> {T}.[any].* }   ==>   { [any] -> {T}.{ g -> * , [any] -> * } }
+         * ```
+         *
+         * The intervening `{T}` is UNCOVERED, so [normaliseUnderAny] -- which walks covered-only
+         * paths, because that is the only place its collapse is sound -- does not heal it, and the
+         * next caller to compress the stored node would rebuild it and re-propagate the tree. The
+         * recursive re-fold on the merged child (below) catches that case where it is created; this
+         * loop is what makes idempotence a PROPERTY of the function rather than an assumption about
+         * how deep a merge can recreate the pattern.
+         *
+         * The receiver is still returned BY IDENTITY when nothing changed: the first pass over an
+         * already-folded node returns it unchanged and the loop exits without rebuilding anything.
+         *
+         * Terminates: nothing here creates a covered edge -- the fold deletes one and merges two
+         * subtrees, and `mergeAdd` and [normaliseUnderAny] are unions of existing tries -- so the
+         * number of covered edges in the tree strictly decreases on every pass that changes
+         * anything, and it is finite.
          */
-        /** Test-only literal child read; never synthesises through the `[any]`. */
-        internal fun getChildForTest(accessor: AccessorIdx): AccessNode? {
-            var found: AccessNode? = null
-            forEachAccessor { a, c -> if (a == accessor) found = c }
-            return found
+        fun compressAbsorbCoveredSiblings(): AccessNode {
+            var current = this
+            while (true) {
+                val next = current.compressAbsorbCoveredSiblings(IdentityHashMap())
+                if (next === current) return current
+                current = next
+            }
         }
-
-        fun compressAbsorbCoveredSiblings(): AccessNode =
-            compressAbsorbCoveredSiblings(IdentityHashMap())
 
         private fun compressAbsorbCoveredSiblings(
             memo: IdentityHashMap<AccessNode, AccessNode>,
@@ -1521,7 +1550,11 @@ class AccessTree(
                     }
                 }
             }
-            keptNodes[keptAccessors.indexOf(ANY_ACCESSOR_IDX)] = newAny
+            // Re-fold the merged child before installing it: the merge above joins two subtrees that
+            // were each compressed on their own, and their union can hold a covered edge beside an
+            // `[any]` at a node neither of them did. Doing it here rather than leaving it to the
+            // entry point's loop keeps the common case to a single extra pass.
+            keptNodes[keptAccessors.indexOf(ANY_ACCESSOR_IDX)] = newAny.compressAbsorbCoveredSiblings(memo)
 
             val result = recreate(
                 isAbstract, isFinal, deepAccessorExclusion,

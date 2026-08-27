@@ -86,6 +86,9 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.anyDepthCharge",
     // AccessTree: fold covered siblings into a node's own `[any]` after each edge-store merge.
     "opentaint.absorbSiblings",
+    // AnyUnrollManager: what `L` is a budget OF -- materialised ACCESSORS (default) or materialised
+    // SEQUENCES. `false` restores the pre-2026-08-27 word count; see AnyUnrollManager.
+    "opentaint.anyPathLengthCost",
 )
 
 fun Project.configureDefaultTest() {

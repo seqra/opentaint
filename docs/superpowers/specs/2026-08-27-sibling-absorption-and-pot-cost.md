@@ -54,12 +54,28 @@ times in 29M graft points. The sibling position is the one the redundancy actual
 
 ---
 
-## 2. Is the pot's cost computation wrong? No — but a different bound is broken
+## 2. Is the pot's cost computation wrong? Yes — half of this section is superseded
+
+> **SUPERSEDED, 2026-08-27 (later the same day).** The measure below has been replaced: `total` now
+> charges the **sum over all paths of the path's length**, exactly as originally suspected, and the
+> third objection here — that such a measure cannot be monotone — was wrong. It holds only for a
+> measure RECOMPUTED from the automaton as it stands. An accumulator maintained at the mint, over
+> mint EVENTS, is monotone by construction: a fold is not a mint, so it can neither charge nor
+> refund. See `2026-08-27-pot-cost-and-matching-mode.md` §1 for the implementation and §3 for what it
+> measured — the correction is real (one pot goes 23 → 54 on the same 6 states) and it changes
+> nothing on conductor, because the whole automaton population is 604 mints and 368 transitions.
+>
+> Objections 1 and 2 stand as stated, and are exactly what force the accumulator form: nothing may
+> traverse a structure that is allowed to be cyclic, and a simple-path count is exponential. The
+> incremental rule — `child.lengthSum = current.lengthSum + current.pathCount`, charge
+> `child.lengthSum` — needs neither. Everything from "**And the motivating observation does not
+> hold**" onward is unaffected: the 278 tiny pots are still tiny, `crossedLimit` is still 1 under
+> BOTH measures, and §3.8's `L + 1` state bound is still broken.
 
 The suspicion was that `total` should be *"the sum over all acyclic paths of the path's length"* and
 that a wrong cost is why 278 of 298 components sit below a total of 2.
 
-**Refuted, on both halves.**
+**Half refuted, as recorded below; read it with the box above.**
 
 **What `total` computes.** The only two writers are `mint` (`AnyUnroll.kt:1428`,
 `dag.total = satAdd(dag.total, current.pathCount, …)`) and cross-dag fusion (`:934`,
@@ -85,10 +101,14 @@ assertion or comment anywhere in the repo relates `total` to path length.
 2. **Magnitude.** Simple-path counting in a general digraph is #P-complete, and even on a DAG the
    count is exponential — the observed 165-state component could carry ~2^80 simple paths. `satAdd`
    would pin every non-trivial pot at `Int.MAX_VALUE`.
-3. **It is not monotone, which destroys termination.** `mergeStates` *destroys* states; folding a
-   chain into a self-loop would take the acyclic-path sum **down** — the observed `7/1` row would go
-   from 7 to **0**. A budget a program loop can refund never terminates. The current measure is a
-   count of mint *events*, i.e. of history, which is monotone by construction.
+3. ~~**It is not monotone, which destroys termination.**~~ **WRONG, and it is the one that
+   mattered.** The claim was that `mergeStates` destroys states, so folding a chain into a self-loop
+   takes the acyclic-path sum **down** — the observed `7/1` row would go from 7 to **0** — and a
+   budget a program loop can refund never terminates. That is true of a measure RECOMPUTED from the
+   current structure and false of an accumulator. Keep the SUM where the COUNT already lived, over
+   mint events, and a fold moves nothing because it is not a mint. The mint is also the moment the
+   structure is provably acyclic, since every mint creates a FRESH state, so the charge taken there
+   is the exact acyclic sum and each cycle is billed for at most the one lap that closed it.
 
 **And the motivating observation does not hold.** For the shipped `PerDag` policy, every mint while
 `total < L` charges `pathCount ≥ 1`, and every fusion merges at least one state, giving
@@ -171,23 +191,34 @@ deletion, prefix absorption, sibling absorption — converges and loses the deep
 premise emission reads the fact's **literal edges**. Until the names R2/R3b need are recorded
 independently of those edges, no fact-side compression can be adopted, however sound it is.
 
+**And the obvious escape is now measured and closed.** Running the fold under the DENOTATIONAL
+reader, where it is sound in both channels, does not work: in that mode the fact population carries
+no `[any]` for it to fold, and it fires **19** times in the whole run against 528,602 under literal
+matching. See `2026-08-27-pot-cost-and-matching-mode.md` §4, including the mixed cell built to give
+it material — which folds 3.7 M branches, converges, and whose own no-absorption control already
+reports zero findings.
+
 Instrumentation: `edgeStore siblingAbsorb folded=… mass=…`. Tests: `SiblingAbsorptionTest` (6,
 including the matching-narrowing falsifier), plus `NameCriticalFlagTest` /
 `SelfSubsumptionClassifierTest` from the previous round.
 
-**Known defects in this implementation, not yet fixed** (the guard-ordering one was):
+**Known defects in this implementation.** Items 1-4 are FIXED — 1 in this round, 2-4 on 2026-08-27;
+see `2026-08-27-pot-cost-and-matching-mode.md` §5. Item 5 stands.
 
 1. *Fixed.* Compression ran BEFORE the storage identity guard, so a merge that added nothing could
    still rebuild the node, fail `merged === stored` and re-propagate the whole tree for no new fact.
    The guard now runs first and compression happens only on the changed path.
-2. **Not idempotent by identity when an `[any]` sits below an UNCOVERED accessor.** Folding can
-   recreate the covered-sibling pattern one level down, and `normaliseUnderAny` only heals the case
-   where the intervening accessor is covered. Fix: re-run the fold on the merged `[any]` child, or
-   loop to a fixpoint. Turning off `-Dopentaint.anyCollapseNested` would make this common.
-3. `SiblingAbsorptionTest` constructs its manager with `anyUnrollLimit = -1`, so the
-   `(anyId != null) == containsAnyAccessor()` invariant and all `AnyUnrollState` propagation are
-   untested. Add an arm with a non-negative limit.
-4. `MethodEdgesNDInitialToFinalTreeApSet` is a third whole-propagating store and is not hooked.
+2. *Fixed.* **Not idempotent by identity when an `[any]` sits below an UNCOVERED accessor.**
+   Folding recreated the covered-sibling pattern one level down, and `normaliseUnderAny` only heals
+   the case where the intervening accessor is covered. The pass now re-folds the merged `[any]` child
+   and loops until one returns the receiver by identity, so an unchanged node is still returned
+   unchanged and the storage layer's `merged === stored` test is unaffected.
+3. *Fixed.* `SiblingAbsorptionTest` constructed its manager with `anyUnrollLimit = -1`, so the
+   `(anyId != null) == containsAnyAccessor()` invariant and all `AnyUnrollState` propagation were
+   untested. Every case now runs against two managers, `-1` and `100`, and the invariant is asserted
+   over the whole result of every fold.
+4. *Fixed.* `MethodEdgesNDInitialToFinalTreeApSet`, the third whole-propagating store, is hooked —
+   identity guard first, matching the other two.
 5. Cost: a fresh memo per top-level call, and `k` suffix-matcher rebuilds over a monotonically
    growing subtree when folding `k` siblings. Accumulating the siblings and doing a single merge
    into the `[any]` child would remove the quadratic term.

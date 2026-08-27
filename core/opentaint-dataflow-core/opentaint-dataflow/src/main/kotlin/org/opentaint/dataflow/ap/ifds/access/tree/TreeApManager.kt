@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet.Empty
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.AnyMatchMode
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FactSideEffectSummariesApStorage
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -70,30 +71,49 @@ class TreeApManager(
     val literalAnyMatch: Boolean = DEFAULT_LITERAL_ANY_MATCH,
 ) : ApManager {
     /**
+     * A part rung, resolved against the manager-wide setting.
+     *
+     * Note what the test is: the CONSTRUCTOR ARGUMENT against the global option, computed once, and
+     * NOT each intermediate rung against it. Testing the rung would break the chain -- setting
+     * `-Dopentaint.literalAnyMatch.premises=false` would move `literalAnyPremises` off the global
+     * default and thereby make the finer `.premises.r3c` / `.premises.r4` rungs beneath it
+     * unreachable, which is the opposite of what a bisect ladder is for.
+     */
+    private val instanceOverridesMode: Boolean = literalAnyMatch != DEFAULT_LITERAL_ANY_MATCH
+
+    private fun part(name: String, wide: Boolean): Boolean =
+        if (instanceOverridesMode) wide else AnyMatchMode.part(name) ?: wide
+
+    /**
      * The rule, split into the three places it applies, so an ablation can attribute a lost finding
      * to one of them instead of to "the change".
      *
-     * Each defaults to [literalAnyMatch] and can be overridden on its own with
+     * Each defaults to [literalAnyMatch] and can be refined on its own with
      * `-Dopentaint.literalAnyMatch.reader|lookup|premises=true|false`. They are NOT independent
      * settings a caller should ship: `premises` without `reader` emits premises nothing can match,
      * and `reader` without `premises` leaves TIFA handing out concrete premises for no reason. They
      * exist to bisect.
+     *
+     * **An explicit per-instance [literalAnyMatch] beats every part property.** The rung only
+     * refines the GLOBAL default; see [part]. Before this, a `.part` property set on the JVM
+     * overrode a manager deliberately constructed in the other mode, so `literalAnyMatch = false` in
+     * a test meant "false unless some `-D` the test never set says otherwise".
      */
     @JvmField
-    val literalAnyReader: Boolean = partOverride("reader", literalAnyMatch)
+    val literalAnyReader: Boolean = part("reader", literalAnyMatch)
 
     @JvmField
-    val literalAnyLookup: Boolean = partOverride("lookup", literalAnyMatch)
+    val literalAnyLookup: Boolean = part("lookup", literalAnyMatch)
 
     @JvmField
-    val literalAnyPremises: Boolean = partOverride("premises", literalAnyMatch)
+    val literalAnyPremises: Boolean = part("premises", literalAnyMatch)
 
     /** Ablation only, one rung finer than [literalAnyPremises]: R3c, R4 and R3b's second edge. */
     @JvmField
-    val dropR3c: Boolean = partOverride("premises.r3c", literalAnyPremises)
+    val dropR3c: Boolean = part("premises.r3c", literalAnyPremises)
 
     @JvmField
-    val dropR4: Boolean = partOverride("premises.r4", literalAnyPremises)
+    val dropR4: Boolean = part("premises.r4", literalAnyPremises)
 
     val refManager = refManager.softRefManager("Tree")
 
@@ -228,7 +248,7 @@ class TreeApManager(
     )
 
     companion object {
-        const val LITERAL_ANY_MATCH_PROPERTY = "opentaint.literalAnyMatch"
+        const val LITERAL_ANY_MATCH_PROPERTY = AnyMatchMode.LITERAL_ANY_MATCH_PROPERTY
 
         /**
          * `-Dopentaint.absorbSiblings=true`, default off. Fold every COVERED sibling of a node's own
@@ -239,20 +259,12 @@ class TreeApManager(
         val ABSORB_SIBLINGS: Boolean = boolProperty("opentaint.absorbSiblings") ?: false
 
         /**
-         * Defaults to ON: the literal reading IS the behaviour, and the flag exists to restore the
-         * synthesising reader for a controlled A/B on the harness. Set
-         * `-Dopentaint.literalAnyMatch=false` to get the pre-2026-08-27 engine back.
+         * The global option, and the only thing that decides the mode for a manager built without an
+         * explicit argument. Delegates to [AnyMatchMode.literal] -- one parse, one place to look.
          */
         @JvmStatic
-        val DEFAULT_LITERAL_ANY_MATCH: Boolean = boolProperty(LITERAL_ANY_MATCH_PROPERTY) ?: true
+        val DEFAULT_LITERAL_ANY_MATCH: Boolean get() = AnyMatchMode.literal
 
-        private fun boolProperty(name: String): Boolean? =
-            System.getProperty(name)?.trim()?.lowercase()
-                ?.let { it != "false" && it != "0" && it != "off" }
-
-        /** `-Dopentaint.literalAnyMatch.<part>`, falling back to the manager-wide setting. */
-        @JvmStatic
-        fun partOverride(part: String, fallback: Boolean): Boolean =
-            boolProperty("$LITERAL_ANY_MATCH_PROPERTY.$part") ?: fallback
+        private fun boolProperty(name: String): Boolean? = AnyMatchMode.boolProperty(name)
     }
 }

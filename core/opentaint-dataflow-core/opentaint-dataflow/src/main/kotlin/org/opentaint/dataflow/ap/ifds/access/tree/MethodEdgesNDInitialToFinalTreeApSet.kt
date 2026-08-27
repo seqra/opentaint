@@ -31,9 +31,15 @@ class MethodEdgesNDInitialToFinalTreeApSet(
             }
 
             val mergedAccess = cur.mergeAdd(element)
+            // The identity guard runs FIRST -- see the note in MethodEdgesFinalTreeApSet. This is
+            // the third store that propagates the WHOLE merged fact rather than the delta, so a
+            // rebuild here costs the same re-propagation as it does there.
             if (mergedAccess === cur) return null
-            current = mergedAccess
-            return mergedAccess
+
+            val mergedFacts =
+                if (TreeApManager.ABSORB_SIBLINGS) mergedAccess.compressAbsorbCoveredSiblings() else mergedAccess
+            current = mergedFacts
+            return mergedFacts
         }
 
         override fun collect(dst: MutableList<AccessTree.AccessNode>) {

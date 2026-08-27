@@ -117,7 +117,19 @@ class AnyUnrollDag(@JvmField val id: Int) {
     @JvmField
     var parent: AnyUnrollDag? = null
 
-    /** The pot. Monotone: transitions are added and never removed, so this only ever grows. */
+    /**
+     * The pot: how much of this origin's budget has been spent.
+     *
+     * The unit is set by [AnyUnrollManager.pathLengthCost] -- by default the SUM OF THE LENGTHS of
+     * the accessor sequences materialised out of this origin, so `L` bounds accessors rather than
+     * words. See [AnyUnrollManager.DEFAULT_PATH_LENGTH_COST].
+     *
+     * Monotone: it is an accumulator over mint EVENTS. Transitions are added and never removed, and
+     * a state merge -- which genuinely destroys states -- moves nothing here. That is deliberate and
+     * it is what a recomputed measure could not offer: folding a chain into a self-loop lowers the
+     * sum of path lengths OVER THE CURRENT STRUCTURE, and a budget a program loop can refund never
+     * terminates.
+     */
     @JvmField
     var total: Int = 0
 
@@ -204,12 +216,36 @@ class AnyUnrollState(
      * A state can be reached by more than one sequence -- that is what a union does, and it is the
      * whole reason the structure is an automaton rather than a trie. Charging 1 for a new transition
      * out of a shared state would under-report the population by the sharing factor, compounding
-     * with every merge, so the charge is `pathCount` (see [AnyUnrollManager.readChild]).
+     * with every merge, so the charge is proportional to `pathCount` rather than flat -- see
+     * [lengthSum] and [AnyUnrollManager.readChild].
      *
      * Maintained incrementally and saturating; never recomputed by traversal.
      */
     @JvmField
     var pathCount: Int = 1
+
+    /**
+     * The sum of the LENGTHS of the sequences that reach this state: `SUM |w|` over those `w`.
+     *
+     * [pathCount] counts the WORDS an `[any]` has sold at this position; this counts their LETTERS.
+     * They are different measures of the same population and the pot charges whichever
+     * [AnyUnrollManager.pathLengthCost] selects, because a word is not a unit of cost -- a state
+     * reached by one sequence of length 40 has materialised forty accessors, and the word-count
+     * measure bills it the same 1 as a state one step from the origin.
+     *
+     * Maintained by the SAME incremental discipline as [pathCount], for the same reason: the
+     * automaton is allowed to be cyclic, so no quantity here may ever be recomputed by traversing it.
+     * Extending every word reaching `current` by one accessor produces `pathCount` new words whose
+     * lengths total `lengthSum + pathCount`, which is the whole of the update rule.
+     *
+     * A cycle contributes at most ONE lap. The transition that closes it was minted -- and charged --
+     * as a fresh state before [mergeStates] folded that state into an ancestor; every later lap finds
+     * the transition already there, mints nothing and charges nothing. So the measure this maintains
+     * is "sum of path lengths over paths that traverse each cycle zero or one times", which is finite
+     * where the accepted language is not.
+     */
+    @JvmField
+    var lengthSum: Int = 0
 
     /**
      * How this state was obtained -- see [AnyUnrollKind].
@@ -762,6 +798,13 @@ class AnyUnrollManager(
     @JvmField val kindPolicy: AnyUnrollKindPolicy = DEFAULT_KIND_POLICY,
     /** The order a re-score spends its budget in; see [AnyUnrollRescoreStrategy]. Fixed for the run. */
     @JvmField val rescoreStrategy: AnyUnrollRescoreStrategy = DEFAULT_RESCORE_STRATEGY,
+    /**
+     * What one materialised accessor sequence costs the pot: its LENGTH (default) or a flat 1.
+     *
+     * See [DEFAULT_PATH_LENGTH_COST]. Fixed for the run -- a budget whose unit changed mid-run would
+     * make `total` a mixture of two quantities and `total >= limit` unreadable.
+     */
+    @JvmField val pathLengthCost: Boolean = DEFAULT_PATH_LENGTH_COST,
 ) {
     val enabled: Boolean get() = limit >= 0
 
@@ -806,6 +849,16 @@ class AnyUnrollManager(
 
     /** `pathCount` saturates here: past `L` the state refuses everything anyway. */
     private val pathCountCeiling: Int = if (limit <= 0) 1 else limit
+
+    /**
+     * `lengthSum` saturates here.
+     *
+     * NOT `pathCountCeiling`: a state may legitimately be reached by `L` words of length `L`, so the
+     * length sum lives a whole factor of `L` above the word count and clamping it at `L` would make
+     * every deep state look like a shallow one. The ceiling exists only to keep the charge inside
+     * `Int` -- any pot whose length sum reaches it is far past `L` and refuses everything already.
+     */
+    private val lengthSumCeiling: Int = Int.MAX_VALUE / 2
 
     /** The [AnyUnrollKindPolicy.Global] pot. Written only under [lock], beside `dag.total`. */
     private var globalSpend: Int = 0
@@ -1016,6 +1069,18 @@ class AnyUnrollManager(
                 satAdd(x.pathCount, y.pathCount, pathCountCeiling)
             } else {
                 maxOf(x.pathCount, y.pathCount)
+            }
+            // Follows `pathCount` exactly, and for the same reason: accumulating when the two states
+            // are reached by genuinely different sequences, `max` when the cascade has paired states
+            // reached by the SAME sequence in two fused automata and the union overlaps by
+            // construction. Note that the merge moves NO cost: `dag.total` is an accumulator over
+            // mint EVENTS, so folding two states leaves it exactly where it was. That is what keeps
+            // the measure monotone where recomputing "sum of path lengths" over the merged structure
+            // would not be -- collapsing a chain into a self-loop would hand budget BACK.
+            x.lengthSum = if (accumulatePaths) {
+                satAdd(x.lengthSum, y.lengthSum, lengthSumCeiling)
+            } else {
+                maxOf(x.lengthSum, y.lengthSum)
             }
             // Traffic ALWAYS accumulates, however the paths merge: the merged state now gates every
             // prepend both of them gated, which is exactly what the weight is meant to say.
@@ -1297,8 +1362,8 @@ class AnyUnrollManager(
      * read here" from "`a` was read here and we declined to pay", so the prepend has nothing to key
      * on. The credit state is the message the read leaves for the prepend.
      *
-     * **A `CREDIT` mint is free, and that is deliberate.** The pot is charged exactly as before --
-     * only for `PAID` mints -- so `total` still stops just past `L` and [budgetExhausted] answers the
+     * **A `CREDIT` mint is free, and that is deliberate.** The pot is charged only for `PAID` mints,
+     * so `total` still stops just past `L` and [budgetExhausted] answers the
      * same question for every existing caller. Charging unpaid mints would make `total` a mixture of
      * two quantities and would shorten the initial-fact abstraction's paid window as a side effect of
      * what `getChild` did.
@@ -1424,11 +1489,19 @@ class AnyUnrollManager(
         val child = AnyUnrollState(stateIds.incrementAndGet(), dag)
         child.kind = if (paid) AnyUnrollKind.PAID else AnyUnrollKind.CREDIT
         child.pathCount = current.pathCount
+        // The `pathCount` words reaching `current` each gain one accessor, so the words reaching
+        // `child` are exactly as many and exactly one letter longer apiece.
+        child.lengthSum = satAdd(current.lengthSum, current.pathCount, lengthSumCeiling)
         putTransition(current, accessor, child)
         if (paid) {
-            dag.total = satAdd(dag.total, current.pathCount, Int.MAX_VALUE)
+            // `child.lengthSum` is precisely how much the running SUM-OF-PATH-LENGTHS grows: `child`
+            // is new, no other state's contribution moves, so the delta is the whole of its own. The
+            // legacy measure charges `current.pathCount` -- how many words appeared, ignoring how
+            // long they are -- which bills a forty-accessor chain the same as a first step.
+            val charge = if (pathLengthCost) child.lengthSum else current.pathCount
+            dag.total = satAdd(dag.total, charge, Int.MAX_VALUE)
             // Charged under the manager lock beside `dag.total`, so a plain Int is enough.
-            globalSpend = satAdd(globalSpend, current.pathCount, Int.MAX_VALUE)
+            globalSpend = satAdd(globalSpend, charge, Int.MAX_VALUE)
         }
         if (kindPolicy == AnyUnrollKindPolicy.Rescore && dag.total >= dag.nextRescoreAt) {
             rescoreDag(dag)
@@ -1659,6 +1732,27 @@ class AnyUnrollManager(
          */
         val DEFAULT_ANY_UNROLL_LIMIT: Int =
             System.getProperty(ANY_UNROLL_LIMIT_PROPERTY)?.trim()?.toIntOrNull() ?: -1
+
+        const val ANY_UNROLL_PATH_LENGTH_COST_PROPERTY = "opentaint.anyPathLengthCost"
+
+        /**
+         * `-Dopentaint.anyPathLengthCost=true|false`, default `true`: what `L` is a budget OF.
+         *
+         * `true` -- the pot spends the SUM OF THE LENGTHS of the accessor sequences it has
+         * materialised, so `L = 100` buys a hundred accessors however they are arranged: one chain of
+         * a hundred, or a hundred first steps, or anything between.
+         *
+         * `false` -- the pre-2026-08-27 measure, one unit per sequence regardless of length, which
+         * charges a hundred-accessor chain the same 1 as a single step off the origin. It is retained
+         * as an ablation, not as a supported mode: with it the printed `total` is a count of words
+         * and cannot be compared against a `total` printed by the default.
+         *
+         * The two are the same number exactly when every sequence has length 1, i.e. for a pot that
+         * only ever took first steps.
+         */
+        val DEFAULT_PATH_LENGTH_COST: Boolean =
+            System.getProperty(ANY_UNROLL_PATH_LENGTH_COST_PROPERTY)?.trim()
+                ?.toBooleanStrictOrNull() ?: true
 
         const val ANY_UNROLL_KIND_MERGE_PROPERTY = "opentaint.anyUnrollKindMerge"
 
