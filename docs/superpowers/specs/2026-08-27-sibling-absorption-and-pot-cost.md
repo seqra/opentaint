@@ -18,10 +18,23 @@ The right rewrite is at the sibling position, and it **merges** rather than dele
 N{ f -> T , [any] -> S }   ==>   N{ [any] -> (S | T) }        f covered
 ```
 
-Sound as a widening: `[any].(S|T)` denotes `<covered>*.(S∪T)`, which contains `f.T` with the `[any]`
-taking the single step `f`, and contains the original `[any].S` with it taking zero. Uncovered
-edges — taint marks, statics, `[value]`, type-info — are things an `[any]` provably cannot denote, so
-they stay as literal edges. `isFinal` is a flag, not an edge, and rides along untouched.
+Sound as a widening **of the denotation**: `[any].(S|T)` denotes `<covered>*.(S∪T)`, which contains
+`f.T` with the `[any]` taking the single step `f`, and contains the original `[any].S` with it taking
+zero. Uncovered edges — taint marks, statics, `[value]`, type-info — are things an `[any]` provably
+cannot denote, so they stay as literal edges. `isFinal` is a flag, not an edge, and rides along
+untouched.
+
+**And that argument is only half the story — this is the correction that matters.** It holds for the
+DENOTATION reader. It is false for the MATCHING reader, which has been the default since literal
+`[any]` matching landed: `getChildMatching` keeps `literal(a)` and the zero-step `any().literal(a)`
+and **drops the synthesised term**. Absorbing deletes the literal `f` edge, and the zero-step read
+then finds something deeper and different — so a premise naming `f` stops selecting that branch.
+
+> **Absorption is a widening of what the fact DENOTES and a NARROWING of what it can MATCH.**
+
+That is the mechanism behind conductor going 2 → 0, and no denotational argument can see it. Pinned
+by `SiblingAbsorptionTest.absorption widens the denotation and NARROWS what the fact can match`,
+which asserts `delta(fact, premise f)` is non-empty before the fold and empty after.
 
 **Why merging beats deleting, concretely.** A mark at `f.T.![m]` does not vanish; it lands at
 `[any].![m]` — one level under the `[any]`, which is precisely where `TreeInitialFactAbstraction`
@@ -102,7 +115,7 @@ already names as its weak point. This is worth fixing independently of anything 
 
 Built: `-Dopentaint.absorbSiblings=true` applies `compressAbsorbCoveredSiblings()` to the result of
 every edge-store merge, in both `MethodEdgesFinalTreeApSet` and `MethodEdgesInitialToFinalTreeApSet`,
-before the identity guard.
+on the changed path only — the storage identity guard runs first (see the defect list).
 
 It is deliberately **not** gated on the `[any]` manager. The manager's `absorbTargetFor` refuses 82%
 of prepends, fires 9 times in 6.59M at `L=100`, and the measured ceiling on opening its kind gate is
@@ -125,13 +138,20 @@ budget because it is a widening, not a materialisation.
 688 success, 0 skipped, 0 false positives, and the single `bad-hexa-conversion` false negative that
 is present in every arm including the unmodified one. Unit gate 3502 / 2, both pre-existing.
 
-So the operation does not lose flows in general. What it loses is conductor's specific witness, which
-needs a chain of concrete premises — and that is the same wall every fact-coarsening has hit here:
-`anyTrimAbstract=true`, `anyTrimAbstract=safe`, `L=0` forced prepend absorption, and now sibling
-absorption all converge the run and all report 0. The rule is the recorded one, and absorption does
-not escape it merely by preserving content:
+So the operation does not lose flows in general. What it loses is conductor's specific witness — and
+§1 now says exactly why, which is sharper than the recorded slogan: **deleting the literal edge
+deletes the premise from the fact's matchable set.** `anyTrimAbstract=true`, `anyTrimAbstract=safe`,
+`L=0` forced prepend absorption and sibling absorption all converge the run and all report 0, and
+they share this one mechanism rather than merely sharing an outcome.
 
-> **Shrinking the premise set is safe; coarsening the FACT is not.**
+> Shrinking the premise set is safe; coarsening the FACT is not — because under literal matching the
+> fact's literal edges ARE its premise set.
+
+**A control worth recording as inconclusive.** Running absorption with `-Dopentaint.literalAnyMatch=false`
+(where the rewrite is sound in both channels) does not settle it: that regime has almost no
+`[any]`-carrying facts, so absorption fires **15 times** in the whole run against 734,114 under
+literal matching. The two readers do not share a fact population, so the workload cannot be used to
+A/B the soundness question. The unit falsifier above can, and does.
 
 The depth-gate fix remains the only lever measured to converge conductor **with** its findings, and
 it is not a coarsening at all — it fixes a cost function (`[any]` charged 10 against a budget
@@ -151,5 +171,23 @@ deletion, prefix absorption, sibling absorption — converges and loses the deep
 premise emission reads the fact's **literal edges**. Until the names R2/R3b need are recorded
 independently of those edges, no fact-side compression can be adopted, however sound it is.
 
-Instrumentation: `edgeStore siblingAbsorb folded=… mass=…`. Tests: `SiblingAbsorptionTest` (5),
-plus `NameCriticalFlagTest` / `SelfSubsumptionClassifierTest` from the previous round.
+Instrumentation: `edgeStore siblingAbsorb folded=… mass=…`. Tests: `SiblingAbsorptionTest` (6,
+including the matching-narrowing falsifier), plus `NameCriticalFlagTest` /
+`SelfSubsumptionClassifierTest` from the previous round.
+
+**Known defects in this implementation, not yet fixed** (the guard-ordering one was):
+
+1. *Fixed.* Compression ran BEFORE the storage identity guard, so a merge that added nothing could
+   still rebuild the node, fail `merged === stored` and re-propagate the whole tree for no new fact.
+   The guard now runs first and compression happens only on the changed path.
+2. **Not idempotent by identity when an `[any]` sits below an UNCOVERED accessor.** Folding can
+   recreate the covered-sibling pattern one level down, and `normaliseUnderAny` only heals the case
+   where the intervening accessor is covered. Fix: re-run the fold on the merged `[any]` child, or
+   loop to a fixpoint. Turning off `-Dopentaint.anyCollapseNested` would make this common.
+3. `SiblingAbsorptionTest` constructs its manager with `anyUnrollLimit = -1`, so the
+   `(anyId != null) == containsAnyAccessor()` invariant and all `AnyUnrollState` propagation are
+   untested. Add an arm with a non-negative limit.
+4. `MethodEdgesNDInitialToFinalTreeApSet` is a third whole-propagating store and is not hooked.
+5. Cost: a fresh memo per top-level call, and `k` suffix-matcher rebuilds over a monotonically
+   growing subtree when folding `k` siblings. Accumulating the siblings and doing a single merge
+   into the `[any]` child would remove the quadratic term.

@@ -101,9 +101,13 @@ class MethodEdgesInitialToFinalTreeApSet(
             exclusions[edgeSetIdx] = mergedExclusion
 
             val currentAccess = edges[edgeSetIdx]!!
-            val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
-                .let { if (TreeApManager.ABSORB_SIBLINGS) it.compressAbsorbCoveredSiblings() else it }
-            if (mergedAccess === currentAccess) {
+            val mergedRaw = currentAccess.mergeAdd(accessWithExclusion.access)
+            // Identity guard first -- see the note in MethodEdgesFinalTreeApSet.
+            val mergedAccess =
+                if (mergedRaw === currentAccess) mergedRaw
+                else if (TreeApManager.ABSORB_SIBLINGS) mergedRaw.compressAbsorbCoveredSiblings()
+                else mergedRaw
+            if (mergedRaw === currentAccess) {
                 if (mergedExclusion === currentExclusion) return null
 
                 return AccessWithExclusion(mergedAccess, mergedExclusion)

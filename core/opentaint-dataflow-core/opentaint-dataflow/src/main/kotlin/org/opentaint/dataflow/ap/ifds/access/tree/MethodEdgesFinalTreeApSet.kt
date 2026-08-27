@@ -34,11 +34,15 @@ class MethodEdgesFinalTreeApSet(
                 return accessPath
             }
 
-            val mergedFacts = factSet.mergeAdd(accessPath)
-                .let { if (TreeApManager.ABSORB_SIBLINGS) it.compressAbsorbCoveredSiblings() else it }
-            if (mergedFacts === factSet) {
+            val merged = factSet.mergeAdd(accessPath)
+            // The identity guard runs FIRST. Compressing before it would let a merge that added
+            // nothing still rebuild the node, so `merged === factSet` would fail and the whole tree
+            // would re-propagate for no new fact.
+            if (merged === factSet) {
                 return null
             }
+            val mergedFacts =
+                if (TreeApManager.ABSORB_SIBLINGS) merged.compressAbsorbCoveredSiblings() else merged
 
             if (EdgeStoreDiagnostics.enabled) {
                 EdgeStoreDiagnostics.recordMerge(factSet.size, mergedFacts.size)

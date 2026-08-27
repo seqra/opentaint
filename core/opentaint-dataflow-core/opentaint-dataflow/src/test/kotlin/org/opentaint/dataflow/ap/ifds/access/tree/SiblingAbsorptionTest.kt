@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import kotlin.test.Test
@@ -117,5 +118,47 @@ class SiblingAbsorptionTest {
         val once = n.compressAbsorbCoveredSiblings()
         val twice = once.compressAbsorbCoveredSiblings()
         assertSame(once, twice, "a second pass must return the very same object; got ${twice.render()}")
+    }
+
+    /**
+     * THE FALSIFIER, and the reason this ships off.
+     *
+     * The soundness argument -- `[any].(S|T)` denotes `<covered>*.(S|T)`, which contains `f.T` --
+     * holds for the DENOTATION reader. It does NOT hold for the MATCHING reader, which has been the
+     * default since literal `[any]` matching landed: `getChildMatching` keeps `literal(a)` and the
+     * zero-step `any().literal(a)` and DROPS the synthesised term. Absorbing deletes the literal
+     * `f` edge, and the zero-step read finds something deeper and different, so a premise naming
+     * `f` stops selecting the branch.
+     *
+     * So the rewrite is a widening of what the fact DENOTES and a NARROWING of what it can MATCH.
+     * That is the mechanism behind conductor going 2 findings -> 0 with absorption on, and it is
+     * not visible in any denotational argument.
+     */
+    @Test
+    fun `absorption widens the denotation and NARROWS what the fact can match`() {
+        val fact = manager.mostAbstractFinalAp(base)
+            .let { AccessTree(manager, base, node(open(F, G), open(AnyAccessor)), it.exclusions) }
+        val premiseF = premise(F)
+
+        assertTrue(
+            fact.delta(premiseF).isNotEmpty(),
+            "before: the literal `f` edge is there, so the premise selects it",
+        )
+
+        val compressed = AccessTree(
+            manager, base, fact.access.compressAbsorbCoveredSiblings(), fact.exclusions,
+        )
+
+        assertTrue(
+            compressed.delta(premiseF).isEmpty(),
+            "after: `f` is denoted but no longer HELD, and the matching reader is literal -- so the " +
+                "premise is refused. This is the cost, and it is invisible to the denotation argument.",
+        )
+    }
+
+    private fun premise(vararg accessors: Accessor): InitialFactAp {
+        var p: InitialFactAp = manager.mostAbstractInitialAp(base)
+        accessors.reversed().forEach { p = p.prependAccessor(it) }
+        return p
     }
 }
