@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.cactus
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -19,8 +20,8 @@ class AccessPathWithCycles(
         TODO("Not yet implemented")
     }
 
-    override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPathWithCycles(base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor, kind: ExclusionKind): InitialFactAp =
+        AccessPathWithCycles(base, access, exclusions.add(accessor, kind))
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
         AccessPathWithCycles(base, access, exclusions)

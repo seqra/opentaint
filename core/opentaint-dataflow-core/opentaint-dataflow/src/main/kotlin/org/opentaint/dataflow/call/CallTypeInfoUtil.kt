@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.call
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzer.MethodCallHandler
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
@@ -31,7 +32,7 @@ inline fun tryExtractCallTypeInfo(
     if (typeInfoGroup == null) {
         if (handler is MethodCallHandler.FactToFactHandler) {
             val edge = handler.currentEdge
-            val refinedInitial = edge.initialFactAp.exclude(TypeInfoGroupAccessor)
+            val refinedInitial = edge.initialFactAp.exclude(TypeInfoGroupAccessor, ExclusionKind.READ)
             analyzer.triggerSideEffectRequirement(refinedInitial)
         }
         return

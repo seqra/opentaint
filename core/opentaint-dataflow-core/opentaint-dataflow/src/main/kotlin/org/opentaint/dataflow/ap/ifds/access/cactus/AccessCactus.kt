@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -49,8 +50,8 @@ class AccessCactus(
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         AccessCactus(manager, newBase, access, exclusions)
 
-    override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessCactus(manager, base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor, kind: ExclusionKind): FinalFactAp =
+        AccessCactus(manager, base, access, exclusions.add(accessor, kind))
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessCactus(manager, base, access, exclusions)

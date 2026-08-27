@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 
@@ -27,7 +28,7 @@ interface FactAp: AccessorList {
 
 interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
     fun rebase(newBase: AccessPathBase): InitialFactAp
-    fun exclude(accessor: Accessor): InitialFactAp
+    fun exclude(accessor: Accessor, kind: ExclusionKind): InitialFactAp
     fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp
 
     fun prependAccessor(accessor: Accessor): InitialFactAp
@@ -49,7 +50,7 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
 
 interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
     fun rebase(newBase: AccessPathBase): FinalFactAp
-    fun exclude(accessor: Accessor): FinalFactAp
+    fun exclude(accessor: Accessor, kind: ExclusionKind): FinalFactAp
     fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp
 
     fun prependAccessor(accessor: Accessor): FinalFactAp

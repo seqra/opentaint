@@ -1,6 +1,6 @@
 # Read/Write Exclusion Sets
 
-**Status:** draft for review (rev 2)
+**Status:** implemented (rev 3) — see [§13 Implementation notes](#13-implementation-notes)
 **Component:** `core/opentaint-dataflow-core/opentaint-dataflow` — `org.opentaint.dataflow.ap.ifds.ExclusionSet`
 **Baseline:** census of all 348 `ExclusionSet` references across 92 files at `ee63656f2` on `main`
 
@@ -22,6 +22,7 @@ and every consumer reads only that.
 - [§10 What the labels are for](#10-what-the-labels-are-for)
 - [§11 Risks and prior art](#11-risks-and-prior-art)
 - [§12 Open questions](#12-open-questions)
+- [§13 Implementation notes](#13-implementation-notes)
 
 ---
 
@@ -659,3 +660,126 @@ by bytecode inspection and execution.*
 that write exclusions do not belong on the initial fact. Both were wrong: the exclusion set is a refinement
 demand rather than an assertion of absence, so union is safe for both kinds, and a store on an abstract
 fact is a case split on the entry fact for the same reason a load is.*
+
+---
+
+## 13. Implementation notes
+
+Steps 1 and 2 of §8 landed together, on `saloed/exclusion-rw`. `read`/`write` are stored as `(flat, write)`
+per §6, `addRead`/`addWrite` replace `add`, `exclude` carries an `ExclusionKind` at all seven origins, and
+`contains(other)` and `subtract` are gone. The rest of this section records where the implementation
+departs from §§5–8, and why.
+
+### Fact identity is finer, and that is the whole cost
+
+§2 said the change "cannot be observed by any consumer". That is true of *findings* and not of *work*.
+Exclusions are part of fact identity and the label is part of exclusion identity, so `a.*\{f:READ}` and
+`a.*\{f:WRITE}` are two keys where they used to be one, until a merge promotes them back together —
+extra edges and extra fixpoint iterations for the same result. It is bounded, because `write` only ever
+grows within a fixed `flat`, so a merged slot can signal a label-only change at most `|flat|` times.
+The class KDoc states this rather than repeating §2's stronger claim.
+
+### The `===` contract is easy to break by accident, and was
+
+Review caught `intersect` computing `(w₁ ∪ w₂) ∩ flat` as `write.addAll(other.write).retainAll(flat)`.
+`PersistentHashSet` returns the receiver when an operation removes or adds nothing, but it does **not**
+canonicalise an add followed by a matching remove: with `this = {a:read, b:write}` and
+`other = {a,b,c} / c:write`, `c` is added and then retained away, and the result is a set `equals` to
+`write` but not `===` it. Every storage reading `merged === current` as its fixpoint signal then reports
+a change on every call, forever — a hang, not a wrong answer, and in the one production `intersect`
+caller (`MethodInitialToFinalApSummaries.kt:150`, default AP mode).
+
+The fix is to clamp each side to the surviving flat set *before* the union rather than after, so the
+`addAll` short-circuit can fire: `write.retainAll(flat).addAll(other.write.retainAll(flat))`.
+`ExclusionSetTest` pins it in both operand shapes. `union` was never exposed to this — it only ever
+adds.
+
+### Merges stay commutative; §6's change-detection gating was not implemented
+
+§6 proposed returning the receiver from a merge whenever `flat` was unchanged, so a kind-only promotion
+would not trip the `===` detectors. **Not done.** That formulation is not commutative — with
+`a = {f:read}` and `b = {f:write}` it gives `a.union(b) = a` but `b.union(a) = b` — and a join in a
+fixpoint engine whose result depends on arrival order is a hazard that outlives the reason for adding it.
+
+The cost §6 was avoiding is bounded and small. `write` only ever grows within a merged slot, so a slot can
+signal "changed" on a label alone at most `|flat|` times over its whole life — the same order as the flat
+set's own signals, on a case (an accessor demanded by both a load and a store at one join) that is already
+rare. `union` and `intersect` therefore return the receiver exactly when both `flat` and `write` are
+unchanged, and `ExclusionSetTest` pins both directions, including the one allocation the split introduces.
+
+### `flat` is a property of `Concrete`, not a method on the interface
+
+§5 listed `fun flat(): PersistentSet<Accessor>` on `ExclusionSet`. All five direct readers are already
+inside an `is ExclusionSet.Concrete ->` branch, and `Universe` has no finite accessor set to return, so
+`flat` is a field on `Concrete` and the readers are a rename. `Concrete` is a plain class with a private
+constructor and a normalising `create` factory (§6), which is what enforces `write ⊆ flat` and maps the
+empty demand to `Empty`.
+
+### `contains(other)` and `subtract` are deleted
+
+§12 Q1's second option. Both had zero callers repo-wide, and §5 established that the requested
+`contains(other)` rule is strictly stronger than the subsumption order `union` induces — dead API whose
+semantics the split makes subtler is exactly what a future caller gets wrong.
+
+### The two §7 "must fix" defects
+
+- `MethodEdgesInitialToFinalCactusApSet.kt` **fixed**: it returned `null` — "nothing new" — whenever the
+  access was unchanged, discarding an exclusion-only change that it had already stored. It now matches
+  `MethodEdgesInitialToFinalTreeApSet`. No test selects `ApMode.Cactus`, so this is not covered
+  end-to-end.
+- `TreeInitialFactAbstraction.kt` **needed only the rename**. §7 called it a must-fix on the grounds that
+  it would drop the labels; §12 Q4 is the correct reading and contradicts it — that `IntOpenHashSet` is
+  the "which accessors have already been case-split" memo, and flat is the right key for it by
+  construction. Revisit only when a §10 consumer makes a read demand and a write demand into different
+  obligations.
+
+The other two §7 defects (`AccessGraph.kt:974-979`, `AccessTree.kt:415-433`) are untouched and still want
+filing.
+
+### Wire format
+
+`ExclusionSetType.CONCRETE_RW = 3`, written as two length-prefixed accessor lists (`flat`, then `write`).
+The enum is serialized by ordinal, so a pre-split `CONCRETE` blob still decodes — as an all-read demand.
+The read path no longer uses `reduce`, which threw on an empty list.
+
+Backward compatibility only goes one way, and §6 understated the other direction: `readEnum` is
+`enumConstants[read()]` (`serialization/Utils.kt:11`), so an **older** build meeting a `CONCRETE_RW` tag
+throws `ArrayIndexOutOfBoundsException` instead of invalidating the store. There is still no schema
+version to fix that properly. The mitigation is to keep the pre-split shape whenever `write` is empty —
+which is every demand the engine produces at five of the seven origins — so only content that genuinely
+needs the new shape can trip an old reader. `options.storeSummaries` defaults to `false` and is `false`
+at every call site found, so in practice no store exists to be tripped.
+
+### Testing
+
+`ExclusionSetTest` (27 cases) and `ExclusionSetSerializerTest` (5 cases) are new, in the module's own test
+source set. Together they pin flat preservation, the `===` contract in both directions, the incremental
+vs. from-scratch hash agreement, kind promotion in both merges, the disjointness invariant, and
+legacy-blob decoding.
+
+`InitialFactAbstractionTest` compiles and passes unchanged; a file-private `exclude(accessor)` helper
+supplies `READ` at its 51 call sites so the scenarios stay a read of the registry contract rather than a
+read/write census. One added scenario runs the hit and miss cases with a `WRITE` label, so the registry's
+kind-insensitivity (§12 Q4) is asserted rather than merely assumed.
+
+### The acceptance criterion, measured
+
+§2 and §8 name one exact criterion: tms must produce byte-identical results. It does.
+
+Both jars built from this worktree — baseline at `af1e4837c`, i.e. the tree before this change — and run
+through the CLI against the staged model at `opentaint-test/opentaint-test-tms/opentaint-project` with
+`--ruleset rules/ruleset --max-memory 8G`:
+
+| | findings | rule ids, messages, locations, full code flows | wall clock (3 alternating warm runs) |
+| --- | --- | --- | --- |
+| `af1e4837c` | 153 | — | 37 s, 37 s, 38 s |
+| this change | 153 | **identical, set-for-set** | 38 s, 38 s, 37 s |
+
+So the extra fact identities predicted above cost nothing measurable here, and no finding moved. (153
+rather than §8's 154 is baseline drift since the census — both runs agree.)
+
+**Not done: the Go `SequentRoundTrip` cases from §9.** The Go SSA server cannot be built in this
+environment (`buildGoServer` needs the network), so every Go dataflow test fails at initialisation
+regardless of this change. Adding cases that cannot be executed here would be worse than recording the
+gap. That blind spot — no Go test ever constructs a non-empty exclusion, so the §5 termination hazard has
+no test — is still open.

@@ -336,7 +336,7 @@ class AccessGraph(
         ExclusionSet.Empty -> this
         ExclusionSet.Universe -> if (initialNodeIsFinal()) manager.emptyGraph() else null
         is ExclusionSet.Concrete -> with(manager) {
-            filter(exclusionSet.set.toBitSet { it.idx })
+            filter(exclusionSet.flat.toBitSet { it.idx })
         }
     }
 

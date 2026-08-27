@@ -42,7 +42,8 @@ class FinalFactReader(
             position = position,
             onMismatch = { node, accessor ->
                 if (accessor != null && node.isAbstract()) {
-                    refinement = refinement.add(accessor)
+                    // A rule condition read a position that missed on an abstract node.
+                    refinement = refinement.addRead(accessor)
                 }
                 false
             },

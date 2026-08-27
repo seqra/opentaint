@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -94,7 +95,7 @@ object MethodFlowFunctionUtils {
 
     fun FinalFactAp.clearField(field: Accessor): FinalFactAp? = clearAccessor(field)
 
-    fun InitialFactAp.excludeField(field: Accessor) = exclude(field)
+    fun InitialFactAp.excludeField(field: Accessor, kind: ExclusionKind) = exclude(field, kind)
 
-    fun FinalFactAp.excludeField(field: Accessor) = exclude(field)
+    fun FinalFactAp.excludeField(field: Accessor, kind: ExclusionKind) = exclude(field, kind)
 }

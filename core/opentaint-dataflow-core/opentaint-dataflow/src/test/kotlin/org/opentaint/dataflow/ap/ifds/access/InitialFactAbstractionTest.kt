@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -111,6 +112,30 @@ abstract class InitialFactAbstractionTest {
         finalFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C, FIELD_C_D),
         expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
     )
+
+    @Test
+    fun `a write-labelled exclusion behaves exactly like a read-labelled one`() {
+        // The abstraction registry keys on the flat exclusion set, so the kind must make no
+        // difference to it. Every other scenario here goes through the READ helper; this is the one
+        // that says the choice was immaterial rather than merely untested.
+        runScenario(
+            "write-labelled exclusion hit on c returns a.b.c",
+            listOf(
+                initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_C, ExclusionKind.WRITE)
+            ),
+            finalFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C, FIELD_C_D),
+            expectedFacts = listOf(initialFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C))
+        )
+
+        runScenario(
+            "write-labelled exclusion miss on e returns empty",
+            listOf(
+                initialFact(AccessPathBase.This, FIELD_A_B).exclude(FIELD_B_E, ExclusionKind.WRITE)
+            ),
+            finalFact(AccessPathBase.This, FIELD_A_B, FIELD_B_C, FIELD_C_D),
+            expectedEmpty = true
+        )
+    }
 
     @Test
     fun `scenario 2 exclusion miss on e returns empty`() = runScenario(
@@ -498,6 +523,14 @@ abstract class InitialFactAbstractionTest {
             }",
         )
     }
+
+    /**
+     * These scenarios exercise the abstraction registry, which reads only the flat exclusion set, so
+     * the kind is immaterial here. Kept as a helper so the scenarios stay a pure read of the registry
+     * contract rather than a read/write census.
+     */
+    private fun InitialFactAp.exclude(accessor: Accessor): InitialFactAp =
+        exclude(accessor, ExclusionKind.READ)
 
     private fun initialFact(base: AccessPathBase, vararg accessors: Accessor): InitialFactAp {
         var fact = apManager.mostAbstractInitialAp(base)

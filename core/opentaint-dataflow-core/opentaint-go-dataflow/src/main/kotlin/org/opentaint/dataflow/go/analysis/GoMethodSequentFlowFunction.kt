@@ -3,6 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -61,7 +62,7 @@ class GoMethodSequentFlowFunction(
     private interface PropagationContext {
         fun unchanged()
         fun propagateFact(fact: FinalFactAp, trace: TraceInfo)
-        fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo)
+        fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, kind: ExclusionKind, trace: TraceInfo)
         fun sideEffect(effect: Sequent.SideEffect)
     }
 
@@ -237,7 +238,7 @@ class GoMethodSequentFlowFunction(
         if (currentFact.base != rhsAccess.base) return
 
         if (currentFact.isAbstract() && !currentFact.exclusions.contains(rhsAccess.accessor)) {
-            propagateFactWithAccessorExclude(currentFact, rhsAccess.accessor, TraceInfo.Flow)
+            propagateFactWithAccessorExclude(currentFact, rhsAccess.accessor, ExclusionKind.READ, TraceInfo.Flow)
 
             val nonAbstractFact = currentFact.removeAbstraction()
             if (nonAbstractFact != null) {
@@ -328,7 +329,7 @@ class GoMethodSequentFlowFunction(
         }
 
         if (currentFact.isAbstract() && !currentFact.exclusions.contains(accessor)) {
-            propagateFactWithAccessorExclude(currentFact, accessor, TraceInfo.Flow)
+            propagateFactWithAccessorExclude(currentFact, accessor, ExclusionKind.WRITE, TraceInfo.Flow)
 
             val nonAbstractFact = currentFact.removeAbstraction()
             if (nonAbstractFact != null) {
@@ -453,7 +454,12 @@ class GoMethodSequentFlowFunction(
             result.add(Sequent.ZeroToFact(fact, trace))
         }
 
-        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+        override fun propagateFactWithAccessorExclude(
+            fact: FinalFactAp,
+            accessor: Accessor,
+            kind: ExclusionKind,
+            trace: TraceInfo
+        ) {
             error("Zero to Fact edge can't be refined: $currentFactAp")
         }
     }
@@ -465,9 +471,14 @@ class GoMethodSequentFlowFunction(
             result.add(Sequent.FactToFact(initialFactAp, fact, trace))
         }
 
-        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
-            val refinedInitial = initialFactAp.exclude(accessor)
-            val refinedFact = fact.exclude(accessor)
+        override fun propagateFactWithAccessorExclude(
+            fact: FinalFactAp,
+            accessor: Accessor,
+            kind: ExclusionKind,
+            trace: TraceInfo
+        ) {
+            val refinedInitial = initialFactAp.exclude(accessor, kind)
+            val refinedFact = fact.exclude(accessor, kind)
             result.add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
 
             result.add(Sequent.SideEffectRequirement(refinedInitial))
@@ -482,7 +493,12 @@ class GoMethodSequentFlowFunction(
             result.add(Sequent.NDFactToFact(initialFacts, fact, trace))
         }
 
-        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+        override fun propagateFactWithAccessorExclude(
+            fact: FinalFactAp,
+            accessor: Accessor,
+            kind: ExclusionKind,
+            trace: TraceInfo
+        ) {
             error("NDF2F edge can't be refined: $currentFactAp")
         }
     }
@@ -502,8 +518,13 @@ class GoMethodSequentFlowFunction(
             base.propagateFact(fact.applyCommaOk(), trace)
         }
 
-        override fun propagateFactWithAccessorExclude(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
-            base.propagateFactWithAccessorExclude(fact.applyCommaOk(), accessor, trace)
+        override fun propagateFactWithAccessorExclude(
+            fact: FinalFactAp,
+            accessor: Accessor,
+            kind: ExclusionKind,
+            trace: TraceInfo
+        ) {
+            base.propagateFactWithAccessorExclude(fact.applyCommaOk(), accessor, kind, trace)
         }
     }
 }

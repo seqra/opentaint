@@ -8,6 +8,7 @@ import it.unimi.dsi.fastutil.ints.IntOpenHashSet
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
@@ -50,8 +51,8 @@ class AccessTree(
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         AccessTree(apManager, newBase, access, exclusions)
 
-    override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions.add(accessor))
+    override fun exclude(accessor: Accessor, kind: ExclusionKind): FinalFactAp =
+        AccessTree(apManager, base, access, exclusions.add(accessor, kind))
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
         AccessTree(apManager, base, access, exclusions)

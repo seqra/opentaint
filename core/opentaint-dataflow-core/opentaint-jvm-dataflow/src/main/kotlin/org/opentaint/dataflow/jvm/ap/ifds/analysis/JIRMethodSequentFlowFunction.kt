@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult
@@ -80,7 +81,7 @@ class JIRMethodSequentFlowFunction(
                 }
                 add(Sequent.ZeroToFact(fact, trace))
             },
-            propagateFactWithAccessorExclude = { _, _, _ ->
+            propagateFactWithAccessorExclude = { _, _, _, _ ->
                 error("Zero to Fact edge can't be refined: $currentFactAp")
             },
             sideEffect = { add(it) }
@@ -103,9 +104,9 @@ class JIRMethodSequentFlowFunction(
                 val refinedFact = refiner.refineFact(fact)
                 add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
             },
-            propagateFactWithAccessorExclude = { fact, accessor, trace ->
-                val refinedInitial = initialFactAp.excludeField(accessor)
-                val refinedFact = fact.excludeField(accessor)
+            propagateFactWithAccessorExclude = { fact, accessor, kind, trace ->
+                val refinedInitial = initialFactAp.excludeField(accessor, kind)
+                val refinedFact = fact.excludeField(accessor, kind)
                 add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
             },
             sideEffect = { add(it) }
@@ -129,7 +130,7 @@ class JIRMethodSequentFlowFunction(
                 }
                 add(Sequent.NDFactToFact(initialFacts, fact, trace))
             },
-            propagateFactWithAccessorExclude = { _, _, _ ->
+            propagateFactWithAccessorExclude = { _, _, _, _ ->
                 error("NDF2F edge can't be refined: $currentFactAp")
             },
             sideEffect = { add(it) }
@@ -142,7 +143,7 @@ class JIRMethodSequentFlowFunction(
         unchanged: () -> Unit,
         propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         propagateFactWithRefinement: (FactRefiner, FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, ExclusionKind, TraceInfo) -> Unit,
         sideEffect: (Sequent.SideEffect) -> Unit
     ) {
         when (currentInst) {
@@ -151,7 +152,7 @@ class JIRMethodSequentFlowFunction(
                     currentInst.rhv, currentInst.lhv, factAp,
                     unchanged,
                     { propagateFact(it, TraceInfo.Flow) },
-                    { f, a -> propagateFactWithAccessorExclude(f, a, TraceInfo.Flow) }
+                    { f, a, k -> propagateFactWithAccessorExclude(f, a, k, TraceInfo.Flow) }
                 )
             }
 
@@ -232,7 +233,7 @@ class JIRMethodSequentFlowFunction(
         currentFactAp: FinalFactAp,
         unchanged: () -> Unit,
         propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, ExclusionKind) -> Unit
     ) {
         var fact = currentFactAp
 
@@ -288,14 +289,16 @@ class JIRMethodSequentFlowFunction(
                 check(assignToAccess !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $assignTo = $assignFrom" }
                 fieldRead(
                     assignToAccess.base, assignFromAccess, fact,
-                    onUnchanged, propagateFact, propagateFactWithAccessorExclude
+                    onUnchanged, propagateFact,
+                    { f, a -> propagateFactWithAccessorExclude(f, a, ExclusionKind.READ) }
                 )
             }
 
             assignToAccess is MethodFlowFunctionUtils.MemoryAccess -> {
                 fieldWrite(
                     assignToAccess, assignFromAccess?.base, fact,
-                    onUnchanged, propagateFact, propagateFactWithAccessorExclude
+                    onUnchanged, propagateFact,
+                    { f, a -> propagateFactWithAccessorExclude(f, a, ExclusionKind.WRITE) }
                 )
             }
 

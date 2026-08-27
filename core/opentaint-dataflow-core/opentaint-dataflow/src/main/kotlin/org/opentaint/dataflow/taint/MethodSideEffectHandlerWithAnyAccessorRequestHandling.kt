@@ -62,7 +62,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
         if (relevantStartAccessors.isEmpty()) return
 
-        val exclusion = relevantStartAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
+        val exclusion = relevantStartAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::addRead)
         val sideEffectRequirement = request.fact.replaceExclusions(exclusion)
         runner.manager.handleCrossUnitSideEffectReq(request.method, sideEffectRequirement)
     }

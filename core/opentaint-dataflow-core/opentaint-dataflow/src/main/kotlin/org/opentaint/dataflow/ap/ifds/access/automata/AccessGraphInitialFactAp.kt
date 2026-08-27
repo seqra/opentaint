@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.access.automata
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionKind
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -28,9 +29,9 @@ data class AccessGraphInitialFactAp(
     override fun isAbstract(): Boolean =
         exclusions !is ExclusionSet.Universe && access.initialNodeIsFinal()
 
-    override fun exclude(accessor: Accessor): InitialFactAp {
+    override fun exclude(accessor: Accessor, kind: ExclusionKind): InitialFactAp {
         check(accessor !is AnyAccessor)
-        return AccessGraphInitialFactAp(base, access, exclusions.add(accessor))
+        return AccessGraphInitialFactAp(base, access, exclusions.add(accessor, kind))
     }
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
