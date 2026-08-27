@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
+import org.opentaint.dataflow.ap.ifds.EdgeStoreDiagnostics
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.createNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
@@ -225,7 +226,10 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
     }
 
     open fun getOrCreateChild(accessor: AccessorIdx): S =
-        children.getOrCreateNullable(accessor) { createStorage() }
+        children.getOrCreateNullable(accessor) {
+            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.premiseTrieNodes.incrementAndGet()
+            createStorage()
+        }
 
     open fun findChild(accessor: AccessorIdx): S? =
         children.get(accessor)

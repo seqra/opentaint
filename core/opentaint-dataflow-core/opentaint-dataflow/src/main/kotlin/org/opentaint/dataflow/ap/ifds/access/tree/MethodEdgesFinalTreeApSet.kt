@@ -47,6 +47,7 @@ class MethodEdgesFinalTreeApSet(
             if (EdgeStoreDiagnostics.enabled) {
                 EdgeStoreDiagnostics.recordMerge(factSet.size, mergedFacts.size)
                 EdgeStoreDiagnostics.recordRootBreadth(mergedFacts.accessorCount())
+                EdgeStoreDiagnostics.recordBigFact(mergedFacts)
             }
             edges[factSetIdx] = internIfRequired(mergedFacts)
             intern(factSetIdx)

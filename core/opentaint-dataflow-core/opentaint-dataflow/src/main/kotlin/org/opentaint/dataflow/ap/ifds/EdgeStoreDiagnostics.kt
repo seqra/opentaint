@@ -410,6 +410,120 @@ object EdgeStoreDiagnostics {
         }
     }
 
+    /* ---------- what the store actually holds: premise trie nodes, and the biggest facts ---------- */
+
+    /**
+     * Nodes created in the PREMISE trie, i.e. how many distinct access paths the store keys on.
+     *
+     * The question this exists for is "is the explosion in the number of premises or in the size of
+     * the facts hanging off them", which no existing counter answers: [slotsOpened] counts
+     * (premise, statement) SLOTS and [storeMass] their fact mass, so both move when either half
+     * grows.
+     */
+    val premiseTrieNodes = AtomicLong()
+
+    private const val BIG_FACT_SLOTS = 6
+    private const val BIG_FACT_MIN_PATHS = 512L
+
+    private val bigFactLock = Any()
+    private val bigFactPaths = LongArray(BIG_FACT_SLOTS)
+    private val bigFactText = arrayOfNulls<String>(BIG_FACT_SLOTS)
+
+    /**
+     * A hall of fame of the largest stored facts, summarised STRUCTURALLY rather than printed.
+     *
+     * `AccessNode.print` emits one line per root-to-leaf PATH, so rendering a fact whose `size` is
+     * seven figures would emit seven figures of lines. [summariseFact] instead reports the shape:
+     * the per-level node and `[any]` census, the branching, and a bounded BFS sample of actual
+     * paths -- which is what a reader needs to answer "what do these facts look like, and where is
+     * the `[any]`".
+     *
+     * Summarising happens only when a fact displaces the smallest entry, so the cost is paid a few
+     * dozen times per run rather than per merge.
+     */
+    fun recordBigFact(node: AccessTree.AccessNode) {
+        val paths = node.size
+        if (paths < BIG_FACT_MIN_PATHS) return
+        synchronized(bigFactLock) {
+            var victim = 0
+            for (i in 0 until BIG_FACT_SLOTS) {
+                if (bigFactText[i] == null) { victim = i; break }
+                if (bigFactPaths[i] < bigFactPaths[victim]) victim = i
+            }
+            if (bigFactText[victim] != null && bigFactPaths[victim] >= paths) return
+            bigFactPaths[victim] = paths
+            bigFactText[victim] = summariseFact(node)
+        }
+    }
+
+    private const val SUMMARY_MAX_LEVELS = 12
+    private const val SUMMARY_MAX_VISITS = 200_000
+    private const val SUMMARY_SAMPLE_PATHS = 10
+
+    private fun summariseFact(root: AccessTree.AccessNode): String {
+        val manager = root.manager
+        val levelNodes = IntArray(SUMMARY_MAX_LEVELS)
+        val levelWithAny = IntArray(SUMMARY_MAX_LEVELS)
+        val levelAnyEdges = IntArray(SUMMARY_MAX_LEVELS)
+        val levelCoveredEdges = IntArray(SUMMARY_MAX_LEVELS)
+        val levelMarkEdges = IntArray(SUMMARY_MAX_LEVELS)
+        val samples = ArrayList<String>()
+        var visits = 0
+        var truncated = false
+        var deepest = ""
+        var deepestLen = -1
+
+        // BFS over DISTINCT nodes: the structure is a DAG and a path walk would re-enumerate the
+        // shared subtrees that are the whole reason `size` and `countNodes` diverge.
+        val seen = java.util.IdentityHashMap<AccessTree.AccessNode, Unit>()
+        var frontier = ArrayList<Pair<AccessTree.AccessNode, String>>()
+        frontier.add(root to "")
+        var level = 0
+        while (frontier.isNotEmpty() && level < SUMMARY_MAX_LEVELS) {
+            val next = ArrayList<Pair<AccessTree.AccessNode, String>>()
+            for ((node, path) in frontier) {
+                if (visits++ > SUMMARY_MAX_VISITS) { truncated = true; break }
+                if (seen.put(node, Unit) != null) continue
+                levelNodes[level]++
+                if (node.containsAnyAccessor()) levelWithAny[level]++
+                if ((node.isAbstract || node.isFinal) && samples.size < SUMMARY_SAMPLE_PATHS) {
+                    samples.add(path + if (node.isFinal) "$" else "/*")
+                }
+                if (path.length > deepestLen) { deepestLen = path.length; deepest = path }
+                node.forEachAccessor { idx, child ->
+                    when {
+                        idx == ANY_ACCESSOR_IDX -> levelAnyEdges[level]++
+                        manager.isCoveredByAny(idx) -> levelCoveredEdges[level]++
+                        else -> levelMarkEdges[level]++
+                    }
+                    if (next.size < 20_000) next.add(child to (path + with(manager) { idx.accessor }.toSuffix()))
+                }
+            }
+            frontier = next
+            level++
+        }
+
+        return buildString {
+            append("paths=").append(root.size)
+            append(" nodes=").append(root.countNodes())
+            append(" maxDepth=").append(root.maxDepth)
+            append(" rootBreadth=").append(root.accessorCount())
+            if (truncated) append(" TRUNCATED")
+            appendLine()
+            append("      levels (depth: nodes/withAny  edges any,covered,other): ")
+            for (d in 0 until minOf(level, SUMMARY_MAX_LEVELS)) {
+                if (levelNodes[d] == 0) continue
+                append("d").append(d).append(":").append(levelNodes[d]).append("/").append(levelWithAny[d])
+                append(" ").append(levelAnyEdges[d]).append(",").append(levelCoveredEdges[d])
+                append(",").append(levelMarkEdges[d]).append("  ")
+            }
+            appendLine()
+            append("      sample paths: ").append(samples.joinToString(" | "))
+            appendLine()
+            append("      deepest sampled prefix: ").append(deepest)
+        }
+    }
+
     fun recordSlotOpened(nodes: Long) {
         slotsOpened.incrementAndGet()
         storeMass.addAndGet(nodes)
@@ -527,6 +641,14 @@ object EdgeStoreDiagnostics {
             "edgeStore siblingAbsorb folded=" + siblingsAbsorbed.get() +
                 " mass=" + siblingAbsorbedMass.get()
         )
+        appendLine("edgeStore premiseTrieNodes=" + premiseTrieNodes.get())
+        synchronized(bigFactLock) {
+            val order = (0 until BIG_FACT_SLOTS).filter { bigFactText[it] != null }
+                .sortedByDescending { bigFactPaths[it] }
+            for ((rank, i) in order.withIndex()) {
+                appendLine("edgeStore bigFact #" + (rank + 1) + " " + bigFactText[i])
+            }
+        }
         appendLine(
             "edgeStore foldCensus calls=" + foldCalls.get() +
                 " callsWithAny=" + foldCallsWithAny.get() +
