@@ -41,10 +41,11 @@ abstract class ProjectAnalyzerBase<
 
     fun Ctx.runAnalyzerWithTraceResolver(
         analyzer: TaintAnalyzer<Method, Stmt>,
-        entryPoints: List<Method>
+        entryPoints: List<Method>,
+        prescanRoots: List<Method> = entryPoints,
     ): AnalysisResult = analyzer.use { analyzer ->
         logger.info { "Start IFDS analysis for project: ${project.sourceRoot()}" }
-        val (traces, status) = analyzer.analyzeWithIfds(entryPoints)
+        val (traces, status) = analyzer.analyzeWithIfds(entryPoints, prescanRoots)
         logger.info { "Finish IFDS analysis for project: ${project.sourceRoot()}" }
 
         var result = AnalysisResult(status, traces)

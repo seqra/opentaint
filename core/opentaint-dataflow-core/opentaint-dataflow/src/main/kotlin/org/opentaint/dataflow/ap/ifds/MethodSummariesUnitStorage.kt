@@ -86,9 +86,9 @@ open class MethodSummariesUnitStorage(
         return methodStorage.factNDEdges(finalFactBase)
     }
 
-    fun addSummaryEdges(initialStatement: MethodEntryPoint, edges: List<Edge>) {
+    fun addSummaryEdges(initialStatement: MethodEntryPoint, edges: List<Edge>): List<Edge> {
         val methodStorage = methodSummaryEdges(initialStatement)
-        methodStorage.addEdges(edges)
+        return methodStorage.addEdges(edges)
     }
 
     fun methodSideEffectRequirements(

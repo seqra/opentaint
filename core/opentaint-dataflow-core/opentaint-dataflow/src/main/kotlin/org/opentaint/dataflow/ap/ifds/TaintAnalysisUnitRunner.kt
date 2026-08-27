@@ -170,6 +170,11 @@ class TaintAnalysisUnitRunner(
         addUnprocessedEvent(ExternalInputFact.InputZero(methodEntryPoint))
     }
 
+    override fun submitExternalInitialZeroToFacts(methodEntryPoint: MethodEntryPoint, factAps: List<FinalFactAp>) {
+        if (factAps.isEmpty()) return
+        addUnprocessedEvent(ExternalInputFact.InputZeroToFacts(methodEntryPoint, factAps))
+    }
+
     override fun submitExternalInitialFact(methodEntryPoint: MethodEntryPoint, factAp: FinalFactAp) {
         addUnprocessedEvent(ExternalInputFact.InputFact(methodEntryPoint, factAp))
     }
@@ -182,6 +187,9 @@ class TaintAnalysisUnitRunner(
         val methodEntryPoint: MethodEntryPoint
 
         data class InputZero(override val methodEntryPoint: MethodEntryPoint) : ExternalInputFact
+
+        data class InputZeroToFacts(override val methodEntryPoint: MethodEntryPoint, val factAps: List<FinalFactAp>) :
+            ExternalInputFact
 
         data class InputFact(override val methodEntryPoint: MethodEntryPoint, val factAp: FinalFactAp) :
             ExternalInputFact
@@ -288,6 +296,8 @@ class TaintAnalysisUnitRunner(
             val methodAnalyzers = methodAnalyzers(methodEntryPoint)
             methodAnalyzers.add(this, methodEntryPoint)
 
+            manager.methodEntryPointActivated(methodEntryPoint)
+
             methodAnalyzers.getAnalyzer(methodEntryPoint).addInitialZeroFact()
         }
     }
@@ -296,6 +306,9 @@ class TaintAnalysisUnitRunner(
         when (event) {
             is ExternalInputFact.InputFact -> submitMethodInitialFact(event.methodEntryPoint, event.factAp)
             is ExternalInputFact.InputZero -> submitMethodInitialZeroFact(event.methodEntryPoint)
+            is ExternalInputFact.InputZeroToFacts -> event.factAps.forEach { factAp ->
+                submitMethodInitialZeroToFact(event.methodEntryPoint, factAp)
+            }
             is ExternalInputFact.SideEffectReq -> triggerMethodSideEffectReq(event.methodEntryPoint, event.sre)
         }
     }
@@ -303,6 +316,12 @@ class TaintAnalysisUnitRunner(
     private fun submitMethodInitialZeroFact(methodEntryPoint: MethodEntryPoint) {
         submitMethodInitialFact(methodEntryPoint) {
             it.addInitialZeroFact()
+        }
+    }
+
+    private fun submitMethodInitialZeroToFact(methodEntryPoint: MethodEntryPoint, factAp: FinalFactAp) {
+        submitMethodInitialFact(methodEntryPoint) {
+            it.addInitialZeroToFact(factAp)
         }
     }
 
@@ -321,6 +340,8 @@ class TaintAnalysisUnitRunner(
     private inline fun submitMethodInitialFact(methodEntryPoint: MethodEntryPoint, body: (MethodAnalyzer) -> Unit) {
         val methodRunner = methodAnalyzers(methodEntryPoint)
         methodRunner.add(this, methodEntryPoint)
+
+        manager.methodEntryPointActivated(methodEntryPoint)
 
         val analyzer = methodRunner.getAnalyzer(methodEntryPoint)
         body(analyzer)

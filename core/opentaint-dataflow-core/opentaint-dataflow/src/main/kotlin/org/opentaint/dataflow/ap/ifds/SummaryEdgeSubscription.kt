@@ -768,7 +768,7 @@ class SummaryEdgeStorageWithSubscribers(
         subscribers.clear()
     }
 
-    fun addEdges(edges: List<Edge>) {
+    fun addEdges(edges: List<Edge>): List<Edge> {
         val addedEdges = mutableListOf<Edge>()
         val zeroToZeroEdges = mutableListOf<Edge.ZeroToZero>()
         val zeroToFactEdges = mutableListOf<Edge.ZeroToFact>()
@@ -789,10 +789,11 @@ class SummaryEdgeStorageWithSubscribers(
         addFactToFactEdges(factToFactEdges, addedEdges)
         addNDFactToFactEdges(ndFactToFactEdges, addedEdges)
 
-        if (addedEdges.isEmpty()) return
+        if (addedEdges.isEmpty()) return emptyList()
         for (subscriber in subscribers) {
             subscriber.newSummaryEdges(addedEdges)
         }
+        return addedEdges
     }
 
     fun getSummaries(): MethodEntryPointSummaries {

@@ -39,6 +39,8 @@ interface MethodAnalyzer {
 
     fun addInitialZeroFact()
 
+    fun addInitialZeroToFact(factAp: FinalFactAp)
+
     fun addInitialFact(factAp: FinalFactAp)
 
     fun triggerSideEffectRequirement(sideEffectRequirement: InitialFactAp)
@@ -258,6 +260,10 @@ class NormalMethodAnalyzer(
                 }
             }
         }
+    }
+
+    override fun addInitialZeroToFact(factAp: FinalFactAp) {
+        addInitialZeroToFactEdge(factAp)
     }
 
     override fun addInitialFact(factAp: FinalFactAp) {
@@ -1410,6 +1416,13 @@ class EmptyMethodAnalyzer(
         }
     }
 
+    override fun addInitialZeroToFact(factAp: FinalFactAp) {
+        runner.addNewSummaryEdges(
+            methodEntryPoint,
+            listOf(ZeroToFact(methodEntryPoint, methodEntryPoint.statement, factAp))
+        )
+    }
+
     override fun addInitialFact(factAp: FinalFactAp) {
         addSummary(factAp.base)
     }
@@ -1661,6 +1674,13 @@ class TimedMethodAnalyzer(
         category = OpCategory.OTHER,
     ) {
         base.addInitialZeroFact()
+    }
+
+    override fun addInitialZeroToFact(factAp: FinalFactAp) = timeOperation(
+        operation = "addInitialZeroToFact",
+        category = OpCategory.OTHER,
+    ) {
+        base.addInitialZeroToFact(factAp)
     }
 
     override fun addInitialFact(factAp: FinalFactAp) = timeOperation(

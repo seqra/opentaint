@@ -4,6 +4,8 @@ import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
@@ -45,6 +47,7 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -63,6 +66,20 @@ class JIRAnalysisManager(
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
+
+    override val prescanPropagationPolicy: PrescanPropagationPolicy = object : PrescanPropagationPolicy {
+        override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (!jirMethod.isConstructor) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+        }
+
+        override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+        }
+    }
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),

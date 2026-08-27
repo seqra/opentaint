@@ -16,6 +16,9 @@ interface TaintAnalysisManager : AnalysisManager {
 
     fun selectPhase(phase: Phase)
 
+    val prescanPropagationPolicy: PrescanPropagationPolicy
+        get() = PrescanPropagationPolicy.None
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,
