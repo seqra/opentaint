@@ -270,6 +270,57 @@ so the split reads as a backend difference rather than a suppression.
 
 ---
 
+## 5b. Result on conductor — a REGRESSION, and the reason
+
+Measured 2026-08-27, one jar, `literalAnyMatch` on vs off, frontier flags
+(`L=100`, `rescore`, `bfs`), conductor single-entry-point / single-rule, 8 GB, 300 s IFDS budget,
+two replicates each, `foreign_overlap 0%`.
+
+| arm | rc | wall | events | stop | `Total vulnerabilities` | SARIF |
+|---|---|---:|---:|---|---:|---:|
+| literal (r1, r2) | 253 | 138.0 s / 140.3 s | 670,745 / 664,018 | **low memory** | 2 | **1** |
+| old reader (r1, r2) | 254 | 269.2 s / 268.7 s | 2,332,148 / 2,347,576 | clock | 2 | 2 |
+
+**3.5x fewer events before dying, and the failure mode moves from the clock to memory.** Both arms
+still derive `Total vulnerabilities: 2`, but the literal arm dies before trace reconstruction
+finishes and reports **one** SARIF finding instead of two in both clean replicates — and a finding
+without a trace is dropped outright.
+
+The diagnostics arms say why, and it is not subtle:
+
+| | old reader | literal |
+|---|---:|---:|
+| TIFA `walkStates` | 48,365,169 | **562,260** |
+| R4 virtual descents | 24,984,408 | 7,904 |
+| R3c premises (suppressed count) | 26,210 | 217,989 |
+| arrivals carrying `[any]` | 402 of 1,510,161 (0.03%) | **35,634 of 153,475 (23%)** |
+| arriving node mass, `[any]` / concrete | 11,172 / 75,077,196 | **14,691,622 / 3,394,756** |
+
+**The ladder was not only a cost — it was a converter.** R3c/R4 turned `[any]`-carrying facts into
+concrete ones on arrival, which is why `[any]` was 0.03% of arrivals and 0.01% of mass in every
+earlier census. Remove it and `[any]` facts survive and propagate: 23% of arrivals, and **4.3x more
+node mass than every concrete arrival combined**. TIFA's own cost falls 86x and the engine pays for
+it many times over downstream.
+
+This is the recorded warning, and it should have been weighted harder in §2.5: *"shrinking the
+premise set is safe; coarsening the FACT is not."* The design shrank the premise set by coarsening
+the fact.
+
+**The obvious remedy is closed.** `-Dopentaint.anyTrimAbstract=true` — the `f.* ⊆ [any].*`
+subsumption that is denotationally EXACT and ships off — becomes relevant for the first time now
+that `[any]` facts dominate. With it the literal arm **converges in 43.7 s, rc=0** … and reports
+`Total vulnerabilities: 0`. Folding `f.![m]` into `[any].*` keeps the denotation and destroys the
+NAMING, which is exactly what R3b exists to preserve. Same shape as the type-vacuity ablation of
+2026-08-26: the steps carrying the volume carry the signal.
+
+**Status.** The rule is correct, the invariant holds, the unit gate is clean (3491/2, both
+pre-existing) and the 688-test rule-level suite is byte-identical across all three arms. But it must
+**not** be adopted as the frontier default until the `[any]`-fact mass it creates is bounded. The
+default is left on so the suite pins one coherent semantics; the harness selects the shipped
+behaviour with `-Dopentaint.literalAnyMatch=false`.
+
+---
+
 ## 6. Open
 
 1. `absorbBeyondAnyEntries` short-circuits on the `[any]` manager being enabled, yet it is a pure
