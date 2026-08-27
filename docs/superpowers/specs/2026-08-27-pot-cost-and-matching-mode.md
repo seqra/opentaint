@@ -221,3 +221,149 @@ pre-existing and unrelated.
 Still not fixed: the fresh memo per top-level call and the `k` suffix-matcher rebuilds over a growing
 subtree. Accumulating the siblings and merging once into the `[any]` child removes the quadratic term
 and is the right moment to thread one memo through the loop.
+
+---
+
+## 6. Why the fold does nothing under the denotational reader
+
+§4 said "the two modes do not share a fact population" and attributed it to the R3c/R4 ladder. That
+was the right shape of answer and it was not established — it was inferred from an earlier census.
+This section establishes it, from the fold's own decision point and from a controlled 2×2, and
+corrects the mechanism.
+
+### 6.1 The fold's census, counted where the decision is made
+
+`folded = 19` is on its own consistent with three different worlds: no `[any]` ever reaches the
+store; `[any]` arrives but never beside a covered edge; or the pass never walks those nodes. Five
+counters at `AccessTree.kt`'s `anyIdx < 0 || !hasCovered` test separate them
+(`edgeStore foldCensus`, under `-Dopentaint.edgeCensus=true`). These count the exact population the
+pass walks — not a sample.
+
+| | literal | **denotational** | mixed: den. reader, literal premises |
+|---|---:|---:|---:|
+| store merges the fold was called on | 118,926 | 1,629,405 | 175,536 |
+| … carrying an `[any]` **anywhere** | 62,010 — **52%** | 778 — **0.048%** | 114,926 — 65% |
+| node visits | 3,659,291 | 46,828,994 | 10,714,706 |
+| … at a node **owning** an `[any]` | 1,375,619 — **38%** | 6,384 — **0.014%** | 6,719,347 — 63% |
+| … of those, with a covered sibling — **the fold fires** | 374,875 — 27.2% | **13** — 0.20% | 1,920,736 — 28.6% |
+| … with siblings, all UNCOVERED | **0** | **0** | **0** |
+| … `[any]` alone, nothing beside it | 1,000,744 — 73% | 6,371 — 99.8% | 4,798,611 — 71% |
+| folded | 886,394 | **24** | 4,394,763 |
+
+**The answer is the second row: there is nothing to fold.** Under the denotational reader an `[any]`
+appears anywhere in fewer than one store merge in two thousand, and owns a node in one visit in seven
+thousand. Under literal matching it is the dominant fact shape.
+
+Two things fall out that were not being looked for:
+
+- **`uncoveredOnly = 0` in every arm.** When an `[any]` does have siblings they are *always* covered.
+  The fold's coverage test never declines a node it reached, so nothing is being refused for the
+  wrong reason — the only question is ever whether the node was reachable at all.
+- **The conditional probability collapses too, by a further 133×** (27.2% → 0.20%), on top of the
+  2,760× density collapse. That has a mechanism: the sibling shape is a **collision**. Nothing builds
+  it at a single node — `createAnyEdge` emits `accessors = intArrayOf(ANY_ACCESSOR_IDX)`, and
+  `installAbove`'s non-absorbing arm emits `createRaw(accessor, this, anyState)`; both are single-edge
+  nodes, which is why 71–99.8% of `[any]`-owning nodes are ALONE in every mode. `N{f → T, [any] → S}`
+  exists only where two facts MEET at one store slot and `mergeAccessorsRaw` unions their arrays,
+  where the graft merges a delta root beside an existing `[any]`, or where `absorbBeyondAnyEntries`
+  splits a chain `f.[any].S` into two same-level entries. Collisions scale with density, so a
+  thinner population loses the shape faster than linearly.
+
+*(The absolute `folded` figure is run-variant — two runs of the identical literal arm gave 528,602
+and 886,394. The census shares are stable, and the ratio to the denotational arm is four orders of
+magnitude in both.)*
+
+### 6.2 It is the PREMISES, not the reader — a controlled 2×2
+
+`literalAnyMatch` moves two independent things at once. Split them:
+
+| | reader | premises (R3c/R4) | merges carrying `[any]` | `[any]`-owning nodes | fold fires |
+|---|---|---|---:|---:|---:|
+| `f-lit` | literal | literal | **52%** | **38%** | 374,875 |
+| `f-mix` | **denotational** | literal | **65%** | **63%** | 1,920,736 |
+| `f-den` | denotational | **denotational** | 0.048% | 0.014% | 13 |
+| `f-prem` | literal | **denotational** | 0.019% | 0.0016% | **0** |
+
+> The table separates on the PREMISES column and not on the READER column. Both literal-premises arms
+> are `[any]`-rich whatever the reader; both denotational-premises arms are barren whatever the
+> reader. The reader is not the cause.
+
+`f-mix` is the load-bearing cell: it runs the *same* synthesising `getChild` as `f-den` and differs
+only in `TreeInitialFactAbstraction`'s R3c/R4, and its `[any]` density is 63% — higher than the
+shipped literal arm's 38%. `f-prem` is the reciprocal and is the most extreme cell in the table: the
+literal reader with the ladder switched back on folds **zero** times in a whole run.
+
+### 6.3 The mechanism, corrected: the ladder does not convert, it out-populates
+
+My §4 wording — "the ladder concretises" — was wrong in mechanism. TIFA never materialises an
+accessor into a fact; R1 says so outright. What R3c/R4 do is emit **(premise, entry-fact) pairs**
+built from the same reversed chain, which becomes the callee's seed edge. So the emitted chain's
+shape *is* the entry fact's shape:
+
+- **R3a** appends `ANY_ACCESSOR_IDX` → entry fact `p.[any].*`, `[any]`-carrying.
+- **R3c** appends a concrete covered accessor the fact reaches only through its `[any]` → `p.a.*`,
+  no `[any]` link at all.
+- **R4** descends *through* the synthesis term with a concrete prefix, so everything emitted beneath
+  it is concrete too.
+
+Under literal matching `dropR3c`/`dropR4` bail before emission and R3a's `p.[any]` is the only answer
+to a covered demand. Under denotational premises the concrete rungs run and **drown it** — the
+`[any]` facts are not converted, they are out-numbered.
+
+### 6.4 A unit-level probe, which refuted the obvious sub-hypothesis
+
+The natural guess is that the difference is one of *shape*: the denotational reader reinstalls the
+`[any]` BELOW the synthesised accessor (`a.[any]…`), so the `[any]` and the covered accessor are
+never siblings. `AnyPositionAfterMatchTest` (10 tests, both manager arms) tests it and **refutes it**:
+
+- The chain is real — `filterStartsWith(this.f)` on `this.[any].*` gives `.f.[any]/*`, no sibling.
+- **But it does not survive the writeback.** The edge store merges that result into the stored tree,
+  which still holds the `[any]` the match was read *through*, giving `.f.[any]/* .[any]/*` — the fold
+  shape verbatim, and the fold fires.
+- Under literal matching the same premise is simply **refused** — `delta` returns empty,
+  `filterStartsWith` returns null — so nothing is written back and no shape is created at all.
+- Counting fold-rewritable stores after one round trip: **literal 0, denotational 3.** Per operation
+  the sign is the *opposite* of production.
+
+So the position of the `[any]` after a match is struck off the candidate list, and the fold itself is
+mode-blind: given byte-identical trees it produces byte-identical results in both modes.
+
+### 6.5 The other axis: the reader is what drives the unroll MANAGER
+
+The same four cells, on the manager rather than the store:
+
+| reader | premises | `anyUnroll` reads | transitions | `maxPotTotal` (`L = 100`) | prepend absorptions |
+|---|---|---:|---:|---:|---:|
+| literal | literal | 3,846 | 362 | 209 | **12** |
+| literal | denotational | **4** | **2** | **2** | **0** |
+| denotational | literal | 55,445 | 368 | **462** | 32,129 |
+| denotational | denotational | 49,323 | 916 | 117 | **59,653** |
+
+**This 2×2 separates on the READER column** — the mirror image of §6.2, which separates on the
+premises column. One reason: `getChild`'s synthesis arm is the call site that spends the pot, and
+literal matching deletes it. Under the shipped reader the manager reads a few thousand times in an
+entire run and its budget never binds — which is the retroactive explanation for §3, where correcting
+the cost function changed nothing on conductor. **The shipped mode had already removed the caller
+that spends the budget.** The second row is the degenerate corner: the literal reader makes no
+synthesis calls *and* the ladder leaves no `[any]` facts to make them about, so the whole manager
+executes 4 reads and 2 transitions in a 270-second run.
+
+The symmetry is exact and worth stating plainly:
+
+> Each of the two `[any]` compression mechanisms is active in the mode where it is useless. The
+> manager's absorbing prepend fires 12 times under the literal reader and 59,653 times under the
+> denotational one; the sibling fold fires ~10⁶ times under literal premises and 13 under
+> denotational ones. Neither ever has both its material and its soundness at once.
+
+### 6.6 What this settles
+
+Absorption is not "unsound in one mode and sound in another". It is a compression **of a shape that
+only one mode produces**, and that mode is the one whose premise emission reads literal edges:
+
+1. Its material — `[any]`-carrying facts — exists only because R3c/R4 are off.
+2. R3c/R4 being off is exactly what makes premise emission depend on the fact's literal edges.
+3. The fold deletes literal edges.
+
+Its material and its blocker are the same switch, so no setting of the existing options makes it both
+fire and preserve premises. The open design question is unchanged and is now the only route:
+**record the names R2/R3b need somewhere the fold does not touch.**

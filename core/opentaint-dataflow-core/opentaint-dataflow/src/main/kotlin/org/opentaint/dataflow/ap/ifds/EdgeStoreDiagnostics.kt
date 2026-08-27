@@ -297,6 +297,52 @@ object EdgeStoreDiagnostics {
         siblingAbsorbedMass.addAndGet(mass)
     }
 
+    /* ---------- why the fold does or does not fire, on the population it actually walks ---------- */
+
+    /**
+     * The fold's own census, counted at its decision point rather than by a sampler.
+     *
+     * `folded = 19` on one arm and `528,602` on another is not by itself a mechanism: it is
+     * consistent with "no `[any]` ever reaches the store", with "`[any]` arrives but never beside a
+     * covered edge", and with "the pass never walks those nodes". These five counters separate all
+     * three, and they are counted where the decision is made, so they describe exactly the node
+     * population the fold sees.
+     */
+    val foldCalls = AtomicLong()
+
+    /** Of [foldCalls], how many were handed a fact carrying an `[any]` ANYWHERE in it. */
+    val foldCallsWithAny = AtomicLong()
+
+    val foldVisits = AtomicLong()
+
+    /** Node visits where the node itself owns an `[any]` edge. Splits into the three below. */
+    val foldNodesWithAny = AtomicLong()
+
+    /** ... and holds at least one COVERED sibling: the shape the fold rewrites. */
+    val foldAnyWithCovered = AtomicLong()
+
+    /** ... and holds siblings, but every one of them is UNCOVERED (mark, static, type-info). */
+    val foldAnyUncoveredOnly = AtomicLong()
+
+    /** ... and the `[any]` is its only edge, so there is nothing beside it to absorb. */
+    val foldAnyAlone = AtomicLong()
+
+    fun recordFoldCall(containsAny: Boolean) {
+        foldCalls.incrementAndGet()
+        if (containsAny) foldCallsWithAny.incrementAndGet()
+    }
+
+    fun recordFoldVisit(hasAny: Boolean, hasCovered: Boolean, siblings: Int) {
+        foldVisits.incrementAndGet()
+        if (!hasAny) return
+        foldNodesWithAny.incrementAndGet()
+        when {
+            hasCovered -> foldAnyWithCovered.incrementAndGet()
+            siblings == 0 -> foldAnyAlone.incrementAndGet()
+            else -> foldAnyUncoveredOnly.incrementAndGet()
+        }
+    }
+
     fun censusShouldSample(): Boolean =
         enabled && censusCounter.incrementAndGet() % CENSUS_RATE == 0L
 
@@ -480,6 +526,17 @@ object EdgeStoreDiagnostics {
         appendLine(
             "edgeStore siblingAbsorb folded=" + siblingsAbsorbed.get() +
                 " mass=" + siblingAbsorbedMass.get()
+        )
+        appendLine(
+            "edgeStore foldCensus calls=" + foldCalls.get() +
+                " callsWithAny=" + foldCallsWithAny.get() +
+                " share=" + ratio(foldCallsWithAny.get(), foldCalls.get()) +
+                " | visits=" + foldVisits.get() +
+                " nodesWithAny=" + foldNodesWithAny.get() +
+                " share=" + ratio(foldNodesWithAny.get(), foldVisits.get()) +
+                " | withCovered=" + foldAnyWithCovered.get() +
+                " uncoveredOnly=" + foldAnyUncoveredOnly.get() +
+                " alone=" + foldAnyAlone.get()
         )
         appendLine(
             "edgeStore selfSubsume facts=" + censusFacts.get() +

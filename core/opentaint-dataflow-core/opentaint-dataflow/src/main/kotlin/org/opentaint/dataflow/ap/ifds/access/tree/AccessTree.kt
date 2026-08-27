@@ -1474,6 +1474,9 @@ class AccessTree(
          * anything, and it is finite.
          */
         fun compressAbsorbCoveredSiblings(): AccessNode {
+            if (EdgeStoreDiagnostics.enabled) {
+                EdgeStoreDiagnostics.recordFoldCall(containsAnyInThisOrDeepNodes)
+            }
             var current = this
             while (true) {
                 val next = current.compressAbsorbCoveredSiblings(IdentityHashMap())
@@ -1510,6 +1513,14 @@ class AccessTree(
                 val a = accessors[i]
                 if (a == ANY_ACCESSOR_IDX) anyIdx = i
                 else if (manager.isCoveredByAny(a)) hasCovered = true
+            }
+
+            if (EdgeStoreDiagnostics.enabled) {
+                EdgeStoreDiagnostics.recordFoldVisit(
+                    hasAny = anyIdx >= 0,
+                    hasCovered = hasCovered,
+                    siblings = accessors.size - 1,
+                )
             }
 
             if (anyIdx < 0 || !hasCovered) {
