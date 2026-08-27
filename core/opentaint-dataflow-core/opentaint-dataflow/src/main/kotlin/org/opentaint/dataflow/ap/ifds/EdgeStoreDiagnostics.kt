@@ -233,6 +233,30 @@ object EdgeStoreDiagnostics {
     }
 
     /** New slots opened, i.e. distinct (base, premise, statement) keys the store ever held. */
+    /**
+     * Children-per-node at the ROOT of a stored fact, bucketed, plus the maximum.
+     *
+     * Breadth is the one dimension with NO bound anywhere in the tree backend -- depth has
+     * `factDepthLimit`, the element cap and the field-repeat rule; width has nothing, and
+     * `accessorCount()` is not compared against a threshold anywhere. The ROOT is the right place to
+     * watch it because `limitFieldAccess` HOISTS every repeated field to the root, so the root is
+     * where width actually accumulates. O(1) per call -- `accessors` is a sorted array.
+     */
+    private val rootBreadthBuckets = AtomicLongArray(64)
+    val maxRootBreadth = AtomicLong()
+    val rootBreadthTotal = AtomicLong()
+    val rootBreadthSamples = AtomicLong()
+
+    fun recordRootBreadth(width: Int) {
+        rootBreadthBuckets.incrementAndGet(width.coerceIn(0, 63))
+        rootBreadthTotal.addAndGet(width.toLong())
+        rootBreadthSamples.incrementAndGet()
+        while (true) {
+            val cur = maxRootBreadth.get()
+            if (width <= cur || maxRootBreadth.compareAndSet(cur, width.toLong())) break
+        }
+    }
+
     fun recordSlotOpened(nodes: Long) {
         slotsOpened.incrementAndGet()
         storeMass.addAndGet(nodes)
@@ -341,6 +365,11 @@ object EdgeStoreDiagnostics {
         appendLine("edgeStore growthByLog2Size=" + (0 until 24).joinToString(",") { growthSizeBuckets.get(it).toString() })
 
         appendLine("edgeStore --- by producer ---")
+        appendLine(
+            "edgeStore rootBreadth mean=" + ratio(rootBreadthTotal.get(), rootBreadthSamples.get()) +
+                " max=" + maxRootBreadth.get() +
+                " buckets=" + (0..31).joinToString(",") { rootBreadthBuckets.get(it).toString() }
+        )
         for (p in producers) {
             var c = 0L; var f = 0L; var g = 0L; var n = 0L; var om = 0L; var pm = 0L
             for (k in kinds) {

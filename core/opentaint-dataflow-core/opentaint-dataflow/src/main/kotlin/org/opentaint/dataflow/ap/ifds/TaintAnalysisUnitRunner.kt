@@ -350,8 +350,21 @@ class TaintAnalysisUnitRunner(
 
     private var factLimit = NormalMethodAnalyzer.INITIAL_ALLOWED_FACT_DEPTH
 
+    /**
+     * Diagnostic ceiling on [factLimit], `-Dopentaint.factDepthCeiling=N`, unbounded when unset.
+     *
+     * The raise below has no ceiling of its own and fires whenever the unit would go IDLE, so the
+     * only bound on fact depth is a scheduling artefact: the less work a configuration produces, the
+     * deeper the facts it admits. Measured 2026-08-27 on conductor -- the old reader raises the
+     * limit 571 times to 9 and leaves 82,891 edges parked forever, while literal `[any]` matching
+     * raises it 9,198 times to 76 and parks nothing. This exists to test that causally.
+     */
+    private val factDepthCeiling: Int =
+        System.getProperty("opentaint.factDepthCeiling")?.trim()?.toIntOrNull() ?: Int.MAX_VALUE
+
     private fun resumeDelayedAnalyzers(delayedAnalyzers: Collection<MethodAnalyzer>) {
         if (delayedAnalyzers.isEmpty()) return
+        if (factLimit >= factDepthCeiling) return
 
         val increasedFactLimit = ++factLimit
         logger.debug { "Increase unit $unit fact limit: $increasedFactLimit" }

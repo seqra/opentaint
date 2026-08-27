@@ -3048,7 +3048,18 @@ class AccessTree(
              * can pass. Visibility is `internal` rather than public so only the premise side in this
              * module can share it.
              */
-            internal const val ANY_ACCESSOR_DEPTH_CHARGE = 10
+            /**
+             * What one `[any]` edge costs against `MethodAnalyzer.factDepthLimit`, which starts at
+             * 3 and is raised only when a unit would go idle.
+             *
+             * Calibrated when `[any]` was rare and got unrolled away. Under literal matching `[any]`
+             * IS the dominant fact shape, so at 10 every such fact is parked at the start, the unit
+             * starves, the limit ratchets -- measured 9,198 raises to 76 on conductor against 571
+             * to 9 for the old reader -- and each ratchet admits a whole generation of deeper facts.
+             * `-Dopentaint.anyDepthCharge=N` exists to test that.
+             */
+            internal val ANY_ACCESSOR_DEPTH_CHARGE: Int =
+                System.getProperty("opentaint.anyDepthCharge")?.trim()?.toIntOrNull() ?: 10
 
             @JvmStatic
             private fun removeSingleAccessor(

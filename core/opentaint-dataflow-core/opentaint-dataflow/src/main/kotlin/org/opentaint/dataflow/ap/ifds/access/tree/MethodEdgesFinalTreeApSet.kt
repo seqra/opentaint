@@ -27,7 +27,10 @@ class MethodEdgesFinalTreeApSet(
 
             if (factSet == null) {
                 edges[factSetIdx] = internIfRequired(accessPath)
-                if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordSlotOpened(accessPath.size)
+                if (EdgeStoreDiagnostics.enabled) {
+                    EdgeStoreDiagnostics.recordSlotOpened(accessPath.size)
+                    EdgeStoreDiagnostics.recordRootBreadth(accessPath.accessorCount())
+                }
                 return accessPath
             }
 
@@ -36,7 +39,10 @@ class MethodEdgesFinalTreeApSet(
                 return null
             }
 
-            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordMerge(factSet.size, mergedFacts.size)
+            if (EdgeStoreDiagnostics.enabled) {
+                EdgeStoreDiagnostics.recordMerge(factSet.size, mergedFacts.size)
+                EdgeStoreDiagnostics.recordRootBreadth(mergedFacts.accessorCount())
+            }
             edges[factSetIdx] = internIfRequired(mergedFacts)
             intern(factSetIdx)
             return mergedFacts

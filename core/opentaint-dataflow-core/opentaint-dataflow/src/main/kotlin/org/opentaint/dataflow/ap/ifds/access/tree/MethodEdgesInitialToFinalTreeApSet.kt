@@ -90,7 +90,10 @@ class MethodEdgesInitialToFinalTreeApSet(
             if (currentExclusion == null) {
                 exclusions[edgeSetIdx] = accessWithExclusion.exclusion
                 edges[edgeSetIdx] = internIfRequired(accessWithExclusion.access)
-                if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordSlotOpened(accessWithExclusion.access.size)
+                if (EdgeStoreDiagnostics.enabled) {
+                    EdgeStoreDiagnostics.recordSlotOpened(accessWithExclusion.access.size)
+                    EdgeStoreDiagnostics.recordRootBreadth(accessWithExclusion.access.accessorCount())
+                }
                 return accessWithExclusion
             }
 
@@ -105,7 +108,10 @@ class MethodEdgesInitialToFinalTreeApSet(
                 return AccessWithExclusion(mergedAccess, mergedExclusion)
             }
 
-            if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordMerge(currentAccess.size, mergedAccess.size)
+            if (EdgeStoreDiagnostics.enabled) {
+                EdgeStoreDiagnostics.recordMerge(currentAccess.size, mergedAccess.size)
+                EdgeStoreDiagnostics.recordRootBreadth(mergedAccess.accessorCount())
+            }
             edges[edgeSetIdx] = internIfRequired(mergedAccess)
             intern(edgeSetIdx)
 

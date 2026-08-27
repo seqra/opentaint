@@ -80,6 +80,10 @@ private val FORWARDED_TEST_PROPERTIES = listOf(
     "opentaint.literalAnyMatch.premises.r3c",
     "opentaint.literalAnyMatch.premises.r4",
     "opentaint.exactCleanerKeepsAny",
+    // MethodAnalyzer.factDepthLimit: a ceiling on the idle-driven ratchet, and what one `[any]`
+    // edge costs against it. Both diagnostic; unset means "no ceiling" and "10", i.e. unchanged.
+    "opentaint.factDepthCeiling",
+    "opentaint.anyDepthCharge",
 )
 
 fun Project.configureDefaultTest() {
