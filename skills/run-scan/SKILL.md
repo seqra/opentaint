@@ -18,6 +18,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 - `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
 - `rule-ids` (optional) — full rule IDs to restrict the scan to
 - `max-memory` (optional) — a `--max-memory` value to run scan with. Default: unset (engine default `8G`)
+- `language` (optional) — project language. Read it from `.opentaint/tracking/state.yaml` when the caller does not supply it
 
 ## Workflow
 
@@ -32,13 +33,14 @@ opentaint scan --project-model .opentaint/project \
   --track-external-methods
 ```
 
-- `--rule-id <full-id>` — restrict to specific rules (repeatable, one per input rule ID); every unnamed rule is dropped, including library `refs`, so list every id the restricted rules depend on. Omit to run all loaded rules
-- `--passthrough-approximations .opentaint/pass-through` — add when that directory exists: passThrough configs override built-ins at the rule level, a provided rule overriding a built-in only when it matches one
-- `--dataflow-approximations .opentaint/dataflow` — add when that directory exists: code-based approximations, one project per batch (each built on demand against the dependencies it pins, and rebuilt only when its sources change)
+- `--rule-id <full-id>` — restrict the scan to specific rules. Repeat the option for each rule. The scan drops each unnamed rule, including library `refs`. List each rule that the selected rules use. Omit this option to run all loaded rules
+- `--passthrough-approximations .opentaint/pass-through` — add this option when the directory has YAML files. A project rule replaces a matching built-in rule
+- For Java and Kotlin, add `--dataflow-approximations .opentaint/dataflow` when that directory has approximation projects
+- For Go, find each `go.mod` under `.opentaint/dataflow`. Add one `--go-models <module-directory>` option for each file. Do not use `--dataflow-approximations` for a Go model
 
-Both approximation-dir flags walk their trees recursively; pass each parent directory once, not every package or batch separately.
+The pass-through and JVM approximation options read their directory trees. A Go model option must name one Go module. The module can model more than one target package.
 
-The scan is long — run it in the background and wait for it to finish. Leave `--timeout` at the engine default (900s); the CLI ends the analysis itself and writes whatever SARIF it has.
+The scan can take a long time. Run it in the background and wait for it to finish. Keep `--timeout` at the engine default of 900 seconds. The CLI ends the analysis and writes the available SARIF report.
 
 ### 2. Retry once on out-of-memory
 

@@ -23,7 +23,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 
 ### 1. Settle built-in coverage first
 
-Before anything, for each package the plan touches see what the built-in source rules already match for its members — `opentaint health --rules` prints the built-in rules root path; browse it and the project's own rules (per the language reference). This decides whether you write a source unit:
+First, check what the built-in source rules match for each package in the plan. `opentaint health --rules` prints the built-in rules root path. Read these rules and the project rules as the language reference specifies. This check decides if you write a source unit:
 
 - full — existing rules already match the project-used sources → write no unit, stop, don't drill further
 - partial — some project-used sources matched, others missed → plan only the missing used members
@@ -31,7 +31,7 @@ Before anything, for each package the plan touches see what the built-in source 
 
 ### 2. Classify the plan's members
 
-The members are the FQNs under the plan's `scopes` — the project-used scope, already extracted, and only the members not yet classified in a prior run. Confirm each package's dependency identity and inspect its signatures/docs while classifying (per the language reference); read app source, dependency API/docs, and framework config to classify the listed members.
+The members are the FQNs under the plan's `scopes`. The scope contains project-used members that a prior run did not classify. Confirm the dependency for each package. Read the signatures and documentation as the language reference specifies. Read application source, dependency API documentation, and framework configuration to classify the listed members.
 
 Find the sources among them — the exact place untrusted data first enters from a boundary (network, persistence, serialization, messaging, execution and more): a method that returns attacker-controlled data. NOT a method that merely passes along data it was handed — that's a propagator the engine already handles. General, not class-tagged.
 
@@ -61,7 +61,7 @@ Short and concise report of what was done
 
 ## Tracking
 
-`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`signature` the member's JVM descriptor, always quoted so array types `[…` stay valid YAML in a flow mapping), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
+`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package. A dependency can span several packages. Each package has its own unit. Replace package separators and dots with `-` in the file name. `dependencies` names the dependency that contains the package. `sources` has one entry point for each source as `{ method, signature, note, rule_id }`. Copy the language-specific signature from the plan. `stages` tracks the unit through rule authoring. Add a `blocker` string under it when the unit cannot pass. Keep it clear from comments
 
 ```yaml
 dependencies:
@@ -73,9 +73,9 @@ stages:
   tests_passing: pending
 ```
 
-This skill fills `dependencies` (the package's dependency identifier) and one `sources` entry per source it found — `{ method, signature, note, rule_id }` with `method` + `signature` copied from the plan and `note` a few words on why the data is untrusted; leave `rule_id: null` and the `stages` for the rule-authoring stage. One unit per package the plan touched.
+This skill fills `dependencies` with the package dependency identifier. It adds one `sources` entry for each source. Copy `method` and `signature` from the plan. Use a short `note` to state why the data is untrusted. Keep `rule_id: null` and the `stages` for the rule-authoring stage. Make one unit for each package in the plan.
 
-The plan `.opentaint/tracking/rules/plans/<id>.yaml` — read your members from its `scopes` map, record the sources you find under a top-level `source` list; the join then ledgers `source` + `safe` (members − source), keyed per method+signature so an overload stays distinct. It is regenerable and disposable, not durable state:
+Read members from the `scopes` map in `.opentaint/tracking/rules/plans/<id>.yaml`. Record found sources in the top-level `source` list. The join records `source` and `safe`, where `safe` contains members that are not sources. It uses the method and signature as the key so overloads stay distinct. The plan is temporary and can be generated again:
 
 ```yaml
 id: lib-001
@@ -89,9 +89,9 @@ source:
 
 ## Constraints
 
-OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
+OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It propagates through visible application code, calls, aliases, and individual fields. Custom rules and approximations model only the assigned source, sink, or opaque method boundary. Compile-time constants and literals carry no taint. A source or carrier that returns only a constant adds no taint.
 
-- This stage finds only sources — the methods where untrusted data enters; sinks are found later from the taint frontier.
+- This stage finds only sources, which are the methods where untrusted data enters. A later stage finds sinks from the taint frontier.
 - Work only your own plan and the source units its packages map to — never another agent's plan or unit, and never `coverage.yaml`. Plans partition packages disjointly, so each source unit has a single writer.
 - Stored / second-order injection (data persisted then read back) is modeled by the engine itself — don't record a source for the read-back or a propagator for the store→read path.
 - For a generic project the analyzer treats every public/protected method of a public class as an entry point.
