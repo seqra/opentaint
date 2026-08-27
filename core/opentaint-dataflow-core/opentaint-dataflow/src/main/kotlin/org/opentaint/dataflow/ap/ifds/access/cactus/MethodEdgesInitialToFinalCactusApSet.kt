@@ -87,7 +87,14 @@ class MethodEdgesInitialToFinalCactusApSet(
             exclusions[edgeSetIdx] = mergedExclusion
 
             val mergedAccess = currentAccess.mergeAdd(accessWithExclusion.access)
-            if (mergedAccess === currentAccess) return null
+            if (mergedAccess === currentAccess) {
+                // The access is unchanged but the refinement demand may have grown, and a demand that
+                // is stored without being republished never reaches the edge that has to discharge it.
+                // Matches MethodEdgesInitialToFinalTreeApSet.
+                if (mergedExclusion === currentExclusion) return null
+
+                return AccessWithExclusion(mergedAccess, mergedExclusion)
+            }
 
             edges[edgeSetIdx] = mergedAccess
             return AccessWithExclusion(mergedAccess, mergedExclusion)
