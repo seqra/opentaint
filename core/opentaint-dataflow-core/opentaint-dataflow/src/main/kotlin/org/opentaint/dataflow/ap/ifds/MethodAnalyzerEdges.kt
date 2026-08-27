@@ -27,7 +27,14 @@ class MethodAnalyzerEdges(
         check(edge.methodEntryPoint == methodEntryPoint)
 
         val produced = addEdge(edge)
-        if (EdgeStoreDiagnostics.enabled) EdgeStoreDiagnostics.recordAdd(methodEntryPoint, edge, produced)
+        if (EdgeStoreDiagnostics.enabled) {
+            EdgeStoreDiagnostics.recordAdd(methodEntryPoint, edge, produced)
+            if (EdgeStoreDiagnostics.censusShouldSample()) {
+                EdgeStoreDiagnostics.runSelfSubsumptionCensus(
+                    produced.firstOrNull()?.let { (it as? Edge.FactToFact)?.factAp }
+                )
+            }
+        }
         return produced
     }
 

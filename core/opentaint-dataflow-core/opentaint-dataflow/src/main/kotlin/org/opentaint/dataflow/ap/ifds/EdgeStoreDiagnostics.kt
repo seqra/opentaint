@@ -1,7 +1,10 @@
 package org.opentaint.dataflow.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTreeAnySuffixMatcher
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
 import java.util.concurrent.atomic.AtomicLongArray
@@ -247,6 +250,101 @@ object EdgeStoreDiagnostics {
     val rootBreadthTotal = AtomicLong()
     val rootBreadthSamples = AtomicLong()
 
+    // ---- self-subsumption census ------------------------------------------------------------
+    //
+    // "Do we hold facts with a sibling branch the fact's OWN `[any]` already denotes?" -- e.g.
+    // `a.b.c` beside `a.[any].c`.
+    //
+    // This is worth counting because the engine cannot answer it. `trimAnyCoveredAndPushChildren`
+    // is a CROSS-trim between two merge OPERANDS: it matches one operand's `[any]` against the
+    // other operand's branches. Nothing ever trims a node's own sibling against its own `[any]`, so
+    // such a pair persists until some later merge partner happens to carry an `[any]` at exactly
+    // that position. The census walks STORED facts and measures the residue directly.
+    //
+    // The matcher is built with `forceCancelAbstract = true` so the number is the FULL subsumption
+    // residue -- what a complete self-normalisation could remove -- while the engine keeps running
+    // its shipped, non-cancelling semantics. A fresh local matcher per point, never the cached
+    // `anySuffixMatcher`: that one carries unsynchronised IdentityHashMap memos shared across
+    // threads, and `manager.abstractNode` is a process-wide singleton, so reusing it would amplify
+    // an existing race.
+    private const val CENSUS_RATE = 512L
+    private const val CENSUS_MIN_SIZE = 50L
+    private const val CENSUS_VISIT_BUDGET = 20_000
+
+    private val censusCounter = AtomicLong()
+    val censusFacts = AtomicLong()
+    val censusTruncated = AtomicLong()
+    val censusNodesWithAny = AtomicLong()
+    val censusSiblings = AtomicLong()
+    /** Sibling branches the fact's own `[any]` fully denotes, and their node mass. */
+    val censusFullySubsumed = AtomicLong()
+    val censusFullySubsumedMass = AtomicLong()
+    /** ... of which hold a mark/static/`[value]`/type-info, i.e. folding costs R3b a name. */
+    val censusSubsumedNameCritical = AtomicLong()
+    val censusSubsumedNameCriticalMass = AtomicLong()
+    /** Partially subsumed: some paths denoted, some not. */
+    val censusPartial = AtomicLong()
+    val censusPartialDroppedMass = AtomicLong()
+    val censusNotSubsumed = AtomicLong()
+    val censusTotalSiblingMass = AtomicLong()
+
+    fun censusShouldSample(): Boolean =
+        enabled && censusCounter.incrementAndGet() % CENSUS_RATE == 0L
+
+    fun runSelfSubsumptionCensus(fact: FinalFactAp?) {
+        val tree = fact as? AccessTree ?: return
+        val root = tree.access
+        if (root.size < CENSUS_MIN_SIZE) return
+        censusFacts.incrementAndGet()
+
+        val seen = java.util.IdentityHashMap<AccessTree.AccessNode, Unit>()
+        val stack = ArrayDeque<AccessTree.AccessNode>()
+        stack.addLast(root)
+        var visits = 0
+
+        while (stack.isNotEmpty()) {
+            if (visits++ > CENSUS_VISIT_BUDGET) { censusTruncated.incrementAndGet(); return }
+            val node = stack.removeLast()
+            if (seen.put(node, Unit) != null) continue
+            node.forEachAccessor { _, child -> stack.addLast(child) }
+            if (!node.containsAnyAccessor()) continue
+
+            var anyNode: AccessTree.AccessNode? = null
+            node.forEachAccessor { a, c -> if (a == ANY_ACCESSOR_IDX) anyNode = c }
+            val any = anyNode ?: continue
+            val siblings = node.clearChild(ANY_ACCESSOR_IDX)
+            if (siblings.isEmpty || siblings.accessors == null) continue
+
+            censusNodesWithAny.incrementAndGet()
+            val kept = AccessTreeAnySuffixMatcher(any, forceCancelAbstract = true)
+                .getNonMatchingNode(siblings)
+
+            val keptChildren = Int2ObjectOpenHashMap<AccessTree.AccessNode>()
+            if (!kept.isEmpty) kept.forEachAccessor { a, c -> keptChildren.put(a, c) }
+
+            siblings.forEachAccessor { accessor, child ->
+                censusSiblings.incrementAndGet()
+                censusTotalSiblingMass.addAndGet(child.size)
+                val kc = keptChildren.get(accessor)
+                when {
+                    kc == null -> {
+                        censusFullySubsumed.incrementAndGet()
+                        censusFullySubsumedMass.addAndGet(child.size)
+                        if (child.containsNameCriticalInThisOrDeepNodes) {
+                            censusSubsumedNameCritical.incrementAndGet()
+                            censusSubsumedNameCriticalMass.addAndGet(child.size)
+                        }
+                    }
+                    kc === child -> censusNotSubsumed.incrementAndGet()
+                    else -> {
+                        censusPartial.incrementAndGet()
+                        censusPartialDroppedMass.addAndGet(child.size - kc.size)
+                    }
+                }
+            }
+        }
+    }
+
     fun recordRootBreadth(width: Int) {
         rootBreadthBuckets.incrementAndGet(width.coerceIn(0, 63))
         rootBreadthTotal.addAndGet(width.toLong())
@@ -369,6 +467,21 @@ object EdgeStoreDiagnostics {
             "edgeStore rootBreadth mean=" + ratio(rootBreadthTotal.get(), rootBreadthSamples.get()) +
                 " max=" + maxRootBreadth.get() +
                 " buckets=" + (0..31).joinToString(",") { rootBreadthBuckets.get(it).toString() }
+        )
+        appendLine(
+            "edgeStore selfSubsume facts=" + censusFacts.get() +
+                " truncated=" + censusTruncated.get() +
+                " nodesWithAny=" + censusNodesWithAny.get() +
+                " siblings=" + censusSiblings.get() +
+                " siblingMass=" + censusTotalSiblingMass.get() +
+                " | fullySubsumed=" + censusFullySubsumed.get() +
+                " mass=" + censusFullySubsumedMass.get() +
+                " share=" + ratio(censusFullySubsumedMass.get(), censusTotalSiblingMass.get()) +
+                " | ofWhichNameCritical=" + censusSubsumedNameCritical.get() +
+                " mass=" + censusSubsumedNameCriticalMass.get() +
+                " | partial=" + censusPartial.get() +
+                " droppedMass=" + censusPartialDroppedMass.get() +
+                " | notSubsumed=" + censusNotSubsumed.get()
         )
         for (p in producers) {
             var c = 0L; var f = 0L; var g = 0L; var n = 0L; var om = 0L; var pm = 0L

@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FIN
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.TYPE_INFO_GROUP_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.VALUE_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
@@ -422,6 +423,26 @@ class AccessTree(
         val containsAnyInThisOrDeepNodes: Boolean get() = (flags.toInt() and CONTAINS_ANY_DEEP) != 0
 
         /**
+         * True if this subtree holds an accessor an `[any]` can NEVER denote -- a taint mark,
+         * `[final]`, `[value]`, a type-info accessor or a class static. Derived at construction,
+         * like [containsStatic].
+         *
+         * "Name-critical" because these are exactly the accessors
+         * [TreeInitialFactAbstraction]'s R3b has to NAME: `p.[any]` denotes covered steps only, so
+         * a mark below an `[any]` is reachable but unnameable, and the mark is the finding. Folding
+         * such a branch into a sibling `[any]` is denotationally exact and still loses the finding,
+         * which is what the unrestricted `[any]` trim does -- it converges conductor in 43.7 s and
+         * reports `Total vulnerabilities: 0`.
+         *
+         * Deliberately computed WITHOUT consulting `manager.isCoveredByAny`: that throws during the
+         * prescan phase ([TreeApManager.anyAccessorsQueryable]), and the two predicates below are
+         * pure functions of the accessor index. In production the covered set is exactly
+         * field + element, so this is its complement.
+         */
+        val containsNameCriticalInThisOrDeepNodes: Boolean
+            get() = (flags.toInt() and CONTAINS_NAME_CRITICAL) != 0
+
+        /**
          * Memoised [AccessTreeAnySuffixMatcher] for this node used as an `[any]` suffix.
          *
          * The matcher is immutable and a PURE FUNCTION of the node it is built from, so a benign
@@ -464,6 +485,7 @@ class AccessTree(
             var depth = 0
             var containsStatic = false
             var containsAnyDeep = false
+            var containsNameCritical = false
 
             if (isAbstract) hash += 1
             if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
@@ -479,6 +501,8 @@ class AccessTree(
 
             if (accessors != null) {
                 containsStatic = accessors.any { it.isStaticAccessor() }
+                containsNameCritical =
+                    accessors.any { it.isStaticAccessor() || it.isAlwaysUnrollNext() }
             }
 
             if (accessorNodes != null) {
@@ -489,6 +513,8 @@ class AccessTree(
 
                 containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
                 containsAnyDeep = containsAnyDeep || accessorNodes.any { it.containsAnyInThisOrDeepNodes }
+                containsNameCritical = containsNameCritical ||
+                    accessorNodes.any { it.containsNameCriticalInThisOrDeepNodes }
             }
 
             if (containsAnyAccessor()) {
@@ -507,6 +533,7 @@ class AccessTree(
             if (isFinal) packed = packed or FINAL
             if (containsStatic) packed = packed or CONTAINS_STATIC
             if (containsAnyDeep) packed = packed or CONTAINS_ANY_DEEP
+            if (containsNameCritical) packed = packed or CONTAINS_NAME_CRITICAL
             this.flags = packed.toByte()
         }
 
@@ -3027,6 +3054,7 @@ class AccessTree(
             private const val FINAL = 1 shl 2
             private const val CONTAINS_STATIC = 1 shl 3
             private const val CONTAINS_ANY_DEEP = 1 shl 4
+            private const val CONTAINS_NAME_CRITICAL = 1 shl 5
 
             /**
              * How much a single `[any]` edge adds to [maxDepth].

@@ -5,7 +5,15 @@ import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 
-class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
+/**
+ * @param forceCancelAbstract census only: cancel `isAbstract` regardless of the global flags, so a
+ *   diagnostic can measure the FULL subsumption residue while the engine runs with its shipped
+ *   (non-cancelling) semantics. Never set by engine code.
+ */
+class AccessTreeAnySuffixMatcher(
+    suffixNode: AccessTree.AccessNode,
+    private val forceCancelAbstract: Boolean = false,
+) {
     companion object {
         /**
          * `-Dopentaint.anyTrimAbstract=true`, default **false**.
@@ -21,7 +29,24 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
          */
         @JvmField
         val TRIM_ABSTRACT: Boolean =
-            System.getProperty("opentaint.anyTrimAbstract")?.trim().toBoolean()
+            System.getProperty("opentaint.anyTrimAbstract")?.trim()?.lowercase() == "true"
+
+        /**
+         * `-Dopentaint.anyTrimAbstract=safe` -- the same cancellation, but ONLY for a branch that
+         * holds nothing an `[any]` can never denote.
+         *
+         * The unrestricted form is exact and still costs every finding, for two measured reasons:
+         * it removes the NAMES `TreeInitialFactAbstraction` R3b needs (a mark below an `[any]` is
+         * reachable but unnameable, and the mark IS the finding), and it removes the abstract nodes
+         * that are `concatToLeafAbstractNodes`' graft points. Restricting it to branches with no
+         * mark, `[value]`, type-info or static below keeps every name R3b can emit, and folds only
+         * pure structure -- which is where the mass is: a sampled fact holds
+         * `.Element.inputData.[any]` beside `.Element.inputData.MapKey.[any]` and
+         * `.Element.inputData.MapKey.Element.[any]`, all covered, all subsumed by the first.
+         */
+        @JvmField
+        val TRIM_ABSTRACT_SAFE: Boolean =
+            System.getProperty("opentaint.anyTrimAbstract")?.trim()?.lowercase() == "safe"
     }
 
     private val manager = suffixNode.manager
@@ -225,7 +250,11 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
             ApOpDiagnostics.trimKeptForAbstractNodes.addAndGet(node.size)
         }
 
-        val thisAbstract = if (TRIM_ABSTRACT) node.isAbstract && !trie.isAbstract else node.isAbstract
+        // `safe` cancels the abstraction exactly as `true` does, but only where the branch holds
+        // nothing an `[any]` can never denote -- so every name R3b could emit survives.
+        val cancelAbstract = forceCancelAbstract ||
+            TRIM_ABSTRACT || (TRIM_ABSTRACT_SAFE && !node.containsNameCriticalInThisOrDeepNodes)
+        val thisAbstract = if (cancelAbstract) node.isAbstract && !trie.isAbstract else node.isAbstract
 
         // all branches matched the any-suffix
         if (!thisAbstract && !thisFinal && accessorIdx.isEmpty())
