@@ -146,12 +146,14 @@ class PrescanPropagationTest {
     }
 
     private fun propagation(vararg methods: DummyMethod) = PrescanPropagation(
-        methods.toList(),
-        object : MethodEntrypointResolver {
-            override fun resolveEntryPoints(method: CommonMethod, context: MethodContext): List<CommonInst> =
-                listOf((method as DummyMethod).entry)
-        },
-        Policy,
+        PrescanPropagationTargetResolver(
+            methods.toList(),
+            object : MethodEntrypointResolver {
+                override fun resolveEntryPoints(method: CommonMethod, context: MethodContext): List<CommonInst> =
+                    listOf((method as DummyMethod).entry)
+            },
+            Policy,
+        )
     )
 
     private fun propagate(

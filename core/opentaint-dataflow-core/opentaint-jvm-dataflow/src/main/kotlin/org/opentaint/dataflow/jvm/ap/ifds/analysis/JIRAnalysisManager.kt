@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationTargetResolver
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
@@ -100,22 +101,26 @@ class JIRAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
-    private var currentPhase: Phase = Phase.Prescan(emptyList())
+    private var currentPhase: Phase = Phase.Init
     val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
         prescanPropagation = when (phase) {
             is Phase.Prescan -> PrescanPropagation(
-                phase.scopeMethods,
-                getMethodEntrypointResolver(checkNotNull(phase.graph)),
-                prescanPropagationPolicy,
+                PrescanPropagationTargetResolver(
+                    phase.scopeMethods,
+                    getMethodEntrypointResolver(phase.graph),
+                    prescanPropagationPolicy,
+                )
             )
+            Phase.Init,
             Phase.FullScan -> null
         }
 
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         when (phase) {
+            Phase.Init,
             is Phase.Prescan -> {}
             Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
         }

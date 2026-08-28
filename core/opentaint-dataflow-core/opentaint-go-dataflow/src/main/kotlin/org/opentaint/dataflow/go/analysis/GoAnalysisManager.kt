@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationTargetResolver
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
@@ -70,15 +71,18 @@ class GoAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
 
-    private var selectedPhase: Phase = Phase.Prescan(emptyList())
+    private var selectedPhase: Phase = Phase.Init
     val phase: Phase get() = selectedPhase
 
     override fun selectPhase(phase: Phase) {
         prescanPropagation = when (phase) {
             is Phase.Prescan -> PrescanPropagation(
-                phase.scopeMethods,
-                getMethodEntrypointResolver(checkNotNull(phase.graph)),
+                PrescanPropagationTargetResolver(
+                    phase.scopeMethods,
+                    getMethodEntrypointResolver(phase.graph),
+                )
             )
+            Phase.Init,
             Phase.FullScan -> null
         }
 

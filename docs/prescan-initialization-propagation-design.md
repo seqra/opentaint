@@ -270,7 +270,15 @@ The policy is evaluated only for methods in the prepared catalog; it must not pe
 
 ### 8.3 Phase-local propagation
 
-Add a phase-scoped `PrescanPropagation` privately owned by each concrete JVM or Go analysis manager through a nullable field. Entering `Phase.Prescan` through `selectPhase` creates it from the phase's method scope and application graph; entering `Phase.FullScan` clears the field. The runner manager is not phase state: it is supplied by the new-summary-storage hook whenever facts need routing. No separate finish protocol or prescan-manager abstraction is required. The propagation object exists only while `Phase.Prescan` is active and holds:
+Add `Phase.Init` as the analysis managers' default phase. `Phase.Prescan` then requires both its method scope and application graph, with no placeholder or optional arguments. Entering `Phase.Prescan` through `selectPhase` creates a phase-scoped `PrescanPropagation`; entering `Phase.FullScan` clears it. The runner manager is not phase state: it is supplied by the new-summary-storage hook whenever facts need routing.
+
+Separate target selection into `PrescanPropagationTargetResolver` with this API:
+
+```text
+resolve(sourceMethodEntryPoint, fact) -> List<MethodEntryPoint>
+```
+
+The target resolver owns all target-related state:
 
 ```text
 scopeMethods                 set of project prescan methods
@@ -278,11 +286,11 @@ deliveryTargets              resolved empty-context entry points
 deliveryTargetsByOwner       receiver-bearing targets grouped by owner
 ```
 
-The propagation object has one runtime input:
+`PrescanPropagation` only subscribes to canonical summary deltas, asks the target resolver for each accepted `Z2F` fact's destinations, and submits the fact through the runner manager. It has no target caches or language-specific classification logic.
 
-1. **A canonical summary delta.** Newly stored `Z2F` summaries are classified into global or owner seeds and immediately delivered to their fixed targets.
+The runtime input is a canonical summary delta. Newly stored `Z2F` summaries are classified into global or owner seeds and immediately delivered to their fixed targets.
 
-All target methods are known before worker execution. The analysis manager obtains its normal `MethodEntrypointResolver` from the application graph carried by `Phase.Prescan`; propagation resolves and caches every `MethodEntryPoint(EmptyMethodContext, statement)` up front. Delivering a fact through the ordinary runner API creates the target analyzer when necessary, so propagation does not depend on a separate activation event or contextual entry point.
+All target methods are known before worker execution. The analysis manager obtains its normal `MethodEntrypointResolver` from the application graph carried by `Phase.Prescan`; `PrescanPropagationTargetResolver` resolves and caches every `MethodEntryPoint(EmptyMethodContext, statement)` up front. Delivering a fact through the ordinary runner API creates the target analyzer when necessary, so propagation does not depend on a separate activation event or contextual entry point.
 
 ### 8.4 Subscribe to canonical summary deltas
 
@@ -341,7 +349,7 @@ start analysisEntryPoints only
 
 ## 10. Concurrency, deduplication, and termination
 
-The propagation object is shared by concurrently running analysis units, but its target caches are immutable after construction. It needs no synchronization or mutable seed registry.
+The propagation object and target resolver are shared by concurrently running analysis units, but the resolver's target caches are immutable after construction. Neither needs synchronization or a mutable seed registry.
 
 Required invariants:
 
@@ -465,8 +473,9 @@ The exact names can change during implementation, but the responsibility boundar
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
 - `TaintAnalyzer`: start the two phases with different root lists and notify the analysis manager of prescan lifecycle.
 - `AnalysisManager`: expose only the general new-summary-storage hook.
-- `TaintAnalysisManager`: represent the phase transition and carry prescan scope inputs in `Phase.Prescan`.
-- `JIRAnalysisManager`, `GoAnalysisManager`: privately own phase-local propagation and implement phase transitions, the storage hook, and seed delivery policy.
+- `TaintAnalysisManager`: define the default `Init` phase and carry the complete prescan scope and graph in `Phase.Prescan`.
+- `JIRAnalysisManager`, `GoAnalysisManager`: privately own phase-local propagation and construct its target resolver through the language's method-entrypoint resolver.
+- `PrescanPropagationTargetResolver`: own target caches and map `(source method entrypoint, fact)` to target method entrypoints.
 - `TaintAnalysisUnitRunnerManager`: provide ordinary cross-unit fact delivery without prescan-specific state or behavior.
 - `TaintAnalysisUnitRunner`: process existing initial-fact events without prescan-specific activation behavior.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.
