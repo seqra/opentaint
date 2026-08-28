@@ -11,10 +11,10 @@ The prescan currently starts from the same externally visible entry points as th
 This design changes the prescan in three ways:
 
 1. Start every executable project method/function in the prescan, including private declarations and JVM/Go initialization code.
-2. Whenever the prescan produces a zero-to-fact (`Z2F`) summary whose final access path has `AccessPathBase.ClassStatic`, seed that same zero-derived fact into every method/function in the project prescan scope.
+2. Whenever the prescan produces a zero-to-fact (`Z2F`) summary whose final access path has `AccessPathBase.ClassStatic`, submit that fact as an initial fact to every method/function in the project prescan scope.
 3. On the JVM, whenever a constructor produces a receiver-rooted `Z2F` summary, seed that fact into every receiver-bearing method declared by the same class.
 
-The broad roots are only a discovery mechanism. They must not become full-scan roots and must not make unreachable private code reportable. Propagated facts also remain zero-derived: injecting them through the existing ordinary initial-fact API would turn them into `F2F` premises and would not implement the requested semantics.
+The broad roots are only a discovery mechanism. They must not become full-scan roots and must not make unreachable private code reportable. Seed eligibility is based on zero-derived summaries, while target installation deliberately reuses the ordinary initial-fact path and therefore participates in the target as an `F2F` premise.
 
 For Go, package `init` functions are included in the broad scope, and their global facts use rule 2. Go has no language-level constructor. Functions named `NewT`, `newT`, or similar are ordinary factories and are not treated as constructors by name.
 
@@ -53,7 +53,7 @@ The feature must:
 - make unconditional global/static facts visible in every project method/function;
 - make unconditional JVM constructor receiver state visible in methods of the same declaration class;
 - work across analysis units/packages and regardless of discovery order;
-- preserve `Z2F` provenance and the complete final access path;
+- pass the complete qualifying `FinalFactAp` into each target's normal initial-fact handling;
 - converge under repeated and cyclic propagation;
 - preserve phase isolation: only information intentionally retained by the language analysis manager, such as relevant rule IDs and dynamic-call-resolution knowledge, crosses into the full scan.
 
@@ -80,27 +80,21 @@ The **project prescan scope** is the finite catalog of project-owned executable 
 
 Call-reachable dependency approximations can still be analyzed through normal call handling. They are not independently started and are not broadcast targets.
 
-### 5.2 Zero-derived seed
+### 5.2 Initialization seed
 
-A **zero-derived seed** is a `FinalFactAp` installed at a target method entry as a `ZeroToFact` edge:
-
-```text
-Zero -> target-entry fact
-```
-
-It is not passed to `MethodAnalyzer.addInitialFact`, because that API abstracts the input into an `InitialFactAp` and creates:
+A prescan **initialization seed** is a `FinalFactAp` selected from an accepted `ZeroToFact` summary and submitted to another method through `submitExternalInitialFact`:
 
 ```text
 input fact premise -> target-entry fact
 ```
 
-That second shape is `F2F`. It says the target result is conditional on a caller providing the premise, which is the opposite of global/initializer state being available before the target executes. It would also prevent transitive `Z2F` discovery.
+The target's method-start flow and initial-fact abstraction are intentionally applied. The resulting target edge is therefore `FactToFact`, rather than a copied `ZeroToFact` edge.
 
-The implementation therefore needs an explicit API such as `addInitialZeroToFact(fact)` and a corresponding runner event. It should reuse the same validation and edge deduplication as locally generated `Z2F` edges.
+This reuses established runner accounting, method-start transformation, exclusion/refinement handling, and initial-fact deduplication. It does not make target summaries transitively qualify as new `Z2F` seeds; the coordinator continues to classify only genuinely accepted `ZeroToFact` summaries.
 
 ### 5.3 Exact fact preservation
 
-Propagation copies the whole `FinalFactAp`, including:
+The coordinator passes the whole `FinalFactAp` to the normal initial-fact API, including:
 
 - its accessors;
 - type-information accessors;
@@ -108,7 +102,7 @@ Propagation copies the whole `FinalFactAp`, including:
 - exclusions/refinement state;
 - the identity in `ClassStaticAccessor`.
 
-Only facts whose base and source method qualify are propagated. No suffix is stripped and no fact is generalized merely for fan-out.
+Only facts whose base and source method qualify are propagated. The coordinator does not strip suffixes or generalize facts merely for fan-out. Normal method-start transformation and initial-fact abstraction may still refine the fact when it is installed in the target.
 
 The singleton `ClassStatic` base is not the identity of a particular field/global. For example:
 
@@ -187,7 +181,7 @@ When a newly canonicalized method summary contains:
 Edge.ZeroToFact(finalFact.base == AccessPathBase.ClassStatic)
 ```
 
-register the exact `finalFact` as a global prescan seed and deliver it as a zero-derived seed to every activated entry point whose method is in the project prescan scope.
+register the exact `finalFact` as a global prescan seed and submit it as an initial fact to every activated entry point whose method is in the project prescan scope.
 
 This rule is language-neutral:
 
@@ -209,7 +203,7 @@ edge.finalFact.base == AccessPathBase.This
 source class is project-owned and indexed in the prescan scope
 ```
 
-register the exact fact under the constructor's declaration class. Deliver it as a zero-derived seed to every executable receiver-bearing method declared by that exact class:
+register the exact fact under the constructor's declaration class. Submit it as an initial fact to every executable receiver-bearing method declared by that exact class:
 
 - instance methods;
 - constructors, including other overloads.
@@ -307,17 +301,17 @@ The preferred change is for `SummaryEdgeStorageWithSubscribers.addEdges` (and th
 
 This location also covers summaries loaded from persistent storage, because `MethodAnalyzer.loadSummariesFromRunner` republishes loaded summaries through `runner.addNewSummaryEdges`.
 
-### 8.5 Deliver a zero-derived seed through runner events
+### 8.5 Deliver seeds through the existing initial-fact event
 
-Add an event distinct from the current `ExternalInputFact.InputFact`, for example:
+Route every delivered seed through the existing runner API:
 
 ```text
-ExternalInputFact.InputZeroToFact(methodEntryPoint, finalFact)
+submitExternalInitialFact(methodEntryPoint, finalFact)
 ```
 
-Handling it obtains/creates the target `MethodAnalyzer` and calls the new `addInitialZeroToFact` API. The event must use the existing enqueue/process accounting, cancellation, and per-unit runner routing, so analysis completion cannot race ahead of fan-out work.
+Handling obtains or creates the target `MethodAnalyzer` and calls its existing `addInitialFact` API. This retains existing enqueue/process accounting, cancellation, method-start handling, and per-unit runner routing, so analysis completion cannot race ahead of fan-out work.
 
-Deliveries should be batched per target/unit where practical. Batching changes event overhead, not semantics.
+Each fact is an ordinary counted runner event. Batching can be added later if initial-fact events gain a batch form.
 
 ### 8.6 Activation hook
 
@@ -381,8 +375,8 @@ Required invariants:
 2. Each exact canonical constructor receiver fact enters its owner log at most once.
 3. Each activated method entry point consumes each applicable log position at most once.
 4. A seed discovered concurrently with activation is delivered by either the activation snapshot or the new-seed fan-out, never missed; duplicate scheduling is acceptable only if the target edge store removes it.
-5. Propagated global facts may reappear as `Z2F` summaries in every target, but the global seed registry rejects them, preventing a broadcast cycle.
-6. Constructor seeds delivered to another constructor may reappear, but the owner registry rejects the repeated fact.
+5. Propagated facts enter targets as `F2F` edges and therefore do not re-enter the coordinator merely because they were broadcast.
+6. Repeated qualifying source summaries are rejected by canonical summary storage or the corresponding seed registry.
 
 Use AP-manager-compatible/canonical fact storage rather than relying on object identity. If a later, more general fact subsumes an earlier narrow fact, it is a new seed and is propagated. Already delivered narrow facts are not retracted; this is conservative and matches the monotone IFDS analysis.
 
@@ -460,7 +454,7 @@ Go tests:
 
 Common/core tests:
 
-- an accepted `ClassStatic` `Z2F` edge is installed as `Z2F`, not `F2F`, in every target;
+- an accepted `ClassStatic` `Z2F` edge is submitted through ordinary initial-fact handling in every target;
 - the complete accessor/mark/type-info structure is preserved;
 - non-static bases and non-`Z2F` summaries do not fan out;
 - cross-unit targets receive the fact;
@@ -505,10 +499,10 @@ The implementation is complete when:
 
 1. JVM and Go production analyzers enumerate the scope described in section 6.
 2. The full scan and vulnerability confirmation still use only the pre-existing external entry points.
-3. Static/global `Z2F` facts reach all project prescan methods/functions across units with exact access paths.
+3. Static/global `Z2F` facts reach all project prescan methods/functions across units through normal initial-fact handling.
 4. JVM constructor `This` `Z2F` facts reach receiver-bearing methods of the exact declaration class.
 5. Go package-init global callable/type information repairs the motivating dynamic-call regression without a Go constructor heuristic.
-6. Propagated facts remain `Z2F` and can produce further zero-derived summaries.
+6. Propagated facts use existing `F2F` initial-fact semantics and still contribute prescan dynamic-resolution and rule-selection knowledge.
 7. Order, duplicate, cycle, reset, loaded-summary, and cancellation tests pass.
 8. Scope/fan-out telemetry is available for performance evaluation.
 
@@ -519,8 +513,8 @@ The exact names can change during implementation, but the responsibility boundar
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
 - `TaintAnalyzer`: start the two phases with different root lists and enable/disable the phase-local coordinator.
 - `TaintAnalysisUnitRunnerManager`: own the coordinator and route cross-unit seed deliveries.
-- `TaintAnalysisUnitRunner`: report entry-point activation and process zero-to-fact seed events.
-- `MethodAnalyzer`: expose a safe zero-to-fact initialization operation.
+- `TaintAnalysisUnitRunner`: report entry-point activation and process existing initial-fact events.
+- `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.
 - `SummaryEdgeStorageWithSubscribers` / `MethodSummariesUnitStorage`: expose the accepted canonical summary delta.
 - JVM policy code: classify constructors and exact declaration-class receiver targets.
 - Go policy code: provide no instance-constructor classification; package initialization relies on static/global propagation.

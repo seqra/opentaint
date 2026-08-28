@@ -183,7 +183,7 @@ class TaintAnalysisUnitRunnerManager(
         for ((methodEntryPoint, facts) in deliveries) {
             val unit = unitResolver.resolve(methodEntryPoint.method)
             val runner = getOrSpawnUnitRunner(unit) ?: continue
-            runner.submitExternalInitialZeroToFacts(methodEntryPoint, facts)
+            facts.forEach { fact -> runner.submitExternalInitialFact(methodEntryPoint, fact) }
         }
     }
 

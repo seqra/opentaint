@@ -27,7 +27,6 @@ interface AnalysisRunner {
     fun subscribeOnMethodSummaries(edge: Edge.FactToFact, methodEntryPoint: MethodEntryPoint, methodFactBase: AccessPathBase)
     fun subscribeOnMethodSummaries(edge: Edge.NDFactToFact, methodEntryPoint: MethodEntryPoint, methodFactBase: AccessPathBase)
     fun submitExternalInitialZeroFact(methodEntryPoint: MethodEntryPoint)
-    fun submitExternalInitialZeroToFacts(methodEntryPoint: MethodEntryPoint, factAps: List<FinalFactAp>)
     fun submitExternalInitialFact(methodEntryPoint: MethodEntryPoint, factAp: FinalFactAp)
     fun triggerSideEffectRequirement(methodEntryPoint: MethodEntryPoint, initialFactAp: InitialFactAp)
 
