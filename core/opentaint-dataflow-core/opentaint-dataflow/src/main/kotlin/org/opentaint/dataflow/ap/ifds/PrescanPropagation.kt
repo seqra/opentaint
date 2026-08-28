@@ -1,12 +1,9 @@
 package org.opentaint.dataflow.ap.ifds
 
-import mu.KotlinLogging
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.ir.api.common.CommonMethod
-
-private val logger = KotlinLogging.logger {}
 
 @JvmInline
 value class PrescanInitializerOwner(val id: String)
@@ -19,33 +16,20 @@ interface PrescanPropagationPolicy {
 }
 
 class PrescanPropagation(
-    private val policy: PrescanPropagationPolicy = PrescanPropagationPolicy.None,
+    scopeMethods: Collection<CommonMethod>,
+    policy: PrescanPropagationPolicy = PrescanPropagationPolicy.None,
 ) {
-    @Volatile
-    private var coordinator: PrescanSeedCoordinator? = null
-
-    fun start(scopeMethods: Collection<CommonMethod>) {
-        check(coordinator == null) { "Prescan propagation is already active" }
-        coordinator = PrescanSeedCoordinator(scopeMethods, policy)
-    }
-
-    fun finish() {
-        val activeCoordinator = coordinator ?: return
-        coordinator = null
-        reportStats(activeCoordinator.stats())
-    }
+    private val coordinator = PrescanSeedCoordinator(scopeMethods, policy)
 
     fun onNewSummaryStorage(
         storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
     ) {
-        val activeCoordinator = coordinator ?: return
         val source = storage.methodEntryPoint
 
         storage.subscribeOnEdges(object : SummaryEdgeStorageWithSubscribers.Subscriber {
             override fun newSummaryEdges(edges: List<Edge>) {
-                if (coordinator !== activeCoordinator) return
-                val deliveries = activeCoordinator.acceptSummaryEdges(source, edges)
+                val deliveries = coordinator.acceptSummaryEdges(source, edges)
                 submitDeliveries(deliveries, manager)
             }
 
@@ -69,18 +53,6 @@ class PrescanPropagation(
             val sourceUnit = manager.unitResolver.resolve(sourceMethod)
             if (sourceUnit == UnknownUnit) continue
             facts.forEach { fact -> manager.handleCrossUnitFactCall(sourceUnit, methodEntryPoint, fact) }
-        }
-    }
-
-    private fun reportStats(stats: PrescanSeedCoordinator.Stats) {
-        logger.info {
-            "Prescan propagation: scopeMethods=${stats.scopeMethods}, " +
-                "targetEntryPoints=${stats.targetEntryPoints}, globalSeeds=${stats.globalSeeds}, " +
-                "constructorSeeds=${stats.constructorSeeds}, globalDeliveries=${stats.globalDeliveries}, " +
-                "constructorDeliveries=${stats.constructorDeliveries}, duplicates=${stats.duplicates}, " +
-                "largestGlobalSeedFanOut=${stats.largestGlobalSeedFanOut}, " +
-                "largestOwner=${stats.largestOwner?.id ?: "none"}, " +
-                "largestOwnerSeedFanOut=${stats.largestOwnerSeedFanOut}"
         }
     }
 }

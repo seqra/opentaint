@@ -270,7 +270,7 @@ The policy is evaluated only for methods in the prepared catalog; it must not pe
 
 ### 8.3 Phase-local seed coordinator
 
-Add a `PrescanSeedCoordinator` privately owned by each concrete JVM or Go analysis manager. Entering `Phase.Prescan` through `selectPhase` creates the coordinator from the phase's method scope; entering `Phase.FullScan` finishes and clears it. The runner manager is not phase state: it is supplied by the new-summary-storage hook whenever facts need routing. No separate prescan-manager abstraction or public coordinator property is required. The coordinator exists only while `Phase.Prescan` is active and holds:
+Add a phase-scoped `PrescanPropagation` privately owned by each concrete JVM or Go analysis manager through a nullable field. Entering `Phase.Prescan` through `selectPhase` creates it from the phase's method scope; entering `Phase.FullScan` clears the field. The runner manager is not phase state: it is supplied by the new-summary-storage hook whenever facts need routing. No separate finish protocol, prescan-manager abstraction, or public coordinator property is required. The propagation object exists only while `Phase.Prescan` is active and holds:
 
 ```text
 scopeMethods                 set of project prescan methods
@@ -371,7 +371,7 @@ Termination follows from the existing finite/capped access-path domain plus the 
 - relevant rule IDs and learned lambda/closure call-resolution values remain available;
 - phase-specific subscribers/caches are reset and reattached in the full scan.
 
-The analysis manager must finish and clear prescan propagation before the full-scan reset. Full-scan summaries must never trigger global or constructor fan-out.
+The analysis manager must clear prescan propagation before the full-scan reset. Full-scan summaries must never trigger global or constructor fan-out.
 
 Persisted prescan summaries are treated like newly discovered summaries after canonical insertion. No coordinator state itself is serialized, because facts are tied to the prescan AP manager and can be reconstructed from summaries/analysis.
 

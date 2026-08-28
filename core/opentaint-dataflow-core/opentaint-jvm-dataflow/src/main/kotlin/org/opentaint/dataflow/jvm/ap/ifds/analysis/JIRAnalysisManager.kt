@@ -70,27 +70,26 @@ class JIRAnalysisManager(
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
-    private val prescanPropagation = PrescanPropagation(
-        object : PrescanPropagationPolicy {
-            override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
-                val jirMethod = method as? JIRMethod ?: return null
-                if (!jirMethod.isConstructor) return null
-                return PrescanInitializerOwner(jirMethod.enclosingClass.name)
-            }
-
-            override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
-                val jirMethod = method as? JIRMethod ?: return null
-                if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
-                return PrescanInitializerOwner(jirMethod.enclosingClass.name)
-            }
+    private val prescanPropagationPolicy = object : PrescanPropagationPolicy {
+        override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (!jirMethod.isConstructor) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
         }
-    )
+
+        override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+        }
+    }
+    private var prescanPropagation: PrescanPropagation? = null
 
     override fun onNewSummaryStorage(
         storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
     ) {
-        prescanPropagation.onNewSummaryStorage(storage, manager)
+        prescanPropagation?.onNewSummaryStorage(storage, manager)
     }
 
     data class Params(
@@ -101,13 +100,13 @@ class JIRAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
-    private var currentPhase: Phase = Phase.FullScan
+    private var currentPhase: Phase = Phase.Prescan(emptyList())
     val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
-        when (phase) {
-            is Phase.Prescan -> prescanPropagation.start(phase.scopeMethods)
-            Phase.FullScan -> prescanPropagation.finish()
+        prescanPropagation = when (phase) {
+            is Phase.Prescan -> PrescanPropagation(phase.scopeMethods, prescanPropagationPolicy)
+            Phase.FullScan -> null
         }
 
         currentPhase = phase

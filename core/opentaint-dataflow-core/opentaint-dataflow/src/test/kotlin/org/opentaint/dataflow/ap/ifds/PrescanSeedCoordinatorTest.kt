@@ -150,9 +150,7 @@ class PrescanSeedCoordinatorTest {
         val producerEntry = entryPoint(producer)
         val fact = fact(AccessPathBase.ClassStatic, "global")
         val manager = RecordingRunnerManager()
-        val propagation = PrescanPropagation()
-
-        propagation.start(listOf(producer, consumer))
+        val propagation = PrescanPropagation(listOf(producer, consumer))
         val storage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
         propagation.onNewSummaryStorage(storage, manager)
         storage.addEdges(listOf(z2f(producerEntry, fact)))
@@ -163,12 +161,6 @@ class PrescanSeedCoordinatorTest {
         assertTrue(manager.routedFacts.all { it.callerUnit == DummyUnit(producer.name) })
         assertTrue(manager.routedFacts.all { it.methodEntryPoint.context == EmptyMethodContext })
         assertTrue(manager.routedFacts.all { it.fact == fact })
-
-        propagation.finish()
-        val inactiveStorage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
-        propagation.onNewSummaryStorage(inactiveStorage, manager)
-        inactiveStorage.addEdges(listOf(z2f(producerEntry, fact(AccessPathBase.ClassStatic, "later"))))
-        assertEquals(2, manager.routedFacts.size)
     }
 
     @Test

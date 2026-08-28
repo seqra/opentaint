@@ -58,25 +58,25 @@ class GoAnalysisManager(
 ) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
-    private val prescanPropagation = PrescanPropagation()
+    private var prescanPropagation: PrescanPropagation? = null
 
     override fun onNewSummaryStorage(
         storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
     ) {
-        prescanPropagation.onNewSummaryStorage(storage, manager)
+        prescanPropagation?.onNewSummaryStorage(storage, manager)
     }
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
 
-    private var selectedPhase: Phase = Phase.FullScan
+    private var selectedPhase: Phase = Phase.Prescan(emptyList())
     val phase: Phase get() = selectedPhase
 
     override fun selectPhase(phase: Phase) {
-        when (phase) {
-            is Phase.Prescan -> prescanPropagation.start(phase.scopeMethods)
-            Phase.FullScan -> prescanPropagation.finish()
+        prescanPropagation = when (phase) {
+            is Phase.Prescan -> PrescanPropagation(phase.scopeMethods)
+            Phase.FullScan -> null
         }
 
         selectedPhase = phase
