@@ -85,24 +85,6 @@ class TaintAnalysisUnitRunnerManager(
     private var prescanSeedCoordinator: PrescanSeedCoordinator? = null
     private var prescanScopeUnits: Int = 0
 
-    private val prescanSummarySubscriber = object : SummaryEdgeStorageWithSubscribers.Subscriber {
-        override fun newSummaryEdges(edges: List<Edge>) {
-            val source = edges.firstOrNull()?.methodEntryPoint ?: return
-            val deliveries = prescanSeedCoordinator?.acceptSummaryEdges(source, edges).orEmpty()
-            submitPrescanDeliveries(deliveries)
-        }
-
-        override fun newSideEffectRequirement(
-            methodEntryPoint: MethodEntryPoint,
-            requirements: List<InitialFactAp>,
-        ) = Unit
-
-        override fun newSideEffectSummaries(
-            methodEntryPoint: MethodEntryPoint,
-            sideEffects: List<SideEffectSummary>,
-        ) = Unit
-    }
-
     private val runnerJobs = ConcurrentLinkedQueue<Job>()
     private var analysisCompletion = CompletableDeferred<Unit>()
 
@@ -198,11 +180,37 @@ class TaintAnalysisUnitRunnerManager(
         submitPrescanDeliveries(deliveries)
     }
 
-    private fun submitPrescanDeliveries(deliveries: List<PrescanSeedCoordinator.Delivery>) {
+    internal fun prescanSummarySubscriber(
+        source: MethodEntryPoint,
+    ): SummaryEdgeStorageWithSubscribers.Subscriber? {
+        if (prescanSeedCoordinator == null) return null
+
+        return object : SummaryEdgeStorageWithSubscribers.Subscriber {
+            override fun newSummaryEdges(edges: List<Edge>) {
+                val deliveries = prescanSeedCoordinator?.acceptSummaryEdges(source, edges).orEmpty()
+                submitPrescanDeliveries(deliveries, unitResolver.resolve(source.method))
+            }
+
+            override fun newSideEffectRequirement(
+                methodEntryPoint: MethodEntryPoint,
+                requirements: List<InitialFactAp>,
+            ) = Unit
+
+            override fun newSideEffectSummaries(
+                methodEntryPoint: MethodEntryPoint,
+                sideEffects: List<SideEffectSummary>,
+            ) = Unit
+        }
+    }
+
+    private fun submitPrescanDeliveries(
+        deliveries: List<PrescanSeedCoordinator.Delivery>,
+        sourceUnit: UnitType? = null,
+    ) {
         for ((methodEntryPoint, facts) in deliveries) {
-            val unit = unitResolver.resolve(methodEntryPoint.method)
-            val runner = getOrSpawnUnitRunner(unit) ?: continue
-            facts.forEach { fact -> runner.submitExternalInitialFact(methodEntryPoint, fact) }
+            val callerUnit = sourceUnit ?: unitResolver.resolve(methodEntryPoint.method)
+            if (callerUnit == UnknownUnit) continue
+            facts.forEach { fact -> handleCrossUnitFactCall(callerUnit, methodEntryPoint, fact) }
         }
     }
 
@@ -528,7 +536,7 @@ class TaintAnalysisUnitRunnerManager(
 
     private fun spawnNewRunner(unit: UnitType): TaintAnalysisUnitRunner {
         val storage = unitStorage.getOrPut(unit) {
-            TaintAnalysisUnitStorage(apManager, analysisManager, prescanSummarySubscriber)
+            TaintAnalysisUnitStorage(apManager, analysisManager, this)
         }
         val sinkTracker = TaintSinkTracker(storage)
         val taintAnalyzer = TaintAnalysisManagerWithContext(analysisManager, sinkTracker)

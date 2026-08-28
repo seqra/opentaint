@@ -297,7 +297,7 @@ All roots are known before worker execution, but entry-point activation is still
 
 Do not observe the raw list passed to `AnalysisUnitRunnerManager.newSummaryEdges`. Summary storage can canonicalize, subsume, or discard an edge. Propagation observes the delta that `SummaryEdgeStorageWithSubscribers` actually accepted.
 
-Install a dedicated subscriber into every `SummaryEdgeStorageWithSubscribers` created by the taint unit storage. The existing subscription notification receives `addedEdges` only after canonical insertion, so the subscriber can forward that delta directly to the prescan coordinator without changing `addEdges` or `addSummaryEdges` return types. The subscriber remains installed across per-entry-point storage creation and AP-manager resets; outside prescan its coordinator lookup is absent and the callback is a no-op.
+For every `SummaryEdgeStorageWithSubscribers`, ask `AnalysisManager` for an optional subscriber using the method entry point and `AnalysisUnitRunnerManager`. The existing subscription notification receives `addedEdges` only after canonical insertion, so the subscriber can forward that delta directly to the prescan coordinator without changing `addEdges` or `addSummaryEdges` return types. Prescan fact deliveries use `AnalysisUnitRunnerManager.handleCrossUnitFactCall`.
 
 This location also covers summaries loaded from persistent storage, because `MethodAnalyzer.loadSummariesFromRunner` republishes loaded summaries through `runner.addNewSummaryEdges`.
 

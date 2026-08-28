@@ -19,6 +19,12 @@ interface TaintAnalysisManager : AnalysisManager {
     val prescanPropagationPolicy: PrescanPropagationPolicy
         get() = PrescanPropagationPolicy.None
 
+    override fun getSummaryStorageSubscriber(
+        methodEntryPoint: MethodEntryPoint,
+        manager: AnalysisUnitRunnerManager,
+    ): SummaryEdgeStorageWithSubscribers.Subscriber? =
+        (manager as? TaintAnalysisUnitRunnerManager)?.prescanSummarySubscriber(methodEntryPoint)
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,

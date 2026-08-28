@@ -171,7 +171,7 @@ class PrescanSeedCoordinatorTest {
                 sideEffects: List<SideEffectSummary>,
             ) = Unit
         }
-        val storage = MethodSummariesUnitStorage(apManager, DummyLanguageManager, subscriber)
+        val storage = MethodSummariesUnitStorage(apManager, DummyLanguageManager) { subscriber }
 
         storage.addSummaryEdges(producerEntry, listOf(edge))
         storage.addSummaryEdges(producerEntry, listOf(edge))
