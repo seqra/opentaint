@@ -5,11 +5,11 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -65,7 +65,7 @@ class JIRAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
-) : JIRLanguageManager(cp), PrescanAnalysisManager {
+) : JIRLanguageManager(cp), TaintAnalysisManager {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
@@ -86,17 +86,6 @@ class JIRAnalysisManager(
         }
     )
 
-    override fun startPrescan(
-        scopeMethods: Collection<CommonMethod>,
-        manager: AnalysisUnitRunnerManager,
-    ) {
-        prescanPropagation.start(scopeMethods, manager)
-    }
-
-    override fun finishPrescan() {
-        prescanPropagation.finish()
-    }
-
     override fun onNewSummaryStorage(
         storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
@@ -112,14 +101,19 @@ class JIRAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
-    private var currentPhase: Phase = Phase.Prescan
+    private var currentPhase: Phase = Phase.FullScan
     val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
+        when (phase) {
+            is Phase.Prescan -> prescanPropagation.start(phase.scopeMethods)
+            Phase.FullScan -> prescanPropagation.finish()
+        }
+
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         when (phase) {
-            Phase.Prescan -> {}
+            is Phase.Prescan -> {}
             Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
         }
     }

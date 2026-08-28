@@ -270,7 +270,7 @@ The policy is evaluated only for methods in the prepared catalog; it must not pe
 
 ### 8.3 Phase-local seed coordinator
 
-Add a `PrescanSeedCoordinator` privately owned by each concrete JVM or Go analysis manager. A narrow `PrescanAnalysisManager` capability exposes only the staged lifecycle needed by `TaintAnalyzer`; the general `TaintAnalysisManager` has no prescan-propagation dependency. The coordinator exists only while `Phase.Prescan` is active and holds:
+Add a `PrescanSeedCoordinator` privately owned by each concrete JVM or Go analysis manager. Entering `Phase.Prescan` through `selectPhase` creates the coordinator from the phase's method scope; entering `Phase.FullScan` finishes and clears it. The runner manager is not phase state: it is supplied by the new-summary-storage hook whenever facts need routing. No separate prescan-manager abstraction or public coordinator property is required. The coordinator exists only while `Phase.Prescan` is active and holds:
 
 ```text
 scopeMethods                 set of project prescan methods
@@ -316,7 +316,7 @@ At prescan start:
 ```text
 catalog = build project prescan method/owner index
 derive every target as MethodEntryPoint(EmptyMethodContext, CFG entry)
-prescanAnalysisManager.startPrescan(catalog, runnerManager)
+analysisManager.selectPhase(Prescan(catalog))
 submit every prescan root from Zero
 ```
 
@@ -339,8 +339,7 @@ for each ZeroToFact edge:
 Before full scan:
 
 ```text
-prescanAnalysisManager.finishPrescan()
-select FullScan
+analysisManager.selectPhase(FullScan)
 reset AP manager and IFDS storages as today
 start analysisEntryPoints only
 ```
@@ -394,7 +393,6 @@ Add phase metrics:
 
 ```text
 prescan.scope.methods
-prescan.scope.units
 prescan.seeds.global
 prescan.seeds.constructor
 prescan.seed.deliveries.global
@@ -491,8 +489,8 @@ The exact names can change during implementation, but the responsibility boundar
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
 - `TaintAnalyzer`: start the two phases with different root lists and notify the analysis manager of prescan lifecycle.
 - `AnalysisManager`: expose only the general new-summary-storage hook.
-- `PrescanAnalysisManager`: expose the staged prescan lifecycle without exposing coordinator implementation state.
-- `JIRAnalysisManager`, `GoAnalysisManager`: privately own the coordinator and implement the storage hook, propagation statistics, and seed delivery policy.
+- `TaintAnalysisManager`: represent the phase transition and carry prescan scope inputs in `Phase.Prescan`.
+- `JIRAnalysisManager`, `GoAnalysisManager`: privately own the coordinator and implement phase transitions, the storage hook, propagation statistics, and seed delivery policy.
 - `TaintAnalysisUnitRunnerManager`: provide ordinary cross-unit fact delivery without prescan-specific state or behavior.
 - `TaintAnalysisUnitRunner`: process existing initial-fact events without prescan-specific activation behavior.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.

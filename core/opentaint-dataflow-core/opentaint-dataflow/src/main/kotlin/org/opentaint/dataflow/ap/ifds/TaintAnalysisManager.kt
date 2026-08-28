@@ -10,7 +10,10 @@ import org.opentaint.util.analysis.ApplicationGraph
 
 interface TaintAnalysisManager : AnalysisManager {
     sealed interface Phase {
-        data object Prescan : Phase
+        data class Prescan(
+            val scopeMethods: Collection<CommonMethod>,
+        ) : Phase
+
         data object FullScan : Phase
     }
 

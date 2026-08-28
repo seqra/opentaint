@@ -23,29 +23,16 @@ class PrescanPropagation(
 ) {
     @Volatile
     private var coordinator: PrescanSeedCoordinator? = null
-    private var scopeUnits: Int = 0
 
-    fun start(
-        scopeMethods: Collection<CommonMethod>,
-        manager: AnalysisUnitRunnerManager,
-    ) {
+    fun start(scopeMethods: Collection<CommonMethod>) {
         check(coordinator == null) { "Prescan propagation is already active" }
-        val newCoordinator = PrescanSeedCoordinator(scopeMethods, policy)
-        val newScopeUnits = scopeMethods.asSequence()
-            .map(manager.unitResolver::resolve)
-            .filter { it != UnknownUnit }
-            .distinct()
-            .count()
-        scopeUnits = newScopeUnits
-        coordinator = newCoordinator
+        coordinator = PrescanSeedCoordinator(scopeMethods, policy)
     }
 
     fun finish() {
         val activeCoordinator = coordinator ?: return
         coordinator = null
-        val completedScopeUnits = scopeUnits
-        scopeUnits = 0
-        reportStats(activeCoordinator.stats(), completedScopeUnits)
+        reportStats(activeCoordinator.stats())
     }
 
     fun onNewSummaryStorage(
@@ -85,9 +72,9 @@ class PrescanPropagation(
         }
     }
 
-    private fun reportStats(stats: PrescanSeedCoordinator.Stats, scopeUnits: Int) {
+    private fun reportStats(stats: PrescanSeedCoordinator.Stats) {
         logger.info {
-            "Prescan propagation: scopeMethods=${stats.scopeMethods}, scopeUnits=$scopeUnits, " +
+            "Prescan propagation: scopeMethods=${stats.scopeMethods}, " +
                 "targetEntryPoints=${stats.targetEntryPoints}, globalSeeds=${stats.globalSeeds}, " +
                 "constructorSeeds=${stats.constructorSeeds}, globalDeliveries=${stats.globalDeliveries}, " +
                 "constructorDeliveries=${stats.constructorDeliveries}, duplicates=${stats.duplicates}, " +

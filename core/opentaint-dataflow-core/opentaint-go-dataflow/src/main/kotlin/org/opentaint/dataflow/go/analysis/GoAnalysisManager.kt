@@ -5,9 +5,9 @@ import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -55,21 +55,10 @@ class GoAnalysisManager(
     cp: GoIRProgram,
     val taintConfig: GoTaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
-) : GoLanguageManager(cp), PrescanAnalysisManager {
+) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
     private val prescanPropagation = PrescanPropagation()
-
-    override fun startPrescan(
-        scopeMethods: Collection<CommonMethod>,
-        manager: AnalysisUnitRunnerManager,
-    ) {
-        prescanPropagation.start(scopeMethods, manager)
-    }
-
-    override fun finishPrescan() {
-        prescanPropagation.finish()
-    }
 
     override fun onNewSummaryStorage(
         storage: SummaryEdgeStorageWithSubscribers,
@@ -81,10 +70,15 @@ class GoAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
 
-    private var selectedPhase: Phase = Phase.Prescan
+    private var selectedPhase: Phase = Phase.FullScan
     val phase: Phase get() = selectedPhase
 
     override fun selectPhase(phase: Phase) {
+        when (phase) {
+            is Phase.Prescan -> prescanPropagation.start(phase.scopeMethods)
+            Phase.FullScan -> prescanPropagation.finish()
+        }
+
         selectedPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         if (phase is Phase.FullScan) {

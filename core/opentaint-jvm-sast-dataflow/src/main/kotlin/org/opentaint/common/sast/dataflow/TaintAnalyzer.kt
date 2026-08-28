@@ -12,7 +12,6 @@ import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodStats
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
-import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -103,7 +102,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         if (options.storeSummaries) summarySerializationContext() else DummySerializationContext
     }
 
-    abstract fun analysisManager(): PrescanAnalysisManager
+    abstract fun analysisManager(): TaintAnalysisManager
 
     abstract fun unitResolver(): UnitResolver<Method>
 
@@ -139,11 +138,13 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     }
 
     private fun prescan(startMethods: List<MethodWithContext>) {
-        analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
-        analysisManager.startPrescan(startMethods.map { it.method }, ifdsEngine)
 
         try {
+            analysisManager.selectPhase(
+                TaintAnalysisManager.Phase.Prescan(startMethods.map { it.method })
+            )
+
             val prescanTimeout = options.ifdsTimeout * 0.3
             val prescanResult = runCatching {
                 ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
@@ -163,7 +164,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 }
             }
         } finally {
-            analysisManager.finishPrescan()
+            analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         }
     }
 
@@ -172,7 +173,6 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         entryPoints: List<Method>,
         startMethods: List<MethodWithContext>,
     ): Pair<List<VulnerabilityWithTrace>, Status> {
-        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         ifdsEngine.resetApManager(apManager)
 
         val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80

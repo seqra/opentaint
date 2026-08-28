@@ -152,7 +152,7 @@ class PrescanSeedCoordinatorTest {
         val manager = RecordingRunnerManager()
         val propagation = PrescanPropagation()
 
-        propagation.start(listOf(producer, consumer), manager)
+        propagation.start(listOf(producer, consumer))
         val storage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
         propagation.onNewSummaryStorage(storage, manager)
         storage.addEdges(listOf(z2f(producerEntry, fact)))
