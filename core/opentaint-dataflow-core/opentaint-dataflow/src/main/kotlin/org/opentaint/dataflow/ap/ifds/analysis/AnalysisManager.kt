@@ -25,13 +25,8 @@ import org.opentaint.util.analysis.ApplicationGraph
 interface AnalysisManager: LanguageManager {
     val factTypeChecker: FactTypeChecker
 
-    fun getSummaryStorageSubscriber(
-        methodEntryPoint: MethodEntryPoint,
-        manager: AnalysisUnitRunnerManager,
-    ): SummaryEdgeStorageWithSubscribers.Subscriber? = null
-
-    fun onMethodEntryPointActivated(
-        methodEntryPoint: MethodEntryPoint,
+    fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
     ) = Unit
 

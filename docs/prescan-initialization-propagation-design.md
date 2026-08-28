@@ -146,7 +146,7 @@ For every `GoIRPackage` with `isProject == true`, include every distinct `GoIRFu
 
 Explicitly include `GoIRPackage.initFunction` and deduplicate it against `package.functions` by function identity. Exclude dependency/standard-library packages and bodyless declarations.
 
-Starting a closure with `EmptyMethodContext` cannot supply its captured values. That is acceptable for conservative prescan discovery; context-specific closure activations remain possible through normal call resolution, and the seed coordinator replays applicable global seeds to those activations.
+Starting a closure with `EmptyMethodContext` cannot supply its captured values. That is acceptable for conservative prescan discovery; context-specific closure activations remain possible through normal call resolution, while initialization seeds are deliberately submitted only to the empty-context entry points derived from the project IR.
 
 ### 6.3 Full-scan roots and debug selection
 
@@ -181,7 +181,7 @@ When a newly canonicalized method summary contains:
 Edge.ZeroToFact(finalFact.base == AccessPathBase.ClassStatic)
 ```
 
-register the exact `finalFact` as a global prescan seed and submit it as an initial fact to every activated entry point whose method is in the project prescan scope.
+register the exact `finalFact` as a global prescan seed and submit it as an initial fact to every empty-context entry point whose method is in the project prescan scope.
 
 This rule is language-neutral:
 
@@ -274,30 +274,22 @@ Add a `PrescanSeedCoordinator` owned by `TaintAnalysisManager`. It exists only w
 
 ```text
 scopeMethods                 set of project prescan methods
-globalSeeds                  append-only canonical fact log
-ownerSeeds[owner]            append-only canonical receiver-fact log
-globalVersion[entryPoint]    replay cursor per activated entry point
-ownerVersion[entryPoint]     replay cursor for its owner
+targets                      empty-context entry points derived from each method CFG
+globalSeeds                  set of canonical global facts already broadcast
+ownerSeeds[owner]            set of canonical receiver facts already broadcast
 ```
 
-The coordinator has two inputs:
+The coordinator has one runtime input:
 
-1. **A canonical summary delta.** Newly stored `Z2F` summaries are classified into global or owner seeds.
-2. **An activated method entry point.** Applicable previously discovered seeds are replayed to it.
+1. **A canonical summary delta.** Newly stored `Z2F` summaries are classified into global or owner seeds and immediately delivered to their fixed targets.
 
-These two inputs make behavior independent of scheduling order:
-
-- producer first: the seed is logged, then replayed when a consumer activates;
-- consumer first: it receives the seed when the producer later publishes it;
-- a dynamic context activates later: it receives the current seed snapshot on activation.
-
-All roots are known before worker execution, but entry-point activation is still event-driven because methods can have multiple/contextual entry points and runners operate concurrently.
+All target methods are known before worker execution. For every CFG entry statement, the coordinator creates `MethodEntryPoint(EmptyMethodContext, statement)` up front. Delivering a fact through the ordinary runner API creates the target analyzer when necessary, so propagation does not depend on a separate activation event or contextual entry point.
 
 ### 8.4 Subscribe to canonical summary deltas
 
 Do not observe the raw list passed to `AnalysisUnitRunnerManager.newSummaryEdges`. Summary storage can canonicalize, subsume, or discard an edge. Propagation observes the delta that `SummaryEdgeStorageWithSubscribers` actually accepted.
 
-For every `SummaryEdgeStorageWithSubscribers`, ask `AnalysisManager` for an optional subscriber using the method entry point and `AnalysisUnitRunnerManager`. The existing subscription notification receives `addedEdges` only after canonical insertion, so the subscriber can forward that delta directly to the prescan coordinator without changing `addEdges` or `addSummaryEdges` return types. Prescan fact deliveries use `AnalysisUnitRunnerManager.handleCrossUnitFactCall`.
+Whenever `MethodSummariesUnitStorage` creates a `SummaryEdgeStorageWithSubscribers`, invoke `AnalysisManager.onNewSummaryStorage(storage, runnerManager)`. The analysis manager can inspect the storage's public `methodEntryPoint` and attach its phase-local subscriber directly. The existing subscription notification receives `addedEdges` only after canonical insertion, so the subscriber can forward that delta directly to the prescan coordinator without changing `addEdges` or `addSummaryEdges` return types. Prescan fact deliveries use `AnalysisUnitRunnerManager.handleCrossUnitFactCall`.
 
 This location also covers summaries loaded from persistent storage, because `MethodAnalyzer.loadSummariesFromRunner` republishes loaded summaries through `runner.addNewSummaryEdges`.
 
@@ -313,11 +305,9 @@ Handling obtains or creates the target `MethodAnalyzer` and calls its existing `
 
 Each fact is an ordinary counted runner event. Batching can be added later if initial-fact events gain a batch form.
 
-### 8.6 Activation hook
+### 8.6 Empty-context targets
 
-When `TaintAnalysisUnitRunner` resolves a `MethodWithContext` into one or more `MethodEntryPoint`s, it notifies `AnalysisManager` before or immediately after adding the initial zero fact. During prescan, the analysis manager asks its coordinator to schedule the seed snapshot for that exact entry point; other analysis managers can leave the hook inactive.
-
-The order between the ordinary zero start and replayed seeds is not semantically significant because edge processing is monotone. Both events must be counted before global quiescence is declared.
+Initialization propagation never follows contextual activation. The coordinator derives target statements from each scoped method's IR and always pairs them with `EmptyMethodContext`. Ordinary call resolution remains free to analyze additional contexts, but global and constructor initialization facts are broadcast only to the fixed empty-context scope.
 
 ## 9. Algorithm
 
@@ -325,19 +315,9 @@ At prescan start:
 
 ```text
 catalog = build project prescan method/owner index
+derive every target as MethodEntryPoint(EmptyMethodContext, CFG entry)
 analysisManager.startPrescanPropagation(catalog, runnerManager)
 submit every prescan root from Zero
-```
-
-On entry-point activation:
-
-```text
-if method not in project prescan scope: return
-mark entry point active
-deliver globalSeeds since globalVersion[entryPoint]
-if entry point accepts receiver facts:
-    deliver ownerSeeds[owner] since ownerVersion[entryPoint]
-advance cursors atomically
 ```
 
 On accepted summary delta:
@@ -346,14 +326,14 @@ On accepted summary delta:
 for each ZeroToFact edge:
     if final base is ClassStatic:
         if exact/canonical seed is new:
-            append to globalSeeds
-            deliver to all active in-scope entry points
+            add to globalSeeds
+            deliver to every fixed in-scope entry point
 
     if source is a JVM constructor and final base is This:
         owner = exact declaration class
         if exact/canonical seed is new for owner:
-            append to ownerSeeds[owner]
-            deliver to all active receiver-bearing entry points of owner
+            add to ownerSeeds[owner]
+            deliver to every fixed receiver-bearing entry point of owner
 ```
 
 Before full scan:
@@ -367,20 +347,19 @@ start analysisEntryPoints only
 
 ## 10. Concurrency, deduplication, and termination
 
-The coordinator is shared by concurrently running analysis units. Its state updates must be linearizable. A simple implementation can synchronize classification/version updates, collect deliveries while holding the lock, release the lock, and enqueue runner events afterward. It must never call into a runner while holding the coordinator lock.
+The coordinator is shared by concurrently running analysis units. Its state updates must be linearizable. A simple implementation can synchronize classification and deduplication, collect deliveries while holding the lock, release the lock, and enqueue runner events afterward. It must never call into a runner while holding the coordinator lock.
 
 Required invariants:
 
 1. Each exact canonical global fact enters `globalSeeds` at most once.
-2. Each exact canonical constructor receiver fact enters its owner log at most once.
-3. Each activated method entry point consumes each applicable log position at most once.
-4. A seed discovered concurrently with activation is delivered by either the activation snapshot or the new-seed fan-out, never missed; duplicate scheduling is acceptable only if the target edge store removes it.
-5. Propagated facts enter targets as `F2F` edges and therefore do not re-enter the coordinator merely because they were broadcast.
-6. Repeated qualifying source summaries are rejected by canonical summary storage or the corresponding seed registry.
+2. Each exact canonical constructor receiver fact enters its owner set at most once.
+3. Each newly accepted seed is delivered once to each applicable fixed target.
+4. Propagated facts enter targets as `F2F` edges and therefore do not re-enter the coordinator merely because they were broadcast.
+5. Repeated qualifying source summaries are rejected by canonical summary storage or the corresponding seed registry.
 
 Use AP-manager-compatible/canonical fact storage rather than relying on object identity. If a later, more general fact subsumes an earlier narrow fact, it is a new seed and is propagated. Already delivered narrow facts are not retracted; this is conservative and matches the monotone IFDS analysis.
 
-The append-log plus per-entry-point cursor representation avoids a separate `Set<(target, fact)>` with explicit Cartesian-product metadata. The target analyzers still necessarily process the applicable facts.
+The fixed target catalog plus canonical seed sets avoids a separate `Set<(target, fact)>` with explicit Cartesian-product metadata. The target analyzers still necessarily process the applicable facts.
 
 Termination follows from the existing finite/capped access-path domain plus the two monotone seed registries. The feature must not introduce a retry loop or re-enqueue an existing seed merely because another method summarized it.
 
@@ -406,7 +385,6 @@ It also intentionally over-approximates discovery. Starting a private function f
 Initial mitigations:
 
 - deduplicate the method catalog and canonical seeds before scheduling;
-- use append-only logs and replay cursors instead of pair sets;
 - batch deliveries per target/unit;
 - do not independently start dependencies;
 - propagate only `Z2F`, only `ClassStatic` globally, and only constructor `This` within an owner;
@@ -422,7 +400,7 @@ prescan.seeds.constructor
 prescan.seed.deliveries.global
 prescan.seed.deliveries.constructor
 prescan.seed.duplicates
-prescan.seed.replayed_entrypoints
+prescan.scope.entrypoints
 ```
 
 Log the largest fan-out facts/owners and distinguish scope-start events from propagation events. These measurements are required before changing timeout allocation.
@@ -458,8 +436,8 @@ Common/core tests:
 - the complete accessor/mark/type-info structure is preserved;
 - non-static bases and non-`Z2F` summaries do not fan out;
 - cross-unit targets receive the fact;
-- producer-before-consumer and consumer-before-producer schedules have identical results;
-- a newly activated contextual entry point receives prior seeds;
+- target analyzers are created on demand even when the producer finishes first;
+- every delivery uses `EmptyMethodContext`, regardless of the source summary context;
 - repeated summaries do not create repeated fan-out;
 - loaded summaries use the same path.
 
@@ -512,9 +490,9 @@ The exact names can change during implementation, but the responsibility boundar
 
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
 - `TaintAnalyzer`: start the two phases with different root lists and notify the analysis manager of prescan lifecycle.
-- `TaintAnalysisManager`: own the coordinator, summary subscriber, activation handling, propagation statistics, and seed delivery policy.
+- `TaintAnalysisManager`: own the coordinator, new-summary-storage hook, propagation statistics, and seed delivery policy.
 - `TaintAnalysisUnitRunnerManager`: provide ordinary cross-unit fact delivery without prescan-specific state or behavior.
-- `TaintAnalysisUnitRunner`: report entry-point activation to the analysis manager and process existing initial-fact events.
+- `TaintAnalysisUnitRunner`: process existing initial-fact events without prescan-specific activation behavior.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.
 - `SummaryEdgeStorageWithSubscribers` / `MethodSummariesUnitStorage`: attach the prescan subscriber and publish accepted canonical deltas through the existing subscription mechanism.
 - JVM policy code: classify constructors and exact declaration-class receiver targets.

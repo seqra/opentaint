@@ -288,8 +288,6 @@ class TaintAnalysisUnitRunner(
             val methodAnalyzers = methodAnalyzers(methodEntryPoint)
             methodAnalyzers.add(this, methodEntryPoint)
 
-            analysisManager.onMethodEntryPointActivated(methodEntryPoint, manager)
-
             methodAnalyzers.getAnalyzer(methodEntryPoint).addInitialZeroFact()
         }
     }
@@ -323,8 +321,6 @@ class TaintAnalysisUnitRunner(
     private inline fun submitMethodInitialFact(methodEntryPoint: MethodEntryPoint, body: (MethodAnalyzer) -> Unit) {
         val methodRunner = methodAnalyzers(methodEntryPoint)
         methodRunner.add(this, methodEntryPoint)
-
-        analysisManager.onMethodEntryPointActivated(methodEntryPoint, manager)
 
         val analyzer = methodRunner.getAnalyzer(methodEntryPoint)
         body(analyzer)

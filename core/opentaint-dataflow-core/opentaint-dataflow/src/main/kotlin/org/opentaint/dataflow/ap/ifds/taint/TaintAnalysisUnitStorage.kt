@@ -14,7 +14,7 @@ class TaintAnalysisUnitStorage(
 ) : MethodSummariesUnitStorage(
     apManager,
     analysisManager,
-    { methodEntryPoint -> manager?.let { analysisManager.getSummaryStorageSubscriber(methodEntryPoint, it) } },
+    { storage -> manager?.let { analysisManager.onNewSummaryStorage(storage, it) } },
 ) {
     private data class VulnerabilityIdentity(
         val ruleId: String,

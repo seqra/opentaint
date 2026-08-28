@@ -29,17 +29,11 @@ interface TaintAnalysisManager : AnalysisManager {
         prescanPropagation.finish()
     }
 
-    override fun getSummaryStorageSubscriber(
-        methodEntryPoint: MethodEntryPoint,
-        manager: AnalysisUnitRunnerManager,
-    ): SummaryEdgeStorageWithSubscribers.Subscriber? =
-        prescanPropagation.getSummaryStorageSubscriber(methodEntryPoint, manager)
-
-    override fun onMethodEntryPointActivated(
-        methodEntryPoint: MethodEntryPoint,
+    override fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
         manager: AnalysisUnitRunnerManager,
     ) {
-        prescanPropagation.onMethodEntryPointActivated(methodEntryPoint, manager)
+        prescanPropagation.onNewSummaryStorage(storage, manager)
     }
 
     override fun getMethodAnalysisContext(

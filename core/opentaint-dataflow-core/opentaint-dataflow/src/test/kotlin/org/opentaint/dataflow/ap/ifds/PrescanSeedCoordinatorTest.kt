@@ -18,15 +18,13 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.assertEquals
-import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PrescanSeedCoordinatorTest {
     private val apManager = TreeApManager(AnyAccessorDisabled, RefManager(), Cancellation())
 
     @Test
-    fun `global seed reaches active targets once`() {
+    fun `global seed reaches all scope targets once`() {
         val producer = method("producer")
         val consumer = method("consumer")
         val producerEntry = entryPoint(producer)
@@ -34,12 +32,10 @@ class PrescanSeedCoordinatorTest {
         val fact = fact(AccessPathBase.ClassStatic, "global")
         val coordinator = coordinator(producer, consumer)
 
-        assertTrue(coordinator.activate(consumerEntry).isEmpty())
-
         val first = coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact)))
-        assertEquals(listOf(producer), first.map { it.sourceMethod })
-        assertEquals(listOf(consumerEntry), first.map { it.methodEntryPoint })
-        assertEquals(listOf(fact), first.single().facts)
+        assertTrue(first.all { it.sourceMethod == producer })
+        assertEquals(setOf(producerEntry, consumerEntry), first.mapTo(hashSetOf()) { it.methodEntryPoint })
+        assertTrue(first.all { it.facts == listOf(fact) })
 
         assertTrue(coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact))).isEmpty())
         assertEquals(1, coordinator.stats().globalSeeds)
@@ -47,21 +43,19 @@ class PrescanSeedCoordinatorTest {
     }
 
     @Test
-    fun `global seed is replayed when consumer activates later`() {
+    fun `global seed always targets empty context`() {
         val producer = method("producer")
         val consumer = method("consumer")
-        val producerEntry = entryPoint(producer)
-        val consumerEntry = entryPoint(consumer)
+        val producerEntry = MethodEntryPoint(DummyContext, producer.entry)
         val fact = fact(AccessPathBase.ClassStatic, "global")
         val coordinator = coordinator(producer, consumer)
 
-        assertTrue(coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact))).isEmpty())
-
-        val replay = coordinator.activate(consumerEntry)
-        assertEquals(producer, replay.single().sourceMethod)
-        assertEquals(listOf(fact), replay.single().facts)
-        assertTrue(coordinator.activate(consumerEntry).isEmpty())
-        assertEquals(1, coordinator.stats().replayedEntryPoints)
+        val deliveries = coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact)))
+        assertTrue(deliveries.all { it.methodEntryPoint.context == EmptyMethodContext })
+        assertEquals(
+            setOf<CommonMethod>(producer, consumer),
+            deliveries.mapTo(hashSetOf()) { it.methodEntryPoint.method },
+        )
     }
 
     @Test
@@ -77,14 +71,12 @@ class PrescanSeedCoordinatorTest {
         val fact = fact(AccessPathBase.This, "receiver")
         val coordinator = coordinator(constructor, sameOwner, staticSameOwner, otherOwner)
 
-        coordinator.activate(sameEntry)
-        coordinator.activate(staticEntry)
-        coordinator.activate(otherEntry)
-
         val deliveries = coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact)))
 
-        assertEquals(listOf(sameEntry), deliveries.map { it.methodEntryPoint })
-        assertEquals(listOf(fact), deliveries.single().facts)
+        assertEquals(setOf(constructorEntry, sameEntry), deliveries.mapTo(hashSetOf()) { it.methodEntryPoint })
+        assertTrue(deliveries.all { it.facts == listOf(fact) })
+        assertTrue(staticEntry !in deliveries.map { it.methodEntryPoint })
+        assertTrue(otherEntry !in deliveries.map { it.methodEntryPoint })
         assertEquals(1, coordinator.stats().constructorSeeds)
     }
 
@@ -94,8 +86,6 @@ class PrescanSeedCoordinatorTest {
         val consumer = method("consumer", receiverOwner = "A")
         val producerEntry = entryPoint(producer)
         val coordinator = coordinator(producer, consumer)
-
-        coordinator.activate(entryPoint(consumer))
 
         val deliveries = coordinator.acceptSummaryEdges(
             producerEntry,
@@ -112,8 +102,6 @@ class PrescanSeedCoordinatorTest {
         val dependencyEntry = entryPoint(dependencyConstructor)
         val coordinator = coordinator(consumer)
 
-        coordinator.activate(entryPoint(consumer))
-
         val deliveries = coordinator.acceptSummaryEdges(
             dependencyEntry,
             listOf(z2f(dependencyEntry, fact(AccessPathBase.This, "receiver"))),
@@ -123,7 +111,7 @@ class PrescanSeedCoordinatorTest {
     }
 
     @Test
-    fun `constructor receiver seed is replayed to a later same-owner activation`() {
+    fun `constructor receiver seed reaches every same-owner scope method`() {
         val constructor = method("init", initializerOwner = "A", receiverOwner = "A")
         val consumer = method("consumer", receiverOwner = "A")
         val constructorEntry = entryPoint(constructor)
@@ -131,12 +119,11 @@ class PrescanSeedCoordinatorTest {
         val fact = fact(AccessPathBase.This, "receiver")
         val coordinator = coordinator(constructor, consumer)
 
-        assertTrue(coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact))).isEmpty())
-
-        val replay = coordinator.activate(consumerEntry)
-        assertEquals(constructor, replay.single().sourceMethod)
-        assertEquals(listOf(fact), replay.single().facts)
-        assertEquals(1, coordinator.stats().constructorDeliveries)
+        val deliveries = coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact)))
+        assertTrue(deliveries.all { it.sourceMethod == constructor })
+        assertEquals(setOf(constructorEntry, consumerEntry), deliveries.mapTo(hashSetOf()) { it.methodEntryPoint })
+        assertTrue(deliveries.all { it.facts == listOf(fact) })
+        assertEquals(2, coordinator.stats().constructorDeliveries)
     }
 
     @Test
@@ -145,7 +132,6 @@ class PrescanSeedCoordinatorTest {
         val consumer = method("consumer")
         val producerEntry = entryPoint(producer)
         val coordinator = coordinator(producer, consumer)
-        coordinator.activate(entryPoint(consumer))
 
         val ignored = listOf(
             z2f(producerEntry, fact(AccessPathBase.Return, "return")),
@@ -158,28 +144,31 @@ class PrescanSeedCoordinatorTest {
     }
 
     @Test
-    fun `analysis manager propagation routes replay from the producer unit`() {
+    fun `new summary storage hook routes facts from the producer unit`() {
         val producer = method("producer")
         val consumer = method("consumer")
         val producerEntry = entryPoint(producer)
-        val consumerEntry = entryPoint(consumer)
         val fact = fact(AccessPathBase.ClassStatic, "global")
         val manager = RecordingRunnerManager()
         val propagation = PrescanPropagation()
 
         propagation.start(listOf(producer, consumer), manager)
-        val subscriber = assertNotNull(propagation.getSummaryStorageSubscriber(producerEntry, manager))
-        subscriber.newSummaryEdges(listOf(z2f(producerEntry, fact)))
-        assertTrue(manager.routedFacts.isEmpty())
-
-        propagation.onMethodEntryPointActivated(consumerEntry, manager)
+        val storage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
+        propagation.onNewSummaryStorage(storage, manager)
+        storage.addEdges(listOf(z2f(producerEntry, fact)))
         assertEquals(
-            listOf(RoutedFact(DummyUnit(producer.name), consumerEntry, fact)),
-            manager.routedFacts,
+            setOf<CommonMethod>(producer, consumer),
+            manager.routedFacts.mapTo(hashSetOf()) { it.methodEntryPoint.method },
         )
+        assertTrue(manager.routedFacts.all { it.callerUnit == DummyUnit(producer.name) })
+        assertTrue(manager.routedFacts.all { it.methodEntryPoint.context == EmptyMethodContext })
+        assertTrue(manager.routedFacts.all { it.fact == fact })
 
         propagation.finish()
-        assertNull(propagation.getSummaryStorageSubscriber(producerEntry, manager))
+        val inactiveStorage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
+        propagation.onNewSummaryStorage(inactiveStorage, manager)
+        inactiveStorage.addEdges(listOf(z2f(producerEntry, fact(AccessPathBase.ClassStatic, "later"))))
+        assertEquals(2, manager.routedFacts.size)
     }
 
     @Test
@@ -203,7 +192,9 @@ class PrescanSeedCoordinatorTest {
                 sideEffects: List<SideEffectSummary>,
             ) = Unit
         }
-        val storage = MethodSummariesUnitStorage(apManager, DummyLanguageManager) { subscriber }
+        val storage = MethodSummariesUnitStorage(apManager, DummyLanguageManager) {
+            it.subscribeOnEdges(subscriber)
+        }
 
         storage.addSummaryEdges(producerEntry, listOf(edge))
         storage.addSummaryEdges(producerEntry, listOf(edge))
@@ -231,7 +222,9 @@ class PrescanSeedCoordinatorTest {
     ) = DummyMethod(name, initializerOwner, receiverOwner)
 
     private fun entryPoint(method: DummyMethod): MethodEntryPoint =
-        MethodEntryPoint(EmptyMethodContext, DummyInst(DummyLocation(method, 0)))
+        MethodEntryPoint(EmptyMethodContext, method.entry)
+
+    private data object DummyContext : MethodContext
 
     private data class DummyMethod(
         override val name: String,
@@ -240,7 +233,14 @@ class PrescanSeedCoordinatorTest {
     ) : CommonMethod {
         override val parameters: List<CommonMethodParameter> = emptyList()
         override val returnType: CommonTypeName get() = error("Unsupported")
-        override fun flowGraph(): ControlFlowGraph<CommonInst> = error("Unsupported")
+        val entry: CommonInst = DummyInst(DummyLocation(this, 0))
+        override fun flowGraph(): ControlFlowGraph<CommonInst> = object : ControlFlowGraph<CommonInst> {
+            override val instructions: List<CommonInst> = listOf(entry)
+            override val entries: List<CommonInst> = listOf(entry)
+            override val exits: List<CommonInst> = listOf(entry)
+            override fun successors(node: CommonInst): Set<CommonInst> = emptySet()
+            override fun predecessors(node: CommonInst): Set<CommonInst> = emptySet()
+        }
     }
 
     private data class DummyLocation(
