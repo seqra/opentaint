@@ -59,6 +59,8 @@ class ProjectBuilder:
         options.incremental = False
         options.preserve_asts = True
         options.export_types = True
+        options.python_executable = None
+        options.semantic_analysis_only = True
         return options
 
     def build(self) -> Iterator[pir_pb2.MypyModuleProto]:
