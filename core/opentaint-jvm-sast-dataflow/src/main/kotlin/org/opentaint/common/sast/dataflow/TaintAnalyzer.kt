@@ -137,9 +137,13 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         return fullScanResult
     }
 
+    @Suppress("UNCHECKED_CAST")
     private fun prescan(startMethods: List<MethodWithContext>) {
         analysisManager.selectPhase(
-            TaintAnalysisManager.Phase.Prescan(startMethods.map { it.method })
+            TaintAnalysisManager.Phase.Prescan(
+                startMethods.map { it.method },
+                ifdsAnalysisGraph as ApplicationGraph<CommonMethod, CommonInst>,
+            )
         )
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
 

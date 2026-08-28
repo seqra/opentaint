@@ -12,6 +12,7 @@ interface TaintAnalysisManager : AnalysisManager {
     sealed interface Phase {
         data class Prescan(
             val scopeMethods: Collection<CommonMethod>,
+            val graph: ApplicationGraph<CommonMethod, CommonInst>? = null,
         ) : Phase
 
         data object FullScan : Phase

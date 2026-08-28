@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccess
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
@@ -20,42 +21,29 @@ import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-class PrescanSeedCoordinatorTest {
+class PrescanPropagationTest {
     private val apManager = TreeApManager(AnyAccessorDisabled, RefManager(), Cancellation())
 
     @Test
-    fun `global seed reaches all scope targets once`() {
+    fun `global seed reaches all scope targets in empty context`() {
         val producer = method("producer")
         val consumer = method("consumer")
         val producerEntry = entryPoint(producer)
         val consumerEntry = entryPoint(consumer)
         val fact = fact(AccessPathBase.ClassStatic, "global")
-        val coordinator = coordinator(producer, consumer)
-
-        val first = coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact)))
-        assertTrue(first.all { it.sourceMethod == producer })
-        assertEquals(setOf(producerEntry, consumerEntry), first.mapTo(hashSetOf()) { it.methodEntryPoint })
-        assertTrue(first.all { it.facts == listOf(fact) })
-
-        assertTrue(coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact))).isEmpty())
-        assertEquals(1, coordinator.stats().globalSeeds)
-        assertEquals(1, coordinator.stats().duplicates)
-    }
-
-    @Test
-    fun `global seed always targets empty context`() {
-        val producer = method("producer")
-        val consumer = method("consumer")
-        val producerEntry = MethodEntryPoint(DummyContext, producer.entry)
-        val fact = fact(AccessPathBase.ClassStatic, "global")
-        val coordinator = coordinator(producer, consumer)
-
-        val deliveries = coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact)))
-        assertTrue(deliveries.all { it.methodEntryPoint.context == EmptyMethodContext })
-        assertEquals(
-            setOf<CommonMethod>(producer, consumer),
-            deliveries.mapTo(hashSetOf()) { it.methodEntryPoint.method },
+        val source = MethodEntryPoint(DummyContext, producer.entry)
+        val manager = propagate(
+            propagation(producer, consumer),
+            source,
+            listOf(z2f(source, fact)),
         )
+
+        assertEquals(
+            setOf(producerEntry, consumerEntry),
+            manager.routedFacts.mapTo(hashSetOf()) { it.methodEntryPoint },
+        )
+        assertTrue(manager.routedFacts.all { it.callerUnit == DummyUnit(producer.name) })
+        assertTrue(manager.routedFacts.all { it.fact == fact })
     }
 
     @Test
@@ -69,15 +57,16 @@ class PrescanSeedCoordinatorTest {
         val staticEntry = entryPoint(staticSameOwner)
         val otherEntry = entryPoint(otherOwner)
         val fact = fact(AccessPathBase.This, "receiver")
-        val coordinator = coordinator(constructor, sameOwner, staticSameOwner, otherOwner)
+        val manager = propagate(
+            propagation(constructor, sameOwner, staticSameOwner, otherOwner),
+            constructorEntry,
+            listOf(z2f(constructorEntry, fact)),
+        )
 
-        val deliveries = coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact)))
-
-        assertEquals(setOf(constructorEntry, sameEntry), deliveries.mapTo(hashSetOf()) { it.methodEntryPoint })
-        assertTrue(deliveries.all { it.facts == listOf(fact) })
-        assertTrue(staticEntry !in deliveries.map { it.methodEntryPoint })
-        assertTrue(otherEntry !in deliveries.map { it.methodEntryPoint })
-        assertEquals(1, coordinator.stats().constructorSeeds)
+        assertEquals(setOf(constructorEntry, sameEntry), manager.routedFacts.mapTo(hashSetOf()) { it.methodEntryPoint })
+        assertTrue(manager.routedFacts.all { it.fact == fact })
+        assertTrue(staticEntry !in manager.routedFacts.map { it.methodEntryPoint })
+        assertTrue(otherEntry !in manager.routedFacts.map { it.methodEntryPoint })
     }
 
     @Test
@@ -85,14 +74,12 @@ class PrescanSeedCoordinatorTest {
         val producer = method("ordinary", receiverOwner = "A")
         val consumer = method("consumer", receiverOwner = "A")
         val producerEntry = entryPoint(producer)
-        val coordinator = coordinator(producer, consumer)
-
-        val deliveries = coordinator.acceptSummaryEdges(
+        val manager = propagate(
+            propagation(producer, consumer),
             producerEntry,
             listOf(z2f(producerEntry, fact(AccessPathBase.This, "receiver"))),
         )
-        assertTrue(deliveries.isEmpty())
-        assertEquals(0, coordinator.stats().constructorSeeds)
+        assertTrue(manager.routedFacts.isEmpty())
     }
 
     @Test
@@ -100,30 +87,12 @@ class PrescanSeedCoordinatorTest {
         val dependencyConstructor = method("init", initializerOwner = "A", receiverOwner = "A")
         val consumer = method("consumer", receiverOwner = "A")
         val dependencyEntry = entryPoint(dependencyConstructor)
-        val coordinator = coordinator(consumer)
-
-        val deliveries = coordinator.acceptSummaryEdges(
+        val manager = propagate(
+            propagation(consumer),
             dependencyEntry,
             listOf(z2f(dependencyEntry, fact(AccessPathBase.This, "receiver"))),
         )
-        assertTrue(deliveries.isEmpty())
-        assertEquals(0, coordinator.stats().constructorSeeds)
-    }
-
-    @Test
-    fun `constructor receiver seed reaches every same-owner scope method`() {
-        val constructor = method("init", initializerOwner = "A", receiverOwner = "A")
-        val consumer = method("consumer", receiverOwner = "A")
-        val constructorEntry = entryPoint(constructor)
-        val consumerEntry = entryPoint(consumer)
-        val fact = fact(AccessPathBase.This, "receiver")
-        val coordinator = coordinator(constructor, consumer)
-
-        val deliveries = coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact)))
-        assertTrue(deliveries.all { it.sourceMethod == constructor })
-        assertEquals(setOf(constructorEntry, consumerEntry), deliveries.mapTo(hashSetOf()) { it.methodEntryPoint })
-        assertTrue(deliveries.all { it.facts == listOf(fact) })
-        assertEquals(2, coordinator.stats().constructorDeliveries)
+        assertTrue(manager.routedFacts.isEmpty())
     }
 
     @Test
@@ -131,36 +100,13 @@ class PrescanSeedCoordinatorTest {
         val producer = method("producer")
         val consumer = method("consumer")
         val producerEntry = entryPoint(producer)
-        val coordinator = coordinator(producer, consumer)
 
         val ignored = listOf(
             z2f(producerEntry, fact(AccessPathBase.Return, "return")),
             Edge.ZeroToZero(producerEntry, producerEntry.statement),
         )
 
-        assertTrue(coordinator.acceptSummaryEdges(producerEntry, ignored).isEmpty())
-        assertEquals(0, coordinator.stats().globalSeeds)
-        assertEquals(0, coordinator.stats().constructorSeeds)
-    }
-
-    @Test
-    fun `new summary storage hook routes facts from the producer unit`() {
-        val producer = method("producer")
-        val consumer = method("consumer")
-        val producerEntry = entryPoint(producer)
-        val fact = fact(AccessPathBase.ClassStatic, "global")
-        val manager = RecordingRunnerManager()
-        val propagation = PrescanPropagation(listOf(producer, consumer))
-        val storage = SummaryEdgeStorageWithSubscribers(apManager, producerEntry)
-        propagation.onNewSummaryStorage(storage, manager)
-        storage.addEdges(listOf(z2f(producerEntry, fact)))
-        assertEquals(
-            setOf<CommonMethod>(producer, consumer),
-            manager.routedFacts.mapTo(hashSetOf()) { it.methodEntryPoint.method },
-        )
-        assertTrue(manager.routedFacts.all { it.callerUnit == DummyUnit(producer.name) })
-        assertTrue(manager.routedFacts.all { it.methodEntryPoint.context == EmptyMethodContext })
-        assertTrue(manager.routedFacts.all { it.fact == fact })
+        assertTrue(propagate(propagation(producer, consumer), producerEntry, ignored).routedFacts.isEmpty())
     }
 
     @Test
@@ -199,7 +145,26 @@ class PrescanSeedCoordinatorTest {
         assertTrue(received.all { it == listOf<Edge>(edge) })
     }
 
-    private fun coordinator(vararg methods: DummyMethod) = PrescanSeedCoordinator(methods.toList(), Policy)
+    private fun propagation(vararg methods: DummyMethod) = PrescanPropagation(
+        methods.toList(),
+        object : MethodEntrypointResolver {
+            override fun resolveEntryPoints(method: CommonMethod, context: MethodContext): List<CommonInst> =
+                listOf((method as DummyMethod).entry)
+        },
+        Policy,
+    )
+
+    private fun propagate(
+        propagation: PrescanPropagation,
+        source: MethodEntryPoint,
+        edges: List<Edge>,
+    ): RecordingRunnerManager {
+        val manager = RecordingRunnerManager()
+        val storage = SummaryEdgeStorageWithSubscribers(apManager, source)
+        propagation.onNewSummaryStorage(storage, manager)
+        storage.addEdges(edges)
+        return manager
+    }
 
     private fun fact(base: AccessPathBase, mark: String): FinalFactAp =
         apManager.createFinalAp(base, ExclusionSet.Universe).prependAccessor(TaintMarkAccessor(mark))

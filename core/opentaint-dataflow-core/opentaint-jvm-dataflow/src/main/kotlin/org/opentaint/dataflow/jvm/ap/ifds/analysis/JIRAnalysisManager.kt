@@ -105,7 +105,11 @@ class JIRAnalysisManager(
 
     override fun selectPhase(phase: Phase) {
         prescanPropagation = when (phase) {
-            is Phase.Prescan -> PrescanPropagation(phase.scopeMethods, prescanPropagationPolicy)
+            is Phase.Prescan -> PrescanPropagation(
+                phase.scopeMethods,
+                getMethodEntrypointResolver(checkNotNull(phase.graph)),
+                prescanPropagationPolicy,
+            )
             Phase.FullScan -> null
         }
 

@@ -75,7 +75,10 @@ class GoAnalysisManager(
 
     override fun selectPhase(phase: Phase) {
         prescanPropagation = when (phase) {
-            is Phase.Prescan -> PrescanPropagation(phase.scopeMethods)
+            is Phase.Prescan -> PrescanPropagation(
+                phase.scopeMethods,
+                getMethodEntrypointResolver(checkNotNull(phase.graph)),
+            )
             Phase.FullScan -> null
         }
 
