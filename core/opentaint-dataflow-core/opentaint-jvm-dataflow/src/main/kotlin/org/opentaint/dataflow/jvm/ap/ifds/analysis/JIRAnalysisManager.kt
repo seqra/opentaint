@@ -3,11 +3,13 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -63,12 +65,12 @@ class JIRAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
-) : JIRLanguageManager(cp), TaintAnalysisManager {
+) : JIRLanguageManager(cp), PrescanAnalysisManager {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
-    override val prescanPropagation = PrescanPropagation(
+    private val prescanPropagation = PrescanPropagation(
         object : PrescanPropagationPolicy {
             override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
                 val jirMethod = method as? JIRMethod ?: return null
@@ -83,6 +85,24 @@ class JIRAnalysisManager(
             }
         }
     )
+
+    override fun startPrescan(
+        scopeMethods: Collection<CommonMethod>,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation.start(scopeMethods, manager)
+    }
+
+    override fun finishPrescan() {
+        prescanPropagation.finish()
+    }
+
+    override fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation.onNewSummaryStorage(storage, manager)
+    }
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),

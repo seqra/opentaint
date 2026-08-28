@@ -2,10 +2,12 @@ package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.PrescanPropagation
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -53,10 +55,28 @@ class GoAnalysisManager(
     cp: GoIRProgram,
     val taintConfig: GoTaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
-) : GoLanguageManager(cp), TaintAnalysisManager {
+) : GoLanguageManager(cp), PrescanAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
-    override val prescanPropagation = PrescanPropagation()
+    private val prescanPropagation = PrescanPropagation()
+
+    override fun startPrescan(
+        scopeMethods: Collection<CommonMethod>,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation.start(scopeMethods, manager)
+    }
+
+    override fun finishPrescan() {
+        prescanPropagation.finish()
+    }
+
+    override fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation.onNewSummaryStorage(storage, manager)
+    }
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()

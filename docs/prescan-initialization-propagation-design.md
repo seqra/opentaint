@@ -270,7 +270,7 @@ The policy is evaluated only for methods in the prepared catalog; it must not pe
 
 ### 8.3 Phase-local seed coordinator
 
-Add a `PrescanSeedCoordinator` owned by `TaintAnalysisManager`. It exists only while `Phase.Prescan` is active and holds:
+Add a `PrescanSeedCoordinator` privately owned by each concrete JVM or Go analysis manager. A narrow `PrescanAnalysisManager` capability exposes only the staged lifecycle needed by `TaintAnalyzer`; the general `TaintAnalysisManager` has no prescan-propagation dependency. The coordinator exists only while `Phase.Prescan` is active and holds:
 
 ```text
 scopeMethods                 set of project prescan methods
@@ -316,7 +316,7 @@ At prescan start:
 ```text
 catalog = build project prescan method/owner index
 derive every target as MethodEntryPoint(EmptyMethodContext, CFG entry)
-analysisManager.startPrescanPropagation(catalog, runnerManager)
+prescanAnalysisManager.startPrescan(catalog, runnerManager)
 submit every prescan root from Zero
 ```
 
@@ -339,7 +339,7 @@ for each ZeroToFact edge:
 Before full scan:
 
 ```text
-analysisManager.finishPrescanPropagation()
+prescanAnalysisManager.finishPrescan()
 select FullScan
 reset AP manager and IFDS storages as today
 start analysisEntryPoints only
@@ -490,7 +490,9 @@ The exact names can change during implementation, but the responsibility boundar
 
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
 - `TaintAnalyzer`: start the two phases with different root lists and notify the analysis manager of prescan lifecycle.
-- `TaintAnalysisManager`: own the coordinator, new-summary-storage hook, propagation statistics, and seed delivery policy.
+- `AnalysisManager`: expose only the general new-summary-storage hook.
+- `PrescanAnalysisManager`: expose the staged prescan lifecycle without exposing coordinator implementation state.
+- `JIRAnalysisManager`, `GoAnalysisManager`: privately own the coordinator and implement the storage hook, propagation statistics, and seed delivery policy.
 - `TaintAnalysisUnitRunnerManager`: provide ordinary cross-unit fact delivery without prescan-specific state or behavior.
 - `TaintAnalysisUnitRunner`: process existing initial-fact events without prescan-specific activation behavior.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.

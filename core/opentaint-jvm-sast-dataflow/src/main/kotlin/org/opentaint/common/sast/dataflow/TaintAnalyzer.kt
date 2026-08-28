@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodStats
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.PrescanAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
@@ -102,7 +103,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         if (options.storeSummaries) summarySerializationContext() else DummySerializationContext
     }
 
-    abstract fun analysisManager(): TaintAnalysisManager
+    abstract fun analysisManager(): PrescanAnalysisManager
 
     abstract fun unitResolver(): UnitResolver<Method>
 
@@ -140,7 +141,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     private fun prescan(startMethods: List<MethodWithContext>) {
         analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
-        analysisManager.startPrescanPropagation(startMethods.map { it.method }, ifdsEngine)
+        analysisManager.startPrescan(startMethods.map { it.method }, ifdsEngine)
 
         try {
             val prescanTimeout = options.ifdsTimeout * 0.3
@@ -162,7 +163,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
                 }
             }
         } finally {
-            analysisManager.finishPrescanPropagation()
+            analysisManager.finishPrescan()
         }
     }
 

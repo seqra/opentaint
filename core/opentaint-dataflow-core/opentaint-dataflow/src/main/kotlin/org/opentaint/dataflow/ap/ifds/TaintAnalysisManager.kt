@@ -16,26 +16,6 @@ interface TaintAnalysisManager : AnalysisManager {
 
     fun selectPhase(phase: Phase)
 
-    val prescanPropagation: PrescanPropagation
-
-    fun startPrescanPropagation(
-        scopeMethods: Collection<CommonMethod>,
-        manager: AnalysisUnitRunnerManager,
-    ) {
-        prescanPropagation.start(scopeMethods, manager)
-    }
-
-    fun finishPrescanPropagation() {
-        prescanPropagation.finish()
-    }
-
-    override fun onNewSummaryStorage(
-        storage: SummaryEdgeStorageWithSubscribers,
-        manager: AnalysisUnitRunnerManager,
-    ) {
-        prescanPropagation.onNewSummaryStorage(storage, manager)
-    }
-
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,
