@@ -30,6 +30,11 @@ interface AnalysisManager: LanguageManager {
         manager: AnalysisUnitRunnerManager,
     ): SummaryEdgeStorageWithSubscribers.Subscriber? = null
 
+    fun onMethodEntryPointActivated(
+        methodEntryPoint: MethodEntryPoint,
+        manager: AnalysisUnitRunnerManager,
+    ) = Unit
+
     fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,

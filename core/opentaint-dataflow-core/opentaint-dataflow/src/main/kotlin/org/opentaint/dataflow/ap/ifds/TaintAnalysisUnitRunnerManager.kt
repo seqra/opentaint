@@ -17,7 +17,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import mu.KotlinLogging
 import org.opentaint.dataflow.ap.ifds.access.ApManager
-import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -81,10 +80,6 @@ class TaintAnalysisUnitRunnerManager(
     private val unitStorage = ConcurrentHashMap<UnitType, TaintAnalysisUnitStorage>()
     private val methodDependencies = ConcurrentHashMap<CommonMethod, MutableSet<UnitType>>()
 
-    @Volatile
-    private var prescanSeedCoordinator: PrescanSeedCoordinator? = null
-    private var prescanScopeUnits: Int = 0
-
     private val runnerJobs = ConcurrentLinkedQueue<Job>()
     private var analysisCompletion = CompletableDeferred<Unit>()
 
@@ -130,8 +125,6 @@ class TaintAnalysisUnitRunnerManager(
     }
 
     fun resetApManager(manager: ApManager) {
-        prescanSeedCoordinator = null
-        prescanScopeUnits = 0
         this.activeApManager = manager
         runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
         unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
@@ -140,78 +133,6 @@ class TaintAnalysisUnitRunnerManager(
         totalEventsEnqueued.set(0)
         totalEventsProcessed.set(0)
         analysisCompletion = CompletableDeferred()
-    }
-
-    fun enablePrescanPropagation(scopeMethods: Collection<CommonMethod>) {
-        check(prescanSeedCoordinator == null) { "Prescan propagation is already enabled" }
-        prescanSeedCoordinator = PrescanSeedCoordinator(
-            scopeMethods = scopeMethods,
-            policy = analysisManager.prescanPropagationPolicy,
-        )
-        prescanScopeUnits = scopeMethods.asSequence()
-            .map(unitResolver::resolve)
-            .filter { it != UnknownUnit }
-            .distinct()
-            .count()
-    }
-
-    fun disablePrescanPropagation() {
-        reportPrescanPropagationStats()
-        prescanSeedCoordinator = null
-        prescanScopeUnits = 0
-    }
-
-    fun reportPrescanPropagationStats() {
-        val stats = prescanSeedCoordinator?.stats() ?: return
-        logger.info {
-            "Prescan propagation: scopeMethods=${stats.scopeMethods}, scopeUnits=$prescanScopeUnits, " +
-                "activeEntryPoints=${stats.activeEntryPoints}, globalSeeds=${stats.globalSeeds}, " +
-                "constructorSeeds=${stats.constructorSeeds}, globalDeliveries=${stats.globalDeliveries}, " +
-                "constructorDeliveries=${stats.constructorDeliveries}, duplicates=${stats.duplicates}, " +
-                "replayedEntryPoints=${stats.replayedEntryPoints}, " +
-                "largestGlobalSeedFanOut=${stats.largestGlobalSeedFanOut}, " +
-                "largestOwner=${stats.largestOwner?.id ?: "none"}, " +
-                "largestOwnerSeedFanOut=${stats.largestOwnerSeedFanOut}"
-        }
-    }
-
-    fun methodEntryPointActivated(methodEntryPoint: MethodEntryPoint) {
-        val deliveries = prescanSeedCoordinator?.activate(methodEntryPoint).orEmpty()
-        submitPrescanDeliveries(deliveries)
-    }
-
-    internal fun prescanSummarySubscriber(
-        source: MethodEntryPoint,
-    ): SummaryEdgeStorageWithSubscribers.Subscriber? {
-        if (prescanSeedCoordinator == null) return null
-
-        return object : SummaryEdgeStorageWithSubscribers.Subscriber {
-            override fun newSummaryEdges(edges: List<Edge>) {
-                val deliveries = prescanSeedCoordinator?.acceptSummaryEdges(source, edges).orEmpty()
-                submitPrescanDeliveries(deliveries, unitResolver.resolve(source.method))
-            }
-
-            override fun newSideEffectRequirement(
-                methodEntryPoint: MethodEntryPoint,
-                requirements: List<InitialFactAp>,
-            ) = Unit
-
-            override fun newSideEffectSummaries(
-                methodEntryPoint: MethodEntryPoint,
-                sideEffects: List<SideEffectSummary>,
-            ) = Unit
-        }
-    }
-
-    private fun submitPrescanDeliveries(
-        deliveries: List<PrescanSeedCoordinator.Delivery>,
-        sourceUnit: UnitType? = null,
-    ) {
-        for ((methodEntryPoint, facts) in deliveries) {
-            val callerUnit = sourceUnit ?: unitResolver.resolve(methodEntryPoint.method)
-            if (callerUnit == UnknownUnit) continue
-            facts.forEach { fact -> handleCrossUnitFactCall(callerUnit, methodEntryPoint, fact) }
-        }
     }
 
     fun runAnalysis(

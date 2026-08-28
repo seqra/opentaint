@@ -6,6 +6,8 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
+import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
@@ -16,6 +18,8 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class PrescanSeedCoordinatorTest {
@@ -33,6 +37,7 @@ class PrescanSeedCoordinatorTest {
         assertTrue(coordinator.activate(consumerEntry).isEmpty())
 
         val first = coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact)))
+        assertEquals(listOf(producer), first.map { it.sourceMethod })
         assertEquals(listOf(consumerEntry), first.map { it.methodEntryPoint })
         assertEquals(listOf(fact), first.single().facts)
 
@@ -53,6 +58,7 @@ class PrescanSeedCoordinatorTest {
         assertTrue(coordinator.acceptSummaryEdges(producerEntry, listOf(z2f(producerEntry, fact))).isEmpty())
 
         val replay = coordinator.activate(consumerEntry)
+        assertEquals(producer, replay.single().sourceMethod)
         assertEquals(listOf(fact), replay.single().facts)
         assertTrue(coordinator.activate(consumerEntry).isEmpty())
         assertEquals(1, coordinator.stats().replayedEntryPoints)
@@ -128,6 +134,7 @@ class PrescanSeedCoordinatorTest {
         assertTrue(coordinator.acceptSummaryEdges(constructorEntry, listOf(z2f(constructorEntry, fact))).isEmpty())
 
         val replay = coordinator.activate(consumerEntry)
+        assertEquals(constructor, replay.single().sourceMethod)
         assertEquals(listOf(fact), replay.single().facts)
         assertEquals(1, coordinator.stats().constructorDeliveries)
     }
@@ -148,6 +155,31 @@ class PrescanSeedCoordinatorTest {
         assertTrue(coordinator.acceptSummaryEdges(producerEntry, ignored).isEmpty())
         assertEquals(0, coordinator.stats().globalSeeds)
         assertEquals(0, coordinator.stats().constructorSeeds)
+    }
+
+    @Test
+    fun `analysis manager propagation routes replay from the producer unit`() {
+        val producer = method("producer")
+        val consumer = method("consumer")
+        val producerEntry = entryPoint(producer)
+        val consumerEntry = entryPoint(consumer)
+        val fact = fact(AccessPathBase.ClassStatic, "global")
+        val manager = RecordingRunnerManager()
+        val propagation = PrescanPropagation()
+
+        propagation.start(listOf(producer, consumer), manager)
+        val subscriber = assertNotNull(propagation.getSummaryStorageSubscriber(producerEntry, manager))
+        subscriber.newSummaryEdges(listOf(z2f(producerEntry, fact)))
+        assertTrue(manager.routedFacts.isEmpty())
+
+        propagation.onMethodEntryPointActivated(consumerEntry, manager)
+        assertEquals(
+            listOf(RoutedFact(DummyUnit(producer.name), consumerEntry, fact)),
+            manager.routedFacts,
+        )
+
+        propagation.finish()
+        assertNull(propagation.getSummaryStorageSubscriber(producerEntry, manager))
     }
 
     @Test
@@ -237,5 +269,31 @@ class PrescanSeedCoordinatorTest {
         override fun producesExceptionalControlFlow(inst: CommonInst): Boolean = error("Unsupported")
         override fun getCalleeMethod(callExpr: CommonCallExpr): CommonMethod = error("Unsupported")
         override val methodContextSerializer: MethodContextSerializer get() = error("Unsupported")
+    }
+
+    private data class DummyUnit(val name: String) : UnitType
+
+    private data class RoutedFact(
+        val callerUnit: UnitType,
+        val methodEntryPoint: MethodEntryPoint,
+        val fact: FinalFactAp,
+    )
+
+    private class RecordingRunnerManager : AnalysisUnitRunnerManager {
+        override val unitResolver = UnitResolver<CommonMethod> { DummyUnit(it.name) }
+        override val cancellation = Cancellation()
+        val routedFacts = mutableListOf<RoutedFact>()
+
+        override fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage? = null
+        override fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner? = null
+        override fun registerMethodCallFromUnit(method: CommonMethod, unit: UnitType) = Unit
+
+        override fun handleCrossUnitFactCall(
+            callerUnit: UnitType,
+            methodEntryPoint: MethodEntryPoint,
+            methodFactAp: FinalFactAp,
+        ) {
+            routedFacts += RoutedFact(callerUnit, methodEntryPoint, methodFactAp)
+        }
     }
 }

@@ -270,7 +270,7 @@ The policy is evaluated only for methods in the prepared catalog; it must not pe
 
 ### 8.3 Phase-local seed coordinator
 
-Add a `PrescanSeedCoordinator` owned by `TaintAnalysisUnitRunnerManager`. It exists only while `Phase.Prescan` is active and holds:
+Add a `PrescanSeedCoordinator` owned by `TaintAnalysisManager`. It exists only while `Phase.Prescan` is active and holds:
 
 ```text
 scopeMethods                 set of project prescan methods
@@ -315,7 +315,7 @@ Each fact is an ordinary counted runner event. Batching can be added later if in
 
 ### 8.6 Activation hook
 
-When `TaintAnalysisUnitRunner` resolves a `MethodWithContext` into one or more `MethodEntryPoint`s, it should notify the coordinator before or immediately after adding the initial zero fact. The coordinator then schedules the seed snapshot for that exact entry point.
+When `TaintAnalysisUnitRunner` resolves a `MethodWithContext` into one or more `MethodEntryPoint`s, it notifies `AnalysisManager` before or immediately after adding the initial zero fact. During prescan, the analysis manager asks its coordinator to schedule the seed snapshot for that exact entry point; other analysis managers can leave the hook inactive.
 
 The order between the ordinary zero start and replayed seeds is not semantically significant because edge processing is monotone. Both events must be counted before global quiescence is declared.
 
@@ -325,7 +325,7 @@ At prescan start:
 
 ```text
 catalog = build project prescan method/owner index
-coordinator.reset(catalog, current prescan AP manager)
+analysisManager.startPrescanPropagation(catalog, runnerManager)
 submit every prescan root from Zero
 ```
 
@@ -359,7 +359,7 @@ for each ZeroToFact edge:
 Before full scan:
 
 ```text
-disable and clear coordinator
+analysisManager.finishPrescanPropagation()
 select FullScan
 reset AP manager and IFDS storages as today
 start analysisEntryPoints only
@@ -393,7 +393,7 @@ Termination follows from the existing finite/capped access-path domain plus the 
 - relevant rule IDs and learned lambda/closure call-resolution values remain available;
 - phase-specific subscribers/caches are reset and reattached in the full scan.
 
-The coordinator must be explicitly disabled before the full-scan reset. Full-scan summaries must never trigger global or constructor fan-out.
+The analysis manager must finish and clear prescan propagation before the full-scan reset. Full-scan summaries must never trigger global or constructor fan-out.
 
 Persisted prescan summaries are treated like newly discovered summaries after canonical insertion. No coordinator state itself is serialized, because facts are tied to the prescan AP manager and can be reconstructed from summaries/analysis.
 
@@ -511,9 +511,10 @@ The implementation is complete when:
 The exact names can change during implementation, but the responsibility boundaries should remain:
 
 - `ProjectAnalyzer`, `JirProjectAnalyzer`, `GoProjectAnalyzer`: construct external entry points and whole-project prescan roots separately.
-- `TaintAnalyzer`: start the two phases with different root lists and enable/disable the phase-local coordinator.
-- `TaintAnalysisUnitRunnerManager`: own the coordinator and route cross-unit seed deliveries.
-- `TaintAnalysisUnitRunner`: report entry-point activation and process existing initial-fact events.
+- `TaintAnalyzer`: start the two phases with different root lists and notify the analysis manager of prescan lifecycle.
+- `TaintAnalysisManager`: own the coordinator, summary subscriber, activation handling, propagation statistics, and seed delivery policy.
+- `TaintAnalysisUnitRunnerManager`: provide ordinary cross-unit fact delivery without prescan-specific state or behavior.
+- `TaintAnalysisUnitRunner`: report entry-point activation to the analysis manager and process existing initial-fact events.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.
 - `SummaryEdgeStorageWithSubscribers` / `MethodSummariesUnitStorage`: attach the prescan subscriber and publish accepted canonical deltas through the existing subscription mechanism.
 - JVM policy code: classify constructors and exact declaration-class receiver targets.

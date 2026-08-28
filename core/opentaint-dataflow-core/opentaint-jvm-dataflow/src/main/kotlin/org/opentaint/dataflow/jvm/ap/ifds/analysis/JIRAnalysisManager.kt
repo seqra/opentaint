@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
+import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
@@ -67,19 +68,21 @@ class JIRAnalysisManager(
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
-    override val prescanPropagationPolicy: PrescanPropagationPolicy = object : PrescanPropagationPolicy {
-        override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
-            val jirMethod = method as? JIRMethod ?: return null
-            if (!jirMethod.isConstructor) return null
-            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
-        }
+    override val prescanPropagation = PrescanPropagation(
+        object : PrescanPropagationPolicy {
+            override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
+                val jirMethod = method as? JIRMethod ?: return null
+                if (!jirMethod.isConstructor) return null
+                return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+            }
 
-        override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
-            val jirMethod = method as? JIRMethod ?: return null
-            if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
-            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+            override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
+                val jirMethod = method as? JIRMethod ?: return null
+                if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
+                return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+            }
         }
-    }
+    )
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),

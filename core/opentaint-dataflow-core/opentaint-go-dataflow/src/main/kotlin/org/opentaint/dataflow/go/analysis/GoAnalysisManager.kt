@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanPropagation
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
@@ -55,6 +56,7 @@ class GoAnalysisManager(
 ) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
+    override val prescanPropagation = PrescanPropagation()
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()

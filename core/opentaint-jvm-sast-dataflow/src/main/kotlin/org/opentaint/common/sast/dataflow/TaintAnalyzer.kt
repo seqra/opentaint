@@ -140,25 +140,29 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     private fun prescan(startMethods: List<MethodWithContext>) {
         analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
-        ifdsEngine.enablePrescanPropagation(startMethods.map { it.method })
+        analysisManager.startPrescanPropagation(startMethods.map { it.method }, ifdsEngine)
 
-        val prescanTimeout = options.ifdsTimeout * 0.3
-        val prescanResult = runCatching {
-            ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
-        }
-            .onFailure { logger.error(it) { "Prescan failed" } }
-
-        val prescanStatus = ifdsEngine.status.get()
-        if (prescanResult.isFailure || prescanStatus != TaintAnalysisUnitRunnerManager.Status.OK) {
-            logger.warn {
-                "Prescan and initialization seed closure may be incomplete: status=$prescanStatus"
+        try {
+            val prescanTimeout = options.ifdsTimeout * 0.3
+            val prescanResult = runCatching {
+                ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
             }
-        }
+                .onFailure { logger.error(it) { "Prescan failed" } }
 
-        if (options.debugOptions?.enableIfdsCoverage == true) {
-            logger.debug {
-                ifdsEngine.reportCoverage()
+            val prescanStatus = ifdsEngine.status.get()
+            if (prescanResult.isFailure || prescanStatus != TaintAnalysisUnitRunnerManager.Status.OK) {
+                logger.warn {
+                    "Prescan and initialization seed closure may be incomplete: status=$prescanStatus"
+                }
             }
+
+            if (options.debugOptions?.enableIfdsCoverage == true) {
+                logger.debug {
+                    ifdsEngine.reportCoverage()
+                }
+            }
+        } finally {
+            analysisManager.finishPrescanPropagation()
         }
     }
 
@@ -167,7 +171,6 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         entryPoints: List<Method>,
         startMethods: List<MethodWithContext>,
     ): Pair<List<VulnerabilityWithTrace>, Status> {
-        ifdsEngine.disablePrescanPropagation()
         analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         ifdsEngine.resetApManager(apManager)
 
