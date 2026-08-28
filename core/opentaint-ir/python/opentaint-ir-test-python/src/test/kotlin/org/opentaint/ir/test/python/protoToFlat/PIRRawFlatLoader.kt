@@ -49,7 +49,7 @@ object PIRRawFlatLoader {
                 .addAllSources(settings.sources)
                 .addAllMypyFlags(settings.mypyFlags)
                 .setPythonVersion(settings.pythonVersion ?: "")
-                .addAllSearchPaths(settings.searchPaths)
+                .addAllPackageRoots(settings.packageRoots)
                 .build()
 
             val iterator = stub.buildProject(request)

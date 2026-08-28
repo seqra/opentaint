@@ -25,15 +25,19 @@ interface PIRClasspath : Closeable {
 
 data class PIRSettings(
     val sources: List<String>,
+    val packageRoots: List<String>,
     val pythonExecutable: String = defaultPirServerPythonExecutable(),
     val pythonVersion: String? = null,
     val mypyFlags: List<String> = emptyList(),
-    val searchPaths: List<String> = emptyList(),
     val serverModule: String = "pir_server",
     val serverStartupTimeout: Duration = Duration.ofSeconds(30),
     val rpcTimeout: Duration = Duration.ofSeconds(120),
     val embeddedServer: Boolean = true,
-)
+) {
+    init {
+        require(packageRoots.isNotEmpty()) { "packageRoots must not be empty" }
+    }
+}
 
 data class PIRDiagnostic(
     val severity: PIRDiagnosticSeverity,

@@ -33,7 +33,7 @@ message BuildProjectRequest {
   repeated string sources = 1;
   repeated string mypy_flags = 2;
   string python_version = 3;
-  repeated string search_paths = 4;
+  repeated string package_roots = 4;
 }
 
 message BuildModuleRequest {
@@ -41,7 +41,7 @@ message BuildModuleRequest {
   string source_path = 2;
   repeated string mypy_flags = 3;
   string python_version = 4;
-  repeated string search_paths = 5;
+  repeated string package_roots = 5;
 }
 
 message ExecuteFunctionRequest {

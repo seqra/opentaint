@@ -15,15 +15,10 @@ class NamespacePackageResolutionTest {
 
     private data class Fixture(val mainPath: String, val helperPath: String, val rootDir: String)
 
-    private fun makeFixture(): Fixture {
-        val tmpDir = Files.createTempDirectory("ns-pkg-test").toFile()
-        tmpDir.deleteOnExit()
+    private data class SplitFixture(val mainPath: String, val appDir: String, val libDir: String)
 
-        val helpersDir = File(tmpDir, "helpers")
-        helpersDir.mkdir()
-        helpersDir.deleteOnExit()
-
-        val dbSqlite = File(helpersDir, "db_sqlite.py")
+    private fun writeHelper(dir: File): File {
+        val dbSqlite = File(dir, "db_sqlite.py")
         dbSqlite.writeText(
             """
                 def run_query(q):
@@ -31,8 +26,11 @@ class NamespacePackageResolutionTest {
             """.trimIndent(),
         )
         dbSqlite.deleteOnExit()
+        return dbSqlite
+    }
 
-        val main = File(tmpDir, "main.py")
+    private fun writeMain(dir: File): File {
+        val main = File(dir, "main.py")
         main.writeText(
             """
                 import helpers.db_sqlite
@@ -42,8 +40,43 @@ class NamespacePackageResolutionTest {
             """.trimIndent(),
         )
         main.deleteOnExit()
+        return main
+    }
+
+    private fun makeFixture(): Fixture {
+        val tmpDir = Files.createTempDirectory("ns-pkg-test").toFile()
+        tmpDir.deleteOnExit()
+
+        val helpersDir = File(tmpDir, "helpers")
+        helpersDir.mkdir()
+        helpersDir.deleteOnExit()
+
+        val dbSqlite = writeHelper(helpersDir)
+        val main = writeMain(tmpDir)
 
         return Fixture(main.absolutePath, dbSqlite.absolutePath, tmpDir.absolutePath)
+    }
+
+    private fun makeSplitFixture(): SplitFixture {
+        val tmpDir = Files.createTempDirectory("ns-pkg-split-test").toFile()
+        tmpDir.deleteOnExit()
+
+        val appDir = File(tmpDir, "app")
+        appDir.mkdir()
+        appDir.deleteOnExit()
+
+        val libDir = File(tmpDir, "lib")
+        libDir.mkdir()
+        libDir.deleteOnExit()
+
+        val helpersDir = File(libDir, "helpers")
+        helpersDir.mkdir()
+        helpersDir.deleteOnExit()
+
+        writeHelper(helpersDir)
+        val main = writeMain(appDir)
+
+        return SplitFixture(main.absolutePath, appDir.absolutePath, libDir.absolutePath)
     }
 
     private fun resolvedCalleeOfRunQueryIn(fn: FlatFunctionIR): String? {
@@ -65,22 +98,22 @@ class NamespacePackageResolutionTest {
     }
 
     @Test
-    fun `namespace package call resolves through searchPaths`() {
+    fun `namespace package call resolves through packageRoots`() {
         val fx = makeFixture()
 
         val f = loadMain(
             PIRSettings(
                 sources = listOf(fx.mainPath),
+                packageRoots = listOf(fx.rootDir),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                searchPaths = listOf(fx.rootDir),
             ),
         )
 
         val resolved = resolvedCalleeOfRunQueryIn(f)
         assertNotNull(
             resolved,
-            "Expected mypy to resolve helpers.db_sqlite.run_query when searchPaths " +
-                "is set, but FlatCall.resolvedCallee was null.",
+            "Expected mypy to resolve helpers.db_sqlite.run_query when the package root " +
+                "is declared, but FlatCall.resolvedCallee was null.",
         )
         assertTrue(
             resolved.contains("helpers.db_sqlite") && resolved.endsWith("run_query"),
@@ -89,21 +122,45 @@ class NamespacePackageResolutionTest {
     }
 
     @Test
-    fun `namespace package call is unresolved without searchPaths`() {
-        val fx = makeFixture()
+    fun `out of tree namespace package is unresolved when its root is not declared`() {
+        val fx = makeSplitFixture()
 
         val f = loadMain(
             PIRSettings(
                 sources = listOf(fx.mainPath),
+                packageRoots = listOf(fx.appDir),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                searchPaths = emptyList(),
             ),
         )
 
         assertNull(
             resolvedCalleeOfRunQueryIn(f),
-            "Without searchPaths, mypy should not be able to resolve " +
-                "helpers.db_sqlite.run_query — expected resolvedCallee to be null.",
+            "helpers/ lives outside every declared package root, so mypy should not be " +
+                "able to resolve helpers.db_sqlite.run_query — expected resolvedCallee to be null.",
+        )
+    }
+
+    @Test
+    fun `out of tree namespace package resolves once its root is declared`() {
+        val fx = makeSplitFixture()
+
+        val f = loadMain(
+            PIRSettings(
+                sources = listOf(fx.mainPath),
+                packageRoots = listOf(fx.appDir, fx.libDir),
+                mypyFlags = listOf("--ignore-missing-imports"),
+            ),
+        )
+
+        val resolved = resolvedCalleeOfRunQueryIn(f)
+        assertNotNull(
+            resolved,
+            "Declaring the lib root should make helpers.db_sqlite.run_query resolvable, " +
+                "but FlatCall.resolvedCallee was null.",
+        )
+        assertTrue(
+            resolved.contains("helpers.db_sqlite") && resolved.endsWith("run_query"),
+            "Expected resolvedCallee to point into helpers.db_sqlite, got: $resolved",
         )
     }
 
@@ -114,8 +171,8 @@ class NamespacePackageResolutionTest {
         val f = loadMain(
             PIRSettings(
                 sources = listOf(fx.mainPath),
+                packageRoots = listOf(fx.rootDir),
                 mypyFlags = listOf("--ignore-missing-imports", "--no-namespace-packages"),
-                searchPaths = listOf(fx.rootDir),
             ),
         )
 

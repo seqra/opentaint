@@ -19,13 +19,17 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         val pyFiles = listPyFiles(pkgDir, recursive)
         assertTrue(pyFiles.isNotEmpty(), "No .py files found in $pkgDir")
 
-        val cp = createClasspath(pyFiles)
+        var root = File(pkgDir)
+        repeat(pythonModule.count { it == '.' } + 1) { root = root.parentFile }
+
+        val cp = createClasspath(pyFiles, root.absolutePath)
         verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions)
     }
 
     protected fun analyzeDir(
         projectName: String,
         sourceDir: String,
+        projectRoot: String,
         expectedModules: Int,
         expectedClasses: Int,
         expectedFunctions: Int,
@@ -51,7 +55,7 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         assertTrue(pyFiles.isNotEmpty(), "No .py files found in $sourceDir")
 
         val cp = try {
-            createClasspath(pyFiles)
+            createClasspath(pyFiles, projectRoot)
         } catch (e: Exception) {
             System.err.println("WARNING: $projectName build failed: ${e.message}")
             org.junit.jupiter.api.Assumptions.assumeTrue(false,
@@ -62,9 +66,10 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         verifyClasspath(projectName, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions, expectedUnknownModules)
     }
 
-    private fun createClasspath(pyFiles: List<String>): PIRClasspath {
+    private fun createClasspath(pyFiles: List<String>, projectRoot: String): PIRClasspath {
         return PIRClasspathLoader(PIRSettings(
             sources = pyFiles,
+            packageRoots = listOf(projectRoot),
             mypyFlags = listOf("--ignore-missing-imports"),
             rpcTimeout = java.time.Duration.ofSeconds(1200),
         )).load()

@@ -19,6 +19,7 @@ abstract class RawFlatModuleTestBase {
         val modules = PIRRawFlatLoader.loadRawFlatModules(
             PIRSettings(
                 sources = listOf(file.absolutePath),
+                packageRoots = listOf(tmpDir.absolutePath),
                 mypyFlags = listOf("--ignore-missing-imports"),
             )
         )

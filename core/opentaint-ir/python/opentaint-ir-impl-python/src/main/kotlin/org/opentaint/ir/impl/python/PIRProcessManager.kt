@@ -3,6 +3,8 @@ package org.opentaint.ir.impl.python
 import java.io.BufferedReader
 import java.io.Closeable
 import java.io.InputStreamReader
+import java.nio.file.Files
+import java.nio.file.Path
 import java.time.Duration
 import java.util.concurrent.TimeUnit
 
@@ -18,9 +20,16 @@ class PIRProcessManager(
 
     private var process: Process? = null
     private var port: Int = -1
+    private var workingDirectory: Path? = null
 
     fun start(): Int {
+        // mypy always adds the process cwd to its package bases, so run the server in an
+        // empty dir that can never be an ancestor of the sources being analyzed.
+        val cwd = Files.createTempDirectory("pir-server-cwd")
+        this.workingDirectory = cwd
+
         val pb = ProcessBuilder(pythonExecutable, "-m", serverModule, "--port", "0")
+        pb.directory(cwd.toFile())
         pb.redirectErrorStream(false)
         pb.redirectError(ProcessBuilder.Redirect.INHERIT)
 
@@ -68,6 +77,8 @@ class PIRProcessManager(
             }
             process = null
             port = -1
+            workingDirectory?.let { runCatching { Files.deleteIfExists(it) } }
+            workingDirectory = null
         }
     }
 

@@ -9,6 +9,7 @@ import mypy.build
 import mypy.main
 import mypy.options
 from mypy.errors import CompileError
+from mypy.find_sources import InvalidSourceList, SourceFinder
 from mypy.fscache import FileSystemCache
 from mypy.nodes import MypyFile
 from pir_server.proto import pir_pb2
@@ -19,18 +20,22 @@ class InvalidMypyFlags(ValueError):
     pass
 
 
+class InvalidPackageRoot(ValueError):
+    pass
+
+
 class ProjectBuilder:
     def __init__(
         self,
         sources: list[str],
+        package_roots: list[str],
         mypy_flags: list[str] | None = None,
         python_version: str | None = None,
-        search_paths: list[str] | None = None,
     ):
         self.sources = sources
+        self.package_roots = list(package_roots)
         self.mypy_flags = mypy_flags or []
         self.python_version = python_version
-        self.search_paths = search_paths or []
 
     def _build_options(self) -> mypy.options.Options:
         if self.mypy_flags:
@@ -53,8 +58,8 @@ class ProjectBuilder:
             parts = self.python_version.split(".")
             if len(parts) >= 2:
                 options.python_version = (int(parts[0]), int(parts[1]))
-        if self.search_paths:
-            options.mypy_path = list(self.search_paths)
+        options.explicit_package_bases = True
+        options.mypy_path = list(self.package_roots)
 
         options.incremental = False
         options.preserve_asts = True
@@ -73,6 +78,15 @@ class ProjectBuilder:
             )
             return
 
+        try:
+            self._validate_package_roots()
+        except InvalidPackageRoot as e:
+            yield pir_pb2.MypyModuleProto(
+                name="__build_errors__",
+                errors=[str(e)],
+            )
+            return
+
         mypy_sources = []
         all_file_paths = []
 
@@ -87,11 +101,16 @@ class ProjectBuilder:
                                 os.path.abspath(os.path.join(root, f))
                             )
 
-        search_root = self._find_search_root(all_file_paths)
+        fscache = FileSystemCache()
+        finder = SourceFinder(fscache, options)
 
         seen_modules: dict[str, str] = {}
         for path in all_file_paths:
-            mod_name = self._path_to_module(path, search_root)
+            try:
+                mod_name, base_dir = finder.crawl_up(path)
+            except InvalidSourceList as e:
+                print(f"WARNING: Skipping {path}: {e}", file=sys.stderr)
+                continue
             if mod_name in seen_modules:
                 print(
                     f"WARNING: Duplicate module '{mod_name}': "
@@ -100,14 +119,15 @@ class ProjectBuilder:
                 )
                 continue
             seen_modules[mod_name] = path
-            mypy_sources.append(mypy.build.BuildSource(path=path, module=mod_name))
+            mypy_sources.append(
+                mypy.build.BuildSource(path=path, module=mod_name, base_dir=base_dir)
+            )
 
         if not mypy_sources:
             return
 
         print(f"PIR: Building {len(mypy_sources)} sources...", file=sys.stderr)
 
-        fscache = FileSystemCache()
         try:
             result = mypy.build.build(
                 sources=mypy_sources,
@@ -260,39 +280,24 @@ class ProjectBuilder:
             errors=[error_msg],
         )
 
-    def _find_search_root(self, file_paths: list[str]) -> str:
-        if not file_paths:
-            return "."
+    def _validate_package_roots(self) -> None:
+        if not self.package_roots:
+            raise InvalidPackageRoot("package_roots must not be empty")
 
-        dirs = set(os.path.dirname(p) for p in file_paths)
-        roots = set()
-        for d in dirs:
-            pkg_root = d
-            while True:
-                parent = os.path.dirname(pkg_root)
-                if parent == pkg_root:
-                    break
-                init_py = os.path.join(pkg_root, "__init__.py")
-                if not os.path.isfile(init_py):
-                    roots.add(pkg_root)
-                    break
-                pkg_root = parent
-                if os.path.isfile(os.path.join(pkg_root, "__init__.py")):
-                    continue
-                else:
-                    roots.add(pkg_root)
-                    break
+        probe = mypy.options.Options()
+        probe.explicit_package_bases = False
+        finder = SourceFinder(FileSystemCache(), probe)
 
-        if roots:
-            return min(roots, key=len)
-        return os.path.commonpath(file_paths)
-
-    def _path_to_module(self, path: str, search_root: str) -> str:
-        rel = os.path.relpath(path, search_root)
-        mod_name = rel.replace(os.sep, ".").removesuffix(".py")
-        if mod_name.endswith(".__init__"):
-            mod_name = mod_name.removesuffix(".__init__")
-        return mod_name
+        for root in self.package_roots:
+            abs_root = os.path.abspath(root)
+            if not os.path.isdir(abs_root):
+                raise InvalidPackageRoot(f"package root is not a directory: {root}")
+            package, base = finder.crawl_up_dir(abs_root)
+            if package:
+                raise InvalidPackageRoot(
+                    f"package root {abs_root} is inside package '{package}'; "
+                    f"pass {base} instead"
+                )
 
     def _should_include(self, state, source_paths: set[str]) -> bool:
         if state.path is None:

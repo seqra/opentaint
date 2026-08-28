@@ -12,7 +12,7 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
             sources=list(request.sources),
             mypy_flags=list(request.mypy_flags),
             python_version=request.python_version or None,
-            search_paths=list(request.search_paths),
+            package_roots=list(request.package_roots),
         )
         for module_proto in builder.build():
             yield module_proto
@@ -27,7 +27,7 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
                 sources=[request.source_path],
                 mypy_flags=list(request.mypy_flags),
                 python_version=request.python_version or None,
-                search_paths=list(request.search_paths),
+                package_roots=list(request.package_roots),
             )
             for module_proto in builder.build():
                 if module_proto.name == request.module_name:

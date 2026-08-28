@@ -206,6 +206,7 @@ class PythonSampleBasedTest {
         return PIRClasspathLoader(
             PIRSettings(
                 sources = listOf(samplePy.absolutePathString()),
+                packageRoots = listOf(sampleDir.absolutePathString()),
                 mypyFlags = listOf("--ignore-missing-imports"),
                 rpcTimeout = java.time.Duration.ofSeconds(1200),
             )

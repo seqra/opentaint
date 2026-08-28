@@ -82,6 +82,7 @@ class AntBenchmarkTest {
         cp = PIRClasspathLoader(
             PIRSettings(
                 sources = pyFiles,
+                packageRoots = listOf(tmp.absolutePath),
                 mypyFlags = listOf("--ignore-missing-imports"),
                 rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
