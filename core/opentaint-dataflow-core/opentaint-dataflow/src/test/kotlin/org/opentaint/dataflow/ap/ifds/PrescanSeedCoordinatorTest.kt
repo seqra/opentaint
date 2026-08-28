@@ -3,12 +3,15 @@ package org.opentaint.dataflow.ap.ifds
 import org.junit.jupiter.api.Test
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy.AnyAccessorDisabled
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.CommonMethodParameter
 import org.opentaint.ir.api.common.CommonTypeName
+import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
@@ -147,6 +150,40 @@ class PrescanSeedCoordinatorTest {
         assertEquals(0, coordinator.stats().constructorSeeds)
     }
 
+    @Test
+    fun `default summary subscriber observes canonical deltas after reset`() {
+        val producer = method("producer")
+        val producerEntry = entryPoint(producer)
+        val edge = z2f(producerEntry, fact(AccessPathBase.ClassStatic, "global"))
+        val received = mutableListOf<List<Edge>>()
+        val subscriber = object : SummaryEdgeStorageWithSubscribers.Subscriber {
+            override fun newSummaryEdges(edges: List<Edge>) {
+                received += edges
+            }
+
+            override fun newSideEffectRequirement(
+                methodEntryPoint: MethodEntryPoint,
+                requirements: List<InitialFactAp>,
+            ) = Unit
+
+            override fun newSideEffectSummaries(
+                methodEntryPoint: MethodEntryPoint,
+                sideEffects: List<SideEffectSummary>,
+            ) = Unit
+        }
+        val storage = MethodSummariesUnitStorage(apManager, DummyLanguageManager, subscriber)
+
+        storage.addSummaryEdges(producerEntry, listOf(edge))
+        storage.addSummaryEdges(producerEntry, listOf(edge))
+        assertEquals(1, received.size)
+        assertEquals(listOf<Edge>(edge), received.single())
+
+        storage.resetApManager(apManager)
+        storage.addSummaryEdges(producerEntry, listOf(edge))
+        assertEquals(2, received.size)
+        assertTrue(received.all { it == listOf<Edge>(edge) })
+    }
+
     private fun coordinator(vararg methods: DummyMethod) = PrescanSeedCoordinator(methods.toList(), Policy)
 
     private fun fact(base: AccessPathBase, mark: String): FinalFactAp =
@@ -189,5 +226,16 @@ class PrescanSeedCoordinatorTest {
 
         override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? =
             (method as DummyMethod).receiverOwner?.let(::PrescanInitializerOwner)
+    }
+
+    private data object DummyLanguageManager : LanguageManager {
+        override fun getInstIndex(inst: CommonInst): Int = error("Unsupported")
+        override fun getMaxInstIndex(method: CommonMethod): Int = error("Unsupported")
+        override fun getInstByIndex(method: CommonMethod, index: Int): CommonInst = error("Unsupported")
+        override fun isEmpty(method: CommonMethod): Boolean = error("Unsupported")
+        override fun getCallExpr(inst: CommonInst): CommonCallExpr? = error("Unsupported")
+        override fun producesExceptionalControlFlow(inst: CommonInst): Boolean = error("Unsupported")
+        override fun getCalleeMethod(callExpr: CommonCallExpr): CommonMethod = error("Unsupported")
+        override val methodContextSerializer: MethodContextSerializer get() = error("Unsupported")
     }
 }

@@ -2,13 +2,16 @@ package org.opentaint.dataflow.ap.ifds.taint
 
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodSummariesUnitStorage
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.concurrent.ConcurrentHashMap
 
-class TaintAnalysisUnitStorage(apManager: ApManager, languageManager: LanguageManager)
-    : MethodSummariesUnitStorage(apManager, languageManager)
-{
+class TaintAnalysisUnitStorage(
+    apManager: ApManager,
+    languageManager: LanguageManager,
+    defaultSummarySubscriber: SummaryEdgeStorageWithSubscribers.Subscriber? = null,
+) : MethodSummariesUnitStorage(apManager, languageManager, defaultSummarySubscriber) {
     private data class VulnerabilityIdentity(
         val ruleId: String,
         val statement: CommonInst,

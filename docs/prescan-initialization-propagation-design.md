@@ -293,11 +293,11 @@ These two inputs make behavior independent of scheduling order:
 
 All roots are known before worker execution, but entry-point activation is still event-driven because methods can have multiple/contextual entry points and runners operate concurrently.
 
-### 8.4 Observe canonical summary deltas
+### 8.4 Subscribe to canonical summary deltas
 
-Do not observe the raw list passed to `AnalysisUnitRunnerManager.newSummaryEdges`. Summary storage can canonicalize, subsume, or discard an edge. Propagation must observe the delta that `SummaryEdgeStorageWithSubscribers` actually accepted.
+Do not observe the raw list passed to `AnalysisUnitRunnerManager.newSummaryEdges`. Summary storage can canonicalize, subsume, or discard an edge. Propagation observes the delta that `SummaryEdgeStorageWithSubscribers` actually accepted.
 
-The preferred change is for `SummaryEdgeStorageWithSubscribers.addEdges` (and the wrapping `MethodSummariesUnitStorage.addSummaryEdges`) to return or publish its `addedEdges` canonical delta. `AnalysisUnitRunnerManager` stores the edges first and forwards only that delta to the prescan coordinator.
+Install a dedicated subscriber into every `SummaryEdgeStorageWithSubscribers` created by the taint unit storage. The existing subscription notification receives `addedEdges` only after canonical insertion, so the subscriber can forward that delta directly to the prescan coordinator without changing `addEdges` or `addSummaryEdges` return types. The subscriber remains installed across per-entry-point storage creation and AP-manager resets; outside prescan its coordinator lookup is absent and the callback is a no-op.
 
 This location also covers summaries loaded from persistent storage, because `MethodAnalyzer.loadSummariesFromRunner` republishes loaded summaries through `runner.addNewSummaryEdges`.
 
@@ -515,7 +515,7 @@ The exact names can change during implementation, but the responsibility boundar
 - `TaintAnalysisUnitRunnerManager`: own the coordinator and route cross-unit seed deliveries.
 - `TaintAnalysisUnitRunner`: report entry-point activation and process existing initial-fact events.
 - `MethodAnalyzer`: process delivered seeds through its existing initial-fact operation.
-- `SummaryEdgeStorageWithSubscribers` / `MethodSummariesUnitStorage`: expose the accepted canonical summary delta.
+- `SummaryEdgeStorageWithSubscribers` / `MethodSummariesUnitStorage`: attach the prescan subscriber and publish accepted canonical deltas through the existing subscription mechanism.
 - JVM policy code: classify constructors and exact declaration-class receiver targets.
 - Go policy code: provide no instance-constructor classification; package initialization relies on static/global propagation.
 

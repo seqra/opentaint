@@ -17,6 +17,7 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import mu.KotlinLogging
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
@@ -83,6 +84,24 @@ class TaintAnalysisUnitRunnerManager(
     @Volatile
     private var prescanSeedCoordinator: PrescanSeedCoordinator? = null
     private var prescanScopeUnits: Int = 0
+
+    private val prescanSummarySubscriber = object : SummaryEdgeStorageWithSubscribers.Subscriber {
+        override fun newSummaryEdges(edges: List<Edge>) {
+            val source = edges.firstOrNull()?.methodEntryPoint ?: return
+            val deliveries = prescanSeedCoordinator?.acceptSummaryEdges(source, edges).orEmpty()
+            submitPrescanDeliveries(deliveries)
+        }
+
+        override fun newSideEffectRequirement(
+            methodEntryPoint: MethodEntryPoint,
+            requirements: List<InitialFactAp>,
+        ) = Unit
+
+        override fun newSideEffectSummaries(
+            methodEntryPoint: MethodEntryPoint,
+            sideEffects: List<SideEffectSummary>,
+        ) = Unit
+    }
 
     private val runnerJobs = ConcurrentLinkedQueue<Job>()
     private var analysisCompletion = CompletableDeferred<Unit>()
@@ -185,14 +204,6 @@ class TaintAnalysisUnitRunnerManager(
             val runner = getOrSpawnUnitRunner(unit) ?: continue
             facts.forEach { fact -> runner.submitExternalInitialFact(methodEntryPoint, fact) }
         }
-    }
-
-    override fun newSummaryEdges(methodEntryPoint: MethodEntryPoint, edges: List<Edge>) {
-        val unit = unitResolver.resolve(methodEntryPoint.method)
-        val storage = getOrCreateUnitStorage(unit) ?: return
-        val addedEdges = storage.addSummaryEdges(methodEntryPoint, edges)
-        val deliveries = prescanSeedCoordinator?.acceptSummaryEdges(methodEntryPoint, addedEdges).orEmpty()
-        submitPrescanDeliveries(deliveries)
     }
 
     fun runAnalysis(
@@ -517,7 +528,7 @@ class TaintAnalysisUnitRunnerManager(
 
     private fun spawnNewRunner(unit: UnitType): TaintAnalysisUnitRunner {
         val storage = unitStorage.getOrPut(unit) {
-            TaintAnalysisUnitStorage(apManager, analysisManager)
+            TaintAnalysisUnitStorage(apManager, analysisManager, prescanSummarySubscriber)
         }
         val sinkTracker = TaintSinkTracker(storage)
         val taintAnalyzer = TaintAnalysisManagerWithContext(analysisManager, sinkTracker)

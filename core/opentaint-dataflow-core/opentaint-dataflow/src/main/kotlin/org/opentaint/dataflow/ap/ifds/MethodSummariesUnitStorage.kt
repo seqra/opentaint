@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 open class MethodSummariesUnitStorage(
     private var apManager: ApManager,
     private val languageManager: LanguageManager,
+    private val defaultSummarySubscriber: SummaryEdgeStorageWithSubscribers.Subscriber? = null,
 ) {
     private var methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
 
@@ -86,9 +87,9 @@ open class MethodSummariesUnitStorage(
         return methodStorage.factNDEdges(finalFactBase)
     }
 
-    fun addSummaryEdges(initialStatement: MethodEntryPoint, edges: List<Edge>): List<Edge> {
+    fun addSummaryEdges(initialStatement: MethodEntryPoint, edges: List<Edge>) {
         val methodStorage = methodSummaryEdges(initialStatement)
-        return methodStorage.addEdges(edges)
+        methodStorage.addEdges(edges)
     }
 
     fun methodSideEffectRequirements(
@@ -111,7 +112,9 @@ open class MethodSummariesUnitStorage(
 
     private fun methodSummaryEdges(methodEntryPoint: MethodEntryPoint) =
         methodSummaries.computeIfAbsent(methodEntryPoint) {
-            SummaryEdgeStorageWithSubscribers(apManager, methodEntryPoint)
+            SummaryEdgeStorageWithSubscribers(apManager, methodEntryPoint).also { storage ->
+                defaultSummarySubscriber?.let(storage::subscribeOnEdges)
+            }
         }
 
     fun methodZeroSideEffectSummaries(
