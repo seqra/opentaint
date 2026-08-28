@@ -125,7 +125,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val analysisStart = TimeSource.Monotonic.markNow()
 
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
-        val prescanStartMethods = prescanRoots.distinct().map { MethodWithContext(it, EmptyMethodContext) }
+        val prescanStartMethods = prescanRoots.map { MethodWithContext(it, EmptyMethodContext) }
 
         logger.info { "Start prescan phase" }
         prescan(prescanStartMethods)
@@ -138,33 +138,28 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     }
 
     private fun prescan(startMethods: List<MethodWithContext>) {
+        analysisManager.selectPhase(
+            TaintAnalysisManager.Phase.Prescan(startMethods.map { it.method })
+        )
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
 
-        try {
-            analysisManager.selectPhase(
-                TaintAnalysisManager.Phase.Prescan(startMethods.map { it.method })
-            )
+        val prescanTimeout = options.ifdsTimeout * 0.3
+        val prescanResult = runCatching {
+            ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
+        }
+            .onFailure { logger.error(it) { "Prescan failed" } }
 
-            val prescanTimeout = options.ifdsTimeout * 0.3
-            val prescanResult = runCatching {
-                ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
+        val prescanStatus = ifdsEngine.status.get()
+        if (prescanResult.isFailure || prescanStatus != TaintAnalysisUnitRunnerManager.Status.OK) {
+            logger.warn {
+                "Prescan and initialization seed closure may be incomplete: status=$prescanStatus"
             }
-                .onFailure { logger.error(it) { "Prescan failed" } }
+        }
 
-            val prescanStatus = ifdsEngine.status.get()
-            if (prescanResult.isFailure || prescanStatus != TaintAnalysisUnitRunnerManager.Status.OK) {
-                logger.warn {
-                    "Prescan and initialization seed closure may be incomplete: status=$prescanStatus"
-                }
+        if (options.debugOptions?.enableIfdsCoverage == true) {
+            logger.debug {
+                ifdsEngine.reportCoverage()
             }
-
-            if (options.debugOptions?.enableIfdsCoverage == true) {
-                logger.debug {
-                    ifdsEngine.reportCoverage()
-                }
-            }
-        } finally {
-            analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         }
     }
 
@@ -173,6 +168,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         entryPoints: List<Method>,
         startMethods: List<MethodWithContext>,
     ): Pair<List<VulnerabilityWithTrace>, Status> {
+        analysisManager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         ifdsEngine.resetApManager(apManager)
 
         val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80
