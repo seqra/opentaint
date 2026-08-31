@@ -1,10 +1,18 @@
-# Global access-tree canonicalization
+# Fact-explosion mitigation after global access-tree canonicalization
 
-## Result
+## Outcome
 
-Conductor retained many equal access-tree nodes in different storage slots. It also retained two one-element arrays for most path nodes. This state caused the low-memory stop.
+Conductor retained many equal access-tree nodes in different storage slots. It also retained two one-element arrays for most path nodes. This state was investigated as a possible cause of the low-memory stop.
 
-The implementation now does these operations:
+Global canonicalization and the compact child representation are insufficient on their own. Revisions 1 through 10 of the synthetic star arm ended with status 253 or 254. Status 253 is an out-of-memory stop. Status 254 is an IFDS timeout. Neither status is a successful analysis.
+
+The accepted synthetic mitigation stops materializing concrete branches out of `[any]` in TIFA. It emits the same demanded premise and virtually descends through `AccessNode.getChild` on later rounds. A per-walk identity memo also prevents the `[any]` suffix matcher from evaluating a shared DAG subtree once per incoming path.
+
+With these changes, two star replicates completed with status 0 in 8.1 and 8.3 seconds, and two concrete-chain replicates completed with status 0 in 5.8 seconds. Every run retained its one SARIF finding. The star live-heap floor was 24 and 163 MiB, with no low-memory stop or soft-reference cleanup.
+
+The latest available conductor e2e run predates this TIFA change. Build `ee45055c9` exited with status 253 after 946.6 seconds, peaked at 8.44 GB, and wrote a partial report with 3 findings. The e2e base completed in 182.1 seconds at 7.89 GB with 7 findings. That run rejects canonicalization as a mitigation; it does not validate or reject the demand-only TIFA implementation. A current conductor rerun remains required.
+
+The attempted implementation does these operations:
 
 - It canonicalizes every tree that enters an edge, summary, or final-fact storage.
 - It uses one bounded canonical index for each `TreeApManager`.
@@ -13,20 +21,23 @@ The implementation now does these operations:
 - It stores child state in one tagged field: `null`, one child, or a child array.
 - It reuses the first canonical node. It does not copy a tree only to mark it canonical.
 
-The implementation does not remove a fact path. It does not change premise emission, `[any]` matching, cleaners, summaries, exclusions, or the fixed-point operation.
+Canonicalization does not intentionally remove a fact path. The final TIFA change preserves the demanded premise family while removing the stored carrier copies that repeatedly reintroduced `[any]`. The fixed point now completes on the existing star repro without losing its finding.
 
 ## Evidence
 
-The semantic prototypes did not give a safe change:
+The investigation separated insufficient or unsound changes from the accepted one:
 
 - The `[any]` manager limited an operation that created only a small part of the node mass.
-- TIFA-no-unroll removed copies, but it kept the same premise family.
+- Matcher memoization reduced repeated DAG work but did not change the star timeout.
+- Demand-only TIFA keeps the same premise family and removes the stored copies; this is the change that made the star arm converge.
 - Literal `[any]` matching removed the premise family, but it also removed the mark-naming premise and lost the conductor findings.
 - Sibling absorption converged, but it deleted literal names and lost the same findings.
 
 A conductor heap census found 20.7 million live `AccessNode` objects. A cross-slot sample found 29,009 node occurrences and 11,119 structurally different nodes. The measured sharing factor was 2.61 in that sample.
 
-The fact tree was load-bearing in two ways. Its shape represented taint semantics. Its concrete premise names also selected the TIFA rules that produced the finding. Therefore, the mitigation changes representation only.
+The e2e comparison establishes a branch-level failure, not the sole cause of that failure. Its base is `17eb0feda`, its new build is `ee45055c9`, and the revisions diverge at `cbe3b3ffc`. Many changes exist on the new branch after that merge base. A same-parent conductor comparison is required to attribute the regression specifically to global canonicalization.
+
+The fact tree was load-bearing in two ways. Its shape represented taint semantics. Its concrete premise names also selected the TIFA rules that produced the finding. The accepted change therefore preserves concrete premise names and changes only how TIFA reaches them: virtual reads replace mutations of the accumulated fact.
 
 ## Formal scope
 
@@ -140,23 +151,28 @@ All star runs used the same generated project, rules, 3 GiB heap, and finding ch
 | 5 | Bound the strong index | 253 at 227 s | 1 | Counterexample |
 | 6 | Share singleton label arrays | 254, then 253 | 1, 1 | Variance counterexample |
 | 7 | Store singleton children without arrays | 253 at 248 s | 1 | Counterexample |
-| 8 | Do not clone first canonical trees | 254, 254, 254 at about 245 s | 1, 1, 1 | Accepted |
-| 9 | Use one tagged child-storage field | 254 at 246 s | 1 | Accepted |
+| 8 | Do not clone first canonical trees | 254, 254, 254 at about 245 s | 1, 1, 1 | Rejected: timeout |
+| 9 | Use one tagged child-storage field | 254 at 246 s | 1 | Rejected: timeout |
+| 10 | Memoize `[any]` suffix matching over the fact DAG | 254 at the 90 s checkpoint | 1 | Rejected: timeout |
+| 11 | Emit demand without materializing `[any]` branches in TIFA | 0 at 8.1 s, 0 at 8.3 s | 1, 1 | Accepted on synthetic gate |
 
-Return code 254 is the configured IFDS timeout. It is not a low-memory stop. All three accepted star runs recorded zero low-memory stops and retained the finding. Their progress values were 39,777, 39,821, and 39,797 events. The concrete-chain arm returned 0 in about 6.1 seconds and retained its finding.
+Return code 254 is the configured IFDS timeout. It is distinct from the low-memory stop, but it is still a failed analysis. The three revision-8 star runs recorded zero low-memory stops and retained one finding, but none completed. Their progress values were 39,777, 39,821, and 39,797 events. The concrete-chain arm returned 0 in about 6.1 seconds and retained its finding; that control does not establish success on the exploding input.
 
-The tagged-union JAR was checked again at the same budget. Its star arm returned 254 at 245.7 seconds with zero low-memory stops, 39,739 progress events, and one finding. Its chain arm returned 0 at 6.1 seconds with one finding.
+The tagged-union JAR was checked again at the same budget. Its star arm returned 254 at 245.7 seconds with 39,739 progress events and one finding. This result is rejected. Its chain arm returned 0 at 6.1 seconds with one finding.
 
-This result mitigates the fact-explosion memory failure. It does not prove that the star fixed point converges inside the current time limit.
+The memoized-matcher checkpoint returned 254 after 18,392 progress events, effectively equal to the 18,408 and 18,432 controls. Demand-only TIFA then completed the same input with 4,815 progress events in both full-budget replicates. The chain control remained at 2,248 progress events and kept its finding.
 
-## Completion evidence
+This is an accepted mitigation for the existing synthetic gate. The available real conductor e2e run still describes the pre-fix branch state, so no current conductor result is claimed.
+
+## Verification evidence
 
 - The feature branch and `saloed/5-default-get` have the same merge base: `4c358d2e16450b3bdb4254955be5cbda61e9cb7c`.
 - `lake build` completes the executable model and all proofs.
 - `lake env lean FactExplosion/Audit.lean` shows only `propext` and `Quot.sound`. A source scan finds no `sorry`, `axiom`, `Classical`, `classical`, or `noncomputable` term.
-- The dataflow module has 162 tests. It has zero failures, zero errors, and zero skipped tests.
-- `projectAnalyzerJar` succeeds. The tagged-union JAR hash prefix is `3cabd8e8489b520d`.
-- The chain and star regression runs use this JAR hash and retain their findings.
+- The dataflow module has 163 tests. It has zero failures, zero errors, and zero skipped tests.
+- `projectAnalyzerJar` succeeds. The accepted JAR hash prefix is `2d69f3cbc05252d7`.
+- Two chain and two star regression runs use this JAR hash. All four return 0 and retain one SARIF finding.
+- The latest conductor e2e new build uses `ee45055c9`, exits 253, and produces a partial report. It predates the demand-only TIFA change.
 - `git diff --check` succeeds.
 
-The formal equivalence scope is all finite trees in the production accessor and exclusion data model. The formal matcher is a finite observation of these trees. The proof first reconstructs the complete source tree. Therefore, each pure tree observation has the same input after decoding. The practical gate also checks the production matcher, premise selection, and finding output on conductor.
+The formal equivalence scope is all finite trees in the production accessor and exclusion data model. The formal matcher is a finite observation of these trees. The proof first reconstructs the complete source tree. Therefore, each pure tree observation has the same input after decoding. These proofs establish semantic preservation and abstract cost bounds for canonicalization only. TIFA premise preservation is covered by the cross-backend scenario suite and the finding-preserving synthetic gate.

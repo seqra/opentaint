@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isAlwaysUnrollNext
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
 
@@ -76,10 +77,10 @@ class TreeInitialFactAbstraction(
         abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>,
         typeChecker: FactTypeChecker
     ) {
-        var concreteFactAccess = initialConcreteFact
+        var firstRound = true
         while (true) {
-            val unrollRequests = mutableListOf<AnyAccessorUnrollRequest>()
-            abstractAccessPath(facts.analyzed, concreteFactAccess, unrollRequests) { abstractAccess ->
+            var registeredNew = false
+            abstractAccessPath(facts.analyzed, initialConcreteFact, typeChecker) { abstractAccess ->
                 apManager.cancellation.checkpoint()
 
                 val initialAbstractAccessNode = apManager.createNodeFromReversedAp(abstractAccess)
@@ -88,56 +89,14 @@ class TreeInitialFactAbstraction(
                 val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
                 val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
 
-                facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                val registered = facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
+                if (registered) registeredNew = true
+                if (firstRound || registered) abstractFacts.add(initialAbstractAp to ap)
             }
 
-            concreteFactAccess = facts.unrollAnyAccessors(unrollRequests, typeChecker)
-                ?: break
+            firstRound = false
+            if (!registeredNew) break
         }
-    }
-
-    private fun MethodSameBaseInitialFact.unrollAnyAccessors(
-        unrollRequests: List<AnyAccessorUnrollRequest>,
-        typeChecker: FactTypeChecker
-    ): AccessTreeNode? {
-        if (unrollRequests.isEmpty()) return null
-
-        val unrollStrategy = apManager.anyAccessorUnrollStrategy
-
-        val newFacts = mutableListOf<AccessTreeNode>()
-        for (unrollRequest in unrollRequests) {
-            apManager.cancellation.checkpoint()
-
-            unrollRequest.accessors.forEachInt { accessor ->
-                val accessorInstance = with(apManager) { accessor.accessor }
-                if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachInt
-
-                val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
-                val accessorStatus = accessorFilter.check(accessorInstance)
-                when (accessorStatus) {
-                    is FactTypeChecker.FilterResult.Accept,
-                    is FactTypeChecker.FilterResult.FilterNext -> {
-                        // accept
-                    }
-
-                    is FactTypeChecker.FilterResult.Reject -> return@forEachInt
-                }
-
-                val prefix = ReversedApNode(accessor, unrollRequest.currentAp)
-
-                val nodeFilter = prefix.createFilter(typeChecker)
-                val filteredNode = unrollRequest.node.filterAccessNode(nodeFilter) ?: return@forEachInt
-
-                newFacts += filteredNode.addReversedApParents(prefix)
-                    ?: return@forEachInt
-            }
-        }
-
-        val mergedNewFacts = newFacts.reduceOrNull { acc, f -> acc.mergeAdd(f, foldToAny = false) }
-            ?: return null
-
-        return addInitialFact(mergedNewFacts, interner)
     }
 
     private fun ReversedApNode?.createFilter(typeChecker: FactTypeChecker): FactTypeChecker.FactApFilter {
@@ -149,11 +108,11 @@ class TreeInitialFactAbstraction(
         }
         return typeChecker.accessPathFilter(accessors.asReversed())
     }
+    private fun AccessorIdx.isUncoveredByAny(): Boolean =
+        isAlwaysUnrollNext() || isStaticAccessor() || !apManager.isCoveredByAny(this)
 
-    private fun AccessTreeNode.addReversedApParents(ap: ReversedApNode): AccessTreeNode? =
-        ap.foldRight(this) { accessor, node ->
-            node.addParentIfPossible(accessor) ?: return null
-        }
+    private fun AccessTreeNode.hasLiteralChild(accessor: AccessorIdx): Boolean =
+        if (accessor == FINAL_ACCESSOR_IDX) isFinal else (accessors?.binarySearch(accessor) ?: -1) >= 0
 
     data class AbstractionState(
         val analyzedTrieRoot: AccessPathTrieNode,
@@ -161,16 +120,10 @@ class TreeInitialFactAbstraction(
         val currentAp: ReversedApNode?,
     )
 
-    data class AnyAccessorUnrollRequest(
-        val currentAp: ReversedApNode?,
-        val node: AccessTreeNode,
-        val accessors: IntOpenHashSet,
-    )
-
     private inline fun abstractAccessPath(
         initialAnalyzedTrieRoot: AccessPathTrieNode,
         initialAdded: AccessTreeNode,
-        unrollRequests: MutableList<AnyAccessorUnrollRequest>,
+        typeChecker: FactTypeChecker,
         crossinline createAbstractAp: (ReversedApNode?) -> Unit
     ) {
         val unprocessed = mutableListOf<AbstractionState>()
@@ -185,14 +138,49 @@ class TreeInitialFactAbstraction(
                 continue
             }
 
-            if (state.added.containsAnyAccessor()) {
-                val unrollAccessors = state.analyzedTrieRoot.unrollAccessors(currentLevelExclusions)
-                if (unrollAccessors.isNotEmpty()) {
-                    unrollRequests += AnyAccessorUnrollRequest(state.currentAp, state.added, unrollAccessors)
+            val anyBranch = if (state.added.containsAnyAccessor()) {
+                state.added.getChild(ANY_ACCESSOR_IDX)
+            } else {
+                null
+            }
+            if (anyBranch != null) {
+                val anyTrie = state.analyzedTrieRoot.child(ANY_ACCESSOR_IDX)
+                if (anyTrie != null) {
+                    unprocessed += AbstractionState(
+                        anyTrie,
+                        anyBranch,
+                        ReversedApNode(ANY_ACCESSOR_IDX, state.currentAp),
+                    )
                 }
 
-                val anyBranch = state.added.getChild(ANY_ACCESSOR_IDX) ?: error("impossible")
-                unprocessed += AbstractionState(state.analyzedTrieRoot, anyBranch, state.currentAp)
+                anyBranch.forEachAccessor { accessor, node ->
+                    if (accessor == ANY_ACCESSOR_IDX || !accessor.isUncoveredByAny()) return@forEachAccessor
+                    abstractAccessPath(
+                        state.analyzedTrieRoot,
+                        accessor,
+                        node,
+                        state.currentAp,
+                        unprocessed,
+                        createAbstractAp,
+                    )
+                }
+
+                var accessorFilter: FactTypeChecker.FactApFilter? = null
+                currentLevelExclusions.forEachInt { accessor ->
+                    if (state.analyzedTrieRoot.child(accessor) != null) return@forEachInt
+                    if (state.added.hasLiteralChild(accessor)) return@forEachInt
+                    if (accessor.isUncoveredByAny()) return@forEachInt
+
+                    val filter = accessorFilter
+                        ?: state.currentAp.createFilter(typeChecker).also { accessorFilter = it }
+                    when (filter.check(with(apManager) { accessor.accessor })) {
+                        is FactTypeChecker.FilterResult.Accept,
+                        is FactTypeChecker.FilterResult.FilterNext -> {
+                        }
+                        is FactTypeChecker.FilterResult.Reject -> return@forEachInt
+                    }
+                    createAbstractAp(ReversedApNode(accessor, state.currentAp))
+                }
             }
 
             if (state.added.isFinal) {
@@ -201,7 +189,23 @@ class TreeInitialFactAbstraction(
             }
 
             state.added.forEachAccessor { accessor, node ->
+                if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
                 abstractAccessPath(state.analyzedTrieRoot, accessor, node, state.currentAp, unprocessed, createAbstractAp)
+            }
+
+            if (anyBranch != null) {
+                state.analyzedTrieRoot.forEachChild { accessor, childTrie ->
+                    if (accessor == ANY_ACCESSOR_IDX) return@forEachChild
+                    if (state.added.hasLiteralChild(accessor)) return@forEachChild
+                    if (accessor.isUncoveredByAny()) return@forEachChild
+
+                    val child = state.added.getChild(accessor) ?: return@forEachChild
+                    unprocessed += AbstractionState(
+                        childTrie,
+                        child,
+                        ReversedApNode(accessor, state.currentAp),
+                    )
+                }
             }
         }
     }
@@ -331,27 +335,25 @@ class TreeInitialFactAbstraction(
     class AccessPathTrieNode {
         private var children: Int2ObjectOpenHashMap<AccessPathTrieNode>? = null
         private var terminals: IntOpenHashSet? = null
-        private var unrolled: IntOpenHashSet? = null
 
         fun exclusions(): IntOpenHashSet? = terminals
 
         fun child(accessor: AccessorIdx): AccessPathTrieNode? =
             children?.get(accessor)
 
+        fun forEachChild(body: (AccessorIdx, AccessPathTrieNode) -> Unit) {
+            val iterator = children?.int2ObjectEntrySet()?.fastIterator() ?: return
+            while (iterator.hasNext()) {
+                val entry = iterator.next()
+                body(entry.intKey, entry.value)
+            }
+        }
+
         private fun getTerminals(): IntOpenHashSet =
             terminals ?: IntOpenHashSet().also { terminals = it }
 
         private fun getChildren(): Int2ObjectOpenHashMap<AccessPathTrieNode> =
             children ?: Int2ObjectOpenHashMap<AccessPathTrieNode>().also { children = it }
-
-        fun unrollAccessors(accessors: IntOpenHashSet): IntOpenHashSet {
-            val current = unrolled ?: IntOpenHashSet().also { unrolled = it }
-            val result = IntOpenHashSet()
-            accessors.forEachInt {
-                if (current.add(it)) result.add(it)
-            }
-            return result
-        }
 
         companion object {
             fun empty() = AccessPathTrieNode()
