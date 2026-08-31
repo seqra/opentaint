@@ -24,6 +24,7 @@ import FactExplosion
 #print axioms FactExplosion.indexedNodeCost_repeatedFacts
 #print axioms FactExplosion.boundedRepeated_complexity_gap
 #print axioms FactExplosion.repeatedSingletonArray_complexity_gap
+#print axioms FactExplosion.taggedChildUnion_slot_gap
 #print axioms FactExplosion.exclusion_must_be_in_key
 #print axioms List.eraseDups_cons
 #print axioms List.replicate_succ

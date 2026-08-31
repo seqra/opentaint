@@ -84,4 +84,15 @@ theorem repeatedSingletonArray_complexity_gap (copies : Nat) :
     optimizedRepeatedSingletonArrayCost (copies + 1) = 1 := by
   simp [baselineRepeatedSingletonArrayCost, optimizedRepeatedSingletonArrayCost]
 
+def splitChildStorageSlots (nodes : Nat) : Nat :=
+  2 * nodes
+
+def unionChildStorageSlots (nodes : Nat) : Nat :=
+  nodes
+
+theorem taggedChildUnion_slot_gap (nodes : Nat) :
+    splitChildStorageSlots nodes = 2 * nodes ∧
+    unionChildStorageSlots nodes = nodes := by
+  exact ⟨rfl, rfl⟩
+
 end FactExplosion

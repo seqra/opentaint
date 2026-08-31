@@ -10,7 +10,7 @@ The implementation now does these operations:
 - It uses one bounded canonical index for each `TreeApManager`.
 - It includes all semantic fields in equality and hashing.
 - It shares one-element accessor-label arrays by accessor index.
-- It stores a singleton child directly in the node, without a child array.
+- It stores child state in one tagged field: `null`, one child, or a child array.
 - It reuses the first canonical node. It does not copy a tree only to mark it canonical.
 
 The implementation does not remove a fact path. It does not change premise emission, `[any]` matching, cleaners, summaries, exclusions, or the fixed-point operation.
@@ -63,6 +63,9 @@ The Lean model is in `formal/fact-explosion`.
 
 - For `n + 1` equal facts, the baseline stores `n + 1` node occurrences. The indexed representation stores one flat row and `n + 1` root references.
 - For `n + 1` singleton nodes with one repeated accessor, the baseline uses `2 * (n + 1)` label and child arrays. The optimized representation uses one shared label array and no child arrays.
+- For `n` nodes, split singleton and array storage uses `2 * n` child-reference slots. The tagged union uses `n` slots.
+
+The slot result is a representation invariant, not a shallow-size claim. A Java instrumentation measurement on the test VM reports 56 bytes for an `AccessNode` before and after the tagged-union change. HotSpot object alignment consumes the removed four-byte compressed reference on this layout.
 
 `Bounded.lean` models the production retention policy. A hit returns the stored equal tree. A miss clears a full cache and inserts the input tree. The proofs show these properties:
 
@@ -97,7 +100,7 @@ The key contains these values:
 
 Global canonicalization first checks for a known root. A hit returns the known tree without walking its children. A miss canonicalizes children from the bottom up and keeps the first root object. Operation-local interning stays separate, so a local marker cannot prevent later manager-wide canonicalization.
 
-Each one-child node gets its label array from a manager flyweight table. The node holds the child in a direct field. Nodes with two or more children keep parallel arrays.
+Each one-child node gets its label array from a manager flyweight table. One private `Any?` field represents the child union. It is `null` for no children, an `AccessNode` for one child, and an `Array<AccessNode>` for two or more children. Utility methods expose indexed access and an array view to the existing algorithms.
 
 The storage identity rule stays valid. A merge that adds no information still returns the stored object. Canonicalization can select an older equal object only at a storage write point that already accepts an equal replacement.
 
@@ -115,7 +118,10 @@ The focused tests cover these properties:
 - the retention bound discards an old batch safely;
 - reference cleanup does not remove the manager index;
 - singleton labels share one array;
-- singleton children use no array;
+- child storage is `null` for leaves;
+- singleton children are stored directly and reject an out-of-range index;
+- multiple children use an array;
+- `AccessNode` has one child-storage field;
 - first-time global canonicalization keeps the original object.
 
 The full dataflow module suite must also pass.
@@ -135,8 +141,11 @@ All star runs used the same generated project, rules, 3 GiB heap, and finding ch
 | 6 | Share singleton label arrays | 254, then 253 | 1, 1 | Variance counterexample |
 | 7 | Store singleton children without arrays | 253 at 248 s | 1 | Counterexample |
 | 8 | Do not clone first canonical trees | 254, 254, 254 at about 245 s | 1, 1, 1 | Accepted |
+| 9 | Use one tagged child-storage field | 254 at 246 s | 1 | Accepted |
 
 Return code 254 is the configured IFDS timeout. It is not a low-memory stop. All three accepted star runs recorded zero low-memory stops and retained the finding. Their progress values were 39,777, 39,821, and 39,797 events. The concrete-chain arm returned 0 in about 6.1 seconds and retained its finding.
+
+The tagged-union JAR was checked again at the same budget. Its star arm returned 254 at 245.7 seconds with zero low-memory stops, 39,739 progress events, and one finding. Its chain arm returned 0 at 6.1 seconds with one finding.
 
 This result mitigates the fact-explosion memory failure. It does not prove that the star fixed point converges inside the current time limit.
 
@@ -145,9 +154,9 @@ This result mitigates the fact-explosion memory failure. It does not prove that 
 - The feature branch and `saloed/5-default-get` have the same merge base: `4c358d2e16450b3bdb4254955be5cbda61e9cb7c`.
 - `lake build` completes the executable model and all proofs.
 - `lake env lean FactExplosion/Audit.lean` shows only `propext` and `Quot.sound`. A source scan finds no `sorry`, `axiom`, `Classical`, `classical`, or `noncomputable` term.
-- The dataflow module has 159 tests. It has zero failures, zero errors, and zero skipped tests.
-- `projectAnalyzerJar` succeeds. The tested JAR hash prefix is `2cdb67783fbde1dd`.
-- The chain run and all three accepted star runs use this JAR hash.
+- The dataflow module has 162 tests. It has zero failures, zero errors, and zero skipped tests.
+- `projectAnalyzerJar` succeeds. The tagged-union JAR hash prefix is `3cabd8e8489b520d`.
+- The chain and star regression runs use this JAR hash and retain their findings.
 - `git diff --check` succeeds.
 
 The formal equivalence scope is all finite trees in the production accessor and exclusion data model. The formal matcher is a finite observation of these trees. The proof first reconstructs the complete source tree. Therefore, each pure tree observation has the same input after decoding. The practical gate also checks the production matcher, premise selection, and finding output on conductor.

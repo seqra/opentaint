@@ -265,8 +265,7 @@ class AccessTree(
         @JvmField val isFinal: Boolean,
         @JvmField val deepAccessorExclusion: DeepAccessorExclusion?,
         @JvmField val accessors: IntArray?,
-        private val singleAccessorNode: AccessNode?,
-        private val accessorNodes: Array<AccessNode>?,
+        private val accessorNodes: Any?,
     ) {
         @JvmField val hash: Long
         @JvmField val size: Long
@@ -376,13 +375,17 @@ class AccessTree(
             }
         }
 
-        fun accessorNodeAt(index: Int): AccessNode =
-            singleAccessorNode ?: accessorNodes!![index]
+        fun accessorNodeAt(index: Int): AccessNode = when (val nodes = accessorNodes) {
+            is AccessNode -> if (index == 0) nodes else throw IndexOutOfBoundsException(index)
+            is Array<*> -> nodes[index] as AccessNode
+            else -> error("Accessor node not found at index $index")
+        }
 
+        @Suppress("UNCHECKED_CAST")
         private fun accessorNodesArray(): Array<AccessNode>? = when {
-            accessors == null -> null
-            singleAccessorNode != null -> arrayOf(singleAccessorNode)
-            else -> accessorNodes
+            accessorNodes == null -> null
+            accessorNodes is AccessNode -> arrayOf(accessorNodes)
+            else -> accessorNodes as Array<AccessNode>
         }
 
         val isEmpty: Boolean
@@ -1198,7 +1201,6 @@ class AccessTree(
             isFinal = isFinal,
             deepAccessorExclusion = deepAccessorExclusion,
             accessors = accessors,
-            singleAccessorNode = singleAccessorNode,
             accessorNodes = accessorNodes,
         )
 
@@ -1780,7 +1782,6 @@ class AccessTree(
                 isAbstract = isAbstract, isFinal = isFinal,
                 deepAccessorExclusion = null,
                 accessors = null,
-                singleAccessorNode = null,
                 accessorNodes = null,
             )
 
@@ -1798,8 +1799,7 @@ class AccessTree(
                     isAbstract = false, isFinal = false,
                     deepAccessorExclusion = null,
                     accessors = node.manager.singleAccessorArray(accessor),
-                    singleAccessorNode = node,
-                    accessorNodes = null,
+                    accessorNodes = node,
                 )
 
             @JvmStatic
@@ -1846,8 +1846,9 @@ class AccessTree(
                         isFinal = base.isFinal,
                         deepAccessorExclusion = deepAccessorExclusion,
                         accessors = nonEmptyAccessors,
-                        singleAccessorNode = nonEmptyAccessorNodes?.singleOrNull(),
-                        accessorNodes = nonEmptyAccessorNodes?.takeIf { it.size > 1 },
+                        accessorNodes = nonEmptyAccessorNodes?.let {
+                            if (it.size == 1) it[0] else it
+                        },
                     )
                 }
             }

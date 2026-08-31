@@ -13,10 +13,12 @@ import java.util.concurrent.Executors
 import java.util.IdentityHashMap
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNotSame
 import kotlin.test.assertNull
 import kotlin.test.assertSame
+import kotlin.test.assertTrue
 
 class AccessTreeInternerTest {
     private object UnrollStrategy : AnyAccessorUnrollStrategy {
@@ -35,6 +37,12 @@ class AccessTreeInternerTest {
             accessorNodes = arrayOf(finalNode),
         )
     }
+
+    private fun childStorage(node: AccessNode): Any? =
+        AccessNode::class.java.getDeclaredField("accessorNodes").run {
+            isAccessible = true
+            get(node)
+        }
 
     @Test
     fun `storage-local wrappers share one manager canonical node`() {
@@ -116,15 +124,51 @@ class AccessTreeInternerTest {
     }
 
     @Test
-    fun `single-child nodes store their child without an array`() {
+    fun `child union stores a single child directly`() {
         val manager = manager()
         val node = node(manager, FieldAccessor("Box", "value", "String"))
-        val childArray = AccessNode::class.java.getDeclaredField("accessorNodes").apply {
-            isAccessible = true
+
+        assertSame(manager.finalNode, childStorage(node))
+        assertSame(manager.finalNode, node.accessorNodeAt(0))
+        assertFailsWith<IndexOutOfBoundsException> { node.accessorNodeAt(1) }
+    }
+
+    @Test
+    fun `child union is null for a node without children`() {
+        val manager = manager()
+
+        assertNull(childStorage(manager.finalNode))
+    }
+
+    @Test
+    fun `child union stores multiple children in an array`() {
+        val manager = manager()
+        val left = FieldAccessor("Box", "left", "String")
+        val right = FieldAccessor("Box", "right", "String")
+        val node = with(manager) {
+            create(
+                isAbstract = false,
+                isFinal = false,
+                deepAccessorExclusion = null,
+                accessors = intArrayOf(left.idx, right.idx),
+                accessorNodes = arrayOf(finalNode, abstractNode),
+            )
         }
 
-        assertNull(childArray.get(node))
+        val storage = childStorage(node)
+        assertTrue(storage is Array<*>)
+        assertTrue(storage.contentEquals(arrayOf(manager.finalNode, manager.abstractNode)))
         assertSame(manager.finalNode, node.accessorNodeAt(0))
+        assertSame(manager.abstractNode, node.accessorNodeAt(1))
+    }
+
+    @Test
+    fun `access nodes have one child-storage field`() {
+        val childStorageFields = AccessNode::class.java.declaredFields.filter {
+            it.name == "singleAccessorNode" || it.name == "accessorNodes"
+        }
+
+        assertEquals(listOf("accessorNodes"), childStorageFields.map { it.name })
     }
 
     @Test
