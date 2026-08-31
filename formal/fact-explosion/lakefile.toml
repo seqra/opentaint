@@ -1,0 +1,6 @@
+name = "fact_explosion"
+version = "0.1.0"
+defaultTargets = ["FactExplosion"]
+
+[[lean_lib]]
+name = "FactExplosion"

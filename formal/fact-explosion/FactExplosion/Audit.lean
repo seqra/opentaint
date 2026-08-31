@@ -1,0 +1,29 @@
+import FactExplosion
+
+#print axioms FactExplosion.encodeRoot_witness
+#print axioms FactExplosion.encoded_accepts_exactly
+#print axioms FactExplosion.encoded_wellFormed_exactly
+#print axioms FactExplosion.encodeIndexedRoot_witness
+#print axioms FactExplosion.encodedRoot_sound
+#print axioms FactExplosion.encodedDag_references_valid
+#print axioms FactExplosion.indexed_accepts_exactly
+#print axioms FactExplosion.indexed_wellFormed_exactly
+#print axioms FactExplosion.indexedNodes_nodup
+#print axioms FactExplosion.indexedNodeCost_le_occurrenceCost
+#print axioms FactExplosion.boundedIntern_value_exact
+#print axioms FactExplosion.boundedIntern_cache_bound
+#print axioms FactExplosion.boundedInternFacts_values_exact
+#print axioms FactExplosion.boundedInternFacts_cache_bound
+#print axioms FactExplosion.boundedInternFacts_repeated
+#print axioms FactExplosion.canonicalCost_le_occurrenceCost
+#print axioms FactExplosion.occurrenceCost_repeatedFacts
+#print axioms FactExplosion.rawNodes_repeatedFacts
+#print axioms FactExplosion.canonicalNodes_repeatedFacts
+#print axioms FactExplosion.canonicalCost_repeatedFacts
+#print axioms FactExplosion.repeatedFacts_complexity_gap
+#print axioms FactExplosion.indexedNodeCost_repeatedFacts
+#print axioms FactExplosion.boundedRepeated_complexity_gap
+#print axioms FactExplosion.repeatedSingletonArray_complexity_gap
+#print axioms FactExplosion.exclusion_must_be_in_key
+#print axioms List.eraseDups_cons
+#print axioms List.replicate_succ
