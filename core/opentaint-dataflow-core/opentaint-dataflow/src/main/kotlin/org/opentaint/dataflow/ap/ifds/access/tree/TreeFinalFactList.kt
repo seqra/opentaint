@@ -10,10 +10,9 @@ class TreeFinalFactList(
 
     private class TreeNodeListStorage(val apManager: TreeApManager) : AccessStorage<AccessTree.AccessNode> {
         private val storage = mutableListOf<AccessTree.AccessNode>()
-        private val interner = AccessTreeSoftInterner(apManager)
 
         override fun add(fact: AccessTree.AccessNode) {
-            storage.add(interner.intern(fact))
+            storage.add(apManager.canonicalizeAccessTree(fact))
         }
 
         override fun get(idx: Int): AccessTree.AccessNode = storage[idx]

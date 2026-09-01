@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.AlwaysAcceptFilter
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CompatibilityFilterResult
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker.CacheableFactApFilter
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FactApFilter
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
@@ -70,11 +71,33 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         if (!isCorrect) compatibilityRejected.increment()
     }
 
+    private data class AccessorFilterKey(
+        val actualType: JIRType,
+        val isLocalCheck: Boolean,
+    )
+
+    private val accessorFilters = ConcurrentHashMap<AccessorFilterKey, AccessorFilter>()
+    private val compatibilityFilters = ConcurrentHashMap<JIRType, AccessorCompatibilityFilter>()
+
+    private fun accessorFilter(actualType: JIRType, isLocalCheck: Boolean): AccessorFilter {
+        val key = AccessorFilterKey(actualType, isLocalCheck)
+        return accessorFilters.computeIfAbsent(key) { AccessorFilter(it) }
+    }
+
+    private fun compatibilityFilter(actualType: JIRType): AccessorCompatibilityFilter =
+        compatibilityFilters.computeIfAbsent(actualType) { AccessorCompatibilityFilter(it) }
+
     private inner class AccessorFilter(
-        private val actualType: JIRType,
-        private val isLocalCheck: Boolean
-    ) : FactApFilter {
-        override fun check(accessor: Accessor): FilterResult = checkAccessor(accessor).also {
+        private val key: AccessorFilterKey,
+    ) : CacheableFactApFilter {
+        private val actualType: JIRType = key.actualType
+        private val isLocalCheck: Boolean = key.isLocalCheck
+        private val fieldChecks = DirectMappedExactCache<String, FilterResult>(ACCESSOR_CHECK_CACHE_SLOTS)
+
+        override fun check(accessor: Accessor): FilterResult = when (accessor) {
+            is FieldAccessor -> fieldChecks.getOrCompute(accessor.className) { checkFieldAccessor(it) }
+            else -> checkAccessor(accessor)
+        }.also {
             val result = it !== FilterResult.Reject
             if (isLocalCheck) result.logLocalFactCheck() else result.logAccessCheck()
         }
@@ -102,11 +125,7 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
                 }
 
                 is FieldAccessor -> {
-                    if (actualType !is JIRRefType) return FilterResult.Reject
-
-                    val factType = fieldClassType(accessor) ?: return FilterResult.Accept
-                    if (!typeMayHaveSubtypeOf(actualType, factType)) return FilterResult.Reject
-                    return FilterResult.Accept
+                    return checkFieldAccessor(accessor.className)
                 }
 
                 ElementAccessor -> {
@@ -116,7 +135,7 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
                     val actualElementType = actualType.ifArrayGetElementType ?: return FilterResult.Accept
 
                     return FilterResult.FilterNext(
-                        AccessorFilter(actualElementType, isLocalCheck)
+                        accessorFilter(actualElementType, isLocalCheck)
                     )
                 }
 
@@ -133,37 +152,43 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
             }
         }
 
+        private fun checkFieldAccessor(className: String): FilterResult {
+            if (actualType !is JIRRefType) return FilterResult.Reject
+
+            val factType = fieldClassType(className) ?: return FilterResult.Accept
+            if (!typeMayHaveSubtypeOf(actualType, factType)) return FilterResult.Reject
+            return FilterResult.Accept
+        }
+
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (javaClass != other?.javaClass) return false
 
             other as AccessorFilter
 
-            if (isLocalCheck != other.isLocalCheck) return false
-            if (actualType != other.actualType) return false
-
-            return true
+            return key == other.key
         }
 
-        override fun hashCode(): Int {
-            var result = isLocalCheck.hashCode()
-            result = 31 * result + actualType.hashCode()
-            return result
-        }
+        override fun hashCode(): Int = key.hashCode()
     }
 
     private inner class AccessorCompatibilityFilter(
         private val actualType: JIRType
     ) : FactTypeChecker.FactCompatibilityFilter {
-        override fun check(accessor: Accessor): CompatibilityFilterResult  = checkAccessor(accessor).also {
+        private val fieldChecks = DirectMappedExactCache<String, CompatibilityFilterResult>(
+            COMPATIBILITY_CHECK_CACHE_SLOTS
+        )
+
+        override fun check(accessor: Accessor): CompatibilityFilterResult = when (accessor) {
+            is FieldAccessor -> fieldChecks.getOrCompute(accessor.fieldType) { checkFieldAccessor(it) }
+            else -> CompatibilityFilterResult.Compatible
+        }.also {
             val result = it !== CompatibilityFilterResult.NotCompatible
             result.logCompatibilityCheck()
         }
 
-        private fun checkAccessor(accessor: Accessor): CompatibilityFilterResult {
-            if (accessor !is FieldAccessor) return CompatibilityFilterResult.Compatible
-
-            val fieldType = fieldAccessorType(accessor)
+        private fun checkFieldAccessor(fieldTypeName: String): CompatibilityFilterResult {
+            val fieldType = cp.findTypeOrNull(fieldTypeName)
                 ?: return CompatibilityFilterResult.Compatible
 
             if (!typesCompatible(actualType, fieldType)) return CompatibilityFilterResult.NotCompatible
@@ -176,18 +201,18 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         if (actualType == null) return factAp
         jIRDowncast<JIRType>(actualType)
 
-        val filter = AccessorFilter(actualType, isLocalCheck = true)
+        val filter = accessorFilter(actualType, isLocalCheck = true)
         return factAp.filterFact(filter)
     }
 
     override fun accessPathFilter(accessPath: List<Accessor>): FactApFilter {
         val actualType = accessorActualType(accessPath) ?: return AlwaysAcceptFilter
-        return AccessorFilter(actualType, isLocalCheck = false)
+        return accessorFilter(actualType, isLocalCheck = false)
     }
 
     override fun accessPathCompatibilityFilter(accessPath: List<Accessor>): FactTypeChecker.FactCompatibilityFilter {
         val actualType = accessorActualType(accessPath) ?: return FactTypeChecker.AlwaysCompatibleFilter
-        return AccessorCompatibilityFilter(actualType)
+        return compatibilityFilter(actualType)
     }
 
     private fun accessorActualType(accessPath: List<Accessor>): JIRType? {
@@ -212,8 +237,8 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         return cp.findTypeOrNull(accessor.fieldType)
     }
 
-    private fun fieldClassType(accessor: FieldAccessor): JIRClassType? {
-        return cp.findTypeOrNull(accessor.className) as? JIRClassType
+    private fun fieldClassType(className: String): JIRClassType? {
+        return cp.findTypeOrNull(className) as? JIRClassType
     }
 
     private fun typeMayBeArrayType(type: JIRRefType): Boolean = when (type) {
@@ -344,5 +369,10 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
             uncheckedClasses.addAll(cls.interfaces)
         }
         return false
+    }
+
+    private companion object {
+        private const val ACCESSOR_CHECK_CACHE_SLOTS = 256
+        private const val COMPATIBILITY_CHECK_CACHE_SLOTS = 128
     }
 }

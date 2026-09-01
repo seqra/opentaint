@@ -12,5 +12,5 @@ interface TreeFinalApAccess: FinalApAccess<AccessTree.AccessNode> {
         (factAp as AccessTree).access
 
     override fun createFinal(base: AccessPathBase, ap: AccessTree.AccessNode, ex: ExclusionSet): FinalFactAp =
-        AccessTree(apManager, base, ap, ex)
+        apManager.internFinalFact(base, ap, ex)
 }

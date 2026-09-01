@@ -89,7 +89,9 @@ class MethodTaintConfigurationResolver(
     val taintMarkManager: TaintMarkManager,
     val cp: JIRClasspath,
     val objectTypeName: TypeName,
-    val method: JIRMethod
+    val method: JIRMethod,
+    private val internCondition: (Condition) -> Condition,
+    private val internSinkMeta: (TaintSinkMeta) -> TaintSinkMeta,
 ) {
     private val typedMethod by lazy { resolveTypedMethod() }
     
@@ -177,7 +179,7 @@ class MethodTaintConfigurationResolver(
 
         val contexts = anyArgSpecializationContexts(serializedCondition, actions)
         return contexts.mapNotNull {
-            val condition = resolveCondition(serializedCondition, it).simplify()
+            val condition = internCondition(resolveCondition(serializedCondition, it).simplify())
             if (condition.isFalse()) return@mapNotNull null
 
             resolveMethodRule(condition, it)
@@ -241,10 +243,12 @@ class MethodTaintConfigurationResolver(
         return "generated-id-${ruleIdGen.incrementAndGet()}"
     }
 
-    private fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
-        message = meta?.message() ?: "",
-        severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
-        cwe = meta?.cwe
+    private fun SinkRule.meta(): TaintSinkMeta = internSinkMeta(
+        TaintSinkMeta(
+            message = meta?.message() ?: "",
+            severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
+            cwe = meta?.cwe
+        )
     )
 
     private fun SinkMetaData.message(): String? = note

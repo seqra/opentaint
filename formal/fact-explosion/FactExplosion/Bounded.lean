@@ -131,4 +131,99 @@ theorem boundedInternFacts_repeated
   simp [boundedInternFacts, boundedIntern_empty positive,
     boundedInternFacts_repeated_existing]
 
+def canonicalFactRoots
+    (limit : Nat)
+    (facts : List AccessTree) : List AccessTree :=
+  (boundedInternFacts limit [] facts).2
+
+theorem canonical_fact_roots_exact
+    (limit : Nat)
+    (facts : List AccessTree) :
+    canonicalFactRoots limit facts = facts := by
+  exact boundedInternFacts_values_exact limit [] facts
+
+def directIntern
+    (slot : Option AccessTree)
+    (tree : AccessTree) : Option AccessTree × AccessTree :=
+  match slot with
+  | some current =>
+      if current == tree then (slot, current) else (some tree, tree)
+  | none => (some tree, tree)
+
+theorem directIntern_value_exact
+    (slot : Option AccessTree)
+    (tree : AccessTree) :
+    (directIntern slot tree).2 = tree := by
+  cases slot with
+  | none => rfl
+  | some current =>
+      by_cases same : current = tree
+      · subst tree
+        simp [directIntern]
+      · simp [directIntern, same]
+
+def directInternSlotCost : Option AccessTree → Nat
+  | none => 0
+  | some _ => 1
+
+theorem directIntern_slot_bounded
+    (slot : Option AccessTree)
+    (tree : AccessTree) :
+    directInternSlotCost (directIntern slot tree).1 ≤ 1 := by
+  cases slot with
+  | none => simp [directIntern, directInternSlotCost]
+  | some current =>
+      by_cases same : current = tree
+      · simp [directIntern, directInternSlotCost, same]
+      · simp [directIntern, directInternSlotCost, same]
+
+def twoWayDirectRepresentative
+    (first second : Option AccessTree)
+    (tree : AccessTree) : AccessTree :=
+  match first with
+  | some current =>
+      if current == tree then current else
+        match second with
+        | some alternate => if alternate == tree then alternate else tree
+        | none => tree
+  | none =>
+      match second with
+      | some alternate => if alternate == tree then alternate else tree
+      | none => tree
+
+theorem twoWayDirectRepresentative_value_exact
+    (first second : Option AccessTree)
+    (tree : AccessTree) :
+    twoWayDirectRepresentative first second tree = tree := by
+  cases first with
+  | none =>
+      cases second with
+      | none => rfl
+      | some alternate =>
+          by_cases same : alternate = tree
+          · subst tree
+            simp [twoWayDirectRepresentative]
+          · simp [twoWayDirectRepresentative, same]
+  | some current =>
+      by_cases same : current = tree
+      · subst tree
+        simp [twoWayDirectRepresentative]
+      · cases second with
+        | none => simp [twoWayDirectRepresentative, same]
+        | some alternate =>
+            by_cases alternateSame : alternate = tree
+            · subst tree
+              simp [twoWayDirectRepresentative, same]
+            · simp [twoWayDirectRepresentative, same, alternateSame]
+
+def twoWayDirectSlotCost
+    (first second : Option AccessTree) : Nat :=
+  directInternSlotCost first + directInternSlotCost second
+
+theorem twoWayDirect_slot_bounded
+    (first second : Option AccessTree) :
+    twoWayDirectSlotCost first second ≤ 2 := by
+  cases first <;> cases second <;>
+    simp [twoWayDirectSlotCost, directInternSlotCost]
+
 end FactExplosion

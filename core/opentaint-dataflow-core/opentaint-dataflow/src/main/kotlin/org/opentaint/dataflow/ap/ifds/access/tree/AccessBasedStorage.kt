@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.createNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
+import org.opentaint.dataflow.util.ConcurrentReadSafeInt2ObjectMap
 import org.opentaint.dataflow.util.forEachEntry
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.dataflow.util.getOrCreateNullable
@@ -12,7 +13,13 @@ import org.opentaint.dataflow.util.int2ObjectMap
 abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
     val manager: TreeApManager
 ) {
-    private val children = int2ObjectMap<S?>()
+    private class SingleChild(
+        @JvmField val accessor: AccessorIdx,
+        @JvmField val storage: Any,
+    )
+
+    @Volatile
+    private var children: Any? = null
 
     abstract fun createStorage(): S
 
@@ -57,7 +64,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
         nodes.add(this as S)
 
         if (pattern.isFinal) {
-            children.get(FINAL_ACCESSOR_IDX)?.let { nodes.add(it) }
+            findChild(FINAL_ACCESSOR_IDX)?.let { nodes.add(it) }
         }
 
         pattern.forEachAccessor { accessor, accessorPattern ->
@@ -70,7 +77,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
         accessor: AccessorIdx,
         nodes: MutableList<S>
     ) {
-        children.get(accessor)?.collectNodesContains(pattern, nodes)
+        findChild(accessor)?.collectNodesContains(pattern, nodes)
     }
 
     fun allNodes(): Sequence<S> {
@@ -82,8 +89,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
             @Suppress("UNCHECKED_CAST")
             storages.add(storage as S)
 
-            storage.children.forEachEntry { _, s ->
-                if (s == null) return@forEachEntry
+            storage.forEachChild { _, s ->
                 unprocessedStorages.add(s)
             }
         }
@@ -106,9 +112,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
             @Suppress("UNCHECKED_CAST")
             body(accessors, storage as S)
 
-            storage.children.forEachEntry { accessor, s ->
-                if (s == null) return@forEachEntry
-
+            storage.forEachChild { accessor, s ->
                 val childrenAccessors = accessors.clone()
                 childrenAccessors.add(accessor)
 
@@ -118,28 +122,91 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
     }
 
     fun removeChildren(predicate: (AccessorIdx, S) -> Boolean) {
-        val accessorsToRemove = IntArrayList()
-
-        children.forEachEntry { accessor, s ->
-            if (s == null) return@forEachEntry
-
-            if (predicate(accessor, s)) {
-                accessorsToRemove.add(accessor)
+        synchronized(this) {
+            val current = children ?: return
+            if (current is SingleChild) {
+                @Suppress("UNCHECKED_CAST")
+                val storage = current.storage as S
+                if (predicate(current.accessor, storage)) children = null
+                return
             }
-        }
 
-        if (accessorsToRemove.isEmpty) return
-
-        accessorsToRemove.forEachInt { accessor ->
-            children.put(accessor, null)
+            @Suppress("UNCHECKED_CAST")
+            val map = current as ConcurrentReadSafeInt2ObjectMap<S?>
+            val accessorsToRemove = IntArrayList()
+            map.forEachEntry { accessor, storage ->
+                if (storage != null && predicate(accessor, storage)) {
+                    accessorsToRemove.add(accessor)
+                }
+            }
+            accessorsToRemove.forEachInt { accessor -> map.put(accessor, null) }
         }
     }
 
-    open fun getOrCreateChild(accessor: AccessorIdx): S =
-        children.getOrCreateNullable(accessor) { createStorage() }
+    open fun getOrCreateChild(accessor: AccessorIdx): S {
+        findChild(accessor)?.let { return it }
 
-    open fun findChild(accessor: AccessorIdx): S? =
-        children.get(accessor)
+        synchronized(this) {
+            when (val current = children) {
+                null -> {
+                    val storage = createStorage()
+                    children = SingleChild(accessor, storage)
+                    return storage
+                }
+
+                is SingleChild -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val currentStorage = current.storage as S
+                    if (current.accessor == accessor) return currentStorage
+
+                    val map = int2ObjectMap<S?>()
+                    map.put(current.accessor, currentStorage)
+                    val storage = createStorage()
+                    map.put(accessor, storage)
+                    children = map
+                    return storage
+                }
+
+                else -> {
+                    @Suppress("UNCHECKED_CAST")
+                    val map = current as ConcurrentReadSafeInt2ObjectMap<S?>
+                    return map.getOrCreateNullable(accessor) { createStorage() }
+                }
+            }
+        }
+    }
+
+    open fun findChild(accessor: AccessorIdx): S? {
+        return when (val current = children) {
+            null -> null
+            is SingleChild -> {
+                if (current.accessor != accessor) return null
+                @Suppress("UNCHECKED_CAST")
+                current.storage as S
+            }
+            else -> {
+                @Suppress("UNCHECKED_CAST")
+                (current as ConcurrentReadSafeInt2ObjectMap<S?>)[accessor]
+            }
+        }
+    }
+
+    private fun forEachChild(body: (AccessorIdx, S) -> Unit) {
+        when (val current = children) {
+            null -> return
+            is SingleChild -> {
+                @Suppress("UNCHECKED_CAST")
+                body(current.accessor, current.storage as S)
+            }
+            else -> {
+                @Suppress("UNCHECKED_CAST")
+                val map = current as ConcurrentReadSafeInt2ObjectMap<S?>
+                map.forEachEntry { accessor, storage ->
+                    if (storage != null) body(accessor, storage)
+                }
+            }
+        }
+    }
 
     override fun toString(): String = buildString {
         print(this, prefix = "")
@@ -149,8 +216,7 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
 
     fun print(builder: StringBuilder, prefix: String) {
         builder.appendLine("$prefix${printStorageNode()}")
-        children.forEachEntry { accessorIdx, s ->
-            if (s == null) return@forEachEntry
+        forEachChild { accessorIdx, s ->
             val accessor = with(manager) { accessorIdx.accessor }
             builder.appendLine("$prefix$accessor ->")
             s.print(builder, prefix + " ".repeat(4))

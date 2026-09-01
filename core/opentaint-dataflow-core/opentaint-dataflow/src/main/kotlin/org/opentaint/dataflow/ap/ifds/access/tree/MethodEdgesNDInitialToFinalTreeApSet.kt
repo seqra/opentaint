@@ -30,10 +30,10 @@ class MethodEdgesNDInitialToFinalTreeApSet(
                 return element
             }
 
-            val mergedAccess = cur.mergeAdd(element)
-            if (mergedAccess === cur) return null
+            val (mergedAccess, delta) = cur.mergeAddDelta(element)
+            if (delta == null) return null
             current = mergedAccess
-            return mergedAccess
+            return delta
         }
 
         override fun collect(dst: MutableList<AccessTree.AccessNode>) {

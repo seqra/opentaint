@@ -29,15 +29,15 @@ class AccessPath(
     override val exclusions: ExclusionSet
 ): InitialFactAp {
     override fun rebase(newBase: AccessPathBase): InitialFactAp =
-        AccessPath(apManager, newBase, access, exclusions)
+        apManager.internInitialFact(newBase, access, exclusions)
 
     override fun isAbstract(): Boolean = access == null
 
     override fun exclude(accessor: Accessor): InitialFactAp =
-        AccessPath(apManager, base, access, exclusions.add(accessor))
+        apManager.internInitialFact(base, access, exclusions.add(accessor))
 
     override fun replaceExclusions(exclusions: ExclusionSet): InitialFactAp =
-        AccessPath(apManager, base, access, exclusions)
+        apManager.internInitialFact(base, access, exclusions)
 
     override fun getAllAccessors(): Set<Accessor> =
         access?.accessorList()?.toSet().orEmpty()
@@ -54,18 +54,22 @@ class AccessPath(
     override fun readAccessor(accessor: Accessor): AccessPath? = with(apManager) {
         if (access == null) return null
         if (access.accessor.accessor != accessor) return null
-        return AccessPath(apManager, base, access.next, exclusions)
+        return internInitialFact(base, access.next, exclusions)
     }
 
     override fun prependAccessor(accessor: Accessor): InitialFactAp {
         val accessorIdx = with(apManager) { accessor.idx }
 
         if (access == null) {
-            return AccessPath(apManager, base, AccessNode(apManager, accessorIdx, next = null), exclusions)
+            return apManager.internInitialFact(
+                base,
+                apManager.createAccessPathNode(accessorIdx, next = null),
+                exclusions,
+            )
         }
 
         val node = access.addParent(accessorIdx)
-        return AccessPath(apManager, base, node, exclusions)
+        return apManager.internInitialFact(base, node, exclusions)
     }
 
     override fun clearAccessor(accessor: Accessor): InitialFactAp? = with(apManager) {
@@ -153,9 +157,9 @@ class AccessPath(
                     val filteredNode = node.filter(other.exclusions) ?: return emptyList()
 
                     val matchedAccessNode = accessorsOnPath.foldRightInt(null as AccessNode?) { accessor, prevNode ->
-                        AccessNode(apManager, accessor, prevNode)
+                        apManager.createAccessPathNode(accessor, prevNode)
                     }
-                    val matchedFact = AccessPath(apManager, base, matchedAccessNode, exclusions)
+                    val matchedFact = apManager.internInitialFact(base, matchedAccessNode, exclusions)
 
                     return listOf(matchedFact to AccessPathDelta.Delta(filteredNode))
                 }
@@ -182,7 +186,7 @@ class AccessPath(
             AccessPathDelta.Empty -> return this
             is AccessPathDelta.Delta -> {
                 val node = access?.concat(delta.node) ?: delta.node
-                return AccessPath(apManager, base, node, exclusions)
+                return apManager.internInitialFact(base, node, exclusions)
             }
         }
     }
@@ -219,7 +223,7 @@ class AccessPath(
         return result
     }
 
-    class AccessNode(
+    class AccessNode internal constructor(
         val manager: TreeApManager,
         val accessor: AccessorIdx,
         val next: AccessNode?
@@ -279,24 +283,24 @@ class AccessPath(
 
             return when {
                 accessor == FINAL_ACCESSOR_IDX -> error("Final parent")
-                accessor == ELEMENT_ACCESSOR_IDX -> AccessNode(
-                    manager, ELEMENT_ACCESSOR_IDX,
+                accessor == ELEMENT_ACCESSOR_IDX -> manager.createAccessPathNode(
+                    ELEMENT_ACCESSOR_IDX,
                     limitElementAccess(limit = SUBSEQUENT_ARRAY_ELEMENTS_LIMIT)
                 )
-                accessor.isFieldAccessor() -> AccessNode(manager, accessor, limitFieldAccess(accessor))
-                accessor.isStaticAccessor() -> AccessNode(manager, accessor, this)
-                accessor.isTaintMarkAccessor() -> AccessNode(manager, accessor, this)
+                accessor.isFieldAccessor() -> manager.createAccessPathNode(accessor, limitFieldAccess(accessor))
+                accessor.isStaticAccessor() -> manager.createAccessPathNode(accessor, this)
+                accessor.isTaintMarkAccessor() -> manager.createAccessPathNode(accessor, this)
                 accessor == VALUE_ACCESSOR_IDX -> {
                     check(this.accessor.isTaintMarkAccessor()) {
                         "Value accessor can only be prepended before a taint mark"
                     }
-                    AccessNode(manager, accessor, this)
+                    manager.createAccessPathNode(accessor, this)
                 }
 
                 accessor == ANY_ACCESSOR_IDX -> this // todo: All accessors are not supported in tree base ap
 
-                accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> AccessNode(manager, accessor, this)
-                accessor.isTypeInfoAccessor() -> AccessNode(manager, accessor, this)
+                accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> manager.createAccessPathNode(accessor, this)
+                accessor.isTypeInfoAccessor() -> manager.createAccessPathNode(accessor, this)
 
                 else -> error("Unsupported accessor $accessor")
             }
@@ -318,7 +322,7 @@ class AccessPath(
             if (limit > 0) {
                 val limitedChild = next?.limitElementAccess(limit - 1)
                 if (limitedChild === next) return this
-                return AccessNode(manager, accessor, limitedChild)
+                return manager.createAccessPathNode(accessor, limitedChild)
             }
 
             return collapseElementAccess()
@@ -345,11 +349,11 @@ class AccessPath(
         companion object {
             @JvmStatic
             fun TreeApManager.createNodeFromAccessors(accessors: IntList): AccessNode? =
-                accessors.foldRight(null as AccessNode?) { accessor, acc -> AccessNode(this, accessor, acc) }
+                accessors.foldRight(null as AccessNode?) { accessor, acc -> createAccessPathNode(accessor, acc) }
 
             @JvmStatic
             fun TreeApManager.createNodeFromReversedAp(reversedAp: ReversedApNode?): AccessNode? =
-                reversedAp.foldRight(null as AccessNode?) { accessor, acc -> AccessNode(this, accessor, acc) }
+                reversedAp.foldRight(null as AccessNode?) { accessor, acc -> createAccessPathNode(accessor, acc) }
 
             class ReversedApNode(val accessor: AccessorIdx, val prev: ReversedApNode?)
 

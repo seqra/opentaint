@@ -28,6 +28,8 @@ interface FactTypeChecker {
         fun check(accessor: Accessor): FilterResult
     }
 
+    interface CacheableFactApFilter : FactApFilter
+
     object AlwaysAcceptFilter : FactApFilter {
         override fun check(accessor: Accessor): FilterResult = FilterResult.Accept
     }

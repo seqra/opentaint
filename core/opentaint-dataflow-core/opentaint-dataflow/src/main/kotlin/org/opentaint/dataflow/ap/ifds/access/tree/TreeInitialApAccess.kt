@@ -12,5 +12,5 @@ interface TreeInitialApAccess: InitialApAccess<AccessPath.AccessNode?> {
         (factAp as AccessPath).access
 
     override fun createInitial(base: AccessPathBase, ap: AccessPath.AccessNode?, ex: ExclusionSet): InitialFactAp =
-        AccessPath(apManager, base, ap, ex)
+        apManager.internInitialFact(base, ap, ex)
 }

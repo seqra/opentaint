@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion
@@ -172,6 +173,18 @@ class AccessTreeInternerTest {
     }
 
     @Test
+    fun `access node metadata uses one packed field`() {
+        val fields = AccessNode::class.java.declaredFields.map { it.name }
+
+        assertTrue("state" in fields)
+        assertTrue("interned" !in fields)
+        assertTrue("isAbstract" !in fields)
+        assertTrue("isFinal" !in fields)
+        assertTrue("containsStatic" !in fields)
+        assertTrue("maxDepth" !in fields)
+    }
+
+    @Test
     fun `canonical index drops an old batch at its retention bound`() {
         val manager = manager()
         val interner = AccessTreeInterner(maxEntries = 2)
@@ -195,6 +208,38 @@ class AccessTreeInternerTest {
         val second = AccessTreeSoftInterner(secondManager).intern(node(secondManager, field))
 
         assertNotSame(first, second)
+    }
+
+    @Test
+    fun `initial access paths share manager canonical nodes`() {
+        val manager = manager()
+        val field = FieldAccessor("Box", "value", "String")
+        val first = manager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(field) as AccessPath
+        val second = manager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(field) as AccessPath
+
+        assertSame(first, second)
+        assertSame(first.access, second.access)
+    }
+
+    @Test
+    fun `final facts share manager canonical envelopes`() {
+        val manager = manager()
+        val field = FieldAccessor("Box", "value", "String")
+        val first = manager.mostAbstractFinalAp(AccessPathBase.This).prependAccessor(field)
+        val second = manager.mostAbstractFinalAp(AccessPathBase.This).prependAccessor(field)
+
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `initial access path nodes remain isolated between managers`() {
+        val firstManager = manager()
+        val secondManager = manager()
+        val field = FieldAccessor("Box", "value", "String")
+        val first = firstManager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(field) as AccessPath
+        val second = secondManager.mostAbstractInitialAp(AccessPathBase.This).prependAccessor(field) as AccessPath
+
+        assertNotSame(first.access, second.access)
     }
 
     @Test

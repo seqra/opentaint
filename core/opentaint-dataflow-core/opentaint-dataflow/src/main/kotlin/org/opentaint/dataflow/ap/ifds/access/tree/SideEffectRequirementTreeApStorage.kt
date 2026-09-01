@@ -71,7 +71,7 @@ private class SideEffectRequirementStorage(
         if (mergedExclusion === currentExclusion) return null
 
         val mergedAp = with(requirement) {
-            AccessPath(apManager, base, access, mergedExclusion)
+            apManager.internInitialFact(base, access, mergedExclusion)
         }
 
         this.requirement = mergedAp
