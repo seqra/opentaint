@@ -73,6 +73,7 @@ class TaintAnalysisUnitRunner(
 
     private var eventPriorityQueue = PriorityQueue(EventComparator)
     private var workList: Channel<Any> = Channel(Channel.UNLIMITED)
+    private var seenExternalInputs = BoundedSeenSet<ExternalInputFact>()
 
     private val analyzers = mutableListOf<MethodAnalyzerStorage>()
     private val methodAnalyzers = hashMapOf<CommonMethod, MethodAnalyzerStorage>()
@@ -113,6 +114,7 @@ class TaintAnalysisUnitRunner(
 
         eventPriorityQueue = PriorityQueue(EventComparator)
         workList = Channel(Channel.UNLIMITED)
+        seenExternalInputs = BoundedSeenSet()
         delayedMethodAnalyzers = mutableListOf()
     }
 
@@ -264,7 +266,10 @@ class TaintAnalysisUnitRunner(
 
     private fun addStartMethodEvent(method: MethodWithContext) = addUnprocessedAnyEvent(method)
 
-    private fun addUnprocessedEvent(event: ExternalInputFact) = addUnprocessedAnyEvent(event)
+    private fun addUnprocessedEvent(event: ExternalInputFact) {
+        if (!seenExternalInputs.markNew(event)) return
+        addUnprocessedAnyEvent(event)
+    }
     private fun addUnprocessedEvent(edge: MethodAnalyzer) = addUnprocessedAnyEvent(edge)
     private fun addUnprocessedEvent(event: MethodAnalysisDelayed) = addUnprocessedAnyEvent(event)
     private fun addUnprocessedEvent(event: DelayedAnalysisResume) = addUnprocessedAnyEvent(event)
@@ -353,7 +358,11 @@ class TaintAnalysisUnitRunner(
     private fun resumeDelayedAnalyzers(delayedAnalyzers: Collection<MethodAnalyzer>) {
         if (delayedAnalyzers.isEmpty()) return
 
-        val increasedFactLimit = ++factLimit
+        val minimumDelayedFactDepth = delayedAnalyzers.minOfOrNull {
+            it.minimumDelayedFactDepth ?: Int.MAX_VALUE
+        }?.takeUnless { it == Int.MAX_VALUE } ?: return
+        val increasedFactLimit = maxOf(factLimit, minimumDelayedFactDepth)
+        factLimit = increasedFactLimit
         logger.debug { "Increase unit $unit fact limit: $increasedFactLimit" }
 
         delayedAnalyzers.forEach { analyzer ->
@@ -514,7 +523,7 @@ class TaintAnalysisUnitRunner(
     }
 
     companion object {
-        private const val RUNNER_STEPS_QUANT = 1000
+        private const val RUNNER_STEPS_QUANT = 100
 
         private val logger = object : KLogging() {}.logger
     }

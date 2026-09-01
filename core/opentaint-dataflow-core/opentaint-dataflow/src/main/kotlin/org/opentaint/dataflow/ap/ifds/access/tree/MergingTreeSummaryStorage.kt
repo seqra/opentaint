@@ -10,37 +10,41 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
     private var edges: AccessNode? = null
     private var edgesDelta: AccessNode? = null
 
-    private val interner = AccessTreeSoftInterner(manager)
-
     fun add(exitAccess: AccessNode): Boolean {
         manager.cancellation.checkpoint()
 
         val currentEdges = edges
 
-        val (modifiedEdges, modificationDelta) = if (currentEdges == null) {
-            exitAccess to exitAccess
+        val modifiedEdges = if (currentEdges == null) {
+            exitAccess
         } else {
-            currentEdges.mergeAddDelta(exitAccess)
+            currentEdges.mergeAdd(exitAccess, foldToAny = false)
         }
 
-        if (modificationDelta == null) return false
+        var retainedEdges = modifiedEdges.absorbCoveredSiblings()
 
-        if (modifiedEdges.size > COMPRESSION_THRESHOLD) {
-            interner.withInterner { interner, cache ->
-                val currentInterned = modifiedEdges.internNodes(interner, cache)
+        if (retainedEdges.size > COMPRESSION_THRESHOLD) {
+            val compressedEdges = manager.withAccessTreeInterner { interner, cache ->
+                val currentInterned = retainedEdges.internNodes(interner, cache, global = true)
                 val compressed = currentInterned.compressNode()
 
                 if (compressed !== currentInterned) {
-                    val interned = compressed.internNodes(interner, cache)
-                    edges = interned
-                    edgesDelta = interned
-                    return true
-                }
+                    compressed.internNodes(interner, cache, global = true)
+                } else null
+            }
+            if (compressedEdges != null) {
+                retainedEdges = compressedEdges
             }
         }
 
-        edges = modifiedEdges
-        edgesDelta = edgesDelta?.mergeAdd(modificationDelta) ?: modificationDelta
+        edges = retainedEdges
+        val retainedDelta = if (currentEdges == null) {
+            retainedEdges
+        } else {
+            currentEdges.mergeAddDelta(retainedEdges, foldToAny = false).second
+        } ?: return false
+
+        edgesDelta = edgesDelta?.mergeAdd(retainedDelta) ?: retainedDelta
         return true
     }
 
@@ -50,9 +54,9 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
         val delta = edgesDelta ?: return null
         edgesDelta = null
 
-        return interner.withInterner { interner, cache ->
-            edges = edges?.internNodes(interner, cache)
-            delta.internNodes(interner, cache)
+        return manager.withAccessTreeInterner { interner, cache ->
+            edges = edges?.internNodes(interner, cache, global = true)
+            delta.internNodes(interner, cache, global = true)
         }
     }
 
@@ -90,6 +94,6 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
     }
 
     companion object {
-        private const val COMPRESSION_THRESHOLD = 10_000
+        private const val COMPRESSION_THRESHOLD = 100
     }
 }

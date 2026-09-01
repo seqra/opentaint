@@ -68,8 +68,8 @@ class JIRMethodCallSummaryHandler(
         return result
     }
 
-    override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+    override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> {
+        return summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
             Edge.FactToFact(
                 summaryEdge.methodEntryPoint,
                 refinement.refineFact(summaryEdge.initialFactAp),
@@ -77,9 +77,10 @@ class JIRMethodCallSummaryHandler(
                 refinement.refineFact(resultFact)
             )
         }
+    }
 
-    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> =
-        summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
+    override fun prepareNDFactToFactSummary(summaryEdge: Edge.NDFactToFact): List<Edge.NDFactToFact> {
+        return summaryRewriter.rewriteSummaryFact(summaryEdge.factAp).map { (resultFact, refinement) ->
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
             Edge.NDFactToFact(
                 summaryEdge.methodEntryPoint,
@@ -88,6 +89,7 @@ class JIRMethodCallSummaryHandler(
                 resultFact,
             )
         }
+    }
 
     private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
         analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, fact) { aliased ->

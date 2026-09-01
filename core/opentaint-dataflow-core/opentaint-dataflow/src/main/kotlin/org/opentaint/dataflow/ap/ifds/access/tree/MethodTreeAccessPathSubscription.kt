@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonAPSub
@@ -13,8 +14,6 @@ import org.opentaint.dataflow.util.PersistentBitSet.Companion.emptyPersistentBit
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.dataflow.util.getOrCreate
-import org.opentaint.dataflow.util.getOrCreateIndex
-import org.opentaint.dataflow.util.object2IntMap
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.lang.ref.Reference
 import java.util.BitSet
@@ -23,13 +22,11 @@ class MethodTreeAccessPathSubscription(
     override val apManager: TreeApManager,
 ) : CommonAPSub<AccessPath.AccessNode?, AccessTree.AccessNode>(),
     TreeInitialApAccess, TreeFinalApAccess {
-    private val interner: AccessTreeSoftInterner = AccessTreeSoftInterner(apManager)
-
     override fun createZ2FSubStorage(callerEp: CommonInst): Z2FSubStorage<AccessPath.AccessNode?, AccessTree.AccessNode> =
         SummaryEdgeFactTreeSubscriptionStorage(apManager)
 
     override fun createF2FSubStorage(callerEp: CommonInst): F2FSubStorage<AccessPath.AccessNode?, AccessTree.AccessNode> =
-        SummaryEdgeFactAbstractTreeSubscriptionStorage(apManager, interner)
+        SummaryEdgeFactAbstractTreeSubscriptionStorage(apManager, callerEp)
 
     override fun createNDF2FSubStorage(callerEp: CommonInst): NDF2FSubStorage<AccessPath.AccessNode?, AccessTree.AccessNode> =
         SummaryEdgeNDFactSubStorage(callerEp, apManager)
@@ -102,21 +99,24 @@ private class SummaryEdgeNDFactSubStorage(
         return FactStorage(idx)
     }
 
-    override fun relevantStorageIndices(summaryInitialFact: AccessPath.AccessNode?): BitSet {
+    override fun forEachRelevantStorageIndex(
+        summaryInitialFact: AccessPath.AccessNode?,
+        body: (Int) -> Unit,
+    ) {
         if (summaryInitialFact == null) {
-            return BitSet().also { it.set(0, maxIdx + 1) }
+            for (index in 0..maxIdx) body(index)
+            return
         }
-
-        return edgeIndex.findStartsWith(summaryInitialFact)
-            ?: emptyPersistentBitSet()
+        edgeIndex.forEachStartsWith(summaryInitialFact, body)
     }
 }
 
-private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
+internal class SummaryEdgeFactAbstractTreeSubscriptionStorage(
     val apManager: TreeApManager,
-    private val interner: AccessTreeSoftInterner,
+    callerEp: CommonInst,
 ) : CommonAPSub.F2FSubStorage<AccessPath.AccessNode?, AccessTree.AccessNode> {
-    private val initialApIndex = object2IntMap<AccessPath>()
+    private val initialApIndex = AccessPathInterner(apManager, callerEp)
+    private val storageRows = arrayListOf<Any?>()
     private val storageInitialFacts = arrayListOf<AccessPath>()
     private val storageFinalFacts = arrayListOf<AccessTree.AccessNode>()
 
@@ -132,35 +132,65 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
 
         apManager.cancellation.checkpoint()
 
-        val currentIndex = initialApIndex.getOrCreateIndex(callerInitialAp) { newIndex ->
-            storageInitialFacts.add(callerInitialAp)
-            storageFinalFacts.add(callerExitAp)
-
-            updateIndex(callerExitAp, newIndex)
-
-            return FactEdgeSubBuilder(apManager)
-                .setCallerNode(callerExitAp)
-                .setCallerInitialAp(callerInitialAp)
-                .setCallerExclusion(callerInitialAp.exclusions)
+        val pathIndex = initialApIndex.getOrCreateIndex(callerInitialAp.base, callerInitialAp.access) { newIndex ->
+            check(newIndex == storageRows.size)
+            storageRows.add(null)
         }
 
-        val current = storageFinalFacts[currentIndex]
-        val (mergedExitAp, delta) = current.mergeAddDelta(callerExitAp)
-        if (delta == null) return null
+        forEachStorageRow(pathIndex) { rowIndex ->
+            val currentInitial = storageInitialFacts[rowIndex]
+            val currentFinal = storageFinalFacts[rowIndex]
 
-        storageInitialFacts[currentIndex] = callerInitialAp
-        storageFinalFacts[currentIndex] = interner.intern(mergedExitAp)
+            if (currentFinal == callerExitAp) {
+                val mergedExclusions = currentInitial.exclusions.intersect(callerInitialAp.exclusions)
+                if (mergedExclusions == currentInitial.exclusions) return null
 
-        updateIndex(delta, currentIndex)
+                storageInitialFacts[rowIndex] = currentInitial.replaceExclusions(mergedExclusions) as AccessPath
+                return subscription(callerExitAp, callerInitialAp)
+            }
 
-        return FactEdgeSubBuilder(apManager)
-            .setCallerNode(delta)
-            .setCallerInitialAp(callerInitialAp)
-            .setCallerExclusion(callerInitialAp.exclusions)
+            if (currentInitial.exclusions == callerInitialAp.exclusions) {
+                val (mergedFinal, delta) = currentFinal.mergeAddDelta(callerExitAp)
+                if (delta == null) return null
+
+                storageFinalFacts[rowIndex] = apManager.canonicalizeAccessTree(mergedFinal)
+                updateIndex(delta, rowIndex)
+                return subscription(delta, callerInitialAp)
+            }
+        }
+
+        val rowIndex = storageInitialFacts.size
+        addStorageRow(pathIndex, rowIndex)
+        storageInitialFacts.add(callerInitialAp)
+        storageFinalFacts.add(callerExitAp)
+        updateIndex(callerExitAp, rowIndex)
+        return subscription(callerExitAp, callerInitialAp)
     }
 
     private fun updateIndex(final: AccessTree.AccessNode, idx: Int) {
         edgeIndex.add(final, idx)
+    }
+
+    private inline fun forEachStorageRow(pathIndex: Int, body: (Int) -> Unit) {
+        when (val rows = storageRows[pathIndex]) {
+            null -> return
+            is Int -> body(rows)
+            else -> {
+                rows as IntArrayList
+                for (index in 0 until rows.size) body(rows.getInt(index))
+            }
+        }
+    }
+
+    private fun addStorageRow(pathIndex: Int, rowIndex: Int) {
+        storageRows[pathIndex] = when (val rows = storageRows[pathIndex]) {
+            null -> rowIndex
+            is Int -> IntArrayList(2).also {
+                it.add(rows)
+                it.add(rowIndex)
+            }
+            else -> (rows as IntArrayList).also { it.add(rowIndex) }
+        }
     }
 
     override fun find(
@@ -170,17 +200,26 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
     ) {
         if (summaryInitialFact == null) {
             storageInitialFacts.forEachIndexed { index, callerInitialAp ->
-                dst.add(storageFinalFacts[index], callerInitialAp)
+                val callerExitAp = storageFinalFacts[index]
+                if (!emptyDeltaRequired || callerExitAp.contains(null)) {
+                    dst.add(callerExitAp, callerInitialAp)
+                }
             }
         } else {
-            val relevantIndices = edgeIndex.findStartsWith(summaryInitialFact)
-            relevantIndices?.forEach { storageIdx ->
+            edgeIndex.forEachStartsWith(summaryInitialFact) { storageIdx ->
                 val callerExitAp = storageFinalFacts[storageIdx]
 
-                val filteredExitAp = callerExitAp.filterStartsWith(summaryInitialFact)
-                    ?: return@forEach
+                if (emptyDeltaRequired) {
+                    if (callerExitAp.contains(summaryInitialFact)) {
+                        dst.add(callerExitAp, storageInitialFacts[storageIdx])
+                    }
+                    return@forEachStartsWith
+                }
 
-                dst.add(filteredExitAp, storageInitialFacts[storageIdx])
+                val filteredExitAp = callerExitAp.filterStartsWith(summaryInitialFact)
+                if (filteredExitAp != null) {
+                    dst.add(filteredExitAp, storageInitialFacts[storageIdx])
+                }
             }
         }
     }
@@ -194,6 +233,17 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
             .setCallerInitialAp(initial)
             .setCallerExclusion(initial.exclusions)
     }
+
+    private fun subscription(
+        exitAp: AccessTree.AccessNode,
+        initial: AccessPath,
+    ): CommonFactEdgeSubBuilder<AccessTree.AccessNode> =
+        FactEdgeSubBuilder(apManager)
+            .setCallerNode(exitAp)
+            .setCallerInitialAp(initial)
+            .setCallerExclusion(initial.exclusions)
+
+    internal fun storedRowCount(): Int = storageInitialFacts.size
 }
 
 private abstract class AccessTreeIndex(private val refManager: SoftReferenceManager) {
@@ -207,12 +257,12 @@ private abstract class AccessTreeIndex(private val refManager: SoftReferenceMana
         indexReference?.get()?.add(rootTreeNode, idx)
     }
 
-    fun findStartsWith(path: AccessPath.AccessNode): BitSet? {
+    fun forEachStartsWith(path: AccessPath.AccessNode, body: (Int) -> Unit) {
         if (maxIdx < INDEX_LIMIT) {
-            return BitSet().also { it.set(0, maxIdx + 1) }
+            for (index in 0..maxIdx) body(index)
+            return
         }
-
-        return getOrCreateIndex().findStartsWith(path)
+        getOrCreateIndex().forEachStartsWith(path, body)
     }
 
     private fun getOrCreateIndex(): AccessTreeIndexImpl {
@@ -238,16 +288,41 @@ private abstract class AccessTreeIndex(private val refManager: SoftReferenceMana
 
 private class AccessTreeIndexImpl {
     private class Node {
-        private var children: Int2ObjectOpenHashMap<Node>? = null
-        val index = BitSet()
+        private class SingleChild(
+            @JvmField val accessor: AccessorIdx,
+            @JvmField val node: Node,
+        )
 
-        private fun getChildren(): Int2ObjectOpenHashMap<Node> =
-            children ?: Int2ObjectOpenHashMap<Node>().also { children = it }
+        private var children: Any? = null
+        val index = HybridIntSet()
 
-        fun getOrCreateChild(accessor: AccessorIdx): Node =
-            getChildren().getOrCreate(accessor, ::Node)
+        fun getOrCreateChild(accessor: AccessorIdx): Node {
+            return when (val current = children) {
+                null -> Node().also { children = SingleChild(accessor, it) }
+                is SingleChild -> {
+                    if (current.accessor == accessor) return current.node
 
-        fun findChild(accessor: AccessorIdx): Node? = children?.get(accessor)
+                    val map = Int2ObjectOpenHashMap<Node>()
+                    map[current.accessor] = current.node
+                    map.getOrCreate(accessor, ::Node).also { children = map }
+                }
+                else -> {
+                    @Suppress("UNCHECKED_CAST")
+                    (current as Int2ObjectOpenHashMap<Node>).getOrCreate(accessor, ::Node)
+                }
+            }
+        }
+
+        fun findChild(accessor: AccessorIdx): Node? {
+            return when (val current = children) {
+                null -> null
+                is SingleChild -> current.node.takeIf { current.accessor == accessor }
+                else -> {
+                    @Suppress("UNCHECKED_CAST")
+                    (current as Int2ObjectOpenHashMap<Node>)[accessor]
+                }
+            }
+        }
     }
 
     private val root = Node()
@@ -257,11 +332,11 @@ private class AccessTreeIndexImpl {
         while (unprocessed.isNotEmpty()) {
             val (indexNode, treeNode) = unprocessed.removeLast()
 
-            indexNode.index.set(idx)
+            indexNode.index.add(idx)
 
             if (treeNode.isFinal) {
                 val indexChild = indexNode.getOrCreateChild(FINAL_ACCESSOR_IDX)
-                indexChild.index.set(idx)
+                indexChild.index.add(idx)
             }
 
             treeNode.forEachAccessor { accessor, treeChild ->
@@ -271,13 +346,13 @@ private class AccessTreeIndexImpl {
         }
     }
 
-    fun findStartsWith(path: AccessPath.AccessNode): BitSet? {
+    fun forEachStartsWith(path: AccessPath.AccessNode, body: (Int) -> Unit) {
         var currentNode = root
         var currentPath = path
 
         while (true) {
-            currentNode = currentNode.findChild(currentPath.accessor) ?: return null
-            currentPath = currentPath.next ?: return currentNode.index
+            currentNode = currentNode.findChild(currentPath.accessor) ?: return
+            currentPath = currentPath.next ?: return currentNode.index.forEach(body)
         }
     }
 }

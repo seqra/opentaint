@@ -50,16 +50,19 @@ class MethodNDInitialToFinalApSummaries(
             override fun add(element: AccessNode): Storage<AccessPath.AccessNode?, AccessNode>? {
                 val currentEdges = edges
                 if (currentEdges == null) {
-                    edges = element
-                    edgesDelta = element
+                    val retainedEdges = element.absorbCoveredSiblings()
+                    edges = retainedEdges
+                    edgesDelta = retainedEdges
                     return this
                 }
 
-                val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(element)
-                if (modificationDelta == null) return null
+                val modifiedEdges = currentEdges.mergeAdd(element, foldToAny = false)
+                val retainedEdges = modifiedEdges.absorbCoveredSiblings()
+                edges = retainedEdges
 
-                edges = modifiedEdges
-                edgesDelta = edgesDelta?.mergeAdd(modificationDelta) ?: modificationDelta
+                val retainedDelta = currentEdges.mergeAddDelta(retainedEdges, foldToAny = false).second
+                    ?: return null
+                edgesDelta = edgesDelta?.mergeAdd(retainedDelta) ?: retainedDelta
                 return this
             }
 

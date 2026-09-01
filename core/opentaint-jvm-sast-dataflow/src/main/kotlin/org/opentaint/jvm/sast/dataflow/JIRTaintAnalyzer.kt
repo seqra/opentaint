@@ -3,6 +3,17 @@ package org.opentaint.jvm.sast.dataflow
 import kotlinx.coroutines.runBlocking
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
+import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.FinalAccessor
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
+import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
+import org.opentaint.dataflow.ap.ifds.ValueAccessor
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
@@ -21,11 +32,13 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.ext.findFieldOrNull
 import org.opentaint.ir.api.jvm.ext.packageName
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
 import org.opentaint.util.analysis.ApplicationGraph
+import java.util.concurrent.ConcurrentHashMap
 
 class JIRTaintAnalyzer(
     val cp: JIRClasspath,
@@ -36,6 +49,28 @@ class JIRTaintAnalyzer(
     val analysisUnit: JIRUnitResolver = PackageUnitResolver(projectClasses),
     externalMethodTracker: ExternalMethodTracker? = null,
 ): TaintAnalyzer<JIRMethod, JIRInst>(options, externalMethodTracker) {
+    private val concreteFieldCache = ConcurrentHashMap<FieldAccessor, Boolean>()
+
+    override val unrollStrategy: AnyAccessorUnrollStrategy = object : AnyAccessorUnrollStrategy {
+        override fun unrollAccessor(accessor: Accessor): Boolean = when (accessor) {
+            is ElementAccessor -> true
+            is FieldAccessor -> concreteFieldCache.computeIfAbsent(accessor) { field ->
+                val cls = cp.findClassOrNull(field.className) ?: return@computeIfAbsent true
+                val resolved = cls.findFieldOrNull(field.fieldName) ?: return@computeIfAbsent false
+                resolved.type.typeName == field.fieldType
+            }
+
+            is ClassStaticAccessor,
+            is AnyAccessor,
+            is FinalAccessor,
+            is TaintMarkAccessor,
+            is TypeInfoAccessor,
+            is TypeInfoGroupAccessor -> false
+
+            is ValueAccessor -> error("Unexpected accessor to unroll: $accessor")
+        }
+    }
+
     override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)

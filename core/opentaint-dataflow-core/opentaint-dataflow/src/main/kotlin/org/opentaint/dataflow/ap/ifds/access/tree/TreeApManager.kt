@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.Edge
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.ExclusionSet.Empty
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
@@ -30,6 +31,8 @@ import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.IdentityHashMap
+import java.util.concurrent.ConcurrentHashMap
 
 class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
@@ -37,6 +40,50 @@ class TreeApManager(
     override val cancellation: Cancellation,
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
+
+    private val accessTreeInterner = AccessTreeInterner()
+    private val accessPathNodeInterner = AccessPathNodeInterner()
+    private val initialFactInterner = AccessFactInterner<AccessPath>()
+    private val finalFactInterner = AccessFactInterner<AccessTree>()
+    private val accessNodeFilterCache = AccessNodeFilterCache()
+    private val singleAccessorArrays = ConcurrentHashMap<AccessorIdx, IntArray>()
+
+    fun getOrCreateAccessTreeInterner(): AccessTreeInterner = accessTreeInterner
+
+    fun canonicalizeAccessTree(node: AccessNode): AccessNode =
+        node.internNodes(accessTreeInterner, IdentityHashMap(), global = true)
+
+    fun filterAccessNode(
+        node: AccessNode,
+        filter: FactTypeChecker.FactApFilter,
+    ): AccessNode? {
+        if (
+            filter !is FactTypeChecker.CacheableFactApFilter ||
+            (node.accessors?.size ?: 0) < FILTER_CACHE_MINIMUM_ACCESSORS
+        ) return node.filterAccessNode(filter)
+        return accessNodeFilterCache.getOrCompute(node, filter) { node.filterAccessNode(filter) }
+    }
+
+    fun createAccessPathNode(accessor: AccessorIdx, next: AccessPath.AccessNode?): AccessPath.AccessNode =
+        accessPathNodeInterner.intern(AccessPath.AccessNode(this, accessor, next))
+
+    fun internInitialFact(
+        base: AccessPathBase,
+        access: AccessPath.AccessNode?,
+        exclusions: ExclusionSet,
+    ): AccessPath = initialFactInterner.intern(AccessPath(this, base, access, exclusions))
+
+    fun internFinalFact(
+        base: AccessPathBase,
+        access: AccessNode,
+        exclusions: ExclusionSet,
+    ): AccessTree = finalFactInterner.intern(AccessTree(this, base, access, exclusions))
+
+    fun <T> withAccessTreeInterner(body: (AccessTreeInterner, IdentityHashMap<AccessNode, AccessNode>) -> T): T =
+        body(accessTreeInterner, IdentityHashMap())
+
+    fun singleAccessorArray(accessor: AccessorIdx): IntArray =
+        singleAccessorArrays.computeIfAbsent(accessor) { intArrayOf(it) }
 
     val interner = AccessorInterner()
 
@@ -46,6 +93,10 @@ class TreeApManager(
     val AccessorIdx.accessor: Accessor
         get() = interner.accessor(this)
             ?: error("Accessor not found: $this")
+
+    private companion object {
+        private const val FILTER_CACHE_MINIMUM_ACCESSORS = 4
+    }
 
     fun isCoveredByAny(accessor: AccessorIdx) =
         anyAccessorUnrollStrategy.unrollAccessor(accessor.accessor)
@@ -104,16 +155,16 @@ class TreeApManager(
     override fun finalFactList(): FinalFactList = TreeFinalFactList(this)
 
     override fun mostAbstractInitialAp(base: AccessPathBase): InitialFactAp =
-        AccessPath(this, base, access = null, exclusions = Empty)
+        internInitialFact(base, access = null, exclusions = Empty)
 
     override fun mostAbstractFinalAp(base: AccessPathBase): FinalFactAp =
-        AccessTree(this, base, abstractNode, exclusions = Empty)
+        internFinalFact(base, abstractNode, exclusions = Empty)
 
     override fun createFinalAp(base: AccessPathBase, exclusions: ExclusionSet): FinalFactAp =
-        AccessTree(this,base, finalNode, exclusions)
+        internFinalFact(base, finalNode, exclusions)
 
     override fun createFinalInitialAp(base: AccessPathBase, exclusions: ExclusionSet): InitialFactAp =
-        AccessPath(this, base, access = null, exclusions).prependAccessor(FinalAccessor)
+        internInitialFact(base, access = null, exclusions).prependAccessor(FinalAccessor)
 
     override fun createSerializer(context: SummarySerializationContext): ApSerializer {
         return TreeSerializer(this, context)

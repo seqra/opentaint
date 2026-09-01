@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds
 
 import it.unimi.dsi.fastutil.objects.Object2LongOpenHashMap
+import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet
 import org.opentaint.dataflow.ap.ifds.Edge.FactToFact
 import org.opentaint.dataflow.ap.ifds.Edge.NDFactToFact
 import org.opentaint.dataflow.ap.ifds.Edge.ZeroInitialEdge
@@ -50,6 +51,8 @@ interface MethodAnalyzer {
     val containsUnprocessedZeroToZeroEdges: Boolean
 
     val containsDelayedEdges: Boolean
+
+    val minimumDelayedFactDepth: Int?
 
     fun tabulationAlgorithmStep()
 
@@ -204,9 +207,13 @@ class NormalMethodAnalyzer(
     private var factDepthLimit = INITIAL_ALLOWED_FACT_DEPTH
     private var delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
     private var delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+    private var nextDelayedFactDepth = Int.MAX_VALUE
 
     override val containsDelayedEdges: Boolean
         get() = !delayedF2FInitialEdges.isEmpty || !delayedF2FSummaries.isEmpty
+
+    override val minimumDelayedFactDepth: Int?
+        get() = nextDelayedFactDepth.takeUnless { it == Int.MAX_VALUE }
 
     init {
         loadSummariesFromRunner()
@@ -562,6 +569,7 @@ class NormalMethodAnalyzer(
 
         registerDelayed()
         delayedF2FInitialEdges.add(edge)
+        nextDelayedFactDepth = minOf(nextDelayedFactDepth, edge.requiredFactDepth())
         return true
     }
 
@@ -578,14 +586,13 @@ class NormalMethodAnalyzer(
 
         val currentDelayedSummaries = delayedF2FSummaries
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        nextDelayedFactDepth = Int.MAX_VALUE
 
         currentDelayedInitialF2F.toList().forEach {
             addInitialF2FEdge(it as FactToFact)
         }
 
-        currentDelayedSummaries.toList().forEach {
-            newSummaryEdge(it)
-        }
+        addNewSummaryEdges(currentDelayedSummaries.toList())
     }
 
     private fun edgeExceedLimit(edge: FactToFact): Boolean {
@@ -593,6 +600,9 @@ class NormalMethodAnalyzer(
         if (edge.factAp.depth > factDepthLimit + 2) return true
         return false
     }
+
+    private fun FactToFact.requiredFactDepth(): Int =
+        maxOf(initialFactAp.depth, factAp.depth - 2)
 
     private fun addSequentialEdge(edge: Edge) {
         edges.add(edge).forEach { newEdge ->
@@ -703,11 +713,24 @@ class NormalMethodAnalyzer(
 
         registerDelayed()
         delayedF2FSummaries.add(edge)
+        nextDelayedFactDepth = minOf(nextDelayedFactDepth, edge.requiredFactDepth())
         return true
     }
 
     private fun addNewSummaryEdge(edge: Edge) {
         pendingSummaryEdges.add(edge)
+
+        if (!analyzerEnqueued) {
+            flushPendingSummaryEdges()
+        }
+    }
+
+    private fun addNewSummaryEdges(edges: List<Edge>) {
+        for (edge in edges) {
+            if (!delaySummaryEdge(edge)) {
+                pendingSummaryEdges.add(edge)
+            }
+        }
 
         if (!analyzerEnqueued) {
             flushPendingSummaryEdges()
@@ -1138,9 +1161,26 @@ class NormalMethodAnalyzer(
     ) {
         val methodInitialFact = currentEdgeFactAp.rebase(methodInitialFactBase)
 
-        val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
-        for ((summaryInitialFact, summaryEdges) in summaries) {
+        if (methodSummaries.size == 1) {
             if (!cancellation.isActive()) return
+            val methodSummary = methodSummaries.single()
+            val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
+                methodInitialFact, getSummaryInitialFact(methodSummary)
+            )
+            for (summaryEdgeEffect in summaryEdgeEffects) {
+                if (!cancellation.isActive()) return
+                handleSequentFact(
+                    currentEdge,
+                    handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
+                )
+            }
+            return
+        }
+
+        val summaries = methodSummaries.groupByTo(hashMapOf()) { getSummaryInitialFact(it) }
+        val batchedSequents = ObjectOpenHashSet<Sequent>()
+        summaryGroups@ for ((summaryInitialFact, summaryEdges) in summaries) {
+            if (!cancellation.isActive()) break
 
             val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
                 methodInitialFact, summaryInitialFact
@@ -1148,13 +1188,18 @@ class NormalMethodAnalyzer(
 
             for (summaryEdgeEffect in summaryEdgeEffects) {
                 for (methodSummary in summaryEdges) {
-                    if (!cancellation.isActive()) return
+                    if (!cancellation.isActive()) break@summaryGroups
 
                     val sf = handleSummary(currentEdgeFactAp, summaryEdgeEffect, methodSummary)
-                    handleSequentFact(currentEdge, sf)
+                    batchedSequents.addAll(sf)
+                    if (batchedSequents.size >= SUMMARY_SEQUENT_BATCH_SIZE) {
+                        handleSequentFact(currentEdge, batchedSequents)
+                        batchedSequents.clear()
+                    }
                 }
             }
         }
+        handleSequentFact(currentEdge, batchedSequents)
     }
 
     private inline fun <Sub> handleMethodNDSummariesSub(
@@ -1384,11 +1429,13 @@ class NormalMethodAnalyzer(
 
         initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)
         delayedF2FInitialEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
+        nextDelayedFactDepth = Int.MAX_VALUE
     }
 
     companion object {
         const val INITIAL_ALLOWED_FACT_DEPTH = 3
         const val DEBUG_ANALYSIS_TIME = false
+        private const val SUMMARY_SEQUENT_BATCH_SIZE = 8_192
     }
 }
 
@@ -1452,6 +1499,9 @@ class EmptyMethodAnalyzer(
 
     override val containsDelayedEdges: Boolean
         get() = false
+
+    override val minimumDelayedFactDepth: Int?
+        get() = null
 
     override fun updateFactDepthLimit(newLimit: Int) {
         // do nothing
@@ -1648,6 +1698,9 @@ class TimedMethodAnalyzer(
 
     override val containsDelayedEdges: Boolean
         get() = base.containsDelayedEdges
+
+    override val minimumDelayedFactDepth: Int?
+        get() = base.minimumDelayedFactDepth
 
     override val analyzerSteps: Long
         get() = base.analyzerSteps

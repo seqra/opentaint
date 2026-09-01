@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.jvm.ActionPosition
@@ -11,11 +13,12 @@ import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
-import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleanerActions
-import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.taint.cleanReach
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.TaintCleanActionEvaluator
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -48,6 +51,11 @@ class JIRMethodCallRuleBasedSummaryRewriter(
     private data class UserRuleDefinedAction(
         val rule: TaintConfigurationItem,
         val positions: Set<ActionPosition>,
+    )
+
+    private data class SummaryState(
+        val fact: FinalFactAp,
+        val refinement: ExclusionSet,
     )
 
     private val userRuleDefinedActions: Map<AccessPathBase, Map<String, List<UserRuleDefinedAction>>> by lazy {
@@ -91,24 +99,41 @@ class JIRMethodCallRuleBasedSummaryRewriter(
         val actionsForBase = userRuleDefinedActions[fact.base].orEmpty()
         if (actionsForBase.isEmpty()) return listOf(fact to startFactReader)
 
-        val cleanEvaluator = JIRTaintCleanActionEvaluator()
-        val cleanedFact = actionsForBase.entries.applyCleanerActions(
-            initial = EvaluatedCleanAction.initial(startFactReader)
-        ) { (mark, actions), current ->
-            actions.applyCleanerActions(
-                evaluator = cleanEvaluator,
-                itemRule = { it.rule },
-                itemActions = { ruleDefinedAction ->
-                    val taintMark = TaintMark(mark)
-                    ruleDefinedAction.positions.map { RemoveMark(taintMark, it) }
-                },
-                initial = current
-            )
+        val cleanEvaluator = TaintCleanActionEvaluator()
+        var states = listOf(startFactReader)
+        for ((mark, actions) in actionsForBase) {
+            val taintMark = TaintMark(mark)
+            val markAccessor = TaintMarkAccessor(mark)
+            for (ruleDefinedAction in actions) {
+                for (position in ruleDefinedAction.positions) {
+                    if (states.isEmpty()) return emptyList()
+
+                    val action = RemoveMark(taintMark, position)
+                    val resolvedPosition = position.resolveAp()
+                    val cleanReach = position.cleanReach()
+                    val next = LinkedHashMap<SummaryState, FinalFactReader>()
+                    for (state in states) {
+                        val evaluated = cleanEvaluator.removeFinalFact(
+                            EvaluatedCleanAction.initial(state),
+                            resolvedPosition,
+                            markAccessor,
+                            ruleDefinedAction.rule,
+                            action,
+                            cleanReach,
+                        )
+                        for (result in evaluated) {
+                            next.retainCanonicalSummaryState(result.fact) {
+                                SummaryState(it.factAp, it.getRefinement())
+                            }
+                        }
+                    }
+                    states = next.values.toList()
+                }
+            }
         }
 
-        return cleanedFact.mapNotNull {
-            val resultFact = it.fact ?: return@mapNotNull null
-            resultFact.factAp to resultFact
+        return states.map {
+            it.factAp to it
         }
     }
 }

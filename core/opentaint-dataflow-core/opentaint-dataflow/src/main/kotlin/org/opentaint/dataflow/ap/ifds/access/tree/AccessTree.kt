@@ -44,17 +44,19 @@ import kotlin.jvm.optionals.getOrNull
 class AccessTree(
     val apManager: TreeApManager,
     override val base: AccessPathBase,
-    val access: AccessNode,
+    access: AccessNode,
     override val exclusions: ExclusionSet
 ) : FinalFactAp {
+    val access: AccessNode = apManager.canonicalizeAccessTree(access)
+
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
-        AccessTree(apManager, newBase, access, exclusions)
+        apManager.internFinalFact(newBase, access, exclusions)
 
     override fun exclude(accessor: Accessor): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions.add(accessor))
+        apManager.internFinalFact(base, access, exclusions.add(accessor))
 
     override fun replaceExclusions(exclusions: ExclusionSet): FinalFactAp =
-        AccessTree(apManager, base, access, exclusions)
+        apManager.internFinalFact(base, access, exclusions)
 
     override fun getAllAccessors(): Set<Accessor> {
         val result = IntOpenHashSet()
@@ -76,24 +78,24 @@ class AccessTree(
 
     override fun readAccessor(accessor: Accessor): FinalFactAp? = with(apManager) {
         access.getChild(accessor.idx)
-            ?.let { AccessTree(apManager, base, it, exclusions) }
+            ?.let { internFinalFact(base, it, exclusions) }
     }
 
     override fun prependAccessor(accessor: Accessor): FinalFactAp = with(apManager) {
-        AccessTree(apManager, base, access.addParent(accessor.idx), exclusions)
+        internFinalFact(base, access.addParent(accessor.idx), exclusions)
     }
 
     override fun clearAccessor(accessor: Accessor): FinalFactAp? = with(apManager) {
         val newAccess = access.clearChild(accessor.idx).takeIf { !it.isEmpty } ?: return null
-        return AccessTree(apManager, base, newAccess, exclusions)
+        return internFinalFact(base, newAccess, exclusions)
     }
 
     override fun removeAbstraction(): FinalFactAp? =
         access.removeAbstraction().takeIf { !it.isEmpty }
-            ?.let { AccessTree(apManager, base, it, exclusions) }
+            ?.let { apManager.internFinalFact(base, it, exclusions) }
 
     override fun abstractOnly(): FinalFactAp =
-        AccessTree(apManager, base, access.abstractOnly(), exclusions)
+        apManager.internFinalFact(base, access.abstractOnly(), exclusions)
 
     override fun clearAllAccessorOccurrences(
         accessor: Accessor,
@@ -104,18 +106,18 @@ class AccessTree(
             accessorIdx, keepStartAccessor, retainDeepAccessorExclusions = exclusions !is ExclusionSet.Universe, IdentityHashMap()
         ) ?: return null
 
-        return if (cleared === access) this else AccessTree(apManager, base, cleared, exclusions)
+        return if (cleared === access) this else apManager.internFinalFact(base, cleared, exclusions)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactApFilter): FinalFactAp? {
         val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessTree(apManager, base, filteredAccess, exclusions)
+        return apManager.internFinalFact(base, filteredAccess, exclusions)
     }
 
     override fun filterFact(filter: FactTypeChecker.FactCompatibilityFilter): FinalFactAp? {
         if (filter is FactTypeChecker.AlwaysCompatibleFilter) return this
         val filteredAccess = access.filterAccessNode(filter) ?: return null
-        return AccessTree(apManager, base, filteredAccess, exclusions)
+        return apManager.internFinalFact(base, filteredAccess, exclusions)
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {
@@ -215,12 +217,12 @@ class AccessTree(
                 val deepAccessorExclusion = d.deepAccessorExclusion ?: return this
                 val annotated = access.annotateAbstractNodes(deepAccessorExclusion, IdentityHashMap())
                 if (annotated === access) return this
-                return AccessTree(apManager, base, annotated, exclusions)
+                return apManager.internFinalFact(base, annotated, exclusions)
             }
             is NodeAccessTreeDelta -> {
                 val concatenatedAccess = access.concatToLeafAbstractNodes(typeChecker, d.node)
                     ?: return null
-                return AccessTree(apManager, base, concatenatedAccess, exclusions)
+                return apManager.internFinalFact(base, concatenatedAccess, exclusions)
             }
         }
     }
@@ -260,17 +262,26 @@ class AccessTree(
 
     class AccessNode private constructor(
         val manager: TreeApManager,
-        @JvmField val interned: Boolean,
-        @JvmField val isAbstract: Boolean,
-        @JvmField val isFinal: Boolean,
+        initialInterned: Boolean,
+        initialIsAbstract: Boolean,
+        initialIsFinal: Boolean,
         @JvmField val deepAccessorExclusion: DeepAccessorExclusion?,
         @JvmField val accessors: IntArray?,
-        @JvmField val accessorNodes: Array<AccessNode>?,
+        private val accessorNodes: Any?,
     ) {
+        private var state =
+            (if (initialInterned) INTERNED_MASK else 0) or
+                (if (initialIsAbstract) ABSTRACT_MASK else 0) or
+                (if (initialIsFinal) FINAL_MASK else 0)
+
+        val interned: Boolean get() = state and INTERNED_MASK != 0
+        val isAbstract: Boolean get() = state and ABSTRACT_MASK != 0
+        val isFinal: Boolean get() = state and FINAL_MASK != 0
+        val containsStatic: Boolean get() = state and STATIC_MASK != 0
+        val maxDepth: Int get() = state and DEPTH_MASK
+
         @JvmField val hash: Long
         @JvmField val size: Long
-        @JvmField val maxDepth: Int
-        @JvmField val containsStatic: Boolean
 
         init {
             check(deepAccessorExclusion == null || isAbstract) {
@@ -279,29 +290,31 @@ class AccessTree(
         }
 
         init {
-            var hash = 0L
+            var hash = 17L
             var depth = 0
             var containsStatic = false
 
-            if (isAbstract) hash += 1
-            if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
+            hash = 31 * hash + if (isAbstract) 1 else 0
+            hash = 31 * hash + if (isFinal) 1 else 0
+            hash = 31 * hash + (deepAccessorExclusion?.hashCode() ?: 0)
 
             if (isFinal) {
                 depth = 1
-                hash += 2
             }
 
             if (accessors != null) {
                 containsStatic = accessors.any { it.isStaticAccessor() }
-            }
-
-            if (accessorNodes != null) {
-                val accessorsHash = accessorNodes.sumOf { it.hash }
-                hash += accessorsHash shl 5
-
-                depth = accessorNodes.maxOf { it.maxDepth } + 1
-
-                containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
+                hash = 31 * hash + accessors.size
+                for (i in accessors.indices) {
+                    hash = 31 * hash + accessors[i]
+                    hash = 31 * hash + accessorNodeAt(i).hash
+                }
+                forEachAccessor { _, node ->
+                    depth = maxOf(depth, node.maxDepth + 1)
+                    containsStatic = containsStatic || node.containsStatic
+                }
+            } else {
+                hash = 31 * hash
             }
 
             if (containsAnyAccessor()) {
@@ -309,19 +322,17 @@ class AccessTree(
             }
 
             this.hash = hash
-            this.maxDepth = depth
-            this.containsStatic = containsStatic
+            require(depth <= DEPTH_MASK)
+            state = state or depth or if (containsStatic) STATIC_MASK else 0
         }
 
         init {
             var size = 1L
-            if (accessorNodes != null) {
-                size += accessorNodes.sumOf { it.size }
-            }
+            forEachAccessor { _, node -> size += node.size }
             this.size = size
         }
 
-        override fun hashCode(): Int = hash.toInt()
+        override fun hashCode(): Int = (hash xor (hash ushr 32)).toInt()
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -332,7 +343,11 @@ class AccessTree(
             if (deepAccessorExclusion != other.deepAccessorExclusion) return false
 
             if (!accessors.contentEquals(other.accessors)) return false
-            return accessorNodes.contentEquals(other.accessorNodes)
+            if (accessors == null) return true
+            for (i in accessors.indices) {
+                if (accessorNodeAt(i) != other.accessorNodeAt(i)) return false
+            }
+            return true
         }
 
         fun countNodes(visited: IdentityHashMap<AccessNode, Unit> = IdentityHashMap()): Int {
@@ -366,9 +381,22 @@ class AccessTree(
         inline fun forEachAccessor(body: (AccessorIdx, AccessNode) -> Unit) {
             if (accessors != null) {
                 for (i in accessors.indices) {
-                    body(accessors[i], accessorNodes!![i])
+                    body(accessors[i], accessorNodeAt(i))
                 }
             }
+        }
+
+        fun accessorNodeAt(index: Int): AccessNode = when (val nodes = accessorNodes) {
+            is AccessNode -> if (index == 0) nodes else throw IndexOutOfBoundsException(index)
+            is Array<*> -> nodes[index] as AccessNode
+            else -> error("Accessor node not found at index $index")
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        private fun accessorNodesArray(): Array<AccessNode>? = when {
+            accessorNodes == null -> null
+            accessorNodes is AccessNode -> arrayOf(accessorNodes)
+            else -> accessorNodes as Array<AccessNode>
         }
 
         val isEmpty: Boolean
@@ -383,7 +411,7 @@ class AccessTree(
         }
 
         private fun getNodeByAccessor(accessor: AccessorIdx): AccessNode? =
-            accessorNodes?.getOrNull(accessorIndex(accessor))
+            accessorIndex(accessor).takeIf { it >= 0 }?.let(::accessorNodeAt)
 
         fun containsAnyAccessor(): Boolean =
             accessorIndex(ANY_ACCESSOR_IDX) >= 0
@@ -561,7 +589,7 @@ class AccessTree(
                 ?: error("Impossible accessor")
 
         fun removeAbstraction(): AccessNode =
-            manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodes)
+            manager.create(isAbstract = false, isFinal, deepAccessorExclusion = null, accessors, accessorNodesArray())
 
         private fun AccessNode.filterDeepExclusion(deepAccessorExclusion: DeepAccessorExclusion?): AccessNode? {
             if (deepAccessorExclusion == null) return this
@@ -639,14 +667,14 @@ class AccessTree(
         }
 
         fun clearChild(accessor: AccessorIdx): AccessNode = when (accessor) {
-            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, deepAccessorExclusion, accessors, accessorNodes)
+            FINAL_ACCESSOR_IDX -> manager.create(isAbstract, isFinal = false, deepAccessorExclusion, accessors, accessorNodesArray())
             else -> removeSingleAccessor(accessor)
         }
 
         fun filter(exclusion: ExclusionSet.Concrete): AccessNode {
             val isFinal = this.isFinal && FinalAccessor !in exclusion
 
-            val transformedAccessors = transformAccessors(accessors, accessorNodes) { accessor, node ->
+            val transformedAccessors = transformAccessors(accessors, accessorNodesArray()) { accessor, node ->
                 with(manager) {
                     node.takeIf { accessor.accessor !in exclusion }
                 }
@@ -657,7 +685,7 @@ class AccessTree(
             }
 
             val accessors = transformedAccessors?.first ?: accessors
-            val accessorNodes = transformedAccessors?.second ?: accessorNodes
+            val accessorNodes = transformedAccessors?.second ?: accessorNodesArray()
 
             return manager.create(isAbstract, isFinal, deepAccessorExclusion, accessors, accessorNodes)
         }
@@ -726,7 +754,7 @@ class AccessTree(
             if (annotation == deepAccessorExclusion) {
                 this
             } else {
-                manager.create(isAbstract, isFinal, annotation, accessors, accessorNodes)
+                manager.create(isAbstract, isFinal, annotation, accessors, accessorNodesArray())
             }
 
         fun abstractOnly(): AccessNode =
@@ -832,7 +860,7 @@ class AccessTree(
             val deepExclusions = intersectDeepExclusion(other)
 
             val mergedAccessors = mergeAccessors(
-                other.accessors, other.accessorNodes, onOtherNode = { _, _ -> }
+                other.accessors, other.accessorNodesArray(), onOtherNode = { _, _ -> }
             ) { _, thisNode, otherNode ->
                 results.getComputedResult(AccessNodeMergePair(thisNode, otherNode))
             }
@@ -846,7 +874,7 @@ class AccessTree(
             }
 
             val accessors = mergedAccessors?.first ?: accessors
-            val accessorNodes = mergedAccessors?.second ?: accessorNodes
+            val accessorNodes = mergedAccessors?.second ?: accessorNodesArray()
 
             return manager.create(isAbstract, isFinal, deepExclusions, accessors, accessorNodes)
         }
@@ -874,7 +902,7 @@ class AccessTree(
             val deltaAccessorNodes = arrayListOf<AccessNode>()
 
             val mergedAccessors = mergeAccessors(
-                other.accessors, other.accessorNodes,
+                other.accessors, other.accessorNodesArray(),
                 onOtherNode = { field, node ->
                     deltaAccessors.add(field)
                     deltaAccessorNodes.add(node)
@@ -904,7 +932,7 @@ class AccessTree(
             ).takeIf { !it.isEmpty }
 
             val accessors = mergedAccessors?.first ?: accessors
-            val accessorNodes = mergedAccessors?.second ?: accessorNodes
+            val accessorNodes = mergedAccessors?.second ?: accessorNodesArray()
 
             return manager.create(isAbstract, isFinal, deepExclusion, accessors, accessorNodes) to delta
         }
@@ -973,21 +1001,18 @@ class AccessTree(
                 return
 
             val aAccessorsUntrimmed = a.accessors
-            val aNodesUntrimmed = a.accessorNodes!!
-
             val aAnyIdx = aAccessorsUntrimmed.indexOf(ANY_ACCESSOR_IDX)
             val bTrimmed =
                 if (aAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(aNodesUntrimmed[aAnyIdx]).getNonMatchingNode(b)
+                    AccessTreeAnySuffixMatcher(a.accessorNodeAt(aAnyIdx)).getNonMatchingNode(b)
                 else b
 
             val bAccessorsUntrimmed = bTrimmed.accessors
-            val bNodesUntrimmed = bTrimmed.accessorNodes
 
             val bAnyIdx = bAccessorsUntrimmed?.indexOf(ANY_ACCESSOR_IDX) ?: -1
             val aTrimmed =
                 if (bAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(bNodesUntrimmed!![bAnyIdx]).getNonMatchingNode(a)
+                    AccessTreeAnySuffixMatcher(bTrimmed.accessorNodeAt(bAnyIdx)).getNonMatchingNode(a)
                 else a
 
             if (aTrimmed !== a || bTrimmed !== b) {
@@ -1009,9 +1034,6 @@ class AccessTree(
         ) {
             val aAccessors = a.accessors ?: return
             val bAccessors = b.accessors ?: return
-            val aNodes = a.accessorNodes!!
-            val bNodes = b.accessorNodes!!
-
             var ai = 0
             var bi = 0
             while (ai < aAccessors.size && bi < bAccessors.size) {
@@ -1020,7 +1042,7 @@ class AccessTree(
                     cmp < 0 -> ai++
                     cmp > 0 -> bi++
                     else -> {
-                        stack.add(AccessNodeMergePair(aNodes[ai], bNodes[bi]))
+                        stack.add(AccessNodeMergePair(a.accessorNodeAt(ai), b.accessorNodeAt(bi)))
                         ai++
                         bi++
                     }
@@ -1085,7 +1107,7 @@ class AccessTree(
                 }
 
                 expanded[node] = Unit
-                node.accessorNodes?.forEach { stack.add(it) }
+                node.forEachAccessor { _, child -> stack.add(child) }
             }
 
             return results[this]
@@ -1125,13 +1147,15 @@ class AccessTree(
         fun internNodes(
             interner: AccessTreeInterner,
             cache: IdentityHashMap<AccessNode, AccessNode>,
-        ): AccessNode = internNodesWithCache(interner, cache)
+            global: Boolean = false,
+        ): AccessNode = internNodesWithCache(interner, cache, global)
 
         private fun internNodesWithCache(
             interner: AccessTreeInterner,
             cache: IdentityHashMap<AccessNode, AccessNode>,
+            global: Boolean,
         ): AccessNode {
-            if (interned) return this
+            if (!global && interned) return this
 
             val stack = mutableListOf<AccessNode>()
             val expanded = IdentityHashMap<AccessNode, Unit>()
@@ -1147,14 +1171,24 @@ class AccessTree(
                     continue
                 }
 
+                if (global) {
+                    val canonical = interner.getCanonical(node)
+                    if (canonical != null) {
+                        cache[node] = canonical
+                        stack.removeLast()
+                        continue
+                    }
+                }
+
                 if (expanded.containsKey(node)) {
                     val withInternedChildren = node.transformAccessors { _, child -> cache[child] }
-                    cache[node] = interner.intern(withInternedChildren.markInterned())
+                    val candidate = if (global) withInternedChildren else withInternedChildren.markInterned()
+                    cache[node] = interner.intern(candidate)
                     stack.removeLast()
                     continue
                 }
 
-                if (node.interned) {
+                if (!global && node.interned) {
                     cache[node] = node
                     stack.removeLast()
                     continue
@@ -1173,12 +1207,12 @@ class AccessTree(
 
         private fun markInterned() = AccessNode(
             manager,
-            interned = true,
-            isAbstract = isAbstract,
-            isFinal = isFinal,
+            initialInterned = true,
+            initialIsAbstract = isAbstract,
+            initialIsFinal = isFinal,
             deepAccessorExclusion = deepAccessorExclusion,
             accessors = accessors,
-            accessorNodes = accessorNodes
+            accessorNodes = accessorNodes,
         )
 
         private class FilteredNode(
@@ -1204,7 +1238,7 @@ class AccessTree(
                     return updateNode(filteredNode)
                 }
 
-                val filteredNode = node.filterAccessNode(filter)
+                val filteredNode = manager.filterAccessNode(node, filter)
 
                 if (filteredNode == null) {
                     nodeCache[filter] = Optional.empty()
@@ -1365,6 +1399,167 @@ class AccessTree(
             return parentAccessors.foldRight(filteredTreeNode, ::create)
         }
 
+        fun absorbCoveredSiblings(): AccessNode {
+            var current = this
+            while (true) {
+                val next = current.absorbCoveredSiblings(IdentityHashMap())
+                if (next === current) return current
+                current = next
+            }
+        }
+
+        private fun absorbCoveredSiblings(
+            memo: IdentityHashMap<AccessNode, AccessNode>,
+        ): AccessNode {
+            memo[this]?.let { return it }
+            manager.cancellation.checkpoint()
+
+            val currentAccessors = accessors
+            if (currentAccessors == null) {
+                memo[this] = this
+                return this
+            }
+            val currentNodes = accessorNodesArray()!!
+
+            var childrenChanged = false
+            val foldedNodes = arrayOfNulls<AccessNode>(currentNodes.size)
+            for (index in currentNodes.indices) {
+                val folded = currentNodes[index].absorbCoveredSiblings(memo)
+                foldedNodes[index] = folded
+                if (folded !== currentNodes[index]) childrenChanged = true
+            }
+
+            val anyIndex = currentAccessors.binarySearch(ANY_ACCESSOR_IDX)
+            val normalizedNodes = arrayOfNulls<AccessNode>(currentNodes.size)
+            var hasCoveredSibling = false
+            if (anyIndex >= 0) {
+                for (index in currentAccessors.indices) {
+                    val accessor = currentAccessors[index]
+                    if (accessor != ANY_ACCESSOR_IDX && manager.isCoveredByAny(accessor)) {
+                        normalizedNodes[index] = foldedNodes[index]!!.normalizeAnySuffixOrNull()
+                    }
+                    if (normalizedNodes[index] != null) {
+                        hasCoveredSibling = true
+                    }
+                }
+            }
+
+            if (!hasCoveredSibling) {
+                val result = if (childrenChanged) {
+                    @Suppress("UNCHECKED_CAST")
+                    manager.create(
+                        isAbstract, isFinal, deepAccessorExclusion,
+                        currentAccessors, foldedNodes as Array<AccessNode>,
+                    )
+                } else {
+                    this
+                }
+                memo[this] = result
+                return result
+            }
+
+            var foldedAny = foldedNodes[anyIndex]!!.normalizeAnySuffixOrNull()
+                ?: foldedNodes[anyIndex]!!
+            val retainedAccessors = IntArrayList(currentAccessors.size)
+            val retainedNodes = ArrayList<AccessNode>(currentAccessors.size)
+            for (index in currentAccessors.indices) {
+                val accessor = currentAccessors[index]
+                when {
+                    index == anyIndex -> {
+                        retainedAccessors.add(accessor)
+                        retainedNodes.add(manager.emptyNode)
+                    }
+                    normalizedNodes[index] != null ->
+                        foldedAny = foldedAny.mergeAdd(normalizedNodes[index]!!)
+                    else -> {
+                        retainedAccessors.add(accessor)
+                        retainedNodes.add(foldedNodes[index]!!)
+                    }
+                }
+            }
+
+            retainedNodes[retainedAccessors.indexOf(ANY_ACCESSOR_IDX)] =
+                foldedAny.absorbCoveredSiblings(memo)
+            val result = manager.create(
+                isAbstract, isFinal, deepAccessorExclusion,
+                retainedAccessors.toIntArray(), retainedNodes.toTypedArray(),
+            )
+            memo[this] = result
+            return result
+        }
+
+        private fun normalizeAnySuffixOrNull(): AccessNode? {
+            if (!containsAnyDeep(IdentityHashMap())) return this
+            if (!anySuffixNormalizable(IdentityHashMap())) return null
+
+            val pending = ArrayDeque<AccessNode>()
+            val enqueued = IdentityHashMap<AccessNode, Unit>()
+            val stripped = IdentityHashMap<AccessNode, AccessNode?>()
+            pending.addLast(this)
+            enqueued[this] = Unit
+
+            var result: AccessNode? = null
+            while (pending.isNotEmpty()) {
+                val next = pending.removeFirst()
+                    .stripAnyBelowCoveredPath(pending, enqueued, stripped)
+                if (next != null) {
+                    result = result?.mergeAdd(next) ?: next
+                }
+            }
+            return result ?: manager.emptyNode
+        }
+
+        private fun containsAnyDeep(
+            visited: IdentityHashMap<AccessNode, Unit>,
+        ): Boolean {
+            if (visited.put(this, Unit) != null) return false
+            if (containsAnyAccessor()) return true
+            forEachAccessor { _, node ->
+                if (node.containsAnyDeep(visited)) return true
+            }
+            return false
+        }
+
+        private fun anySuffixNormalizable(
+            cache: IdentityHashMap<AccessNode, Boolean>,
+        ): Boolean {
+            cache[this]?.let { return it }
+            var normalizable = true
+            forEachAccessor { accessor, node ->
+                if (!normalizable) return@forEachAccessor
+                normalizable = when {
+                    accessor == ANY_ACCESSOR_IDX || manager.isCoveredByAny(accessor) ->
+                        node.anySuffixNormalizable(cache)
+                    else -> !node.containsAnyDeep(IdentityHashMap())
+                }
+            }
+            cache[this] = normalizable
+            return normalizable
+        }
+
+        private fun stripAnyBelowCoveredPath(
+            pending: ArrayDeque<AccessNode>,
+            enqueued: IdentityHashMap<AccessNode, Unit>,
+            cache: IdentityHashMap<AccessNode, AccessNode?>,
+        ): AccessNode? {
+            if (cache.containsKey(this)) return cache[this]
+            manager.cancellation.checkpoint()
+
+            val result = transformAccessorsNonEmpty { accessor, node ->
+                when {
+                    accessor == ANY_ACCESSOR_IDX -> {
+                        if (enqueued.put(node, Unit) == null) pending.addLast(node)
+                        null
+                    }
+                    manager.isCoveredByAny(accessor) ->
+                        node.stripAnyBelowCoveredPath(pending, enqueued, cache)
+                    else -> node
+                }
+            }
+            cache[this] = result
+            return result
+        }
+
         private inline fun mergeAccessors(
             otherFields: IntArray?,
             otherNodesE: Array<AccessNode>?,
@@ -1382,7 +1577,7 @@ class AccessTree(
                 return otherFields to otherNodesBeforeAny
             }
 
-            return mergeAccessorsRaw(accessors, accessorNodes!!, otherFields, otherNodesE, onOtherNode, merge)
+            return mergeAccessorsRaw(accessors, accessorNodesArray()!!, otherFields, otherNodesE, onOtherNode, merge)
         }
 
         private inline fun mergeAccessorsRaw(
@@ -1461,7 +1656,7 @@ class AccessTree(
         private fun transformAccessors(
             transformer: (AccessorIdx, AccessNode) -> AccessNode?
         ): AccessNode {
-            val newAccessors = transformAccessors(accessors, accessorNodes, transformer) ?: return this
+            val newAccessors = transformAccessors(accessors, accessorNodesArray(), transformer) ?: return this
             return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
@@ -1542,7 +1737,7 @@ class AccessTree(
         }
 
         private fun removeSingleAccessor(accessor: AccessorIdx): AccessNode {
-            val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodes) ?: return this
+            val newAccessors = removeSingleAccessor(accessor, accessors, accessorNodesArray()) ?: return this
             return manager.create(isAbstract, isFinal, deepAccessorExclusion, newAccessors.first, newAccessors.second)
         }
 
@@ -1579,9 +1774,7 @@ class AccessTree(
                         val accessor = with(manager) { it.accessor }
                         writeLong(context.getIdByAccessor(accessor))
                     }
-                    node.accessorNodes!!.forEach { child ->
-                        writeAccessNode(child)
-                    }
+                    node.forEachAccessor { _, child -> writeAccessNode(child) }
                 }
             }
 
@@ -1627,11 +1820,17 @@ class AccessTree(
                     accessorNodes[dstAccessor] ?: error("Accessor mismatch: $dstAccessor")
                 }
 
-                return AccessNode(manager, interned = false, isAbstract, isFinal, anyFieldAccessorExclusions, accessors, accessNodes)
+                return manager.create(isAbstract, isFinal, anyFieldAccessorExclusions, accessors, accessNodes)
             }
         }
 
         companion object {
+            private const val INTERNED_MASK = Int.MIN_VALUE
+            private const val ABSTRACT_MASK = 1 shl 30
+            private const val FINAL_MASK = 1 shl 29
+            private const val STATIC_MASK = 1 shl 28
+            private const val DEPTH_MASK = STATIC_MASK - 1
+
             const val SUBSEQUENT_ARRAY_ELEMENTS_LIMIT = 2
 
             @JvmStatic
@@ -1757,10 +1956,11 @@ class AccessTree(
                 isFinal: Boolean
             ): AccessNode = AccessNode(
                 manager,
-                interned = true,
-                isAbstract = isAbstract, isFinal = isFinal,
+                initialInterned = true,
+                initialIsAbstract = isAbstract, initialIsFinal = isFinal,
                 deepAccessorExclusion = null,
-                accessors = null, accessorNodes = null
+                accessors = null,
+                accessorNodes = null,
             )
 
             @JvmStatic
@@ -1773,11 +1973,11 @@ class AccessTree(
             private fun create(accessor: AccessorIdx, node: AccessNode): AccessNode =
                 AccessNode(
                     node.manager,
-                    interned = false,
-                    isAbstract = false, isFinal = false,
+                    initialInterned = false,
+                    initialIsAbstract = false, initialIsFinal = false,
                     deepAccessorExclusion = null,
-                    accessors = intArrayOf(accessor),
-                    accessorNodes = arrayOf(node)
+                    accessors = node.manager.singleAccessorArray(accessor),
+                    accessorNodes = node,
                 )
 
             @JvmStatic
@@ -1810,18 +2010,23 @@ class AccessTree(
                 accessorNodes: Array<AccessNode>?,
             ): AccessNode {
                 val nonEmptyAccessors = accessors?.takeIf { it.isNotEmpty() }
+                    ?.let {
+                        if (it.size == 1) base.manager.singleAccessorArray(it[0]) else it
+                    }
                 val nonEmptyAccessorNodes = accessorNodes?.takeIf { nonEmptyAccessors != null }
                 return if (nonEmptyAccessors == null && deepAccessorExclusion == null) {
                     base
                 } else {
                     AccessNode(
                         base.manager,
-                        interned = false,
-                        isAbstract = base.isAbstract,
-                        isFinal = base.isFinal,
+                        initialInterned = false,
+                        initialIsAbstract = base.isAbstract,
+                        initialIsFinal = base.isFinal,
                         deepAccessorExclusion = deepAccessorExclusion,
                         accessors = nonEmptyAccessors,
-                        accessorNodes = nonEmptyAccessorNodes
+                        accessorNodes = nonEmptyAccessorNodes?.let {
+                            if (it.size == 1) it[0] else it
+                        },
                     )
                 }
             }

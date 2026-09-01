@@ -1,61 +1,52 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
-import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges.Companion.instructionStorageSize
-import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode as AccessTreeNode
+import java.util.Arrays
 
-open class TreeSetWithCompression(maxInstIdx: Int, val manager: TreeApManager) {
-    val edges = arrayOfNulls<AccessTreeNode?>(instructionStorageSize(maxInstIdx))
+open class TreeSetWithCompression(
+    private val columns: Int,
+    val manager: TreeApManager,
+) {
+    protected class Row(@JvmField val keys: IntArray, @JvmField val values: Array<Any?>)
 
-    private val interner = AccessTreeSoftInterner(manager)
-    private var operationsBeforeIntern = INTERN_RATE
-    private var maxTreeSize = 0L
+    @Volatile
+    private var rows: Row? = null
 
-    fun internIfRequired(node: AccessTreeNode): AccessTreeNode {
-        if (node.size < SIZE_TO_FORCE_INTERN) return node
-        return interner.intern(node)
+    protected fun rows(): Row? = rows
+
+    protected fun offsetOf(row: Row, instruction: Int): Int {
+        val position = Arrays.binarySearch(row.keys, instruction)
+        return if (position < 0) -1 else position * columns
     }
 
-    fun intern(idx: Int): Unit = interner.internImpl(
-        manager.cancellation,
-        lastUpdated = edges[idx],
-        size = edges.size,
-        maxNodeSize = maxTreeSize,
-        updateMaxNodeSize = { maxTreeSize = it },
-        decOperations = { operationsBeforeIntern-- },
-        resetOperation = { operationsBeforeIntern = INTERN_RATE },
-        getNode = { edges[it] },
-        setNode = { i, n -> edges[i] = n }
-    )
+    protected fun rowsForWrite(instruction: Int): Row {
+        val current = rows
+        if (current != null && Arrays.binarySearch(current.keys, instruction) >= 0) return current
 
-    companion object {
-        inline fun AccessTreeSoftInterner.internImpl(
-            cancellation: Cancellation,
-            lastUpdated: AccessTreeNode?,
-            size: Int,
-            maxNodeSize: Long,
-            updateMaxNodeSize: (Long) -> Unit,
-            decOperations: () -> Int,
-            resetOperation: () -> Unit,
-            crossinline getNode: (Int) -> AccessTreeNode?,
-            crossinline setNode: (Int, AccessTreeNode) -> Unit,
-        ) {
-            lastUpdated?.let { updateMaxNodeSize(maxOf(maxNodeSize, it.size)) }
+        val oldKeys = current?.keys ?: EMPTY_KEYS
+        val oldValues = current?.values ?: EMPTY_VALUES
+        val insertAt = -Arrays.binarySearch(oldKeys, instruction) - 1
+        val keys = IntArray(oldKeys.size + 1)
+        System.arraycopy(oldKeys, 0, keys, 0, insertAt)
+        keys[insertAt] = instruction
+        System.arraycopy(oldKeys, insertAt, keys, insertAt + 1, oldKeys.size - insertAt)
 
-            if (decOperations() > 0) return
-            if (maxNodeSize < MIN_SIZE_TO_INTERN) return
-            resetOperation()
+        val values = arrayOfNulls<Any?>((oldKeys.size + 1) * columns)
+        System.arraycopy(oldValues, 0, values, 0, insertAt * columns)
+        System.arraycopy(
+            oldValues,
+            insertAt * columns,
+            values,
+            (insertAt + 1) * columns,
+            (oldKeys.size - insertAt) * columns,
+        )
+        return Row(keys, values).also { rows = it }
+    }
 
-            withInterner { interner, cache ->
-                for (i in 0 until size) {
-                    val node = getNode(i) ?: continue
-                    setNode(i, node.internNodes(interner, cache))
-                }
-            }
-        }
+    fun internIfRequired(node: AccessTreeNode): AccessTreeNode = manager.canonicalizeAccessTree(node)
 
-        const val MIN_SIZE_TO_INTERN = 100
-        const val SIZE_TO_FORCE_INTERN = 100_000
-        private const val INTERN_RATE = 100
+    private companion object {
+        private val EMPTY_KEYS = IntArray(0)
+        private val EMPTY_VALUES = arrayOfNulls<Any?>(0)
     }
 }

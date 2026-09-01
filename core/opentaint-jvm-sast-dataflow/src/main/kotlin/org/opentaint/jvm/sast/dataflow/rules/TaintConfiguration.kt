@@ -4,6 +4,7 @@ import org.opentaint.dataflow.configuration.jvm.ActionPosition
 import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.Result
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
+import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
@@ -12,6 +13,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
@@ -38,6 +40,8 @@ class TaintConfiguration(private val cp: JIRClasspath) {
     private val taintMarkManager = TaintMarkManager()
     private val hierarchyInfo = JIRHierarchyInfo(cp)
     private val objectTypeName = cp.objectClass.typename
+    private val conditionInterner = ResolvedValueInterner<Condition>()
+    private val sinkMetaInterner = ResolvedValueInterner<TaintSinkMeta>()
 
     private val entryPointConfig = TaintRulesStorage<SerializedRule.EntryPoint, TaintEntryPointSource>()
     private val sourceConfig = TaintRulesStorage<SerializedRule.Source, TaintMethodSource>()
@@ -170,7 +174,15 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             rules.removeAll { !it.function.matchFunctionName(method) }
             if (rules.isEmpty()) return emptyList()
 
-            val resolver = MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method)
+            val resolver = MethodTaintConfigurationResolver(
+                patternManager,
+                taintMarkManager,
+                cp,
+                objectTypeName,
+                method,
+                conditionInterner::intern,
+                sinkMetaInterner::intern,
+            )
             rules.removeAll {
                 with(resolver) {
                     it.signature?.matchFunctionSignature() == false

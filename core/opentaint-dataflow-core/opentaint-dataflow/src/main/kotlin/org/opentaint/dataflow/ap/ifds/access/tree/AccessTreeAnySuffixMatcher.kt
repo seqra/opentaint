@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
@@ -8,6 +9,12 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     private val manager = suffixNode.manager
     private val root = TrieNode(suffixNode.isAbstract, suffixNode.isFinal, prefixLink = null, depth = 0)
+    private val memoCovered =
+        java.util.IdentityHashMap<TrieNode, java.util.IdentityHashMap<AccessTree.AccessNode, Any>>()
+    private val memoUncovered =
+        java.util.IdentityHashMap<TrieNode, java.util.IdentityHashMap<AccessTree.AccessNode, Any>>()
+
+    private object Dropped
 
     private data class TrieNode(
         val isAbstract: Boolean,
@@ -62,7 +69,7 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     )
 
     init {
-        if (suffixNode.accessors != null && suffixNode.accessorNodes != null) {
+        if (suffixNode.accessors != null) {
             val unprocessed = ArrayDeque<RawNodeWithParent>()
             suffixNode.forEachAccessor { accessor, accessorNode ->
                 val notCoveredByAny = if (accessor.coveredByAny()) null else 1
@@ -113,9 +120,32 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     fun getNonMatchingNode(node: AccessTree.AccessNode) =
         getNonMatchingNode(root, node, true) ?: manager.emptyNode
 
-    private fun getNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
-        val accessorIdx = mutableListOf<AccessorIdx>()
-        val accessorNodes = mutableListOf<AccessTree.AccessNode>()
+    private fun getNonMatchingNode(
+        trie: TrieNode,
+        node: AccessTree.AccessNode,
+        prefixCoveredByAny: Boolean,
+    ): AccessTree.AccessNode? {
+        val memo = (if (prefixCoveredByAny) memoCovered else memoUncovered)
+            .getOrPut(trie) { java.util.IdentityHashMap() }
+        val cached = memo[node]
+        if (cached != null) {
+            @Suppress("UNCHECKED_CAST")
+            return if (cached === Dropped) null else cached as AccessTree.AccessNode
+        }
+
+        val result = computeNonMatchingNode(trie, node, prefixCoveredByAny)
+        memo[node] = result ?: Dropped
+        return result
+    }
+
+    private fun computeNonMatchingNode(
+        trie: TrieNode,
+        node: AccessTree.AccessNode,
+        prefixCoveredByAny: Boolean,
+    ): AccessTree.AccessNode? {
+        val width = node.accessors?.size ?: 0
+        val accessorIdx = IntArrayList(width)
+        val accessorNodes = ArrayList<AccessTree.AccessNode>(width)
         var areChildrenChanged = false
 
         node.forEachAccessor { accessor, accessorNode ->
