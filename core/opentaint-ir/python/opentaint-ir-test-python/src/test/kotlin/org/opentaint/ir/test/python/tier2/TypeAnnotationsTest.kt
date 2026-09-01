@@ -90,14 +90,15 @@ def ta_no_annotation(x):
         assertTrue(ct.typeArgs.isNotEmpty(), "list[int] should have type args")
     }
 
-    @Test fun `Optional maps to union with None or optional flag`() {
+    @Test fun `Optional maps to union with None`() {
         val p = func("ta_optional").parameters[0]
-        val isOptional = when (p.type) {
-            is PIRUnionType -> true
-            is PIRClassType -> (p.type as PIRClassType).isOptional
-            else -> false
-        }
-        assertTrue(isOptional, "Optional[int] should be Union or have isOptional=true, got ${p.type}")
+        assertTrue(p.type is PIRUnionType, "Optional[int] should map to PIRUnionType, got ${p.type}")
+        val members = (p.type as PIRUnionType).members
+        assertTrue(members.any { it is PIRNoneType }, "Optional[int] should include None, got $members")
+        assertTrue(
+            members.any { it is PIRClassType && it.qualifiedName == "builtins.int" },
+            "Optional[int] should include builtins.int, got $members",
+        )
     }
 
     @Test fun `Any type`() {

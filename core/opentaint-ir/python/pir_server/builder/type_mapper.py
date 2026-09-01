@@ -56,15 +56,6 @@ class TypeMapper:
             proto.function_type.CopyFrom(ft)
 
         elif isinstance(typ, UnionType):
-            non_none = [
-                t for t in typ.items if not isinstance(get_proper_type(t), NoneType)
-            ]
-            has_none = len(non_none) < len(typ.items)
-            if len(non_none) == 1 and has_none:
-                inner = self.map(non_none[0])
-                if inner.HasField("class_type"):
-                    inner.class_type.is_optional = True
-                    return inner
             ut = pir_pb2.PIRUnionTypeProto()
             for item in typ.items:
                 ut.members.append(self.map(item))

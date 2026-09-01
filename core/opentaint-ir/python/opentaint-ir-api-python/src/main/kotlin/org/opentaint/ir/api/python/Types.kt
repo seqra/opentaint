@@ -9,13 +9,9 @@ sealed interface PIRType : CommonTypeName {
 data class PIRClassType(
     val qualifiedName: String,
     val typeArgs: List<PIRType> = emptyList(),
-    val isOptional: Boolean = false,
 ) : PIRType {
-    override fun toString(): String {
-        val base = if (typeArgs.isEmpty()) qualifiedName
-            else "$qualifiedName[${typeArgs.joinToString(", ")}]"
-        return if (isOptional) "$base?" else base
-    }
+    override fun toString(): String = if (typeArgs.isEmpty()) qualifiedName
+        else "$qualifiedName[${typeArgs.joinToString(", ")}]"
 }
 
 data class PIRFunctionType(

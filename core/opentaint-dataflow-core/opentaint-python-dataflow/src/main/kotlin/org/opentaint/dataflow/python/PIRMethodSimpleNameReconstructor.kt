@@ -21,9 +21,9 @@ class PIRMethodSimpleNameReconstructor private constructor(
         return result
     }
 
-    override fun initialBinding(inst: PIRInstruction): LocalBinding? = when (inst) {
-        is PIRLoadAttr -> LocalBinding(inst.target.index, inst.attribute)
-        else -> null
+    override fun initialBindings(inst: PIRInstruction): List<LocalBinding> = when (inst) {
+        is PIRLoadAttr -> listOf(LocalBinding(inst.target.index, inst.attribute))
+        else -> emptyList()
     }
 
     override fun transfer(inst: PIRInstruction, payload: LocalBinding): List<LocalBinding> = buildList {

@@ -180,7 +180,6 @@ message PIRTypeProto {
 message PIRClassTypeProto {
   string qualified_name = 1;
   repeated PIRTypeProto type_args = 2;
-  bool is_optional = 3;
 }
 
 message PIRFunctionTypeProto {

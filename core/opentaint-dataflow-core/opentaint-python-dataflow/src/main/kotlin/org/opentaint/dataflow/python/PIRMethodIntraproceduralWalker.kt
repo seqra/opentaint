@@ -15,8 +15,7 @@ abstract class PIRMethodIntraproceduralWalker<B : Any>(
 
     protected fun walk() {
         for (inst in graph.statements()) {
-            val seed = initialBinding(inst) ?: continue
-            propagateToSuccessors(inst, seed)
+            initialBindings(inst).forEach { propagateToSuccessors(inst, it) }
         }
         while (queue.isNotEmpty()) {
             val (inst, payload) = queue.removeLast()
@@ -24,7 +23,7 @@ abstract class PIRMethodIntraproceduralWalker<B : Any>(
         }
     }
 
-    protected abstract fun initialBinding(inst: PIRInstruction): B?
+    protected abstract fun initialBindings(inst: PIRInstruction): List<B>
 
     protected abstract fun transfer(inst: PIRInstruction, payload: B): List<B>
 

@@ -12,6 +12,7 @@ import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
 import java.nio.file.Path
+import java.time.Duration.ofSeconds
 import java.util.jar.JarFile
 import kotlin.io.path.Path
 import kotlin.io.path.absolutePathString
@@ -19,7 +20,6 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.extension
 import kotlin.io.path.isRegularFile
-import kotlin.io.path.readText
 import kotlin.io.path.walk
 import kotlin.io.path.writeText
 import kotlin.test.assertTrue
@@ -43,7 +43,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
                 sources = pyFiles,
                 packageRoots = listOf(sourcesDir.absolutePathString()),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                rpcTimeout = java.time.Duration.ofSeconds(1200),
+                rpcTimeout = ofSeconds(1200),
             )
         ).load()
     }

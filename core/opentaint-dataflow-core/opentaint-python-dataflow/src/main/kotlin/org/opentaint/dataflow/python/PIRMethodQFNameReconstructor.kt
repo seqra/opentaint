@@ -20,6 +20,7 @@ import org.opentaint.ir.api.python.PIRSetExpr
 import org.opentaint.ir.api.python.PIRStringExpr
 import org.opentaint.ir.api.python.PIRTupleExpr
 import org.opentaint.ir.api.python.PIRType
+import org.opentaint.ir.api.python.PIRUnionType
 import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.api.python.targets
 
@@ -35,50 +36,41 @@ class PIRMethodQFNameReconstructor private constructor(
         return result
     }
 
-    override fun initialBinding(inst: PIRInstruction): LocalBinding? {
+    override fun initialBindings(inst: PIRInstruction): List<LocalBinding> {
         return when (inst) {
-            is PIRAssign -> when (val rhv = inst.expr) {
-                is PIRParameterRef -> {
-                    val name = classQnOrNull(rhv.type)?.let { NameEntry.GlobalRef(it) }
-                        ?: NameEntry.ParamRef(rhv.index)
-                    LocalBinding(inst.target.index, name)
-                }
+            is PIRAssign -> {
+                val names = when (val rhv = inst.expr) {
+                    is PIRParameterRef -> classQns(rhv.type)
+                        .map { NameEntry.GlobalRef(it) }
+                        .ifEmpty { listOf(NameEntry.ParamRef(rhv.index)) }
 
-                is PIRBindFunctionExpr ->
-                    LocalBinding(inst.target.index, NameEntry.GlobalRef(rhv.function.qualifiedName))
+                    is PIRBindFunctionExpr -> listOf(NameEntry.GlobalRef(rhv.function.qualifiedName))
 
-                is PIRReadNameExpr -> {
-                    val name = when (val ref = rhv.ref) {
-                        is PIRGlobalNameRef -> NameEntry.GlobalRef(ref.qualifiedName)
-                        is PIRModuleNameRef -> NameEntry.GlobalRef(ref.module)
+                    is PIRReadNameExpr -> when (val ref = rhv.ref) {
+                        is PIRGlobalNameRef -> listOf(NameEntry.GlobalRef(ref.qualifiedName))
+                        is PIRModuleNameRef -> listOf(NameEntry.GlobalRef(ref.module))
                     }
-                    LocalBinding(inst.target.index, name)
+
+                    is PIRListExpr -> listOf(NameEntry.GlobalRef(BUILTIN_LIST))
+                    is PIRTupleExpr -> listOf(NameEntry.GlobalRef(BUILTIN_TUPLE))
+                    is PIRSetExpr -> listOf(NameEntry.GlobalRef(BUILTIN_SET))
+                    is PIRDictExpr -> listOf(NameEntry.GlobalRef(BUILTIN_DICT))
+                    is PIRStringExpr -> listOf(NameEntry.GlobalRef(BUILTIN_STR))
+
+                    else -> emptyList()
                 }
-
-                is PIRListExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_LIST))
-                is PIRTupleExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_TUPLE))
-                is PIRSetExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_SET))
-                is PIRDictExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_DICT))
-                is PIRStringExpr -> LocalBinding(inst.target.index, NameEntry.GlobalRef(BUILTIN_STR))
-
-                else -> null
+                names.map { LocalBinding(inst.target.index, it) }
             }
 
             is PIRCall -> {
-                val resolved = inst.resolvedCallee ?: return null
+                val resolved = inst.resolvedCallee ?: return emptyList()
                 saveCallResult(inst, NameEntry.GlobalRef(resolved))
 
-                val targetIdx = inst.target?.index
-                val resultQn = resultTypeQn(resolved)
-
-                if (targetIdx != null && resultQn != null) {
-                    LocalBinding(targetIdx, NameEntry.GlobalRef(resultQn))
-                } else {
-                    null
-                }
+                val targetIdx = inst.target?.index ?: return emptyList()
+                resultTypeQns(resolved).map { LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
             }
 
-            else -> null
+            else -> emptyList()
         }
     }
 
@@ -96,7 +88,7 @@ class PIRMethodQFNameReconstructor private constructor(
                     val chainedName = payload.name.prependSegment(inst.attribute)
 
                     if (baseType != null) {
-                        attributeTypeQn(baseType, inst.attribute)?.let { this += LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
+                        attributeTypeQns(baseType, inst.attribute).forEach { this += LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
                         attributeMethodQn(baseType, inst.attribute)?.let { this += LocalBinding(targetIdx, NameEntry.GlobalRef(it)) }
                     } else {
                         chainedName?.let { this += LocalBinding(targetIdx, chainedName) }
@@ -132,9 +124,8 @@ class PIRMethodQFNameReconstructor private constructor(
 
                     if (targetIdx != null) {
                         val qn = payload.name.flattenOrNull()
-                        val resultTypeQn = qn?.let { resultTypeQn(it) }
-                        if (resultTypeQn != null) {
-                            this += LocalBinding(targetIdx, NameEntry.GlobalRef(resultTypeQn))
+                        qn?.let { resultTypeQns(it) }.orEmpty().forEach {
+                            this += LocalBinding(targetIdx, NameEntry.GlobalRef(it))
                         }
                     }
                 }
@@ -154,8 +145,11 @@ class PIRMethodQFNameReconstructor private constructor(
         }
     }
 
-    private fun classQnOrNull(type: PIRType?): String? =
-        (type as? PIRClassType)?.qualifiedName?.ifEmpty { null }
+    private fun classQns(type: PIRType?): List<String> = when (type) {
+        is PIRClassType -> listOfNotNull(type.qualifiedName.ifEmpty { null })
+        is PIRUnionType -> type.members.flatMap { classQns(it) }
+        else -> emptyList()
+    }
 
     private fun attributeMethodQn(baseType: PIRClass, attribute: String): String? {
         for (qn in baseType.mro) {
@@ -166,20 +160,20 @@ class PIRMethodQFNameReconstructor private constructor(
         return null
     }
 
-    private fun attributeTypeQn(baseType: PIRClass, attribute: String): String? {
+    private fun attributeTypeQns(baseType: PIRClass, attribute: String): List<String> {
         for (qn in baseType.mro) {
             val cls = cp.findClassOrNull(qn) ?: continue
             val attrType = cls.fields.find { it.name == attribute }?.type
                 ?: cls.properties.find { it.name == attribute }?.type
                 ?: continue
-            return classQnOrNull(attrType)
+            return classQns(attrType)
         }
-        return null
+        return emptyList()
     }
 
-    private fun resultTypeQn(calleeQn: String): String? {
-        if (cp.findClassOrNull(calleeQn) != null) return calleeQn
-        return classQnOrNull(cp.findFunctionOrNull(calleeQn)?.returnType)
+    private fun resultTypeQns(calleeQn: String): List<String> {
+        if (cp.findClassOrNull(calleeQn) != null) return listOf(calleeQn)
+        return classQns(cp.findFunctionOrNull(calleeQn)?.returnType)
     }
 
     private fun saveCallResult(inst: PIRInstruction, calleeName: NameEntry) {

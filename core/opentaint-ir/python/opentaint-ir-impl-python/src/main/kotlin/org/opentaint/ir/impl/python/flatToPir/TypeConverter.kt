@@ -11,7 +11,6 @@ object TypeConverter {
         is FlatClassType -> PIRClassType(
             qualifiedName = flat.qualifiedName,
             typeArgs = flat.typeArgs.map { convert(it) },
-            isOptional = flat.isOptional,
         )
         is FlatFunctionType -> PIRFunctionType(
             paramTypes = flat.paramTypes.map { convert(it) },

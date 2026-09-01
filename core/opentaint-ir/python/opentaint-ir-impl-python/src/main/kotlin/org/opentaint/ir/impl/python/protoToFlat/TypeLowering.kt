@@ -13,7 +13,6 @@ internal object TypeLowering {
             FlatClassType(
                 qualifiedName = ct.qualifiedName,
                 typeArgs = ct.typeArgsList.map { convertType(it) },
-                isOptional = ct.isOptional,
             )
         }
         PIRTypeProto.KindCase.FUNCTION_TYPE -> FlatFunctionType(
