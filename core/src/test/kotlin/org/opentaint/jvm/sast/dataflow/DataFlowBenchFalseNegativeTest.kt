@@ -71,12 +71,11 @@ class JavaDataFlowBenchFalseNegativeTest : DataFlowBenchFalseNegativeTest() {
     // The numeric arm is the benchmark miss; the reference arm is the control that separates the
     // value kind from the entry-iteration modelling.
 
+    // Was a false negative until java-lang.yaml modelled the boxing pair. The taint used to die at
+    // the compiler-inserted `%3 = Integer.valueOf(%2)`: an unresolved JDK callee with no
+    // pass-through, so `put` already saw a clean argument. Box and unbox are independent barriers --
+    // modelling only `valueOf` leaves this failing at `%16.intValue()`.
     @Test
-    // todo: the taint dies at the compiler-inserted `%3 = Integer.valueOf(%2)`. That is an
-    //  unresolved JDK callee and the shipped model has no pass-through for boxing or unboxing, so
-    //  `put` already sees a clean argument. Box and unbox are independent barriers. The String arm
-    //  below is the same access-path shape with no boxing, and passes.
-    @Disabled
     fun `map iteration - Integer-valued entry reaches the sink`() {
         val testCls = "$SAMPLE_PACKAGE.DataFlowBenchMapIterationSample"
 
