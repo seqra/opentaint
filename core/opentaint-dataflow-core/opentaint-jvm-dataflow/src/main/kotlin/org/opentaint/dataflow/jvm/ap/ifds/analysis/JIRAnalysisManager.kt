@@ -34,6 +34,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.taint.SelectedTaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
@@ -61,6 +62,7 @@ class JIRAnalysisManager(
     val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
+    private val phaseTaintConfig = SelectedTaintRulesProvider(taintConfig)
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
@@ -79,8 +81,15 @@ class JIRAnalysisManager(
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         when (phase) {
-            Phase.Prescan -> {}
-            Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
+            Phase.Prescan -> phaseTaintConfig.select(null)
+            Phase.ShallowScan -> {
+                phaseTaintConfig.selectRules(relevantRuleIds)
+                phaseTaintConfig.select(null)
+            }
+            is Phase.FullScan -> {
+                phaseTaintConfig.selectRules(relevantRuleIds)
+                phaseTaintConfig.select(phase.actionableRules)
+            }
         }
     }
 
@@ -130,7 +139,7 @@ class JIRAnalysisManager(
         }
 
         val taintContext = JIRTaintAnalysisContext(
-            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker, relevantRuleIds
+            taintAnalysisContext.taintSinkTracker, phaseTaintConfig, externalMethodTracker, relevantRuleIds
         )
 
         return JIRMethodAnalysisContext(
