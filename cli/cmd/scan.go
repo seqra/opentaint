@@ -83,6 +83,9 @@ Use --project-model to scan a pre-compiled project model instead of compiling fr
 `,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
+		if scanFlags.DebugRunAnalysisOnSelectedEntryPoints != "" {
+			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
+		}
 		runScan(cmd, prepareScanConfig(scanFlags, args))
 	},
 }
@@ -109,6 +112,13 @@ func init() {
 	rootCmd.AddCommand(scanCmd)
 	addScanFlags(scanCmd)
 	addRuleIDFlag(scanCmd)
+	addEntryPointsFlag(scanCmd)
+}
+
+func addEntryPointsFlag(cmd *cobra.Command) {
+	cmd.Flags().StringVar(&scanFlags.DebugRunAnalysisOnSelectedEntryPoints, "entry-points", "",
+		"Start analysis from a fully qualified method such as com.example.Class#method, or '*' for every method")
+	_ = cmd.Flags().MarkHidden("entry-points")
 }
 
 func addRuleIDFlag(cmd *cobra.Command) {
