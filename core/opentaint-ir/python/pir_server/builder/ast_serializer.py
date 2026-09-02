@@ -65,7 +65,13 @@ from mypy.nodes import (
     ARG_STAR,
     ARG_STAR2,
 )
-from mypy.patterns import AsPattern, ValuePattern
+from mypy.patterns import (
+    AsPattern,
+    ClassPattern,
+    OrPattern,
+    SingletonPattern,
+    ValuePattern,
+)
 from mypy.types import CallableType
 from mypy.util import correct_relative_import
 from pir_server.proto import pir_pb2
@@ -408,10 +414,7 @@ class AstSerializer:
                 subject=self._serialize_expr(stmt.subject),
             )
             for pattern, guard, body in zip(stmt.patterns, stmt.guards, stmt.bodies):
-                pat_proto = self._serialize_pattern(pattern)
-                if pat_proto is None:
-                    continue
-                match_proto.patterns.append(pat_proto)
+                match_proto.patterns.append(self._serialize_pattern(pattern))
                 if guard is not None:
                     match_proto.guards.append(self._serialize_expr(guard))
                 else:
@@ -543,31 +546,53 @@ class AstSerializer:
 
         return proto
 
-    def _serialize_pattern(self, pattern) -> pir_pb2.MypyPatternProto | None:
+    SINGLETON_VALUES = {
+        None: pir_pb2.MypySingletonPatternProto.NONE,
+        True: pir_pb2.MypySingletonPatternProto.TRUE,
+        False: pir_pb2.MypySingletonPatternProto.FALSE,
+    }
+
+    def _serialize_pattern(self, pattern) -> pir_pb2.MypyPatternProto:
         proto = pir_pb2.MypyPatternProto()
         if isinstance(pattern, AsPattern):
             as_proto = pir_pb2.MypyAsPatternProto()
             if pattern.pattern is not None:
-                inner = self._serialize_pattern(pattern.pattern)
-                if inner is None:
-                    return None
-                as_proto.pattern.CopyFrom(inner)
+                as_proto.pattern.CopyFrom(self._serialize_pattern(pattern.pattern))
             if pattern.name is not None:
                 as_proto.name = pattern.name.name
             proto.as_pattern.CopyFrom(as_proto)
-            return proto
         elif isinstance(pattern, ValuePattern):
             proto.value_pattern.CopyFrom(
                 pir_pb2.MypyValuePatternProto(expr=self._serialize_expr(pattern.expr))
             )
-            return proto
-        else:
-            print(
-                f"[pir] unsupported match pattern {type(pattern).__name__}; "
-                "dropping case",
-                file=sys.stderr,
+        elif isinstance(pattern, OrPattern):
+            or_proto = pir_pb2.MypyOrPatternProto()
+            for alternative in pattern.patterns:
+                or_proto.patterns.append(self._serialize_pattern(alternative))
+            proto.or_pattern.CopyFrom(or_proto)
+        elif isinstance(pattern, ClassPattern):
+            proto.class_pattern.CopyFrom(
+                pir_pb2.MypyClassPatternProto(
+                    class_ref=self._serialize_expr(pattern.class_ref),
+                )
             )
-            return None
+        elif isinstance(pattern, SingletonPattern):
+            singleton = self.SINGLETON_VALUES.get(pattern.value)
+            if singleton is None:
+                return self._unknown_pattern(pattern)
+            proto.singleton_pattern.CopyFrom(
+                pir_pb2.MypySingletonPatternProto(value=singleton)
+            )
+        else:
+            return self._unknown_pattern(pattern)
+        return proto
+
+    def _unknown_pattern(self, pattern) -> pir_pb2.MypyPatternProto:
+        proto = pir_pb2.MypyPatternProto()
+        proto.unknown_pattern.CopyFrom(
+            pir_pb2.MypyUnknownPatternProto(kind=type(pattern).__name__)
+        )
+        return proto
 
     def _serialize_assignment_stmt(
         self, stmt: AssignmentStmt

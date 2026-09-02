@@ -63,6 +63,55 @@ def rtm_nested_in_if(x: int) -> int:
             case _:
                 return 200
     return 0
+
+def rtm_or(x: int) -> str:
+    match x:
+        case 1 | 2 | 3:
+            return "small"
+        case 10 | 20:
+            return "round"
+        case _:
+            return "other"
+
+def rtm_singleton(v: object) -> str:
+    match v:
+        case None:
+            return "none"
+        case True:
+            return "true"
+        case False:
+            return "false"
+        case _:
+            return "other"
+
+def rtm_singleton_in_or(v: object) -> str:
+    match v:
+        case None | False:
+            return "falsy"
+        case True:
+            return "true"
+        case _:
+            return "other"
+
+def rtm_class_noargs(v: object) -> str:
+    match v:
+        case bool():
+            return "bool"
+        case int():
+            return "int"
+        case str():
+            return "str"
+        case _:
+            return "other"
+
+def rtm_class_as_binding(v: object) -> str:
+    match v:
+        case str() as s:
+            return "str:" + s
+        case int() as n:
+            return "int:" + str(n)
+        case _:
+            return "other"
     """.trimIndent()
 
     @Test fun `match - capture`() = roundTrip("rtm_capture",
@@ -85,4 +134,19 @@ def rtm_nested_in_if(x: int) -> int:
 
     @Test fun `match - nested in if`() = roundTrip("rtm_nested_in_if",
         posArgs(listOf(1), listOf(2), listOf(-1)))
+
+    @Test fun `match - or pattern`() = roundTrip("rtm_or",
+        posArgs(listOf(1), listOf(3), listOf(10), listOf(20), listOf(7)))
+
+    @Test fun `match - singleton pattern`() = roundTrip("rtm_singleton",
+        posArgs(listOf(null), listOf(true), listOf(false), listOf(0), listOf(1), listOf("x")))
+
+    @Test fun `match - singleton inside or`() = roundTrip("rtm_singleton_in_or",
+        posArgs(listOf(null), listOf(false), listOf(true), listOf(0), listOf("x")))
+
+    @Test fun `match - class pattern without args`() = roundTrip("rtm_class_noargs",
+        posArgs(listOf(true), listOf(5), listOf("x"), listOf(1.5), listOf(null)))
+
+    @Test fun `match - class pattern with as binding`() = roundTrip("rtm_class_as_binding",
+        posArgs(listOf("hi"), listOf(7), listOf(1.5)))
 }

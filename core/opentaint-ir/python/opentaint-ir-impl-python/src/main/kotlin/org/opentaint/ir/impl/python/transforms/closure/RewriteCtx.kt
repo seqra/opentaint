@@ -16,6 +16,7 @@ import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
 import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
 import org.opentaint.ir.impl.python.flat.FlatLocal
+import org.opentaint.ir.impl.python.flat.FlatNextIter
 import org.opentaint.ir.impl.python.flat.FlatParamKind
 import org.opentaint.ir.impl.python.flat.FlatParameter
 import org.opentaint.ir.impl.python.flat.FlatParameterRef
@@ -47,6 +48,7 @@ internal class RewriteCtx(
     private val originalParamNames: Set<String> = fn.parameters.map { it.name }.toSet()
     private var tempCounter: Int = 0
     private val envLocal: FlatLocal = FlatLocal(ENV_LOCAL_NAME)
+    private val blockPrologues: MutableMap<Int, MutableList<FlatInst>> = mutableMapOf()
 
     init {
         for (paramName in originalParamNames) {
@@ -69,16 +71,14 @@ internal class RewriteCtx(
             fn.parameters
         }
 
-        val prologue = buildPrologue()
+        addBlockPrologue(fn.cfg.entryBlock, buildPrologue())
 
-        val newBlocks = fn.cfg.blocks.map { block ->
-            val rewrittenBody = block.instructions.flatMap { rewriteInstruction(it) }
-            val instructions = if (block.label == fn.cfg.entryBlock) {
-                prologue + rewrittenBody
-            } else {
-                rewrittenBody
-            }
-            block.copy(instructions = instructions)
+        val rewrittenBlocks = fn.cfg.blocks.map { block ->
+            block to block.instructions.flatMap { rewriteInstruction(it) }
+        }
+
+        val newBlocks = rewrittenBlocks.map { (block, rewrittenBody) ->
+            block.copy(instructions = blockPrologues[block.label].orEmpty() + rewrittenBody)
         }
 
         val newCfg = fn.cfg.copy(blocks = newBlocks)
@@ -161,10 +161,14 @@ internal class RewriteCtx(
         return tmp
     }
 
-    private fun redirectTarget(target: FlatValue, location: PIRPhysicalLocation?, scope: InstRewriterScope): FlatValue {
+    private fun redirectTarget(
+        target: FlatValue,
+        location: PIRPhysicalLocation?,
+        emitStore: (FlatInst) -> Unit,
+    ): FlatValue {
         if (target !is FlatLocal || !isCellManaged(target.name)) return target
         val tmp = freshTemp()
-        scope.emitAfter(
+        emitStore(
             FlatStoreAttr(
                 obj = cellLocals.getValue(target.name),
                 attribute = ClosureRuntime.CELL_VALUE_ATTR,
@@ -180,6 +184,7 @@ internal class RewriteCtx(
         when (inst) {
             is FlatBindFunction -> rewriteBind(inst, scope)
             is FlatDeleteLocal -> rewriteDeleteLocal(inst, scope)
+            is FlatNextIter -> rewriteNextIter(inst, scope)
             else -> defaultRewrite(inst, scope)
         }
         return scope.finish()
@@ -188,8 +193,22 @@ internal class RewriteCtx(
     private fun defaultRewrite(inst: FlatInst, scope: InstRewriterScope) {
         val rewritten = inst
             .mapOperand { v -> loadOperand(v, inst.physicalLocation, scope) }
-            .mapTarget { t -> redirectTarget(t, inst.physicalLocation, scope) }
+            .mapTarget { t -> redirectTarget(t, inst.physicalLocation, scope::emitAfter) }
         scope.replaceWith(rewritten)
+    }
+
+    private fun rewriteNextIter(inst: FlatNextIter, scope: InstRewriterScope) {
+        val rewritten = inst
+            .mapOperand { v -> loadOperand(v, inst.physicalLocation, scope) }
+            .mapTarget { t ->
+                redirectTarget(t, inst.physicalLocation) { addBlockPrologue(inst.bodyBlock, listOf(it)) }
+            }
+        scope.replaceWith(rewritten)
+    }
+
+    private fun addBlockPrologue(label: Int, instructions: List<FlatInst>) {
+        if (instructions.isEmpty()) return
+        blockPrologues.getOrPut(label) { mutableListOf() } += instructions
     }
 
     private fun rewriteDeleteLocal(inst: FlatDeleteLocal, scope: InstRewriterScope) {
@@ -224,7 +243,7 @@ internal class RewriteCtx(
         val (envBuildInst, envValueLocal) = buildEnvDict(childClosureVars, location)
         scope.emitBefore(envBuildInst)
 
-        val callTarget = redirectTarget(originalTarget, location, scope)
+        val callTarget = redirectTarget(originalTarget, location, scope::emitAfter)
 
         val adapterLocal = freshTemp()
         scope.emitBefore(

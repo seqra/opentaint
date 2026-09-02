@@ -137,19 +137,18 @@ private fun CfgSession.visitMatch(stmt: MypyMatchStmtProto, location: PIRPhysica
     val subject = lowerExpr(stmt.subject)
     val endBlock = newBlock()
 
+    if (stmt.patternsCount == 0) emitGoto(endBlock)
+
     for (i in 0 until stmt.patternsCount) {
         val pattern = stmt.getPatterns(i)
         val guard = stmt.getGuards(i)
         val hasGuard = guard.kindCase != MypyExprProto.KindCase.KIND_NOT_SET
         val nextBlock = if (i < stmt.patternsCount - 1) newBlock() else endBlock
 
-        val condition = lowerPatternCondition(pattern, subject, location)
         val matchedBlock = newBlock()
-        if (condition != null) emitBranch(condition, matchedBlock, nextBlock, location)
-        else emitGoto(matchedBlock)
+        emitPatternTest(pattern, subject, matchedBlock, nextBlock, location)
 
         activate(matchedBlock)
-        bindPattern(pattern, subject, location)
         if (hasGuard) {
             val guardVal = lowerExpr(guard)
             val bodyBlock = newBlock()
@@ -165,34 +164,96 @@ private fun CfgSession.visitMatch(stmt: MypyMatchStmtProto, location: PIRPhysica
     activate(endBlock)
 }
 
-private fun CfgSession.lowerPatternCondition(
+private fun CfgSession.emitPatternTest(
     pattern: MypyPatternProto,
     subject: FlatValue,
-    location: PIRPhysicalLocation?,
-): FlatValue? = when {
-    pattern.hasAsPattern() ->
-        if (pattern.asPattern.hasPattern()) lowerPatternCondition(pattern.asPattern.pattern, subject, location)
-        else null
-    pattern.hasValuePattern() -> {
-        val rhs = lowerExpr(pattern.valuePattern.expr)
-        val target = newTempValue()
-        emit(FlatCompare(target, subject, rhs, FlatCompareOperator.EQ, physicalLocation = location))
-        target
-    }
-    else -> null
-}
-
-private fun CfgSession.bindPattern(
-    pattern: MypyPatternProto,
-    subject: FlatValue,
+    matchBlock: Int,
+    failBlock: Int,
     location: PIRPhysicalLocation?,
 ) {
-    if (!pattern.hasAsPattern()) return
-    val asPattern = pattern.asPattern
-    if (asPattern.hasPattern()) bindPattern(asPattern.pattern, subject, location)
-    if (asPattern.name.isNotEmpty()) {
-        emit(FlatAssign(FlatLocal(scope.resolveLocal(asPattern.name)), subject, physicalLocation = location))
+    // todo: support complex patterns
+    when {
+        pattern.hasAsPattern() -> {
+            val asPattern = pattern.asPattern
+            val bindBlock = if (asPattern.name.isNotEmpty()) newBlock() else matchBlock
+            if (asPattern.hasPattern()) emitPatternTest(asPattern.pattern, subject, bindBlock, failBlock, location)
+            else emitGoto(bindBlock)
+            if (bindBlock != matchBlock) {
+                activate(bindBlock)
+                emit(FlatAssign(FlatLocal(scope.resolveLocal(asPattern.name)), subject, physicalLocation = location))
+                emitGoto(matchBlock)
+            }
+        }
+        pattern.hasValuePattern() -> {
+            val rhs = lowerExpr(pattern.valuePattern.expr)
+            emitCompareBranch(subject, rhs, FlatCompareOperator.EQ, matchBlock, failBlock, location)
+        }
+        pattern.hasSingletonPattern() -> {
+            val rhs = when (pattern.singletonPattern.value) {
+                MypySingletonPatternProto.Value.TRUE -> FlatBoolConst(true)
+                MypySingletonPatternProto.Value.FALSE -> FlatBoolConst(false)
+                else -> FlatNoneConst
+            }
+            emitCompareBranch(subject, rhs, FlatCompareOperator.IS, matchBlock, failBlock, location)
+        }
+        pattern.hasOrPattern() -> {
+            val alternatives = pattern.orPattern.patternsList
+            if (alternatives.isEmpty()) {
+                emitGoto(failBlock)
+                return
+            }
+            for ((index, alternative) in alternatives.withIndex()) {
+                val nextAlternative = if (index < alternatives.size - 1) newBlock() else failBlock
+                emitPatternTest(alternative, subject, matchBlock, nextAlternative, location)
+                if (nextAlternative != failBlock) activate(nextAlternative)
+            }
+        }
+        pattern.hasClassPattern() -> {
+            val typeMatched = newTempValue()
+            emit(FlatTypeCheck(typeMatched, subject, resolveClassType(pattern.classPattern.classRef), physicalLocation = location))
+            emitBranch(typeMatched, matchBlock, failBlock, location)
+        }
+        pattern.hasUnknownPattern() -> {
+            module.reportWarning(
+                "unsupported match pattern ${pattern.unknownPattern.kind}; bindings dropped",
+                currentFunctionQualifiedName ?: module.moduleName,
+                "UnsupportedMatchPattern",
+            )
+            emitOpaqueTest(subject, matchBlock, failBlock, location)
+        }
+        else -> emitGoto(matchBlock)
     }
+}
+
+private fun CfgSession.emitOpaqueTest(
+    subject: FlatValue,
+    matchBlock: Int,
+    failBlock: Int,
+    location: PIRPhysicalLocation?,
+) {
+    val target = newTempValue()
+    emit(FlatTypeCheck(target, subject, FlatAnyType, physicalLocation = location))
+    emitBranch(target, matchBlock, failBlock, location)
+}
+
+private fun CfgSession.emitCompareBranch(
+    left: FlatValue,
+    right: FlatValue,
+    op: FlatCompareOperator,
+    matchBlock: Int,
+    failBlock: Int,
+    location: PIRPhysicalLocation?,
+) {
+    val target = newTempValue()
+    emit(FlatCompare(target, left, right, op, physicalLocation = location))
+    emitBranch(target, matchBlock, failBlock, location)
+}
+
+private fun CfgSession.resolveClassType(classRef: MypyExprProto): FlatType = when {
+    classRef.hasNameExpr() ->
+        FlatClassType(imports.qualify(classRef.nameExpr) ?: "builtins.${classRef.nameExpr.name}")
+    classRef.hasMemberExpr() -> FlatClassType(imports.dottedPath(classRef.memberExpr))
+    else -> FlatAnyType
 }
 
 private fun CfgSession.visitWhile(stmt: MypyWhileStmtProto, location: PIRPhysicalLocation?) {

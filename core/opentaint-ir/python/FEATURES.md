@@ -121,7 +121,13 @@ Comprehensive list of Python language features and their support status in the I
 
 | Feature | Status | Notes |
 |---------|--------|-------|
-| `match`/`case` | NOT SUPPORTED | No proto messages, not serialized, not lowered |
+| `match` statement, guards | SUPPORTED + TESTED | |
+| Capture / wildcard / `as` patterns | SUPPORTED + TESTED | |
+| Value patterns (`case 1`, `case Color.RED`) | SUPPORTED + TESTED | Lowered as `==` |
+| Or patterns (`case 1 \| 2`) | SUPPORTED + TESTED | Lowered as a short-circuiting branch chain |
+| Class patterns (`case Point()`) | PARTIALLY SUPPORTED | `isinstance` check only; positional and keyword sub-patterns are ignored, so `case Point(x=1)` matches any `Point` and binds nothing |
+| Singleton patterns (`case None`) | SUPPORTED + TESTED | Lowered as `is` |
+| Sequence / mapping / starred patterns | PARTIALLY SUPPORTED | Lowered as an unknown pattern: opaque test, case body preserved, no destructuring bindings |
 
 ## Imports
 

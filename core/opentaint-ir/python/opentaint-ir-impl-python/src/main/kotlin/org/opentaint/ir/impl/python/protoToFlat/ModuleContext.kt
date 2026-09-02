@@ -31,6 +31,10 @@ internal class ModuleContext(val moduleName: String) {
         _diagnostics.add(PIRDiagnostic(PIRDiagnosticSeverity.ERROR, message, source, code))
     }
 
+    fun reportWarning(message: String, source: String, code: String) {
+        _diagnostics.add(PIRDiagnostic(PIRDiagnosticSeverity.WARNING, message, source, code))
+    }
+
     fun reportException(prefix: String, source: String, e: Throwable) {
         reportError("$prefix: ${e.javaClass.simpleName}: ${e.message}", source, e.javaClass.simpleName)
     }

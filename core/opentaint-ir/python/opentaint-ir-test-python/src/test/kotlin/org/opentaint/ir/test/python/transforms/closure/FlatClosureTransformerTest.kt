@@ -536,11 +536,10 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenOuter = lookup(out, outerQn)
         val rewrittenEntry = rewrittenOuter.cfg.blocks.first { it.label == 0 }.instructions
-        val nextIdx = rewrittenEntry.indexOfFirst { it is FlatNextIter }
-        val nextInst = rewrittenEntry[nextIdx] as FlatNextIter
+        val nextInst = rewrittenEntry.last() as FlatNextIter
         val tempName = (nextInst.target as FlatLocal).name
         assertTrue(tempName.startsWith("\$t"))
-        val store = rewrittenEntry[nextIdx + 1] as FlatStoreAttr
+        val store = rewrittenOuter.cfg.blocks.first { it.label == 1 }.instructions.first() as FlatStoreAttr
         assertEquals(cellName("i"), (store.obj as FlatLocal).name)
         assertEquals(tempName, (store.value as FlatLocal).name)
     }

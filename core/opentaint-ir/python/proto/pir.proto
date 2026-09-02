@@ -758,6 +758,10 @@ message MypyPatternProto {
   oneof kind {
     MypyAsPatternProto as_pattern = 1;
     MypyValuePatternProto value_pattern = 2;
+    MypyOrPatternProto or_pattern = 3;
+    MypyClassPatternProto class_pattern = 4;
+    MypySingletonPatternProto singleton_pattern = 5;
+    MypyUnknownPatternProto unknown_pattern = 6;
   }
 }
 
@@ -770,6 +774,27 @@ message MypyAsPatternProto {
 
 message MypyValuePatternProto {
   MypyExprProto expr = 1;
+}
+
+message MypyOrPatternProto {
+  repeated MypyPatternProto patterns = 1;
+}
+
+message MypyClassPatternProto {
+  MypyExprProto class_ref = 1;
+}
+
+message MypySingletonPatternProto {
+  enum Value {
+    NONE = 0;
+    TRUE = 1;
+    FALSE = 2;
+  }
+  Value value = 1;
+}
+
+message MypyUnknownPatternProto {
+  string kind = 1;
 }
 
 message MypyTryStmtProto {

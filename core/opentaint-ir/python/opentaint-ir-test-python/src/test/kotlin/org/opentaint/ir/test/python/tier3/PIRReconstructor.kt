@@ -367,7 +367,11 @@ def _closure_class(f):
                 listOf("$target = $parts")
             }
             is PIRIterExpr -> listOf("$target = iter(${val_(expr.iterable)})")
-            is PIRTypeCheckExpr -> listOf("$target = isinstance(${val_(expr.value)}, object)")
+            is PIRTypeCheckExpr -> {
+                val checked = (expr.checkType as? PIRClassType)?.qualifiedName
+                    ?.takeIf { it.startsWith("builtins.") }?.substringAfterLast('.') ?: "object"
+                listOf("$target = isinstance(${val_(expr.value)}, $checked)")
+            }
             is PIRBindFunctionExpr -> {
                 val fnName = expr.function.qualifiedName.substringAfterLast('.')
                 if (fnName in closureBearingNames) {
