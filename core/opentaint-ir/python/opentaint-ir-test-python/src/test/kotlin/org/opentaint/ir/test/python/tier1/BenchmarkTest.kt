@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Tag
 @Tag("tier1")
 class BenchmarkTest : BenchmarkTestBase() {
 
-    @Test @Timeout(600) fun `benchmark - click`() = analyzePkg("click", "3.13", 17, 71, 114)
+    @Test @Timeout(600) fun `benchmark - click`() = analyzePkg("click", "3.13", 17, 67, 109)
     @Test @Timeout(600) fun `benchmark - requests`() = analyzePkg("requests", "3.13", 18, 44, 72)
     @Test @Timeout(600) fun `benchmark - attrs`() = analyzePkg("attr", "3.13", 13, 35, 91)
     @Test @Timeout(600) fun `benchmark - typer`() = analyzePkg("typer", "3.13", 16, 36, 86)
@@ -14,7 +14,7 @@ class BenchmarkTest : BenchmarkTestBase() {
     @Test @Timeout(600) fun `benchmark - pygments`() = analyzePkg("pygments", "3.13", 338, 752, 112, recursive = true)
     @Test @Timeout(600) fun `benchmark - urllib3`() = analyzePkg("urllib3", "3.13", 36, 96, 91, recursive = true)
     @Test @Timeout(600) fun `benchmark - packaging`() = analyzePkg("packaging", "3.13", 15, 55, 105)
-    @Test @Timeout(600) fun `benchmark - cryptography`() = analyzePkg("cryptography", "3.13", 72, 262, 101, recursive = true)
+    @Test @Timeout(600) fun `benchmark - cryptography`() = analyzePkg("cryptography", "3.13", 72, 262, 102, recursive = true)
     @Test @Timeout(600) fun `benchmark - more-itertools`() = analyzePkg("more_itertools", "3.13", 3, 12, 172)
     @Test @Timeout(600) fun `benchmark - idna`() = analyzePkg("idna", "3.13", 8, 9, 110)
     @Test @Timeout(600) fun `benchmark - charset-normalizer`() = analyzePkg("charset_normalizer", "3.13", 10, 13, 46)
@@ -34,7 +34,7 @@ class BenchmarkTest : BenchmarkTestBase() {
     @Test @Timeout(600) fun `benchmark - jinja2`() = analyzePkg("jinja2", "3.13", 25, 152, 159, recursive = true)
     @Test @Timeout(600) fun `benchmark - tornado`() = analyzePkg("tornado", "3.13", 73, 544, 154, recursive = true)
     @Test @Timeout(600) fun `benchmark - falcon`() = analyzePkg("falcon", "3.13", 102, 223, 156, recursive = true)
-    @Test @Timeout(600) fun `benchmark - bottle`() = analyzePkg("bottle", "3.13", 8, 99, 105)
+    @Test @Timeout(600) fun `benchmark - bottle`() = analyzePkg("bottle", "3.13", 1, 67, 40)
     @Test @Timeout(600) fun `benchmark - pyramid`() = analyzePkg("pyramid", "3.13", 61, 288, 174, recursive = true)
     @Test @Timeout(600) fun `benchmark - sanic`() = analyzePkg("sanic", "3.13", 132, 198, 107, recursive = true)
     @Test @Timeout(600) fun `benchmark - aiohttp`() = analyzePkg("aiohttp", "3.13", 55, 306, 109, recursive = true)

@@ -5,6 +5,7 @@ import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.PIRClasspathLoader
 import org.opentaint.ir.test.python.PIRTestBase
 import java.io.File
+import java.nio.file.Files
 
 abstract class BenchmarkTestBase : PIRTestBase() {
 
@@ -16,15 +17,33 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         expectedTopLevelFunctions: Int,
         recursive: Boolean = false,
     ) {
-        val pkgDir = findPackageDir(pythonModule)
-        val pyFiles = listPyFiles(pkgDir, recursive)
-        assertTrue(pyFiles.isNotEmpty(), "No .py files found in $pkgDir")
+        val modulePath = findModulePath(pythonModule)
+        val isPackage = modulePath.isDirectory
 
-        var root = File(pkgDir)
-        repeat(pythonModule.count { it == '.' } + 1) { root = root.parentFile }
+        var sitePackages = modulePath.parentFile
+        if (isPackage) repeat(pythonModule.count { it == '.' }) { sitePackages = sitePackages.parentFile }
 
-        val cp = createClasspath(pyFiles, root.absolutePath, pythonVersion)
-        verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedTopLevelFunctions)
+        val linkName = if (isPackage) pythonModule.substringBefore('.') else modulePath.name
+        val root = Files.createTempDirectory("pir-pkg-").toFile()
+        try {
+            Files.createSymbolicLink(
+                File(root, linkName).toPath(),
+                File(sitePackages, linkName).toPath(),
+            )
+
+            val pyFiles = if (isPackage) {
+                listPyFiles(File(root, pythonModule.replace('.', File.separatorChar)).absolutePath, recursive)
+            } else {
+                listOf(File(root, linkName).absolutePath)
+            }
+            assertTrue(pyFiles.isNotEmpty(), "No .py files found for $pythonModule in $root")
+
+            val cp = createClasspath(pyFiles, root.absolutePath, pythonVersion)
+            verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedTopLevelFunctions)
+        } finally {
+            File(root, linkName).delete()
+            root.delete()
+        }
     }
 
     protected fun analyzeDir(
@@ -268,17 +287,17 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         name.contains('$') || name.contains('<') || name.contains('>')
 
     companion object {
-        fun findPackageDir(pythonModule: String): String {
+        fun findModulePath(pythonModule: String): File {
             val proc = ProcessBuilder(
                 System.getenv("PIR_SERVER_PYTHON") ?: error("PIR_SERVER_PYTHON is not set"), "-c",
-                "import $pythonModule, os; print(os.path.dirname($pythonModule.__file__))"
+                "import $pythonModule as m; p = getattr(m, '__path__', None); print(list(p)[0] if p else m.__file__)"
             ).redirectErrorStream(true).start()
             val output = proc.inputStream.bufferedReader().readText().trim()
             proc.waitFor()
             if (proc.exitValue() != 0) {
-                throw IllegalStateException("Cannot locate package $pythonModule: $output")
+                throw IllegalStateException("Cannot locate module $pythonModule: $output")
             }
-            return output
+            return File(output)
         }
 
         fun listPyFiles(dir: String, recursive: Boolean = false): List<String> {
