@@ -5,6 +5,7 @@ import mu.KLogging
 import org.opentaint.dataflow.jvm.ap.ifds.JIRSummariesFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaExpressionToAnonymousClassTransformerFeature
+import org.opentaint.dataflow.jvm.ap.ifds.reflection.JIRReflectionProxyFeature
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRDatabase
 import org.opentaint.ir.api.jvm.JIRSettings
@@ -123,6 +124,7 @@ private fun AnalysisContextBuilder.createAnalysisContextWithCp(
     val lambdaTransformer = LambdaExpressionToAnonymousClassTransformerFeature(lambdaAnonymousClass)
 
     val springComponentsResolver = SpringComponentsResolveTransformer()
+    val reflectionProxies = JIRReflectionProxyFeature()
 
     //        val methodNormalizer = MethodReturnInstNormalizerFeature
     val features = mutableListOf(
@@ -132,6 +134,7 @@ private fun AnalysisContextBuilder.createAnalysisContextWithCp(
         classPathExtensionFeature,
         JavaPropertiesResolveTransformer(projectClasses),
         springComponentsResolver,
+        reflectionProxies,
     )
 
     //        note: reactor operators special handling has no reasons for now

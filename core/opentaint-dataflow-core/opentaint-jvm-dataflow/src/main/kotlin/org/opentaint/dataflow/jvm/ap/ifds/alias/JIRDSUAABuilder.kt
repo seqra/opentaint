@@ -192,7 +192,7 @@ private fun InstEvalContext.evalCall(
 ): Stmt? {
     val lhs = (lValue as? JIRLocalVar)?.let { createLocal(it.index) }
 
-    if (expr.method.method.isPrimitiveBoxAllocMethod()) {
+    if (expr.method.method.isAllocatingLibraryMethod()) {
         if (lhs == null) return null
         return Stmt.Assign(lhs, Expr.Alloc(loc), loc.location.index)
     }
@@ -275,3 +275,20 @@ private val stdPrimitiveBoxes = setOf(
 
 private fun JIRMethod.isPrimitiveBoxAllocMethod(): Boolean =
     name == stdPrimitiveBoxMethodName && enclosingClass.name in stdPrimitiveBoxes
+
+private const val stdReflectionLookupClass = "java.lang.Class"
+
+private val stdReflectionLookupMethods = setOf(
+    "getMethod",
+    "getDeclaredMethod",
+    "getField",
+    "getDeclaredField",
+    "getConstructor",
+    "getDeclaredConstructor",
+)
+
+private fun JIRMethod.isReflectionLookupMethod(): Boolean =
+    enclosingClass.name == stdReflectionLookupClass && name in stdReflectionLookupMethods
+
+private fun JIRMethod.isAllocatingLibraryMethod(): Boolean =
+    isPrimitiveBoxAllocMethod() || isReflectionLookupMethod()

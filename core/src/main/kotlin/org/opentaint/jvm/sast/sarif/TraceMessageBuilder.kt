@@ -16,6 +16,7 @@ import org.opentaint.dataflow.configuration.jvm.RemoveAllMarks
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaClass
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaMethod
+import org.opentaint.dataflow.jvm.ap.ifds.reflection.JIRReflectionProxyMethod
 import org.opentaint.dataflow.jvm.util.isVararg
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -1120,6 +1121,7 @@ class TraceMessageBuilder(
             if (locationMethod is SpringGeneratedMethod) return true
             if (locationMethod is JIRLambdaMethod) return true
             if (locationMethod is JIREnrichedVirtualMethod) return true
+            if (locationMethod is JIRReflectionProxyMethod) return true
             return false
         }
 

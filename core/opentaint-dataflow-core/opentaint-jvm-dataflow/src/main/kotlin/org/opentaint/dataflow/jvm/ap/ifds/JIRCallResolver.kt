@@ -12,6 +12,8 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAllocInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaClass
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.reflection.JIRReflectionProxyFeature
+import org.opentaint.dataflow.jvm.ap.ifds.reflection.JIRReflectionTargetResolver
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.jvm.util.JIRHierarchyInfo
 import org.opentaint.dataflow.util.cartesianProductMapTo
@@ -50,6 +52,11 @@ class JIRCallResolver(
     }
 
     private val methodOverridesCache = ConcurrentHashMap<JIRMethod, List<JIRMethod>>()
+
+    private val reflectionTargetResolver = JIRReflectionTargetResolver()
+
+    private val reflectionProxies: JIRReflectionProxyFeature? =
+        cp.features?.filterIsInstance<JIRReflectionProxyFeature>()?.firstOrNull()
 
     private fun methodOverrides(method: JIRMethod, baseClass: JIRClassOrInterface): List<JIRMethod> {
         if (method.isFinal || method.isConstructor || method.isStatic || method.isClassInitializer) {
@@ -93,6 +100,28 @@ class JIRCallResolver(
 
         if (methodIgnored && alwaysIgnoreMethod(method)) {
             return listOf(MethodResolutionResult.MethodResolutionFailed)
+        }
+
+        val reflection = reflectionTargetResolver.resolveReflectiveTargets(call, location, context)
+        val reflectionProxy = when (reflection) {
+            is JIRReflectionTargetResolver.Resolution.NotReflective -> null
+
+            is JIRReflectionTargetResolver.Resolution.Failed ->
+                return listOf(MethodResolutionResult.MethodResolutionFailed)
+
+            is JIRReflectionTargetResolver.Resolution.MethodTargets ->
+                reflectionProxies?.methodProxy(cp, method, reflection.methods)
+                    ?: return listOf(MethodResolutionResult.MethodResolutionFailed)
+
+            is JIRReflectionTargetResolver.Resolution.FieldTargets ->
+                reflectionProxies?.fieldProxy(cp, method, reflection.fields, reflection.write)
+                    ?: return listOf(MethodResolutionResult.MethodResolutionFailed)
+        }
+
+        if (reflectionProxy != null) {
+            val proxyCtxBuilder = MethodContextCreator(context, call, location, instanceTypeConstraints = null)
+            return proxyCtxBuilder.attachContext(reflectionProxy)
+                .map { MethodResolutionResult.ConcreteMethod(it) }
         }
 
         if (call is JIRLambdaExpr) {

@@ -218,9 +218,6 @@ class JavaDataFlowBenchFalseNegativeTest : DataFlowBenchFalseNegativeTest() {
     // region reflective invocation -- the callee is named by a run-time string.
 
     @Test
-    // todo: Method#invoke on a callee named by a run-time string is not resolved to its body. The
-    //  control calls the very same method directly and reaches the sink.
-    @Disabled
     fun `reflective invocation - a string-resolved callee reaches the sink`() {
         val testCls = "$SAMPLE_PACKAGE.DataFlowBenchReflectiveInvocationSample"
 
@@ -308,9 +305,6 @@ class KotlinDataFlowBenchFalseNegativeTest : DataFlowBenchFalseNegativeTest() {
     }
 
     @Test
-    // todo: the Kotlin mirror of the Java reflection miss. Reference-typed in both languages, so
-    //  the value kind is not involved here at all.
-    @Disabled
     fun `reflective invocation - a string-resolved callee reaches the sink`() {
         val testCls = "$SAMPLE_PACKAGE.KotlinDataFlowBenchReflectiveInvocationSample"
 
