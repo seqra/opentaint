@@ -18,6 +18,11 @@ interface TaintAnalysisManager : AnalysisManager {
 
     fun selectPhase(phase: Phase)
 
+    fun overApproximateMethodContext(
+        method: MethodWithContext,
+        contextIndependentFact: Boolean,
+    ): MethodWithContext = method
+
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
         graph: ApplicationGraph<CommonMethod, CommonInst>,
