@@ -1,0 +1,127 @@
+{
+  "schemaVersion": 1,
+  "scopes": [
+    "analyzer",
+    "autobuilder",
+    "ci",
+    "cli",
+    "core",
+    "docs",
+    "github",
+    "gitlab",
+    "infra",
+    "model",
+    "rules"
+  ],
+  "compatibility": {
+    "forbiddenPairs": [
+      ["cli", "analyzer"],
+      ["cli", "autobuilder"],
+      ["cli", "core"],
+      ["cli", "model"],
+      ["cli", "rules"]
+    ],
+    "exclusiveGroups": [
+      ["github", "gitlab", "infra"]
+    ],
+    "companions": {
+      "github": ["docs", "ci"],
+      "gitlab": ["docs", "ci"],
+      "infra": ["docs", "ci"]
+    }
+  },
+  "ownership": {
+    "ignoredRoots": [
+      "formal"
+    ],
+    "overrides": [
+      {
+        "scope": "ci",
+        "globs": [
+          "release-notes-transform.cjs",
+          "**/.releaserc.cjs"
+        ]
+      }
+    ],
+    "roots": {
+      "rules": {
+        "defaultScope": "rules"
+      },
+      "model": {
+        "defaultScope": "model"
+      },
+      "github": {
+        "defaultScope": "github"
+      },
+      "gitlab": {
+        "defaultScope": "gitlab"
+      },
+      "infra": {
+        "defaultScope": "infra"
+      },
+      "cli": {
+        "defaultScope": "cli"
+      },
+      "core": {
+        "defaultScope": "core",
+        "rules": [
+          {
+            "scope": "autobuilder",
+            "globs": [
+              "opentaint-jvm-autobuilder/**",
+              "opentaint-project-model/**",
+              "opentaint-utils/cli-util/**"
+            ]
+          },
+          {
+            "scope": "analyzer",
+            "globs": [
+              "opentaint-ir/**/src/test/**",
+              "src/**",
+              "samples/**",
+              "opentaint-jvm-sast-dataflow/**",
+              "opentaint-jvm-sast-project/**",
+              "opentaint-jvm-sast-se-api/**",
+              "opentaint-go-querylang/**",
+              "opentaint-java-querylang/**",
+              "opentaint-config/**",
+              "opentaint-configuration-rules/**",
+              "opentaint-utils/common-util/**",
+              "opentaint-utils/opentaint-jvm-util/**"
+            ]
+          }
+        ]
+      },
+      ".github": {
+        "defaultScope": "ci"
+      }
+    },
+    "documentation": {
+      "scope": "docs",
+      "rootDirectories": [
+        "public",
+        "docs",
+        "skills",
+        "skills-templates",
+        "scripts",
+        "logos",
+        ".claude-plugin",
+        ".codex-plugin"
+      ],
+      "basenames": [
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE",
+        "LICENSE.md"
+      ],
+      "extensions": [
+        ".svg",
+        ".png"
+      ],
+      "rootFiles": [
+        ".gitignore",
+        "Makefile"
+      ]
+    }
+  }
+}

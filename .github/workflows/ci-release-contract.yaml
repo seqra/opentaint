@@ -1,0 +1,37 @@
+name: CI Scope Contract
+
+on:
+  workflow_dispatch:
+
+  push:
+    branches: [ "main" ]
+    paths:
+      - '.github/scope-contract.json'
+      - '.github/scripts/scope-contract*'
+      - '.github/workflows/ci-release-contract.yaml'
+      - '.github/workflows/pr-title.yaml'
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - '.github/scope-contract.json'
+      - '.github/scripts/scope-contract*'
+      - '.github/workflows/ci-release-contract.yaml'
+      - '.github/workflows/pr-title.yaml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Test scope validation
+        run: node --test .github/scripts/scope-contract.test.cjs
+
+      - name: Check the shell adapter
+        run: bash -n .github/scripts/scope-contract.sh
