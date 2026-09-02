@@ -10,31 +10,29 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoAccessor
 import org.opentaint.dataflow.ap.ifds.TypeInfoGroupAccessor
 import org.opentaint.dataflow.ap.ifds.ValueAccessor
-import org.opentaint.dataflow.util.ConcurrentReadSafeObject2IntMap
-import org.opentaint.dataflow.util.getOrCreateIndex
-import org.opentaint.dataflow.util.object2IntMap
+import java.util.concurrent.ConcurrentHashMap
 
 typealias AccessorIdx = Int
 
 class AccessorInterner {
     private class AccessorStorage {
-        private val indices = object2IntMap<Accessor>()
-        private val accessors = ArrayList<Accessor>()
+        private val indices = ConcurrentHashMap<Accessor, Int>()
+        private val accessors = ConcurrentHashMap<Int, Accessor>()
+        private var nextIndex = 0
 
         fun index(accessor: Accessor): Int {
-            val currentIndex = indices.getInt(accessor)
-            if (currentIndex != ConcurrentReadSafeObject2IntMap.NO_VALUE) return currentIndex
+            indices[accessor]?.let { return it }
 
             synchronized(this) {
-                return indices.getOrCreateIndex(accessor) { newIdx ->
-                    check(newIdx == accessors.size)
-                    accessors.add(accessor)
-                    return newIdx
-                }
+                indices[accessor]?.let { return it }
+                val newIndex = nextIndex++
+                accessors[newIndex] = accessor
+                indices[accessor] = newIndex
+                return newIndex
             }
         }
 
-        fun getOrNull(idx: Int): Accessor? = accessors.getOrNull(idx)
+        fun getOrNull(idx: Int): Accessor? = accessors[idx]
     }
 
     private val fields = AccessorStorage()
