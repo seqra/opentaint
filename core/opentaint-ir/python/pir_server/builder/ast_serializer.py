@@ -78,6 +78,14 @@ from pir_server.proto import pir_pb2
 from pir_server.builder.type_mapper import TypeMapper
 
 
+def _elif_continuation(stmt):
+    else_body = stmt.else_body
+    if else_body is None or len(else_body.body) != 1:
+        return None
+    following = else_body.body[0]
+    return following if isinstance(following, IfStmt) else None
+
+
 class AstSerializer:
     def __init__(self, tree: MypyFile, types: dict, module_name: str):
         self.tree = tree
@@ -156,6 +164,8 @@ class AstSerializer:
                 )
             ]
         elif isinstance(defn, OverloadedFuncDef):
+            if defn.impl is not None:
+                return self._serialize_definitions(defn.impl, enclosing_class)
             results = []
             for item in defn.items:
                 results.extend(self._serialize_definitions(item, enclosing_class))
@@ -385,12 +395,18 @@ class AstSerializer:
             proto.return_stmt.CopyFrom(ret)
         elif isinstance(stmt, IfStmt):
             if_proto = pir_pb2.MypyIfStmtProto()
-            for cond in stmt.expr:
-                if_proto.conditions.append(self._serialize_expr(cond))
-            for body in stmt.body:
-                if_proto.bodies.append(self._serialize_block(body))
-            if stmt.else_body:
-                if_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
+            current = stmt
+            while True:
+                for cond in current.expr:
+                    if_proto.conditions.append(self._serialize_expr(cond))
+                for body in current.body:
+                    if_proto.bodies.append(self._serialize_block(body))
+                following = _elif_continuation(current)
+                if following is None:
+                    break
+                current = following
+            if current.else_body:
+                if_proto.else_body.CopyFrom(self._serialize_block(current.else_body))
             proto.if_stmt.CopyFrom(if_proto)
         elif isinstance(stmt, WhileStmt):
             while_proto = pir_pb2.MypyWhileStmtProto(

@@ -6,6 +6,7 @@ import os
 import sys
 import time
 import mypy.build
+import mypy.defaults
 import mypy.main
 import mypy.options
 from mypy.errors import CompileError
@@ -22,6 +23,32 @@ class InvalidMypyFlags(ValueError):
 
 class InvalidPackageRoot(ValueError):
     pass
+
+
+class InvalidPythonVersion(ValueError):
+    pass
+
+
+def parse_python_version(value):
+    parts = value.split(".")
+    if len(parts) < 2 or not all(p.isdigit() for p in parts[:2]):
+        raise InvalidPythonVersion(
+            f"Malformed python_version {value!r}; expected 'MAJOR.MINOR'"
+        )
+    version = (int(parts[0]), int(parts[1]))
+    minimum = mypy.defaults.PYTHON3_VERSION_MIN
+    if version < minimum:
+        raise InvalidPythonVersion(
+            f"python_version {value} is below mypy's minimum supported target "
+            f"{minimum[0]}.{minimum[1]}"
+        )
+    host = sys.version_info[:2]
+    if version > host:
+        raise InvalidPythonVersion(
+            f"python_version {value} exceeds the PIR server interpreter "
+            f"{host[0]}.{host[1]}; mypy parses with the host ast"
+        )
+    return version
 
 
 class ProjectBuilder:
@@ -55,9 +82,7 @@ class ProjectBuilder:
             options = mypy.options.Options()
 
         if self.python_version:
-            parts = self.python_version.split(".")
-            if len(parts) >= 2:
-                options.python_version = (int(parts[0]), int(parts[1]))
+            options.python_version = parse_python_version(self.python_version)
         options.explicit_package_bases = True
         options.mypy_path = list(self.package_roots)
 
@@ -75,6 +100,12 @@ class ProjectBuilder:
             yield pir_pb2.MypyModuleProto(
                 name="__build_errors__",
                 errors=[f"Invalid mypy flags {self.mypy_flags}: {e}"],
+            )
+            return
+        except InvalidPythonVersion as e:
+            yield pir_pb2.MypyModuleProto(
+                name="__build_errors__",
+                errors=[str(e)],
             )
             return
 

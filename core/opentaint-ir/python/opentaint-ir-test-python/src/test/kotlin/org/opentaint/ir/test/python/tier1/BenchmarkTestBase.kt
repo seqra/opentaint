@@ -10,9 +10,10 @@ abstract class BenchmarkTestBase : PIRTestBase() {
 
     protected fun analyzePkg(
         pythonModule: String,
+        pythonVersion: String,
         expectedModules: Int,
         expectedClasses: Int,
-        expectedFunctions: Int,
+        expectedTopLevelFunctions: Int,
         recursive: Boolean = false,
     ) {
         val pkgDir = findPackageDir(pythonModule)
@@ -22,23 +23,33 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         var root = File(pkgDir)
         repeat(pythonModule.count { it == '.' } + 1) { root = root.parentFile }
 
-        val cp = createClasspath(pyFiles, root.absolutePath)
-        verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions)
+        val cp = createClasspath(pyFiles, root.absolutePath, pythonVersion)
+        verifyClasspath(pythonModule, pyFiles.size, cp, expectedModules, expectedClasses, expectedTopLevelFunctions)
     }
 
     protected fun analyzeDir(
         projectName: String,
         sourceDir: String,
         projectRoot: String,
+        pythonVersion: String,
         expectedModules: Int,
         expectedClasses: Int,
-        expectedFunctions: Int,
-        expectedUnknownModules: Set<String> = emptySet(),
+        expectedTopLevelFunctions: Int,
     ) {
         val dir = File(sourceDir)
         assertTrue(dir.isDirectory, "Source directory not found: $sourceDir")
 
-        val pyFiles = dir.walk()
+        val pyFiles = listSources(dir)
+
+        assertTrue(pyFiles.isNotEmpty(), "No .py files found in $sourceDir")
+
+        val cp = createClasspath(pyFiles, projectRoot, pythonVersion)
+
+        verifyClasspath(projectName, pyFiles.size, cp, expectedModules, expectedClasses, expectedTopLevelFunctions)
+    }
+
+    private fun listSources(dir: File): List<String> =
+        dir.walk()
             .filter { it.isFile && it.extension == "py" }
             .filter { f ->
                 val rel = f.relativeTo(dir).path
@@ -52,24 +63,15 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             .sortedByDescending { if (it.name == "__init__.py") Long.MAX_VALUE else it.length() }
             .map { it.absolutePath }
 
-        assertTrue(pyFiles.isNotEmpty(), "No .py files found in $sourceDir")
-
-        val cp = try {
-            createClasspath(pyFiles, projectRoot)
-        } catch (e: Exception) {
-            System.err.println("WARNING: $projectName build failed: ${e.message}")
-            org.junit.jupiter.api.Assumptions.assumeTrue(false,
-                "$projectName: mypy build failed (${e.javaClass.simpleName}: ${e.message})")
-            return
-        }
-
-        verifyClasspath(projectName, pyFiles.size, cp, expectedModules, expectedClasses, expectedFunctions, expectedUnknownModules)
-    }
-
-    private fun createClasspath(pyFiles: List<String>, projectRoot: String): PIRClasspath {
+    private fun createClasspath(
+        pyFiles: List<String>,
+        projectRoot: String,
+        pythonVersion: String,
+    ): PIRClasspath {
         return PIRClasspathLoader(PIRSettings(
             sources = pyFiles,
             packageRoots = listOf(projectRoot),
+            pythonVersion = pythonVersion,
             mypyFlags = listOf("--ignore-missing-imports"),
             rpcTimeout = java.time.Duration.ofSeconds(1200),
         )).load()
@@ -81,8 +83,7 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         cp: PIRClasspath,
         expectedModules: Int,
         expectedClasses: Int,
-        expectedFunctions: Int,
-        expectedUnknownModules: Set<String> = emptySet(),
+        expectedTopLevelFunctions: Int,
     ) {
         cp.use {
             val unknownModules = it.modules.filter { m -> m.isUnknown }
@@ -92,8 +93,10 @@ abstract class BenchmarkTestBase : PIRTestBase() {
 
             println("╔══════════════════════════════════════════════════════════════")
             println("║ $name ($fileCount files)")
+            println("║ Python ${cp.pythonVersion}, mypy ${cp.mypyVersion}")
             println("║ Modules: ${stats.modules} (+ ${unknownModules.size} unknown)")
-            println("║ Classes: ${stats.classes}, Functions: ${stats.functions}")
+            println("║ Classes: ${stats.classes} (+ ${stats.syntheticClasses} synthetic)")
+            println("║ Top-level functions: ${stats.topLevelFunctions}, all functions: ${stats.functions}")
             println("║ Blocks: ${stats.blocks}, Instructions: ${stats.instructions}")
             println("║ Instruction kinds: ${stats.instructionKinds.size} types")
             println("║ Dangling edges: ${stats.danglingEdges}, Unreachable: ${stats.unreachableBlocks}")
@@ -107,14 +110,11 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             }
             println("╚══════════════════════════════════════════════════════════════")
 
-            val unknownNames = unknownModules.map { m -> m.name }.toSet()
-            val unexpectedUnknowns = unknownNames - expectedUnknownModules
-            assertTrue(unexpectedUnknowns.isEmpty(),
-                "$name: unexpected unknown modules: $unexpectedUnknowns\n" +
-                    unknownModules.filter { m -> m.name in unexpectedUnknowns }
-                        .joinToString("\n") { m ->
-                            "  ${m.name}: ${m.diagnostics.joinToString("; ") { d -> d.message }}"
-                        })
+            assertTrue(unknownModules.isEmpty(),
+                "$name: ${unknownModules.size} modules failed to build:\n" +
+                    unknownModules.joinToString("\n") { m ->
+                        "  ${m.name}: ${m.diagnostics.joinToString("; ") { d -> d.message }}"
+                    })
 
             if (stats.errorDiagnosticMessages.isNotEmpty()) {
                 println("║ ERRORS:")
@@ -132,24 +132,22 @@ abstract class BenchmarkTestBase : PIRTestBase() {
                 "$name: ${stats.zeroInstructionFunctions} functions with 0 instructions:\n  " +
                     stats.zeroInstructionFunctionNames.take(20).joinToString("\n  "))
 
-            val wholeBuildFailed = knownModules.isEmpty()
-            if (!wholeBuildFailed) {
-                assertEquals(expectedModules, stats.modules,
-                    "$name: module count mismatch")
-                assertEquals(expectedClasses, stats.classes,
-                    "$name: class count mismatch")
-                assertEquals(expectedFunctions, stats.functions,
-                    "$name: function count mismatch")
-            }
+            assertEquals(fileCount, stats.modules + unknownModules.size,
+                "$name: ${fileCount - stats.modules - unknownModules.size} source files silently dropped")
+
+            assertEquals(expectedModules, stats.modules,
+                "$name: module count mismatch")
+            assertEquals(expectedClasses, stats.classes,
+                "$name: class count mismatch")
+            assertEquals(expectedTopLevelFunctions, stats.topLevelFunctions,
+                "$name: top-level function count mismatch")
 
             assertEquals(0, stats.danglingEdges,
                 "$name: found ${stats.danglingEdges} dangling edges in CFGs")
 
-            if (!wholeBuildFailed) {
-                assertTrue(stats.instructionKinds.size >= 3,
-                    "$name: instruction diversity too low — only ${stats.instructionKinds.size} types: " +
-                        stats.instructionKinds)
-            }
+            assertTrue(stats.instructionKinds.size >= 3,
+                "$name: instruction diversity too low — only ${stats.instructionKinds.size} types: " +
+                    stats.instructionKinds)
 
             if (stats.blocks > 0) {
                 val pct = stats.unreachableBlocks.toDouble() / stats.blocks
@@ -161,7 +159,8 @@ abstract class BenchmarkTestBase : PIRTestBase() {
     }
 
     data class Stats(
-        val modules: Int, val classes: Int, val functions: Int,
+        val modules: Int, val classes: Int, val syntheticClasses: Int,
+        val topLevelFunctions: Int, val functions: Int,
         val blocks: Int, val instructions: Int,
         val instructionKinds: Set<String>,
         val danglingEdges: Int,
@@ -176,7 +175,8 @@ abstract class BenchmarkTestBase : PIRTestBase() {
     )
 
     private fun collectStats(modules: List<PIRModule>): Stats {
-        var moduleCount = 0; var classes = 0; var functions = 0
+        var moduleCount = 0; var classes = 0; var syntheticClasses = 0
+        var topLevelFunctions = 0; var functions = 0
         var blocks = 0; var instructions = 0
         val instructionKinds = mutableSetOf<String>()
         var danglingEdges = 0; var unreachableBlocks = 0; var blocksWithHandlers = 0
@@ -185,7 +185,10 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         val errorMessages = mutableListOf<String>()
 
         for (module in modules) {
-            moduleCount++; classes += module.classes.size
+            moduleCount++
+            classes += module.classes.count { c -> !isSynthetic(c.name) }
+            syntheticClasses += module.classes.count { c -> isSynthetic(c.name) }
+            topLevelFunctions += module.functions.count { f -> !isSynthetic(f.name) }
             for (d in module.diagnostics) {
                 if (d.severity == PIRDiagnosticSeverity.ERROR) {
                     errorMessages.add("${d.functionName}: ${d.message}")
@@ -241,7 +244,8 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             }
         }
         return Stats(
-            moduleCount, classes, functions, blocks, instructions,
+            moduleCount, classes, syntheticClasses, topLevelFunctions, functions,
+            blocks, instructions,
             instructionKinds, danglingEdges, unreachableBlocks, blocksWithHandlers,
             errorMessages.size, errorMessages,
             emptyFunctionNames.size, emptyFunctionNames,
@@ -252,8 +256,16 @@ abstract class BenchmarkTestBase : PIRTestBase() {
     private fun allFunctions(module: PIRModule): Sequence<PIRFunction> = sequence {
         yield(module.moduleInit)
         yieldAll(module.functions)
-        for (cls in module.classes) { yieldAll(cls.methods) }
+        for (cls in module.classes) yieldAll(classFunctions(cls))
     }
+
+    private fun classFunctions(cls: PIRClass): Sequence<PIRFunction> = sequence {
+        yieldAll(cls.methods)
+        for (nested in cls.nestedClasses) yieldAll(classFunctions(nested))
+    }
+
+    private fun isSynthetic(name: String): Boolean =
+        name.contains('$') || name.contains('<') || name.contains('>')
 
     companion object {
         fun findPackageDir(pythonModule: String): String {

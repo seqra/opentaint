@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "grpcio-tools>=1.83.1"]
+requires = ["setuptools>=68.0", "grpcio-tools==1.83.1"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,14 +8,14 @@ version = "0.1.0"
 description = "PIR gRPC Server — Python-side mypy analysis and AST serialization"
 requires-python = ">=3.10"
 dependencies = [
-    "grpcio>=1.83.1",
-    "protobuf>=6.31.1",
-    "mypy>=1.19.0",
+    "grpcio==1.83.1",
+    "protobuf==7.36.1",
+    "mypy==2.3.1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "grpcio-tools>=1.83.1",
+    "grpcio-tools==1.83.1",
 ]
 benchmarks = [
     "click==8.3.1",
