@@ -1,4 +1,4 @@
-name: CI Scope Contract
+name: CI Release Contract
 
 on:
   workflow_dispatch:
@@ -6,17 +6,25 @@ on:
   push:
     branches: [ "main" ]
     paths:
+      - '.github/actions/check-scoped-commits/**'
       - '.github/scope-contract.json'
       - '.github/scripts/scope-contract*'
+      - '.github/scripts/release-scope*'
       - '.github/workflows/ci-release-contract.yaml'
       - '.github/workflows/pr-title.yaml'
+      - 'release-notes-transform.cjs'
+      - '*/.releaserc.cjs'
   pull_request:
     branches: [ "main" ]
     paths:
+      - '.github/actions/check-scoped-commits/**'
       - '.github/scope-contract.json'
       - '.github/scripts/scope-contract*'
+      - '.github/scripts/release-scope*'
       - '.github/workflows/ci-release-contract.yaml'
       - '.github/workflows/pr-title.yaml'
+      - 'release-notes-transform.cjs'
+      - '*/.releaserc.cjs'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -35,3 +43,15 @@ jobs:
 
       - name: Check the shell adapter
         run: bash -n .github/scripts/scope-contract.sh
+
+      - name: Test release matching
+        run: node --test .github/scripts/release-scope.test.cjs
+
+      - name: Install Semantic Release test dependencies
+        run: |
+          npm install --no-save --no-package-lock \
+            @semantic-release/commit-analyzer@11.1.0 \
+            conventional-changelog-conventionalcommits@7.0.2
+
+      - name: Test Semantic Release integration
+        run: node --test .github/scripts/release-scope-semantic.test.mjs

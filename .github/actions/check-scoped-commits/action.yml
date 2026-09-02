@@ -35,9 +35,6 @@ runs:
         TAG_PREFIX="${{ inputs.tag-prefix }}"
         SCOPES="${{ inputs.scopes }}"
 
-        SCOPE_PATTERN=$(echo "$SCOPES" | tr ',' '|')
-        REGEX="^\w+\((${SCOPE_PATTERN})\)"
-
         LAST_TAG=$(git tag -l "${TAG_PREFIX}*" --sort=-creatordate | head -1)
 
         if [ -z "$LAST_TAG" ]; then
@@ -48,7 +45,9 @@ runs:
           COMMITS=$(git log --oneline --format='%s' "${LAST_TAG}..HEAD")
         fi
 
-        RELEVANT=$(echo "$COMMITS" | grep -E "$REGEX" || true)
+        RELEVANT=$(printf '%s\n' "$COMMITS" |
+          node "$GITHUB_WORKSPACE/.github/scripts/scope-contract.cjs" \
+            filter-commits "$SCOPES")
 
         if [ -z "$RELEVANT" ]; then
           echo "has-changes=false" >> "$GITHUB_OUTPUT"
