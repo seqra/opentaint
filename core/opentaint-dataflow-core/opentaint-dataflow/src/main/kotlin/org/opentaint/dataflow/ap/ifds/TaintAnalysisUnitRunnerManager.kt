@@ -129,6 +129,7 @@ class TaintAnalysisUnitRunnerManager(
 
     fun resetApManager(manager: ApManager) {
         this.activeApManager = manager
+        status.set(Status.OK)
         runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
         unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
 
