@@ -16,7 +16,9 @@ const EXPECTED_SCOPES = [
   'docs',
   'github',
   'gitlab',
+  'go-server',
   'infra',
+  'ir',
   'model',
   'rules',
 ];
@@ -28,37 +30,52 @@ test('the contract has one ordered scope declaration', () => {
 
 test('scope validation is independent of scope order', () => {
   assert.deepEqual(
-    engine.validateScopeList('rules,model,analyzer'),
+    engine.validateScopeList('rules, model, analyzer'),
     ['rules', 'model', 'analyzer'],
   );
   assert.deepEqual(
-    engine.validateScopeList('analyzer,model,rules'),
+    engine.validateScopeList('analyzer, model, rules'),
     ['analyzer', 'model', 'rules'],
   );
 });
 
 test('scope validation rejects duplicates and unknown scopes', () => {
   assert.throws(() => engine.validateScopeList(''));
-  assert.throws(() => engine.validateScopeList('model,model'));
+  assert.throws(() => engine.validateScopeList('model, model'));
   assert.throws(() => engine.validateScopeList('formal'));
-  assert.throws(() => engine.validateScopeList('model,unknown'));
+  assert.throws(() => engine.validateScopeList('model, unknown'));
   assert.throws(() => engine.validateScopeList('model,,rules'));
 });
 
+test('multi-scope validation requires one space after each comma', () => {
+  assert.doesNotThrow(() => engine.validateScopeList('core, model'));
+  assert.throws(() => engine.validateScopeList('core,model'));
+  assert.throws(() => engine.validateScopeList('core,  model'));
+  assert.throws(() => engine.validateScopeList('core , model'));
+});
+
 test('cli cannot occur with release component scopes', () => {
-  for (const forbidden of ['analyzer', 'autobuilder', 'core', 'model', 'rules']) {
-    assert.throws(() => engine.validateScopeList(`cli,${forbidden}`));
+  for (const forbidden of [
+    'analyzer',
+    'autobuilder',
+    'core',
+    'go-server',
+    'ir',
+    'model',
+    'rules',
+  ]) {
+    assert.throws(() => engine.validateScopeList(`cli, ${forbidden}`));
   }
-  assert.doesNotThrow(() => engine.validateScopeList('cli,docs'));
-  assert.doesNotThrow(() => engine.validateScopeList('cli,ci'));
+  assert.doesNotThrow(() => engine.validateScopeList('cli, docs'));
+  assert.doesNotThrow(() => engine.validateScopeList('cli, ci'));
 });
 
 test('repository integration scopes are mutually exclusive', () => {
   for (const pair of [
-    'github,gitlab',
-    'github,infra',
-    'gitlab,infra',
-    'github,gitlab,docs,ci',
+    'github, gitlab',
+    'github, infra',
+    'gitlab, infra',
+    'github, gitlab, docs, ci',
   ]) {
     assert.throws(() => engine.validateScopeList(pair));
   }
@@ -67,10 +84,10 @@ test('repository integration scopes are mutually exclusive', () => {
 test('repository integration scopes permit docs and ci companions', () => {
   for (const scope of ['github', 'gitlab', 'infra']) {
     assert.doesNotThrow(() => engine.validateScopeList(scope));
-    assert.doesNotThrow(() => engine.validateScopeList(`${scope},docs`));
-    assert.doesNotThrow(() => engine.validateScopeList(`ci,${scope}`));
-    assert.doesNotThrow(() => engine.validateScopeList(`${scope},docs,ci`));
-    assert.throws(() => engine.validateScopeList(`${scope},model`));
+    assert.doesNotThrow(() => engine.validateScopeList(`${scope}, docs`));
+    assert.doesNotThrow(() => engine.validateScopeList(`ci, ${scope}`));
+    assert.doesNotThrow(() => engine.validateScopeList(`${scope}, docs, ci`));
+    assert.throws(() => engine.validateScopeList(`${scope}, model`));
   }
 });
 
@@ -79,6 +96,8 @@ test('all scope subsets agree with the formal compatibility policy', () => {
     'analyzer',
     'autobuilder',
     'core',
+    'go-server',
+    'ir',
     'model',
     'rules',
   ]);
@@ -104,7 +123,7 @@ test('all scope subsets agree with the formal compatibility policy', () => {
       (_, index) => (mask & (1 << index)) !== 0,
     );
     for (const ordered of [selected, [...selected].reverse()]) {
-      const scopeList = ordered.join(',');
+      const scopeList = ordered.join(', ');
       if (expectedValid(ordered)) {
         assert.doesNotThrow(() => engine.validateScopeList(scopeList), scopeList);
       } else {
@@ -113,7 +132,7 @@ test('all scope subsets agree with the formal compatibility policy', () => {
       checked += 1;
     }
   }
-  assert.equal(checked, 4094);
+  assert.equal(checked, 16382);
 });
 
 test('path ownership uses the declarative root contract', () => {
@@ -123,6 +142,12 @@ test('path ownership uses the declarative root contract', () => {
     ['core/opentaint-ir/go/tests/src/test/kotlin/IrTest.kt', 'analyzer'],
     ['core/build.gradle.kts', 'core'],
     ['core/opentaint-jvm-autobuilder/src/Main.kt', 'autobuilder'],
+    ['core/opentaint-project-model/src/Project.kt', 'core'],
+    ['core/opentaint-utils/cli-util/src/Cli.kt', 'core'],
+    ['core/opentaint-ir/go/go-ir-api/src/Program.kt', 'analyzer'],
+    ['core/opentaint-ir/go/go-ssa-server/server.go', 'go-server'],
+    ['core/opentaint-ir/go/proto/goir/service.proto', 'ir'],
+    ['core/opentaint-dataflow-core/opentaint-go-dataflow/src/Dataflow.kt', 'analyzer'],
     ['rules/ruleset/go/lib/example.yaml', 'rules'],
     ['cli/README.md', 'cli'],
     ['formal/release-scopes/Main.lean', null],
@@ -187,12 +212,51 @@ test('exact path validation requires all and only used owners', () => {
     'rules/ruleset/go/lib/example.yaml',
   ];
   assert.doesNotThrow(
-    () => engine.validateScopePaths('model,analyzer,rules', paths),
+    () => engine.validateScopePaths('model, analyzer, rules', paths),
   );
   assert.throws(() => engine.validateScopePaths('model', paths));
   assert.throws(
-    () => engine.validateScopePaths('model,analyzer,rules,docs', paths),
+    () => engine.validateScopePaths('model, analyzer, rules, docs', paths),
   );
+});
+
+test('core paths follow analyzer and autobuilder release effects', () => {
+  assert.doesNotThrow(() => engine.validateScopePaths('analyzer, model', [
+    'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
+    'model/go/dataflow/example/model.go',
+  ]));
+  assert.throws(() => engine.validateScopePaths('core, model', [
+    'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
+    'model/go/dataflow/example/model.go',
+  ]));
+  assert.doesNotThrow(() => engine.validateScopePaths('core, model', [
+    'core/opentaint-project-model/src/main/kotlin/Project.kt',
+    'model/go/dataflow/example/model.go',
+  ]));
+});
+
+test('a model path always requires the model scope', () => {
+  const paths = ['model/go/dataflow/example/model.go'];
+  assert.doesNotThrow(() => engine.validateScopePaths('model', paths));
+  assert.throws(() => engine.validateScopePaths('analyzer', paths));
+  assert.throws(() => engine.validateScopePaths('core', paths));
+  assert.throws(() => engine.validateScopePaths('model, analyzer', paths));
+});
+
+test('release scope sets encode scope release effects', () => {
+  assert.deepEqual(
+    engine.scopesForRelease('analyzer'),
+    ['analyzer', 'core', 'ir', 'model'],
+  );
+  assert.deepEqual(
+    engine.scopesForRelease('autobuilder'),
+    ['autobuilder', 'core'],
+  );
+  assert.deepEqual(
+    engine.scopesForRelease('go-server'),
+    ['go-server', 'ir'],
+  );
+  assert.throws(() => engine.scopesForRelease('unknown'));
 });
 
 test('every tracked path has one owner or is explicitly ignored', () => {
@@ -216,6 +280,8 @@ test('formal paths are ignored but still require a scoped title', () => {
   const paths = ['formal/go-models/OpenTaint/GoModels/Core.lean'];
   assert.throws(() => engine.validateScopePaths('', paths));
   assert.doesNotThrow(() => engine.validateScopePaths('ci', paths));
+  assert.throws(() => engine.validateScopePaths('core', paths));
+  assert.throws(() => engine.validateScopePaths('docs', paths));
 });
 
 test('a guarded path cannot omit its scope', () => {
@@ -233,8 +299,8 @@ test('ignored formal paths can accompany guarded paths', () => {
 
 test('pull request title parsing keeps the complete scope list', () => {
   assert.equal(
-    engine.scopeListFromTitle('fix(model,analyzer,rules): Update models'),
-    'model,analyzer,rules',
+    engine.scopeListFromTitle('fix(model, analyzer, rules): Update models'),
+    'model, analyzer, rules',
   );
   assert.throws(
     () => engine.scopeListFromTitle('chore: Update formal specifications'),
@@ -244,7 +310,7 @@ test('pull request title parsing keeps the complete scope list', () => {
 
 test('release filtering uses scope intersection', () => {
   const subjects = [
-    'fix(model,analyzer,rules): Update models',
+    'fix(model, analyzer, rules): Update models',
     'feat(cli): Update the CLI',
     'fix(model): Update one model',
   ];
