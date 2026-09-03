@@ -1,7 +1,6 @@
 package org.opentaint.ir.impl.python
 
 import io.grpc.ManagedChannel
-import io.grpc.ManagedChannelBuilder
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
@@ -21,11 +20,7 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
         )
         val port = processManager.start()
 
-        val channel = ManagedChannelBuilder
-            .forAddress("localhost", port)
-            .usePlaintext()
-            .maxInboundMessageSize(256 * 1024 * 1024)
-            .build()
+        val channel = PIRChannelFactory.forPort(port)
 
         try {
             val stub = PIRServiceGrpc.newBlockingStub(channel)

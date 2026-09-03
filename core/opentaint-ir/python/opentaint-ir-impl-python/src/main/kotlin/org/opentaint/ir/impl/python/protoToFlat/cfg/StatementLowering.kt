@@ -112,12 +112,11 @@ private fun CfgSession.visitIf(stmt: MypyIfStmtProto, location: PIRPhysicalLocat
     val endBlock = newBlock()
 
     for (i in stmt.conditionsList.indices) {
-        val condition = stmt.getConditions(i)
-        val condVal = lowerExpr(condition)
+        val condVal = lowerExpr(stmt.getConditions(i))
         val trueBlock = newBlock()
         val falseBlock = if (i < stmt.conditionsCount - 1 || stmt.hasElseBody()) newBlock() else endBlock
 
-        emitBranch(condVal, trueBlock, falseBlock, condition.toPhysicalLocation() ?: location)
+        emitBranch(condVal, trueBlock, falseBlock, location)
 
         activate(trueBlock)
         visitBlock(stmt.getBodies(i))
