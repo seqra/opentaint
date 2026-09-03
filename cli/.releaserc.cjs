@@ -1,6 +1,10 @@
 'use strict';
 
 const { createTransform, TYPES } = require('../release-notes-transform.cjs');
+const {
+  RELEASE_PARSER_OPTIONS,
+  createReleaseRules,
+} = require('../.github/scripts/scope-contract.cjs');
 
 module.exports = {
   branches: [
@@ -16,20 +20,15 @@ module.exports = {
       '@semantic-release/commit-analyzer',
       {
         preset: 'conventionalcommits',
-        releaseRules: [
-          { scope: 'cli', breaking: true, release: 'major' },
-          { scope: 'cli', type: 'feat', release: 'minor' },
-          { scope: 'cli', type: 'fix', release: 'patch' },
-          { scope: 'cli', type: 'refactor', release: 'patch' },
-          { scope: 'cli', type: 'revert', release: 'patch' },
-          { scope: '!(cli)', release: false },
-        ],
+        parserOpts: RELEASE_PARSER_OPTIONS,
+        releaseRules: createReleaseRules('cli'),
       },
     ],
     [
       '@semantic-release/release-notes-generator',
       {
         preset: 'conventionalcommits',
+        parserOpts: RELEASE_PARSER_OPTIONS,
         presetConfig: { types: TYPES },
         writerOpts: {
           transform: createTransform(['cli', 'rules', 'analyzer', 'autobuilder', 'core']),
