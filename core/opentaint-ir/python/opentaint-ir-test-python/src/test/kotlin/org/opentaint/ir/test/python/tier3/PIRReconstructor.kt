@@ -144,7 +144,14 @@ class PIRReconstructor {
 
         private const val SELF_PARAM_SAFE = "__self__"
 
-        private const val MODULE_PRELUDE = """class __pir_cell__:
+        private fun sanitizeFuncName(name: String): String {
+            return name
+                .replace("<", "__")
+                .replace(">", "__")
+                .replace("\$", "_")
+        }
+
+        private val MODULE_PRELUDE = """class ${sanitizeFuncName(ClosureRuntime.CELL_CLASS_NAME)}:
     pass
 
 def _closure_class(f):
@@ -417,13 +424,6 @@ def _closure_class(f):
             .replace("\$", "__")
             .replace("<", "__")
             .replace(">", "__")
-    }
-
-    private fun sanitizeFuncName(name: String): String {
-        return name
-            .replace("<", "__")
-            .replace(">", "__")
-            .replace("\$", "_")
     }
 
     private fun binOp(expr: PIRBinaryExpr): String = when (expr) {

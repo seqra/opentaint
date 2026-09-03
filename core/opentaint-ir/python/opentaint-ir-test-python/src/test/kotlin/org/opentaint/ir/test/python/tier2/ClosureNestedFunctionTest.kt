@@ -3,6 +3,7 @@ package org.opentaint.ir.test.python.tier2
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
 import org.opentaint.ir.api.python.*
+import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
 import org.opentaint.ir.test.python.PIRTestBase
 
 @Tag("tier2")
@@ -639,10 +640,12 @@ def cnf_inv31_route(app):
 
         val envLoad = insts.filterIsInstance<PIRLoadAttr>().firstOrNull { la ->
             val obj = la.obj
-            obj is PIRParameterRef && obj.name == "<self>" && la.attribute == "_closure_env_"
+            obj is PIRParameterRef && obj.name == ClosureRuntime.SELF_PARAM_NAME &&
+                la.attribute == ClosureRuntime.ENV_ATTR_NAME
         }
         assertNotNull(envLoad,
-            "reader should have a PIRLoadAttr extracting _closure_env_ from <self>; insts=$insts")
+            "reader should have a PIRLoadAttr extracting ${ClosureRuntime.ENV_ATTR_NAME} " +
+                "from ${ClosureRuntime.SELF_PARAM_NAME}; insts=$insts")
 
         val envLocalName = (envLoad!!.target as? PIRLocalVar)?.name
         assertNotNull(envLocalName, "envLoad target should be a PIRLocalVar")
@@ -691,10 +694,11 @@ def cnf_inv31_route(app):
         }
 
         val cellCtorCalls = insts.filterIsInstance<PIRCall>().filter { call ->
-            calleeQn(call) == "builtins.__pir_cell__"
+            calleeQn(call) == "builtins.${ClosureRuntime.CELL_CLASS_NAME}"
         }
         assertTrue(cellCtorCalls.isNotEmpty(),
-            "outer should have at least one PIRCall to __pir_cell__() for owning value's cell")
+            "outer should have at least one PIRCall to ${ClosureRuntime.CELL_CLASS_NAME}() " +
+                "for owning value's cell")
 
         val adapterCtors = insts.filterIsInstance<PIRCall>().filter { call ->
             val qn = calleeQn(call) ?: return@filter false

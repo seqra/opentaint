@@ -268,7 +268,7 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenOuter = lookup(out, outerQn)
         val insts = entryInsts(rewrittenOuter)
-        val cellCtorQn = "builtins.${ClosureRuntime.CELL_CTOR_NAME}"
+        val cellCtorQn = "builtins.${ClosureRuntime.CELL_CLASS_NAME}"
         val cellCalls = insts.filterIsInstance<FlatCall>().filter {
             calleeQn(it, insts) == cellCtorQn
         }
@@ -318,14 +318,14 @@ class FlatClosureTransformerTest {
 
         val allocIdx = insts.indexOfFirst {
             it is FlatCall &&
-                calleeQn(it, insts) == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
+                calleeQn(it, insts) == "builtins.${ClosureRuntime.CELL_CLASS_NAME}" &&
                 (it.target as? FlatLocal)?.name == cellName("x")
         }
         assertTrue(allocIdx >= 0, "expected cell-alloc for x; insts=$insts")
 
         val seedStore = insts.drop(allocIdx + 1).filterIsInstance<FlatStoreAttr>().firstOrNull { s ->
             (s.obj as? FlatLocal)?.name == cellName("x") &&
-                s.attribute == ClosureRuntime.CELL_VALUE_ATTR
+                s.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
         }
         assertNotNull(seedStore, "expected FlatStoreAttr seeding ${cellName("x")}; insts=$insts")
         val seedTemp = (seedStore!!.value as FlatLocal).name
@@ -372,7 +372,7 @@ class FlatClosureTransformerTest {
             it is FlatLoadAttr &&
                 (it.target as? FlatLocal)?.name == retVal.name &&
                 (it.obj as? FlatLocal)?.name == cellName("x") &&
-                it.attribute == ClosureRuntime.CELL_VALUE_ATTR
+                it.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
         }
         assertTrue(loadIdx >= 0, "No matching FlatLoadAttr found in: $insts")
     }
@@ -414,7 +414,7 @@ class FlatClosureTransformerTest {
         assertTrue(tempName.startsWith("\$t"))
         val store = insts[binIdx + 1] as FlatStoreAttr
         assertEquals(cellName("count"), (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.CELL_VALUE_ATTR, store.attribute)
+        assertEquals(ClosureRuntime.CELL_VALUE_ATTR_NAME, store.attribute)
         assertEquals(tempName, (store.value as FlatLocal).name)
     }
 
@@ -654,7 +654,7 @@ class FlatClosureTransformerTest {
         val insts = entryInsts(lookup(out, outerQn))
         assertFalse(insts.any { it is FlatDeleteLocal }, "FlatDeleteLocal(x) should be lowered")
         val del = insts.filterIsInstance<FlatDeleteAttr>().firstOrNull {
-            (it.obj as? FlatLocal)?.name == cellName("x") && it.attribute == ClosureRuntime.CELL_VALUE_ATTR
+            (it.obj as? FlatLocal)?.name == cellName("x") && it.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
         }
         assertNotNull(del, "Expected FlatDeleteAttr on \$cell\$x")
     }
@@ -734,11 +734,11 @@ class FlatClosureTransformerTest {
         assertEquals("__call__", cls.methods[1].name)
 
         val initInsts = cls.methods[0].cfg.blocks.first().instructions
-        assertEquals(listOf("self", ClosureRuntime.CLOSURE_ATTR_NAME), cls.methods[0].parameters.map { it.name })
+        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), cls.methods[0].parameters.map { it.name })
         val store = initInsts.filterIsInstance<FlatStoreAttr>().single()
-        assertEquals(ClosureRuntime.CLOSURE_ATTR_NAME, store.attribute)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
         assertEquals("self", (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.CLOSURE_ATTR_NAME, (store.value as FlatLocal).name)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatLocal).name)
 
         val callMethod = cls.methods[1]
         assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
@@ -807,7 +807,7 @@ class FlatClosureTransformerTest {
         val insts = entryInsts(rewrittenOuter)
         assertFalse(
             insts.any {
-                it is FlatStoreAttr && it.attribute == ClosureRuntime.CLOSURE_ATTR_NAME
+                it is FlatStoreAttr && it.attribute == ClosureRuntime.ENV_ATTR_NAME
             },
             "Non-capturing child should not trigger env attach",
         )
@@ -936,7 +936,7 @@ class FlatClosureTransformerTest {
         assertTrue(
             outerInsts.any {
                 it is FlatCall &&
-                    calleeQn(it, outerInsts) == "builtins.${ClosureRuntime.CELL_CTOR_NAME}" &&
+                    calleeQn(it, outerInsts) == "builtins.${ClosureRuntime.CELL_CLASS_NAME}" &&
                     (it.target as? FlatLocal)?.name == cellName("x")
             },
             "outer should allocate \$cell\$x",

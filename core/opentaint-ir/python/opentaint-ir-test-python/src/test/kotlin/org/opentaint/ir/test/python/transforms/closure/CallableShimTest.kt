@@ -152,15 +152,15 @@ class CallableShimTest {
     }
 
     @Test
-    fun `init method stores _closure_env_ on self`() {
+    fun `init method stores the closure env attr on self`() {
         val out = simpleCapturingModule()
         val cls = adapterFor(out, "inner")
         val initMethod = cls.methods[0]
-        assertEquals(listOf("self", ClosureRuntime.CLOSURE_ATTR_NAME), initMethod.parameters.map { it.name })
+        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), initMethod.parameters.map { it.name })
         val store = initMethod.cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>().single()
         assertEquals("self", (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.CLOSURE_ATTR_NAME, store.attribute)
-        assertEquals(ClosureRuntime.CLOSURE_ATTR_NAME, (store.value as FlatLocal).name)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatLocal).name)
     }
 
     @Test
@@ -479,7 +479,7 @@ class CallableShimTest {
         val ctorIdx = insts.indexOf(ctorB)
         val store = insts[ctorIdx + 1] as FlatStoreAttr
         assertEquals("\$cell\$b", (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.CELL_VALUE_ATTR, store.attribute)
+        assertEquals(ClosureRuntime.CELL_VALUE_ATTR_NAME, store.attribute)
         assertEquals(tmpName, (store.value as FlatLocal).name)
     }
 

@@ -42,22 +42,22 @@ internal class RewriteCtx(
     private val ownedCells: Set<String> = ci.cellVars
     private val receivedCells: Set<String> = ci.closureVars
     private val cellLocals: Map<String, FlatLocal> = buildMap {
-        for (n in ownedCells) this[n] = FlatLocal(cellLocalName(n))
-        for (n in receivedCells) this[n] = FlatLocal(cellLocalName(n))
+        for (n in ownedCells) this[n] = FlatLocal(ClosureRuntime.cellLocalName(n))
+        for (n in receivedCells) this[n] = FlatLocal(ClosureRuntime.cellLocalName(n))
     }
     private val originalParamNames: Set<String> = fn.parameters.map { it.name }.toSet()
     private var tempCounter: Int = 0
-    private val envLocal: FlatLocal = FlatLocal(ENV_LOCAL_NAME)
+    private val envLocal: FlatLocal = FlatLocal(ClosureRuntime.ENV_LOCAL_NAME)
     private val blockPrologues: MutableMap<Int, MutableList<FlatInst>> = mutableMapOf()
 
     init {
         for (paramName in originalParamNames) {
-            check(paramName != ENV_LOCAL_NAME) {
-                "Closure rewrite reserved name '$ENV_LOCAL_NAME' collides with " +
+            check(paramName != ClosureRuntime.ENV_LOCAL_NAME) {
+                "Closure rewrite reserved name '${ClosureRuntime.ENV_LOCAL_NAME}' collides with " +
                     "parameter of ${fn.qualifiedName}"
             }
-            check(!paramName.startsWith(CELL_LOCAL_PREFIX)) {
-                "Closure rewrite reserved prefix '$CELL_LOCAL_PREFIX' collides " +
+            check(!paramName.startsWith(ClosureRuntime.CELL_LOCAL_PREFIX)) {
+                "Closure rewrite reserved prefix '${ClosureRuntime.CELL_LOCAL_PREFIX}' collides " +
                     "with parameter '$paramName' of ${fn.qualifiedName}"
             }
         }
@@ -112,7 +112,7 @@ internal class RewriteCtx(
             add(
                 FlatReadName(
                     target = callee,
-                    ref = FlatGlobalNameRef("builtins.${ClosureRuntime.CELL_CTOR_NAME}"),
+                    ref = FlatGlobalNameRef("builtins.${ClosureRuntime.CELL_CLASS_NAME}"),
                 ),
             )
             add(
@@ -128,7 +128,7 @@ internal class RewriteCtx(
                 FlatLoadAttr(
                     target = envLocal,
                     obj = FlatParameterRef(ClosureRuntime.SELF_PARAM_NAME),
-                    attribute = ClosureRuntime.CLOSURE_ATTR_NAME,
+                    attribute = ClosureRuntime.ENV_ATTR_NAME,
                 ),
             )
             for (name in receivedCells) {
@@ -145,7 +145,7 @@ internal class RewriteCtx(
 
     private fun isCellManaged(name: String): Boolean = name in cellLocals
 
-    private fun freshTemp(): FlatLocal = FlatLocal("\$tc\$${tempCounter++}")
+    private fun freshTemp(): FlatLocal = FlatLocal("\$tc${tempCounter++}")
 
     private fun loadOperand(value: FlatValue, location: PIRPhysicalLocation?, scope: InstRewriterScope): FlatValue {
         if (value !is FlatLocal || !isCellManaged(value.name)) return value
@@ -154,7 +154,7 @@ internal class RewriteCtx(
             FlatLoadAttr(
                 target = tmp,
                 obj = cellLocals.getValue(value.name),
-                attribute = ClosureRuntime.CELL_VALUE_ATTR,
+                attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
                 physicalLocation = location,
             ),
         )
@@ -171,7 +171,7 @@ internal class RewriteCtx(
         emitStore(
             FlatStoreAttr(
                 obj = cellLocals.getValue(target.name),
-                attribute = ClosureRuntime.CELL_VALUE_ATTR,
+                attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
                 value = tmp,
                 physicalLocation = location,
             ),
@@ -218,7 +218,7 @@ internal class RewriteCtx(
         scope.replaceWith(
             FlatDeleteAttr(
                 obj = cellLocals.getValue(l.name),
-                attribute = ClosureRuntime.CELL_VALUE_ATTR,
+                attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
                 physicalLocation = inst.physicalLocation,
             ),
         )
@@ -284,11 +284,6 @@ internal class RewriteCtx(
     }
 
     private companion object {
-        private const val ENV_LOCAL_NAME = "\$env"
-        private const val CELL_LOCAL_PREFIX = "\$cell\$"
-
-        private fun cellLocalName(name: String): String = "$CELL_LOCAL_PREFIX$name"
-
         private fun selfParameter(): FlatParameter = FlatParameter(
             name = ClosureRuntime.SELF_PARAM_NAME,
             type = FlatAnyType,

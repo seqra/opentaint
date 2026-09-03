@@ -24,8 +24,8 @@ import org.opentaint.ir.impl.python.flat.FlatStoreAttr
  * Shape:
  * ```
  * class <closure_$base>:
- *     def __init__(self, _closure_env_):
- *         self._closure_env_ = _closure_env_
+ *     def __init__(self, env):
+ *         self.env = env
  *     def __call__(self, ...impl-user-params...):
  *         return _impl(self, ...impl-user-params...)
  * ```
@@ -55,7 +55,7 @@ internal fun buildAdapterClass(originalImpl: FlatFunctionIR, moduleName: String)
 
 private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
     val selfLocal = FlatLocal("self")
-    val envParamLocal = FlatLocal(ClosureRuntime.CLOSURE_ATTR_NAME)
+    val envParamLocal = FlatLocal(ClosureRuntime.ENV_ATTR_NAME)
     val cfg = FlatCFG(
         blocks = listOf(
             FlatBlock(
@@ -63,7 +63,7 @@ private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
                 instructions = listOf(
                     FlatStoreAttr(
                         obj = selfLocal,
-                        attribute = ClosureRuntime.CLOSURE_ATTR_NAME,
+                        attribute = ClosureRuntime.ENV_ATTR_NAME,
                         value = envParamLocal,
                     ),
                     // Constructors return their instance (see CfgSession.constructorSelf).
@@ -83,7 +83,7 @@ private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
         cfg = cfg,
         parameters = listOf(
             plainParameter("self"),
-            plainParameter(ClosureRuntime.CLOSURE_ATTR_NAME),
+            plainParameter(ClosureRuntime.ENV_ATTR_NAME),
         ),
         returnType = FlatAnyType,
         isAsync = false,
