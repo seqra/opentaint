@@ -235,12 +235,46 @@ test('core paths follow analyzer and autobuilder release effects', () => {
   ]));
 });
 
-test('a model path always requires the model scope', () => {
-  const paths = ['model/go/dataflow/example/model.go'];
-  assert.doesNotThrow(() => engine.validateScopePaths('model', paths));
-  assert.throws(() => engine.validateScopePaths('analyzer', paths));
-  assert.throws(() => engine.validateScopePaths('core', paths));
-  assert.throws(() => engine.validateScopePaths('model, analyzer', paths));
+test('direct component paths always require their own scope', () => {
+  const cases = [
+    {
+      path: 'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
+      scope: 'analyzer',
+      aliases: ['core', 'ir', 'model'],
+    },
+    {
+      path: 'core/opentaint-jvm-autobuilder/src/Main.kt',
+      scope: 'autobuilder',
+      aliases: ['core'],
+    },
+    {
+      path: 'core/opentaint-ir/go/go-ssa-server/server.go',
+      scope: 'go-server',
+      aliases: ['ir'],
+    },
+    {
+      path: 'model/go/dataflow/example/model.go',
+      scope: 'model',
+      aliases: ['analyzer', 'core', 'ir'],
+    },
+  ];
+
+  for (const { path, scope, aliases } of cases) {
+    assert.doesNotThrow(
+      () => engine.validateScopePaths(scope, [path]),
+      `${path} must accept ${scope}`,
+    );
+    for (const alias of aliases) {
+      assert.throws(
+        () => engine.validateScopePaths(alias, [path]),
+        `${path} must reject ${alias}`,
+      );
+      assert.throws(
+        () => engine.validateScopePaths(`${scope}, ${alias}`, [path]),
+        `${path} must reject unused scope ${alias}`,
+      );
+    }
+  }
 });
 
 test('release scope sets encode scope release effects', () => {
