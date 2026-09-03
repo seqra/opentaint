@@ -21,75 +21,69 @@ class TypeMapper:
     def __init__(self):
         self._depth = 0
 
-    def map(self, typ: Type | None) -> pir_pb2.PIRTypeProto:
+    def map(self, typ: Type | None, out: pir_pb2.PIRTypeProto) -> None:
+        out.SetInParent()
         if typ is None:
-            return pir_pb2.PIRTypeProto(any_type=pir_pb2.PIRAnyTypeProto())
+            out.any_type.SetInParent()
+            return
 
         self._depth += 1
         if self._depth > self.MAX_DEPTH:
             self._depth -= 1
-            return pir_pb2.PIRTypeProto(any_type=pir_pb2.PIRAnyTypeProto())
+            out.any_type.SetInParent()
+            return
 
         try:
-            return self._map_inner(typ)
+            self._map_inner(typ, out)
         finally:
             self._depth -= 1
 
-    def _map_inner(self, typ: Type) -> pir_pb2.PIRTypeProto:
+    def _map_inner(self, typ: Type, out: pir_pb2.PIRTypeProto) -> None:
         typ = get_proper_type(typ)
-        proto = pir_pb2.PIRTypeProto()
 
         if isinstance(typ, Instance):
-            ct = pir_pb2.PIRClassTypeProto(
-                qualified_name=typ.type.fullname,
-            )
+            ct = out.class_type
+            ct.qualified_name = typ.type.fullname
             for arg in typ.args:
-                ct.type_args.append(self.map(arg))
-            proto.class_type.CopyFrom(ct)
+                self.map(arg, ct.type_args.add())
 
         elif isinstance(typ, CallableType):
-            ft = pir_pb2.PIRFunctionTypeProto(
-                return_type=self.map(typ.ret_type),
-            )
+            ft = out.function_type
+            self.map(typ.ret_type, ft.return_type)
             for arg_type in typ.arg_types:
-                ft.param_types.append(self.map(arg_type))
-            proto.function_type.CopyFrom(ft)
+                self.map(arg_type, ft.param_types.add())
 
         elif isinstance(typ, UnionType):
-            ut = pir_pb2.PIRUnionTypeProto()
+            ut = out.union_type
+            ut.SetInParent()
             for item in typ.items:
-                ut.members.append(self.map(item))
-            proto.union_type.CopyFrom(ut)
+                self.map(item, ut.members.add())
 
         elif isinstance(typ, TupleType):
-            tt = pir_pb2.PIRTupleTypeProto()
+            tt = out.tuple_type
+            tt.SetInParent()
             for item in typ.items:
-                tt.element_types.append(self.map(item))
-            proto.tuple_type.CopyFrom(tt)
+                self.map(item, tt.element_types.add())
 
         elif isinstance(typ, NoneType):
-            proto.none_type.CopyFrom(pir_pb2.PIRNoneTypeProto())
+            out.none_type.SetInParent()
 
         elif isinstance(typ, AnyType):
-            proto.any_type.CopyFrom(pir_pb2.PIRAnyTypeProto())
+            out.any_type.SetInParent()
 
         elif isinstance(typ, UninhabitedType):
-            proto.never_type.CopyFrom(pir_pb2.PIRNeverTypeProto())
+            out.never_type.SetInParent()
 
         elif isinstance(typ, TypeVarType):
-            tv = pir_pb2.PIRTypeVarTypeProto(name=typ.name)
+            tv = out.type_var_type
+            tv.name = typ.name
             if typ.upper_bound:
-                tv.bounds.append(self.map(typ.upper_bound))
-            proto.type_var_type.CopyFrom(tv)
+                self.map(typ.upper_bound, tv.bounds.add())
 
         elif isinstance(typ, LiteralType):
-            lt = pir_pb2.PIRLiteralTypeProto(
-                value=str(typ.value),
-                base_type=self.map(typ.fallback),
-            )
-            proto.literal_type.CopyFrom(lt)
+            lt = out.literal_type
+            lt.value = str(typ.value)
+            self.map(typ.fallback, lt.base_type)
 
         else:
-            proto.any_type.CopyFrom(pir_pb2.PIRAnyTypeProto())
-
-        return proto
+            out.any_type.SetInParent()

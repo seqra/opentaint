@@ -78,13 +78,6 @@ from pir_server.proto import pir_pb2
 from pir_server.builder.type_mapper import TypeMapper
 
 
-def _with_submessages(proto, **fields):
-    for name, value in fields.items():
-        if value is not None:
-            getattr(proto, name).CopyFrom(value)
-    return proto
-
-
 class AstSerializer:
     def __init__(self, tree: MypyFile, types: dict, module_name: str):
         self.tree = tree
@@ -99,12 +92,13 @@ class AstSerializer:
         )
         had_system_error = False
         for defn in self.tree.defs:
+            start = len(proto.defs)
             try:
-                for d in self._serialize_definitions(defn):
-                    proto.defs.add().CopyFrom(d)
+                self._serialize_definitions(defn, proto.defs)
             except SystemError as e:
                 # SystemError from protobuf C extension corrupts internal state.
                 # Rebuild proto from scratch with definitions collected so far.
+                del proto.defs[start:]
                 print(
                     f"WARNING: Failed to serialize definition in {self.module_name}: "
                     f"{type(e).__name__}: {e}",
@@ -112,6 +106,7 @@ class AstSerializer:
                 )
                 had_system_error = True
             except Exception as e:
+                del proto.defs[start:]
                 print(
                     f"WARNING: Failed to serialize definition in {self.module_name}: "
                     f"{type(e).__name__}: {e}",
@@ -119,25 +114,16 @@ class AstSerializer:
                 )
         if had_system_error:
             # Rebuild proto to avoid corrupted C extension state
-            clean = pir_pb2.MypyModuleProto(
-                name=self.module_name,
-                path=self.tree.path or "",
-            )
-            try:
-                clean.ParseFromString(proto.SerializeToString())
-            except Exception:
-                clean = pir_pb2.MypyModuleProto(
-                    name=self.module_name,
-                    path=self.tree.path or "",
-                )
-            return clean
+            clean = pir_pb2.MypyModuleProto()
+            clean.CopyFrom(proto)
+            proto = clean
         proto.imports.extend(self._collect_imports())
         return proto
 
     def _serialize_definitions(
-        self, defn, enclosing_class: str | None = None
-    ) -> list[pir_pb2.MypyDefinitionProto]:
-        """Serialize a definition, returning a list (usually 1 item, but OverloadedFuncDef may produce multiple).
+        self, defn, container, enclosing_class: str | None = None
+    ) -> None:
+        """Serialize a definition into `container` (usually 1 entry, but OverloadedFuncDef may produce multiple).
 
         `enclosing_class` carries the dotted class chain *without* the module
         prefix — e.g. `"Outer"` for a class nested in `Outer`, or
@@ -145,91 +131,72 @@ class AstSerializer:
         prepends the module name; `_serialize_class_def` does the same.
         """
         if isinstance(defn, ClassDef):
-            return [
-                _with_submessages(
-                    pir_pb2.MypyDefinitionProto(),
-                    class_def=self._serialize_class_def(defn, enclosing_class),
-                )
-            ]
+            self._serialize_class_def(defn, container.add().class_def, enclosing_class)
         elif isinstance(defn, Decorator):
-            return [
-                _with_submessages(
-                    pir_pb2.MypyDefinitionProto(),
-                    decorator=self._serialize_decorator_def(defn, enclosing_class),
-                )
-            ]
+            self._serialize_decorator_def(
+                defn, container.add().decorator, enclosing_class
+            )
         elif isinstance(defn, FuncDef):
-            return [
-                _with_submessages(
-                    pir_pb2.MypyDefinitionProto(),
-                    func_def=self._serialize_func_def(defn, enclosing_class),
-                )
-            ]
+            self._serialize_func_def(defn, container.add().func_def, enclosing_class)
         elif isinstance(defn, OverloadedFuncDef):
             if defn.impl is not None:
-                return self._serialize_definitions(defn.impl, enclosing_class)
-            results = []
+                self._serialize_definitions(defn.impl, container, enclosing_class)
+                return
             for item in defn.items:
-                results.extend(self._serialize_definitions(item, enclosing_class))
-            return results
+                self._serialize_definitions(item, container, enclosing_class)
         elif isinstance(defn, AssignmentStmt):
-            return [
-                _with_submessages(
-                    pir_pb2.MypyDefinitionProto(),
-                    assignment=self._serialize_stmt(defn),
-                )
-            ]
+            if not self._serialize_stmt(defn, container.add().assignment):
+                del container[-1]
         elif isinstance(defn, (Import, ImportFrom)):
             # Module-level Import / ImportFrom ride the `assignment` slot (typed MypyStmtProto,
             # so it accepts any statement variant); module-level lowering peeks at this slot to
             # register import bindings before any function body is lowered.
-            return [
-                _with_submessages(
-                    pir_pb2.MypyDefinitionProto(),
-                    assignment=self._serialize_stmt(defn),
-                )
-            ]
-        return []
+            if not self._serialize_stmt(defn, container.add().assignment):
+                del container[-1]
 
     def _serialize_class_def(
-        self, class_def: ClassDef, enclosing_class: str | None = None
-    ) -> pir_pb2.MypyClassDefProto:
+        self, class_def: ClassDef, out, enclosing_class: str | None = None
+    ) -> None:
         own_qualifier = (
             f"{enclosing_class}.{class_def.name}" if enclosing_class else class_def.name
         )
-        proto = pir_pb2.MypyClassDefProto(
-            name=class_def.name,
-            fullname=f"{self.module_name}.{own_qualifier}",
-        )
+        out.name = class_def.name
+        out.fullname = f"{self.module_name}.{own_qualifier}"
 
         if class_def.info:
             for base in class_def.info.bases:
                 if hasattr(base, "type") and hasattr(base.type, "fullname"):
-                    proto.base_classes.append(base.type.fullname)
+                    out.base_classes.append(base.type.fullname)
             if hasattr(class_def.info, "mro") and class_def.info.mro:
                 for mro_item in class_def.info.mro:
-                    proto.mro.append(mro_item.fullname)
-            proto.is_abstract = class_def.info.is_abstract
+                    out.mro.append(mro_item.fullname)
+            out.is_abstract = class_def.info.is_abstract
             if (
                 hasattr(class_def.info, "metadata")
                 and "dataclass" in class_def.info.metadata
             ):
-                proto.is_dataclass = True
+                out.is_dataclass = True
 
         # Unlike Decorator.decorators for methods, mypy's semantic analyzer does NOT strip
         # entries from ClassDef.decorators, so the raw expression list is safe to read.
         for dec_expr in class_def.decorators:
-            proto.decorators.add().CopyFrom(self._serialize_decorator_info(dec_expr))
+            self._serialize_decorator_info(dec_expr, out.decorators.add())
 
         for defn in class_def.defs.body:
-            for d in self._serialize_definitions(defn, enclosing_class=own_qualifier):
-                proto.body.add().CopyFrom(d)
+            self._serialize_definitions(defn, out.body, enclosing_class=own_qualifier)
 
-        return proto
+    def _decorator_names(self, expr: Expression) -> tuple[str, str]:
+        if isinstance(expr, CallExpr):
+            return self._decorator_names(expr.callee)
+        if isinstance(expr, NameExpr):
+            fullname = getattr(expr, "fullname", "") or ""
+            return expr.name, fullname or expr.name
+        if isinstance(expr, MemberExpr):
+            fullname = getattr(expr, "fullname", "") or ""
+            return expr.name, fullname or self._member_expr_dotted_path(expr)
+        return "<unknown>", "<unknown>"
 
-    def _serialize_decorator_info(
-        self, expr: Expression
-    ) -> pir_pb2.MypyDecoratorInfoProto:
+    def _serialize_decorator_info(self, expr: Expression, out) -> None:
         """Unwrap a decorator expression into a MypyDecoratorInfoProto summary.
 
         Mirrors the Kotlin `flatDecoratorFromExpr` unwrap (NameExpr / MemberExpr / CallExpr)
@@ -238,28 +205,10 @@ class AstSerializer:
         literals → their text; names/members → dotted path; otherwise "<expr>".
         Keyword-arg names on CallExpr decorators are dropped (pre-existing Stage 1 nit).
         """
+        out.name, out.qualified_name = self._decorator_names(expr)
         if isinstance(expr, CallExpr):
-            inner = self._serialize_decorator_info(expr.callee)
-            proto = pir_pb2.MypyDecoratorInfoProto(
-                name=inner.name,
-                qualified_name=inner.qualified_name,
-            )
             for arg in expr.args:
-                proto.arguments.append(self._decorator_arg_repr(arg))
-            return proto
-        if isinstance(expr, NameExpr):
-            fullname = getattr(expr, "fullname", "") or ""
-            return pir_pb2.MypyDecoratorInfoProto(
-                name=expr.name,
-                qualified_name=fullname or expr.name,
-            )
-        if isinstance(expr, MemberExpr):
-            fullname = getattr(expr, "fullname", "") or ""
-            return pir_pb2.MypyDecoratorInfoProto(
-                name=expr.name,
-                qualified_name=fullname or self._member_expr_dotted_path(expr),
-            )
-        return pir_pb2.MypyDecoratorInfoProto(name="<unknown>", qualified_name="<unknown>")
+                out.arguments.append(self._decorator_arg_repr(arg))
 
     def _member_expr_dotted_path(self, expr: MemberExpr) -> str:
         base = expr.expr
@@ -295,8 +244,8 @@ class AstSerializer:
         return s.replace("\\", "\\\\").replace('"', '\\"')
 
     def _serialize_func_def(
-        self, func_def: FuncDef, enclosing_class: str | None = None
-    ) -> pir_pb2.MypyFuncDefProto:
+        self, func_def: FuncDef, out, enclosing_class: str | None = None
+    ) -> None:
         native_fullname = getattr(func_def, "fullname", "") or ""
         if enclosing_class:
             fullname = f"{self.module_name}.{enclosing_class}.{func_def.name}"
@@ -305,232 +254,171 @@ class AstSerializer:
         else:
             fullname = f"{self.module_name}.{func_def.name}"
 
-        proto = pir_pb2.MypyFuncDefProto(
-            name=func_def.name,
-            fullname=fullname,
-            is_async=func_def.is_coroutine,
-            is_generator=func_def.is_generator,
-            line=getattr(func_def, "line", -1),
-        )
+        out.name = func_def.name
+        out.fullname = fullname
+        out.is_async = func_def.is_coroutine
+        out.is_generator = func_def.is_generator
+        out.line = getattr(func_def, "line", -1)
 
         if func_def.body:
-            proto.body.CopyFrom(self._serialize_block(func_def.body))
+            self._serialize_block(func_def.body, out.body)
 
         for arg in func_def.arguments:
-            proto.arguments.add().CopyFrom(self._serialize_argument(arg))
+            self._serialize_argument(arg, out.arguments.add())
 
         func_type = func_def.type
         if isinstance(func_type, CallableType):
-            proto.return_type.CopyFrom(self.type_mapper.map(func_type.ret_type))
-
-        return proto
+            self.type_mapper.map(func_type.ret_type, out.return_type)
 
     def _serialize_decorator_def(
-        self, dec: Decorator, enclosing_class: str | None = None
-    ) -> pir_pb2.MypyDecoratorDefProto:
-        proto = _with_submessages(
-            pir_pb2.MypyDecoratorDefProto(name=dec.func.name),
-            func=self._serialize_func_def(dec.func, enclosing_class),
-        )
+        self, dec: Decorator, out, enclosing_class: str | None = None
+    ) -> None:
+        out.name = dec.func.name
+        self._serialize_func_def(dec.func, out.func, enclosing_class)
         # Serialize the pristine decorator list. mypy's semantic analyzer strips
         # @staticmethod / @classmethod / @property from `dec.decorators` (encoding
         # them onto `func.is_static` etc.) — so iterating that list would lose them.
         # `dec.original_decorators` is the untouched list.
         for d in dec.original_decorators:
-            proto.original_decorators.add().CopyFrom(self._serialize_expr(d))
+            self._serialize_expr(d, out.original_decorators.add())
         if dec.func.fullname:
-            proto.qualified_name = dec.func.fullname
-        return proto
+            out.qualified_name = dec.func.fullname
 
-    def _serialize_argument(self, arg) -> pir_pb2.MypyArgumentProto:
-        proto = pir_pb2.MypyArgumentProto(
-            name=arg.variable.name if arg.variable else "",
-            kind=int(arg.kind.value),
-            has_default=arg.initializer is not None,
-        )
+    def _serialize_argument(self, arg, out) -> None:
+        out.name = arg.variable.name if arg.variable else ""
+        out.kind = int(arg.kind.value)
+        out.has_default = arg.initializer is not None
         if arg.variable and arg.variable.type:
-            proto.type.CopyFrom(self.type_mapper.map(arg.variable.type))
+            self.type_mapper.map(arg.variable.type, out.type)
         if arg.initializer:
-            proto.default_value.CopyFrom(self._serialize_expr(arg.initializer))
-        return proto
+            self._serialize_expr(arg.initializer, out.default_value)
 
-    def _serialize_block(self, block: Block) -> pir_pb2.MypyBlockProto:
-        proto = pir_pb2.MypyBlockProto()
+    def _serialize_block(self, block: Block, out) -> None:
+        out.SetInParent()
         for stmt in block.body:
-            s = self._serialize_stmt(stmt)
-            if s is not None:
-                proto.stmts.add().CopyFrom(s)
-        return proto
+            if not self._serialize_stmt(stmt, out.stmts.add()):
+                del out.stmts[-1]
 
-    def _serialize_stmt(self, stmt) -> pir_pb2.MypyStmtProto | None:
-        line = getattr(stmt, "line", -1)
-        col = getattr(stmt, "column", 0)
-        # Mypy uses None / missing attribute for unknown end coords; -1 is the
-        # wire-level sentinel. A literal 0 is a legitimate (if unusual) value
-        # and must not be collapsed to -1.
-        end_line = getattr(stmt, "end_line", None)
-        if end_line is None:
-            end_line = -1
-        end_col = getattr(stmt, "end_column", None)
-        if end_col is None:
-            end_col = -1
-        proto = pir_pb2.MypyStmtProto(
-            line=line, col=col, end_line=end_line, end_col=end_col
-        )
-
+    def _serialize_stmt(self, stmt, out) -> bool:
         if isinstance(stmt, AssignmentStmt):
-            proto.assignment.CopyFrom(self._serialize_assignment_stmt(stmt))
+            self._serialize_assignment_stmt(stmt, out.assignment)
         elif isinstance(stmt, OperatorAssignmentStmt):
-            proto.op_assignment.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyOperatorAssignmentStmtProto(op=stmt.op),
-                    lvalue=self._serialize_expr(stmt.lvalue),
-                    rvalue=self._serialize_expr(stmt.rvalue),
-                )
-            )
+            op_assignment = out.op_assignment
+            op_assignment.op = stmt.op
+            self._serialize_expr(stmt.lvalue, op_assignment.lvalue)
+            self._serialize_expr(stmt.rvalue, op_assignment.rvalue)
         elif isinstance(stmt, ExpressionStmt):
-            proto.expression_stmt.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyExpressionStmtProto(),
-                    expr=self._serialize_expr(stmt.expr),
-                )
-            )
+            self._serialize_expr(stmt.expr, out.expression_stmt.expr)
         elif isinstance(stmt, ReturnStmt):
-            ret = pir_pb2.MypyReturnStmtProto()
+            return_stmt = out.return_stmt
+            return_stmt.SetInParent()
             if stmt.expr:
-                ret.expr.CopyFrom(self._serialize_expr(stmt.expr))
-            proto.return_stmt.CopyFrom(ret)
+                self._serialize_expr(stmt.expr, return_stmt.expr)
         elif isinstance(stmt, IfStmt):
-            if_proto = pir_pb2.MypyIfStmtProto()
+            if_stmt = out.if_stmt
+            if_stmt.SetInParent()
             for cond in stmt.expr:
-                if_proto.conditions.add().CopyFrom(self._serialize_expr(cond))
+                self._serialize_expr(cond, if_stmt.conditions.add())
             for body in stmt.body:
-                if_proto.bodies.add().CopyFrom(self._serialize_block(body))
+                self._serialize_block(body, if_stmt.bodies.add())
             if stmt.else_body:
-                if_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
-            proto.if_stmt.CopyFrom(if_proto)
+                self._serialize_block(stmt.else_body, if_stmt.else_body)
         elif isinstance(stmt, WhileStmt):
-            while_proto = _with_submessages(
-                pir_pb2.MypyWhileStmtProto(),
-                condition=self._serialize_expr(stmt.expr),
-                body=self._serialize_block(stmt.body),
-            )
+            while_stmt = out.while_stmt
+            self._serialize_expr(stmt.expr, while_stmt.condition)
+            self._serialize_block(stmt.body, while_stmt.body)
             if stmt.else_body:
-                while_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
-            proto.while_stmt.CopyFrom(while_proto)
+                self._serialize_block(stmt.else_body, while_stmt.else_body)
         elif isinstance(stmt, ForStmt):
-            for_proto = _with_submessages(
-                pir_pb2.MypyForStmtProto(),
-                index=self._serialize_expr(stmt.index),
-                iterable=self._serialize_expr(stmt.expr),
-                body=self._serialize_block(stmt.body),
-            )
+            for_stmt = out.for_stmt
+            self._serialize_expr(stmt.index, for_stmt.index)
+            self._serialize_expr(stmt.expr, for_stmt.iterable)
+            self._serialize_block(stmt.body, for_stmt.body)
             if stmt.else_body:
-                for_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
-            proto.for_stmt.CopyFrom(for_proto)
+                self._serialize_block(stmt.else_body, for_stmt.else_body)
         elif isinstance(stmt, MatchStmt):
-            match_proto = _with_submessages(
-                pir_pb2.MypyMatchStmtProto(),
-                subject=self._serialize_expr(stmt.subject),
-            )
+            match_stmt = out.match_stmt
+            self._serialize_expr(stmt.subject, match_stmt.subject)
             for pattern, guard, body in zip(stmt.patterns, stmt.guards, stmt.bodies):
-                match_proto.patterns.add().CopyFrom(self._serialize_pattern(pattern))
+                self._serialize_pattern(pattern, match_stmt.patterns.add())
                 if guard is not None:
-                    match_proto.guards.add().CopyFrom(self._serialize_expr(guard))
+                    self._serialize_expr(guard, match_stmt.guards.add())
                 else:
-                    match_proto.guards.add()
-                match_proto.bodies.add().CopyFrom(self._serialize_block(body))
-            proto.match_stmt.CopyFrom(match_proto)
+                    match_stmt.guards.add()
+                self._serialize_block(body, match_stmt.bodies.add())
         elif isinstance(stmt, TryStmt):
-            try_proto = _with_submessages(
-                pir_pb2.MypyTryStmtProto(),
-                body=self._serialize_block(stmt.body),
-            )
+            try_stmt = out.try_stmt
+            self._serialize_block(stmt.body, try_stmt.body)
             for t in stmt.types:
                 if t is not None:
-                    try_proto.types.add().CopyFrom(self._serialize_expr(t))
+                    self._serialize_expr(t, try_stmt.types.add())
                 else:
-                    try_proto.types.add()
+                    try_stmt.types.add()
             for v in stmt.vars:
                 if v is not None:
-                    try_proto.vars.add().CopyFrom(self._serialize_expr(v))
+                    self._serialize_expr(v, try_stmt.vars.add())
                 else:
-                    try_proto.vars.add()
+                    try_stmt.vars.add()
             for h in stmt.handlers:
-                try_proto.handlers.add().CopyFrom(self._serialize_block(h))
+                self._serialize_block(h, try_stmt.handlers.add())
             if stmt.else_body:
-                try_proto.else_body.CopyFrom(self._serialize_block(stmt.else_body))
+                self._serialize_block(stmt.else_body, try_stmt.else_body)
             if stmt.finally_body:
-                try_proto.finally_body.CopyFrom(
-                    self._serialize_block(stmt.finally_body)
-                )
-            proto.try_stmt.CopyFrom(try_proto)
+                self._serialize_block(stmt.finally_body, try_stmt.finally_body)
         elif isinstance(stmt, WithStmt):
-            with_proto = _with_submessages(
-                pir_pb2.MypyWithStmtProto(is_async=getattr(stmt, "is_async", False)),
-                body=self._serialize_block(stmt.body),
-            )
+            with_stmt = out.with_stmt
+            with_stmt.is_async = getattr(stmt, "is_async", False)
+            self._serialize_block(stmt.body, with_stmt.body)
             for expr in stmt.expr:
-                with_proto.exprs.add().CopyFrom(self._serialize_expr(expr))
+                self._serialize_expr(expr, with_stmt.exprs.add())
             if stmt.target:
                 for t in stmt.target:
                     if t is not None:
-                        with_proto.targets.add().CopyFrom(self._serialize_expr(t))
+                        self._serialize_expr(t, with_stmt.targets.add())
                     else:
-                        with_proto.targets.add()
-            proto.with_stmt.CopyFrom(with_proto)
+                        with_stmt.targets.add()
         elif isinstance(stmt, RaiseStmt):
-            raise_proto = pir_pb2.MypyRaiseStmtProto()
+            raise_stmt = out.raise_stmt
+            raise_stmt.SetInParent()
             if stmt.expr:
-                raise_proto.expr.CopyFrom(self._serialize_expr(stmt.expr))
+                self._serialize_expr(stmt.expr, raise_stmt.expr)
             if stmt.from_expr:
-                raise_proto.from_expr.CopyFrom(self._serialize_expr(stmt.from_expr))
-            proto.raise_stmt.CopyFrom(raise_proto)
+                self._serialize_expr(stmt.from_expr, raise_stmt.from_expr)
         elif isinstance(stmt, BreakStmt):
-            proto.break_stmt.CopyFrom(pir_pb2.MypyBreakStmtProto())
+            out.break_stmt.SetInParent()
         elif isinstance(stmt, ContinueStmt):
-            proto.continue_stmt.CopyFrom(pir_pb2.MypyContinueStmtProto())
+            out.continue_stmt.SetInParent()
         elif isinstance(stmt, DelStmt):
-            proto.del_stmt.CopyFrom(
-                _with_submessages(pir_pb2.MypyDelStmtProto(), expr=self._serialize_expr(stmt.expr))
-            )
+            self._serialize_expr(stmt.expr, out.del_stmt.expr)
         elif isinstance(stmt, AssertStmt):
-            assert_proto = _with_submessages(
-                pir_pb2.MypyAssertStmtProto(),
-                expr=self._serialize_expr(stmt.expr),
-            )
+            assert_stmt = out.assert_stmt
+            self._serialize_expr(stmt.expr, assert_stmt.expr)
             if stmt.msg:
-                assert_proto.msg.CopyFrom(self._serialize_expr(stmt.msg))
-            proto.assert_stmt.CopyFrom(assert_proto)
+                self._serialize_expr(stmt.msg, assert_stmt.msg)
         elif isinstance(stmt, PassStmt):
-            proto.pass_stmt.CopyFrom(pir_pb2.MypyPassStmtProto())
+            out.pass_stmt.SetInParent()
         elif isinstance(stmt, GlobalDecl):
-            proto.global_decl.CopyFrom(
-                pir_pb2.MypyGlobalDeclProto(names=list(stmt.names))
-            )
+            out.global_decl.names.extend(stmt.names)
         elif isinstance(stmt, Decorator):
             # Nested decorated-def: preserve the decorator expressions so the Kotlin
             # side can lift them into FlatFunctionIR.decorators. Routing this as a
             # FuncDef (via _unwrap_func) would drop the decorators silently.
-            proto.decorator.CopyFrom(self._serialize_decorator_def(stmt))
+            self._serialize_decorator_def(stmt, out.decorator)
         elif isinstance(stmt, (FuncDef, OverloadedFuncDef)):
             func_def = self._unwrap_func(stmt)
             if func_def:
-                proto.func_def.CopyFrom(self._serialize_func_def(func_def))
+                self._serialize_func_def(func_def, out.func_def)
         elif isinstance(stmt, ClassDef):
-            proto.class_def.CopyFrom(self._serialize_class_def(stmt))
+            self._serialize_class_def(stmt, out.class_def)
         elif isinstance(stmt, NonlocalDecl):
-            proto.nonlocal_decl.CopyFrom(
-                pir_pb2.MypyNonlocalDeclProto(names=list(stmt.names))
-            )
+            out.nonlocal_decl.names.extend(stmt.names)
         elif isinstance(stmt, Import):
-            import_proto = pir_pb2.MypyImportStmtProto()
+            import_stmt = out.import_stmt
+            import_stmt.SetInParent()
             for module_id, as_id in stmt.ids:
-                import_proto.ids.add().CopyFrom(pir_pb2.MypyImportIdProto(
-                        module=module_id,
-                        alias=as_id or "",
-                    ))
-            proto.import_stmt.CopyFrom(import_proto)
+                import_id = import_stmt.ids.add()
+                import_id.module = module_id
+                import_id.alias = as_id or ""
         elif isinstance(stmt, ImportFrom):
             resolved_module, ok = correct_relative_import(
                 cur_mod_id=self.module_name,
@@ -545,24 +433,34 @@ class AstSerializer:
                 # real module path. Fall back to the raw target so downstream
                 # FlatGlobalRefs at least carry a recognizable prefix.
                 resolved_module = stmt.id
-            from_proto = pir_pb2.MypyImportFromStmtProto(
-                module=resolved_module,
-                relative=stmt.relative,
-            )
+            import_from_stmt = out.import_from_stmt
+            import_from_stmt.module = resolved_module
+            import_from_stmt.relative = stmt.relative
             for name, as_name in stmt.names:
-                from_proto.names.add().CopyFrom(pir_pb2.MypyImportNameProto(
-                        name=name,
-                        alias=as_name or "",
-                    ))
-            proto.import_from_stmt.CopyFrom(from_proto)
+                import_name = import_from_stmt.names.add()
+                import_name.name = name
+                import_name.alias = as_name or ""
         elif isinstance(stmt, ImportAll):
-            return None
+            return False
         elif isinstance(stmt, Block):
-            return None
+            return False
         else:
-            return None
+            return False
 
-        return proto
+        out.line = getattr(stmt, "line", -1)
+        out.col = getattr(stmt, "column", 0)
+        # Mypy uses None / missing attribute for unknown end coords; -1 is the
+        # wire-level sentinel. A literal 0 is a legitimate (if unusual) value
+        # and must not be collapsed to -1.
+        end_line = getattr(stmt, "end_line", None)
+        if end_line is None:
+            end_line = -1
+        end_col = getattr(stmt, "end_column", None)
+        if end_col is None:
+            end_col = -1
+        out.end_line = end_line
+        out.end_col = end_col
+        return True
 
     SINGLETON_VALUES = {
         None: pir_pb2.MypySingletonPatternProto.NONE,
@@ -570,143 +468,111 @@ class AstSerializer:
         False: pir_pb2.MypySingletonPatternProto.FALSE,
     }
 
-    def _serialize_pattern(self, pattern) -> pir_pb2.MypyPatternProto:
-        proto = pir_pb2.MypyPatternProto()
+    def _serialize_pattern(self, pattern, out) -> None:
         if isinstance(pattern, AsPattern):
-            as_proto = pir_pb2.MypyAsPatternProto()
+            as_pattern = out.as_pattern
+            as_pattern.SetInParent()
             if pattern.pattern is not None:
-                as_proto.pattern.CopyFrom(self._serialize_pattern(pattern.pattern))
+                self._serialize_pattern(pattern.pattern, as_pattern.pattern)
             if pattern.name is not None:
-                as_proto.name = pattern.name.name
-            proto.as_pattern.CopyFrom(as_proto)
+                as_pattern.name = pattern.name.name
         elif isinstance(pattern, ValuePattern):
-            proto.value_pattern.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyValuePatternProto(),
-                    expr=self._serialize_expr(pattern.expr),
-                )
-            )
+            self._serialize_expr(pattern.expr, out.value_pattern.expr)
         elif isinstance(pattern, OrPattern):
-            or_proto = pir_pb2.MypyOrPatternProto()
+            or_pattern = out.or_pattern
+            or_pattern.SetInParent()
             for alternative in pattern.patterns:
-                or_proto.patterns.add().CopyFrom(self._serialize_pattern(alternative))
-            proto.or_pattern.CopyFrom(or_proto)
+                self._serialize_pattern(alternative, or_pattern.patterns.add())
         elif isinstance(pattern, ClassPattern):
-            proto.class_pattern.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyClassPatternProto(),
-                    class_ref=self._serialize_expr(pattern.class_ref),
-                )
-            )
+            self._serialize_expr(pattern.class_ref, out.class_pattern.class_ref)
         elif isinstance(pattern, SingletonPattern):
             singleton = self.SINGLETON_VALUES.get(pattern.value)
             if singleton is None:
-                return self._unknown_pattern(pattern)
-            proto.singleton_pattern.CopyFrom(
-                pir_pb2.MypySingletonPatternProto(value=singleton)
-            )
+                self._unknown_pattern(pattern, out)
+                return
+            out.singleton_pattern.value = singleton
         else:
-            return self._unknown_pattern(pattern)
-        return proto
+            self._unknown_pattern(pattern, out)
 
-    def _unknown_pattern(self, pattern) -> pir_pb2.MypyPatternProto:
-        proto = pir_pb2.MypyPatternProto()
-        proto.unknown_pattern.CopyFrom(
-            pir_pb2.MypyUnknownPatternProto(kind=type(pattern).__name__)
-        )
-        return proto
+    def _unknown_pattern(self, pattern, out) -> None:
+        out.unknown_pattern.kind = type(pattern).__name__
 
-    def _serialize_assignment_stmt(
-        self, stmt: AssignmentStmt
-    ) -> pir_pb2.MypyAssignmentStmtProto:
-        proto = _with_submessages(
-            pir_pb2.MypyAssignmentStmtProto(),
-            rvalue=self._serialize_expr(stmt.rvalue),
-        )
+    def _serialize_assignment_stmt(self, stmt: AssignmentStmt, out) -> None:
+        self._serialize_expr(stmt.rvalue, out.rvalue)
         for lvalue in stmt.lvalues:
-            proto.lvalues.add().CopyFrom(self._serialize_expr(lvalue))
-        return proto
+            self._serialize_expr(lvalue, out.lvalues.add())
 
-    def _serialize_expr(self, expr: Expression) -> pir_pb2.MypyExprProto:
+    def _serialize_expr(self, expr: Expression, out) -> None:
         if expr is None:
-            return pir_pb2.MypyExprProto()
+            out.SetInParent()
+            return
 
-        return self._serialize_expr_inner(expr)
+        self._serialize_expr_inner(expr, out)
 
-    def _serialize_expr_inner(self, expr: Expression) -> pir_pb2.MypyExprProto:
-        line = getattr(expr, "line", -1)
-        col = getattr(expr, "column", 0)
+    def _serialize_expr_inner(self, expr: Expression, out) -> None:
+        out.line = getattr(expr, "line", -1)
+        out.col = getattr(expr, "column", 0)
         end_line = getattr(expr, "end_line", None)
         if end_line is None:
             end_line = -1
         end_col = getattr(expr, "end_column", None)
         if end_col is None:
             end_col = -1
-        proto = pir_pb2.MypyExprProto(
-            line=line, col=col, end_line=end_line, end_col=end_col
-        )
+        out.end_line = end_line
+        out.end_col = end_col
 
         try:
             typ = self.types.get(expr)
             if typ is not None:
-                proto.expr_type.CopyFrom(self.type_mapper.map(typ))
+                self.type_mapper.map(typ, out.expr_type)
         except Exception:
-            pass
+            out.ClearField("expr_type")
 
         if isinstance(expr, IntExpr):
-            int_proto = pir_pb2.MypyIntExprProto()
+            int_expr = out.int_expr
             if -(2**63) <= expr.value <= 2**63 - 1:
-                int_proto.value = expr.value
+                int_expr.value = expr.value
             else:
-                int_proto.str_value = str(expr.value)
-            proto.int_expr.CopyFrom(int_proto)
+                int_expr.str_value = str(expr.value)
         elif isinstance(expr, StrExpr):
-            proto.str_expr.CopyFrom(pir_pb2.MypyStrExprProto(value=expr.value))
+            out.str_expr.value = expr.value
         elif isinstance(expr, FloatExpr):
-            proto.float_expr.CopyFrom(pir_pb2.MypyFloatExprProto(value=expr.value))
+            out.float_expr.value = expr.value
         elif isinstance(expr, BytesExpr):
-            proto.bytes_expr.CopyFrom(
-                pir_pb2.MypyBytesExprProto(
-                    value=expr.value.encode("latin-1", errors="replace")
-                )
-            )
+            out.bytes_expr.value = expr.value.encode("latin-1", errors="replace")
         elif isinstance(expr, ComplexExpr):
-            proto.complex_expr.CopyFrom(
-                pir_pb2.MypyComplexExprProto(real=expr.value.real, imag=expr.value.imag)
-            )
+            complex_expr = out.complex_expr
+            complex_expr.real = expr.value.real
+            complex_expr.imag = expr.value.imag
         elif isinstance(expr, EllipsisExpr):
-            proto.ellipsis_expr.CopyFrom(pir_pb2.MypyEllipsisExprProto())
+            out.ellipsis_expr.SetInParent()
         elif isinstance(expr, NameExpr):
-            name_proto = pir_pb2.MypyNameExprProto(name=expr.name)
+            name_expr = out.name_expr
+            name_expr.name = expr.name
             fullname = ""
             if expr.node is not None:
                 fullname = getattr(expr.node, "fullname", "") or ""
-            name_proto.fullname = fullname
+            name_expr.fullname = fullname
             # mypy's `kind` (LDEF/GDEF/MDEF) is what distinguishes a local from a
             # module-level/imported binding; without it the Kotlin side would have to guess from
             # `fullname` shape and would misclassify `import os` (fullname == "os") as a local.
             # A resolved MypyFile node means the name IS a module reference, emitted as
             # NAME_MODULE. Unresolved names leave `kind=None` and fall back to NAME_LOCAL.
             if isinstance(expr.node, MypyFile):
-                name_proto.name_kind = pir_pb2.NAME_MODULE
+                name_expr.name_kind = pir_pb2.NAME_MODULE
             elif expr.kind == GDEF:
-                name_proto.name_kind = pir_pb2.NAME_GLOBAL
+                name_expr.name_kind = pir_pb2.NAME_GLOBAL
             else:
-                name_proto.name_kind = pir_pb2.NAME_LOCAL
-            proto.name_expr.CopyFrom(name_proto)
+                name_expr.name_kind = pir_pb2.NAME_LOCAL
         elif isinstance(expr, MemberExpr):
-            member_proto = _with_submessages(
-                pir_pb2.MypyMemberExprProto(name=expr.name),
-                expr=self._serialize_expr(expr.expr),
-            )
+            member_expr = out.member_expr
+            member_expr.name = expr.name
+            self._serialize_expr(expr.expr, member_expr.expr)
             if expr.node is not None and hasattr(expr.node, "fullname"):
-                member_proto.fullname = expr.node.fullname or ""
-            proto.member_expr.CopyFrom(member_proto)
+                member_expr.fullname = expr.node.fullname or ""
         elif isinstance(expr, CallExpr):
-            call_proto = _with_submessages(
-                pir_pb2.MypyCallExprProto(),
-                callee=self._serialize_expr(expr.callee),
-            )
+            call_expr = out.call_expr
+            self._serialize_expr(expr.callee, call_expr.callee)
             resolved = ""
             if hasattr(expr.callee, "node"):
                 node = expr.callee.node
@@ -730,184 +596,130 @@ class AstSerializer:
                 except Exception:
                     pass
             if resolved:
-                call_proto.resolved_callee = resolved
+                call_expr.resolved_callee = resolved
             for i, arg_expr in enumerate(expr.args):
                 kind = int(expr.arg_kinds[i].value)
                 name = expr.arg_names[i] if expr.arg_names else None
-                call_proto.args.add().CopyFrom(_with_submessages(
-                    pir_pb2.MypyCallArgProto(kind=kind, name=name or ""),
-                    expr=self._serialize_expr(arg_expr),
-                ))
-            proto.call_expr.CopyFrom(call_proto)
+                arg = call_expr.args.add()
+                arg.kind = kind
+                arg.name = name or ""
+                self._serialize_expr(arg_expr, arg.expr)
         elif isinstance(expr, OpExpr):
-            proto.op_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyOpExprProto(op=expr.op),
-                    left=self._serialize_expr(expr.left),
-                    right=self._serialize_expr(expr.right),
-                )
-            )
+            op_expr = out.op_expr
+            op_expr.op = expr.op
+            self._serialize_expr(expr.left, op_expr.left)
+            self._serialize_expr(expr.right, op_expr.right)
         elif isinstance(expr, UnaryExpr):
-            proto.unary_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyUnaryExprProto(op=expr.op),
-                    expr=self._serialize_expr(expr.expr),
-                )
-            )
+            unary_expr = out.unary_expr
+            unary_expr.op = expr.op
+            self._serialize_expr(expr.expr, unary_expr.expr)
         elif isinstance(expr, ComparisonExpr):
-            cmp_proto = pir_pb2.MypyComparisonExprProto(
-                operators=list(expr.operators),
-            )
+            comparison_expr = out.comparison_expr
+            comparison_expr.operators.extend(expr.operators)
             for operand in expr.operands:
-                cmp_proto.operands.add().CopyFrom(self._serialize_expr(operand))
-            proto.comparison_expr.CopyFrom(cmp_proto)
+                self._serialize_expr(operand, comparison_expr.operands.add())
         elif isinstance(expr, IndexExpr):
-            proto.index_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyIndexExprProto(),
-                    base=self._serialize_expr(expr.base),
-                    index=self._serialize_expr(expr.index),
-                )
-            )
+            index_expr = out.index_expr
+            self._serialize_expr(expr.base, index_expr.base)
+            self._serialize_expr(expr.index, index_expr.index)
         elif isinstance(expr, SliceExpr):
-            slice_proto = pir_pb2.MypySliceExprProto()
+            slice_expr = out.slice_expr
+            slice_expr.SetInParent()
             if expr.begin_index:
-                slice_proto.begin.CopyFrom(self._serialize_expr(expr.begin_index))
+                self._serialize_expr(expr.begin_index, slice_expr.begin)
             if expr.end_index:
-                slice_proto.end.CopyFrom(self._serialize_expr(expr.end_index))
+                self._serialize_expr(expr.end_index, slice_expr.end)
             if expr.stride:
-                slice_proto.stride.CopyFrom(self._serialize_expr(expr.stride))
-            proto.slice_expr.CopyFrom(slice_proto)
+                self._serialize_expr(expr.stride, slice_expr.stride)
         elif isinstance(expr, ListExpr):
-            list_proto = pir_pb2.MypyListExprProto()
+            list_expr = out.list_expr
+            list_expr.SetInParent()
             for item in expr.items:
-                list_proto.items.add().CopyFrom(self._serialize_expr(item))
-            proto.list_expr.CopyFrom(list_proto)
+                self._serialize_expr(item, list_expr.items.add())
         elif isinstance(expr, TupleExpr):
-            tuple_proto = pir_pb2.MypyTupleExprProto()
+            tuple_expr = out.tuple_expr
+            tuple_expr.SetInParent()
             for item in expr.items:
-                tuple_proto.items.add().CopyFrom(self._serialize_expr(item))
-            proto.tuple_expr.CopyFrom(tuple_proto)
+                self._serialize_expr(item, tuple_expr.items.add())
         elif isinstance(expr, SetExpr):
-            set_proto = pir_pb2.MypySetExprProto()
+            set_expr = out.set_expr
+            set_expr.SetInParent()
             for item in expr.items:
-                set_proto.items.add().CopyFrom(self._serialize_expr(item))
-            proto.set_expr.CopyFrom(set_proto)
+                self._serialize_expr(item, set_expr.items.add())
         elif isinstance(expr, DictExpr):
-            dict_proto = pir_pb2.MypyDictExprProto()
+            dict_expr = out.dict_expr
+            dict_expr.SetInParent()
             for k, v in expr.items:
                 if k is not None:
-                    dict_proto.keys.add().CopyFrom(self._serialize_expr(k))
+                    self._serialize_expr(k, dict_expr.keys.add())
                 else:
-                    dict_proto.keys.add()
-                dict_proto.values.add().CopyFrom(self._serialize_expr(v))
-            proto.dict_expr.CopyFrom(dict_proto)
+                    dict_expr.keys.add()
+                self._serialize_expr(v, dict_expr.values.add())
         elif isinstance(expr, ConditionalExpr):
-            proto.conditional_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyConditionalExprProto(),
-                    cond=self._serialize_expr(expr.cond),
-                    if_expr=self._serialize_expr(expr.if_expr),
-                    else_expr=self._serialize_expr(expr.else_expr),
-                )
-            )
+            conditional_expr = out.conditional_expr
+            self._serialize_expr(expr.cond, conditional_expr.cond)
+            self._serialize_expr(expr.if_expr, conditional_expr.if_expr)
+            self._serialize_expr(expr.else_expr, conditional_expr.else_expr)
         elif isinstance(expr, StarExpr):
-            proto.star_expr.CopyFrom(
-                _with_submessages(pir_pb2.MypyStarExprProto(), expr=self._serialize_expr(expr.expr))
-            )
+            self._serialize_expr(expr.expr, out.star_expr.expr)
         elif isinstance(expr, YieldExpr):
-            yield_proto = pir_pb2.MypyYieldExprProto()
+            yield_expr = out.yield_expr
+            yield_expr.SetInParent()
             if expr.expr:
-                yield_proto.expr.CopyFrom(self._serialize_expr(expr.expr))
-            proto.yield_expr.CopyFrom(yield_proto)
+                self._serialize_expr(expr.expr, yield_expr.expr)
         elif isinstance(expr, YieldFromExpr):
-            proto.yield_from_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyYieldFromExprProto(),
-                    expr=self._serialize_expr(expr.expr),
-                )
-            )
+            self._serialize_expr(expr.expr, out.yield_from_expr.expr)
         elif isinstance(expr, AwaitExpr):
-            proto.await_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyAwaitExprProto(),
-                    expr=self._serialize_expr(expr.expr),
-                )
-            )
+            self._serialize_expr(expr.expr, out.await_expr.expr)
         elif isinstance(expr, AssignmentExpr):
-            proto.assignment_expr.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyAssignmentExprProto(),
-                    target=self._serialize_expr(expr.target),
-                    value=self._serialize_expr(expr.value),
-                )
-            )
+            assignment_expr = out.assignment_expr
+            self._serialize_expr(expr.target, assignment_expr.target)
+            self._serialize_expr(expr.value, assignment_expr.value)
         elif isinstance(expr, LambdaExpr):
-            lambda_proto = pir_pb2.MypyLambdaExprProto()
+            lambda_expr = out.lambda_expr
+            lambda_expr.SetInParent()
             for arg in expr.arguments:
-                lambda_proto.arguments.add().CopyFrom(self._serialize_argument(arg))
+                self._serialize_argument(arg, lambda_expr.arguments.add())
             if expr.body:
-                lambda_proto.body.CopyFrom(self._serialize_block(expr.body))
+                self._serialize_block(expr.body, lambda_expr.body)
             func_type = expr.type
             if isinstance(func_type, CallableType):
-                lambda_proto.return_type.CopyFrom(
-                    self.type_mapper.map(func_type.ret_type)
-                )
-            proto.lambda_expr.CopyFrom(lambda_proto)
+                self.type_mapper.map(func_type.ret_type, lambda_expr.return_type)
         elif isinstance(expr, SuperExpr):
-            proto.super_expr.CopyFrom(pir_pb2.MypySuperExprProto())
+            out.super_expr.SetInParent()
         elif isinstance(expr, ListComprehension):
-            proto.list_comprehension.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypyListComprehensionProto(),
-                    generator=self._serialize_generator_expr(expr.generator),
-                )
+            self._serialize_generator_expr(
+                expr.generator, out.list_comprehension.generator
             )
         elif isinstance(expr, SetComprehension):
-            proto.set_comprehension.CopyFrom(
-                _with_submessages(
-                    pir_pb2.MypySetComprehensionProto(),
-                    generator=self._serialize_generator_expr(expr.generator),
-                )
+            self._serialize_generator_expr(
+                expr.generator, out.set_comprehension.generator
             )
         elif isinstance(expr, DictionaryComprehension):
-            dict_comp = _with_submessages(
-                pir_pb2.MypyDictComprehensionProto(),
-                key=self._serialize_expr(expr.key),
-                value=self._serialize_expr(expr.value),
-            )
+            dict_comprehension = out.dict_comprehension
+            self._serialize_expr(expr.key, dict_comprehension.key)
+            self._serialize_expr(expr.value, dict_comprehension.value)
             for idx in expr.indices:
-                dict_comp.indices.add().CopyFrom(self._serialize_expr(idx))
+                self._serialize_expr(idx, dict_comprehension.indices.add())
             for seq in expr.sequences:
-                dict_comp.sequences.add().CopyFrom(self._serialize_expr(seq))
+                self._serialize_expr(seq, dict_comprehension.sequences.add())
             for conds in expr.condlists:
-                cl = pir_pb2.MypyCondListProto()
+                cl = dict_comprehension.condlists.add()
                 for c in conds:
-                    cl.conditions.add().CopyFrom(self._serialize_expr(c))
-                dict_comp.condlists.add().CopyFrom(cl)
-            proto.dict_comprehension.CopyFrom(dict_comp)
+                    self._serialize_expr(c, cl.conditions.add())
         elif isinstance(expr, GeneratorExpr):
-            proto.generator_expr.CopyFrom(self._serialize_generator_expr(expr))
+            self._serialize_generator_expr(expr, out.generator_expr)
 
-        return proto
-
-    def _serialize_generator_expr(
-        self, gen: GeneratorExpr
-    ) -> pir_pb2.MypyGeneratorExprProto:
-        proto = _with_submessages(
-            pir_pb2.MypyGeneratorExprProto(),
-            left_expr=self._serialize_expr(gen.left_expr),
-        )
+    def _serialize_generator_expr(self, gen: GeneratorExpr, out) -> None:
+        self._serialize_expr(gen.left_expr, out.left_expr)
         for idx in gen.indices:
-            proto.indices.add().CopyFrom(self._serialize_expr(idx))
+            self._serialize_expr(idx, out.indices.add())
         for seq in gen.sequences:
-            proto.sequences.add().CopyFrom(self._serialize_expr(seq))
+            self._serialize_expr(seq, out.sequences.add())
         for conds in gen.condlists:
-            cl = pir_pb2.MypyCondListProto()
+            cl = out.condlists.add()
             for c in conds:
-                cl.conditions.add().CopyFrom(self._serialize_expr(c))
-            proto.condlists.add().CopyFrom(cl)
-        return proto
+                self._serialize_expr(c, cl.conditions.add())
 
     def _unwrap_func(self, defn) -> FuncDef | None:
         if isinstance(defn, FuncDef):
