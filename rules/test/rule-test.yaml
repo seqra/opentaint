@@ -42,6 +42,7 @@ tests:
     positive:
       - security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet#doGet
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePing
+      - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePingList
   - rule-id: java/security/crlf-injection.yaml#http-response-splitting
     positive:
       - security.crlfinjection.HttpResponseSplittingServletSamples$UnsafeHeaderServlet#doGet
@@ -50,6 +51,8 @@ tests:
     positive:
       - security.crlfinjection.SmtpCrlfInjectionServletSamples$UnsafeSmtpServlet#doPost
       - security.crlfinjection.SmtpCrlfInjectionSpringSamples$UnsafeSpringSmtpController#unsafe
+    negative:
+      - security.crlfinjection.SmtpCrlfInjectionSpringSamples$SafeHighLevelMimeFieldsController#highLevelFields
   - rule-id: java/security/crypto.yaml#aes-hardcoded-key
     positive:
       - security.crypto.CipherAndKeyCryptoSamples#aesWithHardcodedKey
@@ -240,8 +243,8 @@ tests:
   - rule-id: java/security/external-configuration-control.yaml#bean-injection
     positive:
       - security.externalconfigurationcontrol.BeanInjectionSamples#doGet
-    negative:
       - security.externalconfigurationcontrol.BeanInjectionSamples#doPost
+      - security.externalconfigurationcontrol.BeanInjectionSamples#doPut
   - rule-id: java/security/external-configuration-control.yaml#sql-catalog-external-manipulation
     positive:
       - security.externalconfigurationcontrol.SqlCatalogServletSamples$UnsafeCatalogServlet#doGet
@@ -313,6 +316,8 @@ tests:
   - rule-id: java/security/insecure-design.yaml#trust-boundary-violation
     positive:
       - security.insecuredesign.InsecureDesignSamples#mixesTrustedAndUntrustedInSessionInsecure
+      - security.insecuredesign.InsecureDesignSamples#storesWrappedUntrustedInSessionInsecure
+      - security.insecuredesign.InsecureDesignSamples#storesUntrustedAttributeNameInSessionInsecure
     negative:
       - security.insecuredesign.InsecureDesignSamples#validateBeforeCrossingTrustBoundarySecure
   - rule-id: java/security/ldap.yaml#java-anonymous-ldap
@@ -492,12 +497,14 @@ tests:
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet#doGet
     negative:
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeRequestUriRedirectServlet#doGet
   - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-spring-app
     positive:
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirectView
     negative:
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeInternalRedirect
+      - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeRequestUriRedirect
   - rule-id: java/security/weak-authentication.yaml#java-jwt-decode-without-verify
     positive:
       - security.weakauthentication.WeakAuthenticationSamples#decodeJwtWithoutVerifyInsecure
@@ -588,6 +595,8 @@ tests:
       - security.xss.XssHtmlResponseSpringSamples$Row36ResponseEntityAssignmentJsonController#row36
       - security.xss.XssHtmlResponseSpringSamples$Row37ServletSetContentTypeJsonAssignmentController#row37
       - security.xss.XssHtmlResponseSpringSamples$Row55BuilderChainHtmlEntityDiscardedController#row55
+      - security.xss.XssHtmlResponseSpringSamples$Row57StringProducesLinksetController#row57
+      - security.xss.XssHtmlResponseSpringSamples$Row58StringProducesLinksetJsonController#row58
       - security.xss.XssHtmlResponseSpringSamples$SafeHtmlController#safeHtmlGreet
       - security.xss.XssHtmlResponseSpringSamples$SafeJsonStringReturnController#safeJsonStringReturn
       - security.xss.XssHtmlResponseSpringSamples$SafeStringReturnController#safeStringReturn
