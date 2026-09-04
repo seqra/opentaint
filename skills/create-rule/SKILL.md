@@ -49,7 +49,7 @@ Run the rule tests directly as a foreground, blocking command and wait for exit 
 opentaint test rule run .opentaint/test-compiled/<unit>/<side> \
   -o .opentaint/test-results/<unit>/<side> \
   --ruleset .opentaint/rules --ruleset .opentaint/test-projects/<unit>/<side>/test-rules \
-  --passthrough-approximations .opentaint/pass-through
+  --passthrough-models .opentaint/pass-through
 ```
 
 `test rule run` auto-loads the built-in rules, so pass only your custom rulesets. Apply the passthrough approximations as-is, an empty one is harmless. Read the result with the bundled script — it prints the pass/fail counts and names the failing samples, so you never parse the JSON by hand:
