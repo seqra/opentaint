@@ -12,7 +12,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.Message#headers#org.springframework.messaging.MessageHeaders
+    - .org.springframework.messaging.Message#headers#java.lang.Object
     to: result
 - function: org.springframework.messaging.simp.stomp.StompHeaders#add
   signature:
@@ -51,7 +51,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .org.springframework.messaging.support.MessageBuilder#originalMessage#org.springframework.messaging.Message
+    - .org.springframework.messaging.support.MessageBuilder#originalMessage#java.lang.Object
 - function: org.springframework.messaging.simp.SimpMessageHeaderAccessor#wrap
   taintCopyOnly: true
   copy:
@@ -80,7 +80,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.stomp.StompHeaders#entries#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.springframework.messaging.simp.SimpMessageHeaderAccessor#setSessionAttributes
@@ -88,7 +88,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#content#java.lang.Object
 - function: org.springframework.messaging.simp.SimpMessageHeaderAccessor#setSessionAttributes
   signature:
     params:
@@ -98,7 +98,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#sessionAttributes#java.util.Map
+    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#sessionAttributes#java.lang.Object
 - function: org.springframework.messaging.support.MessageBuilder#createMessage
   copy:
   - from: arg(0)
@@ -112,7 +112,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.String
+    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.Object
 - function: org.springframework.messaging.Message#getHeaders
   taintCopyOnly: true
   copy:
@@ -122,7 +122,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#content#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageBuilder#copyHeaders
   taintCopyOnly: true
@@ -136,10 +136,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.String
+    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.Object
     to:
     - result
-    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.String
+    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.Object
   - from:
     - this
     - .org.springframework.messaging.simp.stomp.StompHeaders#headerValue#java.lang.Object
@@ -183,14 +183,14 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.springframework.messaging.MessageHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.MessageHeaders#entries#java.lang.Object
     to: result
 - function: org.springframework.messaging.simp.stomp.StompHeaders#setAll
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.stomp.StompHeaders#entries#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.springframework.messaging.simp.SimpMessageHeaderAccessor#setSessionAttributes
@@ -213,7 +213,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#sessionAttributes#java.util.Map
+    - .org.springframework.messaging.simp.SimpMessageHeaderAccessor#sessionAttributes#java.lang.Object
     to: result
 - function: org.springframework.messaging.simp.stomp.StompHeaders#add
   signature:
@@ -224,21 +224,21 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.String
+    - .org.springframework.messaging.simp.stomp.StompHeaders#receipt#java.lang.Object
 - function: org.springframework.messaging.support.MessageBuilder#build
   signature:
     return: org.springframework.messaging.Message
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.MessageBuilder#originalMessage#org.springframework.messaging.Message
+    - .org.springframework.messaging.support.MessageBuilder#originalMessage#java.lang.Object
     to: result
 - function: org.springframework.messaging.MessageHeaders#<init>
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.MessageHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.MessageHeaders#entries#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.springframework.messaging.support.MessageBuilder#setReplyChannel
@@ -282,7 +282,7 @@ passThrough:
   - from: arg(1)
     to:
     - result
-    - .org.springframework.messaging.Message#headers#org.springframework.messaging.MessageHeaders
+    - .org.springframework.messaging.Message#headers#java.lang.Object
 - function: org.springframework.messaging.support.MessageBuilder#copyHeaders
   copy:
   - from: this
@@ -301,8 +301,8 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.stomp.StompHeaders#entries#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.springframework.messaging.simp.stomp.StompHeaders#<rule-storage>#java.lang.Object
+    - .org.springframework.messaging.simp.stomp.StompHeaders#entries#java.lang.Object

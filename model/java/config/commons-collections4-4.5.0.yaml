@@ -949,8 +949,8 @@ passThrough:
     - result
     - .org.apache.commons.collections4.Get#MapKey#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) *
   copy:
   - from: arg(5)
     to:
@@ -1896,12 +1896,6 @@ passThrough:
 - function: org.apache.commons.collections4.FluentIterable#of
   signature: (*) *
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.lang.Iterable#Element#java.lang.Object
   - from:
     - arg(0)
     - .java.lang.Iterable#Element#java.lang.Object
@@ -3906,8 +3900,8 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.lang.Iterable#Element#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    *
   copy:
   - from: arg(4)
     to:
@@ -4300,8 +4294,7 @@ passThrough:
     - result
     - .java.util.Enumeration#Element#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) *
   copy:
   - from: arg(3)
     to:
@@ -6224,15 +6217,6 @@ passThrough:
     to:
     - this
     - .org.apache.commons.collections4.Get#MapValue#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*, boolean) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
 - function: org.apache.commons.collections4.collection.PredicatedCollection$Builder#rejectedElements
   copy:
   - from:
@@ -8165,8 +8149,7 @@ passThrough:
     - this
     - .org.apache.commons.collections4.Get#MapKey#java.lang.Object
 - function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) *
   copy:
   - from: arg(3)
     to:
@@ -8192,15 +8175,6 @@ passThrough:
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-- function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (*) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .org.apache.commons.collections4.keyvalue.MultiKey#Element#java.lang.Object
 - function: org.apache.commons.collections4.CollectionUtils#selectRejected
   signature: (*, *, *) *
   copy:
@@ -8951,8 +8925,8 @@ passThrough:
     - this
     - .org.apache.commons.collections4.Get#MapValue#java.lang.Object
 - function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    *
   copy:
   - from: arg(3)
     to:

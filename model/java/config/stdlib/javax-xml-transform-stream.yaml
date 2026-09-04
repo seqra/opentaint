@@ -4,21 +4,9 @@ passThrough:
   signature: (java.io.InputStream, java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamResult#getWriter
   signature: () java.io.Writer
   taintCopyOnly: true
@@ -34,37 +22,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
+    - .javax.xml.transform.stream.StreamSource#reader#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: () void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.Reader, java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#getInputStream
   signature: () java.io.InputStream
   taintCopyOnly: true
@@ -81,31 +51,13 @@ passThrough:
   signature: (java.io.InputStream) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#getReader
   signature: () java.io.Reader
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.Reader) void
@@ -127,13 +79,7 @@ passThrough:
   signature: (java.io.InputStream) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#getReader
   signature: () java.io.Reader
   taintCopyOnly: true
@@ -144,40 +90,16 @@ passThrough:
   signature: (java.io.File) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamResult#getOutputStream
   signature: () java.io.OutputStream
   taintCopyOnly: true
@@ -188,28 +110,16 @@ passThrough:
   signature: (java.io.Reader) void
   copy:
   - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamResult#getWriter
   signature:
     return: java.io.Writer
   copy:
   - from:
     - this
-    - .javax.xml.transform.stream.StreamResult#writer#java.io.Writer
+    - .javax.xml.transform.stream.StreamResult#writer#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature:
@@ -220,11 +130,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stream.StreamSource#systemId#java.lang.String
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#systemId#java.lang.String
+    - .javax.xml.transform.stream.StreamSource#systemId#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature:
     params:
@@ -234,19 +140,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
+    - .javax.xml.transform.stream.StreamSource#reader#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.InputStream) void
   taintCopyOnly: true
@@ -261,19 +155,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
+    - .javax.xml.transform.stream.StreamSource#inputStream#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamSource#setReader
   signature: (java.io.Reader) void
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
+    to: this
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.File) void
   taintCopyOnly: true
@@ -302,7 +190,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stream.StreamSource#reader#java.io.Reader
+    - .javax.xml.transform.stream.StreamSource#reader#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature: (java.io.InputStream, java.lang.String) void
@@ -321,17 +209,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
+    - .javax.xml.transform.stream.StreamSource#inputStream#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#getInputStream
   signature: () java.io.InputStream
   copy:
-  - from:
-    - this
-    - .javax.xml.transform.stream.StreamSource#<rule-storage>#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.Source#<rule-storage>#java.lang.Object
+  - from: this
     to: result
 - function: javax.xml.transform.stream.StreamResult#getOutputStream
   signature:
@@ -339,7 +221,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stream.StreamResult#outputStream#java.io.OutputStream
+    - .javax.xml.transform.stream.StreamResult#outputStream#java.lang.Object
     to: result
 - function: javax.xml.transform.stream.StreamSource#<init>
   signature:
@@ -350,19 +232,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.transform.stream.StreamSource#inputStream#java.io.InputStream
+    - .javax.xml.transform.stream.StreamSource#inputStream#java.lang.Object
 - function: javax.xml.transform.stream.StreamSource#setReader
   signature: (java.io.Reader) void
   taintCopyOnly: true

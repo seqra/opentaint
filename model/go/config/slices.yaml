@@ -6,48 +6,32 @@ passThrough:
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Clone
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Compact
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: CompactFunc
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Concat
@@ -67,48 +51,32 @@ passThrough:
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: DeleteFunc
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Grow
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Insert
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Insert
@@ -167,24 +135,16 @@ passThrough:
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Replace
     receiver: false
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - '[*]'
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Replace

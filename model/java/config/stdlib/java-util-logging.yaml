@@ -12,9 +12,7 @@ passThrough:
   signature: (java.util.logging.Level, java.lang.String) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.logging.LogRecord#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.logging.LogRecord#<init>
   signature: (java.util.logging.Level, java.lang.String) void
   taintCopyOnly: true
@@ -26,10 +24,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.String
+    - .java.util.logging.LogRecord#message#java.lang.Object
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.String
+    - .java.lang.Throwable#message#java.lang.Object
 - function: java.util.logging.Logger#getName
   signature: () java.lang.String
   overrides: false
@@ -43,10 +41,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.String
+    - .java.util.logging.LogRecord#message#java.lang.Object
     to:
     - result
-    - .java.util.logging.LogRecord#message#java.lang.String
+    - .java.util.logging.LogRecord#message#java.lang.Object
 - function: java.util.logging.LogRecord#<init>
   signature:
     params:
@@ -56,4 +54,4 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.String
+    - .java.util.logging.LogRecord#message#java.lang.Object

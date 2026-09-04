@@ -5,22 +5,17 @@ dependencies:
 - org.springframework:spring-tx:6.1.5
 passThrough:
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#<rule-storage>#java.lang.Object
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#content#java.lang.Object
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionFactory
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#<rule-storage>#java.lang.Object
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#content#java.lang.Object
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionFactory
   signature:
     params:
@@ -30,17 +25,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionFactory#org.apache.ibatis.session.SqlSessionFactory
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionFactory#java.lang.Object
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#getSqlSession
   copy:
   - from:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#<rule-storage>#java.lang.Object
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#content#java.lang.Object
     to: result
 - function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionTemplate
   signature:
@@ -51,9 +41,4 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#org.mybatis.spring.SqlSessionTemplate
-- function: org.mybatis.spring.support.SqlSessionDaoSupport#setSqlSessionFactory
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
+    - .org.mybatis.spring.support.SqlSessionDaoSupport#sqlSessionTemplate#java.lang.Object

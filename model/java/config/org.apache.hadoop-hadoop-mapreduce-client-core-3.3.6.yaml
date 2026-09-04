@@ -13,7 +13,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.JobID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobID#toString
   copy:
@@ -21,7 +21,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.JobID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#getWorkPath
   copy:
@@ -29,18 +29,18 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#path#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#<init>
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#path#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#path#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -50,16 +50,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#queueName#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#getQueueName
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#queueName#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.JobID#<init>
   copy:
@@ -68,7 +64,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapreduce.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.JobID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.JobClient#getReduceTaskReports
   copy:
   - from: arg(0)
@@ -77,9 +73,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#jobEndNotificationURI#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.TaskID#getJobID
   copy:
@@ -87,7 +81,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.FileSplit#<init>
   copy:
@@ -96,14 +90,12 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapred.FileSplit#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.FileSplit#path#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#getReduceDebugScript
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#reduceDebugScript#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobID#read
   copy:
@@ -113,17 +105,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#keepTaskFilesPattern#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobConf#getJobName
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#jobName#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.RunningJob#getCounters
   copy:
@@ -133,9 +121,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#keyFieldPartitionerOptions#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.JobID#forName
   copy:
@@ -148,7 +134,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapreduce.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskAttemptID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#findContainingJar
   copy:
   - from: arg(0)
@@ -161,7 +147,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.JobID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -177,7 +163,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskAttemptID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -187,7 +173,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskAttemptID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.TaskID#<init>
   copy:
@@ -196,12 +182,12 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapred.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.TaskID#appendTo
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -210,9 +196,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#workingDirectory#java.lang.Object
 - function: org.apache.hadoop.mapred.JobClient#getMapTaskReports
   copy:
   - from: arg(0)
@@ -232,15 +216,13 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapreduce.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#setKeyFieldPartitionerOptions
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#keyFieldPartitionerOptions#java.lang.Object
 - function: org.apache.hadoop.mapred.RunningJob#getTrackingURL
   copy:
   - from: this
@@ -249,7 +231,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskAttemptID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -259,7 +241,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.TaskAttemptID#<init>
   copy:
@@ -268,14 +250,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapred.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskAttemptID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.FileSplit#getPath
   copy:
   - from: this
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.FileSplit#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.FileSplit#path#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobID#getJtIdentifier
   copy:
@@ -283,7 +265,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.JobID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.TaskID#forName
   copy:
@@ -293,18 +275,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#sessionId#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobConf#setJar
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#jar#java.lang.Object
 - function: org.apache.hadoop.mapred.JobID#forName
   copy:
   - from: arg(*)
@@ -315,7 +293,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskAttemptID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.TaskLog#addCommand
   copy:
@@ -338,14 +316,12 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.JobID#content#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#getProfileParams
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#profileParams#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.Job#getTrackingURL
   copy:
@@ -355,18 +331,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#keyFieldComparatorOptions#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobConf#setUser
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#user#java.lang.Object
 - function: org.apache.hadoop.mapred.RunningJob#getJobID
   copy:
   - from: this
@@ -376,30 +348,24 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#reduceDebugScript#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#setMapDebugScript
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#mapDebugScript#java.lang.Object
 - function: org.apache.hadoop.mapred.JobConf#setJobEndNotificationURI
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#jobEndNotificationURI#java.lang.Object
 - function: org.apache.hadoop.mapreduce.JobID#toString
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.JobID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -408,14 +374,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#keyFieldComparatorOptions#java.lang.Object
 - function: org.apache.hadoop.mapreduce.JobID#appendTo
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.JobID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.JobID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -434,9 +398,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#sessionId#java.lang.Object
 - function: org.apache.hadoop.mapred.FileInputFormat#getInputPaths
   copy:
   - from: arg(0)
@@ -447,17 +409,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#user#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.JobConf#getWorkingDirectory
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#workingDirectory#java.lang.Object
     to: result
 - function: org.apache.hadoop.filecache.DistributedCache#addLocalFiles
   copy:
@@ -480,14 +438,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#jobName#java.lang.Object
 - function: org.apache.hadoop.mapreduce.TaskAttemptID#toString
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskAttemptID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -500,14 +456,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#keepTaskFilesPattern#java.lang.Object
 - function: org.apache.hadoop.mapred.TaskID#getJobID
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -517,7 +471,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskAttemptID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.InputSplit#getLocations
   copy:
@@ -527,9 +481,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#mapDebugScript#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.RunningJob#getID
   copy:
@@ -543,9 +495,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-    to: result
-  - from: this
+    - .org.apache.hadoop.mapred.JobConf#jar#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.TaskID#toString
   copy:
@@ -553,13 +503,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapreduce.TaskAttemptID#getJobID
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapreduce.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapreduce.TaskAttemptID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -569,13 +519,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskAttemptID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskAttemptID#content#java.lang.Object
     to: result
 - function: org.apache.hadoop.mapred.TaskID#toString
   copy:
   - from:
     - this
-    - .org.apache.hadoop.mapred.TaskID#<rule-storage>#java.lang.Object
+    - .org.apache.hadoop.mapred.TaskID#content#java.lang.Object
     to: result
   - from: this
     to: result
@@ -592,9 +542,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobConf#<rule-storage>#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .org.apache.hadoop.mapred.JobConf#profileParams#java.lang.Object
 - function: org.apache.hadoop.mapred.TaskLog#captureOutAndError
   copy:
   - from: arg(*)

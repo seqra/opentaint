@@ -9,7 +9,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.commons.CommonsMultipartFile#fileItem#org.apache.commons.fileupload.FileItem
+    - .org.springframework.web.multipart.commons.CommonsMultipartFile#fileItem#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#getMultipartParameters
   taintCopyOnly: true
@@ -21,12 +21,12 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#<rule-storage>#java.lang.Object
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#path#java.lang.Object
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#getMultipartParameters
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#<rule-storage>#java.lang.Object
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#path#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#<init>
   signature:
@@ -37,7 +37,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartParameters#org.springframework.util.MultiValueMap
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartParameters#java.lang.Object
 - function: org.springframework.web.multipart.commons.CommonsMultipartFile#getFileItem
   taintCopyOnly: true
   copy:
@@ -59,7 +59,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartFiles#java.util.Map
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartFiles#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#getMultipartFiles
   signature:
@@ -67,13 +67,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartParameters#org.springframework.util.MultiValueMap
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#multipartParameters#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#getMultipartFiles
   copy:
   - from:
     - this
-    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#<rule-storage>#java.lang.Object
+    - .org.springframework.web.multipart.commons.CommonsFileUploadSupport$MultipartParsingResult#path#java.lang.Object
     to: result
 - function: org.springframework.web.multipart.commons.CommonsFileUploadSupport#parseFileItems
   taintCopyOnly: true
