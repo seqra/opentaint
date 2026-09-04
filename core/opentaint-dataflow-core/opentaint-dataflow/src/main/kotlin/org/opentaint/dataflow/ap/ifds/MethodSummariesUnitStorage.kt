@@ -10,6 +10,7 @@ import java.util.concurrent.ConcurrentHashMap
 open class MethodSummariesUnitStorage(
     private var apManager: ApManager,
     private val languageManager: LanguageManager,
+    private val onNewSummaryStorage: (SummaryEdgeStorageWithSubscribers) -> Unit = {},
 ) {
     private var methodSummaries = ConcurrentHashMap<MethodEntryPoint, SummaryEdgeStorageWithSubscribers>()
 
@@ -111,7 +112,9 @@ open class MethodSummariesUnitStorage(
 
     private fun methodSummaryEdges(methodEntryPoint: MethodEntryPoint) =
         methodSummaries.computeIfAbsent(methodEntryPoint) {
-            SummaryEdgeStorageWithSubscribers(apManager, methodEntryPoint)
+            SummaryEdgeStorageWithSubscribers(apManager, methodEntryPoint).also { storage ->
+                onNewSummaryStorage(storage)
+            }
         }
 
     fun methodZeroSideEffectSummaries(
