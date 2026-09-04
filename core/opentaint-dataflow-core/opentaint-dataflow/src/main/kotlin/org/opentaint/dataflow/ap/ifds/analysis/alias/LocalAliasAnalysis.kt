@@ -1,9 +1,11 @@
 package org.opentaint.dataflow.ap.ifds.analysis.alias
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.concurrent.ConcurrentHashMap
 
 abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
     interface CommonAliasApInfo<AliasAccessor> {
@@ -15,7 +17,14 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
 
     val aliasInfo: AnalysisResult? by lazy { compute() }
 
-    val convertedAliases = Long2ObjectOpenHashMap<List<AliasInfo>>()
+    val convertedAliases = Long2ObjectOpenHashMap<Int2ObjectOpenHashMap<List<AliasInfo>>>()
+    private val convertedAliasSets = ConcurrentHashMap<Long, List<AliasInfo>>()
+
+    protected open val aliasCompressionThreshold: Int = Int.MAX_VALUE
+
+    protected open fun compressAliases(aliases: List<AliasInfo>): List<AliasInfo> = aliases
+
+    protected open fun filterAliases(query: AAInfo, aliases: List<AliasInfo>): List<AliasInfo> = aliases
 
     fun findAlias(base: AccessPathBase.LocalVar, statement: CommonInst): List<AliasInfo>? =
         withStateBeforeStatement(statement) { state, stateId -> state.findLocalAlias(stateId, base.idx) }
@@ -113,15 +122,16 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
         return convertAllAliases(stateId, localInfoIdx)
     }
 
-    private fun State.convertAllAliases(stateId: Int, infoIdx: Int): List<AliasInfo> {
-        val result = mutableListOf<AliasInfo>()
-        forEachAliasInSet(infoIdx) { aliasIdx ->
-            if (aliasIdx != infoIdx) {
-                result += convert(stateId, aliasIdx, depth = 0)
+    private fun State.convertAllAliases(stateId: Int, infoIdx: Int): List<AliasInfo> =
+        convertedAliasSets.computeIfAbsent(pair(infoIdx, stateId)) {
+            val result = mutableListOf<AliasInfo>()
+            forEachAliasInSet(infoIdx) { aliasIdx ->
+                if (aliasIdx != infoIdx) {
+                    result += convert(stateId, aliasIdx, depth = 0)
+                }
             }
+            filterAliases(manager.getElementUncheck(infoIdx), compressIfRequired(result))
         }
-        return result
-    }
 
     private fun State.convertAllAliasSets(stateId: Int): List<List<AliasInfo>> =
         allAliasSets().map { aliasSet ->
@@ -129,15 +139,19 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
             aliasSet.forEach {
                 result += convert(stateId, it, depth = 0)
             }
-            result
+            compressIfRequired(result)
         }
 
     abstract fun convert(info: AAInfo, depth: Int, convertInstance: (Int) -> List<AliasInfo>): List<AliasInfo>
 
     private fun State.convert(stateId: Int, infoIdx: Int, depth: Int): List<AliasInfo> =
         synchronized(convertedAliases) {
-            convertedAliases.getOrCreate(pair(infoIdx, stateId)) {
-                convert(stateId, manager.getElementUncheck(infoIdx), depth)
+            val cacheId = pair(infoIdx, stateId)
+            val cachedByDepth = convertedAliases.getOrCreate(cacheId) {
+                Int2ObjectOpenHashMap()
+            }
+            cachedByDepth.getOrCreate(depth) {
+                compressIfRequired(convert(stateId, manager.getElementUncheck(infoIdx), depth))
             }
         }
 
@@ -147,8 +161,13 @@ abstract class LocalAliasAnalysis<AliasInfo, AliasAccessor> {
             forEachAliasInSet(instance) {
                 instances += convert(stateId, it, depth + 1)
             }
-            instances
+            compressIfRequired(instances)
         }
+
+    private fun compressIfRequired(aliases: List<AliasInfo>): List<AliasInfo> {
+        if (aliases.size <= aliasCompressionThreshold) return aliases
+        return compressAliases(aliases)
+    }
 
     private fun pair(a: Int, b: Int): Long =
         (a.toLong() shl 32) or (b.toLong() and 0xFFFF_FFFFL)
