@@ -56,7 +56,7 @@ private fun <T> initializeProjectAnalysisContextUtil(
     options: ProjectAnalysisOptions,
     createAnalysisContext: AnalysisContextBuilder.() -> T
 ): T {
-    val dependencyFiles = project.dependencies.map { it.toFile() }
+    val dependencyFiles = project.dependencies.map { it.path.toFile() }
     val projectModulesFiles = run {
         val moduleFiles = mutableMapOf<File, ProjectModuleClasses>()
         for (module in project.modules) {
