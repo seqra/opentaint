@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scopes": [
     "analyzer",
     "autobuilder",
@@ -11,7 +11,6 @@
     "gitlab",
     "go-server",
     "infra",
-    "ir",
     "model",
     "rules"
   ],
@@ -21,7 +20,6 @@
       ["cli", "autobuilder"],
       ["cli", "core"],
       ["cli", "go-server"],
-      ["cli", "ir"],
       ["cli", "model"],
       ["cli", "rules"]
     ],
@@ -38,7 +36,6 @@
     "analyzer": [
       "analyzer",
       "core",
-      "ir",
       "model"
     ],
     "autobuilder": [
@@ -46,8 +43,7 @@
       "core"
     ],
     "go-server": [
-      "go-server",
-      "ir"
+      "go-server"
     ]
   },
   "ownership": {
@@ -56,7 +52,7 @@
     ],
     "overrides": [
       {
-        "scope": "ci",
+        "requiredScopes": ["ci"],
         "globs": [
           "release-notes-transform.cjs",
           "**/.releaserc.cjs"
@@ -65,46 +61,46 @@
     ],
     "roots": {
       "rules": {
-        "defaultScope": "rules"
+        "defaultScopes": ["rules"]
       },
       "model": {
-        "defaultScope": "model"
+        "defaultScopes": ["model"]
       },
       "github": {
-        "defaultScope": "github"
+        "defaultScopes": ["github"]
       },
       "gitlab": {
-        "defaultScope": "gitlab"
+        "defaultScopes": ["gitlab"]
       },
       "infra": {
-        "defaultScope": "infra"
+        "defaultScopes": ["infra"]
       },
       "cli": {
-        "defaultScope": "cli"
+        "defaultScopes": ["cli"]
       },
       "core": {
-        "defaultScope": "core",
+        "defaultScopes": ["core"],
         "rules": [
           {
-            "scope": "autobuilder",
+            "requiredScopes": ["autobuilder"],
             "globs": [
               "opentaint-jvm-autobuilder/**"
             ]
           },
           {
-            "scope": "go-server",
+            "requiredScopes": ["go-server"],
             "globs": [
               "opentaint-ir/go/go-ssa-server/**"
             ]
           },
           {
-            "scope": "ir",
+            "requiredScopes": ["analyzer", "go-server"],
             "globs": [
               "opentaint-ir/go/proto/**"
             ]
           },
           {
-            "scope": "analyzer",
+            "requiredScopes": ["analyzer"],
             "globs": [
               "src/**",
               "samples/**",
@@ -128,11 +124,11 @@
         ]
       },
       ".github": {
-        "defaultScope": "ci"
+        "defaultScopes": ["ci"]
       }
     },
     "documentation": {
-      "scope": "docs",
+      "requiredScopes": ["docs"],
       "rootDirectories": [
         "public",
         "docs",

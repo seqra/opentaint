@@ -68,3 +68,10 @@ test('real analyzer does not release an absent scope', async () => {
 test('real analyzer keeps single-scope compatibility', async () => {
   assert.equal(await releaseFor('rules', 'fix(rules): Update rules'), 'patch');
 });
+
+test('real analyzer releases both products for a shared Go IR change', async () => {
+  const message = 'fix(analyzer, go-server): Update the shared Go IR protocol';
+  assert.equal(await releaseFor('analyzer', message), 'patch');
+  assert.equal(await releaseFor('go-server', message), 'patch');
+  assert.equal(await releaseFor('autobuilder', message), null);
+});

@@ -47,7 +47,7 @@ test('release matching uses scope intersection', () => {
   assert.equal(hasAnyScope('model, analyzer, rules', ['cli']), false);
 });
 
-test('core releases analyzer and autobuilder', () => {
+test('release mappings use product scopes for shared Go IR changes', () => {
   assert.equal(hasAnyScope('core', scopesForRelease('analyzer')), true);
   assert.equal(hasAnyScope('core', scopesForRelease('autobuilder')), true);
   assert.equal(hasAnyScope('core', scopesForRelease('go-server')), false);
@@ -55,8 +55,18 @@ test('core releases analyzer and autobuilder', () => {
   assert.equal(hasAnyScope('autobuilder', scopesForRelease('analyzer')), false);
   assert.equal(hasAnyScope('go-server', scopesForRelease('analyzer')), false);
   assert.equal(hasAnyScope('go-server', scopesForRelease('go-server')), true);
-  assert.equal(hasAnyScope('ir', scopesForRelease('analyzer')), true);
-  assert.equal(hasAnyScope('ir', scopesForRelease('go-server')), true);
+  assert.equal(
+    hasAnyScope('analyzer, go-server', scopesForRelease('analyzer')),
+    true,
+  );
+  assert.equal(
+    hasAnyScope('analyzer, go-server', scopesForRelease('go-server')),
+    true,
+  );
+  assert.equal(
+    hasAnyScope('analyzer, go-server', scopesForRelease('autobuilder')),
+    false,
+  );
   assert.equal(hasAnyScope('model', scopesForRelease('analyzer')), true);
   assert.equal(hasAnyScope('model', scopesForRelease('autobuilder')), false);
   assert.equal(hasAnyScope('model', scopesForRelease('go-server')), false);
@@ -74,7 +84,7 @@ test('publish workflows select a release instead of repeating scope sets', () =>
   assert.doesNotMatch(analyzer, /scopes: analyzer,core,model/);
   assert.doesNotMatch(autobuilder, /scopes: autobuilder,core/);
   assert.match(goServer, /release: go-server/);
-  assert.doesNotMatch(goServer, /scopes: go-server,ir,core/);
+  assert.doesNotMatch(goServer, /scopes: go-server,core/);
   assert.equal(
     releaseCi.match(/\.github\/workflows\/publish-\*\.yaml/g)?.length,
     2,

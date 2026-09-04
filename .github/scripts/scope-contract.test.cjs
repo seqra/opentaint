@@ -18,7 +18,6 @@ const EXPECTED_SCOPES = [
   'gitlab',
   'go-server',
   'infra',
-  'ir',
   'model',
   'rules',
 ];
@@ -60,7 +59,6 @@ test('cli cannot occur with release component scopes', () => {
     'autobuilder',
     'core',
     'go-server',
-    'ir',
     'model',
     'rules',
   ]) {
@@ -97,7 +95,6 @@ test('all scope subsets agree with the formal compatibility policy', () => {
     'autobuilder',
     'core',
     'go-server',
-    'ir',
     'model',
     'rules',
   ]);
@@ -118,10 +115,12 @@ test('all scope subsets agree with the formal compatibility policy', () => {
   }
 
   let checked = 0;
+  let validSets = 0;
   for (let mask = 1; mask < 2 ** EXPECTED_SCOPES.length; mask += 1) {
     const selected = EXPECTED_SCOPES.filter(
       (_, index) => (mask & (1 << index)) !== 0,
     );
+    if (expectedValid(selected)) validSets += 1;
     for (const ordered of [selected, [...selected].reverse()]) {
       const scopeList = ordered.join(', ');
       if (expectedValid(ordered)) {
@@ -132,49 +131,56 @@ test('all scope subsets agree with the formal compatibility policy', () => {
       checked += 1;
     }
   }
-  assert.equal(checked, 16382);
+  assert.equal(checked, 8190);
+  assert.equal(validSets, 271);
 });
 
 test('path ownership uses the declarative root contract', () => {
   const cases = new Map([
-    ['model/go/dataflow/example/model.go', 'model'],
-    ['core/src/test/kotlin/example/ModelTest.kt', 'analyzer'],
-    ['core/opentaint-ir/go/tests/src/test/kotlin/IrTest.kt', 'analyzer'],
-    ['core/build.gradle.kts', 'core'],
-    ['core/opentaint-jvm-autobuilder/src/Main.kt', 'autobuilder'],
-    ['core/opentaint-project-model/src/Project.kt', 'core'],
-    ['core/opentaint-utils/cli-util/src/Cli.kt', 'core'],
-    ['core/opentaint-ir/go/go-ir-api/src/Program.kt', 'analyzer'],
-    ['core/opentaint-ir/go/go-ssa-server/server.go', 'go-server'],
-    ['core/opentaint-ir/go/proto/goir/service.proto', 'ir'],
-    ['core/opentaint-dataflow-core/opentaint-go-dataflow/src/Dataflow.kt', 'analyzer'],
-    ['rules/ruleset/go/lib/example.yaml', 'rules'],
-    ['cli/README.md', 'cli'],
+    ['model/go/dataflow/example/model.go', ['model']],
+    ['core/src/test/kotlin/example/ModelTest.kt', ['analyzer']],
+    ['core/opentaint-ir/go/tests/src/test/kotlin/IrTest.kt', ['analyzer']],
+    ['core/build.gradle.kts', ['core']],
+    ['core/opentaint-jvm-autobuilder/src/Main.kt', ['autobuilder']],
+    ['core/opentaint-project-model/src/Project.kt', ['core']],
+    ['core/opentaint-utils/cli-util/src/Cli.kt', ['core']],
+    ['core/opentaint-ir/go/go-ir-api/src/Program.kt', ['analyzer']],
+    ['core/opentaint-ir/go/go-ssa-server/server.go', ['go-server']],
+    [
+      'core/opentaint-ir/go/proto/goir/service.proto',
+      ['analyzer', 'go-server'],
+    ],
+    [
+      'core/opentaint-dataflow-core/opentaint-go-dataflow/src/Dataflow.kt',
+      ['analyzer'],
+    ],
+    ['rules/ruleset/go/lib/example.yaml', ['rules']],
+    ['cli/README.md', ['cli']],
     ['formal/release-scopes/Main.lean', null],
-    ['github/action.yml', 'github'],
-    ['gitlab/action.yml', 'gitlab'],
-    ['infra/pulumi/index.ts', 'infra'],
-    ['.github/workflows/ci-rules.yaml', 'ci'],
-    ['.github/workflows/ci-analyzer-owasp.yaml', 'ci'],
-    ['.github/workflows/ci-github.yaml', 'ci'],
-    ['.github/workflows/ci-cli.yaml', 'ci'],
-    ['.github/workflows/ci-autobuilder.yaml', 'ci'],
-    ['.github/workflows/ci-analyzer.yaml', 'ci'],
-    ['.github/workflows/ci-dataflow.yaml', 'ci'],
-    ['.github/workflows/ci-ir.yaml', 'ci'],
-    ['.github/workflows/release-rules.yaml', 'ci'],
-    ['.github/workflows/release-github.yaml', 'ci'],
-    ['.github/workflows/release-gitlab.yaml', 'ci'],
-    ['.github/workflows/release-cli.yaml', 'ci'],
-    ['.github/workflows/publish-autobuilder.yaml', 'ci'],
-    ['.github/workflows/publish-analyzer.yaml', 'ci'],
-    ['.github/workflows/pr-title.yaml', 'ci'],
-    ['cli/.releaserc.cjs', 'ci'],
-    ['README.md', 'docs'],
+    ['github/action.yml', ['github']],
+    ['gitlab/action.yml', ['gitlab']],
+    ['infra/pulumi/index.ts', ['infra']],
+    ['.github/workflows/ci-rules.yaml', ['ci']],
+    ['.github/workflows/ci-analyzer-owasp.yaml', ['ci']],
+    ['.github/workflows/ci-github.yaml', ['ci']],
+    ['.github/workflows/ci-cli.yaml', ['ci']],
+    ['.github/workflows/ci-autobuilder.yaml', ['ci']],
+    ['.github/workflows/ci-analyzer.yaml', ['ci']],
+    ['.github/workflows/ci-dataflow.yaml', ['ci']],
+    ['.github/workflows/ci-ir.yaml', ['ci']],
+    ['.github/workflows/release-rules.yaml', ['ci']],
+    ['.github/workflows/release-github.yaml', ['ci']],
+    ['.github/workflows/release-gitlab.yaml', ['ci']],
+    ['.github/workflows/release-cli.yaml', ['ci']],
+    ['.github/workflows/publish-autobuilder.yaml', ['ci']],
+    ['.github/workflows/publish-analyzer.yaml', ['ci']],
+    ['.github/workflows/pr-title.yaml', ['ci']],
+    ['cli/.releaserc.cjs', ['ci']],
+    ['README.md', ['docs']],
   ]);
 
   for (const [path, expected] of cases) {
-    assert.equal(engine.scopeForPath(path), expected, path);
+    assert.deepEqual(engine.requiredScopesForPath(path), expected, path);
   }
 });
 
@@ -189,20 +195,53 @@ test('every workflow path uses the ci scope', () => {
     .filter(Boolean);
   assert(workflows.length > 0);
   for (const workflow of workflows) {
-    assert.equal(engine.scopeForPath(workflow), 'ci', workflow);
+    assert.deepEqual(engine.requiredScopesForPath(workflow), ['ci'], workflow);
   }
 });
 
 test('path ownership rejects an ambiguous refinement', () => {
   const ambiguous = structuredClone(engine.contract);
   ambiguous.ownership.roots.core.rules.push({
-    scope: 'autobuilder',
+    requiredScopes: ['autobuilder'],
     globs: ['src/**'],
   });
   assert.throws(
-    () => engine.scopeForPath('core/src/Main.kt', ambiguous),
-    /multiple scopes/,
+    () => engine.requiredScopesForPath('core/src/Main.kt', ambiguous),
+    /multiple scope requirements/,
   );
+});
+
+test('path ownership rejects an incompatible requirement set', () => {
+  const incompatible = structuredClone(engine.contract);
+  incompatible.ownership.roots.core.rules.push({
+    requiredScopes: ['cli', 'analyzer'],
+    globs: ['new-component/**'],
+  });
+  assert.throws(
+    () => engine.validateContract(incompatible),
+    /cli scope cannot occur with the analyzer scope/,
+  );
+});
+
+test('path ownership rejects malformed requirement sets', () => {
+  for (const requiredScopes of [[], ['core', 'core'], ['unknown']]) {
+    const malformed = structuredClone(engine.contract);
+    malformed.ownership.roots.core.defaultScopes = requiredScopes;
+    assert.throws(() => engine.validateContract(malformed));
+  }
+});
+
+test('a shared Go IR protocol path requires both product scopes', () => {
+  const paths = ['core/opentaint-ir/go/proto/goir/service.proto'];
+  assert.doesNotThrow(
+    () => engine.validateScopePaths('analyzer, go-server', paths),
+  );
+  assert.doesNotThrow(
+    () => engine.validateScopePaths('go-server, analyzer', paths),
+  );
+  assert.throws(() => engine.validateScopePaths('analyzer', paths));
+  assert.throws(() => engine.validateScopePaths('go-server', paths));
+  assert.throws(() => engine.validateScopePaths('ir', paths));
 });
 
 test('exact path validation requires all and only used owners', () => {
@@ -240,7 +279,7 @@ test('direct component paths always require their own scope', () => {
     {
       path: 'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
       scope: 'analyzer',
-      aliases: ['core', 'ir', 'model'],
+      aliases: ['core', 'model'],
     },
     {
       path: 'core/opentaint-jvm-autobuilder/src/Main.kt',
@@ -250,12 +289,12 @@ test('direct component paths always require their own scope', () => {
     {
       path: 'core/opentaint-ir/go/go-ssa-server/server.go',
       scope: 'go-server',
-      aliases: ['ir'],
+      aliases: ['core'],
     },
     {
       path: 'model/go/dataflow/example/model.go',
       scope: 'model',
-      aliases: ['analyzer', 'core', 'ir'],
+      aliases: ['analyzer', 'core'],
     },
   ];
 
@@ -280,7 +319,7 @@ test('direct component paths always require their own scope', () => {
 test('release scope sets encode scope release effects', () => {
   assert.deepEqual(
     engine.scopesForRelease('analyzer'),
-    ['analyzer', 'core', 'ir', 'model'],
+    ['analyzer', 'core', 'model'],
   );
   assert.deepEqual(
     engine.scopesForRelease('autobuilder'),
@@ -288,12 +327,12 @@ test('release scope sets encode scope release effects', () => {
   );
   assert.deepEqual(
     engine.scopesForRelease('go-server'),
-    ['go-server', 'ir'],
+    ['go-server'],
   );
   assert.throws(() => engine.scopesForRelease('unknown'));
 });
 
-test('every tracked path has one owner or is explicitly ignored', () => {
+test('every tracked path has one requirement set or is explicitly ignored', () => {
   const tracked = execFileSync(
     'git',
     ['ls-files', '--cached', '--others', '--exclude-standard'],
@@ -303,8 +342,8 @@ test('every tracked path has one owner or is explicitly ignored', () => {
     .split('\n')
     .filter(candidatePath => candidatePath && fs.existsSync(candidatePath));
   for (const path of tracked) {
-    const owner = engine.scopeForPath(path);
-    if (owner === null) {
+    const requiredScopes = engine.requiredScopesForPath(path);
+    if (requiredScopes === null) {
       assert.equal(path.split('/')[0], 'formal', path);
     }
   }
