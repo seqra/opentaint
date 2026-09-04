@@ -28,10 +28,10 @@ class MethodEdgesInitialToFinalTreeApSet(
             statement: CommonInst,
             initial: AccessPath.AccessNode?,
             final: AccessWithExclusion<AccessTree.AccessNode>,
-        ): AccessWithExclusion<AccessTree.AccessNode>? {
+        ): List<AccessWithExclusion<AccessTree.AccessNode>> {
             val storage = sameInitialAccessEdges.getOrCreateNode(initial).current
 
-            return storage.add(statement, final)
+            return storage.add(statement, final)?.let(::listOf) ?: emptyList()
         }
 
         override fun filter(

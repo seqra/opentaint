@@ -6,7 +6,6 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 data class EvaluatedCleanAction(
     val fact: FinalFactReader?,
     val action: ActionInfo?,
-    val prev: EvaluatedCleanAction?,
 ) {
     data class ActionInfo(
         val rule: CommonTaintConfigurationItem,
@@ -15,7 +14,7 @@ data class EvaluatedCleanAction(
 
     companion object {
         fun initial(fact: FinalFactReader) = EvaluatedCleanAction(
-            action = null, fact = fact, prev = null
+            action = null, fact = fact
         )
     }
 }

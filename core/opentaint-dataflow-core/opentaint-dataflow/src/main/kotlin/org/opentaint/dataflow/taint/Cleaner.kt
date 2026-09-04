@@ -44,13 +44,13 @@ class TaintCleanActionEvaluator {
         val result = mutableListOf<EvaluatedCleanAction>()
         if (cleaned.removedAlternative) {
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            result += EvaluatedCleanAction(null, actionInfo, evc)
+            result += EvaluatedCleanAction(null, actionInfo)
         }
 
         return cleaned.survivingFacts.mapTo(result) { cleanedFact ->
             val resultFact = fact.replaceFact(cleanedFact)
             val actionInfo = EvaluatedCleanAction.ActionInfo(rule, action)
-            EvaluatedCleanAction(resultFact, actionInfo, evc)
+            EvaluatedCleanAction(resultFact, actionInfo)
         }
     }
 
@@ -188,7 +188,7 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): CleanResult {
                     val cleanedWithoutAny = factWithoutAny?.clearAccessor(head)
 
                     return CleanResult(
-                        listOfNotNull(restoredAfterAny, cleanedWithoutAny),
+                        listOfNotNull(restoredAfterAny, cleanedWithoutAny).distinct(),
                         removedAlternative = clearedAfterAny != factAfterAny || cleanedWithoutAny != factWithoutAny,
                     )
                 }
@@ -213,7 +213,7 @@ private fun FinalFactAp.cleanConcrete(cleaner: Cleaner): CleanResult {
     val cleanedChild = child.clean(cleaner.removePrefix(head))
     val restoredChildren = cleanedChild.survivingFacts.map { it.prependAccessor(head) }
     return CleanResult(
-        remaining + restoredChildren,
+        (remaining + restoredChildren).distinct(),
         removedAlternative = cleanedChild.removedAlternative,
     )
 }

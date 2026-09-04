@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.FactToFactTransfer
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
@@ -110,6 +111,30 @@ class JIRMethodSequentFlowFunction(
             },
             sideEffect = { add(it) }
         )
+    }
+
+    override fun createFactToFactTransfer(currentFactAp: FinalFactAp): Set<FactToFactTransfer>? {
+        if (currentInst is JIRReturnInst || currentInst is JIRThrowInst) return null
+
+        return buildSet {
+            propagate(
+                initialFacts = null,
+                factAp = currentFactAp,
+                unchanged = { add(FactToFactTransfer.Unchanged) },
+                propagateFact = { fact, trace ->
+                    add(FactToFactTransfer.Fact(fact, trace))
+                },
+                propagateFactWithRefinement = { _, _, _ ->
+                    error("Fact refinement is only valid at a method exit")
+                },
+                propagateFactWithAccessorExclude = { fact, accessor, trace ->
+                    add(FactToFactTransfer.ExcludeAccessor(fact.excludeField(accessor), accessor, trace))
+                },
+                sideEffect = {
+                    error("A non-exit sequential transfer cannot produce a side effect")
+                },
+            )
+        }
     }
 
     override fun propagateNDFactToFact(
@@ -690,6 +715,9 @@ class JIRMethodSequentFlowFunction(
             val sourceRule = sourceRuleWithCondition.rule
             for (action in sourceRule.actionsAfter) {
                 sourceEvaluator.accept(sourceRule, action).onSome { evaluatedFacts ->
+                    if (!generateTrace && evaluatedFacts.isNotEmpty()) {
+                        analysisContext.recordForwardSourceAction(currentInst, sourceRule, action)
+                    }
                     val trace = TraceInfo.Rule(sourceRule, action)
 
                     evaluatedFacts.mapTo(this) {

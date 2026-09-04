@@ -11,11 +11,13 @@ abstract class SemgrepRuleProvider<RuleItem, ResolvedRule>(
     private var ruleIdFilter: Set<String>? = null
 
     fun selectRelevantSemgrepRules(ruleIds: Set<String>) {
-        ruleIdFilter = rules
-            .flatMapTo(hashSetOf()) { rule -> reduce(rule.root, ruleIds).retainedRuleIds }
+        ruleIdFilter = relevantSemgrepRuleIds(ruleIds)
 
         logger.debug { "Select ${ruleIdFilter?.size} from ${rules.sumOf { it.size }} rules" }
     }
+
+    fun relevantSemgrepRuleIds(candidateRuleIds: Set<String>): Set<String> = rules
+        .flatMapTo(hashSetOf()) { rule -> reduce(rule.root, candidateRuleIds).retainedRuleIds }
 
     private data class Reduction(
         val applicable: Boolean,

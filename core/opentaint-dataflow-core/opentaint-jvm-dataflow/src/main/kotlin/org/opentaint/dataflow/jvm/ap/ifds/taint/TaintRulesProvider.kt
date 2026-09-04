@@ -28,4 +28,7 @@ interface TaintRulesProvider : CommonTaintRulesProvider {
     fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean = false): Iterable<TaintStaticFieldSource>
 
     fun selectRules(ruleIds: Set<String>)
+
+    /** Retains complete rule-graph paths from the supplied candidate rule IDs, or returns null without a rule graph. */
+    fun relevantRuleIds(candidateRuleIds: Set<String>): Set<String>? = null
 }

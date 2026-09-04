@@ -31,10 +31,12 @@ import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
 import org.opentaint.ir.api.jvm.ext.objectClass
 import org.opentaint.ir.impl.util.adjustEmptyList
 import org.opentaint.jvm.util.typename
+import java.util.concurrent.ConcurrentHashMap
 
 class TaintConfiguration(private val cp: JIRClasspath) {
     private val patternManager = PatternManager()
     private val taintMarkManager = TaintMarkManager()
+    private val interner = ResolvedRuleInterner()
     private val hierarchyInfo = JIRHierarchyInfo(cp)
     private val objectTypeName = cp.objectClass.typename
 
@@ -117,24 +119,28 @@ class TaintConfiguration(private val cp: JIRClasspath) {
 
     private inner class TaintRulesStorage<S : SerializedRule, T : TaintConfigurationItem> {
         private var builder: MethodTaintRulesStorage.Builder<S>? = MethodTaintRulesStorage.Builder(patternManager, hierarchyInfo)
+        @Volatile
         private var storage: MethodTaintRulesStorage<S>? = null
 
         private fun storage(): MethodTaintRulesStorage<S> {
             storage?.let { return it }
 
-            storage = builder?.build()
-            builder = null
-
-            return storage ?: error("Storage initialization failed")
+            return synchronized(this) {
+                storage ?: builder?.build()?.also {
+                    storage = it
+                    builder = null
+                } ?: error("Storage initialization failed")
+            }
         }
 
+        @Synchronized
         fun addRules(rules: List<S>) {
             val builder = this.builder ?: error("Storage rule set closed")
             builder.addRules(rules)
         }
 
-        private val methodItems = hashMapOf<JIRMethod, List<T>>()
-        private val methodAllRelevantItems = hashMapOf<JIRMethod, List<T>>()
+        private val methodItems = ConcurrentHashMap<JIRMethod, List<T>>()
+        private val methodAllRelevantItems = ConcurrentHashMap<JIRMethod, List<T>>()
 
         fun configForMethod(method: JIRMethod, allRelevant: Boolean): List<T> = if (!allRelevant) {
             getConfigForMethod(method)
@@ -142,13 +148,11 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             getAllRelevantConfigForMethod(method)
         }
 
-        @Synchronized
-        private fun getConfigForMethod(method: JIRMethod): List<T> = methodItems.getOrPut(method) {
+        private fun getConfigForMethod(method: JIRMethod): List<T> = methodItems.computeIfAbsent(method) {
             resolveMethodItems(method).adjustEmptyList()
         }
 
-        @Synchronized
-        private fun getAllRelevantConfigForMethod(method: JIRMethod): List<T> = methodAllRelevantItems.getOrPut(method) {
+        private fun getAllRelevantConfigForMethod(method: JIRMethod): List<T> = methodAllRelevantItems.computeIfAbsent(method) {
             resolveMethodRelevantItems(method).adjustEmptyList()
         }
 
@@ -169,7 +173,8 @@ class TaintConfiguration(private val cp: JIRClasspath) {
             rules.removeAll { !it.function.matchFunctionName(method) }
             if (rules.isEmpty()) return emptyList()
 
-            val resolver = MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method)
+            val resolver =
+                MethodTaintConfigurationResolver(patternManager, taintMarkManager, cp, objectTypeName, method, interner)
             rules.removeAll {
                 with(resolver) {
                     it.signature?.matchFunctionSignature() == false
@@ -211,7 +216,7 @@ class TaintConfiguration(private val cp: JIRClasspath) {
                     }
                     actions += AssignMark(taintMarkManager.taintMark(action.kind), Result)
                 }
-                return listOf(TaintStaticFieldSource(field, mkTrue(), actions, info, serializedId))
+                return listOf(TaintStaticFieldSource(field, mkTrue(), interner.internList(actions), info, serializedId))
             }
         }
     }

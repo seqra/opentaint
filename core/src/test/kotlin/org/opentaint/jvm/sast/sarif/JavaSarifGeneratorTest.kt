@@ -2,8 +2,10 @@ package org.opentaint.jvm.sast.sarif
 
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import kotlin.test.assertEquals
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JavaSarifGeneratorTest: AbstractSarifGeneratorTest() {
@@ -12,6 +14,32 @@ class JavaSarifGeneratorTest: AbstractSarifGeneratorTest() {
     }
 
     override val sourceFileExtension: String = "java"
+
+    @Test
+    fun `source sink fingerprint distinguishes rules sharing a sink`() {
+        val testCls = "$SAMPLE_PACKAGE.StaticFieldSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", "tainted")),
+            sink = listOf(
+                sinkRule(testCls, "sink", "sink-rule-one", listOf(Argument(0) to "tainted")),
+                sinkRule(testCls, "sink", "sink-rule-two", listOf(Argument(0) to "tainted")),
+            ),
+        )
+
+        val traces = runAnalysis(config, testCls, "staticFieldFlow")
+        val results = generateSarifResults(
+            traces,
+            SarifGenerationOptions(generateFingerprint = true),
+        )
+
+        assertEquals(setOf("sink-rule-one", "sink-rule-two"), results.map { it.ruleID }.toSet())
+        assertEquals(
+            2,
+            results.map {
+                requireNotNull(requireNotNull(it.partialFingerprints)["vulnerabilitySourceSinkHash/v1"])
+            }.toSet().size,
+        )
+    }
 
     @Test
     fun `flow with object constructor`() {

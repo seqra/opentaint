@@ -3,12 +3,21 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
+import org.opentaint.ir.api.jvm.JIRClassOrInterface
+import org.opentaint.dataflow.jvm.ap.ifds.JIRArgumentTypeMethodContext
+import org.opentaint.dataflow.jvm.ap.ifds.JIRInstanceTypeMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodContext
+import org.opentaint.dataflow.ap.ifds.CombinedMethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
@@ -18,6 +27,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
+import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
@@ -30,14 +40,19 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
+import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.taint.SelectedTaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodStartPrecondition
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.CommonMethod
@@ -60,7 +75,69 @@ class JIRAnalysisManager(
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
+    override val supportsForwardActionableRuleFallback: Boolean = true
+
+    override fun overApproximateMethodContext(
+        method: MethodWithContext,
+        contextIndependentFact: Boolean,
+    ): MethodWithContext {
+        if (currentPhase !is Phase.ShallowScan) return method
+        if (!contextIndependentFact) return method
+        if (method.ctx is EmptyMethodContext || method.ctx.containsLambdaConstraint()) return method
+        return method.copy(ctx = EmptyMethodContext)
+    }
+
+    private val contextBoundFunctionTypes = ConcurrentHashMap<JIRClassOrInterface, Boolean>()
+
+    private fun MethodContext.containsLambdaConstraint(): Boolean = when (this) {
+        is JIRInstanceTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is JIRArgumentTypeMethodContext -> typeConstraint.type.isContextBoundFunction()
+        is CombinedMethodContext -> first.containsLambdaConstraint() || second.containsLambdaConstraint()
+        else -> false
+    }
+
+    private fun JIRClassOrInterface.isContextBoundFunction(): Boolean =
+        contextBoundFunctionTypes.computeIfAbsent(this) { type ->
+            type is LambdaAnonymousClassFeature.JIRLambdaClass ||
+                (sequenceOf(type) + type.allSuperHierarchySequence).any { superType ->
+                    superType.name.startsWith("kotlin.jvm.functions.Function") ||
+                        superType.name.startsWith("kotlin.coroutines.SuspendFunction") ||
+                        superType.name.startsWith("java.util.function.")
+                }
+        }
+
+    override fun relevantForwardActionableRules(
+        rules: ActionableRules,
+        uncoveredSinkRules: Set<CommonTaintConfigurationItem>,
+    ): ActionableRules {
+        if (uncoveredSinkRules.isEmpty()) return rules
+
+        val sinkRuleIds = hashSetOf<String>()
+        for (rule in uncoveredSinkRules) {
+            val ruleId = (rule as? TaintConfigurationItem)?.serializedId ?: return rules
+            sinkRuleIds += ruleId
+        }
+
+        val candidateRuleIds = rules.values
+            .asSequence()
+            .flatMap { it.keys.asSequence() }
+            .mapNotNullTo(hashSetOf()) { (it as? TaintConfigurationItem)?.serializedId }
+        candidateRuleIds += sinkRuleIds
+
+        val relevantRuleIds = taintConfig.relevantRuleIds(candidateRuleIds) ?: return rules
+        return buildMap {
+            rules.forEach { (statement, statementRules) ->
+                val retainedRules = statementRules.filterTo(linkedMapOf()) { (rule, _) ->
+                    val ruleId = (rule as? TaintConfigurationItem)?.serializedId
+                    ruleId == null || ruleId in relevantRuleIds
+                }
+                if (retainedRules.isNotEmpty()) put(statement, retainedRules)
+            }
+        }
+    }
+
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
+    private val phaseTaintConfig = SelectedTaintRulesProvider(taintConfig)
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
@@ -78,9 +155,20 @@ class JIRAnalysisManager(
     override fun selectPhase(phase: Phase) {
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
+
         when (phase) {
-            Phase.Prescan -> {}
-            Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
+            is Phase.Prescan -> {
+                phaseTaintConfig.select(null)
+            }
+
+            is Phase.ShallowScan -> {
+                phaseTaintConfig.selectRules(relevantRuleIds)
+                phaseTaintConfig.select(null)
+            }
+
+            is Phase.FullScan -> {
+                phaseTaintConfig.select(phase.actionableRules)
+            }
         }
     }
 
@@ -130,7 +218,7 @@ class JIRAnalysisManager(
         }
 
         val taintContext = JIRTaintAnalysisContext(
-            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker, relevantRuleIds
+            taintAnalysisContext.taintSinkTracker, phaseTaintConfig, externalMethodTracker, relevantRuleIds
         )
 
         return JIRMethodAnalysisContext(
@@ -141,6 +229,7 @@ class JIRAnalysisManager(
             localVariableReachability,
             aliasAnalysis,
             taintContext,
+            callResolver.callResolver,
         ).also {
             contexts.add(it)
         }

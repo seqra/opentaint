@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.analysis
 
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -7,6 +8,16 @@ import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 
 interface MethodSequentFlowFunction {
+    sealed interface FactToFactTransfer {
+        data object Unchanged : FactToFactTransfer
+        data class Fact(val factAp: FinalFactAp, val traceInfo: TraceInfo?) : FactToFactTransfer
+        data class ExcludeAccessor(
+            val excludedFactAp: FinalFactAp,
+            val accessor: Accessor,
+            val traceInfo: TraceInfo?,
+        ) : FactToFactTransfer
+    }
+
     sealed interface Sequent {
         data object Unchanged : Sequent
         data object ZeroToZero : Sequent
@@ -32,4 +43,6 @@ interface MethodSequentFlowFunction {
     fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent>
     fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp): Set<Sequent>
     fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp): Set<Sequent>
+
+    fun createFactToFactTransfer(currentFactAp: FinalFactAp): Set<FactToFactTransfer>? = null
 }

@@ -6,14 +6,17 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.util.Cancellation
+import org.opentaint.dataflow.util.RefManager
 
 interface AnalysisUnitRunnerManager {
     val unitResolver: UnitResolver<CommonMethod>
     val cancellation: Cancellation
+    val refManager: RefManager
 
     fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage?
     fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner?
     fun registerMethodCallFromUnit(method: CommonMethod, unit: UnitType)
+    fun registerResolvedMethodCall(caller: CommonMethod, callee: CommonMethod)
 
     fun handleCrossUnitZeroCall(callerUnit: UnitType, methodEntryPoint: MethodEntryPoint) {
         handleCrossUnitAction(callerUnit, methodEntryPoint) {
@@ -107,6 +110,15 @@ interface AnalysisUnitRunnerManager {
         val unit = unitResolver.resolve(methodEntryPoint.method)
         val storage = getOrCreateUnitStorage(unit) ?: return emptyList()
         return storage.methodFactToFactSummaryEdges(methodEntryPoint, finalFactBase)
+    }
+
+    fun findFactToFactSummaryEdges(
+        methodEntryPoint: MethodEntryPoint,
+        finalFactPattern: FinalFactAp,
+    ): List<Edge.FactToFact> {
+        val unit = unitResolver.resolve(methodEntryPoint.method)
+        val storage = getOrCreateUnitStorage(unit) ?: return emptyList()
+        return storage.methodFactToFactSummaryEdges(methodEntryPoint, finalFactPattern)
     }
 
     fun findFactNDSummaryEdges(

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.CommonAnalysisOptions
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.go.serialized.GoNameMatcher
@@ -184,7 +185,8 @@ abstract class AnalysisTest {
         loadedConfig.loadConfig(serializedConfig)
 
         val options = CommonAnalysisOptions(
-            ifdsAnalysisTimeout = 1.minutes
+            ifdsAnalysisTimeout = 1.minutes,
+            ifdsApMode = ApMode.Tree,
         )
         val analyzer = GoTaintAnalyzer(cp, loadedConfig, GoTestUnitResolver, options.taintAnalyzerOptions())
         analyzer.use {

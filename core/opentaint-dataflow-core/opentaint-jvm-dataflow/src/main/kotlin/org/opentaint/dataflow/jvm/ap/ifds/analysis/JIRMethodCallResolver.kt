@@ -69,8 +69,7 @@ class JIRMethodCallResolver(
         handler: MethodCallHandler,
         failureHandler: MethodAnalyzer.MethodCallResolutionFailureHandler
     ) {
-        val callees = callResolver.resolve(callExpr, location, callerContext)
-
+        val callees = resolveCall(callerContext, callExpr, location)
         val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
         for (resolvedCallee in callees) {
             resolveJirMethodCall(callerContext, resolvedCallee, analyzer, callExpr, location, failureHandler, handler)
@@ -161,11 +160,20 @@ class JIRMethodCallResolver(
         callExpr: JIRCallExpr,
         location: JIRInst
     ): List<MethodCallResolutionResult> {
-        val callees = callResolver.resolve(callExpr, location, callerContext)
+        val callees = resolveCall(callerContext, callExpr, location)
         return callees.flatMap { resolvedCallee ->
             resolvedJirMethodCalls(callerContext, location, resolvedCallee)
         }
     }
+
+    private fun resolveCall(
+        callerContext: JIRMethodAnalysisContext,
+        callExpr: JIRCallExpr,
+        location: JIRInst,
+    ): List<JIRCallResolver.MethodResolutionResult> =
+        callerContext.cachedRawCallResolution(location.location.index) {
+            callResolver.resolve(callExpr, location, callerContext)
+        }
 
     private fun resolvedJirMethodCalls(
         callerContext: JIRMethodAnalysisContext,

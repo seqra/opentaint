@@ -9,12 +9,19 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.TaintVulnerabilityR
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSource
+import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.concurrent.ConcurrentHashMap
 
 class TaintSinkTracker(
     private val storage: TaintAnalysisUnitStorage,
 ) {
+    fun recordForwardActionableRule(
+        statement: CommonInst,
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAction,
+    ) = storage.recordForwardActionableRule(statement, rule, action)
+
     data class TaintVulnerability(
         val statement: CommonInst,
         val ruleId: String,

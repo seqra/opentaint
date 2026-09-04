@@ -86,7 +86,8 @@ class MethodTaintConfigurationResolver(
     val taintMarkManager: TaintMarkManager,
     val cp: JIRClasspath,
     val objectTypeName: TypeName,
-    val method: JIRMethod
+    val method: JIRMethod,
+    private val interner: ResolvedRuleInterner = ResolvedRuleInterner(),
 ) {
     private val typedMethod by lazy { resolveTypedMethod() }
     
@@ -177,7 +178,7 @@ class MethodTaintConfigurationResolver(
             val condition = resolveCondition(serializedCondition, it).simplify()
             if (condition.isFalse()) return@mapNotNull null
 
-            resolveMethodRule(condition, it)
+            resolveMethodRule(interner.internCondition(condition), it)
         }
     }
 
@@ -186,49 +187,54 @@ class MethodTaintConfigurationResolver(
         ctx: AnyArgSpecializationCtx,
     ): TaintConfigurationItem = when (this) {
         is SerializedRule.EntryPoint -> {
-            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            TaintEntryPointSource(method, condition, assignActions(taint, ctx), info, serializedId)
         }
 
         is SerializedRule.Source -> {
-            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            TaintMethodSource(method, condition, assignActions(taint, ctx), info, serializedId)
         }
 
         is SerializedRule.MethodExitSource -> {
-            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            TaintMethodExitSource(method, condition, assignActions(taint, ctx), info, serializedId)
         }
 
         is SerializedRule.Sink -> {
             TaintMethodSink(
-                method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                method, condition, trackedFacts(ctx),
                 ruleId(), meta(), info, serializedId
             )
         }
 
         is SerializedRule.MethodExitSink -> {
             TaintMethodExitSink(
-                method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                method, condition, trackedFacts(ctx),
                 ruleId(), meta(), info, serializedId
             )
         }
 
         is SerializedRule.MethodEntrySink -> {
             TaintMethodEntrySink(
-                method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
+                method, condition, trackedFacts(ctx),
                 ruleId(), meta(), info, serializedId
             )
         }
 
         is SerializedRule.PassThrough -> {
-            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info, serializedId)
+            TaintPassThrough(method, condition, interner.internList(copy.flatMap { it.resolve(ctx) }), info, serializedId)
         }
 
         is SerializedRule.Cleaner -> {
-            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info, serializedId)
+            TaintCleaner(method, condition, interner.internList(cleans.flatMap { it.resolve(ctx) }), info, serializedId)
         }
     }
+
+    private fun assignActions(
+        actions: List<SerializedTaintAssignAction>,
+        ctx: AnyArgSpecializationCtx,
+    ): List<AssignMark> = interner.internList(actions.flatMap { it.resolveWithArray(ctx) })
+
+    private fun SinkRule.trackedFacts(ctx: AnyArgSpecializationCtx): List<AssignMark> =
+        interner.internList(trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty())
 
     private val ruleIdGen = AtomicInteger()
 
@@ -238,10 +244,12 @@ class MethodTaintConfigurationResolver(
         return "generated-id-${ruleIdGen.incrementAndGet()}"
     }
 
-    private fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
-        message = meta?.message() ?: "",
-        severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
-        cwe = meta?.cwe
+    private fun SinkRule.meta(): TaintSinkMeta = interner.intern(
+        TaintSinkMeta(
+            message = meta?.message() ?: "",
+            severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
+            cwe = meta?.cwe
+        )
     )
 
     private fun SinkMetaData.message(): String? = note

@@ -38,7 +38,9 @@ class JIRMethodStartFlowFunction(
         )
 
         val rules = context.taint.sourceRulesForMethodEntry(context.methodEntryPoint.statement as JIRInst, fact = null)
-        applyEntryPointConfig(rules, sourceEvaluator).onSome { facts ->
+        applyEntryPointConfig(rules, sourceEvaluator) { rule, action ->
+            context.recordForwardSourceAction(context.methodEntryPoint.statement, rule, action)
+        }.onSome { facts ->
             facts.mapTo(result) {
                 it.getAllAccessors()
                     .filterIsInstanceTo<TaintMarkAccessor, _>(context.taintMarksAssignedOnMethodEnter)

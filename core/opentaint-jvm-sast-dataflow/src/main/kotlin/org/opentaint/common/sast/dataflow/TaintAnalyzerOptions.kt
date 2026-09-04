@@ -6,6 +6,7 @@ import kotlin.time.Duration
 data class TaintAnalyzerOptions(
     val ifdsTimeout: Duration,
     val ifdsApMode: ApMode,
+    val shallowScanApMode: ApMode = ApMode.BaseOnlyField,
     val symbolicExecutionEnabled: Boolean = false,
     val analysisCwe: Set<Int>? = null,
     val storeSummaries: Boolean = false,

@@ -44,7 +44,7 @@ class TaintAnalysisUnitRunner(
         runner = this
     )
 
-    private object EventComparator : Comparator<Any> {
+    internal object EventComparator : Comparator<Any> {
         override fun compare(o1: Any, o2: Any): Int {
             val methodAnalyzer1 = o1 as? MethodAnalyzer
             val methodAnalyzer2 = o2 as? MethodAnalyzer
@@ -212,15 +212,25 @@ class TaintAnalysisUnitRunner(
             var processed = true
             when (event) {
                 is MethodAnalyzer -> {
-                    val processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
+                    var processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
                     while (event.containsUnprocessedEdges && isActive) {
-                        if (steps++ > RUNNER_STEPS_QUANT || processingZeroToZeroEdges != event.containsUnprocessedZeroToZeroEdges) {
+                        if (steps++ > RUNNER_STEPS_QUANT) {
                             processed = false
                             eventPriorityQueue.add(event)
                             break
                         }
 
                         event.tabulationAlgorithmStep()
+
+                        if (processingZeroToZeroEdges && !event.containsUnprocessedZeroToZeroEdges) {
+                            if (event.containsUnprocessedEdges) {
+                                processed = false
+                                eventPriorityQueue.add(event)
+                            }
+                            break
+                        }
+
+                        processingZeroToZeroEdges = event.containsUnprocessedZeroToZeroEdges
                     }
                 }
 
@@ -338,6 +348,12 @@ class TaintAnalysisUnitRunner(
 
     override fun enqueueMethodAnalyzer(analyzer: MethodAnalyzer) {
         addUnprocessedEvent(analyzer)
+    }
+
+    override fun reprioritizeMethodAnalyzer(analyzer: MethodAnalyzer) {
+        if (eventPriorityQueue.remove(analyzer)) {
+            eventPriorityQueue.add(analyzer)
+        }
     }
 
     data class MethodAnalysisDelayed(val analyzer: MethodAnalyzer)
@@ -485,10 +501,13 @@ class TaintAnalysisUnitRunner(
         }
     }
 
-    fun methodTraceResolver(methodEntryPoint: MethodEntryPoint): MethodTraceResolver {
+    fun methodTraceResolver(
+        methodEntryPoint: MethodEntryPoint,
+        traceResolutionActionHardLimit: Int? = null,
+    ): MethodTraceResolver {
         val methodRunners = methodAnalyzers(methodEntryPoint)
         val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.methodTraceResolver()
+        return runner.methodTraceResolver(traceResolutionActionHardLimit)
     }
 
     fun resolveIntraProceduralForwardFullTrace(

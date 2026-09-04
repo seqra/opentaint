@@ -15,6 +15,9 @@ class MethodAnalyzerEdges(
     private val methodEntryPoint: MethodEntryPoint,
     languageManager: LanguageManager
 ) {
+    var modificationVersion: Long = 0
+        private set
+
     private val maxInstIdx = languageManager.getMaxInstIndex(methodEntryPoint.method)
 
     private val zeroToZeroEdges = SameInitialZeroFactEdges(maxInstIdx, languageManager)
@@ -26,7 +29,9 @@ class MethodAnalyzerEdges(
     fun add(edge: Edge): List<Edge> {
         check(edge.methodEntryPoint == methodEntryPoint)
 
-        return addEdge(edge)
+        return addEdge(edge).also { added ->
+            if (added.isNotEmpty()) modificationVersion++
+        }
     }
 
     fun reachedStatements() = zeroToZeroEdges.reachedStatements()
@@ -101,23 +106,52 @@ class MethodAnalyzerEdges(
         val finalAp = edge.factAp
 
         val storage = if (isAbstractStaticEdge(initialAp, finalAp)) abstractStaticEdges else taintedToFactEdges
-        val (addedInitial, addedFinal) = storage.add(edge.statement, initialAp, finalAp) ?: return emptyList()
+        return storage.add(edge.statement, initialAp, finalAp).map { (addedInitial, addedFinal) ->
+            if (addedInitial === initialAp && addedFinal === finalAp) {
+                edge
+            } else {
+                Edge.FactToFact(
+                    methodEntryPoint = edge.methodEntryPoint,
+                    initialFactAp = addedInitial,
+                    statement = edge.statement,
+                    factAp = addedFinal,
+                )
+            }
+        }
+    }
 
-        if (addedInitial === initialAp && addedFinal === finalAp) return listOf(edge)
+    fun addFactToFactSupports(
+        statement: CommonInst,
+        initialFacts: Iterable<InitialFactAp>,
+        finalFact: FinalFactAp,
+        emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
+    ) {
+        var changed = false
+        val emit: (InitialFactAp, FinalFactAp) -> Unit = { initial, addedFinal ->
+            changed = true
+            emitDelta(initial, addedFinal)
+        }
 
-        return listOf(
-            Edge.FactToFact(
-                methodEntryPoint = edge.methodEntryPoint,
-                initialFactAp = addedInitial,
-                statement = edge.statement,
-                factAp = addedFinal
-            )
-        )
+        if (finalFact.base is AccessPathBase.ClassStatic && finalFact.depth == 0) {
+            val (abstractStatic, regular) = initialFacts.partition { isAbstractStaticEdge(it, finalFact) }
+            abstractStaticEdges.addAll(statement, abstractStatic, finalFact, emit)
+            taintedToFactEdges.addAll(statement, regular, finalFact, emit)
+        } else {
+            taintedToFactEdges.addAll(statement, initialFacts, finalFact, emit)
+        }
+
+        if (changed) modificationVersion++
     }
 
     fun allZeroToFactFactsAtStatement(statement: CommonInst, finalFactPattern: InitialFactAp): List<FinalFactAp> {
         val result = mutableListOf<FinalFactAp>()
         zeroToFactEdges.collectApAtStatement(result, statement, finalFactPattern)
+        return result
+    }
+
+    fun allZeroToFactFactsAtStatement(statement: CommonInst): List<FinalFactAp> {
+        val result = mutableListOf<FinalFactAp>()
+        zeroToFactEdges.collectApAtStatement(result, statement)
         return result
     }
 
@@ -146,6 +180,7 @@ class MethodAnalyzerEdges(
         ndFactToFactEdges.collectApAtStatement(result, statement, initialFacts, finalFactPattern)
         return result
     }
+
 
     private class SameInitialZeroFactEdges(
         maxInstIdx: Int,
@@ -178,21 +213,23 @@ class MethodAnalyzerEdges(
             statement: CommonInst,
             initialAp: InitialFactAp,
             finalAp: FinalFactAp
-        ): Pair<InitialFactAp, FinalFactAp>? {
+        ): List<Pair<InitialFactAp, FinalFactAp>> {
             val edgeIdx = instructionStorageIdx(statement, languageManager)
             val exclusion = finalAp.exclusions
             val currentExclusion = exclusions[edgeIdx]
 
             if (currentExclusion == null) {
                 exclusions[edgeIdx] = exclusion
-                return initialAp to finalAp
+                return listOf(initialAp to finalAp)
             }
 
             val mergedExclusion = currentExclusion.union(exclusion)
-            if (mergedExclusion === currentExclusion) return null
+            if (mergedExclusion === currentExclusion) return emptyList()
 
             exclusions[edgeIdx] = mergedExclusion
-            return initialAp.replaceExclusions(mergedExclusion) to finalAp.replaceExclusions(mergedExclusion)
+            return listOf(
+                initialAp.replaceExclusions(mergedExclusion) to finalAp.replaceExclusions(mergedExclusion)
+            )
         }
 
         override fun collectApAtStatement(

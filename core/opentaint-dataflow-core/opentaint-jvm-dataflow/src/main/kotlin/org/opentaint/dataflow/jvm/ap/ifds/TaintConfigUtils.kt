@@ -23,26 +23,34 @@ import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.applyCleanerActions
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
+import org.opentaint.util.onSome
 
 object TaintConfigUtils {
     fun <T> applyEntryPointConfig(
         rules: List<RuleWithCondition<TaintEntryPointSource>>,
-        taintActionEvaluator: SourceActionEvaluator<T>
+        taintActionEvaluator: SourceActionEvaluator<T>,
+        onActionApplied: (TaintEntryPointSource, AssignMark) -> Unit = { _, _ -> },
     ) = applyAssignMark<TaintEntryPointSource, T>(
         rules, taintActionEvaluator,
-        TaintEntryPointSource::actionsAfter
+        TaintEntryPointSource::actionsAfter,
+        onActionApplied,
     )
 
     private inline fun <reified T : TaintConfigurationItem, R> applyAssignMark(
         rules: List<RuleWithCondition<T>>,
         taintActionEvaluator: SourceActionEvaluator<R>,
-        actionsAfter: (T) -> List<Action>
+        actionsAfter: (T) -> List<Action>,
+        crossinline onActionApplied: (T, AssignMark) -> Unit,
     ): Maybe<List<R>> = rules
         .applicableRules(conditionEvaluator = null)
         .maybeFlatMap { item ->
             actionsAfter(item)
                 .filterIsInstance<AssignMark>()
-                .maybeFlatMap { taintActionEvaluator.accept(item, it) }
+                .maybeFlatMap { action ->
+                    taintActionEvaluator.accept(item, action).onSome { results ->
+                        if (results.isNotEmpty()) onActionApplied(item, action)
+                    }
+                }
         }
 
     fun <T> applyPassThrough(

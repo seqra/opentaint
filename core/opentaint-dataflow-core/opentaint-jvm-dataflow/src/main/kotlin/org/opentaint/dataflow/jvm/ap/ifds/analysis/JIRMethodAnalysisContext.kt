@@ -4,9 +4,16 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
+import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -14,7 +21,9 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
+import org.opentaint.ir.api.common.cfg.CommonInst
 import java.lang.ref.Reference
+import java.util.concurrent.ConcurrentHashMap
 
 class JIRMethodAnalysisContext(
     val analysisManager: JIRAnalysisManager,
@@ -24,6 +33,7 @@ class JIRMethodAnalysisContext(
     val localVariableReachability: JIRLocalVariableReachability,
     val aliasAnalysis: JIRLocalAliasAnalysis?,
     val taint: JIRTaintAnalysisContext,
+    val callResolver: JIRCallResolver,
 ) : MethodAnalysisContext {
     init {
         taint.bindAnalysisContext(this)
@@ -31,12 +41,75 @@ class JIRMethodAnalysisContext(
 
     val phase: Phase get() = analysisManager.phase
 
+    fun recordForwardSourceAction(
+        statement: CommonInst,
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAction,
+    ) {
+        if (phase !is Phase.ShallowScan) return
+        taint.taintSinkTracker.recordForwardActionableRule(statement, rule, action)
+    }
+
     override val methodCallFactMapper: MethodCallFactMapper
         get() = JIRMethodCallFactMapper
 
     val taintMarksAssignedOnMethodEnter = hashSetOf<TaintMarkAccessor>()
 
     val lambdaCallResolution = Int2ObjectOpenHashMap<JIRLambdaTracker.LambdaTracker>()
+
+    private val rawCallResolutionCache =
+        int2ObjectMap<List<JIRCallResolver.MethodResolutionResult>>()
+
+    private data class TracePreconditionKey(
+        val apManager: ApManager,
+        val statementIndex: Int,
+        val fact: InitialFactAp,
+    )
+
+    private class TracePreconditionCache {
+        val sequent = ConcurrentHashMap<TracePreconditionKey, Set<SequentPrecondition>>()
+        val call = ConcurrentHashMap<TracePreconditionKey, List<CallPrecondition>>()
+    }
+
+    @Volatile
+    private var tracePreconditionCache: TracePreconditionCache? = null
+
+    private fun tracePreconditionCache(): TracePreconditionCache {
+        tracePreconditionCache?.let { return it }
+        return synchronized(this) {
+            tracePreconditionCache ?: TracePreconditionCache().also { tracePreconditionCache = it }
+        }
+    }
+
+    fun cachedSequentTracePrecondition(
+        apManager: ApManager,
+        stmtIdx: Int,
+        fact: InitialFactAp,
+        compute: () -> Set<SequentPrecondition>,
+    ): Set<SequentPrecondition> {
+        val cache = tracePreconditionCache()
+        return cache.sequent.computeIfAbsent(TracePreconditionKey(apManager, stmtIdx, fact)) {
+            compute().toSet()
+        }
+    }
+
+    fun cachedCallTracePrecondition(
+        apManager: ApManager,
+        stmtIdx: Int,
+        fact: InitialFactAp,
+        compute: () -> List<CallPrecondition>,
+    ): List<CallPrecondition> {
+        val cache = tracePreconditionCache()
+        return cache.call.computeIfAbsent(TracePreconditionKey(apManager, stmtIdx, fact)) {
+            compute().toList()
+        }
+    }
+
+    fun cachedRawCallResolution(
+        stmtIdx: Int,
+        resolve: () -> List<JIRCallResolver.MethodResolutionResult>,
+    ): List<JIRCallResolver.MethodResolutionResult> =
+        rawCallResolutionCache.computeIfAbsent(stmtIdx) { resolve() }
 
     fun cachedCallFF(stmtIdx: Int, body: () -> JIRMethodCallFlowFunction): JIRMethodCallFlowFunction =
         getCallFFCache().computeIfAbsent(stmtIdx) { body() }
@@ -64,6 +137,8 @@ class JIRMethodAnalysisContext(
         taint.reset()
         lambdaCallResolution.values.forEach { it.resetSubscribers() }
         taintMarksAssignedOnMethodEnter.clear()
+        rawCallResolutionCache.clear()
+        tracePreconditionCache = null
         callFFCache?.clear()
         callSHCache?.clear()
     }

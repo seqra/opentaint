@@ -6,8 +6,8 @@ import mu.KLogging
 import java.lang.management.ManagementFactory
 import java.lang.management.MemoryMXBean
 import java.lang.management.MemoryType
-import java.util.concurrent.atomic.AtomicInteger
 import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.AtomicReference
 import javax.management.Notification
 import javax.management.NotificationEmitter
 import javax.management.NotificationListener
@@ -19,13 +19,19 @@ class MemoryManager(
     private val memoryThreshold: Double,
     private val onOutOfMemory: () -> Unit
 ) {
-    private val memoryManagerState = AtomicInteger(STATE_NORMAL)
-    private val lastGcRequestTime = AtomicLong(0)
-    private val thresholdBytes = AtomicLong(0)
+    internal enum class State {
+        Normal,
+        SoftReferencesReset,
+        GcAfterCleanup,
+    }
 
     inner class GCNotificationListener(
         private val memMx: MemoryMXBean,
     ) : NotificationListener {
+        internal val memoryManagerState = AtomicReference(State.Normal)
+        private val lastGcRequestTime = AtomicLong(0)
+        private val thresholdBytes = AtomicLong(0)
+
         init {
             thresholdBytes.set((memMx.heapMemoryUsage.max * memoryThreshold).toLong())
         }
@@ -49,8 +55,8 @@ class MemoryManager(
 
             if (usedAfterGc < thr) {
                 refManager.allSoftRefManagers().asSequence().forEach { it.enable() }
-                val currentState = memoryManagerState.getAndSet(STATE_NORMAL)
-                if (currentState != STATE_NORMAL) {
+                val currentState = memoryManagerState.getAndSet(State.Normal)
+                if (currentState != State.Normal) {
                     logger.info("Memory back to normal state: $usedAfterGc < $thr")
                 }
                 return
@@ -59,7 +65,7 @@ class MemoryManager(
             logger.info("Detected high memory usage: $usedAfterGc > $thr")
 
             when(state) {
-                STATE_NORMAL -> {
+                State.Normal -> {
                     var cleaned = -1
                     refManager.allSoftRefManagers().asSequence().forEach {
                         cleaned += it.cleanup().coerceAtLeast(0)
@@ -69,19 +75,19 @@ class MemoryManager(
                         logger.debug("Cleaned soft refs: $cleaned")
                     }
 
-                    memoryManagerState.compareAndSet(STATE_NORMAL, STATE_SOFT_REF_RESET)
+                    memoryManagerState.compareAndSet(State.Normal, State.SoftReferencesReset)
 
                     // Ask JVM for another GC; we confirm on the next GC end
                     memMx.gc()
                 }
 
-                STATE_SOFT_REF_RESET -> {
+                State.SoftReferencesReset -> {
                     memMx.gc()
-                    memoryManagerState.compareAndSet(STATE_SOFT_REF_RESET, GC_AFTER_CLEANUP)
+                    memoryManagerState.compareAndSet(State.SoftReferencesReset, State.GcAfterCleanup)
                     lastGcRequestTime.set(info.gcInfo.endTime)
                 }
 
-                GC_AFTER_CLEANUP -> {
+                State.GcAfterCleanup -> {
                     if (info.gcInfo.startTime <= lastGcRequestTime.get() + 10) return
                     if (currentMemoryUsage() < thr) return
 
@@ -138,10 +144,6 @@ class MemoryManager(
     }
 
     companion object {
-        private const val STATE_NORMAL = 0
-        private const val STATE_SOFT_REF_RESET = 1
-        private const val GC_AFTER_CLEANUP = 2
-
         private val logger = object : KLogging() {}.logger
 
         private const val DEBUG_DUMP_HEAP_ON_OOM = false
