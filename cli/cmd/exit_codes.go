@@ -18,12 +18,21 @@ func analyzerExitCodeRows() string {
 }
 
 // scanExitCodesHelp renders the exit-codes block for commands that forward
-// analyzer exit codes but have no test-failure code (scan, test rule
-// reachability).
+// analyzer exit codes but have no failure gate (test rule reachability).
 func scanExitCodesHelp(completedLine string) string {
 	return `Exit codes:
   0    ` + completedLine + `
   1    General failure (configuration or infrastructure error)` + analyzerExitCodeRows()
+}
+
+// gateExitCodesHelp renders the exit-codes block for scan, which adds exit
+// code 2 for the --error-on-findings gate on top of the forwarded analyzer
+// codes.
+func gateExitCodesHelp(completedLine string) string {
+	return `Exit codes:
+  0    ` + completedLine + `
+  1    General failure (configuration or infrastructure error)
+  2    Findings remain and --error-on-findings was set` + analyzerExitCodeRows()
 }
 
 // testExitCodesHelp renders the exit-codes block for the test-run commands,

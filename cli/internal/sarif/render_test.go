@@ -18,13 +18,13 @@ func renderListing(t *testing.T, report *Report, opts ListingOptions) string {
 
 func TestFingerprintAbbrev(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, map[string]string{
-		DefaultFingerprintKey: "abcdefghijklmnopqrstuv",
+		IdentityKey: "abcdefghijklmnopqrstuv",
 	})
-	if got := fingerprintAbbrev(&r, ""); got != "abcdefghijkl" { // 12 chars
+	if got := fingerprintAbbrev(&r); got != "abcdefghijkl" { // 12 chars
 		t.Errorf("fingerprintAbbrev = %q", got)
 	}
 	none := makeResult("r", Error, "a.java", 1, nil)
-	if got := fingerprintAbbrev(&none, ""); got != "" {
+	if got := fingerprintAbbrev(&none); got != "" {
 		t.Errorf("expected empty abbrev, got %q", got)
 	}
 }
@@ -47,7 +47,7 @@ func TestPrintAllGroupsByRuleID(t *testing.T) {
 }
 
 func TestPrintAllShowsFingerprint(t *testing.T) {
-	r := makeResult("r", Error, "a.java", 1, map[string]string{DefaultFingerprintKey: "deadbeefcafe00"})
+	r := makeResult("r", Error, "a.java", 1, map[string]string{IdentityKey: "deadbeefcafe00"})
 	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
 	if !strings.Contains(out, "deadbeefcafe") {
 		t.Errorf("expected abbreviated fingerprint in listing:\n%s", out)
@@ -203,7 +203,7 @@ func TestPrintAllFingerprintHeaderHasRuleSubfield(t *testing.T) {
 	// When a finding has a partial fingerprint, the finding's tree header is
 	// "Fingerprint: <abbrev>" and the rule moves into a Rule: subfield.
 	r := makeResult("my-rule", Error, "a.java", 1, map[string]string{
-		DefaultFingerprintKey: "abc123def456ghi",
+		IdentityKey: "abc123def456ghi",
 	})
 	out := renderListing(t, makeReport(r), ListingOptions{MaxNestingLevel: -1})
 	if !strings.Contains(out, "Fingerprint:") {

@@ -74,7 +74,7 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	// (e.g. SARIF generated without generateFingerprint), fall back to the rule
 	// id as the header and skip the Rule subfield (it would just duplicate it).
 	header := rule
-	if fp := fingerprintAbbrev(result, opts.FingerprintKey); fp != "" {
+	if fp := fingerprintAbbrev(result); fp != "" {
 		header = th.FieldKey.Render("Fingerprint:") + " " + fp
 	}
 	findingNode := out.GroupItem(header)
@@ -95,6 +95,21 @@ func (report *Report) buildFindingTree(out *output.Printer, result *Result, runI
 	}
 	findingNode.Child(out.FieldItem("Severity", coloredSeverity))
 	findingNode.Child(out.FieldItem("Location", locStr))
+
+	if result.BaselineState != nil {
+		state := string(*result.BaselineState)
+		if note := opts.Comparison.StateNote(result); note != "" {
+			state += " (" + note + ")"
+		}
+		findingNode.Child(out.FieldItem("Baseline", state))
+	}
+	if IsSuppressed(result) {
+		suppressedLine := StatusOf(result)
+		if justification := JustificationOf(result); justification != "" {
+			suppressedLine += ": " + justification
+		}
+		findingNode.Child(out.FieldItem("Suppressed", suppressedLine))
+	}
 
 	total := len(result.CodeFlows)
 	if total > 1 {
@@ -282,11 +297,11 @@ func findingEndpoints(result *Result) []endpointInfo {
 	return endpoints
 }
 
-// fingerprintAbbrev returns a short, git-style prefix of the result's
-// partialFingerprints value under key, for display in the listing. Returns ""
-// when the key is absent. When key is empty the default key is used.
-func fingerprintAbbrev(result *Result, key string) string {
-	val := fingerprintValue(result, key)
+// fingerprintAbbrev returns a short, git-style prefix of the result's identity
+// fingerprint, for display in the listing. Returns "" when the result carries
+// none.
+func fingerprintAbbrev(result *Result) string {
+	val := fingerprintValue(result)
 	if val == "" {
 		return ""
 	}

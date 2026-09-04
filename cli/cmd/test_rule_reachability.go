@@ -40,7 +40,7 @@ Before the first run, run "opentaint pull" one time. To read the report, use "op
 			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
 		}
 		cfg := reachabilityScanConfig(scanFlags, args[0], reachabilityEntryPoint)
-		runScan(cmd, prepareScanConfig(cfg, args[1:]))
+		runScan(cmd, prepareScanConfig(cmd, cfg, args[1:]))
 	},
 }
 

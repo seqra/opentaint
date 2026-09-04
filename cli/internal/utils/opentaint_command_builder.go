@@ -216,14 +216,6 @@ func (cb *OpentaintCommandBuilder) WithPartialFingerprint(fingerprints []string)
 	return cb
 }
 
-// WithPartialFingerprintKey sets the --partial-fingerprint-key flag.
-func (cb *OpentaintCommandBuilder) WithPartialFingerprintKey(key string) *OpentaintCommandBuilder {
-	if key != "" {
-		cb.flags["partial-fingerprint-key"] = key
-	}
-	return cb
-}
-
 // WithMaxNestingLevel sets the --max-nesting-level flag when level >= 0.
 func (cb *OpentaintCommandBuilder) WithMaxNestingLevel(level int) *OpentaintCommandBuilder {
 	if level >= 0 {
@@ -388,4 +380,67 @@ func BuildScanCommandFromCompile(projectPath, projectModelPath string) string {
 		WithProjectModel(projectModelPath).
 		WithOutput(outputPath).
 		Build()
+}
+
+// WithBaseline sets the --baseline flag.
+func (cb *OpentaintCommandBuilder) WithBaseline(path string) *OpentaintCommandBuilder {
+	if path != "" {
+		cb.flags["baseline"] = path
+	}
+	return cb
+}
+
+// WithWriteBaselineState sets the --write-baseline-state flag (scan/triage).
+func (cb *OpentaintCommandBuilder) WithWriteBaselineState(enabled bool) *OpentaintCommandBuilder {
+	if enabled {
+		cb.boolFlags["write-baseline-state"] = true
+	}
+	return cb
+}
+
+// WithErrorOnFindings sets the --error-on-findings flag.
+func (cb *OpentaintCommandBuilder) WithErrorOnFindings(enabled bool) *OpentaintCommandBuilder {
+	if enabled {
+		cb.boolFlags["error-on-findings"] = true
+	}
+	return cb
+}
+
+// WithErrorOnSeverity adds repeatable --error-on-severity filters.
+func (cb *OpentaintCommandBuilder) WithErrorOnSeverity(severities []string) *OpentaintCommandBuilder {
+	for _, s := range severities {
+		if s != "" {
+			cb.arrayFlags["error-on-severity"] = append(cb.arrayFlags["error-on-severity"], s)
+		}
+	}
+	return cb
+}
+
+// WithSuppressed sets the --suppressed flag.
+func (cb *OpentaintCommandBuilder) WithSuppressed(enabled bool) *OpentaintCommandBuilder {
+	if enabled {
+		cb.boolFlags["suppressed"] = true
+	}
+	return cb
+}
+
+// WithBaselineStateFilter adds repeatable --baseline-state selection values for
+// the summary command, where the flag takes values rather than being a switch.
+func (cb *OpentaintCommandBuilder) WithBaselineStateFilter(states []string) *OpentaintCommandBuilder {
+	for _, s := range states {
+		if s != "" {
+			cb.arrayFlags["baseline-state"] = append(cb.arrayFlags["baseline-state"], s)
+		}
+	}
+	return cb
+}
+
+// WithExcludeRuleID adds repeatable --exclude-rule-id filters.
+func (cb *OpentaintCommandBuilder) WithExcludeRuleID(ruleIDs []string) *OpentaintCommandBuilder {
+	for _, id := range ruleIDs {
+		if id != "" {
+			cb.arrayFlags["exclude-rule-id"] = append(cb.arrayFlags["exclude-rule-id"], id)
+		}
+	}
+	return cb
 }

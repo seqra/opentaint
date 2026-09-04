@@ -182,6 +182,7 @@ func bindScanFlags(cmd *cobra.Command) {
 		"scan.ruleset":         "ruleset",
 		"scan.max_memory":      "max-memory",
 		"scan.code_flow_limit": "code-flow-limit",
+		"scan.baseline":        "baseline",
 	} {
 		if f := cmd.Flags().Lookup(name); f != nil {
 			_ = viper.BindPFlag(key, f)

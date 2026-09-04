@@ -7,25 +7,20 @@ import (
 	"github.com/bmatcuk/doublestar/v4"
 )
 
-// DefaultFingerprintKey is the partialFingerprints key matched by
-// --partial-fingerprint when --partial-fingerprint-key is not supplied.
-const DefaultFingerprintKey = "vulnerabilityWithTraceHash/v1"
-
 // Filters describes the finding-selection criteria supplied on the summary
 // command. Empty fields mean "do not filter on this dimension".
 type Filters struct {
 	Paths          []string // doublestar globs against the relative file path
 	Severities     []string // SARIF levels: error/warning/note/none
 	RuleIDs        []string // full id, leaf, or doublestar glob over the full id
-	Fingerprints   []string // git-style prefixes of the chosen fingerprint key's value
-	FingerprintKey string   // partialFingerprints key to match ("" = DefaultFingerprintKey)
+	Fingerprints   []string // git-style prefixes of the identity fingerprint's value
+	BaselineStates []string // SARIF baselineState values: new/unchanged/updated/absent
 }
 
-// active reports whether any filter dimension is set. FingerprintKey is
-// intentionally excluded: it only selects which key Fingerprints matches
-// against, so it has no effect without Fingerprints set.
+// active reports whether any filter dimension is set.
 func (f Filters) active() bool {
-	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 || len(f.Fingerprints) > 0
+	return len(f.Paths) > 0 || len(f.Severities) > 0 || len(f.RuleIDs) > 0 ||
+		len(f.Fingerprints) > 0 || len(f.BaselineStates) > 0
 }
 
 // Filter returns a shallow copy of the report whose Runs[].Results contain only
@@ -59,16 +54,90 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.Paths) > 0 && !matchPath(r, f.Paths) {
 		return false
 	}
-	if len(f.Severities) > 0 && !matchSeverity(r, f.Severities) {
+	if len(f.Severities) > 0 && !MatchesSeverity(r, f.Severities) {
 		return false
 	}
 	if len(f.RuleIDs) > 0 && !matchRuleID(r, f.RuleIDs) {
 		return false
 	}
-	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.FingerprintKey, f.Fingerprints) {
+	if len(f.Fingerprints) > 0 && !matchFingerprint(r, f.Fingerprints) {
+		return false
+	}
+	if len(f.BaselineStates) > 0 && !matchBaselineState(r, f.BaselineStates) {
 		return false
 	}
 	return true
+}
+
+// matchesAs is matches for a result whose baseline state is known from the
+// comparison rather than carried on the result itself. Absent findings live in
+// the baseline report and are never stamped with a state, so they can only be
+// filtered by a caller that already knows what they are.
+func (f Filters) matchesAs(r *Result, state BaselineState) bool {
+	if len(f.BaselineStates) > 0 && !stateNamed(state, f.BaselineStates) {
+		return false
+	}
+	stateless := f
+	stateless.BaselineStates = nil
+	return stateless.matches(r)
+}
+
+// WantsAbsent reports whether the filter asks for absent findings, which the
+// caller must add to the listing from the baseline: they exist nowhere in the
+// current report.
+func (f Filters) WantsAbsent() bool {
+	return stateNamed(Absent, f.BaselineStates)
+}
+
+// stateNamed reports whether states names the given baseline state.
+func stateNamed(state BaselineState, states []string) bool {
+	for _, s := range states {
+		if strings.EqualFold(strings.TrimSpace(s), string(state)) {
+			return true
+		}
+	}
+	return false
+}
+
+// matchBaselineState reports whether the result's baselineState equals any
+// supplied value (case-insensitive). A result with no baselineState never
+// matches: it was not compared against a baseline, so no state claim holds.
+func matchBaselineState(r *Result, states []string) bool {
+	if r.BaselineState == nil {
+		return false
+	}
+	actual := strings.ToLower(string(*r.BaselineState))
+	for _, s := range states {
+		if strings.ToLower(strings.TrimSpace(s)) == actual {
+			return true
+		}
+	}
+	return false
+}
+
+// ParseBaselineStates validates --baseline-state values against the SARIF
+// enumeration, returning them normalized.
+func ParseBaselineStates(values []string) ([]string, error) {
+	valid := map[string]BaselineState{
+		"new":       New,
+		"unchanged": Unchanged,
+		"updated":   Updated,
+		"absent":    Absent,
+	}
+	var out []string
+	for _, v := range values {
+		normalized := strings.ToLower(strings.TrimSpace(v))
+		if normalized == "" {
+			continue
+		}
+		state, ok := valid[normalized]
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid baseline state %q: valid values are new, unchanged, updated, absent", v)
+		}
+		out = append(out, string(state))
+	}
+	return out, nil
 }
 
 // matchPath reports whether the result's primary location's relative file path
@@ -90,9 +159,9 @@ func matchPath(r *Result, patterns []string) bool {
 	return false
 }
 
-// matchSeverity reports whether the result's level equals any supplied level
+// MatchesSeverity reports whether the result's level equals any supplied level
 // (case-insensitive). A nil/empty level is treated as "note".
-func matchSeverity(r *Result, levels []string) bool {
+func MatchesSeverity(r *Result, levels []string) bool {
 	actual := strings.ToLower(string(findingLevel(r)))
 	for _, l := range levels {
 		if strings.ToLower(strings.TrimSpace(l)) == actual {
@@ -115,13 +184,17 @@ func ruleLeaf(id string) string {
 	return id
 }
 
-// matchRuleID reports whether the result's rule-id matches any supplied value as
-// a full-id exact match, a leaf exact match, or a doublestar glob over the full id.
+// matchRuleID reports whether the result's rule-id matches any supplied value.
 func matchRuleID(r *Result, values []string) bool {
-	if r.RuleID == nil {
-		return false
-	}
-	full := *r.RuleID
+	return r.RuleID != nil && MatchesRuleID(*r.RuleID, values)
+}
+
+// MatchesRuleID reports whether a rule id matches any supplied value as a
+// full-id exact match, a leaf exact match, or a doublestar glob over the full
+// id — globs deliberately never match the bare leaf. This is the one rule-id
+// grammar: summary's --rule-id filter and scan's rules.only/rules.exclude and
+// --exclude-rule-id selection all use it.
+func MatchesRuleID(full string, values []string) bool {
 	leaf := ruleLeaf(full)
 	for _, v := range values {
 		// skip blank values (cobra StringArrayVar can yield them) so an empty
@@ -139,21 +212,19 @@ func matchRuleID(r *Result, values []string) bool {
 	return false
 }
 
-// fingerprintValue returns the result's partialFingerprints value under key, or
-// "" when the key is absent or its value is empty. When key is empty the default
-// key is used.
-func fingerprintValue(r *Result, key string) string {
-	if key == "" {
-		key = DefaultFingerprintKey
-	}
-	return r.PartialFingerprints[key]
+// fingerprintValue returns the result's identity fingerprint, or "" when the
+// result carries none. It is the same value triage resolves prefixes against,
+// so a fingerprint shown in the listing can always be pasted into
+// triage --accept.
+func fingerprintValue(r *Result) string {
+	v, _ := Identity(r, IdentityKey)
+	return v
 }
 
-// matchFingerprint reports whether the result's partialFingerprints value under
-// key has any supplied value as a prefix (git short-hash style). When key is
-// empty the default key is used.
-func matchFingerprint(r *Result, key string, prefixes []string) bool {
-	val := fingerprintValue(r, key)
+// matchFingerprint reports whether the result's identity fingerprint has any
+// supplied value as a prefix (git short-hash style).
+func matchFingerprint(r *Result, prefixes []string) bool {
+	val := fingerprintValue(r)
 	if val == "" {
 		return false
 	}
@@ -170,8 +241,14 @@ var validSeverities = map[string]bool{"error": true, "warning": true, "note": tr
 
 // ValidateSeverity returns an error if level is not a recognized SARIF level.
 func ValidateSeverity(level string) error {
+	return ValidateSeverityFor("--severity", level)
+}
+
+// ValidateSeverityFor is ValidateSeverity for a caller whose flag is not
+// --severity, so the message names the flag the user actually typed.
+func ValidateSeverityFor(flag, level string) error {
 	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
 		return nil
 	}
-	return fmt.Errorf("invalid --severity %q: valid values are error, warning, note, none", level)
+	return fmt.Errorf("invalid %s %q: valid values are error, warning, note, none", flag, level)
 }

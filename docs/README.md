@@ -16,6 +16,7 @@
 
 - [Installation Guide](installation.md) - Full installation instructions
 - [Usage Guide](usage.md) - Comprehensive usage reference
+- [Baselines & Suppressions](baselines-and-suppressions.md) - Baseline comparison, triage, and CI gating
 - [Configuration Guide](configuration.md) - All configuration options
 - [Docker](docker.md) - Run OpenTaint in containers and CI/CD pipelines
 - [Precompiled Classes and JARs Analysis](classes-and-jars-analysis.md) - Analyze pre-built artifacts when source compilation isn't available
@@ -124,6 +125,7 @@ npx @seqra/opentaint scan                                 # Run without installi
 opentaint scan --output results.sarif                     # Scan with explicit output path
 opentaint summary --show-findings results.sarif           # View results
 opentaint summary --show-findings --verbose-flow --show-code-snippets results.sarif  # Full detail
+opentaint scan --baseline main.sarif --error-on-findings   # Fail CI only on new findings
 ```
 
 | Command | Description |
@@ -132,6 +134,7 @@ opentaint summary --show-findings --verbose-flow --show-code-snippets results.sa
 | `opentaint compile` | Build project model separately |
 | `opentaint project` | Create model from precompiled JARs |
 | `opentaint summary` | View SARIF results |
+| `opentaint triage` | Compare against a baseline and record suppressions |
 | `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Scaffold, test, and debug detection rules |
 | `opentaint test approximation` | Scaffold and test dataflow approximations |
@@ -166,6 +169,7 @@ For detailed configuration, see [Configuration Guide](configuration.md).
 
 - **GitHub Actions:** [seqra/opentaint/github](https://github.com/seqra/opentaint/tree/main/github)
 - **GitLab CI:** [seqra/opentaint/gitlab](https://github.com/seqra/opentaint/tree/main/gitlab)
+- **Baseline gating** (fail only on *new* findings), triage, and copy-paste PR workflows: [Baselines & Suppressions](baselines-and-suppressions.md)
 
 ---
 

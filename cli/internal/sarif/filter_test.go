@@ -22,30 +22,31 @@ func TestMatchPath(t *testing.T) {
 
 func TestMatchSeverity(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, nil)
-	if !matchSeverity(&r, []string{"ERROR"}) {
+	if !MatchesSeverity(&r, []string{"ERROR"}) {
 		t.Error("expected case-insensitive error match")
 	}
-	if matchSeverity(&r, []string{"warning"}) {
+	if MatchesSeverity(&r, []string{"warning"}) {
 		t.Error("expected warning not to match an error")
 	}
 	nilLevel := Result{Locations: r.Locations}
-	if !matchSeverity(&nilLevel, []string{"note"}) {
+	if !MatchesSeverity(&nilLevel, []string{"note"}) {
 		t.Error("expected nil level to be treated as note")
 	}
 }
 
 func TestMatchFingerprint(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, map[string]string{
-		DefaultFingerprintKey: "abc123def456",
+		IdentityKey: "abc123def456",
 	})
-	if !matchFingerprint(&r, "", []string{"abc123"}) {
-		t.Error("expected git-style prefix match on default key")
+	if !matchFingerprint(&r, []string{"abc123"}) {
+		t.Error("expected git-style prefix match")
 	}
-	if matchFingerprint(&r, "", []string{"zzz"}) {
+	if matchFingerprint(&r, []string{"zzz"}) {
 		t.Error("expected non-prefix not to match")
 	}
-	if matchFingerprint(&r, "missing/key", []string{"abc"}) {
-		t.Error("expected absent key not to match")
+	bare := makeResult("r", Error, "a.java", 1, nil)
+	if matchFingerprint(&bare, []string{"abc"}) {
+		t.Error("expected a result without the identity fingerprint not to match")
 	}
 }
 

@@ -21,8 +21,15 @@ type ListingOptions struct {
 	VerboseFlow      bool
 	MaxNestingLevel  int               // < 0 means "no cap" (legacy flow rendering)
 	GroupBy          GroupDimension    // default groupByFilePath
-	FingerprintKey   string            // "" = DefaultFingerprintKey
 	CodeFlows        CodeFlowSelection // zero value = render first flow only
+	// ShowSuppressed lists findings that carry an honored suppression. They are
+	// hidden by default: a suppressed finding is one somebody already decided
+	// about. Hiding happens here rather than in Filters so that the summary
+	// counts still see every result and can report how many were suppressed.
+	ShowSuppressed bool
+	// Comparison qualifies baseline states in the listing: what moved under an
+	// updated finding, what remains of an absent one. nil prints bare states.
+	Comparison *Comparison
 }
 
 // ParseGroupDimension converts a --group-by flag value into a GroupDimension.

@@ -101,3 +101,90 @@ func TestScanConfigFileAppliesWhenFlagUnset(t *testing.T) {
 		t.Errorf("Timeout = %v, want config-file 123s when flag not passed", got)
 	}
 }
+
+func TestScanBaselineFromConfigResolvesRelativeToConfigFile(t *testing.T) {
+	origBaseline := globals.Config.Scan.Baseline
+	origFlagValue := scanFlags.Baseline
+	baselineFlag := scanCmd.Flags().Lookup("baseline")
+	origChanged := baselineFlag.Changed
+	t.Cleanup(func() {
+		globals.Config.Scan.Baseline = origBaseline
+		scanFlags.Baseline = origFlagValue
+		baselineFlag.Changed = origChanged
+		globals.ConfigFile = ""
+		viper.Reset()
+	})
+
+	configDir := t.TempDir()
+	configFile := filepath.Join(configDir, "config.yaml")
+	if err := os.WriteFile(configFile, []byte("scan:\n  baseline: baselines/main.sarif\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	globals.ConfigFile = configFile
+	scanFlags.Baseline = ""
+	baselineFlag.Changed = false
+
+	initConfig(scanCmd)
+	cfg := prepareScanConfig(scanCmd, scanFlags, nil)
+	want := filepath.Join(configDir, "baselines", "main.sarif")
+	if cfg.Baseline != want {
+		t.Errorf("Baseline = %q, want config-relative %q", cfg.Baseline, want)
+	}
+}
+
+func TestScanBaselineFlagOverridesConfigWithoutRebasing(t *testing.T) {
+	origBaseline := globals.Config.Scan.Baseline
+	origFlagValue := scanFlags.Baseline
+	baselineFlag := scanCmd.Flags().Lookup("baseline")
+	origChanged := baselineFlag.Changed
+	t.Cleanup(func() {
+		globals.Config.Scan.Baseline = origBaseline
+		scanFlags.Baseline = origFlagValue
+		baselineFlag.Changed = origChanged
+		globals.ConfigFile = ""
+		viper.Reset()
+	})
+
+	configFile := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(configFile, []byte("scan:\n  baseline: from-config.sarif\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	globals.ConfigFile = configFile
+	scanFlags.Baseline = "from-flag.sarif"
+	baselineFlag.Changed = true
+
+	initConfig(scanCmd)
+	cfg := prepareScanConfig(scanCmd, scanFlags, nil)
+	if cfg.Baseline != "from-flag.sarif" {
+		t.Errorf("Baseline = %q, want unchanged flag path", cfg.Baseline)
+	}
+}
+
+func TestScanBaselineEnvironmentOverridesConfigWithoutRebasing(t *testing.T) {
+	origBaseline := globals.Config.Scan.Baseline
+	origFlagValue := scanFlags.Baseline
+	baselineFlag := scanCmd.Flags().Lookup("baseline")
+	origChanged := baselineFlag.Changed
+	t.Cleanup(func() {
+		globals.Config.Scan.Baseline = origBaseline
+		scanFlags.Baseline = origFlagValue
+		baselineFlag.Changed = origChanged
+		globals.ConfigFile = ""
+		viper.Reset()
+	})
+
+	configFile := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(configFile, []byte("scan:\n  baseline: from-config.sarif\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	globals.ConfigFile = configFile
+	scanFlags.Baseline = ""
+	baselineFlag.Changed = false
+	t.Setenv("OPENTAINT_SCAN_BASELINE", "from-environment.sarif")
+
+	initConfig(scanCmd)
+	cfg := prepareScanConfig(scanCmd, scanFlags, nil)
+	if cfg.Baseline != "from-environment.sarif" {
+		t.Errorf("Baseline = %q, want unchanged environment path", cfg.Baseline)
+	}
+}

@@ -11,11 +11,13 @@ import (
 	"github.com/seqra/opentaint/internal/load_trace"
 	"github.com/seqra/opentaint/internal/rules"
 	"github.com/seqra/opentaint/internal/sarif"
+	"github.com/seqra/opentaint/internal/triage"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/seqra/opentaint/internal/version"
 
 	"github.com/seqra/opentaint/internal/utils/project"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/seqra/opentaint/internal/globals"
 	"github.com/seqra/opentaint/internal/output"
@@ -35,9 +37,15 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
+	ExcludeRuleID             []string
 	PassthroughApproximations []string
 	DataflowApproximations    []string
 	TrackExternalMethods      bool
+
+	Baseline           string
+	WriteBaselineState bool
+	ErrorOnFindings    bool
+	ErrorOnSeverity    []string
 
 	DebugFactReachabilitySarif            bool
 	DebugRunAnalysisOnSelectedEntryPoints string
@@ -81,9 +89,11 @@ The source-path argument is the project root. It is optional. The default is the
 
 OpenTaint writes the findings to a SARIF report. Use --output to set the report path. If --output is not set, the report goes into the project model directory. A summary is shown when the scan completes.
 
+To compare with a previous report, use --baseline. The scan then keeps the suppressions from the baseline. With --error-on-findings, only new findings that are not suppressed cause a failure. To record decisions about findings, use "opentaint triage".
+
 Before your first scan, run "opentaint pull" one time. To read a report again later, use "opentaint summary".
 
-` + scanExitCodesHelp("Scan completed"),
+` + gateExitCodesHelp("Scan completed"),
 	Example: `  # Scan the current directory with the built-in rules
   opentaint scan .
 
@@ -96,6 +106,9 @@ Before your first scan, run "opentaint pull" one time. To read a report again la
   # Use your own rules and show only errors
   opentaint scan . --ruleset ./rules --severity error -o report.sarif
 
+  # Fail CI only on findings that are new since the baseline
+  opentaint scan . --baseline main.sarif --error-on-findings -o report.sarif
+
   # Give a large project more time and memory
   opentaint scan . --timeout 30m --max-memory 16G -o report.sarif
 
@@ -106,17 +119,22 @@ Before your first scan, run "opentaint pull" one time. To read a report again la
 
   # Recipe: build one time, then scan many times
   opentaint compile ./my-app -o ./model
-  opentaint scan --project-model ./model -o report.sarif`,
+  opentaint scan --project-model ./model -o report.sarif
+
+  # Recipe: a CI gate that fails only on new findings
+  opentaint scan . --baseline baselines/main.sarif --error-on-findings -o report.sarif
+  opentaint summary report.sarif --baseline baselines/main.sarif --baseline-state new --show-findings`,
 	Annotations: map[string]string{"PrintConfig": "true"},
 	Run: func(cmd *cobra.Command, args []string) {
 		if scanFlags.DebugRunAnalysisOnSelectedEntryPoints != "" {
 			out.Warn("on Spring projects this method is added to the auto-discovered entry points, not used to restrict them")
 		}
-		runScan(cmd, prepareScanConfig(scanFlags, args))
+		runScan(cmd, prepareScanConfig(cmd, scanFlags, args))
 	},
 }
 
-func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
+func prepareScanConfig(cmd *cobra.Command, cfg ScanConfig, args []string) ScanConfig {
+	cfg.Baseline = configuredScanBaseline(cmd, cfg.Baseline)
 	if len(args) > 0 && cfg.ProjectModelPath != "" {
 		out.Error("Cannot use both a source path argument and --project-model flag")
 		suggest("Use either a source path or --project-model:",
@@ -134,6 +152,33 @@ func prepareScanConfig(cfg ScanConfig, args []string) ScanConfig {
 	return cfg
 }
 
+// configuredScanBaseline applies scan.baseline when --baseline was not given.
+// A path written in a config file is relative to that file; a flag or
+// OPENTAINT_SCAN_BASELINE value remains relative to the process working
+// directory. This keeps checked-in project configs relocatable without
+// changing the established meaning of command-line paths.
+func configuredScanBaseline(cmd *cobra.Command, flagValue string) string {
+	if flag := cmd.Flags().Lookup("baseline"); flag != nil && flag.Changed {
+		return flagValue
+	}
+
+	value := globals.Config.Scan.Baseline
+	if value == "" || filepath.IsAbs(value) {
+		return value
+	}
+	if _, fromEnvironment := os.LookupEnv("OPENTAINT_SCAN_BASELINE"); fromEnvironment {
+		return value
+	}
+	if viper.ConfigFileUsed() == "" {
+		return value
+	}
+	configPath, err := filepath.Abs(viper.ConfigFileUsed())
+	if err != nil {
+		return value
+	}
+	return filepath.Clean(filepath.Join(filepath.Dir(configPath), value))
+}
+
 func init() {
 	rootCmd.AddCommand(scanCmd)
 	addScanFlags(scanCmd)
@@ -149,6 +194,7 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable, overrides rules.exclude from the config)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
@@ -172,6 +218,10 @@ func addScanFlags(cmd *cobra.Command) {
 	addRenamedStringArrayFlag(cmd.Flags(), &scanFlags.DataflowApproximations, "java-models", "dataflow-approximations", "Java dataflow models: a compiled class directory or a Java source directory (repeatable)")
 
 	cmd.Flags().BoolVar(&scanFlags.TrackExternalMethods, "track-external-methods", false, "Write external-method coverage files next to the SARIF report")
+
+	addBaselineFlags(cmd, &scanFlags.Baseline)
+	cmd.Flags().BoolVar(&scanFlags.WriteBaselineState, "write-baseline-state", false, "Persist result.baselineState and run.baselineGuid into the output report (needs --baseline)")
+	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 }
 
 // currentScanBuilder returns a builder pre-populated with the user's current scan flags.
@@ -182,13 +232,88 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
+		WithExcludeRuleID(cfg.ExcludeRuleID).
 		WithPassthroughApproximations(cfg.PassthroughApproximations).
 		WithDataflowApproximations(cfg.DataflowApproximations).
-		WithTrackExternalMethods(cfg.TrackExternalMethods)
+		WithTrackExternalMethods(cfg.TrackExternalMethods).
+		WithBaseline(cfg.Baseline).
+		WithWriteBaselineState(cfg.WriteBaselineState).
+		WithErrorOnFindings(cfg.ErrorOnFindings).
+		WithErrorOnSeverity(cfg.ErrorOnSeverity)
 	if !isDefaultSeverity(cfg.Severity) {
 		b.WithSeverity(cfg.Severity)
 	}
 	return b
+}
+
+// resolveRuleIDs determines which rules the analyzer should run, as exact
+// inclusion and exclusion ids (patterns never reach the analyzer).
+//
+// --rule-id wins over the config lists, as flags do everywhere else. Honoring
+// a flag and rules.only together would silently intersect two selections the
+// user never asked to combine. --exclude-rule-id overrides rules.exclude the
+// same way, and composes with --rule-id since both were asked for explicitly.
+// Returns the zero value when nothing restricts the rules, which runs the
+// whole ruleset.
+func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
+	var rulesetRoots []string
+	for _, r := range absRuleSetPaths {
+		rulesetRoots = append(rulesetRoots, r.Path)
+	}
+
+	if len(cfg.RuleID) > 0 {
+		// The explicit list is small, so exclusions are subtracted right here
+		// and the analyzer sees only the survivors.
+		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
+		if err != nil {
+			out.Fatalf("%s", err)
+		}
+		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID)
+		if cfg.ExpandRuleRefs {
+			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
+		}
+		return rules.Resolved{Include: ids}
+	}
+
+	selection := configuredRuleSelection(cfg)
+	selected, err := rules.Select(selection, rulesetRoots)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if selection.Active() {
+		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots))
+	}
+	return selected
+}
+
+// warnUnmatchedRulePatterns surfaces selection patterns that matched no rule.
+// A pattern matching nothing is usually a typo, and staying silent would make
+// an exclusion look effective when it never was.
+func warnUnmatchedRulePatterns(selection rules.Selection, all []string) {
+	for _, pattern := range selection.Unmatched(all) {
+		out.Warnf("Rule pattern %q matches no rule in the active ruleset", pattern)
+	}
+}
+
+// configuredRuleSelection merges the rules.only / rules.exclude lists from the
+// configuration file with the --exclude-rule-id flag, which overrides the
+// configured exclude list when set.
+// ruleSelectionActive reports whether any rule allow/deny input is in play —
+// the flags or the config lists. Only then does rule resolution read the
+// ruleset from disk.
+func ruleSelectionActive(cfg ScanConfig) bool {
+	return len(cfg.RuleID) > 0 || len(cfg.ExcludeRuleID) > 0 || configuredRuleSelection(cfg).Active()
+}
+
+func configuredRuleSelection(cfg ScanConfig) rules.Selection {
+	selection := rules.Selection{
+		Only:    globals.Config.Rules.Only,
+		Exclude: globals.Config.Rules.Exclude,
+	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		selection.Exclude = cfg.ExcludeRuleID
+	}
+	return selection
 }
 
 func isDefaultSeverity(sev []string) bool {
@@ -263,6 +388,24 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		absSarifReportPath = utils.DefaultSarifReportPath(absProjectModelPath)
 	}
 
+	// Validate the triage flags before compiling: a typo in --baseline should
+	// not surface only after a fifteen-minute analysis.
+	gateSeverities, err := triage.ParseGateSeverities(cfg.ErrorOnSeverity)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if cfg.WriteBaselineState && cfg.Baseline == "" {
+		out.Fatalf("--write-baseline-state needs a --baseline to compare against")
+	}
+	var baseline *sarif.Report
+	var absBaselinePath string
+	if cfg.Baseline != "" {
+		baseline, absBaselinePath = loadBaselineOrExit(cfg.Baseline, absSarifReportPath)
+		if err := sarif.CheckBaselineIdentity(baseline); err != nil {
+			out.Fatalf("%s", err)
+		}
+	}
+
 	sarifReportName := filepath.Base(absSarifReportPath)
 
 	localVersion := utils.ArtifactDisplayVersion(globals.ArtifactByKind("analyzer"))
@@ -308,11 +451,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Fatalf("Input validation failed: %s", err)
 	}
 
-	if cfg.DryRun {
-		runDryRun("the build and scan")
-		return
-	}
-
 	hasBuiltin := false
 	for _, ruleSetPath := range absRuleSetPaths {
 		if ruleSetPath.Builtin {
@@ -320,6 +458,26 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			break
 		}
 	}
+
+	// Rule selections resolve against the rule files on disk, so the built-in
+	// rules must be fetched before an active selection is resolved — a fresh
+	// install has not downloaded them yet.
+	if hasBuiltin && ruleSelectionActive(cfg) {
+		if _, err := utils.EnsureRulesPath(out); err != nil {
+			failf("Failed to prepare built-in rules: %s", err)
+		}
+	}
+
+	// Resolve the active rules before the dry-run bail-out, so that a bad
+	// rules.only/rules.exclude list is reported by --dry-run and never after a
+	// full compile.
+	resolvedRules := resolveRuleIDs(cfg, absRuleSetPaths)
+
+	if cfg.DryRun {
+		runDryRun("the build and scan")
+		return
+	}
+
 	if hasBuiltin {
 		if _, err := utils.EnsureRulesPath(out); err != nil {
 			failf("Failed to prepare built-in rules: %s", err)
@@ -399,16 +557,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
 	}
-	ruleIDs := cfg.RuleID
-	if cfg.ExpandRuleRefs && len(ruleIDs) > 0 {
-		var roots []string
-		for _, r := range absRuleSetPaths {
-			roots = append(roots, r.Path)
-		}
-		ruleIDs = rules.ExpandRuleIDs(ruleIDs, roots)
-	}
-	for _, ruleID := range ruleIDs {
+	for _, ruleID := range resolvedRules.Include {
 		nativeBuilder.AddRuleID(ruleID)
+	}
+	for _, ruleID := range resolvedRules.Exclude {
+		nativeBuilder.AddRuleIDExclude(ruleID)
 	}
 	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
 	if cfg.TrackExternalMethods {
@@ -491,10 +644,12 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			suggestions = append(suggestions, retry)
 		}
 	}
+	var view *sarif.TriageView
 	if report != nil {
+		view = triageScanReport(cfg, report, absSarifReportPath, baseline, absBaselinePath)
 		// Scan does not expose summary's filter/group flags, so pass zero values:
 		// no filtering, default group dimension, first-flow code-flow selection.
-		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1})
+		printSarifSummary(report, absSarifReportPath, sarif.Filters{}, sarif.ListingOptions{MaxNestingLevel: -1}, view, false)
 		switch {
 		case cfg.DebugFactReachabilitySarif:
 			if analyzerFail == nil {
@@ -530,6 +685,31 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
 	}
+	if report != nil {
+		exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report, view)
+	}
+}
+
+// triageScanReport applies the baseline and any inherited suppressions to the
+// report the analyzer just wrote, rewriting the file when that changed it. With
+// no baseline and no annotation requested, the report is left exactly as the
+// analyzer produced it. The baseline was loaded (and validated) before the
+// compile step, so a bad path fails fast and the file is read only once.
+func triageScanReport(cfg ScanConfig, report *sarif.Report, absSarifReportPath string, baseline *sarif.Report, absBaselinePath string) *sarif.TriageView {
+	outcome, err := triage.Apply(report, triage.Options{
+		WriteBaselineState: cfg.WriteBaselineState,
+		Baseline:           baseline,
+		BaselinePath:       absBaselinePath,
+	})
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if outcome.Changed {
+		if err := sarif.SaveReport(report, absSarifReportPath); err != nil {
+			out.Fatalf("Failed to write report: %s", err)
+		}
+	}
+	return outcome.View
 }
 
 // noteSeverityScanCommand builds the follow-up command for a clean scan: the

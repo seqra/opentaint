@@ -7,6 +7,12 @@ import (
 	"github.com/seqra/opentaint/internal/output"
 )
 
+// listable reports whether a result belongs in the detailed listing. Suppressed
+// findings are omitted unless ShowSuppressed is set.
+func (opts ListingOptions) listable(r *Result) bool {
+	return opts.ShowSuppressed || !IsSuppressed(r)
+}
+
 // PrintAll renders every finding in report as a grouped, sorted listing. It
 // returns true when at least one finding had its code flow truncated (so the
 // caller can offer a "--verbose-flow" hint). Groups are determined by
@@ -15,7 +21,11 @@ import (
 func (report *Report) PrintAll(out *output.Printer, opts ListingOptions) bool {
 	totalFindings := 0
 	for _, run := range report.Runs {
-		totalFindings += len(run.Results)
+		for i := range run.Results {
+			if opts.listable(&run.Results[i]) {
+				totalFindings++
+			}
+		}
 	}
 	if totalFindings == 0 {
 		return false
@@ -36,8 +46,11 @@ func (report *Report) PrintAll(out *output.Printer, opts ListingOptions) bool {
 	for runIdx := range report.Runs {
 		run := &report.Runs[runIdx]
 		for resultIdx := range run.Results {
-			order++
 			result := &run.Results[resultIdx]
+			if !opts.listable(result) {
+				continue
+			}
+			order++
 
 			file := "<unknown>"
 			line := int64(-1)

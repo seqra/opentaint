@@ -44,6 +44,7 @@ type Scan struct {
 	Timeout       time.Duration `mapstructure:"timeout"`
 	MaxMemory     string        `mapstructure:"max_memory"`
 	CodeFlowLimit int64         `mapstructure:"code_flow_limit"`
+	Baseline      string        `mapstructure:"baseline"`
 }
 
 type Output struct {
@@ -68,6 +69,12 @@ type Autobuilder struct {
 
 type Rules struct {
 	Version string `mapstructure:"version"`
+	// Only and Exclude control which rules the analyzer runs. They are rule
+	// selection, not suppression: an excluded rule never loads, so it produces
+	// nothing in the report. Entries match a full "path.yaml:id", a bare rule
+	// name, or a glob over either.
+	Only    []string `mapstructure:"only"`
+	Exclude []string `mapstructure:"exclude"`
 }
 
 type Java struct {
