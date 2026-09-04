@@ -16,9 +16,13 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isF
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isStaticAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class AccessorInternerTest {
     private companion object {
@@ -70,6 +74,41 @@ class AccessorInternerTest {
             val first = interner.index(accessor)
             val second = interner.index(accessor)
             assertEquals(first, second, "Indices differ between two index() calls for $accessor")
+        }
+    }
+
+    @Test
+    fun `concurrent indexing survives table growth`() {
+        val interner = AccessorInterner()
+        val accessors = List(2_000) { FieldAccessor("Owner", "field$it", "Value") }
+        val workers = 10
+        val ready = CountDownLatch(workers)
+        val start = CountDownLatch(1)
+        val executor = Executors.newFixedThreadPool(workers)
+
+        try {
+            val results = List(workers) { worker ->
+                executor.submit<List<Int>> {
+                    ready.countDown()
+                    start.await()
+                    List(accessors.size) { offset ->
+                        interner.index(accessors[(offset + worker) % accessors.size])
+                    }
+                }
+            }
+            assertTrue(ready.await(10, TimeUnit.SECONDS), "Workers did not become ready")
+            start.countDown()
+
+            val indicesByWorker = results.map { it.get(30, TimeUnit.SECONDS) }
+            accessors.indices.forEach { accessorIndex ->
+                val indices = indicesByWorker.mapIndexed { worker, indices ->
+                    indices[(accessorIndex - worker).mod(accessors.size)]
+                }
+                assertEquals(1, indices.toSet().size, "Concurrent indices differ")
+                assertEquals(accessors[accessorIndex], interner.accessor(indices.first()))
+            }
+        } finally {
+            executor.shutdownNow()
         }
     }
 
