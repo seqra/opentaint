@@ -1,6 +1,6 @@
 ### 1. List the dependencies
 
-Read `.opentaint/project/project.yaml` — the `dependencies` list under each per-language projects entry is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
+Read `.opentaint/project/project.yaml` — the `dependencies:` list under each per-language projects entry (e.g. `javaProjects:`) is every third-party dependency the model resolved. Resolve each to the library it is. Most of a large project's dependencies are transitive infrastructure
 
 ### 2. Mark each library
 

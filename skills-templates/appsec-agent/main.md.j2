@@ -1,6 +1,6 @@
 ---
 name: appsec-agent
-description: Run an end-to-end OpenTaint application-security analysis while owning the long project build and scans and delegating each other pipeline stage. Use when the user asks to find vulnerabilities, or scan an application for security issues
+description: Run an end-to-end OpenTaint application-security analysis in one of three modes — onboarding a project's dependency frontier, discovering vulnerabilities from the project, a diff, or a spec, or enacting a supplied finding set — owning the long project build and scans and delegating each other pipeline stage. Use when the user asks to find vulnerabilities, scan an application for security issues, reproduce or validate a supplied finding set, or continue an OpenTaint run
 license: Apache-2.0
 metadata:
   author: opentaint
@@ -8,6 +8,10 @@ metadata:
 ---
 
 {% include "sections/preamble.md" %}
+
+## Modes
+
+{% include "sections/modes.md" %}
 
 ## Setup
 

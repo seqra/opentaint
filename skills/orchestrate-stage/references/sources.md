@@ -1,36 +1,8 @@
-# Discover sources + source rules
+# Author sources + assemble
 
-Discover the project's used dependency members that are taint sources, author source rules, and wire them to the built-in sinks. The first project scan follows and names the later taint frontier. On re-entry, partition plans only members no prior run verdicted.
+Author the source rules the boundaries stage seeded into per-family units, and wire them to every relevant sink. The first project scan follows: it is what proves the boundaries and names the taint frontier the later stages work from.
 
-## Triage dependencies
-
-Dispatch triage-dependencies when status names it.
-
-Expect back — `.opentaint/tracking/coverage.yaml` written; status advances to source discovery.
-
-## Discover sources
-
-Run:
-
-```bash
-uv run <skill-dir>/scripts/generate.py partition discover
-```
-
-It writes balanced `.opentaint/tracking/rules/plans/lib-NNN.yaml` plans, one disjoint slice per leaf. Fan out discover-attack-surface, one per plan.
-
-Inputs each:
-- `language`
-- `plan`
-
-At the join run:
-
-```bash
-uv run <skill-dir>/scripts/generate.py mark-safe
-```
-
-Expect back — each agent records the sources it finds into its plan and writes any source unit(s); the join folds source/safe verdicts into `classification.yaml` and prunes the consumed plans. Discovery is a single fan-out pass, not a loop.
-
-Run `uv run <skill-dir>/scripts/get_status.py` to confirm `discover` `DONE`.
+On re-entry, work only the units `get_status.py` still lists as pending — a unit that already passes is a prior pass's result, not work to redo.
 
 ## Source lib rules
 
@@ -66,4 +38,4 @@ Expect back — existing tag-expanded joins reused where they already cover the 
 
 ## Stage gate
 
-`get_status.py` drives `discover` then `source_rules`, naming the current sub-step and units. Finish when both are `DONE`, or when the next step it reports is the project scan.
+`get_status.py` drives `source_rules`, naming the current sub-step and units. Finish when it reads `DONE`, or when the next step it reports is the project scan.

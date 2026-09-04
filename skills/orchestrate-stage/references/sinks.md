@@ -1,6 +1,6 @@
 # Author sinks + assemble
 
-Author the sink rules flagged into per-package units during approximation classification and join them to every relevant source. The final project rescan follows to surface findings.
+Author the sink units this run seeded — the boundaries stage's sink side, plus the sinks flagged into per-package units during model classification — and join them to every relevant source. The final project rescan follows to surface findings.
 
 ## Sink lib rules
 

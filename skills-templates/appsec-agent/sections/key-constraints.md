@@ -1,3 +1,7 @@
-- read pipeline state through `<skill-dir>/scripts/get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/yaml scans over `.opentaint/tracking`, `results`, or the `*.yaml`, nor open finding/unit/SARIF files just to review progress. If its output doesn't settle the question, re-run it with `--full` before opening any file
+- read pipeline state through `<skill-dir>/scripts/get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/yaml scans over `.opentaint/tracking`, `results`, or the `*.yaml`, nor open finding/unit/reference/SARIF files just to review progress. If its output doesn't settle the question, re-run it with `--full` before opening any file
 - don't author or edit stage-owned artifacts or tracking; MAIN writes only `model_commit`, `build_jdk`, and `max_memory` in `state.yaml`
 - keep one generated project model for the run; never hand-edit or replace it mid-analysis — fix the build and rebuild before starting a new run
+- source and sink boundaries come before model work; a model never compensates for a boundary that was never authored
+- run one mode per pass, and never switch `mode` mid-pass: the intake behind the current families would no longer be the one on disk
+- where the tree carries a reference set, coverage is counted by unique finding identity, never by rule id or raw SARIF result count, and a result counts as a reproduction only when its trace carries the finding's own attack path
+- never drop a supplied finding as unsuitable for taint analysis

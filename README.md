@@ -188,12 +188,16 @@ Or install the skills directly for any supported agent:
 npx skills add https://github.com/seqra/opentaint
 ```
 
-The `appsec-agent` skill orchestrates a full project assessment: build the project, run OpenTaint, discover the attack surface, add targeted rules, model missing library data flows, triage findings, and optionally generate dynamic proof-of-concept checks for confirmed vulnerabilities.
+The `appsec-agent` skill is the entry point: it builds the project, runs OpenTaint, turns the project's attack surface into universal rules, models missing library data flows, triages findings, and optionally generates dynamic proof-of-concept checks for confirmed vulnerabilities. It runs in one of three modes, differing only in what the run starts from:
+
+- **onboarding** — the external-method frontier, taken as a trust boundary and classified once, to build the project's universal rule and model corpus
+- **discovery** — the project, a diff, or an informal spec of what changed or what matters
+- **enactment** — a finding set you supply, reproduced as verified rules
 
 Included skills cover the common security-analysis loop:
 
 - **Scan and triage:** `build-project`, `run-scan`, `analyze-findings`, `generate-poc`
-- **Coverage expansion:** `triage-dependencies`, `discover-attack-surface`, `create-test-project`, `create-rule`, `assemble-lib-rules`
+- **Coverage expansion:** `triage-dependencies`, `discover-attack-surface`, `discover-universal-boundaries`, `create-test-project`, `create-rule`, `assemble-lib-rules`
 - **Dataflow modeling:** `analyze-external-methods`, `create-pass-through-approximation`, `create-dataflow-approximation`, `debug-rule`, `report-analyzer-issue`
 
 ---

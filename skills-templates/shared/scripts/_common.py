@@ -1,4 +1,4 @@
-"""Shared helpers for the appsec-agent orchestrator scripts.
+"""Shared helpers for the OpenTaint pipeline orchestrator scripts.
 
 Not a runnable script — imported by the PEP723 entry points (get_status.py, generate.py),
 which carry the pyyaml dependency. Every path resolves under the fixed
@@ -6,6 +6,7 @@ which carry the pyyaml dependency. Every path resolves under the fixed
 scripts from the project root.
 """
 import glob
+import re
 import subprocess
 from pathlib import Path
 
@@ -20,6 +21,9 @@ SOURCES_TR = RULES_TR / "sources"
 SINKS_TR = RULES_TR / "sinks"
 JOINS_TR = RULES_TR / "joins"
 FINDINGS_TR = TRACKING / "findings"
+SCOPE = TRACKING / "scope.yaml"            # every mode: what intake scoped, as the family list
+REFERENCE_TR = TRACKING / "reference"      # enactment mode: the supplied findings, normalized
+BOUNDARIES_TR = TRACKING / "boundaries"    # every mode: per-family universal boundary specs
 RESULTS = ROOT / "results"
 DROPPED = RESULTS / "dropped-external-methods.yaml"
 SARIF = RESULTS / "report.sarif"
@@ -94,6 +98,22 @@ def git_head():
         return out.stdout.strip() or None
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+# ---- intake scope ----
+
+def scope_families():
+    """(name, evidence) per family the intake stage scoped, in scope.yaml order.
+
+    One shape for every mode: the evidence items are reference finding ids in enactment mode,
+    and the members or code areas intake settled on in onboarding and discovery mode. The
+    boundaries stage generalizes one family per entry, whichever mode wrote it."""
+    out = []
+    for f in (load_yaml(SCOPE, {}) or {}).get("families") or []:
+        name = strip_quotes((f or {}).get("name", "")) if isinstance(f, dict) else ""
+        if name:
+            out.append((name, [strip_quotes(str(e)) for e in (f.get("evidence") or [])]))
+    return out
 
 
 # ---- approximation batch readers (shared by coverage + partition) ----
@@ -174,6 +194,12 @@ def build_done_keys():
             if str(item).strip():
                 keys.add(member_key(item))
     return keys
+
+
+# ---- finding files ----
+
+RULE_RE = re.compile(r'^rule_id:\s*(.+?)\s*$', re.M)
+VERDICT_RE = re.compile(r'^verdict:\s*(.+?)\s*$', re.M)
 
 
 def ledger_verdicted_keys():
