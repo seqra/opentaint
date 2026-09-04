@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "scopes": [
     "analyzer",
     "autobuilder",
@@ -9,6 +9,7 @@
     "docs",
     "github",
     "gitlab",
+    "go-server",
     "infra",
     "model",
     "rules"
@@ -18,6 +19,7 @@
       ["cli", "analyzer"],
       ["cli", "autobuilder"],
       ["cli", "core"],
+      ["cli", "go-server"],
       ["cli", "model"],
       ["cli", "rules"]
     ],
@@ -30,13 +32,27 @@
       "infra": ["docs", "ci"]
     }
   },
+  "releaseScopes": {
+    "analyzer": [
+      "analyzer",
+      "core",
+      "model"
+    ],
+    "autobuilder": [
+      "autobuilder",
+      "core"
+    ],
+    "go-server": [
+      "go-server"
+    ]
+  },
   "ownership": {
     "ignoredRoots": [
       "formal"
     ],
     "overrides": [
       {
-        "scope": "ci",
+        "requiredScopes": ["ci"],
         "globs": [
           "release-notes-transform.cjs",
           "**/.releaserc.cjs"
@@ -45,40 +61,51 @@
     ],
     "roots": {
       "rules": {
-        "defaultScope": "rules"
+        "defaultScopes": ["rules"]
       },
       "model": {
-        "defaultScope": "model"
+        "defaultScopes": ["model"]
       },
       "github": {
-        "defaultScope": "github"
+        "defaultScopes": ["github"]
       },
       "gitlab": {
-        "defaultScope": "gitlab"
+        "defaultScopes": ["gitlab"]
       },
       "infra": {
-        "defaultScope": "infra"
+        "defaultScopes": ["infra"]
       },
       "cli": {
-        "defaultScope": "cli"
+        "defaultScopes": ["cli"]
       },
       "core": {
-        "defaultScope": "core",
+        "defaultScopes": ["core"],
         "rules": [
           {
-            "scope": "autobuilder",
+            "requiredScopes": ["autobuilder"],
             "globs": [
-              "opentaint-jvm-autobuilder/**",
-              "opentaint-project-model/**",
-              "opentaint-utils/cli-util/**"
+              "opentaint-jvm-autobuilder/**"
             ]
           },
           {
-            "scope": "analyzer",
+            "requiredScopes": ["go-server"],
             "globs": [
-              "opentaint-ir/**/src/test/**",
+              "opentaint-ir/go/go-ssa-server/**"
+            ]
+          },
+          {
+            "requiredScopes": ["analyzer", "go-server"],
+            "globs": [
+              "opentaint-ir/go/proto/**"
+            ]
+          },
+          {
+            "requiredScopes": ["analyzer"],
+            "globs": [
               "src/**",
               "samples/**",
+              "opentaint-dataflow-core/**",
+              "opentaint-ir/**",
               "opentaint-jvm-sast-dataflow/**",
               "opentaint-jvm-sast-project/**",
               "opentaint-jvm-sast-se-api/**",
@@ -88,16 +115,20 @@
               "opentaint-configuration-rules/**",
               "opentaint-utils/common-util/**",
               "opentaint-utils/opentaint-jvm-util/**"
+            ],
+            "excludeGlobs": [
+              "opentaint-ir/go/go-ssa-server/**",
+              "opentaint-ir/go/proto/**"
             ]
           }
         ]
       },
       ".github": {
-        "defaultScope": "ci"
+        "defaultScopes": ["ci"]
       }
     },
     "documentation": {
-      "scope": "docs",
+      "requiredScopes": ["docs"],
       "rootDirectories": [
         "public",
         "docs",

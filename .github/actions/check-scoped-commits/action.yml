@@ -2,8 +2,8 @@ name: 'Check scoped commits'
 description: 'Check if scoped conventional commits exist since last tag and generate release notes'
 
 inputs:
-  scopes:
-    description: 'Comma-separated list of commit scopes to match (e.g. analyzer,core)'
+  release:
+    description: 'Release whose scopes must match'
     required: true
   tag-prefix:
     description: 'Git tag prefix to find the last release (e.g. analyzer/)'
@@ -33,7 +33,9 @@ runs:
         set -euo pipefail
 
         TAG_PREFIX="${{ inputs.tag-prefix }}"
-        SCOPES="${{ inputs.scopes }}"
+        RELEASE="${{ inputs.release }}"
+        SCOPES=$(node "$GITHUB_WORKSPACE/.github/scripts/scope-contract.cjs" \
+          release-scopes "$RELEASE")
 
         LAST_TAG=$(git tag -l "${TAG_PREFIX}*" --sort=-creatordate | head -1)
 

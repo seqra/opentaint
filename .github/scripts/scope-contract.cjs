@@ -31,9 +31,50 @@ function assertScope(scope, knownScopes, location) {
   );
 }
 
+function validateRequiredScopes(scopes, knownScopes, location) {
+  assert(
+    Array.isArray(scopes) && scopes.length > 0,
+    `${location} must be a non-empty array`,
+  );
+  assert(new Set(scopes).size === scopes.length, `${location} must be unique`);
+  for (const scope of scopes) assertScope(scope, knownScopes, location);
+}
+
+function validateScopeCompatibility(scopes, candidate) {
+  const selected = new Set(scopes);
+  for (const [left, right] of candidate.compatibility.forbiddenPairs) {
+    assert(
+      !selected.has(left) || !selected.has(right),
+      `The ${left} scope cannot occur with the ${right} scope`,
+    );
+  }
+  for (const group of candidate.compatibility.exclusiveGroups) {
+    const present = group.filter(scope => selected.has(scope));
+    assert(
+      present.length < 2,
+      `These scopes are mutually exclusive: ${present.join(',')}`,
+    );
+  }
+  for (const [scope, companions] of Object.entries(
+    candidate.compatibility.companions,
+  )) {
+    if (!selected.has(scope)) continue;
+    const allowed = new Set([scope, ...companions]);
+    const invalid = scopes.filter(other => !allowed.has(other));
+    assert(
+      invalid.length === 0,
+      `The ${scope} scope cannot occur with ${invalid.join(',')}`,
+    );
+  }
+}
+
 function validateRule(rule, knownScopes, location) {
   assert(rule && typeof rule === 'object', `${location} must be an object`);
-  assertScope(rule.scope, knownScopes, `${location}.scope`);
+  validateRequiredScopes(
+    rule.requiredScopes,
+    knownScopes,
+    `${location}.requiredScopes`,
+  );
   assert(
     Array.isArray(rule.globs) && rule.globs.length > 0,
     `${location}.globs must be a non-empty array`,
@@ -44,11 +85,27 @@ function validateRule(rule, knownScopes, location) {
       `${location}.globs must contain non-empty strings`,
     );
   }
+  if (rule.excludeGlobs !== undefined) {
+    assert(
+      Array.isArray(rule.excludeGlobs) && rule.excludeGlobs.length > 0,
+      `${location}.excludeGlobs must be a non-empty array`,
+    );
+    assert(
+      new Set(rule.excludeGlobs).size === rule.excludeGlobs.length,
+      `${location}.excludeGlobs must be unique`,
+    );
+    for (const glob of rule.excludeGlobs) {
+      assert(
+        typeof glob === 'string' && glob.length > 0,
+        `${location}.excludeGlobs must contain non-empty strings`,
+      );
+    }
+  }
 }
 
 function validateContract(candidate) {
   assert(candidate && typeof candidate === 'object', 'The contract must be an object');
-  assert(candidate.schemaVersion === 1, 'The contract schema version must be 1');
+  assert(candidate.schemaVersion === 2, 'The contract schema version must be 2');
   assert(Array.isArray(candidate.scopes), 'The contract scopes must be an array');
 
   const knownScopes = new Set(candidate.scopes);
@@ -77,6 +134,15 @@ function validateContract(candidate) {
     for (const companion of companions) assertScope(companion, knownScopes, `companions.${scope}`);
   }
 
+  assert(
+    candidate.releaseScopes && typeof candidate.releaseScopes === 'object',
+    'Release scope sets are required',
+  );
+  for (const [release, scopes] of Object.entries(candidate.releaseScopes)) {
+    assert(release.length > 0, 'Release names must be non-empty strings');
+    validateRequiredScopes(scopes, knownScopes, `releaseScopes.${release}`);
+  }
+
   const ownership = candidate.ownership;
   assert(ownership && typeof ownership === 'object', 'Ownership is required');
   assert(Array.isArray(ownership.ignoredRoots), 'Ignored ownership roots must be an array');
@@ -96,17 +162,29 @@ function validateContract(candidate) {
   }
   for (const [index, rule] of ownership.overrides.entries()) {
     validateRule(rule, knownScopes, `ownership.overrides[${index}]`);
+    validateScopeCompatibility(rule.requiredScopes, candidate);
   }
   for (const [root, route] of Object.entries(ownership.roots)) {
     assert(root.length > 0 && !root.includes('/'), `Invalid ownership root '${root}'`);
-    assertScope(route.defaultScope, knownScopes, `ownership.roots.${root}.defaultScope`);
+    validateRequiredScopes(
+      route.defaultScopes,
+      knownScopes,
+      `ownership.roots.${root}.defaultScopes`,
+    );
+    validateScopeCompatibility(route.defaultScopes, candidate);
     for (const [index, rule] of (route.rules || []).entries()) {
       validateRule(rule, knownScopes, `ownership.roots.${root}.rules[${index}]`);
+      validateScopeCompatibility(rule.requiredScopes, candidate);
     }
   }
   const documentation = ownership.documentation;
   assert(documentation && typeof documentation === 'object', 'Documentation ownership is required');
-  assertScope(documentation.scope, knownScopes, 'ownership.documentation.scope');
+  validateRequiredScopes(
+    documentation.requiredScopes,
+    knownScopes,
+    'ownership.documentation.requiredScopes',
+  );
+  validateScopeCompatibility(documentation.requiredScopes, candidate);
   for (const key of ['rootDirectories', 'basenames', 'extensions', 'rootFiles']) {
     assert(Array.isArray(documentation[key]), `ownership.documentation.${key} must be an array`);
     assert(new Set(documentation[key]).size === documentation[key].length, `ownership.documentation.${key} must be unique`);
@@ -139,26 +217,37 @@ function globToRegExp(glob) {
 }
 
 function ruleMatches(rule, candidatePath) {
-  return rule.globs.some(glob => globToRegExp(glob).test(candidatePath));
+  const included = rule.globs.some(glob => globToRegExp(glob).test(candidatePath));
+  const excluded = (rule.excludeGlobs || [])
+    .some(glob => globToRegExp(glob).test(candidatePath));
+  return included && !excluded;
 }
 
-function oneRuleOwner(rules, candidatePath, location) {
+function oneRuleRequirements(rules, candidatePath, location) {
   const matches = rules.filter(rule => ruleMatches(rule, candidatePath));
   if (matches.length > 1) {
-    const scopes = matches.map(rule => rule.scope).join(',');
-    throw new ScopeContractError(`${location} has multiple scopes: ${scopes}`);
+    const requirements = matches
+      .map(rule => `{${rule.requiredScopes.join(', ')}}`)
+      .join(', ');
+    throw new ScopeContractError(
+      `${location} has multiple scope requirements: ${requirements}`,
+    );
   }
-  return matches.length === 1 ? matches[0].scope : undefined;
+  return matches.length === 1 ? matches[0].requiredScopes : undefined;
 }
 
 function splitScopes(scopeList) {
   if (typeof scopeList !== 'string' || scopeList.length === 0) return [];
-  return scopeList.split(',');
+  return scopeList.split(',').map(scope => scope.trim());
 }
 
 function validateScopeList(scopeList, candidate = contract) {
   validateContract(candidate);
   assert(typeof scopeList === 'string' && scopeList.length > 0, 'A scope list is required');
+  assert(
+    /^[^,\s]+(?:, [^,\s]+)*$/.test(scopeList),
+    'Separate scopes with one comma and one space',
+  );
   const scopes = splitScopes(scopeList);
   assert(scopes.every(Boolean), 'Scope lists cannot contain an empty scope');
 
@@ -170,24 +259,12 @@ function validateScopeList(scopeList, candidate = contract) {
     selected.add(scope);
   }
 
-  for (const [left, right] of candidate.compatibility.forbiddenPairs) {
-    assert(!selected.has(left) || !selected.has(right), `The ${left} scope cannot occur with the ${right} scope`);
-  }
-  for (const group of candidate.compatibility.exclusiveGroups) {
-    const present = group.filter(scope => selected.has(scope));
-    assert(present.length < 2, `These scopes are mutually exclusive: ${present.join(',')}`);
-  }
-  for (const [scope, companions] of Object.entries(candidate.compatibility.companions)) {
-    if (!selected.has(scope)) continue;
-    const allowed = new Set([scope, ...companions]);
-    const invalid = scopes.filter(other => !allowed.has(other));
-    assert(invalid.length === 0, `The ${scope} scope cannot occur with ${invalid.join(',')}`);
-  }
+  validateScopeCompatibility(scopes, candidate);
 
   return scopes;
 }
 
-function scopeForPath(candidatePath, candidate = contract) {
+function requiredScopesForPath(candidatePath, candidate = contract) {
   validateContract(candidate);
   assert(typeof candidatePath === 'string' && candidatePath.length > 0, 'A changed path is required');
   assert(!candidatePath.startsWith('/'), `Changed paths must be relative: ${candidatePath}`);
@@ -199,13 +276,17 @@ function scopeForPath(candidatePath, candidate = contract) {
   const relative = separator === -1 ? '' : candidatePath.slice(separator + 1);
   if (candidate.ownership.ignoredRoots.includes(root)) return null;
 
-  const override = oneRuleOwner(candidate.ownership.overrides, candidatePath, candidatePath);
-  if (override) return override;
+  const override = oneRuleRequirements(
+    candidate.ownership.overrides,
+    candidatePath,
+    candidatePath,
+  );
+  if (override) return [...override];
 
   const route = candidate.ownership.roots[root];
   if (route) {
-    const refined = oneRuleOwner(route.rules || [], relative, candidatePath);
-    return refined || route.defaultScope;
+    const refined = oneRuleRequirements(route.rules || [], relative, candidatePath);
+    return [...(refined || route.defaultScopes)];
   }
 
   const docs = candidate.ownership.documentation;
@@ -217,7 +298,7 @@ function scopeForPath(candidatePath, candidate = contract) {
     docs.extensions.includes(extension) ||
     docs.rootFiles.includes(candidatePath)
   ) {
-    return docs.scope;
+    return [...docs.requiredScopes];
   }
 
   throw new ScopeContractError(`No scope owns changed path: ${candidatePath}`);
@@ -227,19 +308,32 @@ function validateScopePaths(scopeList, paths, candidate = contract) {
   const scopes = validateScopeList(scopeList, candidate);
   assert(Array.isArray(paths), 'Changed paths must be an array');
   assert(paths.length > 0, 'At least one changed path is required');
-  const owners = paths.map(changedPath => scopeForPath(changedPath, candidate));
-  const guardedOwners = owners.filter(owner => owner !== null);
-  if (guardedOwners.length === 0) return scopes;
+  const requirements = paths.map(
+    changedPath => requiredScopesForPath(changedPath, candidate),
+  );
+  const guardedRequirements = requirements.filter(required => required !== null);
+  if (guardedRequirements.length === 0) {
+    assert(
+      scopes.length === 1 && scopes[0] === 'ci',
+      'An ignored-only change must use only the ci scope',
+    );
+    return scopes;
+  }
 
   const selected = new Set(scopes);
   const used = new Set();
 
   for (let index = 0; index < paths.length; index += 1) {
     const changedPath = paths[index];
-    const owner = owners[index];
-    if (owner === null) continue;
-    assert(selected.has(owner), `Changed path '${changedPath}' requires scope '${owner}'`);
-    used.add(owner);
+    const required = requirements[index];
+    if (required === null) continue;
+    for (const scope of required) {
+      assert(
+        selected.has(scope),
+        `Changed path '${changedPath}' requires scope '${scope}'`,
+      );
+      used.add(scope);
+    }
   }
   for (const scope of scopes) {
     assert(used.has(scope), `Scope '${scope}' does not own a changed path`);
@@ -252,8 +346,25 @@ function hasAnyScope(scopeList, allowedScopes) {
   return allowedScopes.some(scope => scopes.has(scope));
 }
 
+function scopesForRelease(release, candidate = contract) {
+  validateContract(candidate);
+  assert(
+    typeof release === 'string' && Object.hasOwn(candidate.releaseScopes, release),
+    `Unknown release: ${release}`,
+  );
+  return [...candidate.releaseScopes[release]];
+}
+
 function scopePatterns(scope) {
-  return [scope, `${scope},*`, `*,${scope}`, `*,${scope},*`];
+  return [
+    scope,
+    `${scope}, *`,
+    `*, ${scope}`,
+    `*, ${scope}, *`,
+    `${scope},*`,
+    `*,${scope}`,
+    `*,${scope},*`,
+  ];
 }
 
 function scopeExclusionPattern(scope) {
@@ -306,9 +417,9 @@ function runCli(argv) {
     validateScopeList(argument);
     return;
   }
-  if (command === 'scope-for-path') {
-    const owner = scopeForPath(argument);
-    process.stdout.write(`${owner === null ? 'ignored' : owner}\n`);
+  if (command === 'scope-for-path' || command === 'scopes-for-path') {
+    const required = requiredScopesForPath(argument);
+    process.stdout.write(`${required === null ? 'ignored' : required.join(', ')}\n`);
     return;
   }
   if (command === 'title-scopes') {
@@ -320,8 +431,12 @@ function runCli(argv) {
     if (matches.length > 0) process.stdout.write(`${matches.join('\n')}\n`);
     return;
   }
+  if (command === 'release-scopes') {
+    process.stdout.write(`${scopesForRelease(argument).join(', ')}\n`);
+    return;
+  }
   throw new ScopeContractError(
-    'Usage: scope-contract.cjs validate-paths|validate-list|scope-for-path|title-scopes|filter-commits ARGUMENT',
+    'Usage: scope-contract.cjs validate-paths|validate-list|scopes-for-path|title-scopes|filter-commits|release-scopes ARGUMENT',
   );
 }
 
@@ -345,9 +460,10 @@ module.exports = {
   filterScopedCommits,
   globToRegExp,
   hasAnyScope,
+  requiredScopesForPath,
   runCli,
+  scopesForRelease,
   scopeExclusionPattern,
-  scopeForPath,
   scopeListFromTitle,
   scopePatterns,
   splitScopes,
