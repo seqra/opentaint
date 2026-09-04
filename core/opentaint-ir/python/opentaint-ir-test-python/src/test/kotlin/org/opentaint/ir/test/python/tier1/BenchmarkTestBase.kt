@@ -92,7 +92,6 @@ abstract class BenchmarkTestBase : PIRTestBase() {
             packageRoots = listOf(projectRoot),
             pythonVersion = pythonVersion,
             mypyFlags = listOf("--ignore-missing-imports"),
-            rpcTimeout = java.time.Duration.ofSeconds(1200),
         )).load()
     }
 
@@ -104,7 +103,7 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         expectedClasses: Int,
         expectedTopLevelFunctions: Int,
     ) {
-        cp.use {
+        cp.let {
             val unknownModules = it.modules.filter { m -> m.isUnknown }
             val knownModules = it.modules.filter { m -> !m.isUnknown }
 

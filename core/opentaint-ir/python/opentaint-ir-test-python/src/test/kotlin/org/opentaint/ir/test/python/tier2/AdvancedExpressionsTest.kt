@@ -120,10 +120,6 @@ def ae_yield_from(inner):
         cp = buildFromSource(SOURCE)
     }
 
-    @AfterAll
-    fun teardown() {
-        cp.close()
-    }
 
     private fun findFunc(name: String): PIRFunction {
         for (m in cp.modules) {

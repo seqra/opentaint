@@ -29,7 +29,6 @@ class DeepElifChainTest : PIRTestBase() {
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private val dispatch get() = cp.findFunctionOrNull("__test__.dispatch")!!
 

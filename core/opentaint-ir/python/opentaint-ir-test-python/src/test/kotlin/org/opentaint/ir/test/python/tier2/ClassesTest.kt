@@ -29,7 +29,6 @@ DEBUG = True
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     @Test
     fun `class is extracted with methods`() {

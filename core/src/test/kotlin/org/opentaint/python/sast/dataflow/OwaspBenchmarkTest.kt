@@ -43,7 +43,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
                 sources = pyFiles,
                 packageRoots = listOf(sourcesDir.absolutePathString()),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                rpcTimeout = ofSeconds(1200),
             )
         ).load()
     }

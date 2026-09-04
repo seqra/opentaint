@@ -84,7 +84,6 @@ class AntBenchmarkTest {
                 sources = pyFiles,
                 packageRoots = listOf(tmp.absolutePath),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
         ).load()
         benchmarkAvailable = true
@@ -93,7 +92,6 @@ class AntBenchmarkTest {
 
     @AfterAll
     fun tearDown() {
-        if (::cp.isInitialized) cp.close()
         tempDir?.deleteRecursively()
     }
 

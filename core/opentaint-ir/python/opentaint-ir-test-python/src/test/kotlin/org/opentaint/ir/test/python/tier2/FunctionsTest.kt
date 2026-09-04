@@ -75,7 +75,6 @@ async def fn_async(x: int) -> int:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
     private fun func(name: String) = cp.findFunctionOrNull("__test__.$name")!!
 
     @Test fun `simple function has 1 param`() {

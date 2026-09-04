@@ -168,7 +168,6 @@ def ecfc_except_as_in_loop(items: list) -> list:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name")

@@ -8,6 +8,7 @@ plugins {
 val pirEnvironmentExtraKey = "opentaint.pir.env"
 val pirVenvDir = layout.projectDirectory.dir(".venv")
 val pirPyprojectFile = layout.projectDirectory.file("pyproject.toml")
+val pirProtoFile = layout.projectDirectory.file("proto/pir.proto")
 val pirVenvPython = pirVenvDir.file("bin/python")
 val pirBootstrapPython = providers.environmentVariable("PYTHON").orElse("python3.13")
 val pirInstallSpec = ".[dev]"
@@ -59,6 +60,7 @@ tasks.register<Exec>("setupPirServerVenv") {
     description = "Creates the PIR server virtual environment and installs pir-server with dev dependencies."
     dependsOn(upgradePirServerPip)
     inputs.file(pirPyprojectFile)
+    inputs.file(pirProtoFile)
     outputs.dir(pirVenvDir)
     workingDir = projectDir
     commandLine(

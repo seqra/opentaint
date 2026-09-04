@@ -74,7 +74,6 @@ class WithProperty:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
     private fun cls(name: String) = cp.findClassOrNull("__test__.$name")!!
 
     @Test fun `inheritance - baseClasses includes Base`() {

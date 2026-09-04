@@ -1,6 +1,5 @@
 package org.opentaint.semgrep
 
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
@@ -54,12 +53,6 @@ class PythonSampleBasedTest {
     }
 
     private val cpCache = mutableMapOf<Path, PIRClasspath>()
-
-    @AfterAll
-    fun tearDown() {
-        cpCache.values.forEach { it.close() }
-        cpCache.clear()
-    }
 
     @Test fun multiArgSink() = runSample("MultiArgSink")
     @Test fun constantArgSink() = runSample("ConstantArgSink")
@@ -208,7 +201,6 @@ class PythonSampleBasedTest {
                 sources = listOf(samplePy.absolutePathString()),
                 packageRoots = listOf(sampleDir.absolutePathString()),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
         ).load()
     }

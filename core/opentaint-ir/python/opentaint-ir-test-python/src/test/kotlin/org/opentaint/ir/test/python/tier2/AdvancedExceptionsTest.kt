@@ -84,7 +84,6 @@ def exc_nested_try() -> int:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
     private fun func(name: String) = cp.findFunctionOrNull("__test__.$name")!!
     private fun insts(name: String) = func(name).instList
 

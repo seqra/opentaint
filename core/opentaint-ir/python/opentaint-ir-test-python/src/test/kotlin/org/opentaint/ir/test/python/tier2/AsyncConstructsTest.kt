@@ -83,7 +83,6 @@ async def async_yield_multiple(items):
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun findFunc(name: String): PIRFunction {
         for (m in cp.modules) {

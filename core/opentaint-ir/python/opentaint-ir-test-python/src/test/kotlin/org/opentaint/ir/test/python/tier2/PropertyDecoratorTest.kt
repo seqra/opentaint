@@ -151,7 +151,6 @@ class Priority(IntEnum):
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun findFunc(name: String): PIRFunction {
         for (m in cp.modules) {

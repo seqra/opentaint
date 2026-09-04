@@ -79,9 +79,8 @@ from pir_server.builder.type_mapper import TypeMapper
 
 
 class AstSerializer:
-    def __init__(self, tree: MypyFile, types: dict, module_name: str):
+    def __init__(self, tree: MypyFile, module_name: str):
         self.tree = tree
-        self.types = types
         self.module_name = module_name
         self.type_mapper = TypeMapper()
 
@@ -501,6 +500,8 @@ class AstSerializer:
         self._serialize_expr(stmt.rvalue, out.rvalue)
         for lvalue in stmt.lvalues:
             self._serialize_expr(lvalue, out.lvalues.add())
+        if stmt.type is not None:
+            self.type_mapper.map(stmt.type, out.type_annotation)
 
     def _serialize_expr(self, expr: Expression, out) -> None:
         if expr is None:
@@ -520,13 +521,6 @@ class AstSerializer:
             end_col = -1
         out.end_line = end_line
         out.end_col = end_col
-
-        try:
-            typ = self.types.get(expr)
-            if typ is not None:
-                self.type_mapper.map(typ, out.expr_type)
-        except Exception:
-            out.ClearField("expr_type")
 
         if isinstance(expr, IntExpr):
             int_expr = out.int_expr
@@ -578,23 +572,6 @@ class AstSerializer:
                 node = expr.callee.node
                 if node is not None and hasattr(node, "fullname"):
                     resolved = node.fullname or ""
-            if not resolved and isinstance(expr.callee, MemberExpr):
-                try:
-                    receiver_type = self.types.get(expr.callee.expr)
-                    if receiver_type is not None:
-                        type_name = getattr(receiver_type, "type", None)
-                        if type_name is not None:
-                            resolved = f"{type_name.fullname}.{expr.callee.name}"
-                    if not resolved:
-                        member_type = self.types.get(expr.callee)
-                        if member_type is not None:
-                            defn = getattr(member_type, "definition", None)
-                            if defn is not None:
-                                fn = getattr(defn, "fullname", "")
-                                if fn:
-                                    resolved = fn
-                except Exception:
-                    pass
             if resolved:
                 call_expr.resolved_callee = resolved
             for i, arg_expr in enumerate(expr.args):

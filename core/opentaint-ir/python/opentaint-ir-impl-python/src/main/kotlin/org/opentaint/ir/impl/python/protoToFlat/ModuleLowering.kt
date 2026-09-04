@@ -154,12 +154,16 @@ internal object ModuleLowering {
     private inline fun <T> extractFields(
         assignment: MypyAssignmentStmtProto,
         factory: (name: String, type: FlatType) -> T,
-    ): List<T> = assignment.lvaluesList.mapNotNull { lvalue ->
-        if (!lvalue.hasNameExpr()) return@mapNotNull null
-        factory(
-            lvalue.nameExpr.name,
-            if (lvalue.hasExprType()) TypeLowering.convertType(lvalue.exprType) else FlatAnyType,
-        )
+    ): List<T> {
+        val declaredType = if (assignment.hasTypeAnnotation()) {
+            TypeLowering.convertType(assignment.typeAnnotation)
+        } else {
+            FlatAnyType
+        }
+        return assignment.lvaluesList.mapNotNull { lvalue ->
+            if (!lvalue.hasNameExpr()) return@mapNotNull null
+            factory(lvalue.nameExpr.name, declaredType)
+        }
     }
 
     private fun lowerModuleInit(

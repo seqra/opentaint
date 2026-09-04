@@ -55,7 +55,6 @@ def ta_no_annotation(x):
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
     private fun func(name: String) = cp.findFunctionOrNull("__test__.$name")!!
 
     @Test fun `int type maps to builtins_int`() {

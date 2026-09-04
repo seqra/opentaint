@@ -166,7 +166,6 @@ def af_isinstance_tuple(x: object) -> bool:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name")

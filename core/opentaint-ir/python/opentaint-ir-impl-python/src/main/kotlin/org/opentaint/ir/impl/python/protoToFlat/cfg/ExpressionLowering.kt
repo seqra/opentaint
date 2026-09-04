@@ -255,13 +255,7 @@ private fun resolveCallee(expr: MypyCallExprProto): String? {
 
     if (!expr.callee.hasMemberExpr()) return null
     val member = expr.callee.memberExpr
-    member.fullname.ifEmpty { null }?.let { return it }
-
-    val receiverType = member.expr.exprType
-    if (receiverType.hasClassType()) {
-        return "${receiverType.classType.qualifiedName}.${member.name}"
-    }
-    return null
+    return member.fullname.ifEmpty { null }
 }
 
 private fun CfgSession.lowerIndex(expr: MypyIndexExprProto, location: PIRPhysicalLocation?): FlatValue {

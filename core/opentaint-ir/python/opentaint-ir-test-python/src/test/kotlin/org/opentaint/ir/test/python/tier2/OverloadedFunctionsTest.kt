@@ -48,7 +48,6 @@ class Box:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private val module get() = cp.findModuleOrNull("__test__")!!
 

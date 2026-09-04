@@ -38,7 +38,6 @@ class Regular:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun init(className: String): PIRFunction =
         cp.findClassOrNull("__test__.$className")!!.methods.first { it.name == "__init__" }

@@ -2,9 +2,12 @@ import os
 import sys
 import threading
 import grpc
+import mypy.defaults
 from concurrent import futures
 from pir_server.service import PIRServiceServicer
 from pir_server.proto import pir_pb2_grpc
+
+WORKER_STACK_SIZE = 16 * 1024 * 1024
 
 
 def _parent_watchdog(server):
@@ -22,8 +25,11 @@ def _parent_watchdog(server):
 
 
 def serve(port: int = 0):
+    threading.stack_size(WORKER_STACK_SIZE)
+    sys.setrecursionlimit(mypy.defaults.RECURSION_LIMIT)
+
     server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=4),
+        futures.ThreadPoolExecutor(max_workers=1),
         options=[
             ("grpc.max_send_message_length", 256 * 1024 * 1024),
             ("grpc.max_receive_message_length", 256 * 1024 * 1024),
@@ -31,6 +37,8 @@ def serve(port: int = 0):
     )
     pir_pb2_grpc.add_PIRServiceServicer_to_server(PIRServiceServicer(), server)
     actual_port = server.add_insecure_port(f"127.0.0.1:{port}")
+    if actual_port == 0:
+        raise RuntimeError(f"failed to bind 127.0.0.1:{port}")
     server.start()
 
     watchdog = threading.Thread(target=_parent_watchdog, args=(server,), daemon=True)

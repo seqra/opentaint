@@ -6,7 +6,10 @@ import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.TimeoutException
 
 class PIRProcessManager(
     private val pythonExecutable: String,
@@ -19,7 +22,7 @@ class PIRProcessManager(
     }
 
     private var process: Process? = null
-    private var port: Int = -1
+
     private var workingDirectory: Path? = null
 
     fun start(): Int {
@@ -36,49 +39,83 @@ class PIRProcessManager(
         val proc = pb.start()
         this.process = proc
 
-        val reader = BufferedReader(InputStreamReader(proc.inputStream))
-        val deadline = System.currentTimeMillis() + startupTimeout.toMillis()
-
-        while (System.currentTimeMillis() < deadline) {
-            if (!proc.isAlive) {
-                throw PIRServerStartupException(
-                    "Python server exited with code ${proc.exitValue()}"
-                )
-            }
-            val line = reader.readLine() ?: continue
-            if (line.startsWith("READY:")) {
-                port = line.substringAfter("READY:").trim().toInt()
-                return port
-            }
+        val ready = CompletableFuture<Int>()
+        Thread({ drainStdout(proc, ready) }, "pir-server-stdout").apply {
+            isDaemon = true
+            start()
         }
-        proc.destroyForcibly()
-        throw PIRServerStartupException(
-            "Python server did not become ready within $startupTimeout"
-        )
+
+        try {
+            return ready.get(startupTimeout.toMillis(), TimeUnit.MILLISECONDS)
+        } catch (e: TimeoutException) {
+            proc.destroyForcibly()
+            throw PIRServerStartupException("Python server did not become ready within $startupTimeout")
+        } catch (e: ExecutionException) {
+            proc.destroyForcibly()
+            throw e.cause as? PIRServerStartupException
+                ?: PIRServerStartupException("Python server failed to start: ${e.cause}")
+        }
     }
 
-    fun getPort(): Int {
-        check(port > 0) { "Server not started" }
-        return port
+    private fun drainStdout(proc: Process, ready: CompletableFuture<Int>) {
+        try {
+            BufferedReader(InputStreamReader(proc.inputStream)).use { reader ->
+                // Keep reading past READY — once the 64 KB pipe buffer fills, the server
+                // blocks forever inside its next write to stdout.
+                while (true) {
+                    val line = reader.readLine() ?: break
+                    if (ready.isDone || !line.startsWith("READY:")) continue
+                    val parsed = line.substringAfter("READY:").trim().toIntOrNull()
+                    if (parsed == null || parsed <= 0) {
+                        ready.completeExceptionally(
+                            PIRServerStartupException("Malformed READY line from Python server: $line")
+                        )
+                    } else {
+                        ready.complete(parsed)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            ready.completeExceptionally(e)
+        }
+        if (!ready.isDone) {
+            ready.completeExceptionally(PIRServerStartupException(exitMessage(proc)))
+        }
     }
+
+    private fun exitMessage(proc: Process): String =
+        if (proc.waitFor(2, TimeUnit.SECONDS)) {
+            "Python server exited with code ${proc.exitValue()} before becoming ready"
+        } else {
+            "Python server closed stdout before becoming ready"
+        }
 
     override fun close() {
-        val proc = process ?: return
         try {
-            // Close stdin pipe — triggers the Python watchdog thread to exit
-            try { proc.outputStream.close() } catch (_: Exception) {}
-            if (proc.isAlive) {
-                proc.waitFor(5, TimeUnit.SECONDS)
+            process?.let { proc ->
+                try {
+                    // Close stdin pipe — triggers the Python watchdog thread to exit
+                    try { proc.outputStream.close() } catch (_: Exception) {}
+                    if (proc.isAlive) {
+                        proc.waitFor(5, TimeUnit.SECONDS)
+                    }
+                } finally {
+                    if (proc.isAlive) {
+                        proc.destroyForcibly()
+                        proc.waitFor(3, TimeUnit.SECONDS)
+                    }
+                }
             }
         } finally {
-            if (proc.isAlive) {
-                proc.destroyForcibly()
-                proc.waitFor(3, TimeUnit.SECONDS)
-            }
             process = null
-            port = -1
-            workingDirectory?.let { runCatching { Files.deleteIfExists(it) } }
+            workingDirectory?.let { runCatching { deleteRecursively(it) } }
             workingDirectory = null
+        }
+    }
+
+    private fun deleteRecursively(dir: Path) {
+        Files.walk(dir).use { paths ->
+            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
         }
     }
 

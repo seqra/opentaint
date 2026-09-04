@@ -88,7 +88,6 @@ abstract class AnalysisTest {
 
     @AfterAll
     fun tearDown() {
-        if (::cp.isInitialized) cp.close()
         if (::sourcesDir.isInitialized) {
             sourcesDir.toFile().deleteRecursively()
         }
@@ -100,7 +99,6 @@ abstract class AnalysisTest {
                 sources = pyFiles,
                 packageRoots = listOf(sourcesDir.absolutePathString()),
                 mypyFlags = listOf("--ignore-missing-imports"),
-                rpcTimeout = java.time.Duration.ofSeconds(1200),
             )
         ).load()
     }

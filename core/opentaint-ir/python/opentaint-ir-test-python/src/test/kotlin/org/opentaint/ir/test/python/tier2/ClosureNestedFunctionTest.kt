@@ -160,10 +160,6 @@ def cnf_inv31_route(app):
         cp = buildFromSource(SOURCE)
     }
 
-    @AfterAll
-    fun teardown() {
-        cp.close()
-    }
 
     private fun findFunc(name: String): PIRFunction {
         for (m in cp.modules) {

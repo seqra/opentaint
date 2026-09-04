@@ -87,7 +87,6 @@ def ct_mixed_types():
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name")

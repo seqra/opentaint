@@ -20,6 +20,7 @@ class RoundTripTest : PIRTestBase() {
     private val reconstructor = PIRReconstructor()
     private val gson = Gson()
     private lateinit var cp: PIRClasspathImpl
+    private lateinit var executor: PIRExecutorClient
 
     companion object {
         val ALL_SOURCES = """
@@ -197,16 +198,18 @@ def rt_build_dict(keys: list, vals: list) -> dict:
         file.writeText(ALL_SOURCES)
         file.deleteOnExit()
 
-        cp = PIRClasspathLoader(PIRSettings(
+        val settings = PIRSettings(
             sources = listOf(file.absolutePath),
             packageRoots = listOf(tmpDir.absolutePath),
             mypyFlags = listOf("--ignore-missing-imports"),
-        )).load()
+        )
+        cp = PIRClasspathLoader(settings).load()
+        executor = PIRExecutorClient(settings)
     }
 
     @AfterAll
     fun tearDown() {
-        cp.close()
+        executor.close()
     }
 
     private fun executeFunction(
@@ -220,7 +223,7 @@ def rt_build_dict(keys: list, vals: list) -> dict:
             .setFunctionName(funcName)
             .setArgumentsJson(argsJson)
             .build()
-        val response = cp.executeFunction(request)
+        val response = executor.executeFunction(request)
         val type = object : TypeToken<List<Map<String, Any?>>>() {}.type
         return gson.fromJson(response.resultsJson, type)
     }

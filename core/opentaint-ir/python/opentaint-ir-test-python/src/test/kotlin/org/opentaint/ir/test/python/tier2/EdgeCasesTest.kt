@@ -247,7 +247,6 @@ def ec_all_param_kinds(a: int, b: int = 0, *args, c: int = 0, **kwargs) -> int:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name")

@@ -88,7 +88,6 @@ class ProjectBuilder:
 
         options.incremental = False
         options.preserve_asts = True
-        options.export_types = True
         options.python_executable = None
         options.semantic_analysis_only = True
         return options
@@ -208,7 +207,6 @@ class ProjectBuilder:
             try:
                 serializer = AstSerializer(
                     tree=tree,
-                    types=result.types,
                     module_name=module_name,
                 )
                 yield serializer.serialize()
@@ -335,6 +333,6 @@ class ProjectBuilder:
             return False
         abs_path = os.path.abspath(state.path)
         for src in source_paths:
-            if abs_path.startswith(src) or abs_path == src:
+            if abs_path == src or abs_path.startswith(src.rstrip(os.sep) + os.sep):
                 return True
         return False

@@ -71,7 +71,7 @@ class ModuleNamingTest {
             ),
         ).load()
 
-        cp.use {
+        cp.let {
             assertEquals(listOf("__build_errors__"), it.modules.map { m -> m.name })
             val messages = it.modules.flatMap { m -> m.diagnostics }.map { d -> d.message }
             assertTrue(

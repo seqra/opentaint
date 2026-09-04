@@ -60,7 +60,6 @@ def w_in_assert(x: int) -> int:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name")

@@ -12,47 +12,36 @@ import java.util.concurrent.TimeUnit
 
 class PIRClasspathLoader(private val settings: PIRSettings) {
 
-    fun load(): PIRClasspathImpl {
-        val processManager = PIRProcessManager(
+    fun load(): PIRClasspathImpl =
+        PIRProcessManager(
             pythonExecutable = settings.pythonExecutable,
             serverModule = settings.serverModule,
             startupTimeout = settings.serverStartupTimeout,
-        )
-        val port = processManager.start()
+        ).use { processManager ->
+            val channel = PIRChannelFactory.forPort(processManager.start())
+            try {
+                val versions = handshake(processManager, channel)
 
-        val channel = PIRChannelFactory.forPort(port)
+                val modules = if (settings.sources.isNotEmpty()) {
+                    buildModules(channel)
+                } else {
+                    emptyList()
+                }
 
-        try {
-            val stub = PIRServiceGrpc.newBlockingStub(channel)
-                .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
+                val index = indexModules(modules)
 
-            val versions = handshake(processManager, channel)
-
-            val modules = if (settings.sources.isNotEmpty()) {
-                buildModules(stub)
-            } else {
-                emptyList()
+                PIRClasspathImpl(
+                    pythonVersion = versions.pythonVersion,
+                    mypyVersion = versions.mypyVersion,
+                    modules = modules,
+                    modulesByName = index.modulesByName,
+                    classesByQName = index.classesByQName,
+                    functionsByQName = index.functionsByQName,
+                )
+            } finally {
+                channel.shutdownNow()
             }
-
-            val index = indexModules(modules)
-
-            return PIRClasspathImpl(
-                processManager = processManager,
-                channel = channel,
-                stub = stub,
-                pythonVersion = versions.pythonVersion,
-                mypyVersion = versions.mypyVersion,
-                modules = modules,
-                modulesByName = index.modulesByName,
-                classesByQName = index.classesByQName,
-                functionsByQName = index.functionsByQName,
-            )
-        } catch (e: Throwable) {
-            channel.shutdownNow()
-            processManager.close()
-            throw e
         }
-    }
 
     private data class Versions(val pythonVersion: String, val mypyVersion: String)
 
@@ -80,13 +69,16 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
         throw lastException ?: IllegalStateException("Ping failed without exception")
     }
 
-    private fun buildModules(stub: PIRServiceGrpc.PIRServiceBlockingStub): List<PIRModule> {
+    private fun buildModules(channel: ManagedChannel): List<PIRModule> {
         val request = BuildProjectRequest.newBuilder()
             .addAllSources(settings.sources)
             .addAllMypyFlags(settings.mypyFlags)
             .setPythonVersion(settings.pythonVersion ?: "")
             .addAllPackageRoots(settings.packageRoots)
             .build()
+
+        val stub = PIRServiceGrpc.newBlockingStub(channel)
+            .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
 
         val iterator = stub.buildProject(request)
         val result = mutableListOf<PIRModule>()

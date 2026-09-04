@@ -22,9 +22,6 @@ object PIRRawFlatLoader {
         val channel = PIRChannelFactory.forPort(port)
 
         try {
-            val stub = PIRServiceGrpc.newBlockingStub(channel)
-                .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
-
             var lastException: Exception? = null
             for (attempt in 1..5) {
                 if (!processManager.isRunning) error("pir_server died before ping")
@@ -47,6 +44,9 @@ object PIRRawFlatLoader {
                 .setPythonVersion(settings.pythonVersion ?: "")
                 .addAllPackageRoots(settings.packageRoots)
                 .build()
+
+            val stub = PIRServiceGrpc.newBlockingStub(channel)
+                .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
 
             val iterator = stub.buildProject(request)
             val result = mutableListOf<FlatModuleIR>()

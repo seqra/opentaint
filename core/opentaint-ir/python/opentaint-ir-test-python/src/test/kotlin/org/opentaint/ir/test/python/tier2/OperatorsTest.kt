@@ -70,7 +70,6 @@ def op_rshift(a: int, b: int) -> int:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
     private fun binOps(name: String) = cp.findFunctionOrNull("__test__.$name")!!
         .instList.filterAssignOf<PIRBinaryExpr>()
     private fun unaryOps(name: String) = cp.findFunctionOrNull("__test__.$name")!!

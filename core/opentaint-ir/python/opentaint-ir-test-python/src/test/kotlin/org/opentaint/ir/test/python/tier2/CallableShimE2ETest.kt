@@ -1,6 +1,5 @@
 package org.opentaint.ir.test.python.tier2
 
-import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
@@ -34,8 +33,6 @@ def cse_capturing(x):
     @BeforeAll
     fun setup() { cp = buildFromSource(SOURCE) }
 
-    @AfterAll
-    fun teardown() { cp.close() }
 
     @Test
     fun `capturing inner produces synthetic adapter class in module`() {

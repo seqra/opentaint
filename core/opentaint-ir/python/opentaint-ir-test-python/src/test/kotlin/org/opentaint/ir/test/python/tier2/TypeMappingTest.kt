@@ -25,7 +25,6 @@ def tm_no_annot(x):
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String) = cp.findFunctionOrNull("__test__.$name")!!
 

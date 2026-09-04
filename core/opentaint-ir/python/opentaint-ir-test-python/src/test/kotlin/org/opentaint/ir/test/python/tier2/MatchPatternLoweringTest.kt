@@ -73,7 +73,6 @@ def mp_class_subpatterns(v: object) -> str:
     }
 
     @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
-    @AfterAll fun tearDown() { cp.close() }
 
     private fun func(name: String): PIRFunction =
         cp.findFunctionOrNull("__test__.$name") ?: fail("Function __test__.$name not found")

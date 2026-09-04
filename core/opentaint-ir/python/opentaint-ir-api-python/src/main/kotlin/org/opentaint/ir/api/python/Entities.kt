@@ -4,7 +4,6 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.CommonMethodParameter
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
-import java.io.Closeable
 import java.time.Duration
 
 private const val PIR_SERVER_PYTHON_ENV = "PIR_SERVER_PYTHON"
@@ -14,7 +13,7 @@ private fun defaultPirServerPythonExecutable(): String =
         ?.takeIf { it.isNotBlank() }
         ?: error("Environment variable $PIR_SERVER_PYTHON_ENV must point to a Python executable")
 
-interface PIRClasspath : Closeable {
+interface PIRClasspath {
     val modules: List<PIRModule>
     fun findModuleOrNull(name: String): PIRModule?
     fun findClassOrNull(qualifiedName: String): PIRClass?
@@ -32,7 +31,6 @@ data class PIRSettings(
     val serverModule: String = "pir_server",
     val serverStartupTimeout: Duration = Duration.ofSeconds(30),
     val rpcTimeout: Duration = Duration.ofSeconds(120),
-    val embeddedServer: Boolean = true,
 ) {
     init {
         require(packageRoots.isNotEmpty()) { "packageRoots must not be empty" }
