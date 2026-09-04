@@ -91,6 +91,18 @@ test('publish workflows select a release instead of repeating scope sets', () =>
   );
 });
 
+test('scoped commit action sets up Node before invoking the contract', () => {
+  const action = fs.readFileSync('.github/actions/check-scoped-commits/action.yml', 'utf8');
+  const setupNode = action.indexOf('uses: actions/setup-node@');
+  const contractInvocation = action.indexOf(
+    'node "$GITHUB_WORKSPACE/.github/scripts/scope-contract.cjs"',
+  );
+
+  assert.notEqual(setupNode, -1);
+  assert.notEqual(contractInvocation, -1);
+  assert.ok(setupNode < contractInvocation);
+});
+
 test('scope patterns match each token position', () => {
   assert.deepEqual(
     scopePatterns('rules'),
