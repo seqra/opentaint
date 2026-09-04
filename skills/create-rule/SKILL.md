@@ -35,11 +35,13 @@ In fix mode, don't author from the unit: go straight to that one flagged rule, a
 
 ### 2. Author the library rules
 
-Derive each rule's pattern from the unit's fully-qualified names, recorded signatures, and annotations. Bind the tainted value to one consistent metavariable in every rule so the security joins assembled later reference one name. The rule forms — a built-in `refs`, a custom source rule, a custom sink rule, and where custom rules go — are in the language reference.
+Derive each rule's pattern from the unit's fully-qualified names, recorded signatures, and annotations. Bind the tainted value to one consistent metavariable in every rule so the security joins assembled later reference one name.
+
+Give every custom library rule its source/sink family `tags`. Reuse a built-in role tag only when this rule should intentionally extend every join that consumes that family; otherwise create a stable project-specific role tag. Give related custom sources the same project-specific tag when custom joins should consume them as one family. Tags don't alter matching, and a fix must preserve them unless the rule's family membership is itself wrong. The rule forms, tag selection, and where custom rules go are in the language reference.
 
 ### 3. Write the test joins
 
-A library rule emits nothing on its own — to exercise it, wire it to the generic taint marker in a throwaway test join. Write one join for the side into the test project's marker rules, referencing the generic marker on one end and each new lib rule on the other, so a positive sample's tainted value flows marker-to-rule (a sink side) or rule-to-marker (a source side). These joins live only in the test project, never in the scanned rules tree, so the main scan never loads them. The join form, its naming, and where it goes are in the language reference.
+A library rule emits nothing on its own — to exercise it, wire it to the generic taint marker in a throwaway test join. Write one join for the side into the test project's marker rules, referencing the generic marker on one end and each new lib rule on the other, so a positive sample's tainted value flows marker-to-rule (a sink side) or rule-to-marker (a source side). Use exact `rule:` refs here, not the library rule's open family tag, so the test isolates only the component under test. These joins live only in the test project, never in the scanned rules tree, so the main scan never loads them. The join form, its naming, and where it goes are in the language reference.
 
 ### 4. Test until success
 
@@ -79,7 +81,7 @@ A positive that won't pass after ~3 rule fixes may have a cause no rule edit can
 
 ### Summary
 
-- the lib rule ids (created or referenced), a one-line test summary for the side, and the exact `test rule run` command used
+- the lib rule ids (created or referenced), each rule's family tags, a one-line test summary for the side, and the exact `test rule run` command used
 - if blocked at step 5: `stages.tests_passing` left pending, and the cause —
   - a dropped library method on the failing sample's flow → the methods that need a model, to be approximated before a re-dispatch
   - nothing dropped and no clear rule cause → non-convergence, for the orchestrator to intervene
@@ -117,6 +119,7 @@ stages:
 OpenTaint is a whole-program, interprocedural, field-sensitive alias analysis engine. It already propagates through visible application code, calls, aliases, and individual fields; custom rules and approximations model only the assigned source, sink, or opaque-method boundary. Compile-time constants and literals carry no taint, so a source or carrier whose output is only a constant introduces nothing.
 
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
+- Every custom source/sink library rule MUST declare at least one deliberate role-family `tags` value. Reuse an existing tag only when open expansion into all of that tag's consumers is intended
 - The test joins (`mode: join`) MUST have `metadata.cwe` and `metadata.short-description`
 - Metavariable names must match across `refs` and `on` clauses, or the join won't connect. Bind the tainted value to one consistent metavariable in every lib source/sink rule
 - The `rule` path in `refs` is relative to its ruleset root — a marker ref resolves under the test project's marker rules, a lib ref under the scanned rules tree
