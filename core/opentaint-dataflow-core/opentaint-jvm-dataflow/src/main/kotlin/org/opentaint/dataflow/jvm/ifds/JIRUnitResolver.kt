@@ -26,4 +26,5 @@ data class PackageUnit(val packageName: String) : UnitType {
 
 interface JIRUnitResolver : UnitResolver<JIRMethod> {
     fun locationIsUnknown(loc: RegisteredLocation): Boolean
+    fun isApproximation(method: JIRMethod): Boolean = false
 }

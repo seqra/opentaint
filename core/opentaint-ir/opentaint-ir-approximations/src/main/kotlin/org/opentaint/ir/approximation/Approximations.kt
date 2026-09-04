@@ -32,6 +32,7 @@ import org.opentaint.ir.impl.fs.className
 import org.opentaint.ir.impl.storage.execute
 import org.opentaint.ir.impl.storage.txn
 import org.opentaint.ir.impl.types.RefKind
+import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentMap
 
@@ -49,14 +50,21 @@ import java.util.concurrent.ConcurrentMap
  *  See [JIRDatabase.awaitBackgroundJobs].
  */
 class Approximations(
-    versions: List<VersionInfo>
+    versions: List<VersionInfo>,
+    approximationPaths: List<String> = emptyList(),
 ) : JIRFeature<Any?, Any?>, JIRClassExtFeature, JIRInstExtFeature {
 
     private val instSubstitutorForApproximations = InstSubstitutorForApproximations(this)
     private val transformerIntoVirtual = TransformerIntoVirtual(this)
+    private val logger = object : KLogging() {}.logger
 
     private val originalToApproximation: ConcurrentMap<OriginalClassName, ApproximationClassName> = ConcurrentHashMap()
     private val approximationToOriginal: ConcurrentMap<ApproximationClassName, OriginalClassName> = ConcurrentHashMap()
+    private val originalToApproximationPriority: ConcurrentMap<OriginalClassName, Int> = ConcurrentHashMap()
+
+    private val approximationPathPriority = approximationPaths
+        .mapIndexed { priority, path -> path.canonicalPathOrSelf() to priority }
+        .toMap()
 
     private val versionMap: VersionMap = versions.associate { it.target to it.version }
 
@@ -69,7 +77,57 @@ class Approximations(
     override fun newIndexer(
         jIRdb: JIRDatabase,
         location: RegisteredLocation
-    ): ByteCodeIndexer = ApproximationIndexer(originalToApproximation, approximationToOriginal, versionMap)
+    ): ByteCodeIndexer = ApproximationIndexer(
+        versionMap,
+        approximationPriority(location.path),
+        ::registerApproximation,
+    )
+
+    private fun approximationPriority(path: String): Int =
+        approximationPathPriority[path.canonicalPathOrSelf()] ?: -1
+
+    /**
+     * Location paths are not always real file paths: JavaRuntimeModuleLocation encodes the module
+     * and the java home into a single string separated by NUL, which makes canonicalPath throw.
+     */
+    private fun String.canonicalPathOrSelf(): String =
+        runCatching { File(this).canonicalPath }.getOrDefault(this)
+
+    internal fun registerApproximation(
+        originalClassName: OriginalClassName,
+        approximationClassName: ApproximationClassName,
+        priority: Int,
+    ) = synchronized(originalToApproximation) {
+        val existingOriginal = approximationToOriginal[approximationClassName]
+        if (existingOriginal != null && existingOriginal != originalClassName) {
+            logger.error {
+                "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
+                    "as an approximation for `$originalClassName`, but this approximation is already used for " +
+                    "`$existingOriginal`. Only one target per approximation class is allowed."
+            }
+            return@synchronized
+        }
+
+        val existingApproximation = originalToApproximation[originalClassName]
+        val existingPriority = originalToApproximationPriority[originalClassName] ?: Int.MIN_VALUE
+        if (existingApproximation != null && existingApproximation != approximationClassName) {
+            if (priority <= existingPriority) {
+                if (priority == existingPriority) {
+                    logger.error {
+                        "An error occurred during approximations indexing: `$originalClassName` has two " +
+                            "approximations with equal priority: `$existingApproximation` and " +
+                            "`$approximationClassName`."
+                    }
+                }
+                return@synchronized
+            }
+            approximationToOriginal.remove(existingApproximation, originalClassName)
+        }
+
+        originalToApproximation[originalClassName] = approximationClassName
+        originalToApproximationPriority[originalClassName] = priority
+        approximationToOriginal[approximationClassName] = originalClassName
+    }
 
     private val Entity.annotationNameId: Long?
         get() = getCompressed<Long>("nameId")
@@ -152,8 +210,10 @@ class Approximations(
                 ).forEach { (approximation, original) ->
                     val approximationClassName = persistence.findSymbolName(approximation!!).toApproximationName()
                     val originalClassName = persistence.findSymbolName(original!!).toOriginalName()
-                    originalToApproximation[originalClassName] = approximationClassName
-                    approximationToOriginal[approximationClassName] = originalClassName
+                    val approximationClass = context.txn.find("Class", "nameId", approximation.compressed).firstOrNull()
+                    val locationId = approximationClass?.getCompressed<Long>("locationId")
+                    val priority = locationId?.let { approximationPriority(persistence.findLocation(it).path) } ?: -1
+                    registerApproximation(originalClassName, approximationClassName, priority)
                 }
             }
         }
@@ -312,9 +372,9 @@ private fun IntArray.isVersionInRange(fromVersion: IntArray, toVersion: IntArray
 }
 
 private class ApproximationIndexer(
-    private val originalToApproximation: ConcurrentMap<OriginalClassName, ApproximationClassName>,
-    private val approximationToOriginal: ConcurrentMap<ApproximationClassName, OriginalClassName>,
-    private val versionMap: VersionMap
+    private val versionMap: VersionMap,
+    private val priority: Int,
+    private val registerApproximation: (OriginalClassName, ApproximationClassName, Int) -> Unit,
 ) : ByteCodeIndexer {
 
     private fun annotationValueByName(versionValues: List<Any>, name: String): Any? {
@@ -388,38 +448,13 @@ private class ApproximationIndexer(
 
         val approximationClassName = classNode.name.className.toApproximationName()
 
-        // Ensure that each approximation has one and only one
-        if (originalToApproximation.getOrDefault(originalClassName, approximationClassName) != approximationClassName) {
-            logger.error {
-                "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
-                        "as an approximation for `$originalClassName`, but the target class is already " +
-                        "associated with approximation `${originalToApproximation[originalClassName]}`. " +
-                        "Only bijection between classes is allowed."
-            }
-            return
-        }
-
-        if (approximationToOriginal.getOrDefault(approximationClassName, originalClassName) != originalClassName) {
-            logger.error {
-                "An error occurred during approximations indexing: you tried to add `$approximationClassName` " +
-                        "as an approximation for `$originalClassName`, but this approximation is already used for " +
-                        "`${approximationToOriginal[approximationClassName]}`. " +
-                        "Only bijection between classes is allowed."
-            }
-            return
-        }
-
-        originalToApproximation[originalClassName] = approximationClassName
-        approximationToOriginal[approximationClassName] = originalClassName
+        registerApproximation(originalClassName, approximationClassName, priority)
     }
 
     override fun flush(context: StorageContext) {
         // do nothing
     }
 
-    companion object {
-        private val logger = object : KLogging() {}.logger
-    }
 }
 
 private val approximationAnnotationClassName = Approximate::class.qualifiedName!!

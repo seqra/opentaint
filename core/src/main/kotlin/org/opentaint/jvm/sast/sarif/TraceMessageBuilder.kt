@@ -35,6 +35,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
+import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader
 import org.opentaint.jvm.sast.project.spring.GeneratedSpringRegistry
 import org.opentaint.jvm.sast.project.spring.SpringGeneratedMethod
 import org.opentaint.semgrep.pattern.Mark
@@ -1120,6 +1121,7 @@ class TraceMessageBuilder(
             if (locationMethod is SpringGeneratedMethod) return true
             if (locationMethod is JIRLambdaMethod) return true
             if (locationMethod is JIREnrichedVirtualMethod) return true
+            if (locationMethod is JIRMethod && DataFlowApproximationLoader.isApproximation(locationMethod)) return true
             return false
         }
 

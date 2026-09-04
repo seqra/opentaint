@@ -28,6 +28,7 @@ dependencies {
     implementation(Libs.fastutil)
 
     implementation(Libs.sarif4k)
+    testImplementation(Libs.mockk)
 }
 
 
