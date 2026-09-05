@@ -1,0 +1,9 @@
+name = "opentaint-formal"
+defaultTargets = ["Opentaint"]
+
+[leanOptions]
+autoImplicit = false
+relaxedAutoImplicit = false
+
+[[lean_lib]]
+name = "Opentaint"
