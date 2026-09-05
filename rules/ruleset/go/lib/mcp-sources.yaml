@@ -1,0 +1,23 @@
+rules:
+  - id: mcp-sources
+    options:
+      lib: true
+    tags:
+      - http-untrusted-data-source
+    severity: NOTE
+    message: Untrusted MCP request data originates here
+    metadata:
+      short-description: Untrusted MCP request source
+      full-description: |-
+        This source rule marks incoming MCP request values. The MCP Go model uses this
+        helper before it invokes a registered tool, prompt, resource, or middleware
+        callback.
+      provenance: https://github.com/seqra/opentaint/tree/main/skills
+    languages:
+      - go
+    mode: taint
+    pattern-sources:
+      - label: "$UNTRUSTED"
+        by-side-effect: true
+        patterns:
+          - pattern: opentaintMCPIncoming[$TYPE]()
