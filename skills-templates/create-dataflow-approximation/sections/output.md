@@ -1,7 +1,7 @@
 ### Artifacts
 
-- `.opentaint/dataflow/<batch>` — the batch's approximation project: its pinned dependencies plus the code approximation source(s), one `@Approximate` class per target class, that the scan consumes; report the path and the exact test command used
-- the passing methods present in the batch file's `build.done` (new methods appended; repaired methods already recorded, per Tracking)
+- `.opentaint/dataflow/<batch>` contains the approximation project and its pinned dependencies. It contains one `opentaint.<target-package>.<TargetClass>` model for each target class. Report the path and the exact test command.
+- `build.done` lists the methods that pass. Add new methods. Do not change existing entries for repaired methods.
 
 ### Summary
 
