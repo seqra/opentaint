@@ -13,11 +13,19 @@ import org.opentaint.ir.go.type.GoIRType
 class GoIRNamedTypeImpl(
     override val name: String,
     override val fullName: String,
-    override val pkg: GoIRPackage,
+    pkg: GoIRPackage,
     override val underlying: GoIRType,
     override val kind: GoIRNamedTypeKind,
     override val position: GoIRPosition?,
+    override val typeParams: List<GoIRTypeParamDecl> = emptyList(),
 ) : GoIRNamedType {
+    private var owner = pkg
+    override val pkg: GoIRPackage get() = owner
+
+    internal fun rebindPackage(pkg: GoIRPackage) {
+        owner = pkg
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is GoIRNamedType) return false
@@ -37,7 +45,5 @@ class GoIRNamedTypeImpl(
     override val pointerMethods: List<GoIRFunction> get() = _pointerMethods
     override val interfaceMethods: List<GoIRInterfaceMethod> get() = _interfaceMethods
     override val embeddedInterfaces: List<GoIRNamedType> get() = _embeddedInterfaces
-    override val typeParams: List<GoIRTypeParamDecl> = emptyList()
-
     override fun toString(): String = "GoIRNamedType($fullName)"
 }

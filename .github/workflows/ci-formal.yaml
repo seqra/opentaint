@@ -1,0 +1,62 @@
+name: CI Formal
+
+on:
+  workflow_dispatch:
+
+  push:
+    paths:
+      - 'formal/**'
+      - '.github/workflows/ci-formal.yaml'
+    branches: [ "main" ]
+  pull_request:
+    paths:
+      - 'formal/**'
+      - '.github/workflows/ci-formal.yaml'
+    branches: [ "main" ]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Build the golden model
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Lean
+        run: |
+          curl -sSfL https://github.com/leanprover/elan/releases/latest/download/elan-x86_64-unknown-linux-gnu.tar.gz \
+            | tar xz -C /tmp
+          /tmp/elan-init -y --default-toolchain "$(cat formal/lean-toolchain)"
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+
+      - name: Cache the Lean build
+        uses: actions/cache@v4
+        with:
+          path: formal/.lake
+          key: lake-${{ runner.os }}-${{ hashFiles('formal/lean-toolchain', 'formal/lakefile.toml') }}-${{ hashFiles('formal/Opentaint/**/*.lean') }}
+          restore-keys: |
+            lake-${{ runner.os }}-${{ hashFiles('formal/lean-toolchain', 'formal/lakefile.toml') }}-
+
+      # The constructivity gate (Opentaint/Support/Constructive.lean) is a `#constructive` command,
+      # so a proof that reaches Classical.choice fails the build rather than passing quietly.
+      - name: Build
+        run: lake build 2>&1 | tee /tmp/lake.log
+        working-directory: formal
+
+      - name: Refuse incomplete proofs
+        run: |
+          if grep -q "declaration uses 'sorry'" /tmp/lake.log; then
+            grep -n "declaration uses 'sorry'" /tmp/lake.log
+            exit 1
+          fi
+
+      # The mapping law of formal/README.md: every Lean file is attached to the source file it
+      # constrains, LEGACY.txt only shrinks, and MAP.md is regenerated rather than edited.
+      - name: Check the mapping law
+        run: ./check-map.sh
+        working-directory: formal
