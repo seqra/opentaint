@@ -44,6 +44,15 @@ class TreeApManager(
 
     fun getOrCreateAccessTreeInterner(): AccessTreeInterner = accessTreeInterner
 
+    /**
+     * Global hash-consing of an access tree, required by the compressed subscription storage.
+     *
+     * Representation only: `internNodes` replaces structurally equal nodes with one shared instance
+     * and changes no denotation, so it can neither add nor remove a fact.
+     */
+    fun canonicalizeAccessTree(node: AccessTree.AccessNode): AccessTree.AccessNode =
+        node.internNodes(accessTreeInterner, java.util.IdentityHashMap(), global = true)
+
     fun singleAccessorArray(accessor: AccessorIdx): IntArray =
         singleAccessorArrays.computeIfAbsent(accessor) { intArrayOf(it) }
 

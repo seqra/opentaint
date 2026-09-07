@@ -18,7 +18,7 @@ abstract class DefaultNDF2FSubStorage<IAP, FAP : Any> :
         fun collect(dst: MutableList<FAP>, summaryInitialFact: IAP)
     }
 
-    abstract fun relevantStorageIndices(summaryInitialFact: IAP): BitSet
+    abstract fun forEachRelevantStorageIndex(summaryInitialFact: IAP, body: (Int) -> Unit)
 
     override fun add(
         callerInitial: Set<InitialFactAp>,
@@ -35,7 +35,7 @@ abstract class DefaultNDF2FSubStorage<IAP, FAP : Any> :
         summaryInitialFact: IAP,
         emptyDeltaRequired: Boolean,
     ) {
-        relevantStorageIndices(summaryInitialFact).forEach { storageIdx ->
+        forEachRelevantStorageIndex(summaryInitialFact) { storageIdx ->
             val callerInitialAp = initialApStorage[storageIdx]
             val callerExitAp = exitApStorage[storageIdx]
             collectToListWithPostProcess(
