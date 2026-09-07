@@ -35,7 +35,6 @@ class MethodEdgesFinalTreeApSet(
             }
 
             edges[factSetIdx] = internIfRequired(mergedFacts)
-            intern(factSetIdx)
             return mergedFacts
         }
 

@@ -30,6 +30,7 @@ import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.concurrent.ConcurrentHashMap
 
 class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
@@ -37,6 +38,14 @@ class TreeApManager(
     override val cancellation: Cancellation,
 ) : ApManager {
     val refManager = refManager.softRefManager("Tree")
+
+    private val accessTreeInterner = AccessTreeInterner()
+    private val singleAccessorArrays = ConcurrentHashMap<AccessorIdx, IntArray>()
+
+    fun getOrCreateAccessTreeInterner(): AccessTreeInterner = accessTreeInterner
+
+    fun singleAccessorArray(accessor: AccessorIdx): IntArray =
+        singleAccessorArrays.computeIfAbsent(accessor) { intArrayOf(it) }
 
     val interner = AccessorInterner()
 
