@@ -1,86 +1,34 @@
 package org.opentaint.ir.impl.python
 
-import io.grpc.ManagedChannel
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
 import org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer
-import org.opentaint.ir.impl.python.proto.BuildProjectRequest
-import org.opentaint.ir.impl.python.proto.PIRServiceGrpc
-import org.opentaint.ir.impl.python.proto.PingRequest
-import java.util.concurrent.TimeUnit
 
 class PIRClasspathLoader(private val settings: PIRSettings) {
 
     fun load(): PIRClasspathImpl =
-        PIRProcessManager(
-            pythonExecutable = settings.pythonExecutable,
-            serverModule = settings.serverModule,
-            startupTimeout = settings.serverStartupTimeout,
-        ).use { processManager ->
-            val channel = PIRChannelFactory.forPort(processManager.start())
-            try {
-                val versions = handshake(processManager, channel)
-
-                val modules = if (settings.sources.isNotEmpty()) {
-                    buildModules(channel)
-                } else {
-                    emptyList()
-                }
-
-                val index = indexModules(modules)
-
-                PIRClasspathImpl(
-                    pythonVersion = versions.pythonVersion,
-                    mypyVersion = versions.mypyVersion,
-                    modules = modules,
-                    modulesByName = index.modulesByName,
-                    classesByQName = index.classesByQName,
-                    functionsByQName = index.functionsByQName,
-                )
-            } finally {
-                channel.shutdownNow()
+        PIRServerConnection.open(settings).use { connection ->
+            val modules = if (settings.sources.isNotEmpty()) {
+                buildModules(connection)
+            } else {
+                emptyList()
             }
+
+            val index = indexModules(modules)
+
+            PIRClasspathImpl(
+                pythonVersion = connection.pythonVersion,
+                mypyVersion = connection.mypyVersion,
+                modules = modules,
+                modulesByName = index.modulesByName,
+                classesByQName = index.classesByQName,
+                functionsByQName = index.functionsByQName,
+            )
         }
 
-    private data class Versions(val pythonVersion: String, val mypyVersion: String)
-
-    private fun handshake(processManager: PIRProcessManager, channel: ManagedChannel): Versions {
-        val maxRetries = 5
-        var lastException: Exception? = null
-        for (attempt in 1..maxRetries) {
-            if (!processManager.isRunning) {
-                throw PIRServerStartupException(
-                    "Python server died before ping (attempt $attempt/$maxRetries)"
-                )
-            }
-            try {
-                val pingStub = PIRServiceGrpc.newBlockingStub(channel)
-                    .withDeadlineAfter(10, TimeUnit.SECONDS)
-                val pingResponse = pingStub.ping(PingRequest.getDefaultInstance())
-                return Versions(pingResponse.pythonVersion, pingResponse.mypyVersion)
-            } catch (e: Exception) {
-                lastException = e
-                if (attempt < maxRetries) {
-                    Thread.sleep(1000L * attempt)
-                }
-            }
-        }
-        throw lastException ?: IllegalStateException("Ping failed without exception")
-    }
-
-    private fun buildModules(channel: ManagedChannel): List<PIRModule> {
-        val request = BuildProjectRequest.newBuilder()
-            .addAllSources(settings.sources)
-            .addAllMypyFlags(settings.mypyFlags)
-            .setPythonVersion(settings.pythonVersion ?: "")
-            .addAllPackageRoots(settings.packageRoots)
-            .build()
-
-        val stub = PIRServiceGrpc.newBlockingStub(channel)
-            .withDeadlineAfter(settings.rpcTimeout.toMillis(), TimeUnit.MILLISECONDS)
-
-        val iterator = stub.buildProject(request)
+    private fun buildModules(connection: PIRServerConnection): List<PIRModule> {
+        val iterator = connection.buildProject(settings.toBuildProjectRequest())
         val result = mutableListOf<PIRModule>()
         var count = 0
         var unknownCount = 0

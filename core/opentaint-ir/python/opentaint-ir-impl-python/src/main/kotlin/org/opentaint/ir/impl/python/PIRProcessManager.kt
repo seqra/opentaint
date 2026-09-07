@@ -5,7 +5,8 @@ import java.io.Closeable
 import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
-import java.time.Duration
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.seconds
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -14,7 +15,7 @@ import java.util.concurrent.TimeoutException
 class PIRProcessManager(
     private val pythonExecutable: String,
     private val serverModule: String = "pir_server",
-    private val startupTimeout: Duration = Duration.ofSeconds(30),
+    private val startupTimeout: Duration = 30.seconds,
 ) : Closeable {
 
     init {
@@ -26,6 +27,8 @@ class PIRProcessManager(
     private var workingDirectory: Path? = null
 
     fun start(): Int {
+        check(process == null) { "Server already started" }
+
         // mypy always adds the process cwd to its package bases, so run the server in an
         // empty dir that can never be an ancestor of the sources being analyzed.
         val cwd = Files.createTempDirectory("pir-server-cwd")
@@ -46,14 +49,14 @@ class PIRProcessManager(
         }
 
         try {
-            return ready.get(startupTimeout.toMillis(), TimeUnit.MILLISECONDS)
+            return ready.get(startupTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
         } catch (e: TimeoutException) {
             proc.destroyForcibly()
             throw PIRServerStartupException("Python server did not become ready within $startupTimeout")
         } catch (e: ExecutionException) {
             proc.destroyForcibly()
             throw e.cause as? PIRServerStartupException
-                ?: PIRServerStartupException("Python server failed to start: ${e.cause}")
+                ?: PIRServerStartupException("Python server failed to start", e.cause)
         }
     }
 
@@ -122,4 +125,7 @@ class PIRProcessManager(
     val isRunning: Boolean get() = process?.isAlive == true
 }
 
-class PIRServerStartupException(message: String) : RuntimeException(message)
+class PIRServerStartupException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)
