@@ -5,6 +5,10 @@ import it.unimi.dsi.fastutil.longs.Long2ObjectOpenHashMap
 
 fun <V> int2ObjectMap() = ConcurrentReadSafeInt2ObjectMap<V>()
 
+fun <V : Any> long2ObjectMap() = ConcurrentReadSafeLong2ObjectMap<V>()
+
+fun longSet() = ConcurrentReadSafeLongSet()
+
 inline fun <V> ConcurrentReadSafeInt2ObjectMap<V>.forEachEntry(body: (Int, V) -> Unit) {
     if (isEmpty()) return
 
@@ -28,6 +32,39 @@ inline fun <V> ConcurrentReadSafeInt2ObjectMap<V>.forEachEntry(body: (Int, V) ->
             body(k, value[i] as V)
         }
 
+        return
+    }
+}
+
+inline fun <V : Any> ConcurrentReadSafeLong2ObjectMap<V>.forEachEntry(body: (Long, V) -> Unit) {
+    if (isEmpty()) return
+    while (true) {
+        val containsNullKey = getContainsNullKey()
+        val key = getKeys()
+        val value = getValues()
+        val n = getN()
+        if (key.size != n + 1 || value.size != n + 1) continue
+        if (containsNullKey) value[n]?.let { body(0, it) }
+        for (i in 0 until n) {
+            val currentKey = key[i]
+            if (currentKey != 0L) value[i]?.let { body(currentKey, it) }
+        }
+        return
+    }
+}
+
+inline fun ConcurrentReadSafeLongSet.forEachLong(body: (Long) -> Unit) {
+    if (isEmpty()) return
+    while (true) {
+        val containsNull = getContainsNull()
+        val key = getKeys()
+        val n = getN()
+        if (key.size != n + 1) continue
+        if (containsNull) body(0)
+        for (i in 0 until n) {
+            val currentKey = key[i]
+            if (currentKey != 0L) body(currentKey)
+        }
         return
     }
 }
