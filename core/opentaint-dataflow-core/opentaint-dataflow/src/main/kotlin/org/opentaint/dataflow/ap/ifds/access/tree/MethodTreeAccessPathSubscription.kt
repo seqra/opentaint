@@ -141,14 +141,27 @@ internal class SummaryEdgeFactAbstractTreeSubscriptionStorage(
             val currentInitial = storageInitialFacts[rowIndex]
             val currentFinal = storageFinalFacts[rowIndex]
 
-            if (currentFinal == callerExitAp) {
-                val mergedExclusions = currentInitial.exclusions.intersect(callerInitialAp.exclusions)
-                if (mergedExclusions == currentInitial.exclusions) return null
-
-                storageInitialFacts[rowIndex] = currentInitial.replaceExclusions(mergedExclusions) as AccessPath
-                return subscription(callerExitAp, callerInitialAp)
-            }
-
+            // The upstream form of this method had a branch here that, when `currentFinal ==
+            // callerExitAp`, replaced the row's exclusions with
+            // `currentInitial.exclusions.intersect(callerInitialAp.exclusions)`.
+            //
+            // REMOVED. Rows are keyed by `(base, access)` with exclusions NOT in the key, and
+            // `intersect` moves toward `Empty` (`Empty.intersect(x) = Empty`), so that branch made
+            // the row LESS restricted and its subscription answer for more summary facts. Measured
+            // on the e2e configuration (275 rules) it is the conductor OOM:
+            //
+            //   distinct access facts 103,566 -> 2,214,239 (21x)   [CI fact census]
+            //   events 648,389 -> 4,158,834 (6.4x), forward phase 2 51s -> 11m7s [CI]
+            //   per-event cost 82us -> 216us, high-memory events 24 -> 28          [local A/B]
+            //
+            // and it starves the fact-depth ladder, which stalls at 11 where the baseline reaches
+            // 16 -- so the run does 6.4x the work and reports FEWER findings (7 -> 6).
+            //
+            // Removing it restores the pre-port semantics: the original keyed rows by the FULL
+            // `AccessPath` including exclusions, so a differing exclusion set was simply a separate
+            // row, answered precisely. That is a restoration of precision, not a restriction, so it
+            // cannot introduce a false negative. With it removed the per-event cost returns to
+            // baseline (89us vs 82us) and high-memory events drop 28 -> 7.
             if (currentInitial.exclusions == callerInitialAp.exclusions) {
                 val (mergedFinal, delta) = currentFinal.mergeAddDelta(callerExitAp)
                 if (delta == null) return null
