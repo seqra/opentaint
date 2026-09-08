@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonAPSub
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactEdgeSubBuilder
@@ -11,7 +12,9 @@ import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSubStorage
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.util.PersistentBitSet.Companion.emptyPersistentBitSet
+import org.opentaint.dataflow.util.ConcurrentReadSafeObject2IntMap
 import org.opentaint.dataflow.util.SoftReferenceManager
+import org.opentaint.dataflow.util.object2IntMap
 import org.opentaint.dataflow.util.forEach
 import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -137,30 +140,28 @@ internal class SummaryEdgeFactAbstractTreeSubscriptionStorage(
             storageRows.add(null)
         }
 
-        forEachStorageRow(pathIndex) { rowIndex ->
-            val currentInitial = storageInitialFacts[rowIndex]
-            val currentFinal = storageFinalFacts[rowIndex]
+        // Exactly ONE row per distinct AccessPath -- that is, per (base, access, exclusions) -- and
+        // it is always merged. This is `saloed/5-default-get`'s semantics, which keyed an
+        // `object2IntMap<AccessPath>` by the whole path.
+        //
+        // Keying on (base, access) alone and SCANNING the resulting bucket costs 8.1x the access
+        // facts on conductor and OOMs (CLAIMS Claim 144), because neither way of resolving the scan
+        // is exact: merging on an equal final widens the row's exclusions toward `Empty` through
+        // `intersect`, so the row starts matching callers it should not; and not merging gives every
+        // exclusion set its own row that emits a FULL subscription instead of a delta. The
+        // approximation is avoidable -- the exclusions simply belong in the key.
+        val existingRow = findStorageRow(pathIndex, callerInitialAp.exclusions)
+        if (existingRow != NO_ROW) {
+            val (mergedFinal, delta) = storageFinalFacts[existingRow].mergeAddDelta(callerExitAp)
+            if (delta == null) return null
 
-            if (currentFinal == callerExitAp) {
-                val mergedExclusions = currentInitial.exclusions.intersect(callerInitialAp.exclusions)
-                if (mergedExclusions == currentInitial.exclusions) return null
-
-                storageInitialFacts[rowIndex] = currentInitial.replaceExclusions(mergedExclusions) as AccessPath
-                return subscription(callerExitAp, callerInitialAp)
-            }
-
-            if (currentInitial.exclusions == callerInitialAp.exclusions) {
-                val (mergedFinal, delta) = currentFinal.mergeAddDelta(callerExitAp)
-                if (delta == null) return null
-
-                storageFinalFacts[rowIndex] = apManager.canonicalizeAccessTree(mergedFinal)
-                updateIndex(delta, rowIndex)
-                return subscription(delta, callerInitialAp)
-            }
+            storageFinalFacts[existingRow] = apManager.canonicalizeAccessTree(mergedFinal)
+            updateIndex(delta, existingRow)
+            return subscription(delta, callerInitialAp)
         }
 
         val rowIndex = storageInitialFacts.size
-        addStorageRow(pathIndex, rowIndex)
+        addStorageRow(pathIndex, callerInitialAp.exclusions, rowIndex)
         storageInitialFacts.add(callerInitialAp)
         storageFinalFacts.add(callerExitAp)
         updateIndex(callerExitAp, rowIndex)
@@ -171,26 +172,40 @@ internal class SummaryEdgeFactAbstractTreeSubscriptionStorage(
         edgeIndex.add(final, idx)
     }
 
-    private inline fun forEachStorageRow(pathIndex: Int, body: (Int) -> Unit) {
+    private class ExclusionRow(
+        @JvmField val exclusions: ExclusionSet,
+        @JvmField val rowIndex: Int,
+    )
+
+    /** `null` -> empty, one `ExclusionRow` -> a single row, otherwise an exclusions -> row map. */
+    private fun findStorageRow(pathIndex: Int, exclusions: ExclusionSet): Int =
         when (val rows = storageRows[pathIndex]) {
-            null -> return
-            is Int -> body(rows)
+            null -> NO_ROW
+            is ExclusionRow -> if (rows.exclusions == exclusions) rows.rowIndex else NO_ROW
             else -> {
-                rows as IntArrayList
-                for (index in 0 until rows.size) body(rows.getInt(index))
+                @Suppress("UNCHECKED_CAST")
+                val map = rows as ConcurrentReadSafeObject2IntMap<ExclusionSet>
+                val existing = map.getInt(exclusions)
+                if (existing == ConcurrentReadSafeObject2IntMap.NO_VALUE) NO_ROW else existing
+            }
+        }
+
+    private fun addStorageRow(pathIndex: Int, exclusions: ExclusionSet, rowIndex: Int) {
+        storageRows[pathIndex] = when (val rows = storageRows[pathIndex]) {
+            null -> ExclusionRow(exclusions, rowIndex)
+            is ExclusionRow -> object2IntMap<ExclusionSet>().also {
+                it.put(rows.exclusions, rows.rowIndex)
+                it.put(exclusions, rowIndex)
+            }
+            else -> {
+                @Suppress("UNCHECKED_CAST")
+                (rows as ConcurrentReadSafeObject2IntMap<ExclusionSet>).also { it.put(exclusions, rowIndex) }
             }
         }
     }
 
-    private fun addStorageRow(pathIndex: Int, rowIndex: Int) {
-        storageRows[pathIndex] = when (val rows = storageRows[pathIndex]) {
-            null -> rowIndex
-            is Int -> IntArrayList(2).also {
-                it.add(rows)
-                it.add(rowIndex)
-            }
-            else -> (rows as IntArrayList).also { it.add(rowIndex) }
-        }
+    private companion object {
+        private const val NO_ROW = -1
     }
 
     override fun find(
