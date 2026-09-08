@@ -104,6 +104,7 @@ class MethodEdgesInitialToFinalTreeApSet(
             }
 
             edges[edgeSetIdx] = internIfRequired(mergedAccess)
+            intern(edgeSetIdx)
 
             return AccessWithExclusion(mergedAccess, mergedExclusion)
         }

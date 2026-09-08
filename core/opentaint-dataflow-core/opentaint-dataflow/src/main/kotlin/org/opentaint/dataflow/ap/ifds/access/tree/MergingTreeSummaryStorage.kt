@@ -27,11 +27,11 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
 
         if (modifiedEdges.size > COMPRESSION_THRESHOLD) {
             interner.withInterner { interner, cache ->
-                val currentInterned = modifiedEdges.internNodes(interner, cache, global = true)
+                val currentInterned = modifiedEdges.internNodes(interner, cache)
                 val compressed = currentInterned.compressNode()
 
                 if (compressed !== currentInterned) {
-                    val interned = compressed.internNodes(interner, cache, global = true)
+                    val interned = compressed.internNodes(interner, cache)
                     edges = interned
                     edgesDelta = interned
                     return true
@@ -51,8 +51,8 @@ class MergingTreeSummaryStorage(val manager: TreeApManager) {
         edgesDelta = null
 
         return interner.withInterner { interner, cache ->
-            edges = edges?.internNodes(interner, cache, global = true)
-            delta.internNodes(interner, cache, global = true)
+            edges = edges?.internNodes(interner, cache)
+            delta.internNodes(interner, cache)
         }
     }
 

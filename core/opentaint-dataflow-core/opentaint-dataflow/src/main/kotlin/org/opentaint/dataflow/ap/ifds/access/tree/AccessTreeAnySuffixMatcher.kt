@@ -62,7 +62,7 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     )
 
     init {
-        if (suffixNode.accessors != null) {
+        if (suffixNode.accessors != null && suffixNode.accessorNodes != null) {
             val unprocessed = ArrayDeque<RawNodeWithParent>()
             suffixNode.forEachAccessor { accessor, accessorNode ->
                 val notCoveredByAny = if (accessor.coveredByAny()) null else 1
