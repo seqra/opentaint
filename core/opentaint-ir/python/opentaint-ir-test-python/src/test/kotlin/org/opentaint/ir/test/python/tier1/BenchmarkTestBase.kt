@@ -104,35 +104,19 @@ abstract class BenchmarkTestBase : PIRTestBase() {
         expectedTopLevelFunctions: Int,
     ) {
         cp.let {
-            val unknownModules = it.modules.filter { m -> m.isUnknown }
-            val knownModules = it.modules.filter { m -> !m.isUnknown }
-
-            val stats = collectStats(knownModules)
+            val stats = collectStats(it.modules)
 
             println("╔══════════════════════════════════════════════════════════════")
             println("║ $name ($fileCount files)")
             println("║ Python ${cp.pythonVersion}, mypy ${cp.mypyVersion}")
-            println("║ Modules: ${stats.modules} (+ ${unknownModules.size} unknown)")
+            println("║ Modules: ${stats.modules}")
             println("║ Classes: ${stats.classes} (+ ${stats.syntheticClasses} synthetic)")
             println("║ Top-level functions: ${stats.topLevelFunctions}, all functions: ${stats.functions}")
             println("║ Blocks: ${stats.blocks}, Instructions: ${stats.instructions}")
             println("║ Instruction kinds: ${stats.instructionKinds.size} types")
             println("║ Dangling edges: ${stats.danglingEdges}, Unreachable: ${stats.unreachableBlocks}")
             println("║ Exception handlers: ${stats.blocksWithHandlers}, Errors: ${stats.errorDiagnostics}")
-            if (unknownModules.isNotEmpty()) {
-                println("║ Unknown modules:")
-                unknownModules.forEach { m ->
-                    val errs = m.diagnostics.joinToString("; ") { d -> d.message }
-                    println("║   ${m.name}: $errs")
-                }
-            }
             println("╚══════════════════════════════════════════════════════════════")
-
-            assertTrue(unknownModules.isEmpty(),
-                "$name: ${unknownModules.size} modules failed to build:\n" +
-                    unknownModules.joinToString("\n") { m ->
-                        "  ${m.name}: ${m.diagnostics.joinToString("; ") { d -> d.message }}"
-                    })
 
             if (stats.errorDiagnosticMessages.isNotEmpty()) {
                 println("║ ERRORS:")
@@ -150,8 +134,9 @@ abstract class BenchmarkTestBase : PIRTestBase() {
                 "$name: ${stats.zeroInstructionFunctions} functions with 0 instructions:\n  " +
                     stats.zeroInstructionFunctionNames.take(20).joinToString("\n  "))
 
-            assertEquals(fileCount, stats.modules + unknownModules.size,
-                "$name: ${fileCount - stats.modules - unknownModules.size} source files silently dropped")
+            assertEquals(fileCount, stats.modules,
+                "$name: ${fileCount - stats.modules} source files dropped " +
+                    "(failed to build or never emitted — see log)")
 
             assertEquals(expectedModules, stats.modules,
                 "$name: module count mismatch")

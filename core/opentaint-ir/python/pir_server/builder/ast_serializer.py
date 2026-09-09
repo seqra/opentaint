@@ -78,18 +78,25 @@ from pir_server.proto import pir_pb2
 from pir_server.builder.type_mapper import TypeMapper
 
 
+def _sanitize_surrogates(value: str) -> str:
+    return value.encode("utf-8", errors="backslashreplace").decode("utf-8")
+
+
 class AstSerializer:
     def __init__(self, tree: MypyFile, module_name: str):
         self.tree = tree
         self.module_name = module_name
         self.type_mapper = TypeMapper()
 
-    def serialize(self) -> pir_pb2.MypyModuleProto:
-        proto = pir_pb2.MypyModuleProto(
-            name=self.module_name,
-            path=self.tree.path or "",
-        )
+    def serialize(
+        self, proto: pir_pb2.MypyModuleProto | None = None
+    ) -> pir_pb2.MypyModuleProto:
+        if proto is None:
+            proto = pir_pb2.MypyModuleProto()
+        proto.name = self.module_name
+        proto.path = self.tree.path or ""
         had_system_error = False
+        dropped: list[str] = []
         for defn in self.tree.defs:
             start = len(proto.defs)
             try:
@@ -98,26 +105,25 @@ class AstSerializer:
                 # SystemError from protobuf C extension corrupts internal state.
                 # Rebuild proto from scratch with definitions collected so far.
                 del proto.defs[start:]
-                print(
-                    f"WARNING: Failed to serialize definition in {self.module_name}: "
-                    f"{type(e).__name__}: {e}",
-                    file=sys.stderr,
-                )
+                dropped.append(self._dropped_message(e))
                 had_system_error = True
             except Exception as e:
                 del proto.defs[start:]
-                print(
-                    f"WARNING: Failed to serialize definition in {self.module_name}: "
-                    f"{type(e).__name__}: {e}",
-                    file=sys.stderr,
-                )
+                dropped.append(self._dropped_message(e))
         if had_system_error:
             # Rebuild proto to avoid corrupted C extension state
             clean = pir_pb2.MypyModuleProto()
             clean.CopyFrom(proto)
-            proto = clean
+            proto.Clear()
+            proto.CopyFrom(clean)
+        proto.errors.extend(dropped)
         proto.imports.extend(self._collect_imports())
         return proto
+
+    def _dropped_message(self, e: Exception) -> str:
+        message = f"Dropped definition in {self.module_name}: {type(e).__name__}: {e}"
+        print(f"WARNING: {message}", file=sys.stderr)
+        return message
 
     def _serialize_definitions(
         self, defn, container, enclosing_class: str | None = None
@@ -240,7 +246,7 @@ class AstSerializer:
 
     @staticmethod
     def _escape_str_literal(s: str) -> str:
-        return s.replace("\\", "\\\\").replace('"', '\\"')
+        return _sanitize_surrogates(s).replace("\\", "\\\\").replace('"', '\\"')
 
     def _serialize_func_def(
         self, func_def: FuncDef, out, enclosing_class: str | None = None
@@ -529,7 +535,10 @@ class AstSerializer:
             else:
                 int_expr.str_value = str(expr.value)
         elif isinstance(expr, StrExpr):
-            out.str_expr.value = expr.value
+            try:
+                out.str_expr.value = expr.value
+            except UnicodeEncodeError:
+                out.str_expr.value = _sanitize_surrogates(expr.value)
         elif isinstance(expr, FloatExpr):
             out.float_expr.value = expr.value
         elif isinstance(expr, BytesExpr):

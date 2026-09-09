@@ -8,7 +8,7 @@ import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.proto.BuildProjectRequest
 import org.opentaint.ir.impl.python.proto.ExecuteFunctionRequest
 import org.opentaint.ir.impl.python.proto.ExecuteFunctionResponse
-import org.opentaint.ir.impl.python.proto.MypyModuleProto
+import org.opentaint.ir.impl.python.proto.BuildEventProto
 import org.opentaint.ir.impl.python.proto.PIRServiceGrpc
 import org.opentaint.ir.impl.python.proto.PingRequest
 import org.opentaint.ir.impl.python.proto.PingResponse
@@ -29,7 +29,7 @@ class PIRServerConnection private constructor(
 
     fun <T> buildProject(
         request: BuildProjectRequest,
-        drain: (Iterator<MypyModuleProto>) -> T,
+        drain: (Iterator<BuildEventProto>) -> T,
     ): T = Context.current().withCancellation().use { cancellable ->
         try {
             cancellable.call { drain(stub(buildTimeout).buildProject(request)) }

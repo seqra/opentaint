@@ -3,6 +3,7 @@ package org.opentaint.ir.impl.python
 import mu.KotlinLogging
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
+import org.opentaint.ir.impl.python.proto.BuildEventProto
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
 import org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer
 import kotlin.time.Duration.Companion.seconds
@@ -38,39 +39,51 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
         connection.buildProject(settings.toBuildProjectRequest()) { iterator ->
             val result = mutableListOf<PIRModule>()
             var count = 0
-            var unknownCount = 0
             var lastLog = TimeSource.Monotonic.markNow()
 
             while (iterator.hasNext()) {
-                val astModuleProto = iterator.next()
+                val event = iterator.next()
 
-                if (astModuleProto.errorsCount > 0) {
-                    val diagnostics = astModuleProto.errorsList.map {
-                        PIRDiagnostic(
-                            PIRDiagnosticSeverity.ERROR,
-                            it,
-                            astModuleProto.name,
-                            "MypyBuildError",
-                        )
+                when (event.eventCase) {
+                    BuildEventProto.EventCase.FAILURE -> {
+                        logger.error { "Build failed: ${event.failure.errorsList.joinToString("; ")}" }
+                        continue
                     }
-                    result.add(PIRUnknownModule(astModuleProto.name, diagnostics))
-                    unknownCount++
-                    continue
+
+                    BuildEventProto.EventCase.EVENT_NOT_SET -> {
+                        logger.error { "Unrecognized build event" }
+                        continue
+                    }
+
+                    BuildEventProto.EventCase.MODULE -> {  }
                 }
 
+                val astModuleProto = event.module
                 val flat = ProtoToFlat.lowerModule(astModuleProto)
                 val flatWithClosure = FlatClosureTransformer.transform(flat)
-                result.add(FlatToPirConverter(flatWithClosure).convert())
+                val module = FlatToPirConverter(flatWithClosure).convert()
+                logDiagnostics(module)
+                result.add(module)
                 count++
 
                 if (lastLog.elapsedNow() >= LOG_INTERVAL) {
-                    logger.info { "Built $count modules ($unknownCount unknown)..." }
+                    logger.info { "Built $count modules..." }
                     lastLog = TimeSource.Monotonic.markNow()
                 }
             }
-            logger.info { "Finished. $count modules built, $unknownCount unknown." }
+            logger.info { "Finished. $count modules built." }
             result
         }
+
+    private fun logDiagnostics(module: PIRModule) {
+        for (d in module.diagnostics) {
+            val render = { "${d.functionName}: [${d.exceptionType}] ${d.message}" }
+            when (d.severity) {
+                PIRDiagnosticSeverity.ERROR -> logger.error(render)
+                PIRDiagnosticSeverity.WARNING -> logger.warn(render)
+            }
+        }
+    }
 }
 
 private data class ModuleIndex(

@@ -11,7 +11,7 @@ option java_outer_classname = "Pir";
 service PIRService {
   // Build an entire project. Returns raw mypy AST modules as a stream.
   // The Kotlin side performs all CFG lowering.
-  rpc BuildProject(BuildProjectRequest) returns (stream MypyModuleProto);
+  rpc BuildProject(BuildProjectRequest) returns (stream BuildEventProto);
 
   // Execute a Python function with given args and return the result.
   // Used by Tier 3 round-trip tests.
@@ -111,6 +111,20 @@ message MypyModuleProto {
   repeated MypyDefinitionProto defs = 3;      // Top-level definitions
   repeated string imports = 4;                // Collected import strings
   repeated string errors = 5;                 // Build errors (mypy errors for this module)
+}
+
+// A module that was built, or a failure that belongs to no module.
+message BuildEventProto {
+  oneof event {
+    MypyModuleProto module = 1;
+    BuildFailureProto failure = 2;
+  }
+}
+
+// A failure that could not be attributed to any module, so no
+// MypyModuleProto exists to carry it in `errors`.
+message BuildFailureProto {
+  repeated string errors = 1;
 }
 
 // ─── Definitions ───────────────────────────────────────────

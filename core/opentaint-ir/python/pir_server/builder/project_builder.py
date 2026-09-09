@@ -17,6 +17,22 @@ from pir_server.proto import pir_pb2
 from pir_server.builder.ast_serializer import AstSerializer
 
 
+def _error_module_event(
+    name: str, path: str, errors: list[str]
+) -> pir_pb2.BuildEventProto:
+    event = pir_pb2.BuildEventProto()
+    event.module.name = name
+    event.module.path = path
+    event.module.errors.extend(errors)
+    return event
+
+
+def _failure_event(errors: list[str]) -> pir_pb2.BuildEventProto:
+    event = pir_pb2.BuildEventProto()
+    event.failure.errors.extend(errors)
+    return event
+
+
 class InvalidMypyFlags(ValueError):
     pass
 
@@ -94,7 +110,7 @@ class ProjectBuilder:
         options.semantic_analysis_only = True
         return options
 
-    def build(self) -> Iterator[pir_pb2.MypyModuleProto]:
+    def build(self) -> Iterator[pir_pb2.BuildEventProto]:
         options = self._build_options()
         self._validate_package_roots()
 
@@ -146,10 +162,10 @@ class ProjectBuilder:
                 fscache=fscache,
             )
         except CompileError as e:
-            yield from self._errors_to_unknown_modules(e.messages, seen_modules)
+            yield from self._errors_to_events(e.messages, seen_modules)
             return
         except Exception as e:
-            yield from self._exception_to_unknown_modules(e, seen_modules)
+            yield from self._exception_to_events(e, seen_modules)
             return
 
         if result.errors:
@@ -190,26 +206,28 @@ class ProjectBuilder:
                     tree=tree,
                     module_name=module_name,
                 )
-                yield serializer.serialize()
+                event = pir_pb2.BuildEventProto()
+                serializer.serialize(event.module)
+                yield event
             except Exception as e:
                 print(
                     f"WARNING: Failed to serialize module {module_name}: "
                     f"{type(e).__name__}: {e}",
                     file=sys.stderr,
                 )
-                yield pir_pb2.MypyModuleProto(
-                    name=module_name,
-                    path=getattr(tree, "path", ""),
-                    errors=[f"{type(e).__name__}: {e}"],
+                yield _error_module_event(
+                    module_name,
+                    getattr(tree, "path", ""),
+                    [f"{type(e).__name__}: {e}"],
                 )
 
             emitted += 1
 
         print(f"PIR: Done. Emitted {emitted} modules.", file=sys.stderr)
 
-    def _errors_to_unknown_modules(
+    def _errors_to_events(
         self, messages: list[str], seen_modules: dict[str, str]
-    ) -> Iterator[pir_pb2.MypyModuleProto]:
+    ) -> Iterator[pir_pb2.BuildEventProto]:
         path_to_module = sorted(
             ((v, k) for k, v in seen_modules.items()),
             key=lambda x: -len(x[0]),
@@ -237,21 +255,14 @@ class ProjectBuilder:
 
         for mod_name, errors in module_errors.items():
             path = seen_modules.get(mod_name, "")
-            yield pir_pb2.MypyModuleProto(
-                name=mod_name,
-                path=path,
-                errors=errors,
-            )
+            yield _error_module_event(mod_name, path, errors)
 
         if unmapped:
-            yield pir_pb2.MypyModuleProto(
-                name="__build_errors__",
-                errors=unmapped,
-            )
+            yield _failure_event(unmapped)
 
-    def _exception_to_unknown_modules(
+    def _exception_to_events(
         self, exc: Exception, seen_modules: dict[str, str]
-    ) -> Iterator[pir_pb2.MypyModuleProto]:
+    ) -> Iterator[pir_pb2.BuildEventProto]:
         import traceback as tb
 
         error_msg = f"{type(exc).__name__}: {exc}"
@@ -267,10 +278,8 @@ class ProjectBuilder:
                 if best_match is None or len(mod_name) > len(best_match):
                     best_match = mod_name
         if best_match:
-            yield pir_pb2.MypyModuleProto(
-                name=best_match,
-                path=seen_modules[best_match],
-                errors=[error_msg],
+            yield _error_module_event(
+                best_match, seen_modules[best_match], [error_msg]
             )
             return
 
@@ -278,17 +287,10 @@ class ProjectBuilder:
             ((v, k) for k, v in seen_modules.items()), key=lambda x: -len(x[0])
         ):
             if path in tb_str or os.path.relpath(path) in tb_str:
-                yield pir_pb2.MypyModuleProto(
-                    name=mod_name,
-                    path=path,
-                    errors=[error_msg],
-                )
+                yield _error_module_event(mod_name, path, [error_msg])
                 return
 
-        yield pir_pb2.MypyModuleProto(
-            name="__build_errors__",
-            errors=[error_msg],
-        )
+        yield _failure_event([error_msg])
 
     def _validate_package_roots(self) -> None:
         if not self.package_roots:

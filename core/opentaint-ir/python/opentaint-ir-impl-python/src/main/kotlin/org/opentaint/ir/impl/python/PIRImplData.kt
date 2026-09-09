@@ -1,7 +1,22 @@
 package org.opentaint.ir.impl.python
 
-import org.opentaint.ir.api.python.*
-import org.opentaint.ir.impl.python.PIRCFGImpl.Companion.EMPTY_CFG
+import org.opentaint.ir.api.python.PIRBasicBlock
+import org.opentaint.ir.api.python.PIRBranchingInst
+import org.opentaint.ir.api.python.PIRCFG
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRDecorator
+import org.opentaint.ir.api.python.PIRDiagnostic
+import org.opentaint.ir.api.python.PIRField
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRModule
+import org.opentaint.ir.api.python.PIRParameter
+import org.opentaint.ir.api.python.PIRParameterKind
+import org.opentaint.ir.api.python.PIRProperty
+import org.opentaint.ir.api.python.PIRTerminatingInst
+import org.opentaint.ir.api.python.PIRType
+import org.opentaint.ir.api.python.PIRValue
+
 
 data class PIRModuleImpl(
     override val name: String,
@@ -153,48 +168,4 @@ class PIRCFGImpl(
     companion object {
         val EMPTY_CFG = PIRCFGImpl(emptyList(), emptyList(), 0, emptySet(), emptyList())
     }
-}
-
-class PIRUnknownModule(
-    override val name: String,
-    override val diagnostics: List<PIRDiagnostic>,
-) : PIRModule {
-    override val path: String = ""
-    override val classes: List<PIRClass> = emptyList()
-    override val functions: List<PIRFunction> = emptyList()
-    override val fields: List<PIRField> = emptyList()
-    override val imports: List<String> = emptyList()
-    override val isUnknown: Boolean = true
-    override val moduleInit: PIRFunction = PIRFunctionImpl(
-        name = "__module_init__",
-        qualifiedName = "$name.__module_init__",
-        parameters = emptyList(),
-        returnType = PIRAnyType,
-        cfg = EMPTY_CFG,
-        decorators = emptyList(),
-        isAsync = false,
-        isGenerator = false,
-        isStaticMethod = false,
-        isClassMethod = false,
-        isProperty = false,
-        closureVars = emptyList(),
-        enclosingClass = null,
-    ).also { it.module = this }
-}
-
-class PIRUnknownClass(
-    override val name: String,
-    override val qualifiedName: String,
-    override val module: PIRModule,
-) : PIRClass {
-    override val baseClasses: List<String> = emptyList()
-    override val mro: List<String> = emptyList()
-    override val methods: List<PIRFunction> = emptyList()
-    override val fields: List<PIRField> = emptyList()
-    override val nestedClasses: List<PIRClass> = emptyList()
-    override val properties: List<PIRProperty> = emptyList()
-    override val decorators: List<PIRDecorator> = emptyList()
-    override val isAbstract: Boolean = false
-    override val isDataclass: Boolean = false
-    override val isEnum: Boolean = false
 }

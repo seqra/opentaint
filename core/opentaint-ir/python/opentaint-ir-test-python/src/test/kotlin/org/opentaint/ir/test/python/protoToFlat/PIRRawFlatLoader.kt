@@ -12,9 +12,9 @@ object PIRRawFlatLoader {
             connection.buildProject(settings.toBuildProjectRequest()) { iterator ->
                 val result = mutableListOf<FlatModuleIR>()
                 while (iterator.hasNext()) {
-                    val astModuleProto = iterator.next()
-                    if (astModuleProto.errorsCount > 0) continue
-                    result.add(ProtoToFlat.lowerModule(astModuleProto))
+                    val event = iterator.next()
+                    if (!event.hasModule() || event.module.errorsCount > 0) continue
+                    result.add(ProtoToFlat.lowerModule(event.module))
                 }
                 result
             }
