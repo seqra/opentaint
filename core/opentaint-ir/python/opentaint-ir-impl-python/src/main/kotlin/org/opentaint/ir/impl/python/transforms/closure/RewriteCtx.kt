@@ -147,16 +147,18 @@ internal class RewriteCtx(
 
     private fun freshTemp(): FlatLocal = FlatLocal("\$tc${tempCounter++}")
 
-    private fun loadOperand(value: FlatValue, location: PIRPhysicalLocation?, scope: InstRewriterScope): FlatValue {
+    private fun loadOperand(
+        value: FlatValue,
+        location: PIRPhysicalLocation?,
+        into: MutableList<FlatInst>,
+    ): FlatValue {
         if (value !is FlatLocal || !isCellManaged(value.name)) return value
         val tmp = freshTemp()
-        scope.emitBefore(
-            FlatLoadAttr(
-                target = tmp,
-                obj = cellLocals.getValue(value.name),
-                attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
-                physicalLocation = location,
-            ),
+        into += FlatLoadAttr(
+            target = tmp,
+            obj = cellLocals.getValue(value.name),
+            attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
+            physicalLocation = location,
         )
         return tmp
     }
@@ -164,46 +166,43 @@ internal class RewriteCtx(
     private fun redirectTarget(
         target: FlatValue,
         location: PIRPhysicalLocation?,
-        emitStore: (FlatInst) -> Unit,
+        into: MutableList<FlatInst>,
     ): FlatValue {
         if (target !is FlatLocal || !isCellManaged(target.name)) return target
         val tmp = freshTemp()
-        emitStore(
-            FlatStoreAttr(
-                obj = cellLocals.getValue(target.name),
-                attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
-                value = tmp,
-                physicalLocation = location,
-            ),
+        into += FlatStoreAttr(
+            obj = cellLocals.getValue(target.name),
+            attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
+            value = tmp,
+            physicalLocation = location,
         )
         return tmp
     }
 
-    private fun rewriteInstruction(inst: FlatInst): List<FlatInst> {
-        val scope = InstRewriterScope(inst)
-        when (inst) {
-            is FlatBindFunction -> rewriteBind(inst, scope)
-            is FlatDeleteLocal -> rewriteDeleteLocal(inst, scope)
-            is FlatNextIter -> rewriteNextIter(inst, scope)
-            else -> defaultRewrite(inst, scope)
-        }
-        return scope.finish()
+    private fun rewriteInstruction(inst: FlatInst): List<FlatInst> = when (inst) {
+        is FlatBindFunction -> rewriteBind(inst)
+        is FlatDeleteLocal -> rewriteDeleteLocal(inst)
+        is FlatNextIter -> rewriteNextIter(inst)
+        else -> defaultRewrite(inst)
     }
 
-    private fun defaultRewrite(inst: FlatInst, scope: InstRewriterScope) {
-        val rewritten = inst
-            .mapOperand { v -> loadOperand(v, inst.physicalLocation, scope) }
-            .mapTarget { t -> redirectTarget(t, inst.physicalLocation, scope::emitAfter) }
-        scope.replaceWith(rewritten)
+    private fun defaultRewrite(inst: FlatInst): List<FlatInst> {
+        val pre = ArrayList<FlatInst>()
+        val post = ArrayList<FlatInst>()
+        val core = inst
+            .mapOperand { v -> loadOperand(v, inst.physicalLocation, pre) }
+            .mapTarget { t -> redirectTarget(t, inst.physicalLocation, post) }
+        return pre + core + post
     }
 
-    private fun rewriteNextIter(inst: FlatNextIter, scope: InstRewriterScope) {
-        val rewritten = inst
-            .mapOperand { v -> loadOperand(v, inst.physicalLocation, scope) }
-            .mapTarget { t ->
-                redirectTarget(t, inst.physicalLocation) { addBlockPrologue(inst.bodyBlock, listOf(it)) }
-            }
-        scope.replaceWith(rewritten)
+    private fun rewriteNextIter(inst: FlatNextIter): List<FlatInst> {
+        val pre = ArrayList<FlatInst>()
+        val store = ArrayList<FlatInst>()
+        val core = inst
+            .mapOperand { v -> loadOperand(v, inst.physicalLocation, pre) }
+            .mapTarget { t -> redirectTarget(t, inst.physicalLocation, store) }
+        addBlockPrologue(inst.bodyBlock, store)
+        return pre + core
     }
 
     private fun addBlockPrologue(label: Int, instructions: List<FlatInst>) {
@@ -211,11 +210,11 @@ internal class RewriteCtx(
         blockPrologues.getOrPut(label) { mutableListOf() } += instructions
     }
 
-    private fun rewriteDeleteLocal(inst: FlatDeleteLocal, scope: InstRewriterScope) {
-        val l = inst.local as? FlatLocal ?: return
-        if (!isCellManaged(l.name)) return
+    private fun rewriteDeleteLocal(inst: FlatDeleteLocal): List<FlatInst> {
+        val l = inst.local as? FlatLocal ?: return listOf(inst)
+        if (!isCellManaged(l.name)) return listOf(inst)
 
-        scope.replaceWith(
+        return listOf(
             FlatDeleteAttr(
                 obj = cellLocals.getValue(l.name),
                 attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
@@ -224,44 +223,41 @@ internal class RewriteCtx(
         )
     }
 
-    private fun rewriteBind(inst: FlatBindFunction, scope: InstRewriterScope) {
+    private fun rewriteBind(inst: FlatBindFunction): List<FlatInst> {
         val location = inst.physicalLocation
         val childQn = inst.function.qualifiedName
         val childClosureVars = info[childQn]?.closureVars.orEmpty()
 
-        if (childClosureVars.isEmpty()) {
-            defaultRewrite(inst, scope)
-            return
-        }
+        if (childClosureVars.isEmpty()) return defaultRewrite(inst)
 
         val childAdapterQn = ClosureRuntime.adapterClassQn(
             moduleName = moduleName,
             fnName = childQn.substringAfterLast('.'),
         )
-        val originalTarget = inst.target
+
+        val pre = ArrayList<FlatInst>()
+        val post = ArrayList<FlatInst>()
 
         val (envBuildInst, envValueLocal) = buildEnvDict(childClosureVars, location)
-        scope.emitBefore(envBuildInst)
+        pre += envBuildInst
 
-        val callTarget = redirectTarget(originalTarget, location, scope::emitAfter)
+        val callTarget = redirectTarget(inst.target, location, post)
 
         val adapterLocal = freshTemp()
-        scope.emitBefore(
-            FlatReadName(
-                target = adapterLocal,
-                ref = FlatGlobalNameRef(childAdapterQn),
-                physicalLocation = location,
-            ),
+        pre += FlatReadName(
+            target = adapterLocal,
+            ref = FlatGlobalNameRef(childAdapterQn),
+            physicalLocation = location,
         )
 
-        scope.replaceWith(
-            FlatCall(
-                target = callTarget,
-                callee = adapterLocal,
-                args = listOf(FlatCallArg(envValueLocal)),
-                physicalLocation = location,
-            ),
+        val core = FlatCall(
+            target = callTarget,
+            callee = adapterLocal,
+            args = listOf(FlatCallArg(envValueLocal)),
+            physicalLocation = location,
         )
+
+        return pre + core + post
     }
 
     private fun buildEnvDict(childClosureVars: Set<String>, location: PIRPhysicalLocation?): Pair<FlatInst, FlatLocal> {
