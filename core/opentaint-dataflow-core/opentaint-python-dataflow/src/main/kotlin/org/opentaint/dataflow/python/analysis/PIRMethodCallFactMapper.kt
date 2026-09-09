@@ -18,7 +18,12 @@ import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRCallArgKind
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRLocalVar
+import org.opentaint.ir.api.python.PIRValue
 
 object PIRMethodCallFactMapper : MethodCallFactMapper {
 

@@ -3,7 +3,14 @@ package org.opentaint.dataflow.python.util
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRConst
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRGlobalNameRef
+import org.opentaint.ir.api.python.PIRLocalVar
+import org.opentaint.ir.api.python.PIRModuleNameRef
+import org.opentaint.ir.api.python.PIRNameRef
+import org.opentaint.ir.api.python.PIRParameterRef
+import org.opentaint.ir.api.python.PIRValue
 
 object PIRFlowFunctionUtils {
 

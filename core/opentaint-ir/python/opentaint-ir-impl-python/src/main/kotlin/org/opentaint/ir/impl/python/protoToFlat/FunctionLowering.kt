@@ -1,10 +1,13 @@
 package org.opentaint.ir.impl.python.protoToFlat
 
 import org.opentaint.ir.api.python.PythonNames
-import org.opentaint.ir.impl.python.flat.*
-import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
+import org.opentaint.ir.impl.python.flat.FlatAnyType
+import org.opentaint.ir.impl.python.flat.FlatDecorator
+import org.opentaint.ir.impl.python.flat.FlatFunctionIR
+import org.opentaint.ir.impl.python.flat.FlatFunctionKind
 import org.opentaint.ir.impl.python.proto.MypyFuncDefProto
 import org.opentaint.ir.impl.python.proto.MypyLambdaExprProto
+import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
 
 internal object FunctionLowering {
 

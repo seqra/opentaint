@@ -7,7 +7,11 @@ import org.opentaint.dataflow.python.serialization.PIRMethodContextSerializer
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRRaise
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 

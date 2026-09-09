@@ -1,8 +1,18 @@
 package org.opentaint.ir.impl.python.flatToPir
 
-import org.opentaint.ir.api.python.*
-import org.opentaint.ir.impl.python.*
-import org.opentaint.ir.impl.python.flat.*
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRModule
+import org.opentaint.ir.api.python.PIRProperty
+import org.opentaint.ir.impl.python.PIRClassImpl
+import org.opentaint.ir.impl.python.PIRFieldImpl
+import org.opentaint.ir.impl.python.PIRFunctionImpl
+import org.opentaint.ir.impl.python.PIRModuleImpl
+import org.opentaint.ir.impl.python.PIRParameterImpl
+import org.opentaint.ir.impl.python.PIRPropertyImpl
+import org.opentaint.ir.impl.python.flat.FlatClass
+import org.opentaint.ir.impl.python.flat.FlatFunctionIR
+import org.opentaint.ir.impl.python.flat.FlatModuleIR
 
 class FlatToPirConverter(
     private val flat: FlatModuleIR,

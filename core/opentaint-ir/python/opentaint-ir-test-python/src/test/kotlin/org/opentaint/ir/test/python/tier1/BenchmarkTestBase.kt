@@ -1,7 +1,17 @@
 package org.opentaint.ir.test.python.tier1
 
-import org.junit.jupiter.api.Assertions.*
-import org.opentaint.ir.api.python.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.opentaint.ir.api.python.PIRBasicBlock
+import org.opentaint.ir.api.python.PIRBranch
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRDiagnosticSeverity
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRGoto
+import org.opentaint.ir.api.python.PIRModule
+import org.opentaint.ir.api.python.PIRNextIter
+import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
 import org.opentaint.ir.test.python.PIRTestBase
 import java.io.File

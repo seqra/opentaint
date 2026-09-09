@@ -1,8 +1,19 @@
 package org.opentaint.ir.test.python.tier2
 
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
-import org.opentaint.ir.api.python.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRProperty
+import org.opentaint.ir.api.python.PIRStoreAttr
 import org.opentaint.ir.test.python.PIRTestBase
 
 @Tag("tier2")

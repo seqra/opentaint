@@ -1,6 +1,9 @@
 package org.opentaint.ir.impl.python
 
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRModule
 
 class PIRClasspathImpl internal constructor(
     override val pythonVersion: String,

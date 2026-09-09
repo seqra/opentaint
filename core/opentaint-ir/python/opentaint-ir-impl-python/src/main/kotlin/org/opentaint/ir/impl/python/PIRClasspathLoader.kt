@@ -1,7 +1,11 @@
 package org.opentaint.ir.impl.python
 
 import mu.KotlinLogging
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRClass
+import org.opentaint.ir.api.python.PIRDiagnosticSeverity
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRModule
+import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.proto.BuildEventProto
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat

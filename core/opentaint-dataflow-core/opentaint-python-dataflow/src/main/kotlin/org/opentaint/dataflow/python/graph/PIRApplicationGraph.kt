@@ -1,6 +1,9 @@
 package org.opentaint.dataflow.python.graph
 
-import org.opentaint.ir.api.python.*
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.util.analysis.ApplicationGraph
 
 class PIRApplicationGraph(

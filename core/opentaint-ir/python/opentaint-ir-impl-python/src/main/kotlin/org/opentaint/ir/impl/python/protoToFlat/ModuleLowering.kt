@@ -1,12 +1,19 @@
 package org.opentaint.ir.impl.python.protoToFlat
 
-import org.opentaint.ir.impl.python.flat.*
-import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
+import org.opentaint.ir.impl.python.flat.FlatAnyType
+import org.opentaint.ir.impl.python.flat.FlatClass
+import org.opentaint.ir.impl.python.flat.FlatClassField
+import org.opentaint.ir.impl.python.flat.FlatFunctionIR
+import org.opentaint.ir.impl.python.flat.FlatFunctionKind
+import org.opentaint.ir.impl.python.flat.FlatModuleField
+import org.opentaint.ir.impl.python.flat.FlatModuleIR
+import org.opentaint.ir.impl.python.flat.FlatType
 import org.opentaint.ir.impl.python.proto.MypyAssignmentStmtProto
 import org.opentaint.ir.impl.python.proto.MypyClassDefProto
 import org.opentaint.ir.impl.python.proto.MypyDefinitionProto
 import org.opentaint.ir.impl.python.proto.MypyModuleProto
 import org.opentaint.ir.impl.python.proto.MypyStmtProto
+import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
 
 internal object ModuleLowering {
 

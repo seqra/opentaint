@@ -1,9 +1,44 @@
 package org.opentaint.ir.test.python.tier2
 
-import org.junit.jupiter.api.*
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
-import org.opentaint.ir.api.python.*
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRAddExpr
+import org.opentaint.ir.api.python.PIRBinaryExpr
+import org.opentaint.ir.api.python.PIRBitAndExpr
+import org.opentaint.ir.api.python.PIRBitOrExpr
+import org.opentaint.ir.api.python.PIRBitXorExpr
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRCompareExpr
+import org.opentaint.ir.api.python.PIRDivExpr
+import org.opentaint.ir.api.python.PIREqExpr
+import org.opentaint.ir.api.python.PIRFloorDivExpr
+import org.opentaint.ir.api.python.PIRGeExpr
+import org.opentaint.ir.api.python.PIRGtExpr
+import org.opentaint.ir.api.python.PIRInExpr
+import org.opentaint.ir.api.python.PIRInvertExpr
+import org.opentaint.ir.api.python.PIRIsExpr
+import org.opentaint.ir.api.python.PIRIsNotExpr
+import org.opentaint.ir.api.python.PIRLShiftExpr
+import org.opentaint.ir.api.python.PIRLeExpr
+import org.opentaint.ir.api.python.PIRLtExpr
+import org.opentaint.ir.api.python.PIRModExpr
+import org.opentaint.ir.api.python.PIRMulExpr
+import org.opentaint.ir.api.python.PIRNeExpr
+import org.opentaint.ir.api.python.PIRNegExpr
+import org.opentaint.ir.api.python.PIRNotExpr
+import org.opentaint.ir.api.python.PIRNotInExpr
+import org.opentaint.ir.api.python.PIRPosExpr
+import org.opentaint.ir.api.python.PIRPowExpr
+import org.opentaint.ir.api.python.PIRRShiftExpr
+import org.opentaint.ir.api.python.PIRSubExpr
+import org.opentaint.ir.api.python.PIRUnaryExpr
+import org.opentaint.ir.api.python.binaryExpr
+import org.opentaint.ir.api.python.compareExpr
+import org.opentaint.ir.api.python.filterAssignOf
+import org.opentaint.ir.api.python.unaryExpr
 import org.opentaint.ir.test.python.PIRTestBase
 
 @Tag("tier2")

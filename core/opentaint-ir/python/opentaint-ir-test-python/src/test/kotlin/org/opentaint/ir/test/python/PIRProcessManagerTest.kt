@@ -1,6 +1,7 @@
 package org.opentaint.ir.test.python
 
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertFalse
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.opentaint.ir.api.python.PIRSettings

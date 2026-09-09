@@ -1,7 +1,7 @@
 package org.opentaint.ir.test.python.tier1
 
-import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
 
 @Tag("tier1")
 class WebAppBenchmarkTest : BenchmarkTestBase() {

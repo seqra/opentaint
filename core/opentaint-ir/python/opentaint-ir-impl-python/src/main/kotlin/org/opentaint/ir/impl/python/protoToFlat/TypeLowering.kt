@@ -1,6 +1,26 @@
 package org.opentaint.ir.impl.python.protoToFlat
 
-import org.opentaint.ir.impl.python.flat.*
+import org.opentaint.ir.impl.python.flat.FlatAnyType
+import org.opentaint.ir.impl.python.flat.FlatBoolConst
+import org.opentaint.ir.impl.python.flat.FlatBytesConst
+import org.opentaint.ir.impl.python.flat.FlatClassType
+import org.opentaint.ir.impl.python.flat.FlatComplexConst
+import org.opentaint.ir.impl.python.flat.FlatConst
+import org.opentaint.ir.impl.python.flat.FlatEllipsisConst
+import org.opentaint.ir.impl.python.flat.FlatFloatConst
+import org.opentaint.ir.impl.python.flat.FlatFunctionType
+import org.opentaint.ir.impl.python.flat.FlatIntConst
+import org.opentaint.ir.impl.python.flat.FlatLiteralType
+import org.opentaint.ir.impl.python.flat.FlatNeverType
+import org.opentaint.ir.impl.python.flat.FlatNoneConst
+import org.opentaint.ir.impl.python.flat.FlatNoneType
+import org.opentaint.ir.impl.python.flat.FlatParamKind
+import org.opentaint.ir.impl.python.flat.FlatParameter
+import org.opentaint.ir.impl.python.flat.FlatStrConst
+import org.opentaint.ir.impl.python.flat.FlatTupleType
+import org.opentaint.ir.impl.python.flat.FlatType
+import org.opentaint.ir.impl.python.flat.FlatTypeVarType
+import org.opentaint.ir.impl.python.flat.FlatUnionType
 import org.opentaint.ir.impl.python.proto.MypyArgumentProto
 import org.opentaint.ir.impl.python.proto.MypyExprProto
 import org.opentaint.ir.impl.python.proto.PIRTypeProto

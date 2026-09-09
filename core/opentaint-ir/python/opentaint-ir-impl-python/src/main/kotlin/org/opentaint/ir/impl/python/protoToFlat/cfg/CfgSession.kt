@@ -1,7 +1,17 @@
 package org.opentaint.ir.impl.python.protoToFlat.cfg
 
 import org.opentaint.ir.api.python.PIRPhysicalLocation
-import org.opentaint.ir.impl.python.flat.*
+import org.opentaint.ir.impl.python.flat.FlatBlock
+import org.opentaint.ir.impl.python.flat.FlatBranch
+import org.opentaint.ir.impl.python.flat.FlatCFG
+import org.opentaint.ir.impl.python.flat.FlatGoto
+import org.opentaint.ir.impl.python.flat.FlatInst
+import org.opentaint.ir.impl.python.flat.FlatLocal
+import org.opentaint.ir.impl.python.flat.FlatNextIter
+import org.opentaint.ir.impl.python.flat.FlatRaise
+import org.opentaint.ir.impl.python.flat.FlatReturn
+import org.opentaint.ir.impl.python.flat.FlatUnreachable
+import org.opentaint.ir.impl.python.flat.FlatValue
 import org.opentaint.ir.impl.python.protoToFlat.ImportManager
 import org.opentaint.ir.impl.python.protoToFlat.ModuleContext
 import org.opentaint.ir.impl.python.protoToFlat.Scope
