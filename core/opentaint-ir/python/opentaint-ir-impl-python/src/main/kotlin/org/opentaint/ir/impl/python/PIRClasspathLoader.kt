@@ -4,6 +4,10 @@ import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
 import org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeSource
+
+private val LOG_INTERVAL = 10.seconds
 
 class PIRClasspathLoader(private val settings: PIRSettings) {
 
@@ -27,44 +31,43 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
             )
         }
 
-    private fun buildModules(connection: PIRServerConnection): List<PIRModule> {
-        val iterator = connection.buildProject(settings.toBuildProjectRequest())
-        val result = mutableListOf<PIRModule>()
-        var count = 0
-        var unknownCount = 0
-        var lastLog = System.nanoTime()
+    private fun buildModules(connection: PIRServerConnection): List<PIRModule> =
+        connection.buildProject(settings.toBuildProjectRequest()) { iterator ->
+            val result = mutableListOf<PIRModule>()
+            var count = 0
+            var unknownCount = 0
+            var lastLog = TimeSource.Monotonic.markNow()
 
-        while (iterator.hasNext()) {
-            val astModuleProto = iterator.next()
+            while (iterator.hasNext()) {
+                val astModuleProto = iterator.next()
 
-            if (astModuleProto.errorsCount > 0) {
-                val diagnostics = astModuleProto.errorsList.map {
-                    PIRDiagnostic(
-                        PIRDiagnosticSeverity.ERROR,
-                        it,
-                        astModuleProto.name,
-                        "MypyBuildError",
-                    )
+                if (astModuleProto.errorsCount > 0) {
+                    val diagnostics = astModuleProto.errorsList.map {
+                        PIRDiagnostic(
+                            PIRDiagnosticSeverity.ERROR,
+                            it,
+                            astModuleProto.name,
+                            "MypyBuildError",
+                        )
+                    }
+                    result.add(PIRUnknownModule(astModuleProto.name, diagnostics))
+                    unknownCount++
+                    continue
                 }
-                result.add(PIRUnknownModule(astModuleProto.name, diagnostics))
-                unknownCount++
-                continue
-            }
 
-            val flat = ProtoToFlat.lowerModule(astModuleProto)
-            val flatWithClosure = FlatClosureTransformer.transform(flat)
-            result.add(FlatToPirConverter(flatWithClosure).convert())
-            count++
+                val flat = ProtoToFlat.lowerModule(astModuleProto)
+                val flatWithClosure = FlatClosureTransformer.transform(flat)
+                result.add(FlatToPirConverter(flatWithClosure).convert())
+                count++
 
-            val now = System.nanoTime()
-            if (now - lastLog >= 10_000_000_000L) {
-                System.err.println("PIR: Built $count modules ($unknownCount unknown)...")
-                lastLog = now
+                if (lastLog.elapsedNow() >= LOG_INTERVAL) {
+                    System.err.println("PIR: Built $count modules ($unknownCount unknown)...")
+                    lastLog = TimeSource.Monotonic.markNow()
+                }
             }
+            System.err.println("PIR: Finished. $count modules built, $unknownCount unknown.")
+            result
         }
-        System.err.println("PIR: Finished. $count modules built, $unknownCount unknown.")
-        return result
-    }
 }
 
 private data class ModuleIndex(

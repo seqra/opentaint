@@ -1,7 +1,14 @@
 import sys
+import grpc
+import mypy.version
 from pir_server.proto import pir_pb2, pir_pb2_grpc
-from pir_server.builder.project_builder import ProjectBuilder
-from pir_server.executor import execute_function
+from pir_server.builder.project_builder import (
+    InvalidMypyFlags,
+    InvalidPackageRoot,
+    InvalidPythonVersion,
+    ProjectBuilder,
+)
+from pir_server.executor import InvalidExecuteRequest, execute_function
 
 
 class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
@@ -12,17 +19,19 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
             python_version=request.python_version or None,
             package_roots=list(request.package_roots),
         )
-        for module_proto in builder.build():
-            yield module_proto
+        try:
+            yield from builder.build()
+        except (InvalidMypyFlags, InvalidPythonVersion, InvalidPackageRoot) as e:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
 
     def ExecuteFunction(self, request, context):
-        return execute_function(request)
+        try:
+            return execute_function(request)
+        except InvalidExecuteRequest as e:
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
 
     def Ping(self, request, context):
-        import mypy.version
-
         return pir_pb2.PingResponse(
-            version="0.2.0",
             python_version=f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}",
             mypy_version=mypy.version.__version__,
         )

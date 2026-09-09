@@ -23,7 +23,7 @@ object PIRChannelFactory {
 
     fun forPort(port: Int): ManagedChannel =
         ManagedChannelBuilder
-            .forAddress("localhost", port)
+            .forAddress("127.0.0.1", port)
             .usePlaintext()
             .maxInboundMessageSize(MAX_INBOUND_MESSAGE_SIZE)
             .intercept(RecursionLimitInterceptor)

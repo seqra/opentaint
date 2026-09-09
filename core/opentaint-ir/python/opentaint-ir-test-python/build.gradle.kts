@@ -14,7 +14,7 @@ val pirPythonPath = listOf(
 ).filterNotNull().filter { it.isNotBlank() }.joinToString(File.pathSeparator)
 
 tasks.withType<Test>().configureEach {
-    dependsOn(":python:setupPirServerVenv")
+    dependsOn(":python:generatePirProtoStubs")
     dependsOn(":python:setupPirBenchmarkDeps")
     environment("PIR_SERVER_PYTHON", pirServerPython)
     environment("PYTHONPATH", pirPythonPath)
@@ -28,9 +28,9 @@ dependencies {
     testImplementation("com.google.code.gson:gson:2.10.1")
 
     // Needed for Tier 3 round-trip tests (ExecuteFunctionRequest/Response)
-    testImplementation("com.google.protobuf:protobuf-java:3.25.3")
-    testImplementation("io.grpc:grpc-protobuf:1.62.2")
-    testImplementation("io.grpc:grpc-stub:1.62.2")
+    testImplementation("com.google.protobuf:protobuf-java:4.29.3")
+    testImplementation("io.grpc:grpc-protobuf:1.69.0")
+    testImplementation("io.grpc:grpc-stub:1.69.0")
 }
 
 tasks.test {
@@ -43,10 +43,8 @@ tasks.test {
             excludeTags("tier1")
         }
     }
-    // Each test class spawns a Python subprocess with gRPC server.
-    // Single fork prevents port conflicts and resource exhaustion.
-    maxParallelForks = 1
-    maxHeapSize = "8g"
+    maxParallelForks = 4
+    maxHeapSize = "2g"
 
     // Test logging: show which tests start and pass/fail
     testLogging {

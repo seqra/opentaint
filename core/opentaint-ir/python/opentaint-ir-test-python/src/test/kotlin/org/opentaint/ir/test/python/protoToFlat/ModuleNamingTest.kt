@@ -5,7 +5,6 @@ import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.PIRClasspathLoader
 import java.io.File
 import java.nio.file.Files
-import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class ModuleNamingTest {
@@ -54,31 +53,6 @@ class ModuleNamingTest {
 
         assertTrue("pkg.views" in names, "Expected pkg.views, got: $names")
         assertTrue("scripts.tool" in names, "Expected scripts.tool, got: $names")
-    }
-
-    @Test
-    fun `a package root inside a package is rejected`() {
-        val root = tmpRoot("root-in-pkg-test")
-        val pkg = mkdir(root, "pkg")
-        write(pkg, "__init__.py", "")
-        val views = write(pkg, "views.py", "def handler(): pass")
-
-        val cp = PIRClasspathLoader(
-            PIRSettings(
-                sources = listOf(views.absolutePath),
-                packageRoots = listOf(pkg.absolutePath),
-                mypyFlags = listOf("--ignore-missing-imports"),
-            ),
-        ).load()
-
-        cp.let {
-            assertEquals(listOf("__build_errors__"), it.modules.map { m -> m.name })
-            val messages = it.modules.flatMap { m -> m.diagnostics }.map { d -> d.message }
-            assertTrue(
-                messages.any { msg -> msg.contains("is inside package 'pkg'") },
-                "Expected a rejection naming the enclosing package, got: $messages",
-            )
-        }
     }
 
     @Test

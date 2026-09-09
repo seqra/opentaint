@@ -8,8 +8,13 @@ plugins {
 val pirEnvironmentExtraKey = "opentaint.pir.env"
 val pirVenvDir = layout.projectDirectory.dir(".venv")
 val pirPyprojectFile = layout.projectDirectory.file("pyproject.toml")
-val pirProtoFile = layout.projectDirectory.file("proto/pir.proto")
+val pirProtoFile = layout.projectDirectory.file("pir_server/proto/pir.proto")
 val pirVenvPython = pirVenvDir.file("bin/python")
+val pirGeneratedStubs = listOf(
+    "pir_server/proto/pir_pb2.py",
+    "pir_server/proto/pir_pb2_grpc.py",
+    "pir_server/proto/pir_pb2.pyi",
+).map { layout.projectDirectory.file(it) }
 val pirBootstrapPython = providers.environmentVariable("PYTHON").orElse("python3.13")
 val pirInstallSpec = ".[dev]"
 val pirBenchmarksInstallSpec = ".[benchmarks]"
@@ -60,7 +65,6 @@ tasks.register<Exec>("setupPirServerVenv") {
     description = "Creates the PIR server virtual environment and installs pir-server with dev dependencies."
     dependsOn(upgradePirServerPip)
     inputs.file(pirPyprojectFile)
-    inputs.file(pirProtoFile)
     outputs.dir(pirVenvDir)
     workingDir = projectDir
     commandLine(
@@ -70,6 +74,25 @@ tasks.register<Exec>("setupPirServerVenv") {
         "install",
         "-e",
         pirInstallSpec,
+    )
+}
+
+val generatePirProtoStubs = tasks.register<Exec>("generatePirProtoStubs") {
+    group = "python"
+    description = "Generates the Python protobuf and gRPC stubs from pir.proto."
+    dependsOn("setupPirServerVenv")
+    inputs.file(pirProtoFile)
+    outputs.files(pirGeneratedStubs)
+    workingDir = projectDir
+    commandLine(
+        pirVenvPython.asFile.absolutePath,
+        "-m",
+        "grpc_tools.protoc",
+        "-I$projectDir",
+        "--python_out=$projectDir",
+        "--grpc_python_out=$projectDir",
+        "--pyi_out=$projectDir",
+        pirProtoFile.asFile.absolutePath,
     )
 }
 
@@ -93,7 +116,7 @@ tasks.register<Exec>("setupPirBenchmarkDeps") {
 tasks.register<DefaultTask>("setupPirEnvironment") {
     group = "python"
     description = "Initializes the PIR server environment metadata."
-    dependsOn("setupPirServerVenv")
+    dependsOn(generatePirProtoStubs)
     doFirst {
         extra.set(pirEnvironmentExtraKey, pirEnvironment())
     }

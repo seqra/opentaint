@@ -9,14 +9,14 @@ import org.opentaint.ir.impl.python.toBuildProjectRequest
 object PIRRawFlatLoader {
     fun loadRawFlatModules(settings: PIRSettings): List<FlatModuleIR> =
         PIRServerConnection.open(settings).use { connection ->
-            val iterator = connection.buildProject(settings.toBuildProjectRequest())
-
-            val result = mutableListOf<FlatModuleIR>()
-            while (iterator.hasNext()) {
-                val astModuleProto = iterator.next()
-                if (astModuleProto.errorsCount > 0) continue
-                result.add(ProtoToFlat.lowerModule(astModuleProto))
+            connection.buildProject(settings.toBuildProjectRequest()) { iterator ->
+                val result = mutableListOf<FlatModuleIR>()
+                while (iterator.hasNext()) {
+                    val astModuleProto = iterator.next()
+                    if (astModuleProto.errorsCount > 0) continue
+                    result.add(ProtoToFlat.lowerModule(astModuleProto))
+                }
+                result
             }
-            result
         }
 }

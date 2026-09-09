@@ -6,7 +6,6 @@ import java.io.InputStreamReader
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.TimeUnit
@@ -14,8 +13,8 @@ import java.util.concurrent.TimeoutException
 
 class PIRProcessManager(
     private val pythonExecutable: String,
+    private val startupTimeout: Duration,
     private val serverModule: String = "pir_server",
-    private val startupTimeout: Duration = 30.seconds,
 ) : Closeable {
 
     init {
@@ -100,12 +99,12 @@ class PIRProcessManager(
                     // Close stdin pipe — triggers the Python watchdog thread to exit
                     try { proc.outputStream.close() } catch (_: Exception) {}
                     if (proc.isAlive) {
-                        proc.waitFor(5, TimeUnit.SECONDS)
+                        proc.waitFor(1, TimeUnit.SECONDS)
                     }
                 } finally {
                     if (proc.isAlive) {
                         proc.destroyForcibly()
-                        proc.waitFor(3, TimeUnit.SECONDS)
+                        proc.waitFor(1, TimeUnit.SECONDS)
                     }
                 }
             }

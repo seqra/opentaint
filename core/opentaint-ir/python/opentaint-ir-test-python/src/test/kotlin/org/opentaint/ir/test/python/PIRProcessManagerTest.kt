@@ -17,7 +17,7 @@ class PIRProcessManagerTest {
 
     @Test
     fun `startup fails within the timeout when readiness is never reported`() {
-        val script = writeScript("#!/bin/sh\nsleep 300\n")
+        val script = writeScript("#!/bin/sh\nexec sleep 300\n")
         val manager = PIRProcessManager(
             pythonExecutable = script,
             startupTimeout = 2.seconds,
@@ -51,7 +51,7 @@ class PIRProcessManagerTest {
 
     @Test
     fun `start rejects a second invocation instead of orphaning the first process`() {
-        val script = writeScript("#!/bin/sh\nsleep 300\n")
+        val script = writeScript("#!/bin/sh\nexec sleep 300\n")
         val manager = PIRProcessManager(
             pythonExecutable = script,
             startupTimeout = 2.seconds,

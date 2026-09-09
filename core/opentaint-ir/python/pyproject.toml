@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68.0", "grpcio-tools==1.83.1"]
+requires = ["setuptools>=68.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -64,9 +64,6 @@ benchmarks = [
     "filelock==3.24.0",
     "lxml==6.0.2",
 ]
-
-[project.scripts]
-pir-server = "pir_server.__main__:main"
 
 [tool.setuptools.packages.find]
 include = ["pir_server*"]

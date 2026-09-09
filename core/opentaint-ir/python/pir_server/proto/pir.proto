@@ -42,9 +42,11 @@ message ExecuteFunctionResponse {
 
 message PingRequest {}
 message PingResponse {
-  string version = 1;
   string python_version = 2;
   string mypy_version = 3;
+
+  reserved 1;
+  reserved "version";
 }
 
 // ─── Types ──────────────────────────────────────────────────

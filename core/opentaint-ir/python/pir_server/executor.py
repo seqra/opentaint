@@ -3,16 +3,33 @@ import textwrap
 from pir_server.proto import pir_pb2
 
 
+class InvalidExecuteRequest(ValueError):
+    pass
+
+
 def execute_function(
     request: pir_pb2.ExecuteFunctionRequest,
 ) -> pir_pb2.ExecuteFunctionResponse:
     source = textwrap.dedent(request.source_code)
     func_name = request.function_name
-    inputs = json.loads(request.arguments_json)
+
+    try:
+        inputs = json.loads(request.arguments_json)
+    except ValueError as e:
+        raise InvalidExecuteRequest(f"Malformed arguments_json: {e}") from e
 
     namespace = {}
-    exec(source, namespace)
-    func = namespace[func_name]
+    try:
+        exec(source, namespace)
+    except SyntaxError as e:
+        raise InvalidExecuteRequest(f"Malformed source_code: {e}") from e
+
+    try:
+        func = namespace[func_name]
+    except KeyError:
+        raise InvalidExecuteRequest(
+            f"Function {func_name!r} is not defined in source_code"
+        ) from None
 
     results = []
     for args, kwargs in inputs:

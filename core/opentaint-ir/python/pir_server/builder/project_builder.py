@@ -77,7 +77,9 @@ class ProjectBuilder:
                     )
             except SystemExit as e:
                 message = captured.getvalue().strip() or str(e)
-                raise InvalidMypyFlags(message[:2000]) from e
+                raise InvalidMypyFlags(
+                    f"Invalid mypy flags {self.mypy_flags}: {message[:2000]}"
+                ) from e
         else:
             options = mypy.options.Options()
 
@@ -93,29 +95,8 @@ class ProjectBuilder:
         return options
 
     def build(self) -> Iterator[pir_pb2.MypyModuleProto]:
-        try:
-            options = self._build_options()
-        except InvalidMypyFlags as e:
-            yield pir_pb2.MypyModuleProto(
-                name="__build_errors__",
-                errors=[f"Invalid mypy flags {self.mypy_flags}: {e}"],
-            )
-            return
-        except InvalidPythonVersion as e:
-            yield pir_pb2.MypyModuleProto(
-                name="__build_errors__",
-                errors=[str(e)],
-            )
-            return
-
-        try:
-            self._validate_package_roots()
-        except InvalidPackageRoot as e:
-            yield pir_pb2.MypyModuleProto(
-                name="__build_errors__",
-                errors=[str(e)],
-            )
-            return
+        options = self._build_options()
+        self._validate_package_roots()
 
         mypy_sources = []
         all_file_paths = []

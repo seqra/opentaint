@@ -1,6 +1,9 @@
 package org.opentaint.ir.impl.python
 
+import io.grpc.Context
 import io.grpc.ManagedChannel
+import io.grpc.Status
+import io.grpc.StatusRuntimeException
 import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.proto.BuildProjectRequest
 import org.opentaint.ir.impl.python.proto.ExecuteFunctionRequest
@@ -14,20 +17,42 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class PIRServerConnection private constructor(
-    private val rpcTimeout: Duration,
+    private val buildTimeout: Duration,
     private val processManager: PIRProcessManager,
     private val channel: ManagedChannel,
     val pythonVersion: String,
     val mypyVersion: String,
 ) : Closeable {
 
-    fun buildProject(request: BuildProjectRequest): Iterator<MypyModuleProto> =
-        stub().buildProject(request)
+    private var closed = false
 
-    fun executeFunction(request: ExecuteFunctionRequest): ExecuteFunctionResponse =
-        stub().executeFunction(request)
+    fun <T> buildProject(
+        request: BuildProjectRequest,
+        drain: (Iterator<MypyModuleProto>) -> T,
+    ): T = Context.current().withCancellation().use { cancellable ->
+        try {
+            cancellable.call { drain(stub(buildTimeout).buildProject(request)) }
+        } catch (e: StatusRuntimeException) {
+            throw translate(e)
+        }
+    }
+
+    private fun translate(e: StatusRuntimeException): RuntimeException = when (e.status.code) {
+        Status.Code.INVALID_ARGUMENT ->
+            PIRBuildException(e.status.description ?: e.message.orEmpty(), e)
+        Status.Code.DEADLINE_EXCEEDED ->
+            PIRBuildException(
+                "PIR build exceeded buildTimeout of $buildTimeout; raise PIRSettings.buildTimeout",
+                e,
+            )
+        else -> e
+    }
+
+    fun executeFunction(request: ExecuteFunctionRequest, timeout: Duration): ExecuteFunctionResponse =
+        stub(timeout).executeFunction(request)
 
     override fun close() {
+        closed = true
         try {
             shutdown(channel)
         } finally {
@@ -35,13 +60,14 @@ class PIRServerConnection private constructor(
         }
     }
 
-    private fun stub(): PIRServiceGrpc.PIRServiceBlockingStub =
-        PIRServiceGrpc.newBlockingStub(channel)
-            .withDeadlineAfter(rpcTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+    private fun stub(timeout: Duration): PIRServiceGrpc.PIRServiceBlockingStub {
+        check(!closed) { "Connection is closed" }
+        return newStub(channel, timeout)
+    }
 
     companion object {
-        private val HANDSHAKE_TIMEOUT: Duration = 10.seconds
-        private val CHANNEL_TERMINATION_TIMEOUT: Duration = 5.seconds
+        private val HANDSHAKE_TIMEOUT: Duration = 1.seconds
+        private val CHANNEL_TERMINATION_TIMEOUT: Duration = 1.seconds
 
         fun open(settings: PIRSettings): PIRServerConnection {
             val processManager = PIRProcessManager(
@@ -54,7 +80,7 @@ class PIRServerConnection private constructor(
                 channel = PIRChannelFactory.forPort(processManager.start())
                 val ping = handshake(processManager, channel)
                 return PIRServerConnection(
-                    rpcTimeout = settings.rpcTimeout,
+                    buildTimeout = settings.buildTimeout,
                     processManager = processManager,
                     channel = channel,
                     pythonVersion = ping.pythonVersion,
@@ -72,9 +98,7 @@ class PIRServerConnection private constructor(
             channel: ManagedChannel,
         ): PingResult {
             val response = try {
-                PIRServiceGrpc.newBlockingStub(channel)
-                    .withDeadlineAfter(HANDSHAKE_TIMEOUT.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-                    .ping(PingRequest.getDefaultInstance())
+                newStub(channel, HANDSHAKE_TIMEOUT).ping(PingRequest.getDefaultInstance())
             } catch (e: Exception) {
                 if (processManager.isRunning) throw e
                 throw PIRServerStartupException("Python server died before ping", e)
@@ -82,9 +106,19 @@ class PIRServerConnection private constructor(
             return PingResult(response.pythonVersion, response.mypyVersion)
         }
 
+        private fun newStub(
+            channel: ManagedChannel,
+            timeout: Duration,
+        ): PIRServiceGrpc.PIRServiceBlockingStub =
+            PIRServiceGrpc.newBlockingStub(channel)
+                .withDeadlineAfter(timeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
+
         private fun shutdown(channel: ManagedChannel) {
-            channel.shutdownNow()
-            channel.awaitTermination(CHANNEL_TERMINATION_TIMEOUT.inWholeSeconds, TimeUnit.SECONDS)
+            channel.shutdown()
+            if (!channel.awaitTermination(CHANNEL_TERMINATION_TIMEOUT.inWholeSeconds, TimeUnit.SECONDS)) {
+                channel.shutdownNow()
+                channel.awaitTermination(CHANNEL_TERMINATION_TIMEOUT.inWholeSeconds, TimeUnit.SECONDS)
+            }
         }
     }
 
@@ -98,3 +132,8 @@ fun PIRSettings.toBuildProjectRequest(): BuildProjectRequest =
         .setPythonVersion(pythonVersion ?: "")
         .addAllPackageRoots(packageRoots)
         .build()
+
+class PIRBuildException(
+    message: String,
+    cause: Throwable? = null,
+) : RuntimeException(message, cause)

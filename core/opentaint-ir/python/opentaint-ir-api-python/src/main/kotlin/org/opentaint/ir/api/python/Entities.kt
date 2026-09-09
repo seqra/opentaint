@@ -5,6 +5,7 @@ import org.opentaint.ir.api.common.CommonMethodParameter
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 private const val PIR_SERVER_PYTHON_ENV = "PIR_SERVER_PYTHON"
@@ -31,7 +32,7 @@ data class PIRSettings(
     val mypyFlags: List<String> = emptyList(),
     val serverModule: String = "pir_server",
     val serverStartupTimeout: Duration = 5.seconds,
-    val rpcTimeout: Duration = 120.seconds,
+    val buildTimeout: Duration = 5.minutes,
 ) {
     init {
         require(packageRoots.isNotEmpty()) { "packageRoots must not be empty" }
