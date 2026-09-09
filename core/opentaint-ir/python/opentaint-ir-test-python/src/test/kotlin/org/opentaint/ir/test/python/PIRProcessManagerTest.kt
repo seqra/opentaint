@@ -10,23 +10,20 @@ import org.opentaint.ir.impl.python.PIRServerStartupException
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermissions
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
-import java.util.stream.Collectors
 
 class PIRProcessManagerTest {
 
     @Test
     fun `startup fails within the timeout when readiness is never reported`() {
         val script = writeScript("#!/bin/sh\nexec sleep 300\n")
-        val manager = PIRProcessManager(
-            pythonExecutable = script,
-            startupTimeout = 2.seconds,
-        )
-
-        val elapsed = measureMillis {
-            assertThrows<PIRServerStartupException> { manager.start() }
+        val manager = newManager(script, startupTimeout = 2.seconds)
+        val elapsed = try {
+            measureMillis { assertThrows<PIRServerStartupException> { manager.start() } }
+        } finally {
+            manager.close()
         }
-        manager.close()
 
         assertTrue(elapsed < 30_000, "start() must honour startupTimeout, took ${elapsed}ms")
         assertFalse(manager.isRunning, "the hung server process must be destroyed")
@@ -35,13 +32,9 @@ class PIRProcessManagerTest {
     @Test
     fun `startup fails when the server dies before reporting readiness`() {
         val script = writeScript("#!/bin/sh\nexit 3\n")
-        val manager = PIRProcessManager(
-            pythonExecutable = script,
-            startupTimeout = 30.seconds,
-        )
-
-        val error = assertThrows<PIRServerStartupException> { manager.start() }
-        manager.close()
+        val error = newManager(script, startupTimeout = 30.seconds).use { manager ->
+            assertThrows<PIRServerStartupException> { manager.start() }
+        }
 
         assertTrue(
             error.message!!.contains("exited with code 3"),
@@ -52,19 +45,19 @@ class PIRProcessManagerTest {
     @Test
     fun `start rejects a second invocation instead of orphaning the first process`() {
         val script = writeScript("#!/bin/sh\nexec sleep 300\n")
-        val manager = PIRProcessManager(
-            pythonExecutable = script,
-            startupTimeout = 2.seconds,
-        )
-
-        assertThrows<PIRServerStartupException> { manager.start() }
-        assertThrows<IllegalStateException> { manager.start() }
-        manager.close()
+        newManager(script, startupTimeout = 2.seconds).use { manager ->
+            assertThrows<PIRServerStartupException> { manager.start() }
+            assertThrows<IllegalStateException> { manager.start() }
+        }
     }
 
     @Test
     fun `opening a connection to a server that dies leaves no working directory behind`() {
-        val script = writeScript("#!/bin/sh\nexit 3\n")
+        val recordDir = Files.createTempDirectory("pir-cwd-record")
+        recordDir.toFile().deleteOnExit()
+        val record = recordDir.resolve("cwd")
+        val script = writeScript("#!/bin/sh\npwd > '$record'\nexit 3\n")
+        record.toFile().deleteOnExit()
         val settings = PIRSettings(
             sources = emptyList(),
             packageRoots = listOf("."),
@@ -72,21 +65,18 @@ class PIRProcessManagerTest {
             serverStartupTimeout = 30.seconds,
         )
 
-        val before = serverWorkingDirectories()
         assertThrows<PIRServerStartupException> { PIRServerConnection.open(settings) }
 
-        assertEquals(before, serverWorkingDirectories(), "the server working directory leaked")
+        val cwd = Paths.get(Files.readString(record).trim())
+        assertFalse(Files.exists(cwd), "the server working directory leaked: $cwd")
     }
 
-    private fun serverWorkingDirectories(): Set<String> {
-        val tmp = Paths.get(System.getProperty("java.io.tmpdir"))
-        Files.list(tmp).use { paths ->
-            return paths
-                .map { it.fileName.toString() }
-                .filter { it.startsWith("pir-server-cwd") }
-                .collect(Collectors.toSet())
-        }
-    }
+    private fun newManager(script: String, startupTimeout: Duration) =
+        PIRProcessManager(
+            pythonExecutable = script,
+            startupTimeout = startupTimeout,
+            serverModule = "pir_server",
+        )
 
     private fun writeScript(body: String): String {
         val dir = Files.createTempDirectory("pir-fake-server")

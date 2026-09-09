@@ -1,5 +1,6 @@
 package org.opentaint.ir.impl.python
 
+import mu.KotlinLogging
 import org.opentaint.ir.api.python.*
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
@@ -8,6 +9,8 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
 
 private val LOG_INTERVAL = 10.seconds
+
+private val logger = KotlinLogging.logger {}
 
 class PIRClasspathLoader(private val settings: PIRSettings) {
 
@@ -61,11 +64,11 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
                 count++
 
                 if (lastLog.elapsedNow() >= LOG_INTERVAL) {
-                    System.err.println("PIR: Built $count modules ($unknownCount unknown)...")
+                    logger.info { "Built $count modules ($unknownCount unknown)..." }
                     lastLog = TimeSource.Monotonic.markNow()
                 }
             }
-            System.err.println("PIR: Finished. $count modules built, $unknownCount unknown.")
+            logger.info { "Finished. $count modules built, $unknownCount unknown." }
             result
         }
 }

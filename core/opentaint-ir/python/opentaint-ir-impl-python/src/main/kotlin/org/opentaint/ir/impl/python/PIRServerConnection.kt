@@ -11,6 +11,7 @@ import org.opentaint.ir.impl.python.proto.ExecuteFunctionResponse
 import org.opentaint.ir.impl.python.proto.MypyModuleProto
 import org.opentaint.ir.impl.python.proto.PIRServiceGrpc
 import org.opentaint.ir.impl.python.proto.PingRequest
+import org.opentaint.ir.impl.python.proto.PingResponse
 import java.io.Closeable
 import java.util.concurrent.TimeUnit
 import kotlin.time.Duration
@@ -66,7 +67,7 @@ class PIRServerConnection private constructor(
     }
 
     companion object {
-        private val HANDSHAKE_TIMEOUT: Duration = 1.seconds
+        private val HANDSHAKE_TIMEOUT: Duration = 5.seconds
         private val CHANNEL_TERMINATION_TIMEOUT: Duration = 1.seconds
 
         fun open(settings: PIRSettings): PIRServerConnection {
@@ -96,14 +97,11 @@ class PIRServerConnection private constructor(
         private fun handshake(
             processManager: PIRProcessManager,
             channel: ManagedChannel,
-        ): PingResult {
-            val response = try {
-                newStub(channel, HANDSHAKE_TIMEOUT).ping(PingRequest.getDefaultInstance())
-            } catch (e: Exception) {
-                if (processManager.isRunning) throw e
-                throw PIRServerStartupException("Python server died before ping", e)
-            }
-            return PingResult(response.pythonVersion, response.mypyVersion)
+        ): PingResponse = try {
+            newStub(channel, HANDSHAKE_TIMEOUT).ping(PingRequest.getDefaultInstance())
+        } catch (e: Exception) {
+            if (processManager.isRunning) throw e
+            throw PIRServerStartupException("Python server died before ping", e)
         }
 
         private fun newStub(
@@ -121,8 +119,6 @@ class PIRServerConnection private constructor(
             }
         }
     }
-
-    private data class PingResult(val pythonVersion: String, val mypyVersion: String)
 }
 
 fun PIRSettings.toBuildProjectRequest(): BuildProjectRequest =

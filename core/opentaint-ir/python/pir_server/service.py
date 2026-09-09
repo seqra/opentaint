@@ -23,12 +23,14 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
             yield from builder.build()
         except (InvalidMypyFlags, InvalidPythonVersion, InvalidPackageRoot) as e:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            return
 
     def ExecuteFunction(self, request, context):
         try:
             return execute_function(request)
         except InvalidExecuteRequest as e:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
+            return None
 
     def Ping(self, request, context):
         return pir_pb2.PingResponse(

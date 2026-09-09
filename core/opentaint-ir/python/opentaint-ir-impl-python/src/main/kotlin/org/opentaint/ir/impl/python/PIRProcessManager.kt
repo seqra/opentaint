@@ -14,7 +14,7 @@ import java.util.concurrent.TimeoutException
 class PIRProcessManager(
     private val pythonExecutable: String,
     private val startupTimeout: Duration,
-    private val serverModule: String = "pir_server",
+    private val serverModule: String,
 ) : Closeable {
 
     init {
@@ -24,6 +24,8 @@ class PIRProcessManager(
     private var process: Process? = null
 
     private var workingDirectory: Path? = null
+
+    val isRunning: Boolean get() = process?.isAlive == true
 
     fun start(): Int {
         check(process == null) { "Server already started" }
@@ -49,7 +51,7 @@ class PIRProcessManager(
 
         try {
             return ready.get(startupTimeout.inWholeMilliseconds, TimeUnit.MILLISECONDS)
-        } catch (e: TimeoutException) {
+        } catch (_: TimeoutException) {
             proc.destroyForcibly()
             throw PIRServerStartupException("Python server did not become ready within $startupTimeout")
         } catch (e: ExecutionException) {
@@ -97,7 +99,7 @@ class PIRProcessManager(
             process?.let { proc ->
                 try {
                     // Close stdin pipe — triggers the Python watchdog thread to exit
-                    try { proc.outputStream.close() } catch (_: Exception) {}
+                    runCatching { proc.outputStream.close() }
                     if (proc.isAlive) {
                         proc.waitFor(1, TimeUnit.SECONDS)
                     }
@@ -110,18 +112,10 @@ class PIRProcessManager(
             }
         } finally {
             process = null
-            workingDirectory?.let { runCatching { deleteRecursively(it) } }
+            workingDirectory?.let { runCatching { it.toFile().deleteRecursively() } }
             workingDirectory = null
         }
     }
-
-    private fun deleteRecursively(dir: Path) {
-        Files.walk(dir).use { paths ->
-            paths.sorted(Comparator.reverseOrder()).forEach { Files.deleteIfExists(it) }
-        }
-    }
-
-    val isRunning: Boolean get() = process?.isAlive == true
 }
 
 class PIRServerStartupException(
