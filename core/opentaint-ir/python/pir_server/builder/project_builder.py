@@ -173,9 +173,10 @@ class ProjectBuilder:
                 f"PIR: mypy reported {len(result.errors)} errors (non-fatal)",
                 file=sys.stderr,
             )
+            for message in result.errors:
+                print(f"PIR:   {message}", file=sys.stderr)
 
         source_paths = set(all_file_paths)
-        build_errors = result.manager.errors
 
         emitted = 0
         last_log = time.monotonic()
@@ -202,11 +203,6 @@ class ProjectBuilder:
                 )
                 event = pir_pb2.BuildEventProto()
                 serializer.serialize(event.module)
-                event.module.errors.extend(
-                    f"{line}: {severity}: {message}"
-                    for _, line, _, _, _, severity, message, _
-                    in build_errors.file_messages(state.xpath)
-                )
                 yield event
             except Exception as e:
                 print(
