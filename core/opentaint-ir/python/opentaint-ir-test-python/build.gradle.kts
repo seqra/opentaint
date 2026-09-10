@@ -15,10 +15,17 @@ val pirPythonPath = listOf(
 
 tasks.withType<Test>().configureEach {
     dependsOn(":python:generatePirProtoStubs")
-    dependsOn(":python:setupPirBenchmarkDeps")
     environment("PIR_SERVER_PYTHON", pirServerPython)
     environment("PYTHONPATH", pirPythonPath)
-    systemProperty("WEB_PROJECTS_DIR", webProjectsDir)
+
+    testLogging {
+        events("started", "passed", "failed", "skipped")
+        showStandardStreams = false
+        showExceptions = true
+        showCauses = true
+        showStackTraces = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
 }
 
 dependencies {
@@ -34,26 +41,30 @@ dependencies {
 }
 
 tasks.test {
-    if (project.hasProperty("allTiers")) {
-        dependsOn(setupWebProjects)
-    }
-
     useJUnitPlatform {
-        if (!project.hasProperty("allTiers")) {
-            excludeTags("tier1")
-        }
+        excludeTags("tier1")
     }
     maxParallelForks = 4
     maxHeapSize = "2g"
+}
 
-    // Test logging: show which tests start and pass/fail
+val testSourceSet = sourceSets["test"]
+
+tasks.register<Test>("benchmarkTest") {
+    group = "verification"
+    description = "Runs the Tier-1 benchmarks over installed packages and cloned web projects."
+    testClassesDirs = testSourceSet.output.classesDirs
+    classpath = testSourceSet.runtimeClasspath
+    useJUnitPlatform {
+        includeTags("tier1")
+    }
+    dependsOn(":python:setupPirBenchmarkDeps")
+    dependsOn(setupWebProjects)
+    systemProperty("WEB_PROJECTS_DIR", webProjectsDir)
+    maxParallelForks = 2
+    maxHeapSize = "8g"
     testLogging {
-        events("started", "passed", "failed", "skipped")
-        showStandardStreams = false
-        showExceptions = true
-        showCauses = true
-        showStackTraces = true
-        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+        showStandardStreams = true
     }
 }
 
@@ -63,13 +74,18 @@ val webProjectsDir = project.findProperty("pir.webprojects.dir")?.toString()
     ?: layout.buildDirectory.dir("web-projects").get().asFile.absolutePath
 val webProjectsManifest = layout.projectDirectory.file("web-projects.txt")
 
-fun run(vararg args: String, dir: File? = null, ignoreExit: Boolean = false) {
+fun exec(vararg args: String, dir: File? = null): Pair<Int, String> {
     val pb = ProcessBuilder(*args).redirectErrorStream(true)
     if (dir != null) pb.directory(dir)
     val proc = pb.start()
-    proc.inputStream.bufferedReader().forEachLine { println("  $it") }
-    val rc = proc.waitFor()
-    if (rc != 0 && !ignoreExit) {
+    val output = proc.inputStream.bufferedReader().readText()
+    return proc.waitFor() to output.trim()
+}
+
+fun run(vararg args: String, dir: File? = null) {
+    val (rc, output) = exec(*args, dir = dir)
+    output.lineSequence().forEach { println("  $it") }
+    if (rc != 0) {
         throw GradleException("Command failed (exit $rc): ${args.joinToString(" ")}")
     }
 }
@@ -93,7 +109,13 @@ val setupWebProjects = tasks.register("setupWebProjects") {
         for ((name, commit, url) in entries) {
             val projectDir = File(webProjectsDir, name)
             if (projectDir.exists()) {
+                val (rc, head) = exec("git", "rev-parse", "HEAD", dir = projectDir)
+                if (rc == 0 && head == commit) {
+                    println("[$name] Already at $commit")
+                    continue
+                }
                 println("[$name] Already exists, checking out $commit")
+                run("git", "fetch", "--depth=1", "origin", commit, dir = projectDir)
                 run("git", "checkout", commit, dir = projectDir)
             } else {
                 println("[$name] Cloning $url @ $commit")
