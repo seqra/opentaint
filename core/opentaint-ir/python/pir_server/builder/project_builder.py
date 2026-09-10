@@ -45,6 +45,15 @@ class InvalidPythonVersion(ValueError):
     pass
 
 
+class InvalidSource(ValueError):
+    pass
+
+
+def _reject_sources(rejected: list[str]) -> None:
+    if rejected:
+        raise InvalidSource("invalid sources: " + "; ".join(rejected))
+
+
 def parse_python_version(value):
     parts = value.split(".")
     if len(parts) < 2 or not all(p.isdigit() for p in parts[:2]):
@@ -113,45 +122,33 @@ class ProjectBuilder:
     def build(self) -> Iterator[pir_pb2.BuildEventProto]:
         options = self._build_options()
         self._validate_package_roots()
+        self._validate_sources()
 
         mypy_sources = []
-        all_file_paths = []
-
-        for s in self.sources:
-            if os.path.isfile(s):
-                all_file_paths.append(os.path.abspath(s))
-            elif os.path.isdir(s):
-                for root, dirs, files in os.walk(s):
-                    for f in files:
-                        if f.endswith(".py"):
-                            all_file_paths.append(
-                                os.path.abspath(os.path.join(root, f))
-                            )
+        all_file_paths = [os.path.abspath(s) for s in self.sources]
 
         fscache = FileSystemCache()
         finder = SourceFinder(fscache, options)
 
         seen_modules: dict[str, str] = {}
+        rejected = []
         for path in all_file_paths:
             try:
                 mod_name, base_dir = finder.crawl_up(path)
             except InvalidSourceList as e:
-                print(f"WARNING: Skipping {path}: {e}", file=sys.stderr)
+                rejected.append(f"{path}: has no module name: {e}")
                 continue
             if mod_name in seen_modules:
-                print(
-                    f"WARNING: Duplicate module '{mod_name}': "
-                    f"{path} (already: {seen_modules[mod_name]}), skipping",
-                    file=sys.stderr,
+                rejected.append(
+                    f"{path}: duplicates module '{mod_name}' "
+                    f"already provided by {seen_modules[mod_name]}"
                 )
                 continue
             seen_modules[mod_name] = path
             mypy_sources.append(
                 mypy.build.BuildSource(path=path, module=mod_name, base_dir=base_dir)
             )
-
-        if not mypy_sources:
-            return
+        _reject_sources(rejected)
 
         print(f"PIR: Building {len(mypy_sources)} sources...", file=sys.stderr)
 
@@ -174,9 +171,7 @@ class ProjectBuilder:
                 file=sys.stderr,
             )
 
-        source_paths = set()
-        for s in self.sources:
-            source_paths.add(os.path.abspath(s))
+        source_paths = set(all_file_paths)
 
         emitted = 0
         last_log = time.monotonic()
@@ -311,11 +306,23 @@ class ProjectBuilder:
                     f"pass {base} instead"
                 )
 
+    def _validate_sources(self) -> None:
+        if not self.sources:
+            raise InvalidSource("sources must not be empty")
+
+        rejected = []
+        for source in self.sources:
+            if os.path.isdir(source):
+                rejected.append(
+                    f"{source}: is a directory; expand it and pass the files"
+                )
+            elif not os.path.isfile(source):
+                rejected.append(f"{source}: no such file")
+            elif os.path.splitext(source)[1] not in (".py", ".pyi"):
+                rejected.append(f"{source}: not a Python source (.py or .pyi)")
+        _reject_sources(rejected)
+
     def _should_include(self, state, source_paths: set[str]) -> bool:
         if state.path is None:
             return False
-        abs_path = os.path.abspath(state.path)
-        for src in source_paths:
-            if abs_path == src or abs_path.startswith(src.rstrip(os.sep) + os.sep):
-                return True
-        return False
+        return os.path.abspath(state.path) in source_paths

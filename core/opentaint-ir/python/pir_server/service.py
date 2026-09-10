@@ -6,6 +6,7 @@ from pir_server.builder.project_builder import (
     InvalidMypyFlags,
     InvalidPackageRoot,
     InvalidPythonVersion,
+    InvalidSource,
     ProjectBuilder,
 )
 from pir_server.executor import InvalidExecuteRequest, execute_function
@@ -21,7 +22,12 @@ class PIRServiceServicer(pir_pb2_grpc.PIRServiceServicer):
         )
         try:
             yield from builder.build()
-        except (InvalidMypyFlags, InvalidPythonVersion, InvalidPackageRoot) as e:
+        except (
+            InvalidMypyFlags,
+            InvalidPythonVersion,
+            InvalidPackageRoot,
+            InvalidSource,
+        ) as e:
             context.abort(grpc.StatusCode.INVALID_ARGUMENT, str(e))
             return
 
