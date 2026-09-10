@@ -59,6 +59,7 @@ from mypy.nodes import (
     SetComprehension,
     DictionaryComprehension,
     GeneratorExpr,
+    TempNode,
     Expression,
     ARG_POS,
     ARG_OPT,
@@ -87,43 +88,34 @@ class AstSerializer:
         self.tree = tree
         self.module_name = module_name
         self.type_mapper = TypeMapper()
+        self.dropped: list[str] = []
+        self.unsupported_exprs: set[str] = set()
 
-    def serialize(
-        self, proto: pir_pb2.MypyModuleProto | None = None
-    ) -> pir_pb2.MypyModuleProto:
-        if proto is None:
-            proto = pir_pb2.MypyModuleProto()
+    def serialize(self, proto: pir_pb2.MypyModuleProto) -> None:
         proto.name = self.module_name
         proto.path = self.tree.path or ""
-        had_system_error = False
-        dropped: list[str] = []
         for defn in self.tree.defs:
             start = len(proto.defs)
             try:
                 self._serialize_definitions(defn, proto.defs)
-            except SystemError as e:
-                # SystemError from protobuf C extension corrupts internal state.
-                # Rebuild proto from scratch with definitions collected so far.
-                del proto.defs[start:]
-                dropped.append(self._dropped_message(e))
-                had_system_error = True
             except Exception as e:
                 del proto.defs[start:]
-                dropped.append(self._dropped_message(e))
-        if had_system_error:
-            # Rebuild proto to avoid corrupted C extension state
-            clean = pir_pb2.MypyModuleProto()
-            clean.CopyFrom(proto)
-            proto.Clear()
-            proto.CopyFrom(clean)
-        proto.errors.extend(dropped)
-        proto.imports.extend(self._collect_imports())
-        return proto
+                self.dropped.append(self._dropped_message(e))
+        proto.errors.extend(self.dropped)
 
     def _dropped_message(self, e: Exception) -> str:
         message = f"Dropped definition in {self.module_name}: {type(e).__name__}: {e}"
         print(f"WARNING: {message}", file=sys.stderr)
         return message
+
+    def _unsupported_expr(self, expr: Expression) -> None:
+        kind = type(expr).__name__
+        if kind in self.unsupported_exprs:
+            return
+        self.unsupported_exprs.add(kind)
+        message = f"Unsupported expression {kind} in {self.module_name}"
+        print(f"WARNING: {message}", file=sys.stderr)
+        self.dropped.append(message)
 
     def _serialize_definitions(
         self, defn, container, enclosing_class: str | None = None
@@ -154,8 +146,7 @@ class AstSerializer:
                 del container[-1]
         elif isinstance(defn, (Import, ImportFrom)):
             # Module-level Import / ImportFrom ride the `assignment` slot (typed MypyStmtProto,
-            # so it accepts any statement variant); module-level lowering peeks at this slot to
-            # register import bindings before any function body is lowered.
+            # so it accepts any statement variant).
             if not self._serialize_stmt(defn, container.add().assignment):
                 del container[-1]
 
@@ -166,7 +157,7 @@ class AstSerializer:
             f"{enclosing_class}.{class_def.name}" if enclosing_class else class_def.name
         )
         out.name = class_def.name
-        out.fullname = f"{self.module_name}.{own_qualifier}"
+        out.fullname = class_def.fullname or f"{self.module_name}.{own_qualifier}"
 
         if class_def.info:
             for base in class_def.info.bases:
@@ -176,6 +167,7 @@ class AstSerializer:
                 for mro_item in class_def.info.mro:
                     out.mro.append(mro_item.fullname)
             out.is_abstract = class_def.info.is_abstract
+            out.is_enum = class_def.info.is_enum
             if (
                 hasattr(class_def.info, "metadata")
                 and "dataclass" in class_def.info.metadata
@@ -503,7 +495,8 @@ class AstSerializer:
         out.unknown_pattern.kind = type(pattern).__name__
 
     def _serialize_assignment_stmt(self, stmt: AssignmentStmt, out) -> None:
-        self._serialize_expr(stmt.rvalue, out.rvalue)
+        if not isinstance(stmt.rvalue, TempNode):
+            self._serialize_expr(stmt.rvalue, out.rvalue)
         for lvalue in stmt.lvalues:
             self._serialize_expr(lvalue, out.lvalues.add())
         if stmt.type is not None:
@@ -695,6 +688,8 @@ class AstSerializer:
                     self._serialize_expr(c, cl.conditions.add())
         elif isinstance(expr, GeneratorExpr):
             self._serialize_generator_expr(expr, out.generator_expr)
+        else:
+            self._unsupported_expr(expr)
 
     def _serialize_generator_expr(self, gen: GeneratorExpr, out) -> None:
         self._serialize_expr(gen.left_expr, out.left_expr)
@@ -713,18 +708,8 @@ class AstSerializer:
         elif isinstance(defn, Decorator):
             return defn.func
         elif isinstance(defn, OverloadedFuncDef):
+            if defn.impl is not None:
+                return self._unwrap_func(defn.impl)
             if defn.items:
                 return self._unwrap_func(defn.items[0])
         return None
-
-    def _collect_imports(self) -> list[str]:
-        imports = []
-        for defn in self.tree.defs:
-            if isinstance(defn, Import):
-                for mod_id, _ in defn.ids:
-                    imports.append(mod_id)
-            elif isinstance(defn, ImportFrom):
-                imports.append(defn.id)
-            elif isinstance(defn, ImportAll):
-                imports.append(defn.id)
-        return imports

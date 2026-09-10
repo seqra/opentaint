@@ -88,7 +88,6 @@ class CallableShimTest {
         moduleInit = moduleInit(),
         classes = emptyList(),
         fields = emptyList(),
-        imports = emptyList(),
         diagnostics = emptyList<PIRDiagnostic>(),
     )
 

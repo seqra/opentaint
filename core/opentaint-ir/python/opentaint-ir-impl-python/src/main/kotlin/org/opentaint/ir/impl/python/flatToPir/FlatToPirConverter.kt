@@ -32,7 +32,6 @@ class FlatToPirConverter(
             functions = pirFunctions,
             fields = pirFields,
             moduleInit = pirModuleInit,
-            imports = flat.imports,
             diagnostics = flat.diagnostics,
         ).also { wireModuleBackRefs(it) }
     }

@@ -90,7 +90,6 @@ class ClosureAnalyzerTest {
         moduleInit = moduleInit(),
         classes = classes,
         fields = emptyList(),
-        imports = emptyList(),
         diagnostics = emptyList<PIRDiagnostic>(),
     )
 
@@ -557,7 +556,6 @@ class ClosureAnalyzerTest {
                 moduleInit = moduleInit(),
                 classes = listOf(c),
                 fields = emptyList(),
-                imports = emptyList(),
                 diagnostics = emptyList(),
             ),
         ).info

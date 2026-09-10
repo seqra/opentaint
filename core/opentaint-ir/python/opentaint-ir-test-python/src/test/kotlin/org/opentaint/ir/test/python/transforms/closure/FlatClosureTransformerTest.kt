@@ -116,7 +116,6 @@ class FlatClosureTransformerTest {
         moduleInit = moduleInit(),
         classes = classes,
         fields = emptyList(),
-        imports = emptyList(),
         diagnostics = emptyList<PIRDiagnostic>(),
     )
 

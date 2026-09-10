@@ -47,7 +47,6 @@ private class SimpleNameSyntheticModule(override val name: String) : PIRModule {
     override val classes: List<PIRClass> = emptyList()
     override val functions: List<PIRFunction> = emptyList()
     override val fields: List<PIRField> = emptyList()
-    override val imports: List<String> = emptyList()
     override val diagnostics: List<PIRDiagnostic> = emptyList()
     override val moduleInit: PIRFunction
         get() = error("Synthetic simple-name module has no init")

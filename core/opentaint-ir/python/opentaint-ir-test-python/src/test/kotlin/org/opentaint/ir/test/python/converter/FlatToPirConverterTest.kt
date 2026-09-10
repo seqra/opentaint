@@ -82,7 +82,6 @@ class FlatToPirConverterTest {
             ),
             classes = emptyList(),
             fields = listOf(FlatModuleField("x", FlatClassType("builtins.int"), true)),
-            imports = listOf("os"),
             diagnostics = emptyList(),
         )
 
@@ -95,7 +94,6 @@ class FlatToPirConverterTest {
         assertEquals("__module_init__", module.moduleInit.name)
         assertEquals(1, module.fields.size)
         assertEquals("x", module.fields[0].name)
-        assertEquals(listOf("os"), module.imports)
     }
 
     @Test
@@ -149,7 +147,6 @@ class FlatToPirConverterTest {
                 ),
             ),
             fields = emptyList(),
-            imports = emptyList(),
             diagnostics = emptyList(),
         )
 
@@ -209,7 +206,6 @@ class FlatToPirConverterTest {
                 ),
             ),
             fields = emptyList(),
-            imports = emptyList(),
             diagnostics = emptyList(),
         )
         return FlatToPirConverter(flat).convert().classes.single()
@@ -289,7 +285,6 @@ class FlatToPirConverterTest {
             moduleInit = stubModuleInit("mod.__module_init__"),
             classes = emptyList(),
             fields = emptyList(),
-            imports = emptyList(),
             diagnostics = emptyList(),
         )
 
@@ -316,7 +311,6 @@ class FlatToPirConverterTest {
             moduleInit = stubModuleInit(),
             classes = emptyList(),
             fields = emptyList(),
-            imports = emptyList(),
             diagnostics = listOf(PIRDiagnostic(PIRDiagnosticSeverity.ERROR, "test error", "fn", "TestException")),
         )
 

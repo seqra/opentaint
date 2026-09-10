@@ -93,6 +93,7 @@ private fun CfgSession.visitStmt(stmt: MypyStmtProto) {
 }
 
 internal fun CfgSession.visitAssignment(stmt: MypyAssignmentStmtProto, location: PIRPhysicalLocation?) {
+    if (!stmt.hasRvalue()) return
     val rhs = lowerExpr(stmt.rvalue)
     for (lvalue in stmt.lvaluesList) {
         assignTo(lvalue, rhs, location)

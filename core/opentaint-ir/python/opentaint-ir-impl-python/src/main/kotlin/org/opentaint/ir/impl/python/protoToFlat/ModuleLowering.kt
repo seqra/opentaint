@@ -17,10 +17,6 @@ import org.opentaint.ir.impl.python.protoToFlat.cfg.CfgBuild
 
 internal object ModuleLowering {
 
-    private val ENUM_BASE_CLASSES = setOf(
-        "enum.Enum", "enum.IntEnum", "enum.Flag", "enum.IntFlag",
-    )
-
     fun lower(astModule: MypyModuleProto): FlatModuleIR {
         val context = ModuleContext(moduleName = astModule.name)
 
@@ -45,7 +41,11 @@ internal object ModuleLowering {
                     val stmt = def.assignment
                     if (stmt.hasAssignment()) {
                         moduleFields.addAll(extractFields(stmt.assignment) { name, type ->
-                            FlatModuleField(name = name, type = type, hasInitializer = true)
+                            FlatModuleField(
+                                name = name,
+                                type = type,
+                                hasInitializer = stmt.assignment.hasRvalue(),
+                            )
                         })
                     }
                     moduleInitStmts.add(stmt)
@@ -78,7 +78,6 @@ internal object ModuleLowering {
             moduleInit = moduleInit,
             classes = classes,
             fields = moduleFields,
-            imports = astModule.importsList,
             diagnostics = context.diagnostics,
         )
 
@@ -120,7 +119,6 @@ internal object ModuleLowering {
         }
 
         val decorators = DecoratorLowering.fromClassDef(classDef)
-        val isEnum = classDef.baseClassesList.any { it in ENUM_BASE_CLASSES }
         val isDataclass = classDef.isDataclass || decorators.any { it.name == "dataclass" }
 
         return FlatClass(
@@ -134,7 +132,7 @@ internal object ModuleLowering {
             decorators = decorators,
             isAbstract = classDef.isAbstract,
             isDataclass = isDataclass,
-            isEnum = isEnum,
+            isEnum = classDef.isEnum,
         )
     }
 

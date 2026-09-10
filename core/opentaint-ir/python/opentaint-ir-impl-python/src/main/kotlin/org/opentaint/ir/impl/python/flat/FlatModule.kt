@@ -84,7 +84,6 @@ data class FlatModuleIR(
     val moduleInit: FlatFunctionIR,
     val classes: List<FlatClass>,
     val fields: List<FlatModuleField>,
-    val imports: List<String>,
     val diagnostics: List<PIRDiagnostic>,
 ) {
     init {

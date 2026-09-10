@@ -109,8 +109,7 @@ message MypyModuleProto {
   string name = 1;                            // Dotted module name (e.g. "click.core")
   string path = 2;                            // Absolute file path
   repeated MypyDefinitionProto defs = 3;      // Top-level definitions
-  repeated string imports = 4;                // Collected import strings
-  repeated string errors = 5;                 // Build errors (mypy errors for this module)
+  repeated string errors = 4;                 // Build errors (mypy errors for this module)
 }
 
 // A module that was built, or a failure that belongs to no module.

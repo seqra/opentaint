@@ -55,7 +55,6 @@ interface PIRModule {
     val functions: List<PIRFunction>
     val fields: List<PIRField>
     val moduleInit: PIRFunction
-    val imports: List<String>
     val diagnostics: List<PIRDiagnostic>
 }
 

@@ -25,7 +25,6 @@ data class PIRModuleImpl(
     override val functions: List<PIRFunction>,
     override val fields: List<PIRField>,
     override val moduleInit: PIRFunction,
-    override val imports: List<String>,
     override val diagnostics: List<PIRDiagnostic> = emptyList(),
 ) : PIRModule {
     override fun equals(other: Any?): Boolean = this === other || (other is PIRModuleImpl && name == other.name && path == other.path)
