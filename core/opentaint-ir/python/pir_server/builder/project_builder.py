@@ -5,6 +5,7 @@ import io
 import os
 import sys
 import time
+import traceback
 import mypy.build
 import mypy.defaults
 import mypy.main
@@ -159,10 +160,12 @@ class ProjectBuilder:
                 fscache=fscache,
             )
         except CompileError as e:
-            yield from self._errors_to_events(e.messages, seen_modules)
+            yield _failure_event(e.messages)
             return
         except Exception as e:
-            yield from self._exception_to_events(e, seen_modules)
+            print(f"mypy build failed: {type(e).__name__}: {e}", file=sys.stderr)
+            traceback.print_exc()
+            yield _failure_event([f"{type(e).__name__}: {e}"])
             return
 
         if result.errors:
@@ -172,16 +175,12 @@ class ProjectBuilder:
             )
 
         source_paths = set(all_file_paths)
+        build_errors = result.manager.errors
 
         emitted = 0
         last_log = time.monotonic()
-        total = sum(
-            1
-            for _, st in result.graph.items()
-            if st.tree and self._should_include(st, source_paths)
-        )
 
-        for module_name, state in result.graph.items():
+        for processed, (module_name, state) in enumerate(result.graph.items(), 1):
             tree: MypyFile | None = state.tree
             if tree is None:
                 continue
@@ -191,7 +190,7 @@ class ProjectBuilder:
             now = time.monotonic()
             if now - last_log >= 10.0:
                 print(
-                    f"PIR: Serializing module {emitted}/{total}: {module_name}",
+                    f"PIR: Serializing module {processed}/{len(result.graph)}: {module_name}",
                     file=sys.stderr,
                 )
                 last_log = now
@@ -203,6 +202,11 @@ class ProjectBuilder:
                 )
                 event = pir_pb2.BuildEventProto()
                 serializer.serialize(event.module)
+                event.module.errors.extend(
+                    f"{line}: {severity}: {message}"
+                    for _, line, _, _, _, severity, message, _
+                    in build_errors.file_messages(state.xpath)
+                )
                 yield event
             except Exception as e:
                 print(
@@ -219,73 +223,6 @@ class ProjectBuilder:
             emitted += 1
 
         print(f"PIR: Done. Emitted {emitted} modules.", file=sys.stderr)
-
-    def _errors_to_events(
-        self, messages: list[str], seen_modules: dict[str, str]
-    ) -> Iterator[pir_pb2.BuildEventProto]:
-        path_to_module = sorted(
-            ((v, k) for k, v in seen_modules.items()),
-            key=lambda x: -len(x[0]),
-        )
-
-        module_errors: dict[str, list[str]] = {}
-        unmapped: list[str] = []
-
-        for msg in messages:
-            mapped = False
-            for path, mod in path_to_module:
-                if path in msg:
-                    module_errors.setdefault(mod, []).append(msg)
-                    mapped = True
-                    break
-            if not mapped:
-                for path, mod in path_to_module:
-                    rel = os.path.relpath(path)
-                    if rel in msg:
-                        module_errors.setdefault(mod, []).append(msg)
-                        mapped = True
-                        break
-            if not mapped:
-                unmapped.append(msg)
-
-        for mod_name, errors in module_errors.items():
-            path = seen_modules.get(mod_name, "")
-            yield _error_module_event(mod_name, path, errors)
-
-        if unmapped:
-            yield _failure_event(unmapped)
-
-    def _exception_to_events(
-        self, exc: Exception, seen_modules: dict[str, str]
-    ) -> Iterator[pir_pb2.BuildEventProto]:
-        import traceback as tb
-
-        error_msg = f"{type(exc).__name__}: {exc}"
-        print(f"mypy build failed: {error_msg}", file=sys.stderr)
-        tb.print_exc()
-
-        exc_str = str(exc)
-        tb_str = "".join(tb.format_exception(type(exc), exc, exc.__traceback__))
-
-        best_match: str | None = None
-        for mod_name in seen_modules:
-            if mod_name in exc_str:
-                if best_match is None or len(mod_name) > len(best_match):
-                    best_match = mod_name
-        if best_match:
-            yield _error_module_event(
-                best_match, seen_modules[best_match], [error_msg]
-            )
-            return
-
-        for path, mod_name in sorted(
-            ((v, k) for k, v in seen_modules.items()), key=lambda x: -len(x[0])
-        ):
-            if path in tb_str or os.path.relpath(path) in tb_str:
-                yield _error_module_event(mod_name, path, [error_msg])
-                return
-
-        yield _failure_event([error_msg])
 
     def _validate_package_roots(self) -> None:
         if not self.package_roots:
