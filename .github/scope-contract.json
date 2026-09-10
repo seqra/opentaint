@@ -82,25 +82,25 @@
         "defaultScopes": ["core"],
         "rules": [
           {
-            "requiredScopes": ["autobuilder"],
+            "requiredScopes": ["core", "autobuilder"],
             "globs": [
               "opentaint-jvm-autobuilder/**"
             ]
           },
           {
-            "requiredScopes": ["go-server"],
+            "requiredScopes": ["core", "go-server"],
             "globs": [
               "opentaint-ir/go/go-ssa-server/**"
             ]
           },
           {
-            "requiredScopes": ["analyzer", "go-server"],
+            "requiredScopes": ["core", "analyzer", "go-server"],
             "globs": [
               "opentaint-ir/go/proto/**"
             ]
           },
           {
-            "requiredScopes": ["analyzer"],
+            "requiredScopes": ["core", "analyzer"],
             "globs": [
               "src/**",
               "samples/**",
