@@ -8,7 +8,7 @@ on:
       - 'core/opentaint-ir/**'
       - 'core/opentaint-common-build/**'
       - '.github/workflows/ci-ir.yaml'
-    branches: [ "main" ]
+    branches: [ "main", "saloed/python-support" ]
   pull_request:
     paths:
       - 'core/opentaint-ir/**'
@@ -174,5 +174,67 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: gradle-reports-go-ir-benchmark
+          path: '**/build/reports/'
+          retention-days: 1
+
+  python-ir:
+    name: Run Python-ir tests
+    runs-on: ubuntu-latest
+    container: python:3.13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'main' }}
+
+      - name: Run tests
+        run: ./gradlew opentaint-ir:python:opentaint-ir-test-python:check
+        working-directory: core
+
+      - name: Upload Gradle reports
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports-python-ir-tests
+          path: '**/build/reports/'
+          retention-days: 1
+
+  python-ir-bench:
+    name: Run Python-ir benchmark tests
+    runs-on: ubuntu-latest
+    container: python:3.13
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: 17
+          distribution: 'temurin'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: ${{ github.ref != 'main' }}
+
+      - name: Run benchmark tests
+        run: ./gradlew opentaint-ir:python:opentaint-ir-test-python:benchmarkTest
+        working-directory: core
+
+      - name: Upload Gradle reports
+        if: (!cancelled())
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-reports-python-ir-benchmark
           path: '**/build/reports/'
           retention-days: 1
