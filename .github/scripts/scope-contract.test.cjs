@@ -22,6 +22,23 @@ const EXPECTED_SCOPES = [
   'rules',
 ];
 
+function assertSuggestsExactScopes(scopeList, paths, expectedScopes) {
+  const expected = engine.contract.scopes
+    .filter(scope => expectedScopes.split(', ').includes(scope))
+    .join(', ');
+  const expectedSuggestion = `Use exactly these scopes: ${expected}`;
+  assert.throws(
+    () => engine.validateScopePaths(scopeList, paths),
+    error => {
+      assert.doesNotMatch(error.message, /Suggested scopes:/);
+      const suggestionStart = error.message.indexOf(expectedSuggestion);
+      assert.notEqual(suggestionStart, -1, error.message);
+      assert.equal(error.message.slice(suggestionStart), expectedSuggestion);
+      return true;
+    },
+  );
+}
+
 test('the contract has one ordered scope declaration', () => {
   assert.deepEqual(engine.contract.scopes, EXPECTED_SCOPES);
   assert.doesNotThrow(() => engine.validateContract(engine.contract));
@@ -138,21 +155,33 @@ test('all scope subsets agree with the formal compatibility policy', () => {
 test('path ownership uses the declarative root contract', () => {
   const cases = new Map([
     ['model/go/dataflow/example/model.go', ['model']],
-    ['core/src/test/kotlin/example/ModelTest.kt', ['analyzer']],
-    ['core/opentaint-ir/go/tests/src/test/kotlin/IrTest.kt', ['analyzer']],
+    ['core/src/test/kotlin/example/ModelTest.kt', ['core', 'analyzer']],
+    [
+      'core/opentaint-ir/go/tests/src/test/kotlin/IrTest.kt',
+      ['core', 'analyzer'],
+    ],
     ['core/build.gradle.kts', ['core']],
-    ['core/opentaint-jvm-autobuilder/src/Main.kt', ['autobuilder']],
+    [
+      'core/opentaint-jvm-autobuilder/src/Main.kt',
+      ['core', 'autobuilder'],
+    ],
     ['core/opentaint-project-model/src/Project.kt', ['core']],
     ['core/opentaint-utils/cli-util/src/Cli.kt', ['core']],
-    ['core/opentaint-ir/go/go-ir-api/src/Program.kt', ['analyzer']],
-    ['core/opentaint-ir/go/go-ssa-server/server.go', ['go-server']],
+    [
+      'core/opentaint-ir/go/go-ir-api/src/Program.kt',
+      ['core', 'analyzer'],
+    ],
+    [
+      'core/opentaint-ir/go/go-ssa-server/server.go',
+      ['core', 'go-server'],
+    ],
     [
       'core/opentaint-ir/go/proto/goir/service.proto',
-      ['analyzer', 'go-server'],
+      ['core', 'analyzer', 'go-server'],
     ],
     [
       'core/opentaint-dataflow-core/opentaint-go-dataflow/src/Dataflow.kt',
-      ['analyzer'],
+      ['core', 'analyzer'],
     ],
     ['rules/ruleset/go/lib/example.yaml', ['rules']],
     ['cli/README.md', ['cli']],
@@ -223,6 +252,18 @@ test('path ownership rejects an incompatible requirement set', () => {
   );
 });
 
+test('path ownership rejects incompatible additive default and refinement scopes', () => {
+  const incompatible = structuredClone(engine.contract);
+  incompatible.ownership.roots.core.rules.push({
+    requiredScopes: ['cli'],
+    globs: ['cli-only/**'],
+  });
+  assert.throws(
+    () => engine.validateContract(incompatible),
+    /cli scope cannot occur with the core scope/,
+  );
+});
+
 test('path ownership rejects malformed requirement sets', () => {
   for (const requiredScopes of [[], ['core', 'core'], ['unknown']]) {
     const malformed = structuredClone(engine.contract);
@@ -231,16 +272,24 @@ test('path ownership rejects malformed requirement sets', () => {
   }
 });
 
-test('a shared Go IR protocol path requires both product scopes', () => {
+test('a shared Go IR protocol path requires core and both product scopes', () => {
   const paths = ['core/opentaint-ir/go/proto/goir/service.proto'];
   assert.doesNotThrow(
-    () => engine.validateScopePaths('analyzer, go-server', paths),
+    () => engine.validateScopePaths('core, analyzer, go-server', paths),
   );
   assert.doesNotThrow(
-    () => engine.validateScopePaths('go-server, analyzer', paths),
+    () => engine.validateScopePaths('go-server, analyzer, core', paths),
   );
-  assert.throws(() => engine.validateScopePaths('analyzer', paths));
-  assert.throws(() => engine.validateScopePaths('go-server', paths));
+  assertSuggestsExactScopes(
+    'analyzer, go-server',
+    paths,
+    'core, analyzer, go-server',
+  );
+  assertSuggestsExactScopes(
+    'core, analyzer',
+    paths,
+    'core, analyzer, go-server',
+  );
   assert.throws(() => engine.validateScopePaths('ir', paths));
 });
 
@@ -251,23 +300,29 @@ test('exact path validation requires all and only used owners', () => {
     'rules/ruleset/go/lib/example.yaml',
   ];
   assert.doesNotThrow(
-    () => engine.validateScopePaths('model, analyzer, rules', paths),
+    () => engine.validateScopePaths('model, core, analyzer, rules', paths),
   );
-  assert.throws(() => engine.validateScopePaths('model', paths));
-  assert.throws(
-    () => engine.validateScopePaths('model, analyzer, rules, docs', paths),
+  assertSuggestsExactScopes(
+    'model, rules',
+    paths,
+    'model, core, analyzer, rules',
+  );
+  assertSuggestsExactScopes(
+    'model, core, analyzer, rules, docs',
+    paths,
+    'model, core, analyzer, rules',
   );
 });
 
 test('core paths follow analyzer and autobuilder release effects', () => {
-  assert.doesNotThrow(() => engine.validateScopePaths('analyzer, model', [
+  assertSuggestsExactScopes('analyzer, model', [
     'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
     'model/go/dataflow/example/model.go',
-  ]));
-  assert.throws(() => engine.validateScopePaths('core, model', [
+  ], 'core, analyzer, model');
+  assertSuggestsExactScopes('core, model', [
     'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
     'model/go/dataflow/example/model.go',
-  ]));
+  ], 'core, analyzer, model');
   assert.doesNotThrow(() => engine.validateScopePaths('core, model', [
     'core/opentaint-project-model/src/main/kotlin/Project.kt',
     'model/go/dataflow/example/model.go',
@@ -278,42 +333,66 @@ test('direct component paths always require their own scope', () => {
   const cases = [
     {
       path: 'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
-      scope: 'analyzer',
-      aliases: ['core', 'model'],
+      scopes: ['core', 'analyzer'],
+      aliases: ['analyzer', 'core', 'model'],
     },
     {
       path: 'core/opentaint-jvm-autobuilder/src/Main.kt',
-      scope: 'autobuilder',
-      aliases: ['core'],
+      scopes: ['core', 'autobuilder'],
+      aliases: ['autobuilder', 'core', 'analyzer'],
     },
     {
       path: 'core/opentaint-ir/go/go-ssa-server/server.go',
-      scope: 'go-server',
-      aliases: ['core'],
+      scopes: ['core', 'go-server'],
+      aliases: ['go-server', 'core', 'analyzer'],
     },
     {
       path: 'model/go/dataflow/example/model.go',
-      scope: 'model',
+      scopes: ['model'],
       aliases: ['analyzer', 'core'],
     },
   ];
 
-  for (const { path, scope, aliases } of cases) {
+  for (const { path, scopes, aliases } of cases) {
+    const expected = scopes.join(', ');
     assert.doesNotThrow(
-      () => engine.validateScopePaths(scope, [path]),
-      `${path} must accept ${scope}`,
+      () => engine.validateScopePaths(expected, [path]),
+      `${path} must accept ${expected}`,
     );
     for (const alias of aliases) {
-      assert.throws(
-        () => engine.validateScopePaths(alias, [path]),
-        `${path} must reject ${alias}`,
-      );
-      assert.throws(
-        () => engine.validateScopePaths(`${scope}, ${alias}`, [path]),
-        `${path} must reject unused scope ${alias}`,
-      );
+      assertSuggestsExactScopes(alias, [path], expected);
+      if (!scopes.includes(alias)) {
+        assertSuggestsExactScopes(
+          `${expected}, ${alias}`,
+          [path],
+          expected,
+        );
+      }
     }
   }
+});
+
+test('scope mismatch suggestions aggregate and order every path owner', () => {
+  const paths = [
+    'core/samples/src/main/java/test/samples/DataFlowBenchCallbackSample.java',
+    'core/opentaint-jvm-autobuilder/src/Main.kt',
+    'model/go/dataflow/example/model.go',
+  ];
+
+  assertSuggestsExactScopes(
+    'core, model, docs',
+    paths,
+    'core, analyzer, autobuilder, model',
+  );
+  assertSuggestsExactScopes(
+    'model, core, analyzer, autobuilder, docs',
+    paths,
+    'core, analyzer, autobuilder, model',
+  );
+  assert.doesNotThrow(() => engine.validateScopePaths(
+    'core, analyzer, autobuilder, model',
+    paths,
+  ));
 });
 
 test('release scope sets encode scope release effects', () => {

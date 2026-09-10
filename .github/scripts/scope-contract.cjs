@@ -175,6 +175,10 @@ function validateContract(candidate) {
     for (const [index, rule] of (route.rules || []).entries()) {
       validateRule(rule, knownScopes, `ownership.roots.${root}.rules[${index}]`);
       validateScopeCompatibility(rule.requiredScopes, candidate);
+      validateScopeCompatibility(
+        [...new Set([...route.defaultScopes, ...rule.requiredScopes])],
+        candidate,
+      );
     }
   }
   const documentation = ownership.documentation;
@@ -241,6 +245,25 @@ function splitScopes(scopeList) {
   return scopeList.split(',').map(scope => scope.trim());
 }
 
+function scopesInContractOrder(scopes, candidate) {
+  const selected = new Set(scopes);
+  return candidate.scopes.filter(scope => selected.has(scope));
+}
+
+function scopeMismatchMessage(scopes, expected, candidate = contract) {
+  const missing = expected.filter(scope => !scopes.includes(scope));
+  const extra = scopesInContractOrder(
+    scopes.filter(scope => !expected.includes(scope)),
+    candidate,
+  );
+  const differences = [];
+  if (missing.length > 0) differences.push(`missing: ${missing.join(', ')}`);
+  if (extra.length > 0) differences.push(`extra: ${extra.join(', ')}`);
+  const detail = differences.length > 0 ? ` (${differences.join('; ')})` : '';
+  const suggestion = expected.join(', ');
+  return `Scope/path mismatch${detail}. Use exactly these scopes: ${suggestion}`;
+}
+
 function validateScopeList(scopeList, candidate = contract) {
   validateContract(candidate);
   assert(typeof scopeList === 'string' && scopeList.length > 0, 'A scope list is required');
@@ -286,7 +309,10 @@ function requiredScopesForPath(candidatePath, candidate = contract) {
   const route = candidate.ownership.roots[root];
   if (route) {
     const refined = oneRuleRequirements(route.rules || [], relative, candidatePath);
-    return [...(refined || route.defaultScopes)];
+    // A refinement adds ownership to the route; it does not replace the
+    // route's base ownership. In particular, every path under core keeps the
+    // core scope while component-specific paths add their product scopes.
+    return [...new Set([...route.defaultScopes, ...(refined || [])])];
   }
 
   const docs = candidate.ownership.documentation;
@@ -313,30 +339,23 @@ function validateScopePaths(scopeList, paths, candidate = contract) {
   );
   const guardedRequirements = requirements.filter(required => required !== null);
   if (guardedRequirements.length === 0) {
-    assert(
-      scopes.length === 1 && scopes[0] === 'ci',
-      'An ignored-only change must use only the ci scope',
-    );
+    const expected = ['ci'];
+    if (scopes.length !== 1 || scopes[0] !== 'ci') {
+      throw new ScopeContractError(scopeMismatchMessage(scopes, expected, candidate));
+    }
     return scopes;
   }
 
-  const selected = new Set(scopes);
-  const used = new Set();
-
-  for (let index = 0; index < paths.length; index += 1) {
-    const changedPath = paths[index];
-    const required = requirements[index];
-    if (required === null) continue;
-    for (const scope of required) {
-      assert(
-        selected.has(scope),
-        `Changed path '${changedPath}' requires scope '${scope}'`,
-      );
-      used.add(scope);
-    }
+  const required = new Set();
+  for (const requirement of guardedRequirements) {
+    for (const scope of requirement) required.add(scope);
   }
-  for (const scope of scopes) {
-    assert(used.has(scope), `Scope '${scope}' does not own a changed path`);
+  const expected = scopesInContractOrder(required, candidate);
+  const selected = new Set(scopes);
+  const matchesExactly =
+    expected.length === selected.size && expected.every(scope => selected.has(scope));
+  if (!matchesExactly) {
+    throw new ScopeContractError(scopeMismatchMessage(scopes, expected, candidate));
   }
   return scopes;
 }
