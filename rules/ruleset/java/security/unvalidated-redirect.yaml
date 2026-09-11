@@ -1,5 +1,5 @@
 rules:
-  - id: unvalidated-redirect-in-servlet-app
+  - id: unvalidated-redirect
     severity: WARNING
     message: >-
       Application redirects to a destination URL specified by a user-supplied
@@ -15,6 +15,10 @@ rules:
         sufficient validation. Attackers can exploit this to send users to malicious websites while making
         the link appear to come from a trusted domain (phishing),
         bypass intermediate access checks, or chain the redirect into broader attacks.
+
+        This rule covers both Servlet response APIs and Spring MVC redirect values such as
+        `RedirectView`, `ModelAndView("redirect:...")`, and annotated handler returns beginning with
+        `redirect:`.
 
         Vulnerable code sample
 
@@ -119,131 +123,9 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: untrusted-data
-        - tag: servlet-unvalidated-redirect-sink
+        - tag: untrusted-data-source
+          as: source
+        - tag: unvalidated-redirect-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$URL'
-
-  - id: unvalidated-redirect-in-spring-app
-    severity: WARNING
-    message: >-
-      Application redirects to a destination URL specified by a user-supplied
-      parameter that is not validated. This could direct users to malicious locations.
-      Consider using an allowlist to validate URLs.
-    metadata:
-      cwe:
-        - CWE-601
-      short-description: Application redirects to user-manipulated URL which can be malicious
-      full-description: |-
-        Unvalidated redirects (also called “open redirects”) occur when a web application accepts untrusted input that specifies a URL to redirect to, and then performs the redirect without sufficient validation. In Spring MVC/Boot applications, this often happens when controllers return a `redirect:` view or `RedirectView` using user-supplied data. Attackers can exploit this to trick users into visiting malicious sites via URLs that appear to be from a trusted domain, or to chain redirects into other attacks.
-
-        Vulnerable code sample
-
-        ```java
-        @Controller
-        public class RedirectController {
-
-            @GetMapping("/redirect")
-            public String redirect(@RequestParam("url") String url) {
-                // VULNERABLE: unvalidated user-controlled URL
-                return "redirect:" + url;
-            }
-        }
-        ```
-
-        Or with `RedirectView`:
-
-        ```java
-        @Controller
-        public class RedirectController {
-
-            @GetMapping("/redirect")
-            public RedirectView redirect(@RequestParam("url") String url) {
-                // VULNERABLE: unvalidated user-controlled URL
-                return new RedirectView(url);
-            }
-        }
-        ```
-
-        To remediate this issue, avoid redirecting to arbitrary URLs derived directly from user input. Prefer mapping short, controlled identifiers to known internal routes, or if external redirects are required, strictly validate against a whitelist of allowed hosts and schemes.
-
-        Example: safer internal redirects using a target name instead of a full URL:
-
-        ```java
-        @Controller
-        public class SafeRedirectController {
-
-            private static final Map<String, String> ALLOWED_TARGETS = Map.of(
-                "home",    "/home",
-                "profile", "/user/profile",
-                "orders",  "/orders/list"
-            );
-
-            @GetMapping("/redirect")
-            public String redirect(
-                    @RequestParam(value = "target", required = false) String target) {
-
-                // Default safe page
-                String path = ALLOWED_TARGETS.getOrDefault(target, "/home");
-
-                // Only internal paths, no scheme/host
-                return "redirect:" + path;
-            }
-        }
-        ```
-
-        Example: if you must support external redirects, validate against an allowlist of domains:
-
-        ```java
-        @Controller
-        public class ExternalRedirectController {
-
-            private static final Set<String> ALLOWED_DOMAINS = Set.of(
-                "example.com",
-                "trusted-partner.com"
-            );
-
-            @GetMapping("/external-redirect")
-            public String externalRedirect(
-                    @RequestParam("url") String url,
-                    HttpServletRequest request) {
-
-                try {
-                    URI uri = new URI(url);
-                    String host   = uri.getHost();
-                    String scheme = uri.getScheme();
-
-                    if (host != null
-                            && ("http".equalsIgnoreCase(scheme)
-                                || "https".equalsIgnoreCase(scheme))
-                            && ALLOWED_DOMAINS.contains(host.toLowerCase())) {
-
-                        // Safe: host and scheme validated against allowlist
-                        return "redirect:" + uri.toString();
-                    }
-                } catch (URISyntaxException e) {
-                    // fall through to safe default
-                }
-
-                // Fallback to a safe internal page on any failure or disallowed host
-                return "redirect:/home";
-            }
-        }
-        ```
-      references:
-        - https://find-sec-bugs.github.io/bugs.htm#UNVALIDATED_REDIRECT
-        - https://cwe.mitre.org/data/definitions/601.html
-      provenance: https://find-sec-bugs.github.io/bugs.htm#UNVALIDATED_REDIRECT
-    languages:
-      - java
-    mode: join
-    join:
-      refs:
-        - tag: spring-untrusted-data-source
-          as: untrusted-data
-        - tag: spring-unvalidated-redirect-sink
-          as: sink
-      on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$URL'
+        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'

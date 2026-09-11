@@ -1,4 +1,4 @@
-This skill writes only each unit entry's `rule_id` and its `stages.tests_passing`, once the lib rules exist and every sample on the side passes. `rule_id` is the created lib rule's ref, or a built-in ref when you referenced a built-in instead of authoring one. Don't add a top-level `artifact` — the path is derivable from `rule_id`. A blocked unit stays `tests_passing: pending`.
+This skill writes each unit entry's implementing `rule_id` and the unit's `stages.tests_passing`. `rule_id` is a `<relative-yaml-path>#<id>` locator for either the custom lib rule created for that entry or an existing built-in lib rule proven to cover it. Preserve the source unit's top-level `tag` and every sink `groups[].tag`, those tags are the authoring contract. A blocked unit stays `tests_passing: pending`.
 
 {% include "shared/tracking/source-unit.md" %}
 

@@ -3,7 +3,7 @@ rules:
     options:
       lib: true
     tags:
-      - servlet-xss-sink
+      - xss-sink
     severity: NOTE
     message: Direct write of unvalidated user input into a response without safe content type
     metadata:
@@ -77,4 +77,47 @@ rules:
                     - pattern: MediaType.IMAGE_PNG_VALUE
                     - pattern: MediaType.IMAGE_JPEG_VALUE
                     - pattern: MediaType.IMAGE_GIF_VALUE
+          - focus-metavariable: $UNTRUSTED
+
+      - patterns:
+          - pattern-either:
+              - pattern: |
+                  (HttpServletResponse $R).setContentType("$CT_HTML");
+                  ...
+                  $W = (HttpServletResponse $R).getWriter(...);
+                  ...
+                  $W.$WRITE(..., $UNTRUSTED, ...);
+              - pattern: |
+                  (HttpServletResponse $R).setHeader("Content-Type", "$CT_HTML");
+                  ...
+                  $W = (HttpServletResponse $R).getWriter(...);
+                  ...
+                  $W.$WRITE(..., $UNTRUSTED, ...);
+              - pattern: |
+                  (HttpServletResponse $R).addHeader("Content-Type", "$CT_HTML");
+                  ...
+                  $W = (HttpServletResponse $R).getWriter(...);
+                  ...
+                  $W.$WRITE(..., $UNTRUSTED, ...);
+              - pattern: |
+                  (HttpServletResponse $R).setContentType("$CT_HTML");
+                  ...
+                  $S = (HttpServletResponse $R).getOutputStream(...);
+                  ...
+                  $S.$WRITE(..., $UNTRUSTED, ...);
+              - pattern: |
+                  (HttpServletResponse $R).setHeader("Content-Type", "$CT_HTML");
+                  ...
+                  $S = (HttpServletResponse $R).getOutputStream(...);
+                  ...
+                  $S.$WRITE(..., $UNTRUSTED, ...);
+              - pattern: |
+                  (HttpServletResponse $R).addHeader("Content-Type", "$CT_HTML");
+                  ...
+                  $S = (HttpServletResponse $R).getOutputStream(...);
+                  ...
+                  $S.$WRITE(..., $UNTRUSTED, ...);
+          - metavariable-regex:
+              metavariable: $CT_HTML
+              regex: '^text/html(\s*;.*)?$'
           - focus-metavariable: $UNTRUSTED

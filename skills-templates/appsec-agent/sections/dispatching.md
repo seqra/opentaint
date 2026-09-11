@@ -10,7 +10,7 @@ For a `deep` approximation round, also pass `sinks: true`. A subagent inherits t
 
 Stage context:
 
-- `sources` — discover dependency sources, author their rules, and wire the joins
+- `sources` — discover dependency sources and author tag-grouped source rules
 - `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report

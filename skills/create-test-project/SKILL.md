@@ -18,7 +18,7 @@ Provided by the caller, fall back to the default value when omitted. Ask back on
 - `project-root` (optional) — root of the target project. Opentaint keeps all analysis artifacts under the fixed `<project-root>/.opentaint/` directory, so every `.opentaint/...` path below resolves there. Default: current directory
 - `language` (required) — target language for this project and language-specific instructions
 - `type` (required) — what this project verifies, selecting the sample style and the identifying inputs below: `rule-source`, `rule-sink`, or `dataflow`
-- for `rule-source` / `rule-sink` — `unit`: the `<package-kebab>` of the source or sink unit; its methods to exercise and their `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
+- for `rule-source` / `rule-sink` — `unit`: the unit id; its members and `dependencies` come from `.opentaint/tracking/rules/sources|sinks/<unit>.yaml`
 - for `dataflow` — `batch`: the batch whose `.opentaint/tracking/approximations/<batch>.yaml` provides the dataflow methods to exercise and their `dependencies`
 
 The project folder `<name>` is that identifier — the `unit` for a rule side, the `batch` for a dataflow approximation.
@@ -31,7 +31,9 @@ The scaffold command and sample form are language-specific — read the referenc
 
 ### 2. Write the samples
 
-For each method to exercise, the unit or batch entry already records its `signature`; shape a faithful sample from how the method is really called in the project, then write minimal samples. The app's real path is irrelevant, only that data flows between the method and the marker:
+For a unit or batch, each entry records its `signature`; shape a faithful sample from how that callable is really used in the project. The app's real path is irrelevant, only that data flows between the boundary and the marker:
+
+For a sink unit, the methods are nested under `groups[].sinks`, exercise every method while preserving the group boundaries for the later rule author.
 
 - the counterpart is always the generic marker, never a real source/sink, so the sample exercises only the unit under test
 - register each sample under the single verdict it must produce — a positive that must flag, and, where the type calls for it, a negative that must not — in the test's `rule-test.yaml`
@@ -77,31 +79,34 @@ This skill writes only the test-project stage back:
 - a rule side → `stages.test_project: done` in the source or sink unit
 - a dataflow approximation → one `build.test_project` entry per method in the batch file, `status: done` for a method whose sample made it into the project, `status: failed` for one no sample could be written for (excluded)
 
-`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`signature` the member's JVM descriptor, always quoted so array types `[…` stay valid YAML in a flow mapping), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
+`.opentaint/tracking/rules/sources/<package-kebab>.yaml` — one source unit per package (a dependency can span several packages), the file named for that package with `.` → `-`. `tag` is always the reusable `untrusted-data-source` group. `dependencies` names the dependency the package comes from, `sources` each an entry point `{ method, signature, note, rule_id }` (`method` and `signature` use the exact language-specific identifiers from the plan), `stages` tracks the unit through rule authoring, and a `blocker` string is added under it when the unit can't be made to pass. Keep it clear from comments
 
 ```yaml
 dependencies:
-  - org.springframework:spring-websocket:6.1.0
+  - <dependency-id>
+tag: untrusted-data-source
 sources:
-  - { method: org.springframework.web.socket.TextMessage#getPayload, signature: "()Ljava/lang/String;", note: untrusted WebSocket frame data, rule_id: null }
+  - { method: "<qualified-member>", signature: "<language-signature>", note: untrusted message payload, rule_id: null }
 stages:
   test_project: pending
   tests_passing: pending
 ```
 
-`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sinks` each a dangerous operation reached by the taint frontier `{ method, signature, vuln_class, note, rule_id }` — `signature` the member's JVM descriptor so overloads stay distinct, always quoted (array types contain `[`, which is invalid unquoted in a flow mapping), `vuln_class` per entry since one package can host several, `note` a few words on the danger, the tainted argument left unpinned. `stages` tracks the unit through rule authoring. Keep it clear from comments
+`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from. `groups` partitions the package's dangerous operations by reusable sink tag; each group is `{ tag, sinks }`, and each sink is `{ method, signature, note, rule_id }`. The tag belongs to the group, never to an individual method: one rule may cover several methods and several rules may extend the same vulnerability family. `method` and `signature` use the exact language-specific identifiers from the plan. `stages` tracks the unit through rule authoring. Keep it clear from comments
 
 ```yaml
 dependencies:
-  - cn.hutool:hutool-core:5.8.20
-sinks:
-  - { method: cn.hutool.core.io.FileUtil#writeBytes, signature: "([BLjava/lang/String;)Ljava/io/File;", vuln_class: path-traversal, note: writes data to an untrusted path, rule_id: null }
+  - <dependency-id>
+groups:
+  - tag: path-traversal-sink
+    sinks:
+      - { method: "<qualified-member>", signature: "<language-signature>", note: writes data to an untrusted path, rule_id: null }
 stages:
   test_project: pending
   tests_passing: pending
 ```
 
-`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
 - `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
 - `skipped` — terminal non-carriers; each `{ method, signature, reason }`
 - `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
@@ -110,16 +115,16 @@ stages:
 
 ```yaml
 passthrough:
-  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
+  - { method: "<qualified-member-a>", signature: "<language-signature-a>" }
 dataflow:
-  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
+  - { method: "<qualified-member-b>", signature: "<language-signature-b>" }
 skipped:
-  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
+  - { method: "<qualified-member-c>", signature: "<language-signature-c>", reason: "retains none of its input data" }
 engine_issues: []
 dependencies: []
 build:
   test_project:
-    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+    - { method: "<qualified-member-b>", signature: "<language-signature-b>", status: done }
   done: []
 ```
 

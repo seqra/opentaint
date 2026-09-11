@@ -1,3 +1,5 @@
 # Skill: Create Rule
 
-A unit names the source or sink methods of one side to detect. Write a library rule for each — reusing a built-in wherever one fits, authoring a custom one only for what none covers — and verify them against the unit's test project until every sample passes. Each rule exposes its tainted value under a consistent marker so a later stage can wire the real cross-package security joins. During this phase you write only the library rules and the throwaway joins to test them.
+{% include "shared/engine/facts.md" %}
+
+A unit names the source or sink members to detect. Identify an existing built-in or project library rule when it already implements the boundary, otherwise author a custom rule, then verify the unit against its test project. Every selected or created source rule must carry the unit's `untrusted-data-source` tag, and every selected or created sink rule must carry its unit group's `*-sink` tag. Production joins use those tags and are assembled later only when a new sink tag needs one.

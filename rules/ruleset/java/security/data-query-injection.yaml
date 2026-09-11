@@ -59,15 +59,12 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - tag: spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: source
         - tag: xpath-injection-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: mongodb-injection
     severity: ERROR
@@ -121,12 +118,9 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - tag: spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: source
         - tag: mongodb-injection-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$INPUT'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$INPUT'
+        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'

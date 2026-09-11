@@ -3,7 +3,7 @@ rules:
     options:
       lib: true
     tags:
-      - servlet-unvalidated-redirect-sink
+      - unvalidated-redirect-sink
     severity: NOTE
     message: Potential redirect to an untrusted URL
     metadata:
@@ -13,12 +13,12 @@ rules:
     mode: taint
     pattern-sinks:
       - patterns:
-          - pattern: (HttpServletResponse $RES).sendRedirect($URL);
-          - focus-metavariable: $URL
+          - pattern: (HttpServletResponse $RES).sendRedirect($UNTRUSTED);
+          - focus-metavariable: $UNTRUSTED
       - patterns:
-          - pattern: (HttpServletResponse $RES).addHeader("Location", $URL);
-          - focus-metavariable: $URL
+          - pattern: (HttpServletResponse $RES).addHeader("Location", $UNTRUSTED);
+          - focus-metavariable: $UNTRUSTED
     pattern-sanitizers:
       - patterns:
-        - pattern: $URL = (HttpServletRequest $REQ).getContextPath();
-        - focus-metavariable: $URL
+        - pattern: $UNTRUSTED = (HttpServletRequest $REQ).getContextPath();
+        - focus-metavariable: $UNTRUSTED

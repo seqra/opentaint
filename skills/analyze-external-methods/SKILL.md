@@ -9,7 +9,7 @@ metadata:
 
 # Skill: Analyze External Methods
 
-OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a method that carries it nowhere (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a method whose body the analyzer can't see, typically an external dependency. That opaque method may itself be taint-killing (e.g. the same `size()`), or it may in fact carry the data onward — and then it needs an approximation telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
+OpenTaint is a dataflow taint analyzer: it starts from the data a source introduces and follows it call by call until the flow stops. A flow stops for one of two reasons — the data reached a callable that retains none of it (call `size()` on a tainted collection and its whole contents collapse into one number, so the taint is gone), or it reached a callable whose body the analyzer can't see, typically in an external dependency. That opaque callable may itself be taint-killing, or it may in fact carry the data onward — and then it needs an approximation telling the engine exactly how the data moves through the call, or every trace through it is silently cut.
 
 You are handed the list of those dropped methods. Decide which ones actually carry data and which don't, and for each carrier determine the kind of approximation it needs, so the build stage can restore the flow.
 
@@ -50,7 +50,9 @@ When the `sinks` input is set, make a second pass over the same members for a di
 
 Judge sink-ness from the method's own code and behaviour, independent of how the project uses it — don't trace whether taint can actually reach the call, that is the analyzer's job. And judge it apart from propagation: the propagation verdict never settles sink-ness, and finding a sink never changes it. Sinks might sit among the carriers you just modeled, and a `skipped` method can be a sink too — carrying nothing onward says nothing about whether the call itself is dangerous.
 
-Record each sink in its owning package's sink unit `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` (per Tracking). Name its `vuln_class` in canonical kebab-case, reusing the class names the built-in security rules use so the joins group correctly — e.g. `sql-injection`, `path-traversal`, `ssrf`, `deserialization`, `unsafe-reflection`.
+Record each sink in its owning package's sink unit `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` (per Tracking), grouped under the vulnerability tag that describes what unsafe use it performs. Read `.opentaint/tracking/rules/tags.yaml` first and reuse an existing tag whenever its semantics fit. If none fits, choose one precise canonical kebab-case `*-sink` tag, add it to the registry first, then create that group. The tag names the reusable sink family, not an individual method.
+
+`tags.yaml` is the only shared file in this fan-out. Edit it only for a genuinely new tag: re-read it immediately before the additive edit and preserve every tag another leaf may already have added. Ordinary classification that reuses a registered tag never writes the registry.
 
 ### 3. Verify coverage
 
@@ -84,7 +86,7 @@ Short and concise report of what was done
 
 ### Batch classification
 
-`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
 - `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
 - `skipped` — terminal non-carriers; each `{ method, signature, reason }`
 - `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
@@ -93,16 +95,16 @@ Short and concise report of what was done
 
 ```yaml
 passthrough:
-  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
+  - { method: "<qualified-member-a>", signature: "<language-signature-a>" }
 dataflow:
-  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
+  - { method: "<qualified-member-b>", signature: "<language-signature-b>" }
 skipped:
-  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
+  - { method: "<qualified-member-c>", signature: "<language-signature-c>", reason: "retains none of its input data" }
 engine_issues: []
 dependencies: []
 build:
   test_project:
-    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+    - { method: "<qualified-member-b>", signature: "<language-signature-b>", status: done }
   done: []
 ```
 
@@ -110,19 +112,21 @@ This skill writes `passthrough`/`dataflow`/`skipped` and `dependencies`; leave t
 
 ### Sink units (only when `sinks` is set)
 
-`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from, `sinks` each a dangerous operation reached by the taint frontier `{ method, signature, vuln_class, note, rule_id }` — `signature` the member's JVM descriptor so overloads stay distinct, always quoted (array types contain `[`, which is invalid unquoted in a flow mapping), `vuln_class` per entry since one package can host several, `note` a few words on the danger, the tainted argument left unpinned. `stages` tracks the unit through rule authoring. Keep it clear from comments
+`.opentaint/tracking/rules/sinks/<package-kebab>.yaml` — one sink unit per package (a dependency can span several packages, each its own unit), the file named for that package with `.` → `-`. `dependencies` names the dependency the package comes from. `groups` partitions the package's dangerous operations by reusable sink tag; each group is `{ tag, sinks }`, and each sink is `{ method, signature, note, rule_id }`. The tag belongs to the group, never to an individual method: one rule may cover several methods and several rules may extend the same vulnerability family. `method` and `signature` use the exact language-specific identifiers from the plan. `stages` tracks the unit through rule authoring. Keep it clear from comments
 
 ```yaml
 dependencies:
-  - cn.hutool:hutool-core:5.8.20
-sinks:
-  - { method: cn.hutool.core.io.FileUtil#writeBytes, signature: "([BLjava/lang/String;)Ljava/io/File;", vuln_class: path-traversal, note: writes data to an untrusted path, rule_id: null }
+  - <dependency-id>
+groups:
+  - tag: path-traversal-sink
+    sinks:
+      - { method: "<qualified-member>", signature: "<language-signature>", note: writes data to an untrusted path, rule_id: null }
 stages:
   test_project: pending
   tests_passing: pending
 ```
 
-This skill fills `dependencies` and one `sinks` entry per sink it found — `{ method, signature, vuln_class, note, rule_id: null }`, `signature` the method's JVM descriptor from the plan so overloads stay distinct, `vuln_class` per entry, `note` a few words on the danger. Leave `rule_id: null` and the `stages` for the rule-authoring stage. One unit per package; the partition keeps a whole package in one batch, so you are its only writer. Where a package already has a unit from a prior round, add to it rather than rewriting.
+The partition keeps a whole package in one batch, so populate only the units your plan owns. Leave `rule_id: null` and the `stages` for rule authoring. If a package already has a unit from a prior round, merge new methods into the matching tag group rather than rewriting it.
 
 ## Constraints
 

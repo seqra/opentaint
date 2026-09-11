@@ -1,4 +1,4 @@
-`.opentaint/tracking/approximations/<batch>.yaml` — one batch's method classification, `<batch>` the plan's filename stem. Every method sits in exactly one verdict bucket, keyed with its `signature` (the JVM descriptor, always quoted so array types `[…` stay valid YAML) so overloads stay distinct:
+`.opentaint/tracking/approximations/<batch>.yaml` — one batch's callable classification, `<batch>` the plan's filename stem. Every callable sits in exactly one verdict bucket, keyed with the exact language-specific `method` and `signature` from the plan so distinct variants stay separate:
 - `passthrough`, `dataflow` — modeled carriers; each entry `{ method, signature }`
 - `skipped` — terminal non-carriers; each `{ method, signature, reason }`
 - `engine_issues` — a separate bucket for carriers the engine provably can't propagate (built but still dropped); each `{ method, signature, reason }`. Terminal and treated just like `skipped` — the only difference is the reason. `merge-skipped` carries it into `skipped.yaml` as its own `engine_issues` group alongside the regular skipped `methods`.
@@ -7,15 +7,15 @@
 
 ```yaml
 passthrough:
-  - { method: "com.foo.Wrapper#getValue", signature: "()Ljava/lang/String;" }
+  - { method: "<qualified-member-a>", signature: "<language-signature-a>" }
 dataflow:
-  - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;" }
+  - { method: "<qualified-member-b>", signature: "<language-signature-b>" }
 skipped:
-  - { method: "org.slf4j.Logger#info", signature: "(Ljava/lang/String;)V", reason: "void side-effect" }
+  - { method: "<qualified-member-c>", signature: "<language-signature-c>", reason: "retains none of its input data" }
 engine_issues: []
 dependencies: []
 build:
   test_project:
-    - { method: "com.foo.Reactor#flatMap", signature: "(Ljava/util/function/Function;)Lcom/foo/Reactor;", status: done }
+    - { method: "<qualified-member-b>", signature: "<language-signature-b>", status: done }
   done: []
 ```

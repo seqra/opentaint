@@ -25,15 +25,15 @@ Inputs:
 
 Expect back — each sink's `rule_id` set and `stages.tests_passing: done`.
 
-## Assemble the full joins
+## Complete tag coverage
 
-Once no sink unit is pending, status names unwired sink rules. Dispatch assemble-lib-rules.
+Once no sink unit is pending, status checks the active tag-pair matrix. A created sink that reused an existing tag is already connected, if status names a new uncovered sink tag, dispatch assemble-lib-rules.
 
 Inputs:
 - `language`
 
-Expect back — the created-sink joins added to the joins tally, each refing all relevant sources. Then delete the sink units' `test-compiled/` models.
+Expect back — one tag-to-tag join per missing pair, then a clean coverage check. Delete the sink units' `test-compiled/` models.
 
 ## Stage gate
 
-`get_status.py` names each pending sink unit, unwired sink rules, then the project rescan. Finish when every unit is passing or terminal and every created sink is wired. If status reports `rules changed after the last scan`, report the pending rescan and stop.
+`get_status.py` names each pending sink unit, invalid tags, uncovered tag pairs, then the project rescan. Finish when every unit is passing or terminal and the reusable tag matrix is covered. If status reports `rules changed after the last scan`, report the pending rescan and stop.

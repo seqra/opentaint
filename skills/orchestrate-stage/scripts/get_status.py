@@ -17,16 +17,17 @@ it names rather than re-deriving state by hand.
 import argparse
 import glob
 import os
-import re
 import subprocess
 import sys
 from pathlib import Path
 
-from _common import (APPROX, DATAFLOW, FINDINGS_TR, JOINS_TR, MODEL,
-                     PASS_THROUGH, ROOT, RULES, RULES_TR, SARIF, SINKS_TR,
-                     SOURCES_TR, TRACKING, build_done_keys, classified_keys,
-                     dropped_entries, git_head, load_yaml, member_key,
-                     modeled_entries, skipped_keys)
+from _common import (APPROX, DATAFLOW,
+                     FINDINGS_TR, MODEL, PASS_THROUGH, ROOT, RULES, RULES_TR,
+                     SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
+                     active_lib_rules, build_done_keys, builtin_rules_root,
+                     classified_keys, dropped_entries, git_head, iter_rules,
+                     load_yaml, member_key, modeled_entries, rule_tags,
+                     skipped_keys)
 
 STATE = load_yaml(TRACKING / "state.yaml", {}) or {}
 SCAN_LEVEL = STATE.get("scan_level")
@@ -47,11 +48,6 @@ def short(c):
 def load_units(d):
     return [(p.stem, load_yaml(p, {}) or {}) for p in sorted(Path(d).glob("*.yaml"))] \
         if Path(d).is_dir() else []
-
-
-def load_joins():
-    return [(p.stem, load_yaml(p, {}) or {}) for p in sorted(JOINS_TR.glob("*.yaml"))] \
-        if JOINS_TR.is_dir() else []
 
 
 def load_findings():
@@ -106,26 +102,142 @@ def unit_next(doc, kind, side):
     return f"create-rule side {side}"
 
 
-def _join_source_refs():
-    return {str(s).strip() for _, doc in load_joins()
-            for s in (doc.get("sources") or []) if str(s).strip()}
+def _ruleset_roots():
+    roots = [builtin_rules_root()]
+    if RULES.is_dir():
+        roots.append(RULES)
+    return roots
 
 
-def _join_sink_refs():
-    return {str(j["sink"]).strip() for _, doc in load_joins()
-            for j in (doc.get("joins") or []) if isinstance(j, dict) and j.get("sink")}
+def _rule_index():
+    language = STATE.get("language")
+    out = {}
+    for root in _ruleset_roots():
+        for ref, rule in iter_rules(root, language):
+            out[ref] = rule
+    return out
 
 
-def _created_refs(units, field):
-    """rule_ids on the units that resolve to a rule file under .opentaint/rules (created, not
-    a built-in ref, which is indistinguishable by path but never sits on disk here)."""
-    refs = set()
-    for _, doc in units:
-        for e in doc.get(field) or []:
-            rid = str(e.get("rule_id", "")).strip() if isinstance(e, dict) else ""
-            if rid and (RULES / re.split(r"[:#]", rid, 1)[0]).is_file():
-                refs.add(rid)
-    return refs
+def _registry():
+    doc = load_yaml(TAGS, {}) or {}
+    def values(key):
+        raw = doc.get(key) or []
+        raw = [raw] if isinstance(raw, str) else raw
+        return {str(tag).strip() for tag in raw if str(tag).strip()}
+    return values("sources"), values("sinks")
+
+
+def _custom_tag_issues(kind):
+    """Tags used by custom lib rules must be registered under their matching role."""
+    sources, sinks = _registry()
+    known = sources if kind == "source" else sinks
+    suffix = f"-{kind}"
+    issues = []
+    language = STATE.get("language")
+    if not RULES.is_dir():
+        return issues
+    for ref, rule in active_lib_rules(RULES, language):
+        for tag in sorted(t for t in rule_tags(rule) if t.endswith(suffix)):
+            if tag not in known:
+                issues.append(f"{ref}: tag `{tag}` is not registered in {TAGS}")
+            if kind == "source" and tag != "untrusted-data-source":
+                issues.append(f"{ref}: reusable source rules must use `untrusted-data-source`, "
+                              f"not `{tag}`")
+    return issues
+
+
+def _source_tag_issues(units):
+    index = _rule_index()
+    issues = _custom_tag_issues("source")
+    for unit, doc in units:
+        stages = doc.get("stages") or {}
+        blocked = bool(doc.get("blocker") or stages.get("blocker"))
+        if str(doc.get("tag") or "").strip() != "untrusted-data-source":
+            issues.append(f"{unit}: source unit must use `tag: untrusted-data-source`")
+        entries = doc.get("sources") or []
+        if not entries and not blocked:
+            issues.append(f"{unit}: source unit has no source entries")
+        for entry in entries:
+            ref = str(entry.get("rule_id") or "").strip() if isinstance(entry, dict) else ""
+            if not ref:
+                if not blocked:
+                    issues.append(f"{unit}: source entry has no implementing rule_id")
+                continue
+            if ref not in index:
+                issues.append(f"{ref}: source rule does not resolve in the active rulesets")
+            elif "untrusted-data-source" not in rule_tags(index[ref]):
+                issues.append(f"{ref}: source rule must use `untrusted-data-source`")
+    return issues
+
+
+def _sink_tag_issues(units):
+    index = _rule_index()
+    issues = _custom_tag_issues("sink")
+    registered = _registry()[1]
+    for unit, doc in units:
+        stages = doc.get("stages") or {}
+        blocked = bool(doc.get("blocker") or stages.get("blocker"))
+        for group in doc.get("groups") or []:
+            if not isinstance(group, dict):
+                continue
+            tag = str(group.get("tag") or "").strip()
+            if not tag:
+                issues.append(f"{unit}: sink group has no tag")
+                continue
+            if not tag.endswith("-sink"):
+                issues.append(f"{unit}: `{tag}` is not a sink tag")
+            elif tag not in registered:
+                issues.append(f"{unit}: sink tag `{tag}` is not registered in {TAGS}")
+            for entry in group.get("sinks") or []:
+                ref = str(entry.get("rule_id") or "").strip() if isinstance(entry, dict) else ""
+                if not ref:
+                    if not blocked:
+                        issues.append(f"{unit}: sink entry in `{tag}` has no implementing rule_id")
+                elif tag not in rule_tags(index.get(ref, {})):
+                    issues.append(f"{ref}: rule does not carry its group tag `{tag}`")
+    return issues
+
+
+def _tag_pairs():
+    """Tag-to-tag edges present in active join rules across builtin + custom rulesets."""
+    language = STATE.get("language")
+    pairs = set()
+    for root in _ruleset_roots():
+        for _ref, rule in iter_rules(root, language):
+            options = rule.get("options") or {}
+            if rule.get("mode") != "join" or "disabled" in options:
+                continue
+            join = rule.get("join") or {}
+            aliases = {str(ref.get("as") or "").strip(): ref
+                       for ref in join.get("refs") or [] if isinstance(ref, dict)}
+            # PyYAML 1.1 reads the plain YAML key `on` as boolean True.
+            for edge in join.get("on") or join.get(True) or []:
+                if not isinstance(edge, str) or "->" not in edge:
+                    continue
+                left, right = edge.split("->", 1)
+                left_alias = left.strip().split(".", 1)[0]
+                right_alias = right.strip().split(".", 1)[0]
+                source_tag = aliases.get(left_alias, {}).get("tag")
+                sink_tag = aliases.get(right_alias, {}).get("tag")
+                if source_tag and sink_tag:
+                    pairs.add((str(source_tag).strip(), str(sink_tag).strip()))
+    return pairs
+
+
+def _missing_tag_pairs():
+    """Every reusable active source group must reach every reusable active sink group."""
+    language = STATE.get("language")
+    used_sources, used_sinks = set(), set()
+    for root in _ruleset_roots():
+        for _ref, rule in active_lib_rules(root, language):
+            for tag in rule_tags(rule):
+                if tag.endswith("-source"):
+                    used_sources.add(tag)
+                elif tag.endswith("-sink"):
+                    used_sinks.add(tag)
+    covered = _tag_pairs()
+    return sorted((source, sink) for source in used_sources for sink in used_sinks
+                  if (source, sink) not in covered)
 
 
 def _pending_units(units, kind, side):
@@ -158,31 +270,42 @@ def ph_build():
 
 
 def ph_discover():
+    if not TAGS.is_file():
+        return False, ["run `scripts/generate.py tags` to restore the lib-rule tag registry"], None
     if not (TRACKING / "coverage.yaml").is_file():
         return False, ["dispatch triage-dependencies"], None
     leftover = sorted(glob.glob(str(DISCOVER_PLANS / "*.yaml")))
-    units = load_units(SOURCES_TR)
     ledger = load_yaml(RULES_TR / "classification.yaml", {}) or {}
     if leftover:
         tasks = [f"dispatch discover-attack-surface, one per plan (cap {GLOBAL_CAP}):"]
         tasks += [f"  {p}" for p in leftover]
         tasks.append("then run `scripts/generate.py mark-safe` to reconcile the plans")
         return False, tasks, None
-    if not ledger and not units:
+    if not ledger:
         return False, ["run `scripts/generate.py partition discover` to plan the used members"], None
+    unit_sources = {member_key(entry) for _unit, doc in load_units(SOURCES_TR)
+                    for entry in (doc.get("sources") or []) if isinstance(entry, dict)}
+    missing = sorted({member_key(entry) for entry in (ledger.get("source") or [])}
+                     - unit_sources)
+    if missing:
+        return False, ["classified sources missing source units:"] \
+            + [f"  {entry}" for entry in missing], None
     return True, [], None
 
 
 def ph_source_rules():
     units = load_units(SOURCES_TR)
     if not units:
-        return True, [], "built-in covered"
+        issues = _custom_tag_issues("source")
+        if issues:
+            return False, ["source rule tag errors:"] + [f"  {x}" for x in issues], None
+        return True, [], None
     pend = _pending_units(units, "rule-source", "sources")
     if pend:
         return False, ["pending units:"] + pend, None
-    missing = sorted(_created_refs(units, "sources") - _join_source_refs())
-    if missing:
-        return False, ["created sources not wired to a join", "dispatch assemble-lib-rules"], None
+    issues = _source_tag_issues(units)
+    if issues:
+        return False, ["source rule tag errors:"] + [f"  {x}" for x in issues], None
     return True, [], None
 
 
@@ -238,12 +361,15 @@ def ph_sink_rules():
     pend = _pending_units(units, "rule-sink", "sinks")
     if pend:
         return False, ["pending units:"] + pend, None
-    refs = _join_sink_refs()
-    missing = sorted({e["rule_id"] for _, doc in units for e in (doc.get("sinks") or [])
-                      if isinstance(e, dict) and e.get("rule_id")
-                      and str(e["rule_id"]).strip() not in refs})
+    issues = _sink_tag_issues(units)
+    if issues:
+        return False, ["sink rule tag errors:"] + [f"  {x}" for x in issues], None
+    missing = _missing_tag_pairs()
     if missing:
-        return False, ["sink rules not wired to a join", "dispatch assemble-lib-rules"], None
+        tasks = ["reusable tag groups are not fully joined:"]
+        tasks += [f"  {source} -> {sink}" for source, sink in missing]
+        tasks.append("dispatch assemble-lib-rules")
+        return False, tasks, None
     if rules_dirty():
         return False, ["rules changed after the last scan", "dispatch run-scan"], None
     return True, [], None

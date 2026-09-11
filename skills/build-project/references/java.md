@@ -21,7 +21,11 @@ Prefer the `./gradlew` / `./mvnw` wrapper when present:
 mvn package -DskipTests     # Maven
 ```
 
-Fix the build, then re-run `opentaint compile`. If the build needed a JDK the caller didn't supply, return it so the orchestrator reuses it for other compiling subagents.
+Fix the build, then re-run `opentaint compile`.
+
+## Build state field
+
+`build_jdk` — the exact JDK selector/version used for `JAVA_HOME`. Preserve its value after every successful build, even when it originally came from `build-hints`; later compiling runs use it as their JDK hint.
 
 ### 4. Manual build + `opentaint project`
 

@@ -4,7 +4,9 @@ The scaffold command and sample form are language-specific — read the referenc
 
 ### 2. Write the samples
 
-For each method to exercise, the unit or batch entry already records its `signature`; shape a faithful sample from how the method is really called in the project, then write minimal samples. The app's real path is irrelevant, only that data flows between the method and the marker:
+For a unit or batch, each entry records its `signature`; shape a faithful sample from how that callable is really used in the project. The app's real path is irrelevant, only that data flows between the boundary and the marker:
+
+For a sink unit, the methods are nested under `groups[].sinks`, exercise every method while preserving the group boundaries for the later rule author.
 
 - the counterpart is always the generic marker, never a real source/sink, so the sample exercises only the unit under test
 - register each sample under the single verdict it must produce — a positive that must flag, and, where the type calls for it, a negative that must not — in the test's `rule-test.yaml`

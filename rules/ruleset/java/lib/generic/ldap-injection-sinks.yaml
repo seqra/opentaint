@@ -13,22 +13,22 @@ rules:
     mode: taint
     pattern-sinks:
       - patterns:
-          - pattern: new javax.naming.ldap.LdapName(..., $QUERY, ...)
-          - focus-metavariable: $QUERY
+          - pattern: new javax.naming.ldap.LdapName(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
       - patterns:
-          - pattern: (javax.naming.directory.Context $C).lookup(..., $QUERY, ...)
-          - focus-metavariable: $QUERY
+          - pattern: (javax.naming.directory.Context $C).lookup(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
       - patterns:
-          - pattern: (javax.naming.Context $C).lookup(..., $QUERY, ...)
-          - focus-metavariable: $QUERY
+          - pattern: (javax.naming.Context $C).lookup(..., $UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
       - patterns:
-          - pattern: (com.unboundid.ldap.sdk.LDAPConnection $C).search($QUERY, ...)
-          - focus-metavariable: $QUERY
+          - pattern: (com.unboundid.ldap.sdk.LDAPConnection $C).search($UNTRUSTED, ...)
+          - focus-metavariable: $UNTRUSTED
       - patterns:
           - pattern-either:
-              - pattern: ($CTXTYPE $CTX).lookup(..., $QUERY, ...)
-              - pattern: ($CTXTYPE $CTX).search($QUERY, ...)
-              - pattern: ($CTXTYPE $CTX).search($NAME, $QUERY, ...)
+              - pattern: ($CTXTYPE $CTX).lookup(..., $UNTRUSTED, ...)
+              - pattern: ($CTXTYPE $CTX).search($UNTRUSTED, ...)
+              - pattern: ($CTXTYPE $CTX).search($NAME, $UNTRUSTED, ...)
           - metavariable-pattern:
               metavariable: $CTXTYPE
               pattern-either:
@@ -37,16 +37,16 @@ rules:
                 - pattern: javax.naming.ldap.LdapContext
                 - pattern: javax.naming.event.EventDirContext
                 - pattern: com.sun.jndi.ldap.LdapCtx
-          - focus-metavariable: $QUERY
+          - focus-metavariable: $UNTRUSTED
       - patterns:
           - pattern-either:
-              - pattern: ($CTXTYPE $CTX).list($QUERY, ...)
-              - pattern: ($CTXTYPE $CTX).lookup($QUERY, ...)
-              - pattern: ($CTXTYPE $CTX).search($QUERY, ...)
-              - pattern: ($CTXTYPE $CTX).search($NAME, $QUERY, ...)
+              - pattern: ($CTXTYPE $CTX).list($UNTRUSTED, ...)
+              - pattern: ($CTXTYPE $CTX).lookup($UNTRUSTED, ...)
+              - pattern: ($CTXTYPE $CTX).search($UNTRUSTED, ...)
+              - pattern: ($CTXTYPE $CTX).search($NAME, $UNTRUSTED, ...)
           - metavariable-pattern:
               metavariable: $CTXTYPE
               pattern-either:
                 - pattern: org.springframework.ldap.core.LdapTemplate
                 - pattern: org.springframework.ldap.core.LdapOperations
-          - focus-metavariable: $QUERY
+          - focus-metavariable: $UNTRUSTED

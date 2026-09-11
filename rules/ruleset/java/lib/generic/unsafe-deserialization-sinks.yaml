@@ -51,8 +51,8 @@ rules:
             (com.fasterxml.jackson.databind.ObjectMapper $OM).activateDefaultTyping(com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator.instance, com.fasterxml.jackson.databind.ObjectMapper.DefaultTyping.EVERYTHING);
             ...
       - pattern-either:
-          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($JSON, ...);
-          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readTree($JSON);
+          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readValue($UNTRUSTED, ...);
+          - pattern: (com.fasterxml.jackson.databind.ObjectMapper $OM).readTree($UNTRUSTED);
       - pattern-not-inside: |
           (com.fasterxml.jackson.databind.ObjectMapper $OM).enable(MapperFeature.BLOCK_UNSAFE_POLYMORPHIC_BASE_TYPES); ...
       - pattern-not-inside: |
@@ -73,4 +73,4 @@ rules:
       - pattern: |
           $Y = new org.yaml.snakeyaml.Yaml();
           ...
-          $Y.load($YAML);
+          $Y.load($UNTRUSTED);

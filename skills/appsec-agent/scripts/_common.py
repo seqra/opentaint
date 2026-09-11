@@ -6,6 +6,7 @@ which carry the pyyaml dependency. Every path resolves under the fixed
 scripts from the project root.
 """
 import glob
+import re
 import subprocess
 from pathlib import Path
 
@@ -18,7 +19,7 @@ APPROX = TRACKING / "approximations"
 RULES_TR = TRACKING / "rules"
 SOURCES_TR = RULES_TR / "sources"
 SINKS_TR = RULES_TR / "sinks"
-JOINS_TR = RULES_TR / "joins"
+TAGS = RULES_TR / "tags.yaml"
 FINDINGS_TR = TRACKING / "findings"
 RESULTS = ROOT / "results"
 DROPPED = RESULTS / "dropped-external-methods.yaml"
@@ -44,6 +45,75 @@ def load_yaml(path, default=None):
 
 def dump_yaml(obj):
     return yaml.safe_dump(obj, sort_keys=False, default_flow_style=False, allow_unicode=True)
+
+
+# ---- ruleset readers ----
+
+def builtin_rules_root():
+    """Resolve the installed built-in rules root reported by the CLI."""
+    try:
+        proc = subprocess.run(["opentaint", "--color", "never", "health", "--rules"],
+                              capture_output=True, text=True, check=True)
+    except OSError as e:
+        raise SystemExit(f"cannot run `opentaint health --rules`: {e}")
+    except subprocess.CalledProcessError as e:
+        detail = (e.stderr or e.stdout or "").strip()
+        raise SystemExit(f"`opentaint health --rules` failed: {detail}")
+
+    # Current releases print the path alone. Walking the lines backwards also tolerates a
+    # warning before it without guessing where OpenTaint was installed.
+    for line in reversed(proc.stdout.splitlines()):
+        raw = re.sub(r"\x1b\[[0-9;]*m", "", line).strip().strip('"').strip("'")
+        candidate = Path(raw)
+        if candidate.is_dir():
+            return candidate
+    raise SystemExit("`opentaint health --rules` did not report an existing rules directory")
+
+
+def rule_tags(rule):
+    raw = rule.get("tags") or []
+    if isinstance(raw, str):
+        raw = [raw]
+    return {str(tag).strip() for tag in raw if str(tag).strip()}
+
+
+def iter_rules(root, language):
+    """Yield (ref, rule) from one ruleset root for the selected language."""
+    base = Path(root) / language
+    if not base.is_dir():
+        return
+    for path in sorted(base.rglob("*.yaml")):
+        doc = load_yaml(path, {}) or {}
+        for rule in doc.get("rules") or []:
+            if not isinstance(rule, dict) or not rule.get("id"):
+                continue
+            rel = path.relative_to(root).as_posix()
+            yield f"{rel}#{str(rule['id']).strip()}", rule
+
+
+def lib_rules(root, language):
+    for ref, rule in iter_rules(root, language):
+        options = rule.get("options") or {}
+        if options.get("lib") is True:
+            yield ref, rule
+
+
+def active_lib_rules(root, language):
+    for ref, rule in lib_rules(root, language):
+        if "disabled" not in (rule.get("options") or {}):
+            yield ref, rule
+
+
+def collect_lib_tags(roots, language):
+    sources, sinks = set(), set()
+    for root in roots:
+        for _ref, rule in lib_rules(root, language):
+            for tag in rule_tags(rule):
+                if tag.endswith("-source"):
+                    sources.add(tag)
+                elif tag.endswith("-sink"):
+                    sinks.add(tag)
+    return {"sources": sorted(sources), "sinks": sorted(sinks)}
 
 
 # ---- fqn / member normalization ----

@@ -1,2 +1,2 @@
-- Ref the existing lib rules (built-in + created), never re-declare a source or sink
+- Reference the reported sink tag directly, never re-declare or enumerate either tag group's lib-rule members
 - Keep produced joins comment-free
