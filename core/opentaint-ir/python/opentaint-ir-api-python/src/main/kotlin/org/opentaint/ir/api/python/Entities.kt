@@ -1,0 +1,132 @@
+package org.opentaint.ir.api.python
+
+import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.CommonMethodParameter
+import org.opentaint.ir.api.common.cfg.CommonInst
+import org.opentaint.ir.api.common.cfg.ControlFlowGraph
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.minutes
+import kotlin.time.Duration.Companion.seconds
+
+private const val PIR_SERVER_PYTHON_ENV = "PIR_SERVER_PYTHON"
+
+private fun defaultPirServerPythonExecutable(): String =
+    System.getenv(PIR_SERVER_PYTHON_ENV)
+        ?.takeIf { it.isNotBlank() }
+        ?: error("Environment variable $PIR_SERVER_PYTHON_ENV must point to a Python executable")
+
+interface PIRClasspath {
+    val modules: List<PIRModule>
+    fun findModuleOrNull(name: String): PIRModule?
+    fun findClassOrNull(qualifiedName: String): PIRClass?
+    fun findFunctionOrNull(qualifiedName: String): PIRFunction?
+    val pythonVersion: String
+    val mypyVersion: String
+}
+
+data class PIRSettings(
+    val sources: List<String>,
+    val packageRoots: List<String>,
+    val pythonExecutable: String = defaultPirServerPythonExecutable(),
+    val pythonVersion: String? = null,
+    val mypyFlags: List<String> = emptyList(),
+    val serverModule: String = "pir_server",
+    val serverStartupTimeout: Duration = 5.seconds,
+    val buildTimeout: Duration = 5.minutes,
+) {
+    init {
+        require(packageRoots.isNotEmpty()) { "packageRoots must not be empty" }
+    }
+}
+
+data class PIRDiagnostic(
+    val severity: PIRDiagnosticSeverity,
+    val message: String,
+    val functionName: String,
+    val exceptionType: String,
+)
+
+enum class PIRDiagnosticSeverity { WARNING, ERROR }
+
+interface PIRModule {
+    val name: String
+    val path: String
+    val classes: List<PIRClass>
+    val functions: List<PIRFunction>
+    val fields: List<PIRField>
+    val moduleInit: PIRFunction
+    val diagnostics: List<PIRDiagnostic>
+}
+
+interface PIRClass {
+    val name: String
+    val qualifiedName: String
+    val baseClasses: List<String>
+    val mro: List<String>
+    val methods: List<PIRFunction>
+    val fields: List<PIRField>
+    val nestedClasses: List<PIRClass>
+    val properties: List<PIRProperty>
+    val decorators: List<PIRDecorator>
+    val isAbstract: Boolean
+    val isDataclass: Boolean
+    val isEnum: Boolean
+    val module: PIRModule
+}
+
+interface PIRFunction: CommonMethod {
+    override val name: String
+    val qualifiedName: String
+    override val parameters: List<PIRParameter>
+    override val returnType: PIRType
+    val cfg: PIRCFG
+    val instList: List<PIRInstruction>
+    val decorators: List<PIRDecorator>
+    val isAsync: Boolean
+    val isGenerator: Boolean
+    val isStaticMethod: Boolean
+    val isClassMethod: Boolean
+    val isProperty: Boolean
+    val closureVars: List<String>
+    val enclosingClass: PIRClass?
+    val module: PIRModule
+
+    override fun flowGraph(): ControlFlowGraph<CommonInst> = error("Unsupported operation")
+}
+
+interface PIRParameter: CommonMethodParameter {
+    val name: String
+    override val type: PIRType
+    val kind: PIRParameterKind
+    val hasDefault: Boolean
+    val defaultValue: PIRValue?
+    val index: Int
+}
+
+enum class PIRParameterKind {
+    POSITIONAL_ONLY,
+    POSITIONAL_OR_KEYWORD,
+    VAR_POSITIONAL,
+    KEYWORD_ONLY,
+    VAR_KEYWORD,
+}
+
+interface PIRField {
+    val name: String
+    val type: PIRType
+    val isClassVar: Boolean
+}
+
+interface PIRProperty {
+    val name: String
+    val type: PIRType
+    val getter: PIRFunction?
+    val setter: PIRFunction?
+    val deleter: PIRFunction?
+}
+
+interface PIRDecorator {
+    val name: String
+    val qualifiedName: String
+    val arguments: List<String>
+}
