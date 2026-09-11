@@ -182,7 +182,10 @@ jobs:
   python-ir:
     name: Run Python-ir tests
     runs-on: ubuntu-latest
-    container: python:3.13
+    container: ubuntu:latest
+
+    env:
+      PIR_BASE_PYTHON: python3
 
     steps:
       - uses: actions/checkout@v4
@@ -192,6 +195,17 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
+
+      - name: Install Python-ir dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates
+          update-ca-certificates
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
@@ -213,7 +227,10 @@ jobs:
   python-ir-bench:
     name: Run Python-ir benchmark tests
     runs-on: ubuntu-latest
-    container: python:3.13
+    container: ubuntu:latest
+
+    env:
+      PIR_BASE_PYTHON: python3
 
     steps:
       - uses: actions/checkout@v4
@@ -223,6 +240,17 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
+
+      - name: Install Python-ir dependencies
+        run: |
+          apt-get update
+          apt-get install -y ca-certificates git
+          update-ca-certificates
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
