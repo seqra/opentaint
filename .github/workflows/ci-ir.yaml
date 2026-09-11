@@ -8,7 +8,7 @@ on:
       - 'core/opentaint-ir/**'
       - 'core/opentaint-common-build/**'
       - '.github/workflows/ci-ir.yaml'
-    branches: [ "main", "saloed/python-support" ]
+    branches: [ "main" ]
   pull_request:
     paths:
       - 'core/opentaint-ir/**'
