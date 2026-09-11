@@ -15,7 +15,7 @@ val pirGeneratedStubs = listOf(
     "pir_server/proto/pir_pb2_grpc.py",
     "pir_server/proto/pir_pb2.pyi",
 ).map { layout.projectDirectory.file(it) }
-val pirBootstrapPython = providers.environmentVariable("PYTHON").orElse("python3.13")
+val pirBasePython = providers.environmentVariable("PIR_BASE_PYTHON").orElse("python3.13")
 val pirInstallSpec = ".[dev]"
 val pirBenchmarksInstallSpec = ".[benchmarks]"
 val inheritedPythonPath = providers.environmentVariable("PYTHONPATH").orNull
@@ -37,7 +37,7 @@ val createPirServerVenv = tasks.register<Exec>("createPirServerVenv") {
     description = "Creates the PIR server virtual environment."
     outputs.dir(pirVenvDir)
     commandLine(
-        pirBootstrapPython.get(),
+        pirBasePython.get(),
         "-m",
         "venv",
         pirVenvDir.asFile.absolutePath,
