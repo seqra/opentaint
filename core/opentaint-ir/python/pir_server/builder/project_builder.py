@@ -115,6 +115,7 @@ class ProjectBuilder:
         options.mypy_path = list(self.package_roots)
 
         options.incremental = False
+        options.sqlite_cache = False
         options.preserve_asts = True
         options.python_executable = None
         options.semantic_analysis_only = True

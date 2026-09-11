@@ -6,15 +6,25 @@ plugins {
 }
 
 val pirProject = project(":python")
-val pirServerPython = pirProject.layout.projectDirectory.file(".venv/bin/python").asFile.absolutePath
+val pirRootDir = pirProject.layout.projectDirectory
+val pirServerPython = pirRootDir.file(".venv/bin/python").asFile.absolutePath
 val inheritedPythonPath = providers.environmentVariable("PYTHONPATH").orNull
-val pirPythonPath = listOf(
-    pirProject.projectDir.absolutePath,
+val pirPythonPath = listOfNotNull(
+    pirRootDir.asFile.absolutePath,
     inheritedPythonPath,
-).filterNotNull().filter { it.isNotBlank() }.joinToString(File.pathSeparator)
+).filter { it.isNotBlank() }.joinToString(File.pathSeparator)
 
 tasks.withType<Test>().configureEach {
     dependsOn(":python:generatePirProtoStubs")
+
+    inputs.files(
+        pirProject.fileTree("pir_server") {
+            include("**/*.py")
+            include("**/*.proto")
+        },
+        pirRootDir.file("pyproject.toml"),
+    )
+
     environment("PIR_SERVER_PYTHON", pirServerPython)
     environment("PYTHONPATH", pirPythonPath)
 
