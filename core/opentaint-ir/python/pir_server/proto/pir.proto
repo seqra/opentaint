@@ -1,0 +1,631 @@
+syntax = "proto3";
+
+package opentaint.pir;
+
+option java_package = "org.opentaint.ir.impl.python.proto";
+option java_multiple_files = true;
+option java_outer_classname = "Pir";
+
+// ─── Service ────────────────────────────────────────────────
+
+service PIRService {
+  // Build an entire project. Returns raw mypy AST modules as a stream.
+  // The Kotlin side performs all CFG lowering.
+  rpc BuildProject(BuildProjectRequest) returns (stream BuildEventProto);
+
+  // Execute a Python function with given args and return the result.
+  // Used by Tier 3 round-trip tests.
+  rpc ExecuteFunction(ExecuteFunctionRequest) returns (ExecuteFunctionResponse);
+
+  // Health check / readiness probe.
+  rpc Ping(PingRequest) returns (PingResponse);
+}
+
+// ─── RPC Messages ───────────────────────────────────────────
+
+message BuildProjectRequest {
+  repeated string sources = 1;
+  repeated string mypy_flags = 2;
+  string python_version = 3;
+  repeated string package_roots = 4;
+}
+
+message ExecuteFunctionRequest {
+  string source_code = 1;
+  string function_name = 2;
+  string arguments_json = 3;
+}
+
+message ExecuteFunctionResponse {
+  string results_json = 1;
+}
+
+message PingRequest {}
+message PingResponse {
+  string python_version = 2;
+  string mypy_version = 3;
+
+  reserved 1;
+  reserved "version";
+}
+
+// ─── Types ──────────────────────────────────────────────────
+
+message PIRTypeProto {
+  oneof kind {
+    PIRClassTypeProto class_type = 1;
+    PIRFunctionTypeProto function_type = 2;
+    PIRUnionTypeProto union_type = 3;
+    PIRTupleTypeProto tuple_type = 4;
+    PIRLiteralTypeProto literal_type = 5;
+    PIRAnyTypeProto any_type = 6;
+    PIRNeverTypeProto never_type = 7;
+    PIRNoneTypeProto none_type = 8;
+    PIRTypeVarTypeProto type_var_type = 9;
+  }
+}
+
+message PIRClassTypeProto {
+  string qualified_name = 1;
+  repeated PIRTypeProto type_args = 2;
+}
+
+message PIRFunctionTypeProto {
+  repeated PIRTypeProto param_types = 1;
+  PIRTypeProto return_type = 2;
+}
+
+message PIRUnionTypeProto {
+  repeated PIRTypeProto members = 1;
+}
+
+message PIRTupleTypeProto {
+  repeated PIRTypeProto element_types = 1;
+  bool is_var_length = 2;
+}
+
+message PIRLiteralTypeProto {
+  string value = 1;
+  PIRTypeProto base_type = 2;
+}
+
+message PIRAnyTypeProto {}
+message PIRNeverTypeProto {}
+message PIRNoneTypeProto {}
+
+message PIRTypeVarTypeProto {
+  string name = 1;
+  repeated PIRTypeProto bounds = 2;
+}
+
+// ═══════════════════════════════════════════════════════════
+// Raw Mypy AST messages — used by the BuildProject RPC.
+// The Kotlin side performs CFG lowering from these AST nodes.
+// ═══════════════════════════════════════════════════════════
+
+// ─── Top-Level Module ──────────────────────────────────────
+
+message MypyModuleProto {
+  string name = 1;                            // Dotted module name (e.g. "click.core")
+  string path = 2;                            // Absolute file path
+  repeated MypyDefinitionProto defs = 3;      // Top-level definitions
+  repeated string errors = 4;                 // Build errors (mypy errors for this module)
+}
+
+// A module that was built, or a failure that belongs to no module.
+message BuildEventProto {
+  oneof event {
+    MypyModuleProto module = 1;
+    BuildFailureProto failure = 2;
+  }
+}
+
+// A failure that could not be attributed to any module, so no
+// MypyModuleProto exists to carry it in `errors`.
+message BuildFailureProto {
+  repeated string errors = 1;
+}
+
+// ─── Definitions ───────────────────────────────────────────
+
+message MypyDefinitionProto {
+  oneof kind {
+    MypyClassDefProto class_def = 1;
+    MypyFuncDefProto func_def = 2;
+    // Wrapped in MypyStmtProto (rather than MypyAssignmentStmtProto directly)
+    // so module-level assignments carry the same physical location as
+    // in-function statements.
+    MypyStmtProto assignment = 3;
+    MypyDecoratorDefProto decorator = 4;       // Decorator wrapping a FuncDef
+  }
+}
+
+message MypyClassDefProto {
+  string name = 1;
+  string fullname = 2;
+  repeated string base_classes = 3;           // Fully qualified base class names
+  repeated string mro = 4;                    // Method Resolution Order
+  repeated MypyDefinitionProto body = 5;      // Class body (methods, fields, nested classes)
+  repeated MypyDecoratorInfoProto decorators = 6;
+  bool is_abstract = 7;
+  bool is_dataclass = 8;
+  bool is_enum = 9;
+}
+
+message MypyFuncDefProto {
+  string name = 1;
+  string fullname = 2;
+  repeated MypyArgumentProto arguments = 3;
+  PIRTypeProto return_type = 4;               // Reuse existing type proto
+  MypyBlockProto body = 5;                    // Raw statement body (NOT lowered to CFG)
+  bool is_async = 6;
+  bool is_generator = 7;
+  repeated string closure_vars = 11;
+  repeated MypyDecoratorInfoProto decorators = 12;
+  int32 line = 13;
+
+  reserved 8, 9, 10;
+  reserved "is_static", "is_class", "is_property";
+}
+
+message MypyArgumentProto {
+  string name = 1;
+  PIRTypeProto type = 2;
+  int32 kind = 3;                             // ARG_POS=0, ARG_OPT=1, ARG_STAR=2, ARG_NAMED=3, ARG_STAR2=4, ARG_NAMED_OPT=5
+  bool has_default = 4;
+  MypyExprProto default_value = 5;            // Optional default expression
+}
+
+message MypyDecoratorDefProto {
+  MypyFuncDefProto func = 1;
+  repeated MypyExprProto original_decorators = 2;
+  string name = 3;
+  string qualified_name = 4;
+}
+
+message MypyDecoratorInfoProto {
+  string name = 1;
+  string qualified_name = 2;
+  repeated string arguments = 3;
+}
+
+// ─── Blocks & Statements ──────────────────────────────────
+
+message MypyBlockProto {
+  repeated MypyStmtProto stmts = 1;
+}
+
+message MypyStmtProto {
+  int32 line = 1;
+  int32 col = 2;
+  // Tags 100/101 leave the 32..99 band free for future statement variants
+  // (oneof entries today end at import_from_stmt = 31).
+  int32 end_line = 100;
+  int32 end_col = 101;
+
+  oneof kind {
+    MypyAssignmentStmtProto assignment = 10;
+    MypyOperatorAssignmentStmtProto op_assignment = 11;
+    MypyExpressionStmtProto expression_stmt = 12;
+    MypyReturnStmtProto return_stmt = 13;
+    MypyIfStmtProto if_stmt = 14;
+    MypyWhileStmtProto while_stmt = 15;
+    MypyForStmtProto for_stmt = 16;
+    MypyTryStmtProto try_stmt = 17;
+    MypyWithStmtProto with_stmt = 18;
+    MypyRaiseStmtProto raise_stmt = 19;
+    MypyBreakStmtProto break_stmt = 20;
+    MypyContinueStmtProto continue_stmt = 21;
+    MypyDelStmtProto del_stmt = 22;
+    MypyAssertStmtProto assert_stmt = 23;
+    MypyPassStmtProto pass_stmt = 24;
+    MypyGlobalDeclProto global_decl = 25;
+    MypyFuncDefProto func_def = 26;
+    MypyClassDefProto class_def = 27;
+    MypyNonlocalDeclProto nonlocal_decl = 28;
+    MypyDecoratorDefProto decorator = 29;
+    MypyImportStmtProto import_stmt = 30;
+    MypyImportFromStmtProto import_from_stmt = 31;
+    MypyMatchStmtProto match_stmt = 32;
+  }
+}
+
+message MypyNonlocalDeclProto {
+  repeated string names = 1;
+}
+
+message MypyAssignmentStmtProto {
+  repeated MypyExprProto lvalues = 1;
+  MypyExprProto rvalue = 2;
+  PIRTypeProto type_annotation = 3;
+}
+
+message MypyOperatorAssignmentStmtProto {
+  string op = 1;
+  MypyExprProto lvalue = 2;
+  MypyExprProto rvalue = 3;
+}
+
+message MypyExpressionStmtProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyReturnStmtProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyIfStmtProto {
+  repeated MypyExprProto conditions = 1;
+  repeated MypyBlockProto bodies = 2;
+  MypyBlockProto else_body = 3;
+}
+
+message MypyWhileStmtProto {
+  MypyExprProto condition = 1;
+  MypyBlockProto body = 2;
+  MypyBlockProto else_body = 3;
+}
+
+message MypyForStmtProto {
+  MypyExprProto index = 1;
+  MypyExprProto iterable = 2;
+  MypyBlockProto body = 3;
+  MypyBlockProto else_body = 4;
+}
+
+message MypyMatchStmtProto {
+  MypyExprProto subject = 1;
+  repeated MypyPatternProto patterns = 2;
+  // Parallel to `patterns`; entry is KIND_NOT_SET when the case has no `if` guard.
+  repeated MypyExprProto guards = 3;
+  repeated MypyBlockProto bodies = 4;
+}
+
+message MypyPatternProto {
+  oneof kind {
+    MypyAsPatternProto as_pattern = 1;
+    MypyValuePatternProto value_pattern = 2;
+    MypyOrPatternProto or_pattern = 3;
+    MypyClassPatternProto class_pattern = 4;
+    MypySingletonPatternProto singleton_pattern = 5;
+    MypyUnknownPatternProto unknown_pattern = 6;
+  }
+}
+
+// Covers capture (`case x`), wildcard (`case _`) and `as` (`case P as x`):
+// inner `pattern` is absent for capture/wildcard; `name` is empty for wildcard.
+message MypyAsPatternProto {
+  MypyPatternProto pattern = 1;
+  string name = 2;
+}
+
+message MypyValuePatternProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyOrPatternProto {
+  repeated MypyPatternProto patterns = 1;
+}
+
+message MypyClassPatternProto {
+  MypyExprProto class_ref = 1;
+}
+
+message MypySingletonPatternProto {
+  enum Value {
+    NONE = 0;
+    TRUE = 1;
+    FALSE = 2;
+  }
+  Value value = 1;
+}
+
+message MypyUnknownPatternProto {
+  string kind = 1;
+}
+
+message MypyTryStmtProto {
+  MypyBlockProto body = 1;
+  repeated MypyExprProto types = 2;
+  repeated MypyExprProto vars = 3;
+  repeated MypyBlockProto handlers = 4;
+  MypyBlockProto else_body = 5;
+  MypyBlockProto finally_body = 6;
+}
+
+message MypyWithStmtProto {
+  repeated MypyExprProto exprs = 1;
+  repeated MypyExprProto targets = 2;
+  MypyBlockProto body = 3;
+  bool is_async = 4;
+}
+
+message MypyRaiseStmtProto {
+  MypyExprProto expr = 1;
+  MypyExprProto from_expr = 2;
+}
+
+message MypyBreakStmtProto {}
+message MypyContinueStmtProto {}
+message MypyPassStmtProto {}
+
+message MypyDelStmtProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyAssertStmtProto {
+  MypyExprProto expr = 1;
+  MypyExprProto msg = 2;
+}
+
+message MypyGlobalDeclProto {
+  repeated string names = 1;
+}
+
+// `import m`, `import m.sub`, `import m.sub as a`, `import m1.s, m2.t`.
+//
+// Each `MypyImportIdProto` is one comma-separated entry. `module` is the dotted
+// canonical module path as written in source (relative resolution is N/A — only
+// `from`-imports can be relative). `alias` is empty when no `as` clause is
+// present (mypy stores `None` there; the wire-level sentinel is the empty
+// string).
+//
+// The bound name in the enclosing scope is:
+//   - `alias` if non-empty, else
+//   - the root segment of `module` (`split(".")[0]`).
+// This mirrors the cpython runtime: `import m.sub` binds only `m`.
+message MypyImportStmtProto {
+  repeated MypyImportIdProto ids = 1;
+}
+
+message MypyImportIdProto {
+  string module = 1;
+  string alias = 2;
+}
+
+// `from m import x [as y], ...`. `module` is the absolute module path AFTER
+// relative-import resolution on the Python side (so `relative` is purely
+// informational here; consumers MUST NOT re-resolve it). `relative` is the
+// original dot-count from the source statement, preserved for debugging.
+//
+// `from m import *` is intentionally not modeled here — it produces no
+// statically-known bindings. The existing module-level `imports` summary
+// retains the `*`-import target string for downstream metadata.
+message MypyImportFromStmtProto {
+  string module = 1;
+  int32 relative = 2;
+  repeated MypyImportNameProto names = 3;
+}
+
+message MypyImportNameProto {
+  string name = 1;
+  string alias = 2;
+}
+
+// ─── Expressions ───────────────────────────────────────────
+
+message MypyExprProto {
+  int32 line = 1;
+  int32 col = 2;
+  // Tags 100/101 leave the 10..99 band free for future expression variants
+  // (oneof entries today end at generator_expr = 93).
+  int32 end_line = 100;
+  int32 end_col = 101;
+  PIRTypeProto expr_type = 3;                 // Resolved mypy type
+
+  oneof kind {
+    MypyIntExprProto int_expr = 10;
+    MypyStrExprProto str_expr = 11;
+    MypyFloatExprProto float_expr = 12;
+    MypyBytesExprProto bytes_expr = 13;
+    MypyComplexExprProto complex_expr = 14;
+    MypyEllipsisExprProto ellipsis_expr = 15;
+
+    MypyNameExprProto name_expr = 20;
+    MypyMemberExprProto member_expr = 21;
+    MypyCallExprProto call_expr = 22;
+
+    MypyOpExprProto op_expr = 30;
+    MypyUnaryExprProto unary_expr = 31;
+    MypyComparisonExprProto comparison_expr = 32;
+
+    MypyIndexExprProto index_expr = 40;
+    MypySliceExprProto slice_expr = 41;
+
+    MypyListExprProto list_expr = 50;
+    MypyTupleExprProto tuple_expr = 51;
+    MypySetExprProto set_expr = 52;
+    MypyDictExprProto dict_expr = 53;
+
+    MypyConditionalExprProto conditional_expr = 60;
+    MypyStarExprProto star_expr = 61;
+
+    MypyYieldExprProto yield_expr = 70;
+    MypyYieldFromExprProto yield_from_expr = 71;
+    MypyAwaitExprProto await_expr = 72;
+
+    MypyAssignmentExprProto assignment_expr = 80;
+    MypyLambdaExprProto lambda_expr = 81;
+    MypySuperExprProto super_expr = 82;
+
+    MypyListComprehensionProto list_comprehension = 90;
+    MypySetComprehensionProto set_comprehension = 91;
+    MypyDictComprehensionProto dict_comprehension = 92;
+    MypyGeneratorExprProto generator_expr = 93;
+  }
+}
+
+// Literals
+message MypyIntExprProto {
+  int64 value = 1;
+  string str_value = 2;                       // For values outside int64 range
+}
+
+message MypyStrExprProto {
+  string value = 1;
+}
+
+message MypyFloatExprProto {
+  double value = 1;
+}
+
+message MypyBytesExprProto {
+  bytes value = 1;
+}
+
+message MypyComplexExprProto {
+  double real = 1;
+  double imag = 2;
+}
+
+message MypyEllipsisExprProto {}
+
+// Names & Attributes
+message MypyNameExprProto {
+  string name = 1;
+  string fullname = 2;
+  MypyNameKind name_kind = 3;
+}
+
+enum MypyNameKind {
+  NAME_LOCAL = 0;
+  NAME_GLOBAL = 1;
+  NAME_BUILTIN = 2;
+  NAME_PARAMETER = 3;
+  // Bound name resolves to a module (mypy `node` is `MypyFile`). Distinct
+  // from NAME_GLOBAL so the Kotlin side can lower `import os` to a
+  // FlatModuleRef rather than abusing FlatGlobalRef("os", "os").
+  NAME_MODULE = 4;
+}
+
+message MypyMemberExprProto {
+  MypyExprProto expr = 1;
+  string name = 2;
+  string fullname = 3;
+}
+
+message MypyCallExprProto {
+  MypyExprProto callee = 1;
+  repeated MypyCallArgProto args = 2;
+  string resolved_callee = 3;
+}
+
+message MypyCallArgProto {
+  MypyExprProto expr = 1;
+  int32 kind = 2;                             // ARG_POS=0, ARG_OPT=1, ARG_STAR=2, ARG_NAMED=3, ARG_STAR2=4, ARG_NAMED_OPT=5
+  string name = 3;
+}
+
+// Operators
+message MypyOpExprProto {
+  string op = 1;
+  MypyExprProto left = 2;
+  MypyExprProto right = 3;
+}
+
+message MypyUnaryExprProto {
+  string op = 1;
+  MypyExprProto expr = 2;
+}
+
+message MypyComparisonExprProto {
+  repeated string operators = 1;
+  repeated MypyExprProto operands = 2;
+}
+
+// Subscript & Slice
+message MypyIndexExprProto {
+  MypyExprProto base = 1;
+  MypyExprProto index = 2;
+}
+
+message MypySliceExprProto {
+  MypyExprProto begin = 1;
+  MypyExprProto end = 2;
+  MypyExprProto stride = 3;
+}
+
+// Collections
+message MypyListExprProto {
+  repeated MypyExprProto items = 1;
+}
+
+message MypyTupleExprProto {
+  repeated MypyExprProto items = 1;
+}
+
+message MypySetExprProto {
+  repeated MypyExprProto items = 1;
+}
+
+message MypyDictExprProto {
+  repeated MypyExprProto keys = 1;
+  repeated MypyExprProto values = 2;
+}
+
+// Conditional
+message MypyConditionalExprProto {
+  MypyExprProto cond = 1;
+  MypyExprProto if_expr = 2;
+  MypyExprProto else_expr = 3;
+}
+
+message MypyStarExprProto {
+  MypyExprProto expr = 1;
+}
+
+// Generators/Async
+message MypyYieldExprProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyYieldFromExprProto {
+  MypyExprProto expr = 1;
+}
+
+message MypyAwaitExprProto {
+  MypyExprProto expr = 1;
+}
+
+// Assignment expression (walrus)
+message MypyAssignmentExprProto {
+  MypyExprProto target = 1;
+  MypyExprProto value = 2;
+}
+
+// Lambda
+message MypyLambdaExprProto {
+  repeated MypyArgumentProto arguments = 1;
+  MypyBlockProto body = 2;
+  PIRTypeProto return_type = 3;
+}
+
+message MypySuperExprProto {}
+
+// Comprehensions
+message MypyListComprehensionProto {
+  MypyGeneratorExprProto generator = 1;
+}
+
+message MypySetComprehensionProto {
+  MypyGeneratorExprProto generator = 1;
+}
+
+message MypyDictComprehensionProto {
+  MypyExprProto key = 1;
+  MypyExprProto value = 2;
+  repeated MypyExprProto indices = 3;
+  repeated MypyExprProto sequences = 4;
+  repeated MypyCondListProto condlists = 5;
+}
+
+message MypyGeneratorExprProto {
+  MypyExprProto left_expr = 1;
+  repeated MypyExprProto indices = 2;
+  repeated MypyExprProto sequences = 3;
+  repeated MypyCondListProto condlists = 4;
+}
+
+message MypyCondListProto {
+  repeated MypyExprProto conditions = 1;
+}

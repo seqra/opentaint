@@ -1,0 +1,63 @@
+package org.opentaint.ir.impl.python.protoToFlat
+
+import org.opentaint.ir.impl.python.flat.FlatDecorator
+import org.opentaint.ir.impl.python.proto.MypyClassDefProto
+import org.opentaint.ir.impl.python.proto.MypyDecoratorDefProto
+import org.opentaint.ir.impl.python.proto.MypyExprProto
+import org.opentaint.ir.impl.python.proto.MypyFuncDefProto
+
+internal object DecoratorLowering {
+
+    fun fromFuncDef(funcDef: MypyFuncDefProto): List<FlatDecorator> =
+        funcDef.decoratorsList.map { FlatDecorator(it.name, it.qualifiedName, it.argumentsList) }
+
+    fun fromClassDef(classDef: MypyClassDefProto): List<FlatDecorator> =
+        classDef.decoratorsList.map { FlatDecorator(it.name, it.qualifiedName, it.argumentsList) }
+
+    fun fromDecoratorDef(decorator: MypyDecoratorDefProto, imports: ImportManager): List<FlatDecorator> =
+        decorator.originalDecoratorsList.map { fromExpr(it, imports) }
+
+    fun fromExpr(expr: MypyExprProto, imports: ImportManager): FlatDecorator = when {
+        expr.hasNameExpr() -> {
+            val ne = expr.nameExpr
+            FlatDecorator(
+                name = ne.name,
+                qualifiedName = imports.qualify(ne) ?: ne.name,
+                arguments = emptyList(),
+            )
+        }
+        expr.hasMemberExpr() -> {
+            val me = expr.memberExpr
+            FlatDecorator(
+                name = me.name,
+                qualifiedName = imports.dottedPath(me),
+                arguments = emptyList(),
+            )
+        }
+        expr.hasCallExpr() -> {
+            val callee = fromExpr(expr.callExpr.callee, imports)
+            FlatDecorator(
+                name = callee.name,
+                qualifiedName = callee.qualifiedName,
+                arguments = expr.callExpr.argsList.map { exprRepr(it.expr, imports) },
+            )
+        }
+        else -> FlatDecorator("<unknown>", "<unknown>", emptyList())
+    }
+
+    private fun exprRepr(expr: MypyExprProto, imports: ImportManager): String = when {
+        expr.hasIntExpr() -> expr.intExpr.value.toString()
+        expr.hasStrExpr() -> "\"${escape(expr.strExpr.value)}\""
+        expr.hasFloatExpr() -> expr.floatExpr.value.toString()
+        expr.hasBytesExpr() -> "b\"${escape(expr.bytesExpr.value.toStringUtf8())}\""
+        expr.hasComplexExpr() -> "${expr.complexExpr.real}+${expr.complexExpr.imag}j"
+        expr.hasEllipsisExpr() -> "..."
+        // True / False / None are NameExprs in mypy's AST; render verbatim.
+        expr.hasNameExpr() -> expr.nameExpr.name
+        expr.hasMemberExpr() -> imports.dottedPath(expr.memberExpr)
+        else -> "<expr>"
+    }
+
+    private fun escape(s: String): String =
+        s.replace("\\", "\\\\").replace("\"", "\\\"")
+}
