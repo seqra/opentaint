@@ -33,11 +33,14 @@ abstract class ProjectAnalyzer<
 
         return projectAnalysisContext.use {
             val entryPoints = it.selectProjectEntryPoints()
-            it.runAnalyzer(entryPoints, rules)
+            val prescanRoots = it.selectProjectPrescanRoots()
+            it.runAnalyzer(entryPoints, prescanRoots, rules)
         }
     }
 
     abstract fun Ctx.selectProjectEntryPoints(): List<Method>
+
+    open fun Ctx.selectProjectPrescanRoots(): List<Method> = selectProjectEntryPoints()
 
     abstract fun ruleStrategy(): LanguageStrategy<*, RuleItem>
 
@@ -55,11 +58,12 @@ abstract class ProjectAnalyzer<
 
     private fun Ctx.runAnalyzer(
         entryPoints: List<Method>,
+        prescanRoots: List<Method>,
         rules: PreloadedRules<RuleItem, RuleConfig>
     ): ProjectAnalysisStatus {
         val externalMethodTracker = if (options.trackExternalMethods) ExternalMethodTracker() else null
 
-        val analysisResult = runAnalyzerWithTraceResolver(entryPoints, rules, externalMethodTracker)
+        val analysisResult = runAnalyzerWithTraceResolver(entryPoints, prescanRoots, rules, externalMethodTracker)
         generateReportFromAnalysisResult(analysisResult)
 
         if (externalMethodTracker != null) {
@@ -77,11 +81,12 @@ abstract class ProjectAnalyzer<
 
     private fun Ctx.runAnalyzerWithTraceResolver(
         entryPoints: List<Method>,
+        prescanRoots: List<Method>,
         rules: PreloadedRules<RuleItem, RuleConfig>,
         externalMethodTracker: ExternalMethodTracker? = null,
     ): AnalysisResult {
         val analyzer = createAnalyzer(externalMethodTracker, rules)
-        return runAnalyzerWithTraceResolver(analyzer, entryPoints)
+        return runAnalyzerWithTraceResolver(analyzer, entryPoints, prescanRoots)
     }
 
     private fun Ctx.generateReportFromAnalysisResult(result: AnalysisResult) =

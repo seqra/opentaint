@@ -68,7 +68,11 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         GoDefaultConfigLoader.loadConfig()
     }
 
-    fun runSample(ruleName: String, useDefaultConfig: Boolean = false) {
+    fun runSample(
+        ruleName: String,
+        useDefaultConfig: Boolean = false,
+        wholePackagePrescan: Boolean = false,
+    ) {
         val sampleDir = samplesDir.resolve(ruleName)
         require(sampleDir.toFile().isDirectory) {
             "Sample directory missing: $sampleDir"
@@ -98,7 +102,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         }
 
         for (entry in entries) {
-            val result = runAnalysis(rulesProvider(), entry, resolver)
+            val result = runAnalysis(rulesProvider(), entry, resolver, wholePackagePrescan)
             val isPositive = entry.name.startsWith("Positive_")
             if (isPositive) {
                 assertTrue(
@@ -142,6 +146,7 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         rulesProvider: GoTaintRulesProvider,
         entryPoint: GoIRFunction,
         resolver: UnitResolver<GoIRFunction>,
+        wholePackagePrescan: Boolean,
     ): AnalysisResult {
         val ifdsGraph = GoApplicationGraph(program, resolver)
 
@@ -158,7 +163,15 @@ abstract class GoSampleBasedTestBase(val samplesDirProperty: String) {
         }
 
         return analyzer.use { eng ->
-            val resolvedTraces = eng.analyzeWithIfds(listOf(entryPoint)).first
+            val prescanRoots = if (wholePackagePrescan) {
+                val pkg = checkNotNull(entryPoint.pkg)
+                (pkg.functions + listOfNotNull(pkg.initFunction))
+                    .filter { it.hasBody }
+                    .distinct()
+            } else {
+                listOf(entryPoint)
+            }
+            val resolvedTraces = eng.analyzeWithIfds(listOf(entryPoint), prescanRoots).first
             val vulns = eng.ifdsEngine.getVulnerabilities()
             AnalysisResult(vulns.isNotEmpty(), resolvedTraces.isNotEmpty())
         }

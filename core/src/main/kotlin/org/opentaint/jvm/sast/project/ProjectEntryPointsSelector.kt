@@ -2,12 +2,22 @@ package org.opentaint.jvm.sast.project
 
 import mu.KLogging
 import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.ext.hasBody
 import org.opentaint.jvm.sast.project.spring.springWebProjectEntryPoints
 
 private val logger = object : KLogging() {}.logger
 
 fun ProjectAnalysisContext.selectProjectEntryPoints(options: ProjectAnalysisOptions): List<JIRMethod> =
     getEntryPoints(options)
+
+fun ProjectAnalysisContext.projectPrescanRoots(): List<JIRMethod> =
+    projectClasses.allProjectClasses()
+        .flatMap { cls ->
+            cls.declaredMethods.asSequence().filter { it.hasBody }
+        }
+        .distinct()
+        .toMutableList()
+        .ordered()
 
 private fun ProjectAnalysisContext.getEntryPoints(options: ProjectAnalysisOptions): List<JIRMethod> {
     logger.info { "Search entry points for project: ${project.sourceRoot}" }
@@ -37,6 +47,10 @@ private fun ProjectAnalysisContext.allProjectEntryPoints(options: ProjectAnalysi
 }
 
 private fun MutableList<JIRMethod>.ordered(): List<JIRMethod> {
-    sortWith(compareBy<JIRMethod> { it.enclosingClass.name }.thenBy { it.name })
+    sortWith(
+        compareBy<JIRMethod> { it.enclosingClass.name }
+            .thenBy { it.name }
+            .thenBy { it.description }
+    )
     return this
 }

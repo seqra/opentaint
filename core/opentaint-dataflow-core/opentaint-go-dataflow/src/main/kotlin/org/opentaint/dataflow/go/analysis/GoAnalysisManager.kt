@@ -2,8 +2,12 @@ package org.opentaint.dataflow.go.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanPropagation
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationTargetResolver
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
@@ -55,14 +59,33 @@ class GoAnalysisManager(
 ) : GoLanguageManager(cp), TaintAnalysisManager {
 
     override val factTypeChecker: FactTypeChecker = FactTypeChecker.Dummy
+    private var prescanPropagation: PrescanPropagation? = null
+
+    override fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation?.onNewSummaryStorage(storage, manager)
+    }
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<GoMethodAnalysisContext>()
 
-    private var selectedPhase: Phase = Phase.Prescan
+    private var selectedPhase: Phase = Phase.Init
     val phase: Phase get() = selectedPhase
 
     override fun selectPhase(phase: Phase) {
+        prescanPropagation = when (phase) {
+            is Phase.Prescan -> PrescanPropagation(
+                PrescanPropagationTargetResolver(
+                    phase.scopeMethods,
+                    getMethodEntrypointResolver(phase.graph),
+                )
+            )
+            Phase.Init,
+            Phase.FullScan -> null
+        }
+
         selectedPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         if (phase is Phase.FullScan) {

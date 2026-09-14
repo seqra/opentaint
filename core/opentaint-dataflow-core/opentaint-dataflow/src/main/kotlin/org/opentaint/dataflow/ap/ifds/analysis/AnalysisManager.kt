@@ -3,9 +3,11 @@ package org.opentaint.dataflow.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -22,6 +24,11 @@ import org.opentaint.util.analysis.ApplicationGraph
 
 interface AnalysisManager: LanguageManager {
     val factTypeChecker: FactTypeChecker
+
+    fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
+        manager: AnalysisUnitRunnerManager,
+    ) = Unit
 
     fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,

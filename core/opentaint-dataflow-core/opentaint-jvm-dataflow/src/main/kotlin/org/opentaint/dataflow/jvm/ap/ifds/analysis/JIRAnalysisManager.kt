@@ -3,7 +3,13 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.AnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.PrescanInitializerOwner
+import org.opentaint.dataflow.ap.ifds.PrescanPropagation
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationPolicy
+import org.opentaint.dataflow.ap.ifds.PrescanPropagationTargetResolver
+import org.opentaint.dataflow.ap.ifds.SummaryEdgeStorageWithSubscribers
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
@@ -45,6 +51,7 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -64,6 +71,28 @@ class JIRAnalysisManager(
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
+    private val prescanPropagationPolicy = object : PrescanPropagationPolicy {
+        override fun initializerOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (!jirMethod.isConstructor) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+        }
+
+        override fun receiverOwner(method: CommonMethod): PrescanInitializerOwner? {
+            val jirMethod = method as? JIRMethod ?: return null
+            if (jirMethod.isStatic || jirMethod.isClassInitializer) return null
+            return PrescanInitializerOwner(jirMethod.enclosingClass.name)
+        }
+    }
+    private var prescanPropagation: PrescanPropagation? = null
+
+    override fun onNewSummaryStorage(
+        storage: SummaryEdgeStorageWithSubscribers,
+        manager: AnalysisUnitRunnerManager,
+    ) {
+        prescanPropagation?.onNewSummaryStorage(storage, manager)
+    }
+
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),
         val defaultGetModel: JIRMethodGetDefault? = null,
@@ -72,14 +101,27 @@ class JIRAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
-    private var currentPhase: Phase = Phase.Prescan
+    private var currentPhase: Phase = Phase.Init
     val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
+        prescanPropagation = when (phase) {
+            is Phase.Prescan -> PrescanPropagation(
+                PrescanPropagationTargetResolver(
+                    phase.scopeMethods,
+                    getMethodEntrypointResolver(phase.graph),
+                    prescanPropagationPolicy,
+                )
+            )
+            Phase.Init,
+            Phase.FullScan -> null
+        }
+
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         when (phase) {
-            Phase.Prescan -> {}
+            Phase.Init,
+            is Phase.Prescan -> {}
             Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
         }
     }
