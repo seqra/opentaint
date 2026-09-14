@@ -30,6 +30,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
 import org.opentaint.ir.api.jvm.cfg.JIRNewExpr
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.cfg.JIRVirtualCallExpr
+import org.opentaint.ir.api.jvm.ext.allSuperHierarchySequence
+import org.opentaint.ir.api.jvm.ext.findDeclaredMethodOrNull
 import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 import org.opentaint.ir.api.jvm.ext.isSubClassOf
 import org.opentaint.ir.impl.cfg.util.isClass
@@ -135,9 +137,11 @@ class JIRCallResolver(
 
         val methods = hashSetOf<Pair<JIRMethod, TypeConstraintInfo>>()
         for ((method, constraint) in classMethods) {
+            val concreteMethod = method.takeIf { it.isValidConcreteMethod() }
+                ?: method.findApproximationOverride(unitResolver)
             if (constraint.exactType) {
-                if (method.isValidConcreteMethod()) {
-                    methods += method to constraint
+                if (concreteMethod != null) {
+                    methods += concreteMethod to constraint
                 }
                 continue
             }
@@ -152,8 +156,8 @@ class JIRCallResolver(
 
             overrides.mapTo(methods) { it to constraint }
 
-            if (method.isValidConcreteMethod()) {
-                methods += method to constraint
+            if (concreteMethod != null) {
+                methods += concreteMethod to constraint
             }
         }
 
@@ -172,7 +176,10 @@ class JIRCallResolver(
         }
 
         val baseMethodIsUnknown = unitResolver.resolve(baseMethod) == UnknownUnit
-        val allMethodsAreExact = classMethods.all { it.first.isValidConcreteMethod() && it.second.exactType }
+        val allMethodsAreExact = classMethods.all { (method, constraint) ->
+            constraint.exactType &&
+                (method.isValidConcreteMethod() || method.findApproximationOverride(unitResolver) != null)
+        }
         if (!allMethodsAreExact && baseMethodIsUnknown) {
             result += MethodResolutionResult.MethodResolutionFailed
         }
@@ -377,3 +384,8 @@ class JIRCallResolver(
             typeName == "java.lang.Object"
     }
 }
+
+internal fun JIRMethod.findApproximationOverride(unitResolver: JIRUnitResolver): JIRMethod? =
+    enclosingClass.allSuperHierarchySequence
+        .mapNotNull { it.findDeclaredMethodOrNull(name, description) }
+        .firstOrNull { unitResolver.isApproximation(it) }

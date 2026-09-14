@@ -71,6 +71,14 @@ class JIRMethodCallResolver(
     ) {
         val callees = callResolver.resolve(callExpr, location, callerContext)
 
+        if (callees.hasResolvedSamFallback()) {
+            val method = callExpr.method.method
+            externalMethodTracker?.untrackMethod(
+                "${method.enclosingClass.name}#${method.name}",
+                method.description,
+            )
+        }
+
         val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
         for (resolvedCallee in callees) {
             resolveJirMethodCall(callerContext, resolvedCallee, analyzer, callExpr, location, failureHandler, handler)
@@ -228,3 +236,8 @@ class JIRMethodCallResolver(
         private val logger = object : KLogging() {}.logger
     }
 }
+
+internal fun List<JIRCallResolver.MethodResolutionResult>.hasResolvedSamFallback(): Boolean =
+    any { it is JIRCallResolver.MethodResolutionResult.ConcreteMethod } &&
+        any { it is JIRCallResolver.MethodResolutionResult.Lambda } &&
+        none { it is JIRCallResolver.MethodResolutionResult.MethodResolutionFailed }

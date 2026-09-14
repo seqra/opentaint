@@ -16,6 +16,8 @@ import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
 import org.opentaint.ir.approximation.toApproximationName
 import org.opentaint.ir.approximation.toOriginalName
 import org.opentaint.ir.approximations.target.KotlinClass
+import org.opentaint.ir.approximations.target.InterfaceTargetImplementation
+import org.opentaint.ir.approximations.target.InterfaceTarget
 import org.opentaint.ir.impl.fs.JarLocation
 import org.opentaint.ir.testing.BaseTest
 import org.opentaint.ir.testing.WithDb
@@ -72,6 +74,41 @@ open class ApproximationsTest : BaseTest() {
             .filter { it.name == "valueOf" }
             .singleOrNull { it is JIREnrichedVirtualMethod }
         assertNotNull(method)
+    }
+
+    @Test
+    fun `interface approximation does not replace concrete override`() {
+        val target = cp.findClass<InterfaceTarget>()
+        val implementation = cp.findClass<InterfaceTargetImplementation>()
+
+        val targetConvert = target.declaredMethods.single { it.name == "convert" }
+        val convert = implementation.declaredMethods.single { it.name == "convert" }
+
+        assertTrue(targetConvert is JIREnrichedVirtualMethod)
+        assertFalse(convert is JIREnrichedVirtualMethod)
+        assertFalse(implementation.declaredFields.any { it.name == "approximationState" })
+        assertFalse(implementation.declaredMethods.any { it.name == "approximationHelper" })
+    }
+
+    @Test
+    fun `higher priority approximation wins regardless of indexing order`() {
+        val target = "example.Target".toOriginalName()
+        val bundled = "example.BundledApproximation".toApproximationName()
+        val custom = "example.CustomApproximation".toApproximationName()
+
+        val customFirst = Approximations(emptyList())
+        customFirst.registerApproximation(target, custom, priority = 1)
+        customFirst.registerApproximation(target, bundled, priority = 0)
+        assertEquals(custom.className, customFirst.findApproximationByOriginOrNull(target))
+        assertEquals(target.className, customFirst.findOriginalByApproximationOrNull(custom))
+        assertEquals(null, customFirst.findOriginalByApproximationOrNull(bundled))
+
+        val bundledFirst = Approximations(emptyList())
+        bundledFirst.registerApproximation(target, bundled, priority = 0)
+        bundledFirst.registerApproximation(target, custom, priority = 1)
+        assertEquals(custom.className, bundledFirst.findApproximationByOriginOrNull(target))
+        assertEquals(target.className, bundledFirst.findOriginalByApproximationOrNull(custom))
+        assertEquals(null, bundledFirst.findOriginalByApproximationOrNull(bundled))
     }
 
     @Test

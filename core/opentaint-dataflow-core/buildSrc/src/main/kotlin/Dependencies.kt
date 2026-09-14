@@ -6,6 +6,7 @@ object Versions {
     const val sarif4k = "0.5.0"
     const val fastutil = "8.5.13"
     const val jdot = "1.0"
+    const val mockk = "1.13.4"
 }
 
 object Libs {
@@ -26,5 +27,11 @@ object Libs {
         group = "info.leadinglight",
         name = "jdot",
         version = Versions.jdot
+    )
+
+    val mockk = dep(
+        group = "io.mockk",
+        name = "mockk",
+        version = Versions.mockk,
     )
 }

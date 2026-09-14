@@ -27,6 +27,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
+import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -34,6 +35,7 @@ import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.sast.ast.BasicTestUtils
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
+import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximationLocation
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration.Companion.minutes
@@ -111,7 +113,13 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
-    private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
+    private class SingleLocationUnit(
+        val loc: RegisteredLocation,
+        val cp: JIRClasspath,
+    ) : JIRUnitResolver {
+        override fun isApproximation(method: JIRMethod): Boolean =
+            DataFlowApproximationLoader.isApproximation(method)
+
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
                 return SingletonUnit
@@ -120,7 +128,8 @@ abstract class AnalysisTest : BasicTestUtils() {
             return UnknownUnit
         }
 
-        override fun locationIsUnknown(loc: RegisteredLocation): Boolean = loc != this.loc
+        override fun locationIsUnknown(loc: RegisteredLocation): Boolean =
+            loc != this.loc && !isApproximationLocation(cp, loc)
     }
 
     private val defaultConfig by lazy {
@@ -162,7 +171,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
-            override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
+            override fun unitResolver() = SingleLocationUnit(cls.declaration.location, cp)
         }
 
         return analyzer.use {
