@@ -147,6 +147,10 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(0)
+      - '[*]'
+    to: result
 - function:
     package: io
     name: MultiWriter

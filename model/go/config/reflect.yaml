@@ -303,3 +303,7 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
+  - from:
+      - arg(1)
+      - '[*]'
+    to: result

@@ -1,0 +1,7 @@
+- function: java.util.List#get
+  overrides: true
+  copy:
+  - from:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+    to: result

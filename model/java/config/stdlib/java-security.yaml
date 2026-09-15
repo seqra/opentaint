@@ -6,7 +6,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
+    to: result
+  - from:
+    - this
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
     - '[*]'
     to:
     - result
@@ -24,19 +28,16 @@ passThrough:
   overrides: false
   bypassVerification: true
   copy:
+  - from: arg(1)
+    to:
+    - this
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
-    - '[*]'
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
     - '[*]'
 - function: java.security.Key#getEncoded
   signature: () byte[]
@@ -49,19 +50,16 @@ passThrough:
   overrides: false
   bypassVerification: true
   copy:
+  - from: arg(1)
+    to:
+    - this
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
-    - '[*]'
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
     - '[*]'
 - function: java.security.CodeSource#getCodeSigners
   signature: () java.security.CodeSigner[]
@@ -69,7 +67,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
+    to: result
+  - from:
+    - this
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
     - '[*]'
     to:
     - result

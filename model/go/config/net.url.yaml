@@ -192,3 +192,7 @@ passThrough:
   copy:
   - from: arg(*)
     to: result(0)
+  - from:
+      - arg(1)
+      - '[*]'
+    to: result(0)
