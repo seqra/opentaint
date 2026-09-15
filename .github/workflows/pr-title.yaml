@@ -62,11 +62,7 @@ jobs:
 
           SCOPE=$(node .github/scripts/scope-contract.cjs title-scopes "$PR_TITLE")
 
-          # The diff endpoint rejects large pull requests with HTTP 406. The
-          # files endpoint is paginated and has no patch-size dependency.
-          CHANGED=$(gh api --paginate \
-            "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/files?per_page=100" \
-            --jq '.[].filename')
+          CHANGED=$(gh pr diff "$PR_NUMBER" --name-only --repo "$GITHUB_REPOSITORY")
           printf '%s\n' "$CHANGED" |
             node .github/scripts/scope-contract.cjs validate-paths "$SCOPE"
           echo "All changed files have the exact scopes '$SCOPE'"
