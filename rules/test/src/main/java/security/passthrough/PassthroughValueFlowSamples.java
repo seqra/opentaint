@@ -295,6 +295,26 @@ public class PassthroughValueFlowSamples {
         Runtime.getRuntime().exec(buffer.toString());
     }
 
+    /** A typed ByteBuffer view must retain the backing buffer's element taint. */
+    @GetMapping("/byte-buffer-char-view/unsafe")
+    public void byteBufferCharViewUnsafe(@RequestParam String input) throws IOException {
+        CharBuffer view = ByteBuffer.wrap(input.getBytes()).asCharBuffer();
+        Runtime.getRuntime().exec(view.toString());
+    }
+
+    @GetMapping("/byte-buffer-char-view/safe")
+    public void byteBufferCharViewSafe(@RequestParam String input) throws IOException {
+        CharBuffer view = ByteBuffer.wrap(CONSTANT.getBytes()).asCharBuffer();
+        Runtime.getRuntime().exec(view.toString());
+    }
+
+    /** The shared carrier is content-only; it must not taint view metadata. */
+    @GetMapping("/byte-buffer-view-metadata/safe")
+    public void byteBufferViewContentDoesNotReachMetadataSafe(@RequestParam String input)
+            throws IOException {
+        Runtime.getRuntime().exec(ByteBuffer.wrap(input.getBytes()).asIntBuffer().toString());
+    }
+
     @GetMapping("/char-buffer/unsafe")
     public void charBufferUnsafe(@RequestParam String input) throws IOException {
         CharBuffer buffer = CharBuffer.allocate(256);
