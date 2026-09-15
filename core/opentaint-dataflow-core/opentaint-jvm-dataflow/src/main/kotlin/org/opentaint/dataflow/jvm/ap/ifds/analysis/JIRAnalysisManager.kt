@@ -68,7 +68,7 @@ class JIRAnalysisManager(
 
     data class Params(
         val aliasAnalysisParams: JIRLocalAliasAnalysis.Params = JIRLocalAliasAnalysis.Params(),
-        val disableDefaultGetModel: Boolean = false,
+        val defaultGetModel: JIRMethodGetDefault? = null,
     )
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()

@@ -1,5 +1,7 @@
 'use strict';
 
+const { hasAnyScope } = require('./.github/scripts/scope-contract.cjs');
+
 const TYPES = [
   { type: 'chore', hidden: true },
   { type: 'feat', section: ':gift: Features', hidden: false },
@@ -11,11 +13,10 @@ const TYPES = [
 ];
 
 function createTransform(allowedScopes) {
-  const scopeSet = new Set(allowedScopes);
   const typeMap = new Map(TYPES.map(t => [t.type, t]));
 
   return (commit, context) => {
-    if (!scopeSet.has(commit.scope)) return null;
+    if (!hasAnyScope(commit.scope, allowedScopes)) return null;
 
     let discard = true;
     const issues = [];

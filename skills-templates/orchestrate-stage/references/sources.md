@@ -1,12 +1,12 @@
 # Discover sources + source rules
 
-Discover the project's used dependency members that are taint sources, author source rules, and wire them to the built-in sinks. The first project scan follows and names the later taint frontier. On re-entry, partition plans only members no prior run verdicted.
+Discover the project's used dependency members that are taint sources, then author source rules in the reusable source group. Existing tag joins connect them automatically. The first project scan follows and names the later taint frontier. On re-entry, partition plans only members no prior run has classified.
 
 ## Triage dependencies
 
 Dispatch triage-dependencies when status names it.
 
-Expect back — `.opentaint/tracking/coverage.yaml` written; status advances to source discovery.
+Expect back — `.opentaint/tracking/coverage.yaml` written.
 
 ## Discover sources
 
@@ -16,7 +16,7 @@ Run:
 uv run <skill-dir>/scripts/generate.py partition discover
 ```
 
-It writes balanced `.opentaint/tracking/rules/plans/lib-NNN.yaml` plans, one disjoint slice per leaf. Fan out discover-attack-surface, one per plan.
+It writes balanced `.opentaint/tracking/rules/plans/lib-NNN.yaml` plans, one disjoint slice per leaf, containing the currently unclassified dependency members. Fan out discover-attack-surface, one per plan.
 
 Inputs each:
 - `language`
@@ -55,15 +55,10 @@ Inputs:
 
 Expect back — each source's `rule_id` set and `stages.tests_passing: done`.
 
-## Assemble source joins
+## Complete source rules
 
-Once no source unit is pending, status names unwired created sources. Dispatch assemble-lib-rules.
-
-Inputs:
-- `language`
-
-Expect back — the joins tally written: one join per built-in sink, each refing all created sources for that vulnerability class. Then delete the source units' `test-compiled/` models.
+Created source rules use `untrusted-data-source`, so existing tag joins expand to them automatically. No source-only join assembly is needed. Once all source units pass and `get_status.py` accepts their tags, delete the source units' `test-compiled/` models.
 
 ## Stage gate
 
-`get_status.py` drives `discover` then `source_rules`, naming the current sub-step and units. Finish when both are `DONE`, or when the next step it reports is the project scan.
+`get_status.py` drives every in-scope source phase and names the current sub-step and units. Finish when those phases are `DONE`, or when the next step it reports is the project scan.

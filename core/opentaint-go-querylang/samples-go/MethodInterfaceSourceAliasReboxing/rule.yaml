@@ -1,0 +1,37 @@
+rules:
+  - id: method-interface-source-alias-reboxing
+    languages: [go]
+    severity: WARNING
+    message: "Admitted request reaches RaftApply"
+    mode: join
+    join:
+      refs:
+        - rule: '#method-alias-source'
+          as: src
+        - rule: '#method-alias-sink'
+          as: sink
+      on:
+        - 'src.$UNTRUSTED -> sink.$UNTRUSTED'
+  - id: method-alias-source
+    options: {lib: true}
+    languages: [go]
+    severity: NOTE
+    message: "Request is admitted"
+    mode: taint
+    pattern-sources:
+      - label: "$UNTRUSTED"
+        patterns:
+          - pattern-either:
+              - pattern: "($S : *MethodInterfaceSourceAliasReboxing.Server).Authenticate($CTX, $UNTRUSTED)"
+              - pattern: "($S : *MethodInterfaceSourceAliasReboxing.Server).AuthenticateConcrete($CTX, $UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED
+  - id: method-alias-sink
+    options: {lib: true}
+    languages: [go]
+    severity: NOTE
+    message: "Request reaches RaftApply"
+    mode: taint
+    pattern-sinks:
+      - patterns:
+          - pattern: "($S : *MethodInterfaceSourceAliasReboxing.Server).RaftApply($TYPE, $UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED

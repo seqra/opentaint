@@ -93,7 +93,15 @@ private fun <T> List<T>.endsWith(other: List<T>): Boolean {
 }
 
 fun String.splitFullName(): Pair<String, String> {
-    val simpleName = substringAfterLast('.')
-    val pkgName = substringBeforeLast('.', "")
-    return pkgName to simpleName
+    var bracketDepth = 0
+    for (index in lastIndex downTo 0) {
+        when (this[index]) {
+            ']' -> bracketDepth++
+            '[' -> bracketDepth--
+            '.' -> if (bracketDepth == 0) {
+                return substring(0, index) to substring(index + 1)
+            }
+        }
+    }
+    return "" to this
 }

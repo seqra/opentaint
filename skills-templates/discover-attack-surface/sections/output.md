@@ -2,10 +2,10 @@ Short and concise report of what was done
 
 ### Artifacts:
 
-- `.opentaint/tracking/rules/sources/<package-kebab>.yaml` — the source unit(s), one per package the plan touched (none for a fully-covered package)
-- `.opentaint/tracking/rules/plans/<id>.yaml` — your plan, with the sources recorded under `source`
+- `.opentaint/tracking/rules/sources/<unit>.yaml` — each source unit required by the completed plan
+- the assigned plan with the discovered sources recorded under `source`
 
 ### Summary:
 
-- the sources found, one line each, and any package already fully covered
+- the source members found, one line each
 - anything blocked or left uncertain

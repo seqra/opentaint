@@ -1,6 +1,6 @@
 package test
-import "test/util"
 
+import "test/util"
 
 // ── Pass-through rule tests ──────────────────────────────────────────
 
@@ -25,4 +25,20 @@ func passThrough003T() {
 func passThrough004F() {
 	result := util.Transform("clean", util.Source())
 	util.Sink(result)
+}
+
+func passThrough005T() {
+	result := util.GenericIdentity[string](util.Source())
+	util.Sink(result)
+}
+
+func passThrough006T() {
+	data := util.NamedString(util.Source())
+	util.Sink(string(data))
+}
+
+func passThrough007T() {
+	data := util.NamedString(util.Source())
+	result := util.GenericIdentity[util.NamedString](data)
+	util.Sink(string(result))
 }

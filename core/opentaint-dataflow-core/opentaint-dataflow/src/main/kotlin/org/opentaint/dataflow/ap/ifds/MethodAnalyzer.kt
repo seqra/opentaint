@@ -1326,7 +1326,7 @@ class NormalMethodAnalyzer(
                             summaryHandler.handleFactToFact(
                                 initialFact,
                                 currentEdgeFactAp,
-                                EdgeRefinement.UniverseRefinement,
+                                EdgeRefinement.ForcedRefinement(initialFact.exclusions),
                                 summaryEdge
                             )
                         }

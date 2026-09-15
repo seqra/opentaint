@@ -31,7 +31,7 @@ interface VirtualTypedMethodRef : TypedMethodRef {
 
 interface JIRInstLocation : CommonInstLocation {
     override val method: JIRMethod
-    val index: Int
+    override val index: Int
     val lineNumber: Int
 }
 

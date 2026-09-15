@@ -12,9 +12,9 @@ poc                         → stage subagent: poc
 
 ### Build in MAIN
 
-When status reports `build`, load and follow the `build-project` skill in this main session. Run its long build command through the harness's main-session background-command facility and wait for its completion event.
+When status reports `build`, load and follow the `build-project` skill in this main session. Pass any language-specific build fields already present in `state.yaml` as `build-hints`. Run its long build command through the harness's main-session background-command facility and wait for its completion event.
 
-Record the returned `build_jdk` in `.opentaint/tracking/state.yaml`. Record `model_commit` as the full HEAD only when no source file is uncommitted, otherwise set it to null. Build non-convergence blocks the run because no later phase can proceed without the model.
+After a successful build, write the language-specific build fields named by the selected `build-project` reference into `.opentaint/tracking/state.yaml`. Record `model_commit` as the full HEAD only when no source file is uncommitted, otherwise set it to null. Build non-convergence blocks the run because no later phase can proceed without the model.
 
 ### Scan in MAIN
 

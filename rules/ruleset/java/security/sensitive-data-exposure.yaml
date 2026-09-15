@@ -319,12 +319,12 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: untrusted-data
+        - tag: untrusted-data-source
+          as: source
         - tag: file-disclosure-sink
           as: sink
       on:
-      - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+      - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: spring-file-disclosure-model-and-view-sink
     options:
@@ -414,12 +414,12 @@ rules:
     mode: join
     join:
       refs:
-        - tag: spring-untrusted-data-source
-          as: untrusted-data
+        - tag: untrusted-data-source
+          as: source
         - tag: jsp-file-disclosure-sink
           as: sink
       on:
-      - 'untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+      - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: stacktrace-printing-in-error-message
     severity: WARNING

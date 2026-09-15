@@ -1,6 +1,7 @@
 package org.opentaint.ir.approximations
 
 import org.opentaint.ir.api.jvm.JavaVersion
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
@@ -203,7 +204,7 @@ open class ApproximationsTest : BaseTest() {
     }
 
     private fun runAlongLib(file: File) {
-        val classes = JarLocation(file, isRuntime = false, object : JavaVersion {
+        val classes = JarLocation(file, LocationType.APP, object : JavaVersion {
             override val majorVersion: Int
                 get() = 8
         }).classes

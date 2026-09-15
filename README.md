@@ -160,7 +160,29 @@ For more options, see [Installation](docs/README.md#installation) and [Usage](do
 
 ## AI Agent Workflows
 
-OpenTaint includes agent skills that turn static analysis into an end-to-end application-security workflow. Install them with:
+OpenTaint includes agent skills that turn static analysis into an end-to-end application-security workflow.
+
+<details>
+<summary><strong>Install for Codex</strong></summary>
+
+```bash
+codex plugin marketplace add seqra/opentaint
+codex plugin add appsec-workflow@opentaint
+```
+
+</details>
+
+<details>
+<summary><strong>Install for Claude Code</strong></summary>
+
+```bash
+claude plugin marketplace add seqra/opentaint
+claude plugin install appsec-workflow@opentaint
+```
+
+</details>
+
+Or install the skills directly for any supported agent:
 
 ```bash
 npx skills add https://github.com/seqra/opentaint

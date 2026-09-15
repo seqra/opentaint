@@ -67,12 +67,14 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: untrusted-data
-        - tag: spring-untrusted-path-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          exclude:
+            - java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+          as: source
+        - rule: java/lib/spring/untrusted-path-source.yaml#spring-untrusted-path-source
+          as: spring-path-source
         - tag: path-traversal-sink
           as: sink
       on:
-        - 'untrusted-data.$UNTRUSTED -> sink.$FILE'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$FILE'
+        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
+        - 'spring-path-source.$UNTRUSTED -> sink.$UNTRUSTED'

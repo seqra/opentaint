@@ -20,8 +20,9 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 ```yaml
 scan_level: deep
 triage_level: dynamic
-language: java
+language: <language>
 model_commit: 0123456789abcdef0123456789abcdef01234567
-build_jdk: null
 max_memory: null
 ```
+
+The selected `build-project` language reference may define additional build fields; preserve them on resume and pass them back as `build-hints`.

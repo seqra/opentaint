@@ -1,9 +1,8 @@
-{% include "shared/engine/facts.md" %}
-
 - Library rules MUST have `options.lib: true` and `severity: NOTE`
-- The test joins (`mode: join`) MUST have `metadata.cwe` and `metadata.short-description`
-- Metavariable names must match across `refs` and `on` clauses, or the join won't connect. Bind the tainted value to one consistent metavariable in every lib source/sink rule
-- The `rule` path in `refs` is relative to its ruleset root — a marker ref resolves under the test project's marker rules, a lib ref under the scanned rules tree
+- Created source rules MUST carry the `untrusted-data-source` tag, created sink rules MUST carry their enclosing sink group's registered `*-sink` tag
+- The test joins MUST have `metadata.cwe` and `metadata.short-description`
+- In test joins, metavariable names must match across `refs` and `on` clauses or the join won't connect. Bind the tainted value to `$UNTRUSTED` in every lib source/sink rule
+- Test-join `rule` paths are relative to a ruleset root: marker rules resolve under the test project's rules, lib rules under the built-in or custom scanned rules tree
 - Rule IDs must be globally unique
 - The custom lib rules go in the scanned rules tree; the test joins go only in the test project's marker rules
 - Never scan the main project model

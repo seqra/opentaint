@@ -110,31 +110,49 @@ Example (from `ruleset/java/security/ssrf.yaml`):
   mode: join
   join:
     refs:
-      - tag: servlet-untrusted-data-source
-        as: servlet-untrusted-data
-      - tag: spring-untrusted-data-source
-        as: spring-untrusted-data
+      - tag: untrusted-data-source
+        as: source
       - tag: ssrf-sink
         as: sink
     on:
-      - 'servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
-      - 'spring-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED'
+      - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 ```
 
 Semantics:
 
 - `mode: join` derives a composite rule from other rules referenced in `join.refs`.
 - Each `ref` selects a library rule and assigns a local alias:
-  - `tag` selects every enabled rule with that tag in the join's language. Adding the same tag to a
-    custom rule extends the join.
+  - `tag` selects every enabled, non-excluded rule with that tag in the join's language. Adding the
+    same tag to a custom rule extends the join.
   - `rule` selects one rule by `<path>#<rule-id>`.
+  - `exclude` removes specific rule references (`<rule-id>` in the same file or
+    `<path>#<rule-id>`) from a `tag` ref. It is not valid with `rule`, and its scope is limited to
+    that one ref.
   - `as` defines the alias used in `on`.
 - `on` correlates captures from the referenced rules. For example,
-  `servlet-untrusted-data.$UNTRUSTED -> sink.$UNTRUSTED` requires dataflow from the source capture
+  `source.$UNTRUSTED -> sink.$UNTRUSTED` requires dataflow from the source capture
   to the sink capture.
 
-Built-in joins use language-scoped, per-source and per-sink tags. Use `rule` when a join must
-reference one specific rule.
+Java joins share the `untrusted-data-source` tag and select sinks by vulnerability family.
+Path traversal excludes the ordinary Spring source locally and explicitly includes its
+untagged path-specific source, preserving the non-wildcard path-variable exclusion:
+
+```yaml
+refs:
+  - tag: untrusted-data-source
+    as: source
+    exclude:
+      - java/lib/spring/untrusted-data-source.yaml#spring-untrusted-data-source
+  - rule: java/lib/spring/untrusted-path-source.yaml#spring-untrusted-path-source
+    as: spring-path-source
+  - tag: path-traversal-sink
+    as: sink
+on:
+  - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
+  - 'spring-path-source.$UNTRUSTED -> sink.$UNTRUSTED'
+```
+
+Tags are language-scoped. Use `rule` for private components that should not be extended by tags.
 
 This join mode is **based on Semgrep's join mode**, but OpenTaint extends it with custom features (such as the `->` notation in the `on` section) to express taint-style flows across multiple rule components.
 

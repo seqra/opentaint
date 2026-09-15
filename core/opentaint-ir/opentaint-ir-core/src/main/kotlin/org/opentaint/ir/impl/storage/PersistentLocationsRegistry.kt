@@ -75,7 +75,8 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         get() = persistence.read { context ->
             context.execute(
                 sqlAction = {
-                    context.dslContext.selectFrom(BYTECODELOCATIONS).where(BYTECODELOCATIONS.RUNTIME.ne(true))
+                    context.dslContext.selectFrom(BYTECODELOCATIONS)
+                        .where(BYTECODELOCATIONS.LOCATION_TYPE.ne(LocationType.RUNTIME.persistentValue))
                         .fetch { record ->
                             PersistentByteCodeLocation(
                                 jIRdb,
@@ -84,21 +85,16 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                         }
                 },
                 noSqlAction = {
-                    context.txn.find(
-                        type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                        propertyName = BytecodeLocationEntity.IS_RUNTIME,
-                        value = false
-                    ).map { entity ->
-                        PersistentByteCodeLocation(
-                            jIRdb,
-                            PersistentByteCodeLocationData.fromErsEntity(entity)
-                        )
-                    }.toList()
+                    context.txn.all(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
+                        .map { PersistentByteCodeLocationData.fromErsEntity(it) }
+                        .filter { it.type != LocationType.RUNTIME }
+                        .map { PersistentByteCodeLocation(jIRdb, it) }
+                        .toList()
                 }
             )
         }
 
-    override lateinit var runtimeLocations: List<RegisteredLocation>
+    override var runtimeLocations: List<RegisteredLocation> = emptyList()
 
     override val snapshots: KeySetView<LocationsRegistrySnapshot, Boolean> = ConcurrentHashMap.newKeySet()
 
@@ -110,17 +106,6 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
             this.runtimeLocations = it.registered
         }
     }
-//
-//    fun restorePure() {
-//        runtimeLocations = persistence.read {
-//            it.selectFrom(BYTECODELOCATIONS)
-//                .where(BYTECODELOCATIONS.RUNTIME.eq(true))
-//                .fetch {
-//                    PersistentByteCodeLocation(jIRdb, it.id!!)
-//                }
-//        }
-//    }
-
     override fun afterProcessing(locations: List<RegisteredLocation>) {
         val ids = locations.map { it.id }
         persistence.write { context ->
@@ -143,12 +128,30 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         jIRdb.featuresRegistry.broadcast(JIRInternalSignal.AfterIndexing)
     }
 
-    override fun registerIfNeeded(locations: List<JIRByteCodeLocation>): RegistrationResult {
-        val uniqueLocations = locations.toSet()
+    override fun registerIfNeeded(
+        locations: List<JIRByteCodeLocation>,
+        validateExistingType: Boolean
+    ): RegistrationResult {
+        if (locations.isEmpty()) return RegistrationResult(emptyList(), emptyList())
+
+        val uniqueLocations = linkedMapOf<String, JIRByteCodeLocation>()
+        locations.forEach { location ->
+            val previous = uniqueLocations.putIfAbsent(location.fileSystemId, location)
+            if (previous != null && validateExistingType) {
+                requireSameType(
+                    fileSystemId = location.fileSystemId,
+                    storedPath = previous.path,
+                    storedType = previous.type,
+                    requestedPath = location.path,
+                    requestedType = location.type
+                )
+            }
+        }
+
         return persistence.write { context ->
-            val result = arrayListOf<RegisteredLocation>()
             val toAdd = arrayListOf<JIRByteCodeLocation>()
-            val fsIds = uniqueLocations.map { it.fileSystemId }
+            val resolvedByFileSystemId = hashMapOf<String, RegisteredLocation>()
+            val fsIds = uniqueLocations.keys
             val existing = context.execute(
                 sqlAction = {
                     context.dslContext.selectFrom(BYTECODELOCATIONS).where(BYTECODELOCATIONS.UNIQUEID.`in`(fsIds))
@@ -168,12 +171,25 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                 }
             ).associateBy { it.fileSystemId }
 
-            uniqueLocations.forEach {
-                val found = existing[it.fileSystemId]
+            uniqueLocations.values.forEach { location ->
+                val found = existing[location.fileSystemId]
                 if (found == null) {
-                    toAdd += it
+                    toAdd += location
                 } else {
-                    result += PersistentByteCodeLocation(jIRdb, found, it)
+                    if (validateExistingType) {
+                        requireSameType(
+                            fileSystemId = location.fileSystemId,
+                            storedPath = found.path,
+                            storedType = found.type,
+                            requestedPath = location.path,
+                            requestedType = location.type
+                        )
+                    }
+                    resolvedByFileSystemId[location.fileSystemId] = PersistentByteCodeLocation(
+                        jIRdb,
+                        found,
+                        location.takeIf { it.type == found.type }
+                    )
                 }
             }
             val records = context.execute(
@@ -186,7 +202,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                             setLong(1, id)
                             setString(2, location.path)
                             setString(3, location.fileSystemId)
-                            setBoolean(4, location.type == LocationType.RUNTIME)
+                            setString(4, location.type.persistentValue)
                             setInt(5, LocationState.INITIAL.ordinal)
                             setNull(6, Types.BIGINT)
                         }
@@ -199,22 +215,41 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                         val entity = txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
                         entity[BytecodeLocationEntity.PATH] = location.path
                         entity[BytecodeLocationEntity.FILE_SYSTEM_ID] = location.fileSystemId
-                        entity[BytecodeLocationEntity.IS_RUNTIME] = location.type == LocationType.RUNTIME
+                        entity[BytecodeLocationEntity.LOCATION_TYPE] = location.type.persistentValue
                         entity[BytecodeLocationEntity.STATE] = LocationState.INITIAL.ordinal
                         entity.id.instanceId to location
                     }
                 }
             )
-            val added = records.map {
+            val added = records.map { (id, location) ->
                 PersistentByteCodeLocation(
                     jIRdb.persistence,
                     jIRdb.runtimeVersion,
-                    it.first,
+                    id,
                     null,
-                    it.second
-                )
+                    location
+                ).also {
+                    resolvedByFileSystemId[location.fileSystemId] = it
+                }
             }
-            RegistrationResult(result + added, added)
+            RegistrationResult(
+                registered = uniqueLocations.keys.map { resolvedByFileSystemId.getValue(it) },
+                new = added
+            )
+        }
+    }
+
+    private fun requireSameType(
+        fileSystemId: String,
+        storedPath: String,
+        storedType: LocationType,
+        requestedPath: String,
+        requestedType: LocationType
+    ) {
+        require(storedType == requestedType) {
+            "Bytecode location type conflict for file-system id '$fileSystemId': " +
+                    "registered '$storedPath' as $storedType, but '$requestedPath' was requested as $requestedType. " +
+                    "Use the registered type or rebuild the database with the desired classification."
         }
     }
 
@@ -337,29 +372,34 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
     private fun JIRByteCodeLocation.findOrNew(context: StorageContext): PersistentByteCodeLocationData {
         val existing = findOrNull(context)
         if (existing != null) {
+            requireSameType(
+                fileSystemId = fileSystemId,
+                storedPath = existing.path,
+                storedType = existing.type,
+                requestedPath = path,
+                requestedType = type
+            )
             return existing
         }
         return context.execute(
             sqlAction = {
                 val record = BytecodelocationsRecord().also {
+                    it.id = requireNotNull(idGen).incrementAndGet()
                     it.path = path
                     it.uniqueid = fileSystemId
-                    it.runtime = type == LocationType.RUNTIME
+                    it.locationType = type.persistentValue
+                    it.state = LocationState.INITIAL.ordinal
                 }
-                context.dslContext.insertInto(BYTECODELOCATIONS).set(record)
+                context.dslContext.insertInto(BYTECODELOCATIONS).set(record).execute()
                 PersistentByteCodeLocationData.fromSqlRecord(record)
             },
             noSqlAction = {
                 val txn = context.txn
-                val entity =
-                    txn.find(
-                        type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                        propertyName = BytecodeLocationEntity.PATH,
-                        value = path
-                    ).firstOrNull() ?: txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
+                val entity = txn.newEntity(BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE)
                 entity[BytecodeLocationEntity.PATH] = path
                 entity[BytecodeLocationEntity.FILE_SYSTEM_ID] = fileSystemId
-                entity[BytecodeLocationEntity.IS_RUNTIME] = type == LocationType.RUNTIME
+                entity[BytecodeLocationEntity.LOCATION_TYPE] = type.persistentValue
+                entity[BytecodeLocationEntity.STATE] = LocationState.INITIAL.ordinal
                 PersistentByteCodeLocationData.fromErsEntity(entity)
             }
         )
@@ -369,7 +409,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
         return context.execute(
             sqlAction = {
                 context.dslContext.selectFrom(BYTECODELOCATIONS)
-                    .where(BYTECODELOCATIONS.PATH.eq(path).and(BYTECODELOCATIONS.UNIQUEID.eq(fileSystemId)))
+                    .where(BYTECODELOCATIONS.UNIQUEID.eq(fileSystemId))
                     .fetchAny()
                     ?.let { PersistentByteCodeLocationData.fromSqlRecord(it) }
             },
@@ -377,10 +417,10 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
                 val txn = context.txn
                 txn.find(
                     type = BytecodeLocationEntity.BYTECODE_LOCATION_ENTITY_TYPE,
-                    propertyName = BytecodeLocationEntity.PATH,
-                    value = path
+                    propertyName = BytecodeLocationEntity.FILE_SYSTEM_ID,
+                    value = fileSystemId
                 )
-                    .firstOrNull { it.get<String>(BytecodeLocationEntity.FILE_SYSTEM_ID) == fileSystemId }
+                    .firstOrNull()
                     ?.let {
                         PersistentByteCodeLocationData.fromErsEntity(it)
                     }
@@ -392,7 +432,7 @@ class PersistentLocationsRegistry(private val jIRdb: JIRDatabaseImpl) : Location
 object BytecodeLocationEntity {
     const val BYTECODE_LOCATION_ENTITY_TYPE = "ByteCodeLocation"
     const val STATE = "state"
-    const val IS_RUNTIME = "isRuntime"
+    const val LOCATION_TYPE = "locationType"
     const val PATH = "path"
     const val FILE_SYSTEM_ID = "fileSystemId"
     const val UPDATED_LINK = "updatedLink"

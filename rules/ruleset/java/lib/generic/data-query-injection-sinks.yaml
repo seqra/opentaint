@@ -34,27 +34,27 @@ rules:
       - java
     patterns:
       - pattern-either:
-          - pattern: (com.mongodb.BasicDBObject $QUERY).put("$where", $INPUT);
+          - pattern: (com.mongodb.BasicDBObject $QUERY).put("$where", $UNTRUSTED);
           - pattern: |
-              (java.util.Map $MAP).put("$where", $INPUT);
+              (java.util.Map $MAP).put("$where", $UNTRUSTED);
               ...
               (com.mongodb.BasicDBObject $QUERY).putAll($MAP);
-          - pattern: (com.mongodb.BasicDBObject $QUERY).append("$where", $INPUT);
-          - pattern: new com.mongodb.BasicDBObject("$where", $INPUT);
+          - pattern: (com.mongodb.BasicDBObject $QUERY).append("$where", $UNTRUSTED);
+          - pattern: new com.mongodb.BasicDBObject("$where", $UNTRUSTED);
           - pattern: |
-              (java.util.Map $MAP).put("$where", $INPUT);
+              (java.util.Map $MAP).put("$where", $UNTRUSTED);
               ...
               new com.mongodb.BasicDBObject($MAP);
           - pattern: |
-              (java.util.Map $MAP).put("$where", $INPUT);
+              (java.util.Map $MAP).put("$where", $UNTRUSTED);
               ...
               String $JSON = new JSONObject($MAP).toString();
               ...
               (com.mongodb.BasicDBObject $QUERY).parse((String $JSON));
-          - pattern: com.mongodb.BasicDBObjectBuilder.start().add("$where", $INPUT);
-          - pattern: com.mongodb.BasicDBObjectBuilder.start().append("$where", $INPUT);
-          - pattern: com.mongodb.BasicDBObjectBuilder.start("$where", $INPUT);
+          - pattern: com.mongodb.BasicDBObjectBuilder.start().add("$where", $UNTRUSTED);
+          - pattern: com.mongodb.BasicDBObjectBuilder.start().append("$where", $UNTRUSTED);
+          - pattern: com.mongodb.BasicDBObjectBuilder.start("$where", $UNTRUSTED);
           - pattern: |
-              (java.util.Map $MAP).put("$where", $INPUT);
+              (java.util.Map $MAP).put("$where", $UNTRUSTED);
               ...
               com.mongodb.BasicDBObjectBuilder.start($MAP);

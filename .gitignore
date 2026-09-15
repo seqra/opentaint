@@ -34,3 +34,7 @@ core/**/bin/
 # Optional: Allow the .gitignore file itself to be tracked
 !.gitignore
 !.github
+
+# Agent plugin manifests
+!.claude-plugin
+!.codex-plugin

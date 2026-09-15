@@ -8,7 +8,7 @@ Spring app mode is selected per sample in `rule-test.yaml` — an entry is eithe
 
 ```yaml
 tests:
-  - rule-id: java/security/xss.yaml#xss-in-spring-app
+  - rule-id: java/security/xss.yaml#xss
     positive:
       - entrypoint: test.VulnerableSink#vulnerable
         mode: spring-app

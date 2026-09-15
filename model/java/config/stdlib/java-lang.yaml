@@ -1637,3 +1637,93 @@ passThrough:
     - arg(0)
     - '[*]'
     to: this
+- function: java.lang.Boolean#valueOf
+  signature: (boolean) java.lang.Boolean
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Byte#valueOf
+  signature: (byte) java.lang.Byte
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Character#valueOf
+  signature: (char) java.lang.Character
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Double#valueOf
+  signature: (double) java.lang.Double
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Float#valueOf
+  signature: (float) java.lang.Float
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Integer#valueOf
+  signature: (int) java.lang.Integer
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Long#valueOf
+  signature: (long) java.lang.Long
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Short#valueOf
+  signature: (short) java.lang.Short
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Boolean#booleanValue
+  signature: () boolean
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Byte#byteValue
+  signature: () byte
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Double#doubleValue
+  signature: () double
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Float#floatValue
+  signature: () float
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Integer#intValue
+  signature: () int
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Long#longValue
+  signature: () long
+  overrides: false
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Short#shortValue
+  signature: () short
+  overrides: false
+  copy:
+  - from: this
+    to: result

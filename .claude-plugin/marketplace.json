@@ -1,0 +1,24 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "opentaint",
+  "description": "OpenTaint skills extend built-in security rules and code models for your dependencies and frameworks, then find vulnerabilities with whole-program static taint analysis",
+  "owner": {
+    "name": "Seqra",
+    "url": "https://opentaint.org/"
+  },
+  "plugins": [
+    {
+      "name": "appsec-workflow",
+      "source": "./",
+      "description": "Find application-specific vulnerabilities with whole-program static taint analysis and write rules and dependency models for future scans",
+      "version": "0.3.0",
+      "author": {
+        "name": "Seqra"
+      },
+      "license": "Apache-2.0",
+      "category": "security",
+      "homepage": "https://opentaint.org/",
+      "repository": "https://github.com/seqra/opentaint"
+    }
+  ]
+}

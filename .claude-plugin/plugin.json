@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "appsec-workflow",
+  "displayName": "OpenTaint AppSec Workflow",
+  "version": "0.3.0",
+  "description": "Find application-specific vulnerabilities with whole-program static taint analysis and write rules and dependency models for future scans",
+  "author": {
+    "name": "Seqra"
+  },
+  "homepage": "https://opentaint.org/",
+  "repository": "https://github.com/seqra/opentaint",
+  "license": "Apache-2.0",
+  "keywords": [
+    "security",
+    "sast",
+    "taint-analysis",
+    "vulnerability-scanning"
+  ],
+  "skills": "./skills/"
+}

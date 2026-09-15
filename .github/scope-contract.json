@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 2,
+  "scopes": [
+    "analyzer",
+    "autobuilder",
+    "ci",
+    "cli",
+    "core",
+    "docs",
+    "github",
+    "gitlab",
+    "go-server",
+    "infra",
+    "model",
+    "rules"
+  ],
+  "compatibility": {
+    "forbiddenPairs": [
+      ["cli", "analyzer"],
+      ["cli", "autobuilder"],
+      ["cli", "core"],
+      ["cli", "go-server"],
+      ["cli", "model"],
+      ["cli", "rules"]
+    ],
+    "exclusiveGroups": [
+      ["github", "gitlab", "infra"]
+    ],
+    "companions": {
+      "github": ["docs", "ci"],
+      "gitlab": ["docs", "ci"],
+      "infra": ["docs", "ci"]
+    }
+  },
+  "releaseScopes": {
+    "analyzer": [
+      "analyzer",
+      "core",
+      "model"
+    ],
+    "autobuilder": [
+      "autobuilder",
+      "core"
+    ],
+    "go-server": [
+      "go-server"
+    ]
+  },
+  "ownership": {
+    "ignoredRoots": [
+      "formal"
+    ],
+    "overrides": [
+      {
+        "requiredScopes": ["ci"],
+        "globs": [
+          "release-notes-transform.cjs",
+          "**/.releaserc.cjs"
+        ]
+      }
+    ],
+    "roots": {
+      "rules": {
+        "defaultScopes": ["rules"]
+      },
+      "model": {
+        "defaultScopes": ["model"]
+      },
+      "github": {
+        "defaultScopes": ["github"]
+      },
+      "gitlab": {
+        "defaultScopes": ["gitlab"]
+      },
+      "infra": {
+        "defaultScopes": ["infra"]
+      },
+      "cli": {
+        "defaultScopes": ["cli"]
+      },
+      "core": {
+        "defaultScopes": ["core"],
+        "rules": [
+          {
+            "requiredScopes": ["core", "autobuilder"],
+            "globs": [
+              "opentaint-jvm-autobuilder/**"
+            ]
+          },
+          {
+            "requiredScopes": ["core", "go-server"],
+            "globs": [
+              "opentaint-ir/go/go-ssa-server/**"
+            ]
+          },
+          {
+            "requiredScopes": ["core", "analyzer", "go-server"],
+            "globs": [
+              "opentaint-ir/go/proto/**"
+            ]
+          },
+          {
+            "requiredScopes": ["core", "analyzer"],
+            "globs": [
+              "src/**",
+              "samples/**",
+              "opentaint-dataflow-core/**",
+              "opentaint-ir/**",
+              "opentaint-jvm-sast-dataflow/**",
+              "opentaint-jvm-sast-project/**",
+              "opentaint-jvm-sast-se-api/**",
+              "opentaint-go-querylang/**",
+              "opentaint-java-querylang/**",
+              "opentaint-config/**",
+              "opentaint-configuration-rules/**",
+              "opentaint-utils/common-util/**",
+              "opentaint-utils/opentaint-jvm-util/**"
+            ],
+            "excludeGlobs": [
+              "opentaint-ir/go/go-ssa-server/**",
+              "opentaint-ir/go/proto/**"
+            ]
+          }
+        ]
+      },
+      ".github": {
+        "defaultScopes": ["ci"]
+      }
+    },
+    "documentation": {
+      "requiredScopes": ["docs"],
+      "rootDirectories": [
+        "public",
+        "docs",
+        "skills",
+        "skills-templates",
+        "scripts",
+        "logos",
+        ".claude-plugin",
+        ".codex-plugin"
+      ],
+      "basenames": [
+        "README.md",
+        "CHANGELOG.md",
+        "LICENSE",
+        "LICENSE.md"
+      ],
+      "extensions": [
+        ".svg",
+        ".png"
+      ],
+      "rootFiles": [
+        ".gitignore",
+        "Makefile"
+      ]
+    }
+  }
+}

@@ -2,6 +2,7 @@ package org.opentaint.ir.testing.persistence
 
 import kotlinx.coroutines.runBlocking
 import org.opentaint.ir.api.jvm.JIRSettings
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.impl.JIRSQLitePersistenceSettings
 import org.opentaint.ir.impl.features.Builders
 import org.opentaint.ir.impl.features.Usages
@@ -69,10 +70,10 @@ class IncompleteDataTest {
         withPersistence { jooq ->
             jooq.update(BYTECODELOCATIONS)
                 .set(BYTECODELOCATIONS.STATE, LocationState.AWAITING_INDEXING.ordinal)
-                .where(BYTECODELOCATIONS.RUNTIME.isFalse)
+                .where(BYTECODELOCATIONS.LOCATION_TYPE.ne(LocationType.RUNTIME.name))
                 .execute()
             jooq.selectFrom(BYTECODELOCATIONS)
-                .where(BYTECODELOCATIONS.RUNTIME.isFalse)
+                .where(BYTECODELOCATIONS.LOCATION_TYPE.ne(LocationType.RUNTIME.name))
                 .fetch {
                     ids.add(it.id!!)
                 }

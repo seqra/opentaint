@@ -34,7 +34,7 @@ jobs:
         id: changes
         uses: ./.github/actions/check-scoped-commits
         with:
-          scopes: go-server,ir,core
+          release: go-server
           tag-prefix: 'go-server/'
 
       - name: Set up Go

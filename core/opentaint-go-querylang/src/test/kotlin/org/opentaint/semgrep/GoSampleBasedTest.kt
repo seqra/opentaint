@@ -12,6 +12,8 @@ class GoSampleBasedTest: GoSampleBasedTestBase("GO_SAMPLES_DIR") {
 
     @Test fun passThrough() = runSample("PassThrough")
 
+    @Test fun methodInterfaceSourceAliasReboxing() = runSample("MethodInterfaceSourceAliasReboxing")
+
     @Test fun sanitizer() = runSample("Sanitizer")
 
     @Test fun multiArgSink() = runSample("MultiArgSink")

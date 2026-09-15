@@ -3,7 +3,7 @@ rules:
     options:
       lib: true
     tags:
-      - servlet-response-injection-sink
+      - response-injection-sink
     severity: NOTE
     message: Direct write of unvalidated user input into response
     metadata:
@@ -57,4 +57,12 @@ rules:
                       $S.$WRITE(..., $UNTRUSTED, ...);
               - pattern: (HttpServletResponse $RESPONSE).sendError($CODE, $UNTRUSTED)
               - pattern: (JspWriter $W).$WRITE(..., $UNTRUSTED, ...)
+              - pattern: |
+                  (HttpServletResponse $RESPONSE).getWriter(...).$WRITE(..., $UNTRUSTED, ...)
+              - pattern: |
+                  (HttpServletResponse $RESPONSE).getOutputStream(...).$WRITE(..., $UNTRUSTED, ...)
+              - pattern: |
+                  (javax.servlet.ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
+              - pattern: |
+                  (ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
           - focus-metavariable: $UNTRUSTED

@@ -1,20 +1,24 @@
 ### 1. Check existing coverage
 
-Browse the built-in library rules for a source or sink you can reference — a `refs` to a built-in is cheaper and more accurate than authoring a completely new rule. The following command prints the built-in rules root path; browse it (layout per the language reference) and grep by your package's FQN:
+Browse the built-in library rules and `.opentaint/rules` to determine whether one already matches each unit entry. When one does, do not author a duplicate: set its `rule_id` in `.opentaint/tracking/rules/<side>/<unit>.yaml` to `<relative-yaml-path>#<rule-id>`. This string is tracking bookkeeping only. Do not add a `rule` reference to any production rule, production joins remain tag-based and are written later. The following command prints the built-in rules root path. Browse both roots using the language reference and search by the entry's exact language-specific identifier:
 
 ```bash
 opentaint health --rules
 ```
 
-In fix mode, don't author from the unit: go straight to that one flagged rule, adjust it by the false-positive/negative guidance per step 4, re-run this side's tests, and stop — leave the unit's other entries untouched. Otherwise, when the unit's rules already exist and pass (entries carry `rule_id` and `stages.tests_passing: done`), reuse them as the baseline and extend only for what the unit newly names. When the unit is partway (some stages `done`, some not), continue from the first unfinished stage on the artifacts already on disk rather than restarting, authoring from scratch only the genuinely new sources or sinks.
+Read `.opentaint/tracking/rules/tags.yaml`. A source unit must carry `tag: untrusted-data-source`, each sink unit group carries the one existing or newly registered `*-sink` tag its rules must extend.
+
+In fix mode, don't author from the unit: go straight to that one flagged rule, adjust it by the false-positive/negative guidance per step 4, re-run this side's tests, and stop — leave the unit's other entries untouched. Otherwise, when entries already carry `rule_id`, continue from those recorded implementations and author only entries still lacking coverage. When the unit is partway (some stages `done`, some not), continue from the first unfinished stage on the artifacts already on disk rather than restarting.
 
 ### 2. Author the library rules
 
-Derive each rule's pattern from the unit's fully-qualified names, recorded signatures, and annotations. Bind the tainted value to one consistent metavariable in every rule so the security joins assembled later reference one name. The rule forms — a built-in `refs`, a custom source rule, a custom sink rule, and where custom rules go — are in the language reference.
+Derive each rule's pattern from the unit's exact member identifiers, recorded signatures, and relevant declaration metadata. Bind the tainted value to `$UNTRUSTED` and put the unit/group tag on the lib rule. A sink tag belongs to the whole semantic group, not to an individual method. One rule can cover several group methods and several rules can carry the same tag. The rule forms and locations are in the language reference.
+
+For `side: sinks`, iterate `groups`: ensure every method under `groups[].sinks` has an implementing `rule_id`, and put the enclosing `groups[].tag` on every custom rule you create. For `side: sources`, use the unit's top-level tag.
 
 ### 3. Write the test joins
 
-A library rule emits nothing on its own — to exercise it, wire it to the generic taint marker in a throwaway test join. Write one join for the side into the test project's marker rules, referencing the generic marker on one end and each new lib rule on the other, so a positive sample's tainted value flows marker-to-rule (a sink side) or rule-to-marker (a source side). These joins live only in the test project, never in the scanned rules tree, so the main scan never loads them. The join form, its naming, and where it goes are in the language reference.
+A library rule emits nothing on its own — to exercise it, wire it to the generic taint marker in a throwaway test join. Write one join for the side into the test project's marker rules, referencing the generic marker on one end and each lib `rule_id` selected for the unit on the other, so a positive sample's tainted value flows marker-to-rule (a sink side) or rule-to-marker (a source side). The test joins live only in the test project, never in the scanned rules tree. Their form, naming, and location are in the language reference.
 
 ### 4. Test until success
 

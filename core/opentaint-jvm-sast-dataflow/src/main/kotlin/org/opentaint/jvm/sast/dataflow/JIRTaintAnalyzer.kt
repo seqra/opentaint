@@ -12,6 +12,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSummarySerializationContext
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaMethod
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodGetDefault
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.dataflow.jvm.ifds.PackageUnit
@@ -47,11 +48,22 @@ class JIRTaintAnalyzer(
     )
 
     private val analysisParams get() = JIRAnalysisManager.Params(
-        disableDefaultGetModel = jirOptions.disableDefaultGetModel,
+        defaultGetModel = configureDefaultModel(),
         aliasAnalysisParams = JIRLocalAliasAnalysis.Params(
             aliasAnalysisInterProcCallDepth = options.experimentalAAInterProcCallDepth
         )
     )
+
+    private fun configureDefaultModel(): JIRMethodGetDefault? {
+        if (jirOptions.disableDefaultGetModel) return null
+
+        val config = object : JIRMethodGetDefault.Configuration {
+            override fun enableDefaultPropagationForClass(cls: JIRClassOrInterface): Boolean =
+                !projectClasses.isProjectClass(cls)
+        }
+
+        return JIRMethodGetDefault(config)
+    }
 
     private val taintConfig: TaintRulesProvider by lazy {
         StringConcatRuleProvider(taintConfiguration)
