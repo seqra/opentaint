@@ -75,6 +75,14 @@ passThrough:
   copy:
   - from:
     - this
+    - .javax.mail.Part#fileName#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#text#java.lang.Object
+    to: result
+  - from:
+    - this
     - .javax.mail.Part#content#java.lang.Object
     to: result
   - from:
@@ -91,19 +99,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.mail.Part#fileName#java.lang.Object
-    to: result
-  - from:
-    - this
     - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
     - .javax.mail.Part#inputStream#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#text#java.lang.Object
     to: result
 - function: javax.mail.Message#getReplyTo
   signature: () javax.mail.Address[]
@@ -121,6 +121,14 @@ passThrough:
   copy:
   - from:
     - this
+    - .javax.mail.Part#fileName#java.lang.Object
+    to: result
+  - from:
+    - this
+    - .javax.mail.Part#text#java.lang.Object
+    to: result
+  - from:
+    - this
     - .javax.mail.Part#content#java.lang.Object
     to: result
   - from:
@@ -137,19 +145,11 @@ passThrough:
     to: result
   - from:
     - this
-    - .javax.mail.Part#fileName#java.lang.Object
-    to: result
-  - from:
-    - this
     - .javax.mail.Part#headers#java.lang.Object
     to: result
   - from:
     - this
     - .javax.mail.Part#inputStream#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#text#java.lang.Object
     to: result
 - function: javax.mail.Folder#getMessage
   signature: (int) javax.mail.Message
@@ -390,17 +390,17 @@ passThrough:
 - function: javax.mail.Message#addRecipients
   signature: (javax.mail.Message$RecipientType, javax.mail.Address[]) void
   copy:
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .javax.mail.Message#recipients#java.lang.Object
   - from: arg(1)
     to:
     - this
     - .javax.mail.Part#recipients#java.lang.Object
   - from: arg(1)
+    to:
+    - this
+    - .javax.mail.Message#recipients#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - this
     - .javax.mail.Message#recipients#java.lang.Object

@@ -10,12 +10,12 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.ErrorMessage#headers#java.lang.Object
+    - .org.springframework.messaging.support.ErrorMessage#originalMessage#java.lang.Object
+    - .org.springframework.messaging.Message#headers#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.springframework.messaging.support.ErrorMessage#originalMessage#java.lang.Object
-    - .org.springframework.messaging.Message#headers#java.lang.Object
+    - .org.springframework.messaging.support.ErrorMessage#headers#java.lang.Object
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#toNativeHeaderMap
   copy:
   - from:
@@ -232,14 +232,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.messaging.support.ErrorMessage#headers#java.lang.Object
+    - .org.springframework.messaging.support.ErrorMessage#originalMessage#java.lang.Object
+    - .org.springframework.messaging.Message#headers#java.lang.Object
     to:
     - result
     - .org.springframework.messaging.Message#headers#java.lang.Object
   - from:
     - this
-    - .org.springframework.messaging.support.ErrorMessage#originalMessage#java.lang.Object
-    - .org.springframework.messaging.Message#headers#java.lang.Object
+    - .org.springframework.messaging.support.ErrorMessage#headers#java.lang.Object
     to:
     - result
     - .org.springframework.messaging.Message#headers#java.lang.Object

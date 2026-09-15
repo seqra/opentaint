@@ -26,7 +26,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsObject
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.String) java.lang.Object
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
+    java.lang.String) java.lang.Object
   copy:
   - from: arg(2)
     to: result
@@ -102,7 +103,8 @@ passThrough:
     - .java.util.EventObject#content#java.lang.Object
     to: result
 - function: javax.faces.model.SelectItemGroup#<init>
-  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[]) void
+  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[])
+    void
   copy:
   - from:
     - arg(3)
@@ -181,7 +183,8 @@ passThrough:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsString
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.Object) java.lang.String
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
+    java.lang.Object) java.lang.String
   copy:
   - from: arg(2)
     to: result

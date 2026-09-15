@@ -949,8 +949,8 @@ passThrough:
     - result
     - .org.apache.commons.collections4.Get#MapKey#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object, java.lang.Object) *
   copy:
   - from: arg(5)
     to:
@@ -3900,8 +3900,8 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.lang.Iterable#Element#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) *
   copy:
   - from: arg(4)
     to:
@@ -4294,7 +4294,8 @@ passThrough:
     - result
     - .java.util.Enumeration#Element#java.lang.Object
 - function: org.apache.commons.collections4.map.MultiKeyMap#put
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    *
   copy:
   - from: arg(3)
     to:
@@ -8149,7 +8150,8 @@ passThrough:
     - this
     - .org.apache.commons.collections4.Get#MapKey#java.lang.Object
 - function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
+    *
   copy:
   - from: arg(3)
     to:
@@ -8925,8 +8927,8 @@ passThrough:
     - this
     - .org.apache.commons.collections4.Get#MapValue#java.lang.Object
 - function: org.apache.commons.collections4.keyvalue.MultiKey#<init>
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    *
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
+    java.lang.Object) *
   copy:
   - from: arg(3)
     to:

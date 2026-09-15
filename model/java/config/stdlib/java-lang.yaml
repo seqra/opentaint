@@ -1,27 +1,5 @@
 language: java
 passThrough:
-- function: java.lang.Integer#intValue
-  signature: () int
-  copy:
-  - from: this
-    to: result
-- function: java.lang.Integer#valueOf
-  signature: (int) java.lang.Integer
-  overrides: false
-  copy:
-  - from: arg(0)
-    to: result
-- function: java.lang.Double#doubleValue
-  signature: () double
-  copy:
-  - from: this
-    to: result
-- function: java.lang.Double#valueOf
-  signature: (double) java.lang.Double
-  overrides: false
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.lang.String#intern
   signature: () java.lang.String
   copy:
@@ -1063,8 +1041,7 @@ passThrough:
   - from: this
     to: result
 - function: java.lang.String#join
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[],
-    int) java.lang.String
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String[], int) java.lang.String
   taintCopyOnly: true
   copy:
   - from: arg(*)
@@ -1078,7 +1055,10 @@ passThrough:
 - function: java.lang.String#charAt
   signature: (int) char
   copy:
-  - from: this
+  - from:
+    - this
+    - .java.lang.String#bytes#java.lang.Object
+    - '[*]'
     to: result
 - function: java.lang.String#<init>
   signature: (byte[], java.nio.charset.Charset) void
@@ -1560,6 +1540,33 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: java.lang.String#charAt
+  signature: (int) char
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Integer#intValue
+  signature: () int
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Integer#valueOf
+  signature: (int) java.lang.Integer
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
+- function: java.lang.Double#doubleValue
+  signature: () double
+  copy:
+  - from: this
+    to: result
+- function: java.lang.Double#valueOf
+  signature: (double) java.lang.Double
+  overrides: false
+  copy:
+  - from: arg(0)
+    to: result
 - function: java.lang.String#join
   signature: (java.lang.CharSequence, java.lang.Iterable) java.lang.String
   copy:
@@ -1586,14 +1593,6 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - '[*]'
-    to: result
-- function: java.lang.String#charAt
-  signature: (int) char
-  copy:
-  - from:
-    - this
-    - .java.lang.String#bytes#java.lang.Object
     - '[*]'
     to: result
 - function: java.lang.String#copyValueOf
