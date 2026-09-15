@@ -22,7 +22,9 @@ When the `sinks` input is set, make a second pass over the same members for a di
 
 Judge sink-ness from the method's own code and behaviour, independent of how the project uses it — don't trace whether taint can actually reach the call, that is the analyzer's job. And judge it apart from propagation: the propagation verdict never settles sink-ness, and finding a sink never changes it. Sinks might sit among the carriers you just modeled, and a `skipped` method can be a sink too — carrying nothing onward says nothing about whether the call itself is dangerous.
 
-Record each sink in its owning package's sink unit `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` (per Tracking). Name its `vuln_class` in canonical kebab-case, reusing the class names the built-in security rules use so the joins group correctly — e.g. `sql-injection`, `path-traversal`, `ssrf`, `deserialization`, `unsafe-reflection`.
+Record each sink in its owning package's sink unit `.opentaint/tracking/rules/sinks/<package-kebab>.yaml` (per Tracking), grouped under the vulnerability tag that describes what unsafe use it performs. Read `.opentaint/tracking/rules/tags.yaml` first and reuse an existing tag whenever its semantics fit. If none fits, choose one precise canonical kebab-case `*-sink` tag, add it to the registry first, then create that group. The tag names the reusable sink family, not an individual method.
+
+`tags.yaml` is the only shared file in this fan-out. Edit it only for a genuinely new tag: re-read it immediately before the additive edit and preserve every tag another leaf may already have added. Ordinary classification that reuses a registered tag never writes the registry.
 
 ### 3. Verify coverage
 

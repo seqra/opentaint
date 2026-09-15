@@ -36,4 +36,4 @@ Seed the run state and the working tree with the chosen levels and language:
 uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml`, seeds `history.yaml`, creates the `.opentaint/` tree, and generates `tracking/rules/tags.yaml`. A fresh tree inventories builtin lib tags, a resumed tree refreshes from builtin + `.opentaint/rules`. Use `generate.py tags` only to recover that registry explicitly.

@@ -53,7 +53,7 @@ Seed the run state and the working tree with the chosen levels and language:
 uv run <skill-dir>/scripts/generate.py init --scan-level <lite|normal|deep> --triage-level <static|dynamic> --language <lang>
 ```
 
-It writes `state.yaml`, seeds `history.yaml`, and creates the `.opentaint/` tree.
+It writes `state.yaml`, seeds `history.yaml`, creates the `.opentaint/` tree, and generates `tracking/rules/tags.yaml`. A fresh tree inventories builtin lib tags, a resumed tree refreshes from builtin + `.opentaint/rules`. Use `generate.py tags` only to recover that registry explicitly.
 
 ## Workflow
 
@@ -71,9 +71,9 @@ poc                         → stage subagent: poc
 
 ### Build in MAIN
 
-When status reports `build`, load and follow the `build-project` skill in this main session. Run its long build command through the harness's main-session background-command facility and wait for its completion event.
+When status reports `build`, load and follow the `build-project` skill in this main session. Pass any language-specific build fields already present in `state.yaml` as `build-hints`. Run its long build command through the harness's main-session background-command facility and wait for its completion event.
 
-Record the returned `build_jdk` in `.opentaint/tracking/state.yaml`. Record `model_commit` as the full HEAD only when no source file is uncommitted, otherwise set it to null. Build non-convergence blocks the run because no later phase can proceed without the model.
+After a successful build, write the language-specific build fields named by the selected `build-project` reference into `.opentaint/tracking/state.yaml`. Record `model_commit` as the full HEAD only when no source file is uncommitted, otherwise set it to null. Build non-convergence blocks the run because no later phase can proceed without the model.
 
 ### Scan in MAIN
 
@@ -99,7 +99,7 @@ For a `deep` approximation round, also pass `sinks: true`. A subagent inherits t
 
 Stage context:
 
-- `sources` — discover dependency sources, author their rules, and wire the joins
+- `sources` — discover dependency sources and author tag-grouped source rules
 - `approx-round` — classify and build one dropped-method frontier; use a fresh agent for each new frontier
 - `sinks` — author classified sink rules and wire the joins
 - `triage` — classify the latest findings and refresh the vulnerability report
@@ -134,14 +134,15 @@ The tree is long-lived. On resume, reuse `DONE` artifacts; `get_status.py` deriv
 ```yaml
 scan_level: deep
 triage_level: dynamic
-language: java
+language: <language>
 model_commit: 0123456789abcdef0123456789abcdef01234567
-build_jdk: null
 max_memory: null
 ```
+
+The selected `build-project` language reference may define additional build fields; preserve them on resume and pass them back as `build-hints`.
 
 ## Key constraints
 
 - read pipeline state through `<skill-dir>/scripts/get_status.py`, not by hand — don't re-derive it with glob/grep/`python3 -c`/yaml scans over `.opentaint/tracking`, `results`, or the `*.yaml`, nor open finding/unit/SARIF files just to review progress. If its output doesn't settle the question, re-run it with `--full` before opening any file
-- don't author or edit stage-owned artifacts or tracking; MAIN writes only `model_commit`, `build_jdk`, and `max_memory` in `state.yaml`
+- don't author or edit stage-owned artifacts or tracking; MAIN writes only `model_commit`, `max_memory`, and build fields defined by the selected `build-project` reference in `state.yaml`
 - keep one generated project model for the run; never hand-edit or replace it mid-analysis — fix the build and rebuild before starting a new run

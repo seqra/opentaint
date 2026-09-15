@@ -5,7 +5,7 @@ import org.opentaint.ir.api.common.cfg.CommonInstLocation
 
 interface PIRLocation : CommonInstLocation {
     override val method: PIRFunction
-    val index: Int
+    override val index: Int
 }
 
 sealed interface PIRInstruction: CommonInst {

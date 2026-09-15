@@ -28,6 +28,10 @@ func Passthrough(data string) string          { return data }
 func Sanitize(data string) string             { return "clean" }
 func Transform(in1 string, in2 string) string { return in2 }
 
+type NamedString string
+
+func GenericIdentity[T any](value T) T { return value }
+
 // Collection Sources (whole container tainted via Result position)
 func SourceSlice() []string        { return []string{"tainted"} }
 func SourceMap() map[string]string { return map[string]string{"k": "tainted"} }

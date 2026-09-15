@@ -531,6 +531,7 @@ abstract class InitialFactAbstractionTest {
     private val dummyInst = object : CommonInst {
         override fun toString(): String = "dummy-inst"
         override val location: CommonInstLocation = object : CommonInstLocation {
+            override val index: Int = 0
             override val method: CommonMethod = object : CommonMethod {
                 override val name: String = "dummy"
                 override val parameters: List<CommonMethodParameter> = emptyList()

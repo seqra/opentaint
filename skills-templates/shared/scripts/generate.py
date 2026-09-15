@@ -8,6 +8,7 @@ state at a fan-out join; none is read-only (use get_status.py for checks). Run w
 from the project root: `uv run scripts/generate.py <cmd>`.
 
   init                bootstrap the .opentaint tree + state.yaml from the workflow flags
+  tags                refresh tracking/rules/tags.yaml from the active lib rules
   partition analyze   dropped external methods -> per-root batch plans (approximations)
   partition discover  coverage.yaml's used members -> balanced discover plans
   mark-safe           discover plans' verdicts -> classification.yaml ledger (+prune plans)
@@ -26,12 +27,13 @@ from pathlib import Path
 
 import yaml
 
-from _common import (APPROX, DATAFLOW, DROPPED, FINDINGS_TR, JOINS_TR, MODEL,
-                     PASS_THROUGH, RESULTS, RULES, RULES_TR, SARIF, SINKS_TR,
-                     SOURCES_TR, TRACKING, class_of, classified_keys,
-                     dropped_entries, dump_yaml, fqn_base, git_head,
-                     ledger_verdicted_keys, load_yaml, member_key, package_of,
-                     strip_quotes)
+from _common import (APPROX, DATAFLOW, DROPPED,
+                     FINDINGS_TR, MODEL, PASS_THROUGH, RESULTS, RULES, RULES_TR,
+                     SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
+                     builtin_rules_root, class_of, classified_keys,
+                     collect_lib_tags, dropped_entries, dump_yaml, fqn_base,
+                     git_head, ledger_verdicted_keys, load_yaml, member_key,
+                     package_of, strip_quotes)
 
 ANALYZE_BUDGET = 20                       # methods per approximation batch
 ANALYZE_MISC = 6                          # roots with <= this many methods pool into one misc batch
@@ -46,12 +48,13 @@ APPROX_PLANS = APPROX / "plans"
 
 # the durable directories a run writes into; the leaves/scripts mkdir on write, but seeding
 # them up front gives every stage a place to land and makes the empty tree self-describing.
-INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, JOINS_TR, FINDINGS_TR,
+INIT_DIRS = [TRACKING, APPROX, SOURCES_TR, SINKS_TR, FINDINGS_TR,
              RESULTS, RULES, PASS_THROUGH, DATAFLOW]
 STATE_DERIVED = ("model_commit", "build_jdk", "max_memory")   # build/scan fill these, init preserves
 
 
 def cmd_init(args):
+    tags_existed = TAGS.is_file()
     for d in INIT_DIRS:
         d.mkdir(parents=True, exist_ok=True)
     state_path = TRACKING / "state.yaml"
@@ -70,11 +73,32 @@ def cmd_init(args):
         runs.append({"commit": git_head(), "type": f"{args.scan_level}/{args.triage_level}"})
         hist_path.write_text(dump_yaml({"runs": runs}), encoding="utf-8")
 
+    refresh_tags(state["language"], include_custom=tags_existed)
+
     mode = "resumed (derived knobs preserved)" if resume else "fresh"
     print(f"init {mode}: scan_level={state['scan_level']} triage_level={state['triage_level']} "
           f"language={state['language']}")
     print(f"seeded {len(INIT_DIRS)} directories under .opentaint/")
     print("next: uv run scripts/get_status.py --full")
+    return 0
+
+
+def refresh_tags(language, include_custom):
+    if not language:
+        raise SystemExit("cannot build tags.yaml before tracking/state.yaml has a language")
+    roots = [builtin_rules_root()]
+    if include_custom and RULES.is_dir():
+        roots.append(RULES)
+    tags = collect_lib_tags(roots, language)
+    TAGS.parent.mkdir(parents=True, exist_ok=True)
+    TAGS.write_text(dump_yaml(tags), encoding="utf-8")
+    origin = "builtin + custom" if include_custom else "builtin"
+    print(f"tags.yaml ({origin}): {len(tags['sources'])} source, {len(tags['sinks'])} sink")
+
+
+def cmd_tags(args):
+    state = load_yaml(TRACKING / "state.yaml", {}) or {}
+    refresh_tags(state.get("language"), include_custom=TAGS.is_file())
     return 0
 
 
@@ -302,17 +326,20 @@ def pending_packages():
 def cmd_discover(args):
     regen_plans(DISCOVER_PLANS)
     packages = pending_packages()
-    if not packages:
-        print("nothing to plan — no pending package in coverage.yaml", file=sys.stderr)
-        return 0
     verdicted = ledger_verdicted_keys()               # method+signature keys
-    sigs = {}                                          # bare member fqn -> its pending signatures
-    for f, sig in extract_usages():
-        if in_packages(class_of(f), packages) and f + sig not in verdicted:
-            sigs.setdefault(f, set()).add(sig)
+    sigs = {}                       # bare member fqn -> its pending signatures
+    if packages:
+        for f, sig in extract_usages():
+            if in_packages(class_of(f), packages) and f + sig not in verdicted:
+                sigs.setdefault(f, set()).add(sig)
     todo = sorted(sigs)
     if not todo:
-        print("nothing to plan — every used member already verdicted", file=sys.stderr)
+        ledger = RULES_TR / "classification.yaml"
+        if not ledger.is_file():
+            ledger.parent.mkdir(parents=True, exist_ok=True)
+            ledger.write_text(dump_yaml({"source": [], "safe": []}), encoding="utf-8")
+        print("nothing to plan — every used dependency member is "
+              "already verdicted", file=sys.stderr)
         return 0
     cap = DISCOVER_TARGET + DISCOVER_BAND
     plans = pack(atomize(todo, cap), DISCOVER_TARGET, cap)
@@ -330,6 +357,15 @@ def cmd_partition(args):
 
 # ---- mark-safe (discover join) ----
 
+def _member_source_unit_keys():
+    keys = set()
+    for path in SOURCES_TR.glob("*.yaml") if SOURCES_TR.is_dir() else []:
+        doc = load_yaml(path, {}) or {}
+        keys.update(member_key(entry) for entry in (doc.get("sources") or [])
+                    if isinstance(entry, dict))
+    return keys
+
+
 def cmd_mark_safe(args):
     plans = sorted(glob.glob(str(DISCOVER_PLANS / "lib-*.yaml")))
     if not plans:
@@ -339,7 +375,9 @@ def cmd_mark_safe(args):
     doc = load_yaml(ledger, {}) or {}
     source = {member_key(x) for x in (doc.get("source") or [])}
     safe = {member_key(x) for x in (doc.get("safe") or [])}
+    unit_sources = _member_source_unit_keys()
     processed, unprocessed = [], []
+    invalid = []
     for p in plans:
         pdoc = load_yaml(p, {}) or {}
         raw = pdoc.get("source")
@@ -348,14 +386,27 @@ def cmd_mark_safe(args):
             continue
         members = {member_key(m) for v in (pdoc.get("scopes") or {}).values() for m in v}
         srcs = {member_key(x) for x in raw}
+        outside = sorted(srcs - members)
+        missing_units = sorted(srcs - unit_sources)
+        if outside or missing_units:
+            unprocessed.append(p)
+            if outside:
+                invalid.append(f"{Path(p).name}: source entries outside the assigned plan: "
+                               + ", ".join(outside))
+            if missing_units:
+                invalid.append(f"{Path(p).name}: source entries missing from member source units: "
+                               + ", ".join(missing_units))
+            continue
         source |= srcs
         safe |= members - srcs
         processed.append(p)
         print(f"{Path(p).name}: {len(srcs)} sources, {len(members - srcs)} safe")
     if not processed:
-        print("no processed discover plans (every plan still carries source: null) — "
-              "fan out discover-attack-surface first", file=sys.stderr)
-        return 0
+        print("no complete discover plan can be reconciled — fan out or repair its source units",
+              file=sys.stderr)
+        for issue in invalid:
+            print(issue, file=sys.stderr)
+        return 1 if invalid else 0
     safe -= source
     ledger.parent.mkdir(parents=True, exist_ok=True)
     ledger.write_text(dump_yaml({"source": sorted(source), "safe": sorted(safe)}), encoding="utf-8")
@@ -365,9 +416,11 @@ def cmd_mark_safe(args):
             Path(p).unlink()
         print(f"pruned {len(processed)} reconciled discover plan(s)")
     if unprocessed:
-        print(f"left {len(unprocessed)} unprocessed plan(s) (source: null) for re-dispatch: "
+        print(f"left {len(unprocessed)} incomplete plan(s) for re-dispatch: "
               + ", ".join(Path(p).name for p in unprocessed))
-    return 0
+    for issue in invalid:
+        print(issue, file=sys.stderr)
+    return 1 if invalid else 0
 
 
 # ---- merge-skipped (analyze join) ----
@@ -565,6 +618,9 @@ def main():
     i.add_argument("--triage-level", required=True, choices=["static", "dynamic"])
     i.add_argument("--language", default=None, help="target language, determined by the orchestrator")
     i.set_defaults(func=cmd_init)
+
+    t = sub.add_parser("tags", help="refresh tags.yaml from the active lib rules")
+    t.set_defaults(func=cmd_tags)
 
     p = sub.add_parser("partition", help="split classification work into per-agent plans")
     p.add_argument("kind", choices=["analyze", "discover"])

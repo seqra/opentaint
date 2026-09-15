@@ -16,6 +16,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.LocalAliasAnalysis
 import org.opentaint.dataflow.ap.ifds.analysis.alias.State
 import org.opentaint.dataflow.ap.ifds.analysis.alias.allElements
 import org.opentaint.dataflow.ap.ifds.analysis.alias.withAnalysisCancellation
+import org.opentaint.dataflow.go.GoFlowFunctionUtils
 import org.opentaint.dataflow.go.analysis.alias.GoDSUAliasAnalysis.ConnectedAliases
 import org.opentaint.dataflow.util.forEachInt
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -196,7 +197,10 @@ class GoLocalAliasAnalysis(
         return when (info) {
             is GoLocalAlias.SimpleLoc -> when (val loc = info.loc) {
                 is GoRefValue.Local -> AliasApInfoNoRef(AccessPathBase.LocalVar(loc.idx), emptyList())
-                is GoRefValue.Arg -> AliasApInfoNoRef(AccessPathBase.Argument(loc.idx), emptyList())
+                is GoRefValue.Arg -> AliasApInfoNoRef(
+                    GoFlowFunctionUtils.parameterAccessPathBase(loc.idx, function),
+                    emptyList()
+                )
                 is GoRefValue.Global -> AliasApInfoNoRef(AccessPathBase.ClassStatic, listOf(GoAliasAccessor.Global(loc.name)))
                 is GoRefValue.FreeVarBase -> AliasApInfoNoRef(AccessPathBase.This, emptyList())
             }

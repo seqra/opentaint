@@ -35,6 +35,10 @@ core/**/bin/
 !.gitignore
 !.github
 
+# Agent plugin manifests
+!.claude-plugin
+!.codex-plugin
+
 CLAUDE.md
 .claude/*
 .mcprules-*

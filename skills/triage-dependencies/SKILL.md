@@ -55,6 +55,6 @@ Short and concise report of what was done
 
 ```yaml
 packages:
-  - org.springframework.web.socket
-  - org.springframework.kafka
+  - <dependency-package-a>
+  - <dependency-package-b>
 ```

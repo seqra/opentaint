@@ -57,9 +57,9 @@ rules:
     languages:
       - java
     pattern-either:
-      - pattern: (ExpressionFactory $EXP).createValueExpression((ELContext $CTX), $EXPR, ...)
-      - pattern: (ExpressionFactory $EXP).createMethodExpression((ELContext $CTX), $EXPR, ...)
-      - pattern: $OBJECT.buildConstraintViolationWithTemplate($EXPR, ...)
-      - pattern: ($X.el.ELProcessor $P).eval(..., $EXPR, ...)
-      - pattern: ($X.el.ELProcessor $P).getValue(..., $EXPR, ...)
-      - pattern: ($X.el.ELProcessor $P).setValue(..., $EXPR, ...)
+      - pattern: (ExpressionFactory $EXP).createValueExpression((ELContext $CTX), $UNTRUSTED, ...)
+      - pattern: (ExpressionFactory $EXP).createMethodExpression((ELContext $CTX), $UNTRUSTED, ...)
+      - pattern: $OBJECT.buildConstraintViolationWithTemplate($UNTRUSTED, ...)
+      - pattern: ($X.el.ELProcessor $P).eval(..., $UNTRUSTED, ...)
+      - pattern: ($X.el.ELProcessor $P).getValue(..., $UNTRUSTED, ...)
+      - pattern: ($X.el.ELProcessor $P).setValue(..., $UNTRUSTED, ...)

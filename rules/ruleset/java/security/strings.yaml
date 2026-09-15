@@ -90,15 +90,12 @@ rules:
     mode: join
     join:
       refs:
-        - tag: servlet-untrusted-data-source
-          as: servlet-untrusted-data
-        - tag: spring-untrusted-data-source
-          as: spring-untrusted-data
+        - tag: untrusted-data-source
+          as: source
         - tag: format-string-sink
           as: sink
       on:
-        - 'servlet-untrusted-data.$UNTRUSTED -> sink.$FORMAT_STR'
-        - 'spring-untrusted-data.$UNTRUSTED -> sink.$FORMAT_STR'
+        - 'source.$UNTRUSTED -> sink.$UNTRUSTED'
 
   - id: java-string-format-sinks
     options:
@@ -113,15 +110,15 @@ rules:
       - java
     patterns:
       - pattern-either:
-          - pattern: String.format($FORMAT_STR, ...);
-          - pattern: String.format((java.util.Locale $LOCALE), $FORMAT_STR, ...);
-          - pattern: (java.util.Formatter $F).format($FORMAT_STR, ...);
-          - pattern: (java.util.Formatter $F).format((java.util.Locale $LOCALE), $FORMAT_STR, ...);
-          - pattern: (java.io.PrintStream $F).printf($FORMAT_STR, ...);
-          - pattern: (java.io.PrintStream $F).printf((java.util.Locale $LOCALE), $FORMAT_STR, ...);
-          - pattern: (java.io.PrintStream $F).format($FORMAT_STR, ...);
-          - pattern: (java.io.PrintStream $F).format((java.util.Locale $LOCALE), $FORMAT_STR, ...);
-          - pattern: System.out.printf($FORMAT_STR, ...);
-          - pattern: System.out.printf((java.util.Locale $LOCALE), $FORMAT_STR, ...);
-          - pattern: System.out.format($FORMAT_STR, ...);
-          - pattern: System.out.format((java.util.Locale $LOCALE), $FORMAT_STR, ...);
+          - pattern: String.format($UNTRUSTED, ...);
+          - pattern: String.format((java.util.Locale $LOCALE), $UNTRUSTED, ...);
+          - pattern: (java.util.Formatter $F).format($UNTRUSTED, ...);
+          - pattern: (java.util.Formatter $F).format((java.util.Locale $LOCALE), $UNTRUSTED, ...);
+          - pattern: (java.io.PrintStream $F).printf($UNTRUSTED, ...);
+          - pattern: (java.io.PrintStream $F).printf((java.util.Locale $LOCALE), $UNTRUSTED, ...);
+          - pattern: (java.io.PrintStream $F).format($UNTRUSTED, ...);
+          - pattern: (java.io.PrintStream $F).format((java.util.Locale $LOCALE), $UNTRUSTED, ...);
+          - pattern: System.out.printf($UNTRUSTED, ...);
+          - pattern: System.out.printf((java.util.Locale $LOCALE), $UNTRUSTED, ...);
+          - pattern: System.out.format($UNTRUSTED, ...);
+          - pattern: System.out.format((java.util.Locale $LOCALE), $UNTRUSTED, ...);

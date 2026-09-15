@@ -91,10 +91,8 @@ class SQLitePersistenceImpl(
         persistenceService.persist(location, allClasses)
     }
 
-    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? {
-        val symbolId = findSymbolId(fullName)
-        return cp.db.classSources(CLASSES.NAME.eq(symbolId).and(cp.clause), single = true).firstOrNull()
-    }
+    override fun findClassSourceByName(cp: JIRClasspath, fullName: String): ClassSource? =
+        cp.classPathResolution.selectClassSource(findClassSources(cp, fullName).asSequence())
 
     override fun findClassSources(db: JIRDatabase, location: RegisteredLocation): List<ClassSource> {
         return db.classSources(CLASSES.LOCATION_ID.eq(location.id))
@@ -110,16 +108,13 @@ class SQLitePersistenceImpl(
             return CLASSES.LOCATION_ID.`in`(registeredLocationIds)
         }
 
-    private fun JIRDatabase.classSources(clause: Condition, single: Boolean = false): List<ClassSource> =
+    private fun JIRDatabase.classSources(clause: Condition): List<ClassSource> =
         read { context ->
             val jooq = context.dslContext
             val classesQuery =
                 jooq.select(CLASSES.LOCATION_ID, CLASSES.ID, CLASSES.BYTECODE, SYMBOLS.NAME).from(CLASSES).join(SYMBOLS)
                     .on(CLASSES.NAME.eq(SYMBOLS.ID)).where(clause)
-            val classes = when {
-                single -> listOfNotNull(classesQuery.fetchAny())
-                else -> classesQuery.fetch()
-            }
+            val classes = classesQuery.fetch()
             classes.map { (locationId, classId, bytecode, name) ->
                 PersistenceClassSource(
                     db = this,

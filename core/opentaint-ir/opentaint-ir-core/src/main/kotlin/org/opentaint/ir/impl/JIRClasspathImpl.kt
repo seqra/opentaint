@@ -15,6 +15,7 @@ import org.opentaint.ir.api.jvm.JIRClasspathExtFeature
 import org.opentaint.ir.api.jvm.JIRClasspathExtFeature.JIRResolvedClassResult
 import org.opentaint.ir.api.jvm.JIRClasspathExtFeature.JIRResolvedTypeResult
 import org.opentaint.ir.api.jvm.JIRClasspathFeature
+import org.opentaint.ir.api.jvm.JIRClasspathResolution
 import org.opentaint.ir.api.jvm.JIRClasspathTask
 import org.opentaint.ir.api.jvm.JIRFeatureEvent
 import org.opentaint.ir.api.jvm.JIRRefType
@@ -51,6 +52,7 @@ class JIRClasspathImpl(
     override val locations: List<JIRByteCodeLocation> = locationsRegistrySnapshot.locations.mapNotNull { it.jIRLocation }
     override val registeredLocations: List<RegisteredLocation> = locationsRegistrySnapshot.locations
     override val registeredLocationIds: Set<Long> = locationsRegistrySnapshot.ids
+    override val classPathResolution: JIRClasspathResolution = ClasspathResolution(registeredLocations)
     private val classpathVfs = ClasspathVfs(globalClassVFS, locationsRegistrySnapshot)
     private val featuresChain = JIRFeaturesChain(
         if (!features.any { it is UnknownClasses }) {
@@ -191,11 +193,10 @@ class JIRClasspathImpl(
     private inner class JIRClasspathFeatureImpl : JIRClasspathExtFeature {
 
         override fun tryFindClass(classpath: JIRClasspath, name: String): JIRResolvedClassResult? {
-            val source = classpathVfs.firstClassOrNull(name)
-            val jIRClass = source?.let { newClassOrInterface(it.source) }
-                ?: db.persistence.findClassSourceByName(classpath, name)?.let {
-                    newClassOrInterface(it)
-                }
+            val vfsSources = classpathVfs.findClassNodes(name).asSequence().map { it.source }
+            val persistedSources = db.persistence.findClassSources(classpath, name).asSequence()
+            val source = classPathResolution.selectClassSource(vfsSources + persistedSources)
+            val jIRClass = source?.let { newClassOrInterface(it) }
             if (jIRClass == null && isResolveAllToUnknown) {
                 return null
             }
@@ -221,13 +222,9 @@ class JIRClasspathImpl(
         }
 
         override fun findClasses(classpath: JIRClasspath, name: String): List<JIRClassOrInterface> {
-            val findClassNodes = classpathVfs.findClassNodes(name)
-            val vfsClasses = findClassNodes.map { toJIRClass(it.source) }
-            val persistedClasses = db.persistence.findClassSources(classpath, name).map { toJIRClass(it) }
-            return buildSet {
-                addAll(vfsClasses)
-                addAll(persistedClasses)
-            }.toList()
+            val vfsSources = classpathVfs.findClassNodes(name).asSequence().map { it.source }
+            val persistedSources = db.persistence.findClassSources(classpath, name).asSequence()
+            return classPathResolution.distinctClassSources(vfsSources + persistedSources).map { toJIRClass(it) }
         }
 
         override fun event(result: Any): JIRFeatureEvent {

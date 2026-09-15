@@ -44,11 +44,6 @@ class PackageVfsItem(folderName: String?, parent: PackageVfsItem?) :
         }.also { locations.synchronized { add(locationId) } }
     }
 
-    fun firstClassOrNull(className: String, predicate: (Long) -> Boolean): ClassVfsItem? {
-        val locationsClasses = classes[className] ?: return null
-        return locationsClasses.asSequence().firstOrNull { predicate(it.key) }?.value
-    }
-
     fun findClasses(className: String, predicate: (Long) -> Boolean): List<ClassVfsItem> {
         val locationsClasses = classes[className] ?: return emptyList()
         return locationsClasses.asSequence().filter { predicate(it.key) }.map { it.value }.toList()

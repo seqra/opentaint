@@ -1,8 +1,7 @@
 ### Artifacts
 
-- one join file per (vuln class, sink rule) under `.opentaint/rules/<lang>/security/<class>-<sink>-lib-ext.yaml`, each refing all relevant sources + its one sink
-- `.opentaint/tracking/rules/joins/<class>.yaml` — one per vuln class, recording every join produced (per Tracking)
+- one security join file per missing sink tag at `.opentaint/rules/<lang>/security/<vulnerability>.yaml`
 
 ### Summary
 
-- one line per join: class, sink, source count, and which ends are new
+- one line per join: sink tag and rule id

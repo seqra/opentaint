@@ -1,17 +1,17 @@
 package org.opentaint.ir.testing.tree
 
 import kotlinx.collections.immutable.persistentListOf
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertNull
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.jvm.ClassSource
 import org.opentaint.ir.impl.fs.ClassSourceImpl
 import org.opentaint.ir.impl.vfs.ClassVfsItem
 import org.opentaint.ir.impl.vfs.ClasspathVfs
 import org.opentaint.ir.impl.vfs.GlobalClassesVfs
 import org.opentaint.ir.impl.vfs.RemoveLocationsVisitor
-import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertNotNull
-import org.junit.jupiter.api.Assertions.assertNull
-import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Test
 
 class GlobalClassVfsTest {
 
@@ -50,11 +50,6 @@ class GlobalClassVfsTest {
         globalClassVFS.addClass(lib1.classSource("xxx.Simple"))
         globalClassVFS.addClass(lib2.classSource("xxx.zzz.Simple"))
 
-        with(limitedTree.firstClassOrNull("xxx.Simple")) {
-            assertNotNull(this!!)
-            assertEquals("Simple", name)
-            assertEquals(lib1, location)
-        }
         with(limitedTree.findClassNodes("xxx.Simple")) {
             assertEquals(1, size)
             with(first()) {
@@ -63,7 +58,6 @@ class GlobalClassVfsTest {
             }
         }
 
-        assertNull(limitedTree.firstClassOrNull("xxx.zzz.Simple"))
         assertTrue(limitedTree.findClassNodes("xxx.zzz.Simple").isEmpty())
     }
 
@@ -77,13 +71,13 @@ class GlobalClassVfsTest {
 
         globalClassVFS.visit(RemoveLocationsVisitor(listOf(lib2)))
 
-        with(limitedTree.firstClassOrNull("xxx.Simple")) {
+        with(limitedTree.findClassNodes("xxx.Simple").firstOrNull()) {
             assertNotNull(this!!)
             assertEquals("Simple", name)
             assertEquals(lib1, location)
         }
 
-        assertNull(limitedTree.firstClassOrNull("xxx.zzz.Simple"))
+        assertNull(limitedTree.findClassNodes("xxx.zzz.Simple").firstOrNull())
     }
 
     @Test
@@ -96,7 +90,7 @@ class GlobalClassVfsTest {
 
         globalClassVFS.visit(RemoveLocationsVisitor(listOf(lib1, lib2)))
 
-        assertNull(limitedTree.firstClassOrNull("xxx.Simple"))
+        assertNull(limitedTree.findClassNodes("xxx.Simple").firstOrNull())
     }
 
     private fun DummyCodeLocation.findNode(name: String): ClassVfsItem? {

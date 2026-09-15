@@ -7,12 +7,14 @@ on:
     paths:
       - 'core/opentaint-ir/**'
       - 'core/opentaint-common-build/**'
+      - 'model/go/dataflow/**'
       - '.github/workflows/ci-ir.yaml'
     branches: [ "main" ]
   pull_request:
     paths:
       - 'core/opentaint-ir/**'
       - 'core/opentaint-common-build/**'
+      - 'model/go/dataflow/**'
       - '.github/workflows/ci-ir.yaml'
     branches: [ "main" ]
 

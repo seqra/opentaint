@@ -179,6 +179,16 @@ interface MethodCallSummaryHandler {
                     summaryFinalFact.replaceExclusions(currentFactAp.exclusions)
                 )
             )
+
+            is EdgeRefinement.ForcedRefinement -> {
+                val requiredExclusions = summaryEffect.requiredExclusions
+                setOf(
+                    handleSummaryEdge(
+                        requiredExclusions,
+                        summaryFinalFact.replaceExclusions(requiredExclusions)
+                    )
+                )
+            }
         }
     }
 }

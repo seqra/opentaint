@@ -81,18 +81,23 @@ object GoFlowFunctionUtils {
         value: GoIRValue,
         method: GoIRFunction?
     ): AccessPathBase = when (value) {
-        is GoIRParameterValue -> {
-            if (method != null && method.isMethod && value.paramIndex == 0) {
-                AccessPathBase.This
-            } else {
-                val shift = if (method != null && method.isMethod) 1 else 0
-                AccessPathBase.Argument(value.paramIndex - shift)
-            }
-        }
+        is GoIRParameterValue -> parameterAccessPathBase(value.paramIndex, method)
 
         is GoIRRegister -> AccessPathBase.LocalVar(value.index)
         is GoIRConstValue -> AccessPathBase.Constant(value.type.displayName, value.value.toString())
         else -> error("Unexpected value: $value")
+    }
+
+    fun parameterAccessPathBase(
+        parameterIndex: Int,
+        method: GoIRFunction?
+    ): AccessPathBase {
+        val hasReceiver = method?.isMethod == true
+        return if (hasReceiver && parameterIndex == 0) {
+            AccessPathBase.This
+        } else {
+            AccessPathBase.Argument(parameterIndex - if (hasReceiver) 1 else 0)
+        }
     }
 
     fun accessForGlobal(global: GoIRGlobal) = RefAccess(

@@ -13,6 +13,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
+import org.opentaint.ir.api.jvm.ByteCodeLocationSpec
 import org.opentaint.ir.api.jvm.JIRByteCodeLocation
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRClasspathFeature
@@ -21,6 +22,7 @@ import org.opentaint.ir.api.jvm.JIRDatabasePersistence
 import org.opentaint.ir.api.jvm.JIRFeature
 import org.opentaint.ir.api.jvm.JIRSettings
 import org.opentaint.ir.api.jvm.JavaVersion
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.impl.features.classpaths.ClasspathCache
 import org.opentaint.ir.impl.features.classpaths.KotlinMetadata
@@ -28,7 +30,7 @@ import org.opentaint.ir.impl.features.classpaths.MethodInstructionsFeature
 import org.opentaint.ir.impl.features.classpaths.UnknownClassMethodsAndFields
 import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.fs.JavaRuntime
-import org.opentaint.ir.impl.fs.createNonRuntimeByteCodeLocations
+import org.opentaint.ir.impl.fs.createByteCodeLocations
 import org.opentaint.ir.impl.fs.lazySources
 import org.opentaint.ir.impl.fs.sources
 import org.opentaint.ir.impl.storage.ers.ERS_DATABASE_PERSISTENCE_SPI
@@ -77,8 +79,21 @@ class JIRDatabaseImpl(
     }
 
     override val id: String
-        get() = locations.mapNotNull { it.jIRLocation?.fileSystemIdHash }
-            .fold(featuresHash) { result, hash -> result xor hash }.toString(Character.MAX_RADIX)
+        get() {
+            val typedLocations = locations.mapNotNull { location ->
+                location.jIRLocation?.fileSystemId?.let { it to location.type.name }
+            }.sortedWith(compareBy<Pair<String, String>> { it.first }.thenBy { it.second })
+            if (typedLocations.isEmpty()) {
+                return featuresHash.toString(Character.MAX_RADIX)
+            }
+
+            val hasher = Hashing.sha256().newHasher()
+            typedLocations.forEach { (fileSystemId, type) ->
+                hasher.putString(fileSystemId, StandardCharsets.UTF_8).putByte(0)
+                hasher.putString(type, StandardCharsets.UTF_8).putByte(0)
+            }
+            return (featuresHash xor BigInteger(hasher.hash().asBytes())).toString(Character.MAX_RADIX)
+        }
 
     override val locations: List<RegisteredLocation> get() = locationsRegistry.actualLocations
 
@@ -88,7 +103,7 @@ class JIRDatabaseImpl(
         val runtime = JavaRuntime(settings.jre).allLocations.takeIf { settings.buildModelForJRE }
         val runtimeNew = runtime?.let { locationsRegistry.setup(it).new }
         val registeredNew = locationsRegistry.registerIfNeeded(
-            settings.predefinedDirOrJars.createNonRuntimeByteCodeLocations(javaRuntime.version)
+            settings.predefinedByteCodeLocations.createByteCodeLocations(javaRuntime.version)
         ).new
         if (canBeDumped() && persistence.tryLoad(id)) {
             isImmutable = true
@@ -116,8 +131,10 @@ class JIRDatabaseImpl(
 
     override suspend fun classpath(dirOrJars: List<File>, features: List<JIRClasspathFeature>?): JIRClasspath {
         assertNotClosed()
-        val existingLocations = dirOrJars.createNonRuntimeByteCodeLocations(javaRuntime.version)
-        val processed = locationsRegistry.registerIfNeeded(existingLocations)
+        val requestedLocations = dirOrJars
+            .map { ByteCodeLocationSpec(it, LocationType.APP) }
+            .createByteCodeLocations(javaRuntime.version)
+        val processed = locationsRegistry.registerIfNeeded(requestedLocations, validateExistingType = false)
             .also { it.new.process(true) }.registered + locationsRegistry.runtimeLocations
         return JIRClasspathImpl(
             locationsRegistry.newSnapshot(processed),
@@ -146,8 +163,16 @@ class JIRDatabaseImpl(
     }
 
     override suspend fun load(dirOrJars: List<File>) = apply {
+        load(dirOrJars, LocationType.APP)
+    }
+
+    override suspend fun load(dirOrJars: List<File>, type: LocationType) = apply {
         assertNotClosed()
-        loadLocations(dirOrJars.createNonRuntimeByteCodeLocations(javaRuntime.version))
+        loadLocations(
+            dirOrJars
+                .map { ByteCodeLocationSpec(it, type) }
+                .createByteCodeLocations(javaRuntime.version)
+        )
     }
 
     override suspend fun loadLocations(locations: List<JIRByteCodeLocation>) = apply {

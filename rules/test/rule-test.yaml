@@ -28,8 +28,12 @@ tests:
   - rule-id: java/security/code-injection.yaml#spring-el-injection
     positive:
       - security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController#evalUnsafe
+      - security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController#evalRawUnsafe
+      - security.codeinjection.SpringElInjectionSamples$UnsafeSpringElController#evalWithContextUnsafe
     negative:
+      - security.codeinjection.SpringElInjectionSamples$SafeSpringElController#evalFromUnrelatedFactory
       - security.codeinjection.SpringElInjectionSamples$SafeSpringElController#evalSafe
+      - security.codeinjection.SpringElInjectionSamples$SafeSpringElController#evalWithSimpleContext
   - rule-id: java/security/code-injection.yaml#ssti
     positive:
       - security.codeinjection.SstiServletSamples$UnsafeTemplateServlet#doPost
@@ -487,16 +491,15 @@ tests:
     negative:
       - security.unsafedeserialization.UnsafeDeserializationSamples$SafeSnakeYamlServlet#doPost
       - security.unsafedeserialization.UnsafeDeserializationSamples$SnakeYamlSpringController#safeYaml
-  - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-servlet-app
+  - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect
     positive:
+      - security.tagunification.RedirectTagEdgeSamples$SpringParameterToServletResponse#springParamToServletRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$UnsafeUnvalidatedRedirectServlet#doGet
-    negative:
-      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
-  - rule-id: java/security/unvalidated-redirect.yaml#unvalidated-redirect-in-spring-app
-    positive:
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirect
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$UnsafeUnvalidatedRedirectController#unsafeRedirectView
     negative:
+      - security.tagunification.RedirectTagEdgeSamples$SpringParameterToServletResponse#springParamToConstantServletRedirect
+      - security.unvalidatedredirect.UnvalidatedRedirectServletSamples$SafeContextPathRedirectServlet#doGet
       - security.unvalidatedredirect.UnvalidatedRedirectSpringSamples$SafeValidatedRedirectController#safeInternalRedirect
   - rule-id: java/security/weak-authentication.yaml#java-jwt-decode-without-verify
     positive:
@@ -508,35 +511,29 @@ tests:
       - security.weakauthentication.WeakAuthenticationSamples#samlParserPoolIgnoreCommentsInsecure
     negative:
       - security.weakauthentication.WeakAuthenticationSamples#samlParserPoolDefaultCommentsSecure
-  - rule-id: java/security/xss.yaml#response-injection-in-servlet-app
+  - rule-id: java/security/xss.yaml#response-injection
     positive:
+      - security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController#requestObjectToSpringHtmlResponse
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredHtmlOutputStream
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredHtmlWriter
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredOutputStream
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredWriter
       - security.xss.XssServletSamples$UnsafeJsonInfoServlet#doGet
-  - rule-id: java/security/xss.yaml#response-injection-in-spring-app
-    positive:
       - security.xss.XssSpringSamples$UnsafeNoContentTypeSpringController#unsafeNoContentType
       - security.xss.XssSpringSamples$UnsafeResponseEntityController#unsafeResponseEntity
+    negative:
+      - security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController#springParameterToJsonDto
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToEscapedHtml
   - rule-id: java/security/xss.yaml#wicket-xss
     positive:
       - security.xss.WicketXssSamples$UnsafeWicketPage
     negative:
       - security.xss.WicketXssSamples$SafeWicketPage
-  - rule-id: java/security/xss.yaml#xss-in-servlet-app
+  - rule-id: java/security/xss.yaml#xss
     positive:
-      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedOutputStreamServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedWriterServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeHtmlServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeNoContentTypeServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeOutputStreamLocalServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeSendErrorServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$UnsafeTypedPrintWriterServlet#doGet
-      - security.xss.XssServletSamples$UnsafeGreetingServlet#doGet
-    negative:
-      - security.xss.XssHtmlResponseServletSamples$SafeChainedWriterJsonServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet#doGet
-      - security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet#doGet
-      - security.xss.XssServletSamples$SafeGreetingServlet#doGet
-  - rule-id: java/security/xss.yaml#xss-in-spring-app
-    positive:
+      - security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController#requestObjectToSpringHtmlResponse
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredHtmlOutputStream
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToStoredHtmlWriter
       - security.xss.UnsafeBareBytesController#unsafeBareBytes
       - security.xss.UnsafeBareResourceController#unsafeBareResource
       - security.xss.UnsafeHtmlRestController#unsafeHtml
@@ -567,7 +564,17 @@ tests:
       - security.xss.XssHtmlResponseSpringSamples$UnsafeSetHeaderController#unsafeSetHeaderGreet
       - security.xss.XssHtmlResponseSpringSamples$UnsafeStringReturnController#unsafeStringReturn
       - security.xss.XssSpringSamples$UnsafeXssSpringController#unsafeGreet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedOutputStreamServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeChainedWriterServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeHtmlServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeNoContentTypeServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeOutputStreamLocalServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeSendErrorServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$UnsafeTypedPrintWriterServlet#doGet
+      - security.xss.XssServletSamples$UnsafeGreetingServlet#doGet
     negative:
+      - security.tagunification.ResponseXssTagEdgeSamples$SpringResponseEntityController#springParameterToJsonDto
+      - security.tagunification.ResponseXssTagEdgeSamples$StoredServletResponseController#springParameterToEscapedHtml
       - security.xss.SafeDtoRestController#safeDto
       - security.xss.XssHtmlResponseSpringSamples$Row04StringProducesTextPlainController#row04
       - security.xss.XssHtmlResponseSpringSamples$Row05StringProducesPdfController#row05
@@ -592,6 +599,11 @@ tests:
       - security.xss.XssHtmlResponseSpringSamples$SafeJsonStringReturnController#safeJsonStringReturn
       - security.xss.XssHtmlResponseSpringSamples$SafeStringReturnController#safeStringReturn
       - security.xss.XssSpringSamples$SafeXssSpringController#safeGreet
+      - security.xss.XssHtmlResponseServletSamples$SafeChainedWriterJsonServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$SafeHtmlServlet#doGet
+      - security.xss.XssHtmlResponseServletSamples$SafeOutputStreamOctetServlet#doGet
+      - security.xss.XssServletSamples$SafeGreetingServlet#doGet
+
   - rule-id: java/security/xss.yaml#xssrequestwrapper-is-insecure
     positive:
       - security.xss.XssRequestWrapperSamples$InsecureWrappedServlet#doGet

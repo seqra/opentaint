@@ -3,7 +3,7 @@ rules:
     options:
       lib: true
     tags:
-      - spring-response-injection-sink
+      - response-injection-sink
     severity: NOTE
     message: Direct write of unvalidated user input into response
     metadata:
@@ -26,13 +26,35 @@ rules:
       - patterns:
         - pattern-either:
           - patterns:
-            - pattern: |
-                @$ANNOTATION(...)
-                $RETURNTYPE $METHOD(...) {
-                  ...
-                  return $UNTRUSTED;
-                  ...
-                }
+            - pattern-either:
+                - pattern: |
+                    @$ANNOTATION(...)
+                    String $METHOD(...) {
+                      ...
+                      return $UNTRUSTED;
+                      ...
+                    }
+                - pattern: |
+                    @$ANNOTATION(...)
+                    byte[] $METHOD(...) {
+                      ...
+                      return $UNTRUSTED;
+                      ...
+                    }
+                - pattern: |
+                    @$ANNOTATION(...)
+                    ResponseEntity<String> $METHOD(...) {
+                      ...
+                      return $UNTRUSTED;
+                      ...
+                    }
+                - pattern: |
+                    @$ANNOTATION(...)
+                    ResponseEntity<byte[]> $METHOD(...) {
+                      ...
+                      return $UNTRUSTED;
+                      ...
+                    }
             - metavariable-pattern:
                 metavariable: $ANNOTATION
                 patterns:
@@ -43,14 +65,4 @@ rules:
                       - pattern: PatchMapping
                       - pattern: PostMapping
                       - pattern: PutMapping
-          - pattern: |
-              (HttpServletResponse $RESPONSE).getWriter(...).$WRITE(..., $UNTRUSTED, ...)
-          - pattern: |
-              (HttpServletResponse $RESPONSE).getOutputStream(...).$WRITE(..., $UNTRUSTED, ...)
-          - pattern: |
-              (HttpServletResponse $RESPONSE).sendError($CODE, $UNTRUSTED)
-          - pattern: |
-              (javax.servlet.ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
-          - pattern: |
-              (ServletOutputStream $WRITER).$WRITE(..., $UNTRUSTED, ...)
         - focus-metavariable: $UNTRUSTED

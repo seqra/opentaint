@@ -73,13 +73,20 @@ internal class MethodTraceAStar(
     private fun stateMethod(state: Int): Int = state ushr 1
     private fun statePhase(state: Int): Int = state and 1
 
+    private var stateCreationTime = 0
+
     data class SearchState(
         val score: Int,
+        val creationTime: Int,
         val state: Int,
         val g: Int,
     ) : Comparable<SearchState> {
-        override fun compareTo(other: SearchState): Int =
-            score.compareTo(other.score)
+        override fun compareTo(other: SearchState): Int {
+            val scoreCmp = score.compareTo(other.score)
+            if (scoreCmp != 0) return scoreCmp
+
+            return creationTime.compareTo(other.creationTime)
+        }
     }
 
     fun search(
@@ -99,7 +106,7 @@ internal class MethodTraceAStar(
         fun push(state: Int, g: Int) {
             val hv = h(stateMethod(state))
             if (hv == Int.MAX_VALUE) return
-            open.add(SearchState(g + hv, state, g))
+            open.add(SearchState(score = g + hv, creationTime = stateCreationTime++, state = state, g = g))
         }
 
         fun relax(fromState: Int, toState: Int, stepCost: Int, gFrom: Int) {

@@ -34,18 +34,6 @@ jobs:
             revert
             style
             test
-          scopes: |
-            cli
-            rules
-            model
-            github
-            gitlab
-            analyzer
-            autobuilder
-            core
-            infra
-            ci
-            docs
           requireScope: true
           subjectPattern: ^[A-Z].+$
           subjectPatternError: |
@@ -72,104 +60,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          SCOPE=$(echo "$PR_TITLE" | sed -n 's/^[a-z]*(\([^)]*\)).*/\1/p')
-
-          if [ -z "$SCOPE" ]; then
-            echo "Could not extract scope from PR title: $PR_TITLE"
-            exit 1
-          fi
-
-          declare -A SCOPE_PATHS
-
-          SCOPE_PATHS[rules]="^(rules/|\.github/workflows/((ci|release)-rules|ci-analyzer-owasp)\.)"
-          SCOPE_PATHS[model]="^model/"
-          SCOPE_PATHS[github]="^(github/|\.github/workflows/(ci|release)-github\.)"
-          SCOPE_PATHS[gitlab]="^(gitlab/|\.github/workflows/release-gitlab\.)"
-          AUTOBUILDER_MODULES=(
-            "opentaint-jvm-autobuilder/"
-            "opentaint-project-model/"
-            "opentaint-common-build/"
-            "opentaint-utils/cli-util/"
-            "opentaint-utils/build\.gradle\.kts"
-            "opentaint-utils/settings\.gradle\.kts"
-            "opentaint-utils/buildSrc/"
-            "build\.gradle\.kts"
-            "settings\.gradle\.kts"
-            "buildSrc/"
-          )
-          AUTOBUILDER_PATTERN=$(IFS="|"; echo "${AUTOBUILDER_MODULES[*]}")
-          SCOPE_PATHS[autobuilder]="^(core/(${AUTOBUILDER_PATTERN})|\.github/workflows/(ci|publish)-autobuilder\.)"
-          SCOPE_PATHS[infra]="^(infra/|\.github/workflows/publish-infra)"
-          SCOPE_PATHS[ci]="^(\.github/|release-notes-transform\.cjs|[^/]+/\.releaserc\.cjs)"
-
-          ANALYZER_MODULES=(
-            "opentaint-jvm-sast-dataflow/"
-            "opentaint-jvm-sast-project/"
-            "opentaint-jvm-sast-se-api/"
-            "opentaint-go-querylang/"
-            "opentaint-java-querylang/"
-            "opentaint-config/"
-            "opentaint-configuration-rules/"
-            "opentaint-ir/"
-            "opentaint-dataflow-core/"
-            "opentaint-utils/common-util/"
-            "opentaint-utils/opentaint-jvm-util/"
-            "opentaint-utils/build\.gradle\.kts"
-            "opentaint-utils/settings\.gradle\.kts"
-            "opentaint-utils/buildSrc/"
-            "build\.gradle\.kts"
-            "settings\.gradle\.kts"
-            "buildSrc/"
-            "src/"
-            "samples/"
-          )
-          ANALYZER_PATTERN=$(IFS="|"; echo "${ANALYZER_MODULES[*]}")
-          SCOPE_PATHS[analyzer]="^(core/(${ANALYZER_PATTERN})|\.github/workflows/((ci|publish)-analyzer|ci-analyzer-owasp|ci-(dataflow|ir))\.)"
-
-          SCOPE_PATHS[core]="^(core/|\.github/workflows/(pr-title|((ci|publish)-analyzer)|ci-analyzer-owasp|((ci|publish)-autobuilder)|ci-(dataflow|ir))\.)"
-
-          DOCS_PATTERNS=(
-            "public/"
-            "docs/"
-            "skills/"
-            "skills-templates/"
-            "scripts/"
-            "(.*/)?README\.md"
-            "(.*/)?CHANGELOG\.md"
-            "logos/"
-            "(.*/)?LICENSE(\.md)?"
-            ".*\.svg"
-            ".*\.png"
-            ".gitignore"
-            "Makefile"
-          )
-          DOCS_PATTERN=$(IFS="|"; echo "${DOCS_PATTERNS[*]}")
-          SCOPE_PATHS[docs]="^(${DOCS_PATTERN})"
-          SCOPE_PATHS[cli]="^(cli/|\.github/workflows/(ci|release)-cli\.|${DOCS_PATTERN})"
-
-          ALLOWED="${SCOPE_PATHS[$SCOPE]:-}"
-          if [ -z "$ALLOWED" ]; then
-            echo "Unknown scope: $SCOPE"
-            exit 1
-          fi
+          SCOPE=$(node .github/scripts/scope-contract.cjs title-scopes "$PR_TITLE")
 
           CHANGED=$(gh pr diff "$PR_NUMBER" --name-only --repo "$GITHUB_REPOSITORY")
-
-          VIOLATIONS=""
-          while IFS= read -r file; do
-            [ -z "$file" ] && continue
-            if ! echo "$file" | grep -qE "$ALLOWED"; then
-              VIOLATIONS="$VIOLATIONS\n  $file"
-            fi
-          done <<< "$CHANGED"
-
-          if [ -n "$VIOLATIONS" ]; then
-            echo "ERROR: PR scope ($SCOPE) does not match these changed files:"
-            echo -e "$VIOLATIONS"
-            echo ""
-            echo "Each PR must only touch files belonging to its scope."
-            echo "Allowed pattern for scope '$SCOPE': $ALLOWED"
-            exit 1
-          fi
-
-          echo "All changed files match scope '$SCOPE'"
+          printf '%s\n' "$CHANGED" |
+            node .github/scripts/scope-contract.cjs validate-paths "$SCOPE"
+          echo "All changed files have the exact scopes '$SCOPE'"

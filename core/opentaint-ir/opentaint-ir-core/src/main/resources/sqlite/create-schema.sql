@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS "BytecodeLocations"(
     "id"         BIGINT PRIMARY KEY,
     "path"       VARCHAR(1024) NOT NULL,
     "uniqueId"       VARCHAR(1024) NOT NULL,
-    "runtime"    BOOLEAN       NOT NULL DEFAULT 0,
+    "location_type" VARCHAR(16) NOT NULL,
     "state"      INT           NOT NULL DEFAULT 0,
     "updated_id" BIGINT,
     CONSTRAINT "fk_BytecodeLocations_updated_id__id" FOREIGN KEY ("updated_id") REFERENCES "BytecodeLocations" ("id") ON DELETE RESTRICT ON UPDATE RESTRICT

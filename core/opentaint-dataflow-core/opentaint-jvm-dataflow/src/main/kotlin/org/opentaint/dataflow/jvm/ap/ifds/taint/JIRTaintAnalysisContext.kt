@@ -185,11 +185,11 @@ class JIRTaintAnalysisContext(
         }.handlePhase()
     }
 
-    private fun <T : TaintConfigurationItem> List<RuleWithCondition<T>>.handlePhase() =
-        if (analysisContext.phase !is Phase.Prescan) {
-            this
-        } else {
-            mapNotNullTo(relevantRuleIds) { it.rule.serializedId }
-            emptyList()
-        }
+    private fun <T : TaintConfigurationItem> List<RuleWithCondition<T>>.handlePhase(): List<RuleWithCondition<T>> {
+        if (analysisContext.phase !is Phase.Prescan) return this
+
+        mapNotNullTo(relevantRuleIds) { it.rule.serializedId }
+
+        return filter { it.rule is TaintPassThrough }
+    }
 }

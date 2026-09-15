@@ -8,6 +8,7 @@ interface CommonInst {
 
 interface CommonInstLocation {
     val method: CommonMethod
+    val index: Int
 }
 
 interface CommonAssignInst : CommonInst {

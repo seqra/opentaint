@@ -33,8 +33,8 @@ class JIRSettings {
     var buildModelForJRE: Boolean = true
         private set
 
-    /** jar files which should be loaded right after database is created */
-    var predefinedDirOrJars: List<File> = persistentListOf()
+    /** Bytecode locations which should be loaded right after database is created. */
+    var predefinedByteCodeLocations: List<ByteCodeLocationSpec> = persistentListOf()
         private set
 
     var cacheSettings: JIRCacheSettings = JIRCacheSettings()
@@ -90,7 +90,16 @@ class JIRSettings {
     }
 
     fun loadByteCode(files: List<File>) = apply {
-        predefinedDirOrJars = (predefinedDirOrJars + files).toPersistentList()
+        loadByteCode(files, LocationType.APP)
+    }
+
+    /**
+     * Registers [files] with [type] when the database is created.
+     */
+    fun loadByteCode(files: List<File>, type: LocationType) = apply {
+        predefinedByteCodeLocations = (
+            predefinedByteCodeLocations + files.map { ByteCodeLocationSpec(it, type) }
+        ).toPersistentList()
     }
 
     fun keepLocalVariableNames() = apply {

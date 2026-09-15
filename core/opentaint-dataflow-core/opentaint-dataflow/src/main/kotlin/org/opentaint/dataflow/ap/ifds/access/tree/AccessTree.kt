@@ -1029,6 +1029,13 @@ class AccessTree(
         }
 
         fun filterAccessNode(filter: FactTypeChecker.FactApFilter): AccessNode? = with(manager) {
+            // An any-accessor matches zero or more accessors. If the filter rejects it, only the
+            // empty match stays: remove the edge, keep its subtree at this node, then filter.
+            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
+            if (anyNode != null && filter.check(ANY_ACCESSOR_IDX.accessor) === FactTypeChecker.FilterResult.Reject) {
+                return removeSingleAccessor(ANY_ACCESSOR_IDX).mergeAdd(anyNode).filterAccessNode(filter)
+            }
+
             var result = transformAccessors { accessor, accessNode ->
                 when (val status = filter.check(accessor.accessor)) {
                     FactTypeChecker.FilterResult.Accept -> accessNode

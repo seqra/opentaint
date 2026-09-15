@@ -136,8 +136,12 @@ abstract class SarifGenerator<IL>(
         digest.update(ruleId.toByteArray())
         digest.addLocationFingerprint(vulnerabilityLocation)
 
-        traces
-            ?.map { computeTraceFingerprint(it, kind) }
+        val perTrace = traces?.map { computeTraceFingerprint(it, kind) }
+        val considered = when (kind) {
+            FingerprintKind.SOURCE_SINK -> perTrace?.distinctBy { it.toList() }
+            FingerprintKind.FULL_TRACE -> perTrace
+        }
+        considered
             ?.sortedWith(Arrays::compare)
             ?.forEach(digest::update)
 

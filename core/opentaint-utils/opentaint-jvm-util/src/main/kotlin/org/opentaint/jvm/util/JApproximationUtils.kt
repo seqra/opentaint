@@ -5,6 +5,7 @@ import org.opentaint.ir.api.jvm.JIRClassType
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRClasspathFeature
 import org.opentaint.ir.api.jvm.JIRDatabase
+import org.opentaint.ir.api.jvm.LocationType
 import org.opentaint.ir.approximation.Approximations
 import org.opentaint.ir.impl.types.JIRClassTypeImpl
 import java.io.File
@@ -45,6 +46,8 @@ suspend fun JIRDatabase.classpathWithApproximations(
     }
 
     val approximationsPath = approximationPaths.presentPaths.map { File(it) }
+
+    load(approximationsPath, LocationType.LIB)
 
     val cpWithApproximations = dirOrJars + approximationsPath
 

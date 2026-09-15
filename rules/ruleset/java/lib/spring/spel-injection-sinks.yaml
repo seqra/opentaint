@@ -13,17 +13,20 @@ rules:
     patterns:
       - pattern-either:
         - pattern: |
-            org.springframework.expression.Expression $EXPRESSION = (SPELL_PARSER_TYPE $PARSER).SPEL_PARSE($UNTRUSTED, ...);
+            org.springframework.expression.Expression $EXPRESSION = ($SPEL_PARSER_TYPE $PARSER).$SPEL_PARSE($UNTRUSTED, ...);
             ...
             $EXPRESSION.$SPEL_EXPR_FUNC();
         - patterns:
           - pattern: |
-              org.springframework.expression.Expression $EXPRESSION = ($SPELL_PARSER_TYPE $PARSER).$SPEL_PARSE($UNTRUSTED, ...);
+              org.springframework.expression.Expression $EXPRESSION = ($SPEL_PARSER_TYPE $PARSER).$SPEL_PARSE($UNTRUSTED, ...);
               ...
               $EXPRESSION.$SPEL_EXPR_FUNC($EVALUATION_CONTEXT, ...);
-          - pattern-not-inside: |
-              org.springframework.expression.spel.support.SimpleEvaluationContext $EVALUATION_CONTEXT =
-                (org.springframework.expression.spel.support.SimpleEvaluationContext.Builder).build();
+          - pattern-not: |
+              org.springframework.expression.Expression $EXPRESSION =
+                ($SPEL_PARSER_TYPE $PARSER).$SPEL_PARSE($UNTRUSTED, ...);
+              ...
+              $EXPRESSION.$SPEL_EXPR_FUNC(
+                (org.springframework.expression.spel.support.SimpleEvaluationContext $EVALUATION_CONTEXT), ...);
       - metavariable-pattern:
           metavariable: $SPEL_EXPR_FUNC
           pattern-either:
@@ -32,13 +35,13 @@ rules:
             - pattern: getValueType
             - pattern: getValueTypeDescriptor
       - metavariable-pattern:
-          metavariable: $SPELL_PARSER_TYPE
+          metavariable: $SPEL_PARSER_TYPE
           pattern-either:
             - pattern: org.springframework.expression.common.TemplateAwareExpressionParser
             - pattern: org.springframework.expression.spel.standard.SpelExpressionParser
             - pattern: org.springframework.expression.ExpressionParser
       - metavariable-pattern:
-          metavariable: $SPELL_PARSE
+          metavariable: $SPEL_PARSE
           pattern-either:
             - pattern: parseExpression
             - pattern: parseRaw
