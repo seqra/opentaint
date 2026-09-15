@@ -7,8 +7,6 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.AbstractStringBuilder#<init>
   signature: (java.lang.String) void
   copy:
@@ -16,15 +14,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.AbstractStringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -33,7 +31,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -42,7 +42,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -51,17 +53,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -69,17 +69,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -92,7 +84,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -101,7 +95,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -110,7 +106,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -119,17 +117,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -140,17 +136,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -161,17 +155,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -182,17 +174,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -203,17 +193,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -224,17 +212,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -245,7 +231,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#append
@@ -254,17 +242,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -272,17 +258,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -295,17 +273,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -316,17 +292,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -337,7 +311,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#charAt
@@ -346,7 +322,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#delete
@@ -355,7 +333,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#deleteCharAt
@@ -364,7 +344,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#getChars
@@ -382,7 +364,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -391,7 +375,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -400,17 +386,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -418,17 +402,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -441,7 +417,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -450,7 +428,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -459,7 +439,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -468,17 +450,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -489,17 +469,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -510,17 +488,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -531,7 +507,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#insert
@@ -540,17 +518,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -558,17 +534,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -581,17 +549,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -602,17 +568,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(2)
-    to: this
   - from: arg(2)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(2)
-    to: result
   - from: arg(2)
     to:
     - result
@@ -623,7 +587,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#setCharAt
@@ -633,15 +599,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: this
 - function: java.lang.AbstractStringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#substring
@@ -650,7 +616,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.AbstractStringBuilder#substring
@@ -659,7 +627,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#<init>
@@ -669,8 +639,6 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.StringBuffer#<init>
   signature: (java.lang.String) void
   copy:
@@ -678,15 +646,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.StringBuffer#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -695,7 +663,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -704,7 +674,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -713,7 +685,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -722,7 +696,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -731,17 +707,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -749,17 +723,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -772,17 +738,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -790,17 +754,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -813,7 +769,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -822,7 +780,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -831,7 +791,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -840,7 +802,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -849,7 +813,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -858,7 +824,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -867,17 +835,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -888,17 +854,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -909,17 +873,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -930,17 +892,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -951,17 +911,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -972,17 +930,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -993,17 +949,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1014,17 +968,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1035,17 +987,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1056,17 +1006,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1077,17 +1025,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1098,7 +1044,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -1107,7 +1055,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#append
@@ -1116,17 +1066,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1134,17 +1082,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -1157,17 +1097,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1175,17 +1113,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -1198,17 +1128,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1219,17 +1147,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1240,17 +1166,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1261,7 +1185,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#appendCodePoint
@@ -1270,7 +1196,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#charAt
@@ -1279,7 +1207,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#delete
@@ -1288,7 +1218,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#delete
@@ -1297,7 +1229,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#deleteCharAt
@@ -1306,7 +1240,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#deleteCharAt
@@ -1315,7 +1251,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#getChars
@@ -1333,7 +1271,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1342,7 +1282,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1351,7 +1293,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1360,7 +1304,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1369,17 +1315,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1387,17 +1331,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -1410,17 +1346,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1428,17 +1362,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -1451,7 +1377,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1460,7 +1388,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1469,7 +1399,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1478,7 +1410,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1487,7 +1421,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1496,7 +1432,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1505,17 +1443,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1526,17 +1462,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1547,17 +1481,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1568,17 +1500,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1589,17 +1519,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1610,17 +1538,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1631,7 +1557,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1640,7 +1568,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#insert
@@ -1649,17 +1579,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1667,17 +1595,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -1690,17 +1610,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1708,17 +1626,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -1731,17 +1641,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1752,17 +1660,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -1773,17 +1679,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(2)
-    to: this
   - from: arg(2)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(2)
-    to: result
   - from: arg(2)
     to:
     - result
@@ -1794,17 +1698,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(2)
-    to: this
   - from: arg(2)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(2)
-    to: result
   - from: arg(2)
     to:
     - result
@@ -1815,7 +1717,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#reverse
@@ -1824,7 +1728,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#setCharAt
@@ -1834,15 +1740,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: this
 - function: java.lang.StringBuffer#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#substring
@@ -1851,7 +1757,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuffer#substring
@@ -1860,7 +1768,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#<init>
@@ -1870,8 +1780,6 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.StringBuilder#<init>
   signature: (java.lang.String) void
   copy:
@@ -1879,15 +1787,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: java.lang.StringBuilder#append
   signature: (boolean) java.lang.AbstractStringBuilder
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -1896,7 +1804,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -1905,7 +1815,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -1914,7 +1826,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -1923,7 +1837,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -1932,17 +1848,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1950,17 +1864,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -1973,17 +1879,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -1991,17 +1895,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -2014,7 +1910,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2023,7 +1921,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2032,7 +1932,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2041,7 +1943,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2050,7 +1954,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2059,7 +1965,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2068,17 +1976,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2089,17 +1995,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2110,17 +2014,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2131,17 +2033,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2152,17 +2052,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2173,17 +2071,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2194,17 +2090,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2215,17 +2109,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2236,17 +2128,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2257,7 +2147,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2266,7 +2158,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#append
@@ -2275,17 +2169,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2293,17 +2185,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -2316,17 +2200,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2334,17 +2216,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
   - from:
     - arg(0)
     - '[*]'
@@ -2357,17 +2231,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2378,17 +2250,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2399,17 +2269,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(0)
-    to: result
   - from: arg(0)
     to:
     - result
@@ -2420,7 +2288,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#appendCodePoint
@@ -2429,7 +2299,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#charAt
@@ -2438,7 +2310,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#delete
@@ -2447,7 +2321,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#delete
@@ -2456,7 +2332,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#deleteCharAt
@@ -2465,7 +2343,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#deleteCharAt
@@ -2474,7 +2354,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#getChars
@@ -2492,7 +2374,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2501,7 +2385,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2510,7 +2396,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2519,7 +2407,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2528,17 +2418,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2546,17 +2434,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -2569,17 +2449,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2587,17 +2465,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -2610,7 +2480,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2619,7 +2491,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2628,7 +2502,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2637,7 +2513,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2646,7 +2524,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2655,7 +2535,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2664,17 +2546,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2685,17 +2565,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2706,17 +2584,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2727,17 +2603,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2748,17 +2622,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2769,17 +2641,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2790,7 +2660,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2799,7 +2671,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#insert
@@ -2808,17 +2682,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2826,17 +2698,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -2849,17 +2713,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2867,17 +2729,9 @@ passThrough:
   - from:
     - arg(1)
     - '[*]'
-    to: this
-  - from:
-    - arg(1)
-    - '[*]'
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
   - from:
     - arg(1)
     - '[*]'
@@ -2890,17 +2744,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2911,17 +2763,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(1)
-    to: this
   - from: arg(1)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - result
@@ -2932,17 +2782,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(2)
-    to: this
   - from: arg(2)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(2)
-    to: result
   - from: arg(2)
     to:
     - result
@@ -2953,17 +2801,15 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
-  - from: arg(2)
-    to: this
   - from: arg(2)
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(2)
-    to: result
   - from: arg(2)
     to:
     - result
@@ -2974,7 +2820,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#reverse
@@ -2983,7 +2831,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#setCharAt
@@ -2993,15 +2843,15 @@ passThrough:
     to:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to: this
 - function: java.lang.StringBuilder#subSequence
   signature: (int, int) java.lang.CharSequence
   copy:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#substring
@@ -3010,7 +2860,9 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result
 - function: java.lang.StringBuilder#substring
@@ -3019,6 +2871,8 @@ passThrough:
   - from:
     - this
     - .java.lang.CharSequence#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.lang.CharSequence#content#java.lang.Object
   - from: this
     to: result

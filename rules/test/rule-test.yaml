@@ -72,6 +72,18 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#qNameLocalPartUnsafe
       - security.passthrough.PassthroughValueFlowSamples#qNamePrefixUnsafe
       - security.passthrough.PassthroughValueFlowSamples#httpHeadersUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatStaticPatternUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatStaticArgumentUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#choiceFormatFormatsUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#objectBufferListUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonGeneratorBinaryUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#listReplaceAllUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#fileSystemPathVarargsUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#searchControlsAttributesUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#basicControlPayloadUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#facesArrayDataModelUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#facesSelectItemGroupUnsafe
       - security.passthrough.PassthroughServletAccessorSamples$RequestUriServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$QueryStringServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$ServletPathServlet#doGet
@@ -178,6 +190,22 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#qNameNamespaceDoesNotReachLocalPartSafe
       - security.passthrough.PassthroughValueFlowSamples#qNamePrefixDoesNotReachNamespaceSafe
       - security.passthrough.PassthroughValueFlowSamples#httpHeadersSafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatStaticPatternSafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatStaticArgumentSafe
+      - security.passthrough.PassthroughValueFlowSamples#messageFormatDoesNotFlowBackToArgumentsSafe
+      - security.passthrough.PassthroughValueFlowSamples#choiceFormatFormatsSafe
+      - security.passthrough.PassthroughValueFlowSamples#choiceFormatFormatsDoNotReachLimitsSafe
+      - security.passthrough.PassthroughValueFlowSamples#objectBufferListSafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonGeneratorBinarySafe
+      - security.passthrough.PassthroughValueFlowSamples#listReplaceAllSafe
+      - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllSafe
+      - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllDoesNotMixKeysSafe
+      - security.passthrough.PassthroughValueFlowSamples#fileSystemPathVarargsSafe
+      - security.passthrough.PassthroughValueFlowSamples#searchControlsAttributesSafe
+      - security.passthrough.PassthroughValueFlowSamples#basicControlPayloadSafe
+      - security.passthrough.PassthroughValueFlowSamples#basicControlIdDoesNotReachPayloadSafe
+      - security.passthrough.PassthroughValueFlowSamples#facesArrayDataModelSafe
+      - security.passthrough.PassthroughValueFlowSamples#facesSelectItemGroupSafe
       - security.passthrough.PassthroughServletAccessorSamples$SafeAccessorsServlet#doGet
   - rule-id: java/security/crlf-injection.yaml#http-response-splitting
     positive:

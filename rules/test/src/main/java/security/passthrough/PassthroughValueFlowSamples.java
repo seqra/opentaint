@@ -5,21 +5,34 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
+import java.nio.file.FileSystems;
+import java.text.ChoiceFormat;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.StringJoiner;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.naming.NamingException;
 import javax.naming.Reference;
+import javax.naming.directory.SearchControls;
 import javax.naming.ldap.BasicControl;
 import javax.naming.ldap.Rdn;
 import javax.naming.ldap.SortKey;
 import javax.xml.namespace.QName;
 
+import javax.faces.model.ArrayDataModel;
+import javax.faces.model.SelectItem;
+import javax.faces.model.SelectItemGroup;
+
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.util.ObjectBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -447,5 +460,204 @@ public class PassthroughValueFlowSamples {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Command", CONSTANT);
         Runtime.getRuntime().exec("cat " + headers.getFirst("X-Command"));
+    }
+
+    // === regressions for precise array-element and void-return modelling ===
+
+    @GetMapping("/message-format-static-pattern/unsafe")
+    public void messageFormatStaticPatternUnsafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(MessageFormat.format(input, CONSTANT));
+    }
+
+    @GetMapping("/message-format-static-pattern/safe")
+    public void messageFormatStaticPatternSafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(MessageFormat.format(CONSTANT, CONSTANT));
+    }
+
+    @GetMapping("/message-format-static-argument/unsafe")
+    public void messageFormatStaticArgumentUnsafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(MessageFormat.format("cat {0}", input));
+    }
+
+    @GetMapping("/message-format-static-argument/safe")
+    public void messageFormatStaticArgumentSafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(MessageFormat.format("cat {0}", CONSTANT));
+    }
+
+    /** Formatting must not taint or overwrite the independent argument-array slot. */
+    @GetMapping("/message-format-no-argument-backflow/safe")
+    public void messageFormatDoesNotFlowBackToArgumentsSafe(@RequestParam String input)
+            throws IOException {
+        Object[] arguments = new Object[] { CONSTANT };
+        MessageFormat.format(input, arguments);
+        Runtime.getRuntime().exec((String) arguments[0]);
+    }
+
+    @GetMapping("/choice-format-formats/unsafe")
+    public void choiceFormatFormatsUnsafe(@RequestParam String input) throws IOException {
+        ChoiceFormat format = new ChoiceFormat(new double[] { 0 }, new String[] { input });
+        Runtime.getRuntime().exec(format.format(0));
+    }
+
+    @GetMapping("/choice-format-formats/safe")
+    public void choiceFormatFormatsSafe(@RequestParam String input) throws IOException {
+        ChoiceFormat format = new ChoiceFormat(new double[] { 0 }, new String[] { CONSTANT });
+        Runtime.getRuntime().exec(format.format(0));
+    }
+
+    /** A tainted format element must not contaminate the independent limits array. */
+    @GetMapping("/choice-format-no-formats-to-limits/safe")
+    public void choiceFormatFormatsDoNotReachLimitsSafe(@RequestParam String input)
+            throws IOException {
+        ChoiceFormat format = new ChoiceFormat(new double[] { 0 }, new String[] { input });
+        Runtime.getRuntime().exec("cat " + format.getLimits()[0]);
+    }
+
+    @GetMapping("/object-buffer-list/unsafe")
+    public void objectBufferListUnsafe(@RequestParam String input) throws IOException {
+        ObjectBuffer buffer = new ObjectBuffer();
+        List<Object> output = new ArrayList<>();
+        buffer.completeAndClearBuffer(new Object[] { input }, 1, output);
+        Runtime.getRuntime().exec((String) output.get(0));
+    }
+
+    @GetMapping("/object-buffer-list/safe")
+    public void objectBufferListSafe(@RequestParam String input) throws IOException {
+        ObjectBuffer buffer = new ObjectBuffer();
+        List<Object> output = new ArrayList<>();
+        buffer.completeAndClearBuffer(new Object[] { CONSTANT }, 1, output);
+        Runtime.getRuntime().exec((String) output.get(0));
+    }
+
+    @GetMapping("/json-generator-binary/unsafe")
+    public void jsonGeneratorBinaryUnsafe(@RequestParam String input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (JsonGenerator generator = new JsonFactory().createGenerator(output)) {
+            generator.writeBinary(input.getBytes());
+        }
+        Runtime.getRuntime().exec(output.toString());
+    }
+
+    @GetMapping("/json-generator-binary/safe")
+    public void jsonGeneratorBinarySafe(@RequestParam String input) throws IOException {
+        ByteArrayOutputStream output = new ByteArrayOutputStream();
+        try (JsonGenerator generator = new JsonFactory().createGenerator(output)) {
+            generator.writeBinary(CONSTANT.getBytes());
+        }
+        Runtime.getRuntime().exec(output.toString());
+    }
+
+    @GetMapping("/list-replace-all/unsafe")
+    public void listReplaceAllUnsafe(@RequestParam String input) throws IOException {
+        List<String> values = new ArrayList<>();
+        values.add(input);
+        values.replaceAll(String::trim);
+        Runtime.getRuntime().exec(values.get(0));
+    }
+
+    @GetMapping("/list-replace-all/safe")
+    public void listReplaceAllSafe(@RequestParam String input) throws IOException {
+        List<String> values = new ArrayList<>();
+        values.add(CONSTANT);
+        values.replaceAll(String::trim);
+        Runtime.getRuntime().exec(values.get(0));
+    }
+
+    @GetMapping("/concurrent-map-replace-all/unsafe")
+    public void concurrentMapReplaceAllUnsafe(@RequestParam String input) throws IOException {
+        Map<String, String> values = new ConcurrentHashMap<>();
+        values.put("command", input);
+        values.replaceAll((key, value) -> value.trim());
+        Runtime.getRuntime().exec(values.get("command"));
+    }
+
+    @GetMapping("/concurrent-map-replace-all/safe")
+    public void concurrentMapReplaceAllSafe(@RequestParam String input) throws IOException {
+        Map<String, String> values = new ConcurrentHashMap<>();
+        values.put("command", CONSTANT);
+        values.replaceAll((key, value) -> value.trim());
+        Runtime.getRuntime().exec(values.get("command"));
+    }
+
+    /** Replacing values must not merge the independent key and value slots. */
+    @GetMapping("/concurrent-map-replace-all-no-key-to-value/safe")
+    public void concurrentMapReplaceAllDoesNotMixKeysSafe(@RequestParam String input)
+            throws IOException {
+        Map<String, String> values = new ConcurrentHashMap<>();
+        values.put(input, CONSTANT);
+        values.replaceAll((key, value) -> value.trim());
+        Runtime.getRuntime().exec(values.values().iterator().next());
+    }
+
+    @GetMapping("/file-system-path-varargs/unsafe")
+    public void fileSystemPathVarargsUnsafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(FileSystems.getDefault().getPath("tmp", input).toString());
+    }
+
+    @GetMapping("/file-system-path-varargs/safe")
+    public void fileSystemPathVarargsSafe(@RequestParam String input) throws IOException {
+        Runtime.getRuntime().exec(FileSystems.getDefault().getPath("tmp", CONSTANT).toString());
+    }
+
+    @GetMapping("/search-controls-attributes/unsafe")
+    public void searchControlsAttributesUnsafe(@RequestParam String input) throws IOException {
+        SearchControls controls = new SearchControls();
+        controls.setReturningAttributes(new String[] { input });
+        Runtime.getRuntime().exec(controls.getReturningAttributes()[0]);
+    }
+
+    @GetMapping("/search-controls-attributes/safe")
+    public void searchControlsAttributesSafe(@RequestParam String input) throws IOException {
+        SearchControls controls = new SearchControls();
+        controls.setReturningAttributes(new String[] { CONSTANT });
+        Runtime.getRuntime().exec(controls.getReturningAttributes()[0]);
+    }
+
+    @GetMapping("/basic-control-payload/unsafe")
+    public void basicControlPayloadUnsafe(@RequestParam String input) throws IOException {
+        BasicControl control = new BasicControl("1.2.3", false, input.getBytes());
+        Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    @GetMapping("/basic-control-payload/safe")
+    public void basicControlPayloadSafe(@RequestParam String input) throws IOException {
+        BasicControl control = new BasicControl("1.2.3", false, CONSTANT.getBytes());
+        Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    /** The OID and encoded payload are separate fields of the same control. */
+    @GetMapping("/basic-control-no-id-to-payload/safe")
+    public void basicControlIdDoesNotReachPayloadSafe(@RequestParam String input)
+            throws IOException {
+        BasicControl control = new BasicControl(input, false, CONSTANT.getBytes());
+        Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    @GetMapping("/faces-array-data-model/unsafe")
+    public void facesArrayDataModelUnsafe(@RequestParam String input) throws IOException {
+        ArrayDataModel<String> model = new ArrayDataModel<>(new String[] { input });
+        model.setRowIndex(0);
+        Runtime.getRuntime().exec(model.getRowData());
+    }
+
+    @GetMapping("/faces-array-data-model/safe")
+    public void facesArrayDataModelSafe(@RequestParam String input) throws IOException {
+        ArrayDataModel<String> model = new ArrayDataModel<>(new String[] { CONSTANT });
+        model.setRowIndex(0);
+        Runtime.getRuntime().exec(model.getRowData());
+    }
+
+    @GetMapping("/faces-select-item-group/unsafe")
+    public void facesSelectItemGroupUnsafe(@RequestParam String input) throws IOException {
+        SelectItemGroup group = new SelectItemGroup();
+        group.setSelectItems(new SelectItem[] { new SelectItem(input) });
+        Runtime.getRuntime().exec((String) group.getSelectItems()[0].getValue());
+    }
+
+    @GetMapping("/faces-select-item-group/safe")
+    public void facesSelectItemGroupSafe(@RequestParam String input) throws IOException {
+        SelectItemGroup group = new SelectItemGroup();
+        group.setSelectItems(new SelectItem[] { new SelectItem(CONSTANT) });
+        Runtime.getRuntime().exec((String) group.getSelectItems()[0].getValue());
     }
 }

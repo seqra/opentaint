@@ -47,8 +47,18 @@ passThrough:
 - function: java.util.concurrent.ConcurrentHashMap#replaceAll
   signature: (java.util.function.BiFunction) void
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .java.util.Map#MapKey#java.lang.Object
+    to:
+    - this
+    - .java.util.Map#MapKey#java.lang.Object
+  - from:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
+    to:
+    - this
+    - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#search
   signature: (long, java.util.function.BiFunction) java.lang.Object
   taintCopyOnly: true

@@ -15,7 +15,10 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.yaml.snakeyaml.Yaml;
 
@@ -34,6 +37,38 @@ import org.yaml.snakeyaml.Yaml;
 public final class ModelConfigDiffCoverageCheck {
     private static final String BASE_COMMIT = "56a00bb32ebaa7b850b8ba41a4fe112d97200a92";
     private static final String MANIFEST = "rules/test/model-config-diff-coverage.tsv";
+    private static final Pattern EXACT_SIGNATURE = Pattern.compile("^\\((.*)\\)\\s+(.+)$");
+    private static final Pattern ARGUMENT = Pattern.compile("^arg\\((\\d+)\\)$");
+    private static final Pattern FIELD = Pattern.compile("^\\.(.*)#([^#]+)#(.*)$");
+    private static final Set<String> AGGREGATE_RESULTS = Set.of(
+            "java.lang.String", "java.lang.Object", "byte", "char", "short", "int", "long",
+            "float", "double", "boolean");
+    private static final String SAMPLE =
+            "security.passthrough.PassthroughValueFlowSamples#";
+    private static final List<RegressionPair> REQUIRED_REGRESSION_PAIRS = List.of(
+            pair("StringBuilder array elements", "stringBuilderAppendChars"),
+            pair("byte-array output field", "byteArrayOutputStream"),
+            pair("ByteBuffer storage", "byteBuffer"),
+            pair("ByteBuffer destination", "byteBufferGet"),
+            pair("CharBuffer storage", "charBuffer"),
+            pair("CharBuffer destination", "charBufferGet"),
+            pair("MessageFormat static pattern", "messageFormatStaticPattern"),
+            pair("MessageFormat static arguments", "messageFormatStaticArgument"),
+            pair("ChoiceFormat format array", "choiceFormatFormats"),
+            pair("Jackson ObjectBuffer list elements", "objectBufferList"),
+            pair("Jackson generator binary content", "jsonGeneratorBinary"),
+            pair("List.replaceAll void result", "listReplaceAll"),
+            pair("ConcurrentHashMap.replaceAll slots", "concurrentMapReplaceAll"),
+            pair("FileSystem path varargs", "fileSystemPathVarargs"),
+            pair("SearchControls attribute array", "searchControlsAttributes"),
+            pair("BasicControl encoded payload", "basicControlPayload"),
+            pair("Faces ArrayDataModel elements", "facesArrayDataModel"),
+            pair("Faces SelectItemGroup elements", "facesSelectItemGroup"));
+    private static final Set<String> REQUIRED_ISOLATION_REGRESSIONS = Set.of(
+            SAMPLE + "messageFormatDoesNotFlowBackToArgumentsSafe",
+            SAMPLE + "choiceFormatFormatsDoNotReachLimitsSafe",
+            SAMPLE + "concurrentMapReplaceAllDoesNotMixKeysSafe",
+            SAMPLE + "basicControlIdDoesNotReachPayloadSafe");
 
     private record Atom(String path, String section, String canonical, String description) {
         String fingerprint() {
@@ -44,11 +79,20 @@ public final class ModelConfigDiffCoverageCheck {
 
     private record Delta(char kind, Atom atom) {}
 
+    private record RegressionPair(String issue, String positive, String negative) {}
+
     private ModelConfigDiffCoverageCheck() {}
 
     public static void main(String[] args) throws Exception {
         Path repository = Paths.get("../..").toRealPath();
         Path manifest = repository.resolve(MANIFEST);
+        List<String> validationErrors = validateCurrentConfigs(repository);
+        validateRegressionCoverage(repository, validationErrors);
+        if (!validationErrors.isEmpty()) {
+            System.err.println("Model config semantic validation failed:");
+            validationErrors.forEach(error -> System.err.println("  " + error));
+            System.exit(1);
+        }
         List<Delta> actual = collectDeltas(repository);
 
         if (args.length == 1 && args[0].equals("--update")) {
@@ -74,6 +118,28 @@ public final class ModelConfigDiffCoverageCheck {
                 + removals + " removals).");
     }
 
+    private static RegressionPair pair(String issue, String stem) {
+        return new RegressionPair(issue, SAMPLE + stem + "Unsafe", SAMPLE + stem + "Safe");
+    }
+
+    private static void validateRegressionCoverage(Path repository, List<String> errors)
+            throws IOException {
+        String registrations = Files.readString(repository.resolve("rules/test/rule-test.yaml"));
+        for (RegressionPair pair : REQUIRED_REGRESSION_PAIRS) {
+            if (!registrations.contains("- " + pair.positive)) {
+                errors.add(pair.issue + " is missing positive regression " + pair.positive);
+            }
+            if (!registrations.contains("- " + pair.negative)) {
+                errors.add(pair.issue + " is missing negative regression " + pair.negative);
+            }
+        }
+        for (String regression : REQUIRED_ISOLATION_REGRESSIONS) {
+            if (!registrations.contains("- " + regression)) {
+                errors.add("field-isolation regression is missing: " + regression);
+            }
+        }
+    }
+
     private static List<Delta> collectDeltas(Path repository) throws Exception {
         ensureBaseCommitExists(repository);
         List<String> changedPaths = command(repository, "git", "diff", "--name-only", BASE_COMMIT,
@@ -95,6 +161,233 @@ public final class ModelConfigDiffCoverageCheck {
                 .thenComparing(delta -> delta.atom.fingerprint())
                 .thenComparing(delta -> delta.atom.canonical));
         return result;
+    }
+
+    private static List<String> validateCurrentConfigs(Path repository) throws Exception {
+        List<String> errors = new ArrayList<>();
+        List<String> changedPaths = command(repository, "git", "diff", "--name-only", BASE_COMMIT,
+                "--", "model/java/config").lines().filter(line -> line.endsWith(".yaml")).sorted().toList();
+        for (String path : changedPaths) {
+            Path file = repository.resolve(path);
+            if (!Files.exists(file)) {
+                continue;
+            }
+            Object loaded;
+            try (var input = Files.newInputStream(file)) {
+                loaded = new Yaml().load(input);
+            }
+            Object rulesObject = loaded instanceof Map<?, ?> map ? map.get("passThrough") : loaded;
+            if (!(rulesObject instanceof List<?> rules)) {
+                continue;
+            }
+            for (int index = 0; index < rules.size(); index++) {
+                if (rules.get(index) instanceof Map<?, ?> rule) {
+                    validateRule(path, index, rule, errors);
+                }
+            }
+        }
+        validateFieldIdentities(repository.resolve("model"), errors);
+        return errors;
+    }
+
+    private static void validateRule(String path, int index, Map<?, ?> rule, List<String> errors) {
+        Object signatureObject = rule.get("signature");
+        List<String> parameters = List.of();
+        String returnType = "*";
+        boolean exactParameters = false;
+        if (signatureObject instanceof String signature) {
+            Matcher signatureMatcher = EXACT_SIGNATURE.matcher(signature);
+            if (signatureMatcher.matches()) {
+                parameters = splitParameters(signatureMatcher.group(1));
+                returnType = signatureMatcher.group(2);
+                exactParameters = true;
+            }
+        } else if (signatureObject instanceof Map<?, ?> signature) {
+            if (signature.get("return") != null) {
+                returnType = String.valueOf(signature.get("return"));
+            }
+            parameters = matcherParameterTypes(signature.get("params"));
+        }
+        Object copiesObject = rule.get("copy");
+        if (!(copiesObject instanceof List<?> copies)) {
+            return;
+        }
+        String function = String.valueOf(rule.get("function"));
+        String location = path + ":passThrough[" + index + "] " + function;
+        for (Object copyObject : copies) {
+            if (!(copyObject instanceof Map<?, ?> copy)) {
+                continue;
+            }
+            validateEndpoint(location, "from", copy.get("from"), parameters, exactParameters,
+                    returnType, errors);
+            validateEndpoint(location, "to", copy.get("to"), parameters, exactParameters,
+                    returnType, errors);
+            validateElementCollapse(location, function, copy.get("from"), copy.get("to"),
+                    parameters, returnType, errors);
+            if (exactParameters) {
+                validateFieldCollapse(location, function, copy.get("from"), copy.get("to"),
+                        parameters, returnType, errors);
+            }
+        }
+    }
+
+    private static void validateEndpoint(String location, String side, Object endpoint,
+            List<String> parameters, boolean exactParameters, String returnType, List<String> errors) {
+        List<?> parts = endpoint instanceof List<?> list ? list : List.of(endpoint);
+        if (parts.isEmpty()) {
+            return;
+        }
+        String base = String.valueOf(parts.get(0));
+        Matcher argument = ARGUMENT.matcher(base);
+        if (exactParameters && argument.matches()
+                && Integer.parseInt(argument.group(1)) >= parameters.size()) {
+            errors.add(location + " has out-of-range " + side + " endpoint " + endpoint);
+        }
+        if (base.equals("result") && returnType.equals("void")) {
+            errors.add(location + " uses " + side + "=result for a void method");
+        }
+        if (parts.size() > 1 && parts.get(1).equals("[*]")) {
+            String baseType = endpointBaseType(base, parameters, returnType);
+            if (baseType != null && !baseType.equals("*") && !baseType.endsWith("[]")) {
+                errors.add(location + " applies [*] to non-array " + baseType + " at " + side);
+            }
+        }
+        for (int i = 0; i + 1 < parts.size(); i++) {
+            Matcher field = FIELD.matcher(String.valueOf(parts.get(i)));
+            if (field.matches() && parts.get(i + 1).equals("[*]")) {
+                String fieldType = field.group(3);
+                if (!fieldType.endsWith("[]") && !fieldType.equals("java.lang.Object")) {
+                    errors.add(location + " applies [*] after non-array field " + parts.get(i));
+                }
+            }
+        }
+    }
+
+    private static void validateElementCollapse(String location, String function, Object from, Object to,
+            List<String> parameters, String returnType, List<String> errors) {
+        if (!(from instanceof List<?> fromParts) || fromParts.isEmpty()
+                || !fromParts.get(fromParts.size() - 1).equals("[*]") || to instanceof List<?>) {
+            return;
+        }
+        String target = String.valueOf(to);
+        boolean stringConstruction = function.equals("java.lang.String#<init>");
+        if (!stringConstruction && (target.equals("this") || ARGUMENT.matcher(target).matches())) {
+            errors.add(location + " collapses an array element into whole " + target);
+        }
+        if (target.equals("result") && !returnType.endsWith("[]")
+                && !AGGREGATE_RESULTS.contains(returnType) && !returnType.equals("*")) {
+            errors.add(location + " collapses an array element into whole result of type " + returnType);
+        }
+    }
+
+    private static void validateFieldCollapse(String location, String function, Object from, Object to,
+            List<String> parameters, String returnType, List<String> errors) {
+        if (!(from instanceof List<?> fromParts) || fromParts.size() < 2 || to instanceof List<?>) {
+            return;
+        }
+        Matcher field = FIELD.matcher(String.valueOf(fromParts.get(fromParts.size() - 1)));
+        if (!field.matches()) {
+            return;
+        }
+        String target = String.valueOf(to);
+        String fieldType = field.group(3);
+        String targetType = endpointBaseType(target, parameters, returnType);
+        boolean compatibleArrays = targetType != null && targetType.endsWith("[]")
+                && fieldType.endsWith("[]");
+        boolean compatible = targetType != null && (targetType.equals(fieldType)
+                || fieldType.equals("java.lang.Object") || compatibleArrays);
+        if ((target.equals("this") || ARGUMENT.matcher(target).matches()) && !compatible) {
+            errors.add(location + "widens field " + field.group() + " into whole " + target);
+            return;
+        }
+        String owner = function.contains("#") ? function.substring(0, function.indexOf('#')) : "";
+        boolean fluentResult = returnType.equals(owner);
+        if (!target.equals("result") || returnType.equals("*") || compatible
+                || AGGREGATE_RESULTS.contains(returnType) || !fluentResult) {
+            return;
+        }
+        errors.add(location + "widens field " + field.group() + " into incompatible whole result "
+                + returnType);
+    }
+
+    private static String endpointBaseType(String base, List<String> parameters, String returnType) {
+        Matcher argument = ARGUMENT.matcher(base);
+        if (argument.matches()) {
+            int index = Integer.parseInt(argument.group(1));
+            return index < parameters.size() ? parameters.get(index) : null;
+        }
+        return base.equals("result") ? returnType : null;
+    }
+
+    private static List<String> splitParameters(String parameters) {
+        if (parameters.isBlank()) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (String parameter : parameters.split(",")) {
+            result.add(parameter.strip());
+        }
+        return result;
+    }
+
+    private static List<String> matcherParameterTypes(Object paramsObject) {
+        if (!(paramsObject instanceof List<?> params)) {
+            return List.of();
+        }
+        int maximum = -1;
+        for (Object value : params) {
+            if (value instanceof Map<?, ?> param && param.get("index") instanceof Number index) {
+                maximum = Math.max(maximum, index.intValue());
+            }
+        }
+        if (maximum < 0) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (int index = 0; index <= maximum; index++) {
+            result.add("*");
+        }
+        for (Object value : params) {
+            if (value instanceof Map<?, ?> param && param.get("index") instanceof Number index
+                    && param.get("type") != null) {
+                result.set(index.intValue(), String.valueOf(param.get("type")));
+            }
+        }
+        return result;
+    }
+
+    private static void validateFieldIdentities(Path modelRoot, List<String> errors) throws IOException {
+        Map<String, Map<String, List<String>>> identities = new TreeMap<>();
+        try (var paths = Files.walk(modelRoot)) {
+            for (Path path : paths.filter(file -> file.toString().endsWith(".yaml")).toList()) {
+                Object loaded;
+                try (var input = Files.newInputStream(path)) {
+                    loaded = new Yaml().load(input);
+                }
+                collectFields(loaded, modelRoot.relativize(path).toString(), identities);
+            }
+        }
+        identities.forEach((identity, types) -> {
+            if (types.size() > 1) {
+                errors.add("field " + identity + " has conflicting declared types " + types.keySet());
+            }
+        });
+    }
+
+    private static void collectFields(Object value, String path,
+            Map<String, Map<String, List<String>>> identities) {
+        if (value instanceof Map<?, ?> map) {
+            map.values().forEach(item -> collectFields(item, path, identities));
+        } else if (value instanceof List<?> list) {
+            list.forEach(item -> collectFields(item, path, identities));
+        } else if (value instanceof String string) {
+            Matcher field = FIELD.matcher(string);
+            if (field.matches()) {
+                String identity = field.group(1) + "#" + field.group(2);
+                identities.computeIfAbsent(identity, ignored -> new TreeMap<>())
+                        .computeIfAbsent(field.group(3), ignored -> new ArrayList<>()).add(path);
+            }
+        }
     }
 
     private static void subtract(List<Atom> left, List<Atom> right, char kind, List<Delta> output) {
