@@ -211,30 +211,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: javax.faces.model.SelectItem#<init>
-  signature:
-    params:
-    - index: 0
-      type: java.lang.Object
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.SelectItem#value#java.lang.Object
-- function: javax.faces.model.SelectItem#setValue
-  signature: (java.lang.Object) void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.faces.model.SelectItem#value#java.lang.Object
-- function: javax.faces.model.SelectItem#getValue
-  signature: () java.lang.Object
-  copy:
-  - from:
-    - this
-    - .javax.faces.model.SelectItem#value#java.lang.Object
-    to: result
 - function: javax.faces.model.ListDataModel#<init>
   signature: (java.util.List) void
   copy:
@@ -280,4 +256,28 @@ passThrough:
   - from:
     - this
     - .javax.faces.model.DataModelEvent#rowData#java.lang.Object
+    to: result
+- function: javax.faces.model.SelectItem#<init>
+  signature:
+    params:
+    - index: 0
+      type: java.lang.Object
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.faces.model.SelectItem#value#java.lang.Object
+- function: javax.faces.model.SelectItem#setValue
+  signature: (java.lang.Object) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.faces.model.SelectItem#value#java.lang.Object
+- function: javax.faces.model.SelectItem#getValue
+  signature: () java.lang.Object
+  copy:
+  - from:
+    - this
+    - .javax.faces.model.SelectItem#value#java.lang.Object
     to: result

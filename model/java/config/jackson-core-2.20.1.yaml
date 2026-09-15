@@ -235,18 +235,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: com.fasterxml.jackson.core.JsonGenerator#writeBinary
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
 - function: com.fasterxml.jackson.core.JsonFactory#createJsonParser
   signature:
     params:
@@ -279,22 +267,6 @@ passThrough:
     to:
     - this
     - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
-- function: com.fasterxml.jackson.core.JsonFactory#createParser
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to:
-    - result
-    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
 - function: com.fasterxml.jackson.core.JsonParser#readValueAs
   copy:
   - from: this
@@ -763,22 +735,6 @@ passThrough:
   copy:
   - from: arg(1)
     to: arg(0)
-- function: com.fasterxml.jackson.core.JsonFactory#createJsonParser
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to:
-    - result
-    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
 - function: com.fasterxml.jackson.core.util.JsonParserSequence#nextToken
   copy:
   - from: this
@@ -853,15 +809,6 @@ passThrough:
     to: result
   - from: this
     to: result
-- function: com.fasterxml.jackson.core.JsonGenerator#writeBinaryField
-  signature: (java.lang.String, byte[]) void
-  copy:
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
 - function: com.fasterxml.jackson.core.base.ParserBase#overrideCurrentName
   copy:
   - from: arg(0)
@@ -1210,3 +1157,56 @@ passThrough:
     - .com.fasterxml.jackson.core.base.ParserMinimalBase#content#java.lang.Object
   - from: arg(0)
     to: this
+- function: com.fasterxml.jackson.core.JsonGenerator#writeBinary
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
+- function: com.fasterxml.jackson.core.JsonFactory#createParser
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
+- function: com.fasterxml.jackson.core.JsonFactory#createJsonParser
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .com.fasterxml.jackson.core.JsonParser#content#java.lang.Object
+- function: com.fasterxml.jackson.core.JsonGenerator#writeBinaryField
+  signature: (java.lang.String, byte[]) void
+  copy:
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object

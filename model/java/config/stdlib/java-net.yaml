@@ -604,17 +604,6 @@ passThrough:
     to:
     - this
     - .java.net.URL#spec#java.lang.String
-- function: java.net.InetAddress#getByAddress
-  signature:
-    params:
-    - index: 0
-      type: java.lang.String
-    - index: 1
-      type: byte[]
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
-    to: result
 - function: java.net.HttpCookie#setValue
   signature:
     params:
@@ -955,4 +944,15 @@ passThrough:
   - from:
     - this
     - .java.net.URLConnection#headerField#java.lang.String
+    to: result
+- function: java.net.InetAddress#getByAddress
+  signature:
+    params:
+    - index: 0
+      type: java.lang.String
+    - index: 1
+      type: byte[]
+  taintCopyOnly: true
+  copy:
+  - from: arg(*)
     to: result

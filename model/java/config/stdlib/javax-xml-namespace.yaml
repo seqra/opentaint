@@ -7,6 +7,17 @@ passThrough:
     to:
     - this
     - .javax.xml.namespace.QName#localPart#java.lang.String
+- function: javax.xml.namespace.QName#<init>
+  signature: (java.lang.String, java.lang.String) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .javax.xml.namespace.QName#localPart#java.lang.String
 - function: javax.xml.namespace.QName#getPrefix
   signature: () java.lang.String
   copy:
@@ -39,17 +50,6 @@ passThrough:
     - this
     - .javax.xml.namespace.QName#localPart#java.lang.String
     to: result
-- function: javax.xml.namespace.QName#<init>
-  signature: (java.lang.String, java.lang.String) void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
-  - from: arg(1)
-    to:
-    - this
-    - .javax.xml.namespace.QName#localPart#java.lang.String
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:

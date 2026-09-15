@@ -1,5 +1,20 @@
 language: java
 passThrough:
+- function: java.text.ChoiceFormat#toPattern
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#pattern#java.lang.String
+    to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#limits#double[]
+    to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    to: result
 - function: java.text.DecimalFormat#applyPattern
   signature: (java.lang.String, boolean) void
   taintCopyOnly: true
@@ -192,6 +207,13 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+- function: java.text.MessageFormat#<init>
+  signature: (java.lang.String) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.MessageFormat#pattern#java.lang.String
 - function: java.text.DecimalFormatSymbols#equals
   signature: (java.lang.Object) boolean
   copy:
@@ -268,66 +290,6 @@ passThrough:
     - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
     - .java.text.DecimalFormatSymbols#currency#java.util.Currency
     to: result
-- function: java.text.ChoiceFormat#getLimits
-  signature: () double[]
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#limits#double[]
-    to: result
-  - from:
-    - this
-    - .java.text.ChoiceFormat#limits#double[]
-    - '[*]'
-    to:
-    - result
-    - '[*]'
-- function: java.text.ChoiceFormat#getFormats
-  signature: () java.lang.Object[]
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    to: result
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    - '[*]'
-    to:
-    - result
-    - '[*]'
-- function: java.text.ChoiceFormat#format
-  signature: (double) java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    - '[*]'
-    to: result
-- function: java.text.ChoiceFormat#format
-  signature: (long) java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    - '[*]'
-    to: result
-- function: java.text.NumberFormat#format
-  signature: (double) java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    - '[*]'
-    to: result
-- function: java.text.NumberFormat#format
-  signature: (long) java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    - '[*]'
-    to: result
 - function: java.text.DateFormat#format
   signature: (java.util.Date) java.lang.String
   taintCopyOnly: true
@@ -336,6 +298,13 @@ passThrough:
     to: result
   - from: this
     to: result
+- function: java.text.MessageFormat#toPattern
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.MessageFormat#pattern#java.lang.String
+    to: result
 - function: java.text.ChoiceFormat#applyPattern
   signature: (java.lang.String) void
   copy:
@@ -343,21 +312,6 @@ passThrough:
     to:
     - this
     - .java.text.ChoiceFormat#pattern#java.lang.String
-- function: java.text.ChoiceFormat#toPattern
-  signature: () java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.text.ChoiceFormat#limits#double[]
-    to: result
-  - from:
-    - this
-    - .java.text.ChoiceFormat#formats#java.lang.String[]
-    to: result
 - function: java.text.Format#format
   signature: (java.lang.Object) java.lang.String
   copy:
@@ -366,53 +320,6 @@ passThrough:
   - from:
     - this
     - .java.text.MessageFormat#pattern#java.lang.String
-    to: result
-- function:
-    package: java.text
-    class: DecimalFormat
-    name:
-      pattern: set.+
-  signature:
-    params:
-    - index: 0
-      type: java.util.Currency
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#currency#java.util.Currency
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
-- function: java.text.DateFormatSymbols#getProviderInstance
-  signature: (*) java.text.DateFormatSymbols
-  copy:
-  - from:
-    - this
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
-    to:
-    - result
-    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
-  - from:
-    - this
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
-    to:
-    - result
-    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
-  - from:
-    - this
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
-    to:
-    - result
-    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
-- function: java.text.Format#format
-  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
-  copy:
-  - from: arg(0)
-    to: arg(1)
-  - from: arg(0)
     to: result
 - function: java.text.MessageFormat#format
   signature: (java.lang.Object[], java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
@@ -463,23 +370,68 @@ passThrough:
     to:
     - result
     - .java.lang.Appendable#buffer#java.lang.Object
+- function:
+    package: java.text
+    class: DecimalFormat
+    name:
+      pattern: set.+
+  signature:
+    params:
+    - index: 0
+      type: java.util.Currency
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#currency#java.util.Currency
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+- function: java.text.DateFormatSymbols#getProviderInstance
+  signature: (*) java.text.DateFormatSymbols
+  copy:
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+    to:
+    - result
+    - .java.text.DateFormatSymbols#localPatternChars#java.lang.String
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    to:
+    - result
+    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    to:
+    - result
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+- function: java.text.Format#format
+  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  copy:
+  - from: arg(0)
+    to: arg(1)
+  - from: arg(0)
+    to: result
 - function: java.text.NumberFormat#format
   signature: (double) java.lang.String
   copy:
-  - from: arg(0)
-    to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
     to: result
 - function: java.text.NumberFormat#format
   signature: (long) java.lang.String
   copy:
-  - from: arg(0)
-    to: result
   - from:
     - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
     to: result
 - function:
     package: java.text
@@ -500,6 +452,43 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+- function: java.text.MessageFormat#format
+  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  copy:
+  - from:
+    - this
+    - .java.text.MessageFormat#pattern#java.lang.String
+    to:
+    - arg(1)
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.text.MessageFormat#pattern#java.lang.String
+    to:
+    - result
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    to:
+    - arg(1)
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    to:
+    - result
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - arg(1)
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .java.lang.Appendable#buffer#java.lang.Object
+  - from: arg(1)
     to: result
 - function: java.text.DateFormat#equals
   signature: (java.lang.Object) boolean
@@ -617,50 +606,6 @@ passThrough:
     - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
     - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
     to: result
-- function: java.text.MessageFormat#<init>
-  signature: (java.lang.String) void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-- function: java.text.MessageFormat#format
-  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
-  copy:
-  - from:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to:
-    - arg(1)
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to:
-    - result
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from:
-    - this
-    - .java.text.MessageFormat#formats#java.text.Format[]
-    to:
-    - arg(1)
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from:
-    - this
-    - .java.text.MessageFormat#formats#java.text.Format[]
-    to:
-    - result
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(0)
-    to:
-    - arg(1)
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(0)
-    to:
-    - result
-    - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(1)
-    to: result
 - function: java.text.NumberFormat#format
   signature: (long, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
@@ -747,13 +692,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .java.text.MessageFormat#pattern#java.lang.String
-    to: result
-- function: java.text.MessageFormat#toPattern
-  signature: () java.lang.String
-  copy:
   - from:
     - this
     - .java.text.MessageFormat#pattern#java.lang.String
@@ -921,6 +859,146 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: this
+    to: result
+- function: java.text.NumberFormat#format
+  signature: (long, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  taintCopyOnly: true
+  copy:
+  - from: arg(2)
+    to: result
+  - from: arg(2)
+    to: arg(1)
+  - from: this
+    to: result
+  - from: this
+    to: arg(1)
+- function: java.text.ChoiceFormat#<init>
+  signature: (java.lang.String) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.ChoiceFormat#pattern#java.lang.String
+- function: java.text.NumberFormat#format
+  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  taintCopyOnly: true
+  copy:
+  - from: arg(2)
+    to: result
+  - from: arg(2)
+    to: arg(1)
+  - from: this
+    to: result
+  - from: this
+    to: arg(1)
+- function: java.text.ChoiceFormat#applyPattern
+  signature:
+    params:
+    - index: 0
+      type: java.lang.String
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.ChoiceFormat#pattern#java.lang.String
+- function: java.text.DecimalFormat#toLocalizedPattern
+  signature:
+    return: java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#pattern#java.lang.String
+    to: result
+  - from:
+    - this
+    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+    to: result
+- function:
+    package: java.text
+    class: DecimalFormat
+    name:
+      pattern: get.+
+  copy:
+  - from: this
+    to: result
+- function: java.text.DateFormat#format
+  signature: (java.util.Date, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: arg(1)
+  - from: arg(2)
+    to: result
+  - from: arg(0)
+    to: result
+  - from: arg(2)
+    to: arg(1)
+  - from: this
+    to: result
+  - from: this
+    to: arg(1)
+- function: java.text.ChoiceFormat#getLimits
+  signature: () double[]
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#limits#double[]
+    to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#limits#double[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function: java.text.ChoiceFormat#getFormats
+  signature: () java.lang.Object[]
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function: java.text.ChoiceFormat#format
+  signature: (double) java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to: result
+- function: java.text.ChoiceFormat#format
+  signature: (long) java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to: result
+- function: java.text.NumberFormat#format
+  signature: (double) java.lang.String
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - this
+    - .java.text.DecimalFormat#pattern#java.lang.String
+    to: result
+- function: java.text.NumberFormat#format
+  signature: (long) java.lang.String
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - this
+    - .java.text.DecimalFormat#pattern#java.lang.String
     to: result
 - function: java.text.DateFormatSymbols#setLocalPatternChars
   signature: (java.lang.String) void
@@ -1426,47 +1504,6 @@ passThrough:
     - this
     - .java.text.DecimalFormatSymbols#locale#java.util.Locale
     to: result
-- function: java.text.NumberFormat#format
-  signature: (long, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
-  taintCopyOnly: true
-  copy:
-  - from: arg(2)
-    to: result
-  - from: arg(2)
-    to: arg(1)
-  - from: this
-    to: result
-  - from: this
-    to: arg(1)
-- function: java.text.ChoiceFormat#<init>
-  signature: (java.lang.String) void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
-- function: java.text.NumberFormat#format
-  signature: (java.lang.Object, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
-  taintCopyOnly: true
-  copy:
-  - from: arg(2)
-    to: result
-  - from: arg(2)
-    to: arg(1)
-  - from: this
-    to: result
-  - from: this
-    to: arg(1)
-- function: java.text.ChoiceFormat#applyPattern
-  signature:
-    params:
-    - index: 0
-      type: java.lang.String
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .java.text.ChoiceFormat#pattern#java.lang.String
 - function: java.text.MessageFormat#setLocale
   signature: (java.util.Locale) void
   copy:
@@ -1537,19 +1574,6 @@ passThrough:
     to:
     - result
     - '[*]'
-- function: java.text.DecimalFormat#toLocalizedPattern
-  signature:
-    return: java.lang.String
-  copy:
-  - from:
-    - this
-    - .java.text.DecimalFormat#pattern#java.lang.String
-    to: result
-  - from:
-    - this
-    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
-    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
-    to: result
 - function: java.text.MessageFormat#format
   signature: (java.lang.Object[]) java.lang.String
   copy:
@@ -1567,27 +1591,3 @@ passThrough:
     - arg(0)
     - '[*]'
     to: result
-- function:
-    package: java.text
-    class: DecimalFormat
-    name:
-      pattern: get.+
-  copy:
-  - from: this
-    to: result
-- function: java.text.DateFormat#format
-  signature: (java.util.Date, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: arg(1)
-  - from: arg(2)
-    to: result
-  - from: arg(0)
-    to: result
-  - from: arg(2)
-    to: arg(1)
-  - from: this
-    to: result
-  - from: this
-    to: arg(1)

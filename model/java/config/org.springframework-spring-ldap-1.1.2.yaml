@@ -26,6 +26,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+- function: org.springframework.ldap.support.LdapRdn#addComponent
+  copy:
+  - from: arg(*)
+    to:
+    - this
+    - .org.springframework.ldap.support.LdapRdn#content#java.lang.Object
 - function: org.springframework.ldap.support.filter.LessThanOrEqualsFilter#<init>
   signature:
     params:
@@ -191,6 +197,12 @@ passThrough:
     to:
     - this
     - .org.springframework.ldap.support.control.PagedResultsCookie#content#java.lang.Object
+- function: org.springframework.ldap.support.LdapRdnComponent#getValue
+  copy:
+  - from:
+    - this
+    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
+    to: result
 - function:
     package: org.springframework.ldap.support
     class: LdapRdn
@@ -243,6 +255,16 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: org.springframework.ldap.support.LdapRdnComponent#<init>
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
 - function: org.springframework.ldap.support.filter.LessThanOrEqualsFilter#<init>
   copy:
   - from: arg(1)
@@ -404,12 +426,12 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
-- function: org.springframework.ldap.support.LdapRdnComponent#getValue
+- function: org.springframework.ldap.support.LdapRdnComponent#setValue
   copy:
-  - from:
+  - from: arg(0)
+    to:
     - this
     - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
-    to: result
 - function:
     package: org.springframework.ldap.support
     class: LdapRdn
@@ -444,12 +466,6 @@ passThrough:
     to:
     - this
     - .org.springframework.ldap.support.filter.EqualsFilter#attribute#java.lang.String
-- function: org.springframework.ldap.support.LdapRdn#addComponent
-  copy:
-  - from: arg(*)
-    to:
-    - this
-    - .org.springframework.ldap.support.LdapRdn#content#java.lang.Object
 - function: org.springframework.ldap.support.filter.CompareFilter#<init>
   taintCopyOnly: true
   copy:
@@ -662,16 +678,6 @@ passThrough:
     to:
     - result
     - .org.springframework.ldap.support.LdapRdnComponent#value#java.lang.String
-- function: org.springframework.ldap.support.LdapRdnComponent#<init>
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
 - function: org.springframework.ldap.support.LdapRdnComponent#getKey
   signature:
     return: java.lang.String
@@ -704,12 +710,6 @@ passThrough:
     - this
     - .org.springframework.ldap.support.control.PagedResultsRequestControl#cookie#org.springframework.ldap.support.control.PagedResultsCookie
     to: result
-- function: org.springframework.ldap.support.LdapRdnComponent#setValue
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.springframework.ldap.support.LdapRdnComponent#content#java.lang.Object
 - function: org.springframework.ldap.support.filter.AndFilter#and
   taintCopyOnly: true
   copy:
