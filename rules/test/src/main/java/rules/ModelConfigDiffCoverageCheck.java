@@ -29,6 +29,11 @@ import org.yaml.snakeyaml.Yaml;
  * field types, matchers, options, additions, removals, and duplicate counts are
  * significant.
  *
+ * <p>A separate ordering check requires all rules that can be matched to the
+ * base revision to retain their relative order. This includes rules whose copy
+ * actions changed, and rules whose options changed but whose function and
+ * signature still identify the original entry.</p>
+ *
  * <p>The checked-in manifest is intentionally generated from Git objects. This
  * prevents a line-oriented YAML diff from mistaking moves for tests and makes a
  * newly edited config fail CI until its exact semantic delta is reviewed and
@@ -81,12 +86,15 @@ public final class ModelConfigDiffCoverageCheck {
 
     private record RegressionPair(String issue, String positive, String negative) {}
 
+    private record IndexPair(int before, int after) {}
+
     private ModelConfigDiffCoverageCheck() {}
 
     public static void main(String[] args) throws Exception {
         Path repository = Paths.get("../..").toRealPath();
         Path manifest = repository.resolve(MANIFEST);
         List<String> validationErrors = validateCurrentConfigs(repository);
+        validateStableRuleOrdering(repository, validationErrors);
         validateRegressionCoverage(repository, validationErrors);
         if (!validationErrors.isEmpty()) {
             System.err.println("Model config semantic validation failed:");
@@ -188,6 +196,117 @@ public final class ModelConfigDiffCoverageCheck {
         }
         validateFieldIdentities(repository.resolve("model"), errors);
         return errors;
+    }
+
+    private static void validateStableRuleOrdering(Path repository, List<String> errors)
+            throws Exception {
+        List<String> paths = command(repository, "git", "diff", "--name-only", BASE_COMMIT,
+                "--", "model").lines().filter(line -> line.endsWith(".yaml")).sorted().toList();
+        for (String path : paths) {
+            byte[] beforeBytes = gitFile(repository, BASE_COMMIT, path);
+            Path currentPath = repository.resolve(path);
+            if (beforeBytes == null || !Files.exists(currentPath)) {
+                continue;
+            }
+            Object before = new Yaml().load(new ByteArrayInputStream(beforeBytes));
+            Object after;
+            try (var input = Files.newInputStream(currentPath)) {
+                after = new Yaml().load(input);
+            }
+            if (!(before instanceof Map<?, ?> beforeRoot)
+                    || !(after instanceof Map<?, ?> afterRoot)) {
+                continue;
+            }
+            for (Object section : beforeRoot.keySet()) {
+                if (!(beforeRoot.get(section) instanceof List<?> beforeRules)
+                        || !(afterRoot.get(section) instanceof List<?> afterRules)) {
+                    continue;
+                }
+                List<IndexPair> matched = matchRules(beforeRules, afterRules);
+                matched.sort(Comparator.comparingInt(IndexPair::after));
+                int previous = -1;
+                for (IndexPair pair : matched) {
+                    if (pair.before < previous) {
+                        errors.add(path + ":" + section
+                                + " reorders an existing or modified config entry");
+                        break;
+                    }
+                    previous = pair.before;
+                }
+            }
+        }
+    }
+
+    private static List<IndexPair> matchRules(List<?> before, List<?> after) {
+        List<IndexPair> result = new ArrayList<>();
+        Set<Integer> unmatchedBefore = new java.util.LinkedHashSet<>();
+        Set<Integer> unmatchedAfter = new java.util.LinkedHashSet<>();
+        for (int index = 0; index < before.size(); index++) {
+            unmatchedBefore.add(index);
+        }
+        for (int index = 0; index < after.size(); index++) {
+            unmatchedAfter.add(index);
+        }
+        matchByKey(before, after, unmatchedBefore, unmatchedAfter, result,
+                ModelConfigDiffCoverageCheck::ruleContextKey);
+        matchByKey(before, after, unmatchedBefore, unmatchedAfter, result,
+                ModelConfigDiffCoverageCheck::ruleIdentityKey);
+        return result;
+    }
+
+    private static void matchByKey(List<?> before, List<?> after, Set<Integer> unmatchedBefore,
+            Set<Integer> unmatchedAfter, List<IndexPair> result,
+            java.util.function.Function<Object, String> keyFunction) {
+        Map<String, List<Integer>> beforeByKey = groupIndices(before, unmatchedBefore, keyFunction);
+        Map<String, List<Integer>> afterByKey = groupIndices(after, unmatchedAfter, keyFunction);
+        for (String key : beforeByKey.keySet()) {
+            List<Integer> beforeIndices = beforeByKey.get(key);
+            List<Integer> afterIndices = afterByKey.get(key);
+            if (afterIndices == null) {
+                continue;
+            }
+            int count = Math.min(beforeIndices.size(), afterIndices.size());
+            for (int index = 0; index < count; index++) {
+                int beforeIndex = beforeIndices.get(index);
+                int afterIndex = afterIndices.get(index);
+                result.add(new IndexPair(beforeIndex, afterIndex));
+                unmatchedBefore.remove(beforeIndex);
+                unmatchedAfter.remove(afterIndex);
+            }
+        }
+    }
+
+    private static Map<String, List<Integer>> groupIndices(List<?> values, Set<Integer> indices,
+            java.util.function.Function<Object, String> keyFunction) {
+        Map<String, List<Integer>> result = new LinkedHashMap<>();
+        for (int index : indices) {
+            result.computeIfAbsent(keyFunction.apply(values.get(index)), ignored -> new ArrayList<>())
+                    .add(index);
+        }
+        return result;
+    }
+
+    private static String ruleContextKey(Object value) {
+        if (!(value instanceof Map<?, ?> rule) || !rule.containsKey("copy")) {
+            return canonical(value);
+        }
+        Map<Object, Object> context = new LinkedHashMap<>();
+        for (Map.Entry<?, ?> entry : rule.entrySet()) {
+            if (!String.valueOf(entry.getKey()).equals("copy")) {
+                context.put(entry.getKey(), entry.getValue());
+            }
+        }
+        return canonical(context);
+    }
+
+    private static String ruleIdentityKey(Object value) {
+        if (!(value instanceof Map<?, ?> rule)) {
+            return canonical(value);
+        }
+        Map<String, Object> identity = new LinkedHashMap<>();
+        identity.put("function", rule.get("function"));
+        identity.put("signature", rule.get("signature"));
+        return canonical(identity);
     }
 
     private static void validateRule(String path, int index, Map<?, ?> rule, List<String> errors) {

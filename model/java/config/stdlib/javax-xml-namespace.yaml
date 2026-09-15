@@ -7,6 +7,38 @@ passThrough:
     to:
     - this
     - .javax.xml.namespace.QName#localPart#java.lang.String
+- function: javax.xml.namespace.QName#getPrefix
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.xml.namespace.QName#prefix#java.lang.String
+    to: result
+- function: javax.xml.namespace.QName#valueOf
+  signature: (java.lang.String) javax.xml.namespace.QName
+  copy:
+  - from: arg(0)
+    to:
+    - result
+    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
+  - from: arg(0)
+    to:
+    - result
+    - .javax.xml.namespace.QName#localPart#java.lang.String
+- function: javax.xml.namespace.QName#getNamespaceURI
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
+    to: result
+- function: javax.xml.namespace.QName#getLocalPart
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.xml.namespace.QName#localPart#java.lang.String
+    to: result
 - function: javax.xml.namespace.QName#<init>
   signature: (java.lang.String, java.lang.String) void
   copy:
@@ -33,38 +65,6 @@ passThrough:
     to:
     - this
     - .javax.xml.namespace.QName#prefix#java.lang.String
-- function: javax.xml.namespace.QName#getNamespaceURI
-  signature: () java.lang.String
-  copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
-    to: result
-- function: javax.xml.namespace.QName#getLocalPart
-  signature: () java.lang.String
-  copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#localPart#java.lang.String
-    to: result
-- function: javax.xml.namespace.QName#getPrefix
-  signature: () java.lang.String
-  copy:
-  - from:
-    - this
-    - .javax.xml.namespace.QName#prefix#java.lang.String
-    to: result
-- function: javax.xml.namespace.QName#valueOf
-  signature: (java.lang.String) javax.xml.namespace.QName
-  copy:
-  - from: arg(0)
-    to:
-    - result
-    - .javax.xml.namespace.QName#namespaceURI#java.lang.String
-  - from: arg(0)
-    to:
-    - result
-    - .javax.xml.namespace.QName#localPart#java.lang.String
 - function: javax.xml.namespace.QName#toString
   signature: () java.lang.String
   copy:
