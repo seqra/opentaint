@@ -1,8 +1,11 @@
 package security.passthrough;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.StringReader;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.CharBuffer;
 import java.nio.file.FileSystems;
@@ -245,6 +248,26 @@ public class PassthroughValueFlowSamples {
         char[] chars = new char[64];
         reader.read(chars);
         Runtime.getRuntime().exec(new String(chars));
+    }
+
+    // === java.net.URI#path -> java.io.File#path ===
+
+    /** File(URI) must preserve taint from the URI path component. */
+    @GetMapping("/uri-file-path/unsafe")
+    public void uriFilePathUnsafe(@RequestParam String input)
+            throws IOException, URISyntaxException {
+        URI uri = new URI("file", null, input, null);
+        File file = new File(uri);
+        Runtime.getRuntime().exec(file.toString());
+    }
+
+    /** A URI fragment is not part of the filesystem path consumed by File(URI). */
+    @GetMapping("/uri-file-fragment/safe")
+    public void uriFragmentDoesNotReachFilePathSafe(@RequestParam String input)
+            throws IOException, URISyntaxException {
+        URI uri = new URI("file", null, CONSTANT, input);
+        File file = new File(uri);
+        Runtime.getRuntime().exec(file.toString());
     }
 
     // === java.nio buffers ===

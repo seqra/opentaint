@@ -60,6 +60,7 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#messageFormatUnsafe
       - security.passthrough.PassthroughValueFlowSamples#byteArrayOutputStreamUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringReaderUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#uriFilePathUnsafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferUnsafe
       - security.passthrough.PassthroughValueFlowSamples#charBufferUnsafe
       - security.passthrough.PassthroughValueFlowSamples#stringGetCharsUnsafe
@@ -191,6 +192,7 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#messageFormatSafe
       - security.passthrough.PassthroughValueFlowSamples#byteArrayOutputStreamSafe
       - security.passthrough.PassthroughValueFlowSamples#stringReaderSafe
+      - security.passthrough.PassthroughValueFlowSamples#uriFragmentDoesNotReachFilePathSafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferSafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferContentDoesNotReachMetadataSafe
       - security.passthrough.PassthroughValueFlowSamples#charBufferSafe
