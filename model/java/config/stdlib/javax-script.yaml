@@ -128,12 +128,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.ScriptContext#bindings#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
 - function: javax.script.Bindings#remove
   signature: (java.lang.Object) java.lang.Object
   copy:

@@ -125,7 +125,8 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URL#<init>
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler) void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler)
+    void
   copy:
   - from: arg(2)
     to: this
@@ -148,8 +149,8 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String, java.lang.String,
-    java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String,
+    java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -178,8 +179,8 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
-    void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String,
+    java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -203,8 +204,8 @@ passThrough:
     - this
     - .java.net.URLConnection#headerField#java.lang.Object
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String, java.lang.String,
-    java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String,
+    java.lang.String, java.lang.String) void
   taintCopyOnly: true
   copy:
   - from: arg(*)
@@ -389,8 +390,8 @@ passThrough:
     - this
     - .java.net.HttpCookie#value#java.lang.Object
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String, java.lang.String)
-    void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String,
+    java.lang.String) void
   taintCopyOnly: true
   copy:
   - from: arg(*)
@@ -473,7 +474,8 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+    void
   copy:
   - from: arg(*)
     to: this
@@ -484,8 +486,8 @@ passThrough:
   - from: arg(0)
     to: this
 - function: java.net.URL#set
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String, java.lang.String,
-    java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String,
+    java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
     to: this
@@ -644,7 +646,8 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String)
+    void
   taintCopyOnly: true
   copy:
   - from: arg(*)
@@ -658,14 +661,15 @@ passThrough:
     - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URL#set
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String, java.lang.String,
-    java.lang.String, java.lang.String) void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.lang.String,
+    java.lang.String, java.lang.String, java.lang.String) void
   taintCopyOnly: true
   copy:
   - from: arg(*)
     to: this
 - function: java.net.URL#<init>
-  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler) void
+  signature: (java.lang.String, java.lang.String, int, java.lang.String, java.net.URLStreamHandler)
+    void
   taintCopyOnly: true
   copy:
   - from: arg(*)

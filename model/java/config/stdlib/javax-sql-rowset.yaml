@@ -254,20 +254,20 @@ passThrough:
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], java.lang.String[]) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
+    to: this
+  - from: arg(0)
     to: this
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], int[]) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
+    to: this
+  - from: arg(0)
     to: this
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: () java.util.Collection

@@ -156,6 +156,14 @@ passThrough:
   - from: arg(*)
     to:
     - this
+    - .org.apache.wicket.Component#parent#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
+    - .org.apache.wicket.Component#page#java.lang.Object
+  - from: arg(*)
+    to:
+    - this
     - .org.apache.wicket.Component#children#java.lang.Object
   - from: arg(*)
     to:
@@ -181,14 +189,6 @@ passThrough:
     to:
     - this
     - .org.apache.wicket.Component#markupStream#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#page#java.lang.Object
-  - from: arg(*)
-    to:
-    - this
-    - .org.apache.wicket.Component#parent#java.lang.Object
   - from: arg(*)
     to:
     - this

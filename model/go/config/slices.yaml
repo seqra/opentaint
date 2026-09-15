@@ -75,20 +75,20 @@ passThrough:
     receiver: false
   taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
-- function:
-    package: slices
-    name: Insert
-    receiver: false
-  taintCopyOnly: true
-  copy:
   - from:
     - arg(2)
     - '[*]'
     to:
     - result
     - '[*]'
+- function:
+    package: slices
+    name: Insert
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: result
 - function:
     package: slices
     name: Max
@@ -143,17 +143,17 @@ passThrough:
     receiver: false
   taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
-- function:
-    package: slices
-    name: Replace
-    receiver: false
-  taintCopyOnly: true
-  copy:
   - from:
     - arg(3)
     - '[*]'
     to:
     - result
     - '[*]'
+- function:
+    package: slices
+    name: Replace
+    receiver: false
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: result

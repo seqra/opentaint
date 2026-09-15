@@ -116,19 +116,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#tasks#java.lang.Object
   - from: arg(0)
     to:
     - this
     - .org.apache.hadoop.mapred.JobHistory$JobInfo#userName#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hadoop.mapred.JobHistory$JobInfo#jobHistoryFile#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.hadoop.mapred.JobHistory$JobInfo#properties#java.lang.Object
 - function: org.apache.hadoop.mapred.JobHistory$JobInfo#getAllTasks
   copy:
   - from:

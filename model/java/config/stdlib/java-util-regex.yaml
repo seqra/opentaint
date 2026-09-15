@@ -120,8 +120,6 @@ passThrough:
 - function: java.util.regex.Matcher#group
   signature: () java.lang.String
   copy:
-  - from: this
-    to: result
   - from:
     - this
     - .java.util.regex.Matcher#input#java.lang.Object
@@ -130,6 +128,8 @@ passThrough:
     - this
     - .java.util.regex.Matcher#group#java.lang.Object
     - .java.lang.String#content#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: java.util.regex.Matcher#appendTail
   signature: (java.lang.StringBuilder) java.lang.StringBuilder
@@ -159,24 +159,24 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.lang.String#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.Object
     to: result
 - function: java.util.regex.Matcher#toString
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.lang.String#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.Object
     to: result
 - function: java.util.regex.Matcher#group
   signature: (int) java.lang.String
@@ -303,12 +303,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.lang.String#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.Object
     to: result
 - function: java.util.regex.Matcher#useTransparentBounds
   signature: (*) java.util.regex.Matcher
@@ -430,12 +430,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.lang.String#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.Object
     to: result
 - function: java.util.regex.Matcher#appendReplacement
   signature: (java.lang.StringBuffer, java.lang.String) java.util.regex.Matcher
@@ -557,12 +557,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.lang.String#content#java.lang.Object
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.Object
     to: result
 - function: java.util.regex.Matcher#group
   signature:

@@ -66,11 +66,11 @@ passThrough:
   signature: (javax.naming.directory.Attributes) void
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(0)
     to:
     - this
     - .javax.naming.Binding#attributes#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: javax.naming.directory.SearchResult#<init>
   signature:
     params:
@@ -117,31 +117,16 @@ passThrough:
   - from: arg(0)
     to: this
 - function: javax.naming.directory.SearchResult#<init>
-  signature: (java.lang.String, java.lang.Object, javax.naming.directory.Attributes) void
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.NameClassPair#name#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.Binding#object#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.Binding#attributes#java.lang.Object
-- function: javax.naming.directory.SearchResult#<init>
   signature: (java.lang.String, java.lang.Object, javax.naming.directory.Attributes, boolean) void
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.NameClassPair#name#java.lang.Object
   - from: arg(1)
     to:
     - this
     - .javax.naming.Binding#object#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
   - from: arg(2)
     to:
     - this
@@ -190,11 +175,11 @@ passThrough:
 - function: javax.naming.directory.SearchResult#getAttributes
   signature: () javax.naming.directory.Attributes
   copy:
+  - from: this
+    to: result
   - from:
     - this
     - .javax.naming.Binding#attributes#java.lang.Object
-    to: result
-  - from: this
     to: result
 - function: javax.naming.directory.Attributes#getAll
   signature: () javax.naming.NamingEnumeration
@@ -254,6 +239,21 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: javax.naming.directory.SearchResult#<init>
+  signature: (java.lang.String, java.lang.Object, javax.naming.directory.Attributes) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.NameClassPair#name#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.SearchResult#getAttributes
   signature: () javax.naming.directory.Attributes
   taintCopyOnly: true
@@ -264,30 +264,30 @@ passThrough:
   signature: (java.lang.String, java.lang.String, java.lang.Object, javax.naming.directory.Attributes,
     boolean) void
   copy:
-  - from: arg(3)
-    to: this
-  - from: arg(2)
+  - from: arg(0)
     to: this
   - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+  - from: arg(2)
+    to: this
+  - from: arg(3)
+    to:
+    - this
+    - .javax.naming.Binding#attributes#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.NameClassPair#className#java.lang.Object
+  - from: arg(3)
     to: this
   - from: arg(0)
     to:
     - this
     - .javax.naming.NameClassPair#name#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.NameClassPair#className#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.Binding#object#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.BasicAttribute#remove
   signature: (int) java.lang.Object
   taintCopyOnly: true
@@ -314,30 +314,30 @@ passThrough:
   signature: (java.lang.String, java.lang.String, java.lang.Object, javax.naming.directory.Attributes)
     void
   copy:
-  - from: arg(3)
-    to: this
-  - from: arg(2)
+  - from: arg(0)
     to: this
   - from: arg(1)
     to: this
-  - from: arg(0)
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.Binding#object#java.lang.Object
+  - from: arg(2)
+    to: this
+  - from: arg(3)
+    to:
+    - this
+    - .javax.naming.Binding#attributes#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.NameClassPair#className#java.lang.Object
+  - from: arg(3)
     to: this
   - from: arg(0)
     to:
     - this
     - .javax.naming.NameClassPair#name#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .javax.naming.NameClassPair#className#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.Binding#object#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .javax.naming.Binding#attributes#java.lang.Object
 - function: javax.naming.directory.ModificationItem#<init>
   signature: (int, javax.naming.directory.Attribute) void
   copy:

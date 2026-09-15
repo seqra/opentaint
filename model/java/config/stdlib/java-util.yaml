@@ -1072,13 +1072,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Comparator#reversed
-  signature: () java.util.Comparator
-  copy:
-  - from: this
-    to:
-    - result
-    - .java.util.Comparator#Delegate#java.lang.Object
 - function: java.util.Collections#unmodifiableSet
   signature: (java.util.Set) java.util.Set
   overrides: false
@@ -3734,11 +3727,11 @@ passThrough:
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: java.util.Scanner#useDelimiter
   signature: (java.util.regex.Pattern) java.util.Scanner
   copy:
@@ -3881,11 +3874,11 @@ passThrough:
 - function: java.util.List#<init>
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: java.util.Map#of
   signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
     java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
@@ -3947,11 +3940,11 @@ passThrough:
   signature: (int, java.util.Collection) boolean
   copy:
   - from: arg(1)
-    to: this
-  - from: arg(1)
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
+  - from: arg(1)
+    to: this
 - function: java.util.SequencedMap#putLast
   copy:
   - from: arg(1)
@@ -4182,11 +4175,11 @@ passThrough:
 - function: java.util.Enumeration#nextElement
   signature: () java.lang.Object
   copy:
-  - from: this
-    to: result
   - from:
     - this
     - .java.util.Enumeration#Element#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: java.util.Base64$Decoder#decode
   signature: (java.nio.ByteBuffer) java.nio.ByteBuffer
@@ -5069,11 +5062,11 @@ passThrough:
 - function: java.util.StringJoiner#toString
   signature: () java.lang.String
   copy:
-  - from: this
-    to: result
   - from:
     - this
     - .java.util.StringJoiner#delimiter#java.lang.Object
+    to: result
+  - from: this
     to: result
 - function: java.util.Collections#checkedSortedSet
   signature: (java.util.SortedSet, java.lang.Class) java.util.SortedSet
@@ -5154,11 +5147,11 @@ passThrough:
   signature: (java.lang.Object) void
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
+  - from: arg(0)
+    to: this
 - function: java.util.StringJoiner#<init>
   signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
     void
@@ -5692,6 +5685,13 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+- function: java.util.Comparator#reversed
+  signature: () java.util.Comparator
+  copy:
+  - from: this
+    to:
+    - result
+    - .java.util.Comparator#Delegate#java.lang.Object
 - function: java.util.Map$Entry#getKey
   signature: () java.lang.Object
   copy:

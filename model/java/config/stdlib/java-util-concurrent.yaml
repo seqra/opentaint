@@ -170,7 +170,8 @@ passThrough:
     - this
     - .java.util.concurrent.Future#value#java.lang.Object
 - function: java.util.concurrent.ConcurrentHashMap#reduce
-  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction) java.lang.Object
+  signature: (long, java.util.function.BiFunction, java.util.function.BiFunction)
+    java.lang.Object
   taintCopyOnly: true
   copy:
   - from: this

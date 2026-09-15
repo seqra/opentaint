@@ -18,11 +18,11 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
+    - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .org.apache.commons.httpclient.NameValuePair#value#java.lang.Object
+    - .org.apache.commons.httpclient.NameValuePair#name#java.lang.Object
 - function: org.apache.commons.httpclient.HttpMethodBase#getURI
   copy:
   - from:
@@ -289,11 +289,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
+    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
     to: result
   - from:
     - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
+    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
     to: result
 - function: org.apache.commons.httpclient.NTCredentials#setHost
   copy:
@@ -353,11 +353,11 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.HttpMethodBase#setRequestHeader
   copy:
-  - from: arg(*)
+  - from: arg(0)
     to:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
-  - from: arg(0)
+  - from: arg(*)
     to:
     - this
     - .org.apache.commons.httpclient.HttpMethodBase#requestHeaders#java.lang.Object
@@ -438,11 +438,19 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(2)
+    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
   - from: arg(2)
     to:
     - this
@@ -450,15 +458,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -473,11 +473,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.commons.httpclient.HttpState#credentials#java.lang.Object
+    - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
     to: result
   - from:
     - this
-    - .org.apache.commons.httpclient.HttpState#proxyCredentials#java.lang.Object
+    - .org.apache.commons.httpclient.HttpState#credentials#java.lang.Object
     to: result
 - function: org.apache.commons.httpclient.HttpConnection#setProxyHost
   copy:
@@ -508,11 +508,11 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
+    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .org.apache.commons.httpclient.UsernamePasswordCredentials#userName#java.lang.Object
+    - .org.apache.commons.httpclient.UsernamePasswordCredentials#password#java.lang.Object
 - function: org.apache.commons.httpclient.NTCredentials#toString
   copy:
   - from:
@@ -658,11 +658,19 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(1)
+    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
   - from: arg(1)
     to:
     - this
@@ -670,15 +678,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(0)
     to:
     - this
@@ -717,34 +717,34 @@ passThrough:
     to: result
 - function: org.apache.commons.httpclient.NTCredentials#<init>
   copy:
-  - from: arg(3)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#password#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
   - from: arg(2)
     to:
     - this
     - .org.apache.commons.httpclient.NTCredentials#host#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.commons.httpclient.NTCredentials#password#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
   - from: arg(0)
     to:
     - this
     - .org.apache.commons.httpclient.NTCredentials#userName#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .org.apache.commons.httpclient.NTCredentials#domain#java.lang.Object
 - function: org.apache.commons.httpclient.HttpMethod#addRequestHeader
   copy:
   - from: arg(*)
@@ -826,15 +826,31 @@ passThrough:
   - from: arg(3)
     to:
     - this
+    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
     - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
   - from: arg(3)
     to:
     - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(3)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(3)
     to:
     - this
@@ -842,15 +858,7 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(2)
     to:
     - this
@@ -858,15 +866,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.commons.httpclient.HttpConnection#host#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
     - .org.apache.commons.httpclient.HttpConnection#lastResponseInputStream#java.lang.Object
-  - from: arg(0)
-    to:
-    - this
-    - .org.apache.commons.httpclient.HttpConnection#proxyHost#java.lang.Object
   - from: arg(0)
     to:
     - this
