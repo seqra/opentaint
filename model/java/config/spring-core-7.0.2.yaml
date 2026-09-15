@@ -50,7 +50,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.core.io.InputStreamResource#inputStream#java.lang.Object
+    - .org.springframework.core.io.InputStreamResource#inputStream#java.io.InputStream
 - function: org.springframework.util.CollectionUtils#mergeArrayIntoCollection
   overrides: false
   bypassVerification: true
@@ -328,7 +328,7 @@ passThrough:
     - .org.springframework.core.io.InputStreamSource#inputStream#java.lang.Object
     to:
     - this
-    - .org.springframework.core.io.InputStreamResource#inputStream#java.lang.Object
+    - .org.springframework.core.io.InputStreamResource#inputStream#java.io.InputStream
 - function: org.springframework.util.CollectionUtils#toIterator
   overrides: false
   copy:
@@ -432,7 +432,7 @@ passThrough:
     - .org.springframework.core.io.InputStreamSource#inputStream#java.lang.Object
     to:
     - this
-    - .org.springframework.core.io.InputStreamResource#inputStream#java.lang.Object
+    - .org.springframework.core.io.InputStreamResource#inputStream#java.io.InputStream
 - function: org.springframework.util.LinkedMultiValueMap#deepCopy
   overrides: false
   copy:
