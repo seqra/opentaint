@@ -36,17 +36,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.ScriptEngineFactory#getProgram
   signature: (java.lang.String[]) java.lang.String
   taintCopyOnly: true
@@ -62,7 +62,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngine#bindings#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
 - function: javax.script.Bindings#remove
   signature: (java.lang.Object) java.lang.Object
   taintCopyOnly: true
@@ -86,7 +86,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to: result
 - function: javax.script.ScriptContext#setBindings
   signature:
@@ -97,7 +97,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.ScriptEngineManager#setBindings
   signature:
     params:
@@ -107,7 +107,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngineManager#globalBindings#java.lang.Object
+    - .javax.script.ScriptEngineManager#globalBindings#javax.script.Bindings
 - function: javax.script.ScriptEngineManager#setBindings
   signature: (javax.script.Bindings) void
   copy:
@@ -128,12 +128,12 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
 - function: javax.script.Bindings#remove
   signature: (java.lang.Object) java.lang.Object
   copy:
@@ -176,21 +176,21 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
     to: result
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.ScriptEngine#setBindings
   signature: (javax.script.Bindings, int) void
   taintCopyOnly: true
@@ -209,7 +209,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptEngine#bindings#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
 - function: javax.script.ScriptContext#removeAttribute
   signature: (java.lang.String, int) java.lang.Object
   copy:
@@ -230,7 +230,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptEngine#bindings#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
     to: result
 - function: javax.script.ScriptEngine#getBindings
   signature: (int) javax.script.Bindings
@@ -249,24 +249,24 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to:
     - result
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.ScriptEngineManager#getBindings
   signature:
     return: javax.script.Bindings
   copy:
   - from:
     - this
-    - .javax.script.ScriptEngineManager#globalBindings#java.lang.Object
+    - .javax.script.ScriptEngineManager#globalBindings#javax.script.Bindings
     to: result
 - function: javax.script.AbstractScriptEngine#getContext
   signature:
@@ -274,7 +274,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
     to: result
 - function: javax.script.AbstractScriptEngine#<init>
   signature:
@@ -285,19 +285,19 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#bindings#javax.script.Bindings
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.AbstractScriptEngine#setContext
   signature: (javax.script.ScriptContext) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
 - function: javax.script.AbstractScriptEngine#setContext
   signature:
     params:
@@ -307,7 +307,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
 - function: javax.script.SimpleBindings#<init>
   signature: (java.util.Map) void
   copy:
@@ -323,14 +323,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
 - function: javax.script.AbstractScriptEngine#getScriptContext
   signature:
     return: javax.script.ScriptContext
   copy:
   - from:
     - this
-    - .javax.script.AbstractScriptEngine#context#java.lang.Object
+    - .javax.script.AbstractScriptEngine#context#javax.script.ScriptContext
     to: result
 - function: javax.script.ScriptContext#getBindings
   signature:
@@ -338,7 +338,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#bindings#java.lang.Object
+    - .javax.script.ScriptContext#bindings#javax.script.Bindings
     to: result
 - function: javax.script.ScriptContext#removeAttribute
   signature:
@@ -353,5 +353,5 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptEngine#bindings#java.lang.Object
+    - .javax.script.ScriptEngine#bindings#javax.script.Bindings
     to: result

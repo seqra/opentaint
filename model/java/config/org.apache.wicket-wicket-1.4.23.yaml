@@ -15,19 +15,19 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#markupStream#java.lang.Object
+    - .org.apache.wicket.Component#markupStream#org.apache.wicket.markup.MarkupStream
     to: result
 - function: org.apache.wicket.Component#setMarkupStream
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#markupStream#java.lang.Object
+    - .org.apache.wicket.Component#markupStream#org.apache.wicket.markup.MarkupStream
     to: result
 - function: org.apache.wicket.Component#findMarkupStream
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#markupStream#java.lang.Object
+    - .org.apache.wicket.Component#markupStream#org.apache.wicket.markup.MarkupStream
     to: result
 - function: org.apache.wicket.Response#encodeURL
   copy:

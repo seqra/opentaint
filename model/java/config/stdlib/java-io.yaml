@@ -14,11 +14,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.Writer#<init>
   signature: (java.lang.Object) void
   copy:
@@ -42,8 +42,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
-    to: result
+    - .java.io.File#path#java.lang.String
+    to:
+    - result
+    - .java.net.URL#spec#java.lang.String
 - function: java.io.Reader#read
   signature: (char[], int, int) int
   copy:
@@ -54,7 +56,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to: result
 - function: java.io.ByteArrayOutputStream#toByteArray
   signature: () byte[]
@@ -76,14 +78,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.ByteArrayOutputStream#buffer#java.lang.Object
+    - .java.io.ByteArrayOutputStream#buffer#byte[]
 - function: java.io.File#toURL
   signature: () java.net.URL
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
-    to: result
+    - .java.io.File#path#java.lang.String
+    to:
+    - result
+    - .java.net.URL#spec#java.lang.String
 - function: java.io.InputStream#read
   signature:
     params:
@@ -98,11 +102,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function:
     package: java.io
     class: ObjectOutput
@@ -138,7 +142,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.io.Reader#read
   signature: (char[]) int
   copy:
@@ -150,7 +154,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.ByteArrayOutputStream#buffer#java.lang.Object
+    - .java.io.ByteArrayOutputStream#buffer#byte[]
     to: result
 - function: java.io.InputStream#read
   signature: () int
@@ -162,27 +166,27 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.File#getAbsolutePath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to: result
 - function: java.io.File#listFiles
   signature: (java.io.FilenameFilter) java.io.File[]
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
     - '[*]'
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.ByteArrayInputStream#<init>
   copy:
   - from: arg(0)
@@ -193,11 +197,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
   - from: arg(1)
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.StringReader#<init>
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -210,13 +214,13 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
   - from:
     - arg(0)
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function:
     package: java.io
     class: InputStream
@@ -247,37 +251,39 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.ByteArrayInputStream#buffer#java.lang.Object
+    - .java.io.ByteArrayInputStream#buffer#byte[]
 - function: java.io.File#getAbsoluteFile
   signature: () java.io.File
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.File#getCanonicalPath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to: result
 - function: java.io.File#getPath
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to: result
 - function: java.io.File#<init>
   signature: (java.net.URI) void
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - .java.net.URI#value#java.lang.String
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function:
     package: java.io
     class: InputStream
@@ -315,17 +321,19 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.File#toPath
   signature: () java.nio.file.Path
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
-    to: result
+    - .java.io.File#path#java.lang.String
+    to:
+    - result
+    - .java.nio.file.Path#path#java.lang.String
 - function: java.io.ByteArrayOutputStream#write
   signature: (byte[], int, int) void
   copy:
@@ -340,8 +348,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
-    to: result
+    - .java.io.File#path#java.lang.String
+    to:
+    - result
+    - .java.net.URI#value#java.lang.String
 - function: java.io.ByteArrayOutputStream#write
   signature: (int) void
   copy:
@@ -359,14 +369,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
 - function: java.io.File#toURI
   signature: () java.net.URI
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
-    to: result
+    - .java.io.File#path#java.lang.String
+    to:
+    - result
+    - .java.net.URI#value#java.lang.String
 - function: java.io.Reader#read
   signature: (java.nio.CharBuffer) int
   copy:
@@ -389,7 +401,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
 - function: java.io.StringBufferInputStream#<init>
   signature: (java.lang.String) void
   copy:
@@ -419,7 +431,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.io.File#path#java.lang.Object
+    - .java.io.File#path#java.lang.String
     to:
     - result
     - '[*]'

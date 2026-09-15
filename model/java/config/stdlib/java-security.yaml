@@ -6,7 +6,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
     to: result
 - function: java.security.Key#getEncoded
   signature:
@@ -14,7 +14,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.security.Key#encoded#java.lang.Object
+    - .java.security.Key#encoded#byte[]
     to: result
 - function: java.security.CodeSource#<init>
   signature: (java.net.URL, java.security.cert.Certificate[]) void
@@ -24,11 +24,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
 - function: java.security.Key#getEncoded
   signature: () byte[]
   taintCopyOnly: true
@@ -43,16 +39,12 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
-  - from: arg(1)
-    to:
-    - this
-    - .java.security.CodeSource#certificates#java.lang.Object
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
 - function: java.security.CodeSource#getCodeSigners
   signature: () java.security.CodeSigner[]
   overrides: false
   copy:
   - from:
     - this
-    - .java.security.CodeSource#codeSigners#java.lang.Object
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
     to: result

@@ -106,7 +106,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Integer#toBinaryString
   signature: (int) java.lang.String
   copy:
@@ -173,13 +173,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Thread#name#java.lang.Object
+    - .java.lang.Thread#name#java.lang.String
 - function: java.lang.Throwable#getLocalizedMessage
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to: result
 - function: java.lang.String#format
   signature: (java.util.Locale, java.lang.String, java.lang.Object[]) java.lang.String
@@ -239,7 +239,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.lang.StringBuilder#value#java.lang.Object
+    - .java.lang.StringBuilder#value#java.lang.String
     to: this
 - function: java.lang.String#subSequence
   signature:
@@ -298,10 +298,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Class#getSuperclass
   signature: () java.lang.Class
   copy:
@@ -340,12 +340,12 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.lang.StringBuffer#value#java.lang.Object
+    - .java.lang.StringBuffer#value#java.lang.String
     to: this
   - from:
     - arg(0)
-    - .java.lang.StringBuffer#delegate#java.lang.Object
-    - .java.lang.AbstractStringBuilder#value#java.lang.Object
+    - .java.lang.StringBuffer#delegate#java.lang.AbstractStringBuilder
+    - .java.lang.AbstractStringBuilder#value#java.lang.String
     to: this
 - function:
     package: java.lang
@@ -390,7 +390,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Integer#toOctalString
   signature: (int) java.lang.String
   copy:
@@ -411,10 +411,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Character#toTitleCase
   signature: (int) int
   copy:
@@ -425,14 +425,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
     to: result
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.String#<init>
   signature: (java.lang.StringBuilder) void
   taintCopyOnly: true
@@ -446,7 +446,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.System#arraycopy
   signature: (java.lang.Object, int, java.lang.Object, int, int) void
   copy:
@@ -488,7 +488,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.RuntimeException#<init>
   signature: (java.lang.Throwable) void
   overrides: false
@@ -496,20 +496,20 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
 - function: java.lang.Throwable#initCause
   signature: (java.lang.Throwable) java.lang.Throwable
   copy:
   - from: arg(0)
     to:
     - result
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
   - from: this
     to: result
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
 - function: java.lang.String#getBytes
   signature: (byte[], int, int, byte, int) void
   taintCopyOnly: true
@@ -527,7 +527,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Class#classLoader#java.lang.Object
+    - .java.lang.Class#classLoader#java.lang.ClassLoader
     to: result
 - function: java.lang.String#valueOf
   signature:
@@ -573,7 +573,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Class#interfaces#java.lang.Object
+    - .java.lang.Class#interfaces#java.lang.Object[]
     to: result
 - function: java.lang.ProcessBuilder#start
   signature: (java.lang.ProcessBuilder$Redirect[]) java.lang.Process
@@ -590,14 +590,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to: result
 - function: java.lang.Thread#getName
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.lang.Thread#name#java.lang.Object
+    - .java.lang.Thread#name#java.lang.String
     to: result
 - function: java.lang.String#toCharArray
   signature:
@@ -611,7 +611,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.ProcessBuilder#command#java.lang.Object
+    - .java.lang.ProcessBuilder#command#java.util.List
     to: result
 - function: java.lang.ProcessBuilder#command
   signature:
@@ -622,7 +622,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.ProcessBuilder#command#java.lang.Object
+    - .java.lang.ProcessBuilder#command#java.util.List
 - function: java.lang.String#<init>
   signature: (byte[], byte) void
   taintCopyOnly: true
@@ -821,7 +821,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.String#getBytes
   signature:
     params:
@@ -878,7 +878,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
 - function: java.lang.Enum#<init>
   signature:
     params:
@@ -888,7 +888,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Enum#name#java.lang.Object
+    - .java.lang.Enum#name#java.lang.String
 - function: java.lang.String#concat
   signature: (java.lang.String) java.lang.String
   copy:
@@ -945,11 +945,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function:
     package: java.lang
     class: ProcessBuilder
@@ -963,7 +963,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.ProcessBuilder#command#java.lang.Object
+    - .java.lang.ProcessBuilder#command#java.util.List
 - function: java.lang.UnsupportedOperationException#<init>
   signature: (java.lang.String) void
   overrides: false
@@ -971,7 +971,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Enum#<init>
   signature: (java.lang.String, int) void
   taintCopyOnly: true
@@ -993,7 +993,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.net.URL#spec#java.lang.Object
+    - .java.net.URL#spec#java.lang.String
 - function: java.lang.Class#getPackage
   signature: () java.lang.Package
   taintCopyOnly: true
@@ -1007,7 +1007,15 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.AssertionError#detail#java.lang.Object
+- function: java.lang.AssertionError#getMessage
+  signature: () java.lang.String
+  overrides: false
+  copy:
+  - from:
+    - this
+    - .java.lang.AssertionError#detail#java.lang.Object
+    to: result
 - function: java.lang.System#mapLibraryName
   signature: (java.lang.String) java.lang.String
   taintCopyOnly: true
@@ -1057,7 +1065,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.String#bytes#java.lang.Object
+    - .java.lang.String#bytes#byte[]
     - '[*]'
     to: result
 - function: java.lang.String#<init>
@@ -1145,7 +1153,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.String#getBytes
   signature: (java.nio.charset.Charset) byte[]
   copy:
@@ -1164,11 +1172,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.RuntimeException#<init>
   signature: (java.lang.String, java.lang.Throwable) void
   overrides: false
@@ -1176,11 +1184,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.NullPointerException#<init>
   signature: (java.lang.String) void
   overrides: false
@@ -1188,7 +1196,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Throwable#<init>
   signature: (java.lang.String) void
   copy:
@@ -1221,7 +1229,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.System#property#java.lang.Object
+    - .java.lang.System#property#java.lang.String
     to: result
 - function:
     package: java.lang
@@ -1300,10 +1308,10 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .java.lang.Class#interfaces#java.lang.Object
+    - .java.lang.Class#interfaces#java.lang.Object[]
     to:
     - this
-    - .java.lang.Class#interfaces#java.lang.Object
+    - .java.lang.Class#interfaces#java.lang.Object[]
 - function: java.lang.Class#isInterface
   signature: () boolean
   copy:
@@ -1360,10 +1368,10 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.lang.Enum#name#java.lang.Object
+    - .java.lang.Enum#name#java.lang.String
     to:
     - result
-    - .java.lang.Enum#name#java.lang.Object
+    - .java.lang.Enum#name#java.lang.String
 - function: java.lang.Iterable#iterator
   signature: () java.util.Iterator
   copy:
@@ -1392,7 +1400,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#cause#java.lang.Object
+    - .java.lang.Throwable#cause#java.lang.Throwable
 - function: java.lang.String#getBytes
   signature: (java.nio.charset.Charset) byte[]
   taintCopyOnly: true
@@ -1420,16 +1428,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Throwable#initCause
   signature: (*) java.lang.Throwable
   copy:
   - from:
     - this
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.String#valueOf
   signature: (java.lang.Object) java.lang.String
   copy:

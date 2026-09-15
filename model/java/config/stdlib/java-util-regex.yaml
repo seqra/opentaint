@@ -15,39 +15,39 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
     to: result
 - function: java.util.regex.Matcher#appendReplacement
   signature: (*, *) java.util.regex.Matcher
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#matches
   signature: () boolean
   copy:
@@ -84,32 +84,32 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#group
   signature: (java.lang.String) java.lang.String
   copy:
@@ -122,12 +122,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from: this
     to: result
@@ -148,35 +148,35 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from: arg(0)
     to:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#replaceAll
   signature: (*) java.lang.String
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#toString
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#group
   signature: (int) java.lang.String
@@ -222,19 +222,19 @@ passThrough:
   - from: arg(1)
     to:
     - arg(0)
-    - .java.lang.StringBuffer#value#java.lang.Object
+    - .java.lang.StringBuffer#value#java.lang.String
   - from: arg(1)
     to:
     - arg(0)
-    - .java.lang.StringBuffer#delegate#java.lang.Object
-    - .java.lang.AbstractStringBuilder#value#java.lang.Object
+    - .java.lang.StringBuffer#delegate#java.lang.AbstractStringBuilder
+    - .java.lang.AbstractStringBuilder#value#java.lang.String
 - function: java.util.regex.Matcher#replaceAll
   signature:
     return: java.lang.String
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
     to: result
 - function: java.util.regex.Matcher#replaceFirst
   signature: (java.lang.String) java.lang.String
@@ -262,7 +262,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Pattern#regex#java.lang.Object
+    - .java.util.regex.Pattern#regex#java.lang.String
     to: result
 - function: java.util.regex.Matcher#appendReplacement
   signature: (java.lang.StringBuilder, java.lang.String) java.util.regex.Matcher
@@ -285,62 +285,62 @@ passThrough:
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Pattern#regex#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Pattern#regex#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Pattern#regex#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Pattern#regex#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#quoteReplacement
   signature: (*) java.lang.String
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#useTransparentBounds
   signature: (*) java.util.regex.Matcher
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Pattern#flags
   signature: () int
   copy:
@@ -367,19 +367,19 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuffer#value#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.lang.StringBuffer#value#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuffer#value#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.lang.StringBuffer#value#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#replaceFirst
   signature: (java.util.function.Function) java.lang.String
   taintCopyOnly: true
@@ -399,7 +399,7 @@ passThrough:
   - from: arg(1)
     to:
     - arg(0)
-    - .java.lang.StringBuilder#value#java.lang.Object
+    - .java.lang.StringBuilder#value#java.lang.String
 - function: java.util.regex.Matcher#replaceAll
   signature: (java.lang.String) java.lang.String
   copy:
@@ -430,12 +430,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#appendReplacement
   signature: (java.lang.StringBuffer, java.lang.String) java.util.regex.Matcher
@@ -464,81 +464,81 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#appendTail
   signature: (*) java.lang.StringBuilder
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuilder#value#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.lang.StringBuilder#value#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.lang.StringBuilder#value#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.lang.StringBuilder#value#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#reset
   signature: (*) java.util.regex.Matcher
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Pattern#split
   signature: (java.lang.CharSequence) java.lang.String[]
   taintCopyOnly: true
@@ -557,12 +557,12 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to: result
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to: result
 - function: java.util.regex.Matcher#group
   signature:
@@ -570,7 +570,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
     to: result
 - function: java.util.regex.Pattern#matcher
   signature:
@@ -582,12 +582,12 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from: arg(0)
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#appendTail
   signature: (java.lang.StringBuilder) java.lang.StringBuilder
   copy:
@@ -609,32 +609,32 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#reset
   signature: (java.lang.CharSequence) java.util.regex.Matcher
   copy:
@@ -650,12 +650,12 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from: arg(0)
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#end
   signature: () int
   copy:
@@ -681,32 +681,32 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#input#java.lang.Object
+    - .java.util.regex.Matcher#input#java.lang.CharSequence
   - from:
     - this
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
     to:
     - result
-    - .java.util.regex.Matcher#group#java.lang.Object
-    - .java.lang.String#content#java.lang.Object
+    - .java.util.regex.Matcher#group#java.lang.String
+    - .java.lang.String#content#java.lang.CharSequence
 - function: java.util.regex.Matcher#appendTail
   signature: (java.lang.StringBuffer) java.lang.StringBuffer
   copy:

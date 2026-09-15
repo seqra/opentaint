@@ -6,7 +6,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.TextMessage#payload#java.lang.Object
+    - .org.springframework.web.socket.TextMessage#payload#java.lang.CharSequence
     to: result
 - function: org.springframework.web.socket.TextMessage#<init>
   signature:
@@ -17,14 +17,16 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.TextMessage#payload#java.lang.Object
+    - .org.springframework.web.socket.TextMessage#payload#java.lang.CharSequence
 - function: org.springframework.web.socket.BinaryMessage#toStringPayload
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.BinaryMessage#payload#java.lang.Object
-    to: result
+    - .org.springframework.web.socket.BinaryMessage#payload#byte[]
+    to:
+    - result
+    - .java.lang.String#<string-bytes>#byte[]
 - function: org.springframework.web.socket.PongMessage#<init>
   taintCopyOnly: true
   copy:
@@ -50,7 +52,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.BinaryMessage#payload#java.lang.Object
+    - .org.springframework.web.socket.BinaryMessage#payload#byte[]
 - function: org.springframework.web.socket.TextMessage#<init>
   signature:
     params:
@@ -60,7 +62,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.web.socket.TextMessage#payloadBytes#java.lang.Object
+    - .org.springframework.web.socket.TextMessage#payloadBytes#byte[]
 - function: org.springframework.web.socket.TextMessage#asBytes
   taintCopyOnly: true
   copy:
@@ -101,7 +103,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.web.socket.TextMessage#payloadBytes#java.lang.Object
+    - .org.springframework.web.socket.TextMessage#payloadBytes#byte[]
     to: result
 - function: org.springframework.web.socket.BinaryMessage#<init>
   taintCopyOnly: true

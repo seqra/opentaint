@@ -16,7 +16,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stax.StAXSource#xmlStreamReader#java.lang.Object
+    - .javax.xml.transform.stax.StAXSource#xmlStreamReader#javax.xml.stream.XMLStreamReader
     to: result
 - function: javax.xml.transform.stax.StAXResult#getXMLEventWriter
   signature: () javax.xml.stream.XMLEventWriter
@@ -33,14 +33,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stax.StAXSource#xmlEventReader#java.lang.Object
+    - .javax.xml.transform.stax.StAXSource#xmlEventReader#javax.xml.stream.XMLEventReader
 - function: javax.xml.transform.stax.StAXResult#getXMLStreamWriter
   signature:
     return: javax.xml.stream.XMLStreamWriter
   copy:
   - from:
     - this
-    - .javax.xml.transform.stax.StAXResult#xmlStreamWriter#java.lang.Object
+    - .javax.xml.transform.stax.StAXResult#xmlStreamWriter#javax.xml.stream.XMLStreamWriter
     to: result
 - function: javax.xml.transform.stax.StAXSource#<init>
   signature:
@@ -51,7 +51,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stax.StAXSource#xmlStreamReader#java.lang.Object
+    - .javax.xml.transform.stax.StAXSource#xmlStreamReader#javax.xml.stream.XMLStreamReader
 - function: javax.xml.transform.stax.StAXResult#getXMLEventWriter
   signature: () javax.xml.stream.XMLEventWriter
   copy:
@@ -69,7 +69,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stax.StAXSource#xmlEventReader#java.lang.Object
+    - .javax.xml.transform.stax.StAXSource#xmlEventReader#javax.xml.stream.XMLEventReader
     to: result
 - function: javax.xml.transform.stax.StAXResult#<init>
   signature: (javax.xml.stream.XMLStreamWriter) void
@@ -99,7 +99,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.stax.StAXResult#xmlEventWriter#java.lang.Object
+    - .javax.xml.transform.stax.StAXResult#xmlEventWriter#javax.xml.stream.XMLEventWriter
     to: result
 - function: javax.xml.transform.stax.StAXSource#<init>
   signature: (javax.xml.stream.XMLEventReader) void
@@ -120,7 +120,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stax.StAXResult#xmlEventWriter#java.lang.Object
+    - .javax.xml.transform.stax.StAXResult#xmlEventWriter#javax.xml.stream.XMLEventWriter
 - function: javax.xml.transform.stax.StAXSource#getXMLStreamReader
   signature: () javax.xml.stream.XMLStreamReader
   copy:
@@ -141,7 +141,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.stax.StAXResult#xmlStreamWriter#java.lang.Object
+    - .javax.xml.transform.stax.StAXResult#xmlStreamWriter#javax.xml.stream.XMLStreamWriter
 - function: javax.xml.transform.stax.StAXSource#getXMLEventReader
   signature: () javax.xml.stream.XMLEventReader
   taintCopyOnly: true

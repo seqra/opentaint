@@ -70,6 +70,6 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.activation.URLDataSource#path#java.lang.Object
+    - .javax.activation.URLDataSource#path#java.net.URL
   - from: arg(0)
     to: this

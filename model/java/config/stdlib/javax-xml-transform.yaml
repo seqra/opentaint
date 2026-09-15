@@ -24,7 +24,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.Result#systemId#java.lang.Object
+    - .javax.xml.transform.Result#systemId#java.lang.String
 - function:
     package: javax.xml.transform
     class: TransformerFactory
@@ -110,7 +110,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Result#systemId#java.lang.Object
+    - .javax.xml.transform.Result#systemId#java.lang.String
     to: result
 - function:
     package: javax.xml.transform
@@ -122,7 +122,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Transformer#outputProperties#java.lang.Object
+    - .javax.xml.transform.Transformer#outputProperties#java.util.Properties
     to: result
 - function: javax.xml.transform.URIResolver#resolve
   signature:
@@ -134,7 +134,7 @@ passThrough:
   - from: arg(1)
     to:
     - result
-    - .javax.xml.transform.Source#systemId#java.lang.Object
+    - .javax.xml.transform.Source#systemId#java.lang.String
 - function:
     package: javax.xml.transform
     class: Source
@@ -156,7 +156,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.SourceLocator#systemId#java.lang.Object
+    - .javax.xml.transform.SourceLocator#systemId#java.lang.String
     to: result
 - function:
     package: javax.xml.transform
@@ -177,7 +177,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .javax.xml.transform.Source#systemId#java.lang.Object
+    - .javax.xml.transform.Source#systemId#java.lang.String
 - function:
     package: javax.xml.transform
     class: Result
@@ -211,7 +211,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Transformer#parameter#java.lang.Object
+    - .javax.xml.transform.Transformer#parameter#java.lang.String
     to: result
 - function:
     package: javax.xml.transform
@@ -223,7 +223,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Source#systemId#java.lang.Object
+    - .javax.xml.transform.Source#systemId#java.lang.String
     to: result
 - function:
     package: javax.xml.transform
@@ -235,7 +235,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.TransformerFactory#uriResolver#java.lang.Object
+    - .javax.xml.transform.TransformerFactory#uriResolver#javax.xml.transform.URIResolver
     to: result
 - function:
     package: javax.xml.transform
@@ -247,7 +247,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Transformer#errorListener#java.lang.Object
+    - .javax.xml.transform.Transformer#errorListener#javax.xml.transform.ErrorListener
     to: result
 - function:
     package: javax.xml.transform
@@ -276,7 +276,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Templates#outputProperties#java.lang.Object
+    - .javax.xml.transform.Templates#outputProperties#java.util.Properties
     to: result
 - function: javax.xml.transform.URIResolver#resolve
   signature: (java.lang.String, java.lang.String) javax.xml.transform.Source
@@ -298,7 +298,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.Transformer#uriResolver#java.lang.Object
+    - .javax.xml.transform.Transformer#uriResolver#javax.xml.transform.URIResolver
     to: result
 - function:
     package: javax.xml.transform
@@ -330,7 +330,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.xml.transform.Source#systemId#java.lang.Object
+    - .javax.xml.transform.Source#systemId#java.lang.String
 - function:
     package: javax.xml.transform
     class: TransformerFactory
@@ -358,5 +358,5 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.transform.TransformerFactory#errorListener#java.lang.Object
+    - .javax.xml.transform.TransformerFactory#errorListener#javax.xml.transform.ErrorListener
     to: result

@@ -54,7 +54,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultSetDataModel#elements#java.lang.Object
+    - .javax.faces.model.ResultSetDataModel#elements#java.sql.ResultSet
   - from: arg(0)
     to: this
 - function: javax.faces.model.SelectItemGroup#<init>
@@ -63,20 +63,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .javax.faces.model.SelectItemGroup#label#java.lang.String
 - function: javax.faces.model.DataModelEvent#<init>
   signature: (javax.faces.model.DataModel, int, java.lang.Object) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.DataModelEvent#content#java.lang.Object
-  - from: arg(2)
-    to:
-    - this
-    - .javax.faces.model.DataModelEvent#content#java.lang.Object
+    - .javax.faces.model.DataModelEvent#dataModel#javax.faces.model.DataModel
   - from: arg(0)
     to:
     - this
@@ -84,23 +78,13 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .java.util.EventObject#content#java.lang.Object
-  - from: arg(2)
-    to: this
-  - from: arg(0)
-    to: this
+    - .javax.faces.model.DataModelEvent#rowData#java.lang.Object
 - function: javax.faces.model.DataModelEvent#getDataModel
   signature: () javax.faces.model.DataModel
   copy:
-  - from: this
-    to: result
   - from:
     - this
-    - .javax.faces.model.DataModelEvent#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.EventObject#content#java.lang.Object
+    - .javax.faces.model.DataModelEvent#dataModel#javax.faces.model.DataModel
     to: result
 - function: javax.faces.model.SelectItemGroup#<init>
   signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[])
@@ -113,28 +97,24 @@ passThrough:
   - from: arg(3)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
   - from: arg(3)
     to: this
   - from: arg(1)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(1)
-    to: this
+    - .javax.faces.model.SelectItemGroup#description#java.lang.String
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
-  - from: arg(0)
-    to: this
+    - .javax.faces.model.SelectItemGroup#label#java.lang.String
 - function: javax.faces.model.ResultDataModel#<init>
   signature: (javax.servlet.jsp.jstl.sql.Result) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ResultDataModel#content#java.lang.Object
+    - .javax.faces.model.ResultDataModel#content#javax.servlet.jsp.jstl.sql.Result
   - from: arg(0)
     to:
     - this
@@ -165,7 +145,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object
+    - .javax.faces.model.ArrayDataModel#elements#java.lang.Object[]
 - function: javax.faces.model.DataModel#getRowData
   signature: () java.lang.Object
   copy:
@@ -202,7 +182,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
     to: result
   - from: this
     to: result
@@ -216,7 +196,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.SelectItemGroup#selectItems#java.lang.Object
+    - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
   - from: arg(0)
     to: this
 - function: javax.faces.context.ExternalContext#encodeResourceURL
@@ -234,7 +214,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.faces.model.ListDataModel#elements#java.lang.Object
+    - .javax.faces.model.ListDataModel#elements#java.util.List
   - from: arg(0)
     to:
     - this
@@ -266,13 +246,7 @@ passThrough:
 - function: javax.faces.model.DataModelEvent#getRowData
   signature: () java.lang.Object
   copy:
-  - from: this
-    to: result
   - from:
     - this
-    - .javax.faces.model.DataModelEvent#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .java.util.EventObject#content#java.lang.Object
+    - .javax.faces.model.DataModelEvent#rowData#java.lang.Object
     to: result

@@ -18,6 +18,7 @@ import javax.naming.Reference;
 import javax.naming.ldap.BasicControl;
 import javax.naming.ldap.Rdn;
 import javax.naming.ldap.SortKey;
+import javax.xml.namespace.QName;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -400,6 +401,36 @@ public class PassthroughValueFlowSamples {
     public void referenceClassNameSafe(@RequestParam String input) throws IOException {
         Reference reference = new Reference(CONSTANT);
         Runtime.getRuntime().exec("jndi " + reference.getClassName());
+    }
+
+    // === javax.xml.namespace.QName field isolation ===
+
+    @GetMapping("/qname-local-part/unsafe")
+    public void qNameLocalPartUnsafe(@RequestParam String input) throws IOException {
+        QName name = new QName("urn:constant", input, "constant");
+        Runtime.getRuntime().exec("cat " + name.getLocalPart());
+    }
+
+    @GetMapping("/qname-prefix/unsafe")
+    public void qNamePrefixUnsafe(@RequestParam String input) throws IOException {
+        QName name = new QName("urn:constant", "constant", input);
+        Runtime.getRuntime().exec("cat " + name.getPrefix());
+    }
+
+    /** Taint in the namespace URI must not leak into the independent local-part field. */
+    @GetMapping("/qname-namespace-not-local/safe")
+    public void qNameNamespaceDoesNotReachLocalPartSafe(@RequestParam String input)
+            throws IOException {
+        QName name = new QName(input, CONSTANT, "constant");
+        Runtime.getRuntime().exec("cat " + name.getLocalPart());
+    }
+
+    /** Taint in the prefix must not leak into the independent namespace field. */
+    @GetMapping("/qname-prefix-not-namespace/safe")
+    public void qNamePrefixDoesNotReachNamespaceSafe(@RequestParam String input)
+            throws IOException {
+        QName name = new QName("urn:constant", CONSTANT, input);
+        Runtime.getRuntime().exec("cat " + name.getNamespaceURI());
     }
 
     // === org.springframework.http.HttpHeaders ===
