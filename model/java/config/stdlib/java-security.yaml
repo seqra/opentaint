@@ -8,6 +8,13 @@ passThrough:
     - this
     - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
     to: result
+  - from:
+    - this
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.security.Key#getEncoded
   signature:
     return: byte[]
@@ -25,6 +32,13 @@ passThrough:
     to:
     - this
     - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.security.CodeSource#certificates#java.security.cert.Certificate[]
+    - '[*]'
 - function: java.security.Key#getEncoded
   signature: () byte[]
   taintCopyOnly: true
@@ -40,6 +54,13 @@ passThrough:
     to:
     - this
     - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
+    - '[*]'
 - function: java.security.CodeSource#getCodeSigners
   signature: () java.security.CodeSigner[]
   overrides: false
@@ -48,3 +69,10 @@ passThrough:
     - this
     - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
     to: result
+  - from:
+    - this
+    - .java.security.CodeSource#codeSigners#java.security.CodeSigner[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'

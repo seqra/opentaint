@@ -45,13 +45,15 @@ passThrough:
     to: result
 - function: java.util.Spliterators#spliterator
   signature: (java.lang.Object[], int) java.util.Spliterator
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -95,10 +97,20 @@ passThrough:
     - result
     - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Collection#<init>
-  taintCopyOnly: true
+  bypassVerification: true
   copy:
-  - from: arg(0)
-    to: this
+  - from:
+    - arg(0)
+    - .java.lang.Iterable#Element#java.lang.Object
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.EventObject#<init>
   signature: (java.lang.Object) void
   overrides: false
@@ -181,8 +193,12 @@ passThrough:
   signature: (double[], int, int) double[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Set#copyOf
   signature: (java.util.Collection) java.util.Set
   overrides: false
@@ -195,10 +211,13 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature: (double[], int) java.util.Spliterator$OfDouble
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Map$Entry#<init>
   bypassVerification: true
   copy:
@@ -221,8 +240,7 @@ passThrough:
   - from: this
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -242,8 +260,7 @@ passThrough:
     - result
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -318,10 +335,14 @@ passThrough:
     - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Arrays#spliterator
   signature: (double[]) java.util.Spliterator$OfDouble
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.EnumMap#<init>
   signature: (java.util.EnumMap) void
   overrides: false
@@ -342,8 +363,12 @@ passThrough:
   signature: (double[], int) double[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Set#of
   signature: (java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
@@ -444,8 +469,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -474,10 +498,14 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Arrays#stream
   signature: (long[]) java.util.stream.LongStream
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Optional#toString
   signature: () java.lang.String
   bypassVerification: true
@@ -492,20 +520,32 @@ passThrough:
   signature: (byte[], int, int) byte[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Arrays#spliterator
   signature: (long[], int, int) java.util.Spliterator$OfLong
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Arrays#copyOfRange
   signature: (short[], int, int) short[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Enumeration#<init>
   bypassVerification: true
   copy:
@@ -515,9 +555,9 @@ passThrough:
     to:
     - this
     - .java.util.Enumeration#Element#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .java.util.Enumeration#Element#java.lang.Object
@@ -575,9 +615,12 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (int[], int) void
+  overrides: false
   copy:
   - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.LinkedList#removeFirst
   signature: () java.lang.Object
   taintCopyOnly: true
@@ -586,15 +629,22 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (char[], char) void
+  overrides: false
   copy:
   - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Arrays#stream
   signature: (double[], int, int) java.util.stream.DoubleStream
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Calendar#getInstance
   signature: () java.util.Calendar
   copy:
@@ -635,13 +685,16 @@ passThrough:
     - '[*]'
 - function: java.util.Arrays#spliterator
   signature: (int[]) java.util.Spliterator$OfInt
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -784,8 +837,12 @@ passThrough:
   signature: (short[], int) short[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.EventObject#getSource
   signature: () java.lang.Object
   copy:
@@ -909,8 +966,7 @@ passThrough:
     - .java.util.Optional#Element#java.lang.Object
     to: result
 - function: java.util.StringJoiner#<init>
-  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
-    void
+  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence) void
   taintCopyOnly: true
   copy:
   - from: arg(1)
@@ -963,11 +1019,12 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Arrays#fill
   signature: (byte[], int, int, byte) void
+  overrides: false
   copy:
   - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.LinkedList#getLast
   signature: () java.lang.Object
   copy:
@@ -1043,11 +1100,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: java.util.Enumeration#<init>
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.util.Collections#list
   signature: (java.util.Enumeration) java.util.ArrayList
   taintCopyOnly: true
@@ -1137,10 +1189,7 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -1229,6 +1278,30 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
     to: result
+  - from:
+    - this
+    - .java.util.Map#MapValue#java.lang.String[]
+    to: result
+- function: java.util.List#of
+  signature: (java.lang.Object[]) java.util.List
+  overrides: false
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
+- function: java.util.Set#of
+  signature: (java.lang.Object[]) java.util.Set
+  overrides: false
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Scanner#<init>
   signature: (java.io.InputStream) void
   copy:
@@ -1277,11 +1350,12 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (double[], int, int, double) void
+  overrides: false
   copy:
   - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Properties#list
   signature: (java.io.PrintStream) void
   taintCopyOnly: true
@@ -1321,10 +1395,14 @@ passThrough:
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Arrays#stream
   signature: (java.lang.Object[]) java.util.stream.Stream
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Map#ofEntries
   signature: (java.util.Map$Entry[]) java.util.Map
   overrides: false
@@ -1360,9 +1438,7 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Value#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -1447,16 +1523,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (int[]) java.util.Spliterator$OfInt
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Map#compute
   signature: (java.lang.Object, java.util.function.BiFunction) java.lang.Object
   taintCopyOnly: true
@@ -1525,8 +1591,12 @@ passThrough:
   signature: (java.lang.Object[], int, java.lang.Class) java.lang.Object[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.AbstractMap$SimpleEntry#<init>
   signature: (java.util.Map$Entry) void
   overrides: false
@@ -1548,29 +1618,23 @@ passThrough:
   copy:
   - from: arg(1)
     to: arg(0)
-- function: java.util.Arrays#stream
-  signature: (double[]) java.util.stream.DoubleStream
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.util.Arrays#copyOf
   signature: (byte[], int) byte[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Optional#ofNullable
   signature: (java.lang.Object) java.util.Optional
   copy:
   - from: arg(0)
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -1654,8 +1718,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -1713,23 +1776,24 @@ passThrough:
     to:
     - this
     - .java.util.StringJoiner#delimiter#java.lang.CharSequence
-- function: java.util.Arrays#fill
-  signature: (long[], long) void
-  copy:
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Spliterators#spliterator
   signature: (int[], int, int, int) java.util.Spliterator$OfInt
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature: (java.lang.Object[], int, int, int) java.util.Spliterator
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Scanner#<init>
   signature: (java.lang.String) void
   copy:
@@ -1763,10 +1827,14 @@ passThrough:
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Arrays#spliterator
   signature: (double[], int, int) java.util.Spliterator$OfDouble
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Deque#peekFirst
   signature: () java.lang.Object
   copy:
@@ -1787,19 +1855,8 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (byte[], int, int, byte) void
-  overrides: false
-  copy:
-  - from: arg(3)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(15)
@@ -1894,16 +1951,6 @@ passThrough:
     to:
     - result
     - .java.util.Iterator#Element#java.lang.Object
-- function: java.util.Arrays#stream
-  signature: (long[]) java.util.stream.LongStream
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.NavigableSet#subSet
   signature: (java.lang.Object, boolean, java.lang.Object, boolean) java.util.NavigableSet
   copy:
@@ -1940,13 +1987,6 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
-- function: java.util.Arrays#fill
-  signature: (java.lang.Object[], int, int, java.lang.Object) void
-  copy:
-  - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Optional#orElseThrow
   signature: (java.util.function.Supplier) java.lang.Object
   taintCopyOnly: true
@@ -1992,6 +2032,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: arg(1)
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - arg(1)
+    - '[*]'
 - function: java.util.SequencedCollection#removeFirst
   copy:
   - from:
@@ -2044,8 +2090,12 @@ passThrough:
   signature: (int[], int) int[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.NavigableMap#lowerEntry
   signature: (java.lang.Object) java.util.Map$Entry
   copy:
@@ -2082,8 +2132,12 @@ passThrough:
   signature: (char[], int) char[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.NavigableSet#ceiling
   signature: (java.lang.Object) java.lang.Object
   copy:
@@ -2137,10 +2191,14 @@ passThrough:
     - .java.util.Map$Entry#Value#java.lang.Object
 - function: java.util.Arrays#spliterator
   signature: (java.lang.Object[]) java.util.Spliterator
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.List#of
   signature: (java.lang.Object) java.util.List
   overrides: false
@@ -2204,14 +2262,6 @@ passThrough:
     to:
     - this
     - .java.util.Map$Entry#Key#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (double[], int, int, double) void
-  overrides: false
-  copy:
-  - from: arg(3)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Map$Entry#getValue
   signature: () java.lang.Object
   taintCopyOnly: true
@@ -2280,27 +2330,16 @@ passThrough:
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Collection#<init>
-  bypassVerification: true
+- function: java.util.Arrays#spliterator
+  signature: (java.lang.Object[], int, int) java.util.Spliterator
+  overrides: false
   copy:
   - from:
     - arg(0)
-    - .java.lang.Iterable#Element#java.lang.Object
+    - '[*]'
     to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#spliterator
-  signature: (java.lang.Object[], int, int) java.util.Spliterator
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Optional#ofNullable
   signature: (java.lang.Object) java.util.Optional
   overrides: false
@@ -2355,9 +2394,7 @@ passThrough:
     - result
     - .java.util.Calendar#timeZone#java.util.TimeZone
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -2481,8 +2518,12 @@ passThrough:
   signature: (int[], int, int) int[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Spliterators#spliteratorUnknownSize
   signature:
     params:
@@ -2504,9 +2545,7 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -2566,11 +2605,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (byte[], byte) void
-  copy:
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Dictionary#remove
   signature: (java.lang.Object) java.lang.Object
   copy:
@@ -2590,15 +2624,12 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (java.lang.Object[], java.lang.Object) void
+  overrides: false
   copy:
   - from: arg(1)
-    to: arg(0)
-- function: java.util.Arrays#stream
-  signature: (long[], int, int) java.util.stream.LongStream
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Dictionary#elements
   signature: () java.util.Enumeration
   copy:
@@ -2610,23 +2641,19 @@ passThrough:
     - .java.util.Enumeration#Element#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature: (long[], int, int, int) java.util.Spliterator$OfLong
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Map#<init>
   copy:
   - from: arg(0)
     to:
     - this
     - .java.util.Map#MapValue#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (char[], int, int, char) void
-  copy:
-  - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Calendar#internalGet
   signature: (int) int
   copy:
@@ -2650,18 +2677,16 @@ passThrough:
   signature: (boolean[], int, int) boolean[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Optional#flatMap
   signature: (java.util.function.Function) java.util.Optional
   copy:
   - from: this
-    to: result
-- function: java.util.Arrays#stream
-  signature: (int[], int, int) java.util.stream.IntStream
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
     to: result
 - function: java.util.LinkedHashMap#<init>
   signature: (java.util.Map) void
@@ -2689,10 +2714,14 @@ passThrough:
     - '[*]'
 - function: java.util.Arrays#spliterator
   signature: (long[]) java.util.Spliterator$OfLong
-  taintCopyOnly: true
+  overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature:
     params:
@@ -2710,8 +2739,12 @@ passThrough:
   signature: (java.lang.Object[], int, int) java.lang.Object[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.SequencedMap#pollFirstEntry
   copy:
   - from:
@@ -2733,11 +2766,12 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (int[], int, int, int) void
+  overrides: false
   copy:
   - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Calendar#set
   signature: (int, int, int, int, int) void
   copy:
@@ -2787,8 +2821,12 @@ passThrough:
   signature: (float[], int, int) float[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.PriorityQueue#<init>
   signature: (java.util.Collection) void
   overrides: false
@@ -2845,16 +2883,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#stream
-  signature: (double[], int, int) java.util.stream.DoubleStream
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Collection#remove
   signature: (java.lang.Object) boolean
   copy:
@@ -2864,14 +2892,6 @@ passThrough:
     to: result
   - from: this
     to: result
-- function: java.util.Arrays#fill
-  signature: (int[], int, int, int) void
-  overrides: false
-  copy:
-  - from: arg(3)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Spliterators#iterator
   signature: (java.util.Spliterator) java.util.Iterator
   taintCopyOnly: true
@@ -2894,12 +2914,6 @@ passThrough:
     to:
     - this
     - .java.util.Scanner#delimiter#java.lang.String
-- function: java.util.Arrays#asList
-  signature: (java.lang.Object[]) java.util.List
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
-    to: result
 - function:
     package: java.util
     class: SortedSet
@@ -2928,10 +2942,13 @@ passThrough:
     - .java.util.StringJoiner#delimiter#java.lang.CharSequence
 - function: java.util.Spliterators#spliterator
   signature: (double[], int, int, int) java.util.Spliterator$OfDouble
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Collection#toArray
   signature: (java.lang.Object[]) java.lang.Object[]
   copy:
@@ -2993,11 +3010,6 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
-- function: java.util.Arrays#fill
-  signature: (float[], float) void
-  copy:
-  - from: arg(1)
-    to: arg(0)
 - function:
     package: java.util
     class: Calendar
@@ -3007,8 +3019,7 @@ passThrough:
   - from: this
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -3028,8 +3039,7 @@ passThrough:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -3072,16 +3082,6 @@ passThrough:
     - this
     - .java.util.Optional#Element#java.lang.Object
     to: result
-- function: java.util.Arrays#stream
-  signature: (java.lang.Object[]) java.util.stream.Stream
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.stream.BaseStream#Element#java.lang.Object
 - function: java.util.Collections#nCopies
   signature: (int, java.lang.Object) java.util.List
   overrides: false
@@ -3107,8 +3107,7 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -3154,9 +3153,26 @@ passThrough:
     class: Collections
     name:
       pattern: unmodifiable.*
+  bypassVerification: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - .java.lang.Iterable#Element#java.lang.Object
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
+  - from:
+    - arg(0)
+    - .java.util.Map#MapKey#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapKey#java.lang.Object
+  - from:
+    - arg(0)
+    - .java.util.Map#MapValue#java.lang.Object
+    to:
+    - result
+    - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature:
     params:
@@ -3180,14 +3196,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (int[], int) void
-  overrides: false
-  copy:
-  - from: arg(1)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.SequencedMap#reversed
   copy:
   - from:
@@ -3203,8 +3211,7 @@ passThrough:
     - result
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -3245,14 +3252,6 @@ passThrough:
     to:
     - result
     - .java.util.Iterator#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (java.lang.Object[], java.lang.Object) void
-  overrides: false
-  copy:
-  - from: arg(1)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Collections#synchronizedSortedSet
   signature: (java.util.SortedSet) java.util.SortedSet
   overrides: false
@@ -3272,10 +3271,20 @@ passThrough:
     - .java.util.Scanner#delimiter#java.lang.String
     to: result
 - function: java.util.Iterator#<init>
-  taintCopyOnly: true
+  bypassVerification: true
   copy:
-  - from: arg(0)
-    to: this
+  - from:
+    - arg(0)
+    - .java.lang.Iterable#Element#java.lang.Object
+    to:
+    - this
+    - .java.util.Iterator#Element#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.util.Iterator#Element#java.lang.Object
 - function: java.util.SequencedCollection#addLast
   copy:
   - from: arg(0)
@@ -3455,9 +3464,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(8)
@@ -3496,16 +3503,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#spliterator
-  signature: (double[]) java.util.Spliterator$OfDouble
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.ResourceBundle#handleGetObject
   signature: (java.lang.String) java.lang.Object
   taintCopyOnly: true
@@ -3601,9 +3598,12 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (short[], short) void
+  overrides: false
   copy:
   - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Deque#<init>
   taintCopyOnly: true
   copy:
@@ -3675,8 +3675,7 @@ passThrough:
     - result
     - .java.util.Map#MapKey#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(2)
@@ -3721,8 +3720,12 @@ passThrough:
   signature: (long[], int, int) long[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.LinkedList#addLast
   signature: (java.lang.Object) void
   copy:
@@ -3796,8 +3799,12 @@ passThrough:
   signature: (boolean[], int) boolean[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Scanner#reset
   signature: () java.util.Scanner
   copy:
@@ -3818,16 +3825,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (java.lang.Object[]) java.util.Spliterator
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Spliterators#spliteratorUnknownSize
   signature: (java.util.PrimitiveIterator$OfDouble, int) java.util.Spliterator$OfDouble
   taintCopyOnly: true
@@ -3843,21 +3840,6 @@ passThrough:
     to:
     - result
     - .java.util.Iterator#Element#java.lang.Object
-- function: java.util.Iterator#<init>
-  bypassVerification: true
-  copy:
-  - from:
-    - arg(0)
-    - .java.lang.Iterable#Element#java.lang.Object
-    to:
-    - this
-    - .java.util.Iterator#Element#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.util.Iterator#Element#java.lang.Object
 - function: java.util.Deque#getLast
   signature: () java.lang.Object
   copy:
@@ -3869,19 +3851,29 @@ passThrough:
   signature: (long[], int) long[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.List#<init>
+  bypassVerification: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - .java.lang.Iterable#Element#java.lang.Object
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -3974,21 +3966,19 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (int[], int, int) java.util.Spliterator$OfInt
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Scanner#findInLine
   signature: (java.util.regex.Pattern) java.lang.String
   copy:
   - from: this
     to: result
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -4100,16 +4090,6 @@ passThrough:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (long[], int, int) java.util.Spliterator$OfLong
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Map$Entry#getValue
   signature: () java.lang.Object
   condition:
@@ -4195,13 +4175,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (float[], int, int, float) void
-  copy:
-  - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.TreeSet#<init>
   signature: (java.util.Collection) void
   overrides: false
@@ -4229,15 +4202,21 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (boolean[], boolean) void
+  overrides: false
   copy:
   - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.Spliterators#spliterator
   signature: (long[], int) java.util.Spliterator$OfLong
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.NavigableMap#subMap
   signature: (java.lang.Object, boolean, java.lang.Object, boolean) java.util.NavigableMap
   copy:
@@ -4286,16 +4265,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (double[], int, int) java.util.Spliterator$OfDouble
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Calendar#getInstance
   signature: (*) java.util.Calendar
   copy:
@@ -4311,13 +4280,6 @@ passThrough:
     to:
     - result
     - .java.util.Calendar#timeZone#java.util.TimeZone
-- function: java.util.Arrays#fill
-  signature: (boolean[], int, int, boolean) void
-  copy:
-  - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Collections#copy
   signature: (java.util.List, java.util.List) void
   overrides: false
@@ -4413,8 +4375,12 @@ passThrough:
   signature: (float[], int) float[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Collections#unmodifiableSortedSet
   signature: (java.util.SortedSet) java.util.SortedSet
   overrides: false
@@ -4429,17 +4395,12 @@ passThrough:
   signature: (java.lang.Object[], int) java.lang.Object[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
-- function:
-    package: java.util
-    class: Collections
-    name:
-      pattern: unmodifiable.*
-  taintCopyOnly: true
-  copy:
-  - from: arg(1)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.Collections#min
   signature: (java.util.Collection, java.util.Comparator) java.lang.Object
   overrides: false
@@ -4466,16 +4427,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: java.util.Arrays#spliterator
-  signature: (java.lang.Object[], int, int) java.util.Spliterator
-  overrides: false
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
 - function: java.util.Collections#singletonList
   signature: (java.lang.Object) java.util.List
   overrides: false
@@ -4483,27 +4434,6 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#stream
-  signature: (java.lang.Object[], int, int) java.util.stream.Stream
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
-- function: java.util.List#<init>
-  bypassVerification: true
-  copy:
-  - from:
-    - arg(0)
-    - .java.lang.Iterable#Element#java.lang.Object
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
     - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Optional#get
   signature: () java.lang.Object
@@ -4513,25 +4443,18 @@ passThrough:
     to: result
 - function: java.util.Arrays#fill
   signature: (short[], int, int, short) void
+  overrides: false
   copy:
   - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
+    to:
+    - arg(0)
+    - '[*]'
 - function: java.util.StringJoiner#<init>
   signature: (java.lang.CharSequence) void
   taintCopyOnly: true
   copy:
   - from: arg(0)
     to: this
-- function: java.util.Arrays#fill
-  signature: (char[], char) void
-  overrides: false
-  copy:
-  - from: arg(1)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Scanner#findWithinHorizon
   signature: (java.util.regex.Pattern, int) java.lang.String
   copy:
@@ -4608,14 +4531,6 @@ passThrough:
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Collection#<init>
-  copy:
-  - from: arg(0)
-    to: this
-  - from: arg(0)
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.StringJoiner#add
   signature: (java.lang.CharSequence) java.util.StringJoiner
   taintCopyOnly: true
@@ -4677,10 +4592,6 @@ passThrough:
     to:
     - this
     - .java.util.Map#MapValue#java.lang.Object
-- function: java.util.Iterator#<init>
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.util.NavigableMap#headMap
   signature: (java.lang.Object, boolean) java.util.NavigableMap
   copy:
@@ -4795,9 +4706,8 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#spliterator
-  signature: (long[]) java.util.Spliterator$OfLong
-  overrides: false
+- function: java.util.Spliterators#spliterator
+  signature: (int[], int) java.util.Spliterator$OfInt
   copy:
   - from:
     - arg(0)
@@ -4805,12 +4715,6 @@ passThrough:
     to:
     - result
     - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (int[], int) java.util.Spliterator$OfInt
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.util.Deque#offerFirst
   signature: (java.lang.Object) boolean
   copy:
@@ -4838,8 +4742,7 @@ passThrough:
   - from: arg(1)
     to: result
 - function: java.util.List#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.List
   overrides: false
   copy:
   - from: arg(2)
@@ -4977,12 +4880,6 @@ passThrough:
     to:
     - result
     - '[*]'
-- function: java.util.Arrays#stream
-  signature: (int[]) java.util.stream.IntStream
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.util.NavigableSet#descendingSet
   signature: () java.util.NavigableSet
   copy:
@@ -5003,9 +4900,7 @@ passThrough:
     - result
     - .java.util.Optional#Element#java.lang.Object
 - function: java.util.Set#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object) java.util.Set
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Set
   overrides: false
   copy:
   - from: arg(8)
@@ -5048,11 +4943,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.List#<init>
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.util.Objects#requireNonNull
   signature: (java.lang.Object) java.lang.Object
   overrides: false
@@ -5116,8 +5006,12 @@ passThrough:
   signature: (java.lang.Object[], int, int, java.lang.Class) java.lang.Object[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.LinkedList#getFirst
   signature: () java.lang.Object
   copy:
@@ -5153,8 +5047,7 @@ passThrough:
   - from: arg(0)
     to: this
 - function: java.util.StringJoiner#<init>
-  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence)
-    void
+  signature: (java.lang.CharSequence, java.lang.CharSequence, java.lang.CharSequence) void
   copy:
   - from: arg(2)
     to: this
@@ -5192,14 +5085,6 @@ passThrough:
     to:
     - result
     - .java.util.StringJoiner#delimiter#java.lang.CharSequence
-- function: java.util.Arrays#fill
-  signature: (boolean[], boolean) void
-  overrides: false
-  copy:
-  - from: arg(1)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.SequencedMap#sequencedValues
   copy:
   - from:
@@ -5225,10 +5110,7 @@ passThrough:
     - this
     - .java.util.Map#MapValue#java.lang.Object
 - function: java.util.Map#of
-  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object,
-    java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object)
-    java.util.Map
+  signature: (java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object, java.lang.Object) java.util.Map
   overrides: false
   copy:
   - from: arg(0)
@@ -5405,14 +5287,6 @@ passThrough:
     to:
     - this
     - .java.util.Map#MapValue#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (short[], int, int, short) void
-  overrides: false
-  copy:
-  - from: arg(3)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Collection#addAll
   signature: (java.util.Collection) boolean
   copy:
@@ -5459,10 +5333,6 @@ passThrough:
     to:
     - result
     - .java.util.Enumeration#Element#java.lang.Object
-- function: java.util.Enumeration#<init>
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.util.Deque#pollLast
   signature: () java.lang.Object
   copy:
@@ -5531,13 +5401,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: java.util.Arrays#fill
-  signature: (long[], int, int, long) void
-  copy:
-  - from: arg(3)
-    to: arg(0)
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.Collections#checkedMap
   signature: (java.util.Map, java.lang.Class, java.lang.Class) java.util.Map
   overrides: false
@@ -5592,11 +5455,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#fill
-  signature: (double[], double) void
-  copy:
-  - from: arg(1)
-    to: arg(0)
 - function: java.util.SortedSet#first
   signature: () java.lang.Object
   copy:
@@ -5631,8 +5489,12 @@ passThrough:
   signature: (char[], int, int) char[]
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.util.StringJoiner#merge
   signature: (java.util.StringJoiner) java.util.StringJoiner
   overrides: false
@@ -5644,14 +5506,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.util.Arrays#fill
-  signature: (short[], short) void
-  overrides: false
-  copy:
-  - from: arg(1)
-    to:
-    - arg(0)
-    - '[*]'
 - function: java.util.Map#copyOf
   signature: (java.util.Map) java.util.Map
   overrides: false
@@ -5692,20 +5546,6 @@ passThrough:
     to:
     - result
     - .java.util.Comparator#Delegate#java.lang.Object
-- function: java.util.Map$Entry#getKey
-  signature: () java.lang.Object
-  copy:
-  - from:
-    - this
-    - .java.util.Map$Entry#Key#java.lang.Object
-    to: result
-- function: java.util.Map$Entry#getValue
-  signature: () java.lang.Object
-  copy:
-  - from:
-    - this
-    - .java.util.Map$Entry#Value#java.lang.Object
-    to: result
 - function: java.util.Properties#store
   copy:
   - from:
@@ -5754,75 +5594,3 @@ passThrough:
     to:
     - this
     - .java.util.Dictionary#MapValue#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (java.lang.Object[], int) java.util.Spliterator
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (double[], int) java.util.Spliterator$OfDouble
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (int[], int, int, int) java.util.Spliterator$OfInt
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (java.lang.Object[], int, int, int) java.util.Spliterator
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (long[], int, int, int) java.util.Spliterator$OfLong
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (double[], int, int, int) java.util.Spliterator$OfDouble
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (long[], int) java.util.Spliterator$OfLong
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object
-- function: java.util.Spliterators#spliterator
-  signature: (int[], int) java.util.Spliterator$OfInt
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - result
-    - .java.util.Spliterator#Element#java.lang.Object

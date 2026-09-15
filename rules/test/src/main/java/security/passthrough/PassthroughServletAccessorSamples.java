@@ -10,6 +10,7 @@ import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.PushBuilder;
 
 /**
  * Regression samples for the explicit {@code HttpServletRequest} accessor models in
@@ -171,6 +172,36 @@ public class PassthroughServletAccessorSamples {
         }
     }
 
+    /** PushBuilder keeps each fluent property in its own slot. */
+    @WebServlet("/passthrough/servlet/push-builder")
+    public static class PushBuilderPathServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            PushBuilder builder = request.newPushBuilder().path(request.getParameter("file"));
+            Runtime.getRuntime().exec("cat " + builder.getPath());
+        }
+    }
+
+    @WebServlet("/passthrough/servlet/push-builder-header")
+    public static class PushBuilderHeaderServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            PushBuilder builder = request.newPushBuilder()
+                    .addHeader("X-File", request.getParameter("file"));
+            Runtime.getRuntime().exec("cat " + builder.getHeader("X-File"));
+        }
+    }
+
+    @WebServlet("/passthrough/servlet/push-builder-header-name")
+    public static class PushBuilderHeaderNameServlet extends HttpServlet {
+        @Override
+        protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException {
+            PushBuilder builder = request.newPushBuilder()
+                    .addHeader(request.getParameter("name"), "constant");
+            Runtime.getRuntime().exec("cat " + builder.getHeaderNames().iterator().next());
+        }
+    }
+
     /**
      * Negative twin: the same accessors are called, and both attribute stores are
      * exercised with constants, but the executed command is built from constants only, so
@@ -193,6 +224,10 @@ public class PassthroughServletAccessorSamples {
             request.setAttribute("file", "motd");
             request.getAttribute("file");
             request.getAttributeNames();
+            PushBuilder builder = request.newPushBuilder().path("/assets/app.js");
+            builder.queryString(request.getParameter("ignored"));
+            builder.addHeader("X-Ignored", request.getParameter("ignored"));
+            Runtime.getRuntime().exec("cat " + builder.getPath());
             Runtime.getRuntime().exec("cat /etc/motd");
         }
     }

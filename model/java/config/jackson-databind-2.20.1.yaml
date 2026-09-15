@@ -1,6 +1,20 @@
 language: java
 library: com.fasterxml.jackson.core:jackson-databind:2.20.1
 passThrough:
+- function: com.fasterxml.jackson.databind.util.TokenBuffer#writeBinary
+  signature: (com.fasterxml.jackson.core.Base64Variant, byte[], int, int) void
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+    - '[*]'
 - function: com.fasterxml.jackson.databind.JsonNode#textValue
   copy:
   - from: this
@@ -131,15 +145,9 @@ passThrough:
     - arg(0)
     - .java.lang.String#<serialized-value>#java.lang.Object
     to: result
-- function: com.fasterxml.jackson.databind.util.ObjectBuffer#completeAndClearBuffer
-  copy:
-  - from: arg(0)
-    to: result
-  - from: this
-    to: result
   - from:
-    - this
-    - .com.fasterxml.jackson.databind.util.ObjectBuffer#buffer#java.lang.Object
+    - arg(0)
+    - '[*]'
     to: result
 - function: com.fasterxml.jackson.databind.ObjectReader#readValue
   signature:
@@ -319,6 +327,10 @@ passThrough:
       type: byte[]
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: com.fasterxml.jackson.databind.node.TextNode#textValue
   copy:
@@ -672,14 +684,6 @@ passThrough:
     - .com.fasterxml.jackson.databind.util.TokenBuffer#buffer#java.lang.Object
   - from: arg(0)
     to: this
-- function: com.fasterxml.jackson.databind.util.TokenBuffer#writeBinary
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .com.fasterxml.jackson.databind.util.TokenBuffer#buffer#java.lang.Object
-  - from: arg(1)
-    to: this
 - function: com.fasterxml.jackson.databind.node.TreeTraversingParser#getEmbeddedObject
   copy:
   - from: this
@@ -832,6 +836,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: com.fasterxml.jackson.databind.ObjectMapper#convertValue
   copy:
   - from: arg(0)
@@ -862,6 +870,10 @@ passThrough:
     to:
     - result
     - .java.util.Iterator#Element#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: com.fasterxml.jackson.databind.node.POJONode#<init>
   copy:
   - from: arg(0)
@@ -1291,14 +1303,32 @@ passThrough:
     to: result
 - function: com.fasterxml.jackson.databind.util.TokenBuffer#asParser
   copy:
-  - from: arg(0)
-    to: result
-  - from: this
-    to: result
+  - from:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+    to:
+    - result
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#binaryContent#byte[]
+  - from:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+    - '[*]'
+    to:
+    - result
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#binaryContent#byte[]
+    - '[*]'
   - from:
     - this
     - .com.fasterxml.jackson.databind.util.TokenBuffer#buffer#java.lang.Object
-    to: result
+    to:
+    - result
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
+  - from:
+    - this
+    - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
+    to:
+    - result
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
 - function: com.fasterxml.jackson.databind.node.ArrayNode#findParent
   copy:
   - from:
@@ -1392,12 +1422,17 @@ passThrough:
     to: this
 - function: com.fasterxml.jackson.databind.util.TokenBuffer$Parser#getBinaryValue
   copy:
-  - from: this
+  - from:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#binaryContent#byte[]
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
-    to: result
+    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#binaryContent#byte[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: com.fasterxml.jackson.databind.ObjectMapper#readTree
   signature:
     params:
@@ -1570,6 +1605,10 @@ passThrough:
     - arg(0)
     - .java.lang.String#<serialized-value>#java.lang.Object
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: com.fasterxml.jackson.databind.node.TextNode#valueOf
   copy:
   - from: arg(0)
@@ -1579,14 +1618,6 @@ passThrough:
   - from: this
     to: result
 - function: com.fasterxml.jackson.databind.util.TokenBuffer$Parser#getCurrentName
-  copy:
-  - from: this
-    to: result
-  - from:
-    - this
-    - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
-    to: result
-- function: com.fasterxml.jackson.databind.util.TokenBuffer$Parser#nextToken
   copy:
   - from: this
     to: result
@@ -1626,19 +1657,3 @@ passThrough:
     - this
     - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
     to: result
-- function: com.fasterxml.jackson.databind.util.ObjectBuffer#completeAndClearBuffer
-  signature:
-    params:
-    - index: 0
-      type: java.lang.Object[]
-    - index: 1
-      type: int
-    - index: 2
-      type: java.util.List
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - arg(2)
-    - .java.lang.Iterable#Element#java.lang.Object

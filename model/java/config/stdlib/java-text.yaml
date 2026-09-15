@@ -275,6 +275,13 @@ passThrough:
     - this
     - .java.text.ChoiceFormat#limits#double[]
     to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#limits#double[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.ChoiceFormat#getFormats
   signature: () java.lang.Object[]
   copy:
@@ -282,6 +289,13 @@ passThrough:
     - this
     - .java.text.ChoiceFormat#formats#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.ChoiceFormat#format
   signature: (double) java.lang.String
   copy:
@@ -291,6 +305,22 @@ passThrough:
     - '[*]'
     to: result
 - function: java.text.ChoiceFormat#format
+  signature: (long) java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to: result
+- function: java.text.NumberFormat#format
+  signature: (double) java.lang.String
+  copy:
+  - from:
+    - this
+    - .java.text.ChoiceFormat#formats#java.lang.String[]
+    - '[*]'
+    to: result
+- function: java.text.NumberFormat#format
   signature: (long) java.lang.String
   copy:
   - from:
@@ -704,6 +734,13 @@ passThrough:
     to:
     - this
     - .java.text.ChoiceFormat#limits#double[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.ChoiceFormat#limits#double[]
+    - '[*]'
 - function: java.text.Format#format
   signature: (java.lang.Object) java.lang.String
   taintCopyOnly: true
@@ -899,6 +936,22 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - '[*]'
+  - from:
+    - arg(0)
+    - '[*]'
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - '[*]'
+    - '[*]'
 - function: java.text.DecimalFormat#format
   signature: (long, java.lang.StringBuffer, java.text.FieldPosition) java.lang.StringBuffer
   copy:
@@ -951,6 +1004,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#eras#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#eras#java.lang.String[]
+    - '[*]'
 - function: java.text.DateFormatSymbols#setMonths
   signature: (java.lang.String[]) void
   copy:
@@ -958,6 +1018,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#months#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#months#java.lang.String[]
+    - '[*]'
 - function: java.text.DateFormatSymbols#setShortMonths
   signature: (java.lang.String[]) void
   copy:
@@ -965,6 +1032,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+    - '[*]'
 - function: java.text.DateFormatSymbols#setWeekdays
   signature: (java.lang.String[]) void
   copy:
@@ -972,6 +1046,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - '[*]'
 - function: java.text.DateFormatSymbols#setShortWeekdays
   signature: (java.lang.String[]) void
   copy:
@@ -979,6 +1060,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+    - '[*]'
 - function: java.text.DateFormatSymbols#setAmPmStrings
   signature: (java.lang.String[]) void
   copy:
@@ -986,6 +1074,13 @@ passThrough:
     to:
     - this
     - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+    - '[*]'
 - function: java.text.DecimalFormatSymbols#getCurrency
   signature: () java.util.Currency
   copy:
@@ -1042,6 +1137,22 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#zoneStrings#java.lang.String[][]
+    - '[*]'
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+    - '[*]'
 - function: java.text.DateFormatSymbols#getEras
   signature: () java.lang.String[]
   copy:
@@ -1049,6 +1160,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#eras#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#eras#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DateFormatSymbols#getMonths
   signature: () java.lang.String[]
   copy:
@@ -1056,6 +1174,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#months#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#months#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DateFormatSymbols#getShortMonths
   signature: () java.lang.String[]
   copy:
@@ -1063,6 +1188,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#shortMonths#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DateFormatSymbols#getWeekdays
   signature: () java.lang.String[]
   copy:
@@ -1070,6 +1202,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#weekdays#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DateFormatSymbols#getShortWeekdays
   signature: () java.lang.String[]
   copy:
@@ -1077,6 +1216,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#shortWeekdays#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DateFormatSymbols#getAmPmStrings
   signature: () java.lang.String[]
   copy:
@@ -1084,6 +1230,13 @@ passThrough:
     - this
     - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
     to: result
+  - from:
+    - this
+    - .java.text.DateFormatSymbols#amPmStrings#java.lang.String[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DecimalFormatSymbols#setCurrencySymbol
   signature: (java.lang.String) void
   copy:
@@ -1335,6 +1488,13 @@ passThrough:
     to:
     - this
     - .java.text.MessageFormat#formats#java.text.Format[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    - '[*]'
 - function: java.text.MessageFormat#setFormatsByArgumentIndex
   signature: (java.text.Format[]) void
   copy:
@@ -1342,6 +1502,13 @@ passThrough:
     to:
     - this
     - .java.text.MessageFormat#formats#java.text.Format[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    - '[*]'
 - function: java.text.MessageFormat#getFormats
   signature: () java.text.Format[]
   copy:
@@ -1349,6 +1516,13 @@ passThrough:
     - this
     - .java.text.MessageFormat#formats#java.text.Format[]
     to: result
+  - from:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.MessageFormat#getFormatsByArgumentIndex
   signature: () java.text.Format[]
   copy:
@@ -1356,6 +1530,13 @@ passThrough:
     - this
     - .java.text.MessageFormat#formats#java.text.Format[]
     to: result
+  - from:
+    - this
+    - .java.text.MessageFormat#formats#java.text.Format[]
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: java.text.DecimalFormat#toLocalizedPattern
   signature:
     return: java.lang.String

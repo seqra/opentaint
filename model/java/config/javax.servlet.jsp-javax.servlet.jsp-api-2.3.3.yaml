@@ -28,30 +28,42 @@ passThrough:
 - function: javax.servlet.jsp.JspWriter#print
   signature: (char[]) void
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .java.io.Writer#buffer#java.lang.Object
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
 - function: javax.servlet.jsp.JspWriter#println
   signature: (char[]) void
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .java.io.Writer#buffer#java.lang.Object
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .java.lang.Appendable#buffer#java.lang.Object
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .javax.servlet.jsp.JspWriter#buffer#java.lang.Object
