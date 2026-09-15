@@ -1151,6 +1151,13 @@ passThrough:
     - this
     - .org.springframework.core.io.FileSystemResource#file#java.io.File
     - .java.io.File#uri#java.net.URI
+- function: org.springframework.util.StringUtils#arrayToCommaDelimitedString
+  bypassVerification: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: org.springframework.core.io.UrlResource#getURI
   signature: () java.net.URI
   copy:
@@ -1192,13 +1199,6 @@ passThrough:
     to:
     - result
     - '[*]'
-- function: org.springframework.util.StringUtils#arrayToCommaDelimitedString
-  bypassVerification: true
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: org.springframework.util.MultiValueMapAdapter#<init>
   overrides: false
   copy:

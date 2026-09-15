@@ -19,6 +19,11 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+- function: javax.xml.transform.dom.DOMResult#setNextSibling
+  signature: (org.w3c.dom.Node) void
+  copy:
+  - from: arg(0)
+    to: this
 - function:
     package: javax.xml.transform.dom
     class: DOMResult
@@ -130,6 +135,24 @@ passThrough:
     to:
     - this
     - .javax.xml.transform.dom.DOMSource#node#org.w3c.dom.Node
+- function: javax.xml.transform.dom.DOMResult#getNextSibling
+  signature: () org.w3c.dom.Node
+  copy:
+  - from: this
+    to: result
+  - from:
+    - this
+    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
+    to:
+    - result
+    - .org.w3c.dom.Node#nodeValue#java.lang.String
+  - from:
+    - this
+    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
+    - .org.w3c.dom.Node#nodeValue#java.lang.String
+    to:
+    - result
+    - .org.w3c.dom.Node#nodeValue#java.lang.String
 - function: javax.xml.transform.dom.DOMResult#setNode
   signature:
     params:
@@ -162,32 +185,9 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: javax.xml.transform.dom.DOMResult#getNextSibling
-  signature: () org.w3c.dom.Node
-  copy:
-  - from: this
-    to: result
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#systemId#java.lang.String
-    to:
-    - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
-  - from:
-    - this
-    - .javax.xml.transform.dom.DOMResult#node#org.w3c.dom.Node
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
-    to:
-    - result
-    - .org.w3c.dom.Node#nodeValue#java.lang.String
 - function: javax.xml.transform.dom.DOMSource#<init>
   signature: (org.w3c.dom.Node, java.lang.String) void
   taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
-- function: javax.xml.transform.dom.DOMResult#setNextSibling
-  signature: (org.w3c.dom.Node) void
   copy:
   - from: arg(0)
     to: this

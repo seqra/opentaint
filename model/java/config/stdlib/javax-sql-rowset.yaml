@@ -292,13 +292,6 @@ passThrough:
     to:
     - this
     - .javax.sql.rowset.CachedRowSet#tableName#java.lang.String
-- function: javax.sql.rowset.CachedRowSet#getTableName
-  signature: () java.lang.String
-  copy:
-  - from:
-    - this
-    - .javax.sql.rowset.CachedRowSet#tableName#java.lang.String
-    to: result
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: (java.lang.String) java.util.Collection
   taintCopyOnly: true
@@ -342,4 +335,11 @@ passThrough:
   signature: () javax.sql.rowset.CachedRowSet
   copy:
   - from: this
+    to: result
+- function: javax.sql.rowset.CachedRowSet#getTableName
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.sql.rowset.CachedRowSet#tableName#java.lang.String
     to: result

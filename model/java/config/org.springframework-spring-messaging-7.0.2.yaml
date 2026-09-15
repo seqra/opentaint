@@ -27,6 +27,12 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#toMap
+  copy:
+  - from:
+    - this
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
+    to: result
 - function:
     package: org.springframework.messaging.support
     class: MessageHeaderAccessor
@@ -51,6 +57,12 @@ passThrough:
     - this
     - .org.springframework.messaging.support.GenericMessage#content#java.lang.Object
 - function: org.springframework.messaging.support.MessageHeaderAccessor#toMessageHeaders
+  copy:
+  - from:
+    - this
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#getMessageHeaders
   copy:
   - from:
     - this
@@ -114,6 +126,16 @@ passThrough:
     to:
     - this
     - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaderName#java.lang.String
+- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#setNativeHeader
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
+  - from: arg(1)
+    to:
+    - this
+    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#getFirstNativeHeader
   copy:
   - from:
@@ -150,18 +172,18 @@ passThrough:
     - .org.springframework.messaging.support.MessageHeaderAccessor#headerValue#java.lang.Object
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getMessageHeaders
-  copy:
-  - from:
-    - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
-    to: result
-- function: org.springframework.messaging.support.MessageHeaderAccessor#getMessageHeaders
   signature:
     return: org.springframework.messaging.MessageHeaders
   copy:
   - from:
     - this
     - .org.springframework.messaging.support.MessageHeaderAccessor#messageHeaders#org.springframework.messaging.MessageHeaders
+    to: result
+- function: org.springframework.messaging.support.MessageHeaderAccessor#getHeader
+  copy:
+  - from:
+    - this
+    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
     to: result
 - function: org.springframework.messaging.support.MessageHeaderAccessor#getAccessor
   signature:
@@ -217,16 +239,6 @@ passThrough:
     to:
     - result
     - .org.springframework.messaging.support.MessageHeaderAccessor#headerName#java.lang.String
-- function: org.springframework.messaging.support.NativeMessageHeaderAccessor#setNativeHeader
-  copy:
-  - from: arg(0)
-    to:
-    - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
-  - from: arg(1)
-    to:
-    - this
-    - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaders#java.util.Map
 - function: org.springframework.messaging.support.ErrorMessage#getOriginalMessage
   signature: () org.springframework.messaging.Message
   copy:
@@ -289,12 +301,6 @@ passThrough:
     to:
     - this
     - .org.springframework.messaging.support.NativeMessageHeaderAccessor#nativeHeaderName#java.lang.String
-- function: org.springframework.messaging.support.MessageHeaderAccessor#toMap
-  copy:
-  - from:
-    - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
-    to: result
 - function: org.springframework.messaging.support.NativeMessageHeaderAccessor#addNativeHeader
   signature:
     params:
@@ -315,12 +321,6 @@ passThrough:
     to:
     - this
     - .org.springframework.messaging.support.GenericMessage#headers#org.springframework.messaging.MessageHeaders
-- function: org.springframework.messaging.support.MessageHeaderAccessor#getHeader
-  copy:
-  - from:
-    - this
-    - .org.springframework.messaging.support.MessageHeaderAccessor#headerMap#java.util.Map
-    to: result
 - function: org.springframework.messaging.support.ErrorMessage#<init>
   taintCopyOnly: true
   copy:

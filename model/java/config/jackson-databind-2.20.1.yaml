@@ -1,20 +1,6 @@
 language: java
 library: com.fasterxml.jackson.core:jackson-databind:2.20.1
 passThrough:
-- function: com.fasterxml.jackson.databind.util.TokenBuffer#writeBinary
-  signature: (com.fasterxml.jackson.core.Base64Variant, byte[], int, int) void
-  copy:
-  - from: arg(1)
-    to:
-    - this
-    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
-  - from:
-    - arg(1)
-    - '[*]'
-    to:
-    - this
-    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
-    - '[*]'
 - function: com.fasterxml.jackson.databind.JsonNode#textValue
   copy:
   - from: this
@@ -133,22 +119,6 @@ passThrough:
     - .com.fasterxml.jackson.databind.node.ObjectNode#fields#java.lang.Object
   - from: arg(0)
     to: this
-- function: com.fasterxml.jackson.databind.ObjectReader#readValue
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: com.fasterxml.jackson.databind.ObjectReader#readValue
   signature:
     params:
@@ -320,18 +290,6 @@ passThrough:
     - .com.fasterxml.jackson.databind.node.ArrayNode#elements#java.lang.Object
   - from: arg(1)
     to: this
-- function: com.fasterxml.jackson.databind.ObjectReader#readTree
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: com.fasterxml.jackson.databind.node.TextNode#textValue
   copy:
   - from: this
@@ -828,18 +786,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: com.fasterxml.jackson.databind.ObjectMapper#readTree
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: com.fasterxml.jackson.databind.ObjectMapper#convertValue
   copy:
   - from: arg(0)
@@ -855,24 +801,6 @@ passThrough:
 - function: com.fasterxml.jackson.databind.ObjectMapper#treeAsTokens
   copy:
   - from: arg(0)
-    to: result
-- function: com.fasterxml.jackson.databind.ObjectReader#readValues
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to:
-    - result
-    - .java.util.Iterator#Element#java.lang.Object
-  - from:
-    - arg(0)
-    - '[*]'
     to: result
 - function: com.fasterxml.jackson.databind.node.POJONode#<init>
   copy:
@@ -1593,22 +1521,6 @@ passThrough:
     - this
     - .com.fasterxml.jackson.databind.node.POJONode#content#java.lang.Object
     to: result
-- function: com.fasterxml.jackson.databind.ObjectMapper#readValue
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - .java.lang.String#<serialized-value>#java.lang.Object
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: com.fasterxml.jackson.databind.node.TextNode#valueOf
   copy:
   - from: arg(0)
@@ -1656,4 +1568,92 @@ passThrough:
   - from:
     - this
     - .com.fasterxml.jackson.databind.util.TokenBuffer$Parser#buffer#java.lang.Object
+    to: result
+- function: com.fasterxml.jackson.databind.util.TokenBuffer#writeBinary
+  signature: (com.fasterxml.jackson.core.Base64Variant, byte[], int, int) void
+  copy:
+  - from: arg(1)
+    to:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .com.fasterxml.jackson.databind.util.TokenBuffer#binaryContent#byte[]
+    - '[*]'
+- function: com.fasterxml.jackson.databind.ObjectReader#readValue
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - .java.lang.String#<serialized-value>#java.lang.Object
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: com.fasterxml.jackson.databind.ObjectReader#readTree
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: com.fasterxml.jackson.databind.ObjectMapper#readTree
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: com.fasterxml.jackson.databind.ObjectReader#readValues
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - .java.lang.String#<serialized-value>#java.lang.Object
+    to:
+    - result
+    - .java.util.Iterator#Element#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: com.fasterxml.jackson.databind.ObjectMapper#readValue
+  signature:
+    params:
+    - index: 0
+      type: byte[]
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - .java.lang.String#<serialized-value>#java.lang.Object
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result

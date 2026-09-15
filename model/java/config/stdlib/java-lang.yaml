@@ -314,20 +314,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.lang.String#getChars
-  signature:
-    params:
-    - index: 0
-      type: int
-    - index: 1
-      type: int
-    - index: 2
-      type: char[]
-    - index: 3
-      type: int
-  copy:
-  - from: this
-    to: arg(2)
 - function: java.lang.String#<init>
   signature: (byte[], int) void
   copy:
@@ -364,19 +350,6 @@ passThrough:
   copy:
   - from: arg(*)
     to: this
-- function: java.lang.String#valueOf
-  signature:
-    params:
-    - index: 0
-      type: char[]
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
 - function: java.lang.ProcessBuilder#start
   signature: (java.lang.ProcessBuilder$Redirect[]) java.lang.Process
   taintCopyOnly: true
@@ -795,21 +768,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.lang.String#getChars
-  signature:
-    params:
-    - index: 0
-      type: int
-    - index: 1
-      type: int
-    - index: 2
-      type: char[]
-    - index: 3
-      type: int
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: arg(2)
 - function:
     package: java.lang
     class: String
@@ -840,20 +798,6 @@ passThrough:
     to:
     - this
     - .java.lang.Throwable#message#java.lang.String
-- function: java.lang.String#getBytes
-  signature:
-    params:
-    - index: 0
-      type: int
-    - index: 1
-      type: int
-    - index: 2
-      type: byte[]
-    - index: 3
-      type: int
-  copy:
-  - from: this
-    to: arg(2)
 - function: java.lang.String#getBytes
   signature: (int, int, byte[], int) void
   copy:
@@ -996,14 +940,6 @@ passThrough:
     to:
     - this
     - .java.lang.AssertionError#detail#java.lang.Object
-- function: java.lang.AssertionError#getMessage
-  signature: () java.lang.String
-  overrides: false
-  copy:
-  - from:
-    - this
-    - .java.lang.AssertionError#detail#java.lang.Object
-    to: result
 - function: java.lang.System#mapLibraryName
   signature: (java.lang.String) java.lang.String
   taintCopyOnly: true
@@ -1167,24 +1103,12 @@ passThrough:
     - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.Throwable#<init>
   signature: (java.lang.String) void
+  overrides: false
   copy:
   - from: arg(0)
-    to: this
-- function: java.lang.String#getBytes
-  signature:
-    params:
-    - index: 0
-      type: int
-    - index: 1
-      type: int
-    - index: 2
-      type: byte[]
-    - index: 3
-      type: int
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: arg(2)
+    to:
+    - this
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.lang.System#mapLibraryName
   signature:
     return: java.lang.String
@@ -1349,12 +1273,9 @@ passThrough:
     to: this
 - function: java.lang.Throwable#<init>
   signature: (java.lang.String) void
-  overrides: false
   copy:
   - from: arg(0)
-    to:
-    - this
-    - .java.lang.Throwable#message#java.lang.String
+    to: this
 - function: java.lang.Throwable#initCause
   signature: (*) java.lang.Throwable
   copy:
@@ -1465,6 +1386,85 @@ passThrough:
   copy:
   - from: this
     to: result
+- function: java.lang.String#getChars
+  signature:
+    params:
+    - index: 0
+      type: int
+    - index: 1
+      type: int
+    - index: 2
+      type: char[]
+    - index: 3
+      type: int
+  copy:
+  - from: this
+    to: arg(2)
+- function: java.lang.String#valueOf
+  signature:
+    params:
+    - index: 0
+      type: char[]
+  taintCopyOnly: true
+  copy:
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
+- function: java.lang.String#getChars
+  signature:
+    params:
+    - index: 0
+      type: int
+    - index: 1
+      type: int
+    - index: 2
+      type: char[]
+    - index: 3
+      type: int
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: arg(2)
+- function: java.lang.String#getBytes
+  signature:
+    params:
+    - index: 0
+      type: int
+    - index: 1
+      type: int
+    - index: 2
+      type: byte[]
+    - index: 3
+      type: int
+  copy:
+  - from: this
+    to: arg(2)
+- function: java.lang.AssertionError#getMessage
+  signature: () java.lang.String
+  overrides: false
+  copy:
+  - from:
+    - this
+    - .java.lang.AssertionError#detail#java.lang.Object
+    to: result
+- function: java.lang.String#getBytes
+  signature:
+    params:
+    - index: 0
+      type: int
+    - index: 1
+      type: int
+    - index: 2
+      type: byte[]
+    - index: 3
+      type: int
+  taintCopyOnly: true
+  copy:
+  - from: this
+    to: arg(2)
 - function: java.lang.Integer#intValue
   signature: () int
   copy:
