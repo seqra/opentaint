@@ -7,7 +7,7 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.logging.Logger#name#java.lang.Object
+    - .java.util.logging.Logger#name#java.lang.String
 - function: java.util.logging.LogRecord#<init>
   signature: (java.util.logging.Level, java.lang.String) void
   copy:
@@ -24,27 +24,27 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.Object
+    - .java.util.logging.LogRecord#message#java.lang.String
     to:
     - result
-    - .java.lang.Throwable#message#java.lang.Object
+    - .java.lang.Throwable#message#java.lang.String
 - function: java.util.logging.Logger#getName
   signature: () java.lang.String
   overrides: false
   copy:
   - from:
     - this
-    - .java.util.logging.Logger#name#java.lang.Object
+    - .java.util.logging.Logger#name#java.lang.String
     to: result
 - function: java.util.logging.LogRecord#setLongThreadID
   signature: (*) java.util.logging.LogRecord
   copy:
   - from:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.Object
+    - .java.util.logging.LogRecord#message#java.lang.String
     to:
     - result
-    - .java.util.logging.LogRecord#message#java.lang.Object
+    - .java.util.logging.LogRecord#message#java.lang.String
 - function: java.util.logging.LogRecord#<init>
   signature:
     params:
@@ -54,4 +54,4 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.util.logging.LogRecord#message#java.lang.Object
+    - .java.util.logging.LogRecord#message#java.lang.String

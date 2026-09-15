@@ -322,7 +322,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.databind.node.ObjectNode#retain
   copy:
@@ -635,7 +635,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.databind.node.BinaryNode#asToken
@@ -1153,7 +1153,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.databind.util.TokenBuffer$Segment#get
   copy:
@@ -1187,7 +1187,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.databind.ObjectReader#readValues
   signature:
@@ -1411,7 +1411,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.databind.node.MissingNode#asText
   copy:
@@ -1449,7 +1449,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.Object
+    - .com.fasterxml.jackson.databind.node.TextNode#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.databind.ObjectReader#writeValue
   copy:

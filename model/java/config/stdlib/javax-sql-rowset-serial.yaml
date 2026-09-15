@@ -20,7 +20,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.sql.rowset.serial.SerialDatalink#url#java.lang.Object
+    - .javax.sql.rowset.serial.SerialDatalink#url#java.net.URL
 - function: javax.sql.rowset.serial.SerialJavaObject#getFields
   signature: () java.lang.reflect.Field[]
   copy:
@@ -51,7 +51,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.sql.rowset.serial.SerialDatalink#url#java.lang.Object
+    - .javax.sql.rowset.serial.SerialDatalink#url#java.net.URL
     to: result
 - function: javax.sql.rowset.serial.SerialJavaObject#getObject
   signature: () java.lang.Object

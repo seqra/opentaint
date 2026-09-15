@@ -105,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: arg(0)
   - from: this
     to: arg(0)
@@ -144,7 +144,7 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .com.fasterxml.jackson.core.Base64Variant#content#java.lang.Object
+    - .com.fasterxml.jackson.core.Base64Variant#content#java.lang.String
 - function: com.fasterxml.jackson.core.base.ParserMinimalBase#getBinaryValue
   copy:
   - from: this
@@ -159,7 +159,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.core.util.JsonGeneratorDelegate#copyCurrentEvent
   copy:
@@ -193,7 +193,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: arg(0)
   - from: this
     to: arg(0)
@@ -211,7 +211,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.core.base.ParserMinimalBase#getCurrentToken
   copy:
@@ -548,7 +548,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.core.io.MergedStream#read
@@ -580,7 +580,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.core.Base64Variant#<init>
@@ -594,7 +594,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.Base64Variant#content#java.lang.Object
+    - .com.fasterxml.jackson.core.Base64Variant#content#java.lang.String
 - function: com.fasterxml.jackson.core.JsonFactory#createJsonParser
   signature:
     params:
@@ -799,7 +799,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.core.JsonParser#nextValue
   copy:
@@ -814,7 +814,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.core.JsonGenerator#writeRaw
@@ -1056,14 +1056,14 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.core.SerializableString#putQuotedUTF8
   copy:
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: arg(0)
   - from: this
     to: arg(0)
@@ -1117,7 +1117,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: result
 - function: com.fasterxml.jackson.core.JsonGenerator#writeString
   copy:
@@ -1190,7 +1190,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
   - from: arg(0)
     to: this
 - function: com.fasterxml.jackson.core.base.ParserMinimalBase#nextValue
@@ -1221,7 +1221,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.Object
+    - .com.fasterxml.jackson.core.SerializableString#value#java.lang.String
     to: arg(0)
   - from: this
     to: arg(0)

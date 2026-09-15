@@ -6,7 +6,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.http.entity.mime.content.FileBody#path#java.lang.Object
+    - .org.apache.http.entity.mime.content.FileBody#path#java.io.File
   - from: arg(0)
     to: this
 - function: org.apache.http.entity.mime.FormBodyPart#addField

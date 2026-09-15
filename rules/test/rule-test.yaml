@@ -69,6 +69,8 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#rdnTypeUnsafe
       - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleUnsafe
       - security.passthrough.PassthroughValueFlowSamples#referenceClassNameUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#qNameLocalPartUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#qNamePrefixUnsafe
       - security.passthrough.PassthroughValueFlowSamples#httpHeadersUnsafe
       - security.passthrough.PassthroughServletAccessorSamples$RequestUriServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$QueryStringServlet#doGet
@@ -173,6 +175,8 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#rdnTypeSafe
       - security.passthrough.PassthroughValueFlowSamples#sortKeyMatchingRuleSafe
       - security.passthrough.PassthroughValueFlowSamples#referenceClassNameSafe
+      - security.passthrough.PassthroughValueFlowSamples#qNameNamespaceDoesNotReachLocalPartSafe
+      - security.passthrough.PassthroughValueFlowSamples#qNamePrefixDoesNotReachNamespaceSafe
       - security.passthrough.PassthroughValueFlowSamples#httpHeadersSafe
       - security.passthrough.PassthroughServletAccessorSamples$SafeAccessorsServlet#doGet
   - rule-id: java/security/crlf-injection.yaml#http-response-splitting

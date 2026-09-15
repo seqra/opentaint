@@ -7,7 +7,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#class#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#class#java.lang.Class
     to: result
 - function: org.apache.hadoop.fs.FileSystem#setDefaultUri
   copy:
@@ -69,7 +69,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.String
     to: result
 - function: org.apache.hadoop.io.BytesWritable#getBytes
   copy:
@@ -93,7 +93,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#parent#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#parent#org.apache.hadoop.net.Node
     to: result
 - function: org.apache.hadoop.fs.DF#getFilesystem
   copy:
@@ -119,7 +119,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -143,7 +143,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -157,13 +157,13 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.fs.FileStatus#getPermission
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -229,13 +229,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.net.NodeBase#name#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#name#java.lang.String
     to: result
 - function: org.apache.hadoop.fs.FileStatus#getOwner
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -247,7 +247,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.conf.Configuration#getResource
   copy:
@@ -282,7 +282,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.ClassLoader
 - function: org.apache.hadoop.io.BytesWritable#set
   copy:
   - from: arg(0)
@@ -334,7 +334,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.String
 - function: org.apache.hadoop.io.GenericWritable#get
   copy:
   - from: this
@@ -387,7 +387,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -517,7 +517,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -571,7 +571,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#value#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#value#java.lang.String
     to: arg(0)
 - function: org.apache.hadoop.io.MapFile$Reader#midKey
   copy:
@@ -590,11 +590,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
   - from: arg(1)
     to:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -631,7 +631,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.io.ByteWritable#set
   copy:
@@ -663,7 +663,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -679,13 +679,13 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.conf.Configuration#iterator
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.fs.LocalDirAllocator#getLocalPathForWrite
   copy:
@@ -710,15 +710,15 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#name#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#name#java.lang.String
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#parent#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#parent#org.apache.hadoop.net.Node
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#networkLocation#java.lang.String
 - function:
     package: org.apache.hadoop.io
     class: MapFile$Writer
@@ -804,7 +804,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.hadoop.net.NodeBase#parent#java.lang.Object
+    - .org.apache.hadoop.net.NodeBase#parent#org.apache.hadoop.net.Node
 - function: org.apache.hadoop.io.ByteWritable#get
   copy:
   - from:
@@ -817,7 +817,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#classLoader#java.lang.ClassLoader
     to: result
 - function: org.apache.hadoop.fs.FileSystem#getFileChecksum
   copy:
@@ -827,7 +827,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.conf.Configuration#properties#java.lang.Object
+    - .org.apache.hadoop.conf.Configuration#properties#java.util.Properties
     to: result
 - function: org.apache.hadoop.io.UTF8#write
   copy:
@@ -859,7 +859,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result
@@ -914,7 +914,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.hadoop.fs.FileStatus#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileStatus#path#org.apache.hadoop.fs.Path
   - from: arg(*)
     to: this
 - function: org.apache.hadoop.net.DNS#getIPs
@@ -925,7 +925,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.hadoop.fs.FileSystem#path#java.lang.Object
+    - .org.apache.hadoop.fs.FileSystem#path#org.apache.hadoop.fs.Path
     to: result
   - from: this
     to: result

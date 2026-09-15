@@ -37,34 +37,26 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#disposition#java.lang.Object
+    - .javax.mail.Part#disposition#java.lang.String
     to: result
 - function: javax.mail.Multipart#getParent
   signature: () javax.mail.Part
   copy:
   - from:
     - this
-    - .javax.mail.Multipart#parent#java.lang.Object
+    - .javax.mail.Multipart#parent#javax.mail.Part
     to: result
 - function: javax.mail.Header#<init>
   signature: (java.lang.String, java.lang.String) void
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Header#content#java.lang.Object
+    - .javax.mail.Header#value#java.lang.String
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Header#content#java.lang.Object
-  - from: arg(1)
-    to: this
-  - from: arg(0)
-    to: this
+    - .javax.mail.Header#name#java.lang.String
 - function: javax.mail.Folder#list
   signature: () javax.mail.Folder[]
   copy:
@@ -75,81 +67,41 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#fileName#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#text#java.lang.Object
+    - .javax.mail.Part#text#java.lang.String
     to: result
   - from:
     - this
     - .javax.mail.Part#content#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#contentType#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#description#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#disposition#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#headers#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#inputStream#java.lang.Object
     to: result
 - function: javax.mail.Message#getReplyTo
   signature: () javax.mail.Address[]
   copy:
   - from:
     - this
-    - .javax.mail.Message#replyTo#java.lang.Object
+    - .javax.mail.Message#replyTo#javax.mail.Address[]
     to: result
   - from:
     - this
-    - .javax.mail.Part#replyTo#java.lang.Object
+    - .javax.mail.Part#replyTo#javax.mail.Address[]
     to: result
 - function: javax.mail.Part#getInputStream
   signature: () java.io.InputStream
   copy:
   - from:
     - this
-    - .javax.mail.Part#fileName#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#text#java.lang.Object
-    to: result
+    - .javax.mail.Part#text#java.lang.String
+    to:
+    - result
+    - .java.io.InputStream#buffer#java.lang.Object
   - from:
     - this
     - .javax.mail.Part#content#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.io.InputStream#buffer#java.lang.Object
   - from:
     - this
-    - .javax.mail.Part#contentType#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#description#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#disposition#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#headers#java.lang.Object
-    to: result
-  - from:
-    - this
-    - .javax.mail.Part#inputStream#java.lang.Object
+    - .javax.mail.Part#inputStream#java.io.InputStream
     to: result
 - function: javax.mail.Folder#getMessage
   signature: (int) javax.mail.Message
@@ -166,11 +118,11 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Message#recipients#java.lang.Object
+    - .javax.mail.Message#recipients#javax.mail.Address[]
     to: result
   - from:
     - this
-    - .javax.mail.Part#recipients#java.lang.Object
+    - .javax.mail.Part#recipients#javax.mail.Address[]
     to: result
 - function: javax.mail.Folder#search
   signature: (javax.mail.search.SearchTerm) javax.mail.Message[]
@@ -197,20 +149,18 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Header#content#java.lang.Object
-    to: result
-  - from: this
+    - .javax.mail.Header#name#java.lang.String
     to: result
 - function: javax.mail.Message#getFrom
   signature: () javax.mail.Address[]
   copy:
   - from:
     - this
-    - .javax.mail.Message#from#java.lang.Object
+    - .javax.mail.Message#from#javax.mail.Address[]
     to: result
   - from:
     - this
-    - .javax.mail.Part#from#java.lang.Object
+    - .javax.mail.Part#from#javax.mail.Address[]
     to: result
 - function: javax.mail.Part#getAllHeaders
   signature: () java.util.Enumeration
@@ -218,26 +168,26 @@ passThrough:
   - from:
     - this
     - .javax.mail.Part#headers#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.util.Enumeration#Element#java.lang.Object
 - function: javax.mail.Message#getFolder
   signature: () javax.mail.Folder
   copy:
   - from:
     - this
-    - .javax.mail.Message#folder#java.lang.Object
+    - .javax.mail.Message#folder#javax.mail.Folder
     to: result
   - from:
     - this
-    - .javax.mail.Part#folder#java.lang.Object
+    - .javax.mail.Part#folder#javax.mail.Folder
     to: result
 - function: javax.mail.Header#getValue
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.mail.Header#content#java.lang.Object
-    to: result
-  - from: this
+    - .javax.mail.Header#value#java.lang.String
     to: result
 - function: javax.mail.Folder#getURLName
   signature: () javax.mail.URLName
@@ -250,7 +200,9 @@ passThrough:
   - from:
     - this
     - .javax.mail.Part#headers#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.util.Enumeration#Element#java.lang.Object
 - function: javax.mail.Folder#getParent
   signature: () javax.mail.Folder
   copy:
@@ -267,7 +219,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#fileName#java.lang.Object
+    - .javax.mail.Part#fileName#java.lang.String
     to: result
 - function: javax.mail.Folder#getFullName
   signature: () java.lang.String
@@ -286,32 +238,38 @@ passThrough:
   - from:
     - this
     - .javax.mail.Part#headers#java.lang.Object
-    to: result
+    to:
+    - result
+    - .java.util.Enumeration#Element#java.lang.Object
 - function: javax.mail.Part#getHeader
   signature: (java.lang.String) java.lang.String[]
   copy:
   - from:
     - this
     - .javax.mail.Part#headers#java.lang.Object
-    to: result
+    to:
+    - result
+    - '[*]'
 - function: javax.mail.Part#setText
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
     to:
     - this
-    - .javax.mail.Part#text#java.lang.Object
+    - .javax.mail.Part#text#java.lang.String
 - function: javax.mail.Message#addRecipient
   signature: (javax.mail.Message$RecipientType, javax.mail.Address) void
   copy:
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Part#recipients#java.lang.Object
+    - .javax.mail.Part#recipients#javax.mail.Address[]
+    - '[*]'
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Message#recipients#java.lang.Object
+    - .javax.mail.Message#recipients#javax.mail.Address[]
+    - '[*]'
 - function:
     package: javax.mail
     class: Multipart
@@ -329,36 +287,36 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.mail.Part#description#java.lang.Object
+    - .javax.mail.Part#description#java.lang.String
     to: result
 - function: javax.mail.Message#getSubject
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.mail.Message#subject#java.lang.Object
+    - .javax.mail.Message#subject#java.lang.String
     to: result
   - from:
     - this
-    - .javax.mail.Part#subject#java.lang.Object
+    - .javax.mail.Part#subject#java.lang.String
     to: result
 - function: javax.mail.Part#getContentType
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .javax.mail.Part#contentType#java.lang.Object
+    - .javax.mail.Part#contentType#java.lang.String
     to: result
 - function: javax.mail.Message#getRecipients
   signature: (javax.mail.Message$RecipientType) javax.mail.Address[]
   copy:
   - from:
     - this
-    - .javax.mail.Message#recipients#java.lang.Object
+    - .javax.mail.Message#recipients#javax.mail.Address[]
     to: result
   - from:
     - this
-    - .javax.mail.Part#recipients#java.lang.Object
+    - .javax.mail.Part#recipients#javax.mail.Address[]
     to: result
 - function: javax.mail.Folder#listSubscribed
   signature: (java.lang.String) javax.mail.Folder[]
@@ -393,17 +351,18 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Part#recipients#java.lang.Object
+    - .javax.mail.Part#recipients#javax.mail.Address[]
   - from: arg(1)
     to:
     - this
-    - .javax.mail.Message#recipients#java.lang.Object
+    - .javax.mail.Message#recipients#javax.mail.Address[]
   - from:
     - arg(1)
     - '[*]'
     to:
     - this
-    - .javax.mail.Message#recipients#java.lang.Object
+    - .javax.mail.Message#recipients#javax.mail.Address[]
+    - '[*]'
 - function: javax.mail.Folder#getName
   signature: () java.lang.String
   copy:

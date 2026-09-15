@@ -27,7 +27,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.xml.bind.JAXBElement#name#java.lang.Object
+    - .javax.xml.bind.JAXBElement#name#javax.xml.namespace.QName
     to: result
 - function: javax.xml.bind.JAXBElement#setValue
   copy:

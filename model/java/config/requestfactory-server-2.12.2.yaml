@@ -19,13 +19,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.String
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#setPath
   copy:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.String
 - function:
     package: com.google.web.bindery.requestfactory.shared
     class: EntityProxy
@@ -43,7 +43,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#path#java.lang.String
     to: result
 - function:
     package: com.google.web.bindery.requestfactory.shared
@@ -75,17 +75,17 @@ passThrough:
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.String
     to: result
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#setMessageTemplate
   copy:
   - from: arg(0)
     to:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#messageTemplate#java.lang.String
 - function: com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#getMessage
   copy:
   - from:
     - this
-    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.Object
+    - .com.google.web.bindery.requestfactory.shared.messages.ViolationMessage#message#java.lang.String
     to: result

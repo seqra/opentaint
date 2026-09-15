@@ -105,7 +105,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.wicket.Component#markupId#java.lang.Object
+    - .org.apache.wicket.Component#markupId#java.lang.String
     to: result
 - function: org.apache.wicket.Component#render
   copy:
@@ -123,7 +123,7 @@ passThrough:
     to: result
   - from:
     - this
-    - .org.apache.wicket.Component#markupId#java.lang.Object
+    - .org.apache.wicket.Component#markupId#java.lang.String
     to: result
 - function: org.apache.wicket.Component#setDefaultModel
   copy:
@@ -184,11 +184,11 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#markupId#java.lang.Object
+    - .org.apache.wicket.Component#markupId#java.lang.String
   - from: arg(*)
     to:
     - this
-    - .org.apache.wicket.Component#markupStream#java.lang.Object
+    - .org.apache.wicket.Component#markupStream#org.apache.wicket.markup.MarkupStream
   - from: arg(*)
     to:
     - this
