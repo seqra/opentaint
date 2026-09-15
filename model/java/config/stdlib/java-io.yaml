@@ -148,12 +148,8 @@ passThrough:
 - function: java.io.File#getCanonicalFile
   signature: () java.io.File
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to:
-    - result
-    - .java.io.File#path#java.lang.String
+  - from: this
+    to: result
 - function: java.io.File#getAbsolutePath
   signature: () java.lang.String
   copy:
@@ -268,12 +264,8 @@ passThrough:
 - function: java.io.File#getAbsoluteFile
   signature: () java.io.File
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to:
-    - result
-    - .java.io.File#path#java.lang.String
+  - from: this
+    to: result
 - function: java.io.File#getCanonicalPath
   signature: () java.lang.String
   copy:
@@ -293,7 +285,7 @@ passThrough:
   copy:
   - from:
     - arg(0)
-    - .java.net.URI#value#java.lang.String
+    - .java.net.URI#path#java.lang.String
     to:
     - this
     - .java.io.File#path#java.lang.String
@@ -336,12 +328,8 @@ passThrough:
 - function: java.io.File#getParentFile
   signature: () java.io.File
   copy:
-  - from:
-    - this
-    - .java.io.File#path#java.lang.String
-    to:
-    - result
-    - .java.io.File#path#java.lang.String
+  - from: this
+    to: result
 - function: java.io.File#toPath
   signature: () java.nio.file.Path
   copy:
@@ -371,9 +359,7 @@ passThrough:
   - from:
     - this
     - .java.io.File#path#java.lang.String
-    to:
-    - result
-    - .java.net.URI#value#java.lang.String
+    to: result
 - function: java.io.ByteArrayOutputStream#write
   signature: (int) void
   taintCopyOnly: true

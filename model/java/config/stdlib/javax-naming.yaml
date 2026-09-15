@@ -196,12 +196,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.naming.Name#components#java.util.Enumeration
-    to:
-    - result
-    - .javax.naming.Name#components#java.util.Enumeration
 - function: javax.naming.CompositeName#getSuffix
   signature:
     return: javax.naming.Name
@@ -215,12 +209,6 @@ passThrough:
   copy:
   - from: this
     to: result
-  - from:
-    - this
-    - .javax.naming.Name#components#java.util.Enumeration
-    to:
-    - result
-    - .javax.naming.Name#components#java.util.Enumeration
 - function: javax.naming.CompoundName#<init>
   signature:
     params:

@@ -6,6 +6,5 @@ tasks {
     withType<JavaCompile> {
         sourceCompatibility = JavaVersion.VERSION_1_8.toString()
         targetCompatibility = JavaVersion.VERSION_1_8.toString()
-        options.encoding = "UTF-8"
     }
 }

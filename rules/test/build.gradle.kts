@@ -10,10 +10,6 @@ allprojects {
 
     apply(plugin = "java")
 
-    tasks.withType<JavaCompile>().configureEach {
-        options.encoding = "UTF-8"
-    }
-
     dependencies {
         // Servlet + OGNL + Groovy dependencies for rule samples
         implementation("javax.servlet:javax.servlet-api:4.0.1")

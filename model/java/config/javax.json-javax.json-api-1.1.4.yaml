@@ -4,12 +4,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, java.math.BigDecimal) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -32,12 +28,8 @@ passThrough:
   signature: (java.lang.String, javax.json.JsonObjectBuilder) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -86,12 +78,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (java.math.BigInteger) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -103,12 +91,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, java.math.BigDecimal) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -148,12 +132,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, java.lang.String) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -190,12 +170,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, javax.json.JsonValue) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -232,21 +208,13 @@ passThrough:
   signature: () javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.stream.JsonGenerator#writeStartArray
   signature: (java.lang.String) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -258,12 +226,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (double) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -275,12 +239,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, boolean) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -300,12 +260,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, boolean) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -317,12 +273,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, long) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -368,12 +320,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.math.BigDecimal) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -396,12 +344,8 @@ passThrough:
   signature: (java.math.BigDecimal) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -419,12 +363,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, javax.json.JsonValue) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -445,12 +385,8 @@ passThrough:
   signature: (int, java.math.BigDecimal) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -480,12 +416,8 @@ passThrough:
   signature: (int, double) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -497,12 +429,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, long) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -533,12 +461,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, java.lang.String) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -558,12 +482,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, java.math.BigDecimal) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -583,22 +503,14 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeEnd
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonArrayBuilder#set
   signature: (int, javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -631,12 +543,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, int) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -655,12 +563,8 @@ passThrough:
   signature: (int, int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -678,12 +582,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeNull
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonReader#readArray
   signature: () javax.json.JsonArray
   copy:
@@ -692,12 +592,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, java.math.BigInteger) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -718,12 +614,8 @@ passThrough:
   signature: (int, long) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -736,12 +628,8 @@ passThrough:
   signature: (java.lang.String, javax.json.JsonArrayBuilder) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -765,12 +653,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (javax.json.JsonValue) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -782,12 +666,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, javax.json.JsonArrayBuilder) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -812,22 +692,14 @@ passThrough:
   signature: (java.lang.String) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, java.math.BigInteger) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -848,12 +720,8 @@ passThrough:
   signature: (long) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -866,12 +734,8 @@ passThrough:
   signature: (int, javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -888,12 +752,8 @@ passThrough:
   signature: (int, javax.json.JsonValue) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -905,12 +765,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (long) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -923,12 +779,8 @@ passThrough:
   signature: (int, java.lang.String) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -940,12 +792,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (long) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -958,12 +806,8 @@ passThrough:
   signature: (javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -979,12 +823,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.math.BigInteger) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -997,12 +837,8 @@ passThrough:
   signature: (java.lang.String, javax.json.JsonValue) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1023,12 +859,8 @@ passThrough:
   signature: (java.lang.String) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1041,12 +873,8 @@ passThrough:
   signature: (java.lang.String) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonPatchBuilder#move
   signature: (java.lang.String, java.lang.String) javax.json.JsonPatchBuilder
   overrides: false
@@ -1087,12 +915,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (java.lang.String) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1104,12 +928,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -1140,12 +960,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (javax.json.JsonValue) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1157,12 +973,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -1178,12 +990,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1202,12 +1010,8 @@ passThrough:
   signature: (javax.json.JsonValue) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1220,12 +1024,8 @@ passThrough:
   signature: (int, java.math.BigInteger) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1237,12 +1037,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, java.math.BigInteger) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1262,12 +1058,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, javax.json.JsonObjectBuilder) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1292,12 +1084,8 @@ passThrough:
   signature: (java.lang.String, java.lang.String) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1329,12 +1117,8 @@ passThrough:
   signature: (int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1347,12 +1131,8 @@ passThrough:
   signature: (javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -1369,12 +1149,8 @@ passThrough:
   signature: (java.lang.String, long) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1395,12 +1171,8 @@ passThrough:
   signature: (java.math.BigInteger) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1433,12 +1205,8 @@ passThrough:
   signature: (int, boolean) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1451,12 +1219,8 @@ passThrough:
   signature: (int, java.math.BigDecimal) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1483,12 +1247,8 @@ passThrough:
   signature: (double) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1501,12 +1261,8 @@ passThrough:
   signature: (javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -1529,12 +1285,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (java.math.BigDecimal) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1552,12 +1304,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, double) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1591,12 +1339,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, java.lang.String) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1609,12 +1353,8 @@ passThrough:
   signature: (int, long) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1627,12 +1367,8 @@ passThrough:
   signature: (java.lang.String, java.math.BigDecimal) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1652,12 +1388,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (double) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1670,30 +1402,18 @@ passThrough:
   signature: (int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.stream.JsonGenerator#writeStartObject
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -1722,12 +1442,8 @@ passThrough:
   signature: (int, javax.json.JsonObjectBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -1744,12 +1460,8 @@ passThrough:
   signature: (javax.json.JsonObjectBuilder) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(0)
     - .javax.json.JsonObjectBuilder#members#java.lang.Object
@@ -1779,22 +1491,14 @@ passThrough:
   signature: (int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, boolean) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1815,12 +1519,8 @@ passThrough:
   signature: (int, java.lang.String) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1833,12 +1533,8 @@ passThrough:
   signature: (int, javax.json.JsonValue) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1850,12 +1546,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (boolean) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1868,12 +1560,8 @@ passThrough:
   signature: (int, double) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -1898,12 +1586,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, int) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1923,12 +1607,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeStartArray
   signature: () javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonWriterFactory#createWriter
   signature: (java.io.OutputStream, java.nio.charset.Charset) javax.json.JsonWriter
   condition:
@@ -1944,12 +1624,8 @@ passThrough:
   signature: (java.lang.String, double) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -1969,12 +1645,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeNull
   signature: (java.lang.String) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2004,12 +1676,8 @@ passThrough:
   signature: (int, java.math.BigInteger) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2040,21 +1708,13 @@ passThrough:
   signature: (int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, double) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2088,12 +1748,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (boolean) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2105,12 +1761,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -2127,12 +1779,8 @@ passThrough:
   signature: (boolean) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2145,12 +1793,8 @@ passThrough:
   signature: (int, javax.json.JsonArrayBuilder) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from:
     - arg(1)
     - .javax.json.JsonArrayBuilder#elements#java.lang.Object
@@ -2166,12 +1810,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (int) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2183,12 +1823,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, java.math.BigInteger) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2211,12 +1847,8 @@ passThrough:
   signature: (int, int) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2228,12 +1860,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, javax.json.JsonValue) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2269,12 +1897,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2286,12 +1910,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#write
   signature: (java.lang.String, double) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2339,12 +1959,8 @@ passThrough:
   signature: (java.lang.String, int) javax.json.JsonObjectBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2364,12 +1980,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, int) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2389,12 +2001,8 @@ passThrough:
 - function: javax.json.stream.JsonGenerator#writeStartObject
   signature: (java.lang.String) javax.json.stream.JsonGenerator
   copy:
-  - from:
-    - this
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
-    to:
-    - result
-    - .javax.json.stream.JsonGenerator#buffer#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this
@@ -2406,12 +2014,8 @@ passThrough:
 - function: javax.json.JsonArrayBuilder#add
   signature: (int, long) javax.json.JsonArrayBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2424,12 +2028,8 @@ passThrough:
   signature: (int, boolean) javax.json.JsonArrayBuilder
   overrides: false
   copy:
-  - from:
-    - this
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonArrayBuilder#elements#java.lang.Object
+  - from: this
+    to: result
   - from: arg(1)
     to:
     - this
@@ -2441,12 +2041,8 @@ passThrough:
 - function: javax.json.JsonObjectBuilder#add
   signature: (java.lang.String, boolean) javax.json.JsonObjectBuilder
   copy:
-  - from:
-    - this
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
-    to:
-    - result
-    - .javax.json.JsonObjectBuilder#members#java.lang.Object
+  - from: this
+    to: result
   - from: arg(0)
     to:
     - this

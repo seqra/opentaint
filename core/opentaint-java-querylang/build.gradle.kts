@@ -89,7 +89,6 @@ val generateKotlinGrammarSource by tasks.registering(AntlrTask::class) {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.remove("-Werror")
-    options.encoding = "UTF-8"
 }
 
 tasks.named<JavaCompile>("compileTestJava") {

@@ -10,13 +10,21 @@ passThrough:
 - function: java.net.URI#toASCIIString
   signature: () java.lang.String
   copy:
-  - from: this
+  - from:
+    - this
+    - .java.net.URI#value#java.lang.String
     to: result
 - function: java.net.URI#<init>
   signature: (java.lang.String) void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#<init>
   signature: (java.lang.String, java.lang.String, int, java.lang.String) void
   copy:
@@ -57,7 +65,9 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
 - function: java.net.URLConnection#getHeaderField
   signature: (java.lang.String) java.lang.String
   taintCopyOnly: true
@@ -108,7 +118,9 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
 - function: java.net.URL#<init>
   signature: (java.net.URL, java.lang.String) void
   copy:
@@ -140,20 +152,18 @@ passThrough:
     to: this
   - from: arg(*)
     to: this
-- function:
-    package: java.net
-    class: URI
-    name:
-      pattern: get.*
-  copy:
-  - from: this
-    to: result
 - function: java.net.URI#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String,
     java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(4)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URLConnection#getContentEncoding
   signature: () java.lang.String
   taintCopyOnly: true
@@ -165,7 +175,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
   - from: arg(0)
     to: this
 - function: java.net.URL#getContent
@@ -183,7 +199,13 @@ passThrough:
     java.lang.String) void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.HttpCookie#<init>
   signature:
     params:
@@ -209,7 +231,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(4)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.HttpCookie#parseInternal
   signature: (*, *) java.net.HttpCookie
   copy:
@@ -224,16 +252,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
-- function:
-    package: java.net
-    class: URI
-    name:
-      pattern: get.*
-  taintCopyOnly: true
-  copy:
-  - from: this
-    to: result
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#<init>
   signature:
     params:
@@ -285,6 +310,10 @@ passThrough:
     to:
     - result
     - .java.net.URI#value#java.lang.String
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#getQuery
   signature:
     return: java.lang.String
@@ -331,18 +360,28 @@ passThrough:
   signature: () void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
 - function: java.net.URI#toURL
   signature: () java.net.URL
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .java.net.URI#value#java.lang.String
+    to:
+    - result
+    - .java.net.URL#spec#java.lang.String
 - function: java.net.URI#toURL
   signature: () java.net.URL
   taintCopyOnly: true
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .java.net.URI#value#java.lang.String
+    to:
+    - result
+    - .java.net.URL#spec#java.lang.String
 - function: java.net.URL#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:
@@ -367,7 +406,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: result
+    to:
+    - result
+    - .java.net.URI#value#java.lang.String
+  - from: arg(0)
+    to:
+    - result
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#getFile
   signature: () java.lang.String
   copy:
@@ -395,7 +440,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#toExternalForm
   signature: () java.lang.String
   copy:
@@ -447,8 +498,12 @@ passThrough:
 - function: java.net.URL#toURI
   signature: () java.net.URI
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .java.net.URL#spec#java.lang.String
+    to:
+    - result
+    - .java.net.URI#value#java.lang.String
 - function:
     package: java.net
     class: URL
@@ -478,7 +533,13 @@ passThrough:
     void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.HttpCookie#setValue
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -585,7 +646,13 @@ passThrough:
   signature: (java.lang.String, java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#getFile
   signature:
     return: java.lang.String
@@ -627,8 +694,12 @@ passThrough:
   signature: () java.net.URI
   taintCopyOnly: true
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .java.net.URL#spec#java.lang.String
+    to:
+    - result
+    - .java.net.URI#value#java.lang.String
 - function: java.net.URI#<init>
   signature:
     params:
@@ -651,7 +722,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#getHost
   signature:
     return: java.lang.String
@@ -686,7 +763,9 @@ passThrough:
   signature: (java.lang.String, java.lang.String) void
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
 - function: java.net.URL#getContent
   signature: (java.lang.Class[]) java.lang.Object
   taintCopyOnly: true
@@ -725,7 +804,9 @@ passThrough:
   signature: () java.lang.String
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .java.net.URI#value#java.lang.String
     to: result
 - function: java.net.URL#<init>
   signature: (java.lang.String, java.lang.String, int, java.lang.String) void
@@ -860,7 +941,13 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(*)
-    to: this
+    to:
+    - this
+    - .java.net.URI#value#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URLConnection#getHeaderField
   signature:
     return: java.lang.String
