@@ -11,6 +11,8 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
+import org.opentaint.dataflow.util.ClimbKey
+import org.opentaint.dataflow.util.UnfoldClimbBound
 
 interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffectSummaryHandler {
     val runner: AnalysisRunner
@@ -35,11 +37,19 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         summaryEffect: SummaryEdgeApplication,
         kind: SideEffectKind
     ): Set<MethodSequentFlowFunction.Sequent> {
-        if (kind !is TaintMarkFieldUnfoldRequest) {
+        if (kind !is TaintMarkFieldUnfoldRequest || UnfoldClimbBound.disabled) {
+            return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
+        }
+
+        // 8867fb730's guard: fact-to-fact edges vastly outnumber zero-to-fact ones, so refining on
+        // all of them does not terminate. Only act while the request is still the bare abstraction.
+        if (UnfoldClimbBound.unrefinedOnly && !kind.fact.getAllAccessors().isEmpty()) {
+            UnfoldClimbBound.droppedByRefined.incrementAndGet()
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
         if (handleUnfoldRequest(summaryEffect, kind)) {
+            UnfoldClimbBound.answeredLocally.incrementAndGet()
             return emptySet()
         }
 
@@ -52,6 +62,22 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
         val newKind = kind.copy(suffix = suffix)
         val fact = currentInitialFactAp.replaceExclusions(ExclusionSet.Empty)
+
+        // The climb is otherwise unbounded: `fact` is the caller's fact, one access step longer
+        // each hop, with its exclusions erased. Under recursion it never converges.
+        UnfoldClimbBound.noteDepth(fact.depth)
+
+        if (UnfoldClimbBound.exceedsDepth(fact.depth)) {
+            UnfoldClimbBound.droppedByDepth.incrementAndGet()
+            return emptySet()
+        }
+
+        if (UnfoldClimbBound.isDuplicate(ClimbKey(methodEntryPoint, currentInitialFactAp, newKind))) {
+            UnfoldClimbBound.droppedByMemo.incrementAndGet()
+            return emptySet()
+        }
+
+        UnfoldClimbBound.reposted.incrementAndGet()
         return setOf(MethodSequentFlowFunction.Sequent.FactSideEffect(fact, newKind))
     }
 
