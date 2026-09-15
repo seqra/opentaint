@@ -16,7 +16,7 @@ from pir_server.proto import pir_pb2
 
 
 class TypeMapper:
-    MAX_DEPTH = 10
+    MAX_DEPTH = 16
 
     def __init__(self):
         self._depth = 0
