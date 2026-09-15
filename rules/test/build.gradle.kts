@@ -123,3 +123,15 @@ tasks.register<JavaExec>("checkRulesCoverage") {
     classpath = sourceSets["main"].runtimeClasspath
     mainClass = "rules.RuleCoverageCheck"
 }
+
+tasks.register<JavaExec>("checkModelConfigDiffCoverage") {
+    group = "verification"
+    description = "Ensures every semantic model-config delta has an exact regression assertion."
+
+    classpath = sourceSets["main"].runtimeClasspath
+    mainClass = "rules.ModelConfigDiffCoverageCheck"
+}
+
+tasks.named("checkRulesCoverage") {
+    dependsOn("checkModelConfigDiffCoverage")
+}
