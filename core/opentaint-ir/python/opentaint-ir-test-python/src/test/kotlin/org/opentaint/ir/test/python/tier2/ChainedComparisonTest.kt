@@ -1,0 +1,206 @@
+package org.opentaint.ir.test.python.tier2
+
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.Assertions.fail
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRBinaryExpr
+import org.opentaint.ir.api.python.PIRBitAndExpr
+import org.opentaint.ir.api.python.PIRBranch
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRCompareExpr
+import org.opentaint.ir.api.python.PIREqExpr
+import org.opentaint.ir.api.python.PIRFunction
+import org.opentaint.ir.api.python.PIRGeExpr
+import org.opentaint.ir.api.python.PIRIsNotExpr
+import org.opentaint.ir.api.python.PIRLeExpr
+import org.opentaint.ir.api.python.PIRLtExpr
+import org.opentaint.ir.api.python.PIRNeExpr
+import org.opentaint.ir.api.python.binaryExpr
+import org.opentaint.ir.api.python.compareExpr
+import org.opentaint.ir.api.python.filterAssignOf
+import org.opentaint.ir.api.python.isAssignOf
+import org.opentaint.ir.test.python.PIRTestBase
+
+@Tag("tier2")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class ChainedComparisonTest : PIRTestBase() {
+
+    private lateinit var cp: PIRClasspath
+
+    companion object {
+        val SOURCE = """
+def cc_simple(x: int) -> bool:
+    return 0 < x < 10
+
+def cc_triple(x: int) -> bool:
+    return 0 < x < 10 < 100
+
+def cc_mixed_ops(x: int, y: int) -> bool:
+    return x < y <= 100
+
+def cc_equality_chain(a: int, b: int, c: int) -> bool:
+    return a == b == c
+
+def cc_inequality_chain(a: int, b: int, c: int) -> bool:
+    return a != b != c
+
+def cc_ge_chain(x: int) -> bool:
+    return 100 >= x >= 0
+
+def cc_in_if(x: int) -> int:
+    if 0 < x < 10:
+        return 1
+    return 0
+
+def cc_in_while(x: int) -> int:
+    count = 0
+    while 0 < x < 100:
+        x = x - 1
+        count += 1
+    return count
+
+def cc_with_function_call(x: int) -> bool:
+    return 0 < abs(x) < 50
+
+def cc_four_operands(a: int, b: int, c: int, d: int) -> bool:
+    return a < b < c < d
+
+def cc_mixed_is(x: object) -> bool:
+    return x is not None
+
+def cc_single_compare(x: int) -> bool:
+    return x > 0
+        """.trimIndent()
+    }
+
+    @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
+
+    private fun func(name: String): PIRFunction =
+        cp.findFunctionOrNull("__test__.$name")
+            ?: fail("Function $name not found")
+
+    private fun insts(name: String) = func(name).instList
+
+    @Test fun `chained comparison a lt b lt c produces 2 compares`() {
+        val compares = insts("cc_simple").filterAssignOf<PIRCompareExpr>()
+        assertEquals(2, compares.size,
+            "Expected exactly 2 PIRCompare for 0 < x < 10, got ${compares.size}")
+    }
+
+    @Test fun `chained comparison uses short-circuit branching`() {
+        val branches = insts("cc_simple").filterIsInstance<PIRBranch>()
+        assertTrue(branches.isNotEmpty(),
+            "Expected short-circuit branch for chained comparison")
+    }
+
+    @Test fun `chained comparison compare ops are LT`() {
+        val compares = insts("cc_simple").filterAssignOf<PIRCompareExpr>()
+        assertTrue(compares.all { it.compareExpr is PIRLtExpr },
+            "Expected all comparisons to be LT for 0 < x < 10")
+    }
+
+    @Test fun `triple chain produces 3 compares`() {
+        val compares = insts("cc_triple").filterAssignOf<PIRCompareExpr>()
+        assertEquals(3, compares.size,
+            "Expected 3 PIRCompare for 0 < x < 10 < 100, got ${compares.size}")
+    }
+
+    @Test fun `triple chain uses 2 short-circuit branches`() {
+        val branches = insts("cc_triple").filterIsInstance<PIRBranch>()
+        assertTrue(branches.size >= 2,
+            "Expected at least 2 short-circuit branches for triple chain, got ${branches.size}")
+    }
+
+    @Test fun `mixed ops chain has LT and LE`() {
+        val compares = insts("cc_mixed_ops").filterAssignOf<PIRCompareExpr>()
+        assertTrue(compares.any { it.compareExpr is PIRLtExpr },
+            "Expected LT for x < y")
+        assertTrue(compares.any { it.compareExpr is PIRLeExpr },
+            "Expected LE for y <= 100")
+    }
+
+    @Test fun `equality chain produces EQ compares`() {
+        val compares = insts("cc_equality_chain").filterAssignOf<PIRCompareExpr>()
+        assertEquals(2, compares.size, "Expected 2 EQ compares for a == b == c")
+        assertTrue(compares.all { it.compareExpr is PIREqExpr })
+    }
+
+    @Test fun `inequality chain produces NE compares`() {
+        val compares = insts("cc_inequality_chain").filterAssignOf<PIRCompareExpr>()
+        assertEquals(2, compares.size, "Expected 2 NE compares for a != b != c")
+        assertTrue(compares.all { it.compareExpr is PIRNeExpr })
+    }
+
+    @Test fun `GE chain produces GE compares`() {
+        val compares = insts("cc_ge_chain").filterAssignOf<PIRCompareExpr>()
+        assertEquals(2, compares.size, "Expected 2 GE compares for 100 >= x >= 0")
+        assertTrue(compares.all { it.compareExpr is PIRGeExpr })
+    }
+
+    @Test fun `chained in if produces branch`() {
+        val branches = insts("cc_in_if").filterIsInstance<PIRBranch>()
+        assertTrue(branches.isNotEmpty(), "Expected PIRBranch for if with chained comparison")
+    }
+
+    @Test fun `chained in if produces 2 compares with short-circuit`() {
+        val compares = insts("cc_in_if").filterAssignOf<PIRCompareExpr>()
+        assertEquals(2, compares.size, "Expected 2 compares in if")
+        val branches = insts("cc_in_if").filterIsInstance<PIRBranch>()
+        assertTrue(branches.size >= 2,
+            "Expected at least 2 branches (short-circuit + if)")
+    }
+
+    @Test fun `chained in while has loop structure`() {
+        val allInsts = insts("cc_in_while")
+        assertTrue(allInsts.any { it.isAssignOf<PIRCompareExpr>() }, "Expected PIRCompare in while")
+        assertTrue(allInsts.any { it is PIRBranch }, "Expected PIRBranch in while")
+    }
+
+    @Test fun `four operand chain produces 3 compares with short-circuit`() {
+        val compares = insts("cc_four_operands").filterAssignOf<PIRCompareExpr>()
+        assertEquals(3, compares.size, "Expected 3 compares for a < b < c < d")
+        val branches = insts("cc_four_operands").filterIsInstance<PIRBranch>()
+        assertTrue(branches.size >= 2,
+            "Expected at least 2 short-circuit branches for 4-operand chain")
+    }
+
+    @Test fun `single compare produces 1 compare no BIT_AND`() {
+        val compares = insts("cc_single_compare").filterAssignOf<PIRCompareExpr>()
+        val bitAnds = insts("cc_single_compare").filterAssignOf<PIRBinaryExpr>()
+            .filter { it.binaryExpr is PIRBitAndExpr }
+        assertEquals(1, compares.size, "Expected 1 compare for simple x > 0")
+        assertEquals(0, bitAnds.size, "Expected 0 BIT_AND for simple compare")
+    }
+
+    @Test fun `chained with function call produces call and 2 compares`() {
+        val compares = insts("cc_with_function_call").filterAssignOf<PIRCompareExpr>()
+        val calls = insts("cc_with_function_call").filterIsInstance<PIRCall>()
+        assertEquals(2, compares.size, "Expected 2 compares for 0 < abs(x) < 50")
+        assertTrue(calls.isNotEmpty(), "Expected PIRCall for abs(x)")
+    }
+
+    @Test fun `is not None produces IS_NOT`() {
+        val compares = insts("cc_mixed_is").filterAssignOf<PIRCompareExpr>()
+        assertTrue(compares.any { it.compareExpr is PIRIsNotExpr },
+            "Expected IS_NOT for 'x is not None'")
+    }
+
+    @Test fun `all chained comparison functions have valid CFGs`() {
+        val funcNames = listOf(
+            "cc_simple", "cc_triple", "cc_mixed_ops",
+            "cc_equality_chain", "cc_inequality_chain", "cc_ge_chain",
+            "cc_in_if", "cc_in_while", "cc_with_function_call",
+            "cc_four_operands", "cc_mixed_is", "cc_single_compare"
+        )
+        for (name in funcNames) {
+            val f = func(name)
+            assertTrue(f.instList.isNotEmpty(),
+                "Function $name should have non-empty CFG")
+        }
+    }
+}
