@@ -11,7 +11,16 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
-  - from: arg(2)
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
+    - '[*]'
+  - from:
+    - arg(2)
+    - '[*]'
     to:
     - this
     - .javax.naming.ldap.SortResponseControl#failedAttributeId#java.lang.String
@@ -79,6 +88,13 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
+    - '[*]'
   - from: arg(0)
     to:
     - this
@@ -171,6 +187,13 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
+    - '[*]'
   - from: arg(0)
     to:
     - this
@@ -186,6 +209,13 @@ passThrough:
     to:
     - result
     - .javax.naming.ldap.ExtendedResponse#encodedValue#byte[]
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .javax.naming.ldap.ExtendedResponse#encodedValue#byte[]
+    - '[*]'
 - function: javax.naming.ldap.Rdn#unescapeValue
   signature: (java.lang.String) java.lang.Object
   taintCopyOnly: true
@@ -232,6 +262,13 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.PagedResultsResponseControl#cookie#byte[]
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.PagedResultsResponseControl#cookie#byte[]
+    - '[*]'
 - function: javax.naming.ldap.Rdn#<init>
   signature: () void
   copy:
@@ -310,7 +347,9 @@ passThrough:
 - function: javax.naming.ldap.SortControl#<init>
   signature: (java.lang.String[], boolean) void
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]
@@ -342,7 +381,9 @@ passThrough:
 - function: javax.naming.ldap.SortControl#<init>
   signature: (javax.naming.ldap.SortKey[], boolean) void
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to:
     - this
     - .javax.naming.ldap.BasicControl#encodedValue#byte[]

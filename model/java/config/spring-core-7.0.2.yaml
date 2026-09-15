@@ -300,8 +300,12 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.LinkedMultiValueMap#<init>
   signature: (java.util.Map) *
   overrides: false
@@ -417,8 +421,12 @@ passThrough:
     - .java.lang.String#<string-bytes>#byte[]
 - function: org.springframework.util.ObjectUtils#toObjectArray
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.core.io.InputStreamResource#<init>
   signature: (org.springframework.core.io.InputStreamSource, *) *
   copy:
@@ -743,8 +751,12 @@ passThrough:
 - function: org.springframework.util.StringUtils#sortStringArray
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.AutoPopulatingList#<init>
   signature: (java.util.List, java.lang.Class) *
   overrides: false
@@ -765,8 +777,12 @@ passThrough:
     to: arg(1)
 - function: org.springframework.util.StringUtils#sortStringArray
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.StringUtils#trimTrailingWhitespace
   copy:
   - from: arg(0)
@@ -1170,7 +1186,18 @@ passThrough:
   overrides: false
   bypassVerification: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+- function: org.springframework.util.StringUtils#arrayToCommaDelimitedString
+  bypassVerification: true
+  copy:
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: org.springframework.util.MultiValueMapAdapter#<init>
   overrides: false
@@ -1191,10 +1218,18 @@ passThrough:
     - .java.lang.Iterable#Element#java.lang.Object
 - function: org.springframework.util.ObjectUtils#addObjectToArray
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.ClassUtils#getPackageName
   taintCopyOnly: true
   copy:
@@ -1310,6 +1345,13 @@ passThrough:
     to:
     - this
     - .org.springframework.core.io.ByteArrayResource#byteArray#byte[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .org.springframework.core.io.ByteArrayResource#byteArray#byte[]
+    - '[*]'
 - function: org.springframework.core.io.Resource#<init>
   signature:
     params:
@@ -1545,8 +1587,12 @@ passThrough:
 - function: org.springframework.util.StringUtils#removeDuplicateStrings
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.StringUtils#trimAllWhitespace
   copy:
   - from: arg(0)
@@ -1583,8 +1629,12 @@ passThrough:
     - .java.net.URL#spec#java.lang.String
 - function: org.springframework.util.StringUtils#removeDuplicateStrings
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.core.io.FileSystemResource#createRelative
   signature: (*) org.springframework.core.io.Resource
   copy:
@@ -1872,8 +1922,12 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.springframework.util.MultiValueMap#set
   copy:
   - from: arg(1)

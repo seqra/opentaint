@@ -23,16 +23,23 @@ import javax.naming.Reference;
 import javax.naming.directory.SearchControls;
 import javax.naming.ldap.BasicControl;
 import javax.naming.ldap.Rdn;
+import javax.naming.ldap.SortControl;
 import javax.naming.ldap.SortKey;
+import javax.sql.rowset.CachedRowSet;
+import javax.sql.rowset.RowSetProvider;
 import javax.xml.namespace.QName;
 
 import javax.faces.model.ArrayDataModel;
 import javax.faces.model.SelectItem;
 import javax.faces.model.SelectItemGroup;
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObjectBuilder;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.Base64Variants;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.util.ObjectBuffer;
+import com.fasterxml.jackson.databind.util.TokenBuffer;
 import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -245,15 +252,24 @@ public class PassthroughValueFlowSamples {
     @GetMapping("/byte-buffer/unsafe")
     public void byteBufferUnsafe(@RequestParam String input) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(256);
-        buffer.put(input.getBytes());
-        Runtime.getRuntime().exec(new String(buffer.array()));
+        ByteBuffer returned = buffer.put(input.getBytes());
+        Runtime.getRuntime().exec(new String(returned.array()));
     }
 
     @GetMapping("/byte-buffer/safe")
     public void byteBufferSafe(@RequestParam String input) throws IOException {
         ByteBuffer buffer = ByteBuffer.allocate(256);
-        buffer.put(CONSTANT.getBytes());
-        Runtime.getRuntime().exec(new String(buffer.array()));
+        ByteBuffer returned = buffer.put(CONSTANT.getBytes());
+        Runtime.getRuntime().exec(new String(returned.array()));
+    }
+
+    /** Buffer metadata text must not inherit taint stored only in the content slot. */
+    @GetMapping("/byte-buffer-metadata/safe")
+    public void byteBufferContentDoesNotReachMetadataSafe(@RequestParam String input)
+            throws IOException {
+        ByteBuffer buffer = ByteBuffer.allocate(256);
+        buffer.put(input.getBytes());
+        Runtime.getRuntime().exec(buffer.toString());
     }
 
     @GetMapping("/char-buffer/unsafe")
@@ -348,7 +364,7 @@ public class PassthroughValueFlowSamples {
     /** CharBuffer#get(char[]) does the same for chars. */
     @GetMapping("/char-buffer-get/unsafe")
     public void charBufferGetUnsafe(@RequestParam String input) throws IOException {
-        CharBuffer buffer = CharBuffer.wrap(input);
+        CharBuffer buffer = CharBuffer.wrap(input.toCharArray());
         char[] drained = new char[input.length()];
         buffer.get(drained);
         Runtime.getRuntime().exec(new String(drained));
@@ -356,7 +372,7 @@ public class PassthroughValueFlowSamples {
 
     @GetMapping("/char-buffer-get/safe")
     public void charBufferGetSafe(@RequestParam String input) throws IOException {
-        CharBuffer buffer = CharBuffer.wrap(CONSTANT);
+        CharBuffer buffer = CharBuffer.wrap(CONSTANT.toCharArray());
         char[] drained = new char[CONSTANT.length()];
         buffer.get(drained);
         Runtime.getRuntime().exec(new String(drained));
@@ -531,20 +547,54 @@ public class PassthroughValueFlowSamples {
 
     @GetMapping("/json-generator-binary/unsafe")
     public void jsonGeneratorBinaryUnsafe(@RequestParam String input) throws IOException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        try (JsonGenerator generator = new JsonFactory().createGenerator(output)) {
-            generator.writeBinary(input.getBytes());
+        byte[] bytes = input.getBytes();
+        TokenBuffer generator = new TokenBuffer(null, false);
+        generator.writeBinary(Base64Variants.getDefaultVariant(), bytes, 0, bytes.length);
+        try (JsonParser parser = generator.asParser()) {
+            parser.nextToken();
+            Runtime.getRuntime().exec(new String(parser.getBinaryValue()));
         }
-        Runtime.getRuntime().exec(output.toString());
     }
 
     @GetMapping("/json-generator-binary/safe")
     public void jsonGeneratorBinarySafe(@RequestParam String input) throws IOException {
-        ByteArrayOutputStream output = new ByteArrayOutputStream();
-        try (JsonGenerator generator = new JsonFactory().createGenerator(output)) {
-            generator.writeBinary(CONSTANT.getBytes());
+        byte[] bytes = CONSTANT.getBytes();
+        TokenBuffer generator = new TokenBuffer(null, false);
+        generator.writeBinary(Base64Variants.getDefaultVariant(), bytes, 0, bytes.length);
+        try (JsonParser parser = generator.asParser()) {
+            parser.nextToken();
+            Runtime.getRuntime().exec(new String(parser.getBinaryValue()));
         }
-        Runtime.getRuntime().exec(output.toString());
+    }
+
+    @GetMapping("/json-array-builder-indexed/unsafe")
+    public void jsonArrayBuilderIndexedUnsafe(@RequestParam String input) throws IOException {
+        JsonArrayBuilder builder = Json.createArrayBuilder().add(CONSTANT);
+        JsonArrayBuilder returned = builder.add(0, input);
+        Runtime.getRuntime().exec(returned.build().getString(0));
+    }
+
+    /** The position argument controls placement but is not JSON array content. */
+    @GetMapping("/json-array-builder-index/safe")
+    public void jsonArrayBuilderIndexSafe(@RequestParam String input) throws IOException {
+        JsonArrayBuilder builder = Json.createArrayBuilder().add(CONSTANT);
+        JsonArrayBuilder returned = builder.add(Integer.parseInt(input), CONSTANT);
+        Runtime.getRuntime().exec(returned.build().getString(0));
+    }
+
+    @GetMapping("/json-object-builder-nested/unsafe")
+    public void jsonObjectBuilderNestedUnsafe(@RequestParam String input) throws IOException {
+        JsonObjectBuilder nested = Json.createObjectBuilder().add("command", input);
+        JsonObjectBuilder outer = Json.createObjectBuilder().add("nested", nested);
+        Runtime.getRuntime().exec(outer.build().getJsonObject("nested").getString("command"));
+    }
+
+    /** A removal key is control input and must not become surviving object content. */
+    @GetMapping("/json-object-builder-remove/safe")
+    public void jsonObjectBuilderRemoveKeySafe(@RequestParam String input) throws IOException {
+        JsonObjectBuilder builder = Json.createObjectBuilder().add("command", CONSTANT);
+        builder.remove(input);
+        Runtime.getRuntime().exec(builder.build().getString("command"));
     }
 
     @GetMapping("/list-replace-all/unsafe")
@@ -631,6 +681,32 @@ public class PassthroughValueFlowSamples {
             throws IOException {
         BasicControl control = new BasicControl(input, false, CONSTANT.getBytes());
         Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    @GetMapping("/sort-control-array/unsafe")
+    public void sortControlArrayUnsafe(@RequestParam String input) throws IOException {
+        SortControl control = new SortControl(new String[] { input }, false);
+        Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    @GetMapping("/sort-control-array/safe")
+    public void sortControlArraySafe(@RequestParam String input) throws IOException {
+        SortControl control = new SortControl(new String[] { CONSTANT }, false);
+        Runtime.getRuntime().exec(new String(control.getEncodedValue()));
+    }
+
+    @GetMapping("/cached-row-set-table-name/unsafe")
+    public void cachedRowSetTableNameUnsafe(@RequestParam String input) throws Exception {
+        CachedRowSet rows = RowSetProvider.newFactory().createCachedRowSet();
+        rows.setTableName(input);
+        Runtime.getRuntime().exec(rows.getTableName());
+    }
+
+    @GetMapping("/cached-row-set-table-name/safe")
+    public void cachedRowSetTableNameSafe(@RequestParam String input) throws Exception {
+        CachedRowSet rows = RowSetProvider.newFactory().createCachedRowSet();
+        rows.setTableName(CONSTANT);
+        Runtime.getRuntime().exec(rows.getTableName());
     }
 
     @GetMapping("/faces-array-data-model/unsafe")

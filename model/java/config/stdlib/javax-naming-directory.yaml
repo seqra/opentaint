@@ -13,6 +13,13 @@ passThrough:
     to:
     - this
     - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+  - from:
+    - arg(3)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+    - '[*]'
 - function:
     package: javax.naming.directory
     class: Attribute
@@ -85,6 +92,13 @@ passThrough:
     to:
     - this
     - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+  - from:
+    - arg(3)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+    - '[*]'
 - function: javax.naming.directory.Attribute#set
   signature: (int, java.lang.Object) java.lang.Object
   copy:
@@ -112,6 +126,13 @@ passThrough:
     to:
     - this
     - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.directory.SearchControls#returningAttributes#java.lang.String[]
+    - '[*]'
 - function: javax.naming.directory.ModificationItem#getAttribute
   signature: () javax.naming.directory.Attribute
   copy:

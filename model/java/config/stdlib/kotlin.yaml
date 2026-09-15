@@ -381,11 +381,15 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - arg(0)
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - result
     - .java.lang.CharSequence#content#java.lang.Object
@@ -394,11 +398,15 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - arg(0)
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - result
     - .java.lang.CharSequence#content#java.lang.Object
@@ -407,11 +415,15 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - arg(0)
     - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
+  - from:
+    - arg(1)
+    - '[*]'
     to:
     - result
     - .java.lang.CharSequence#content#java.lang.Object
@@ -511,42 +523,3 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-- function: kotlin.text.StringsKt__AppendableKt#append
-  signature: (java.lang.Appendable, java.lang.CharSequence[]) java.lang.Appendable
-  copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to:
-    - arg(0)
-    - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to:
-    - result
-    - .java.lang.CharSequence#content#java.lang.Object
-- function: kotlin.text.StringsKt__StringBuilderKt#append
-  signature: (java.lang.StringBuilder, java.lang.String[]) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to:
-    - arg(0)
-    - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to:
-    - result
-    - .java.lang.CharSequence#content#java.lang.Object
-- function: kotlin.text.StringsKt__StringBuilderKt#append
-  signature: (java.lang.StringBuilder, java.lang.Object[]) java.lang.StringBuilder
-  copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to:
-    - arg(0)
-    - .java.lang.CharSequence#content#java.lang.Object
-  - from: arg(1)
-    to:
-    - result
-    - .java.lang.CharSequence#content#java.lang.Object

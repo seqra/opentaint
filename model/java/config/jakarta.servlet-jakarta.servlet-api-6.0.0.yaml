@@ -31,7 +31,7 @@ passThrough:
     - .jakarta.servlet.ServletRequest#parameter-value#java.lang.String
     to:
     - result
-    - .java.util.Map#MapValue#java.lang.Object
+    - .java.util.Map#MapValue#java.lang.String[]
     - '[*]'
 - function: jakarta.servlet.ServletRequest#getParameterNames
   signature: () java.util.Enumeration
@@ -132,40 +132,6 @@ passThrough:
     - this
     - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
     to: result
-  - from:
-    - this
-    - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
-    to:
-    - result
-    - '[*]'
-  - from:
-    - this
-    - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
-    to:
-    - result
-    - '[*]'
-    - .jakarta.servlet.http.Cookie#name#java.lang.String
-  - from:
-    - this
-    - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
-    to:
-    - result
-    - '[*]'
-    - .jakarta.servlet.http.Cookie#value#java.lang.String
-  - from:
-    - this
-    - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
-    to:
-    - result
-    - '[*]'
-    - .jakarta.servlet.http.Cookie#path#java.lang.String
-  - from:
-    - this
-    - .jakarta.servlet.http.HttpServletRequest#cookies#jakarta.servlet.http.Cookie[]
-    to:
-    - result
-    - '[*]'
-    - .jakarta.servlet.http.Cookie#domain#java.lang.String
 - function: jakarta.servlet.http.HttpServletRequest#getRequestedSessionId
   signature: () java.lang.String
   copy:

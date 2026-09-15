@@ -10,6 +10,10 @@ allprojects {
 
     apply(plugin = "java")
 
+    tasks.withType<JavaCompile>().configureEach {
+        options.encoding = "UTF-8"
+    }
+
     dependencies {
         // Servlet + OGNL + Groovy dependencies for rule samples
         implementation("javax.servlet:javax.servlet-api:4.0.1")
@@ -79,6 +83,7 @@ allprojects {
 
         // JSF API for FacesContext samples
         implementation("javax.faces:javax.faces-api:2.3")
+        implementation("javax.json:javax.json-api:1.1.4")
 
         // JBoss Seam for @Name and logging samples (from JBoss public repository)
         implementation("org.jboss.seam:jboss-seam:2.3.1.Final")

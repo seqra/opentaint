@@ -1898,6 +1898,12 @@ passThrough:
   copy:
   - from:
     - arg(0)
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
+  - from:
+    - arg(0)
     - .java.lang.Iterable#Element#java.lang.Object
     to:
     - result

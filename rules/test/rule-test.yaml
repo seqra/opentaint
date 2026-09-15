@@ -77,11 +77,15 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#choiceFormatFormatsUnsafe
       - security.passthrough.PassthroughValueFlowSamples#objectBufferListUnsafe
       - security.passthrough.PassthroughValueFlowSamples#jsonGeneratorBinaryUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonArrayBuilderIndexedUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonObjectBuilderNestedUnsafe
       - security.passthrough.PassthroughValueFlowSamples#listReplaceAllUnsafe
       - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllUnsafe
       - security.passthrough.PassthroughValueFlowSamples#fileSystemPathVarargsUnsafe
       - security.passthrough.PassthroughValueFlowSamples#searchControlsAttributesUnsafe
       - security.passthrough.PassthroughValueFlowSamples#basicControlPayloadUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#sortControlArrayUnsafe
+      - security.passthrough.PassthroughValueFlowSamples#cachedRowSetTableNameUnsafe
       - security.passthrough.PassthroughValueFlowSamples#facesArrayDataModelUnsafe
       - security.passthrough.PassthroughValueFlowSamples#facesSelectItemGroupUnsafe
       - security.passthrough.PassthroughServletAccessorSamples$RequestUriServlet#doGet
@@ -98,10 +102,16 @@ tests:
       - security.passthrough.PassthroughServletAccessorSamples$InputStreamServlet#doPost
       - security.passthrough.PassthroughServletAccessorSamples$RequestAttributeRoundTripServlet#doGet
       - security.passthrough.PassthroughServletAccessorSamples$SessionAttributeRoundTripServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$PushBuilderPathServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$PushBuilderHeaderServlet#doGet
+      - security.passthrough.PassthroughServletAccessorSamples$PushBuilderHeaderNameServlet#doGet
       - security.passthrough.PassthroughContainerSamples#arrayElementUnsafe
       - security.passthrough.PassthroughContainerSamples#arraysCopyOfUnsafe
       - security.passthrough.PassthroughContainerSamples#systemArrayCopyUnsafe
       - security.passthrough.PassthroughContainerSamples#arraysAsListUnsafe
+      - security.passthrough.PassthroughContainerSamples#listOfVarargsUnsafe
+      - security.passthrough.PassthroughContainerSamples#setOfVarargsUnsafe
+      - security.passthrough.PassthroughContainerSamples#streamOfVarargsUnsafe
       - security.passthrough.PassthroughContainerSamples#listGetUnsafe
       - security.passthrough.PassthroughContainerSamples#listIterateUnsafe
       - security.passthrough.PassthroughContainerSamples#listCopyUnsafe
@@ -135,6 +145,9 @@ tests:
       - security.passthrough.PassthroughContainerSamples#arraysCopyOfSafe
       - security.passthrough.PassthroughContainerSamples#systemArrayCopySafe
       - security.passthrough.PassthroughContainerSamples#arraysAsListSafe
+      - security.passthrough.PassthroughContainerSamples#listOfVarargsSafe
+      - security.passthrough.PassthroughContainerSamples#setOfVarargsSafe
+      - security.passthrough.PassthroughContainerSamples#streamOfVarargsSafe
       - security.passthrough.PassthroughContainerSamples#listGetSafe
       - security.passthrough.PassthroughContainerSamples#listIterateSafe
       - security.passthrough.PassthroughContainerSamples#listCopySafe
@@ -179,6 +192,7 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#byteArrayOutputStreamSafe
       - security.passthrough.PassthroughValueFlowSamples#stringReaderSafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferSafe
+      - security.passthrough.PassthroughValueFlowSamples#byteBufferContentDoesNotReachMetadataSafe
       - security.passthrough.PassthroughValueFlowSamples#charBufferSafe
       - security.passthrough.PassthroughValueFlowSamples#stringGetCharsSafe
       - security.passthrough.PassthroughValueFlowSamples#byteBufferGetSafe
@@ -197,6 +211,8 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#choiceFormatFormatsDoNotReachLimitsSafe
       - security.passthrough.PassthroughValueFlowSamples#objectBufferListSafe
       - security.passthrough.PassthroughValueFlowSamples#jsonGeneratorBinarySafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonArrayBuilderIndexSafe
+      - security.passthrough.PassthroughValueFlowSamples#jsonObjectBuilderRemoveKeySafe
       - security.passthrough.PassthroughValueFlowSamples#listReplaceAllSafe
       - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllSafe
       - security.passthrough.PassthroughValueFlowSamples#concurrentMapReplaceAllDoesNotMixKeysSafe
@@ -204,6 +220,8 @@ tests:
       - security.passthrough.PassthroughValueFlowSamples#searchControlsAttributesSafe
       - security.passthrough.PassthroughValueFlowSamples#basicControlPayloadSafe
       - security.passthrough.PassthroughValueFlowSamples#basicControlIdDoesNotReachPayloadSafe
+      - security.passthrough.PassthroughValueFlowSamples#sortControlArraySafe
+      - security.passthrough.PassthroughValueFlowSamples#cachedRowSetTableNameSafe
       - security.passthrough.PassthroughValueFlowSamples#facesArrayDataModelSafe
       - security.passthrough.PassthroughValueFlowSamples#facesSelectItemGroupSafe
       - security.passthrough.PassthroughServletAccessorSamples$SafeAccessorsServlet#doGet

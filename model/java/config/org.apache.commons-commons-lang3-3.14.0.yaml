@@ -46,13 +46,21 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#removeAllOccurrences
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.ArrayUtils#toArray
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.mutable.MutableObject#<init>
   copy:
   - from: arg(0)
@@ -193,8 +201,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#removeElements
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.tuple.ImmutablePair#of
   signature: (java.lang.Object, java.lang.Object) *
   overrides: false
@@ -302,8 +314,12 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.ObjectUtils#identityToString
   signature:
     params:
@@ -389,8 +405,12 @@ passThrough:
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#toPrimitive
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.mutable.Mutable#setValue
   copy:
   - from: arg(0)
@@ -479,8 +499,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#removeAllOccurences
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.StringUtils#difference
   copy:
   - from: arg(0)
@@ -557,8 +581,12 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.StringUtils#leftPad
   copy:
   - from: arg(2)
@@ -817,8 +845,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#subarray
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrTokenizer#getContent
   copy:
   - from: this
@@ -833,8 +865,12 @@ passThrough:
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#toObject
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#appendln
   copy:
   - from: arg(0)
@@ -865,8 +901,12 @@ passThrough:
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#subarray
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#deleteAll
   overrides: false
   copy:
@@ -942,8 +982,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#toObject
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.StringUtils#toEncodedString
   copy:
   - from: arg(0)
@@ -976,8 +1020,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#removeAll
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.tuple.Pair#getKey
   copy:
   - from:
@@ -1042,8 +1090,12 @@ passThrough:
     to: arg(0)
 - function: org.apache.commons.lang3.ArrayUtils#clone
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#reverse
   copy:
   - from:
@@ -1229,8 +1281,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#removeElement
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#toCharArray
   copy:
   - from:
@@ -1414,14 +1470,32 @@ passThrough:
     - index: 1
       type: java.lang.Object[]
   copy:
-  - from: arg(1)
-    to: result
+  - from: arg(0)
+    to:
+    - this
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
+  - from: arg(0)
+    to:
+    - result
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
   - from:
     - this
     - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
-    to: result
-  - from: this
-    to: result
+    to:
+    - result
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - this
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - .org.apache.commons.lang3.text.StrBuilder#buffer#java.lang.Object
 - function: org.apache.commons.lang3.ClassPathUtils#toFullyQualifiedPath
   copy:
   - from: arg(0)
@@ -1515,8 +1589,12 @@ passThrough:
     to:
     - result
     - '[*]'
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#appendSeparator
   copy:
   - from: arg(0)
@@ -1617,10 +1695,18 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#addAll
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
-  - from: arg(1)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.ArrayUtils#nullToEmpty
   signature: (*, java.lang.Class) *
   overrides: false
@@ -1667,10 +1753,18 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#insert
   overrides: false
   copy:
-  - from: arg(1)
-    to: result
-  - from: arg(2)
-    to: result
+  - from:
+    - arg(1)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
+  - from:
+    - arg(2)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#setNullText
   overrides: false
   copy:
@@ -1714,8 +1808,12 @@ passThrough:
     to: result
 - function: org.apache.commons.lang3.ArrayUtils#toArray
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.exception.ExceptionUtils#getCause
   copy:
   - from: arg(0)
@@ -1733,8 +1831,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#remove
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.exception.ExceptionUtils#getThrowables
   copy:
   - from: arg(0)
@@ -2001,8 +2103,12 @@ passThrough:
 - function: org.apache.commons.lang3.ArrayUtils#clone
   overrides: false
   copy:
-  - from: arg(0)
-    to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - result
+    - '[*]'
 - function: org.apache.commons.lang3.text.StrBuilder#append
   copy:
   - from: arg(0)

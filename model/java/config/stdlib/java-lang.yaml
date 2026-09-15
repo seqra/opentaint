@@ -17,15 +17,19 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (byte[], int, int, java.nio.charset.Charset) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.String#join
   signature: (java.lang.CharSequence, java.lang.CharSequence[]) java.lang.String
-  taintCopyOnly: true
   copy:
-  - from: arg(*)
+  - from: arg(0)
+    to: result
+  - from:
+    - arg(1)
+    - '[*]'
     to: result
 - function: java.lang.Long#toHexString
   signature: (long) java.lang.String
@@ -95,9 +99,10 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (char[], int, int) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.IllegalArgumentException#<init>
   signature: (java.lang.String) void
@@ -186,6 +191,10 @@ passThrough:
   copy:
   - from: arg(1)
     to: result
+  - from:
+    - arg(2)
+    - '[*]'
+    to: result
 - function: java.lang.String#getBytes
   signature: () byte[]
   taintCopyOnly: true
@@ -200,8 +209,6 @@ passThrough:
 - function: java.lang.String#<init>
   signature: (byte[], int, int, int) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -263,8 +270,6 @@ passThrough:
 - function: java.lang.String#<init>
   signature: (char[]) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -272,8 +277,10 @@ passThrough:
 - function: java.lang.String#format
   signature: (java.lang.String, java.lang.Object[]) java.lang.String
   copy:
+  - from: arg(0)
+    to: result
   - from:
-    - arg(*)
+    - arg(1)
     - '[*]'
     to: result
 - function: java.lang.ProcessBuilder#start
@@ -323,9 +330,10 @@ passThrough:
     to: arg(2)
 - function: java.lang.String#<init>
   signature: (byte[], int) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.Character#toString
   signature: (char) java.lang.String
@@ -364,6 +372,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.lang.ProcessBuilder#start
   signature: (java.lang.ProcessBuilder$Redirect[]) java.lang.Process
@@ -470,9 +482,10 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (byte[], int, int) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.Class#isArray
   signature: () boolean
@@ -538,6 +551,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
+  - from:
+    - arg(0)
+    - '[*]'
+    to: result
 - function: java.lang.String#join
   signature:
     params:
@@ -549,9 +566,10 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (byte[], int, int, java.lang.String) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function:
     package: java.lang
@@ -625,9 +643,10 @@ passThrough:
     - .java.lang.ProcessBuilder#command#java.util.List
 - function: java.lang.String#<init>
   signature: (byte[], byte) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.Character#getNumericValue
   signature: (int) int
@@ -699,15 +718,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.lang.String#<init>
-  signature: (byte[], int) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
 - function: java.lang.ProcessBuilder#command
   signature: (java.lang.String[]) java.lang.ProcessBuilder
   copy:
@@ -723,6 +733,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to: this
 - function: java.lang.Character#toUpperCase
   signature: (int) int
   copy:
@@ -735,6 +749,10 @@ passThrough:
       type: char[]
   copy:
   - from: arg(0)
+    to: this
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.Character#forDigit
   signature: (int, int) char
@@ -844,17 +862,10 @@ passThrough:
 - function: java.lang.String#copyValueOf
   signature: (char[], int, int) java.lang.String
   copy:
-  - from: arg(0)
-    to: result
-- function: java.lang.String#<init>
-  signature: (byte[], byte) void
-  copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
-    to: this
+    to: result
 - function: java.lang.Iterable#spliterator
   signature: () java.util.Spliterator
   copy:
@@ -898,9 +909,10 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (byte[]) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.String#getBytes
   signature: (byte[], int, byte) void
@@ -908,36 +920,12 @@ passThrough:
   copy:
   - from: this
     to: arg(0)
-- function: java.lang.String#<init>
-  signature: (byte[], int, int, java.lang.String) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
-- function: java.lang.String#copyValueOf
-  signature: (char[], int, int) java.lang.String
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.lang.Class#getDeclaredClasses
   signature: () java.lang.Class[]
   taintCopyOnly: true
   copy:
   - from: this
     to: result
-- function: java.lang.String#<init>
-  signature: (byte[], int, int) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
 - function: java.lang.Throwable#<init>
   signature: (java.lang.String, java.lang.Throwable) void
   overrides: false
@@ -1054,12 +1042,6 @@ passThrough:
   copy:
   - from: arg(*)
     to: result
-- function: java.lang.String#<init>
-  signature: (byte[], java.lang.String) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.lang.String#charAt
   signature: (int) char
   copy:
@@ -1068,11 +1050,11 @@ passThrough:
     - .java.lang.String#bytes#byte[]
     - '[*]'
     to: result
+  - from: this
+    to: result
 - function: java.lang.String#<init>
   signature: (byte[], java.nio.charset.Charset) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
@@ -1107,9 +1089,10 @@ passThrough:
     to: result
 - function: java.lang.String#<init>
   signature: (int[], int, int) void
-  taintCopyOnly: true
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: this
 - function: java.lang.Class#getName
   signature: () java.lang.String
@@ -1123,12 +1106,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.lang.String#<init>
-  signature: (char[]) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.lang.ProcessBuilder#command
   signature: () java.util.List
   taintCopyOnly: true
@@ -1137,15 +1114,6 @@ passThrough:
     to: this
   - from: this
     to: result
-- function: java.lang.String#<init>
-  signature: (byte[], int, int, java.nio.charset.Charset) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
 - function: java.lang.Exception#<init>
   signature: (java.lang.String) void
   overrides: false
@@ -1217,12 +1185,6 @@ passThrough:
   copy:
   - from: this
     to: arg(2)
-- function: java.lang.String#<init>
-  signature: (byte[], int, int, int) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.lang.System#mapLibraryName
   signature:
     return: java.lang.String
@@ -1257,7 +1219,9 @@ passThrough:
 - function: java.lang.String#copyValueOf
   signature: (char[]) java.lang.String
   copy:
-  - from: arg(0)
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.lang.String#copyValueOf
   signature:
@@ -1267,6 +1231,10 @@ passThrough:
     return: java.lang.String
   copy:
   - from: arg(0)
+    to: result
+  - from:
+    - arg(0)
+    - '[*]'
     to: result
 - function: java.lang.Class#cast
   signature: (java.lang.Object) java.lang.Object
@@ -1294,15 +1262,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
-- function: java.lang.String#<init>
-  signature: (byte[]) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
 - function: java.lang.Class#<init>
   signature: (*, java.lang.Class) *
   copy:
@@ -1326,18 +1285,6 @@ passThrough:
   signature: () boolean
   copy:
   - from: this
-    to: result
-- function: java.lang.String#copyValueOf
-  signature: (char[]) java.lang.String
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: result
-- function: java.lang.String#format
-  signature: (java.lang.String, java.lang.Object[]) java.lang.String
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
     to: result
 - function: java.lang.String#getBytes
   signature: () byte[]
@@ -1381,18 +1328,6 @@ passThrough:
     to:
     - result
     - .java.util.Iterator#Element#java.lang.Object
-- function: java.lang.String#format
-  signature: (java.util.Locale, java.lang.String, java.lang.Object[]) java.lang.String
-  taintCopyOnly: true
-  copy:
-  - from: arg(2)
-    to: result
-- function: java.lang.String#<init>
-  signature: (byte[], java.nio.charset.Charset) void
-  taintCopyOnly: true
-  copy:
-  - from: arg(0)
-    to: this
 - function: java.lang.Throwable#<init>
   signature: (java.lang.Throwable) void
   overrides: false
@@ -1411,15 +1346,6 @@ passThrough:
   signature: (java.lang.String, java.lang.Throwable, boolean, boolean) void
   copy:
   - from: arg(0)
-    to: this
-- function: java.lang.String#<init>
-  signature: (char[], int, int) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
     to: this
 - function: java.lang.Throwable#<init>
   signature: (java.lang.String) void
@@ -1449,15 +1375,6 @@ passThrough:
   copy:
   - from: this
     to: arg(2)
-- function: java.lang.String#<init>
-  signature: (int[], int, int) void
-  copy:
-  - from: arg(0)
-    to: this
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
 - function: java.lang.Boolean#valueOf
   signature: (boolean) java.lang.Boolean
   overrides: false
@@ -1548,32 +1465,15 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.lang.String#charAt
-  signature: (int) char
-  copy:
-  - from: this
-    to: result
 - function: java.lang.Integer#intValue
   signature: () int
   copy:
   - from: this
     to: result
-- function: java.lang.Integer#valueOf
-  signature: (int) java.lang.Integer
-  overrides: false
-  copy:
-  - from: arg(0)
-    to: result
 - function: java.lang.Double#doubleValue
   signature: () double
   copy:
   - from: this
-    to: result
-- function: java.lang.Double#valueOf
-  signature: (double) java.lang.Double
-  overrides: false
-  copy:
-  - from: arg(0)
     to: result
 - function: java.lang.String#join
   signature: (java.lang.CharSequence, java.lang.Iterable) java.lang.String
@@ -1581,32 +1481,4 @@ passThrough:
   - from:
     - arg(1)
     - .java.lang.Iterable#Element#java.lang.Object
-    to: result
-- function: java.lang.String#join
-  signature: (java.lang.CharSequence, java.lang.CharSequence[]) java.lang.String
-  copy:
-  - from:
-    - arg(1)
-    - '[*]'
-    to: result
-- function: java.lang.String#format
-  signature: (java.util.Locale, java.lang.String, java.lang.Object[]) java.lang.String
-  copy:
-  - from:
-    - arg(2)
-    - '[*]'
-    to: result
-- function: java.lang.String#copyValueOf
-  signature: (char[], int, int) java.lang.String
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: result
-- function: java.lang.String#copyValueOf
-  signature: (char[]) java.lang.String
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
     to: result

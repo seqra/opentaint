@@ -14,6 +14,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -90,6 +91,42 @@ public class PassthroughContainerSamples {
     public void arraysAsListSafe(@RequestParam String input) throws IOException {
         List<String> files = Arrays.asList(new String[] { CONSTANT });
         Runtime.getRuntime().exec("cat " + files.get(0));
+    }
+
+    @GetMapping("/list-of-varargs/unsafe")
+    public void listOfVarargsUnsafe(@RequestParam String input) throws IOException {
+        List<String> files = List.of(new String[] { input });
+        Runtime.getRuntime().exec("cat " + files.get(0));
+    }
+
+    @GetMapping("/list-of-varargs/safe")
+    public void listOfVarargsSafe(@RequestParam String input) throws IOException {
+        List<String> files = List.of(new String[] { CONSTANT });
+        Runtime.getRuntime().exec("cat " + files.get(0));
+    }
+
+    @GetMapping("/set-of-varargs/unsafe")
+    public void setOfVarargsUnsafe(@RequestParam String input) throws IOException {
+        Set<String> files = Set.of(new String[] { input });
+        Runtime.getRuntime().exec("cat " + files.iterator().next());
+    }
+
+    @GetMapping("/set-of-varargs/safe")
+    public void setOfVarargsSafe(@RequestParam String input) throws IOException {
+        Set<String> files = Set.of(new String[] { CONSTANT });
+        Runtime.getRuntime().exec("cat " + files.iterator().next());
+    }
+
+    @GetMapping("/stream-of-varargs/unsafe")
+    public void streamOfVarargsUnsafe(@RequestParam String input) throws IOException {
+        Stream<String> files = Stream.of(new String[] { input });
+        Runtime.getRuntime().exec("cat " + files.findFirst().orElse(CONSTANT));
+    }
+
+    @GetMapping("/stream-of-varargs/safe")
+    public void streamOfVarargsSafe(@RequestParam String input) throws IOException {
+        Stream<String> files = Stream.of(new String[] { CONSTANT });
+        Runtime.getRuntime().exec("cat " + files.findFirst().orElse(CONSTANT));
     }
 
     // === lists ===
