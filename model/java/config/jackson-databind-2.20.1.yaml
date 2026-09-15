@@ -23,14 +23,18 @@ passThrough:
     - index: 2
       type: java.util.List
   copy:
-  - from: arg(0)
-    to: arg(2)
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - arg(2)
+    - .java.lang.Iterable#Element#java.lang.Object
   - from:
     - this
     - .com.fasterxml.jackson.databind.util.ObjectBuffer#buffer#java.lang.Object
-    to: arg(2)
-  - from: this
-    to: arg(2)
+    to:
+    - arg(2)
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: com.fasterxml.jackson.databind.node.ObjectNode#path
   copy:
   - from: this
@@ -1635,4 +1639,6 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: arg(2)
+    to:
+    - arg(2)
+    - .java.lang.Iterable#Element#java.lang.Object

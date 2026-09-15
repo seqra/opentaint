@@ -26,8 +26,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsObject
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
-    java.lang.String) java.lang.Object
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.String) java.lang.Object
   copy:
   - from: arg(2)
     to: result
@@ -87,19 +86,12 @@ passThrough:
     - .javax.faces.model.DataModelEvent#dataModel#javax.faces.model.DataModel
     to: result
 - function: javax.faces.model.SelectItemGroup#<init>
-  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[])
-    void
+  signature: (java.lang.String, java.lang.String, boolean, javax.faces.model.SelectItem[]) void
   copy:
-  - from:
-    - arg(3)
-    - '[*]'
-    to: this
   - from: arg(3)
     to:
     - this
     - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
-  - from: arg(3)
-    to: this
   - from: arg(1)
     to:
     - this
@@ -108,6 +100,13 @@ passThrough:
     to:
     - this
     - .javax.faces.model.SelectItemGroup#label#java.lang.String
+  - from:
+    - arg(3)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
+    - '[*]'
 - function: javax.faces.model.ResultDataModel#<init>
   signature: (javax.servlet.jsp.jstl.sql.Result) void
   copy:
@@ -135,13 +134,9 @@ passThrough:
   - from:
     - arg(0)
     - '[*]'
-    to: this
-  - from: arg(0)
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-  - from: arg(0)
-    to: this
   - from: arg(0)
     to:
     - this
@@ -163,8 +158,7 @@ passThrough:
   - from: arg(0)
     to: result
 - function: javax.faces.convert.Converter#getAsString
-  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent,
-    java.lang.Object) java.lang.String
+  signature: (javax.faces.context.FacesContext, javax.faces.component.UIComponent, java.lang.Object) java.lang.String
   copy:
   - from: arg(2)
     to: result
@@ -184,21 +178,20 @@ passThrough:
     - this
     - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
     to: result
-  - from: this
-    to: result
 - function: javax.faces.model.SelectItemGroup#setSelectItems
   signature: (javax.faces.model.SelectItem[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: arg(0)
     to:
     - this
     - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
-  - from: arg(0)
-    to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.faces.model.SelectItemGroup#selectItems#javax.faces.model.SelectItem[]
+    - '[*]'
 - function: javax.faces.context.ExternalContext#encodeResourceURL
   signature: (java.lang.String) java.lang.String
   copy:

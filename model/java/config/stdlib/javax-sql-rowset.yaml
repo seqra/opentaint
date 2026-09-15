@@ -4,8 +4,13 @@ passThrough:
   signature: () java.util.Collection
   taintCopyOnly: true
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: javax.sql.rowset.CachedRowSet#getOriginalRow
   signature: () java.sql.ResultSet
   taintCopyOnly: true
@@ -17,7 +22,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.WebRowSet#writeXml
   signature: (java.sql.ResultSet, java.io.OutputStream) void
   copy:
@@ -68,17 +76,28 @@ passThrough:
   signature: (javax.sql.RowSet, int) void
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.JoinRowSet#getRowSets
   signature: () java.util.Collection
   copy:
-  - from: this
-    to: result
+  - from:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
+    to:
+    - result
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.rowset.Joinable) void
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: (int) java.util.Collection
   taintCopyOnly: true
@@ -131,7 +150,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.CachedRowSet#getOriginalRow
   signature:
     return: java.sql.ResultSet
@@ -149,12 +171,10 @@ passThrough:
   signature: (javax.sql.RowSet[], int[]) void
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
 - function: javax.sql.rowset.CachedRowSet#createShared
   signature: () javax.sql.RowSet
   copy:
@@ -187,7 +207,10 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.WebRowSet#writeXml
   signature: (java.sql.ResultSet, java.io.Writer) void
   copy:
@@ -197,7 +220,10 @@ passThrough:
   signature: (javax.sql.RowSet, java.lang.String) void
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
+    - '[*]'
 - function: javax.sql.rowset.CachedRowSet#getOriginal
   signature: () java.sql.ResultSet
   copy:
@@ -213,12 +239,10 @@ passThrough:
   signature: (javax.sql.RowSet[], java.lang.String[]) void
   taintCopyOnly: true
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
 - function: javax.sql.rowset.CachedRowSet#populate
   signature: (java.sql.ResultSet, int) void
   taintCopyOnly: true
@@ -254,21 +278,17 @@ passThrough:
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], java.lang.String[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
 - function: javax.sql.rowset.JoinRowSet#addRowSet
   signature: (javax.sql.RowSet[], int[]) void
   copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to: this
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.sql.rowset.JoinRowSet#rowSets#javax.sql.RowSet[]
 - function: javax.sql.rowset.CachedRowSet#toCollection
   signature: () java.util.Collection
   copy:

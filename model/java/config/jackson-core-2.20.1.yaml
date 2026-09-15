@@ -255,8 +255,6 @@ passThrough:
     to:
     - this
     - .com.fasterxml.jackson.core.JsonGenerator#buffer#java.lang.Object
-  - from: arg(0)
-    to: this
 - function: com.fasterxml.jackson.core.JsonFactory#createJsonParser
   signature:
     params:
@@ -1240,14 +1238,4 @@ passThrough:
     - this
     - .com.fasterxml.jackson.core.base.ParserMinimalBase#content#java.lang.Object
   - from: arg(0)
-    to: this
-- function: com.fasterxml.jackson.core.JsonGenerator#writeBinary
-  signature:
-    params:
-    - index: 0
-      type: byte[]
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
     to: this

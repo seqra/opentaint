@@ -2019,9 +2019,9 @@ passThrough:
   - from:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
-    to: result
-  - from: this
-    to: result
+    to:
+    - this
+    - .java.lang.Iterable#Element#java.lang.Object
 - function: java.util.Spliterators#spliterator
   signature:
     params:
