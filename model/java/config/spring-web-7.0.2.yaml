@@ -66,22 +66,22 @@ passThrough:
     - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
     to:
     - result
     - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
   - from:
     - this
@@ -127,10 +127,10 @@ passThrough:
     - .org.springframework.http.HttpHeaders#host#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
   - from:
     - this
     - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
@@ -474,22 +474,22 @@ passThrough:
     - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
     to:
     - result
     - .org.springframework.http.HttpHeaders#headerValue#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
   - from:
     - this
@@ -535,10 +535,10 @@ passThrough:
     - .org.springframework.http.HttpHeaders#host#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     to:
     - result
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
   - from:
     - this
     - .org.springframework.http.HttpHeaders#headerMap#java.lang.Object
@@ -782,7 +782,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
 - function: org.springframework.http.RequestEntity#<init>
   signature:
@@ -905,7 +905,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
 - function: org.springframework.web.server.ServerWebExchange#getAttribute
   taintCopyOnly: true
   copy:
@@ -1000,7 +1000,7 @@ passThrough:
     - .java.net.URI#value#java.lang.Object
   - from:
     - this
-    - .org.springframework.http.HttpHeaders#location#java.lang.Object
+    - .org.springframework.http.HttpHeaders#location#java.net.URI
     - .java.net.URI#value#java.lang.Object
     to:
     - result

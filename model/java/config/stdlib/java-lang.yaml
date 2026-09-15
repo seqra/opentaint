@@ -85,8 +85,6 @@ passThrough:
 - function: java.lang.String#<init>
   signature: (byte[], java.lang.String) void
   copy:
-  - from: arg(0)
-    to: this
   - from:
     - arg(0)
     - '[*]'
