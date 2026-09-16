@@ -26,11 +26,14 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleZeroToFact(currentFactAp, summaryEffect, kind)
         }
 
-        if (!UnfoldClimbBound.admit(requestKey("z2f", kind, summaryEffect))) {
+        if (!UnfoldClimbBound.admit(storageKey("z2f", kind, "${currentFactAp.base}"))) {
             return emptySet()
         }
 
-        UnfoldClimbBound.recordQuestion("z2f", "${kind.method}", "${kind.fact}", "${kind.mark}")
+        UnfoldClimbBound.recordRequest(
+            "z2f", "${kind.method}", "${kind.fact}", "${kind.mark}",
+            edgeFact = "${currentFactAp.base}", suffix = "${kind.suffix}"
+        )
 
         if (UnfoldClimbBound.questionAlreadyAsked(questionKey("z2f", kind))) {
             return emptySet()
@@ -51,11 +54,16 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
-        if (!UnfoldClimbBound.admit(requestKey("f2f@$methodEntryPoint", kind, summaryEffect))) {
+        if (!UnfoldClimbBound.admit(storageKey("f2f@$methodEntryPoint", kind,
+                "${currentInitialFactAp.replaceExclusions(ExclusionSet.Empty)}"))) {
             return emptySet()
         }
 
-        UnfoldClimbBound.recordQuestion("$methodEntryPoint", "${kind.method}", "${kind.fact}", "${kind.mark}")
+        UnfoldClimbBound.recordRequest(
+            "$methodEntryPoint", "${kind.method}", "${kind.fact}", "${kind.mark}",
+            edgeFact = "${currentInitialFactAp.replaceExclusions(ExclusionSet.Empty)}",
+            suffix = "${kind.suffix}"
+        )
 
         if (UnfoldClimbBound.questionAlreadyAsked(questionKey("f2f@$methodEntryPoint", kind))) {
             return emptySet()
@@ -104,6 +112,23 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
     /** The question, without the summary-application detail that makes it look distinct. */
     private fun questionKey(site: String, request: TaintMarkFieldUnfoldRequest): Any =
         listOf(site, request.method, request.fact, request.mark)
+
+    /**
+     * The identity the summary storage actually keys on: the frame, the edge fact (base +
+     * initialAccess; exclusions are merged into the value, not the key) and the SideEffectKind
+     * (origin method, origin fact, mark, suffix). Two invocations sharing this are the same stored
+     * summary and collapse on their own -- so this, not the invocation count, is the population
+     * worth minimising.
+     */
+    private fun storageKey(site: String, request: TaintMarkFieldUnfoldRequest, edgeFact: String): String =
+        UnfoldClimbBound.requestKey(
+            method = "$site:${request.method}",
+            fact = request.fact,
+            mark = request.mark,
+            effect = "edge=$edgeFact",
+            delta = null,
+            suffix = request.suffix,
+        )
 
     private fun requestKey(
         site: String,

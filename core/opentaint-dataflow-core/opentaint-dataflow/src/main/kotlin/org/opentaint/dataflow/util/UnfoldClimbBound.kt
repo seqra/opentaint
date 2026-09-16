@@ -78,52 +78,69 @@ object UnfoldClimbBound {
     /** question -> how many requests carried it. Question = frame | origin | fact | mark. */
     private val census = ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
 
-    fun recordQuestion(frame: String, origin: String, fact: String, mark: String) {
+    /**
+     * One handler invocation. `unique` is the tuple that makes this request distinct work --
+     * (frame, edge fact, origin, fact, mark, suffix) -- which is what the summary storage keys on
+     * (CommonFactSideEffectSummary: base + initialAccess + SideEffectKind, exclusions merged as the
+     * value). `question` drops the edge fact and the suffix, leaving what is actually being asked.
+     * Identical invocations collapse in storage on their own; the interesting number is how many
+     * STORAGE-DISTINCT requests share a question, because those are droppable but not deduplicated.
+     */
+    fun recordRequest(frame: String, origin: String, fact: String, mark: String, edgeFact: String, suffix: String) {
         if (!censusEnabled) return
-        census.computeIfAbsent("$frame\u0001$origin\u0001$fact\u0001$mark") {
-            java.util.concurrent.atomic.AtomicInteger()
-        }.incrementAndGet()
+        val q = "$frame\u0001$origin\u0001$fact\u0001$mark"
+        val u = "$q\u0001$edgeFact\u0001$suffix"
+        census.computeIfAbsent(u) { java.util.concurrent.atomic.AtomicInteger() }.incrementAndGet()
     }
 
     private fun censusReport(): String = buildString {
+        // row = [frame, origin, fact, mark, edgeFact, suffix] -> invocations
         val rows = census.entries.map { it.key.split('\u0001') to it.value.get() }
-        val requests = rows.sumOf { it.second }
-        appendLine("requests=$requests distinctQuestions=${rows.size}")
         if (rows.isEmpty()) return@buildString
+        val invocations = rows.sumOf { it.second }
+
+        fun key(r: List<String>, vararg i: Int) = i.joinToString("\u0001") { r[it] }
+        val questions = rows.mapTo(HashSet()) { key(it.first, 0, 1, 2, 3) }.size
+        val unique = rows.size   // storage-distinct: frame x origin x fact x mark x edgeFact x suffix
+
+        appendLine("invocations     = $invocations")
+        appendLine("uniqueRequests  = $unique   <- storage-distinct; identical ones already collapse there")
+        appendLine("questions       = $questions   <- what is actually being asked")
+        appendLine("DROPPABLE UNIQUE = ${unique - questions} of $unique (%.1f%%)"
+            .format(100.0 * (unique - questions) / unique))
+        appendLine("identical-invocation collapse already done by storage = ${invocations - unique} (%.1f%% of invocations)"
+            .format(100.0 * (invocations - unique) / invocations))
 
         fun distinct(i: Int) = rows.mapTo(HashSet()) { it.first[i] }.size
-        appendLine("distinct: frames=${distinct(0)} origins=${distinct(1)} facts=${distinct(2)} marks=${distinct(3)}")
+        appendLine("distinct: frames=${distinct(0)} origins=${distinct(1)} facts=${distinct(2)} marks=${distinct(3)} edgeFacts=${distinct(4)} suffixes=${distinct(5)}")
 
-        // how many requests carry one question
-        val mult = rows.groupingBy { it.second }.eachCount().toSortedMap()
-        appendLine("requestsPerQuestion histogram (count -> questions):")
-        mult.entries.take(15).forEach { (k, v) -> appendLine("  x%-4d %d".format(k, v)) }
-        val repeats = rows.sumOf { it.second - 1 }
-        appendLine("repeatRequests=$repeats (%.1f%% of all)".format(100.0 * repeats / requests))
+        val perQuestion = rows.groupBy { key(it.first, 0, 1, 2, 3) }
+        appendLine("uniqueRequestsPerQuestion histogram (count -> questions):")
+        perQuestion.values.groupingBy { it.size }.eachCount().toSortedMap().entries.take(15)
+            .forEach { (k, v) -> appendLine("  x%-4d %d".format(k, v)) }
 
-        // which component carries the breadth
-        fun projDistinct(vararg idx: Int) =
-            rows.mapTo(HashSet()) { r -> idx.joinToString("\u0001") { r.first[it] } }.size
-        appendLine("projections of the question set:")
-        appendLine("  frame                 = ${projDistinct(0)}")
-        appendLine("  origin                = ${projDistinct(1)}")
-        appendLine("  fact                  = ${projDistinct(2)}")
-        appendLine("  mark                  = ${projDistinct(3)}")
-        appendLine("  origin x mark         = ${projDistinct(1, 3)}")
-        appendLine("  origin x fact         = ${projDistinct(1, 2)}")
-        appendLine("  origin x fact x mark  = ${projDistinct(1, 2, 3)}   <- the questions ignoring the asking frame")
-        appendLine("  frame x origin        = ${projDistinct(0, 1)}")
+        // which component fabricates the uniqueness inside a question
+        val edgeFactVariants = perQuestion.values.sumOf { g -> g.mapTo(HashSet()) { it.first[4] }.size }
+        val suffixVariants = perQuestion.values.sumOf { g -> g.mapTo(HashSet()) { it.first[5] }.size }
+        appendLine("attribution across $questions questions:")
+        appendLine("  summed distinct edgeFacts = $edgeFactVariants (%.2f per question)".format(1.0 * edgeFactVariants / questions))
+        appendLine("  summed distinct suffixes  = $suffixVariants (%.2f per question)".format(1.0 * suffixVariants / questions))
+        appendLine("  unique/question           = %.2f".format(1.0 * unique / questions))
+
+        fun projQ(vararg idx: Int) = rows.mapTo(HashSet()) { r -> idx.joinToString("\u0001") { r.first[it] } }.size
+        appendLine("projections of the QUESTION set:")
+        appendLine("  origin x fact x mark = ${projQ(1, 2, 3)}   <- questions ignoring the asking frame")
+        appendLine("  origin x fact        = ${projQ(1, 2)}   <- and ignoring the mark")
 
         fun top(name: String, idx: IntArray, n: Int) {
-            appendLine("top $n by $name (questions, requests):")
+            appendLine("top $n by $name (q = questions, u = unique requests):")
             rows.groupBy { r -> idx.joinToString(" | ") { r.first[it] } }
-                .map { (k, v) -> Triple(k, v.size, v.sumOf { it.second }) }
-                .sortedByDescending { it.second }.take(n)
-                .forEach { appendLine("  q=%-7d r=%-7d %s".format(it.second, it.third, it.first.take(180))) }
+                .map { (k, v) -> Triple(k, v.mapTo(HashSet()) { key(it.first, 0, 1, 2, 3) }.size, v.size) }
+                .sortedByDescending { it.third }.take(n)
+                .forEach { appendLine("  q=%-7d u=%-7d %s".format(it.second, it.third, it.first.take(170))) }
         }
-        top("frame", intArrayOf(0), 15)
-        top("origin", intArrayOf(1), 15)
-        top("mark", intArrayOf(3), 15)
+        top("frame", intArrayOf(0), 12)
+        top("mark", intArrayOf(3), 10)
         top("origin x fact x mark", intArrayOf(1, 2, 3), 10)
     }
 
