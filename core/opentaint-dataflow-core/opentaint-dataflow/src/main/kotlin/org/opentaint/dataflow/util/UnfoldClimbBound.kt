@@ -53,10 +53,98 @@ object UnfoldClimbBound {
 
     val droppedByRefined = AtomicLong()
 
+    /**
+     * First-wins memo on the QUESTION -- (frame, origin method, origin fact, mark) -- dropping the
+     * summary-application detail (refinement kind, delta, suffix) from the request's identity.
+     *
+     * Minimisation on the depth ladder shows the engine asks each question 1 + k times, that only
+     * the first asking carries it, and that the other k cannot even substitute for it: they are
+     * causally downstream re-presentations. Required = 2d + 2, raised = 7d - 1.
+     */
+    @Volatile
+    var questionMemo: Boolean =
+        System.getProperty("opentaint.unfoldClimb.questionMemo")?.toBooleanStrictOrNull() ?: false
+
+    private val askedQuestions = ConcurrentHashMap.newKeySet<Any>()
+
+    val droppedByQuestion = AtomicLong()
+
+    /** Distinct questions actually handled. */
+    val questionCount: Int get() = askedQuestions.size
+
+    /** @return true when this question has already been asked at this frame. */
+    fun questionAlreadyAsked(key: Any): Boolean {
+        if (!questionMemo) return false
+        if (askedQuestions.add(key)) return false
+        droppedByQuestion.incrementAndGet()
+        return true
+    }
+
     val statsEnabled: Boolean =
         System.getProperty("opentaint.unfoldClimb.stats")?.toBooleanStrictOrNull() ?: true
 
     private val seen = ConcurrentHashMap.newKeySet<Any>()
+
+    // ---- request tracing and suppression, for the minimisation harness ----
+
+    /** Record every request the handler sees, keyed structurally. */
+    @Volatile
+    var traceEnabled: Boolean = false
+
+    /** Occurrence count per structural request key, in first-seen order. */
+    val trace: MutableMap<String, Int> = java.util.Collections.synchronizedMap(LinkedHashMap())
+
+    /**
+     * When non-null, only requests whose key is in this set are handled; every other request is a
+     * no-op. `null` means handle everything, i.e. the unbounded engine.
+     */
+    @Volatile
+    var allow: Set<String>? = null
+
+    val suppressedCount = AtomicLong()
+
+    fun reset() {
+        seen.clear()
+        askedQuestions.clear()
+        trace.clear()
+        allow = null
+        traceEnabled = false
+        questionMemo = System.getProperty("opentaint.unfoldClimb.questionMemo")?.toBooleanStrictOrNull() ?: false
+        listOf(
+            reposted, droppedByMemo, droppedByDepth, droppedByRefined,
+            answeredLocally, maxDepthSeen, suppressedCount, droppedByQuestion
+        ).forEach { it.set(0) }
+    }
+
+    /** Structural identity of one request as the handler sees it. */
+    fun requestKey(method: Any, fact: Any, mark: Any, effect: String, delta: Any?, suffix: Any?): String =
+        ("$method | fact=$fact | mark=$mark | $effect | delta=${render(delta)} | suffix=${render(suffix)}")
+
+    /**
+     * Data-class toString on the access-tree deltas leaks the ApManager's identity hash, which is
+     * fresh per analysis run. Strip identity hashes so a key means the same thing across runs.
+     */
+    private fun render(v: Any?): String = v?.toString()
+        ?.replace(Regex("@[0-9a-f]{4,}"), "")
+        ?.replace(Regex("apManager=[^,]*, "), "")
+        ?.replace("\n", " ")
+        ?.trim() ?: "-"
+
+    /**
+     * Records the request and reports whether the handler should act on it.
+     * Returns false when the minimisation harness has suppressed this key.
+     */
+    fun admit(key: String): Boolean {
+        if (traceEnabled) {
+            synchronized(trace) { trace[key] = (trace[key] ?: 0) + 1 }
+        }
+        val allowed = allow
+        if (allowed != null && key !in allowed) {
+            suppressedCount.incrementAndGet()
+            return false
+        }
+        return true
+    }
 
     val reposted = AtomicLong()
     val droppedByMemo = AtomicLong()
@@ -86,11 +174,14 @@ object UnfoldClimbBound {
         append(" maxDepth=").append(maxDepth)
         append(" suffixInKey=").append(suffixInKey)
         append(" unrefinedOnly=").append(unrefinedOnly)
+        append(" questionMemo=").append(questionMemo)
         append(" | answeredLocally=").append(answeredLocally.get())
         append(" reposted=").append(reposted.get())
         append(" droppedByMemo=").append(droppedByMemo.get())
         append(" droppedByDepth=").append(droppedByDepth.get())
         append(" droppedByRefined=").append(droppedByRefined.get())
+        append(" droppedByQuestion=").append(droppedByQuestion.get())
+        append(" questions=").append(askedQuestions.size)
         append(" distinctKeys=").append(seen.size)
         append(" maxFactDepth=").append(maxDepthSeen.get())
     }

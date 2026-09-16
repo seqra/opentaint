@@ -26,6 +26,14 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleZeroToFact(currentFactAp, summaryEffect, kind)
         }
 
+        if (!UnfoldClimbBound.admit(requestKey("z2f", kind, summaryEffect))) {
+            return emptySet()
+        }
+
+        if (UnfoldClimbBound.questionAlreadyAsked(questionKey("z2f", kind))) {
+            return emptySet()
+        }
+
         handleUnfoldRequest(summaryEffect, kind)
         return emptySet()
     }
@@ -39,6 +47,14 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
     ): Set<MethodSequentFlowFunction.Sequent> {
         if (kind !is TaintMarkFieldUnfoldRequest || UnfoldClimbBound.disabled) {
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
+        }
+
+        if (!UnfoldClimbBound.admit(requestKey("f2f@$methodEntryPoint", kind, summaryEffect))) {
+            return emptySet()
+        }
+
+        if (UnfoldClimbBound.questionAlreadyAsked(questionKey("f2f@$methodEntryPoint", kind))) {
+            return emptySet()
         }
 
         // 8867fb730's guard: fact-to-fact edges vastly outnumber zero-to-fact ones, so refining on
@@ -79,6 +95,30 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
         UnfoldClimbBound.reposted.incrementAndGet()
         return setOf(MethodSequentFlowFunction.Sequent.FactSideEffect(fact, newKind))
+    }
+
+    /** The question, without the summary-application detail that makes it look distinct. */
+    private fun questionKey(site: String, request: TaintMarkFieldUnfoldRequest): Any =
+        listOf(site, request.method, request.fact, request.mark)
+
+    private fun requestKey(
+        site: String,
+        request: TaintMarkFieldUnfoldRequest,
+        summaryEffect: SummaryEdgeApplication
+    ): String {
+        val effect = when (summaryEffect) {
+            is SummaryEdgeApplication.SummaryApRefinement -> "ApRefinement"
+            is SummaryEdgeApplication.SummaryExclusionRefinement -> "ExclusionRefinement"
+        }
+        val delta = (summaryEffect as? SummaryEdgeApplication.SummaryApRefinement)?.delta
+        return UnfoldClimbBound.requestKey(
+            method = "$site:${request.method}",
+            fact = request.fact,
+            mark = request.mark,
+            effect = effect,
+            delta = delta,
+            suffix = request.suffix,
+        )
     }
 
     private fun handleUnfoldRequest(
