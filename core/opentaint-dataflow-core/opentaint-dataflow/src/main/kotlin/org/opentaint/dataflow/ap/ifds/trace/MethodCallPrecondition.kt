@@ -29,7 +29,7 @@ interface MethodCallPrecondition {
     sealed interface CallFailurePreconditionFact : CallResolutionPreconditionFact
     sealed interface CallSuccessPreconditionFact : CallResolutionPreconditionFact
 
-    object UnresolvedCallSkip : CallPreconditionFact, CallFailurePreconditionFact
+    object UnresolvedCallSkip : CallPreconditionFact, CallFailurePreconditionFact, CallSuccessPreconditionFact
     data class CallToReturnTaintRule(val precondition: TaintRulePrecondition) : CallPreconditionFact, CallFailurePreconditionFact, CallSuccessPreconditionFact
     data class CallToStart(val callerFact: InitialFactAp, val startFactBase: AccessPathBase) : CallPreconditionFact
     data class CallToStartResolved(val callerFact: InitialFactAp, val startFactBase: AccessPathBase, val method: MethodWithContext): CallSuccessPreconditionFact
