@@ -83,7 +83,7 @@ interface MethodCallFlowFunction {
 
     data class Drop(
         val traceInfo: TraceInfo?,
-    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact
+    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact, ZeroCallFailureFact, FactCallFailureFact, NDFactCallFailureFact, ZeroCallSuccessFact, FactCallSuccessFact, NDFactCallSuccessFact
 
     sealed interface TraceInfo {
         data object Flow : TraceInfo
