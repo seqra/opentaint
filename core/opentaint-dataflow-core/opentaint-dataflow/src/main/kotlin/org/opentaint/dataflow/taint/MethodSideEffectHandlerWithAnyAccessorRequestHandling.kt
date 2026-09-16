@@ -47,7 +47,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         // Measured on tms: that iteration registers 3.3x the side-effect requirements (299,593 vs
         // 90,644), and each registration fans out ~14 new initial facts instead of ~3, for 6.46M
         // initial facts against 335k. That difference is the whole distance between finishing in
-        // 77 s and dying on the memory guard.
+        // 74 s and dying on the memory guard.
         if (!kind.fact.getAllAccessors().isEmpty()) {
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }

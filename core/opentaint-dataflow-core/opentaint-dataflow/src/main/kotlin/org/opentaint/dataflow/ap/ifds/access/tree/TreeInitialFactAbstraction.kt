@@ -88,8 +88,14 @@ class TreeInitialFactAbstraction(
                 val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
                 val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
 
-                facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                // The walk re-derives the whole added tree of the base on every registration, so it
+                // re-emits everything it has ever emitted. `addAnalyzedInitialFact` already tells us
+                // whether this abstraction is new; measured on tms, 98.2% of emissions are not
+                // (119,021 new against 6,460,363 repeats). A repeat produces an initial edge the
+                // method already has, so emitting it is redundant work, not information.
+                if (facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())) {
+                    abstractFacts.add(initialAbstractAp to ap)
+                }
             }
 
             concreteFactAccess = facts.unrollAnyAccessors(unrollRequests, typeChecker)
