@@ -1,6 +1,5 @@
 package org.opentaint.jvm.sast.dataflow
 
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -70,70 +69,18 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
      * finding the flow once the request has picked up accessors on the way up, and the depth at
      * which that happens is exactly what these cases record.
      */
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 1`() = assertDeepReachable(1)
 
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 2`() = assertDeepReachable(2)
 
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 3`() = assertDeepReachable(3)
 
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 5`() = assertDeepReachable(5)
@@ -142,19 +89,6 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
      * Ten frames. This is the cost case: without a bound on the climb the analyzer exhausts its own
      * IFDS budget here rather than reporting the flow.
      */
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 10`() = assertDeepReachable(10)
@@ -164,19 +98,6 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
      * by which its own initial fact extends, so this is the shape any "the delta is the edge fact's
      * tail, so skip it" bound has to be checked against. The depth ladder never produces it.
      */
-    @Disabled(
-        "Needs the unfold request to be answered at a fact that is already a refinement -- i.e. to " +
-            "iterate the demand on its own output. Measured on tms: that registers 3.3x the " +
-            "side-effect requirements and fans out ~14 new initial facts per registration instead " +
-            "of ~3 (6.46M vs 335k), which is the difference between rc=0 in 75 s and the 8 GB " +
-            "memory guard. Eleven variants were tried to keep both -- answering the whole path at " +
-            "once, exact re-post dedup, stopping the climb on a saturated demand, suppressing the " +
-            "loop's own echo, refusing accessors read through an [any], gating the registration by " +
-            "the existing depth limit, requiring the delta to name the mark, keying the demand per " +
-            "base -- and every one of them either kept this test and hit the guard, or passed the " +
-            "guard and lost this test. Re-enable together with whatever makes the refinement " +
-            "fan-out affordable."
-    )
     @Test
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field through a recursive walk`() = assertReachable(

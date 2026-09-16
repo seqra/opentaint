@@ -163,6 +163,24 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
         edgeIndex.add(final, idx)
     }
 
+    /**
+     * Whether a delta of [path] against this exit fact could possibly be empty. `AccessTree.delta`
+     * only narrows the node further, so a node that is neither abstract nor final at the end of
+     * [path] can never produce one.
+     */
+    private fun AccessTree.AccessNode.mayHaveEmptyDeltaAt(path: AccessPath.AccessNode): Boolean {
+        var node = this
+        var current: AccessPath.AccessNode? = path
+        while (current != null) {
+            // An abstraction covers whatever is below it, including accessors that have no concrete
+            // child node, so nothing past this point can be decided here.
+            if (node.isAbstract) return true
+            node = node.getChild(current.accessor) ?: return false
+            current = current.next
+        }
+        return node.isAbstract || node.isFinal
+    }
+
     override fun find(
         dst: MutableList<CommonFactEdgeSubBuilder<AccessTree.AccessNode>>,
         summaryInitialFact: AccessPath.AccessNode?,
@@ -176,6 +194,16 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
             val relevantIndices = edgeIndex.findStartsWith(summaryInitialFact)
             relevantIndices?.forEach { storageIdx ->
                 val callerExitAp = storageFinalFacts[storageIdx]
+
+                // `emptyDeltaRequired` is plumbed down to here and was then ignored by this backend,
+                // so a caller that merely CONTAINS the requirement as a prefix was built and
+                // delivered, only for `handleMethodSideEffectRequirement` to drop it on its first
+                // line -- it needs an EMPTY delta, which needs the node to be abstract or final
+                // there, strictly stronger than containing the prefix. The index answers that in
+                // O(depth) with no allocation.
+                if (emptyDeltaRequired && !callerExitAp.mayHaveEmptyDeltaAt(summaryInitialFact)) {
+                    return@forEach
+                }
 
                 val filteredExitAp = callerExitAp.filterStartsWith(summaryInitialFact)
                     ?: return@forEach
