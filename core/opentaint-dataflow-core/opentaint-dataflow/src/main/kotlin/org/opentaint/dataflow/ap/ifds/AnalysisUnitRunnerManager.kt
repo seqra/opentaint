@@ -5,11 +5,15 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
+import org.opentaint.dataflow.taint.MarkUnfoldDemand
 import org.opentaint.dataflow.util.Cancellation
 
 interface AnalysisUnitRunnerManager {
     val unitResolver: UnitResolver<CommonMethod>
     val cancellation: Cancellation
+
+    /** Accessors already demanded by answers to a `TaintMarkFieldUnfoldRequest`. */
+    val markUnfoldDemand: MarkUnfoldDemand
 
     fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage?
     fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner?

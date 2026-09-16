@@ -93,7 +93,20 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         val nextAccessors = request.suffix?.let { setOf(it) }
             ?: delta.relevantStartAccessors(mark)
 
-        val exclusion = nextAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
+        // The demand for one question only grows. An accessor that has already been demanded for it
+        // does not refine the abstraction a second time -- the split it asks for ends in `[any]`
+        // again, one accessor further down, and re-raises the same question. See [MarkUnfoldDemand].
+        val newAccessors = runner.manager.markUnfoldDemand.newlyDemanded(
+            request.method, request.fact.base, mark, nextAccessors
+        )
+
+        // Nothing fresh: this answer asks for a split that has already been asked for. Raising it
+        // again cannot refine anything, so no request is issued. The request itself is not consumed
+        // -- it keeps travelling, because a different caller may still hold an accessor no one has
+        // contributed yet, and stopping it here measurably loses that.
+        if (newAccessors.isEmpty()) return false
+
+        val exclusion = newAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
         runner.manager.handleCrossUnitSideEffectReq(request.method, request.fact.replaceExclusions(exclusion))
 
         return true

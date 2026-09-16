@@ -37,6 +37,7 @@ import org.opentaint.dataflow.ap.ifds.trace.path.generateTracePath
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
+import org.opentaint.dataflow.taint.MarkUnfoldDemand
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.MemoryManager
 import org.opentaint.dataflow.util.RefManager
@@ -62,6 +63,8 @@ class TaintAnalysisUnitRunnerManager(
     private val summarySerializationContext: SummarySerializationContext,
     private val taintRulesStatsSamplingPeriod: Int?,
 ): AnalysisUnitRunnerManager, AutoCloseable {
+    override val markUnfoldDemand: MarkUnfoldDemand = MarkUnfoldDemand()
+
     enum class Status {
         OK, EXCEPTION, TIMEOUT, OOM
     }
