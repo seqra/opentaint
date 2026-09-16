@@ -30,6 +30,8 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return emptySet()
         }
 
+        UnfoldClimbBound.recordQuestion("z2f", "${kind.method}", "${kind.fact}", "${kind.mark}")
+
         if (UnfoldClimbBound.questionAlreadyAsked(questionKey("z2f", kind))) {
             return emptySet()
         }
@@ -52,6 +54,8 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         if (!UnfoldClimbBound.admit(requestKey("f2f@$methodEntryPoint", kind, summaryEffect))) {
             return emptySet()
         }
+
+        UnfoldClimbBound.recordQuestion("$methodEntryPoint", "${kind.method}", "${kind.fact}", "${kind.mark}")
 
         if (UnfoldClimbBound.questionAlreadyAsked(questionKey("f2f@$methodEntryPoint", kind))) {
             return emptySet()

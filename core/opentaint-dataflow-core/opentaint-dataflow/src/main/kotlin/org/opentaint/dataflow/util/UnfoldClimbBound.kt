@@ -69,6 +69,64 @@ object UnfoldClimbBound {
 
     val droppedByQuestion = AtomicLong()
 
+    // ---- question census: decompose the distinct-question population ----
+
+    /** Enabled with -Dopentaint.unfoldClimb.census=true; writes to .census file at shutdown. */
+    val censusEnabled: Boolean =
+        System.getProperty("opentaint.unfoldClimb.census")?.toBooleanStrictOrNull() ?: false
+
+    /** question -> how many requests carried it. Question = frame | origin | fact | mark. */
+    private val census = ConcurrentHashMap<String, java.util.concurrent.atomic.AtomicInteger>()
+
+    fun recordQuestion(frame: String, origin: String, fact: String, mark: String) {
+        if (!censusEnabled) return
+        census.computeIfAbsent("$frame\u0001$origin\u0001$fact\u0001$mark") {
+            java.util.concurrent.atomic.AtomicInteger()
+        }.incrementAndGet()
+    }
+
+    private fun censusReport(): String = buildString {
+        val rows = census.entries.map { it.key.split('\u0001') to it.value.get() }
+        val requests = rows.sumOf { it.second }
+        appendLine("requests=$requests distinctQuestions=${rows.size}")
+        if (rows.isEmpty()) return@buildString
+
+        fun distinct(i: Int) = rows.mapTo(HashSet()) { it.first[i] }.size
+        appendLine("distinct: frames=${distinct(0)} origins=${distinct(1)} facts=${distinct(2)} marks=${distinct(3)}")
+
+        // how many requests carry one question
+        val mult = rows.groupingBy { it.second }.eachCount().toSortedMap()
+        appendLine("requestsPerQuestion histogram (count -> questions):")
+        mult.entries.take(15).forEach { (k, v) -> appendLine("  x%-4d %d".format(k, v)) }
+        val repeats = rows.sumOf { it.second - 1 }
+        appendLine("repeatRequests=$repeats (%.1f%% of all)".format(100.0 * repeats / requests))
+
+        // which component carries the breadth
+        fun projDistinct(vararg idx: Int) =
+            rows.mapTo(HashSet()) { r -> idx.joinToString("\u0001") { r.first[it] } }.size
+        appendLine("projections of the question set:")
+        appendLine("  frame                 = ${projDistinct(0)}")
+        appendLine("  origin                = ${projDistinct(1)}")
+        appendLine("  fact                  = ${projDistinct(2)}")
+        appendLine("  mark                  = ${projDistinct(3)}")
+        appendLine("  origin x mark         = ${projDistinct(1, 3)}")
+        appendLine("  origin x fact         = ${projDistinct(1, 2)}")
+        appendLine("  origin x fact x mark  = ${projDistinct(1, 2, 3)}   <- the questions ignoring the asking frame")
+        appendLine("  frame x origin        = ${projDistinct(0, 1)}")
+
+        fun top(name: String, idx: IntArray, n: Int) {
+            appendLine("top $n by $name (questions, requests):")
+            rows.groupBy { r -> idx.joinToString(" | ") { r.first[it] } }
+                .map { (k, v) -> Triple(k, v.size, v.sumOf { it.second }) }
+                .sortedByDescending { it.second }.take(n)
+                .forEach { appendLine("  q=%-7d r=%-7d %s".format(it.second, it.third, it.first.take(180))) }
+        }
+        top("frame", intArrayOf(0), 15)
+        top("origin", intArrayOf(1), 15)
+        top("mark", intArrayOf(3), 15)
+        top("origin x fact x mark", intArrayOf(1, 2, 3), 10)
+    }
+
     /** Distinct questions actually handled. */
     val questionCount: Int get() = askedQuestions.size
 
@@ -164,7 +222,15 @@ object UnfoldClimbBound {
 
     init {
         if (statsEnabled) {
-            Runtime.getRuntime().addShutdownHook(Thread { System.err.println(report()) })
+            Runtime.getRuntime().addShutdownHook(Thread {
+                System.err.println(report())
+                if (censusEnabled) {
+                    runCatching {
+                        java.io.File(System.getProperty("opentaint.unfoldClimb.censusOut") ?: "unfold-census.txt")
+                            .writeText(censusReport())
+                    }
+                }
+            })
         }
     }
 
