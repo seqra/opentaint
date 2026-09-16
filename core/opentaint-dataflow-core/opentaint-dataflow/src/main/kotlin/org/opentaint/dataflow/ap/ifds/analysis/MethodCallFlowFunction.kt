@@ -270,7 +270,8 @@ interface MethodCallFlowFunction {
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                     this += CallToReturnZFact(factAp, trace)
                 },
-                addCallToStart = { callerFactAp, startFactBase, trace ->
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                     this += CallToStartZFact(callerFactAp, startFactBase, trace)
                 },
                 addUnchecked = {
@@ -302,8 +303,12 @@ interface MethodCallFlowFunction {
                         trace
                     )
                 },
-                addCallToStart = { callerFactAp, startFactBase, trace ->
-                    this += CallToStartFFact(initialFactAp, callerFactAp, startFactBase, trace)
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    this += CallToStartFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(callerFactAp),
+                        startFactBase, trace
+                    )
                 },
                 addUnchecked = {
                     check(it is FactCallSuccessFact) { "unexpected" }
@@ -331,7 +336,8 @@ interface MethodCallFlowFunction {
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                     this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
                 },
-                addCallToStart = { callerFactAp, startFactBase, trace ->
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                     this += CallToStartNDFFact(initialFacts, callerFactAp, startFactBase, trace)
                 },
                 addUnchecked = {
@@ -367,7 +373,7 @@ interface MethodCallFlowFunction {
             method: MethodWithContext,
             addSideEffectRequirement: (FinalFactReader) -> Unit,
             addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
-            addCallToStart: (callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
+            addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
             addUnchecked: (CallFact) -> Unit,
         )
     }

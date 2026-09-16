@@ -244,9 +244,9 @@ class GoMethodCallFlowFunction(
         method: MethodWithContext,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
-        addCallToStart: (callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
+        addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
-    ) = addCallToStart(factAp, startFactBase, null)
+    ) = addCallToStart(FinalFactReader(factAp, apManager), factAp, startFactBase, null)
 
     private fun propagateDefault(
         factAp: FinalFactAp,
