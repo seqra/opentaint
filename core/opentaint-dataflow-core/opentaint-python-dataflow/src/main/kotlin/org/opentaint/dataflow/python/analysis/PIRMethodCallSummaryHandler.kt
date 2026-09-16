@@ -11,7 +11,6 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
-import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeCallStatement
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
@@ -21,17 +20,17 @@ import kotlin.collections.plusAssign
 class PIRMethodCallSummaryHandler(
     private val callInst: PIRCall,
     private val ctx: PIRMethodAnalysisContext,
-    private val callResolver: PIRCallResolver, // TODO remove call resolver
     private val apManager: ApManager,
     override val factTypeChecker: FactTypeChecker,
 ) : MethodCallSummaryHandler {
     private val factMapper get() = ctx.methodCallFactMapper
 
-    private val resolvedMethods by lazy { callResolver.resolveCall(callInst) }
+    private val summaryRewriters = hashMapOf<PIRFunction, PIRCallRuleBasedSummaryRewriter>()
 
-    private val summaryRewriter by lazy {
-        PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, resolvedMethods)
-    }
+    private fun summaryRewriter(callee: MethodEntryPoint): PIRCallRuleBasedSummaryRewriter =
+        summaryRewriters.getOrPut(callee.callee) {
+            PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, setOf(callee.callee))
+        }
 
     private val MethodEntryPoint.callee: PIRFunction get() = method as PIRFunction
 
@@ -54,7 +53,7 @@ class PIRMethodCallSummaryHandler(
         val callee = summaryEdge.methodEntryPoint
         val callSiteFact = summaryEdge.factAp.toCallSiteFrame(callee) ?: return emptyList()
 
-        return summaryRewriter.rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
+        return summaryRewriter(callee).rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
             val initialFacts = prepareSummaryInitialFact(refinement.refineFact(summaryEdge.initialFactAp), callee)
             refinement.refineFact(resultFact).mapToCaller().flatMap { finalFact ->
                 initialFacts.map { Edge.FactToFact(callee, it, summaryEdge.statement, finalFact) }
@@ -70,7 +69,7 @@ class PIRMethodCallSummaryHandler(
             .map { prepareSummaryInitialFact(it, callee) }
             .cartesianProductMapTo { it.toHashSet() }
 
-        return summaryRewriter.rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
+        return summaryRewriter(callee).rewriteSummaryFact(callSiteFact).flatMap { (resultFact, refinement) ->
             check(!refinement.hasRefinement) { "Can't refine NDF2F edge" }
             resultFact.mapToCaller().flatMap { finalFact ->
                 initialFacts.map { SummaryEdge.NdF2F(callee, it, finalFact) }

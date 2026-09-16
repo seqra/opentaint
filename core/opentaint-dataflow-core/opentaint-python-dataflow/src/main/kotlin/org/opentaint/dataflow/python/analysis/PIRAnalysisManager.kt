@@ -178,7 +178,7 @@ class PIRAnalysisManager(
     ): MethodCallSummaryHandler {
         val ctx = analysisContext as PIRMethodAnalysisContext
         return PIRMethodCallSummaryHandler(
-            statement as PIRCall, ctx, pirCallResolver, apManager, factTypeChecker
+            statement as PIRCall, ctx, apManager, factTypeChecker
         )
     }
 
