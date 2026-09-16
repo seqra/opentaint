@@ -237,6 +237,8 @@ class GoMethodCallFlowFunction(
     }
 
     override fun propagateSuccessCallFact(
+        initialFacts: Set<InitialFactAp>,
+        exclusion: ExclusionSet,
         factAp: FinalFactAp,
         startFactBase: AccessPathBase,
         method: MethodWithContext,

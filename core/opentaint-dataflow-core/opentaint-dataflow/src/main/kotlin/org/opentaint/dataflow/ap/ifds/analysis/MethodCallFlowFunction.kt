@@ -258,6 +258,8 @@ interface MethodCallFlowFunction {
             method: MethodWithContext,
         ): Set<ZeroCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
+                initialFacts = emptySet(),
+                exclusion = ExclusionSet.Universe,
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
                 method = method,
@@ -285,6 +287,8 @@ interface MethodCallFlowFunction {
             method: MethodWithContext,
         ): Set<FactCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
+                initialFacts = setOf(initialFactAp),
+                exclusion = initialFactAp.exclusions,
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
                 method = method,
@@ -315,6 +319,8 @@ interface MethodCallFlowFunction {
             method: MethodWithContext,
         ): Set<NDFactCallSuccessFact> = buildSet {
             propagateSuccessCallFact(
+                initialFacts = initialFacts,
+                exclusion = ExclusionSet.Universe,
                 factAp = currentFactAp,
                 startFactBase = startFactBase,
                 method = method,
@@ -354,6 +360,8 @@ interface MethodCallFlowFunction {
         )
 
         fun propagateSuccessCallFact(
+            initialFacts: Set<InitialFactAp>,
+            exclusion: ExclusionSet,
             factAp: FinalFactAp,
             startFactBase: AccessPathBase,
             method: MethodWithContext,
