@@ -39,6 +39,19 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
+        // A request asks about an ABSTRACTION: is the mark hidden under the `[any]` of this fact?
+        // A fact that already carries accessors is not an abstraction waiting for an answer -- it is
+        // one, produced by answering the question at the abstraction above it. Answering there
+        // refines it again, and the refined frame re-raises the question one accessor further down.
+        //
+        // Measured on tms: that iteration registers 3.3x the side-effect requirements (299,593 vs
+        // 90,644), and each registration fans out ~14 new initial facts instead of ~3, for 6.46M
+        // initial facts against 335k. That difference is the whole distance between finishing in
+        // 77 s and dying on the memory guard.
+        if (!kind.fact.getAllAccessors().isEmpty()) {
+            return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
+        }
+
         if (handleUnfoldRequest(summaryEffect, kind)) {
             return emptySet()
         }
