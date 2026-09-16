@@ -54,8 +54,19 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
-        if (!UnfoldClimbBound.admit(storageKey("f2f@$methodEntryPoint", kind,
-                "${currentInitialFactAp.replaceExclusions(ExclusionSet.Empty)}"))) {
+        val f2fKey = storageKey(
+            "f2f@$methodEntryPoint", kind,
+            "${currentInitialFactAp.replaceExclusions(ExclusionSet.Empty)}"
+        )
+        val deltaTail = deltaIsEdgeFactTail(currentInitialFactAp, summaryEffect)
+        UnfoldClimbBound.recordDeltaTail(f2fKey, deltaTail)
+
+        if (!UnfoldClimbBound.admit(f2fKey)) {
+            return emptySet()
+        }
+
+        if (UnfoldClimbBound.dropDeltaTail && deltaTail) {
+            UnfoldClimbBound.droppedByDeltaTail.incrementAndGet()
             return emptySet()
         }
 
@@ -112,6 +123,55 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
     /** The question, without the summary-application detail that makes it look distinct. */
     private fun questionKey(site: String, request: TaintMarkFieldUnfoldRequest): Any =
         listOf(site, request.method, request.fact, request.mark)
+
+    /**
+     * Linear accessor chain of a fact / delta, or null if it branches.
+     * AccessPath is a chain by construction; a summary delta need not be.
+     */
+    private fun InitialFactAp.chainOrNull(limit: Int = 64): List<Accessor>? {
+        val out = ArrayList<Accessor>()
+        var cur: InitialFactAp = this
+        while (out.size < limit) {
+            val a = cur.getStartAccessors().singleOrNull() ?: return if (cur.getStartAccessors().isEmpty()) out else null
+            out += a
+            cur = cur.readAccessor(a) ?: return out
+        }
+        return null
+    }
+
+    private fun FinalFactAp.Delta.chainOrNull(limit: Int = 64): List<Accessor>? {
+        val out = ArrayList<Accessor>()
+        var cur: FinalFactAp.Delta = this
+        while (out.size < limit) {
+            val a = cur.getStartAccessors().singleOrNull() ?: return if (cur.getStartAccessors().isEmpty()) out else null
+            out += a
+            cur = cur.readAccessor(a) ?: return out
+        }
+        return null
+    }
+
+    /**
+     * True when the refinement the caller brings is exactly the tail by which the F2F initial fact
+     * extends: the `arg0.f.* -> a.f.*` application of a request already applied at `arg0.* -> a.*`.
+     * The deeper application asks the same question one accessor further down.
+     */
+    private fun deltaIsEdgeFactTail(
+        currentInitialFactAp: InitialFactAp,
+        summaryEffect: SummaryEdgeApplication
+    ): Boolean {
+        if (summaryEffect !is SummaryEdgeApplication.SummaryApRefinement) {
+            UnfoldClimbBound.tailNotApRefinement.incrementAndGet(); return false
+        }
+        val deltaChain = summaryEffect.delta.chainOrNull()
+        if (deltaChain == null) { UnfoldClimbBound.tailBranching.incrementAndGet(); return false }
+        if (deltaChain.isEmpty()) { UnfoldClimbBound.tailEmptyDelta.incrementAndGet(); return false }
+        val edge = currentInitialFactAp.chainOrNull()
+        if (edge == null) { UnfoldClimbBound.tailBranching.incrementAndGet(); return false }
+        val hit = edge.size >= deltaChain.size &&
+            edge.subList(edge.size - deltaChain.size, edge.size) == deltaChain
+        (if (hit) UnfoldClimbBound.tailTrue else UnfoldClimbBound.tailFalse).incrementAndGet()
+        return hit
+    }
 
     /**
      * The identity the summary storage actually keys on: the frame, the edge fact (base +

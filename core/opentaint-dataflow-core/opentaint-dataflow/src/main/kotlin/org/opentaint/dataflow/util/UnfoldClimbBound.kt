@@ -144,6 +144,32 @@ object UnfoldClimbBound {
         top("origin x fact x mark", intArrayOf(1, 2, 3), 10)
     }
 
+    // ---- hypothesis: the ApRefinement delta is the edge fact's own tail ----
+
+    /** Per storage key: how often the predicate held / did not hold. */
+    val deltaTailTrue: MutableMap<String, Int> = java.util.Collections.synchronizedMap(HashMap())
+    val deltaTailFalse: MutableMap<String, Int> = java.util.Collections.synchronizedMap(HashMap())
+
+    fun recordDeltaTail(key: String, isTail: Boolean) {
+        if (!traceEnabled) return
+        val m = if (isTail) deltaTailTrue else deltaTailFalse
+        synchronized(m) { m[key] = (m[key] ?: 0) + 1 }
+    }
+
+    /** Drop a request whose ApRefinement delta is exactly the tail of the F2F initial fact. */
+    @Volatile
+    var dropDeltaTail: Boolean =
+        System.getProperty("opentaint.unfoldClimb.dropDeltaTail")?.toBooleanStrictOrNull() ?: false
+
+    val droppedByDeltaTail = AtomicLong()
+
+    /** Why the predicate did or did not decide, over every f2f unfold request. */
+    val tailTrue = AtomicLong()
+    val tailFalse = AtomicLong()
+    val tailNotApRefinement = AtomicLong()
+    val tailEmptyDelta = AtomicLong()
+    val tailBranching = AtomicLong()
+
     /** Distinct questions actually handled. */
     val questionCount: Int get() = askedQuestions.size
 
@@ -184,10 +210,14 @@ object UnfoldClimbBound {
         trace.clear()
         allow = null
         traceEnabled = false
+        deltaTailTrue.clear()
+        deltaTailFalse.clear()
+        dropDeltaTail = System.getProperty("opentaint.unfoldClimb.dropDeltaTail")?.toBooleanStrictOrNull() ?: false
         questionMemo = System.getProperty("opentaint.unfoldClimb.questionMemo")?.toBooleanStrictOrNull() ?: false
         listOf(
             reposted, droppedByMemo, droppedByDepth, droppedByRefined,
-            answeredLocally, maxDepthSeen, suppressedCount, droppedByQuestion
+            answeredLocally, maxDepthSeen, suppressedCount, droppedByQuestion, droppedByDeltaTail,
+            tailTrue, tailFalse, tailNotApRefinement, tailEmptyDelta, tailBranching
         ).forEach { it.set(0) }
     }
 
@@ -264,6 +294,12 @@ object UnfoldClimbBound {
         append(" droppedByDepth=").append(droppedByDepth.get())
         append(" droppedByRefined=").append(droppedByRefined.get())
         append(" droppedByQuestion=").append(droppedByQuestion.get())
+        append(" droppedByDeltaTail=").append(droppedByDeltaTail.get())
+        append(" | tail: true=").append(tailTrue.get())
+        append(" false=").append(tailFalse.get())
+        append(" notApRef=").append(tailNotApRefinement.get())
+        append(" emptyDelta=").append(tailEmptyDelta.get())
+        append(" branching=").append(tailBranching.get())
         append(" questions=").append(askedQuestions.size)
         append(" distinctKeys=").append(seen.size)
         append(" maxFactDepth=").append(maxDepthSeen.get())

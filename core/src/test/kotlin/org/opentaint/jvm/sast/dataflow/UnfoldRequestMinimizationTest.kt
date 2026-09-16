@@ -51,16 +51,36 @@ class UnfoldRequestMinimizationTest : AnalysisTest() {
 
     var lastQuestions = 0
     var lastDropped = 0L
+    var lastTailTrue = 0L
+    var lastTailFalse = 0L
+    var lastNotApRef = 0L
+    var lastBranching = 0L
+    var lastDroppedTail = 0L
+    var lastTailTrueKeys: Set<String> = emptySet()
+    var lastTailFalseKeys: Set<String> = emptySet()
 
-    private fun run(entry: String, allow: Set<String>?, questionMemo: Boolean = false): Pair<Boolean, Map<String, Int>> {
+    private fun run(
+        entry: String,
+        allow: Set<String>?,
+        questionMemo: Boolean = false,
+        dropDeltaTail: Boolean = false,
+    ): Pair<Boolean, Map<String, Int>> {
         UnfoldClimbBound.reset()
         UnfoldClimbBound.traceEnabled = true
         UnfoldClimbBound.allow = allow
         UnfoldClimbBound.questionMemo = questionMemo
+        UnfoldClimbBound.dropDeltaTail = dropDeltaTail
         val found = runAnalysis(config, TEST_CLASS, entry).isNotEmpty()
         val seen = synchronized(UnfoldClimbBound.trace) { LinkedHashMap(UnfoldClimbBound.trace) }
         lastQuestions = UnfoldClimbBound.questionCount
         lastDropped = UnfoldClimbBound.droppedByQuestion.get()
+        lastTailTrue = UnfoldClimbBound.tailTrue.get()
+        lastTailFalse = UnfoldClimbBound.tailFalse.get()
+        lastNotApRef = UnfoldClimbBound.tailNotApRefinement.get()
+        lastBranching = UnfoldClimbBound.tailBranching.get()
+        lastDroppedTail = UnfoldClimbBound.droppedByDeltaTail.get()
+        lastTailTrueKeys = synchronized(UnfoldClimbBound.deltaTailTrue) { HashSet(UnfoldClimbBound.deltaTailTrue.keys) }
+        lastTailFalseKeys = synchronized(UnfoldClimbBound.deltaTailFalse) { HashSet(UnfoldClimbBound.deltaTailFalse.keys) }
         UnfoldClimbBound.reset()
         return found to seen
     }
@@ -141,6 +161,70 @@ class UnfoldRequestMinimizationTest : AnalysisTest() {
             redundant.forEach { say("    x%-3d %s".format(observed[it], it)) }
         }
         File(System.getProperty("unfold.report") ?: "/tmp/unfold-minim.txt").writeText(out.toString())
+    }
+
+    /**
+     * The depth ladder never produces a request whose delta is the edge fact's tail, so it cannot
+     * judge that predicate. The recursive walk does -- each frame is entered one `.next` deeper
+     * than its caller. This is the unit-level safety check for dropping those requests.
+     */
+    @Test
+    fun `delta-is-edge-tail on the recursive walk`() {
+        val out = StringBuilder()
+        for (entry in listOf("fieldFlowRecursive", "fieldFlowDepth10")) {
+            val keep = run(entry, null, dropDeltaTail = false)
+            val kTrue = lastTailTrue; val kFalse = lastTailFalse
+            val kNot = lastNotApRef; val kBranch = lastBranching
+            val drop = run(entry, null, dropDeltaTail = true)
+            val dropped = lastDroppedTail
+            out.appendLine(
+                "%-20s | keep: found=%-5s unique=%-4d tailTrue=%-4d tailFalse=%-4d notApRef=%-4d branching=%-4d | drop: found=%-5s unique=%-4d dropped=%d"
+                    .format(entry, keep.first, keep.second.size, kTrue, kFalse, kNot, kBranch, drop.first, drop.second.size, dropped)
+            )
+            out.appendLine("   VERDICT: " + if (!keep.first) "n/a (not reachable even unbounded)"
+                else if (drop.first) "SAFE here" else "LOSSY - dropping the delta-tail requests loses the finding")
+        }
+        File(System.getProperty("unfold.rec") ?: "/tmp/unfold-rec.txt").writeText(out.toString())
+    }
+
+    /**
+     * Cross-tabulate the "ApRefinement delta is the F2F initial fact's tail" predicate against the
+     * ground-truth required/redundant classification. A predicate that ever fires on a REQUIRED
+     * request is lossy; one that only fires on redundant ones is a safe drop on this sample.
+     */
+    @Test
+    fun `delta-is-edge-tail predicate versus ground truth`() {
+        val out = StringBuilder()
+        out.appendLine("%-6s %-7s %-9s %-10s | %-12s %-12s %-14s %s".format(
+            "depth", "unique", "required", "redundant", "pred-on-req", "pred-on-redun", "coverage", "SAFE"))
+        for (depth in DEPTHS) {
+            val entry = "fieldFlowDepth$depth"
+            val observed = run(entry, null).second
+            // snapshot taken inside run(), before its trailing reset()
+            val pred = lastTailTrueKeys - lastTailFalseKeys
+            val mixed = lastTailTrueKeys intersect lastTailFalseKeys
+
+            var keep = observed.keys.toMutableSet()
+            for (k in observed.keys) {
+                if (k !in keep) continue
+                val cand = keep - k
+                if (run(entry, cand).first) keep = cand.toMutableSet()
+            }
+            val required = observed.keys.filter { it in keep }.toSet()
+            val redundant = observed.keys.filter { it !in keep }.toSet()
+
+            val onReq = pred.count { it in required }
+            val onRedun = pred.count { it in redundant }
+            val coverage = if (redundant.isEmpty()) 0.0 else 100.0 * onRedun / redundant.size
+            out.appendLine("%-6d %-7d %-9d %-10d | %-12d %-12d %-13.1f%% %s  (pred=%d mixed=%d)".format(
+                depth, observed.size, required.size, redundant.size, onReq, onRedun, coverage,
+                if (onReq == 0) "yes" else "NO - LOSSY", pred.size, mixed.size))
+            if (onReq > 0) {
+                out.appendLine("   predicate fires on these REQUIRED requests:")
+                pred.filter { it in required }.take(4).forEach { out.appendLine("     $it") }
+            }
+        }
+        File(System.getProperty("unfold.tail") ?: "/tmp/unfold-tail.txt").writeText(out.toString())
     }
 
     /** Semantic identity of the question, dropping the summary-application detail. */

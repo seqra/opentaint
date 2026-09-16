@@ -93,6 +93,21 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
     @Timeout(value = 3, unit = TimeUnit.MINUTES)
     fun `any-field sink unfolds a field at depth 10`() = assertDeepReachable(10)
 
+    /**
+     * A self-recursive descent through a repeated field. Each frame's refinement delta is the tail
+     * by which its own initial fact extends, so this is the shape any "the delta is the edge fact's
+     * tail, so skip it" bound has to be checked against. The depth ladder never produces it.
+     */
+    @Test
+    @Timeout(value = 3, unit = TimeUnit.MINUTES)
+    fun `any-field sink unfolds a field through a recursive walk`() = assertReachable(
+        config = deepConfig,
+        testCls = DEEP_TEST_CLASS,
+        entryPointName = "fieldFlowRecursive",
+        ruleId = DEEP_RULE_ID,
+        testName = "recursive interprocedural any-field sink",
+    )
+
     private fun assertDeepReachable(depth: Int) = assertReachable(
         config = deepConfig,
         testCls = DEEP_TEST_CLASS,

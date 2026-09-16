@@ -28,6 +28,38 @@ public class AnyFieldDeepInterproceduralSample {
         public String note;
     }
 
+    public static class Node {
+        public Path payload;
+        public Node next;
+    }
+
+    /**
+     * Self-recursive descent through a repeated field. Each recursive frame is entered with a fact
+     * one `.next` deeper than its caller, so the refinement delta the caller brings is exactly the
+     * tail by which its own initial fact extends -- the `arg0.next.* -> n.next.*` application of a
+     * request already applied at `arg0.* -> n.*`. This is the shape of ImportController#joinKV.
+     */
+    private void walk(Node n) {
+        sink(n.payload);
+        if (n.next != null) {
+            walk(n.next);
+        }
+    }
+
+    private void recursiveStore(String value) {
+        Node tail = new Node();
+        tail.payload = new Path();
+        tail.payload.value = value;
+
+        Node head = new Node();
+        head.payload = new Path();
+        head.next = tail;
+
+        walk(head);
+    }
+
+    public void fieldFlowRecursive() { recursiveStore(source()); }
+
     public String source() {
         return "tainted";
     }
