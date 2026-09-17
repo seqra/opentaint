@@ -154,7 +154,7 @@ class PIRAnalysisManager(
         val ctx = analysisContext as PIRMethodAnalysisContext
         val pirCall = statement as PIRCall
         return PIRMethodCallFlowFunction(
-            pirCall, ctx.method, ctx, apManager, pirCallResolver
+            pirCall, ctx, apManager
         )
     }
 
@@ -168,7 +168,7 @@ class PIRAnalysisManager(
         pIRDowncast<PIRCall>(statement)
         pIRDowncast<PIRMethodAnalysisContext>(analysisContext)
 
-        return PIRMethodCallPrecondition(apManager, statement, analysisContext, pirCallResolver)
+        return PIRMethodCallPrecondition(apManager, statement, analysisContext)
     }
 
     override fun getMethodCallSummaryHandler(

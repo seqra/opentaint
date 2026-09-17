@@ -194,8 +194,8 @@ object PIRMethodCallFactMapper : MethodCallFactMapper {
         factAp: FactAp,
     ): Boolean {
         val base = factAp.base
-        if (base is AccessPathBase.ClassStatic || base is AccessPathBase.Constant) return true
-        if (valueToBase(callStatement.callee) == base) return true
+        if (base is AccessPathBase.ClassStatic) return true
+        if (valueToBase(callStatement.callee) == base && factAp.startsWithAccessor(SELF_ACCESSOR)) return true
 
         for (arg in callStatement.args) {
             if (base == valueToBase(arg.value)) return true

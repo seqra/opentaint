@@ -24,7 +24,7 @@ class PIRCallRuleBasedSummaryRewriter(
     private val callInst: PIRCall,
     private val ctx: PIRMethodAnalysisContext,
     private val apManager: ApManager,
-    private val resolvedMethods: Set<PIRFunction>,
+    private val method: PIRFunction,
 ) {
     private val config get() = ctx.taint.taintConfig
 
@@ -40,7 +40,7 @@ class PIRCallRuleBasedSummaryRewriter(
         )
 
         val result = mutableListOf<UserRuleDefinedAction>()
-        for (sourceRule in resolvedMethods.flatMap { config.sourcesForMethod(it) }) {
+        for (sourceRule in config.sourcesForMethod(method)) {
             val ruleInfo = sourceRule.info as? PIRUserDefinedRuleInfo ?: continue
 
             val simplifiedCondition = conditionRewriter.rewrite(sourceRule.condition)
@@ -50,7 +50,7 @@ class PIRCallRuleBasedSummaryRewriter(
             result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
         }
 
-        for (cleanRule in resolvedMethods.flatMap { config.cleanersForMethod(it) }) {
+        for (cleanRule in config.cleanersForMethod(method)) {
             val ruleInfo = cleanRule.info as? PIRUserDefinedRuleInfo ?: continue
 
             val simplifiedCondition = conditionRewriter.rewrite(cleanRule.condition)

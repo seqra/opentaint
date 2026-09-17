@@ -13,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionF
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.python.PIRCallAnyArgumentResolver
 import org.opentaint.dataflow.python.PIRCallAtomEvaluator
-import org.opentaint.dataflow.python.PIRCallResolver
 import org.opentaint.dataflow.python.PIRConditionRewriter
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
 import org.opentaint.dataflow.python.rulesWithConditions
@@ -21,6 +20,7 @@ import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.alias.forEachAliasBeforeStatement
 import org.opentaint.dataflow.python.alias.forEachPossibleAliasBeforeStatement
 import org.opentaint.dataflow.python.analysis.PIRMethodAnalysisContext
+import org.opentaint.dataflow.python.graph.PIRUnknownFunction
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.configuration.python.TaintPassAction
 import org.opentaint.dataflow.configuration.python.TaintPassThrough
@@ -31,19 +31,18 @@ import org.opentaint.dataflow.taint.evaluatePassRulePrecondition
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.util.Maybe
 
 class PIRMethodCallPrecondition(
     override val apManager: ApManager,
     private val statement: PIRCall,
     private val analysisContext: PIRMethodAnalysisContext,
-    private val callResolver: PIRCallResolver,
 ) : MethodCallPrecondition.Default {
     private val callExpr = statement.callExpr ?: error("Unexpected null call expr")
     private val rulesProvider get() = analysisContext.taint.taintConfig
     private val methodCallFactMapper get() = analysisContext.methodCallFactMapper
     private val returnValue get() = statement.target
-    private val resolvedMethods by lazy { callResolver.resolveCall(statement) }
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
         methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
@@ -72,17 +71,39 @@ class PIRMethodCallPrecondition(
         if (startFactBase != AccessPathBase.Return) {
             this += MethodCallPrecondition.UnresolvedCallSkip
         }
-
-        factPassRulePrecondition(fact, startFactBase).mapTo(this) {
-            MethodCallPrecondition.CallToReturnTaintRule(it)
-        }
     }
 
     override fun factPreconditionResolutionSuccess(
         fact: InitialFactAp,
         startFactBase: AccessPathBase,
         method: MethodWithContext
-    ) = listOf(MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method))
+    ): List<MethodCallPrecondition.CallSuccessPreconditionFact> = buildList {
+        val callee = method.method as PIRFunction
+
+        factSourceRulePrecondition(callee, fact, startFactBase).forEach {
+            this += MethodCallPrecondition.CallToReturnTaintRule(it)
+        }
+
+        if (callee is PIRUnknownFunction) {
+            unknownCallPrecondition(callee, fact, startFactBase)
+        } else {
+            this += MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method)
+        }
+    }
+
+    private fun MutableList<MethodCallPrecondition.CallSuccessPreconditionFact>.unknownCallPrecondition(
+        callee: PIRUnknownFunction,
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+    ) {
+        if (startFactBase != AccessPathBase.Return) {
+            this += MethodCallPrecondition.UnresolvedCallSkip
+        }
+
+        factPassRulePrecondition(callee, fact, startFactBase).forEach {
+            this += MethodCallPrecondition.CallToReturnTaintRule(it)
+        }
+    }
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!methodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) return null
@@ -91,34 +112,24 @@ class PIRMethodCallPrecondition(
 
         val ret = returnValue
         if (ret != null && accessPathBase(ret) == fact.base) {
-            preconditions.preconditionForFact(fact, AccessPathBase.Return)
+            preconditions += MethodCallPrecondition.CallToStart(fact, AccessPathBase.Return)
         }
 
         methodCallFactMapper.mapMethodCallToStartFlowFact(
             statement, statement.location.method, callExpr, returnValue = null, fact
         ) { callerFact, startBase ->
-            preconditions.preconditionForFact(callerFact, startBase)
+            preconditions += MethodCallPrecondition.CallToStart(callerFact, startBase)
         }
 
         return preconditions
     }
 
-    private fun MutableList<CallPreconditionFact>.preconditionForFact(
-        fact: InitialFactAp,
-        startBase: AccessPathBase,
-    ) {
-        factSourceRulePrecondition(fact, startBase).mapTo(this) {
-            MethodCallPrecondition.CallToReturnTaintRule(it)
-        }
-
-        this += MethodCallPrecondition.CallToStart(fact, startBase)
-    }
-
     private fun factSourceRulePrecondition(
+        callee: PIRFunction,
         fact: InitialFactAp,
         startBase: AccessPathBase,
     ): List<TaintRulePrecondition> {
-        val sourceRules = resolvedMethods.flatMap { rulesProvider.sourcesForMethod(it) }
+        val sourceRules = rulesProvider.sourcesForMethod(callee)
         if (sourceRules.isEmpty()) return emptyList()
 
         val entryFactReader = InitialFactReader(fact.rebase(startBase), apManager)
@@ -141,10 +152,12 @@ class PIRMethodCallPrecondition(
     }
 
     private fun factPassRulePrecondition(
+        callee: PIRFunction,
         fact: InitialFactAp,
         startFactBase: AccessPathBase,
     ): List<TaintRulePrecondition> = buildList {
-        val passRules = getPassRules()
+        val passRules = rulesProvider.passThroughForMethod(callee)
+            .ifEmpty { rulesProvider.passThroughForMethod(callee, bySimpleName = true) }
         if (passRules.isEmpty()) return@buildList
 
         val entryFactReader = InitialFactReader(fact.rebase(startFactBase), apManager)
@@ -160,13 +173,6 @@ class PIRMethodCallPrecondition(
                 mapExit2Return = { mapExit2Return(it) },
             )
         }
-    }
-
-    private fun getPassRules(): List<TaintPassThrough> {
-        val passRules = resolvedMethods.flatMap { rulesProvider.passThroughForMethod(it) }
-        if (passRules.isNotEmpty()) return passRules
-
-        return resolvedMethods.flatMap { rulesProvider.passThroughForMethod(it, bySimpleName = true) }
     }
 
     private fun TaintPassActionPreconditionEvaluator.acceptPass(

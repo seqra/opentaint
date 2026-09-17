@@ -14,6 +14,7 @@ import org.opentaint.dataflow.configuration.python.ContainsMark
 import org.opentaint.dataflow.configuration.python.Position
 import org.opentaint.dataflow.configuration.python.Result
 import org.opentaint.dataflow.configuration.python.TaintAssignAction
+import org.opentaint.dataflow.configuration.python.TaintCleanAction
 import org.opentaint.dataflow.configuration.python.TaintCleaner
 import org.opentaint.dataflow.configuration.python.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.python.TaintExitSink
@@ -134,18 +135,20 @@ abstract class AnalysisTest {
     fun assertSinkReachable(
         source: TestSource,
         sink: TestSink,
-        entryPointFunction: String
+        entryPointFunction: String,
+        cleaners: List<TestCleaner> = emptyList(),
     ) {
-        val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
+        val vulnerabilities = runAnalysis(source, sink, entryPointFunction, cleaners)
         assertTrue(vulnerabilities.isNotEmpty(), "Sink was not reached")
     }
 
     fun assertSinkNotReachable(
         source: TestSource,
         sink: TestSink,
-        entryPointFunction: String
+        entryPointFunction: String,
+        cleaners: List<TestCleaner> = emptyList(),
     ) {
-        val vulnerabilities = runAnalysis(source, sink, entryPointFunction)
+        val vulnerabilities = runAnalysis(source, sink, entryPointFunction, cleaners)
         assertTrue(vulnerabilities.isEmpty(), "Sink should not be reached")
     }
 
@@ -175,7 +178,8 @@ abstract class AnalysisTest {
         source: TestSource,
         sink: TestSink,
         entryPointFunction: String,
-    ): List<VulnerabilityWithTrace> = runAnalysis(rulesWith(source, sink), entryPointFunction)
+        cleaners: List<TestCleaner> = emptyList(),
+    ): List<VulnerabilityWithTrace> = runAnalysis(rulesWith(source, sink, cleaners), entryPointFunction)
 
     fun runAnalysis(
         taintConfig: PIRTaintRulesProvider,
@@ -206,10 +210,13 @@ abstract class AnalysisTest {
     protected fun sink(function: String, mark: String, pos: Position, id: String): TestSink =
         TestSink(function, mark, pos, id)
 
-    private fun rulesWith(source: TestSource, sink: TestSink): PIRTaintRulesProvider =
+    protected fun cleaner(function: String, mark: String, pos: Position): TestCleaner =
+        TestCleaner(function, mark, pos)
+
+    private fun rulesWith(source: TestSource, sink: TestSink, cleaners: List<TestCleaner>): PIRTaintRulesProvider =
         PIRCombinedTaintRulesProvider(
             loadDefaultConfig(),
-            TestRulesProvider(listOf(source), listOf(sink)),
+            TestRulesProvider(listOf(source), listOf(sink), cleaners),
             PIRCombinedTaintRulesProvider.CombinationOptions(
                 source = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
                 sink = PIRCombinedTaintRulesProvider.CombinationMode.EXTEND,
@@ -243,9 +250,12 @@ sealed interface TestSource {
 
 data class TestSink(val function: String, val mark: String, val pos: Position, val id: String)
 
+data class TestCleaner(val function: String, val mark: String, val pos: Position)
+
 private class TestRulesProvider(
     private val sources: List<TestSource>,
     private val sinks: List<TestSink>,
+    private val cleaners: List<TestCleaner>,
 ) : PIRTaintRulesProvider {
     override fun sourcesForMethod(method: PIRFunction): List<TaintSource> =
         sources.flatMap { it.rulesForMethod(method) }
@@ -264,7 +274,15 @@ private class TestRulesProvider(
 
     override fun entryPointSourcesForMethod(method: PIRFunction): List<TaintEntryPointSource> = emptyList()
     override fun passThroughForMethod(method: PIRFunction, bySimpleName: Boolean): List<TaintPassThrough> = emptyList()
-    override fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> = emptyList()
+    override fun cleanersForMethod(method: PIRFunction): List<TaintCleaner> =
+        cleaners.filter { method.matches(it.function) }.map {
+            TaintCleaner(
+                target = Target.Function(method),
+                condition = mkTrue(),
+                cleans = listOf(TaintCleanAction(TaintMark(it.mark), it.pos)),
+                forCategory = null,
+            )
+        }
     override fun sourcesForAttribute(name: String): List<TaintSource> =
         sources.flatMap { it.rulesForAttribute(name) }
     override fun sinksForAttribute(name: String): List<TaintSink> = emptyList()

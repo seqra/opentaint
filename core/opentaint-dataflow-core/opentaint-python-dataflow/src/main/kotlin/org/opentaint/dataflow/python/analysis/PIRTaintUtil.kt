@@ -14,7 +14,6 @@ import org.opentaint.dataflow.configuration.python.PythonRuleCondition
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
-import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
 import org.opentaint.dataflow.python.util.PIRFlowFunctionUtils
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
@@ -113,7 +112,6 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
 }
 
 class PIRMethodCallTaintUtil(
-    val callExpr: PIRCallExprAdapter,
     context: PIRMethodAnalysisContext,
     statement: PIRCall,
     apManager: ApManager
@@ -131,18 +129,7 @@ class PIRMethodCallTaintUtil(
     override fun mapFactToReturn(fact: InitialFactAp) =
         callFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 
-    override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> = buildList {
-        callFactMapper.mapMethodCallToStartFlowFact(
-            statement,
-            callee = statement.location.method,
-            callExpr,
-            returnValue = null,
-            factReader.factAp,
-            FactTypeChecker.Dummy,
-        ) { fact, startBase ->
-            this += FinalFactReader(fact.rebase(startBase), apManager)
-        }
-    }
+    override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> = listOf(factReader)
 }
 
 class PIRSequentTaintUtil(

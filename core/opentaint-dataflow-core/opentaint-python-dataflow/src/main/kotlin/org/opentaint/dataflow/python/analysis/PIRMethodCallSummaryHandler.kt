@@ -29,7 +29,7 @@ class PIRMethodCallSummaryHandler(
 
     private fun summaryRewriter(callee: MethodEntryPoint): PIRCallRuleBasedSummaryRewriter =
         summaryRewriters.getOrPut(callee.callee) {
-            PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, setOf(callee.callee))
+            PIRCallRuleBasedSummaryRewriter(callInst, ctx, apManager, callee.callee)
         }
 
     private val MethodEntryPoint.callee: PIRFunction get() = method as PIRFunction
