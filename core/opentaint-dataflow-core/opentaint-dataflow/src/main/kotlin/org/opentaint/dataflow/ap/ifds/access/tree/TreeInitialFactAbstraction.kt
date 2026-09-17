@@ -39,7 +39,9 @@ class TreeInitialFactAbstraction(
         val addedFact = facts.addInitialFact(factAp.access, interner) ?: return emptyList()
 
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
-        addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts, typeChecker)
+        // The walk starts from the just-added subtree, so it derives each abstraction once by
+        // construction and needs no dedup.
+        addAbstractInitialFact(facts, factAp.base, addedFact, abstractFacts, typeChecker, emitOnlyNew = false)
         return abstractFacts
     }
 
@@ -65,16 +67,27 @@ class TreeInitialFactAbstraction(
         if (!facts.addAnalyzedInitialFact(factAp.access, excludedAccessors)) return emptyList()
 
         val abstractFacts = mutableListOf<Pair<InitialFactAp, FinalFactAp>>()
-        addAbstractInitialFact(facts, factAp.base, facts.allAddedFacts(), abstractFacts, typeChecker)
+        // Here the walk restarts from the base's WHOLE added tree, so it re-derives every abstraction
+        // it has ever derived for this base.
+        addAbstractInitialFact(facts, factAp.base, facts.allAddedFacts(), abstractFacts, typeChecker, emitOnlyNew = true)
         return abstractFacts
     }
 
+    /**
+     * [emitOnlyNew] drops an abstraction this base has already emitted from this walk.
+     *
+     * The pair an abstraction produces is a pure function of the base and the abstract access path,
+     * and the pair's only consumer builds an initial edge from it -- which the method either already
+     * holds, or already has parked as delayed until the fact-depth limit rises. Either way
+     * `MethodAnalyzerEdges.add` drops the repeat, so re-emitting it is work rather than information.
+     */
     private fun addAbstractInitialFact(
         facts: MethodSameBaseInitialFact,
         concreteFactBase: AccessPathBase,
         initialConcreteFact: AccessTreeNode,
         abstractFacts: MutableList<Pair<InitialFactAp, FinalFactAp>>,
-        typeChecker: FactTypeChecker
+        typeChecker: FactTypeChecker,
+        emitOnlyNew: Boolean,
     ) {
         var concreteFactAccess = initialConcreteFact
         while (true) {
@@ -88,8 +101,11 @@ class TreeInitialFactAbstraction(
                 val apAccess = apManager.createAbstractNodeFromReversedAp(abstractAccess)
                 val ap = AccessTree(apManager, concreteFactBase, apAccess, Empty)
 
-                facts.addAnalyzedInitialFact(initialAbstractAccessNode, exclusions = IntOpenHashSet())
-                abstractFacts.add(initialAbstractAp to ap)
+                val firstEmission = facts.addAnalyzedAbstraction(initialAbstractAccessNode)
+
+                if (firstEmission || !emitOnlyNew) {
+                    abstractFacts.add(initialAbstractAp to ap)
+                }
             }
 
             concreteFactAccess = facts.unrollAnyAccessors(unrollRequests, typeChecker)
@@ -109,11 +125,15 @@ class TreeInitialFactAbstraction(
         for (unrollRequest in unrollRequests) {
             apManager.cancellation.checkpoint()
 
+            // Depends only on the request's own prefix, not on the accessor being unrolled, and a
+            // request carries up to a few hundred of them -- one per accessor ever demanded at this
+            // trie node. Built once per accessor, it was the same filter every time.
+            val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
+
             unrollRequest.accessors.forEachInt { accessor ->
                 val accessorInstance = with(apManager) { accessor.accessor }
                 if (!unrollStrategy.unrollAccessor(accessorInstance)) return@forEachInt
 
-                val accessorFilter = unrollRequest.currentAp.createFilter(typeChecker)
                 val accessorStatus = accessorFilter.check(accessorInstance)
                 when (accessorStatus) {
                     is FactTypeChecker.FilterResult.Accept,
@@ -326,12 +346,17 @@ class TreeInitialFactAbstraction(
 
         fun addAnalyzedInitialFact(ap: AccessPath.AccessNode?, exclusions: IntOpenHashSet): Boolean =
             AccessPathTrieNode.add(analyzed, ap, exclusions)
+
+        fun addAnalyzedAbstraction(ap: AccessPath.AccessNode?): Boolean =
+            AccessPathTrieNode.addAbstraction(analyzed, ap)
+
     }
 
     class AccessPathTrieNode {
         private var children: Int2ObjectOpenHashMap<AccessPathTrieNode>? = null
         private var terminals: IntOpenHashSet? = null
         private var unrolled: IntOpenHashSet? = null
+        private var abstractionEmitted: Boolean = false
 
         fun exclusions(): IntOpenHashSet? = terminals
 
@@ -369,6 +394,37 @@ class TreeInitialFactAbstraction(
                         var modified = trieNode.terminals == null
                         modified = modified or trieNode.getTerminals().addAll(exclusions)
                         return modified
+                    }
+
+                    val key = access.accessor
+                    trieNode = trieNode.getChildren().getOrPut(key) { empty() }
+                    access = access.next
+                }
+            }
+
+            /**
+             * Registers [initialAccess] as analyzed with no exclusions, exactly as [add] does, and
+             * reports whether its abstraction has not been emitted from this base before.
+             *
+             * The flag is separate from [terminals] on purpose: a path can be marked analyzed by a
+             * concrete initial fact without its abstraction ever having been emitted, so reusing
+             * [add]'s "modified" answer would suppress a first emission.
+             */
+            fun addAbstraction(
+                initialRoot: AccessPathTrieNode,
+                initialAccess: AccessPath.AccessNode?,
+            ): Boolean {
+                var trieNode = initialRoot
+                var access = initialAccess
+
+                while (true) {
+                    if (access == null) {
+                        trieNode.getTerminals()
+
+                        if (trieNode.abstractionEmitted) return false
+
+                        trieNode.abstractionEmitted = true
+                        return true
                     }
 
                     val key = access.accessor

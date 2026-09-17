@@ -4,6 +4,7 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.create
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
+import java.util.concurrent.ConcurrentHashMap
 
 class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
     private val manager = suffixNode.manager
@@ -110,10 +111,48 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         }
     }
 
+    /**
+     * The walk is a pure function of its three arguments: the trie is built once in `init` and never
+     * touched again, and an [AccessTree.AccessNode] is immutable. A fact is a DAG, not a tree, so the
+     * same pair is reached along many paths -- remembering the answer returns the answer the walk
+     * would recompute.
+     */
+    private val walkMemo = ConcurrentHashMap<MemoKey, Any>()
+
+    private class MemoKey(
+        private val trie: Any,
+        private val node: AccessTree.AccessNode,
+        private val prefixCoveredByAny: Boolean,
+    ) {
+        override fun hashCode(): Int {
+            var result = System.identityHashCode(trie)
+            result = 31 * result + System.identityHashCode(node)
+            return 31 * result + if (prefixCoveredByAny) 1 else 0
+        }
+
+        override fun equals(other: Any?): Boolean =
+            other is MemoKey &&
+                trie === other.trie &&
+                node === other.node &&
+                prefixCoveredByAny == other.prefixCoveredByAny
+    }
+
+    private object NoNode
+
     fun getNonMatchingNode(node: AccessTree.AccessNode) =
         getNonMatchingNode(root, node, true) ?: manager.emptyNode
 
     private fun getNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
+        val key = MemoKey(trie, node, prefixCoveredByAny)
+
+        walkMemo[key]?.let { return if (it === NoNode) null else it as AccessTree.AccessNode }
+
+        val result = computeNonMatchingNode(trie, node, prefixCoveredByAny)
+        walkMemo[key] = result ?: NoNode
+        return result
+    }
+
+    private fun computeNonMatchingNode(trie: TrieNode, node: AccessTree.AccessNode, prefixCoveredByAny: Boolean): AccessTree.AccessNode? {
         val accessorIdx = mutableListOf<AccessorIdx>()
         val accessorNodes = mutableListOf<AccessTree.AccessNode>()
         var areChildrenChanged = false

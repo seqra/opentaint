@@ -97,6 +97,13 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         val nextAccessors = request.suffix?.let { setOf(it) }
             ?: delta.relevantStartAccessors(mark)
 
+        // Nothing to split off. An `ExclusionSet.Empty` requirement demands nothing -- the fact it
+        // refines is the fact itself, so `handleInputFactChange` returns at its equality guard, and
+        // `handleMethodSideEffectRequirement` drops an `Empty` refinement outright. Posting it only
+        // broadcasts a requirement to every caller of the asking frame for each of them to rebase,
+        // delta and discard. The pre-climb handler returned here rather than posting.
+        if (nextAccessors.isEmpty()) return true
+
         val exclusion = nextAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
         runner.manager.handleCrossUnitSideEffectReq(request.method, request.fact.replaceExclusions(exclusion))
 

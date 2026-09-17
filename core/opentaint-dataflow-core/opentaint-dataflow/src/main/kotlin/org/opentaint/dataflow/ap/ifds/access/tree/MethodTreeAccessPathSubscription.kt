@@ -170,7 +170,13 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
     ) {
         if (summaryInitialFact == null) {
             storageInitialFacts.forEachIndexed { index, callerInitialAp ->
-                dst.add(storageFinalFacts[index], callerInitialAp)
+                val callerExitAp = storageFinalFacts[index]
+
+                if (emptyDeltaRequired && !callerExitAp.mayHaveEmptyDelta(null)) {
+                    return@forEachIndexed
+                }
+
+                dst.add(callerExitAp, callerInitialAp)
             }
         } else {
             val relevantIndices = edgeIndex.findStartsWith(summaryInitialFact)
@@ -180,9 +186,47 @@ private class SummaryEdgeFactAbstractTreeSubscriptionStorage(
                 val filteredExitAp = callerExitAp.filterStartsWith(summaryInitialFact)
                     ?: return@forEach
 
+                if (emptyDeltaRequired && !filteredExitAp.mayHaveEmptyDelta(summaryInitialFact)) {
+                    return@forEach
+                }
+
                 dst.add(filteredExitAp, storageInitialFacts[storageIdx])
             }
         }
+    }
+
+    /**
+     * Answers `AccessTree.delta(requirement).any { it.isEmpty }` for this caller exit fact, erring
+     * towards `true`.
+     *
+     * The only caller that asks for [emptyDeltaRequired] is the side-effect REQUIREMENT broadcast,
+     * and `handleMethodSideEffectRequirement` keeps exactly the subscriptions with an empty delta --
+     * `emptyDeltaExclusionRefinementOrNull` returns `null` for every other one, which then rebases,
+     * deltas and drops it. Deciding it here instead skips the delivery rather than the result.
+     *
+     * `delta` walks the requirement path from this node and reports an empty delta only where it
+     * lands on an abstraction, or on the final marker with this node final. The requirement's
+     * exclusion set is not available at this level, but it reaches `delta` only as a filter on the
+     * node the walk lands on, and filtering preserves `isAbstract`: ignoring it can therefore only
+     * keep a subscription `delta` would have dropped, never drop one it would have kept.
+     */
+    private fun AccessTree.AccessNode.mayHaveEmptyDelta(path: AccessPath.AccessNode?): Boolean {
+        var node = this
+        var current = path
+
+        while (current != null) {
+            // An abstraction stands for every continuation below it, including accessors with no
+            // node of their own, so nothing past this point is decidable here.
+            if (node.isAbstract) return true
+
+            // `delta` never descends through the final marker -- it answers on the flag instead.
+            if (current.accessor == FINAL_ACCESSOR_IDX) return node.isFinal
+
+            node = node.getChild(current.accessor) ?: return false
+            current = current.next
+        }
+
+        return node.isAbstract
     }
 
     private fun MutableList<CommonFactEdgeSubBuilder<AccessTree.AccessNode>>.add(

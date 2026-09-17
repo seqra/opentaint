@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion
 import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion.Companion.addAccessorFromDepth0
 import org.opentaint.dataflow.ap.ifds.access.DeepAccessorExclusion.Companion.addAccessorFromDepth1
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import java.lang.ref.Reference
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.ReversedApNode
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.foldRight
@@ -430,6 +431,22 @@ class AccessTree(
             }
 
             return resultNode
+        }
+
+        /**
+         * The matcher is a pure function of this node, and building it is a BFS over the whole
+         * `[any]` subtree with a `TrieNode` allocated per node. Every merge against an `[any]`-owning
+         * node rebuilt it from scratch for the same suffix. Held softly: dropping it costs a rebuild,
+         * never an answer.
+         */
+        private var anySuffixMatcherRef: Reference<AccessTreeAnySuffixMatcher>? = null
+
+        fun anySuffixMatcher(): AccessTreeAnySuffixMatcher {
+            anySuffixMatcherRef?.get()?.let { return it }
+
+            val matcher = AccessTreeAnySuffixMatcher(this)
+            anySuffixMatcherRef = manager.refManager.createRef(matcher)
+            return matcher
         }
 
         fun addParentIfPossible(accessor: AccessorIdx): AccessNode? {
@@ -978,7 +995,7 @@ class AccessTree(
             val aAnyIdx = aAccessorsUntrimmed.indexOf(ANY_ACCESSOR_IDX)
             val bTrimmed =
                 if (aAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(aNodesUntrimmed[aAnyIdx]).getNonMatchingNode(b)
+                    aNodesUntrimmed[aAnyIdx].anySuffixMatcher().getNonMatchingNode(b)
                 else b
 
             val bAccessorsUntrimmed = bTrimmed.accessors
@@ -987,7 +1004,7 @@ class AccessTree(
             val bAnyIdx = bAccessorsUntrimmed?.indexOf(ANY_ACCESSOR_IDX) ?: -1
             val aTrimmed =
                 if (bAnyIdx >= 0)
-                    AccessTreeAnySuffixMatcher(bNodesUntrimmed!![bAnyIdx]).getNonMatchingNode(a)
+                    bNodesUntrimmed!![bAnyIdx].anySuffixMatcher().getNonMatchingNode(a)
                 else a
 
             if (aTrimmed !== a || bTrimmed !== b) {
