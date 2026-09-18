@@ -60,13 +60,17 @@ Then compile the project with "opentaint compile" and run the samples with "open
 			}
 			out.Printf("Rule test project (%s) initialized at %s", kind, dir)
 		}
-		dir := filepath.Join(args[0], kinds[0])
-		modelDir := filepath.Join(dir, "model")
-		out.Suggestions(
-			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
-			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", dir, modelDir)},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test rule run %s", modelDir)},
-		)
+		var suggestions []output.Suggestion
+		for _, kind := range kinds {
+			dir := filepath.Join(args[0], kind)
+			modelDir := filepath.Join(dir, "model")
+			suggestions = append(suggestions,
+				output.Suggestion{Description: fmt.Sprintf("To add %s test samples, edit:", kind), Command: filepath.Join(dir, "rule-test.yaml")},
+				output.Suggestion{Description: fmt.Sprintf("To compile the %s test project, run:", kind), Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
+				output.Suggestion{Description: fmt.Sprintf("To run the %s tests, run:", kind), Command: fmt.Sprintf("opentaint test rule run %s", shellQuote(modelDir))},
+			)
+		}
+		out.Suggestions(suggestions...)
 	},
 }
 
@@ -103,8 +107,8 @@ Then compile the project with "opentaint compile" and run the samples with "open
 		modelDir := filepath.Join(dir, "model")
 		out.Suggestions(
 			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
-			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", dir, modelDir)},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test approximation run %s --java-models <approximation>", modelDir)},
+			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test approximation run %s --java-models <approximation>", shellQuote(modelDir))},
 		)
 	},
 }

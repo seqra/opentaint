@@ -181,7 +181,6 @@ func (c *JavaAutobuilderConfig) printProjectSummary(config *project.Config) erro
 	projectYamlPath := filepath.Join(c.outputDir, "project.yaml")
 
 	c.logProjectSummary(projectYamlPath, config)
-	out.Successf("Project model generated.")
 	suggest("To scan the generated model, run:", utils.BuildScanCommandFromCompile(c.outputDir, c.outputDir))
 	return nil
 }
