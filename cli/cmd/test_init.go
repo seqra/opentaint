@@ -74,41 +74,41 @@ Then compile the project with "opentaint compile" and run the samples with "open
 	},
 }
 
-var testApproximationInitCmd = &cobra.Command{
+var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a dataflow-approximation test project",
-	Long: `Create a Gradle test project for dataflow-approximation tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
+	Short: "Create a Java dataflow model test project",
+	Long: `Create a Gradle test project for Java dataflow model tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
 
-The output-dir argument is the directory for the new project. To add compile-only Maven dependencies for the samples, use --dependency. The approximation under test is not part of the project. Give it at run time with --java-models.
+The output-dir argument is the directory for the new project. To add compile-only Maven dependencies for the samples, use --dependency. The model under test is not part of the project. Give it at run time with --java-models.
 
-The project contains a rule-test.yaml file, a Taint.java source and sink, and the fixed approximation-rule.yaml. Declare your positive and negative samples in rule-test.yaml.
+The project contains a rule-test.yaml file, a Taint.java source and sink, and a fixed source-to-sink harness rule. Declare your positive and negative samples in rule-test.yaml.
 
-Then compile the project with "opentaint compile" and run the samples with "opentaint test approximation run".`,
-	Example: `  # Create an approximation test project
-  opentaint test approximation init ./approx-test
+Then compile the project with "opentaint compile" and run the samples with "opentaint test model run".`,
+	Example: `  # Create a model test project
+  opentaint test model init ./model-test
 
   # Add a compile-only dependency for the samples
-  opentaint test approximation init ./approx-test --dependency <group:artifact:version>
+  opentaint test model init ./model-test --dependency <group:artifact:version>
 
   # Recipe: from an empty directory to a first test run
-  opentaint test approximation init ./approx-test
-  opentaint compile ./approx-test -o ./approx-test/model
-  opentaint test approximation run ./approx-test/model --java-models ./my-approximation`,
+  opentaint test model init ./model-test
+  opentaint compile ./model-test -o ./model-test/model
+  opentaint test model run ./model-test/model --java-models ./my-model`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
+		if err := testproject.Bootstrap(args[0], "model-test-project", initApproxProjectDeps); err != nil {
 			out.Fatalf("Failed to bootstrap test project: %s", err)
 		}
 		if err := testapprox.Scaffold(args[0]); err != nil {
-			out.Fatalf("Failed to scaffold approximation project: %s", err)
+			out.Fatalf("Failed to scaffold model test project: %s", err)
 		}
-		out.Printf("Approximation test project initialized at %s", args[0])
+		out.Printf("Model test project initialized at %s", args[0])
 		dir := args[0]
 		modelDir := filepath.Join(dir, "model")
 		out.Suggestions(
 			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
 			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test approximation run %s --java-models <approximation>", shellQuote(modelDir))},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --java-models <model>", shellQuote(modelDir))},
 		)
 	},
 }
@@ -122,7 +122,7 @@ func init() {
 	testRuleInitCmd.Flags().BoolVar(&initRuleSourcesOnly, "sources-only", false,
 		"Create only the sources test project")
 
-	testApproximationCmd.AddCommand(testApproximationInitCmd)
-	testApproximationInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
+	testModelCmd.AddCommand(testModelInitCmd)
+	testModelInitCmd.Flags().StringArrayVar(&initApproxProjectDeps, "dependency", nil,
 		"Compile-only Maven dependency coordinates for generated samples (repeatable)")
 }
