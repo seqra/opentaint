@@ -117,6 +117,16 @@ These flags are to work with custom approximations:
 | `--passthrough-models` | Apply pass-through model YAML files or directories (repeatable) |
 | `--java-models` | Apply Java dataflow model classes or source directories (repeatable) |
 
+<details>
+<summary>Deprecated flag names</summary>
+
+The old names remain accepted for compatibility and are deprecated:
+
+- `--passthrough-approximations` → `--passthrough-models`
+- `--dataflow-approximations` → `--java-models`
+
+</details>
+
 Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available. The approximated-methods file shows methods already covered by built-in or custom models.
 
 ### opentaint health
@@ -157,6 +167,9 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
 | `opentaint test rule reachability <rule-id> [source-path]` | Show why a rule does or does not fire |
 
+Rule-test options include `--ruleset`, `--rule-id`, `--project-model`, `--entry-points`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`.
+Rule runs also accept `--java-models` and the deprecated `--dataflow-approximations` alias. Reachability accepts `--project-model` or a source path, but not both.
+
 #### Approximation tests
 
 ```bash
@@ -170,6 +183,8 @@ opentaint test approximation run .opentaint/test-compiled/my-approximation \
 |---------|-------------|
 | `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
 | `opentaint test approximation run <project-model>` | Run dataflow-approximation tests on a compiled project model |
+
+Approximation-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `--dataflow-approximations` alias remains accepted.
 
 Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
@@ -231,6 +246,18 @@ opentaint scan --project-model ./project-model
 | `--dependency` | Additional dependency JAR files on the compile classpath (repeatable) |
 | `--dry-run` | Validate inputs and show what would run without generating the project model |
 | `--log-file` | Path to the log file (default: `<cache-dir>/logs/<timestamp>.log`) |
+
+### opentaint pull, update, and prune
+
+`opentaint pull` downloads the analyzer, autobuilder, built-in rules, and Java runtime. Use it before the first scan or to restore components removed by pruning.
+
+`opentaint update [version]` updates the OpenTaint binary. `--check` checks for an available update without installing it, and `--yes` skips confirmation. Homebrew and npm installations are updated with their package managers.
+
+`opentaint prune` removes old cached artifacts and models. By default it removes old artifacts, rules, JDK/JRE versions, and cached models. Use `--logs` or `--install` to include those categories, `--all` to select every category, `--dry-run` to preview deletion, and `--yes` to skip confirmation. `--all` cannot be combined with a category flag.
+
+### opentaint health
+
+`opentaint health` reports the autobuilder, analyzer, built-in rules, and Java runtime. Use `--autobuilder`, `--analyzer`, `--rules`, or `--runtime` to select one component. A selected missing component causes a non-zero exit status.
 
 ## Model Caching
 

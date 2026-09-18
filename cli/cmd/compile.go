@@ -110,7 +110,6 @@ Before your first compile, run "opentaint pull" one time. To scan the model, use
 		}); err == nil {
 			out.Blank()
 			printCompileSummary(absOutputProjectModelPath)
-			out.Successf("Compilation completed.")
 			suggest("To scan the compiled project model, run:", utils.BuildScanCommandFromCompile(projectRoot, absOutputProjectModelPath))
 		} else {
 			out.InteractiveBlank()
