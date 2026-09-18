@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.go.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -8,7 +9,8 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithConditi
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.go.GoCallExpr
@@ -77,15 +79,23 @@ class GoMethodCallPrecondition(
         val result = mutableListOf<CallFailurePreconditionFact>()
 
         if (startFactBase != AccessPathBase.Return) {
-            result += CallPreconditionFact.UnresolvedCallSkip
+            result += MethodCallPrecondition.UnresolvedCallSkip
         }
 
         factPassRulePrecondition(fact, startFactBase).mapTo(result) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
 
         return result
     }
+
+    override fun factPreconditionResolutionSuccess(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+        method: MethodWithContext
+    ): List<CallSuccessPreconditionFact> = listOf(
+        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method)
+    )
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) return null
@@ -114,10 +124,10 @@ class GoMethodCallPrecondition(
         startBase: AccessPathBase,
     ) {
         factSourceRulePrecondition(fact, startBase).mapTo(this) {
-            CallPreconditionFact.CallToReturnTaintRule(it)
+            MethodCallPrecondition.CallToReturnTaintRule(it)
         }
 
-        this += CallPreconditionFact.CallToStart(fact, startBase)
+        this += MethodCallPrecondition.CallToStart(fact, startBase)
     }
 
     private fun factSourceRulePrecondition(

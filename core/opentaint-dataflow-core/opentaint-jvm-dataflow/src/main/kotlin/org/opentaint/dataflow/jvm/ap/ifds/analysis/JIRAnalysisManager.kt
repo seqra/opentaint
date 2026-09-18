@@ -52,6 +52,8 @@ import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
+import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallSummaryPrecondition
 
 class JIRAnalysisManager(
     cp: JIRClasspath,
@@ -234,6 +236,15 @@ class JIRAnalysisManager(
         return analysisContext.cachedCallSH(statement.location.index) {
             JIRMethodCallSummaryHandler(statement, analysisContext, apManager)
         }
+    }
+
+    override fun getMethodCallSummaryPrecondition(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        statement: CommonInst
+    ): MethodCallSummaryPrecondition {
+        jIRDowncast<JIRInst>(statement)
+        return JIRMethodCallSummaryPrecondition(statement)
     }
 
     override fun getMethodSideEffectSummaryHandler(

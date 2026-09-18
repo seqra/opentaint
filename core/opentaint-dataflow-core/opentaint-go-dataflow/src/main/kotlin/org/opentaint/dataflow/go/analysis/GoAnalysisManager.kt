@@ -44,6 +44,8 @@ import org.opentaint.ir.go.inst.GoIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallSummaryPrecondition
+import org.opentaint.dataflow.go.trace.GoMethodCallSummaryPrecondition
 
 /**
  * Central factory that wires all Go dataflow analysis components together.
@@ -156,6 +158,14 @@ class GoAnalysisManager(
             apManager, analysisContext as GoMethodAnalysisContext,
             statement as GoIRInst
         )
+    }
+
+    override fun getMethodCallSummaryPrecondition(
+        apManager: ApManager,
+        analysisContext: MethodAnalysisContext,
+        statement: CommonInst
+    ): MethodCallSummaryPrecondition {
+        return GoMethodCallSummaryPrecondition(statement as GoIRInst)
     }
 
     override fun getMethodSideEffectSummaryHandler(

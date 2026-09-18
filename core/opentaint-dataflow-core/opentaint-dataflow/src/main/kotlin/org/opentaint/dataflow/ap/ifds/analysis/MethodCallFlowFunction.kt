@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -26,57 +27,63 @@ interface MethodCallFlowFunction {
 
     sealed interface NDFactCallFailureFact: NDFactCallFact
 
+    sealed interface ZeroCallSuccessFact
+
+    sealed interface FactCallSuccessFact
+
+    sealed interface NDFactCallSuccessFact
+
     data object Unchanged : ZeroCallFact, FactCallFact, NDFactCallFact
 
-    data object CallToReturnZeroFact: ZeroCallFact, Call2ReturnFact, ZeroCallFailureFact
+    data object CallToReturnZeroFact: ZeroCallFact, Call2ReturnFact, ZeroCallFailureFact, ZeroCallSuccessFact
 
-    data object CallToStartZeroFact : ZeroCallFact
+    data object CallToStartZeroFact : ZeroCallFact, ZeroCallSuccessFact
 
     data class CallToReturnFFact(
         val initialFactAp: InitialFactAp,
         val factAp: FinalFactAp,
         val traceInfo: TraceInfo?,
-    ) : FactCallFact, ZeroCallFact, Call2ReturnFact, FactCallFailureFact, ZeroCallFailureFact
+    ) : FactCallFact, ZeroCallFact, Call2ReturnFact, FactCallFailureFact, ZeroCallFailureFact, ZeroCallSuccessFact, FactCallSuccessFact
 
     data class CallToStartFFact(
         val initialFactAp: InitialFactAp,
         val callerFactAp: FinalFactAp,
         val startFactBase: AccessPathBase,
         val traceInfo: TraceInfo?,
-    ) : FactCallFact
+    ) : FactCallFact, FactCallSuccessFact
 
     data class CallToReturnZFact(
         val factAp: FinalFactAp,
         val traceInfo: TraceInfo?,
-    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact, ZeroCallFailureFact, FactCallFailureFact, NDFactCallFailureFact
+    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact, ZeroCallFailureFact, FactCallFailureFact, NDFactCallFailureFact, ZeroCallSuccessFact, FactCallSuccessFact, NDFactCallSuccessFact
 
     data class CallToStartZFact(
         val callerFactAp: FinalFactAp,
         val startFactBase: AccessPathBase,
         val traceInfo: TraceInfo?,
-    ) : ZeroCallFact
+    ) : ZeroCallFact, ZeroCallSuccessFact
 
     data class CallToReturnNonDistributiveFact(
         val initialFacts: Set<InitialFactAp>,
         val factAp: FinalFactAp,
         val traceInfo: TraceInfo?,
-    ) : FactCallFact, ZeroCallFact, NDFactCallFact, Call2ReturnFact, FactCallFailureFact, ZeroCallFailureFact, NDFactCallFailureFact
+    ) : FactCallFact, ZeroCallFact, NDFactCallFact, Call2ReturnFact, FactCallFailureFact, ZeroCallFailureFact, NDFactCallFailureFact, ZeroCallSuccessFact, FactCallSuccessFact, NDFactCallSuccessFact
 
     data class CallToStartNDFFact(
         val initialFacts: Set<InitialFactAp>,
         val callerFactAp: FinalFactAp,
         val startFactBase: AccessPathBase,
         val traceInfo: TraceInfo?,
-    ) : NDFactCallFact
+    ) : NDFactCallFact, NDFactCallSuccessFact
 
-    data class SideEffectRequirement(val initialFactAp: InitialFactAp) : FactCallFact, FactCallFailureFact
+    data class SideEffectRequirement(val initialFactAp: InitialFactAp) : FactCallFact, FactCallFailureFact, FactCallSuccessFact
 
     data class ZeroSideEffect(val kind: SideEffectKind) : ZeroCallFact, ZeroCallFailureFact
-    data class FactSideEffect(val initialFactAp: InitialFactAp, val kind: SideEffectKind) : FactCallFact, FactCallFailureFact
+    data class FactSideEffect(val initialFactAp: InitialFactAp, val kind: SideEffectKind) : FactCallFact, FactCallFailureFact, FactCallSuccessFact
 
     data class Drop(
         val traceInfo: TraceInfo?,
-    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact
+    ) : ZeroCallFact, FactCallFact, NDFactCallFact, Call2ReturnFact, ZeroCallFailureFact, FactCallFailureFact, NDFactCallFailureFact, ZeroCallSuccessFact, FactCallSuccessFact, NDFactCallSuccessFact
 
     sealed interface TraceInfo {
         data object Flow : TraceInfo
@@ -92,6 +99,11 @@ interface MethodCallFlowFunction {
     fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<ZeroCallFailureFact>
     fun propagateFactToFactResolutionFailure(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<FactCallFailureFact>
     fun propagateNDFactToFactResolutionFailure(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase): Set<NDFactCallFailureFact>
+
+    fun propagateZeroToZeroResolutionSuccess(method: MethodWithContext): Set<ZeroCallSuccessFact>
+    fun propagateZeroToFactResolutionSuccess(currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<ZeroCallSuccessFact>
+    fun propagateFactToFactResolutionSuccess(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<FactCallSuccessFact>
+    fun propagateNDFactToFactResolutionSuccess(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp, startFactBase: AccessPathBase, method: MethodWithContext): Set<NDFactCallSuccessFact>
 
     interface Default : MethodCallFlowFunction {
         override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
@@ -187,6 +199,7 @@ interface MethodCallFlowFunction {
         override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                 },
@@ -204,6 +217,7 @@ interface MethodCallFlowFunction {
         ): Set<FactCallFailureFact> = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
                 },
@@ -224,12 +238,111 @@ interface MethodCallFlowFunction {
         ) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                 },
                 addCallToReturn = { factReader, factAp, trace ->
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                     this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
+                },
+            )
+        }
+
+        override fun propagateZeroToZeroResolutionSuccess(method: MethodWithContext): Set<ZeroCallSuccessFact> =
+            setOf(CallToStartZeroFact)
+
+        override fun propagateZeroToFactResolutionSuccess(
+            currentFactAp: FinalFactAp,
+            startFactBase: AccessPathBase,
+            method: MethodWithContext,
+        ): Set<ZeroCallSuccessFact> = buildSet {
+            propagateSuccessCallFact(
+                initialFacts = emptySet(),
+                exclusion = ExclusionSet.Universe,
+                factAp = currentFactAp,
+                startFactBase = startFactBase,
+                method = method,
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToReturnZFact(factAp, trace)
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToStartZFact(callerFactAp, startFactBase, trace)
+                },
+                addUnchecked = {
+                    check(it is ZeroCallSuccessFact) { "unexpected" }
+                    this += it
+                },
+            )
+        }
+
+        override fun propagateFactToFactResolutionSuccess(
+            initialFactAp: InitialFactAp,
+            currentFactAp: FinalFactAp,
+            startFactBase: AccessPathBase,
+            method: MethodWithContext,
+        ): Set<FactCallSuccessFact> = buildSet {
+            propagateSuccessCallFact(
+                initialFacts = setOf(initialFactAp),
+                exclusion = initialFactAp.exclusions,
+                factAp = currentFactAp,
+                startFactBase = startFactBase,
+                method = method,
+                addSideEffectRequirement = { factReader ->
+                    this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    this += CallToReturnFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(factAp),
+                        trace
+                    )
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    this += CallToStartFFact(
+                        factReader.refineFact(initialFactAp),
+                        factReader.refineFact(callerFactAp),
+                        startFactBase, trace
+                    )
+                },
+                addUnchecked = {
+                    check(it is FactCallSuccessFact) { "unexpected" }
+                    this += it
+                },
+            )
+        }
+
+        override fun propagateNDFactToFactResolutionSuccess(
+            initialFacts: Set<InitialFactAp>,
+            currentFactAp: FinalFactAp,
+            startFactBase: AccessPathBase,
+            method: MethodWithContext,
+        ): Set<NDFactCallSuccessFact> = buildSet {
+            propagateSuccessCallFact(
+                initialFacts = initialFacts,
+                exclusion = ExclusionSet.Universe,
+                factAp = currentFactAp,
+                startFactBase = startFactBase,
+                method = method,
+                addSideEffectRequirement = { factReader ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                    this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
+                },
+                addCallToStart = { factReader, callerFactAp, startFactBase, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                    this += CallToStartNDFFact(initialFacts, callerFactAp, startFactBase, trace)
+                },
+                addUnchecked = {
+                    check(it is NDFactCallSuccessFact) { "unexpected" }
+                    this += it
                 },
             )
         }
@@ -247,8 +360,21 @@ interface MethodCallFlowFunction {
 
         fun propagateUnresolvedCallFact(
             factAp: FinalFactAp,
+            startFactBase: AccessPathBase,
             addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
             addSideEffectRequirement: (FinalFactReader) -> Unit,
+        )
+
+        fun propagateSuccessCallFact(
+            initialFacts: Set<InitialFactAp>,
+            exclusion: ExclusionSet,
+            factAp: FinalFactAp,
+            startFactBase: AccessPathBase,
+            method: MethodWithContext,
+            addSideEffectRequirement: (FinalFactReader) -> Unit,
+            addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
+            addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo?) -> Unit,
+            addUnchecked: (CallFact) -> Unit,
         )
     }
 }
