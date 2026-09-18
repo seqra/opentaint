@@ -84,10 +84,10 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint summary` | View SARIF analysis results |
 | `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Create, run, and debug detection-rule tests |
-| `opentaint test model` | Create and run Java dataflow model tests |
+| `opentaint test dataflow-model` | Create and run dataflow model tests |
 | `opentaint approximation` | Create dataflow approximation projects |
 
-`test approximation` remains accepted as a deprecated compatibility alias for `test model`.
+`test approximation` remains accepted as a deprecated compatibility alias for `test dataflow-model`.
 | `opentaint pull` | Download the analysis toolchain and Java runtime |
 | `opentaint update` | Update to latest version |
 | `opentaint prune` | Remove old downloaded artifacts and cached models |
@@ -153,7 +153,7 @@ With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Jav
 
 ### opentaint test
 
-The `test` command group is tooling for rule and Java dataflow model development.
+The `test` command group is tooling for rule and dataflow model development.
 
 #### Rule tests
 
@@ -176,19 +176,19 @@ Rule runs also accept `--java-models` and the deprecated `--dataflow-approximati
 #### Java dataflow model tests
 
 ```bash
-opentaint test model init .opentaint/test-projects/my-model \
+opentaint test dataflow-model init .opentaint/test-projects/my-model \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 opentaint compile .opentaint/test-projects/my-model -o .opentaint/test-compiled/my-model
-opentaint test model run .opentaint/test-compiled/my-model \
+opentaint test dataflow-model run .opentaint/test-compiled/my-model \
   --java-models .opentaint/dataflow/my-model
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test model run <project-model>` | Run Java dataflow model tests on a compiled project model |
+| `opentaint test dataflow-model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test dataflow-model run <project-model>` | Run dataflow model tests on a compiled project model |
 
-Model-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `test approximation` command and `--dataflow-approximations` flag remain accepted.
+Dataflow-model-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `test approximation` command and `--dataflow-approximations` flag remain accepted.
 Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
 ### opentaint compile

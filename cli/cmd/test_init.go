@@ -76,24 +76,24 @@ Then compile the project with "opentaint compile" and run the samples with "open
 
 var testModelInitCmd = &cobra.Command{
 	Use:   "init <output-dir>",
-	Short: "Create a Java dataflow model test project",
-	Long: `Create a Gradle test project for Java dataflow model tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
+	Short: "Create a dataflow model test project",
+	Long: `Create a Gradle test project for dataflow model tests. The project contains a fixed source-to-sink rule. The samples are checked against this rule.
 
 The output-dir argument is the directory for the new project. To add compile-only Maven dependencies for the samples, use --dependency. The model under test is not part of the project. Give it at run time with --java-models.
 
 The project contains a rule-test.yaml file, a Taint.java source and sink, and a fixed source-to-sink harness rule. Declare your positive and negative samples in rule-test.yaml.
 
-Then compile the project with "opentaint compile" and run the samples with "opentaint test model run".`,
-	Example: `  # Create a model test project
-  opentaint test model init ./model-test
+Then compile the project with "opentaint compile" and run the samples with "opentaint test dataflow-model run".`,
+	Example: `  # Create a dataflow model test project
+  opentaint test dataflow-model init ./model-test
 
   # Add a compile-only dependency for the samples
-  opentaint test model init ./model-test --dependency <group:artifact:version>
+  opentaint test dataflow-model init ./model-test --dependency <group:artifact:version>
 
   # Recipe: from an empty directory to a first test run
-  opentaint test model init ./model-test
+  opentaint test dataflow-model init ./model-test
   opentaint compile ./model-test -o ./model-test/model
-  opentaint test model run ./model-test/model --java-models ./my-model`,
+  opentaint test dataflow-model run ./model-test/model --java-models ./my-model`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := testproject.Bootstrap(args[0], "model-test-project", initApproxProjectDeps); err != nil {
@@ -108,7 +108,7 @@ Then compile the project with "opentaint compile" and run the samples with "open
 		out.Suggestions(
 			output.Suggestion{Description: "To add your test samples, edit:", Command: filepath.Join(dir, "rule-test.yaml")},
 			output.Suggestion{Description: "To compile the test project, run:", Command: fmt.Sprintf("opentaint compile %s -o %s", shellQuote(dir), shellQuote(modelDir))},
-			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test model run %s --java-models <model>", shellQuote(modelDir))},
+			output.Suggestion{Description: "To run the tests, run:", Command: fmt.Sprintf("opentaint test dataflow-model run %s --java-models <model>", shellQuote(modelDir))},
 		)
 	},
 }
