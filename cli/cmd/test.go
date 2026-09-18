@@ -8,13 +8,13 @@ import (
 
 var testCmd = &cobra.Command{
 	Use:   "test",
-	Short: "Create and run rule and approximation tests",
-	Long: `Create and run tests for detection rules and for dataflow approximations. Rule tests make sure that a rule finds the positive samples and ignores the negative samples. Approximation tests make sure that a dataflow approximation moves taint from source to sink.
+	Short: "Create and run rule and model tests",
+	Long: `Create and run tests for detection rules and Java dataflow models. Rule tests make sure that a rule finds the positive samples and ignores the negative samples. Model tests make sure that a model moves taint from source to sink.
 
 Workflow:
   1. Create a test project with init.
   2. Compile the project with "opentaint compile".
-  3. Run the samples with "test rule run" or "test approximation run".
+  3. Run the samples with "test rule run" or "test model run".
 
 To see why one rule does or does not fire, use "test rule reachability".`,
 }
@@ -32,21 +32,27 @@ Workflow:
 To see why one rule does or does not fire, use "test rule reachability".`,
 }
 
-var testApproximationCmd = &cobra.Command{
-	Use:   "approximation",
-	Short: "Create and run dataflow-approximation tests",
-	Long: `Create and run tests for dataflow approximations. An approximation test makes sure that an approximation moves taint from source to sink in your samples.
+var testModelCmd = &cobra.Command{
+	Use:     "model",
+	Aliases: []string{"approximation"},
+	Short:   "Create and run Java dataflow model tests",
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if cmd.Parent().CalledAs() == "approximation" {
+			out.Warnf("command 'test approximation' is deprecated; use 'test model' instead")
+		}
+	},
+	Long: `Create and run tests for Java dataflow models. A model test makes sure that a model moves taint from source to sink in your samples.
 
 Workflow:
-  1. Create a test project with "test approximation init".
+  1. Create a test project with "test model init".
   2. Compile the project with "opentaint compile".
-  3. Run the samples with "test approximation run --java-models <approximation>".`,
+  3. Run the samples with "test model run --java-models <model>".`,
 }
 
 func init() {
 	rootCmd.AddCommand(testCmd)
 	testCmd.AddCommand(testRuleCmd)
-	testCmd.AddCommand(testApproximationCmd)
+	testCmd.AddCommand(testModelCmd)
 }
 
 func addTestRunFlags(cmd *cobra.Command, outputDir *string, timeout *time.Duration, maxMemory *string, dataflow *[]string) {

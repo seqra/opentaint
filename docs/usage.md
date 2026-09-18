@@ -84,7 +84,9 @@ Use [CodeChecker](https://github.com/Ericsson/codechecker) for advanced result m
 | `opentaint summary` | View SARIF analysis results |
 | `opentaint health` | Show dependency paths and report missing components |
 | `opentaint test rule` | Create, run, and debug detection-rule tests |
-| `opentaint test approximation` | Create and run dataflow-approximation tests |
+| `opentaint test model` | Create and run Java dataflow model tests |
+
+`test approximation` remains accepted as a deprecated compatibility alias for `test model`.
 | `opentaint pull` | Download the analysis toolchain and Java runtime |
 | `opentaint update` | Update to latest version |
 | `opentaint prune` | Remove old downloaded artifacts and cached models |
@@ -109,7 +111,7 @@ On the first run, the compiled project model is cached in `~/.opentaint/cache/`.
 
 #### Rule-authoring flags
 
-These flags are to work with custom approximations:
+These flags are for working with custom models:
 
 | Flag | Description |
 |------|-------------|
@@ -127,7 +129,7 @@ The old names remain accepted for compatibility and are deprecated:
 
 </details>
 
-Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available. The approximated-methods file shows methods already covered by built-in or custom models.
+Use external-method tracking when a scan may miss flows through library methods. The dropped-methods file shows where taint was killed because no model was available. The modeled-methods file shows methods already covered by built-in or custom models.
 
 ### opentaint health
 
@@ -150,7 +152,7 @@ With no flags, `health` shows the autobuilder, analyzer, built-in rules, and Jav
 
 ### opentaint test
 
-The `test` command group is tooling for rule and approximation development.
+The `test` command group is tooling for rule and Java dataflow model development.
 
 #### Rule tests
 
@@ -170,23 +172,22 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 Rule-test options include `--ruleset`, `--rule-id`, `--project-model`, `--entry-points`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`.
 Rule runs also accept `--java-models` and the deprecated `--dataflow-approximations` alias. Reachability accepts `--project-model` or a source path, but not both.
 
-#### Approximation tests
+#### Java dataflow model tests
 
 ```bash
-opentaint test approximation init .opentaint/test-projects/my-approximation
-opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
-opentaint test approximation run .opentaint/test-compiled/my-approximation \
-  --java-models .opentaint/dataflow/my-approximation
+opentaint test model init .opentaint/test-projects/my-model
+opentaint compile .opentaint/test-projects/my-model -o .opentaint/test-compiled/my-model
+opentaint test model run .opentaint/test-compiled/my-model \
+  --java-models .opentaint/dataflow/my-model
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test approximation init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
-| `opentaint test approximation run <project-model>` | Run dataflow-approximation tests on a compiled project model |
+| `opentaint test model init <output-dir>` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test model run <project-model>` | Run Java dataflow model tests on a compiled project model |
 
-Approximation-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `--dataflow-approximations` alias remains accepted.
-
-Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
+Model-test options include `--java-models`, `--output`, `--timeout`, `--max-memory`, and `--dry-run`. The deprecated `test approximation` command and `--dataflow-approximations` flag remain accepted.
+Rule and model test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 
 ### opentaint compile
 
