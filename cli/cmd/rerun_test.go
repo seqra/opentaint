@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/seqra/opentaint/internal/analyzer"
 )
@@ -48,6 +49,9 @@ func TestWithFlag(t *testing.T) {
 	if got := withFlag("opentaint prune --yes", "--yes"); got != "opentaint prune --yes" {
 		t.Fatalf("withFlag no-op = %q", got)
 	}
+	if got := withFlag("opentaint scan path--debug", "--debug"); got != "opentaint scan path--debug --debug" {
+		t.Fatalf("withFlag substring match = %q", got)
+	}
 }
 
 func TestRerunReplacingFlagValueForm(t *testing.T) {
@@ -79,11 +83,13 @@ func TestRerunReplacingFlagAppendsWhenAbsent(t *testing.T) {
 
 func TestDoubleMemory(t *testing.T) {
 	cases := map[string]string{
-		"8G":       "16G",
-		"1024m":    "2048m",
-		"83886080": "167772160",
-		"weird":    "16G",
-		"":         "16G",
+		"8G":    "16G",
+		"12G":   "16G",
+		"15G":   "16G",
+		"1024m": "2048m",
+		"0G":    "16G",
+		"weird": "16G",
+		"":      "16G",
 	}
 	for in, want := range cases {
 		if got := doubleMemory(in); got != want {
@@ -100,13 +106,22 @@ func TestRetrySuggestion(t *testing.T) {
 		t.Fatalf("OOM retry = %+v ok=%t", oom, ok)
 	}
 
-	timeoutRetry, ok := retrySuggestion(analyzer.ExitTimeout, 900e9, "8G")
+	timeoutRetry, ok := retrySuggestion(analyzer.ExitTimeout, 10*time.Minute, "8G")
 	if !ok || timeoutRetry.Description != "To retry with a longer timeout, run:" {
 		t.Fatalf("timeout retry = %+v ok=%t", timeoutRetry, ok)
 	}
-	want := "opentaint scan . --max-memory 8G --timeout 30m0s"
+	want := "opentaint scan . --max-memory 8G --timeout 15m0s"
 	if timeoutRetry.Command != want {
 		t.Fatalf("timeout retry command = %q, want %q", timeoutRetry.Command, want)
+	}
+	if _, ok := retrySuggestion(analyzer.ExitTimeout, 15*time.Minute, "8G"); ok {
+		t.Fatal("timeout at cap must not produce a retry suggestion")
+	}
+	if _, ok := retrySuggestion(analyzer.ExitOOM, 15*time.Minute, "16G"); ok {
+		t.Fatal("memory at cap must not produce a retry suggestion")
+	}
+	if retry, ok := retrySuggestion(analyzer.ExitTimeout, 10*time.Minute, "8G"); !ok || retry.Command != "opentaint scan . --max-memory 8G --timeout 15m0s" {
+		t.Fatalf("timeout cap retry = %+v ok=%t", retry, ok)
 	}
 
 	if _, ok := retrySuggestion(analyzer.ExitException, 900e9, "8G"); ok {

@@ -507,8 +507,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 			if analyzerFail == nil {
 				out.Successf("Reachability analysis completed.")
 			}
-			// The reachability report is the command's deliverable. Point at it,
-			// never at the main SARIF.
 			reachabilityReportPath := filepath.Join(filepath.Dir(absSarifReportPath), "debug-ifds-fact-reachability.sarif")
 			suggestions = append(suggestions, output.Suggestion{
 				Description: "To view the reachability report, run:",
@@ -523,7 +521,7 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 				Command:     utils.NewSummaryCommand(absSarifReportPath).WithShowFindings().Build(),
 			})
 		case analyzerFail == nil:
-			out.Successf("Scan completed. No vulnerabilities found at %s severity.", strings.Join(cfg.Severity, " or "))
+			out.Successf("Scan completed. No %s findings were reported.", strings.Join(cfg.Severity, " or "))
 			if isDefaultSeverity(cfg.Severity) {
 				suggestions = append(suggestions, output.Suggestion{
 					Description: "To also check note-level rules, run:",
@@ -539,8 +537,6 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	}
 }
 
-// noteSeverityScanCommand builds the follow-up command for a clean scan: the
-// same invocation narrowed to the note-level rules the default run skips.
 func noteSeverityScanCommand(cfg ScanConfig) string {
 	sourcePath := cfg.UserProjectPath
 	if cfg.ProjectModelPath != "" {
