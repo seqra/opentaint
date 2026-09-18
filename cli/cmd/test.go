@@ -9,12 +9,12 @@ import (
 var testCmd = &cobra.Command{
 	Use:   "test",
 	Short: "Create and run rule and model tests",
-	Long: `Create and run tests for detection rules and Java dataflow models. Rule tests make sure that a rule finds the positive samples and ignores the negative samples. Model tests make sure that a model moves taint from source to sink.
+	Long: `Create and run tests for detection rules and dataflow models. Rule tests make sure that a rule finds the positive samples and ignores the negative samples. Dataflow model tests make sure that a model moves taint from source to sink.
 
 Workflow:
   1. Create a test project with init.
   2. Compile the project with "opentaint compile".
-  3. Run the samples with "test rule run" or "test model run".
+  3. Run the samples with "test rule run" or "test dataflow-model run".
 
 To see why one rule does or does not fire, use "test rule reachability".`,
 }
@@ -33,20 +33,20 @@ To see why one rule does or does not fire, use "test rule reachability".`,
 }
 
 var testModelCmd = &cobra.Command{
-	Use:     "model",
+	Use:     "dataflow-model",
 	Aliases: []string{"approximation"},
-	Short:   "Create and run Java dataflow model tests",
+	Short:   "Create and run dataflow model tests",
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		if cmd.Parent().CalledAs() == "approximation" {
-			out.Warnf("command 'test approximation' is deprecated; use 'test model' instead")
+			out.Warnf("command 'test approximation' is deprecated; use 'test dataflow-model' instead")
 		}
 	},
-	Long: `Create and run tests for Java dataflow models. A model test makes sure that a model moves taint from source to sink in your samples.
+	Long: `Create and run tests for dataflow models. A model test makes sure that a model moves taint from source to sink in your samples.
 
 Workflow:
-  1. Create a test project with "test model init".
+  1. Create a test project with "test dataflow-model init".
   2. Compile the project with "opentaint compile".
-  3. Run the samples with "test model run --java-models <model>".`,
+  3. Run the samples with "test dataflow-model run --java-models <model>".`,
 }
 
 func init() {

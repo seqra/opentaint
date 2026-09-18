@@ -17,8 +17,8 @@ var (
 
 var testModelRunCmd = &cobra.Command{
 	Use:   "run <project-model>",
-	Short: "Run Java dataflow model tests on a compiled project model",
-	Long: `Run the samples that rule-test.yaml declares, with your Java dataflow models applied. The command reports which samples passed. A fixed source-to-sink harness rule is applied automatically. Positive samples point to it with the id model-rule.
+	Short: "Run dataflow model tests on a compiled project model",
+	Long: `Run the samples that rule-test.yaml declares, with your dataflow models applied. The command reports which samples passed. A fixed source-to-sink harness rule is applied automatically. Positive samples point to it with the id model-rule.
 
 The project-model argument is a compiled project model directory from "opentaint compile". Give the model under test with --java-models.
 
@@ -27,14 +27,14 @@ The command writes test-result.json and a test-results.sarif report to --output.
 Compile the test project before you run the tests. To read the results, use "opentaint summary".
 
 ` + testExitCodesHelp("All model tests passed"),
-	Example: `  # Run a model test on a compiled model
-  opentaint test model run ./model-test/model --java-models ./my-model
+	Example: `  # Run a dataflow model test on a compiled model
+  opentaint test dataflow-model run ./model-test/model --java-models ./my-model
 
   # Write the results to a directory
-  opentaint test model run ./model-test/model --java-models ./my-model -o ./results
+  opentaint test dataflow-model run ./model-test/model --java-models ./my-model -o ./results
 
   # Recipe: change a model, then make sure the tests stay green
-  opentaint test model run ./model-test/model --java-models ./my-model -o ./results
+  opentaint test dataflow-model run ./model-test/model --java-models ./my-model -o ./results
   opentaint summary ./results/test-results.sarif --show-findings`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
