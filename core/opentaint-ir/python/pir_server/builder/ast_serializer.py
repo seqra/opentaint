@@ -2,6 +2,9 @@ from __future__ import annotations
 import sys
 from mypy.nodes import (
     GDEF,
+    LDEF,
+    RefExpr,
+    TypeInfo,
     MypyFile,
     FuncDef,
     ClassDef,
@@ -60,6 +63,7 @@ from mypy.nodes import (
     DictionaryComprehension,
     GeneratorExpr,
     TempNode,
+    Var,
     Expression,
     ARG_POS,
     ARG_OPT,
@@ -173,6 +177,11 @@ class AstSerializer:
                 and "dataclass" in class_def.info.metadata
             ):
                 out.is_dataclass = True
+            for name, sym in class_def.info.names.items():
+                if sym.implicit and isinstance(sym.node, Var):
+                    field = out.instance_fields.add()
+                    field.name = name
+                    self.type_mapper.map(sym.node.type, field.type)
 
         # Unlike Decorator.decorators for methods, mypy's semantic analyzer does NOT strip
         # entries from ClassDef.decorators, so the raw expression list is safe to read.
@@ -570,9 +579,9 @@ class AstSerializer:
             call_expr = out.call_expr
             self._serialize_expr(expr.callee, call_expr.callee)
             resolved = ""
-            if hasattr(expr.callee, "node"):
+            if isinstance(expr.callee, RefExpr) and expr.callee.kind != LDEF:
                 node = expr.callee.node
-                if node is not None and hasattr(node, "fullname"):
+                if isinstance(node, (FuncDef, OverloadedFuncDef, Decorator, TypeInfo)):
                     resolved = node.fullname or ""
             if resolved:
                 call_expr.resolved_callee = resolved

@@ -302,19 +302,11 @@ private fun CfgSession.lowerCall(expr: MypyCallExprProto, location: PIRPhysicalL
         FlatCallArg(argVal, kind, arg.name.ifEmpty { null })
     }
 
-    val resolvedCallee = resolveCallee(expr)
+    val resolvedCallee = expr.resolvedCallee.ifEmpty { null }
 
     val target = newTempValue()
     emit(FlatCall(target, callee, args, resolvedCallee, physicalLocation = location))
     return target
-}
-
-private fun resolveCallee(expr: MypyCallExprProto): String? {
-    expr.resolvedCallee.ifEmpty { null }?.let { return it }
-
-    if (!expr.callee.hasMemberExpr()) return null
-    val member = expr.callee.memberExpr
-    return member.fullname.ifEmpty { null }
 }
 
 private fun CfgSession.lowerIndex(expr: MypyIndexExprProto, location: PIRPhysicalLocation?): FlatValue {

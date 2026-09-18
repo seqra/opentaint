@@ -150,6 +150,12 @@ message MypyClassDefProto {
   bool is_abstract = 7;
   bool is_dataclass = 8;
   bool is_enum = 9;
+  repeated MypyClassFieldProto instance_fields = 10;
+}
+
+message MypyClassFieldProto {
+  string name = 1;
+  PIRTypeProto type = 2;
 }
 
 message MypyFuncDefProto {

@@ -141,7 +141,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("Index insensitivity")
     @Test fun benchmarkTest00348() = assertNotReachable("00348")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00896() = assertReachable("00896")
 
     @Disabled("Path insensitivity")
@@ -171,9 +170,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00931() = assertReachable("00931")
     @Test fun benchmarkTest01212() = assertReachable("01212")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00462() = assertReachable("00462")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00541() = assertReachable("00541")
 
     @Test fun benchmarkTest00017() = assertNotReachable("00017")
@@ -280,11 +277,8 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00986() = assertReachable("00986")
     @Test fun benchmarkTest01188() = assertReachable("01188")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00343() = assertReachable("00343")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00422() = assertReachable("00422")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00601() = assertReachable("00601")
 
     @Disabled("Unexpressible sanitizer")
@@ -481,7 +475,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest01230() = assertNotReachable("01230")
     @Test fun benchmarkTest00509() = assertNotReachable("00509")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00269() = assertReachable("00269")
     @Disabled("Index insensitivity")
     @Test fun benchmarkTest00349() = assertNotReachable("00349")
@@ -501,7 +494,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     // pathtraver (CWE-22)
     @Test fun benchmarkTest00001() = assertReachable("00001")
     @Test fun benchmarkTest00002() = assertReachable("00002")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00003() = assertReachable("00003")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00004() = assertNotReachable("00004")
@@ -538,7 +530,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00175() = assertReachable("00175")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00176() = assertNotReachable("00176")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00177() = assertReachable("00177")
     @Test fun benchmarkTest00178() = assertReachable("00178")
     @Disabled("Index insensitivity")
@@ -595,7 +586,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00448() = assertNotReachable("00448")
     @Test fun benchmarkTest00449() = assertReachable("00449")
     @Test fun benchmarkTest00516() = assertReachable("00516")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00517() = assertReachable("00517")
     @Disabled("Unexpressible sanitizer")
     @Test fun benchmarkTest00518() = assertNotReachable("00518")
@@ -611,7 +601,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00524() = assertNotReachable("00524")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00525() = assertNotReachable("00525")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00526() = assertReachable("00526")
     @Test fun benchmarkTest00527() = assertNotReachable("00527")
     @Test fun benchmarkTest00528() = assertNotReachable("00528")
@@ -621,7 +610,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00610() = assertReachable("00610")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00611() = assertNotReachable("00611")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00612() = assertReachable("00612")
     @Test fun benchmarkTest00613() = assertReachable("00613")
     @Disabled("Index insensitivity")
@@ -665,8 +653,8 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00831() = assertReachable("00831")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00832() = assertNotReachable("00832")
+    @Disabled("Dynamic getattr dispatch, simple-name fallback over-approximates")
     @Test fun benchmarkTest00833() = assertNotReachable("00833")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00834() = assertReachable("00834")
     @Test fun benchmarkTest00835() = assertReachable("00835")
     @Disabled("Path insensitivity")
@@ -748,15 +736,14 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00210() = assertReachable("00210")
     @Test fun benchmarkTest00211() = assertReachable("00211")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00103() = assertReachable("00103")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00209() = assertReachable("00209")
 
     @Test fun benchmarkTest00023() = assertNotReachable("00023")
     @Disabled("Index insensitivity")
     @Test fun benchmarkTest00024() = assertNotReachable("00024")
     @Test fun benchmarkTest00111() = assertNotReachable("00111")
+    @Disabled("Dynamic getattr dispatch, simple-name fallback over-approximates")
     @Test fun benchmarkTest00201() = assertNotReachable("00201")
 
     @Disabled("Unexpressible sanitizer")
@@ -821,7 +808,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
 
     @Test fun benchmarkTest00217() = assertReachable("00217")
     @Test fun benchmarkTest00304() = assertReachable("00304")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00374() = assertReachable("00374")
 
     @Test fun benchmarkTest00215() = assertNotReachable("00215")
@@ -880,11 +866,9 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00682() = assertReachable("00682")
     @Test fun benchmarkTest00760() = assertReachable("00760")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00472() = assertReachable("00472")
     @Test fun benchmarkTest00554() = assertReachable("00554")
     @Test fun benchmarkTest00555() = assertReachable("00555")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00761() = assertReachable("00761")
 
     @Test fun benchmarkTest00469() = assertNotReachable("00469")
@@ -892,6 +876,7 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00471() = assertNotReachable("00471")
     @Test fun benchmarkTest00553() = assertNotReachable("00553")
+    @Disabled("Dynamic getattr dispatch, simple-name fallback over-approximates")
     @Test fun benchmarkTest00677() = assertNotReachable("00677")
     @Test fun benchmarkTest00686() = assertNotReachable("00686")
     @Test fun benchmarkTest00687() = assertNotReachable("00687")
@@ -939,7 +924,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00932() = assertReachable("00932")
     @Test fun benchmarkTest00933() = assertReachable("00933")
 
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00844() = assertReachable("00844")
     @Test fun benchmarkTest00858() = assertReachable("00858")
     @Test fun benchmarkTest00944() = assertReachable("00944")
@@ -1042,7 +1026,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00272() = assertReachable("00272")
     @Test fun benchmarkTest00278() = assertReachable("00278")
     @Test fun benchmarkTest00281() = assertReachable("00281")
-    @Disabled("Dynamic getattr dispatch, unresolved call")
     @Test fun benchmarkTest00362() = assertReachable("00362")
     @Test fun benchmarkTest00365() = assertReachable("00365")
     @Disabled("Tuple-wrapped binop not handled")

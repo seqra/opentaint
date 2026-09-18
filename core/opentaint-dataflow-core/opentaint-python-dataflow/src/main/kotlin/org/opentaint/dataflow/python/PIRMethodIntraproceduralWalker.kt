@@ -1,39 +1,76 @@
 package org.opentaint.dataflow.python
 
 import org.opentaint.dataflow.python.graph.PIRApplicationGraph
+import org.opentaint.ir.api.python.PIRAssign
+import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRLocal
+import org.opentaint.ir.api.python.targets
 
-abstract class PIRMethodIntraproceduralWalker<B : Any>(
+abstract class PIRMethodIntraproceduralWalker<V : Any>(
     method: PIRFunction,
     applicationGraph: PIRApplicationGraph,
 ) {
     protected val graph = applicationGraph.methodGraph(method)
 
-    private val queue = mutableListOf<Pair<PIRInstruction, B>>()
-    private val storage = MutableList(method.instList.size) { hashSetOf<B>() }
+    private val queue = mutableListOf<Pair<PIRInstruction, Fact<V>>>()
+    private val storage = MutableList(method.instList.size) { hashSetOf<Fact<V>>() }
 
     protected fun walk() {
         for (inst in graph.statements()) {
-            initialBindings(inst).forEach { propagateToSuccessors(inst, it) }
+            // seed runs before the target check: it may record names for target-less calls
+            val values = seed(inst)
+            val targetIdx = inst.targets.singleOrNull()?.index ?: continue
+            values.forEach { propagateToSuccessors(inst, Fact(targetIdx, it)) }
         }
         while (queue.isNotEmpty()) {
-            val (inst, payload) = queue.removeLast()
-            transfer(inst, payload).forEach { propagateToSuccessors(inst, it) }
+            val (inst, fact) = queue.removeLast()
+            transfer(inst, fact).forEach { propagateToSuccessors(inst, it) }
         }
     }
 
-    protected abstract fun initialBindings(inst: PIRInstruction): List<B>
+    protected abstract fun seed(inst: PIRInstruction): List<V>
 
-    protected abstract fun transfer(inst: PIRInstruction, payload: B): List<B>
+    protected open fun attributeRead(inst: PIRLoadAttr, obj: V): List<V> = emptyList()
 
-    private fun propagateToSuccessors(inst: PIRInstruction, payload: B) {
-        graph.successors(inst).forEach { addEntry(it, payload) }
-    }
+    protected open fun call(inst: PIRCall, callee: V): List<V> = emptyList()
 
-    private fun addEntry(inst: PIRInstruction, payload: B) {
-        if (storage[inst.location.index].add(payload)) {
-            queue += inst to payload
+    private fun transfer(inst: PIRInstruction, fact: Fact<V>): List<Fact<V>> = buildList {
+        val idx = fact.idx
+
+        when (inst) {
+            is PIRLoadAttr -> if ((inst.obj as? PIRLocal)?.index == idx) {
+                attributeRead(inst, fact.value).forEach { this += Fact(inst.target.index, it) }
+            }
+
+            is PIRCall -> if ((inst.callee as? PIRLocal)?.index == idx) {
+                val results = call(inst, fact.value)
+                inst.target?.let { target -> results.forEach { this += Fact(target.index, it) } }
+            }
+
+            is PIRAssign -> if ((inst.expr as? PIRLocal)?.index == idx) {
+                this += Fact(inst.target.index, fact.value)
+            }
+
+            else -> {}
+        }
+
+        if (inst.targets.none { it.index == idx }) {
+            this += fact
         }
     }
+
+    private fun propagateToSuccessors(inst: PIRInstruction, fact: Fact<V>) {
+        graph.successors(inst).forEach { addEntry(it, fact) }
+    }
+
+    private fun addEntry(inst: PIRInstruction, fact: Fact<V>) {
+        if (storage[inst.location.index].add(fact)) {
+            queue += inst to fact
+        }
+    }
+
+    private data class Fact<V>(val idx: Int, val value: V)
 }

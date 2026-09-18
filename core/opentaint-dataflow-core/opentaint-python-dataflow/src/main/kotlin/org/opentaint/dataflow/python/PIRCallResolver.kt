@@ -4,28 +4,35 @@ import org.opentaint.dataflow.python.graph.PIRApplicationGraph
 import org.opentaint.dataflow.python.graph.PIRQualifiedUnknownFunction
 import org.opentaint.dataflow.python.graph.PIRSimpleNameUnknownFunction
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClass
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRLoadAttr
+import java.util.concurrent.ConcurrentHashMap
 
 class PIRCallResolver(
     private val cp: PIRClasspath,
     private val applicationGraph: PIRApplicationGraph,
 ) {
 
-    private val perMethodNames: MutableMap<PIRFunction, Map<PIRInstruction, Set<String>>> = hashMapOf()
-    private val perMethodSimpleNames: MutableMap<PIRFunction, Map<PIRCall, Set<String>>> = hashMapOf()
-    private val qualifiedSyntheticByName: MutableMap<String, PIRQualifiedUnknownFunction> = hashMapOf()
-    private val simpleNameSyntheticByName: MutableMap<String, PIRSimpleNameUnknownFunction> = hashMapOf()
+    private val perMethodNames = ConcurrentHashMap<PIRFunction, Map<PIRInstruction, Set<String>>>()
+    private val perMethodSimpleNames = ConcurrentHashMap<PIRFunction, Map<PIRCall, Set<String>>>()
+    private val qualifiedSyntheticByName = ConcurrentHashMap<String, PIRQualifiedUnknownFunction>()
+    private val simpleNameSyntheticByName = ConcurrentHashMap<String, PIRSimpleNameUnknownFunction>()
+
+    private val projectMethodsByName: Map<String, List<PIRFunction>> by lazy {
+        fun methods(cls: PIRClass): List<PIRFunction> = cls.methods + cls.nestedClasses.flatMap(::methods)
+        cp.modules.flatMap { module -> module.classes.flatMap(::methods) }.groupBy { it.name }
+    }
 
     private fun namesFor(method: PIRFunction): Map<PIRInstruction, Set<String>> =
-        perMethodNames.getOrPut(method) {
+        perMethodNames.computeIfAbsent(method) {
             PIRMethodQFNameReconstructor.compute(method, applicationGraph)
         }
 
     private fun simpleNamesFor(method: PIRFunction): Map<PIRCall, Set<String>> =
-        perMethodSimpleNames.getOrPut(method) {
+        perMethodSimpleNames.computeIfAbsent(method) {
             PIRMethodSimpleNameReconstructor.compute(method, applicationGraph)
         }
 
@@ -53,16 +60,16 @@ class PIRCallResolver(
                 cp.findFunctionOrNull(it) ?: qualifiedSyntheticFor(it)
             }
         }
-        return resolveSimpleNames(call).mapTo(hashSetOf()) {
-            cp.findFunctionOrNull(it) ?: simpleNameSyntheticFor(it)
+        return resolveSimpleNames(call).flatMapTo(hashSetOf()) {
+            projectMethodsByName[it].orEmpty() + simpleNameSyntheticFor(it)
         }
     }
 
     private fun qualifiedSyntheticFor(qualifiedName: String): PIRQualifiedUnknownFunction =
-        qualifiedSyntheticByName.getOrPut(qualifiedName) {
+        qualifiedSyntheticByName.computeIfAbsent(qualifiedName) {
             PIRQualifiedUnknownFunction(qualifiedName)
         }
 
     private fun simpleNameSyntheticFor(name: String): PIRSimpleNameUnknownFunction =
-        simpleNameSyntheticByName.getOrPut(name) { PIRSimpleNameUnknownFunction(name) }
+        simpleNameSyntheticByName.computeIfAbsent(name) { PIRSimpleNameUnknownFunction(name) }
 }

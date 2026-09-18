@@ -118,6 +118,16 @@ internal object ModuleLowering {
             }
         }
 
+        val classBodyFieldNames = classFields.mapTo(hashSetOf()) { it.name }
+        for (field in classDef.instanceFieldsList) {
+            if (field.name in classBodyFieldNames) continue
+            classFields += FlatClassField(
+                name = field.name,
+                type = TypeLowering.convertType(field.type),
+                isClassVar = false,
+            )
+        }
+
         val decorators = DecoratorLowering.fromClassDef(classDef)
         val isDataclass = classDef.isDataclass || decorators.any { it.name == "dataclass" }
 
