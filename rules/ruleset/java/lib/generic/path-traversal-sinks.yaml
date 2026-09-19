@@ -12,10 +12,6 @@ rules:
     languages:
       - java
     mode: taint
-    pattern-propagators:
-      - pattern: $RES = (Object $*OBJ).toString();
-        from: $OBJ
-        to: $RES
     pattern-sanitizers:
       - pattern: org.apache.commons.io.FilenameUtils.getName(...)
       - pattern: org.apache.commons.io.FilenameUtils.getExtension(...)
