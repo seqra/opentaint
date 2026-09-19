@@ -108,6 +108,45 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
         testName = "recursive interprocedural any-field sink",
     )
 
+    /**
+     * A KNOWN MISS, and a structural one: `n.next.next.payload.value` is a real flow and the
+     * analyzer does not report it.
+     *
+     * An access tree holds each field accessor at most once per path. `AccessNode.addParent` of a
+     * field runs `limitFieldAccess`, which strips every occurrence of that field from the subtree
+     * and re-attaches what hung below it at the new root -- so prepending `next` to a tree that
+     * already contains `next` collapses the two into one, and `arg0.next.next` is not a fact this
+     * representation can hold. Nothing on the unfold path causes this and nothing there can fix
+     * it.
+     *
+     * It is pinned rather than left silent because it is the exact shape that any "this frame has
+     * already been asked to split on `next`" rule would be blamed for: the flow is gone before
+     * such a rule is reached. If the representation ever holds repeated fields, this test fails
+     * and should become an `assertReachable`.
+     */
+    @Test
+    @Timeout(value = 3, unit = TimeUnit.MINUTES)
+    fun `a repeated field is not followed twice`() = assertNotReachable(
+        config = deepConfig,
+        testCls = DEEP_TEST_CLASS,
+        entryPointName = "fieldFlowTwoHopChain",
+        testName = "the same field twice on one path",
+    )
+
+    /**
+     * The contrast that places the blame: the same two hops on two DIFFERENT fields, the same
+     * call depth, and it is found. So the miss above is the repetition, not the distance.
+     */
+    @Test
+    @Timeout(value = 3, unit = TimeUnit.MINUTES)
+    fun `two distinct fields are followed`() = assertReachable(
+        config = deepConfig,
+        testCls = DEEP_TEST_CLASS,
+        entryPointName = "fieldFlowTwoDistinctHops",
+        ruleId = DEEP_RULE_ID,
+        testName = "two hops on different fields",
+    )
+
     private fun assertDeepReachable(depth: Int) = assertReachable(
         config = deepConfig,
         testCls = DEEP_TEST_CLASS,

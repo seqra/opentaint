@@ -150,4 +150,48 @@ public class AnyFieldDeepInterproceduralSample {
     }
 
     public void fieldFlowDepth10() { d10_store(source()); }
+
+    // ---- the same field twice on one path: an access tree cannot hold it ----
+    private void h2_f00(Node n) { sink(n.payload); }
+    private void h2_f01(Node n) { h2_f00(n.next); }
+    private void h2_f02(Node n) { h2_f01(n.next); }
+
+    private void h2_store(String value) {
+        Node last = new Node();
+        last.payload = new Path();
+        last.payload.value = value;
+
+        Node mid = new Node();
+        mid.payload = new Path();
+        mid.next = last;
+
+        Node head = new Node();
+        head.payload = new Path();
+        head.next = mid;
+
+        h2_f02(head);
+    }
+
+    public void fieldFlowTwoHopChain() { h2_store(source()); }
+
+    // ---- two distinct fields, the same depth, and it is found ----
+    public static class Outer {
+        public Holder holder;
+    }
+
+    private void h4_f00(Holder h) { sink(h.path); }
+    private void h4_f01(Outer o) { h4_f00(o.holder); }
+
+    private void h4_store(String value) {
+        Holder holder = new Holder();
+        holder.path = new Path();
+        holder.path.value = value;
+
+        Outer outer = new Outer();
+        outer.holder = holder;
+
+        h4_f01(outer);
+    }
+
+    public void fieldFlowTwoDistinctHops() { h4_store(source()); }
 }
