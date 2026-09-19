@@ -104,15 +104,33 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         // DAG-aware visited set.
         if (!delta.containsAccessorDeep(mark)) return false
 
+        // Freshness is asked of every candidate before one is chosen, not of the chosen one
+        // afterwards: the two narrowings would otherwise compound, and a stale nearest candidate
+        // would hide a fresh one behind it.
+        val demand = runner.manager.markUnfoldDemand
+        val fresh = { accessor: Accessor ->
+            !demand.alreadyDemanded(request.method, request.fact.base, mark, accessor)
+        }
+
         val candidates = if (request.suffix != null) emptyList() else delta.markCandidates(mark)
-        val nextAccessors = request.suffix ?: candidates.selectAnswer(mark, extraPaths(f2f))
 
         // Nothing to split off. An `ExclusionSet.Empty` requirement demands nothing -- the fact it
         // refines is the fact itself, so `handleInputFactChange` returns at its equality guard, and
         // `handleMethodSideEffectRequirement` drops an `Empty` refinement outright. Posting it only
         // broadcasts a requirement to every caller of the asking frame for each of them to rebase,
         // delta and discard. The pre-climb handler returned here rather than posting.
-        if (nextAccessors.isEmpty()) return true
+        if (request.suffix == null && candidates.isEmpty()) return true
+
+        val selected = request.suffix?.filter(fresh)
+            ?: candidates.filter { fresh(it.accessor) }.selectAnswer(mark, extraPaths(f2f))
+
+        val nextAccessors = demand.demand(request.method, request.fact.base, mark, selected)
+
+        // Every accessor this answer would contribute has been demanded for this question
+        // already, so the split it asks for has been asked for. The request is NOT consumed: it
+        // keeps climbing, because a caller further up may still hold an accessor nobody has
+        // contributed. Consuming it here measurably stalls the analysis instead.
+        if (nextAccessors.isEmpty()) return false
 
         val exclusion = nextAccessors.fold(ExclusionSet.Empty as ExclusionSet, ExclusionSet::add)
         runner.manager.handleCrossUnitSideEffectReq(request.method, request.fact.replaceExclusions(exclusion))
