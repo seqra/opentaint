@@ -176,6 +176,10 @@ class AccessTree(
             node.containsAccessorDeep(accessor.idx)
         }
 
+        override fun minDepthToAccessor(accessor: Accessor): Int = with(apManager) {
+            node.minDepthToAccessor(accessor.idx)
+        }
+
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? = with(apManager) {
             node.getChild(accessor.idx)
                 ?.let { NodeAccessTreeDelta(apManager, it) }
@@ -811,6 +815,45 @@ class AccessTree(
             }
 
             return false
+        }
+
+        /**
+         * [org.opentaint.dataflow.ap.ifds.access.FinalFactAp.Delta.minDepthToAccessor] without
+         * the wrapper allocation the interface walk needs: one step per concrete accessor, none
+         * for `[any]`, and `-1` when [accessor] does not occur below this node.
+         *
+         * The answer is a function of the node, so memoising it on node identity is exact -- the
+         * same argument [containsAccessorDeep] makes, and the same reason it is needed: these
+         * nodes are a DAG, so without a memo the walk costs paths rather than nodes.
+         */
+        fun minDepthToAccessor(accessor: AccessorIdx): Int {
+            if (accessorNodes == null) return -1
+            return minDepthToAccessor(accessor, IdentityHashMap())
+        }
+
+        private fun minDepthToAccessor(
+            accessor: AccessorIdx,
+            memo: IdentityHashMap<AccessNode, Int>
+        ): Int {
+            memo[this]?.let { return it }
+
+            var best = -1
+
+            forEachAccessor { nodeAccessor, child ->
+                val childDepth = when {
+                    // `[any]` consumes nothing, so what is below it sits at this node's depth
+                    nodeAccessor == ANY_ACCESSOR_IDX -> child.minDepthToAccessor(accessor, memo)
+                    nodeAccessor == accessor -> 1
+                    else -> child.minDepthToAccessor(accessor, memo).let { if (it < 0) it else it + 1 }
+                }
+
+                if (childDepth >= 0 && (best < 0 || childDepth < best)) {
+                    best = childDepth
+                }
+            }
+
+            memo[this] = best
+            return best
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {

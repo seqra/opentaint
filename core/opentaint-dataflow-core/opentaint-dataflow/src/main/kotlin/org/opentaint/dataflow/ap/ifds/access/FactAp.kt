@@ -2,6 +2,7 @@ package org.opentaint.dataflow.ap.ifds.access
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 
@@ -68,6 +69,23 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
 
     interface Delta: ReadableAccessorList<Delta> {
         val isEmpty: Boolean
+
+        /**
+         * The length of the shortest path from here down to [accessor], or `-1` when no path
+         * reaches it -- so `minDepthToAccessor(a) >= 0` is [containsAccessorDeep] for every
+         * accessor that occurs as an edge.
+         *
+         * A step onto a concrete accessor costs one. `[any]` costs nothing: it stands for any
+         * number of accessors, so what sits below it is at an unknown distance, and charging a
+         * step each would be a number this structure does not hold -- zero is the one choice
+         * that keeps the result a lower bound on the true distance. `[any]` is also never a
+         * match, matching [containsAccessorDeep].
+         *
+         * The final marker is a flag on a node rather than an edge, so it is never reached here
+         * and answers `-1` where [containsAccessorDeep] answers `true`. Nothing asks: the
+         * callers all pass a taint mark.
+         */
+        fun minDepthToAccessor(accessor: Accessor): Int = genericMinDepthToAccessor(accessor)
     }
 
     fun delta(other: InitialFactAp): List<Delta>
@@ -83,4 +101,44 @@ interface FinalFactAp : FactAp, ReadableAccessorList<FinalFactAp> {
         delta(other).any { it.isEmpty }
 
     fun clearAllAccessorOccurrences(accessor: Accessor, keepStartAccessor: Boolean): FinalFactAp?
+}
+
+/**
+ * [FinalFactAp.Delta.minDepthToAccessor] over the [ReadableAccessorList] interface alone, for
+ * representations that have nothing faster to offer.
+ *
+ * A breadth-first walk, so the first arrival is the shortest one, with the zero-cost `[any]`
+ * edges closed into the level before it is stepped: that is a 0-1 BFS, and it keeps the distance
+ * exact. A delta is a DAG rather than a tree, so the visited set is what keeps the walk linear
+ * in its nodes instead of in its paths.
+ */
+private fun FinalFactAp.Delta.genericMinDepthToAccessor(accessor: Accessor): Int {
+    var depth = 0
+    var frontier = mutableListOf(this)
+    val visited = hashSetOf<FinalFactAp.Delta>(this)
+
+    while (frontier.isNotEmpty()) {
+        // `[any]` consumes nothing, so what is below it sits at the current depth
+        var i = 0
+        while (i < frontier.size) {
+            val anyNode = frontier[i++].readAccessor(AnyAccessor) ?: continue
+            if (visited.add(anyNode)) frontier.add(anyNode)
+        }
+
+        val next = mutableListOf<FinalFactAp.Delta>()
+        for (node in frontier) {
+            for (nodeAccessor in node.getStartAccessors()) {
+                if (nodeAccessor == AnyAccessor) continue
+                if (nodeAccessor == accessor) return depth + 1
+
+                val child = node.readAccessor(nodeAccessor) ?: continue
+                if (visited.add(child)) next.add(child)
+            }
+        }
+
+        depth++
+        frontier = next
+    }
+
+    return -1
 }
