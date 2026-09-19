@@ -48,7 +48,7 @@ The project argument is the path to the project root. It is required. Use --outp
 
 Later scans can use the model without a new build. This makes repeated scans fast.
 
-Before your first compile, run "opentaint pull" one time. To scan the model, use "opentaint scan --project-model".`,
+To scan the model, use "opentaint scan --project-model".`,
 	Example: `  # Compile the current directory into a project model
   opentaint compile . -o ./model
 
