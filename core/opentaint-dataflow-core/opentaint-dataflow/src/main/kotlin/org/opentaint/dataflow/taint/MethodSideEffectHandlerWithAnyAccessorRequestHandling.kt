@@ -24,7 +24,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleZeroToFact(currentFactAp, summaryEffect, kind)
         }
 
-        handleUnfoldRequest(summaryEffect, kind)
+        handleUnfoldRequest(summaryEffect, kind, f2f = false)
         return emptySet()
     }
 
@@ -39,7 +39,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
-        if (handleUnfoldRequest(summaryEffect, kind)) {
+        if (handleUnfoldRequest(summaryEffect, kind, f2f = true)) {
             return emptySet()
         }
 
@@ -74,12 +74,13 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
     private fun handleUnfoldRequest(
         summaryEffect: SummaryEdgeApplication,
-        request: TaintMarkFieldUnfoldRequest
+        request: TaintMarkFieldUnfoldRequest,
+        f2f: Boolean
     ): Boolean {
         when (summaryEffect) {
             is SummaryEdgeApplication.SummaryApRefinement -> {
                 if (!summaryEffect.delta.isEmpty) {
-                    return handleMarkAfterAnyFieldRequest(summaryEffect.delta, request)
+                    return handleMarkAfterAnyFieldRequest(summaryEffect.delta, request, f2f)
                 }
             }
 
@@ -93,7 +94,8 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
     private fun handleMarkAfterAnyFieldRequest(
         delta: FinalFactAp.Delta,
-        request: TaintMarkFieldUnfoldRequest
+        request: TaintMarkFieldUnfoldRequest,
+        f2f: Boolean
     ): Boolean {
         val mark = request.mark
         // `getAllAccessors` costs the delta's PATH count and allocates two sets plus an interner
@@ -102,7 +104,8 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         // DAG-aware visited set.
         if (!delta.containsAccessorDeep(mark)) return false
 
-        val nextAccessors = request.suffix ?: delta.relevantStartAccessors(mark)
+        val candidates = if (request.suffix != null) emptyList() else delta.markCandidates(mark)
+        val nextAccessors = request.suffix ?: candidates.selectAnswer(mark, extraPaths(f2f))
 
         // Nothing to split off. An `ExclusionSet.Empty` requirement demands nothing -- the fact it
         // refines is the fact itself, so `handleInputFactChange` returns at its equality guard, and
@@ -116,6 +119,20 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
         return true
     }
+
+    /**
+     * How many answers beyond the nearest one a request on this edge may carry.
+     *
+     * None on a fact-to-fact edge. An answer there becomes a side-effect requirement that every
+     * caller of the asking frame replays, and the fact it refines is usually one the demand itself
+     * produced, so a second answer there is a second branch of an iteration with no fixed point on
+     * self-similar shapes. A zero-to-fact answer is about a value built locally -- low fan-in --
+     * and is where the width given up by answering with the nearest candidate is bought back.
+     *
+     * Measured on tms: widening fact-to-fact answers too costs 45% more request traffic and finds
+     * nothing extra.
+     */
+    private fun extraPaths(f2f: Boolean): Int = if (f2f) 0 else EXTRA_Z2F_PATHS
 
     private fun FinalFactAp.Delta.startAccessors(): Set<Accessor> {
         val startAccessors = hashSetOf<Accessor>()
@@ -133,8 +150,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         return startAccessors
     }
 
-    private fun FinalFactAp.Delta.relevantStartAccessors(mark: Accessor): List<Accessor> =
-        startAccessors().filter { accessor ->
-            accessor == mark || readAccessor(accessor)?.containsAccessorDeep(mark) ?: false
-        }
+    private companion object {
+        const val EXTRA_Z2F_PATHS = 2
+    }
 }
