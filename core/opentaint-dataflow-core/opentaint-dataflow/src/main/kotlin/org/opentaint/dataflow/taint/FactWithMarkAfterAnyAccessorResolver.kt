@@ -14,7 +14,7 @@ data class TaintMarkFieldUnfoldRequest(
     val method: MethodEntryPoint,
     val fact: InitialFactAp,
     val mark: TaintMarkAccessor,
-    val suffix: Accessor?
+    val suffix: Set<Accessor>?
 ) : SideEffectKind
 
 data class DefaultFactWithMarkAfterAnyFieldResolver(

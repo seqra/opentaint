@@ -62,7 +62,12 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             if (suffix != null || effect.delta.isEmpty) {
                 listOf(this)
             } else {
-                effect.delta.startAccessors().map { copy(suffix = it) }
+                // One request carrying every candidate, not one request per candidate. The answer
+                // demands the whole set, which is a superset of what any single fork would have
+                // demanded -- and on the registration channel a larger exclusion set spawns MORE
+                // abstractions, never fewer. So recall is preserved while the climb stops
+                // multiplying by the delta's width at every frame it passes through.
+                listOf(copy(suffix = effect.delta.startAccessors()))
             }
         }
     }
@@ -94,8 +99,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         val allAccessors = delta.getAllAccessors()
         if (mark !in allAccessors) return false
 
-        val nextAccessors = request.suffix?.let { setOf(it) }
-            ?: delta.relevantStartAccessors(mark)
+        val nextAccessors = request.suffix ?: delta.relevantStartAccessors(mark)
 
         // Nothing to split off. An `ExclusionSet.Empty` requirement demands nothing -- the fact it
         // refines is the fact itself, so `handleInputFactChange` returns at its equality guard, and
