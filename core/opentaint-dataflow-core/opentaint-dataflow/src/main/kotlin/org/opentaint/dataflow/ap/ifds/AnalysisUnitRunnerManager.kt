@@ -11,6 +11,21 @@ interface AnalysisUnitRunnerManager {
     val unitResolver: UnitResolver<CommonMethod>
     val cancellation: Cancellation
 
+    /**
+     * One canonical object per distinct side-effect kind, for the analysis.
+     *
+     * A kind is pure identity: it is the key of every frame's
+     * `ConcurrentHashMap<SideEffectKind, ExclusionSet>`. A kind that climbs the call graph is
+     * rebuilt at every frame it passes, so the same VALUE was stored as a different OBJECT in each
+     * frame's map -- and each of those objects retains whatever it carries. Interning changes no
+     * equivalence class and no hash; it only stops paying for the copies.
+     */
+    val sideEffectKindInterner: java.util.concurrent.ConcurrentHashMap<SideEffectKind, SideEffectKind>
+
+    @Suppress("UNCHECKED_CAST")
+    fun <T : SideEffectKind> internSideEffectKind(kind: T): T =
+        (sideEffectKindInterner.putIfAbsent(kind, kind) ?: kind) as T
+
     fun getOrCreateUnitStorage(unit: UnitType): MethodSummariesUnitStorage?
     fun getOrCreateUnitRunner(unit: UnitType): AnalysisRunner?
     fun registerMethodCallFromUnit(method: CommonMethod, unit: UnitType)

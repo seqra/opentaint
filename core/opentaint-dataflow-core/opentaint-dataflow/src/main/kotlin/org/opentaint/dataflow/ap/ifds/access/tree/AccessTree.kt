@@ -66,6 +66,9 @@ class AccessTree(
         }
     }
 
+    override fun containsAccessorDeep(accessor: Accessor): Boolean =
+        with(apManager) { access.containsAccessorDeep(accessor.idx) }
+
     override fun startsWithAccessor(accessor: Accessor): Boolean =
         with(apManager) { access.contains(accessor.idx) }
 
@@ -144,6 +147,7 @@ class AccessTree(
         override fun startsWithAccessor(accessor: Accessor): Boolean = false
         override fun getStartAccessors(): Set<Accessor> = emptySet()
         override fun getAllAccessors(): Set<Accessor> = emptySet()
+        override fun containsAccessorDeep(accessor: Accessor): Boolean = false
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? = null
         override fun isAbstract(): Boolean = true
     }
@@ -166,6 +170,10 @@ class AccessTree(
             val s = IntOpenHashSet()
             node.collectAccessorsTo(s)
             return s.mapTo(hashSetOf()) { it.accessor }
+        }
+
+        override fun containsAccessorDeep(accessor: Accessor): Boolean = with(apManager) {
+            node.containsAccessorDeep(accessor.idx)
         }
 
         override fun readAccessor(accessor: Accessor): FinalFactAp.Delta? = with(apManager) {
@@ -770,6 +778,39 @@ class AccessTree(
 
             cache[this] = result
             return result
+        }
+
+        /**
+         * Exactly `collectAccessorsTo(s).contains(accessor)`, with an early exit and a
+         * DAG-aware visited set.
+         *
+         * [collectAccessorsTo] recurses with no memo, so it costs [size] -- the count of
+         * root-to-leaf PATHS -- while the node count is what is actually distinct: interning and
+         * [mergeAdd]'s result memo make these nodes a DAG, so the two differ without bound. Both
+         * walks compute the same set
+         *     R(n) = {FINAL if n.isFinal} u U_(a,c) ({a} if a != ANY) u R(c)
+         * so this answers `accessor in R(this)`; memoising on node identity is exact because R is
+         * a function of the node.
+         */
+        fun containsAccessorDeep(accessor: AccessorIdx): Boolean {
+            if (accessorNodes == null) return accessor == FINAL_ACCESSOR_IDX && isFinal
+            return containsAccessorDeep(accessor, IdentityHashMap())
+        }
+
+        private fun containsAccessorDeep(
+            accessor: AccessorIdx,
+            visited: IdentityHashMap<AccessNode, Unit>
+        ): Boolean {
+            if (visited.put(this, Unit) != null) return false
+
+            if (accessor == FINAL_ACCESSOR_IDX && isFinal) return true
+
+            forEachAccessor { nodeAccessor, accessorNode ->
+                if (nodeAccessor == accessor && nodeAccessor != ANY_ACCESSOR_IDX) return true
+                if (accessorNode.containsAccessorDeep(accessor, visited)) return true
+            }
+
+            return false
         }
 
         fun collectAccessorsTo(dst: IntOpenHashSet) {

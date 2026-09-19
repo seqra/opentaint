@@ -62,6 +62,8 @@ class TaintAnalysisUnitRunnerManager(
     private val summarySerializationContext: SummarySerializationContext,
     private val taintRulesStatsSamplingPeriod: Int?,
 ): AnalysisUnitRunnerManager, AutoCloseable {
+    override val sideEffectKindInterner = ConcurrentHashMap<SideEffectKind, SideEffectKind>()
+
     enum class Status {
         OK, EXCEPTION, TIMEOUT, OOM
     }

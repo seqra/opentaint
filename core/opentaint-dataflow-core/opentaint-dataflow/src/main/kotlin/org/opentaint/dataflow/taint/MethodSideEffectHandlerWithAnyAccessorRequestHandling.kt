@@ -67,7 +67,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
                 // demanded -- and on the registration channel a larger exclusion set spawns MORE
                 // abstractions, never fewer. So recall is preserved while the climb stops
                 // multiplying by the delta's width at every frame it passes through.
-                listOf(copy(suffix = effect.delta.startAccessors()))
+                listOf(runner.manager.internSideEffectKind(copy(suffix = effect.delta.startAccessors())))
             }
         }
     }
@@ -96,8 +96,11 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
         request: TaintMarkFieldUnfoldRequest
     ): Boolean {
         val mark = request.mark
-        val allAccessors = delta.getAllAccessors()
-        if (mark !in allAccessors) return false
+        // `getAllAccessors` costs the delta's PATH count and allocates two sets plus an interner
+        // lookup per accessor, and every one of those is thrown away here: the only question asked
+        // is membership. `containsAccessorDeep` is the same predicate with an early exit and a
+        // DAG-aware visited set.
+        if (!delta.containsAccessorDeep(mark)) return false
 
         val nextAccessors = request.suffix ?: delta.relevantStartAccessors(mark)
 
@@ -132,6 +135,6 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
 
     private fun FinalFactAp.Delta.relevantStartAccessors(mark: Accessor): List<Accessor> =
         startAccessors().filter { accessor ->
-            accessor == mark || readAccessor(accessor)?.getAllAccessors()?.contains(mark) ?: false
+            accessor == mark || readAccessor(accessor)?.containsAccessorDeep(mark) ?: false
         }
 }

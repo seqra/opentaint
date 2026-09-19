@@ -176,6 +176,18 @@ class NormalMethodAnalyzer(
     private var pendingSideEffectRequirements = arrayListOf<InitialFactAp>()
     private var pendingSideEffectSummaries = arrayListOf<SideEffectSummary>()
 
+    /**
+     * What is already in [pendingSideEffectSummaries], so a repeat is not carried into the flush.
+     *
+     * `CommonFactSideEffectSummary.MethodTaintedSideEffectSummaries.add` groups the batch by
+     * `(base, initial access, kind)` and folds the group's exclusions with `ExclusionSet::union`.
+     * Two entries with the same `(initialFactAp, kind)` necessarily carry the same exclusion set --
+     * the exclusions live on `initialFactAp`, which is part of the key -- and `E union E === E` for
+     * every [ExclusionSet], so the map that reaches the storage is unchanged by dropping the
+     * repeat. Cleared with the batch, so it retains nothing between flushes.
+     */
+    private var pendingSideEffectSummaryKeys = hashSetOf<SideEffectSummary>()
+
     private val analysisContext: MethodAnalysisContext = analysisManager.getMethodAnalysisContext(
         methodEntryPoint, runner.graph, runner.methodCallResolver,
         (emptyContextAnalyzer as? NormalMethodAnalyzer)?.analysisContext
@@ -732,6 +744,7 @@ class NormalMethodAnalyzer(
         if (pendingSideEffectSummaries.isNotEmpty()) {
             runner.addNewSideEffectSummaries(methodEntryPoint, pendingSideEffectSummaries)
             pendingSideEffectSummaries = arrayListOf()
+            pendingSideEffectSummaryKeys = hashSetOf()
         }
     }
 
@@ -948,6 +961,8 @@ class NormalMethodAnalyzer(
     }
 
     private fun addSideEffectSummary(summary: SideEffectSummary) {
+        if (!pendingSideEffectSummaryKeys.add(summary)) return
+
         pendingSideEffectSummaries.add(summary)
 
         if (!analyzerEnqueued) {
@@ -1380,6 +1395,7 @@ class NormalMethodAnalyzer(
         pendingSummaryEdges = EdgeCollection.EdgeList(apManager, methodEntryPoint)
         pendingSideEffectRequirements = arrayListOf()
         pendingSideEffectSummaries = arrayListOf()
+        pendingSideEffectSummaryKeys = hashSetOf()
         delayedF2FSummaries = EdgeCollection.EdgeList(apManager, methodEntryPoint)
 
         initialFacts = apManager.initialFactAbstraction(methodEntryPoint.statement)

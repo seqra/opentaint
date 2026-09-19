@@ -10,6 +10,15 @@ interface AccessorList {
     fun getStartAccessors(): Set<Accessor>
     fun getAllAccessors(): Set<Accessor>
 
+    /**
+     * `getAllAccessors().contains(accessor)`, without materialising the set.
+     *
+     * The default is the definition itself, so an implementation that does not override this is
+     * unchanged. An override must answer the same predicate -- it exists only to let a
+     * representation answer it with an early exit and without allocating.
+     */
+    fun containsAccessorDeep(accessor: Accessor): Boolean = getAllAccessors().contains(accessor)
+
     fun isAbstract(): Boolean
 }
 
