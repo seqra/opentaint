@@ -657,7 +657,6 @@ class OwaspBenchmarkTest : AnalysisTest() {
     @Test fun benchmarkTest00833() = assertNotReachable("00833")
     @Test fun benchmarkTest00834() = assertReachable("00834")
     @Test fun benchmarkTest00835() = assertReachable("00835")
-    @Disabled("Path insensitivity")
     @Test fun benchmarkTest00836() = assertNotReachable("00836")
     @Disabled("Path insensitivity")
     @Test fun benchmarkTest00837() = assertNotReachable("00837")
