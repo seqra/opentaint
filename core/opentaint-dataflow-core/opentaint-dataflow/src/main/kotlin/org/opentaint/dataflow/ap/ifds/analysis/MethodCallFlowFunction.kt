@@ -27,11 +27,11 @@ interface MethodCallFlowFunction {
 
     sealed interface NDFactCallFailureFact: NDFactCallFact
 
-    sealed interface ZeroCallSuccessFact
+    sealed interface ZeroCallSuccessFact: ZeroCallFact
 
-    sealed interface FactCallSuccessFact
+    sealed interface FactCallSuccessFact: FactCallFact
 
-    sealed interface NDFactCallSuccessFact
+    sealed interface NDFactCallSuccessFact: NDFactCallFact
 
     data object Unchanged : ZeroCallFact, FactCallFact, NDFactCallFact
 
