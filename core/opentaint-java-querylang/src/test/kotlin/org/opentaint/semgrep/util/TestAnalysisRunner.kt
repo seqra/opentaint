@@ -17,7 +17,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaExpressionToAnonymousClassTransformerFeature
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
-import org.opentaint.dataflow.jvm.graph.MethodReturnInstNormalizerFeature
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -26,6 +25,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
+import org.opentaint.jvm.graph.JApplicationSingleExitGraph
+import org.opentaint.jvm.graph.JMethodBoundaryInstFeature
 import org.opentaint.jvm.sast.dataflow.JIRMethodExitRuleProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.jvm.sast.rules.JIRSemgrepRuleProvider
@@ -46,11 +47,11 @@ class TestAnalysisRunner(
     private fun initializeCp() = runBlocking {
         val lambdaAnonymousClass = LambdaAnonymousClassFeature()
         val lambdaTransformer = LambdaExpressionToAnonymousClassTransformerFeature(lambdaAnonymousClass)
-        val methodNormalizer = MethodReturnInstNormalizerFeature
 
         val features = mutableListOf(
-            UnknownClasses, lambdaAnonymousClass, lambdaTransformer, methodNormalizer,
-            JStringConcatTransformer, JMultiDimArrayAllocationTransformer
+            UnknownClasses, lambdaAnonymousClass, lambdaTransformer,
+            JStringConcatTransformer, JMultiDimArrayAllocationTransformer,
+            JMethodBoundaryInstFeature,
         )
 
         val allCpFiles = listOf(samples.samplesJar.toFile())
@@ -64,7 +65,7 @@ class TestAnalysisRunner(
     private val ifdsAnalysisGraph by lazy {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        JIRSafeApplicationGraph(mainGraph)
+        JIRSafeApplicationGraph(JApplicationSingleExitGraph(mainGraph))
     }
 
     @Suppress("UNCHECKED_CAST")

@@ -24,6 +24,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.packageName
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
+import org.opentaint.jvm.graph.JApplicationSingleExitGraph
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
 import org.opentaint.util.analysis.ApplicationGraph
 
@@ -40,7 +41,8 @@ class JIRTaintAnalyzer(
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
         val tryBoundaryExceptionsGraph = JTryBoundaryExceptionsApplicationGraph(mainGraph)
-        return JIRSafeApplicationGraph(tryBoundaryExceptionsGraph)
+        val singleExitGraph = JApplicationSingleExitGraph(tryBoundaryExceptionsGraph)
+        return JIRSafeApplicationGraph(singleExitGraph)
     }
 
     data class JIRAnalysisOptions(

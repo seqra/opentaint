@@ -117,6 +117,8 @@ interface AnalysisManager: LanguageManager {
         fact: FinalFactAp,
     ): Boolean
 
+    fun isTraceRequiredInstruction(inst: CommonInst): Boolean = false
+
     fun onInstructionReached(inst: CommonInst)
     fun reportLanguageSpecificRunnerProgress(logger: KLogger) = Unit
 }

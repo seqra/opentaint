@@ -48,6 +48,7 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
@@ -300,6 +301,9 @@ class JIRAnalysisManager(
     }
 
     override val methodContextSerializer = JIRMethodContextSerializer(cp)
+
+    override fun isTraceRequiredInstruction(inst: CommonInst): Boolean =
+        inst is JIRReturnInst
 
     override fun onInstructionReached(inst: CommonInst) {
 

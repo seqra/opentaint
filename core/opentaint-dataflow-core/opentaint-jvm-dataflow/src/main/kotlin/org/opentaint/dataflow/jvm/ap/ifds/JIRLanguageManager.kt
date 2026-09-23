@@ -1,18 +1,16 @@
 package org.opentaint.dataflow.jvm.ap.ifds
 
+import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
-import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
-import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.LanguageManager
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
 import kotlin.contracts.ExperimentalContracts
 import kotlin.contracts.contract
 
@@ -43,7 +41,7 @@ open class JIRLanguageManager(val cp: JIRClasspath) : LanguageManager {
     }
 
     override fun producesExceptionalControlFlow(inst: CommonInst): Boolean {
-        return inst is JIRThrowInst
+        return inst is JIRThrowInst || inst is JMethodExitExceptionalInst
     }
 
     override fun getCalleeMethod(callExpr: CommonCallExpr): JIRMethod {

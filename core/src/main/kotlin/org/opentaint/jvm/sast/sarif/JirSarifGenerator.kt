@@ -17,7 +17,13 @@ import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInstLocation
 import org.opentaint.ir.api.jvm.cfg.JIRRef
+import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodBoundaryInst
+import org.opentaint.jvm.graph.JMethodEnterInst
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.jvm.sast.JIRSourceFileResolver
 import org.opentaint.jvm.sast.ast.AstSpanResolverProvider
 import org.opentaint.jvm.sast.project.servlet.ServletAnnotator
@@ -52,12 +58,15 @@ class JirSarifGenerator(
         vulnerability: TaintSinkTracker.TaintVulnerability,
         trace: TracePathGenerationResult,
         tracePaths: List<List<TracePathNode>>?
-    ): Result = annotators.fold(sarif) { result, annotator ->
-        annotator.annotateSarif(result, vulnerability, trace, tracePaths.orEmpty()) { s ->
-            val loc = statementLocation(s, LocationType.WebInfoRelated, relevantLocations = null)
-                ?: return@annotateSarif null
+    ): Result {
+        val normalizedTracePaths = tracePaths?.map { it.unwrapBoundaries() }
+        return annotators.fold(sarif) { result, annotator ->
+            annotator.annotateSarif(result, vulnerability, trace, normalizedTracePaths.orEmpty()) { s ->
+                val loc = statementLocation(s, LocationType.WebInfoRelated, relevantLocations = null)
+                    ?: return@annotateSarif null
 
-            locationResolver.generateSarifLocation(loc)
+                locationResolver.generateSarifLocation(loc)
+            }
         }
     }
 
@@ -171,8 +180,9 @@ class JirSarifGenerator(
     }
 
     override fun generateThreadFlow(path: List<TracePathNode>, sinkMessage: String): List<IntermediateLocation> {
-        val messageBuilder = TraceMessageBuilder(traits, sinkMessage, path)
-        val filteredLocations = path.filter { messageBuilder.isGoodTrace(it) }
+        val normalizedPath = path.unwrapBoundaries()
+        val messageBuilder = TraceMessageBuilder(traits, sinkMessage, normalizedPath)
+        val filteredLocations = normalizedPath.filter { messageBuilder.isGoodTrace(it) }
         val groupedLocations = groupRelativeTraces(filteredLocations)
         val noReassigns = groupedLocations.map { removeFieldReassigns(it) }
         val filteredGroups = removeRepetitiveAssigns(noReassigns)
@@ -226,6 +236,31 @@ class JirSarifGenerator(
             message = null,
             type = type,
         )
+    }
+
+    private fun TracePathNode.unwrapBoundary(previous: TracePathNode?): TracePathNode {
+        val statement = statement
+        if (statement !is JMethodBoundaryInst) return this
+
+        val instructions = statement.location.method.instList.instructions
+        val previousStatement = previous?.statement?.takeIf { it.location.method == statement.location.method }
+        val real = when (statement) {
+            is JMethodEnterInst -> instructions.first()
+            is JMethodExitNormalInst -> previousStatement as? JIRReturnInst
+                ?: instructions.lastOrNull { it is JIRReturnInst }
+            is JMethodExitExceptionalInst -> previousStatement as? JIRThrowInst
+                ?: instructions.lastOrNull { it is JIRThrowInst }
+        } ?: return this
+
+        return copy(statement = real)
+    }
+
+    private fun List<TracePathNode>.unwrapBoundaries(): List<TracePathNode> {
+        if (none { it.statement is JMethodBoundaryInst }) return this
+
+        val result = ArrayList<TracePathNode>(size)
+        for (node in this) result += node.unwrapBoundary(result.lastOrNull())
+        return result
     }
 
     companion object {
