@@ -279,7 +279,12 @@ class TraceMessageBuilder(
                 return false
         }
 
-        val entry = node.entry as? TracePathNodeEntry.Action ?: return true
+        val entry = when (val e = node.entry) {
+            is TracePathNodeEntry.NonAction -> return e.entry !is TraceEntry.Unchanged
+            is TracePathNodeEntry.Action -> e
+            null -> return true
+        }
+
         val primaryAction = entry.variant.primaryAction
 
         // filtering generated assigns
