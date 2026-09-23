@@ -32,6 +32,7 @@ import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
+import org.opentaint.jvm.graph.JApplicationSingleExitGraph
 import org.opentaint.jvm.sast.ast.BasicTestUtils
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximation
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
@@ -149,7 +150,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val ifdsGraph = JIRSafeApplicationGraph(mainGraph)
+        val ifdsGraph = JIRSafeApplicationGraph(JApplicationSingleExitGraph(mainGraph))
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
