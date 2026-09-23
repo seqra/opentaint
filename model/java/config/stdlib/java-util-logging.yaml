@@ -7,14 +7,12 @@ passThrough:
   - from: arg(0)
     to:
     - result
-    - .java.util.logging.Logger#name#java.lang.Object
+    - .java.util.logging.Logger#name#java.lang.String
 - function: java.util.logging.LogRecord#<init>
   signature: (java.util.logging.Level, java.lang.String) void
   copy:
   - from: arg(1)
-    to:
-    - this
-    - .java.util.logging.LogRecord#<rule-storage>#java.lang.Object
+    to: this
 - function: java.util.logging.LogRecord#<init>
   signature: (java.util.logging.Level, java.lang.String) void
   taintCopyOnly: true
@@ -36,7 +34,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.util.logging.Logger#name#java.lang.Object
+    - .java.util.logging.Logger#name#java.lang.String
     to: result
 - function: java.util.logging.LogRecord#setLongThreadID
   signature: (*) java.util.logging.LogRecord
