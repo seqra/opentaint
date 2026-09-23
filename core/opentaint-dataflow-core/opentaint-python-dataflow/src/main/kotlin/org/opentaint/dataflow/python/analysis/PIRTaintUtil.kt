@@ -34,6 +34,8 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
 ) : TaintUtil<PythonRuleCondition, TaintConfigurationSource, TaintConfigurationSink, TraceInfo>(apManager) {
     private val sinkTracker get() = context.taint.taintSinkTracker
 
+    val factsAfterSink = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
+
     override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintConfigurationSource> =
         object : RuleAssumptionsManager<TaintConfigurationSource> {
             override fun storeAssumptions(
@@ -114,7 +116,10 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         sourceEvaluator: TaintSourceActionEvaluator,
     ): Set<FinalFactAp> {
         val facts = hashSetOf<FinalFactAp>()
-        applySourceAction(rule, rule.trackFactsReachAnalysisEnd, sourceEvaluator) { fact, _ -> facts += fact }
+        applySourceAction(rule, rule.trackFactsReachAnalysisEnd, sourceEvaluator) { fact, action ->
+            facts += fact
+            factsAfterSink += fact to createRuleTraceInfo(rule, action)
+        }
         return facts
     }
 

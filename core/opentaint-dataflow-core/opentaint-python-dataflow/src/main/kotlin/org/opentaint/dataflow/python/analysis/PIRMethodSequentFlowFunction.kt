@@ -508,6 +508,10 @@ class PIRMethodSequentFlowFunction(
         taintUtil.applySinkRules(
             conditionRewriter.rulesWithConditions(exitSinks), fact, markAfterAnyAccessorResolver
         )
+
+        taintUtil.factsAfterSink.forEach { (factAp, trace) ->
+            addUnchecked(Sequent.ZeroToFact(factAp, trace))
+        }
     }
 
     private fun handleStoreAttr(

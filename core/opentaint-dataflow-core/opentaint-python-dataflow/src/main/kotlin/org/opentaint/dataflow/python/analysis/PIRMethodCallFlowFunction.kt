@@ -76,6 +76,8 @@ class PIRMethodCallFlowFunction(
         applySinkRules(callee, initialFacts = emptySet(), factReader = null, conditionRewriter) {
             check(it is ZeroCallSuccessFact)
             result += it
+        }.forEach { (fact, trace) ->
+            fact.forEachSourceFactWithAliases { result += CallToReturnZFact(it, trace) }
         }
 
         if (callee !is PIRUnknownFunction) {
@@ -129,6 +131,9 @@ class PIRMethodCallFlowFunction(
         val startFactReader = FinalFactReader(factAp.rebase(startFactBase), apManager)
 
         applySinkRules(callee, initialFacts, startFactReader, conditionRewriter, addUnchecked)
+            .forEach { (fact, trace) ->
+                fact.forEachSourceFactWithAliases { addUnchecked(CallToReturnZFact(it, trace)) }
+            }
 
         applySourceRules(
             callee, initialFacts, startFactReader, exclusion, conditionRewriter,
@@ -296,7 +301,7 @@ class PIRMethodCallFlowFunction(
         factReader: FinalFactReader?,
         conditionRewriter: PIRConditionRewriter,
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit
-    ) {
+    ): List<Pair<FinalFactAp, TraceInfo>> {
         val sinkRules = rulesProvider.sinksForMethod(callee)
 
         val taintUtil = PIRMethodCallTaintUtil(ctx, callInst, apManager)
@@ -310,6 +315,8 @@ class PIRMethodCallFlowFunction(
         taintUtil.applySinkRules(
             conditionRewriter.rulesWithConditions(sinkRules), factReader, markAfterAnyAccessorResolver
         )
+
+        return taintUtil.factsAfterSink
     }
 
     private fun applyPassRules(
