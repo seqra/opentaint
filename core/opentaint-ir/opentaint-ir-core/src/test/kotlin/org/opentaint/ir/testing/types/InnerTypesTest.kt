@@ -30,18 +30,25 @@ class InnerTypesTest : BaseTypesTest() {
         val classWithInners = findType<InnerClasses<*>>()
         val inners = classWithInners.innerTypes
         assertEquals(listOf(
-            "org.opentaint.ir.testing.types.InnerClasses<W>.InnerStateOverriden<W>",
-            "org.opentaint.ir.testing.types.InnerClasses<W>.InnerState",
+            "org.opentaint.ir.testing.types.InnerClasses<W>\$InnerStateOverriden<W>",
+            "org.opentaint.ir.testing.types.InnerClasses<W>\$InnerState",
             "org.opentaint.ir.testing.types.InnerClasses<W>$2",
             "org.opentaint.ir.testing.types.InnerClasses<W>$1"
         ), inners.map { it.typeName }.sortedDescending())
     }
 
     @Test
+    fun `raw inner class type name uses JVM separator`() {
+        val type = cp.findTypeOrNull("org.opentaint.ir.testing.types.AAA\$BBB")
+
+        assertEquals("org.opentaint.ir.testing.types.AAA\$BBB", type?.typeName)
+    }
+
+    @Test
     fun `get not parameterized inner types`() {
         val innerClasses = findType<InnerClasses<*>>().innerTypes
         assertEquals(4, innerClasses.size)
-        with(innerClasses.first { it.typeName == "org.opentaint.ir.testing.types.InnerClasses<W>.InnerState" }) {
+        with(innerClasses.first { it.typeName == "org.opentaint.ir.testing.types.InnerClasses<W>\$InnerState" }) {
             val fields = fields
             assertEquals(2, fields.size)
 

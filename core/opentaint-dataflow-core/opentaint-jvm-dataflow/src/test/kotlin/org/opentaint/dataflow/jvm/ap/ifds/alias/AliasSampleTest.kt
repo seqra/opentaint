@@ -453,6 +453,40 @@ class AliasSampleTest : BasicTestUtils() {
     }
 
     @Test
+    fun `test node traversal on two fields produces field chain ending with data`() {
+        val method = findMethod(HEAP_SAMPLE, "twoFieldNodeTraversalData")
+        val aa = aaForMethod(method)
+
+        val sink = method.findSinkCall("sinkOneValue")
+        val apAliases = aa.sinkArgApAliases(sink)
+
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0)
+                        && it.accessors.size >= 2
+                        && it.accessors.last().isField(FIELD_DATA)
+                        && it.accessors.dropLast(1).all { a -> a.isField(FIELD_NEXT) }
+            }
+        }
+
+        assertTrue {
+            apAliases.any {
+                it.base == Argument(0)
+                        && it.accessors.size >= 2
+                        && it.accessors.last().isField(FIELD_DATA)
+                        && it.accessors.dropLast(1).all { a -> a.isField(FIELD_PREV) }
+            }
+        }
+
+        assertFalse {
+            apAliases.any { alias ->
+                val fields = alias.accessors.dropLast(1)
+                fields.any { it.isField(FIELD_NEXT) } && fields.any { it.isField(FIELD_PREV) }
+            }
+        }
+    }
+
+    @Test
     fun `test field overwrite on argument receiver`() {
         val method = findMethod(HEAP_SAMPLE, "fieldOverwrite")
         val aa = aaForMethod(method)
@@ -589,7 +623,10 @@ class AliasSampleTest : BasicTestUtils() {
         val localReachability = JIRLocalVariableReachability(method, graph, manager)
         val cancellation = Cancellation().also { it.activate() }
 
-        return JIRLocalAliasAnalysis(ep, graph, callResolver, noRules, localReachability, cancellation, manager, params)
+        return JIRLocalAliasAnalysis(
+            ep, graph, callResolver, noRules,
+            localReachability, cancellation, manager, manager.factTypeChecker, params
+        )
     }
 
     private fun interProcParams(depth: Int) =
@@ -643,6 +680,7 @@ class AliasSampleTest : BasicTestUtils() {
         private const val FIELD_VALUE = "value"
         private const val FIELD_BOX = "box"
         private const val FIELD_NEXT = "next"
+        private const val FIELD_PREV = "prev"
         private const val FIELD_DATA = "data"
         private const val FIELD_INTERPROC = "field"
     }
