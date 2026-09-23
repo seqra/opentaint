@@ -102,12 +102,12 @@ class PythonSampleBasedTest {
 
     @Ignore @Test fun ruleCookie() = runSample("RuleCookie")
 
-    @Ignore @Test fun cleanerAfterSink0() = runSample("CleanerAfterSink0")
-    @Ignore @Test fun cleanerAfterSink1() = runSample("CleanerAfterSink1")
-    @Ignore @Test fun cleanerAfterSink2() = runSample("CleanerAfterSink2")
-    @Ignore @Test fun ruleWithSeveralSuffixCleaners() = runSample("RuleWithSeveralSuffixCleaners")
-    @Ignore @Test fun ruleWithNotInsideSuffix() = runSample("RuleWithNotInsideSuffix")
-    @Ignore @Test fun rulePatternNotWithSignature() = runSample("RulePatternNotWithSignature")
+    @Test fun cleanerAfterSink0() = runSample("CleanerAfterSink0")
+    @Test fun cleanerAfterSink1() = runSample("CleanerAfterSink1")
+    @Test fun cleanerAfterSink2() = runSample("CleanerAfterSink2")
+    @Test fun ruleWithSeveralSuffixCleaners() = runSample("RuleWithSeveralSuffixCleaners")
+    @Test fun ruleWithNotInsideSuffix() = runSample("RuleWithNotInsideSuffix")
+    @Test fun rulePatternNotWithSignature() = runSample("RulePatternNotWithSignature")
 
     @Ignore @Test fun ruleWithEllipsisInvocationAndPatternNot() = runSample("RuleWithEllipsisInvocationAndPatternNot")
     @Ignore @Test fun ruleWithEllipsisMethodInvocation() = runSample("RuleWithEllipsisMethodInvocation")
@@ -241,8 +241,7 @@ class PythonSampleBasedTest {
         }
 
         return analyzer.use { eng ->
-            eng.analyzeWithIfds(listOf(entryPoint))
-            eng.ifdsEngine.getVulnerabilities()
+            eng.analyzeWithIfds(listOf(entryPoint)).first.map { it.vulnerability }
         }
     }
 

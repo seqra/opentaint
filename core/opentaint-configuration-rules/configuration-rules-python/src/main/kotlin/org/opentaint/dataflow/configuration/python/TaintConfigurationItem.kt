@@ -20,6 +20,8 @@ sealed interface TaintConfigurationSource : TaintConfigurationItem, CommonTaintC
 
 sealed interface TaintConfigurationSink : TaintConfigurationItem, CommonTaintConfigurationSink {
     override val meta: TaintSinkMeta
+
+    val trackFactsReachAnalysisEnd: List<TaintAssignAction>
 }
 
 sealed interface TaintConfigurationPassThrough : TaintConfigurationItem {
@@ -56,6 +58,7 @@ data class TaintSinkMeta(
 data class TaintSink(
     override val target: Target,
     override val condition: PIRCondition,
+    override val trackFactsReachAnalysisEnd: List<TaintAssignAction>,
     override val id: String,
     override val meta: TaintSinkMeta,
     override val info: ItemInfo? = null,
@@ -64,6 +67,7 @@ data class TaintSink(
 data class TaintExitSink(
     override val target: Target.Function,
     override val condition: PIRCondition,
+    override val trackFactsReachAnalysisEnd: List<TaintAssignAction>,
     override val id: String,
     override val meta: TaintSinkMeta,
     override val info: ItemInfo? = null,

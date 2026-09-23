@@ -101,6 +101,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         TaintSink(
             target = Target.Function(method),
             condition = resolveCondition(rule.condition),
+            trackFactsReachAnalysisEnd = resolveTrackedEndFacts(rule.trackFactsReachAnalysisEnd),
             id = "function:${fn.function}",
             meta = sinkMeta(rule.meta),
         )
@@ -112,6 +113,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         TaintExitSink(
             target = Target.Function(method),
             condition = resolveCondition(rule.condition),
+            trackFactsReachAnalysisEnd = resolveTrackedEndFacts(rule.trackFactsReachAnalysisEnd),
             id = "exit:${fn.function}",
             meta = sinkMeta(rule.meta),
         )
@@ -162,6 +164,7 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
         TaintSink(
             target = Target.Attribute(name),
             condition = resolveCondition(rule.condition),
+            trackFactsReachAnalysisEnd = resolveTrackedEndFacts(rule.trackFactsReachAnalysisEnd),
             id = "attribute:$name",
             meta = sinkMeta(rule.meta),
         )
@@ -282,6 +285,10 @@ internal class MethodTaintConfigurationResolver(private val method: PIRFunction?
     // endregion
 
     // region Position + condition + action conversion
+
+    private fun resolveTrackedEndFacts(
+        actions: List<SerializedPythonTaintAssignAction>?,
+    ): List<TaintAssignAction> = actions.orEmpty().flatMap(::convertAssignActions)
 
     private fun convertAssignActions(a: SerializedPythonTaintAssignAction): List<TaintAssignAction> =
         expandPositions(a.pos).map { TaintAssignAction(mark = TaintMark(a.kind), pos = it) }

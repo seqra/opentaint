@@ -78,16 +78,22 @@ fun PythonTaintRuleGenerationCtx.emitPythonTaintRules(ctx: RuleConversionCtx): L
 
     for (ruleEdge in edgesToFinalAccept) {
         for (condition in evaluateWithStateCheck(ruleEdge, ruleEdge.stateFrom)) {
+            val afterSinkActions = buildPythonStateAssignActions(ruleEdge.stateTo, condition)
+
             when (ruleEdge.edgeKind) {
                 TaintRuleEdge.Kind.MethodCall -> rules += ruleEdge to SerializedPythonSink(
                     target = pythonTargetFor(condition.ruleCondition.function),
                     condition = condition.ruleCondition.condition.nullIfTrue(),
+                    trackFactsReachAnalysisEnd = afterSinkActions.takeIf { it.isNotEmpty() },
                     meta = ctx.meta.toPythonSinkMeta(),
                 )
 
                 TaintRuleEdge.Kind.MethodExit -> rules += ruleEdge to SerializedPythonExitSink(
                     target = PythonTarget.Function(ANY_PYTHON_FUNCTION),
                     condition = condition.ruleCondition.condition.rewriteAsEndCondition().nullIfTrue(),
+                    trackFactsReachAnalysisEnd = afterSinkActions
+                        .map { it.copy(pos = it.pos.rewriteAsEndPosition()) }
+                        .takeIf { it.isNotEmpty() },
                     meta = ctx.meta.toPythonSinkMeta(),
                 )
 

@@ -87,7 +87,9 @@ class PIRMethodCallPrecondition(
         if (callee is PIRUnknownFunction) {
             unknownCallPrecondition(callee, fact, startFactBase)
         } else {
-            this += MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method)
+            methodCallFactMapper.toCalleeFrame(statement, callee, startFactBase)?.let {
+                this += MethodCallPrecondition.CallToStartResolved(fact, it, method)
+            }
         }
     }
 

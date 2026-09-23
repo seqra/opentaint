@@ -265,6 +265,7 @@ private class TestRulesProvider(
             TaintSink(
                 target = Target.Function(method),
                 condition = CommonCondition.Atom(ContainsMark(TaintMark(it.mark), it.pos)),
+                trackFactsReachAnalysisEnd = emptyList(),
                 id = it.id,
                 meta = TaintSinkMeta(it.id, CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null, note = it.id),
             )

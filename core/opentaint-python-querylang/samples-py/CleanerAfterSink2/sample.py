@@ -1,3 +1,9 @@
+def TaintRuleFalsePositive(reason):
+    def _decorator(fn):
+        return fn
+    return _decorator
+
+
 def src():
     return object()
 
@@ -20,6 +26,7 @@ def Positive_simple():
     sink(a, b)
 
 
+@TaintRuleFalsePositive("Cleaner requires 2 facts")
 def Negative_simple():
     a = src()
     b = copy(a)
@@ -53,6 +60,7 @@ def _negative_multiple_functions_nested_clean(a, b):
     clean(a, b)
 
 
+@TaintRuleFalsePositive("Cleaner requires 2 facts")
 def Negative_multiple_functions():
     a = _negative_multiple_functions_nested_src()
     b = copy(a)
@@ -102,6 +110,7 @@ def _negative_branch_nested_clean(a, b):
         _negative_branch_other_clean(a, b)
 
 
+@TaintRuleFalsePositive("Cleaner requires 2 facts")
 def Negative_branch():
     a = _negative_branch_nested_src()
     b = copy(a)

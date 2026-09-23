@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.python.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -11,6 +12,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.PythonRuleCondition
+import org.opentaint.dataflow.configuration.python.TaintAssignAction
+import org.opentaint.dataflow.configuration.python.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.python.TaintConfigurationSource
 import org.opentaint.dataflow.python.PIRFlowFunctionUtils.resolveAp
@@ -67,10 +70,24 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         factReader: FinalFactReader?,
         evaluatedFacts: List<InitialFactAp>
     ) {
+        val factAfterSinkEvaluator by lazy {
+            TaintSourceActionEvaluator(apManager, exclusion = ExclusionSet.Universe)
+        }
+
         if (evaluatedFacts.isEmpty()) {
             if (factReader != null) return
 
-            sinkTracker.addUnconditionalVulnerability(context.methodEntryPoint, statement, rule)
+            if (rule.trackFactsReachAnalysisEnd.isEmpty()) {
+                sinkTracker.addUnconditionalVulnerability(context.methodEntryPoint, statement, rule)
+                return
+            }
+
+            sinkTracker.addUnconditionalVulnerabilityWithEndFactRequirement(
+                context.methodEntryPoint,
+                statement,
+                rule,
+                requiredEndFacts(rule, factAfterSinkEvaluator),
+            )
             return
         }
 
@@ -78,12 +95,27 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
             mapFactToReturn(it).single()
         }
 
-        context.taint.taintSinkTracker.addVulnerability(
+        if (rule.trackFactsReachAnalysisEnd.isEmpty()) {
+            sinkTracker.addVulnerability(context.methodEntryPoint, callerFacts, statement, rule)
+            return
+        }
+
+        sinkTracker.addVulnerabilityWithEndFactRequirement(
             context.methodEntryPoint,
             callerFacts,
             statement,
-            rule
+            rule,
+            requiredEndFacts(rule, factAfterSinkEvaluator),
         )
+    }
+
+    private fun requiredEndFacts(
+        rule: TaintConfigurationSink,
+        sourceEvaluator: TaintSourceActionEvaluator,
+    ): Set<FinalFactAp> {
+        val facts = hashSetOf<FinalFactAp>()
+        applySourceAction(rule, rule.trackFactsReachAnalysisEnd, sourceEvaluator) { fact, _ -> facts += fact }
+        return facts
     }
 
     protected open val positionCall: PIRCall? get() = null
@@ -92,15 +124,23 @@ abstract class PIRTaintUtil<I : PIRInstruction, TraceInfo>(
         rule: TaintConfigurationSource,
         sourceEvaluator: TaintSourceActionEvaluator,
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit
+    ) = applySourceAction(rule, rule.taint, sourceEvaluator) { fact, action ->
+        createFinalFact(fact, createRuleTraceInfo(rule, action))
+    }
+
+    private inline fun applySourceAction(
+        rule: TaintConfigurationItem,
+        actions: List<TaintAssignAction>,
+        sourceEvaluator: TaintSourceActionEvaluator,
+        createFinalFact: (FinalFactAp, TaintAssignAction) -> Unit,
     ) {
-        rule.taint.forEach { action ->
+        actions.forEach { action ->
             val pos = action.pos.resolveAp(positionCall) ?: return@forEach
-            val trace = createRuleTraceInfo(rule, action)
             val mark = TaintMarkAccessor(action.mark.name)
             sourceEvaluator.evaluate(rule, action, pos, mark).onSome { facts ->
                 facts.forEach { fact ->
                     val callerFacts = mapFactToReturn(fact)
-                    callerFacts.forEach { createFinalFact(it, trace) }
+                    callerFacts.forEach { createFinalFact(it, action) }
                 }
             }
         }

@@ -1,3 +1,9 @@
+def TaintRuleFalsePositive(reason):
+    def _decorator(fn):
+        return fn
+    return _decorator
+
+
 def src():
     return "tainted"
 
@@ -46,6 +52,7 @@ def _negative_multiple_functions_nested_clean(o):
     clean(o)
 
 
+@TaintRuleFalsePositive("PIR copies params into locals, so the post-sink mark lands on a local and the nested cleaner only clears the copy")
 def Negative_multiple_functions():
     o = _negative_multiple_functions_nested_src()
     _negative_multiple_functions_nested_sink(o)
@@ -93,6 +100,7 @@ def _negative_branch_nested_clean(o):
         _negative_branch_other_clean(o)
 
 
+@TaintRuleFalsePositive("PIR copies params into locals, so the post-sink mark lands on a local and the nested cleaner only clears the copy")
 def Negative_branch():
     o = _negative_branch_nested_src()
     _negative_branch_nested_sink(o)

@@ -47,6 +47,7 @@ data class SerializedPythonSource(
 data class SerializedPythonSink(
     override val target: PythonTarget,
     val condition: SerializedPythonCondition? = null,
+    val trackFactsReachAnalysisEnd: List<SerializedPythonTaintAssignAction>? = null,
     val meta: PythonSinkMetaData? = null,
     override val info: ItemInfo? = null,
     override val serializedId: String? = null,
@@ -56,6 +57,7 @@ data class SerializedPythonSink(
 data class SerializedPythonExitSink(
     override val target: PythonTarget,
     val condition: SerializedPythonCondition? = null,
+    val trackFactsReachAnalysisEnd: List<SerializedPythonTaintAssignAction>? = null,
     val meta: PythonSinkMetaData? = null,
     override val info: ItemInfo? = null,
     override val serializedId: String? = null,
@@ -145,6 +147,7 @@ private data class SinkSurrogate(
     val attribute: String? = null,
     val signature: SerializedPythonSignatureMatcher? = null,
     val condition: SerializedPythonCondition? = null,
+    val trackFactsReachAnalysisEnd: List<SerializedPythonTaintAssignAction>? = null,
     val cwe: List<Int>? = null,
     val note: String? = null,
 )
@@ -156,6 +159,7 @@ object SerializedPythonSinkSerializer : KSerializer<SerializedPythonSink> {
         return SerializedPythonSink(
             target = buildTarget(raw.function, raw.attribute, raw.signature),
             condition = raw.condition,
+            trackFactsReachAnalysisEnd = raw.trackFactsReachAnalysisEnd,
             meta = PythonSinkMetaData(raw.cwe, raw.note),
         )
     }
@@ -169,6 +173,7 @@ object SerializedPythonExitSinkSerializer : KSerializer<SerializedPythonExitSink
         return SerializedPythonExitSink(
             target = buildTarget(raw.function, raw.attribute, raw.signature),
             condition = raw.condition,
+            trackFactsReachAnalysisEnd = raw.trackFactsReachAnalysisEnd,
             meta = PythonSinkMetaData(raw.cwe, raw.note),
         )
     }
