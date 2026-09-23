@@ -35,6 +35,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
+import org.opentaint.jvm.graph.JMethodBoundaryInst
+import org.opentaint.jvm.graph.JMethodEnterInst
 import org.opentaint.jvm.sast.project.spring.GeneratedSpringRegistry
 import org.opentaint.jvm.sast.project.spring.SpringGeneratedMethod
 import org.opentaint.semgrep.pattern.Mark
@@ -901,7 +903,10 @@ class TraceMessageBuilder(
     }
 
     private fun createReturnAssignMessage(valueNode: TracePathNode, retNode: TracePathNode): String {
-        check(valueNode.statement is JIRAssignInst && retNode.statement is JIRReturnInst)
+        check(valueNode.statement is JIRAssignInst && retNode.statement is JIRReturnInst) {
+            "createReturnAssignMessage expects an assign/return pair, got " +
+                "${valueNode.statement} and ${retNode.statement}"
+        }
         val value = valueNode.statement.rhv
         val retMark = printMarks(retNode.entry.collectFollows())
         val assignedFrom = if (value is JIRCallExpr) {
@@ -1116,6 +1121,7 @@ class TraceMessageBuilder(
         }
 
         fun isGeneratedLocation(stmt: CommonInst): Boolean {
+            if (stmt is JMethodBoundaryInst) return true
             val locationMethod = stmt.location.method
             if (locationMethod is SpringGeneratedMethod) return true
             if (locationMethod is JIRLambdaMethod) return true
@@ -1124,6 +1130,8 @@ class TraceMessageBuilder(
         }
 
         fun tryResolveNormalGeneratedLocation(stmt: CommonInst): CommonInst? {
+            if (stmt is JMethodEnterInst) return stmt.location.method.instList.first()
+            if (stmt is JMethodBoundaryInst) return null
             val locationMethod = stmt.location.method
             if (locationMethod is JIRLambdaMethod) {
                 val lambdaCreationLocation = (locationMethod.enclosingClass as JIRLambdaClass).lambdaLocation
