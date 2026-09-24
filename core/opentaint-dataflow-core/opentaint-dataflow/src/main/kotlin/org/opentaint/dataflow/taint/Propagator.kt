@@ -105,6 +105,85 @@ class TaintPassActionEvaluator(
     }
 }
 
+class TaintPassActionInverseEvaluator(
+    private val apManager: ApManager,
+    private val factTypeChecker: FactTypeChecker,
+    private val factReader: FinalFactReader,
+    private val positionTypeResolver: PositionTypeResolver,
+) : PassActionEvaluator<EvaluatedPass> {
+    val relevantPositionBase = hashSetOf<AccessPathBase>()
+
+    override fun propagateData(
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAction,
+        from: PositionAccess,
+        to: PositionAccess
+    ): Maybe<List<EvaluatedPass>> =
+        copyAllFactsInverse(from, to).fmap { facts ->
+            facts.map { EvaluatedPass(rule, action, it) }
+        }
+
+    override fun propagateTaint(
+        rule: CommonTaintConfigurationItem,
+        action: CommonTaintAction,
+        from: PositionAccess,
+        to: PositionAccess,
+        mark: TaintMarkAccessor
+    ): Maybe<List<EvaluatedPass>> =
+        copyFinalFactInverse(from, to, mark).fmap { facts ->
+            facts.map { EvaluatedPass(rule, action, it) }
+        }
+
+    private fun copyAllFactsInverse(
+        fromPosAccess: PositionAccess,
+        toPosAccess: PositionAccess,
+    ): Maybe<List<FinalFactAp>> {
+        relevantPositionBase += toPosAccess.base()
+
+        if (!factReader.containsPosition(toPosAccess)) {
+            return Maybe.none()
+        }
+
+        val toPositionBaseType = positionTypeResolver.resolve(toPosAccess)
+
+        val fact = factTypeChecker.filterFactByLocalType(toPositionBaseType, factReader.factAp)
+            ?: return Maybe.some(emptyList())
+
+        val factApDelta = readPosition(
+            ap = fact,
+            position = toPosAccess,
+            onMismatch = { _, _ -> return Maybe.none() },
+            matchedNode = { it }
+        )
+
+        val fromPositionBaseType = positionTypeResolver.resolve(fromPosAccess)
+
+        val resultFact = mkAccessPath(fromPosAccess, factApDelta, fact.exclusions)
+        val wellTypedFact = factTypeChecker.filterFactByLocalType(fromPositionBaseType, resultFact)
+            ?: return Maybe.none()
+
+        return Maybe.some(listOf(wellTypedFact))
+    }
+
+    private fun copyFinalFactInverse(
+        fromPosAccess: PositionAccess,
+        toPosAccess: PositionAccess,
+        markRestriction: TaintMarkAccessor,
+    ): Maybe<List<FinalFactAp>> {
+        relevantPositionBase += toPosAccess.base()
+
+        if (!factReader.containsPositionWithTaintMark(toPosAccess, markRestriction)) return Maybe.none()
+
+        val copiedFact = apManager.mkAccessPath(fromPosAccess, factReader.factAp.exclusions, markRestriction)
+
+        val fromPositionBaseType = positionTypeResolver.resolve(fromPosAccess)
+        val wellTypedCopy = factTypeChecker.filterFactByLocalType(fromPositionBaseType, copiedFact)
+            ?: return Maybe.none()
+
+        return Maybe.some(listOf(wellTypedCopy))
+    }
+}
+
 class TaintPassActionPreconditionEvaluator(
     private val factReader: InitialFactReader,
 ) : PassActionEvaluator<Pair<CommonTaintAction, InitialFactAp>> {
