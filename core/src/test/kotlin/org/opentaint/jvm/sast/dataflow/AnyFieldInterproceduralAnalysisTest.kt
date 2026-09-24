@@ -1,5 +1,6 @@
 package org.opentaint.jvm.sast.dataflow
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.Timeout
 import org.opentaint.dataflow.ap.ifds.Accessor
@@ -27,10 +28,10 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
      * The sink accepts the container, so the mark has to be found below an arbitrary field rather
      * than on argument 0 itself -- which is what raises the field-unfold request in the first place.
      */
-    private fun anyFieldSink(testClass: String, ruleId: String) = SerializedRule.Sink(
+    private fun anyFieldSink(testClass: String, ruleId: String, mark: String = TAINT_MARK) = SerializedRule.Sink(
         function = functionMatcher(testClass, "sink"),
         condition = SerializedCondition.ContainsMark(
-            tainted = TAINT_MARK,
+            tainted = mark,
             pos = PositionBaseWithModifiers.WithModifiers(Argument(0), listOf(AnyField)),
         ),
         id = ruleId,
@@ -107,6 +108,19 @@ class AnyFieldInterproceduralAnalysisTest : AnalysisTest() {
         ruleId = DEEP_RULE_ID,
         testName = "recursive interprocedural any-field sink",
     )
+
+    @Test
+    @Timeout(value = 3, unit = TimeUnit.MINUTES)
+    fun `one unfold request answers each of its marks`() {
+        val cls = "test.samples.AnyFieldMarkSetSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(cls, "sourceA", "markA"), sourceRule(cls, "sourceB", "markB")),
+            sink = listOf(anyFieldSink(cls, "mark-a", mark = "markA"), anyFieldSink(cls, "mark-b", mark = "markB")),
+        )
+
+        val traces = runAnalysis(config, cls, "twoMarksTwoFrames")
+        assertEquals(setOf("mark-a", "mark-b"), traces.mapTo(hashSetOf()) { it.vulnerability.rule.id })
+    }
 
     private fun assertDeepReachable(depth: Int) = assertReachable(
         config = deepConfig,

@@ -172,6 +172,7 @@ class GoMethodCallFlowFunction(
 
         val taintUtils = GoMethodCallTaintUtil(statement, callExpr, returnValue, context, apManager)
         taintUtils.applySinkRules(sinkRules, factReader, markAfterAnyAccessorResolver)
+        markAfterAnyAccessorResolver?.flush()
     }
 
     override fun propagateUnresolvedCallFact(

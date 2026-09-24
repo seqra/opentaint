@@ -124,6 +124,7 @@ class JIRMethodCallFlowFunction(
             },
             markAfterAnyFieldResolver = markAfterAnyFieldResolver,
         )
+        markAfterAnyFieldResolver?.flush()
 
         JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
             statement,

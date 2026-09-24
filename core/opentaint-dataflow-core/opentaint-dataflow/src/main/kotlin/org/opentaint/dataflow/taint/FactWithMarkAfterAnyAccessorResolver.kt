@@ -13,7 +13,7 @@ interface FactWithMarkAfterAnyAccessorResolver {
 data class TaintMarkFieldUnfoldRequest(
     val method: MethodEntryPoint,
     val fact: InitialFactAp,
-    val mark: TaintMarkAccessor,
+    val marks: Set<TaintMarkAccessor>,
     val suffix: Accessor?
 ) : SideEffectKind
 
@@ -22,8 +22,15 @@ data class DefaultFactWithMarkAfterAnyFieldResolver(
     private val initialFact: InitialFactAp,
     private val addSideEffect: (InitialFactAp, SideEffectKind) -> Unit
 ): FactWithMarkAfterAnyAccessorResolver {
+    private val marks = hashSetOf<TaintMarkAccessor>()
+
     override fun resolve(mark: TaintMarkAccessor) {
-        addSideEffect(initialFact, TaintMarkFieldUnfoldRequest(method, initialFact, mark, suffix = null))
+        marks.add(mark)
+    }
+
+    fun flush() {
+        if (marks.isEmpty()) return
+        addSideEffect(initialFact, TaintMarkFieldUnfoldRequest(method, initialFact, marks.toSet(), suffix = null))
     }
 
     companion object {

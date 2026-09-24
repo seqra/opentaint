@@ -616,6 +616,7 @@ class JIRMethodSequentFlowFunction(
 
         val taintUtil = JIRSequentTaintUtil(apManager, currentInst, analysisContext, generateTrace, methodResult)
         taintUtil.applySinkRules(sinkRules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver)
+        markAfterAnyFieldResolver?.flush()
 
         taintUtil.conditionReaders.forEach { refiner.add(it) }
 

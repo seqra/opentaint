@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
@@ -43,11 +44,9 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             return super.handleFactToFact(methodEntryPoint, currentInitialFactAp, currentFactAp, summaryEffect, kind)
         }
 
-        if (handleUnfoldRequest(summaryEffect, kind)) {
-            return emptySet()
-        }
+        val unanswered = handleUnfoldRequest(summaryEffect, kind) ?: return emptySet()
 
-        val nextRequests = kind.nextRequests(summaryEffect)
+        val nextRequests = unanswered.nextRequests(summaryEffect)
         val ex = when (summaryEffect) {
             is SummaryEdgeApplication.SummaryApRefinement -> ExclusionSet.Empty
             is SummaryEdgeApplication.SummaryExclusionRefinement -> summaryEffect.exclusion
@@ -74,11 +73,15 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
     private fun handleUnfoldRequest(
         summaryEffect: SummaryEdgeApplication,
         request: TaintMarkFieldUnfoldRequest
-    ): Boolean {
+    ): TaintMarkFieldUnfoldRequest? {
         when (summaryEffect) {
             is SummaryEdgeApplication.SummaryApRefinement -> {
                 if (!summaryEffect.delta.isEmpty) {
-                    return handleMarkAfterAnyFieldRequest(summaryEffect.delta, request)
+                    val answered = request.marks.filterTo(hashSetOf()) {
+                        handleMarkAfterAnyFieldRequest(summaryEffect.delta, request, it)
+                    }
+                    if (answered.size == request.marks.size) return null
+                    return request.copy(marks = request.marks - answered)
                 }
             }
 
@@ -87,14 +90,14 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
             }
         }
 
-        return false
+        return request
     }
 
     private fun handleMarkAfterAnyFieldRequest(
         delta: FinalFactAp.Delta,
-        request: TaintMarkFieldUnfoldRequest
+        request: TaintMarkFieldUnfoldRequest,
+        mark: TaintMarkAccessor
     ): Boolean {
-        val mark = request.mark
         val allAccessors = delta.getAllAccessors()
         if (mark !in allAccessors) return false
 
