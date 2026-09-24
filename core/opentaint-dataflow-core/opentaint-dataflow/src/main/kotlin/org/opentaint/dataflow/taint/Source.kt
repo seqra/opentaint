@@ -29,7 +29,7 @@ class TaintSourceActionEvaluator(
 }
 
 class TaintSourceActionPreconditionEvaluator(
-    private val factReader: InitialFactReader,
+    private val factReader: FactReader,
 ) : SourceActionEvaluator<Pair<CommonTaintConfigurationItem, CommonTaintAssignAction>> {
     override fun evaluate(
         rule: CommonTaintConfigurationItem,
