@@ -6,14 +6,10 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnNonDistributiveFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Drop
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
@@ -219,71 +215,7 @@ class JIRBackwardMethodCallFlowFunction(
         return survivingFacts
     }
 
-    override fun propagateZeroToFactResolutionFailure(
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<CallToReturnZFact> = buildSet {
-        propagateUnresolvedDemand(
-            factAp = currentFactAp,
-            startFactBase = startFactBase,
-            addSideEffectRequirement = { factReader ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-            },
-            addCallToReturn = { factReader, factAp, trace ->
-                check(!factReader.hasRefinement) { "Can't refine Zero fact" }
-                this += CallToReturnZFact(factAp, trace)
-            },
-        )
-    }
-
-    override fun propagateFactToFactResolutionFailure(
-        initialFactAp: InitialFactAp,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<FactCallFailureFact> = buildSet {
-        propagateUnresolvedDemand(
-            factAp = currentFactAp,
-            startFactBase = startFactBase,
-            addSideEffectRequirement = { factReader ->
-                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
-            },
-            addCallToReturn = { factReader, factAp, trace ->
-                this += CallToReturnFFact(
-                    factReader.refineFact(initialFactAp),
-                    factReader.refineFact(factAp),
-                    trace
-                )
-            },
-        )
-    }
-
-    override fun propagateNDFactToFactResolutionFailure(
-        initialFacts: Set<InitialFactAp>,
-        currentFactAp: FinalFactAp,
-        startFactBase: AccessPathBase
-    ): Set<CallToReturnNonDistributiveFact> = buildSet {
-        propagateUnresolvedDemand(
-            factAp = currentFactAp,
-            startFactBase = startFactBase,
-            addSideEffectRequirement = { factReader ->
-                check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
-            },
-            addCallToReturn = { factReader, factAp, trace ->
-                check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
-                this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
-            },
-        )
-    }
-
     override fun propagateUnresolvedCallFact(
-        factAp: FinalFactAp,
-        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
-        addSideEffectRequirement: (FinalFactReader) -> Unit,
-    ) {
-        error("Backward unresolved call propagation requires the start fact base")
-    }
-
-    private fun propagateUnresolvedDemand(
         factAp: FinalFactAp,
         startFactBase: AccessPathBase,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,

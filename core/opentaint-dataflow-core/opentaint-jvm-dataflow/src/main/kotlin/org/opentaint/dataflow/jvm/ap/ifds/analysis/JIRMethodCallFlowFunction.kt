@@ -252,6 +252,7 @@ class JIRMethodCallFlowFunction(
 
     override fun propagateUnresolvedCallFact(
         factAp: FinalFactAp,
+        startFactBase: AccessPathBase,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit
     ) {

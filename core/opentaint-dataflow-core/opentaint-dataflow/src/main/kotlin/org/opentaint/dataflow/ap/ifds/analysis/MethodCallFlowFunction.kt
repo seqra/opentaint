@@ -187,6 +187,7 @@ interface MethodCallFlowFunction {
         override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine Zero fact" }
                 },
@@ -204,6 +205,7 @@ interface MethodCallFlowFunction {
         ): Set<FactCallFailureFact> = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
                 },
@@ -224,6 +226,7 @@ interface MethodCallFlowFunction {
         ) = buildSet {
             propagateUnresolvedCallFact(
                 factAp = currentFactAp,
+                startFactBase = startFactBase,
                 addSideEffectRequirement = { factReader ->
                     check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
                 },
@@ -247,6 +250,7 @@ interface MethodCallFlowFunction {
 
         fun propagateUnresolvedCallFact(
             factAp: FinalFactAp,
+            startFactBase: AccessPathBase,
             addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
             addSideEffectRequirement: (FinalFactReader) -> Unit,
         )
