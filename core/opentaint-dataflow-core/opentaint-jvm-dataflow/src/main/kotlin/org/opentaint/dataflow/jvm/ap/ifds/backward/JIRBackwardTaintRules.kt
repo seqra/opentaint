@@ -1,6 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -16,6 +17,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.Bac
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardUnconditionalSink
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
@@ -247,19 +249,22 @@ class JIRBackwardTaintRules(
         mapTo(hashSetOf()) { TaintMarkAccessor((it as AssignMark).mark.name) }
 
     private fun TaintMarkAwareConditionExpr.demandFacts(): List<FinalFactAp> {
-        val literals = mutableListOf<TaintMarkAwareConditionExpr.ContainsMarkLiteral>()
-        collectPositiveMarkLiterals(literals)
-        return literals.distinct().map { apManager.mkAccessPath(it.position, ExclusionSet.Universe, it.mark) }
+        val positions = mutableListOf<Pair<PositionAccess, TaintMarkAccessor>>()
+        collectPositiveMarkPositions(positions)
+        return positions.distinct().map { (position, mark) -> apManager.mkAccessPath(position, ExclusionSet.Universe, mark) }
     }
 
-    private fun TaintMarkAwareConditionExpr.collectPositiveMarkLiterals(
-        result: MutableList<TaintMarkAwareConditionExpr.ContainsMarkLiteral>
+    private fun TaintMarkAwareConditionExpr.collectPositiveMarkPositions(
+        result: MutableList<Pair<PositionAccess, TaintMarkAccessor>>
     ) {
         when (this) {
-            is TaintMarkAwareConditionExpr.And -> args.forEach { it.collectPositiveMarkLiterals(result) }
-            is TaintMarkAwareConditionExpr.Or -> args.forEach { it.collectPositiveMarkLiterals(result) }
-            is TaintMarkAwareConditionExpr.ContainsMarkLiteral -> if (!negated) result += this
-            is TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral -> Unit
+            is TaintMarkAwareConditionExpr.And -> args.forEach { it.collectPositiveMarkPositions(result) }
+            is TaintMarkAwareConditionExpr.Or -> args.forEach { it.collectPositiveMarkPositions(result) }
+            is TaintMarkAwareConditionExpr.ContainsMarkLiteral -> if (!negated) result += position to mark
+            is TaintMarkAwareConditionExpr.ContainsMarkOnAnyAccessorLiteral -> if (!negated) {
+                result += position to mark
+                result += PositionAccess.Complex(position, AnyAccessor) to mark
+            }
         }
     }
 }
