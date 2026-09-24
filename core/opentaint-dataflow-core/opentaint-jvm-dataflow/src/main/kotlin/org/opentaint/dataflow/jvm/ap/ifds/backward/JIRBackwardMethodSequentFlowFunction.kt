@@ -55,6 +55,7 @@ class JIRBackwardMethodSequentFlowFunction(
         propagate(
             DemandOutput(
                 current = currentFactAp,
+                initialFacts = emptySet(),
                 unchanged = { add(Sequent.Unchanged) },
                 propagateFact = { fact -> add(Sequent.ZeroToFact(fact, TraceInfo.Flow)) },
                 propagateFactWithRefinement = { reader, fact ->
@@ -75,6 +76,7 @@ class JIRBackwardMethodSequentFlowFunction(
             propagate(
                 DemandOutput(
                     current = currentFactAp,
+                    initialFacts = setOf(initialFactAp),
                     unchanged = { add(Sequent.Unchanged) },
                     propagateFact = { fact -> add(Sequent.FactToFact(initialFactAp, fact, TraceInfo.Flow)) },
                     propagateFactWithRefinement = { reader, fact ->
@@ -96,6 +98,7 @@ class JIRBackwardMethodSequentFlowFunction(
             propagate(
                 DemandOutput(
                     current = currentFactAp,
+                    initialFacts = initialFacts,
                     unchanged = { add(Sequent.Unchanged) },
                     propagateFact = { fact -> add(Sequent.NDFactToFact(initialFacts, fact, TraceInfo.Flow)) },
                     propagateFactWithRefinement = { reader, fact ->
@@ -113,6 +116,7 @@ class JIRBackwardMethodSequentFlowFunction(
 
     private class DemandOutput(
         val current: FinalFactAp,
+        val initialFacts: Set<InitialFactAp>,
         val unchanged: () -> Unit,
         val propagateFact: (FinalFactAp) -> Unit,
         val propagateFactWithRefinement: (FinalFactReader, FinalFactAp) -> Unit,
@@ -166,7 +170,7 @@ class JIRBackwardMethodSequentFlowFunction(
 
     private fun methodEnter(fact: FinalFactAp, out: DemandOutput) {
         val sources = rules.matchMethodEntrySources(currentInst, fact)
-        rules.recordSourceMatches(currentInst, sources)
+        rules.recordMethodEntrySourceMatches(currentInst, sources, out.initialFacts)
         out.keepAll(sources.reader, listOf(fact) + sources.conditionDemands)
     }
 

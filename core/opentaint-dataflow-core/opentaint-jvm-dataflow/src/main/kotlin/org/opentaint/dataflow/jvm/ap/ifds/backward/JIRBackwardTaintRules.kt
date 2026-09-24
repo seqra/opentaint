@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -148,6 +149,23 @@ class JIRBackwardTaintRules(
             conditionFact.takeIf { isMethodBoundaryBase(it.base) }
         }
     }
+
+    fun recordMethodEntrySourceMatches(statement: JIRInst, result: SourceMatchResult, initialFacts: Set<InitialFactAp>) {
+        if (result.found.isEmpty()) return
+        if (initialFacts.isNotEmpty() && initialFacts.all { leavesThroughArgumentRoot(statement, it) }) return
+        recordSourceMatches(statement, result)
+    }
+
+    private fun leavesThroughArgumentRoot(statement: JIRInst, initialFact: InitialFactAp): Boolean {
+        val base = initialFact.base
+        if (base !is AccessPathBase.Argument && base !is AccessPathBase.This) return false
+        return methodEntryMarks(statement).any { initialFact.startsWithAccessor(it) }
+    }
+
+    private fun methodEntryMarks(statement: JIRInst): Set<TaintMarkAccessor> =
+        taint.sourceRulesForMethodEntry(statement, fact = null).flatMapTo(hashSetOf()) { ruleWithCondition ->
+            ruleWithCondition.rule.actionsAfter.map { TaintMarkAccessor(it.mark.name) }
+        }
 
     fun matchStaticFieldSources(statement: JIRAssignInst, fact: FinalFactAp): SourceMatchResult {
         val fieldRef = statement.rhv as? JIRFieldRef ?: return SourceMatchResult.EMPTY
