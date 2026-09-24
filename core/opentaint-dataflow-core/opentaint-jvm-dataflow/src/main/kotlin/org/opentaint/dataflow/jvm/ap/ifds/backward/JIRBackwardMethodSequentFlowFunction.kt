@@ -40,6 +40,7 @@ class JIRBackwardMethodSequentFlowFunction(
 
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         add(Sequent.ZeroToZero)
+        rules.registerPrescanStatementSources(currentInst)
 
         val demands = when (currentInst) {
             is JIRReturnInst -> rules.methodExitSinkDemands(currentInst)

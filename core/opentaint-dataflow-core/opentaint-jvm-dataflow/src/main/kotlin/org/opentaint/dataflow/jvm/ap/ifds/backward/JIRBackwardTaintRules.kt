@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -24,12 +25,14 @@ import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.dataflow.taint.mkAccessPath
 import org.opentaint.dataflow.taint.removeNegated
+import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.jvm.graph.JMethodEnterInst
 
 class JIRBackwardTaintRules(
     private val apManager: ApManager,
@@ -114,6 +117,23 @@ class JIRBackwardTaintRules(
         return seeds
     }
 
+    fun registerPrescanCallSources(statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?) {
+        if (context.phase !is Phase.Prescan) return
+        taint.sourceRulesForCallStatement(statement, callExpr, returnValue, fact = null)
+    }
+
+    fun registerPrescanStatementSources(statement: JIRInst) {
+        if (context.phase !is Phase.Prescan) return
+        when (statement) {
+            is JIRReturnInst -> taint.sourceRulesForMethodExit(statement, fact = null)
+            is JMethodEnterInst -> taint.sourceRulesForMethodEntry(statement, fact = null)
+            is JIRAssignInst -> staticFieldRead(statement)?.let { taint.sourceRulesForStaticField(it, statement, fact = null) }
+        }
+    }
+
+    private fun staticFieldRead(statement: JIRAssignInst): JIRField? =
+        (statement.rhv as? JIRFieldRef)?.field?.field?.takeIf { it.isStatic }
+
     fun matchCallSources(
         statement: JIRInst,
         callExpr: JIRCallExpr,
@@ -168,9 +188,7 @@ class JIRBackwardTaintRules(
         }
 
     fun matchStaticFieldSources(statement: JIRAssignInst, fact: FinalFactAp): SourceMatchResult {
-        val fieldRef = statement.rhv as? JIRFieldRef ?: return SourceMatchResult.EMPTY
-        val field = fieldRef.field.field
-        if (!field.isStatic) return SourceMatchResult.EMPTY
+        val field = staticFieldRead(statement) ?: return SourceMatchResult.EMPTY
 
         val lhv = accessPathBase(statement.lhv) ?: return SourceMatchResult.EMPTY
         if (fact.base != lhv) return SourceMatchResult.EMPTY

@@ -57,6 +57,7 @@ class JIRBackwardMethodCallFlowFunction(
     override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
         add(CallToReturnZeroFact)
         add(CallToStartZeroFact)
+        rules.registerPrescanCallSources(statement, callExpr, returnValue)
 
         val demands = rules.callSinkDemands(statement, callExpr, returnValue)
         rules.recordSinkDemands(statement, demands).forEach { seed ->
