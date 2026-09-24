@@ -166,14 +166,15 @@ class JIRBackwardAnalysisManager(
 
     override fun getMethodEntrypointResolver(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
-    ): MethodEntrypointResolver = JIRBackwardMethodEntrypointResolver(graph, this)
+    ): MethodEntrypointResolver = JIRBackwardMethodEntrypointResolver(graph)
 
     override fun getMethodStartFlowFunction(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext
     ): MethodStartFlowFunction {
         jIRDowncast<JIRBackwardMethodAnalysisContext>(analysisContext)
-        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext)
+        val exceptionalExit = producesExceptionalControlFlow(analysisContext.methodEntryPoint.statement)
+        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, exceptionalExit)
     }
 
     override fun getMethodStartPrecondition(

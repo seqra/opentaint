@@ -9,11 +9,14 @@ import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodStartFlowFunction
 class JIRBackwardMethodStartFlowFunction(
     apManager: ApManager,
     context: JIRBackwardMethodAnalysisContext,
+    private val exceptionalExit: Boolean,
 ) : MethodStartFlowFunction {
     private val forwardStartFlowFunction = JIRMethodStartFlowFunction(apManager, context)
 
     override fun propagateZero(): List<StartFact> = listOf(StartFact.Zero)
 
-    override fun propagateFact(fact: FinalFactAp): List<StartFact.Fact> =
-        forwardStartFlowFunction.propagateFact(fact)
+    override fun propagateFact(fact: FinalFactAp): List<StartFact.Fact> {
+        if (exceptionalExit) return emptyList()
+        return forwardStartFlowFunction.propagateFact(fact)
+    }
 }
