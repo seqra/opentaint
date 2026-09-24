@@ -743,13 +743,36 @@ class NormalMethodAnalyzer(
     }
 
     override fun handleResolvedMethodCall(method: MethodWithContext, handler: MethodCallHandler) {
-        for (ep in methodEntryPoints(method)) {
+        for (ep in methodEntryPoints(analysisMethod(method, handler))) {
             handleMethodCall(handler, ep)
         }
     }
 
     override fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler) {
-        handleMethodCall(handler, entryPoint)
+        val method = analysisMethod(MethodWithContext(entryPoint.method, entryPoint.context), handler)
+        handleMethodCall(handler, MethodEntryPoint(method.ctx, entryPoint.statement))
+    }
+
+    private fun analysisMethod(method: MethodWithContext, handler: MethodCallHandler): MethodWithContext {
+        val manager = analysisManager as? TaintAnalysisManager ?: return method
+        val contextIndependentFact = handler is MethodCallHandler.ZeroToZeroHandler ||
+            handler.currentEdge().finalFactBase == AccessPathBase.ClassStatic
+        return manager.overApproximateMethodContext(method, contextIndependentFact)
+    }
+
+    private val Edge.finalFactBase: AccessPathBase?
+        get() = when (this) {
+            is ZeroToZero -> null
+            is ZeroToFact -> factAp.base
+            is FactToFact -> factAp.base
+            is NDFactToFact -> factAp.base
+        }
+
+    private fun MethodCallHandler.currentEdge(): Edge = when (this) {
+        is MethodCallHandler.ZeroToZeroHandler -> currentEdge
+        is MethodCallHandler.ZeroToFactHandler -> currentEdge
+        is MethodCallHandler.FactToFactHandler -> currentEdge
+        is MethodCallHandler.NDFactToFactHandler -> currentEdge
     }
 
     private fun handleMethodCall(handler: MethodCallHandler, ep: MethodEntryPoint) = when (handler) {
