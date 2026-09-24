@@ -41,11 +41,13 @@ import kotlin.time.Duration.Companion.minutes
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AnalysisTest : BasicTestUtils() {
-    fun functionMatcher(fqn: String, methodName: String) = SerializedFunctionNameMatcher.Simple(
-        `package` = SerializedSimpleNameMatcher.Simple(fqn.substringBeforeLast('.')),
-        `class` = SerializedSimpleNameMatcher.Simple(fqn.substringAfterLast('.')),
-        name = SerializedSimpleNameMatcher.Simple(methodName)
-    )
+    companion object {
+        fun functionMatcher(fqn: String, methodName: String) = SerializedFunctionNameMatcher.Simple(
+            `package` = SerializedSimpleNameMatcher.Simple(fqn.substringBeforeLast('.')),
+            `class` = SerializedSimpleNameMatcher.Simple(fqn.substringAfterLast('.')),
+            name = SerializedSimpleNameMatcher.Simple(methodName)
+        )
+    }
 
     fun List<Pair<PositionBase, String>>.condition(): SerializedCondition =
         SerializedCondition.and(map {

@@ -5,13 +5,12 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBaseWithModifiers
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionModifier
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedCondition
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFunctionNameMatcher
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
-import org.opentaint.dataflow.configuration.jvm.serialized.SerializedSimpleNameMatcher
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintCleanAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.dataflow.configuration.jvm.serialized.SinkMetaData
+import org.opentaint.jvm.sast.dataflow.AnalysisTest.Companion.functionMatcher
 
 data class ForwardCase(
     val suite: String,
@@ -46,20 +45,14 @@ object ForwardSuiteCases {
             cleanerDsl() + cleanerControlFlow() + cleanerFieldSensitivity() + cleanerStarDual()
     }
 
-    fun functionMatcher(fqn: String, methodName: String) = SerializedFunctionNameMatcher.Simple(
-        `package` = SerializedSimpleNameMatcher.Simple(fqn.substringBeforeLast('.')),
-        `class` = SerializedSimpleNameMatcher.Simple(fqn.substringAfterLast('.')),
-        name = SerializedSimpleNameMatcher.Simple(methodName)
-    )
+    fun sinkMarks(sink: SerializedRule.Sink): Set<String> = buildSet { sink.condition?.collectMarks(this, positive = true) }
 
-    fun sinkMarks(sink: SerializedRule.Sink): Set<String> = buildSet { sink.condition?.collectMarks(this) }
-
-    private fun SerializedCondition.collectMarks(result: MutableSet<String>) {
+    private fun SerializedCondition.collectMarks(result: MutableSet<String>, positive: Boolean) {
         when (this) {
-            is SerializedCondition.And -> allOf.forEach { it.collectMarks(result) }
-            is SerializedCondition.Or -> anyOf.forEach { it.collectMarks(result) }
-            is SerializedCondition.Not -> not.collectMarks(result)
-            is SerializedCondition.ContainsMark -> result += tainted
+            is SerializedCondition.And -> allOf.forEach { it.collectMarks(result, positive) }
+            is SerializedCondition.Or -> anyOf.forEach { it.collectMarks(result, positive) }
+            is SerializedCondition.Not -> not.collectMarks(result, !positive)
+            is SerializedCondition.ContainsMark -> if (positive) result += tainted
             else -> Unit
         }
     }
