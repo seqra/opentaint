@@ -46,9 +46,10 @@ abstract class BackwardAnalysisTest : AnalysisTest() {
         config: SerializedTaintConfig,
         entryPointClass: String,
         entryPointMethod: String,
+        stagedRuleSelection: Boolean = false,
     ): BackwardResult {
         val ep = findEntryPoint(entryPointClass, entryPointMethod)
-        val rulesProvider = createRulesProvider(config)
+        val rulesProvider = createRulesProvider(config).let { if (stagedRuleSelection) RuleIdSelectingProvider(it) else it }
 
         @Suppress("UNCHECKED_CAST")
         val backwardGraph = createAnalysisGraph().reversed as ApplicationGraph<CommonMethod, CommonInst>
@@ -67,14 +68,18 @@ abstract class BackwardAnalysisTest : AnalysisTest() {
             taintRulesStatsSamplingPeriod = null,
         )
 
+        val startMethods = listOf(MethodWithContext(ep, EmptyMethodContext))
         return engine.use {
+            if (stagedRuleSelection) {
+                manager.selectPhase(TaintAnalysisManager.Phase.Prescan)
+                it.resetApManager(createApManager(cancellation, refManager))
+                it.runAnalysis(startMethods, timeout = 1.minutes, cancellationTimeout = 10.seconds)
+                it.cleanup()
+            }
+
             manager.selectPhase(TaintAnalysisManager.Phase.FullScan())
             it.resetApManager(createApManager(cancellation, refManager))
-            it.runAnalysis(
-                listOf(MethodWithContext(ep, EmptyMethodContext)),
-                timeout = 1.minutes,
-                cancellationTimeout = 10.seconds,
-            )
+            it.runAnalysis(startMethods, timeout = 1.minutes, cancellationTimeout = 10.seconds)
 
             BackwardResult(
                 status = it.status.get(),
