@@ -194,6 +194,127 @@ Rule handling inside the sequent FF:
     is a finding.
   * Zero: seed demands for entry sinks (`sinkRulesForMethodEntry`).
 
+A source match never kills the demand: the demand keeps flowing (to `x` at
+`return x`, to the static field at `x = C.f`, unchanged at `JMethodEnterInst`).
+Condition demands of a matched source (`SourceMatchResult.conditionDemands`)
+are emitted next to it, from the same initial fact.
+
+### 4.1 Implementation notes
+
+The FF mirrors forward's callback structure. `propagate` receives one output
+object per edge kind with `unchanged`, `propagateFact`,
+`propagateFactWithRefinement(reader, fact)` and
+`propagateFactWithAccessorExclude(fact, accessor)`. For `FactToFact` the last
+two refine the initial fact exactly like forward (`reader.refineFact` on both
+facts, or `exclude(accessor)` on both). `ZeroToFact` and `NDFactToFact` edges
+cannot be refined; as in forward, a refinement there is an error. Demands on
+these edges come from sink seeds (`position·M·$` with `ExclusionSet.Universe`),
+so they are never abstract and never need one.
+
+An output fact equal to the incoming one is emitted as `Sequent.Unchanged`,
+any other one as a new edge. Every case below builds its outputs from the
+incoming demand, so nothing is emitted "by default": this is what keeps the
+self-referential forms exact.
+
+* **Type filters.** Before an assignment is processed the incoming demand is
+  filtered with `filterFactByLocalType` exactly where forward filters it: the
+  lhs and every rhs base (cast operand with the cast type, array with the array
+  type, field-ref instance with the instance type and with the field's
+  enclosing type, both binary operands with their own types). A demand
+  rejected by a filter is dropped. The filter depends only on the accessors, so
+  filtering `x.P` with `x`'s type before rebasing to `y` is the same as
+  filtering the result.
+* **Constants.** A demand is never rebased to a `Constant` base: `x = "c"`,
+  `x = a op 1` (for the constant operand), `y.f = "c"`, `a[i] = 0`,
+  `return "c"` and `throw` of a constant kill the moved part.
+* **Other rhs.** `new`, `newarray`, `length`, `instanceof`, unary negation,
+  lambdas etc. kill a demand on the lhs, as forward does not propagate through
+  them either.
+* **Instance field write `y.f = x`** (strong update) on a demand with base `y`:
+  1. abstract and `f ∉ excl`: the `removeAbstraction()` part is processed by
+     the next two steps, and `y.*` (`abstractOnly()`) is emitted with `f`
+     excluded. Abstraction is checked **first**, like forward, so a tree fact
+     `y.{f.P, *}` moves `f.P` and refines the abstract part.
+  2. does not start with `f`: unchanged.
+  3. starts with `f`: `clearAccessor(f)` is kept (if non-empty) and
+     `readAccessor(f)` is rebased to `x` (dropped if `x` is a constant).
+* **Static write `C.f = x`** runs the same procedure over the two accessors
+  `<C>` then `f` on the `ClassStatic` demand, re-prepending `<C>` to whatever is
+  kept at the second level. An abstract demand is refined on `<C>` at the first
+  level (`ClassStatic.*` with `<C>` excluded) and on `f` at the second one
+  (`ClassStatic.<C>.*` with `f` excluded). Forward's aux-base trick is not
+  needed because backward never has to rebuild the static prefix around a
+  read.
+* **Array write `a[i] = x`** (weak update) keeps the whole demand unchanged and
+  additionally moves `a.[e].P` to `x.P`. An abstract `a.*` (with `[e]` not
+  excluded) is kept unchanged and emitted again with `[e]` excluded, exactly
+  the shape of forward `fieldRead` (unchanged original plus excluded
+  `abstractOnly`).
+* **Reads** (`x = y.f`, `x = C.f`, `x = a[i]`) prepend the accessor(s) and
+  rebase; they never refine. A read on a demand whose base is not `x` is
+  unchanged (the forward array-read "re-emit" hack is not mirrored; it only
+  exists to force a new forward edge).
+* **Throw** has no rules: `Exception.P → x.P`, other demands unchanged.
+* **Entry rules** are matched only when `currentInst is JMethodEnterInst`, as
+  the Phase 1 stub already did for entry-sink seeds. A method without boundary
+  instructions therefore gets neither entry sinks nor entry sources.
+
+**Aliases (field and array writes only).** When `aliasAnalysis != null` and the
+demand base `z` differs from the written instance `y`, the FF asks
+`aliasAnalysis.findAlias(y, currentInst)`, i.e. the alias state **before** the
+statement. It is the right state for the backward direction because the object
+written by `y.f = x` is fixed by the value of `y` before the statement, and a
+write to a field does not change which locals alias `y` (it only changes the
+heap). It is also the state forward uses (`forEachAliasAtStatement`) and the
+one `JIRMethodSequentPrecondition` uses (`forEachPossibleAliasAtStatement`),
+so the two directions agree on the same statement.
+
+Every `AliasApInfo(base = z, accessors = [g1..gn])` of `y` (meaning
+`y == z.g1…gn`) translates the demand to the instance: `d.readAccessor(g1)…readAccessor(gn)`
+rebased to `y` (the same "unapply" as the precondition). If the translation
+meets an abstract node whose exclusions do not contain `gi`, the original
+demand is emitted with `gi` excluded, so the engine refines the initial fact
+on the alias path. The translated demand only contributes its **moved** part
+(`y.f.P → x.P`, with the same abstract refinement on `f`, applied to the
+original demand). The original demand itself is kept unchanged: an alias is a
+may-alias, so the update through it is weak. Static writes have no aliases
+(the base is `ClassStatic`). Reads, simple assignments, returns and throws do
+not use aliases: the demand is on the assigned variable itself.
+
+**JIR shapes observed** (`BackwardSequentSample`): javac/JIR never produce a
+literal `x = x.f` for `n = n.next`; it is split into `%t = n.next; n = %t`. The
+direct form is still handled (the demand on `x` is moved, nothing else is
+emitted). `x.f = x` does appear literally. `b2 = b` is coalesced into a single
+local, so alias tests need a heap indirection (`h.box = b; b2 = h.box`).
+Integer arithmetic is a `JIRBinaryExpr`; demands on primitives survive the
+type filter only for marks ending in `%%primitive%%`
+(`PrimitiveTaintExt.PRIMITIVE_TRACKING_ENABLED_MODE`), as in forward.
+
+### 4.2 Status and tests (Phase 2b)
+
+The sequent FF is complete (the section 10 stub description applies only to
+the zero fact now). Tests, in `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`,
+on `core/samples/src/main/java/test/samples/BackwardSequentSample.java`:
+
+* `BackwardSequentFlowTest` (end to end, no call-FF fact handling needed): an
+  entry-point source on `Argument(0)` of the analysed method plus a call sink
+  on `sink(String)`/`sinkInt(int)`. The seed is produced at the sink call,
+  flows backward through the sequent FF only, and must (or must not) be matched
+  at `JMethodEnterInst`. Positive and negative cases for local copies and
+  overwrites, casts, field write/read, strong field overwrite, other field,
+  aliased field and array writes (heap indirection), array weak update, static
+  write/read and strong static overwrite, static-field source at `x = C.f`,
+  binary operands, both self-referential forms, branches and a loop-carried
+  flow, and a method-exit sink on the analysed method.
+* `BackwardSequentFlowFunctionTest` (unit): builds the FF for one instruction
+  with a hand-made `JIRBackwardMethodAnalysisContext` (no alias analysis) and
+  checks the exact `Sequent` sets for abstract `FactToFact` demands (field,
+  array and two-level static refinement, read without refinement), concrete
+  `ZeroToFact` demands (move/clear/keep, self write), and the exit-source match
+  at `return x` (finding on the concrete demand, mark refinement on the
+  abstract one). The unit fixture must call `selectPhase(FullScan())`: in
+  `Prescan` the taint context keeps only pass-through rules.
+
 ## 5. Call semantics (`JIRBackwardMethodCallFlowFunction`)
 
 The engine applies only the call FF at call statements, so the call FF owns
