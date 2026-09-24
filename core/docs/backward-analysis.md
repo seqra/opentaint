@@ -430,10 +430,28 @@ Not mirrored from forward (documented omissions):
 * `JIRMethodCallRuleBasedSummaryRewriter` (user-rule-based rewriting of
   pass-through and default-propagation facts) is forward-only.
 * The external-method tracker is not fed by backward resolution failures.
-* Call-site aliases (`forEachAliasAfterCallStatement`) are not applied to
-  emitted demands.
 * No per-statement call FF cache (the FF is cheap to build; its helpers are
   lazy).
+
+**Call-site aliases.** Forward copies the facts a call creates (source
+results, pass-through results, summary facts with a memory effect) to every
+alias of their base that persists through the call
+(`forEachAliasAfterCallStatement`: aliases before the call that are also
+aliases after it). The backward call FF inverts this on the demand: for every
+call local `b` (receiver, arguments, result) and every alias
+`AliasApInfo(base = z, accessors = g1..gn)` of `b` persisting through the call
+with `z` the demand's base, the demand is read through `g1..gn` (a
+`FinalFactReader.containsPosition` check first, so an abstract demand is
+refined like any other read) and rebased to `b`. The derived demand then goes
+through exactly the same processing as the original one: source matching,
+cleaners, call-to-start and, on resolution failure, the keep plus inverse
+pass-through. This is also what `JIRMethodCallPrecondition` does for aliased
+trace facts. A demand irrelevant to the call itself is still `Unchanged`; its
+derived demands are processed next to it. Over-approximation: forward does not
+alias a fact the call leaves unchanged (identity summary, unresolved-call
+keep), while the derived backward demand is also kept through the call. `b`
+and `z` are aliases before the call as well, so this only adds findings that
+forward misses because it never aliases an unchanged fact.
 
 Refinement: every `FinalFactReader` that read through an abstraction must feed
 the refinement into the emitted edges, exactly as forward does
@@ -529,10 +547,14 @@ Sink → demand seeds (zero fact):
 | `methodEntrySinkDemands(statement: JIRInst)` | `JMethodEnterInst` | `sinkRulesForMethodEntry` | `Argument`/`This`/`ClassStatic` kept; others dropped |
 | `recordSinkDemands(statement, demands): List<FinalFactAp>` | any | – | records `BackwardDemandSeed` / `BackwardUnconditionalSink` in the tracker and returns the seed facts to emit |
 
-Seeds are built from the positive `ContainsMarkLiteral`s of the rewritten
+Seeds are built from the positive mark literals of the rewritten
 condition after `removeNegated()` (both `And` and `Or` branches, duplicates
 removed): `apManager.mkAccessPath(position, ExclusionSet.Universe, mark)`,
-i.e. `position·M·$`. The caller emits them as `CallToReturnZFact` (call FF) or
+i.e. `position·M·$`. A `ContainsMarkOnAnyAccessorLiteral` (a `ContainsMark`
+on a position with the `AnyField` modifier) matches, in forward, a fact
+holding `M` at any path below the position, the position itself included; it
+is seeded as the two demands `position·M·$` and `position.[any]·M·$`. Source
+condition demands use the same expansion. The caller emits them as `CallToReturnZFact` (call FF) or
 `Sequent.ZeroToFact` (sequent FF).
 
 Demand → source match (fact):
@@ -619,9 +641,10 @@ as `JIRBackwardAnalysisManager.findings` and resets it in `selectPhase`.
   approximation).
 * **Side-effect summaries and `trackFactsReachAnalysisEnd`** are not modelled.
 * **Exceptional flow** is ignored, as in forward.
-* **`ContainsMarkOnAnyAccessorLiteral`** (mark on any field) produces no seed
-  and no source-condition demand. A sink whose condition has only such
-  literals produces nothing.
+* **Any-field demands.** A `ContainsMarkOnAnyAccessorLiteral` is demanded as
+  the star path `x.[any]·M`. No access-path model can express "a path of
+  length at least one", so an `Exact` cleaner on `x` cannot be inverted
+  precisely on it (section 11).
 * **Sinks with only negated mark literals** are recorded as unconditional,
   matching the "negated mark condition is satisfied" convention of
   `removeNegated` in the trace preconditions.
@@ -685,3 +708,199 @@ Test harness: `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`.
     and its zero-to-fact summary is mapped back to the caller's argument local
     (visible at the `process(...)` call, the next backward statement);
   * the source-reach assertion is `@Disabled("phase 2")`.
+
+## 11. Differential validation
+
+### 11.1 Harness
+
+`BackwardForwardDifferentialTest` (`core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`)
+replays the forward end-to-end suites against the backward analysis. The cases
+are re-declared, data-driven, in `ForwardSuiteCases` (the forward test classes
+are unchanged): every case of `JavaDataFlowReachabilityTest` (including the
+`@Disabled` `streamFlatMapFlow`, expected unreachable because forward misses
+it), `KotlinDataFlowReachabilityTest`, `MultiReturnDataFlowTest`,
+`CleanerDslAnalysisTest` (each parameterised run is one case),
+`CleanerDslControlFlowAnalysisTest` and `CleanerFieldSensitivityAnalysisTest`,
+with the suite's `useDefaultConfig` and unroll strategy. A case is
+`(config, class, entry method, expected sink rule ids)`. Kotlin samples need
+no special handling: `sourceFileExtension` only locates source files for SARIF
+spans, the classes come from the same samples jar.
+
+* **Sink groups.** A backward finding names a mark, not a sink. The sinks of a
+  case are split greedily into groups whose demanded marks are pairwise
+  distinct, and backward runs once per group, so a reported mark identifies
+  the sink. The run agrees on a sink rule when "backward reports a source
+  finding for its mark" equals "forward reports the rule".
+* **Forward reference.** Forward runs once per sink rule, with the other sinks
+  removed. With all sinks of a call in one config forward reports fewer
+  rules: in BaseOnly `cleanThenRetain`, forward reports
+  `newSourceAfterCleanSink-m1` alone but not next to the four other rules of
+  the same call. In Tree mode forward on the full config is additionally
+  checked against the forward suite's expected ids (this guards the
+  re-declared configs).
+* **Modes.** `Tree` is strict (backward must equal forward). `Automata`,
+  `BaseOnly` and `BaseOnlyField` also accept a backward result equal to the
+  forward suite's Tree-verified expectation: forward has its own
+  mode-specific results there (section 11.4).
+* **Divergences** pin the backward value of one `(case, sink rule, modes)` and
+  carry the mechanism. An entry is checked to still differ from the
+  reference, so a fixed divergence makes the test fail until the entry is
+  removed.
+* **Evidence cases.** `CleanerStarDualSample` (suite `CleanerStarDualEvidence`)
+  is not a forward suite; its three cases isolate the star/Exact-cleaner
+  mechanism of section 11.3 in both directions, with forward's actual result
+  as the expectation.
+
+Runtime: about one minute per mode (dominated by the per-rule forward runs).
+
+### 11.2 Results
+
+Tree: 631 sink groups; 628 of them come from the 130 forward-suite cases, 3 from the evidence cases.
+
+| | groups |
+|---|---|
+| agree from the start | 609 |
+| fixed (backward bugs, below) | 11 |
+| accepted divergences (forward suites) | 8 groups, 18 sink rules |
+| evidence cases (all three behave as predicted) | 3 |
+
+Bugs fixed:
+
+1. **Any-field sinks produced no demand** (9 groups:
+   `CleanerDslControlFlowAnalysisTest` `sequentialMarks` ×5 and
+   `cleanThenRetain`, the `CleanerDslAnalysisTest` helper controls and the
+   recursive any-only source). `ContainsMark` on an `AnyField` position is
+   rewritten to `ContainsMarkOnAnyAccessorLiteral`, which the seed builder
+   skipped. Fix: seed it as `x·M` and `x.[any]·M` (section 6a).
+2. **Call-site aliases were not mirrored** (`chainedAppend`, `namedReturn`).
+   `sb.append("/").append(b)`: forward taints the intermediate receiver
+   `%t` through the pass-through and copies the fact to `sb` because `%t`
+   aliases `sb` after the call. The backward demand on `sb` never became a
+   demand on `%t`. Fix: section 5, "Call-site aliases".
+
+Accepted divergences (Tree):
+
+| Case | Cause | Verdict |
+|---|---|---|
+| `JavaDataFlowReachability/lambdaCaptureFlow` | The sink is inside a lambda body reached through `fn.apply` on a captured `Function` parameter. Resolving it needs forward type-info facts (section 9). Verified: backward analyses `lambdaCaptureFlow`, `lambdaCapture`, the local lambda `g` and its body, never the sink lambda, and records no demand seed. | inherent (all modes) |
+| `CleanerDsl/matrix-N-AnyField`, `…-AnyField-Plain-AnyField-field-depth0-markK` (5 groups, 15 rules), `CleanerDsl/field-store` `field-store-any`, `CleanerDslControlFlow/sequentialMarks` `sequenceNestedAfterPlainSink-m1` | Star path vs. `Exact` cleaner, section 11.3. Backward misses. | inherent to the access-path models |
+| evidence `nestedStoreThenCleanerThenAnySink` | Same, minimal: `value.k.value = source(); applyPlainClean(value); anySink(value)`. Forward reaches, backward does not. | inherent |
+| evidence `inlineCleanerThenFieldSink` | The dual: any-field entry fact, `Exact` cleaner in the same method, plain sink on `value.k`. Forward misses (it holds the star fact and the cleaner removes all of it), backward reaches (it demands the concrete `value.k·M`, which the cleaner keeps). `calleeCleanerThenFieldSink`, the same flow with the cleaner inside a callee, is reached by both. | inherent; forward result contradicts its own DSL matrix |
+
+### 11.3 Star paths and `Exact` cleaners
+
+`x.[any]·M` is a star: it covers `x·M` and every `x.f…·M`
+(`TreeApManager`: `contains(M)` and `readAccessor` see through `[any]`). The
+residual after an `Exact` cleaner `RemoveMark(x, M)`, "`M` below a path of
+length at least one", is not representable. `Cleaner.kt`'s `Exact` branch
+clears `M` directly after `[any]` and so removes the whole star (unit check:
+`clean(arg0.[any]·M, Mark(arg0, M, Exact))` has no survivor in Tree and
+Cactus; Automata returns the star unchanged; base-only has no `[any]`).
+
+* Forward meets a star **fact** only from an `AnyField` source, and usually
+  not at the cleaner: when the cleaner runs in a summarised callee, the
+  callee sees an abstract fact and the summary materialises concrete
+  `x.k…·M` paths, which survive. When the cleaner runs in the method that
+  holds the star fact, forward loses the whole fact (`inlineCleanerThenFieldSink`).
+* Backward meets a star **demand** from every any-field sink, and always
+  concretely (seeds are never abstract). An `Exact` cleaner on its base drops
+  it in Tree, even when the flow reaches the sink through a concrete field
+  (`nestedStoreThenCleanerThenAnySink`, where forward holds
+  `value.k.value·M`). In Automata the cleaner keeps the star, and the demand
+  then also matches a root-level mark that the cleaner did remove (FP,
+  section 11.4).
+
+A precise fix needs a "non-empty star" node in the access-path models, or a
+type-driven unrolling of the star at the cleaner.
+
+### 11.4 Access-path modes
+
+**Existing backward suite** (66 tests; the unit test always uses Tree):
+
+| Mode | Result |
+|---|---|
+| Tree, Automata, Cactus | 66 / 66 |
+| BaseOnly | 59 / 66: `fieldOverwrite`, `otherField`, `staticOverwrite`, `selfWriteNegative`, `selfReadNoResurrect` (`BackwardSequentFlowTest`), `cleanedArgument`, `cleanedResult` receiver-cleaner (`BackwardCallFlowTest`) report a finding |
+| BaseOnlyField | 63 / 66: `selfWriteNegative`, `cleanedArgument`, `cleanedResult` receiver-cleaner |
+
+Forward on the same configs and mode reports the same flows (BaseOnly:
+6 of 7; BaseOnlyField: 3 of 3). The seventh, BaseOnly `staticOverwrite`, has
+forward IFDS facts reaching `sink(a)`, and only the trace resolution drops
+the vulnerability. Verdict: mode-inherent (field-insensitive access paths
+cannot express strong updates, and `P·M` reads as `P.[any]·M`, so
+`RemoveMark` never drops it). This confirms the call FF note of section 5.
+
+**Differential in other modes** (631 groups each):
+
+| Mode | Pinned divergences | Agree only with the suite expectation |
+|---|---|---|
+| Automata | 12 groups: lambda; `streamFlatMapFlow` (backward reaches); `matrix-N-Plain` `Plain-Plain-AnyField-field-depth0` (5 groups, 15 rules) and `sequentialMarks` `…-m1` at 5 checkpoints (backward FP) | `recursive-any-only-depth2` (forward misses) |
+| BaseOnly | lambda only | none |
+| BaseOnlyField | 13 groups, 21 rules: lambda; `field-store` plain and cleaned; `helperSourceAndCleanerExample-cleaned`; `sequentialMarks` m2–m4 at 6 checkpoints; `cleanThenRetain` m1/m2 at 3 checkpoints (backward FP) | 300 matrix groups (forward FP) |
+
+Mechanisms:
+
+* **Automata star kept.** An `Exact` cleaner leaves the Automata star demand
+  unchanged (the self-loop `[any]` graph is returned as is), so the demand
+  matches the root mark a `Plain` source produced after the cleaner removed
+  it. Verified by the unit check and by the fact dumps.
+* **Base-only root demand.** A base-only sink seed is `x·M` with an open
+  field tail (`x![M].$/*`); any-field positions collapse to it, because
+  `prependAccessor([any])` is absorbed. `Exact` cleaners never remove it,
+  the any-field cleaner keeps root marks, and a field write `x.f = v` then
+  moves it to `v` (a root `/*` fact starts with every field). Forward
+  holds the concrete `x.child·M` after the same write (BaseOnlyField keeps one
+  field level), which the any-field cleaner removes and a root sink check
+  does not match. Verified by the fact dumps of `cleanThenRetain` and
+  `field-store`. Plain BaseOnly has no field level for forward either, so
+  both directions agree there.
+* **Forward drops what its IFDS facts reach.** Automata `streamFlatMapFlow`
+  (the element loop represents `List<List<T>>`) and `recursive-any-only-depth2`:
+  forward IFDS facts reach the sink call with the mark, but forward reports
+  nothing. Backward reports the flow the forward suite describes as real.
+* **BaseOnlyField forward matrix FPs.** Forward reads a field from a root
+  `P·M/*` fact and reports plain sources at depth ≥ 1. Backward's
+  `containsPosition(P·M)` on the demand `P.k·M` is false, so it agrees with
+  the forward suite.
+
+**Cactus** is not part of the committed test: forward cannot run there
+(`AccessCactus.equalTo` throws `NotImplementedError` in
+`JIRMethodCallSummaryHandler.hasMemoryEffect`, even for `simpleDataFlow`).
+Against the forward suite expectation, backward in Cactus disagrees on 24 of
+631 groups:
+
+* 3 groups crash (`deepCleanerPipeline`, `starred-depth2/3-sanitized`):
+  Cactus summary application leaves an abstract node (`arg(0).*/*`) on a
+  zero-to-fact demand, and the method-entry source match then refines a zero
+  edge. Verified by dumping the facts without the entry source.
+* 21 groups are FN or FP:
+  * 9 groups match the Tree divergences of section 11.2: the depth-0
+    `AnyField-Plain-AnyField` rule (only for `mark1`), `field-store-any`,
+    `sequenceNestedAfterPlainSink-m1` and both evidence cases.
+  * `streamFlatMapFlow`: backward reports the flow the forward suite calls a
+    known false negative, as in Automata.
+  * 11 groups are Cactus-only, which localises them to the Cactus access
+    paths because the same backward code agrees with forward in Tree and
+    Automata: the `sequentialMarks` checkpoints 0–4, both helper controls,
+    `recursive-any-only-root`, `convergentJoinSink-m1`,
+    `alwaysCleanReturnSink-m1` and `newSourceAfterCleanSink-m2`. They were not
+    root-caused further. One visible difference: the Cactus star does not
+    contain its root (`containsPosition(ret·M)` on `ret.[any]·M` is false,
+    true in Tree and Automata).
+
+Verdict: the Cactus access paths are unmaintained. Tree and Automata are the
+references.
+
+### 11.5 Forward observations
+
+Found while validating; forward is unchanged:
+
+* `inlineCleanerThenFieldSink`: an `Exact` cleaner in the method that holds an
+  any-field fact removes the whole star, so a field-level flow that the
+  cleaner DSL matrix declares surviving is lost. The result depends on
+  whether the cleaner call sits in a summarised callee.
+* Forward reports fewer rules when several sink rules share a call statement
+  (per-rule runs report more).
+* Automata `streamFlatMapFlow` / `recursive-any-only-depth2` and BaseOnly
+  `staticOverwrite`: IFDS facts reach the sink, the reported result is empty.
+* Cactus forward fails on every summary application with a memory-effect check.
