@@ -61,8 +61,8 @@ class JIRAnalysisManager(
     refManager: RefManager,
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
-    val params: Params = Params(),
-) : JIRLanguageManager(cp), TaintAnalysisManager {
+    override val params: Params = Params(),
+) : JIRLanguageManager(cp), TaintAnalysisManager, JIRAnalysisManagerBase {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
@@ -76,7 +76,7 @@ class JIRAnalysisManager(
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan
-    val phase: Phase get() = currentPhase
+    override val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
         currentPhase = phase

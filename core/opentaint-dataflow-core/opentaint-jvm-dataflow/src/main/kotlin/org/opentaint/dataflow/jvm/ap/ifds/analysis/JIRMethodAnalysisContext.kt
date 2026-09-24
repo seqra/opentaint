@@ -16,8 +16,8 @@ import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
 import java.lang.ref.Reference
 
-class JIRMethodAnalysisContext(
-    val analysisManager: JIRAnalysisManager,
+open class JIRMethodAnalysisContext(
+    val analysisManager: JIRAnalysisManagerBase,
     val refManager: SoftReferenceManager,
     override val methodEntryPoint: MethodEntryPoint,
     val factTypeChecker: JIRFactTypeChecker,
