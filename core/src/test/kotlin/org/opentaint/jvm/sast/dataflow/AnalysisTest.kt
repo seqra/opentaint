@@ -112,7 +112,7 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
-    private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
+    protected class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
                 return SingletonUnit
@@ -128,15 +128,13 @@ abstract class AnalysisTest : BasicTestUtils() {
         JavaDefaultConfigLoader.loadConfig()
     }
 
-    fun runAnalysis(
-        config: SerializedTaintConfig,
-        entryPointClass: String,
-        entryPointMethod: String
-    ): List<VulnerabilityWithTrace> {
+    protected fun findEntryPoint(entryPointClass: String, entryPointMethod: String): JIRMethod {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
-        val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
+        return cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
             ?: error("No $entryPointMethod method in $entryPointClass")
+    }
 
+    protected fun createRulesProvider(config: SerializedTaintConfig): TaintRulesProvider {
         val taintConfig = TaintConfiguration(cp)
         taintConfig.loadConfig(config)
 
@@ -145,12 +143,25 @@ abstract class AnalysisTest : BasicTestUtils() {
             taintConfig.loadConfig(defaultPassRules)
         }
 
-        var rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
-        rulesProvider = JIRMethodExitRuleProvider(rulesProvider)
+        val rulesProvider: TaintRulesProvider = JIRTaintRulesProvider(taintConfig)
+        return JIRMethodExitRuleProvider(rulesProvider)
+    }
 
+    protected fun createAnalysisGraph(): JIRSafeApplicationGraph {
         val usages = runBlocking { cp.usagesExt() }
         val mainGraph = JApplicationGraphImpl(cp, usages)
-        val ifdsGraph = JIRSafeApplicationGraph(JApplicationSingleExitGraph(mainGraph))
+        return JIRSafeApplicationGraph(JApplicationSingleExitGraph(mainGraph))
+    }
+
+    fun runAnalysis(
+        config: SerializedTaintConfig,
+        entryPointClass: String,
+        entryPointMethod: String
+    ): List<VulnerabilityWithTrace> {
+        val ep = findEntryPoint(entryPointClass, entryPointMethod)
+        val cls = ep.enclosingClass
+        val rulesProvider = createRulesProvider(config)
+        val ifdsGraph = createAnalysisGraph()
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
