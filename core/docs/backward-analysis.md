@@ -213,41 +213,138 @@ the whole statement.
 
 **Fact** (`d`)
 * Not relevant → `Unchanged` (`skipCall`).
-* Source match: for every source rule (`sourceRulesForCallStatement`) whose
-  `AssignMark(pos, M)` position holds `d`'s mark (`TaintSourceActionPreconditionEvaluator`
-  on `d` rebased to the callee base), record a finding.
-  * If the source condition itself needs marks (`evaluateSourceRulePrecondition`
-    gives `Pass`), emit the condition's positive mark literals as new demands
-    instead of a finding. These are `CallToReturn*` facts mapped callee → caller.
-* Cleaner: if a cleaner rule removes `d`'s mark at `d`'s position, emit `Drop`
-  for that start base. A tainted value there would have been cleaned.
-* Otherwise emit `CallToStart(d, startBase)` using the section 3 mapping.
-  Constructors additionally keep `d` call-to-return, mirroring forward.
+* For every `(callerFact, startBase)` of the section 3 call → start mapping
+  (with the real `returnValue`):
+  * Source match: for every source rule (`sourceRulesForCallStatement`) whose
+    `AssignMark(pos, M)` position holds `d`'s mark (`TaintSourceActionPreconditionEvaluator`
+    on `d` rebased to the callee base), record a finding.
+    * If the source condition itself needs marks (`evaluateSourceRulePrecondition`
+      gives `Pass`), emit the condition's positive mark literals as new demands
+      instead of a finding. These are `CallToReturn*` facts mapped callee → caller.
+    * A source match does not kill `d`: the cleaner and call-to-start steps
+      below still run. For `r = source()` the demand on `r` enters the source
+      method (if it is analysed) as a `Return` demand and dies there.
+  * Cleaner: see "Cleaner inversion" below. Surviving demands continue,
+    removed alternatives become `Drop`.
+  * Otherwise emit `CallToStart(d, startBase)` using the section 3 mapping.
+    Constructors additionally keep `d` call-to-return, mirroring forward.
 
-**Resolution failure** (unresolved or library callee), per `startBase`:
-* `startBase ≠ Return`: keep `d` call-to-return. An unknown callee is assumed
-  not to write the heap, as in forward.
+**Cleaner inversion.** A cleaner is a filter: forward `clean(f)` keeps the
+part of `f` the cleaner does not remove. A value that is in the demand `d`
+after the call was, before the call, a value that survived the cleaner, so the
+demand before the call is `clean(d)`. The backward FF therefore runs the
+**forward cleaner code on the demand itself**
+(`TaintConfigUtils.applyCleaner` with `JIRTaintCleanActionEvaluator`, on
+`d` rebased to the callee base), exactly as forward
+`applyCleanersOrCallToStart` does:
+
+* a removed alternative (`EvaluatedCleanAction.fact == null`) → `Drop`
+  (with the rule trace for user-defined rules, as forward);
+* every surviving fact → call-to-start (and constructor call-to-return).
+
+Consequences:
+
+* `RemoveMark(P, M)` drops a demand `P·M·$`; a demand `P.f·M·$` survives
+  (reach `Exact`), a demand under `[any]` is split exactly as forward
+  (`TaintCleanReach.Exact` vs `ExactAndAnyField` handled by `Cleaner.kt`).
+* `RemoveAllMarks(P)` drops every demand at or below `P`.
+* A `Result` cleaner drops a demand on the call result before it reaches
+  the callee or pass-through. Forward applies user-defined `Result` cleaners
+  to pass-through results through `JIRMethodCallRuleBasedSummaryRewriter`;
+  the backward order (clean the result demand first) is the inverse, and it
+  applies to every cleaner rule, not only user-defined ones.
+* The cleaner **condition** is evaluated by `TaintFactAwareConditionEvaluator`
+  over the demand rebased to the callee base, as forward evaluates it over the
+  fact. Mark literals are therefore checked against the demanded marks. This
+  is exact for the common self-referential form (`RemoveMark(P, M)` guarded by
+  `ContainsMark(P, M)`); a cleaner whose condition names a mark at another
+  position does not fire unless that position is the demand's.
+* Inverse pass-through demands (resolution failure, below) go through the
+  same cleaner filter: forward cleans the argument fact **before** the
+  pass-through runs, so a pass-through source position whose mark is cleaned
+  by the same call produces no demand.
+* Aliases are not consulted (forward's cleaner does not consult them either).
+* In the base-only AP modes a concrete demand `P·M·$` also reads as
+  `P.[any]·M·$`, and the `Exact` split keeps the `[any]` alternative, so
+  `RemoveMark` never fully drops the demand. This is the same field-insensitivity
+  trait forward has in these modes; the Phase 2a tests run in `Tree` mode.
+
+**Resolution failure** (unresolved or library callee), per `startBase`
+(`callerFact` is the caller edge fact, `d = callerFact.rebase(startBase)`):
+* `startBase ≠ Return`: keep `callerFact` call-to-return (trace `null`, as
+  forward's default propagation). An unknown callee is assumed not to write
+  the heap, as in forward.
 * Inverse pass-through: pass rules (`passRulesForCallStatement` plus
-  `defaultGetModel`) evaluated with `TaintPassActionPreconditionEvaluator`.
-  A demand on the rule's `to` becomes a demand on its `from`, mapped
-  callee → caller and emitted call-to-return.
+  `defaultGetModel.defaultPropagationRules(callee)`) evaluated with
+  `TaintPassActionInverseEvaluator` (see "Pass inversion"). A demand on the
+  rule's `to` becomes a demand on its `from`, filtered by the cleaners of the
+  call, mapped callee → caller (`mapCalleeToCaller`: `Return` results
+  dropped) and emitted call-to-return with trace `Rule(rule, action)`.
 * `startBase == Return`: nothing else. The result demand dies unless a pass
   rule regenerates it.
+
+**Pass inversion** (`TaintPassActionInverseEvaluator`, `opentaint-dataflow`
+`taint/Propagator.kt`, a sibling of `TaintPassActionEvaluator`; the trace
+evaluator `TaintPassActionPreconditionEvaluator` is unchanged):
+
+* `CopyAllMarks(from, to)`: if the demand contains `to`
+  (`FinalFactReader.containsPosition`, refining an abstract demand exactly as
+  forward), the demand is type-filtered by the `to` position type, the delta
+  after `to` is read (`readPosition`) and rebuilt at `from` with the demand's
+  exclusions, then type-filtered by the `from` position type.
+* `CopyMark(from, to, M)`: if the demand contains `to·M·$`, emit
+  `from·M·$` with the demand's exclusions, type-filtered by the `from` type.
+* Unlike the forward evaluator it does not return the original fact: keeping
+  the demand is the resolution-failure rule above (and does not apply to
+  `Return`).
+* Rule applicability: a rule is used when its rewritten condition is not
+  constant-false. Mark literals of pass conditions are treated as satisfied
+  (both positive and negated). Forward evaluates them against the fact at
+  `from`, which the backward FF does not have; treating them as true
+  over-approximates. Non-mark conditions (types, constants) are already
+  folded into the rewritten condition by `prepareCallStatementRules`.
+
+Not mirrored from forward (documented omissions):
+
+* `JIRMethodCallRuleBasedSummaryRewriter` (user-rule-based rewriting of
+  pass-through and default-propagation facts) is forward-only.
+* The external-method tracker is not fed by backward resolution failures.
+* Call-site aliases (`forEachAliasAfterCallStatement`) are not applied to
+  emitted demands.
+* No per-statement call FF cache (the FF is cheap to build; its helpers are
+  lazy).
 
 Refinement: every `FinalFactReader` that read through an abstraction must feed
 the refinement into the emitted edges, exactly as forward does
 (`addCallToReturn(factReader, …)` / `addCallToStart(factReader, …)` /
-`addSideEffectRequirement`).
+`addSideEffectRequirement`). Concretely:
+
+* `propagateFact`: one reader over `d`. It absorbs the source-match reader
+  (`SourceMatchResult.reader`), the cleaner condition reader and each
+  surviving cleaner reader before the call-to-start / constructor
+  call-to-return that uses it. Condition demands of conditional sources are
+  emitted after all start bases were processed, so they carry the full
+  refinement. If the reader was refined, `addSideEffectRequirement` is called.
+* Resolution failure: the kept demand uses a fresh reader (as forward's
+  default propagation). The pass reader over `d` absorbs the inverse pass
+  reads and the cleaner readers of the generated demands and is used for the
+  pass-generated edges; it is merged into the outer reader, which triggers
+  `addSideEffectRequirement` when refined.
+* Zero-to-fact and ND edges keep forward's "can't refine" checks. Demands on
+  such edges are concrete (seeds and summary applications), so reads do not
+  refine them.
 
 Corrections to the above, found against the code:
 
 * `MethodCallFlowFunction.Default.propagateUnresolvedCallFact` does **not**
-  receive `startFactBase`. The `startBase == Return` rule is therefore
-  implemented by overriding the three `propagate*ResolutionFailure` methods
-  (return an empty set for `Return`, otherwise delegate to `super`). Their
+  receive `startFactBase`. The backward FF therefore overrides the three
+  `propagate*ResolutionFailure` methods, builds the same callbacks as
+  `Default` (refinement checks for zero / ND edges, `refineFact` of initial
+  and final facts and `SideEffectRequirement` for F2F edges) and calls a
+  private `propagateUnresolvedDemand(fact, startFactBase, …)`. The inherited
+  `propagateUnresolvedCallFact` is unreachable and throws. The override
   return types are narrowed by `Default` (`Set<CallToReturnZFact>`,
-  `Set<FactCallFailureFact>`, `Set<CallToReturnNonDistributiveFact>`). The
-  Phase 1 stub already contains these overrides.
+  `Set<FactCallFailureFact>`, `Set<CallToReturnNonDistributiveFact>`).
 * The resolution-failure hooks run once **per start base**, so a demand whose
   base is both receiver and argument is kept call-to-return twice; edge
   deduplication absorbs this.
@@ -259,11 +356,8 @@ Corrections to the above, found against the code:
   API) so its refinement can be merged into the emitted edges.
 * `TaintPassActionPreconditionEvaluator` still needs an `InitialFactReader`:
   `copyAllFactsPrecondition` reads the `InitialFactAp` and rebuilds an
-  `InitialFactAp`. It cannot evaluate a `FinalFactAp` demand. Phase 2 needs a
-  `FinalFactAp` counterpart (a `PassActionEvaluator<EvaluatedPass>` that, for
-  `CopyAllMarks(from, to)`, reads `to` from the demand and rebuilds the delta
-  at `from`, and for `CopyMark(from, to, M)` checks `to·M·$` and emits
-  `from·M·$`), or a generalisation of the existing evaluator.
+  `InitialFactAp`. It cannot evaluate a `FinalFactAp` demand, so Phase 2a
+  added the sibling `TaintPassActionInverseEvaluator` (see "Pass inversion").
 * Conditions of cleaner, source and pass rules are evaluated with the rewritten
   condition of `prepareCallStatementRules`, which uses the **forward** alias
   analysis at the call statement. This is sound for backward because the call
@@ -348,8 +442,8 @@ condition count as satisfied; the remaining positive literals become
 A source match does not kill the demand: whether the demand keeps flowing past
 the source (e.g. a source that also has a pass-through) is the FF's decision.
 
-Not covered by the helper (Phase 2): cleaner checks, inverse pass-through (see
-the notes at the end of section 5), aliases.
+Not covered by the helper: cleaner checks and inverse pass-through (they live
+in the call FF, section 5), aliases.
 
 ## 7. Required forward-side refactors
 
@@ -433,6 +527,20 @@ Phase 1 delivers everything above except the fact-level flow functions:
   `(apManager, analysisContext, returnValue: JIRImmediate?, callExpr: JIRCallExpr, statement: JIRInst)`.
 
 Phase 2 replaces the fact-level bodies of these two classes.
+
+Phase 2a (call FF) status: `JIRBackwardMethodCallFlowFunction` implements
+section 5 completely; the sequent FF is still the Phase 1 stub.
+`BackwardCallFlowTest` (sample `test.samples.BackwardCallSample`, plus
+`StringMethodDataFlowSample`) covers flows that need only the call FF:
+`sink(source())`, default-config pass-through on `String`/`StringBuilder`
+library calls, a user `CopyMark` pass rule (positive and other-mark
+negative), a demand through a callee's argument heap effect (`fill(sb)`
+appending a source inside the analysed callee, summarised back to the
+caller), argument / result / receiver cleaners and their negatives, a
+conditional source turning into a demand on its argument, and negative
+cases. Flows through a callee's `return x` (e.g. `x = identity(source())`,
+and the Phase 1 `SimpleDataFlowSample` source-reach test, whose `process`
+returns its argument) need the sequent FF and stay `@Disabled`.
 
 Test harness: `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`.
 
