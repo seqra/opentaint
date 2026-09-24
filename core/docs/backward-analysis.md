@@ -22,7 +22,7 @@ The engine is direction-agnostic: it only uses `methodGraph.successors`,
 
 | Engine notion | Forward meaning | Backward meaning |
 |---|---|---|
-| method entry point (`MethodEntryPoint.statement`) | `JMethodEnterInst` | `JMethodExitNormalInst` (normal exit only) |
+| method entry point (`MethodEntryPoint.statement`) | `JMethodEnterInst` | `JMethodExitNormalInst` and `JMethodExitExceptionalInst` (the latter Zero-only) |
 | successors of `s` | forward successors | forward predecessors |
 | exit point (summary emission) | `JMethodExitNormalInst`/`JMethodExitExceptionalInst` | `JMethodEnterInst` |
 | edge at statement `s` | facts **before** `s` executes | facts **after** `s` executes (forward order) |
@@ -30,10 +30,11 @@ The engine is direction-agnostic: it only uses `methodGraph.successors`,
 
 Consequences:
 
-* The backward entry-point resolver returns the reversed graph's entry points
-  minus those with `producesExceptionalControlFlow` (drops
-  `JMethodExitExceptionalInst`). This mirrors forward, which drops exceptional
-  exits when it applies summaries.
+* The backward entry-point resolver returns all of the reversed graph's entry
+  points, the exceptional exit included. An exceptional entry point
+  (`producesExceptionalControlFlow`: `JMethodExitExceptionalInst`, or a `throw`
+  for a method without boundary instructions) starts **only the Zero fact**:
+  the start FF returns no fact for it (section 2). Rationale below.
 * Summaries are emitted at `JMethodEnterInst`. Valid exit facts are based on
   `Argument`, `This` or `ClassStatic`. `Return`, `Exception` and `LocalVar` are
   not valid.
@@ -46,7 +47,7 @@ Consequences:
   demand on a variable that is never defined dies at `JMethodEnterInst`
   because it is not a valid exit fact.
 
-Observed behaviour of the reversed single-exit graph (verified by the Phase 1
+Observed behaviour of the reversed single-exit graph (verified by the test
 harness, see section 10):
 
 * The flow function of a statement runs **before** the engine checks whether
@@ -57,18 +58,44 @@ harness, see section 10):
 * Backward successors of `JMethodExitNormalInst` are the method's
   `JIRReturnInst`s. Backward successors of the first real instruction include
   `JMethodEnterInst`. `JMethodEnterInst` has no backward successors.
-* `JMethodExitExceptionalInst` is never an entry point, so `JIRThrowInst`s are
-  reached only from their forward successors (catch handlers), never from the
-  exceptional exit.
+* Backward successors of `JMethodExitExceptionalInst` are the method's
+  `JIRThrowInst`s. Code that only reaches a `throw` (a branch ending in a
+  throw, a catch handler that rethrows, a method that always throws) is
+  reached backward only from the exceptional exit.
 * For a method without boundary instructions (`MethodBoundary.of` returns
   `null`, e.g. the `JMethodBoundaryInstFeature` is not installed) the reversed
-  entry points are the forward exit points (`return`/`throw`, throws dropped)
+  entry points are the forward exit points (`return`/`throw`, throws Zero-only)
   and the summary statement is the first real instruction. The backward
   context then seeds alias analysis with that first instruction; it is `null`
   (alias analysis disabled) when the method has no forward entry at all.
 * `MethodInstGraph.build` indexes the boundary instructions like any other
   instruction (they are the last three entries of `instList`), so
   `getInstIndex`/`getInstByIndex` need no special handling.
+
+**Exceptional exit.** Forward analyses every statement reachable from the
+method entry, including the ones that only lead to a `throw`: a sink before a
+throw is reported. What forward ignores is the exceptional *exit*: summary
+edges emitted at `JMethodExitExceptionalInst` (and at a `throw` without
+boundary instructions) are filtered by `isApplicableExitToReturnEdge`, so no
+fact leaves a method through an exception. The backward mirror is:
+
+* Zero enters at the exceptional exit, so sink seeds on a throwing path are
+  created and flow to `JMethodEnterInst`. Their zero-to-fact summaries are
+  emitted at `JMethodEnterInst` (not an exceptional statement), so callers
+  apply them: a caller argument that reaches a sink inside a callee before the
+  callee throws is demanded, as forward reports it.
+* No caller demand enters at the exceptional exit (`propagateFact` returns
+  nothing there). A caller demand after the call describes a value the callee
+  returns normally; forward never propagates a callee fact to the caller along
+  an exception. The analyser for the exceptional entry point therefore holds
+  only Zero-rooted edges.
+* Consequently no demand has the `Exception` base: the `throw x` rule
+  (`Exception.P → x.P`) never fires and every other demand passes a `throw`
+  unchanged. `isValidMethodExitFact` and the exit → return mapping need no
+  change (summaries are still emitted at `JMethodEnterInst` only).
+* Code from which no exit is reachable (an infinite loop) is not analysed
+  backward. Forward reports nothing for the `infiniteLoop` sample of
+  `BackwardRegressionTest` either (not investigated further).
 
 ## 2. Components
 
@@ -84,7 +111,7 @@ The code lives in package `org.opentaint.dataflow.jvm.ap.ifds.backward`, module
 | start FF | `JIRBackwardMethodStartFlowFunction` |
 | sequent FF | `JIRBackwardMethodSequentFlowFunction` |
 | call FF | `JIRBackwardMethodCallFlowFunction : MethodCallFlowFunction.Default` |
-| call summary handler | `JIRBackwardMethodCallSummaryHandler` |
+| call summary handler | `JIRBackwardMethodCallSummaryHandler` (section 6) |
 | side-effect handler | `JIRBackwardMethodSideEffectHandler` (an `object`; interface defaults: no side effects) |
 | preconditions | `JIRBackwardMethodStartPrecondition` / `JIRBackwardMethodSequentPrecondition` / `JIRBackwardMethodCallPrecondition` (trivial `object`s, file `JIRBackwardPreconditions.kt`) |
 | edge post-processor | the existing `JIRMethodSummaryEdgeProcessor` (direction-neutral compatibility filter) |
@@ -95,9 +122,11 @@ The code lives in package `org.opentaint.dataflow.jvm.ap.ifds.backward`, module
 Manager details:
 
 * The constructor mirrors `JIRAnalysisManager`:
-  `JIRBackwardAnalysisManager(cp, refManager, taintConfig, externalMethodTracker = null, params = JIRAnalysisManager.Params())`.
+  `JIRBackwardAnalysisManager(cp, refManager, taintConfig, externalMethodTracker = null, params = JIRAnalysisManager.Params(), recordDemandSeeds = false)`.
   It reuses `JIRAnalysisManager.Params` so both managers satisfy
-  `JIRAnalysisManagerBase` with the same `params` type.
+  `JIRAnalysisManagerBase` with the same `params` type. `recordDemandSeeds`
+  enables the `BackwardDemandSeed` debugging records (section 8); the test
+  harness turns it on.
 * `selectPhase` mirrors forward (`SelectedTaintRulesProvider`,
   `relevantRuleIds`, reset of every context's analysis cache) and additionally
   resets the finding tracker, so the tracker only holds the current phase's
@@ -106,14 +135,16 @@ Manager details:
   merging), `isTraceRequiredInstruction` keeps the interface default (`false`).
 * The start FF delegates `propagateFact` to the forward
   `JIRMethodStartFlowFunction.propagateFact` (the context type check has no
-  side effects), and `propagateZero` returns only `Zero`.
+  side effects), and `propagateZero` returns only `Zero`. At an exceptional
+  entry point (the manager passes `producesExceptionalControlFlow(entry)`)
+  `propagateFact` returns nothing (section 1).
 * The backward context (`JIRBackwardMethodAnalysisContext`) additionally
   carries `forwardEntryPoint` (the forward entry used to seed alias analysis,
   reused for the empty-context analyzer like `localVariableReachability` and
   `aliasAnalysis`) and `findings` (the manager's tracker).
 * The backward call FF is **not** cached per statement (forward caches it in
-  `JIRMethodAnalysisContext.cachedCallFF`, typed to the forward class). Phase 2
-  can add a cache to `JIRBackwardMethodAnalysisContext` if construction becomes
+  `JIRMethodAnalysisContext.cachedCallFF`, typed to the forward class). A cache
+  can be added to `JIRBackwardMethodAnalysisContext` if construction becomes
   expensive.
 
 ## 3. Call-site base mapping (`JIRBackwardMethodCallFactMapper`)
@@ -142,6 +173,15 @@ the same mapping without type checks.
 Unlike the forward mapper, the backward call → start mapping **uses** its
 `returnValue` parameter (forward ignores it and its call FF passes `null`). The
 backward call FF must pass the real result variable.
+
+Implementation: the object delegates to the forward `JIRMethodCallFactMapper`
+(`MethodCallFactMapper by JIRMethodCallFactMapper`) and overrides only the
+differences: exit → return answers nothing for `Return` (forward maps it to
+the call result) and otherwise calls forward; call → start maps a demand on
+the result variable to `Return` (type-checked against `returnValue.type`) and
+otherwise calls forward; `isValidMethodExitFact` accepts only
+`Argument`/`This`/`ClassStatic` (forward accepts every non-local base).
+Relevance is forward's.
 
 ## 4. Statement semantics (`JIRBackwardMethodSequentFlowFunction`)
 
@@ -191,13 +231,51 @@ Rule handling inside the sequent FF:
   source's mark is a finding.
 * **`JMethodEnterInst`** (the backward exit):
   * Fact: a demand on `Argument`/`This` that matches `sourceRulesForMethodEntry`
-    is a finding.
+    is a finding, unless the demand came from a caller through the root of an
+    argument (below).
   * Zero: seed demands for entry sinks (`sinkRulesForMethodEntry`).
 
 A source match never kills the demand: the demand keeps flowing (to `x` at
 `return x`, to the static field at `x = C.f`, unchanged at `JMethodEnterInst`).
 Condition demands of a matched source (`SourceMatchResult.conditionDemands`)
-are emitted next to it, from the same initial fact.
+are emitted next to it, from the same initial fact. When a source match
+refines an abstract demand and nothing is emitted afterwards (`return "c"`,
+a void `return`), the refinement is reported as a `Sequent.SideEffectRequirement`
+on a fact-to-fact edge, so the engine still creates the concrete initial fact
+that the finding needs.
+
+**Entry sources and caller demands.** Forward applies entry-point sources in
+`propagateZero` of **every** analysed method, callees included, so the marks
+live on zero-to-fact edges. They reach sinks inside the method and its
+callees, and leave the method through `Return` and `ClassStatic` facts. At
+the exit, `dropArgumentsLocalTaintMarks` removes the marks assigned on method
+enter (`taintMarksAssignedOnMethodEnter`) from zero-to-fact facts whose base is
+`Argument`/`This`. `TaintMarkRemover` returns `Accept` for any non-mark
+accessor, so only a mark directly at the root is removed: `arg0·M` is
+dropped, `arg1.sb·M` (the entry mark copied into an argument's field) is kept
+and reaches the caller.
+
+Backward sees the same flow from the other end. A backward fact-to-fact edge
+starts at the method exit with a demand from a caller (its initial fact), and
+an entry-source match at `JMethodEnterInst` on that edge stands for the
+forward zero-to-fact fact created at entry that reached the exit as the
+initial fact. The finding is therefore recorded unless the initial fact is
+based on `Argument`/`This` **and** starts with a mark assigned by an entry
+rule of this method (all marks of `sourceRulesForMethodEntry`, like
+`taintMarksAssignedOnMethodEnter`). Consequences:
+
+* zero-to-fact edges (sinks inside the method or its callees) always record;
+* initial `Return` or `ClassStatic` bases always record (forward keeps them);
+* initial `arg.f…·M` records, initial `arg·M` does not;
+* a conditional source inside the method can turn the initial `arg·M1` into
+  a demand for another mark `M2`; the finding for `M2` is suppressed only if
+  `M1` is itself an entry mark, as forward drops `M1` at the root only then;
+* a non-distributive edge is suppressed only when every initial fact
+  qualifies (backward never creates such edges itself).
+
+Not mirrored: forward's drop also removes an entry mark that a *call* source
+inside the method put on an argument root; backward only suppresses entry
+source findings.
 
 ### 4.1 Implementation notes
 
@@ -254,10 +332,12 @@ self-referential forms exact.
   rebase; they never refine. A read on a demand whose base is not `x` is
   unchanged (the forward array-read "re-emit" hack is not mirrored; it only
   exists to force a new forward edge).
-* **Throw** has no rules: `Exception.P → x.P`, other demands unchanged.
-* **Entry rules** are matched only when `currentInst is JMethodEnterInst`, as
-  the Phase 1 stub already did for entry-sink seeds. A method without boundary
-  instructions therefore gets neither entry sinks nor entry sources.
+* **Throw** has no rules: `Exception.P → x.P`, other demands unchanged. No
+  demand has the `Exception` base (section 1), so in practice every demand
+  passes a `throw` unchanged.
+* **Entry rules** are matched only when `currentInst is JMethodEnterInst`. A
+  method without boundary instructions therefore gets neither entry sinks nor
+  entry sources.
 
 **Aliases (field and array writes only).** When `aliasAnalysis != null` and the
 demand base `z` differs from the written instance `y`, the FF asks
@@ -292,8 +372,7 @@ type filter only for marks ending in `%%primitive%%`
 
 ### 4.2 Status and tests (Phase 2b)
 
-The sequent FF is complete (the section 10 stub description applies only to
-the zero fact now). Tests, in `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`,
+The sequent FF is complete. Tests, in `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`,
 on `core/samples/src/main/java/test/samples/BackwardSequentSample.java`:
 
 * `BackwardSequentFlowTest` (end to end, no call-FF fact handling needed): an
@@ -437,21 +516,25 @@ Not mirrored from forward (documented omissions):
 results, pass-through results, summary facts with a memory effect) to every
 alias of their base that persists through the call
 (`forEachAliasAfterCallStatement`: aliases before the call that are also
-aliases after it). The backward call FF inverts this on the demand: for every
-call local `b` (receiver, arguments, result) and every alias
+aliases after it). Forward only requires the *call local* to be a local
+variable; the alias base `z` can be a local, `Argument`, `This` or
+`ClassStatic` (`b = C.f` gives `AliasApInfo(ClassStatic, [<C>, f])`), only
+`Constant` alias bases are skipped. The backward call FF inverts this on the
+demand: for every call local `b` (receiver, arguments, result) and every alias
 `AliasApInfo(base = z, accessors = g1..gn)` of `b` persisting through the call
-with `z` the demand's base, the demand is read through `g1..gn` (a
-`FinalFactReader.containsPosition` check first, so an abstract demand is
-refined like any other read) and rebased to `b`. The derived demand then goes
-through exactly the same processing as the original one: source matching,
-cleaners, call-to-start and, on resolution failure, the keep plus inverse
-pass-through. This is also what `JIRMethodCallPrecondition` does for aliased
-trace facts. A demand irrelevant to the call itself is still `Unchanged`; its
-derived demands are processed next to it. Over-approximation: forward does not
-alias a fact the call leaves unchanged (identity summary, unresolved-call
-keep), while the derived backward demand is also kept through the call. `b`
-and `z` are aliases before the call as well, so this only adds findings that
-forward misses because it never aliases an unchanged fact.
+with `z` the demand's base (any base; a demand is never `Constant`), the
+demand is read through `g1..gn` (a `FinalFactReader.containsPosition` check
+first, so an abstract demand is refined like any other read) and rebased to
+`b`. The derived demand then goes through exactly the same processing as the
+original one: source matching, cleaners, call-to-start and, on resolution
+failure, the keep plus inverse pass-through. This is also what
+`JIRMethodCallPrecondition` does for aliased trace facts. A demand irrelevant
+to the call itself is still `Unchanged`; its derived demands are processed
+next to it. Over-approximation: forward does not alias a fact the call leaves
+unchanged (identity summary, unresolved-call keep), while the derived backward
+demand is also kept through the call. `b` and `z` are aliases before the call
+as well, so this only adds findings that forward misses because it never
+aliases an unchanged fact.
 
 Refinement: every `FinalFactReader` that read through an abstraction must feed
 the refinement into the emitted edges, exactly as forward does
@@ -475,15 +558,12 @@ the refinement into the emitted edges, exactly as forward does
 
 Corrections to the above, found against the code:
 
-* `MethodCallFlowFunction.Default.propagateUnresolvedCallFact` does **not**
-  receive `startFactBase`. The backward FF therefore overrides the three
-  `propagate*ResolutionFailure` methods, builds the same callbacks as
-  `Default` (refinement checks for zero / ND edges, `refineFact` of initial
-  and final facts and `SideEffectRequirement` for F2F edges) and calls a
-  private `propagateUnresolvedDemand(fact, startFactBase, …)`. The inherited
-  `propagateUnresolvedCallFact` is unreachable and throws. The override
-  return types are narrowed by `Default` (`Set<CallToReturnZFact>`,
-  `Set<FactCallFailureFact>`, `Set<CallToReturnNonDistributiveFact>`).
+* `MethodCallFlowFunction.Default.propagateUnresolvedCallFact` receives the
+  `startFactBase` of the failed call (added for backward; the forward JIR and
+  Go implementations ignore it). The backward FF implements it directly and
+  inherits `Default`'s three `propagate*ResolutionFailure` adapters
+  (refinement checks for zero / ND edges, `refineFact` of initial and final
+  facts and `SideEffectRequirement` for F2F edges).
 * The resolution-failure hooks run once **per start base**, so a demand whose
   base is both receiver and argument is kept call-to-return twice; edge
   deduplication absorbs this.
@@ -504,17 +584,33 @@ Corrections to the above, found against the code:
 
 ## 6. Summaries (`JIRBackwardMethodCallSummaryHandler`)
 
-The handler inherits `MethodCallSummaryHandler`, with
+The handler implements `MethodCallSummaryHandler`, with
 `mapMethodExitToReturnFlowFact` set to the section 3 exit → return mapping.
-No rule-based rewriting and no call aliases.
+
+`handleSummary` mirrors forward's `JIRMethodCallSummaryHandler.handleSummary`
+minus two parts:
+
+* Kept: whenever applying a summary refines the caller's initial fact
+  (`initialFactRefinement != null`), it also emits
+  `createSideEffectRequirement(refinement)` (a `Sequent.SideEffectRequirement`
+  on fact-to-fact edges, nothing on zero / ND edges, where the default
+  handlers already require a universe refinement). The requirement is what
+  makes the engine refine the caller's own callers; without it a refinement
+  learned through a summary stays local to the edge.
+* Dropped: call aliases (`applyCallAliases` for summaries with a memory
+  effect and in `handleZeroToZero`). Backward inverts call-site aliases in
+  the call FF, on the demand before it enters the callee (section 5); the
+  summary is already mapped back to the call locals, and aliasing it again
+  would duplicate that work in the opposite direction.
+* Dropped: `prepareFactToFactSummary` / `prepareNDFactToFactSummary` rewriting
+  (`JIRMethodCallRuleBasedSummaryRewriter`), forward-only (section 5).
 
 ## 6a. Helper API (`JIRBackwardTaintRules`)
 
 `JIRBackwardTaintRules(apManager, context: JIRBackwardMethodAnalysisContext)`
 is a per-flow-function helper (create it lazily in the FF, it holds no state).
-It turns rules into demand seeds and demand facts into source findings. It is
-used by the Phase 1 stubs for the zero fact and is the intended entry point for
-the Phase 2 call FF and sequent FF.
+It turns rules into demand seeds and demand facts into source findings for
+the call FF and the sequent FF.
 
 Result types:
 
@@ -566,6 +662,7 @@ Demand → source match (fact):
 | `matchMethodEntrySources(statement, fact)` | sequent FF at `JMethodEnterInst` | `fact` as is (only `Argument`/`This` bases can match) |
 | `matchStaticFieldSources(statement: JIRAssignInst, fact)` | sequent FF at `x = C.f` | `fact.rebase(Return)` when `fact.base` is `x` |
 | `recordSourceMatches(statement, result)` | any | records one `BackwardSourceFinding` per `(Found, mark)` |
+| `recordMethodEntrySourceMatches(statement, result, initialFacts)` | sequent FF at `JMethodEnterInst` | `recordSourceMatches` unless the edge's initial facts all come from a caller through an argument root (section 4) |
 | `mapCalleeToCaller(statement, calleeFact): FinalFactAp?` | any call | section 3 exit → return mapping, single result |
 
 Matching uses `evaluateSourceRulePrecondition` with a
@@ -575,7 +672,8 @@ must contain `position·M·$` for an `AssignMark(position, M)` of the rule
 condition count as satisfied; the remaining positive literals become
 `ConditionDemand.facts`. The FF must:
 
-1. call `recordSourceMatches` for the findings,
+1. call `recordSourceMatches` (`recordMethodEntrySourceMatches` at
+   `JMethodEnterInst`) for the findings,
 2. emit `conditionDemands` as new demands (`CallToReturnZFact`/`CallToReturn*`
    in the call FF, `Sequent.*ToFact` in the sequent FF),
 3. merge `result.reader` into its own reader
@@ -587,6 +685,28 @@ the source (e.g. a source that also has a pass-through) is the FF's decision.
 
 Not covered by the helper: cleaner checks and inverse pass-through (they live
 in the call FF, section 5), aliases.
+
+Prescan rule registration (zero fact, `Prescan` phase only, results
+discarded):
+
+| Function | Called from | Queries |
+|---|---|---|
+| `registerPrescanCallSources(statement, callExpr, returnValue)` | call FF `propagateZeroToZero` | `sourceRulesForCallStatement` |
+| `registerPrescanStatementSources(statement)` | sequent FF `propagateZeroToZero` | `sourceRulesForMethodExit` at `return`, `sourceRulesForMethodEntry` at `JMethodEnterInst`, `sourceRulesForStaticField` at `x = C.f` |
+
+`JIRTaintAnalysisContext.handlePhase` adds the id of every rule it returns in
+`Prescan` to `relevantRuleIds` (and then keeps only pass-through rules), and
+`selectPhase(ShallowScan / FullScan)` hands that set to
+`TaintRulesProvider.selectRules`. Forward queries sinks **and** sources on the
+zero fact (call FF `propagateZeroToZero`, start FF `propagateZero`, sequent FF
+unconditional sources at `return` and static reads), so both kinds are
+registered. Backward matches sources only on demands, and `Prescan` has no
+demands (sink rules are filtered out, so no seeds exist), so without these
+calls no source id would be recorded and a semgrep-backed provider
+(`SemgrepRuleProvider.reduceTaint`, which drops a taint rule whose source
+group has no selected id) would drop the rule in the later phases. Cleaner
+and pass-through rules are queried on facts only, in forward as well, so they
+are not registered on the zero fact in either direction.
 
 ## 7. Required forward-side refactors
 
@@ -619,8 +739,11 @@ the finding does not name the sink. Recovering the sink needs trace resolution,
 which is out of scope.
 
 A third record, `BackwardDemandSeed(methodEntryPoint, statement, rule: TaintConfigurationSink, fact: FinalFactAp)`,
-is kept for every seed emitted by a sink rule. It is a debugging and test aid
-(the Phase 1 smoke test asserts on it); it is not a finding.
+is kept for every seed emitted by a sink rule when the tracker is created with
+`recordDemandSeeds = true` (manager constructor flag, off by default, on in
+the test harness). It is a debugging and test aid (the smoke tests assert on
+it); it is not a finding, and it would otherwise retain a fact per seed for
+the whole run.
 
 API: `addSourceFinding` / `addUnconditionalSink` / `addDemandSeed`, snapshot
 getters `sourceFindings()` / `unconditionalSinks()` / `demandSeeds()`, and
@@ -640,7 +763,10 @@ as `JIRBackwardAnalysisManager.findings` and resets it in `selectPhase`.
   them, so lambda calls go through resolution failure (pass-through
   approximation).
 * **Side-effect summaries and `trackFactsReachAnalysisEnd`** are not modelled.
-* **Exceptional flow** is ignored, as in forward.
+* **Exceptional flow.** As in forward, no fact leaves a method through an
+  exception (no `Exception` demands, no summaries from the exceptional exit),
+  but the statements that only reach a `throw` are analysed (section 1).
+* **Code that reaches no exit** (an infinite loop) is never analysed.
 * **Any-field demands.** A `ContainsMarkOnAnyAccessorLiteral` is demanded as
   the star path `x.[any]·M`. No access-path model can express "a path of
   length at least one", so an `Exact` cleaner on `x` cannot be inverted
@@ -648,66 +774,67 @@ as `JIRBackwardAnalysisManager.findings` and resets it in `selectPhase`.
 * **Sinks with only negated mark literals** are recorded as unconditional,
   matching the "negated mark condition is satisfied" convention of
   `removeNegated` in the trace preconditions.
-* **Rule selection without a prescan.** `selectPhase(FullScan())` calls
-  `selectRules(relevantRuleIds)` exactly like forward. When the backward run
-  skips `Prescan`, that set is empty. The test providers ignore
-  `selectRules`, but a semgrep-backed provider would then select no rules.
-  Run a `Prescan` phase first (it records the rule ids) when using such a
-  provider.
+* **Rule selection.** `selectPhase(ShallowScan / FullScan)` calls
+  `selectRules(relevantRuleIds)` exactly like forward, and the backward
+  `Prescan` records sink and source rule ids (section 6a). A run that skips
+  `Prescan` passes an empty set; the test providers ignore `selectRules`, but
+  a semgrep-backed provider would then select no rules, so run `Prescan` first
+  with such a provider (`BackwardAnalysisTest.runBackwardAnalysis(…,
+  stagedRuleSelection = true)` does, with `RuleIdSelectingProvider`, a test
+  provider that honours `selectRules`).
 
-## 10. Phase 1 status and test harness
+## 10. Test harness and tests
 
-Phase 1 delivers everything above except the fact-level flow functions:
-
-* `JIRBackwardMethodSequentFlowFunction` (stub): zero → `ZeroToZero`, plus the
-  exit-sink seeds at `return x` and the entry-sink seeds at `JMethodEnterInst`
-  (both via the helper). Every fact → `Unchanged`.
-  Constructor: `(apManager, analysisContext: JIRBackwardMethodAnalysisContext, currentInst: JIRInst)`.
-* `JIRBackwardMethodCallFlowFunction` (stub): zero → `CallToReturnZeroFact`,
-  `CallToStartZeroFact`, a `CallToReturnZFact` per sink seed, and
-  unconditional-sink findings. Every fact → `Unchanged` (`skipCall`).
-  Resolution failure keeps the fact call-to-return except for the `Return`
-  start base. Constructor:
-  `(apManager, analysisContext, returnValue: JIRImmediate?, callExpr: JIRCallExpr, statement: JIRInst)`.
-
-Phase 2 replaces the fact-level bodies of these two classes.
-
-Phase 2a (call FF) status: `JIRBackwardMethodCallFlowFunction` implements
-section 5 completely; the sequent FF is still the Phase 1 stub.
-`BackwardCallFlowTest` (sample `test.samples.BackwardCallSample`, plus
-`StringMethodDataFlowSample`) covers flows that need only the call FF:
-`sink(source())`, default-config pass-through on `String`/`StringBuilder`
-library calls, a user `CopyMark` pass rule (positive and other-mark
-negative), a demand through a callee's argument heap effect (`fill(sb)`
-appending a source inside the analysed callee, summarised back to the
-caller), argument / result / receiver cleaners and their negatives, a
-conditional source turning into a demand on its argument, and negative
-cases. Flows through a callee's `return x` (e.g. `x = identity(source())`,
-and the Phase 1 `SimpleDataFlowSample` source-reach test, whose `process`
-returns its argument) need the sequent FF and stay `@Disabled`.
-
-Test harness: `core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`.
+Both flow functions are complete (the phase 1 stubs, which handled only the
+zero fact, are gone). The tests live in
+`core/src/test/kotlin/org/opentaint/jvm/sast/dataflow/backward/`.
 
 * `BackwardAnalysisTest : AnalysisTest` builds
   `JIRSafeApplicationGraph(JApplicationSingleExitGraph(JApplicationGraphImpl(cp, usages)))`,
-  reverses it, creates `JIRBackwardAnalysisManager` and
-  `TaintAnalysisUnitRunnerManager` directly (`SingleLocationUnit`,
-  `DummySerializationContext`), selects the `ApManager` from `apMode`
-  (default `Tree`), and runs `selectPhase(FullScan())` → `resetApManager` →
-  `runAnalysis(entry)`. It returns a `BackwardResult` with the runner status,
-  the three tracker lists, the analysed methods and the facts per statement.
-  Rule builders, the rules provider and the graph come from `AnalysisTest`
-  (`findEntryPoint`, `createRulesProvider`, `createAnalysisGraph`,
-  `SingleLocationUnit` are now `protected`).
+  reverses it, creates `JIRBackwardAnalysisManager` (with
+  `recordDemandSeeds = true`) and `TaintAnalysisUnitRunnerManager` directly
+  (`SingleLocationUnit`, `DummySerializationContext`), selects the `ApManager`
+  from `apMode` (default `Tree`), and runs `selectPhase(FullScan())` →
+  `resetApManager` → `runAnalysis(entry)`. With `stagedRuleSelection = true`
+  it wraps the rules provider in `RuleIdSelectingProvider` (drops rules whose
+  `serializedId` was not passed to `selectRules`, like the semgrep provider)
+  and runs a `Prescan` phase first, followed by `cleanup()`, as
+  `StagedAnalysisRunner` does. It returns a `BackwardResult` with the runner
+  status, the three tracker lists, the analysed methods and the facts per
+  statement. Rule builders, the rules provider and the graph come from
+  `AnalysisTest` (`findEntryPoint`, `createRulesProvider`,
+  `createAnalysisGraph`, `SingleLocationUnit` are `protected`;
+  `functionMatcher` is a companion function, shared with `ForwardSuiteCases`).
 * Assertions: `assertSourceReached(config, testCls, entryPointName, sourceMethodName, mark, testName)`
   and `assertNoSourceReached(config, testCls, entryPointName, testName)`.
 * `BackwardSmokeTest` on `test.samples.SimpleDataFlowSample#simpleDataFlow`:
-  * the sink seed is produced once, at the `sink(...)` call, on the caller
-    local, with the `tainted` mark, and every callee is entered from its exit;
-  * a method-entry sink on `sink` is seeded at `JMethodEnterInst` of `sink`,
-    and its zero-to-fact summary is mapped back to the caller's argument local
-    (visible at the `process(...)` call, the next backward statement);
-  * the source-reach assertion is `@Disabled("phase 2")`.
+  the sink seed is produced once, at the `sink(...)` call, on the caller
+  local, with the `tainted` mark, and every callee is entered from its exit; a
+  method-entry sink on `sink` is seeded at `JMethodEnterInst` of `sink`, and
+  its zero-to-fact summary is mapped back to the caller's argument local; the
+  sink demand reaches the source.
+* `BackwardCallFlowTest` (sample `BackwardCallSample`, plus
+  `StringMethodDataFlowSample`): `sink(source())`, default-config
+  pass-through on `String`/`StringBuilder` library calls, a user `CopyMark`
+  pass rule (positive and other-mark negative), a demand through a callee's
+  argument heap effect, a result demand through a callee's `return x`,
+  argument / result / receiver cleaners and their negatives, a conditional
+  source turning into a demand on its argument, and negative cases.
+* `BackwardSequentFlowTest` and `BackwardSequentFlowFunctionTest`: section 4.2.
+* `BackwardRegressionTest` (sample `BackwardRegressionSample`): review
+  regressions, each checked against forward on the same config. A sink on a
+  branch ending in a throw, inside a callee that always throws, and in a catch
+  handler that rethrows (exceptional exit, section 1); the heap effect of a
+  callee that always throws does not reach the caller; a sink in a loop with
+  no exit (neither direction reports it); call-site aliases rooted at an
+  argument, `this`, a local and a static field (section 5); an entry source
+  of a callee that does not reach the caller through the argument root, and
+  does reach it through an argument field, the return value and a static
+  field, and a sink inside the callee (section 4); an exit source on a method
+  returning a constant (refinement without an emitted demand); and, with
+  `stagedRuleSelection`, call, entry, exit and static-field sources surviving
+  the prescan rule selection (section 6a).
+* `BackwardForwardDifferentialTest`: section 11.
 
 ## 11. Differential validation
 
