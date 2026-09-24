@@ -2,7 +2,6 @@ package org.opentaint.jvm.sast.dataflow.backward
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
@@ -146,7 +145,6 @@ class BackwardCallFlowTest : BackwardAnalysisTest() {
         assertNotReached(config(CALL_CLS), CALL_CLS, "calleeArgHeapEffectOtherArg")
     }
 
-    @Disabled("needs the sequent flow function for `return value` in the callee")
     @Test
     fun `callee return value - result demand enters the callee and reaches the caller source`() {
         assertReached(config(CALL_CLS), CALL_CLS, "calleeReturnValue")

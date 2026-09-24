@@ -2,7 +2,6 @@ package org.opentaint.jvm.sast.dataflow.backward
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
@@ -92,7 +91,6 @@ class BackwardSmokeTest : BackwardAnalysisTest() {
         )
     }
 
-    @Disabled("phase 2")
     @Test
     fun `simple flow - sink demand reaches the source`() {
         assertSourceReached(
