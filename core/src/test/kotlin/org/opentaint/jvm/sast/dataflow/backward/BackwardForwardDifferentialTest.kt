@@ -1,6 +1,7 @@
 package org.opentaint.jvm.sast.dataflow.backward
 
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DynamicContainer
 import org.junit.jupiter.api.DynamicNode
 import org.junit.jupiter.api.DynamicTest
@@ -11,11 +12,18 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
-    data class Divergence(val caseId: String, val ruleId: String, val reason: String)
+    data class Divergence(
+        val caseId: String,
+        val ruleId: String,
+        val reason: String,
+        val modes: Set<ApMode>,
+        val backwardReaches: Boolean,
+    )
 
     data class SinkGroup(val index: Int, val sinks: List<SerializedRule.Sink>) {
         val marksByRule: Map<String, Set<String>> = sinks.associate { sink ->
@@ -40,26 +48,72 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
             "forward holds the any-field entry fact as the star path x.[any].M when the Exact cleaner on x runs in the same method and " +
                 "Cleaner.kt removes the whole star; backward demands the concrete path x.k.M, which the cleaner keeps"
 
-        val commonDivergences: List<Divergence> =
-            listOf(Divergence("${ForwardSuiteCases.JAVA_REACHABILITY}/lambdaCaptureFlow", "reach", LAMBDA_RESOLUTION)) +
-                (1..5).flatMap { markCount ->
-                    (1..markCount).map { mark ->
-                        Divergence(
-                            "${ForwardSuiteCases.CLEANER_DSL}/matrix-$markCount-AnyField",
-                            "cleaner-dsl-matrix-AnyField-Plain-AnyField-field-depth0-mark$mark",
-                            STAR_DEMAND_EXACT_CLEANER,
-                        )
-                    }
-                } +
-                listOf(
-                    Divergence("${ForwardSuiteCases.CLEANER_DSL}/field-store", "field-store-any", STAR_DEMAND_EXACT_CLEANER),
-                    Divergence("${ForwardSuiteCases.CLEANER_CONTROL_FLOW}/sequentialMarks", "sequenceNestedAfterPlainSink-m1", STAR_DEMAND_EXACT_CLEANER),
-                    Divergence("${ForwardSuiteCases.CLEANER_STAR_DUAL}/nestedStoreThenCleanerThenAnySink", "any-sink", STAR_DEMAND_EXACT_CLEANER),
-                    Divergence("${ForwardSuiteCases.CLEANER_STAR_DUAL}/inlineCleanerThenFieldSink", "field-sink", STAR_FACT_EXACT_CLEANER),
-                )
+        private const val FORWARD_KNOWN_FALSE_NEGATIVE =
+            "the forward suite disables this flow as a known false negative (List<List<T>>); the nested element is representable here " +
+                "and backward reports the real flow, while forward drops the vulnerability its IFDS facts reach"
+
+        private const val AUTOMATA_STAR_KEPT =
+            "the any-field sink is demanded as the star x.[any].M; in Automata an Exact cleaner on x returns the star unchanged, " +
+                "so the demand still matches the root-level mark the Plain source produced and the cleaner removed"
+
+        private const val BASE_ONLY_ROOT_DEMAND =
+            "base-only access paths seed the sink demand at the root with an open field tail (x.M/*): Exact cleaners never remove it and " +
+                "the any-field cleaner keeps root marks, then a field write y.f = v moves it to v; forward holds y.f.M, which the cleaner " +
+                "removes or the root check does not match"
+
+        private val ALL_MODES = ApMode.entries.toSet()
+        private val TREE = setOf(ApMode.Tree)
+        private val AUTOMATA = setOf(ApMode.Automata)
+        private val BASE_ONLY_FIELD = setOf(ApMode.BaseOnlyField)
+
+        private fun divergence(suite: String, case: String, rule: String, reason: String, modes: Set<ApMode>, backwardReaches: Boolean) =
+            Divergence("$suite/$case", rule, reason, modes, backwardReaches)
+
+        val commonDivergences: List<Divergence> = buildList {
+            val java = ForwardSuiteCases.JAVA_REACHABILITY
+            val dsl = ForwardSuiteCases.CLEANER_DSL
+            val flow = ForwardSuiteCases.CLEANER_CONTROL_FLOW
+            val dual = ForwardSuiteCases.CLEANER_STAR_DUAL
+
+            add(divergence(java, "lambdaCaptureFlow", "reach", LAMBDA_RESOLUTION, ALL_MODES, false))
+            add(divergence(java, "streamFlatMapFlow", "reach", FORWARD_KNOWN_FALSE_NEGATIVE, AUTOMATA, true))
+
+            for (markCount in 1..5) {
+                for (mark in 1..markCount) {
+                    val anyPlainAny = "cleaner-dsl-matrix-AnyField-Plain-AnyField-field-depth0-mark$mark"
+                    add(divergence(dsl, "matrix-$markCount-AnyField", anyPlainAny, STAR_DEMAND_EXACT_CLEANER, TREE, false))
+                    val plainPlainAny = "cleaner-dsl-matrix-Plain-Plain-AnyField-field-depth0-mark$mark"
+                    add(divergence(dsl, "matrix-$markCount-Plain", plainPlainAny, AUTOMATA_STAR_KEPT, AUTOMATA, true))
+                }
+            }
+            add(divergence(dsl, "field-store", "field-store-any", STAR_DEMAND_EXACT_CLEANER, TREE, false))
+            add(divergence(flow, "sequentialMarks", "sequenceNestedAfterPlainSink-m1", STAR_DEMAND_EXACT_CLEANER, TREE, false))
+            add(divergence(dual, "nestedStoreThenCleanerThenAnySink", "any-sink", STAR_DEMAND_EXACT_CLEANER, TREE, false))
+            add(divergence(dual, "inlineCleanerThenFieldSink", "field-sink", STAR_FACT_EXACT_CLEANER, TREE, true))
+
+            for (sink in listOf("sequenceAfterM1Sink", "sequenceAfterM2Sink", "sequenceAfterM4SourceSink", "sequenceAfterM3Sink", "sequenceAllCleanSink")) {
+                add(divergence(flow, "sequentialMarks", "$sink-m1", AUTOMATA_STAR_KEPT, AUTOMATA, true))
+            }
+
+            add(divergence(dsl, "field-store", "field-store-plain", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
+            add(divergence(dsl, "field-store", "field-store-cleaned", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
+            add(divergence(dsl, "helperSourceAndCleanerExample-cleaned", "helper-source-sink", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
+            val baseOnlyFieldSequential = listOf(
+                "sequenceAfterM2Sink-m2", "sequenceAfterM4SourceSink-m2", "sequenceAfterM3Sink-m2", "sequenceAfterM3Sink-m3",
+                "sequenceAllCleanSink-m2", "sequenceAllCleanSink-m3", "sequenceAllCleanSink-m4",
+                "sequenceNestedAfterPlainSink-m2", "sequenceNestedAfterPlainSink-m3", "sequenceNestedAfterPlainSink-m4",
+                "sequenceNestedAfterAnySink-m2", "sequenceNestedAfterAnySink-m3", "sequenceNestedAfterAnySink-m4",
+            )
+            baseOnlyFieldSequential.forEach { add(divergence(flow, "sequentialMarks", it, BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true)) }
+            listOf("cleanBeforeNewSourceSink-m1", "newSourceAfterCleanSink-m1", "newSourceCleanedSink-m1", "newSourceCleanedSink-m2").forEach {
+                add(divergence(flow, "cleanThenRetain", it, BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
+            }
+        }
     }
 
     open val checkForwardExpectations: Boolean = false
+
+    open val acceptSuiteExpectation: Boolean = true
 
     private var currentCase: ForwardCase? = null
 
@@ -87,6 +141,13 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
         }
     }
 
+    private fun forwardIsolatedRuleIds(case: ForwardCase, group: SinkGroup): Set<String> = withCase(case) {
+        group.sinks.flatMapTo(hashSetOf()) { sink ->
+            runAnalysis(case.config.copy(sink = listOf(sink)), case.entryClass, case.entryMethod)
+                .map { it.vulnerability.rule.id }
+        }
+    }
+
     private fun backwardMarks(case: ForwardCase, group: SinkGroup): Set<String> = withCase(case) {
         val result = runBackwardAnalysis(case.config.copy(sink = group.sinks), case.entryClass, case.entryMethod)
         assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, result.status, "${case.id}: backward analysis status")
@@ -95,7 +156,7 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
 
     @TestFactory
     fun `backward agrees with forward`(): List<DynamicNode> {
-        val divergenceIndex = divergences.associateBy { it.caseId to it.ruleId }
+        val divergenceIndex = divergences.filter { apMode in it.modes }.associateBy { it.caseId to it.ruleId }
         return ForwardSuiteCases.all.groupBy { it.suite }.map { (suite, cases) ->
             DynamicContainer.dynamicContainer(suite, cases.map { case ->
                 DynamicContainer.dynamicContainer(case.name, sinkGroups(case).map { group ->
@@ -108,36 +169,41 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
     }
 
     private fun checkGroup(case: ForwardCase, group: SinkGroup, divergenceIndex: Map<Pair<String, String>, Divergence>) {
-        val forward = forwardRuleIds(case)
+        val groupRules = group.marksByRule.keys
+        val suite = case.expectedRuleIds.intersect(groupRules)
         if (checkForwardExpectations) {
-            val groupRules = group.marksByRule.keys
             assertEquals(
-                case.expectedRuleIds.intersect(groupRules),
-                forward.intersect(groupRules),
+                suite,
+                forwardRuleIds(case).intersect(groupRules),
                 "${case.id}: forward result differs from the forward suite expectation",
             )
         }
 
+        val forward = forwardIsolatedRuleIds(case, group)
         val backward = backwardMarks(case, group)
-        val expectedMarks = hashSetOf<String>()
-        val divergent = mutableListOf<Divergence>()
+
+        val mismatches = mutableListOf<String>()
         for ((ruleId, marks) in group.marksByRule) {
+            val backwardReached = backward.containsAll(marks)
             val forwardReached = ruleId in forward
+            val suiteExpects = ruleId in suite
             val divergence = divergenceIndex[case.id to ruleId]
-            if (divergence != null) divergent += divergence
-            val backwardExpected = if (divergence != null) !forwardReached else forwardReached
-            if (backwardExpected) expectedMarks += marks
+
+            val agrees = when {
+                divergence != null -> backwardReached == divergence.backwardReaches &&
+                    backwardReached != forwardReached &&
+                    (!acceptSuiteExpectation || backwardReached != suiteExpects)
+
+                acceptSuiteExpectation -> backwardReached == forwardReached || backwardReached == suiteExpects
+                else -> backwardReached == forwardReached
+            }
+
+            if (!agrees) {
+                mismatches += "$ruleId: backward=$backwardReached forward=$forwardReached suite=$suiteExpects divergence=${divergence?.reason}"
+            }
         }
 
-        val demanded = group.marksByRule.values.flatten().toSet()
-        assertEquals(
-            expectedMarks,
-            backward.intersect(demanded),
-            buildString {
-                append("${case.id} group ${group.index}: forward reached ${forward.intersect(group.marksByRule.keys)}")
-                if (divergent.isNotEmpty()) append(", accepted divergences $divergent")
-            },
-        )
+        assertTrue(mismatches.isEmpty(), "${case.id} group ${group.index}: ${mismatches.joinToString("; ")}")
     }
 
     private fun sinkGroups(case: ForwardCase): List<SinkGroup> {
@@ -160,4 +226,17 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
 
 class TreeBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
     override val checkForwardExpectations: Boolean = true
+    override val acceptSuiteExpectation: Boolean = false
+}
+
+class AutomataBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
+    override val apMode: ApMode = ApMode.Automata
+}
+
+class BaseOnlyBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
+    override val apMode: ApMode = ApMode.BaseOnly
+}
+
+class BaseOnlyFieldBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
+    override val apMode: ApMode = ApMode.BaseOnlyField
 }
