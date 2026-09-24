@@ -60,13 +60,14 @@ class JIRBackwardAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     override val params: JIRAnalysisManager.Params = JIRAnalysisManager.Params(),
+    recordDemandSeeds: Boolean = false,
 ) : JIRLanguageManager(cp), TaintAnalysisManager, JIRAnalysisManagerBase {
     private val refManager = refManager.softRefManager("JIRBackwardAnalysisManager")
     private val phaseTaintConfig = SelectedTaintRulesProvider(taintConfig)
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
-    val findings = JIRBackwardFindingTracker()
+    val findings = JIRBackwardFindingTracker(recordDemandSeeds)
 
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRBackwardMethodAnalysisContext>()

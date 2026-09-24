@@ -55,7 +55,7 @@ abstract class BackwardAnalysisTest : AnalysisTest() {
 
         val refManager = RefManager()
         val cancellation = Cancellation()
-        val manager = JIRBackwardAnalysisManager(cp, refManager, rulesProvider)
+        val manager = JIRBackwardAnalysisManager(cp, refManager, rulesProvider, recordDemandSeeds = true)
 
         @Suppress("UNCHECKED_CAST")
         val engine = TaintAnalysisUnitRunnerManager(

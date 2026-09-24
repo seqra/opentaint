@@ -8,7 +8,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import java.util.concurrent.ConcurrentHashMap
 
-class JIRBackwardFindingTracker {
+class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) {
     data class BackwardSourceFinding(
         val methodEntryPoint: MethodEntryPoint,
         val statement: JIRInst,
@@ -42,6 +42,7 @@ class JIRBackwardFindingTracker {
     }
 
     fun addDemandSeed(seed: BackwardDemandSeed) {
+        if (!recordDemandSeeds) return
         demandSeeds.add(seed)
     }
 
