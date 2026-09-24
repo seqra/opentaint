@@ -80,6 +80,7 @@ interface MethodSideEffectHandlerWithAnyAccessorRequestHandling : MethodSideEffe
                     val answered = request.marks.filterTo(hashSetOf()) {
                         handleMarkAfterAnyFieldRequest(summaryEffect.delta, request, it)
                     }
+                    if (answered.isEmpty()) return request
                     if (answered.size == request.marks.size) return null
                     return request.copy(marks = request.marks - answered)
                 }

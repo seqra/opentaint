@@ -30,7 +30,7 @@ data class DefaultFactWithMarkAfterAnyFieldResolver(
 
     fun flush() {
         if (marks.isEmpty()) return
-        addSideEffect(initialFact, TaintMarkFieldUnfoldRequest(method, initialFact, marks.toSet(), suffix = null))
+        addSideEffect(initialFact, TaintMarkFieldUnfoldRequest(method, initialFact, java.util.Set.copyOf(marks), suffix = null))
     }
 
     companion object {
