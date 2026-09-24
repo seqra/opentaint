@@ -120,7 +120,6 @@ class JIRBackwardMethodCallFlowFunction(
     private fun callSiteAliasDemands(factReader: FinalFactReader): List<FinalFactAp> {
         val aliasAnalysis = analysisContext.aliasAnalysis ?: return emptyList()
         val factAp = factReader.factAp
-        if (factAp.base !is AccessPathBase.LocalVar) return emptyList()
 
         val result = mutableListOf<FinalFactAp>()
         for (local in callLocals) {
