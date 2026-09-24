@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -67,6 +68,11 @@ class JIRBackwardMethodSequentFlowFunction(
                 propagateFactWithAccessorExclude = { _, _ ->
                     error("Zero to Fact edge can't be refined: $currentFactAp")
                 },
+                requireRefinement = { reader ->
+                    check(!reader.hasRefinement) {
+                        "Zero to Fact edge can't be refined: $currentFactAp"
+                    }
+                },
             )
         )
     }
@@ -89,6 +95,9 @@ class JIRBackwardMethodSequentFlowFunction(
                         val refinedFact = fact.excludeField(accessor)
                         add(Sequent.FactToFact(refinedInitial, refinedFact, TraceInfo.Flow))
                     },
+                    requireRefinement = { reader ->
+                        add(Sequent.SideEffectRequirement(reader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty))))
+                    },
                 )
             )
         }
@@ -110,6 +119,11 @@ class JIRBackwardMethodSequentFlowFunction(
                     propagateFactWithAccessorExclude = { _, _ ->
                         error("NDF2F edge can't be refined: $currentFactAp")
                     },
+                    requireRefinement = { reader ->
+                        check(!reader.hasRefinement) {
+                            "NDF2F edge can't be refined: $currentFactAp"
+                        }
+                    },
                 )
             )
         }
@@ -121,6 +135,7 @@ class JIRBackwardMethodSequentFlowFunction(
         val propagateFact: (FinalFactAp) -> Unit,
         val propagateFactWithRefinement: (FinalFactReader, FinalFactAp) -> Unit,
         val propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
+        val requireRefinement: (FinalFactReader) -> Unit,
     ) {
         fun keep(fact: FinalFactAp) {
             if (fact == current) unchanged() else propagateFact(fact)
@@ -129,6 +144,7 @@ class JIRBackwardMethodSequentFlowFunction(
         fun keepAll(reader: FinalFactReader?, facts: List<FinalFactAp>) {
             if (reader != null && reader.hasRefinement) {
                 facts.forEach { propagateFactWithRefinement(reader, it) }
+                if (facts.isEmpty()) requireRefinement(reader)
             } else {
                 facts.forEach { keep(it) }
             }
