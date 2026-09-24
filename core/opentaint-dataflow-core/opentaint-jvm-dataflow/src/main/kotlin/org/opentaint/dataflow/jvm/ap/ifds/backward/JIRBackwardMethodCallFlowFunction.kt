@@ -20,6 +20,9 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithConditi
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
@@ -27,11 +30,13 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.EvaluatedPass
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionInverseEvaluator
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.util.onSome
 
 class JIRBackwardMethodCallFlowFunction(
@@ -69,31 +74,38 @@ class JIRBackwardMethodCallFlowFunction(
         addCallToStart: (factReader: FinalFactReader, callerFact: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
-        if (!JIRBackwardMethodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, factAp)) {
+        val factReader = FinalFactReader(factAp, apManager)
+        val demands = mutableListOf<FinalFactAp>()
+
+        if (JIRBackwardMethodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, factAp)) {
+            demands += factAp
+        } else {
             skipCall()
-            return
         }
 
-        val factReader = FinalFactReader(factAp, apManager)
+        demands += callSiteAliasDemands(factReader)
+
         val conditionDemands = mutableListOf<FinalFactAp>()
 
-        JIRBackwardMethodCallFactMapper.mapMethodCallToStartFlowFact(
-            statement,
-            callee = callExpr.callee,
-            callExpr = callExpr,
-            returnValue = returnValue,
-            factAp = factAp,
-            checker = analysisContext.factTypeChecker,
-        ) { callerFact, startFactBase ->
-            val sourceMatches = rules.matchCallSources(statement, callExpr, returnValue, callerFact, startFactBase)
-            rules.recordSourceMatches(statement, sourceMatches)
-            sourceMatches.reader?.let { factReader.updateRefinement(it) }
-            conditionDemands += sourceMatches.conditionDemands
+        for (demand in demands) {
+            JIRBackwardMethodCallFactMapper.mapMethodCallToStartFlowFact(
+                statement,
+                callee = callExpr.callee,
+                callExpr = callExpr,
+                returnValue = returnValue,
+                factAp = demand,
+                checker = analysisContext.factTypeChecker,
+            ) { callerFact, startFactBase ->
+                val sourceMatches = rules.matchCallSources(statement, callExpr, returnValue, callerFact, startFactBase)
+                rules.recordSourceMatches(statement, sourceMatches)
+                sourceMatches.reader?.let { factReader.updateRefinement(it) }
+                conditionDemands += sourceMatches.conditionDemands
 
-            applyCleanersOrCallToStart(
-                factReader, callerFact, startFactBase,
-                addCallToReturn, addCallToStart, addUnchecked
-            )
+                applyCleanersOrCallToStart(
+                    factReader, callerFact, startFactBase,
+                    addCallToReturn, addCallToStart, addUnchecked
+                )
+            }
         }
 
         for (demand in conditionDemands) {
@@ -103,6 +115,42 @@ class JIRBackwardMethodCallFlowFunction(
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
         }
+    }
+
+    private fun callSiteAliasDemands(factReader: FinalFactReader): List<FinalFactAp> {
+        val aliasAnalysis = analysisContext.aliasAnalysis ?: return emptyList()
+        val factAp = factReader.factAp
+        if (factAp.base !is AccessPathBase.LocalVar) return emptyList()
+
+        val result = mutableListOf<FinalFactAp>()
+        for (local in callLocals) {
+            val aliasesBefore = aliasAnalysis.findAlias(local, statement) ?: continue
+            val aliasesAfter = aliasAnalysis.findAliasAfterStatement(local, statement)?.toSet() ?: continue
+
+            for (alias in aliasesBefore) {
+                if (alias !is AliasApInfo || alias.base != factAp.base || alias !in aliasesAfter) continue
+                if (alias.accessors.isEmpty() && local == factAp.base) continue
+
+                val accessors = alias.accessors.map { it.apAccessor() }
+                val position = accessors.fold(PositionAccess.Simple(factAp.base) as PositionAccess) { position, accessor ->
+                    PositionAccess.Complex(position, accessor)
+                }
+                if (!factReader.containsPosition(position)) continue
+
+                val aliased = accessors.fold(factAp as FinalFactAp?) { fact, accessor -> fact?.readAccessor(accessor) }
+                    ?: continue
+                result += aliased.rebase(local)
+            }
+        }
+        return result
+    }
+
+    private val callLocals: List<AccessPathBase.LocalVar> by lazy {
+        buildList {
+            (callExpr as? JIRInstanceCallExpr)?.let { add(it.instance) }
+            addAll(callExpr.args)
+            returnValue?.let { add(it) }
+        }.mapNotNull { MethodFlowFunctionUtils.accessPathBase(it) as? AccessPathBase.LocalVar }.distinct()
     }
 
     private fun applyCleanersOrCallToStart(
