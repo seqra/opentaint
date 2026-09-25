@@ -3,20 +3,27 @@
 - **Status:** design, model v2.
 - **Formal model:** `formal/markset-scan` (Lean 4.33.1, constructive). It is
   checked by `formal/markset-scan/check.sh`.
-- **Branch base:** `saloed/staged-analysis-clean`.
+- **Branch base:** `origin/main` (`ce24bbbb9`).
 
 ## 1. Summary
 
-The staged analysis runs prescan → shallow scan → full scan. The shallow scan
-selects `(statement, rule, actions)` triples (`ActionableRules`), and the full
-scan runs only with those. Today the shallow scan is a second IFDS run with the
-BaseOnly access-path domain, followed by per-finding trace resolution and a
-trace walk (`TraceActionSearcher`).
+**What main does today.** `TaintAnalyzer.analyzeStaged` runs a prescan and
+then the full scan. The only selection the prescan produces is a global set of
+rule ids (`relevantRuleIds`), applied through `taintConfig.selectRules`.
 
-This document specifies a replacement that plugs into the same integration
-point. It does not run IFDS a second time. The prescan records the call graph
-and every rule's residual (mark-only) condition, and the replacement then runs
-three steps:
+**The staged branch.** The unmerged branch `saloed/staged-analysis-clean`
+inserts a shallow scan between the two phases. That scan is a second IFDS run
+in the BaseOnly access-path domain, followed by trace-based rule discovery.
+Its output is a statement-level selection (`ActionableRules`).
+
+**What this document adds, directly on main.**
+
+- **A statement-level selection mechanism** (§10): the `ActionableRules`
+  type, with the same shape as on the staged branch, and a provider that
+  *filters* the delegate's rules.
+- **A mark-set shallow phase that computes the selection.** It does not run
+  IFDS a second time. The prescan records the call graph and every rule's
+  residual (mark-only) condition. The phase then runs three steps:
 
 1. **Forward step: mark sets.** Compute which taint marks can exist in the part
    of the program reachable from each root, with access-path bases erased. A
@@ -57,7 +64,8 @@ The audit is transitive, so private lemmas are covered too.
 
 | Item | Status |
 |---|---|
-| JVM (`JIRAnalysisManager` + `SelectedTaintRulesProvider`) | in scope |
+| Statement-level selection mechanism on main (`ActionableRules`, filtering `SelectedTaintRulesProvider`, phase wiring) | in scope (§10) |
+| JVM (`JIRAnalysisManager`) | in scope |
 | Go | Out. No statement-level provider exists, so the phase is skipped and the full scan uses the baseline, which is the current behaviour. The model is language-agnostic. |
 | Flow-insensitive mode (default) | in scope, proved |
 | Relevance pass (default on) | in scope, proved |
@@ -84,22 +92,30 @@ Two kinds of difference are allowed:
 
 ## 3. Background: what exists
 
-Facts from the code on `saloed/staged-analysis-clean`, with references:
+Facts from the code on `origin/main` (`ce24bbbb9`), with references. Engine
+files the staged branch does not modify are identical on both branches.
 
-**Selection type and provider**
-- The selection type is
-  `ActionableRules = Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>`.
-  Sinks carry an empty action set. Sources carry the `AssignMark` subset to
-  keep.
-- `SelectedTaintRulesProvider` currently *replaces* the delegate's answer for
-  six rule kinds with the per-statement map. It does not filter the answer:
-  `sinkRulesForMethodExit` returns the selected exit sinks without the
-  delegate's `initialFacts` filter (`JIRMethodExitRuleProvider`, "Apply method
-  exit rules on Z2F edges only"). §10 changes this. The model already assumes
-  filter semantics.
-- Cleaners, pass-throughs, static-field sources, and every `allRelevant = true`
-  query (the implicit kills in the summary rewriter) always go to the
-  delegate.
+**Phases and selection**
+- *Phases.* `TaintAnalysisManager.Phase` is `Prescan | FullScan`, both data
+  objects. `TaintAnalyzer.analyzeStaged` runs `prescan` (Tree AP,
+  `ifdsTimeout·0.3`, failures only logged) and then `fullScan`.
+- *Selection on main.* It is the rule-id set only.
+  `JIRAnalysisManager.selectPhase(FullScan)` calls
+  `taintConfig.selectRules(relevantRuleIds)`. There is no statement-level
+  selection.
+- *The staged branch's selection.* `ActionableRules =
+  Map<CommonInst, Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>>`,
+  installed by `SelectedTaintRulesProvider`. That provider *replaces* the
+  delegate's answer instead of filtering it. `sinkRulesForMethodExit` then
+  drops the delegate's `initialFacts` filter (`JIRMethodExitRuleProvider`,
+  "Apply method exit rules on Z2F edges only").
+  - This spec reuses the type, so the two branches stay mergeable.
+  - It requires filter semantics (§10), which is what the model's `Sel`
+    assumes.
+  - Anyone merging the staged branch must take the §10 provider.
+- *Always delegated.* Cleaners, pass-throughs, static-field sources, and every
+  `allRelevant = true` query (the implicit kills in the summary rewriter)
+  must go to the delegate. §10 keeps this.
 
 **Residuals and how the engine evaluates them**
 - *Residuals.* `JIRMarkAwareConditionRewriter` folds every non-mark atom at a
@@ -153,8 +169,15 @@ Facts from the code on `saloed/staged-analysis-clean`, with references:
   store.
 
 **Prescan status and stored summaries**
-- *Prescan status* is currently lost. The prescan swallows its failures, and
-  `resetApManager` forces the status back to `OK`.
+- *Prescan status.* The prescan swallows its exceptions (`runCatching`), but
+  the engine status survives it. `TaintAnalysisUnitRunnerManager.status` is set
+  by `updateFailureStatus`, and main's `resetApManager` does not reset it. So
+  the phase can read `ifdsEngine.status.get()` right after the prescan's
+  `runAnalysis`. The staged branch resets the status in `resetApManager`; do
+  not carry that change over.
+  - Because the status is not reset, a prescan failure also shows up in the
+    full scan's reported status. This is existing behaviour and is left
+    unchanged.
 - *Stored summaries.* When summaries are preloaded, the prescan skips those
   bodies. The full scan does not skip them, because `resetApManager` clears the
   loaded flag.
@@ -241,7 +264,7 @@ made an explicit assumption.
 | G2 (M3) | The engine joins across method *contexts* at a statement. v1 joined only within one node. | `Program.method`. Joined premises can come from any node of the same method (`PE.genJoined`, `InS.joined`, `CubeSat`). |
 | G3 (B4) | The old §6.2 claimed that under 4* the per-root closure alone is sound. It is **false**. Relaxing `(A@0 ∧ B@1) ⇒ C` to `A ∨ B` per root loses the zero-context placement of C. A third root that passes neither A nor B, but calls n and has a sink on C, loses its finding (`naive_relax_unsound`). | 4* relaxes only the *test* of joined cubes. Their placement is unchanged (`InSRelax`, `markset_exact_relaxed`). |
 | G4 (M2) | An engine fact is a per-base tree with several marks. A cleaner conditioned on mark B also fires on a tree holding a needed mark A. If B were pruned, A would survive, and the restricted run would report more findings. | Every recorded cleaner atom is `Needed` (`Needed.cleanerAtom`). The model keeps kills as a fixed predicate, justified by E4. |
-| G5 (B1) | The provider replaces the delegate's rules instead of filtering them, so exit sinks lose their `initialFacts` filter. This also affects the TRACE mode today. | The provider filters the delegate's answer (§10). This is the semantics `Sel` assumes. |
+| G5 (B1) | The provider replaces the delegate's rules instead of filtering them, so exit sinks lose their `initialFacts` filter. It is found in the staged branch's provider. On main the provider is new. | The provider filters the delegate's answer (§10). This is the semantics `Sel` assumes. |
 | G6 (B2) | Exit rules at throw statements are never recorded. | Record at throws, and fall back to the delegate at unrecorded statements (§10). |
 
 ### 5.3 Accepted precision losses
@@ -458,7 +481,7 @@ restricted run behaves like `PE`'s for exactness.
 | E6 | Multi-fact conditions are joined only at one statement, over facts present there under any context of the method, and the result is a zero-context fact. ND summaries applied at callers combine only facts already present at the call. | `TaintSinkTracker` assumption keys; `applyRuleWithAssumptions`; `matchNDInitial` | Covered by the model (`PE.genJoined`). D1 regression sample (§8). |
 | E7 | No summaries are preloaded. | Preloaded summaries hide callee bodies from the prescan. | Fail-open trigger 2. |
 | E8 | Pass-through residuals contribute their atoms to `Needed`. They are mark-free in shipped models and in Semgrep output. | `model/**/config/*.yaml`; Semgrep emits no pass-throughs. | `Needed.passAtom`. |
-| E9 | The gate compares the finding set after confirmation and before the trace filter. | `StagedAnalysisRunner.fullScan`: `confirmVulnerabilities`, then the trace filter. | The harness compares `(ruleId, location)` keys at that point. Code-flow counts are excluded, because the existing e2e diff inflates "missing findings" when it counts code flows. |
+| E9 | The gate compares the finding set after confirmation and before the trace filter. | `TaintAnalyzer.fullScan`: `confirmVulnerabilities`, then the trace filter. | The harness compares `(ruleId, location)` keys at that point. Code-flow counts are excluded, because the existing e2e diff inflates "missing findings" when it counts code flows. |
 | E10 | The engine has the derivation locality `T-REL` relies on: a needed-mark fact's derivation uses only needed-mark facts, zero reachability, and needed-mark initial facts or preconditions (including abstract initial facts in `matchNDInitial`). | Traced by the review. There is no negative dependence on facts other than kills (E4). | Layer 3 debug diff: per statement, the needed-mark facts of the baseline and of the restricted run must be equal (§8). |
 | E11 | Confirmation (`VulnerabilityChecker`) of a finding depends only on the sink's end facts and the caller walk. Those are needed marks (`Needed.sinkGen`) and the call graph. | `VulnerabilityChecker` | Covered by the Layer 3 differential. |
 
@@ -513,7 +536,7 @@ check recorded edges and sites for these cases:
 This layer also runs the E1 and E2 debug checks over the whole sample suite.
 
 **Layer 3: differential.** Every existing JVM taint sample runs under both the
-baseline and `MARK_SET`. The finding sets must be equal (E9), with the E10
+baseline and with `markSetScan` on. The finding sets must be equal (E9), with the E10
 per-statement needed-fact diff enabled.
 
 New samples:
@@ -542,7 +565,7 @@ New samples:
 - the prescan completion rate (the mode fails open on incomplete prescans);
 - selected actions / baseline actions;
 - selected sinks / baseline sinks;
-- full-scan time vs. the baseline and vs. TRACE mode;
+- full-scan time vs. the baseline and, where available, vs. the staged branch's BaseOnly shallow scan;
 - how often the phase fails open.
 
 **Usefulness bar:** the corpus median of selected actions is ≤ 60% of the
@@ -581,8 +604,21 @@ normal edges only, matching the engine.
 
 ## 10. Integration
 
+**The selection mechanism** (new on main):
+- *The type.* `ActionableRules` goes in `org.opentaint.dataflow.ap.ifds.taint`,
+  defined exactly as on the staged branch.
+- *The hook.* `TaintAnalysisManager.selectStatementRules(rules:
+  ActionableRules?)` gets a default no-op, which is what Go uses.
+- *JVM.* `JIRAnalysisManager` wraps `taintConfig` in `SelectedTaintRulesProvider`
+  for the taint analysis contexts, and only there. Local alias analysis keeps
+  the raw config. The wrapper has the filter semantics below.
+- *Setting and clearing.* `selectPhase(FullScan)` keeps
+  `selectRules(relevantRuleIds)`. The selection is installed by
+  `selectStatementRules`, which the runner calls just before
+  `selectPhase(FullScan)`. It is cleared when the phase is `Prescan`.
+
 **`TaintAnalyzerOptions`.**
-- `shallowScanMode: TRACE | MARK_SET`. The default stays `TRACE` until Layer 4
+- `markSetScan: Boolean = false`. It becomes the default only once Layer 4
   passes.
 - `markSetFlowSensitive = false`
 - `markSetRelaxed = false`
@@ -590,25 +626,30 @@ normal edges only, matching the engine.
 - `markSetTimeLimit = 30.seconds`
 - the recorder caps.
 
-**`StagedAnalysisRunner`.**
-- *Prescan status:* capture the status and success immediately after the
-  prescan's `runAnalysis`, before `cleanup`/`resetApManager`. Fix the OOM and
-  exception handlers so the failure status is set before they complete (M7).
-- *`MARK_SET` mode:* skip `selectPhase(ShallowScan)`, `resetApManager` and the
-  IFDS run. Seal the recorder, run `MarkSetScan`, and return
-  `ActionableRules?`. Apply the fail-open rules in §6.6.
+**`TaintAnalyzer.analyzeStaged`.** Order: `prescan` → `markSetPhase` →
+`fullScan`.
+- `markSetPhase` records `prescanOk = runCatching succeeded &&
+  ifdsEngine.status.get() == OK` immediately after the prescan's
+  `runAnalysis`.
+- It then seals the recorder, runs `MarkSetScan`, and returns
+  `ActionableRules?` (`null` means fail open, §6.6).
+- It runs no IFDS and changes no AP manager.
+- A Layer 2 test checks that an OOM or exception in the prescan leaves a non-OK
+  status. This covers the handler ordering the review flagged (M7).
+- `fullScan` calls `analysisManager.selectStatementRules(rules)` before
+  `selectPhase(FullScan)`.
 
 **Recorder.**
 - `TaintAnalysisManager.markSetRecorder(): MarkSetRecorder?` returns non-null
-  only for JVM in `MARK_SET` mode.
+  only for JVM with `markSetScan` on.
 - Edges are recorded at `subscribeOnMethodSummaries(ZeroToZero)` while the
   phase is `Prescan`. Sites and cleaner atoms are recorded in
   `JIRTaintAnalysisContext.handlePhase()`. The prescan also queries exit rules
   at throw statements.
 - Concurrency: sharded concurrent interning; marks use `TaintMarkManager` ids.
 
-**`SelectedTaintRulesProvider`** changes to filter semantics (G5, G6). Every
-restricted query does the following:
+**`SelectedTaintRulesProvider`** is new on main, with filter semantics (G5,
+G6). Every restricted query does the following:
 1. Call `delegate.<query>(…)` with the original arguments (`fact`,
    `initialFacts`).
 2. If the statement is not a recorded statement, return the delegate's result
@@ -616,8 +657,8 @@ restricted query does the following:
 3. Otherwise keep only the rules selected at that statement, and replace
    sources with their action-restricted copies.
 
-This fixes TRACE mode as well. A unit test covers the exit-sink `initialFacts`
-case.
+A unit test covers the exit-sink `initialFacts` case (the staged branch's G5
+bug).
 
 **Output conversion:** `MarkSetResult` becomes `ActionableRules`. Sinks map to
 ∅, and sources map to their needed `AssignMark` subset.
