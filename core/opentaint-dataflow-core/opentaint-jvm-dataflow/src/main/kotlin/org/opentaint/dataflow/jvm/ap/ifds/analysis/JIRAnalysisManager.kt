@@ -18,6 +18,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSideEffectSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
+import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
@@ -34,6 +36,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.taint.SelectedTaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodSequentPrecondition
@@ -60,6 +63,7 @@ class JIRAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
+    val markSetRecorder: MarkSetRecorder? = null,
 ) : JIRLanguageManager(cp), TaintAnalysisManager {
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
@@ -73,6 +77,10 @@ class JIRAnalysisManager(
     private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
+    // Wraps taintConfig for the taint analysis contexts only (spec §10); local alias analysis
+    // keeps the raw taintConfig.
+    private val selectedConfig = SelectedTaintRulesProvider(taintConfig)
+
     private var currentPhase: Phase = Phase.Prescan
     val phase: Phase get() = currentPhase
 
@@ -80,9 +88,21 @@ class JIRAnalysisManager(
         currentPhase = phase
         contexts.forEach { it.resetAnalysisCache() }
         when (phase) {
-            Phase.Prescan -> {}
-            Phase.FullScan -> taintConfig.selectRules(relevantRuleIds)
+            Phase.Prescan -> {
+                markSetRecorder?.active = true
+                selectedConfig.select(null, emptySet())
+            }
+            Phase.FullScan -> {
+                markSetRecorder?.active = false
+                taintConfig.selectRules(relevantRuleIds)
+            }
         }
+    }
+
+    override fun markSetRecorder(): MarkSetRecorder? = markSetRecorder
+
+    override fun selectStatementRules(rules: ActionableRules?, coveredStatements: Set<CommonInst>) {
+        selectedConfig.select(rules, coveredStatements)
     }
 
     override fun getMethodCallResolver(
@@ -131,7 +151,7 @@ class JIRAnalysisManager(
         }
 
         val taintContext = JIRTaintAnalysisContext(
-            taintAnalysisContext.taintSinkTracker, taintConfig, externalMethodTracker, relevantRuleIds
+            taintAnalysisContext.taintSinkTracker, selectedConfig, externalMethodTracker, relevantRuleIds
         )
 
         return JIRMethodAnalysisContext(
