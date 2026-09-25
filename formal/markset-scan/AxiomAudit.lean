@@ -353,6 +353,14 @@ import MarkScan
 #print axioms MarkScan.joined_relax_decide
 #print axioms MarkScan.joined_relax_mono
 #print axioms MarkScan.cubeSatRelax_joined_iff
+#print axioms MarkScan.needed_eq_neededOver
+#print axioms MarkScan.neededOver_mono
+#print axioms MarkScan.neededFS_implies_needed
+#print axioms MarkScan.relOver_preserves_needed_strong
+#print axioms MarkScan.relOver_fires_iff
+#print axioms MarkScan.rel_fires_iff_of_relOver
+#print axioms MarkScan.ecube_applicableFS
+#print axioms MarkScan.markset_exact_fs
 #print axioms MarkScan.pe_mono
 #print axioms MarkScan.SelectionLemmas.ecube_mono
 #print axioms MarkScan.fires_mono

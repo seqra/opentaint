@@ -56,8 +56,8 @@ same sink firings as the baseline. The implemented configuration is the graph
 with method contexts merged, with applicability keyed by statement.
 `markset_exact_relaxed` is the same result for option 4*.
 
-**Audit.** The model has 403 public theorems. Each depends only on `propext`
-and `Quot.sound`: 78 use no axioms, 74 use `propext` alone, and 251 use both.
+**Audit.** The model has 411 public theorems. Each depends only on `propext`
+and `Quot.sound`: 80 use no axioms, 74 use `propext` alone, and 257 use both.
 The audit is transitive, so private lemmas are covered too.
 
 ## 2. Scope
@@ -70,7 +70,7 @@ The audit is transitive, so private lemmas are covered too.
 | Flow-insensitive mode (default) | in scope, proved |
 | Relevance pass (default on) | in scope, proved |
 | Option 4*: relaxed conditions, corrected (§6.2) | behind a flag, proved |
-| Option 3*: flow-sensitive, context-insensitive within a root | Behind a flag. Soundness and refinement are proved. Relevance under 3* is gated on O-FS-3 (§9). |
+| Option 3*: flow-sensitive, context-insensitive within a root | behind a flag, proved including relevance (O-FS-3, `markset_exact_fs`) |
 | Option 3*: context-sensitive | gated on O-FS-1 and O-FS-2 (§9) |
 | Per-root relevance, escape-aware returns, context retention | future refinements (§11) |
 
@@ -590,10 +590,14 @@ recorded method. It is recorded at seal time from the method's graph, with
 normal edges only, matching the engine.
 
 **Obligations before a 3* flag may be enabled:**
-- **O-FS-3:** relevance under 3*. Generalize `Selection` so that `Needed` is
-  parameterized by the applicability predicate, then prove `T-REL` for
-  `Needed` over `ApplicableFS`. This is needed because the 3* selection prunes
-  by `ApplicableFS`.
+- **O-FS-3:** relevance under 3*. **Proved** in `Relevance`:
+  - `NeededOver` parameterizes `Needed` by the applicability predicate.
+  - `relOver_fires_iff` is `T-REL` over any `App` that covers what the
+    engine fires.
+  - `ecube_applicableFS` shows the engine fires only `ApplicableFS` sites.
+  - `markset_exact_fs` is the end-to-end result for 3*.
+  - `neededFS_implies_needed`: 3* never needs more marks than the default
+    mode.
 - **O-FS-1:** the context-sensitive variant, where a callee is analyzed with the
   caller's set at the call site. Functional tabulation per `(node, IN)` must be
   sound against `PE`, including joins over the method-level union at a point.
@@ -720,6 +724,7 @@ enforces this.
 | `Algorithm` | Executable concept vs optimization, with costs | `Algorithm.mem_reachList`, `refInS_iff`, `refApplicable_iff`, `refNeeded_iff`, `refFuel_suffices`, `opt_eq_ref`, `optApplicable_eq`, `optNeeded_eq`, `closure_dedup`, `applicable_iff_union`, `optApplicableU_eq`, `optSteps_le`, `fam_speedup`, `ex2_sinkGen_not_applicable`, `ex2_unreached_applicable` |
 | `Relaxed` | The corrected option 4*; G3 | `inS_relax`, `cubeSat_relax`, `applicable_relax`, `needed_relax`, `joined_relax_single_mark`, `joined_relax_decide`, `naive_relax_unsound`, `relax_strictly_coarser` |
 | `FlowSensitive` | Option 3*; D3 | `fs_sound`, `fs_ctx_needed`, `fs_fires_applicable`, `fs_refines_fi`, `applicableFS_implies_applicable`, `fs_strict`, `linear_order_unsound`, `exLoop_fs_applicable`, `fsPoints_length` |
+| `Relevance` | `T-REL` over any applicability predicate; O-FS-3 | `needed_eq_neededOver`, `relOver_fires_iff`, `ecube_applicableFS`, `markset_exact_fs`, `neededFS_implies_needed` |
 | `Integration` | The end-to-end contract | `markset_exact`, `markset_exact_coarse`, `markset_exact_relaxed` |
 
 **Changing the model.** Kotlin types mirror `Basic`. A semantic change starts in
