@@ -4,10 +4,12 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.dataflow.MarkSetFindings
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
 import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -31,7 +33,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -46,38 +47,6 @@ import kotlin.time.Duration.Companion.minutes
 
 /** The system property that turns on the differential run of every analysis (spec §8 Layer 3). */
 const val MARKSET_DIFF_PROPERTY = "opentaint.markset.diff"
-
-/** A finding's key under the soundness contract (spec §2, E9): its sink rule and sink statement. */
-fun TaintSinkTracker.TaintVulnerability.findingKey(): Pair<String, CommonInst> = ruleId to statement
-
-/**
- * Asserts that the baseline and the mark-set run report the same findings (spec §2): the
- * confirmed findings before the trace filter (the contract's comparison point, E9), and the
- * reported findings after it.
- */
-fun assertSameFindings(baseline: AnalysisTest.AnalysisRun, markSet: AnalysisTest.AnalysisRun, what: String) {
-    assertSameKeys(
-        baseline.confirmed.mapTo(hashSetOf()) { it.findingKey() },
-        markSet.confirmed.mapTo(hashSetOf()) { it.findingKey() },
-        "confirmed findings of $what",
-    )
-    assertSameKeys(
-        baseline.findings.mapTo(hashSetOf()) { it.vulnerability.findingKey() },
-        markSet.findings.mapTo(hashSetOf()) { it.vulnerability.findingKey() },
-        "reported findings of $what",
-    )
-}
-
-private fun assertSameKeys(baseline: Set<Pair<String, CommonInst>>, markSet: Set<Pair<String, CommonInst>>, what: String) {
-    if (baseline == markSet) return
-
-    fun Set<Pair<String, CommonInst>>.show() = map { (rule, stmt) -> "$rule @ ${stmt.location.method}: $stmt" }
-    throw AssertionError(
-        "mark-set differs from the baseline in the $what\n" +
-            "  missing under mark-set: ${(baseline - markSet).show()}\n" +
-            "  extra under mark-set: ${(markSet - baseline).show()}"
-    )
-}
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AnalysisTest : BasicTestUtils() {
@@ -206,7 +175,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         val markSetOptions = if (markSet.enabled) markSet else MarkSetScanOptions(enabled = true)
         val baseline = runAnalysisOnce(config, entryPointClass, entryPointMethods, MarkSetScanOptions())
         val restricted = runAnalysisOnce(config, entryPointClass, entryPointMethods, markSetOptions)
-        assertSameFindings(baseline, restricted, "$entryPointClass$entryPointMethods")
+        assertSameMarkSetFindings(baseline.gated, restricted.gated, "$entryPointClass$entryPointMethods")
 
         (if (markSet.enabled) restricted else baseline).publish()
         return baseline.findings
@@ -221,7 +190,10 @@ abstract class AnalysisTest : BasicTestUtils() {
         val confirmed: List<TaintSinkTracker.TaintVulnerability>,
         val markSetInput: MarkSetInput?,
         val markSetOutcome: MarkSetOutcome?,
-    )
+    ) {
+        /** The findings the differential gate compares. */
+        val gated: MarkSetFindings get() = MarkSetFindings(confirmed, findings)
+    }
 
     private fun AnalysisRun.publish(): List<VulnerabilityWithTrace> {
         lastMarkSetInput = markSetInput

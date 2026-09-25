@@ -1,9 +1,11 @@
 package org.opentaint.semgrep.util
 
 import kotlinx.coroutines.runBlocking
+import org.opentaint.common.sast.dataflow.MarkSetFindings
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
+import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
 import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -20,7 +22,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.LambdaExpressionToAnonymousClassTransf
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
-import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
@@ -74,13 +75,11 @@ class TestAnalysisRunner(
         JIRSafeApplicationGraph(JApplicationSingleExitGraph(mainGraph))
     }
 
-    /** One run: its reported findings and its confirmed findings before the trace filter (spec E9). */
-    private class Run(
-        val findings: List<VulnerabilityWithTrace>,
-        val confirmed: List<TaintSinkTracker.TaintVulnerability>,
-    )
-
-    private fun runEngine(configProvider: TaintRulesProvider, ep: JIRMethod, markSet: MarkSetScanOptions): Run {
+    private fun runEngine(
+        configProvider: TaintRulesProvider,
+        ep: JIRMethod,
+        markSet: MarkSetScanOptions,
+    ): MarkSetFindings {
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
             ifdsApMode = ApMode.Tree,
@@ -111,7 +110,7 @@ class TestAnalysisRunner(
         }
 
         val findings = analyzer.use { it.analyzeWithIfds(listOf(ep)).first }
-        return Run(findings, confirmed)
+        return MarkSetFindings(confirmed, findings)
     }
 
     /**
@@ -136,34 +135,11 @@ class TestAnalysisRunner(
                 val markSet = runEngine(
                     rulesProvider(rule, config, useDefaultConfig), ep, MarkSetScanOptions(enabled = true)
                 )
-                assertSameKeys(baseline.confirmed.keys(), markSet.confirmed.keys(), "confirmed findings of $sample")
-                assertSameKeys(
-                    baseline.findings.map { it.vulnerability }.keys(),
-                    markSet.findings.map { it.vulnerability }.keys(),
-                    "reported findings of $sample",
-                )
+                assertSameMarkSetFindings(baseline, markSet, sample)
             }
 
-            sample to baseline.findings
+            sample to baseline.reported
         }
-
-    private fun List<TaintSinkTracker.TaintVulnerability>.keys(): Set<Pair<String, CommonInst>> =
-        mapTo(hashSetOf()) { it.ruleId to it.statement }
-
-    private fun assertSameKeys(
-        baseline: Set<Pair<String, CommonInst>>,
-        markSet: Set<Pair<String, CommonInst>>,
-        what: String,
-    ) {
-        if (baseline == markSet) return
-
-        fun Set<Pair<String, CommonInst>>.show() = map { (rule, stmt) -> "$rule @ ${stmt.location.method}: $stmt" }
-        throw AssertionError(
-            "mark-set differs from the baseline in the $what\n" +
-                "  missing under mark-set: ${(baseline - markSet).show()}\n" +
-                "  extra under mark-set: ${(markSet - baseline).show()}"
-        )
-    }
 
     private val defaultConfig by lazy {
         JavaDefaultConfigLoader.loadConfig()

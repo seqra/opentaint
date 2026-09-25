@@ -20,6 +20,30 @@ public class MarkSetDiffSamples {
         sinkBoth(first, second);
     }
 
+    /* ---------- G3: a joined source in a shared callee, three roots and a control root ---------- */
+
+    public void g3EntryOne() {
+        g3Shared(sourceA(), "safe");
+    }
+
+    public void g3EntryTwo() {
+        g3Shared("safe", sourceB());
+    }
+
+    public void g3EntryThree() {
+        String joined = g3Shared("safe", "safe");
+        sink(joined);
+    }
+
+    public void g3EntryBoth() {
+        String joined = g3Shared(sourceA(), sourceB());
+        sink(joined);
+    }
+
+    private String g3Shared(String first, String second) {
+        return join(first, second);
+    }
+
     /* ---------- G1: a sink's end fact used across roots ---------- */
 
     public void g1EntryOne() {
@@ -111,6 +135,7 @@ public class MarkSetDiffSamples {
     public RuntimeException sourceException() { return new RuntimeException(); }
 
     public String transform(String data) { return data; }
+    public String join(String first, String second) { return first + second; }
 
     public void sink(String data) { }
     public void sinkBoth(String first, String second) { }

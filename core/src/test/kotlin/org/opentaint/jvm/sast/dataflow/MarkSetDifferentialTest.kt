@@ -3,6 +3,7 @@ package org.opentaint.jvm.sast.dataflow
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
+import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
@@ -32,12 +33,14 @@ class MarkSetDifferentialTest : AnalysisTest() {
 
         const val MARK_A = "a"
         const val MARK_B = "b"
+        const val MARK_C = "c"
         const val MARK_CHECKED = "checked"
         const val MARK_THROWN = "thrown"
         const val MARK_TRANSFORMED = "transformed"
         const val MARK_UNRELATED = "unrelated"
 
         const val RULE_BOTH = "d1-both"
+        const val RULE_JOINED = "g3-joined"
         const val RULE_CHECK = "g1-check"
         const val RULE_CHECKED = "g1-checked"
         const val RULE_SINK = "g4-sink"
@@ -50,13 +53,20 @@ class MarkSetDifferentialTest : AnalysisTest() {
 
     override val sourceFileExtension: String = "java"
 
-    /** Runs [entryPoints] in both modes, whatever the differential switch, and asserts equal findings. */
-    private fun differential(config: SerializedTaintConfig, vararg entryPoints: String): Differential {
+    /**
+     * Runs [entryPoints] in the baseline and in the mark-set mode given by [markSetOptions], whatever
+     * the differential switch, and asserts equal findings.
+     */
+    private fun differential(
+        config: SerializedTaintConfig,
+        vararg entryPoints: String,
+        markSetOptions: MarkSetScanOptions = MarkSetScanOptions(enabled = true),
+    ): Differential {
         val eps = entryPoints.toList()
         val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions())
-        val markSet = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions(enabled = true))
+        val markSet = runAnalysisOnce(config, TEST_CLS, eps, markSetOptions)
         val outcome = assertIs<MarkSetOutcome.Selected>(markSet.markSetOutcome, "the mark-set phase did not select")
-        assertSameFindings(baseline, markSet, "$TEST_CLS$eps")
+        assertSameMarkSetFindings(baseline.gated, markSet.gated, "$TEST_CLS$eps")
         return Differential(baseline, markSet, outcome)
     }
 
@@ -97,6 +107,31 @@ class MarkSetDifferentialTest : AnalysisTest() {
         val run = differential(config, "d1EntryOne", "d1EntryTwo")
         assertEquals(listOf("d1Shared"), run.baselineFiredIn(RULE_BOTH), "the baseline sink did not fire")
         assertTrue(run.markSet.confirmed.any { it.ruleId == RULE_BOTH }, "the mark-set sink did not fire")
+    }
+
+    @Test
+    fun `G3 - a joined source in a shared callee with three roots, exact and under 4*`() {
+        val config = SerializedTaintConfig(
+            source = listOf(
+                source("sourceA", MARK_A),
+                source("sourceB", MARK_B),
+                source(
+                    "join", MARK_C,
+                    condition = SerializedCondition.and(listOf(mark(MARK_A, Argument(0)), mark(MARK_B, Argument(1)))),
+                ),
+            ),
+            sink = listOf(sink("sink", RULE_JOINED, mark(MARK_C, Argument(0)))),
+        )
+
+        val entryPoints = arrayOf("g3EntryOne", "g3EntryTwo", "g3EntryThree", "g3EntryBoth")
+        val exact = differential(config, *entryPoints)
+        // The premise, as the engine realizes it: the join in the shared callee is over two
+        // caller-supplied (fact-to-fact) facts, so its C is a non-distributive summary edge that
+        // needs both A@arg0 and B@arg1 at one call site. It reaches only the control root that
+        // passes both, not the third root (the model's zero-context placement over-approximates).
+        assertEquals(listOf("g3EntryBoth"), exact.baselineFiredIn(RULE_JOINED), "the joined C reaches an unexpected root")
+
+        differential(config, *entryPoints, markSetOptions = MarkSetScanOptions(enabled = true, relaxed = true))
     }
 
     @Test
