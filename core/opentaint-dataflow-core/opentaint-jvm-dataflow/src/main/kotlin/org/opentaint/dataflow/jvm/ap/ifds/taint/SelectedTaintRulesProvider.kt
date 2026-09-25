@@ -62,6 +62,9 @@ class SelectedTaintRulesProvider(
     @Volatile
     private var selection: Selection? = null
 
+    /** The provider this one filters: the full scan's baseline rules (mark-set debug checks, E2). */
+    val unrestricted: TaintRulesProvider get() = delegate
+
     /** Installs the mark-set scan's selection, or clears it with `rules = null` (Prescan). */
     fun select(rules: ActionableRules?, coveredStatements: Set<CommonInst>) {
         selection = rules?.let { r ->

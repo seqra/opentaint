@@ -26,7 +26,9 @@ data class TaintAnalyzerOptions(
  * @property timeLimit the phase's time budget; exceeding it fails open (spec §6.6).
  * @property maxSites the recorder's site cap; exceeding it fails open.
  * @property maxEdges the recorder's edge cap; exceeding it fails open.
- * @property debugChecks the E1/E2 prescan coverage checks (tests only).
+ * @property debugChecks the E1/E2 prescan coverage checks (spec §7, tests only): the recorder keeps
+ *   its tables through the full scan, observes it, and [TaintAnalyzer] reports the violations
+ *   after it.
  */
 data class MarkSetScanOptions(
     val enabled: Boolean = false,

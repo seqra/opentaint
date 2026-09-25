@@ -43,3 +43,25 @@ internal fun <T : TaintConfigurationItem> JIRTaintAnalysisContext.recordMarkSet(
         }
     }
 }
+
+/**
+ * Mark-set debug checks (spec §7, E2): observes one full-scan rule query, as [recordMarkSet]
+ * records a prescan one. [rules] are the rewritten rules of the unrestricted provider, before the
+ * mark-set selection filters them. A no-op unless the recorder is observing (the full scan, with
+ * debug checks on).
+ */
+internal fun <T : TaintConfigurationItem> JIRTaintAnalysisContext.observeMarkSet(
+    statement: JIRInst,
+    rules: List<RuleWithCondition<T>>,
+) {
+    val recorder = markSetRecorder?.takeIf { it.observing } ?: return
+
+    for ((rule, condition) in rules) {
+        when (rule) {
+            is TaintConfigurationSource -> recorder.observeSite(statement, rule, SiteKind.SOURCE, condition)
+            is TaintConfigurationSink -> recorder.observeSite(statement, rule, SiteKind.SINK, condition)
+            is TaintPassThrough -> recorder.observeSite(statement, rule, SiteKind.PASS_THROUGH, condition)
+            is TaintCleaner -> recorder.observeCleaner(statement, condition)
+        }
+    }
+}

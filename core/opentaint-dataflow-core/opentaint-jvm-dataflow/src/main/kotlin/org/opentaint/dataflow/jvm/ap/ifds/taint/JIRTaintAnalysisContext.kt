@@ -21,6 +21,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
@@ -56,6 +57,14 @@ class JIRTaintAnalysisContext(
     private val isMarkSetRecording: Boolean
         get() = analysisContext.phase is Phase.Prescan && markSetRecorder?.active == true
 
+    /** Mark-set debug checks (E2): the full scan is observed; see [observeMarkSet]. */
+    private val isMarkSetObserving: Boolean
+        get() = analysisContext.phase is Phase.FullScan && markSetRecorder?.observing == true
+
+    /** The rules the full scan would use without the mark-set selection (debug checks only). */
+    private val unrestrictedConfig: TaintRulesProvider
+        get() = (taintConfig as? SelectedTaintRulesProvider)?.unrestricted ?: taintConfig
+
     private fun JIRInst.callExpr(): JIRCallExpr = callExpr ?: error("Non-call statement")
     private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
     private fun JIRInst.calleeMethod(): JIRMethod = callExpr().calleeMethod()
@@ -76,7 +85,7 @@ class JIRTaintAnalysisContext(
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
     ) = prepareCallStatementRules(
-        taintConfig.sourceRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
+        { sourceRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false) },
         TaintMethodSource::condition,
         statement, callExpr, returnValue
     )
@@ -87,7 +96,7 @@ class JIRTaintAnalysisContext(
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
     ) = prepareCallStatementRules(
-        taintConfig.sinkRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
+        { sinkRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false) },
         TaintMethodSink::condition,
         statement, callExpr, returnValue
     )
@@ -98,7 +107,7 @@ class JIRTaintAnalysisContext(
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
     ) = prepareCallStatementRules(
-        taintConfig.cleanerRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
+        { cleanerRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false) },
         TaintCleaner::condition,
         statement, callExpr, returnValue
     )
@@ -109,7 +118,7 @@ class JIRTaintAnalysisContext(
         returnValue: JIRImmediate?,
         fact: FinalFactAp?
     ) = prepareCallStatementRules(
-        taintConfig.passTroughRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false),
+        { passTroughRulesForMethod(statement.calleeMethod(), statement, fact, allRelevant = false) },
         TaintPassThrough::condition,
         statement, callExpr, returnValue
     )
@@ -167,12 +176,20 @@ class JIRTaintAnalysisContext(
     }
 
     private inline fun <T: TaintConfigurationItem> prepareCallStatementRules(
-        rules: Iterable<T>, cond: T.() -> Condition,
+        rules: TaintRulesProvider.() -> Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
-    ): List<RuleWithCondition<T>> =
-        rewriteCallStatementRules(rules, cond, statement, callExpr, returnValue)
+    ): List<RuleWithCondition<T>> {
+        if (isMarkSetObserving) {
+            observeMarkSet(
+                statement,
+                rewriteCallStatementRules(unrestrictedConfig.rules(), cond, statement, callExpr, returnValue)
+            )
+        }
+
+        return rewriteCallStatementRules(taintConfig.rules(), cond, statement, callExpr, returnValue)
             .also { recordMarkSet(statement, it) }
             .handlePhase()
+    }
 
     private inline fun <T: TaintConfigurationItem> rewriteCallStatementRules(
         rules: Iterable<T>, cond: T.() -> Condition,
@@ -195,19 +212,32 @@ class JIRTaintAnalysisContext(
         field: JIRField,
         statement: JIRInst,
         fact: FinalFactAp?
-    ) = taintConfig.sourceRulesForStaticField(field, statement, fact, allRelevant = false).map {
+    ): List<RuleWithCondition<TaintStaticFieldSource>> {
+        if (isMarkSetObserving) {
+            observeMarkSet(statement, staticFieldRules(unrestrictedConfig, field, statement, fact))
+        }
+
+        return staticFieldRules(taintConfig, field, statement, fact).also { recordMarkSet(statement, it) }.handlePhase()
+    }
+
+    private fun staticFieldRules(
+        config: TaintRulesProvider,
+        field: JIRField,
+        statement: JIRInst,
+        fact: FinalFactAp?
+    ) = config.sourceRulesForStaticField(field, statement, fact, allRelevant = false).map {
         if (!it.condition.isTrue()) {
             TODO("Field source with complex condition")
         }
 
         RuleWithCondition(it, RuleConditionRewriter.trueExpr)
-    }.also { recordMarkSet(statement, it) }.handlePhase()
+    }
 
     fun sourceRulesForMethodExit(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(
-        taintConfig.exitSourceRulesForMethod(statement.location.method, statement, fact, allRelevant = false),
+        { exitSourceRulesForMethod(statement.location.method, statement, fact, allRelevant = false) },
         TaintMethodExitSource::condition,
         statement
     )
@@ -217,13 +247,13 @@ class JIRTaintAnalysisContext(
         fact: FinalFactAp?,
         initialFacts: Set<InitialFactAp>?
     ) = prepareMethodRules(
-        taintConfig.sinkRulesForMethodExit(statement.location.method, statement, fact, initialFacts),
+        { sinkRulesForMethodExit(statement.location.method, statement, fact, initialFacts) },
         TaintMethodExitSink::condition,
         statement
     )
 
     fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
-        taintConfig.sinkRulesForMethodEntry(statement.location.method, statement, fact),
+        { sinkRulesForMethodEntry(statement.location.method, statement, fact) },
         TaintMethodEntrySink::condition,
         statement
     )
@@ -232,7 +262,7 @@ class JIRTaintAnalysisContext(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(
-        taintConfig.entryPointRulesForMethod(statement.location.method, statement, fact),
+        { entryPointRulesForMethod(statement.location.method, statement, fact) },
         TaintEntryPointSource::condition,
         statement
     )
@@ -263,12 +293,17 @@ class JIRTaintAnalysisContext(
     }
 
     private inline fun <T : TaintConfigurationItem> prepareMethodRules(
-        rules: Iterable<T>, cond: T.() -> Condition,
+        rules: TaintRulesProvider.() -> Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst,
-    ): List<RuleWithCondition<T>> =
-        rewriteMethodRules(rules, cond, statement)
+    ): List<RuleWithCondition<T>> {
+        if (isMarkSetObserving) {
+            observeMarkSet(statement, rewriteMethodRules(unrestrictedConfig.rules(), cond, statement))
+        }
+
+        return rewriteMethodRules(taintConfig.rules(), cond, statement)
             .also { recordMarkSet(statement, it) }
             .handlePhase()
+    }
 
     private inline fun <T : TaintConfigurationItem> rewriteMethodRules(
         rules: Iterable<T>, cond: T.() -> Condition,

@@ -44,6 +44,8 @@ sealed interface MarkSetOutcome {
      * @property elapsed the phase's time, sealing included.
      * @property sealTime the part of [elapsed] spent sealing the recorder.
      * @property scanTime the part of [elapsed] spent in the scan.
+     * @property neededMarks the names of the needed marks (spec §6.3), or `null` without relevance
+     *   (every mark is needed then). The E10 debug diff compares the facts of these marks.
      */
     data class Selected(
         val rules: ActionableRules,
@@ -59,6 +61,7 @@ sealed interface MarkSetOutcome {
         val elapsed: Duration = Duration.ZERO,
         val sealTime: Duration = Duration.ZERO,
         val scanTime: Duration = Duration.ZERO,
+        val neededMarks: Set<String>? = null,
     ) : MarkSetOutcome {
         override fun logLine(): String =
             "markset: time=${elapsed.inWholeMilliseconds}ms seal=${sealTime.inWholeMilliseconds}ms " +
@@ -99,6 +102,11 @@ private const val FLOW_SENSITIVE_SIZE = "flow-sensitive size"
  * more than [maxRootPoints] `(root, statement)` pairs ("flow-sensitive size"). [onSealed] observes
  * the sealed input (a test hook).
  *
+ * The recorder is released on every path, except that under [MarkSetScanOptions.debugChecks] (with
+ * a recorder made with [MarkSetRecorder.debugChecks]) a selection keeps it and starts observing the
+ * full scan (spec §7, E1/E2): the caller then calls [MarkSetRecorder.checkCoverage] after the full
+ * scan, and releases it.
+ *
  * @param cfgSource the engine's statement graphs, required by option 3* only.
  */
 fun runMarkSetPhase(
@@ -131,10 +139,13 @@ fun runMarkSetPhase(
         if (start.elapsedNow() > options.timeLimit) throw MarkSetTimeLimitExceeded()
     }
 
+    val debugChecks = options.debugChecks && recorder.debugChecks
+    var outcome: MarkSetOutcome? = null
     return try {
         val input = recorder.seal(roots, cfgSource.takeIf { options.flowSensitive })
-        // Only the selection and the covered statements survive into the full scan.
-        recorder.release()
+        // Only the selection and the covered statements survive into the full scan, but the debug
+        // checks need the prescan's tables.
+        if (!debugChecks) recorder.release()
         val sealTime = start.elapsedNow()
         onSealed(input)
         checkCancelled()
@@ -153,7 +164,7 @@ fun runMarkSetPhase(
 
         input.toSelection(result, options).copy(
             elapsed = start.elapsedNow(), sealTime = sealTime, scanTime = scanTime,
-        )
+        ).also { outcome = it }
     } catch (e: MarkSetTimeLimitExceeded) {
         MarkSetOutcome.FailOpen("time limit")
     } catch (e: MethodCfgUnavailable) {
@@ -165,7 +176,11 @@ fun runMarkSetPhase(
         logger.error(e) { "Mark-set phase failed" }
         MarkSetOutcome.FailOpen("error: $e")
     } finally {
-        recorder.release()
+        if (debugChecks && outcome is MarkSetOutcome.Selected) {
+            recorder.startObserving()
+        } else {
+            recorder.release()
+        }
     }
 }
 
@@ -253,6 +268,7 @@ private fun MarkSetInput.toSelection(
         baselineSinks = baselineSinks,
         selectedSourceRules = selectedSourceRules,
         baselineSourceRules = baselineSourceRules,
+        neededMarks = if (options.relevance) markNames.filterTo(hashSetOf(), ::isNeeded) else null,
     )
 }
 

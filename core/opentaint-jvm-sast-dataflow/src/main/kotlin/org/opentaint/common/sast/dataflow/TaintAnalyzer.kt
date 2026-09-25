@@ -25,6 +25,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetCoverage
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.markset.MethodCfgSource
@@ -113,7 +114,11 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
      * A `null` recorder adds no behaviour.
      */
     protected fun createMarkSetRecorder(): MarkSetRecorder? = if (options.markSet.enabled) {
-        MarkSetRecorder(options.markSet.maxSites, options.markSet.maxEdges, recordCalls = options.markSet.flowSensitive)
+        MarkSetRecorder(
+            options.markSet.maxSites, options.markSet.maxEdges,
+            recordCalls = options.markSet.flowSensitive,
+            debugChecks = options.markSet.debugChecks,
+        )
     } else {
         null
     }
@@ -129,6 +134,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
      * point at which the mark-set soundness contract compares findings (spec §2, E9).
      */
     protected open fun onConfirmedVulnerabilities(vulnerabilities: List<TaintSinkTracker.TaintVulnerability>) {}
+
+    /**
+     * Observes the E1/E2 debug checks (spec §7, a test hook): called after the full scan when
+     * [MarkSetScanOptions.debugChecks] is on and the mark-set phase selected.
+     */
+    protected open fun onMarkSetCoverage(coverage: MarkSetCoverage) {}
 
     @Suppress("UNCHECKED_CAST")
     private fun createIfdsEngine() = TaintAnalysisUnitRunnerManager(
@@ -208,6 +219,30 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         logger.info { "Finish mark-set phase" }
     }
 
+    /**
+     * The E1/E2 debug checks (spec §7): once the full scan is done, compares what it resolved and
+     * evaluated with the prescan's recording, and releases the recorder. Before confirmation,
+     * which is not part of the full scan. A no-op unless the recorder is observing.
+     */
+    private fun checkMarkSetCoverage() {
+        val recorder = analysisManager.markSetRecorder()?.takeIf { it.observing } ?: return
+        val coverage = recorder.checkCoverage()
+        recorder.release()
+
+        if (coverage.violations.isEmpty()) {
+            logger.info {
+                "markset debug checks: ok calls=${coverage.observedCalls} sites=${coverage.observedSites} " +
+                    "uncoveredSites=${coverage.uncoveredSites}"
+            }
+        } else {
+            logger.error {
+                "markset debug checks: ${coverage.violations.size} violations\n" +
+                    coverage.violations.joinToString("\n") { "  ${it.check}: ${it.detail}" }
+            }
+        }
+        onMarkSetCoverage(coverage)
+    }
+
     private fun fullScan(
         analysisStart: TimeSource.Monotonic.ValueTimeMark,
         entryPoints: List<Method>,
@@ -219,6 +254,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val analysisTimeout = (options.ifdsTimeout - analysisStart.elapsedNow()) * 0.80
         runCatching { ifdsEngine.runAnalysis(startMethods, timeout = analysisTimeout, cancellationTimeout = 30.seconds) }
             .onFailure { logger.error(it) { "Full analysis failed" } }
+        checkMarkSetCoverage()
 
         val analysisStatus = ifdsEngine.status.get()
 

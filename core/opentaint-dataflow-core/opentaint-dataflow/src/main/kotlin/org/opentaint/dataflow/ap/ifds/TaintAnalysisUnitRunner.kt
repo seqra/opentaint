@@ -11,6 +11,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.AnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.serialization.MethodSummariesSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodForwardTraceResolver
@@ -286,7 +287,7 @@ class TaintAnalysisUnitRunner(
         for (start in epResolver.resolveEntryPoints(method.method, method.ctx)) {
             val methodEntryPoint = MethodEntryPoint(method.ctx, start)
             val methodAnalyzers = methodAnalyzers(methodEntryPoint)
-            methodAnalyzers.add(this, methodEntryPoint)
+            if (methodAnalyzers.add(this, methodEntryPoint)) markSetRecorder?.recordEntryPoint(methodEntryPoint)
 
             methodAnalyzers.getAnalyzer(methodEntryPoint).addInitialZeroFact()
         }
@@ -320,7 +321,7 @@ class TaintAnalysisUnitRunner(
 
     private inline fun submitMethodInitialFact(methodEntryPoint: MethodEntryPoint, body: (MethodAnalyzer) -> Unit) {
         val methodRunner = methodAnalyzers(methodEntryPoint)
-        methodRunner.add(this, methodEntryPoint)
+        if (methodRunner.add(this, methodEntryPoint)) markSetRecorder?.recordEntryPoint(methodEntryPoint)
 
         val analyzer = methodRunner.getAnalyzer(methodEntryPoint)
         body(analyzer)
@@ -369,8 +370,10 @@ class TaintAnalysisUnitRunner(
         methodEntryPoint: MethodEntryPoint
     ) {
         // Mark-set prescan (spec §4): the one zero-callee subscription path, lambdas included.
-        (analysisManager as? TaintAnalysisManager)?.markSetRecorder()
-            ?.recordEdge(edge.methodEntryPoint.method, edge.statement, methodEntryPoint.method)
+        markSetRecorder?.let {
+            it.recordEdge(edge.methodEntryPoint.method, edge.statement, methodEntryPoint.method)
+            it.observeCall(edge.methodEntryPoint.method, edge.statement, methodEntryPoint.method)
+        }
 
         subscribeOnMethodSummaries(
             methodEntryPoint = methodEntryPoint,
@@ -384,34 +387,52 @@ class TaintAnalysisUnitRunner(
         edge: Edge.ZeroToFact,
         methodEntryPoint: MethodEntryPoint,
         methodFactBase: AccessPathBase
-    )  = subscribeOnMethodSummaries(
-        methodEntryPoint = methodEntryPoint,
-        subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
-        submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
-        submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
-    )
+    ) {
+        observeMarkSetCall(edge, methodEntryPoint)
+        subscribeOnMethodSummaries(
+            methodEntryPoint = methodEntryPoint,
+            subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
+            submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
+            submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
+        )
+    }
 
     override fun subscribeOnMethodSummaries(
         edge: Edge.FactToFact,
         methodEntryPoint: MethodEntryPoint,
         methodFactBase: AccessPathBase
-    ) = subscribeOnMethodSummaries(
-        methodEntryPoint = methodEntryPoint,
-        subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
-        submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
-        submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
-    )
+    ) {
+        observeMarkSetCall(edge, methodEntryPoint)
+        subscribeOnMethodSummaries(
+            methodEntryPoint = methodEntryPoint,
+            subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
+            submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
+            submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
+        )
+    }
 
     override fun subscribeOnMethodSummaries(
         edge: Edge.NDFactToFact,
         methodEntryPoint: MethodEntryPoint,
         methodFactBase: AccessPathBase
-    ) = subscribeOnMethodSummaries(
-        methodEntryPoint = methodEntryPoint,
-        subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
-        submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
-        submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
-    )
+    ) {
+        observeMarkSetCall(edge, methodEntryPoint)
+        subscribeOnMethodSummaries(
+            methodEntryPoint = methodEntryPoint,
+            subscribe = { subscribeOnMethodSummary(methodEntryPoint, methodFactBase, edge) },
+            submitThisUnitFact = { submitMethodInitialFact(methodEntryPoint, edge.factAp.rebase(methodFactBase)) },
+            submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
+        )
+    }
+
+    /** The mark-set recorder (spec §4), `null` unless the mark-set scan is on. */
+    private val markSetRecorder: MarkSetRecorder?
+        get() = (analysisManager as? TaintAnalysisManager)?.markSetRecorder()
+
+    /** Mark-set debug checks (E1): observes a call on a fact edge; a no-op unless observing. */
+    private fun observeMarkSetCall(edge: Edge, methodEntryPoint: MethodEntryPoint) {
+        markSetRecorder?.observeCall(edge.methodEntryPoint.method, edge.statement, methodEntryPoint.method)
+    }
 
     private inline fun subscribeOnMethodSummaries(
         methodEntryPoint: MethodEntryPoint,

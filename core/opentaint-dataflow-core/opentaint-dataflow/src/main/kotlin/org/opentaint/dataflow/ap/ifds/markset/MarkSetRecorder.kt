@@ -1,5 +1,6 @@
 package org.opentaint.dataflow.ap.ifds.markset
 
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.taint.PositionAccess
@@ -43,6 +44,29 @@ class MarkSetInput(
 )
 
 /**
+ * One failed debug check (spec §7): [check] is `"E1"` (a full-scan call or entry point the prescan
+ * did not create) or `"E2"` (a full-scan rule residual at a covered statement the prescan did not
+ * record); [detail] names the statement, the rule or edge, and the residual.
+ */
+data class CoverageViolation(val check: String, val detail: String)
+
+/**
+ * The result of [MarkSetRecorder.checkCoverage].
+ *
+ * @property violations every E1 and E2 violation; empty when the prescan covered the full scan.
+ * @property observedCalls the distinct `(caller, call statement, callee)` the full scan resolved.
+ * @property observedSites the distinct rule residuals the full scan evaluated, over every statement.
+ * @property uncoveredSites the part of [observedSites] at statements the prescan never queried a
+ *   rule at. E2 does not cover them: the provider falls back to the delegate there (spec §10).
+ */
+class MarkSetCoverage(
+    val violations: List<CoverageViolation>,
+    val observedCalls: Int,
+    val observedSites: Int,
+    val uncoveredSites: Int,
+)
+
+/**
  * Language-agnostic recorder for the mark-set prescan (spec §4). Builds a
  * [MarkSetProgram] from the engine's call graph and rule residuals while the
  * prescan runs. Every `record*` method is a no-op unless [active], and all of
@@ -68,11 +92,16 @@ class MarkSetInput(
  *   number of distinct recorded call points. Exceeding it sets [overflow] and stops recording.
  * @property recordCalls also record every call point `(caller, call statement, callee)`, which
  *   option 3* needs (spec §9); off otherwise, so the default mode pays nothing for it.
+ * @property debugChecks the E1/E2 debug checks (spec §7): the prescan also records its
+ *   `(call statement, callee)` pairs and its method entry points, and after [startObserving] the
+ *   full scan's calls, entry points and rule residuals are observed, for [checkCoverage]. Off
+ *   otherwise, so the default mode pays nothing for it.
  */
 class MarkSetRecorder(
     val maxSites: Int = 20_000_000,
     val maxEdges: Int = 20_000_000,
     val recordCalls: Boolean = false,
+    val debugChecks: Boolean = false,
 ) {
     /** True only while the prescan phase is active; set by the caller. */
     @Volatile
@@ -81,6 +110,11 @@ class MarkSetRecorder(
     /** Set once a cap ([maxSites] or [maxEdges]) is exceeded; recording then stops. */
     @Volatile
     var overflow: Boolean = false
+
+    /** With [debugChecks] only: true from [startObserving] (the full scan) until [checkCoverage]. */
+    @Volatile
+    var observing: Boolean = false
+        private set
 
     // Interning tables: ids are dense, assigned inside `computeIfAbsent` (at most once per key).
     private var methodIds = ConcurrentHashMap<CommonMethod, Int>()
@@ -115,6 +149,16 @@ class MarkSetRecorder(
     private var cleanerSeen = ConcurrentHashMap.newKeySet<CleanerKey>()
     private val cleanerAtoms = BitSet()
 
+    // Debug checks (E1): what the prescan created. Empty unless [debugChecks].
+    private var prescanCalls = ConcurrentHashMap.newKeySet<CallSite>()
+    private var prescanEntryPoints = ConcurrentHashMap.newKeySet<MethodEntryPoint>()
+
+    // Debug checks: what the full scan did, while [observing].
+    private var observedCalls = ConcurrentHashMap.newKeySet<ObservedCall>()
+    private var observedEntryPoints = ConcurrentHashMap.newKeySet<MethodEntryPoint>()
+    private var observedSites = ConcurrentHashMap.newKeySet<ObservedSite>()
+    private var observedCleaners = ConcurrentHashMap.newKeySet<CleanerKey>()
+
     /** `(position, mark name, anyAccessor)`: the literal-id key (spec §4.1). */
     private data class LiteralKey(val position: PositionAccess, val markName: String, val anyAccessor: Boolean)
 
@@ -148,6 +192,19 @@ class MarkSetRecorder(
 
     private data class CallPoint(val caller: Int, val statement: CommonInst, val callee: Int)
 
+    /** E1's key: a call statement resolved to a callee. */
+    private data class CallSite(val statement: CommonInst, val callee: CommonMethod)
+
+    private data class ObservedCall(val caller: CommonMethod, val statement: CommonInst, val callee: CommonMethod)
+
+    private data class ObservedSite(
+        val statement: CommonInst,
+        val rule: CommonTaintConfigurationItem,
+        val kind: SiteKind,
+        val residual: Any,
+        val cond: MarkCond,
+    )
+
     /**
      * Records a call edge `caller --call--> callee`, while the phase is Prescan. With [recordCalls],
      * also records the call point.
@@ -156,6 +213,7 @@ class MarkSetRecorder(
         if (!active || overflow) return
         val callerId = internMethod(caller)
         val calleeId = internMethod(callee)
+        if (debugChecks) prescanCalls.add(CallSite(call, callee))
         if (recordCalls) recordCallPoint(CallPoint(callerId, call, calleeId))
         val key = edgeKey(callerId, calleeId)
         if (key in edgeKeys || !edgeKeys.add(key)) return
@@ -234,6 +292,126 @@ class MarkSetRecorder(
     }
 
     /**
+     * Debug checks (E1): records a method entry point the engine just created. The prescan's are
+     * kept; one created while [observing] (the full scan) is checked against them. A no-op without
+     * [debugChecks].
+     */
+    fun recordEntryPoint(entryPoint: MethodEntryPoint) {
+        if (!debugChecks) return
+        if (observing) {
+            observedEntryPoints.add(entryPoint)
+        } else if (active && !overflow) {
+            prescanEntryPoints.add(entryPoint)
+        }
+    }
+
+    /**
+     * Debug checks (E1): observes a call the full scan resolved, on any edge kind. A no-op unless
+     * [observing].
+     */
+    fun observeCall(caller: CommonMethod, call: CommonInst, callee: CommonMethod) {
+        if (!observing) return
+        observedCalls.add(ObservedCall(caller, call, callee))
+    }
+
+    /**
+     * Debug checks (E2): observes one rule residual the full scan evaluated, before the selection
+     * filters it. Skipped as [recordSite] skips it: a `false` residual, and a pass-through
+     * residual without a positive mark literal. A no-op unless [observing].
+     */
+    fun observeSite(
+        statement: CommonInst,
+        rule: CommonTaintConfigurationItem,
+        kind: SiteKind,
+        residual: RuleConditionRewriter.ExprOrConstant,
+    ) {
+        if (!observing) return
+        if (residual.isFalse) return
+        if (kind == SiteKind.PASS_THROUGH && !residual.hasPositiveLiteral()) return
+        observedSites.add(ObservedSite(statement, rule, kind, residual.key(), markCondOf(residual)))
+    }
+
+    /**
+     * Debug checks (E2): observes a cleaner residual the full scan evaluated. Skipped as
+     * [recordCleaner] skips it: without a positive mark literal. A no-op unless [observing].
+     */
+    fun observeCleaner(statement: CommonInst, residual: RuleConditionRewriter.ExprOrConstant) {
+        if (!observing) return
+        if (residual.isFalse || !residual.hasPositiveLiteral()) return
+        observedCleaners.add(CleanerKey(statement, residual.key()))
+    }
+
+    /**
+     * Debug checks: stops recording and starts observing the full scan. Call it after [seal],
+     * instead of [release], so that the prescan's tables stay for [checkCoverage].
+     */
+    fun startObserving() {
+        check(debugChecks) { "observing needs debugChecks" }
+        active = false
+        observing = true
+    }
+
+    /**
+     * Debug checks: stops observing, and returns every full-scan observation the prescan did not
+     * cover (spec §7):
+     * - E1: a `(call statement, callee)` or a method entry point the prescan did not create;
+     * - E2: a rule residual at a covered statement not recorded there for that rule. Uncovered
+     *   statements fall back to the delegate and are only counted.
+     *
+     * Call it once the full scan is done (no concurrent `observe*` calls).
+     */
+    fun checkCoverage(): MarkSetCoverage {
+        observing = false
+        val violations = ArrayList<CoverageViolation>()
+
+        for (call in observedCalls) {
+            if (CallSite(call.statement, call.callee) in prescanCalls) continue
+            violations += CoverageViolation(
+                "E1", "call ${call.caller} -> ${call.callee} at ${call.statement} was not resolved by the prescan"
+            )
+        }
+        for (entryPoint in observedEntryPoints) {
+            if (entryPoint in prescanEntryPoints) continue
+            violations += CoverageViolation(
+                "E1", "entry point $entryPoint at ${entryPoint.statement} was not created by the prescan"
+            )
+        }
+
+        var uncovered = 0
+        for (site in observedSites) {
+            if (site.statement !in coveredStatements) {
+                uncovered++
+                continue
+            }
+            val entry = siteEntries[SiteEntry(site.statement, site.rule, site.kind)]
+            if (entry != null && site.cond in entry.conds) continue
+            val recorded = entry?.conds?.toList() ?: "nothing"
+            violations += CoverageViolation(
+                "E2", "${site.kind} ${site.rule} at ${site.statement} (${site.statement.location.method}) " +
+                    "with residual ${site.residual.show()} (${site.cond}); the prescan recorded $recorded"
+            )
+        }
+        for (cleaner in observedCleaners) {
+            if (cleaner.statement !in coveredStatements) {
+                uncovered++
+                continue
+            }
+            if (cleaner in cleanerSeen) continue
+            violations += CoverageViolation(
+                "E2", "cleaner at ${cleaner.statement} (${cleaner.statement.location.method}) " +
+                    "with residual ${cleaner.residual.show()} was not recorded by the prescan"
+            )
+        }
+
+        return MarkSetCoverage(
+            violations = violations,
+            observedCalls = observedCalls.size,
+            observedSites = observedSites.size + observedCleaners.size,
+            uncoveredSites = uncovered,
+        )
+    }
+
+    /**
      * Builds the [MarkSetInput] recorded so far. Call it once the prescan is done and
      * recording has stopped (no concurrent `record*` calls).
      *
@@ -303,11 +481,13 @@ class MarkSetRecorder(
     }
 
     /**
-     * Drops every recorded table and stops recording, so that nothing recorded survives
-     * into the full scan. After this the recorder is empty and inactive.
+     * Drops every recorded table and observation and stops recording and observing, so that
+     * nothing recorded survives into the full scan (with [debugChecks], past [checkCoverage]).
+     * After this the recorder is empty and inactive.
      */
     fun release() {
         active = false
+        observing = false
         methodIds = ConcurrentHashMap()
         markIds = ConcurrentHashMap()
         literalIds = ConcurrentHashMap()
@@ -319,6 +499,12 @@ class MarkSetRecorder(
         siteEntries = ConcurrentHashMap()
         coveredStatements = ConcurrentHashMap.newKeySet()
         cleanerSeen = ConcurrentHashMap.newKeySet()
+        prescanCalls = ConcurrentHashMap.newKeySet()
+        prescanEntryPoints = ConcurrentHashMap.newKeySet()
+        observedCalls = ConcurrentHashMap.newKeySet()
+        observedEntryPoints = ConcurrentHashMap.newKeySet()
+        observedSites = ConcurrentHashMap.newKeySet()
+        observedCleaners = ConcurrentHashMap.newKeySet()
         synchronized(cleanerAtoms) { cleanerAtoms.clear() }
         methodCount.set(0)
         markCount.set(0)
@@ -439,6 +625,9 @@ class MarkSetRecorder(
 
     private companion object {
         private val TRUE_KEY = Any()
+
+        /** A residual key ([key]) for a debug-check message. */
+        private fun Any.show(): String = if (this === TRUE_KEY) "true" else toString()
         private val NO_CONDS = emptyArray<MarkCond>()
         private val NO_CALLEES = IntArray(0)
 

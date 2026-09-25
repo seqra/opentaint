@@ -4,6 +4,7 @@ import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
+import org.opentaint.common.sast.dataflow.assertSameNeededFacts
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
@@ -19,6 +20,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -62,8 +64,9 @@ class MarkSetDifferentialTest : AnalysisTest() {
 
     /**
      * Runs [entryPoints] in the baseline and in the mark-set mode given by [markSetOptions], whatever
-     * the differential switch, and asserts equal findings. A flow-insensitive [markSetOptions] is
-     * also checked under option 3* (spec §9), and the requested run is returned.
+     * the differential switch, and asserts equal findings and the debug checks (E1, E2, E10). A
+     * flow-insensitive [markSetOptions] is also checked under option 3* (spec §9), and the requested
+     * run is returned.
      */
     private fun differential(
         config: SerializedTaintConfig,
@@ -71,12 +74,14 @@ class MarkSetDifferentialTest : AnalysisTest() {
         markSetOptions: MarkSetScanOptions = defaultDifferentialMarkSet,
     ): Differential {
         val eps = entryPoints.toList()
-        val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions())
+        val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions(), collectFacts = true)
 
         fun restricted(options: MarkSetScanOptions): Differential {
-            val markSet = runAnalysisOnce(config, TEST_CLS, eps, options)
-            val outcome = assertIs<MarkSetOutcome.Selected>(markSet.markSetOutcome, "the mark-set phase did not select: $options")
-            assertSameMarkSetFindings(baseline.gated, markSet.gated, "$TEST_CLS$eps $options")
+            val checked = options.copy(debugChecks = true)
+            val markSet = runAnalysisOnce(config, TEST_CLS, eps, checked, collectFacts = true)
+            val outcome = assertIs<MarkSetOutcome.Selected>(markSet.markSetOutcome, "the mark-set phase did not select: $checked")
+            assertMarkSetDebugChecks(baseline, markSet, "$TEST_CLS$eps $checked")
+            assertSameMarkSetFindings(baseline.gated, markSet.gated, "$TEST_CLS$eps $checked")
             return Differential(baseline, markSet, outcome)
         }
 
@@ -307,5 +312,48 @@ class MarkSetDifferentialTest : AnalysisTest() {
         )
         assertTrue(selectedSources.any { it.first == "sourceA" }, "the chain's source is not selected: $selectedSources")
         assertTrue(selectedSources.any { it.first == "transform" }, "the transformer is not selected: $selectedSources")
+    }
+
+    @Test
+    fun `E10 - the needed-fact diff compares the needed marks' facts and reports a missing one`() {
+        val config = SerializedTaintConfig(
+            source = listOf(source("sourceA", MARK_A), source("sourceB", MARK_B)),
+            sink = listOf(
+                sink(
+                    "sinkBoth", RULE_BOTH,
+                    SerializedCondition.and(listOf(mark(MARK_A, Argument(0)), mark(MARK_B, Argument(1)))),
+                )
+            ),
+        )
+
+        val run = differential(config, "d1EntryOne", "d1EntryTwo")
+        val needed = checkNotNull(run.outcome.neededMarks)
+        assertEquals(setOf(MARK_A, MARK_B), needed)
+
+        val baselineFacts = checkNotNull(run.baseline.markFacts)
+        val markSetFacts = checkNotNull(run.markSet.markFacts)
+        val sharedFacts = baselineFacts.filter { it.mark == MARK_A && "d1Shared" in it.statement }
+        assertTrue(sharedFacts.isNotEmpty(), "no fact of mark $MARK_A in d1Shared: $baselineFacts")
+
+        val error = assertFailsWith<AssertionError> {
+            assertSameNeededFacts(baselineFacts, markSetFacts - sharedFacts.first(), needed, "a mutated run")
+        }
+        assertTrue("missing under mark-set" in error.message.orEmpty() && "d1Shared" in error.message.orEmpty())
+    }
+
+    @Test
+    fun `E10 - the facts of a deselected mark are left out of the needed-fact diff`() {
+        val config = SerializedTaintConfig(
+            source = listOf(source("sourceA", MARK_A), source("sourceUnrelated", MARK_UNRELATED)),
+            sink = listOf(sink("sinkUnrelated", RULE_UNRELATED, mark("never-produced", Argument(0)))),
+        )
+
+        val run = differential(config, "d4Entry")
+        val needed = checkNotNull(run.outcome.neededMarks)
+        assertFalse(MARK_UNRELATED in needed, "the unrelated mark is needed: $needed")
+
+        // The baseline has the unrelated mark's facts and the restricted run has none; the diff passed.
+        assertTrue(checkNotNull(run.baseline.markFacts).any { it.mark == MARK_UNRELATED }, "no baseline fact of the unrelated mark")
+        assertTrue(checkNotNull(run.markSet.markFacts).none { it.mark == MARK_UNRELATED }, "the unrelated mark's source fired")
     }
 }

@@ -1,6 +1,8 @@
 package org.opentaint.dataflow.ap.ifds.markset
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
+import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.taint.PositionAccess
@@ -415,6 +417,131 @@ class MarkSetRecorderTest {
         assertFalse(recorder.overflow)
         recorder.recordEdge(caller, inst(caller, 1), callee)
         assertTrue(recorder.overflow)
+    }
+
+    /** A debug-check recorder after a prescan that recorded one call, one entry point and one sink. */
+    private class ObservedPrescan {
+        val recorder = MarkSetRecorder(debugChecks = true)
+        val caller = FakeMethod("caller")
+        val callee = FakeMethod("callee")
+        val call: CommonInst = FakeInst(FakeLocation(caller, 0))
+        val calleeEntry = MethodEntryPoint(EmptyMethodContext, FakeInst(FakeLocation(callee, 0)))
+        val sink = FakeRule()
+
+        fun prescan(residual: RuleConditionRewriter.ExprOrConstant) {
+            recorder.active = true
+            recorder.recordEntryPoint(calleeEntry)
+            recorder.recordEdge(caller, call, callee)
+            recorder.recordStatement(call)
+            recorder.recordSite(call, sink, SiteKind.SINK, residual, gens = emptyList())
+            recorder.active = false
+            recorder.seal(roots = listOf(caller))
+            recorder.startObserving()
+        }
+    }
+
+    @Test
+    fun `debug checks - full-scan calls, entry points and rules the prescan recorded are no violation`() {
+        val prescan = ObservedPrescan()
+        val residual = literal("A", position(0))
+        prescan.prescan(residual)
+
+        with(prescan) {
+            recorder.observeCall(caller, call, callee)
+            recorder.recordEntryPoint(calleeEntry)
+            recorder.observeSite(call, sink, SiteKind.SINK, literal("A", position(0)))
+        }
+
+        val coverage = prescan.recorder.checkCoverage()
+        assertEquals(emptyList(), coverage.violations)
+        assertEquals(1, coverage.observedCalls)
+        assertEquals(1, coverage.observedSites)
+    }
+
+    @Test
+    fun `debug checks - a full-scan call or entry point the prescan did not record is an E1 violation`() {
+        val prescan = ObservedPrescan()
+        prescan.prescan(literal("A", position(0)))
+        val other = FakeMethod("other")
+        val otherEntry = MethodEntryPoint(EmptyMethodContext, inst(other))
+
+        with(prescan) {
+            // Same caller and callee methods, another call statement: E1 is per (call statement, callee).
+            recorder.observeCall(caller, inst(caller, 1), callee)
+            recorder.observeCall(caller, call, other)
+            recorder.recordEntryPoint(otherEntry)
+        }
+
+        val violations = prescan.recorder.checkCoverage().violations
+        assertEquals(listOf("E1", "E1", "E1"), violations.map { it.check })
+        assertTrue(violations.any { "other" in it.detail && "entry point" in it.detail }, "$violations")
+    }
+
+    @Test
+    fun `debug checks - a full-scan rule at a covered statement with an unrecorded residual is an E2 violation`() {
+        val prescan = ObservedPrescan()
+        prescan.prescan(literal("A", position(0)))
+        val otherSink = FakeRule()
+
+        with(prescan) {
+            recorder.observeSite(call, sink, SiteKind.SINK, literal("B", position(0)))
+            recorder.observeSite(call, otherSink, SiteKind.SINK, RuleConditionRewriter.trueExpr)
+            recorder.observeCleaner(call, literal("A", position(1)))
+        }
+
+        val violations = prescan.recorder.checkCoverage().violations
+        assertEquals(listOf("E2", "E2", "E2"), violations.map { it.check }, "$violations")
+    }
+
+    @Test
+    fun `debug checks - mark-free cleaners and pass-throughs and uncovered statements are not checked`() {
+        val prescan = ObservedPrescan()
+        prescan.prescan(literal("A", position(0)))
+        val uncovered = inst(prescan.caller, 7)
+
+        with(prescan) {
+            recorder.observeSite(call, FakeRule(), SiteKind.PASS_THROUGH, RuleConditionRewriter.trueExpr)
+            recorder.observeSite(call, FakeRule(), SiteKind.PASS_THROUGH, literal("A", position(0), negated = true))
+            recorder.observeCleaner(call, RuleConditionRewriter.trueExpr)
+            recorder.observeSite(call, FakeRule(), SiteKind.SINK, RuleConditionRewriter.falseExpr)
+            recorder.observeSite(uncovered, FakeRule(), SiteKind.SOURCE, literal("C", position(0)))
+        }
+
+        val coverage = prescan.recorder.checkCoverage()
+        assertEquals(emptyList(), coverage.violations)
+        assertEquals(1, coverage.uncoveredSites)
+    }
+
+    @Test
+    fun `without debug checks nothing is observed and release still drops the tables`() {
+        val recorder = MarkSetRecorder()
+        val caller = FakeMethod("caller")
+        val callee = FakeMethod("callee")
+        val call = inst(caller)
+
+        recorder.active = true
+        recorder.recordEntryPoint(MethodEntryPoint(EmptyMethodContext, inst(callee)))
+        recorder.recordEdge(caller, call, callee)
+        recorder.active = false
+        assertFailsWith<IllegalStateException> { recorder.startObserving() }
+
+        recorder.observeCall(caller, inst(caller, 1), callee)
+        recorder.observeSite(call, FakeRule(), SiteKind.SINK, RuleConditionRewriter.trueExpr)
+        assertFalse(recorder.observing)
+    }
+
+    @Test
+    fun `checkCoverage stops observing and release drops the observations`() {
+        val prescan = ObservedPrescan()
+        prescan.prescan(literal("A", position(0)))
+        prescan.recorder.observeCall(prescan.caller, inst(prescan.caller, 1), prescan.callee)
+
+        assertEquals(1, prescan.recorder.checkCoverage().violations.size)
+        assertFalse(prescan.recorder.observing)
+
+        prescan.recorder.observeCall(prescan.caller, inst(prescan.caller, 2), prescan.callee)
+        prescan.recorder.release()
+        assertEquals(0, prescan.recorder.checkCoverage().observedCalls)
     }
 
     private class Workload(val events: List<(MarkSetRecorder) -> Unit>, val roots: List<CommonMethod>) :
