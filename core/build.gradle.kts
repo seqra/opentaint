@@ -183,4 +183,5 @@ fun findOpentaintSeEnvInitializer(): Task? {
 
 tasks.withType<Test> {
     maxHeapSize = "4G"
+    systemProperty("opentaint.markset.diff", project.findProperty("marksetDiff") ?: "false")
 }

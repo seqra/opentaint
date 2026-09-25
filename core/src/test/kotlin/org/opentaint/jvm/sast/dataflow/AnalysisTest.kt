@@ -12,6 +12,7 @@ import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
+import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
@@ -30,6 +31,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRSafeApplicationGraph
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -41,6 +43,41 @@ import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.isApproximati
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
 import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.time.Duration.Companion.minutes
+
+/** The system property that turns on the differential run of every analysis (spec §8 Layer 3). */
+const val MARKSET_DIFF_PROPERTY = "opentaint.markset.diff"
+
+/** A finding's key under the soundness contract (spec §2, E9): its sink rule and sink statement. */
+fun TaintSinkTracker.TaintVulnerability.findingKey(): Pair<String, CommonInst> = ruleId to statement
+
+/**
+ * Asserts that the baseline and the mark-set run report the same findings (spec §2): the
+ * confirmed findings before the trace filter (the contract's comparison point, E9), and the
+ * reported findings after it.
+ */
+fun assertSameFindings(baseline: AnalysisTest.AnalysisRun, markSet: AnalysisTest.AnalysisRun, what: String) {
+    assertSameKeys(
+        baseline.confirmed.mapTo(hashSetOf()) { it.findingKey() },
+        markSet.confirmed.mapTo(hashSetOf()) { it.findingKey() },
+        "confirmed findings of $what",
+    )
+    assertSameKeys(
+        baseline.findings.mapTo(hashSetOf()) { it.vulnerability.findingKey() },
+        markSet.findings.mapTo(hashSetOf()) { it.vulnerability.findingKey() },
+        "reported findings of $what",
+    )
+}
+
+private fun assertSameKeys(baseline: Set<Pair<String, CommonInst>>, markSet: Set<Pair<String, CommonInst>>, what: String) {
+    if (baseline == markSet) return
+
+    fun Set<Pair<String, CommonInst>>.show() = map { (rule, stmt) -> "$rule @ ${stmt.location.method}: $stmt" }
+    throw AssertionError(
+        "mark-set differs from the baseline in the $what\n" +
+            "  missing under mark-set: ${(baseline - markSet).show()}\n" +
+            "  extra under mark-set: ${(markSet - baseline).show()}"
+    )
+}
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AnalysisTest : BasicTestUtils() {
@@ -126,6 +163,9 @@ abstract class AnalysisTest : BasicTestUtils() {
     var lastMarkSetOutcome: MarkSetOutcome? = null
         private set
 
+    /** The differential switch (spec §8 Layer 3): `-PmarksetDiff=true` sets this system property. */
+    private val markSetDiff: Boolean = System.getProperty(MARKSET_DIFF_PROPERTY) == "true"
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -148,12 +188,54 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointMethod: String
     ): List<VulnerabilityWithTrace> = runAnalysis(config, entryPointClass, listOf(entryPointMethod))
 
+    /**
+     * Runs the analysis with [markSet]. Under the differential switch (`-PmarksetDiff=true`, spec §8
+     * Layer 3) it runs twice, the baseline and then the mark-set selection, asserts that both report
+     * the same findings, and returns the baseline's. The mark-set run is the requested one when
+     * [markSet] is enabled, else the default mark-set options. [lastMarkSetInput] and
+     * [lastMarkSetOutcome] describe the requested run only.
+     */
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
         entryPointMethods: List<String>,
         markSet: MarkSetScanOptions = this.markSet,
     ): List<VulnerabilityWithTrace> {
+        if (!markSetDiff) return runAnalysisOnce(config, entryPointClass, entryPointMethods, markSet).publish()
+
+        val markSetOptions = if (markSet.enabled) markSet else MarkSetScanOptions(enabled = true)
+        val baseline = runAnalysisOnce(config, entryPointClass, entryPointMethods, MarkSetScanOptions())
+        val restricted = runAnalysisOnce(config, entryPointClass, entryPointMethods, markSetOptions)
+        assertSameFindings(baseline, restricted, "$entryPointClass$entryPointMethods")
+
+        (if (markSet.enabled) restricted else baseline).publish()
+        return baseline.findings
+    }
+
+    /**
+     * One run: its reported findings, its confirmed findings before the trace filter (spec E9),
+     * and its mark-set phase observations.
+     */
+    class AnalysisRun(
+        val findings: List<VulnerabilityWithTrace>,
+        val confirmed: List<TaintSinkTracker.TaintVulnerability>,
+        val markSetInput: MarkSetInput?,
+        val markSetOutcome: MarkSetOutcome?,
+    )
+
+    private fun AnalysisRun.publish(): List<VulnerabilityWithTrace> {
+        lastMarkSetInput = markSetInput
+        lastMarkSetOutcome = markSetOutcome
+        return findings
+    }
+
+    /** Runs the analysis once with [markSet]; does not touch [lastMarkSetInput] / [lastMarkSetOutcome]. */
+    fun runAnalysisOnce(
+        config: SerializedTaintConfig,
+        entryPointClass: String,
+        entryPointMethods: List<String>,
+        markSet: MarkSetScanOptions,
+    ): AnalysisRun {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val eps = entryPointMethods.map { entryPointMethod ->
             cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
@@ -181,8 +263,9 @@ abstract class AnalysisTest : BasicTestUtils() {
             markSet = markSet,
         )
 
-        lastMarkSetInput = null
-        lastMarkSetOutcome = null
+        var markSetInput: MarkSetInput? = null
+        var markSetOutcome: MarkSetOutcome? = null
+        var confirmed: List<TaintSinkTracker.TaintVulnerability> = emptyList()
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy
@@ -194,14 +277,19 @@ abstract class AnalysisTest : BasicTestUtils() {
             override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
 
             override fun onMarkSetPhase(input: MarkSetInput?, outcome: MarkSetOutcome) {
-                lastMarkSetInput = input
-                lastMarkSetOutcome = outcome
+                markSetInput = input
+                markSetOutcome = outcome
+            }
+
+            override fun onConfirmedVulnerabilities(vulnerabilities: List<TaintSinkTracker.TaintVulnerability>) {
+                confirmed = vulnerabilities
             }
         }
 
-        return analyzer.use {
+        val findings = analyzer.use {
             it.analyzeWithIfds(eps).first
         }
+        return AnalysisRun(findings, confirmed, markSetInput, markSetOutcome)
     }
 
     fun assertReachable(

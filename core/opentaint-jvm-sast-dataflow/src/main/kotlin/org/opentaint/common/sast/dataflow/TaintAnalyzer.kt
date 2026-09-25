@@ -120,6 +120,12 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
      */
     protected open fun onMarkSetPhase(input: MarkSetInput?, outcome: MarkSetOutcome) {}
 
+    /**
+     * Observes the findings after confirmation and before the trace filter (a test hook): the
+     * point at which the mark-set soundness contract compares findings (spec §2, E9).
+     */
+    protected open fun onConfirmedVulnerabilities(vulnerabilities: List<TaintSinkTracker.TaintVulnerability>) {}
+
     @Suppress("UNCHECKED_CAST")
     private fun createIfdsEngine() = TaintAnalysisUnitRunnerManager(
         refManager, cancellation,
@@ -226,6 +232,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         }
 
         logger.info { "Total vulnerabilities: ${vulnerabilities.size}" }
+        onConfirmedVulnerabilities(vulnerabilities)
 
         if (options.debugOptions?.enableVulnSummary == true) {
             logger.info {
