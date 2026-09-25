@@ -1,6 +1,7 @@
 package org.opentaint.common.sast
 
 import org.opentaint.common.sast.dataflow.DebugOptions
+import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -25,6 +26,7 @@ data class CommonAnalysisOptions(
     val symbolicExecutionTimeout: Duration = Duration.ZERO,
     val storeSummaries: Boolean = false,
     val experimentalAAInterProcCallDepth: Int = 1,
+    val markSet: MarkSetScanOptions = MarkSetScanOptions(),
 ) {
     val summariesApMode get() = ifdsApMode.takeIf { storeSummaries }
 
@@ -37,5 +39,6 @@ data class CommonAnalysisOptions(
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
         debugOptions = debugOptions,
         tracePathLimit = sarifGenerationOptions.sarifCodeFlowLimit,
+        markSet = markSet,
     )
 }

@@ -4,11 +4,14 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.dataflow.MarkSetOutcome
+import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.config.JavaDefaultConfigLoader
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
@@ -112,6 +115,17 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
+    /** The mark-set shallow scan options of every [runAnalysis] (spec §10); off by default. */
+    open val markSet: MarkSetScanOptions = MarkSetScanOptions()
+
+    /** The sealed mark-set input of the last [runAnalysis], or `null` if it was never sealed. */
+    var lastMarkSetInput: MarkSetInput? = null
+        private set
+
+    /** The mark-set phase outcome of the last [runAnalysis], or `null` if the phase did not run. */
+    var lastMarkSetOutcome: MarkSetOutcome? = null
+        private set
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -132,10 +146,19 @@ abstract class AnalysisTest : BasicTestUtils() {
         config: SerializedTaintConfig,
         entryPointClass: String,
         entryPointMethod: String
+    ): List<VulnerabilityWithTrace> = runAnalysis(config, entryPointClass, listOf(entryPointMethod))
+
+    fun runAnalysis(
+        config: SerializedTaintConfig,
+        entryPointClass: String,
+        entryPointMethods: List<String>,
+        markSet: MarkSetScanOptions = this.markSet,
     ): List<VulnerabilityWithTrace> {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
-        val ep = cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
-            ?: error("No $entryPointMethod method in $entryPointClass")
+        val eps = entryPointMethods.map { entryPointMethod ->
+            cls.declaredMethods.singleOrNull { it.name == entryPointMethod }
+                ?: error("No $entryPointMethod method in $entryPointClass")
+        }
 
         val taintConfig = TaintConfiguration(cp)
         taintConfig.loadConfig(config)
@@ -154,20 +177,30 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = apMode
+            ifdsApMode = apMode,
+            markSet = markSet,
         )
+
+        lastMarkSetInput = null
+        lastMarkSetOutcome = null
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy
                 get() = analysisUnrollStrategy
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
-            override fun analysisManager() = JIRAnalysisManager(cp, refManager, rulesProvider)
+            override fun analysisManager() =
+                JIRAnalysisManager(cp, refManager, rulesProvider, markSetRecorder = createMarkSetRecorder())
             override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
+
+            override fun onMarkSetPhase(input: MarkSetInput?, outcome: MarkSetOutcome) {
+                lastMarkSetInput = input
+                lastMarkSetOutcome = outcome
+            }
         }
 
         return analyzer.use {
-            it.analyzeWithIfds(listOf(ep)).first
+            it.analyzeWithIfds(eps).first
         }
     }
 

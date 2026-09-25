@@ -10,6 +10,7 @@ import com.github.ajalt.clikt.parameters.types.choice
 import com.github.ajalt.clikt.parameters.types.int
 import com.github.ajalt.clikt.parameters.types.path
 import org.opentaint.common.sast.CommonAnalysisOptions
+import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.sarif.SarifGenerationOptions
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta.Severity
 import org.opentaint.go.sast.project.GoProjectAnalysisOptions
@@ -85,6 +86,25 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val experimentalAAInterProcCallDepth: Int by option(help = "Experimental options: inter-proc alias analysis call depth")
         .int().default(1)
 
+    private val markSetScan: Boolean by option(help = "Experimental options: restrict the full scan's rules with the mark-set shallow scan")
+        .flag(default = false)
+
+    private val markSetRelaxed: Boolean by option(help = "Experimental options: mark-set scan with relaxed joined conditions (option 4*)")
+        .flag(default = false)
+
+    private val markSetNoRelevance: Boolean by option(help = "Experimental options: mark-set scan without pruning unneeded source actions")
+        .flag(default = false)
+
+    private val markSetFlowSensitive: Boolean by option(help = "Experimental options: flow-sensitive mark-set scan (option 3*)")
+        .flag(default = false)
+
+    private val markSetOptions get() = MarkSetScanOptions(
+        enabled = markSetScan,
+        relaxed = markSetRelaxed,
+        relevance = !markSetNoRelevance,
+        flowSensitive = markSetFlowSensitive,
+    )
+
     private val sarifOptions get() = SarifGenerationOptions(
         sarifFileName = sarifFileName,
         sarifCodeFlowLimit = sarifCodeFlowLimit,
@@ -112,6 +132,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         symbolicExecutionTimeout = symbolicExecutionTimeout.seconds,
         storeSummaries = false,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
+        markSet = markSetOptions,
     )
 
     override fun commonOptions(): CommonAnalysisOptions = commonOptions

@@ -112,9 +112,10 @@ class TaintAnalysisUnitRunnerManager(
 
     private val analysisMemoryManager = MemoryManager(refManager, OOM_DETECTION_THRESHOLD) {
         logger.error { "Running low on memory, stopping analysis" }
+        // Status before completion: the awaiting phase reads it right after `analysisCompletion` (M7).
+        updateFailureStatus(Status.OOM)
         analysisCompletion.complete(Unit)
         cancellation.cancel()
-        updateFailureStatus(Status.OOM)
     }
 
     fun storeSummaries() {
@@ -485,8 +486,9 @@ class TaintAnalysisUnitRunnerManager(
             }
 
             logger.error { "Got exception $exception from runner for unit $unit, stopping analysis" }
-            analysisCompletion.completeExceptionally(exception)
+            // Status before completion: the awaiting phase reads it right after `analysisCompletion` (M7).
             updateFailureStatus(Status.EXCEPTION)
+            analysisCompletion.completeExceptionally(exception)
         }
 
         val job = analyzerScope.launch(exceptionHandler) { runner.runLoop() }

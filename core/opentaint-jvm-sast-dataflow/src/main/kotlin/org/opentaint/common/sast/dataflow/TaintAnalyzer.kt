@@ -25,6 +25,8 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
@@ -105,6 +107,19 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     private val analysisManager by lazy { analysisManager() }
 
+    /**
+     * The recorder for [analysisManager] when the mark-set scan is on (spec §10), else `null`.
+     * A `null` recorder adds no behaviour.
+     */
+    protected fun createMarkSetRecorder(): MarkSetRecorder? =
+        if (options.markSet.enabled) MarkSetRecorder(options.markSet.maxSites, options.markSet.maxEdges) else null
+
+    /**
+     * Observes the mark-set phase (a test hook): the sealed input, `null` if the phase failed
+     * open before sealing, and the outcome. Not called when the mark-set scan is off.
+     */
+    protected open fun onMarkSetPhase(input: MarkSetInput?, outcome: MarkSetOutcome) {}
+
     @Suppress("UNCHECKED_CAST")
     private fun createIfdsEngine() = TaintAnalysisUnitRunnerManager(
         refManager, cancellation,
@@ -121,8 +136,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
 
         logger.info { "Start prescan phase" }
-        prescan(startMethods)
+        val prescanOk = prescan(startMethods)
         logger.info { "Finish prescan phase" }
+
+        markSetPhase(entryPoints, prescanOk)
 
         logger.info { "Start full scan phase" }
         val fullScanResult = fullScan(analysisStart, entryPoints, startMethods)
@@ -130,19 +147,47 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         return fullScanResult
     }
 
-    private fun prescan(startMethods: List<MethodWithContext>) {
+    /** Returns whether the prescan completed with status OK (spec §6.6, M7). */
+    private fun prescan(startMethods: List<MethodWithContext>): Boolean {
         analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
 
         val prescanTimeout = options.ifdsTimeout * 0.3
-        runCatching { ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds) }
-            .onFailure { logger.error(it) { "Prescan failed" } }
+        val prescanCompleted = runCatching {
+            ifdsEngine.runAnalysis(startMethods, timeout = prescanTimeout, cancellationTimeout = 30.seconds)
+        }.onFailure { logger.error(it) { "Prescan failed" } }.isSuccess
+        val prescanOk = prescanCompleted && ifdsEngine.status.get() == TaintAnalysisUnitRunnerManager.Status.OK
 
         if (options.debugOptions?.enableIfdsCoverage == true) {
             logger.debug {
                 ifdsEngine.reportCoverage()
             }
         }
+
+        return prescanOk
+    }
+
+    /**
+     * The mark-set phase (spec §10): runs only when [analysisManager] has a recorder, and installs
+     * its selection for the full scan unless it fails open. It runs no IFDS.
+     */
+    private fun markSetPhase(entryPoints: List<Method>, prescanOk: Boolean) {
+        val recorder = analysisManager.markSetRecorder() ?: return
+
+        logger.info { "Start mark-set phase" }
+        var sealedInput: MarkSetInput? = null
+        val outcome = runMarkSetPhase(
+            recorder, entryPoints, prescanOk, options.storeSummaries, options.markSet,
+            onSealed = { sealedInput = it },
+        )
+        logger.info { outcome.logLine() }
+
+        if (outcome is MarkSetOutcome.Selected) {
+            analysisManager.selectStatementRules(outcome.rules, outcome.covered)
+        }
+
+        onMarkSetPhase(sealedInput, outcome)
+        logger.info { "Finish mark-set phase" }
     }
 
     private fun fullScan(
