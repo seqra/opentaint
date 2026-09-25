@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.taint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
@@ -45,6 +46,13 @@ class JIRTaintAnalysisContext(
     fun reset() {
         taintSinkTracker.reset()
     }
+
+    /** Non-null only with the mark-set scan on (spec §10); see [recordMarkSet]. */
+    internal val markSetRecorder: MarkSetRecorder?
+        get() = analysisContext.analysisManager.markSetRecorder()
+
+    private val isMarkSetRecording: Boolean
+        get() = analysisContext.phase is Phase.Prescan && markSetRecorder?.active == true
 
     private fun JIRInst.callExpr(): JIRCallExpr = callExpr ?: error("Non-call statement")
     private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
@@ -104,7 +112,41 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
+    /**
+     * Mark-set prescan only (spec §5.2, G4): records the cleaners and pass-throughs of a call on
+     * the zero fact, which the prescan otherwise never queries there. The rules are only recorded:
+     * nothing is returned and, unlike [handlePhase], the relevant rule ids are left unchanged, so
+     * the full scan's rule set stays the baseline's.
+     */
+    fun recordZeroFactCallRules(statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?) {
+        if (!isMarkSetRecording) return
+
+        val method = statement.calleeMethod()
+        recordMarkSet(
+            statement,
+            rewriteCallStatementRules(
+                taintConfig.cleanerRulesForMethod(method, statement, fact = null, allRelevant = false),
+                TaintCleaner::condition, statement, callExpr, returnValue
+            )
+        )
+        recordMarkSet(
+            statement,
+            rewriteCallStatementRules(
+                taintConfig.passTroughRulesForMethod(method, statement, fact = null, allRelevant = false),
+                TaintPassThrough::condition, statement, callExpr, returnValue
+            )
+        )
+    }
+
     private inline fun <T: TaintConfigurationItem> prepareCallStatementRules(
+        rules: Iterable<T>, cond: T.() -> Condition,
+        statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
+    ): List<RuleWithCondition<T>> =
+        rewriteCallStatementRules(rules, cond, statement, callExpr, returnValue)
+            .also { recordMarkSet(statement, it) }
+            .handlePhase()
+
+    private inline fun <T: TaintConfigurationItem> rewriteCallStatementRules(
         rules: Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
     ): List<RuleWithCondition<T>> {
@@ -118,7 +160,7 @@ class JIRTaintAnalysisContext(
             if (cond.isFalse) return@mapNotNull null
 
             RuleWithCondition(it, cond)
-        }.handlePhase()
+        }
     }
 
     fun sourceRulesForStaticField(
@@ -131,7 +173,7 @@ class JIRTaintAnalysisContext(
         }
 
         RuleWithCondition(it, RuleConditionRewriter.trueExpr)
-    }.handlePhase()
+    }.also { recordMarkSet(statement, it) }.handlePhase()
 
     fun sourceRulesForMethodExit(
         statement: JIRInst,
@@ -167,7 +209,40 @@ class JIRTaintAnalysisContext(
         statement
     )
 
+    /**
+     * Mark-set prescan only (spec §5.2, G6): records the exit sources and sinks at a throw on the
+     * zero fact; the prescan otherwise queries exit rules at returns only. The rules are only
+     * recorded: nothing is returned and the relevant rule ids are left unchanged.
+     */
+    fun recordZeroFactThrowRules(statement: JIRInst) {
+        if (!isMarkSetRecording) return
+
+        val method = statement.location.method
+        recordMarkSet(
+            statement,
+            rewriteMethodRules(
+                taintConfig.exitSourceRulesForMethod(method, statement, fact = null, allRelevant = false),
+                TaintMethodExitSource::condition, statement
+            )
+        )
+        recordMarkSet(
+            statement,
+            rewriteMethodRules(
+                taintConfig.sinkRulesForMethodExit(method, statement, fact = null, initialFacts = null),
+                TaintMethodExitSink::condition, statement
+            )
+        )
+    }
+
     private inline fun <T : TaintConfigurationItem> prepareMethodRules(
+        rules: Iterable<T>, cond: T.() -> Condition,
+        statement: JIRInst,
+    ): List<RuleWithCondition<T>> =
+        rewriteMethodRules(rules, cond, statement)
+            .also { recordMarkSet(statement, it) }
+            .handlePhase()
+
+    private inline fun <T : TaintConfigurationItem> rewriteMethodRules(
         rules: Iterable<T>, cond: T.() -> Condition,
         statement: JIRInst,
     ): List<RuleWithCondition<T>> {
@@ -182,7 +257,7 @@ class JIRTaintAnalysisContext(
             if (cond.isFalse) return@mapNotNull null
 
             RuleWithCondition(it, cond)
-        }.handlePhase()
+        }
     }
 
     private fun <T : TaintConfigurationItem> List<RuleWithCondition<T>>.handlePhase(): List<RuleWithCondition<T>> {

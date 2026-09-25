@@ -63,6 +63,11 @@ class JIRMethodSequentFlowFunction(
 
         applyUnconditionalSources()
         applyUnconditionalSinks()
+
+        if (currentInst is JIRThrowInst) {
+            // Mark-set prescan only (G6): record the exit rules at throws; a no-op otherwise.
+            analysisContext.taint.recordZeroFactThrowRules(currentInst)
+        }
     }
 
     override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {

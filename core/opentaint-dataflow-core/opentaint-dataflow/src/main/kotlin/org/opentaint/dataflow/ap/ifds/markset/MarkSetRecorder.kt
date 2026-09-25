@@ -26,6 +26,7 @@ class SiteRef(
  *
  * @property sites parallel to [MarkSetProgram.sites].
  * @property markNames mark id -> name.
+ * @property methods method id -> method (the program's nodes).
  * @property coveredStatements every statement at which the prescan queried a
  *   rule (§4, "recorded statements"); used by the provider's fallback.
  */
@@ -33,6 +34,7 @@ class MarkSetInput(
     val program: MarkSetProgram,
     val sites: List<SiteRef>,
     val markNames: List<String>,
+    val methods: List<CommonMethod>,
     val coveredStatements: Set<CommonInst>,
 )
 
@@ -194,12 +196,19 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
                 program = program,
                 sites = siteRefs.toList(),
                 markNames = markNames.toList(),
+                methods = methodsById(),
                 coveredStatements = coveredStatements.toSet(),
             )
         }
     }
 
     // ---- helpers, all called with [lock] held ------------------------------
+
+    private fun methodsById(): List<CommonMethod> {
+        val methods = arrayOfNulls<CommonMethod>(methodIds.size)
+        for ((method, id) in methodIds) methods[id] = method
+        return methods.map { checkNotNull(it) }
+    }
 
     private fun internMethod(method: CommonMethod): Int = methodIds.getOrPut(method) { methodIds.size }
 

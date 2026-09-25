@@ -367,12 +367,18 @@ class TaintAnalysisUnitRunner(
     override fun subscribeOnMethodSummaries(
         edge: Edge.ZeroToZero,
         methodEntryPoint: MethodEntryPoint
-    )  = subscribeOnMethodSummaries(
-        methodEntryPoint = methodEntryPoint,
-        subscribe = { subscribeOnMethodSummary(methodEntryPoint, edge) },
-        submitThisUnitFact = { submitMethodInitialZeroFact(methodEntryPoint) },
-        submitCrossUnitFact = { handleCrossUnitZeroCall(unit, methodEntryPoint) }
-    )
+    ) {
+        // Mark-set prescan (spec §4): the one zero-callee subscription path, lambdas included.
+        (analysisManager as? TaintAnalysisManager)?.markSetRecorder()
+            ?.recordEdge(edge.methodEntryPoint.method, edge.statement, methodEntryPoint.method)
+
+        subscribeOnMethodSummaries(
+            methodEntryPoint = methodEntryPoint,
+            subscribe = { subscribeOnMethodSummary(methodEntryPoint, edge) },
+            submitThisUnitFact = { submitMethodInitialZeroFact(methodEntryPoint) },
+            submitCrossUnitFact = { handleCrossUnitZeroCall(unit, methodEntryPoint) }
+        )
+    }
 
     override fun subscribeOnMethodSummaries(
         edge: Edge.ZeroToFact,

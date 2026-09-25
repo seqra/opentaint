@@ -74,6 +74,9 @@ class JIRMethodCallFlowFunction(
             }
         )
 
+        // Mark-set prescan only (G4): record the cleaners and pass-throughs at the call; a no-op otherwise.
+        taintCtx.recordZeroFactCallRules(statement, callExpr, returnValue)
+
         this += CallToReturnZeroFact
         this += CallToStartZeroFact
     }
