@@ -459,7 +459,7 @@ of these holds:
    cap;
 5. the language is Go;
 6. the recorder's seal-time `PcWF` check failed (E0);
-7. a debug check failed (E1, E2; enabled in tests);
+7. (not a fail-open) a debug check failure (E1, E2, E10) is decidable only after the full scan. It is logged at ERROR and fails the test harness;
 8. any other exception during seal or scan (`error: <e>`);
 9. option 3* only: the per-root reachable statement count exceeds 50M
    (`flow-sensitive size`).
