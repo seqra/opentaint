@@ -110,7 +110,7 @@ abstract class SampleBasedTest(
 
     private val sampleData by lazy { samplesDb.loadSampleData() }
 
-    private val runner by lazy { TestAnalysisRunner(samplesDb) }
+    private val runner by lazy { TestAnalysisRunner(samplesDb, this::class.simpleName ?: "SampleBasedTest") }
 
     fun closeRunner() {
         runner.close()

@@ -2,10 +2,19 @@ package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
+import org.opentaint.common.sast.dataflow.MarkSetOutcomeTally
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
+import org.opentaint.common.sast.dataflow.assertMarkSetDebugChecks
+import org.opentaint.common.sast.dataflow.checkLogLine
 import org.opentaint.common.sast.dataflow.runMarkSetPhase
+import org.opentaint.common.sast.dataflow.violationLogLines
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
+import org.opentaint.dataflow.ap.ifds.analysis.MethodEntrypointResolver
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.markset.CoverageViolation
+import org.opentaint.dataflow.ap.ifds.markset.MarkSetCoverage
 import org.opentaint.dataflow.ap.ifds.markset.MethodCfgSource
 import org.opentaint.dataflow.ap.ifds.markset.SiteKind
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
@@ -29,8 +38,10 @@ import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
+import org.opentaint.util.analysis.ApplicationGraph
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 import kotlin.time.Duration
@@ -133,10 +144,93 @@ class MarkSetPhaseTest : AnalysisTest() {
         val capped = runAnalysis(
             simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"),
             markSet = enabled.copy(maxSites = 1, maxEdges = 1),
+            allowedFailOpen = setOf("recorder cap"),
         )
 
         assertEquals(MarkSetOutcome.FailOpen("recorder cap"), lastMarkSetOutcome)
         assertEquals(findings(baseline), findings(capped))
+    }
+
+    @Test
+    fun `a recorder byte cap fails open and keeps the findings`() {
+        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"))
+        val capped = runAnalysis(
+            simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"),
+            markSet = enabled.copy(maxRecorderBytes = 1),
+            allowedFailOpen = setOf("recorder cap"),
+        )
+
+        assertEquals(MarkSetOutcome.FailOpen("recorder cap"), lastMarkSetOutcome)
+        assertEquals(findings(baseline), findings(capped))
+    }
+
+    @Test
+    fun `the debug-check log reports the counts per check and caps the violation lines`() {
+        val violations = List(3) { CoverageViolation("E1", "call $it") } + CoverageViolation("E2", "site")
+        val coverage = MarkSetCoverage(violations, observedCalls = 7, observedSites = 9, uncoveredSites = 2)
+
+        assertEquals(
+            "markset-check: e1=3 e2=1 e10=n/a violations=4 calls=7 sites=9 uncoveredSites=2",
+            coverage.checkLogLine(),
+        )
+        assertEquals(
+            listOf("markset-check E1: call 0", "markset-check E1: call 1", "markset-check: 2 more violations"),
+            coverage.violationLogLines(limit = 2),
+        )
+        assertEquals(
+            "markset-check: e1=0 e2=0 e10=n/a violations=0 calls=0 sites=0 uncoveredSites=0",
+            MarkSetCoverage(emptyList(), 0, 0, 0).checkLogLine(),
+        )
+    }
+
+    @Test
+    fun `a differential pair whose mark-set run failed open fails unless the reason is allowed`() {
+        val failOpen = MarkSetOutcome.FailOpen("time limit")
+
+        assertFailsWith<AssertionError> { assertMarkSetDebugChecks(emptySet(), emptySet(), failOpen, null, "pair") }
+        assertFailsWith<AssertionError> { assertMarkSetDebugChecks(emptySet(), emptySet(), null, null, "pair") }
+        assertMarkSetDebugChecks(emptySet(), emptySet(), failOpen, null, "pair", allowedFailOpen = setOf("time limit"))
+
+        val tally = MarkSetOutcomeTally()
+        tally.record(failOpen)
+        tally.record(MarkSetOutcome.FailOpen("recorder cap"))
+        tally.record(failOpen)
+        assertEquals("markset-diff Suite: selected=0 failOpen=3 {recorder cap=1, time limit=2}", tally.summary("Suite"))
+    }
+
+    /** Throws from every prescan runner's first event, and delegates otherwise (the M7 test). */
+    private class FailingPrescan(private val base: TaintAnalysisManager) : TaintAnalysisManager by base {
+        @Volatile
+        private var phase: TaintAnalysisManager.Phase = TaintAnalysisManager.Phase.Prescan
+
+        override fun selectPhase(phase: TaintAnalysisManager.Phase) {
+            this.phase = phase
+            base.selectPhase(phase)
+        }
+
+        override fun getMethodEntrypointResolver(
+            graph: ApplicationGraph<CommonMethod, CommonInst>,
+        ): MethodEntrypointResolver {
+            check(phase !is TaintAnalysisManager.Phase.Prescan) { "injected prescan failure" }
+            return base.getMethodEntrypointResolver(graph)
+        }
+    }
+
+    @Test
+    fun `a runner exception in the prescan leaves a non-OK status and fails open`() {
+        // The same failure with the flag off: the full scan keeps only the rules the failed prescan
+        // saw, so it is the baseline a fail-open run must match.
+        val baseline = runAnalysisOnce(
+            simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), MarkSetScanOptions(), wrapManager = ::FailingPrescan,
+        )
+        val failed = runAnalysisOnce(
+            simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), enabled, wrapManager = ::FailingPrescan,
+        )
+
+        // Read by the mark-set phase, right after the prescan's `runAnalysis` returned (spec §10, M7).
+        assertEquals(TaintAnalysisUnitRunnerManager.Status.EXCEPTION, failed.statusAfterPrescan)
+        assertEquals(MarkSetOutcome.FailOpen("prescan incomplete"), failed.markSetOutcome)
+        assertEquals(findings(baseline.findings), findings(failed.findings))
     }
 
     private fun sampleMethod(cls: String, name: String): JIRMethod =

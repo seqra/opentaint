@@ -1,12 +1,14 @@
 package org.opentaint.jvm.sast.dataflow
 
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkFactKey
 import org.opentaint.common.sast.dataflow.MarkSetFindings
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
+import org.opentaint.common.sast.dataflow.MarkSetOutcomeTally
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
@@ -14,6 +16,8 @@ import org.opentaint.common.sast.dataflow.assertMarkSetDebugChecks
 import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
 import org.opentaint.common.sast.dataflow.markFactKeys
 import org.opentaint.config.JavaDefaultConfigLoader
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetCoverage
@@ -156,6 +160,14 @@ abstract class AnalysisTest : BasicTestUtils() {
     /** The differential switch (spec §8 Layer 3): `-PmarksetDiff=true` sets this system property. */
     private val markSetDiff: Boolean = System.getProperty(MARKSET_DIFF_PROPERTY) == "true"
 
+    /** The mark-set outcomes of this class' differential pairs, logged once the class is done. */
+    private val differentialOutcomes = MarkSetOutcomeTally()
+
+    @AfterAll
+    fun logMarkSetDifferentialSummary() {
+        if (markSetDiff) println(differentialOutcomes.summary(this::class.simpleName ?: "AnalysisTest"))
+    }
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -182,15 +194,17 @@ abstract class AnalysisTest : BasicTestUtils() {
      * Runs the analysis with [markSet]. Under the differential switch (`-PmarksetDiff=true`, spec §8
      * Layer 3) it runs twice, the baseline and then the mark-set selection with the debug checks on,
      * asserts that both pass [assertMarkSetDebugChecks] and report the same findings, and returns
-     * the baseline's. The mark-set run is the requested one when [markSet] is enabled, else
-     * [defaultDifferentialMarkSet]. [lastMarkSetInput] and [lastMarkSetOutcome] describe the
-     * requested run only.
+     * the baseline's. The mark-set run must select unless it fails open for a reason in
+     * [allowedFailOpen] (a test that fails open on purpose). The mark-set run is the requested one
+     * when [markSet] is enabled, else [defaultDifferentialMarkSet]. [lastMarkSetInput] and
+     * [lastMarkSetOutcome] describe the requested run only.
      */
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
         entryPointMethods: List<String>,
         markSet: MarkSetScanOptions = this.markSet,
+        allowedFailOpen: Set<String> = emptySet(),
     ): List<VulnerabilityWithTrace> {
         if (!markSetDiff) return runAnalysisOnce(config, entryPointClass, entryPointMethods, markSet).publish()
 
@@ -198,7 +212,8 @@ abstract class AnalysisTest : BasicTestUtils() {
         val baseline = runAnalysisOnce(config, entryPointClass, entryPointMethods, MarkSetScanOptions(), collectFacts = true)
         val restricted = runAnalysisOnce(config, entryPointClass, entryPointMethods, markSetOptions, collectFacts = true)
         val what = "$entryPointClass$entryPointMethods"
-        assertMarkSetDebugChecks(baseline, restricted, what)
+        differentialOutcomes.record(restricted.markSetOutcome)
+        assertMarkSetDebugChecks(baseline, restricted, what, allowedFailOpen)
         assertSameMarkSetFindings(baseline.gated, restricted.gated, what)
 
         (if (markSet.enabled) restricted else baseline).publish()
@@ -207,8 +222,9 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     /**
      * One run: its reported findings, its confirmed findings before the trace filter (spec E9),
-     * and its mark-set phase observations: the E1/E2 [coverage] (debug checks only) and the
-     * [markFacts] the E10 diff compares (with `collectFacts` only).
+     * and its mark-set phase observations: the E1/E2 [coverage] (debug checks only), the
+     * [markFacts] the E10 diff compares (with `collectFacts` only), and the engine status the
+     * mark-set phase saw right after the prescan (`null` if the phase did not run).
      */
     class AnalysisRun(
         val findings: List<VulnerabilityWithTrace>,
@@ -217,6 +233,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         val markSetOutcome: MarkSetOutcome?,
         val coverage: MarkSetCoverage? = null,
         val markFacts: Set<MarkFactKey>? = null,
+        val statusAfterPrescan: TaintAnalysisUnitRunnerManager.Status? = null,
     ) {
         /** The findings the differential gate compares. */
         val gated: MarkSetFindings get() = MarkSetFindings(confirmed, findings)
@@ -224,15 +241,20 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     /**
      * The mark-set debug checks of a differential pair (spec §7, §8 Layers 2 and 3): the mark-set
-     * run passed E1 and E2 if it selected, and both runs have the same facts of every needed mark
-     * per statement (E10). Both runs must have collected their facts.
+     * run selected (or failed open for a reason in [allowedFailOpen]) and passed E1 and E2, and both
+     * runs have the same facts of every needed mark per statement (E10). Both runs must have
+     * collected their facts.
      */
-    fun assertMarkSetDebugChecks(baseline: AnalysisRun, markSet: AnalysisRun, what: String) =
-        assertMarkSetDebugChecks(
-            checkNotNull(baseline.markFacts) { "no baseline facts for $what" },
-            checkNotNull(markSet.markFacts) { "no mark-set facts for $what" },
-            markSet.markSetOutcome, markSet.coverage, what,
-        )
+    fun assertMarkSetDebugChecks(
+        baseline: AnalysisRun,
+        markSet: AnalysisRun,
+        what: String,
+        allowedFailOpen: Set<String> = emptySet(),
+    ) = assertMarkSetDebugChecks(
+        checkNotNull(baseline.markFacts) { "no baseline facts for $what" },
+        checkNotNull(markSet.markFacts) { "no mark-set facts for $what" },
+        markSet.markSetOutcome, markSet.coverage, what, allowedFailOpen,
+    )
 
     private fun AnalysisRun.publish(): List<VulnerabilityWithTrace> {
         lastMarkSetInput = markSetInput
@@ -243,6 +265,7 @@ abstract class AnalysisTest : BasicTestUtils() {
     /**
      * Runs the analysis once with [markSet]; does not touch [lastMarkSetInput] / [lastMarkSetOutcome].
      * With [collectFacts], the run keeps the marked facts of every statement for the E10 diff.
+     * [wrapManager] wraps the engine's analysis manager (a test hook, e.g. to inject a failure).
      */
     fun runAnalysisOnce(
         config: SerializedTaintConfig,
@@ -250,6 +273,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         entryPointMethods: List<String>,
         markSet: MarkSetScanOptions,
         collectFacts: Boolean = false,
+        wrapManager: (TaintAnalysisManager) -> TaintAnalysisManager = { it },
     ): AnalysisRun {
         val cls = cp.findClassOrNull(entryPointClass) ?: error("Class $entryPointClass not found in CP")
         val eps = entryPointMethods.map { entryPointMethod ->
@@ -282,6 +306,7 @@ abstract class AnalysisTest : BasicTestUtils() {
         var markSetOutcome: MarkSetOutcome? = null
         var confirmed: List<TaintSinkTracker.TaintVulnerability> = emptyList()
         var observedCoverage: MarkSetCoverage? = null
+        var statusAfterPrescan: TaintAnalysisUnitRunnerManager.Status? = null
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
             override val unrollStrategy: AnyAccessorUnrollStrategy
@@ -289,12 +314,13 @@ abstract class AnalysisTest : BasicTestUtils() {
 
             override fun analysisGraph(): ApplicationGraph<JIRMethod, JIRInst> = ifdsGraph
             override fun analysisManager() =
-                JIRAnalysisManager(cp, refManager, rulesProvider, markSetRecorder = createMarkSetRecorder())
+                wrapManager(JIRAnalysisManager(cp, refManager, rulesProvider, markSetRecorder = createMarkSetRecorder()))
             override fun unitResolver() = SingleLocationUnit(cls.declaration.location)
 
             override fun onMarkSetPhase(input: MarkSetInput?, outcome: MarkSetOutcome) {
                 markSetInput = input
                 markSetOutcome = outcome
+                statusAfterPrescan = ifdsEngine.status.get()
             }
 
             override fun onConfirmedVulnerabilities(vulnerabilities: List<TaintSinkTracker.TaintVulnerability>) {
@@ -312,7 +338,7 @@ abstract class AnalysisTest : BasicTestUtils() {
                 if (collectFacts) markFacts = markFactKeys(it.statementsWithFacts())
             }
         }
-        return AnalysisRun(findings, confirmed, markSetInput, markSetOutcome, observedCoverage, markFacts)
+        return AnalysisRun(findings, confirmed, markSetInput, markSetOutcome, observedCoverage, markFacts, statusAfterPrescan)
     }
 
     fun assertReachable(
