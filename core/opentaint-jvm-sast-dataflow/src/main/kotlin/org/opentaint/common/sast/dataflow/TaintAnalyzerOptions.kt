@@ -20,6 +20,10 @@ data class TaintAnalyzerOptions(
 /**
  * Options of the mark-set shallow scan (spec §10), run between the prescan and the full scan.
  *
+ * On by default, in the best known configuration (flow-insensitive, with relevance, without
+ * relaxed conditions): [enabled] `true`, [relaxed] `false`, [relevance] `true`, [flowSensitive]
+ * `false`. Pass `enabled = false` for the baseline (the plain full scan, no restriction).
+ *
  * @property enabled record the mark-set program during the prescan and restrict the full scan's rules.
  * @property relaxed option 4* (spec §6.2).
  * @property relevance prune source actions to the needed marks (spec §6.3).
@@ -34,7 +38,7 @@ data class TaintAnalyzerOptions(
  *   after it.
  */
 data class MarkSetScanOptions(
-    val enabled: Boolean = false,
+    val enabled: Boolean = true,
     val relaxed: Boolean = false,
     val relevance: Boolean = true,
     val flowSensitive: Boolean = false,

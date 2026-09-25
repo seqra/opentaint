@@ -86,8 +86,9 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val experimentalAAInterProcCallDepth: Int by option(help = "Experimental options: inter-proc alias analysis call depth")
         .int().default(1)
 
-    private val markSetScan: Boolean by option(help = "Experimental options: restrict the full scan's rules with the mark-set shallow scan")
-        .flag(default = false)
+    private val markSetScan: Boolean by option(
+        help = "Restrict the full scan's rules with the mark-set shallow scan (on by default; --no-mark-set-scan opts out)",
+    ).flag("--no-mark-set-scan", default = true)
 
     private val markSetRelaxed: Boolean by option(help = "Experimental options: mark-set scan with relaxed joined conditions (option 4*)")
         .flag(default = false)

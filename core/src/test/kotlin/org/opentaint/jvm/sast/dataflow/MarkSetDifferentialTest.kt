@@ -74,7 +74,7 @@ class MarkSetDifferentialTest : AnalysisTest() {
         markSetOptions: MarkSetScanOptions = defaultDifferentialMarkSet,
     ): Differential {
         val eps = entryPoints.toList()
-        val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions(), collectFacts = true)
+        val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions(enabled = false), collectFacts = true)
 
         fun restricted(options: MarkSetScanOptions): Differential {
             val checked = options.copy(debugChecks = true)

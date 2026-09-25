@@ -68,13 +68,14 @@ class MarkSetPhaseTest : AnalysisTest() {
     )
 
     private val enabled = MarkSetScanOptions(enabled = true)
+    private val disabled = MarkSetScanOptions(enabled = false)
 
     private fun findings(result: List<VulnerabilityWithTrace>) =
         result.mapTo(hashSetOf()) { it.vulnerability.rule.id to it.vulnerability.statement }
 
     @Test
     fun `the flag on gives the same findings as off and a selection`() {
-        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"))
+        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = disabled)
         assertEquals(null, lastMarkSetOutcome, "the mark-set phase ran with the flag off")
 
         val markSet = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = enabled)
@@ -98,7 +99,7 @@ class MarkSetPhaseTest : AnalysisTest() {
             ),
         )
 
-        val baseline = runAnalysis(config, SIMPLE_CLS, listOf("simpleDataFlow"))
+        val baseline = runAnalysis(config, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = disabled)
         val markSet = runAnalysis(config, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = enabled)
         assertEquals(findings(baseline), findings(markSet))
 
@@ -140,7 +141,7 @@ class MarkSetPhaseTest : AnalysisTest() {
 
     @Test
     fun `a recorder cap of one fails open and keeps the findings`() {
-        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"))
+        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = disabled)
         val capped = runAnalysis(
             simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"),
             markSet = enabled.copy(maxSites = 1, maxEdges = 1),
@@ -153,7 +154,7 @@ class MarkSetPhaseTest : AnalysisTest() {
 
     @Test
     fun `a recorder byte cap fails open and keeps the findings`() {
-        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"))
+        val baseline = runAnalysis(simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), markSet = disabled)
         val capped = runAnalysis(
             simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"),
             markSet = enabled.copy(maxRecorderBytes = 1),
@@ -221,7 +222,7 @@ class MarkSetPhaseTest : AnalysisTest() {
         // The same failure with the flag off: the full scan keeps only the rules the failed prescan
         // saw, so it is the baseline a fail-open run must match.
         val baseline = runAnalysisOnce(
-            simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), MarkSetScanOptions(), wrapManager = ::FailingPrescan,
+            simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), disabled, wrapManager = ::FailingPrescan,
         )
         val failed = runAnalysisOnce(
             simpleConfig, SIMPLE_CLS, listOf("simpleDataFlow"), enabled, wrapManager = ::FailingPrescan,

@@ -146,7 +146,11 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
-    /** The mark-set shallow scan options of every [runAnalysis] (spec §10); off by default. */
+    /**
+     * The mark-set shallow scan options of every [runAnalysis] (spec §10); on by default
+     * ([MarkSetScanOptions]'s own default). A test that needs the plain baseline passes
+     * `MarkSetScanOptions(enabled = false)` explicitly, e.g. through [runAnalysisOnce].
+     */
     open val markSet: MarkSetScanOptions = MarkSetScanOptions()
 
     /** The sealed mark-set input of the last [runAnalysis], or `null` if it was never sealed. */
@@ -209,7 +213,9 @@ abstract class AnalysisTest : BasicTestUtils() {
         if (!markSetDiff) return runAnalysisOnce(config, entryPointClass, entryPointMethods, markSet).publish()
 
         val markSetOptions = (if (markSet.enabled) markSet else defaultDifferentialMarkSet).copy(debugChecks = true)
-        val baseline = runAnalysisOnce(config, entryPointClass, entryPointMethods, MarkSetScanOptions(), collectFacts = true)
+        val baseline = runAnalysisOnce(
+            config, entryPointClass, entryPointMethods, MarkSetScanOptions(enabled = false), collectFacts = true,
+        )
         val restricted = runAnalysisOnce(config, entryPointClass, entryPointMethods, markSetOptions, collectFacts = true)
         val what = "$entryPointClass$entryPointMethods"
         differentialOutcomes.record(restricted.markSetOutcome)

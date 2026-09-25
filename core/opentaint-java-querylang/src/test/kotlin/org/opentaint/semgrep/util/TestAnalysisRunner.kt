@@ -177,7 +177,7 @@ class TestAnalysisRunner(
                 ?: error("No entrypoint in $sample")
 
             val baseline = runEngine(
-                rulesProvider(rule, config, useDefaultConfig), ep, MarkSetScanOptions(), collectFacts = markSetDiff,
+                rulesProvider(rule, config, useDefaultConfig), ep, MarkSetScanOptions(enabled = false), collectFacts = markSetDiff,
             )
             if (markSetDiff) {
                 val markSet = runEngine(
