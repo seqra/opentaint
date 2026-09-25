@@ -69,6 +69,7 @@ The audit is transitive, so private lemmas are covered too.
 | Go | Out. No statement-level provider exists, so the phase is skipped and the full scan uses the baseline, which is the current behaviour. The model is language-agnostic. |
 | Flow-insensitive mode (default) | in scope, proved |
 | Relevance pass (default on) | in scope, proved |
+| Default | the mark-set scan is on by default (flow-insensitive, relevance on); `--no-mark-set-scan` opts out (§10) |
 | Option 4*: relaxed conditions, corrected (§6.2) | behind a flag, proved |
 | Option 3*: flow-sensitive, context-insensitive within a root | behind a flag, proved including relevance (O-FS-3, `markset_exact_fs`) |
 | Option 3*: context-sensitive | gated on O-FS-1 and O-FS-2 (§9) |
@@ -630,14 +631,19 @@ normal edges only, matching the engine.
   `selectStatementRules`, which the runner calls just before
   `selectPhase(FullScan)`. It is cleared when the phase is `Prescan`.
 
-**`TaintAnalyzerOptions`.**
-- `markSetScan: Boolean = false`. It becomes the default only once Layer 4
-  passes.
-- `markSetFlowSensitive = false`
-- `markSetRelaxed = false`
-- `markSetRelevance = true`
-- `markSetTimeLimit = 30.seconds`
-- the recorder caps.
+**`TaintAnalyzerOptions.markSet` (`MarkSetScanOptions`).** The scan is **on by
+default** in the best known configuration, by a user decision taken after the
+Conductor experiment (`docs/markset-conductor-experiment.md`). That experiment
+showed identical findings, and the §6.6 fail-open keeps a safe fallback.
+- `enabled = true`. The CLI flag is `--mark-set-scan`, which is on by default;
+  opt out with `--no-mark-set-scan`.
+- `flowSensitive = false`. 3* falls back to the baseline on large root sets.
+- `relaxed = false`. 4* only adds imprecision.
+- `relevance = true`.
+- `timeLimit = 30.seconds`.
+- The recorder caps: sites, edges, and 512 MB.
+- `debugChecks = false`. The hidden flag `--mark-set-debug-checks` turns them
+  on.
 
 **`TaintAnalyzer.analyzeStaged`.** Order: `prescan` → `markSetPhase` →
 `fullScan`.
