@@ -262,7 +262,7 @@ made an explicit assumption.
 |---|---|---|
 | G1 (B3) | Sink `trackFactsReachAnalysisEnd` facts are zero-context facts in the engine. v1 kept the sink's context, so it did not over-approximate the engine. | `ESite.genCtx`: sink gens land in the zero context. `InS.sinkGen` places them in every root that reaches n. Necessity: `sinkgen_zero_ctx_needed`. The engine fires a sink in root E2 on an end mark produced under E1, and the semantics without `sinkGen` does not select it. |
 | G2 (M3) | The engine joins across method *contexts* at a statement. v1 joined only within one node. | `Program.method`. Joined premises can come from any node of the same method (`PE.genJoined`, `InS.joined`, `CubeSat`). |
-| G3 (B4) | The old §6.2 claimed that under 4* the per-root closure alone is sound. It is **false**. Relaxing `(A@0 ∧ B@1) ⇒ C` to `A ∨ B` per root loses the zero-context placement of C. A third root that passes neither A nor B, but calls n and has a sink on C, loses its finding (`naive_relax_unsound`). | 4* relaxes only the *test* of joined cubes. Their placement is unchanged (`InSRelax`, `markset_exact_relaxed`). |
+| G3 (B4) | (The JVM engine cannot exhibit this with premises that come from callers, because it builds an ND summary edge (E6). The Layer 3 G3 sample therefore checks equality with a control root that supplies both premises.) The old §6.2 claimed that under 4* the per-root closure alone is sound. It is **false**. Relaxing `(A@0 ∧ B@1) ⇒ C` to `A ∨ B` per root loses the zero-context placement of C. A third root that passes neither A nor B, but calls n and has a sink on C, loses its finding (`naive_relax_unsound`). | 4* relaxes only the *test* of joined cubes. Their placement is unchanged (`InSRelax`, `markset_exact_relaxed`). |
 | G4 (M2) | An engine fact is a per-base tree with several marks. A cleaner conditioned on mark B also fires on a tree holding a needed mark A. If B were pruned, A would survive, and the restricted run would report more findings. | Every recorded cleaner atom is `Needed` (`Needed.cleanerAtom`). The model keeps kills as a fixed predicate, justified by E4. |
 | G5 (B1) | The provider replaces the delegate's rules instead of filtering them, so exit sinks lose their `initialFacts` filter. It is found in the staged branch's provider. On main the provider is new. | The provider filters the delegate's answer (§10). This is the semantics `Sel` assumes. |
 | G6 (B2) | Exit rules at throw statements are never recorded. | Record at throws, and fall back to the delegate at unrecorded statements (§10). |
@@ -459,7 +459,13 @@ of these holds:
    cap;
 5. the language is Go;
 6. the recorder's seal-time `PcWF` check failed (E0);
-7. a debug check failed (E1, E2; enabled in tests).
+7. a debug check failed (E1, E2; enabled in tests);
+8. any other exception during seal or scan (`error: <e>`);
+9. option 3* only: the per-root reachable statement count exceeds 50M
+   (`flow-sensitive size`).
+
+Trigger 2 covers preloaded summaries, because the engine can load
+precalculated summaries only when `storeSummaries` is set.
 
 An empty selection (no applicable sink) is not a fail-open trigger. By
 `T-REL`, the baseline also reports no findings.
@@ -478,7 +484,7 @@ restricted run behaves like `PE`'s for exactness.
 | E3 | Marks are created only by `AssignMark`. Copies and unresolved calls preserve or kill marks. Facts cross methods only along call edges, through argument, `this`, return and `ClassStatic` bases. | `Propagator`, `JIRMethodCallFlowFunction`, `JIRMethodCallFactMapper`, `JIRMethodGetDefault`, `StringConcatRuleProvider` | Covered by the model's `PE` constructors, plus recorder tests per site kind. |
 | E4 | Kills of needed-mark facts do not depend on the selection. Cleaners and implicit kills go to the delegate. A cleaner condition sees only the flowing base's tree, and all its atoms are `Needed`. `dropArgumentsLocalTaintMarks` and exit-sink `ClassStatic` drops depend only on selected rules applied to needed-mark facts. | `SelectedTaintRulesProvider` delegation; `applyCleanersOrCallToStart` | Provider unit test. Regression test pinning cleaner evaluation to the flowing fact. |
 | E5 | Negated mark literals are treated as true. | `TaintFactAwareConditionEvaluator:37` | A unit test fails if this changes; the abstraction would then need the atoms under negation. |
-| E6 | Multi-fact conditions are joined only at one statement, over facts present there under any context of the method, and the result is a zero-context fact. ND summaries applied at callers combine only facts already present at the call. | `TaintSinkTracker` assumption keys; `applyRuleWithAssumptions`; `matchNDInitial` | Covered by the model (`PE.genJoined`). D1 regression sample (§8). |
+| E6 | Multi-fact conditions are joined only at one statement, over facts present there under any context of the method. The model places the joined result in the zero context. That over-approximates the engine, which is less generous in two ways. A joined source whose premises come from callers yields an ND summary edge, which reaches a caller only when that caller supplies every premise at one call site. That was observed in the Task 7 G3 sample. A joined sink's end facts are zero-context facts. ND summaries applied at callers combine only facts already present at the call. | `TaintSinkTracker` assumption keys; `applyRuleWithAssumptions`; `matchNDInitial` | Covered by the model (`PE.genJoined`). D1 regression sample (§8). |
 | E7 | No summaries are preloaded. | Preloaded summaries hide callee bodies from the prescan. | Fail-open trigger 2. |
 | E8 | Pass-through residuals contribute their atoms to `Needed`. They are mark-free in shipped models and in Semgrep output. | `model/**/config/*.yaml`; Semgrep emits no pass-throughs. | `Needed.passAtom`. |
 | E9 | The gate compares the finding set after confirmation and before the trace filter. | `TaintAnalyzer.fullScan`: `confirmVulnerabilities`, then the trace filter. | The harness compares `(ruleId, location)` keys at that point. Code-flow counts are excluded, because the existing e2e diff inflates "missing findings" when it counts code flows. |
@@ -516,7 +522,10 @@ witness gets a Kotlin twin with the same program.
     cleaner atoms.
   - It records `refInS`, `refApplicable` and `refNeeded` for each.
   - The results are checked in as JSON, and the Kotlin core must match them
-    exactly, under both 4* settings.
+    exactly in the default mode.
+  - Under 4* the core must return a superset of the oracle's answers.
+    `applicable_relax` and `needed_relax` prove relaxed ⊇ exact, and the Kotlin
+    relaxed test is a further sound over-approximation (§6.2).
 - *Law tests.*
   - monotonicity;
   - relaxed ⊇ exact;
