@@ -8,8 +8,10 @@ import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
+import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.isTrue
 import org.opentaint.dataflow.configuration.jvm.Condition
+import org.opentaint.dataflow.configuration.jvm.ContainsMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
@@ -117,25 +119,51 @@ class JIRTaintAnalysisContext(
      * the zero fact, which the prescan otherwise never queries there. The rules are only recorded:
      * nothing is returned and, unlike [handlePhase], the relevant rule ids are left unchanged, so
      * the full scan's rule set stays the baseline's.
+     *
+     * Only the residual's positive mark literals matter for these kinds, and the rewriter makes
+     * literals only from mark atoms, so a rule whose condition has no mark atom is skipped before
+     * the rewrite: the recorder would drop its residual anyway. Pass-throughs are looked up once
+     * per callee, with no statement (as the alias analysis does), because querying the provider
+     * at every call is what made this hook costly; every pass-through provider is
+     * statement-independent. Shipped pass-throughs have no mark atom (E8), so the memo is almost
+     * always empty.
      */
     fun recordZeroFactCallRules(statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?) {
         if (!isMarkSetRecording) return
 
         val method = statement.calleeMethod()
-        recordMarkSet(
-            statement,
-            rewriteCallStatementRules(
-                taintConfig.cleanerRulesForMethod(method, statement, fact = null, allRelevant = false),
-                TaintCleaner::condition, statement, callExpr, returnValue
+        val cleaners = taintConfig.cleanerRulesForMethod(method, statement, fact = null, allRelevant = false)
+            .filter { it.condition.hasMarkAtom() }
+        if (cleaners.isNotEmpty()) {
+            recordMarkSet(
+                statement,
+                rewriteCallStatementRules(cleaners, TaintCleaner::condition, statement, callExpr, returnValue)
             )
-        )
-        recordMarkSet(
-            statement,
-            rewriteCallStatementRules(
-                taintConfig.passTroughRulesForMethod(method, statement, fact = null, allRelevant = false),
-                TaintPassThrough::condition, statement, callExpr, returnValue
+        }
+
+        val passThroughs = markSetPassThroughsWithMarks(method)
+        if (passThroughs.isNotEmpty()) {
+            recordMarkSet(
+                statement,
+                rewriteCallStatementRules(passThroughs, TaintPassThrough::condition, statement, callExpr, returnValue)
             )
-        )
+        }
+    }
+
+    private fun markSetPassThroughsWithMarks(method: JIRMethod): List<TaintPassThrough> {
+        val memo = analysisContext.analysisManager.markSetPassThroughs
+        memo[method]?.let { return it }
+        val rules = taintConfig.passTroughRulesForMethod(method, statement = null, fact = null, allRelevant = false)
+            .filter { it.condition.hasMarkAtom() }
+        return memo.putIfAbsent(method, rules) ?: rules
+    }
+
+    private fun Condition.hasMarkAtom(): Boolean = when (this) {
+        is CommonCondition.True -> false
+        is CommonCondition.Atom -> atom is ContainsMark || atom is ContainsMarkOnAnyField
+        is CommonCondition.Not -> arg.hasMarkAtom()
+        is CommonCondition.And -> args.any { it.hasMarkAtom() }
+        is CommonCondition.Or -> args.any { it.hasMarkAtom() }
     }
 
     private inline fun <T: TaintConfigurationItem> prepareCallStatementRules(

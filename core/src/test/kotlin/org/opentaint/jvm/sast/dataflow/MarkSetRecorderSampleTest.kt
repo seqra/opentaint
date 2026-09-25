@@ -1,6 +1,7 @@
 package org.opentaint.jvm.sast.dataflow
 
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
@@ -22,6 +23,7 @@ import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import kotlin.test.Test
+import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
@@ -161,6 +163,13 @@ class MarkSetRecorderSampleTest : AnalysisTest() {
         val fieldSites = input.sites.filter { it.rule is TaintStaticFieldSource }
         assertTrue(fieldSites.isNotEmpty(), "no static-field source site")
         assertTrue(fieldSites.all { (it.statement as JIRInst).location.method.name == "entryOne" })
+    }
+
+    @Test
+    fun `the selection never holds a static-field source`() {
+        input // runs the analysis
+        val outcome = assertIs<MarkSetOutcome.Selected>(lastMarkSetOutcome)
+        assertTrue(outcome.rules.values.none { rules -> rules.keys.any { it is TaintStaticFieldSource } })
     }
 
     private fun throwStatement(): JIRInst {

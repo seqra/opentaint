@@ -8,6 +8,9 @@ import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.BitSet
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * One recorded rule site, still holding its IR objects (spec §4: "the ids
@@ -24,7 +27,8 @@ class SiteRef(
  * The result of [MarkSetRecorder.seal]: the dense [MarkSetProgram] plus the
  * side tables needed to translate its output back to IR objects.
  *
- * @property sites parallel to [MarkSetProgram.sites].
+ * @property sites parallel to [MarkSetProgram.sites]. The sites of one
+ *   `(statement, rule)` are contiguous.
  * @property markNames mark id -> name.
  * @property methods method id -> method (the program's nodes).
  * @property coveredStatements every statement at which the prescan queried a
@@ -45,6 +49,15 @@ class MarkSetInput(
  * them are safe to call concurrently (the prescan calls this recorder from
  * multiple coroutine workers).
  *
+ * Recording takes no global lock, and it is shaped for the prescan's volume
+ * (millions of sites, mostly repeats of a few residual shapes):
+ * - interning uses concurrent maps with dense counters;
+ * - a residual is converted to a [MarkCond] once per distinct residual, and
+ *   equal residuals share one [MarkCond] instance;
+ * - a site is one small per-`(statement, rule)` entry holding its distinct
+ *   conds (the M8 dedup scope); the [MarkSite]/[SiteRef] objects are built only
+ *   by [seal].
+ *
  * Existing engine behaviour is unaffected: every new hook this recorder
  * requires is gated on a non-null recorder by the caller, and this class has
  * no side effect beyond its own state.
@@ -63,67 +76,91 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
     @Volatile
     var overflow: Boolean = false
 
-    private val lock = Any()
+    // Interning tables: ids are dense, assigned inside `computeIfAbsent` (at most once per key).
+    private var methodIds = ConcurrentHashMap<CommonMethod, Int>()
+    private val methodCount = AtomicInteger()
+    private var markIds = ConcurrentHashMap<String, Int>()
+    private val markCount = AtomicInteger()
+    private var literalIds = ConcurrentHashMap<LiteralKey, Int>()
+    private val literalCount = AtomicInteger()
 
-    // Interning tables, all guarded by [lock].
-    private val methodIds = HashMap<CommonMethod, Int>()
-    private val markIds = HashMap<String, Int>()
-    private val markNames = ArrayList<String>()
-    private val literalIds = HashMap<LiteralKey, Int>()
+    /** Residual (structurally) -> its [MarkCond]: the conversion memo. */
+    private var condCache = ConcurrentHashMap<Any, MarkCond>()
 
-    // Edges, guarded by [lock]: dedup set plus an insertion-ordered adjacency source.
-    private val edgeKeys = HashSet<Long>()
-    private val edgeList = ArrayList<LongArray>() // each entry: [callerId, calleeId]
+    /** Gen-mark names (structurally) -> their interned [Gens]. */
+    private var gensCache = ConcurrentHashMap<List<String>, Gens>()
 
-    // Sites, guarded by [lock]: M8 dedup on (statement, rule, MarkCond).
-    private val siteDedup = HashMap<SiteDedupKey, Int>()
-    private val siteEntries = ArrayList<MarkSite>()
-    private val siteRefs = ArrayList<SiteRef>()
+    // Edges: dedup set plus an insertion-ordered list of the same keys.
+    private var edgeKeys = ConcurrentHashMap.newKeySet<Long>()
+    private val edgeCount = AtomicInteger()
+    private var edgeList = ConcurrentLinkedQueue<Long>()
 
-    private val coveredStatements = HashSet<CommonInst>()
+    /** One entry per `(statement, rule)`, mapped to itself (the entry is its own key). */
+    private var siteEntries = ConcurrentHashMap<SiteEntry, SiteEntry>()
+    private val siteCount = AtomicInteger()
+
+    private var coveredStatements = ConcurrentHashMap.newKeySet<CommonInst>()
+
+    // Cleaners: `(statement, residual)` already recorded, and the atoms, guarded by [cleanerAtoms].
+    private var cleanerSeen = ConcurrentHashMap.newKeySet<CleanerKey>()
     private val cleanerAtoms = BitSet()
 
     /** `(position, mark name, anyAccessor)`: the literal-id key (spec §4.1). */
     private data class LiteralKey(val position: PositionAccess, val markName: String, val anyAccessor: Boolean)
 
-    /** The M8 dedup key: one site per `(statement, rule, MarkCond)`. */
-    private data class SiteDedupKey(
+    private class Gens(val names: List<String>, val ids: IntArray)
+
+    /**
+     * Every site of one rule at one statement: the M8 dedup scope. Equality is by
+     * `(statement, rule)` only. [conds] holds the distinct conds recorded (almost always one);
+     * it is read without a lock and replaced under this entry's monitor.
+     */
+    private class SiteEntry(
         val statement: CommonInst,
         val rule: CommonTaintConfigurationItem,
-        val cond: MarkCond,
-    )
+        val kind: SiteKind,
+    ) {
+        private val hash = statement.hashCode() * 31 + rule.hashCode()
+
+        @Volatile
+        var gens: Gens? = null
+
+        @Volatile
+        var conds: Array<MarkCond> = NO_CONDS
+
+        override fun equals(other: Any?): Boolean =
+            this === other || (other is SiteEntry && statement == other.statement && rule == other.rule)
+
+        override fun hashCode(): Int = hash
+    }
+
+    private data class CleanerKey(val statement: CommonInst, val residual: Any)
 
     /** Records a call edge `caller --call--> callee`, while the phase is Prescan. */
     fun recordEdge(caller: CommonMethod, call: CommonInst, callee: CommonMethod) {
         if (!active || overflow) return
-        synchronized(lock) {
-            if (!active || overflow) return
-            val callerId = internMethod(caller)
-            val calleeId = internMethod(callee)
-            val key = edgeKey(callerId, calleeId)
-            if (edgeKeys.contains(key)) return
-            if (edgeList.size >= maxEdges) {
-                overflow = true
-                return
-            }
-            edgeKeys.add(key)
-            edgeList.add(longArrayOf(callerId.toLong(), calleeId.toLong()))
+        val key = edgeKey(internMethod(caller), internMethod(callee))
+        if (key in edgeKeys || !edgeKeys.add(key)) return
+        if (edgeCount.incrementAndGet() > maxEdges) {
+            overflow = true
+            return
         }
+        edgeList.add(key)
     }
 
     /** Records a statement at which the prescan queried any rule (§4, provider fallback). */
     fun recordStatement(statement: CommonInst) {
         if (!active || overflow) return
-        synchronized(lock) {
-            if (!active || overflow) return
-            coveredStatements.add(statement)
-        }
+        if (statement in coveredStatements) return
+        coveredStatements.add(statement)
     }
 
     /**
      * Records one rule site. Deduplicated on `(statement, rule, MarkCond)` (M8); if the
      * same rule gets different residuals at the same statement, all of them are kept.
-     * A `false` residual is not recorded.
+     * A `false` residual is not recorded, nor is a pass-through residual without a
+     * positive mark literal: such a site has no gens and no atoms, so it cannot change
+     * the scan's result (a pass-through only contributes its atoms to `Needed`, E8).
      */
     fun recordSite(
         statement: CommonInst,
@@ -133,99 +170,164 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
         gens: List<String>,
     ) {
         if (!active || overflow) return
-        synchronized(lock) {
-            if (!active || overflow) return
-            val cond = residual.toMarkCondOrNull() ?: return
-            val key = SiteDedupKey(statement, rule, cond)
-            if (siteDedup.containsKey(key)) return
-            if (siteEntries.size >= maxSites) {
+        if (residual.isFalse) return
+        if (kind == SiteKind.PASS_THROUGH && !residual.hasPositiveLiteral()) return
+
+        val cond = markCondOf(residual)
+        val entry = entryOf(statement, rule, kind, gens)
+        if (cond in entry.conds) return
+
+        synchronized(entry) {
+            val conds = entry.conds
+            if (cond in conds) return
+            if (siteCount.incrementAndGet() > maxSites) {
                 overflow = true
                 return
             }
-            val methodId = internMethod(statement.location.method)
-            val genIds = IntArray(gens.size) { internMark(gens[it]) }
-            siteDedup[key] = siteEntries.size
-            siteEntries.add(MarkSite(methodId, kind, cond, genIds))
-            siteRefs.add(SiteRef(statement, rule, gens))
+            entry.conds = conds + cond
         }
+    }
+
+    private fun entryOf(
+        statement: CommonInst,
+        rule: CommonTaintConfigurationItem,
+        kind: SiteKind,
+        gens: List<String>,
+    ): SiteEntry {
+        val probe = SiteEntry(statement, rule, kind)
+        siteEntries[probe]?.let { return it }
+        probe.gens = internGens(gens)
+        return siteEntries.putIfAbsent(probe, probe) ?: probe
     }
 
     /** Adds the positive atoms of a cleaner's residual to `Program.cleanerAtoms` (spec §6.3 (4)). */
     fun recordCleaner(statement: CommonInst, residual: RuleConditionRewriter.ExprOrConstant) {
         if (!active || overflow) return
-        synchronized(lock) {
-            if (!active || overflow) return
-            val cond = residual.toMarkCondOrNull() ?: return
-            cond.atoms(cleanerAtoms)
-        }
+        if (residual.isFalse || !residual.hasPositiveLiteral()) return
+        val key = CleanerKey(statement, residual.key())
+        if (key in cleanerSeen || !cleanerSeen.add(key)) return
+        val atoms = markCondOf(residual).atoms()
+        synchronized(cleanerAtoms) { cleanerAtoms.or(atoms) }
     }
 
-    /** Builds the [MarkSetInput] recorded so far. Safe to call once the prescan is done. */
+    /**
+     * Builds the [MarkSetInput] recorded so far. Call it once the prescan is done and
+     * recording has stopped (no concurrent `record*` calls).
+     */
     fun seal(roots: Collection<CommonMethod>): MarkSetInput {
-        synchronized(lock) {
-            val methodCount = methodIds.size
-
-            val outDegree = IntArray(methodCount)
-            for (edge in edgeList) outDegree[edge[0].toInt()]++
-            val callees = Array(methodCount) { IntArray(outDegree[it]) }
-            val cursor = IntArray(methodCount)
-            for (edge in edgeList) {
-                val callerId = edge[0].toInt()
-                callees[callerId][cursor[callerId]++] = edge[1].toInt()
+        // Sites first: interning a site's method may add a node (E0).
+        val sites = ArrayList<MarkSite>()
+        val refs = ArrayList<SiteRef>()
+        for (entry in siteEntries.keys) {
+            val gens = checkNotNull(entry.gens)
+            val methodId = internMethod(entry.statement.location.method)
+            for (cond in entry.conds) {
+                sites.add(MarkSite(methodId, entry.kind, cond, gens.ids))
+                refs.add(SiteRef(entry.statement, entry.rule, gens.names))
             }
-
-            val rootIds = roots.mapNotNull { methodIds[it] }.distinct().toIntArray()
-
-            // E0 (PcWF): every site's method is a node. Holds by construction (methodId
-            // came from `internMethod`, which never returns an id >= methodIds.size); assert it.
-            for (site in siteEntries) {
-                check(site.method in 0 until methodCount) {
-                    "PcWF violated (E0): site method ${site.method} is not a recorded node"
-                }
-            }
-
-            val program = MarkSetProgram(
-                methodCount = methodCount,
-                markCount = markNames.size,
-                roots = rootIds,
-                callees = callees,
-                sites = siteEntries.toList(),
-                cleanerAtoms = cleanerAtoms.clone() as BitSet,
-            )
-            return MarkSetInput(
-                program = program,
-                sites = siteRefs.toList(),
-                markNames = markNames.toList(),
-                methods = methodsById(),
-                coveredStatements = coveredStatements.toSet(),
-            )
         }
-    }
 
-    // ---- helpers, all called with [lock] held ------------------------------
-
-    private fun methodsById(): List<CommonMethod> {
-        val methods = arrayOfNulls<CommonMethod>(methodIds.size)
+        val methodCount = methodCount.get()
+        val methods = arrayOfNulls<CommonMethod>(methodCount)
         for ((method, id) in methodIds) methods[id] = method
-        return methods.map { checkNotNull(it) }
+
+        val edges = edgeList.toList()
+        val outDegree = IntArray(methodCount)
+        for (edge in edges) outDegree[edgeCaller(edge)]++
+        val callees = Array(methodCount) { IntArray(outDegree[it]) }
+        val cursor = IntArray(methodCount)
+        for (edge in edges) {
+            val callerId = edgeCaller(edge)
+            callees[callerId][cursor[callerId]++] = edgeCallee(edge)
+        }
+
+        val rootIds = roots.mapNotNull { methodIds[it] }.distinct().toIntArray()
+
+        // E0 (PcWF): every site's method is a node. Holds by construction (methodId
+        // came from `internMethod`, which never returns an id >= methodCount); assert it.
+        for (site in sites) {
+            check(site.method in 0 until methodCount) {
+                "PcWF violated (E0): site method ${site.method} is not a recorded node"
+            }
+        }
+
+        val markNames = arrayOfNulls<String>(markCount.get())
+        for ((name, id) in markIds) markNames[id] = name
+
+        val program = MarkSetProgram(
+            methodCount = methodCount,
+            markCount = markNames.size,
+            roots = rootIds,
+            callees = callees,
+            sites = sites,
+            cleanerAtoms = synchronized(cleanerAtoms) { cleanerAtoms.clone() as BitSet },
+        )
+        return MarkSetInput(
+            program = program,
+            sites = refs,
+            markNames = markNames.map { checkNotNull(it) },
+            methods = methods.map { checkNotNull(it) },
+            coveredStatements = HashSet(coveredStatements),
+        )
     }
 
-    private fun internMethod(method: CommonMethod): Int = methodIds.getOrPut(method) { methodIds.size }
-
-    private fun internMark(name: String): Int = markIds.getOrPut(name) {
-        val id = markNames.size
-        markNames.add(name)
-        id
+    /**
+     * Drops every recorded table and stops recording, so that nothing recorded survives
+     * into the full scan. After this the recorder is empty and inactive.
+     */
+    fun release() {
+        active = false
+        methodIds = ConcurrentHashMap()
+        markIds = ConcurrentHashMap()
+        literalIds = ConcurrentHashMap()
+        condCache = ConcurrentHashMap()
+        gensCache = ConcurrentHashMap()
+        edgeKeys = ConcurrentHashMap.newKeySet()
+        edgeList = ConcurrentLinkedQueue()
+        siteEntries = ConcurrentHashMap()
+        coveredStatements = ConcurrentHashMap.newKeySet()
+        cleanerSeen = ConcurrentHashMap.newKeySet()
+        synchronized(cleanerAtoms) { cleanerAtoms.clear() }
+        methodCount.set(0)
+        markCount.set(0)
+        literalCount.set(0)
+        edgeCount.set(0)
+        siteCount.set(0)
     }
+
+    // ---- helpers -------------------------------------------------------------
+
+    private fun internMethod(method: CommonMethod): Int =
+        methodIds[method] ?: methodIds.computeIfAbsent(method) { methodCount.getAndIncrement() }
+
+    private fun internMark(name: String): Int =
+        markIds[name] ?: markIds.computeIfAbsent(name) { markCount.getAndIncrement() }
+
+    private fun internLiteral(key: LiteralKey): Int =
+        literalIds[key] ?: literalIds.computeIfAbsent(key) { literalCount.getAndIncrement() }
 
     private fun edgeKey(callerId: Int, calleeId: Int): Long =
         (callerId.toLong() shl 32) or (calleeId.toLong() and 0xFFFFFFFFL)
 
-    /** `isTrue` -> `True`; `isFalse` -> `null` (not recorded); else the expr's `MarkCond`. */
-    private fun RuleConditionRewriter.ExprOrConstant.toMarkCondOrNull(): MarkCond? = when {
-        isFalse -> null
-        isTrue -> MarkCond.True
-        else -> expr.toMarkCond()
+    private fun edgeCaller(key: Long): Int = (key ushr 32).toInt()
+    private fun edgeCallee(key: Long): Int = key.toInt()
+
+    /** The residual's structural identity: the expression, or a marker for `true`. */
+    private fun RuleConditionRewriter.ExprOrConstant.key(): Any = if (isTrue) TRUE_KEY else expr
+
+    /** `isTrue` -> `True`; otherwise the expr's `MarkCond`, converted once per distinct residual. */
+    private fun markCondOf(residual: RuleConditionRewriter.ExprOrConstant): MarkCond {
+        if (residual.isTrue) return MarkCond.True
+        val expr = residual.expr
+        condCache[expr]?.let { return it }
+        val cond = expr.toMarkCond()
+        return condCache.putIfAbsent(expr, cond) ?: cond
+    }
+
+    private fun internGens(names: List<String>): Gens {
+        gensCache[names]?.let { return it }
+        val gens = Gens(names, IntArray(names.size) { internMark(names[it]) })
+        return gensCache.putIfAbsent(names, gens) ?: gens
     }
 
     private fun TaintMarkAwareConditionExpr.toMarkCond(): MarkCond = when (this) {
@@ -246,7 +348,22 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
     ): MarkCond {
         if (negated) return MarkCond.True
         val markId = internMark(mark.mark)
-        val literalId = literalIds.getOrPut(LiteralKey(position, mark.mark, anyAccessor)) { literalIds.size }
+        val literalId = internLiteral(LiteralKey(position, mark.mark, anyAccessor))
         return MarkCond.Lit(markId, literalId)
+    }
+
+    private companion object {
+        private val TRUE_KEY = Any()
+        private val NO_CONDS = emptyArray<MarkCond>()
+
+        /** Whether the residual has a positive (non-negated) mark literal, i.e. a non-empty `atoms()`. */
+        private fun RuleConditionRewriter.ExprOrConstant.hasPositiveLiteral(): Boolean =
+            !isTrue && !isFalse && expr.hasPositiveLiteral()
+
+        private fun TaintMarkAwareConditionExpr.hasPositiveLiteral(): Boolean = when (this) {
+            is TaintMarkAwareConditionExpr.And -> args.any { it.hasPositiveLiteral() }
+            is TaintMarkAwareConditionExpr.Or -> args.any { it.hasPositiveLiteral() }
+            is TaintMarkAwareConditionExpr.Literal -> !negated
+        }
     }
 }

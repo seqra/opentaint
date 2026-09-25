@@ -27,6 +27,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
 import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
+import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
@@ -48,6 +49,7 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -81,6 +83,12 @@ class JIRAnalysisManager(
     // keeps the raw taintConfig.
     private val selectedConfig = SelectedTaintRulesProvider(taintConfig)
 
+    /**
+     * Mark-set prescan only (G4): each callee's pass-through rules that have a mark atom.
+     * Filled while recording; cleared when the full scan starts.
+     */
+    internal val markSetPassThroughs = ConcurrentHashMap<JIRMethod, List<TaintPassThrough>>()
+
     private var currentPhase: Phase = Phase.Prescan
     val phase: Phase get() = currentPhase
 
@@ -94,6 +102,7 @@ class JIRAnalysisManager(
             }
             Phase.FullScan -> {
                 markSetRecorder?.active = false
+                markSetPassThroughs.clear()
                 taintConfig.selectRules(relevantRuleIds)
             }
         }

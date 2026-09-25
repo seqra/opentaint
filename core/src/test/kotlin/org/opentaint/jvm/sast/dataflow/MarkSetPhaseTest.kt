@@ -4,6 +4,20 @@ import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.runMarkSetPhase
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.markset.SiteKind
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.jvm.Result
+import org.opentaint.dataflow.configuration.jvm.TaintMark
+import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
+import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
+import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
+import org.opentaint.dataflow.configuration.mkTrue
+import org.opentaint.dataflow.taint.PositionAccess
+import org.opentaint.dataflow.taint.RuleConditionRewriter
+import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -120,5 +134,86 @@ class MarkSetPhaseTest : AnalysisTest() {
 
         assertEquals(MarkSetOutcome.FailOpen("recorder cap"), lastMarkSetOutcome)
         assertEquals(findings(baseline), findings(capped))
+    }
+
+    private fun sampleMethod(cls: String, name: String): JIRMethod =
+        cp.findClassOrNull(cls)!!.declaredMethods.single { it.name == name }
+
+    private fun mark(name: String) = AssignMark(TaintMark(name), Result)
+
+    private fun markLiteral(name: String) = RuleConditionRewriter.ExprOrConstant(
+        TaintMarkAwareConditionExpr.ContainsMarkLiteral(
+            PositionAccess.Simple(AccessPathBase.Argument(0)), TaintMarkAccessor(name), negated = false
+        )
+    )
+
+    /**
+     * One method holding: a method source recorded with two residuals (one `(statement, rule)`
+     * pair, actions A, A, U; the second residual needs X), a static-field source, and a sink on A.
+     * U is never needed.
+     */
+    private fun recordedProgram(): Triple<MarkSetRecorder, JIRMethod, List<JIRInst>> {
+        val method = sampleMethod(SIMPLE_CLS, "simpleDataFlow")
+        val statements = method.instList.take(3)
+        val field = cp.findClassOrNull("test.samples.StaticFieldSample")!!.declaredFields.single { it.name == "staticField" }
+
+        val recorder = MarkSetRecorder()
+        recorder.active = true
+        val source = TaintMethodSource(method, mkTrue(), listOf(mark("A"), mark("A"), mark("U")), info = null)
+        recorder.recordSite(statements[0], source, SiteKind.SOURCE, RuleConditionRewriter.trueExpr, listOf("A", "A", "U"))
+        recorder.recordSite(statements[0], source, SiteKind.SOURCE, markLiteral("X"), listOf("A", "A", "U"))
+        val staticSource = TaintStaticFieldSource(field, mkTrue(), listOf(mark("A")), info = null)
+        recorder.recordSite(statements[1], staticSource, SiteKind.SOURCE, RuleConditionRewriter.trueExpr, listOf("A"))
+        val sink = TaintMethodSink(
+            method, mkTrue(), emptyList(), "sink", TaintSinkMeta("sink", CommonTaintConfigurationSinkMeta.Severity.Error, null), info = null
+        )
+        recorder.recordSite(statements[2], sink, SiteKind.SINK, markLiteral("A"), emptyList())
+        statements.forEach { recorder.recordStatement(it) }
+        return Triple(recorder, method, statements)
+    }
+
+    @Test
+    fun `the selection and its counts leave out static-field sources and count unique pairs`() {
+        val (recorder, method, statements) = recordedProgram()
+        val outcome = assertIs<MarkSetOutcome.Selected>(
+            runMarkSetPhase(recorder, listOf(method), prescanOk = true, storeSummaries = false, enabled)
+        )
+
+        assertEquals(setOf(statements[0], statements[2]), outcome.rules.keys)
+        assertEquals(listOf(mark("A")), outcome.rules.getValue(statements[0]).values.single().toList())
+        assertEquals(emptySet(), outcome.rules.getValue(statements[2]).values.single())
+
+        assertEquals(1, outcome.selectedActions)
+        assertEquals(2, outcome.baselineActions)
+        assertEquals(1, outcome.selectedSourceRules)
+        assertEquals(1, outcome.baselineSourceRules)
+        assertEquals(1, outcome.selectedSinks)
+        assertEquals(1, outcome.baselineSinks)
+        assertTrue(
+            outcome.logLine().contains("selectedActions=1/baselineActions=2 selectedSinks=1/baselineSinks=1 sourceRules=1/1"),
+            outcome.logLine(),
+        )
+    }
+
+    @Test
+    fun `the phase releases the recorder on every path`() {
+        val paths = listOf<(MarkSetRecorder, JIRMethod) -> MarkSetOutcome>(
+            { r, m -> runMarkSetPhase(r, listOf(m), prescanOk = true, storeSummaries = false, enabled) },
+            { r, m -> runMarkSetPhase(r, listOf(m), prescanOk = false, storeSummaries = false, enabled) },
+            { r, m -> runMarkSetPhase(r, listOf(m), prescanOk = true, storeSummaries = true, enabled) },
+            { r, m -> r.overflow = true; runMarkSetPhase(r, listOf(m), prescanOk = true, storeSummaries = false, enabled) },
+            { r, m ->
+                runMarkSetPhase(r, listOf(m), prescanOk = true, storeSummaries = false, enabled.copy(timeLimit = Duration.ZERO))
+            },
+        )
+        for (path in paths) {
+            val (recorder, method, _) = recordedProgram()
+            val outcome = path(recorder, method)
+            val left = recorder.seal(listOf(method))
+            assertEquals(0, left.program.sites.size, "sites left after $outcome")
+            assertEquals(0, left.program.methodCount, "methods left after $outcome")
+            assertTrue(left.coveredStatements.isEmpty(), "covered statements left after $outcome")
+            assertTrue(!recorder.active)
+        }
     }
 }

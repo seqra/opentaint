@@ -12,6 +12,9 @@ import org.opentaint.ir.api.common.CommonTypeName
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -249,5 +252,156 @@ class MarkSetRecorderTest {
                 assertEquals(sinkRule, ref.rule)
             }
         }
+    }
+
+    @Test
+    fun `a pass-through residual without a positive literal is not recorded`() {
+        val recorder = MarkSetRecorder()
+        recorder.active = true
+        val method = FakeMethod("m")
+        val rule = FakeRule()
+
+        recorder.recordSite(inst(method, 0), rule, SiteKind.PASS_THROUGH, RuleConditionRewriter.trueExpr, emptyList())
+        recorder.recordSite(inst(method, 1), rule, SiteKind.PASS_THROUGH, literal("A", position(0), negated = true), emptyList())
+        recorder.recordSite(inst(method, 2), rule, SiteKind.PASS_THROUGH, literal("B", position(0)), emptyList())
+
+        val input = recorder.seal(roots = emptyList())
+        assertEquals(1, input.program.sites.size)
+        assertEquals(listOf("B"), input.markNames)
+    }
+
+    @Test
+    fun `release drops every recorded table and stops recording`() {
+        val recorder = MarkSetRecorder()
+        recorder.active = true
+        val caller = FakeMethod("caller")
+        val callee = FakeMethod("callee")
+        val statement = inst(caller)
+
+        recorder.recordEdge(caller, statement, callee)
+        recorder.recordStatement(statement)
+        recorder.recordSite(statement, FakeRule(), SiteKind.SINK, literal("A", position(0)), gens = emptyList())
+        recorder.recordCleaner(statement, literal("A", position(0)))
+        assertEquals(1, recorder.seal(roots = listOf(caller)).program.sites.size)
+
+        recorder.release()
+        assertFalse(recorder.active)
+
+        recorder.recordSite(statement, FakeRule(), SiteKind.SINK, literal("B", position(0)), gens = emptyList())
+        val input = recorder.seal(roots = listOf(caller))
+        assertEquals(0, input.program.methodCount)
+        assertEquals(0, input.program.sites.size)
+        assertTrue(input.program.callees.isEmpty())
+        assertTrue(input.markNames.isEmpty())
+        assertTrue(input.coveredStatements.isEmpty())
+        assertTrue(input.program.cleanerAtoms.isEmpty)
+    }
+
+    @Test
+    fun `concurrent recording seals the same program as sequential recording`() {
+        val workload = randomWorkload(Random(42))
+
+        val sequential = MarkSetRecorder().also { recorder ->
+            recorder.active = true
+            workload.forEach { it(recorder) }
+        }.seal(workload.roots)
+
+        val threads = 8
+        val concurrent = MarkSetRecorder().also { recorder ->
+            recorder.active = true
+            val pool = Executors.newFixedThreadPool(threads)
+            val start = CountDownLatch(1)
+            val done = (0 until threads).map { t ->
+                // Every thread records every event (so each one is recorded concurrently many
+                // times), each in its own order.
+                val events = workload.shuffled(Random(t))
+                pool.submit {
+                    start.await()
+                    events.forEach { it(recorder) }
+                }
+            }
+            start.countDown()
+            done.forEach { it.get() }
+            pool.shutdown()
+        }.seal(workload.roots)
+
+        assertEquals(canonical(sequential), canonical(concurrent))
+        assertTrue(sequential.program.sites.isNotEmpty())
+    }
+
+    private class Workload(val events: List<(MarkSetRecorder) -> Unit>, val roots: List<CommonMethod>) :
+        List<(MarkSetRecorder) -> Unit> by events
+
+    private fun randomWorkload(random: Random): Workload {
+        val methods = (0 until 30).map { FakeMethod("m$it") }
+        val statements = methods.flatMap { m -> (0 until 5).map { inst(m, it) } }
+        val rules = (0 until 10).map { FakeRule() }
+        val marks = listOf("A", "B", "C", "D")
+
+        fun residual(): RuleConditionRewriter.ExprOrConstant {
+            val parts = (0 until random.nextInt(0, 3)).map {
+                literal(marks.random(random), position(random.nextInt(0, 2)), negated = random.nextInt(5) == 0)
+            }
+            return when (parts.size) {
+                0 -> RuleConditionRewriter.trueExpr
+                1 -> parts.single()
+                else -> and(parts)
+            }
+        }
+
+        val events = mutableListOf<(MarkSetRecorder) -> Unit>()
+        repeat(200) {
+            val caller = methods.random(random)
+            val callee = methods.random(random)
+            val call = statements.random(random)
+            events += { it.recordEdge(caller, call, callee) }
+        }
+        repeat(2_000) {
+            val statement = statements.random(random)
+            val ruleIdx = random.nextInt(rules.size)
+            val rule = rules[ruleIdx]
+            // The kind and gens are properties of the rule, as in the engine.
+            val kind = SiteKind.entries[ruleIdx % SiteKind.entries.size]
+            val gens = if (kind == SiteKind.PASS_THROUGH) emptyList() else listOf(marks[ruleIdx % marks.size])
+            val cond = residual()
+            events += { it.recordStatement(statement) }
+            events += { it.recordSite(statement, rule, kind, cond, gens) }
+        }
+        repeat(100) {
+            val statement = statements.random(random)
+            val cond = residual()
+            events += { it.recordCleaner(statement, cond) }
+        }
+        return Workload(events, methods.take(3))
+    }
+
+    /** The sealed input with every dense id replaced by the object or name it stands for. */
+    private fun canonical(input: MarkSetInput): Map<String, Any> {
+        val p = input.program
+        fun MarkCond.render(): String = when (this) {
+            MarkCond.True -> "T"
+            MarkCond.False -> "F"
+            is MarkCond.Lit -> input.markNames[mark]
+            is MarkCond.And -> args.joinToString(",", "and(", ")") { it.render() }
+            is MarkCond.Or -> args.joinToString(",", "or(", ")") { it.render() }
+        }
+        val sites = p.sites.indices.map { i ->
+            val site = p.sites[i]
+            val ref = input.sites[i]
+            listOf(
+                ref.statement, ref.rule, input.methods[site.method], site.kind, site.cond.render(),
+                site.cond.hasJoinedCube(), site.gens.map { input.markNames[it] }, ref.genMarks,
+            )
+        }
+        return mapOf(
+            "sites" to sites.groupingBy { it }.eachCount(),
+            "edges" to p.callees.indices.flatMap { c -> p.callees[c].map { input.methods[c] to input.methods[it] } }
+                .groupingBy { it }.eachCount(),
+            "roots" to p.roots.map { input.methods[it] }.toSet(),
+            "methods" to input.methods.toSet(),
+            "marks" to input.markNames.toSet(),
+            "cleanerAtoms" to p.cleanerAtoms.stream().toArray().map { input.markNames[it] }.toSet(),
+            "covered" to input.coveredStatements,
+        )
     }
 }
