@@ -116,3 +116,59 @@ Three findings explain the table.
 - **The phase cost is above target.** Recording plus the phase is about 14% of the prescan against a 10% target. The largest remaining lever is the recorder input: 1.76M of the 1.9M sites are sinks, and most are identical per method (noted in Task 5+6 fix round 1).
 - **Option 3* is not usable on Conductor-sized root sets** as implemented. It fails open by design. This is consistent with spec §9's cost note: roots × points.
 - **The next lever for full-scan cost is not rule selection.** It is sharing identical sources across rules. Seven rules taint the same 310 statements with seven distinct marks, and the engine carries all seven marks on the same bases. Unifying equivalent source definitions into one mark, and splitting per rule only at the sinks, is a separate design and outside this spec.
+
+## Follow-up: how many kept actions are really needed?
+
+**Question.** Of what the mark-set scan keeps, how much is required by the findings that actually fire?
+
+**Method.** This uses a throwaway, instrumented build in a scratch worktree; it is not on the branch.
+1. Run the mark-set mode with an unlimited trace-path limit (`--sarif-code-flow-limit 100000`). For every confirmed finding, walk all generated trace paths, including nested inner-call traces. Collect every rule action the paths use:
+   - the source actions of each path's `SourceStartEntry`;
+   - `CallSourceRule`, `EntryPointSourceRule` and `SequentialSourceRule` actions on the path (these include automaton transformers);
+   - `AssignMark` actions of `CallRule` steps.
+2. **Sufficiency check.** Re-run with the selection restricted to exactly those trace-derived `(statement, rule, mark)` triples, plus the 6 finding sinks. Compare the findings with the baseline, code-flow counts included.
+
+**Traces.**
+- Four findings (ssrf, path-traversal, and two graaljs) have full paths: 4–5 paths each.
+- The two `stacktrace-printing-in-error-message` findings have `SIMPLE` traces, meaning no source step.
+
+| Quantity | Kept by the mark-set scan | Used on the fired findings' traces | Share really needed |
+|---|---|---|---|
+| Source action entries (per statement × rule instance) | 2,100 | 56 | 2.7% |
+| Distinct `(statement, rule id, mark)` triples | 648 | 12 | 1.9% |
+| Source statements | 125 | 4 | 3.2% |
+| Marks carried by kept source actions | 22 | 3 | 14% |
+| Sink instances | 22,779 | 6 | 0.03% |
+
+**The needed actions.**
+- They are the Spring entry-point sources of 4 controller methods in `WorkflowResource`: `startWorkflow`, `rerun`, `testWorkflow` and `executeWorkflow`.
+- Each carries the `$UNTRUSTED` marks of 3 rules (ssrf, path-traversal, graaljs).
+- The 12 triples expand to 56 action entries because the Spring provider creates several rule instances with the same serialized id per entry statement.
+- The two stack-trace findings need **no** restricted source action.
+
+**Sufficiency.** The minimal selection (56 actions and 6 sinks) reproduces all 6 findings **identically to the baseline, code-flow counts included**. So "really needed" is at most 56 action entries. Every entry lies on a real witness path of a fired finding.
+
+**Effect of the minimal selection on the full scan:**
+
+| Selection | Full-scan events |
+|---|---|
+| baseline | about 540k |
+| mark-set | about 535k |
+| **minimal (56 actions, 6 sinks)** | **518k** |
+| no source actions (4 findings lost) | 57k |
+
+The full-scan time under the minimal selection is within the noise of this machine.
+
+**Conclusions.**
+- **Precision on Conductor is low in counts:** 2.7% of kept source actions and 0.03% of kept sinks are really needed.
+- **The imprecision costs almost nothing:** even an oracle-perfect selection removes only about 4% of the full scan's work.
+- **Almost all of the full scan is the real findings' own flows.** The Spring entry-point taint from just 4 controller methods produces about 460k of the roughly 518k events. Rule selection cannot reduce this without losing findings.
+- Where the imprecision comes from, and what could tighten it:
+
+  | Source of imprecision | Candidate refinement (spec §11) |
+  |---|---|
+  | Relevance is computed globally, not per root | per-root `Needed` |
+  | Any applicable sink counts, whether or not a flow reaches it | escape-aware returns |
+  | Marks are keyed per rule rather than shared | not in the spec; separate design |
+
+  On Conductor none of these would pay off in full-scan time.
