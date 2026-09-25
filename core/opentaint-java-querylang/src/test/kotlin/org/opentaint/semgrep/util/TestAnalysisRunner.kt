@@ -45,6 +45,9 @@ class TestAnalysisRunner(
     /** The differential switch (spec §8 Layer 3): `-PmarksetDiff=true` sets this system property. */
     private val markSetDiff: Boolean = System.getProperty("opentaint.markset.diff") == "true"
 
+    /** `-PmarksetFlowSensitive=true`: the differential run uses option 3* (spec §9). */
+    private val markSetFlowSensitive: Boolean = System.getProperty("opentaint.markset.flowSensitive") == "true"
+
     private lateinit var cp: JIRClasspath
 
     init {
@@ -133,7 +136,8 @@ class TestAnalysisRunner(
             val baseline = runEngine(rulesProvider(rule, config, useDefaultConfig), ep, MarkSetScanOptions())
             if (markSetDiff) {
                 val markSet = runEngine(
-                    rulesProvider(rule, config, useDefaultConfig), ep, MarkSetScanOptions(enabled = true)
+                    rulesProvider(rule, config, useDefaultConfig), ep,
+                    MarkSetScanOptions(enabled = true, flowSensitive = markSetFlowSensitive),
                 )
                 assertSameMarkSetFindings(baseline, markSet, sample)
             }

@@ -48,6 +48,19 @@ import kotlin.time.Duration.Companion.minutes
 /** The system property that turns on the differential run of every analysis (spec §8 Layer 3). */
 const val MARKSET_DIFF_PROPERTY = "opentaint.markset.diff"
 
+/**
+ * The system property (`-PmarksetFlowSensitive=true`) that makes the default mark-set run of the
+ * differential switch, and of [MarkSetDifferentialTest], use option 3* (spec §9).
+ */
+const val MARKSET_FLOW_SENSITIVE_PROPERTY = "opentaint.markset.flowSensitive"
+
+/** The mark-set options a differential run uses when the caller did not ask for mark-set mode. */
+val defaultDifferentialMarkSet: MarkSetScanOptions
+    get() = MarkSetScanOptions(
+        enabled = true,
+        flowSensitive = System.getProperty(MARKSET_FLOW_SENSITIVE_PROPERTY) == "true",
+    )
+
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class AnalysisTest : BasicTestUtils() {
     fun functionMatcher(fqn: String, methodName: String) = SerializedFunctionNameMatcher.Simple(
@@ -161,7 +174,7 @@ abstract class AnalysisTest : BasicTestUtils() {
      * Runs the analysis with [markSet]. Under the differential switch (`-PmarksetDiff=true`, spec §8
      * Layer 3) it runs twice, the baseline and then the mark-set selection, asserts that both report
      * the same findings, and returns the baseline's. The mark-set run is the requested one when
-     * [markSet] is enabled, else the default mark-set options. [lastMarkSetInput] and
+     * [markSet] is enabled, else [defaultDifferentialMarkSet]. [lastMarkSetInput] and
      * [lastMarkSetOutcome] describe the requested run only.
      */
     fun runAnalysis(
@@ -172,7 +185,7 @@ abstract class AnalysisTest : BasicTestUtils() {
     ): List<VulnerabilityWithTrace> {
         if (!markSetDiff) return runAnalysisOnce(config, entryPointClass, entryPointMethods, markSet).publish()
 
-        val markSetOptions = if (markSet.enabled) markSet else MarkSetScanOptions(enabled = true)
+        val markSetOptions = if (markSet.enabled) markSet else defaultDifferentialMarkSet
         val baseline = runAnalysisOnce(config, entryPointClass, entryPointMethods, MarkSetScanOptions())
         val restricted = runAnalysisOnce(config, entryPointClass, entryPointMethods, markSetOptions)
         assertSameMarkSetFindings(baseline.gated, restricted.gated, "$entryPointClass$entryPointMethods")

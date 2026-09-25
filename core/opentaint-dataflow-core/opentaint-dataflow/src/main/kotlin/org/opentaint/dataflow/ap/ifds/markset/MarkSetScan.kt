@@ -22,14 +22,6 @@ object MarkSetScan {
         checkCancelled: () -> Unit = {},
     ): MarkSetResult = Scan(p, options, checkCancelled).run()
 
-    /** A deduplicated site signature: `(cond, gens, kind == SINK)`. */
-    private data class SigKey(val cond: MarkCond, val gens: List<Int>, val isSink: Boolean)
-
-    private class Sig(val cond: MarkCond, val gens: BitSet, val isSink: Boolean) {
-        val atoms: BitSet = cond.atoms()
-        val hasJoinedCube: Boolean = cond.hasJoinedCube()
-    }
-
     private class Scan(
         private val p: MarkSetProgram,
         private val options: MarkSetOptions,
@@ -51,17 +43,9 @@ object MarkSetScan {
             val compCount = graph.comps.size
 
             // 2. Signatures.
-            val sigIds = HashMap<SigKey, Int>()
-            val sigs = mutableListOf<Sig>()
-            val siteSig = IntArray(p.sites.size)
-            for ((i, site) in p.sites.withIndex()) {
-                val key = SigKey(site.cond, site.gens.toList(), site.kind == SiteKind.SINK)
-                siteSig[i] = sigIds.getOrPut(key) {
-                    val gens = BitSet().apply { site.gens.forEach { set(it) } }
-                    sigs += Sig(site.cond, gens, key.isSink)
-                    sigs.size - 1
-                }
-            }
+            val signatures = Signatures(p)
+            val sigs = signatures.sigs
+            val siteSig = signatures.siteSig
 
             val local = Array(compCount) { BitSet() }
             for ((i, site) in p.sites.withIndex()) {
@@ -138,7 +122,7 @@ object MarkSetScan {
                     val sig = sigs[siteSig[i]]
                     val u = unions[graph.compOf[site.method]]!!
                     val x = forced[site.method]
-                    if (x != null && containsAll(x, sig.gens)) continue
+                    if (x != null && x.containsAll(sig.gens)) continue
                     step()
                     val eval = sig.cond.eval(u)
                     val fires = (if (sig.isSink) eval.sat else eval.big) || relaxedJoined(sig, u)
@@ -167,7 +151,7 @@ object MarkSetScan {
 
             // 8. Relevance.
             val needed = if (options.relevance) {
-                needed(sigs, siteSig, applicable)
+                neededOver(p, signatures, applicable)
             } else {
                 BitSet().apply { set(0, p.markCount) }
             }
@@ -208,7 +192,7 @@ object MarkSetScan {
                         step()
                         if (sig.cond.eval(marks).smallSat) {
                             done.set(s)
-                            if (!containsAll(marks, sig.gens)) {
+                            if (!marks.containsAll(sig.gens)) {
                                 marks.or(sig.gens)
                                 changed = true
                             }
@@ -219,55 +203,112 @@ object MarkSetScan {
             }
             return intern(marks)
         }
+    }
+}
 
-        /** The least fixpoint of spec §6.3, over applicable signatures. */
-        private fun needed(sigs: List<Sig>, siteSig: IntArray, applicable: BitSet): BitSet {
-            val needed = p.cleanerAtoms.clone() as BitSet
-            val appSigs = BitSet()
-            var i = applicable.nextSetBit(0)
-            while (i >= 0) {
-                val sig = sigs[siteSig[i]]
-                appSigs.set(siteSig[i])
-                when (p.sites[i].kind) {
-                    SiteKind.SINK -> {
-                        needed.or(sig.atoms)
-                        needed.or(sig.gens)
-                    }
-                    SiteKind.PASS_THROUGH -> needed.or(sig.atoms)
-                    SiteKind.SOURCE -> Unit
-                }
-                i = applicable.nextSetBit(i + 1)
-            }
+/** A deduplicated site signature: `(cond, gens, kind == SINK)`. */
+internal class Sig(val cond: MarkCond, val gens: BitSet, val isSink: Boolean) {
+    val atoms: BitSet = cond.atoms()
+    val hasJoinedCube: Boolean = cond.hasJoinedCube()
 
-            val done = BitSet()
-            var changed = true
-            while (changed) {
-                changed = false
-                var s = appSigs.nextSetBit(0)
-                while (s >= 0) {
-                    if (!done.get(s)) {
-                        val sig = sigs[s]
-                        if (sig.gens.intersects(needed)) {
-                            done.set(s)
-                            if (!containsAll(needed, sig.atoms)) {
-                                needed.or(sig.atoms)
-                                changed = true
-                            }
-                        }
-                    }
-                    s = appSigs.nextSetBit(s + 1)
-                }
-            }
-            return needed
-        }
+    /** The DNF has the constant-true cube (`CondEval.hasEmpty` does not depend on the marks). */
+    private val hasEmptyCube: Boolean = cond.eval(BitSet()).hasEmpty
 
-        private fun containsAll(set: BitSet, subset: BitSet): Boolean {
-            var m = subset.nextSetBit(0)
-            while (m >= 0) {
-                if (!set.get(m)) return false
-                m = subset.nextSetBit(m + 1)
-            }
-            return true
+    /** The marks of the DNF's one-literal cubes: `CondEval.singles` of the set of every atom. */
+    private val singleCubeMarks: BitSet = BitSet().also { marks ->
+        val singles = cond.eval(atoms).singles
+        if (singles.isNotEmpty()) cond.forEachLit { if (it.literal in singles) marks.set(it.mark) }
+    }
+
+    /**
+     * `cond.eval(marks).smallSat` without evaluating the tree: a cube of at most one literal holds
+     * on [marks] iff the DNF has the empty cube or a one-literal cube on a mark of [marks].
+     */
+    fun smallSat(marks: BitSet): Boolean = hasEmptyCube || singleCubeMarks.intersects(marks)
+
+    private fun MarkCond.forEachLit(body: (MarkCond.Lit) -> Unit) {
+        when (this) {
+            MarkCond.True, MarkCond.False -> Unit
+            is MarkCond.Lit -> body(this)
+            is MarkCond.And -> args.forEach { it.forEachLit(body) }
+            is MarkCond.Or -> args.forEach { it.forEachLit(body) }
         }
     }
+}
+
+/** The distinct site signatures of a program: [sigs], and [siteSig] the signature of every site. */
+internal class Signatures(p: MarkSetProgram) {
+    private data class SigKey(val cond: MarkCond, val gens: List<Int>, val isSink: Boolean)
+
+    val sigs: List<Sig>
+    val siteSig: IntArray = IntArray(p.sites.size)
+
+    init {
+        val sigIds = HashMap<SigKey, Int>()
+        val list = mutableListOf<Sig>()
+        for ((i, site) in p.sites.withIndex()) {
+            val key = SigKey(site.cond, site.gens.toList(), site.kind == SiteKind.SINK)
+            siteSig[i] = sigIds.getOrPut(key) {
+                val gens = BitSet().apply { site.gens.forEach { set(it) } }
+                list += Sig(site.cond, gens, key.isSink)
+                list.size - 1
+            }
+        }
+        sigs = list
+    }
+}
+
+/**
+ * The least fixpoint of spec §6.3 over the sites in [applicable]: `NeededOver p App` of
+ * `MarkScan/Relevance.lean`, with `App` the applicability the caller computed (`Applicable` for
+ * the default mode, `ApplicableFS` for option 3*).
+ */
+internal fun neededOver(p: MarkSetProgram, signatures: Signatures, applicable: BitSet): BitSet {
+    val sigs = signatures.sigs
+    val needed = p.cleanerAtoms.clone() as BitSet
+    val appSigs = BitSet()
+    var i = applicable.nextSetBit(0)
+    while (i >= 0) {
+        val sig = sigs[signatures.siteSig[i]]
+        appSigs.set(signatures.siteSig[i])
+        when (p.sites[i].kind) {
+            SiteKind.SINK -> {
+                needed.or(sig.atoms)
+                needed.or(sig.gens)
+            }
+            SiteKind.PASS_THROUGH -> needed.or(sig.atoms)
+            SiteKind.SOURCE -> Unit
+        }
+        i = applicable.nextSetBit(i + 1)
+    }
+
+    val done = BitSet()
+    var changed = true
+    while (changed) {
+        changed = false
+        var s = appSigs.nextSetBit(0)
+        while (s >= 0) {
+            if (!done.get(s)) {
+                val sig = sigs[s]
+                if (sig.gens.intersects(needed)) {
+                    done.set(s)
+                    if (!needed.containsAll(sig.atoms)) {
+                        needed.or(sig.atoms)
+                        changed = true
+                    }
+                }
+            }
+            s = appSigs.nextSetBit(s + 1)
+        }
+    }
+    return needed
+}
+
+internal fun BitSet.containsAll(subset: BitSet): Boolean {
+    var m = subset.nextSetBit(0)
+    while (m >= 0) {
+        if (!get(m)) return false
+        m = subset.nextSetBit(m + 1)
+    }
+    return true
 }

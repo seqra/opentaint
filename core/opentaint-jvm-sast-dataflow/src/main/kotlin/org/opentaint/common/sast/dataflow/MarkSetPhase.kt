@@ -1,12 +1,15 @@
 package org.opentaint.common.sast.dataflow
 
 import mu.KLogging
+import org.opentaint.dataflow.ap.ifds.markset.FlowSensitiveScan
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetOptions
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetResult
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetScan
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetStats
+import org.opentaint.dataflow.ap.ifds.markset.MethodCfgSource
+import org.opentaint.dataflow.ap.ifds.markset.MethodCfgUnavailable
 import org.opentaint.dataflow.ap.ifds.markset.SiteKind
 import org.opentaint.dataflow.ap.ifds.markset.SiteRef
 import org.opentaint.dataflow.ap.ifds.taint.ActionableRules
@@ -64,7 +67,8 @@ sealed interface MarkSetOutcome {
                 "rootSets=${stats.distinctRootSets} applicableSinks=${stats.applicableSinks} " +
                 "neededMarks=${stats.neededMarks} selectedActions=$selectedActions/baselineActions=$baselineActions " +
                 "selectedSinks=$selectedSinks/baselineSinks=$baselineSinks " +
-                "sourceRules=$selectedSourceRules/$baselineSourceRules"
+                "sourceRules=$selectedSourceRules/$baselineSourceRules" +
+                if (stats.rootPoints > 0) " rootPoints=${stats.rootPoints}" else ""
     }
 
     /** The full scan runs with the baseline rules. */
@@ -79,14 +83,23 @@ private class MarkSetTimeLimitExceeded : RuntimeException("mark-set time limit")
 
 private val logger = object : KLogging() {}.logger
 
+private const val FLOW_SENSITIVE_CFG = "flow-sensitive cfg"
+private const val FLOW_SENSITIVE_SIZE = "flow-sensitive size"
+
 /**
  * Runs the mark-set phase between the prescan and the full scan (spec §10): seals [recorder],
- * runs [MarkSetScan] and converts its result to [ActionableRules]. It runs no IFDS.
+ * runs [MarkSetScan] (or [FlowSensitiveScan] under [MarkSetScanOptions.flowSensitive], spec §9)
+ * and converts its result to [ActionableRules]. It runs no IFDS.
  *
  * Fails open (spec §6.6), in this order, when the prescan did not complete with status OK,
  * when summaries are stored, when the recorder hit a cap, when the phase exceeds
- * [MarkSetScanOptions.timeLimit], or when it runs out of memory. [onSealed] observes the sealed
- * input (a test hook).
+ * [MarkSetScanOptions.timeLimit], or when it runs out of memory. Under option 3* it also fails
+ * open when the statement graph is unavailable (no [cfgSource], a recorder without call points,
+ * or a statement outside its method's graph: "flow-sensitive cfg") and when the scan would visit
+ * more than [maxRootPoints] `(root, statement)` pairs ("flow-sensitive size"). [onSealed] observes
+ * the sealed input (a test hook).
+ *
+ * @param cfgSource the engine's statement graphs, required by option 3* only.
  */
 fun runMarkSetPhase(
     recorder: MarkSetRecorder,
@@ -95,6 +108,8 @@ fun runMarkSetPhase(
     storeSummaries: Boolean,
     options: MarkSetScanOptions,
     onSealed: (MarkSetInput) -> Unit = {},
+    cfgSource: MethodCfgSource? = null,
+    maxRootPoints: Long = FlowSensitiveScan.MAX_ROOT_POINTS,
 ): MarkSetOutcome {
     // Stop recording first: a prescan that timed out may still have runners winding down.
     recorder.active = false
@@ -103,6 +118,7 @@ fun runMarkSetPhase(
         !prescanOk -> "prescan incomplete"
         storeSummaries -> "stored summaries"
         recorder.overflow -> "recorder cap"
+        options.flowSensitive && (cfgSource == null || !recorder.recordCalls) -> FLOW_SENSITIVE_CFG
         else -> null
     }
     if (failOpen != null) {
@@ -116,7 +132,7 @@ fun runMarkSetPhase(
     }
 
     return try {
-        val input = recorder.seal(roots)
+        val input = recorder.seal(roots, cfgSource.takeIf { options.flowSensitive })
         // Only the selection and the covered statements survive into the full scan.
         recorder.release()
         val sealTime = start.elapsedNow()
@@ -124,7 +140,14 @@ fun runMarkSetPhase(
         checkCancelled()
 
         val scanOptions = MarkSetOptions(relaxed = options.relaxed, relevance = options.relevance)
-        val result = MarkSetScan.run(input.program, scanOptions, checkCancelled)
+        val result = if (options.flowSensitive) {
+            if (FlowSensitiveScan.rootPoints(input.program, maxRootPoints) > maxRootPoints) {
+                return MarkSetOutcome.FailOpen(FLOW_SENSITIVE_SIZE)
+            }
+            FlowSensitiveScan.run(input.program, scanOptions, checkCancelled)
+        } else {
+            MarkSetScan.run(input.program, scanOptions, checkCancelled)
+        }
         val scanTime = start.elapsedNow() - sealTime
         checkCancelled()
 
@@ -133,6 +156,9 @@ fun runMarkSetPhase(
         )
     } catch (e: MarkSetTimeLimitExceeded) {
         MarkSetOutcome.FailOpen("time limit")
+    } catch (e: MethodCfgUnavailable) {
+        logger.warn { "Mark-set phase: ${e.message}" }
+        MarkSetOutcome.FailOpen(FLOW_SENSITIVE_CFG)
     } catch (e: OutOfMemoryError) {
         MarkSetOutcome.FailOpen("memory")
     } catch (e: Exception) {

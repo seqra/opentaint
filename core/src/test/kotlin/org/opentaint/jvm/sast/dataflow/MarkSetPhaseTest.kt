@@ -6,6 +6,7 @@ import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.runMarkSetPhase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.markset.MethodCfgSource
 import org.opentaint.dataflow.ap.ifds.markset.SiteKind
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.jvm.Result
@@ -17,6 +18,8 @@ import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.RuleConditionRewriter
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
+import org.opentaint.ir.api.common.CommonMethod
+import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
@@ -152,12 +155,12 @@ class MarkSetPhaseTest : AnalysisTest() {
      * pair, actions A, A, U; the second residual needs X), a static-field source, and a sink on A.
      * U is never needed.
      */
-    private fun recordedProgram(): Triple<MarkSetRecorder, JIRMethod, List<JIRInst>> {
+    private fun recordedProgram(recordCalls: Boolean = false): Triple<MarkSetRecorder, JIRMethod, List<JIRInst>> {
         val method = sampleMethod(SIMPLE_CLS, "simpleDataFlow")
         val statements = method.instList.take(3)
         val field = cp.findClassOrNull("test.samples.StaticFieldSample")!!.declaredFields.single { it.name == "staticField" }
 
-        val recorder = MarkSetRecorder()
+        val recorder = MarkSetRecorder(recordCalls = recordCalls)
         recorder.active = true
         val source = TaintMethodSource(method, mkTrue(), listOf(mark("A"), mark("A"), mark("U")), info = null)
         recorder.recordSite(statements[0], source, SiteKind.SOURCE, RuleConditionRewriter.trueExpr, listOf("A", "A", "U"))
@@ -193,6 +196,65 @@ class MarkSetPhaseTest : AnalysisTest() {
             outcome.logLine().contains("selectedActions=1/baselineActions=2 selectedSinks=1/baselineSinks=1 sourceRules=1/1"),
             outcome.logLine(),
         )
+    }
+
+    /** A straight-line statement graph over the method's instruction list, indexed by location. */
+    private val straightLineCfg = object : MethodCfgSource {
+        override fun indexOf(statement: CommonInst): Int = (statement as JIRInst).location.index
+
+        override fun graphOf(method: CommonMethod): MethodCfgSource.MethodGraph {
+            val count = (method as JIRMethod).instList.size
+            return MethodCfgSource.MethodGraph(
+                stmtCount = count,
+                succ = Array(count) { if (it + 1 < count) intArrayOf(it + 1) else IntArray(0) },
+                entries = intArrayOf(0),
+                exits = intArrayOf(count - 1),
+            )
+        }
+    }
+
+    private val flowSensitive = enabled.copy(flowSensitive = true)
+
+    @Test
+    fun `option 3* selects like the default mode on a straight-line program`() {
+        val (recorder, method, statements) = recordedProgram(recordCalls = true)
+        val outcome = assertIs<MarkSetOutcome.Selected>(
+            runMarkSetPhase(recorder, listOf(method), prescanOk = true, storeSummaries = false, flowSensitive, cfgSource = straightLineCfg)
+        )
+        // The source at statement 0 precedes the sink at statement 2.
+        assertEquals(setOf(statements[0], statements[2]), outcome.rules.keys)
+        assertEquals(1, outcome.selectedActions)
+        assertTrue(outcome.stats.rootPoints > 0, "the flow-sensitive scan did not run")
+        assertTrue(outcome.logLine().contains("rootPoints="), outcome.logLine())
+    }
+
+    @Test
+    fun `option 3* without a statement graph or call points fails open`() {
+        val withoutCfg = recordedProgram(recordCalls = true)
+        assertEquals(
+            MarkSetOutcome.FailOpen("flow-sensitive cfg"),
+            runMarkSetPhase(withoutCfg.first, listOf(withoutCfg.second), prescanOk = true, storeSummaries = false, flowSensitive),
+        )
+        val withoutCalls = recordedProgram(recordCalls = false)
+        assertEquals(
+            MarkSetOutcome.FailOpen("flow-sensitive cfg"),
+            runMarkSetPhase(
+                withoutCalls.first, listOf(withoutCalls.second), prescanOk = true, storeSummaries = false, flowSensitive,
+                cfgSource = straightLineCfg,
+            ),
+        )
+    }
+
+    @Test
+    fun `option 3* over the size guard fails open`() {
+        val (recorder, method, _) = recordedProgram(recordCalls = true)
+        val outcome = runMarkSetPhase(
+            recorder, listOf(method), prescanOk = true, storeSummaries = false, flowSensitive,
+            cfgSource = straightLineCfg, maxRootPoints = 1,
+        )
+        assertEquals(MarkSetOutcome.FailOpen("flow-sensitive size"), outcome)
+        assertTrue(!recorder.active)
+        assertEquals(0, recorder.seal(listOf(method)).program.sites.size, "the recorder was not released")
     }
 
     @Test

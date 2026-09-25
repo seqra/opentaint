@@ -27,6 +27,7 @@ import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetInput
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetRecorder
+import org.opentaint.dataflow.ap.ifds.markset.MethodCfgSource
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
@@ -111,8 +112,11 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
      * The recorder for [analysisManager] when the mark-set scan is on (spec §10), else `null`.
      * A `null` recorder adds no behaviour.
      */
-    protected fun createMarkSetRecorder(): MarkSetRecorder? =
-        if (options.markSet.enabled) MarkSetRecorder(options.markSet.maxSites, options.markSet.maxEdges) else null
+    protected fun createMarkSetRecorder(): MarkSetRecorder? = if (options.markSet.enabled) {
+        MarkSetRecorder(options.markSet.maxSites, options.markSet.maxEdges, recordCalls = options.markSet.flowSensitive)
+    } else {
+        null
+    }
 
     /**
      * Observes the mark-set phase (a test hook): the sealed input, `null` if the phase failed
@@ -182,9 +186,17 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
         logger.info { "Start mark-set phase" }
         var sealedInput: MarkSetInput? = null
+        // Option 3* (spec §9) reads the statement graphs the engine analyzes methods on.
+        @Suppress("UNCHECKED_CAST")
+        val cfgSource = if (options.markSet.flowSensitive) {
+            MethodCfgSource.of(analysisManager, ifdsAnalysisGraph as ApplicationGraph<CommonMethod, CommonInst>)
+        } else {
+            null
+        }
         val outcome = runMarkSetPhase(
             recorder, entryPoints, prescanOk, options.storeSummaries, options.markSet,
             onSealed = { sealedInput = it },
+            cfgSource = cfgSource,
         )
         logger.info { outcome.logLine() }
 

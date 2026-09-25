@@ -4,6 +4,7 @@ import org.junit.jupiter.api.TestInstance
 import org.opentaint.common.sast.dataflow.MarkSetOutcome
 import org.opentaint.common.sast.dataflow.MarkSetScanOptions
 import org.opentaint.common.sast.dataflow.assertSameMarkSetFindings
+import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase
 import org.opentaint.dataflow.configuration.jvm.serialized.PositionBase.Argument
@@ -18,13 +19,15 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
 
 /**
  * Spec §8 Layer 3, the new samples: each program runs under the baseline and under the mark-set
  * selection, and the two finding sets must be equal (spec §2). Each sample pins one design bug
- * (D1, D4) or one model-engine gap (G1, G4, G5, G6) of spec §5.
+ * (D1, D3, D4) or one model-engine gap (G1, G4, G5, G6) of spec §5. Every sample is also checked
+ * under option 3* (spec §9).
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class MarkSetDifferentialTest : AnalysisTest() {
@@ -49,25 +52,46 @@ class MarkSetDifferentialTest : AnalysisTest() {
         const val RULE_THROWN = "g6-thrown"
         const val RULE_TRANSFORMED = "d4-transformed"
         const val RULE_UNRELATED = "d4-unrelated"
+        const val RULE_LOOP = "d3-loop"
+        const val RULE_STRICT = "fs-strict"
+
+        val FLOW_SENSITIVE = MarkSetScanOptions(enabled = true, flowSensitive = true)
     }
 
     override val sourceFileExtension: String = "java"
 
     /**
      * Runs [entryPoints] in the baseline and in the mark-set mode given by [markSetOptions], whatever
-     * the differential switch, and asserts equal findings.
+     * the differential switch, and asserts equal findings. A flow-insensitive [markSetOptions] is
+     * also checked under option 3* (spec §9), and the requested run is returned.
      */
     private fun differential(
         config: SerializedTaintConfig,
         vararg entryPoints: String,
-        markSetOptions: MarkSetScanOptions = MarkSetScanOptions(enabled = true),
+        markSetOptions: MarkSetScanOptions = defaultDifferentialMarkSet,
     ): Differential {
         val eps = entryPoints.toList()
         val baseline = runAnalysisOnce(config, TEST_CLS, eps, MarkSetScanOptions())
-        val markSet = runAnalysisOnce(config, TEST_CLS, eps, markSetOptions)
-        val outcome = assertIs<MarkSetOutcome.Selected>(markSet.markSetOutcome, "the mark-set phase did not select")
-        assertSameMarkSetFindings(baseline.gated, markSet.gated, "$TEST_CLS$eps")
-        return Differential(baseline, markSet, outcome)
+
+        fun restricted(options: MarkSetScanOptions): Differential {
+            val markSet = runAnalysisOnce(config, TEST_CLS, eps, options)
+            val outcome = assertIs<MarkSetOutcome.Selected>(markSet.markSetOutcome, "the mark-set phase did not select: $options")
+            assertSameMarkSetFindings(baseline.gated, markSet.gated, "$TEST_CLS$eps $options")
+            return Differential(baseline, markSet, outcome)
+        }
+
+        val requested = restricted(markSetOptions)
+        if (!markSetOptions.flowSensitive) {
+            val flowSensitive = restricted(markSetOptions.copy(flowSensitive = true))
+            assertTrue(flowSensitive.outcome.stats.rootPoints > 0, "the flow-sensitive scan did not run")
+        }
+        return requested
+    }
+
+    /** Whether the selection keeps a sink rule at a call of `sink` in [method]. */
+    private fun Differential.selectsSinkIn(method: String): Boolean = outcome.rules.any { (statement, rules) ->
+        val inst = statement as JIRInst
+        inst.location.method.name == method && inst.callExpr?.method?.name == "sink" && rules.keys.any { it is TaintMethodSink }
     }
 
     private class Differential(val baseline: AnalysisRun, val markSet: AnalysisRun, val outcome: MarkSetOutcome.Selected)
@@ -221,6 +245,36 @@ class MarkSetDifferentialTest : AnalysisTest() {
         val run = differential(config, "g6Entry")
         // The premise: the exit source fires at the throw (its only exit), where the exit sink sees it.
         assertEquals(listOf("g6Throw"), run.baselineFiredIn(RULE_THROWN), "the exit source does not fire at the throw")
+    }
+
+    @Test
+    fun `D3 - a loop's back edge carries a later source to an earlier sink under 3*`() {
+        val config = SerializedTaintConfig(
+            source = listOf(source("sourceA", MARK_A)),
+            sink = listOf(sink("sink", RULE_LOOP, mark(MARK_A, Argument(0)))),
+        )
+
+        val run = differential(config, "d3Loop", markSetOptions = FLOW_SENSITIVE)
+        // The premise: the sink call comes before the source call in statement order, and the
+        // baseline reports it through the back edge (Lean `linear_order_unsound`).
+        assertEquals(listOf("d3Loop"), run.baselineFiredIn(RULE_LOOP), "the baseline sink did not fire")
+        assertTrue(run.outcome.stats.rootPoints > 0, "the flow-sensitive scan did not run")
+        assertTrue(run.selectsSinkIn("d3Loop"), "option 3* does not select the loop's sink")
+    }
+
+    @Test
+    fun `fs_strict - 3* deselects a sink that runs before the source, with the same findings`() {
+        val config = SerializedTaintConfig(
+            source = listOf(source("sourceA", MARK_A)),
+            sink = listOf(sink("sink", RULE_STRICT, mark(MARK_A, Argument(0)))),
+        )
+
+        val flowInsensitive = differential(config, "fsStrict", markSetOptions = MarkSetScanOptions(enabled = true))
+        val flowSensitive = differential(config, "fsStrict", markSetOptions = FLOW_SENSITIVE)
+        assertEquals(emptyList(), flowInsensitive.baselineFiredIn(RULE_STRICT), "the sink before the source fired")
+        // Lean `fs_strict`: the default mode selects the sink, option 3* does not.
+        assertTrue(flowInsensitive.selectsSinkIn("fsStrict"), "the default mode does not select the sink")
+        assertFalse(flowSensitive.selectsSinkIn("fsStrict"), "option 3* selects the sink before the source")
     }
 
     @Test

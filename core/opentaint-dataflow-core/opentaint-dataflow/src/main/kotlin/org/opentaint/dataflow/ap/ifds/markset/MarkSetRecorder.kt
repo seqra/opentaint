@@ -64,10 +64,16 @@ class MarkSetInput(
  *
  * @property maxSites cap on the number of distinct recorded sites (by the M8
  *   dedup key). Exceeding it sets [overflow] and stops recording.
- * @property maxEdges cap on the number of distinct recorded call edges.
- *   Exceeding it sets [overflow] and stops recording.
+ * @property maxEdges cap on the number of distinct recorded call edges, and separately on the
+ *   number of distinct recorded call points. Exceeding it sets [overflow] and stops recording.
+ * @property recordCalls also record every call point `(caller, call statement, callee)`, which
+ *   option 3* needs (spec §9); off otherwise, so the default mode pays nothing for it.
  */
-class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000_000) {
+class MarkSetRecorder(
+    val maxSites: Int = 20_000_000,
+    val maxEdges: Int = 20_000_000,
+    val recordCalls: Boolean = false,
+) {
     /** True only while the prescan phase is active; set by the caller. */
     @Volatile
     var active: Boolean = false
@@ -94,6 +100,10 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
     private var edgeKeys = ConcurrentHashMap.newKeySet<Long>()
     private val edgeCount = AtomicInteger()
     private var edgeList = ConcurrentLinkedQueue<Long>()
+
+    /** Call points, with [recordCalls] only. */
+    private var callPoints = ConcurrentHashMap.newKeySet<CallPoint>()
+    private val callPointCount = AtomicInteger()
 
     /** One entry per `(statement, rule)`, mapped to itself (the entry is its own key). */
     private var siteEntries = ConcurrentHashMap<SiteEntry, SiteEntry>()
@@ -136,16 +146,29 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
 
     private data class CleanerKey(val statement: CommonInst, val residual: Any)
 
-    /** Records a call edge `caller --call--> callee`, while the phase is Prescan. */
+    private data class CallPoint(val caller: Int, val statement: CommonInst, val callee: Int)
+
+    /**
+     * Records a call edge `caller --call--> callee`, while the phase is Prescan. With [recordCalls],
+     * also records the call point.
+     */
     fun recordEdge(caller: CommonMethod, call: CommonInst, callee: CommonMethod) {
         if (!active || overflow) return
-        val key = edgeKey(internMethod(caller), internMethod(callee))
+        val callerId = internMethod(caller)
+        val calleeId = internMethod(callee)
+        if (recordCalls) recordCallPoint(CallPoint(callerId, call, calleeId))
+        val key = edgeKey(callerId, calleeId)
         if (key in edgeKeys || !edgeKeys.add(key)) return
         if (edgeCount.incrementAndGet() > maxEdges) {
             overflow = true
             return
         }
         edgeList.add(key)
+    }
+
+    private fun recordCallPoint(point: CallPoint) {
+        if (point in callPoints || !callPoints.add(point)) return
+        if (callPointCount.incrementAndGet() > maxEdges) overflow = true
     }
 
     /** Records a statement at which the prescan queried any rule (§4, provider fallback). */
@@ -213,8 +236,14 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
     /**
      * Builds the [MarkSetInput] recorded so far. Call it once the prescan is done and
      * recording has stopped (no concurrent `record*` calls).
+     *
+     * With [cfgSource], the program also gets its statement graph ([MarkSetProgram.cfg], option 3*),
+     * built from the recorded call points (which need [recordCalls]). A method with other than one
+     * entry statement gets one synthetic entry statement, after its own, leading to all of them.
+     *
+     * @throws MethodCfgUnavailable when a site or call statement is not a statement of its method's graph.
      */
-    fun seal(roots: Collection<CommonMethod>): MarkSetInput {
+    fun seal(roots: Collection<CommonMethod>, cfgSource: MethodCfgSource? = null): MarkSetInput {
         // Sites first: interning a site's method may add a node (E0).
         val sites = ArrayList<MarkSite>()
         val refs = ArrayList<SiteRef>()
@@ -228,8 +257,9 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
         }
 
         val methodCount = methodCount.get()
-        val methods = arrayOfNulls<CommonMethod>(methodCount)
-        for ((method, id) in methodIds) methods[id] = method
+        val methodArray = arrayOfNulls<CommonMethod>(methodCount)
+        for ((method, id) in methodIds) methodArray[id] = method
+        val methods = methodArray.map { checkNotNull(it) }
 
         val edges = edgeList.toList()
         val outDegree = IntArray(methodCount)
@@ -261,12 +291,13 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
             callees = callees,
             sites = sites,
             cleanerAtoms = synchronized(cleanerAtoms) { cleanerAtoms.clone() as BitSet },
+            cfg = cfgSource?.let { buildCfg(it, methods, sites, refs) },
         )
         return MarkSetInput(
             program = program,
             sites = refs,
             markNames = markNames.map { checkNotNull(it) },
-            methods = methods.map { checkNotNull(it) },
+            methods = methods,
             coveredStatements = HashSet(coveredStatements),
         )
     }
@@ -284,6 +315,7 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
         gensCache = ConcurrentHashMap()
         edgeKeys = ConcurrentHashMap.newKeySet()
         edgeList = ConcurrentLinkedQueue()
+        callPoints = ConcurrentHashMap.newKeySet()
         siteEntries = ConcurrentHashMap()
         coveredStatements = ConcurrentHashMap.newKeySet()
         cleanerSeen = ConcurrentHashMap.newKeySet()
@@ -292,10 +324,63 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
         markCount.set(0)
         literalCount.set(0)
         edgeCount.set(0)
+        callPointCount.set(0)
         siteCount.set(0)
     }
 
     // ---- helpers -------------------------------------------------------------
+
+    private fun buildCfg(
+        source: MethodCfgSource,
+        methods: List<CommonMethod>,
+        sites: List<MarkSite>,
+        refs: List<SiteRef>,
+    ): MethodCfg {
+        val n = methods.size
+        val stmtCount = IntArray(n)
+        val entry = IntArray(n)
+        val exits = arrayOfNulls<IntArray>(n)
+        val succ = arrayOfNulls<Array<IntArray>>(n)
+        for (m in 0 until n) {
+            val graph = source.graphOf(methods[m])
+            exits[m] = graph.exits
+            if (graph.entries.size == 1) {
+                stmtCount[m] = graph.stmtCount
+                entry[m] = graph.entries[0]
+                succ[m] = graph.succ
+            } else {
+                stmtCount[m] = graph.stmtCount + 1
+                entry[m] = graph.stmtCount
+                succ[m] = graph.succ + graph.entries
+            }
+        }
+
+        fun indexIn(method: Int, statement: CommonInst): Int {
+            val index = source.indexOf(statement)
+            if (statement.location.method != methods[method] || index !in 0 until stmtCount[method]) {
+                throw MethodCfgUnavailable("statement $statement is not in the graph of ${methods[method]}")
+            }
+            return index
+        }
+
+        val siteStmt = IntArray(sites.size) { indexIn(sites[it].method, refs[it].statement) }
+
+        val calls = Array(n) { m -> arrayOfNulls<IntArray>(stmtCount[m]) }
+        for (point in callPoints) {
+            val s = indexIn(point.caller, point.statement)
+            val current = calls[point.caller][s] ?: NO_CALLEES
+            if (point.callee !in current) calls[point.caller][s] = current + point.callee
+        }
+
+        return MethodCfg(
+            stmtCount = stmtCount,
+            succ = Array(n) { checkNotNull(succ[it]) },
+            entry = entry,
+            exits = Array(n) { checkNotNull(exits[it]) },
+            siteStmt = siteStmt,
+            callsAt = Array(n) { m -> Array(stmtCount[m]) { s -> calls[m][s] ?: NO_CALLEES } },
+        )
+    }
 
     private fun internMethod(method: CommonMethod): Int =
         methodIds[method] ?: methodIds.computeIfAbsent(method) { methodCount.getAndIncrement() }
@@ -355,6 +440,7 @@ class MarkSetRecorder(val maxSites: Int = 20_000_000, val maxEdges: Int = 20_000
     private companion object {
         private val TRUE_KEY = Any()
         private val NO_CONDS = emptyArray<MarkCond>()
+        private val NO_CALLEES = IntArray(0)
 
         /** Whether the residual has a positive (non-negated) mark literal, i.e. a non-empty `atoms()`. */
         private fun RuleConditionRewriter.ExprOrConstant.hasPositiveLiteral(): Boolean =

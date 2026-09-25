@@ -127,6 +127,25 @@ public class MarkSetDiffSamples {
         consume(unrelated, unrelated);
     }
 
+    /* ---------- D3: a loop whose back edge carries a later source to an earlier sink (3*) ---------- */
+
+    public void d3Loop(int count) {
+        String data = "safe";
+        for (int i = 0; i < count; i++) {
+            sink(data);
+            data = sourceA();
+        }
+    }
+
+    /* ---------- fs_strict: a sink before a source, no loop (3* deselects the sink) ---------- */
+
+    public void fsStrict() {
+        String data = "safe";
+        sink(data);
+        data = sourceA();
+        consume(data, data);
+    }
+
     /* ---------- rule targets ---------- */
 
     public String sourceA() { return "a"; }

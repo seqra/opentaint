@@ -17,7 +17,10 @@ import java.util.concurrent.Executors
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertFalse
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class MarkSetRecorderTest {
@@ -327,6 +330,91 @@ class MarkSetRecorderTest {
 
         assertEquals(canonical(sequential), canonical(concurrent))
         assertTrue(sequential.program.sites.isNotEmpty())
+    }
+
+    /** A statement graph per method; a statement's index is its location index. */
+    private class FakeCfgSource(private val graphs: Map<CommonMethod, MethodCfgSource.MethodGraph>) : MethodCfgSource {
+        override fun indexOf(statement: CommonInst): Int = statement.location.index
+        override fun graphOf(method: CommonMethod): MethodCfgSource.MethodGraph = graphs.getValue(method)
+    }
+
+    private fun straightLine(count: Int, entries: IntArray = intArrayOf(0)) = MethodCfgSource.MethodGraph(
+        stmtCount = count,
+        succ = Array(count) { if (it + 1 < count) intArrayOf(it + 1) else IntArray(0) },
+        entries = entries,
+        exits = intArrayOf(count - 1),
+    )
+
+    @Test
+    fun `with call recording, seal builds the statement graph, call points and site statements`() {
+        val recorder = MarkSetRecorder(recordCalls = true)
+        recorder.active = true
+        val root = FakeMethod("root")
+        val callee = FakeMethod("callee")
+        val firstCall = inst(root, 1)
+        val secondCall = inst(root, 2)
+
+        recorder.recordEdge(root, firstCall, callee)
+        recorder.recordEdge(root, firstCall, callee) // duplicate call point, deduplicated
+        recorder.recordEdge(root, secondCall, callee) // same method pair, another call point
+        recorder.recordSite(inst(root, 3), FakeRule(), SiteKind.SINK, literal("A", position(0)), gens = emptyList())
+        recorder.recordSite(inst(callee, 1), FakeRule(), SiteKind.SOURCE, RuleConditionRewriter.trueExpr, listOf("A"))
+
+        // The callee has two entry statements: seal adds one synthetic entry leading to both.
+        val source = FakeCfgSource(mapOf(root to straightLine(4), callee to straightLine(2, entries = intArrayOf(0, 1))))
+        val input = recorder.seal(roots = listOf(root), cfgSource = source)
+        val program = input.program
+        val cfg = assertNotNull(program.cfg)
+
+        val rootId = input.methods.indexOf(root)
+        val calleeId = input.methods.indexOf(callee)
+        assertEquals(1, program.callees[rootId].size)
+
+        assertEquals(4, cfg.stmtCount[rootId])
+        assertEquals(0, cfg.entry[rootId])
+        assertEquals(listOf(3), cfg.exits[rootId].toList())
+        assertEquals(listOf(listOf(), listOf(calleeId), listOf(calleeId), listOf()), cfg.callsAt[rootId].map { it.toList() })
+
+        assertEquals(3, cfg.stmtCount[calleeId])
+        assertEquals(2, cfg.entry[calleeId])
+        assertEquals(listOf(0, 1), cfg.succ[calleeId][2].toList())
+        assertEquals(listOf(1), cfg.succ[calleeId][0].toList())
+        assertEquals(listOf(1), cfg.exits[calleeId].toList())
+
+        for (i in program.sites.indices) {
+            assertEquals(input.sites[i].statement.location.index, cfg.siteStmt[i])
+        }
+    }
+
+    @Test
+    fun `without a CFG source, seal records no statement graph`() {
+        val recorder = MarkSetRecorder(recordCalls = true)
+        recorder.active = true
+        val root = FakeMethod("root")
+        recorder.recordEdge(root, inst(root, 0), FakeMethod("callee"))
+        assertNull(recorder.seal(roots = listOf(root)).program.cfg)
+    }
+
+    @Test
+    fun `a statement outside its method's graph makes the graph unavailable`() {
+        val recorder = MarkSetRecorder(recordCalls = true)
+        recorder.active = true
+        val root = FakeMethod("root")
+        recorder.recordSite(inst(root, 5), FakeRule(), SiteKind.SINK, literal("A", position(0)), gens = emptyList())
+        val source = FakeCfgSource(mapOf(root to straightLine(2)))
+        assertFailsWith<MethodCfgUnavailable> { recorder.seal(roots = listOf(root), cfgSource = source) }
+    }
+
+    @Test
+    fun `call points count against the edge cap`() {
+        val recorder = MarkSetRecorder(maxEdges = 1, recordCalls = true)
+        recorder.active = true
+        val caller = FakeMethod("caller")
+        val callee = FakeMethod("callee")
+        recorder.recordEdge(caller, inst(caller, 0), callee)
+        assertFalse(recorder.overflow)
+        recorder.recordEdge(caller, inst(caller, 1), callee)
+        assertTrue(recorder.overflow)
     }
 
     private class Workload(val events: List<(MarkSetRecorder) -> Unit>, val roots: List<CommonMethod>) :

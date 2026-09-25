@@ -86,6 +86,56 @@ class MarkSetScanOracleTest {
     }
 
     @Test
+    fun `option 3-star matches the direct reading of the Lean rules on every program`() {
+        val failures = mutableListOf<String>()
+        for (case in cases) {
+            val result = FlowSensitiveScan.run(case.program, MarkSetOptions()) {}
+            val expected = FlowSensitiveReference.run(case.program)
+
+            val applicable = result.applicable.toSet()
+            if (applicable != expected.applicable) {
+                failures += "seed ${case.seed}: FS applicable = $applicable, expected ${expected.applicable}"
+            }
+            val needed = result.needed.toSet()
+            if (needed != expected.needed) {
+                failures += "seed ${case.seed}: FS needed = $needed, expected ${expected.needed}"
+            }
+            for (root in case.program.roots.distinct()) {
+                val actual = result.rootMarks[root]?.toSet() ?: emptySet()
+                if (actual != expected.rootMarks.getValue(root)) {
+                    failures += "seed ${case.seed}: FS marks of root $root = $actual, expected ${expected.rootMarks[root]}"
+                }
+            }
+        }
+        if (failures.isNotEmpty()) {
+            fail("${failures.size} mismatches:\n" + failures.take(20).joinToString("\n"))
+        }
+    }
+
+    @Test
+    fun `option 3-star never selects or needs more than the default mode on every program`() {
+        // Lean `applicableFS_implies_applicable`, `neededFS_implies_needed` and `fs_refines_fi`, on the
+        // oracle's straight-line statement graphs.
+        var strictlyFewer = 0
+        for (case in cases) {
+            val fs = FlowSensitiveScan.run(case.program, MarkSetOptions()) {}
+            val fi = MarkSetScan.run(case.program)
+
+            val fsApplicable = fs.applicable.toSet()
+            val fiApplicable = fi.applicable.toSet()
+            assertTrue(fiApplicable.containsAll(fsApplicable), "seed ${case.seed}: FS applicable $fsApplicable ⊄ FI $fiApplicable")
+            assertTrue(fi.needed.toSet().containsAll(fs.needed.toSet()), "seed ${case.seed}: FS needed ⊄ FI needed")
+            for (root in case.program.roots.distinct()) {
+                val fsMarks = fs.rootMarks[root]?.toSet() ?: emptySet()
+                val fiMarks = fi.rootMarks[root]?.toSet() ?: emptySet()
+                assertTrue(fiMarks.containsAll(fsMarks), "seed ${case.seed}: FS marks of root $root ⊄ S_E")
+            }
+            if (fsApplicable != fiApplicable) strictlyFewer++
+        }
+        assertTrue(strictlyFewer > 0, "option 3* is never strictly finer on the fixture")
+    }
+
+    @Test
     fun `relevance off makes every mark needed`() {
         for (case in cases) {
             val result = MarkSetScan.run(case.program, MarkSetOptions(relevance = false))
@@ -117,9 +167,18 @@ class MarkSetScanOracleTest {
         val roots = json.getValue("roots").jsonArray.ints()
 
         val callees = Array(nodeCount) { LinkedHashSet<Int>() }
+        // The statement graph as the Lean oracle builds it (`Raw.toProgram`): pcs `0 until count`,
+        // straight-line `pc -> pc + 1`, entry `0`, exit the last pc.
+        val stmtCount = IntArray(nodeCount)
+        for (pc in json.getValue("pcs").jsonArray) {
+            val (node, index) = pc.jsonArray.ints()
+            stmtCount[node] = maxOf(stmtCount[node], index + 1)
+        }
+        val callsAt = Array(nodeCount) { m -> Array(stmtCount[m]) { mutableListOf<Int>() } }
         for (call in json.getValue("calls").jsonArray) {
-            val (caller, _, callee) = call.jsonArray.ints()
+            val (caller, pc, callee) = call.jsonArray.ints()
             callees[caller] += callee
+            callsAt[caller][pc] += callee
         }
 
         var maxMark = -1
@@ -151,6 +210,7 @@ class MarkSetScanOracleTest {
             val gens = site.getValue("gens").jsonArray.ints().map { seeMark(it) }.toIntArray()
             MarkSite(site.getValue("node").jsonPrimitive.int, kind, cond, gens)
         }
+        val siteStmt = json.getValue("sites").jsonArray.map { it.jsonObject.getValue("pc").jsonPrimitive.int }
 
         val cleanerAtoms = BitSet()
         for (atom in json.getValue("cleanerAtoms").jsonArray) {
@@ -164,6 +224,16 @@ class MarkSetScanOracleTest {
             callees = Array(nodeCount) { callees[it].toIntArray() },
             sites = sites,
             cleanerAtoms = cleanerAtoms,
+            cfg = MethodCfg(
+                stmtCount = stmtCount,
+                succ = Array(nodeCount) { m ->
+                    Array(stmtCount[m]) { pc -> if (pc + 1 < stmtCount[m]) intArrayOf(pc + 1) else IntArray(0) }
+                },
+                entry = IntArray(nodeCount),
+                exits = Array(nodeCount) { m -> if (stmtCount[m] == 0) IntArray(0) else intArrayOf(stmtCount[m] - 1) },
+                siteStmt = siteStmt.toIntArray(),
+                callsAt = Array(nodeCount) { m -> Array(stmtCount[m]) { pc -> callsAt[m][pc].distinct().toIntArray() } },
+            ),
         )
 
         val expected = json.getValue("expected").jsonObject
