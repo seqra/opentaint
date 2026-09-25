@@ -30,27 +30,58 @@ import java.util.IdentityHashMap
  *
  * [select] installs an immutable snapshot; a `null` selection (or a
  * statement outside [ActionableRules]' covered set) means "no filtering".
+ * Each selected rule's answer is built once, by [select]: a query allocates
+ * nothing per rule, and a restricted source keeps one identity across queries.
  */
 class SelectedTaintRulesProvider(
     private val delegate: TaintRulesProvider,
 ) : TaintRulesProvider by delegate {
 
     /**
-     * One statement's `rule -> selected actions` map. The identity map is
-     * checked first: on the hot full-scan path the same rule instances the
-     * prescan recorded are usually the ones the delegate hands back, so an
-     * identity hit avoids the data class' structural `hashCode`/`equals`.
-     * The equals-based map is the correctness fallback.
+     * One statement's `rule -> answer` map, built once by [select]. The answer
+     * is [KEEP] when the delegate's rule is returned as is (a sink, or a source
+     * with every action selected), else the source's action-restricted copy. A
+     * source with no selected action has no entry: it is dropped, as an
+     * unselected rule is. The identity map is checked first: on the hot
+     * full-scan path the same rule instances the prescan recorded are usually
+     * the ones the delegate hands back, so an identity hit avoids the data
+     * class' structural `hashCode`/`equals`. The equals-based map is the
+     * correctness fallback (e.g. rules the delegate builds afresh per call).
      */
     private class RuleActions(rules: Map<CommonTaintConfigurationItem, Set<CommonTaintAction>>) {
-        private val byIdentity = IdentityHashMap<CommonTaintConfigurationItem, Set<CommonTaintAction>>(rules)
-        private val byEquals: Map<CommonTaintConfigurationItem, Set<CommonTaintAction>> = rules
+        private val byEquals: Map<CommonTaintConfigurationItem, Any> = buildMap {
+            for ((rule, actions) in rules) {
+                answerOf(rule, actions)?.let { put(rule, it) }
+            }
+        }
+        private val byIdentity = IdentityHashMap<CommonTaintConfigurationItem, Any>(byEquals)
 
-        operator fun get(rule: CommonTaintConfigurationItem): Set<CommonTaintAction>? =
-            byIdentity[rule] ?: byEquals[rule]
+        /** [KEEP], the restricted copy to return, or `null` to drop [rule]. */
+        operator fun get(rule: CommonTaintConfigurationItem): Any? = byIdentity[rule] ?: byEquals[rule]
 
         companion object {
             val EMPTY = RuleActions(emptyMap())
+
+            /** The answer for a delegate rule equal to this one: return the delegate's own instance. */
+            val KEEP = Any()
+
+            private fun answerOf(rule: CommonTaintConfigurationItem, actions: Set<CommonTaintAction>): Any? {
+                if (rule !is TaintConfigurationSource) return KEEP
+                val kept = rule.actionsAfter.filter { it in actions }
+                return when (kept.size) {
+                    0 -> null
+                    rule.actionsAfter.size -> KEEP
+                    else -> rule.copyWithActions(kept)
+                }
+            }
+
+            private fun TaintConfigurationSource.copyWithActions(actions: List<AssignMark>): TaintConfigurationSource =
+                when (this) {
+                    is TaintEntryPointSource -> copy(actionsAfter = actions)
+                    is TaintMethodSource -> copy(actionsAfter = actions)
+                    is TaintMethodExitSource -> copy(actionsAfter = actions)
+                    is TaintStaticFieldSource -> copy(actionsAfter = actions)
+                }
         }
     }
 
@@ -92,23 +123,14 @@ class SelectedTaintRulesProvider(
     ): Iterable<T> {
         val lookup = lookupFor(statement, allRelevant) ?: return base
         return base.mapNotNull { rule ->
-            val acts = lookup[rule] ?: return@mapNotNull null
-            when (rule) {
-                is TaintConfigurationSource ->
-                    rule.copyWithActions(rule.actionsAfter.filter { it in acts })
-                        .takeIf { it.actionsAfter.isNotEmpty() } as T?
-                else -> rule
+            when (val answer = lookup[rule]) {
+                null -> null
+                RuleActions.KEEP -> rule
+                // The restricted copy of a rule equal to [rule], so of the same class.
+                else -> answer as T
             }
         }
     }
-
-    private fun TaintConfigurationSource.copyWithActions(actions: List<AssignMark>): TaintConfigurationSource =
-        when (this) {
-            is TaintEntryPointSource -> copy(actionsAfter = actions)
-            is TaintMethodSource -> copy(actionsAfter = actions)
-            is TaintMethodExitSource -> copy(actionsAfter = actions)
-            is TaintStaticFieldSource -> copy(actionsAfter = actions)
-        }
 
     override fun entryPointRulesForMethod(
         method: CommonMethod,

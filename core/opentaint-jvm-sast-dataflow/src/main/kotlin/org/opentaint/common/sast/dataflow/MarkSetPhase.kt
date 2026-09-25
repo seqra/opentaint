@@ -46,6 +46,8 @@ sealed interface MarkSetOutcome {
      * @property scanTime the part of [elapsed] spent in the scan.
      * @property neededMarks the names of the needed marks (spec §6.3), or `null` without relevance
      *   (every mark is needed then). The E10 debug diff compares the facts of these marks.
+     * @property recorderBytes the recorder's estimated size when the phase started
+     *   ([MarkSetRecorder.estimatedBytes]; its cap is [MarkSetScanOptions.maxRecorderBytes]).
      */
     data class Selected(
         val rules: ActionableRules,
@@ -62,6 +64,7 @@ sealed interface MarkSetOutcome {
         val sealTime: Duration = Duration.ZERO,
         val scanTime: Duration = Duration.ZERO,
         val neededMarks: Set<String>? = null,
+        val recorderBytes: Long = 0,
     ) : MarkSetOutcome {
         override fun logLine(): String =
             "markset: time=${elapsed.inWholeMilliseconds}ms seal=${sealTime.inWholeMilliseconds}ms " +
@@ -70,7 +73,8 @@ sealed interface MarkSetOutcome {
                 "rootSets=${stats.distinctRootSets} applicableSinks=${stats.applicableSinks} " +
                 "neededMarks=${stats.neededMarks} selectedActions=$selectedActions/baselineActions=$baselineActions " +
                 "selectedSinks=$selectedSinks/baselineSinks=$baselineSinks " +
-                "sourceRules=$selectedSourceRules/$baselineSourceRules" +
+                "sourceRules=$selectedSourceRules/$baselineSourceRules " +
+                "recorderMb=${recorderBytes / (1024 * 1024)}" +
                 if (stats.rootPoints > 0) " rootPoints=${stats.rootPoints}" else ""
     }
 
@@ -140,6 +144,7 @@ fun runMarkSetPhase(
     }
 
     val debugChecks = options.debugChecks && recorder.debugChecks
+    val recorderBytes = recorder.estimatedBytes
     var outcome: MarkSetOutcome? = null
     return try {
         val input = recorder.seal(roots, cfgSource.takeIf { options.flowSensitive })
@@ -163,7 +168,7 @@ fun runMarkSetPhase(
         checkCancelled()
 
         input.toSelection(result, options).copy(
-            elapsed = start.elapsedNow(), sealTime = sealTime, scanTime = scanTime,
+            elapsed = start.elapsedNow(), sealTime = sealTime, scanTime = scanTime, recorderBytes = recorderBytes,
         ).also { outcome = it }
     } catch (e: MarkSetTimeLimitExceeded) {
         MarkSetOutcome.FailOpen("time limit")

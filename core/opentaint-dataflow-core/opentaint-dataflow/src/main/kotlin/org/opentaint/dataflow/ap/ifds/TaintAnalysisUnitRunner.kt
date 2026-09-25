@@ -45,6 +45,12 @@ class TaintAnalysisUnitRunner(
         runner = this
     )
 
+    /**
+     * The mark-set recorder (spec §4), `null` unless the mark-set scan is on. Resolved once: the
+     * manager's recorder is fixed for its lifetime, and this is read on every subscription.
+     */
+    private val markSetRecorder: MarkSetRecorder? = (analysisManager as? TaintAnalysisManager)?.markSetRecorder()
+
     private object EventComparator : Comparator<Any> {
         override fun compare(o1: Any, o2: Any): Int {
             val methodAnalyzer1 = o1 as? MethodAnalyzer
@@ -424,10 +430,6 @@ class TaintAnalysisUnitRunner(
             submitCrossUnitFact = { handleCrossUnitFactCall(unit, methodEntryPoint, edge.factAp.rebase(methodFactBase)) }
         )
     }
-
-    /** The mark-set recorder (spec §4), `null` unless the mark-set scan is on. */
-    private val markSetRecorder: MarkSetRecorder?
-        get() = (analysisManager as? TaintAnalysisManager)?.markSetRecorder()
 
     /** Mark-set debug checks (E1): observes a call on a fact edge; a no-op unless observing. */
     private fun observeMarkSetCall(edge: Edge, methodEntryPoint: MethodEntryPoint) {

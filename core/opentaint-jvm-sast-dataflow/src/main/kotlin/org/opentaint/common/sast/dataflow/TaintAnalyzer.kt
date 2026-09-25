@@ -115,7 +115,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
      */
     protected fun createMarkSetRecorder(): MarkSetRecorder? = if (options.markSet.enabled) {
         MarkSetRecorder(
-            options.markSet.maxSites, options.markSet.maxEdges,
+            options.markSet.maxSites, options.markSet.maxEdges, options.markSet.maxRecorderBytes,
             recordCalls = options.markSet.flowSensitive,
             debugChecks = options.markSet.debugChecks,
         )
@@ -222,24 +222,21 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     /**
      * The E1/E2 debug checks (spec §7): once the full scan is done, compares what it resolved and
      * evaluated with the prescan's recording, and releases the recorder. Before confirmation,
-     * which is not part of the full scan. A no-op unless the recorder is observing.
+     * which is not part of the full scan. Logs one INFO line ([checkLogLine]) and an ERROR line
+     * per violation ([violationLogLines]). A no-op unless the recorder is observing; with
+     * [MarkSetScanOptions.debugChecks] on, a phase that failed open is logged as not checked.
      */
     private fun checkMarkSetCoverage() {
-        val recorder = analysisManager.markSetRecorder()?.takeIf { it.observing } ?: return
+        val recorder = analysisManager.markSetRecorder() ?: return
+        if (!recorder.observing) {
+            if (options.markSet.debugChecks) logger.info { "markset-check: not run (the mark-set phase failed open)" }
+            return
+        }
         val coverage = recorder.checkCoverage()
         recorder.release()
 
-        if (coverage.violations.isEmpty()) {
-            logger.info {
-                "markset debug checks: ok calls=${coverage.observedCalls} sites=${coverage.observedSites} " +
-                    "uncoveredSites=${coverage.uncoveredSites}"
-            }
-        } else {
-            logger.error {
-                "markset debug checks: ${coverage.violations.size} violations\n" +
-                    coverage.violations.joinToString("\n") { "  ${it.check}: ${it.detail}" }
-            }
-        }
+        logger.info { coverage.checkLogLine() }
+        coverage.violationLogLines().forEach { line -> logger.error { line } }
         onMarkSetCoverage(coverage)
     }
 

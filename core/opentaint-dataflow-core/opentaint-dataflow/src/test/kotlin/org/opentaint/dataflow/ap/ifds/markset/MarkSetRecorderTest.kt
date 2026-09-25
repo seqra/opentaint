@@ -205,6 +205,56 @@ class MarkSetRecorderTest {
     }
 
     @Test
+    fun `the byte estimate charges every new table entry once`() {
+        val recorder = MarkSetRecorder()
+        recorder.active = true
+        val caller = FakeMethod("caller")
+        val callee = FakeMethod("callee")
+        val statement = inst(caller)
+        val rule = FakeRule()
+        assertEquals(0L, recorder.estimatedBytes)
+
+        recorder.recordStatement(statement)
+        assertEquals(MarkSetRecorder.STATEMENT_BYTES, recorder.estimatedBytes)
+
+        recorder.recordEdge(caller, statement, callee)
+        val afterEdge = MarkSetRecorder.STATEMENT_BYTES + 2 * MarkSetRecorder.INTERNED_BYTES + MarkSetRecorder.EDGE_BYTES
+        assertEquals(afterEdge, recorder.estimatedBytes)
+
+        recorder.recordSite(statement, rule, SiteKind.SOURCE, literal("A", position(0)), gens = listOf("A"))
+        val afterSite = afterEdge +
+            MarkSetRecorder.COND_BYTES + 2 * MarkSetRecorder.INTERNED_BYTES + // the cond, its mark and literal ids
+            MarkSetRecorder.INTERNED_BYTES + // the gens
+            MarkSetRecorder.SITE_ENTRY_BYTES + MarkSetRecorder.SITE_BYTES
+        assertEquals(afterSite, recorder.estimatedBytes)
+
+        // Repeats add nothing.
+        recorder.recordStatement(statement)
+        recorder.recordEdge(caller, statement, callee)
+        recorder.recordSite(statement, rule, SiteKind.SOURCE, literal("A", position(0)), gens = listOf("A"))
+        assertEquals(afterSite, recorder.estimatedBytes)
+
+        recorder.release()
+        assertEquals(0L, recorder.estimatedBytes)
+    }
+
+    @Test
+    fun `the byte cap sets overflow and stops recording`() {
+        val recorder = MarkSetRecorder(maxBytes = 10 * MarkSetRecorder.STATEMENT_BYTES)
+        recorder.active = true
+        val method = FakeMethod("m")
+
+        for (i in 0 until 10) recorder.recordStatement(inst(method, i))
+        assertFalse(recorder.overflow)
+        recorder.recordStatement(inst(method, 10))
+        assertTrue(recorder.overflow)
+
+        val recorded = recorder.estimatedBytes
+        recorder.recordStatement(inst(method, 11))
+        assertEquals(recorded, recorder.estimatedBytes)
+    }
+
+    @Test
     fun `seal builds callees, roots and the site to SiteRef alignment`() {
         val recorder = MarkSetRecorder()
         recorder.active = true
@@ -491,6 +541,24 @@ class MarkSetRecorderTest {
 
         val violations = prescan.recorder.checkCoverage().violations
         assertEquals(listOf("E2", "E2", "E2"), violations.map { it.check }, "$violations")
+    }
+
+    @Test
+    fun `debug checks - a full scan whose rules cannot be observed is one E2 violation per reason`() {
+        val prescan = ObservedPrescan()
+        prescan.prescan(literal("A", position(0)))
+
+        prescan.recorder.observeUnavailable("no unrestricted provider")
+        prescan.recorder.observeUnavailable("no unrestricted provider")
+
+        val violations = prescan.recorder.checkCoverage().violations
+        assertEquals(listOf("E2"), violations.map { it.check }, "$violations")
+        assertTrue("no unrestricted provider" in violations.single().detail, "$violations")
+
+        // Not observing: ignored.
+        prescan.recorder.release()
+        prescan.recorder.observeUnavailable("after release")
+        assertEquals(emptyList(), prescan.recorder.checkCoverage().violations)
     }
 
     @Test

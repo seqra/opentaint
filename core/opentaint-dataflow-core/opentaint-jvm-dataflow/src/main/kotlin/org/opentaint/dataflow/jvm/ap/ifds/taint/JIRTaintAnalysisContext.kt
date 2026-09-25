@@ -44,26 +44,40 @@ class JIRTaintAnalysisContext(
 
     fun bindAnalysisContext(analysisContext: JIRMethodAnalysisContext) {
         this.analysisContext = analysisContext
+        markSetRecorder = analysisContext.analysisManager.markSetRecorder()
     }
 
     fun reset() {
         taintSinkTracker.reset()
     }
 
-    /** Non-null only with the mark-set scan on (spec §10); see [recordMarkSet]. */
-    internal val markSetRecorder: MarkSetRecorder?
-        get() = analysisContext.analysisManager.markSetRecorder()
+    /**
+     * Non-null only with the mark-set scan on (spec §10); see [recordMarkSet]. Resolved once, by
+     * [bindAnalysisContext]: the manager's recorder is fixed, and this is read on every rule query.
+     */
+    internal var markSetRecorder: MarkSetRecorder? = null
+        private set
 
     private val isMarkSetRecording: Boolean
-        get() = analysisContext.phase is Phase.Prescan && markSetRecorder?.active == true
+        get() = markSetRecorder?.active == true && analysisContext.phase is Phase.Prescan
 
     /** Mark-set debug checks (E2): the full scan is observed; see [observeMarkSet]. */
     private val isMarkSetObserving: Boolean
-        get() = analysisContext.phase is Phase.FullScan && markSetRecorder?.observing == true
+        get() = markSetRecorder?.observing == true && analysisContext.phase is Phase.FullScan
 
     /** The rules the full scan would use without the mark-set selection (debug checks only). */
-    private val unrestrictedConfig: TaintRulesProvider
-        get() = (taintConfig as? SelectedTaintRulesProvider)?.unrestricted ?: taintConfig
+    private val unrestrictedConfig: TaintRulesProvider? = (taintConfig as? SelectedTaintRulesProvider)?.unrestricted
+
+    /**
+     * The provider E2 observes the full scan with: [unrestrictedConfig]. Without one, filtered rules
+     * would pass E2 vacuously, so the observation is reported as unavailable (an E2 violation).
+     */
+    private fun observedConfig(): TaintRulesProvider? = unrestrictedConfig ?: run {
+        markSetRecorder?.observeUnavailable(
+            "the rules provider ${taintConfig::class.qualifiedName} is not a SelectedTaintRulesProvider"
+        )
+        null
+    }
 
     private fun JIRInst.callExpr(): JIRCallExpr = callExpr ?: error("Non-call statement")
     private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
@@ -180,10 +194,12 @@ class JIRTaintAnalysisContext(
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?,
     ): List<RuleWithCondition<T>> {
         if (isMarkSetObserving) {
-            observeMarkSet(
-                statement,
-                rewriteCallStatementRules(unrestrictedConfig.rules(), cond, statement, callExpr, returnValue)
-            )
+            observedConfig()?.let { config ->
+                observeMarkSet(
+                    statement,
+                    rewriteCallStatementRules(config.rules(), cond, statement, callExpr, returnValue)
+                )
+            }
         }
 
         return rewriteCallStatementRules(taintConfig.rules(), cond, statement, callExpr, returnValue)
@@ -214,7 +230,7 @@ class JIRTaintAnalysisContext(
         fact: FinalFactAp?
     ): List<RuleWithCondition<TaintStaticFieldSource>> {
         if (isMarkSetObserving) {
-            observeMarkSet(statement, staticFieldRules(unrestrictedConfig, field, statement, fact))
+            observedConfig()?.let { observeMarkSet(statement, staticFieldRules(it, field, statement, fact)) }
         }
 
         return staticFieldRules(taintConfig, field, statement, fact).also { recordMarkSet(statement, it) }.handlePhase()
@@ -297,7 +313,7 @@ class JIRTaintAnalysisContext(
         statement: JIRInst,
     ): List<RuleWithCondition<T>> {
         if (isMarkSetObserving) {
-            observeMarkSet(statement, rewriteMethodRules(unrestrictedConfig.rules(), cond, statement))
+            observedConfig()?.let { observeMarkSet(statement, rewriteMethodRules(it.rules(), cond, statement)) }
         }
 
         return rewriteMethodRules(taintConfig.rules(), cond, statement)

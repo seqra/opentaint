@@ -7,6 +7,8 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.markset.MarkSetCoverage
 import org.opentaint.ir.api.common.cfg.CommonInst
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * One marked access path at one statement, comparable across two analysis runs (the E10 debug diff,
@@ -89,8 +91,10 @@ fun assertSameNeededFacts(
 
 /**
  * The mark-set debug checks of one differential pair (spec §7, §8 Layers 2 and 3): the mark-set
- * run, whose phase ended with [outcome], passed E1 and E2 ([coverage]) if it selected, and both
- * runs have the same facts of every needed mark per statement (E10). [what] names the analysis.
+ * run, whose phase ended with [outcome], selected and passed E1 and E2 ([coverage]), and both runs
+ * have the same facts of every needed mark per statement (E10). A fail-open run would compare the
+ * baseline with itself, so it fails the pair unless its reason is in [allowedFailOpen] (a test
+ * that fails open on purpose). [what] names the analysis.
  */
 fun assertMarkSetDebugChecks(
     baselineFacts: Set<MarkFactKey>,
@@ -98,11 +102,66 @@ fun assertMarkSetDebugChecks(
     outcome: MarkSetOutcome?,
     coverage: MarkSetCoverage?,
     what: String,
+    allowedFailOpen: Set<String> = emptySet(),
 ) {
-    if (outcome is MarkSetOutcome.Selected) {
-        assertNoCoverageViolations(coverage ?: throw AssertionError("the debug checks did not run for $what"), what)
+    when (outcome) {
+        is MarkSetOutcome.Selected ->
+            assertNoCoverageViolations(coverage ?: throw AssertionError("the debug checks did not run for $what"), what)
+
+        is MarkSetOutcome.FailOpen -> if (outcome.reason !in allowedFailOpen) {
+            throw AssertionError(
+                "the mark-set run of $what failed open (${outcome.reason}), so its differential checks nothing"
+            )
+        }
+
+        null -> throw AssertionError("the mark-set phase did not run for $what")
     }
     assertSameNeededFacts(baselineFacts, markSetFacts, (outcome as? MarkSetOutcome.Selected)?.neededMarks, what)
+}
+
+/**
+ * Counts the mark-set outcomes of a differential suite (spec §8 Layer 3), so that its log shows how
+ * many pairs compared a selection with the baseline. Safe to use from concurrent tests.
+ */
+class MarkSetOutcomeTally {
+    private val selected = AtomicInteger()
+    private val failOpen = ConcurrentHashMap<String, AtomicInteger>()
+
+    fun record(outcome: MarkSetOutcome?) {
+        when (outcome) {
+            is MarkSetOutcome.Selected -> selected.incrementAndGet()
+            is MarkSetOutcome.FailOpen -> failOpen.computeIfAbsent(outcome.reason) { AtomicInteger() }.incrementAndGet()
+            null -> failOpen.computeIfAbsent("not run") { AtomicInteger() }.incrementAndGet()
+        }
+    }
+
+    /** One summary line for [suite]: `markset-diff <suite>: selected=<n> failOpen=<n> {reason=n, ...}`. */
+    fun summary(suite: String): String {
+        val reasons = failOpen.entries.sortedBy { it.key }.associate { it.key to it.value.get() }
+        return "markset-diff $suite: selected=${selected.get()} failOpen=${reasons.values.sum()}" +
+            if (reasons.isEmpty()) "" else " $reasons"
+    }
+}
+
+/** The most violations [TaintAnalyzer] logs one line each for. */
+const val MAX_LOGGED_VIOLATIONS = 100
+
+/**
+ * The debug checks' one INFO line (spec §7): `markset-check: e1=<n> e2=<n> e10=<e10> violations=<n>`
+ * and the observation counts. E10 needs a baseline run, so an analysis reports it as [e10] `n/a`.
+ */
+fun MarkSetCoverage.checkLogLine(e10: String = "n/a"): String {
+    val e1 = violations.count { it.check == "E1" }
+    val e2 = violations.count { it.check == "E2" }
+    return "markset-check: e1=$e1 e2=$e2 e10=$e10 violations=${violations.size} " +
+        "calls=$observedCalls sites=$observedSites uncoveredSites=$uncoveredSites"
+}
+
+/** One ERROR line per violation, the first [limit] only, and a count of the rest. */
+fun MarkSetCoverage.violationLogLines(limit: Int = MAX_LOGGED_VIOLATIONS): List<String> {
+    val lines = violations.take(limit).mapTo(mutableListOf()) { "markset-check ${it.check}: ${it.detail}" }
+    if (violations.size > limit) lines += "markset-check: ${violations.size - limit} more violations"
+    return lines
 }
 
 /**

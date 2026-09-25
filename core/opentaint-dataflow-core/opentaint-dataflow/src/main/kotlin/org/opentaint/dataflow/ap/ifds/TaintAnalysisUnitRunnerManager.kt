@@ -110,12 +110,39 @@ class TaintAnalysisUnitRunnerManager(
         (progressDispatcher.executor as? ExecutorService)?.shutdownNow()
     }
 
-    private val analysisMemoryManager = MemoryManager(refManager, OOM_DETECTION_THRESHOLD) {
+    private val analysisMemoryManager = MemoryManager(refManager, OOM_DETECTION_THRESHOLD) { stopOnLowMemory() }
+
+    /**
+     * The analysis memory manager's low-memory callback: stops the analysis with status OOM. The
+     * status is set before the analysis completes, because the awaiting phase reads it as soon as
+     * [runAnalysis] returns (spec §10, M7).
+     */
+    internal fun stopOnLowMemory() {
         logger.error { "Running low on memory, stopping analysis" }
-        // Status before completion: the awaiting phase reads it right after `analysisCompletion` (M7).
         updateFailureStatus(Status.OOM)
         analysisCompletion.complete(Unit)
         cancellation.cancel()
+    }
+
+    /**
+     * A runner's exception handler: a [Cancellation.Cancelled] runner is only logged; any other
+     * exception stops the analysis with status EXCEPTION, set before the analysis completes
+     * (spec §10, M7).
+     */
+    internal fun stopOnRunnerException(unit: UnitType, exception: Throwable) {
+        if (exception is Cancellation.Cancelled) {
+            logger.error { "Cancelled: $unit, stopping analysis" }
+            return
+        }
+
+        logger.error { "Got exception $exception from runner for unit $unit, stopping analysis" }
+        updateFailureStatus(Status.EXCEPTION)
+        analysisCompletion.completeExceptionally(exception)
+    }
+
+    /** A test hook: runs [handler] when the current analysis completes, on the completing thread. */
+    internal fun invokeOnAnalysisCompletion(handler: (Throwable?) -> Unit) {
+        analysisCompletion.invokeOnCompletion(handler)
     }
 
     fun storeSummaries() {
@@ -479,17 +506,7 @@ class TaintAnalysisUnitRunnerManager(
     }
 
     private fun startRunner(unit: UnitType, runner: TaintAnalysisUnitRunner) {
-        val exceptionHandler = CoroutineExceptionHandler { _, exception ->
-            if (exception is Cancellation.Cancelled) {
-                logger.error { "Cancelled: $unit, stopping analysis" }
-                return@CoroutineExceptionHandler
-            }
-
-            logger.error { "Got exception $exception from runner for unit $unit, stopping analysis" }
-            // Status before completion: the awaiting phase reads it right after `analysisCompletion` (M7).
-            updateFailureStatus(Status.EXCEPTION)
-            analysisCompletion.completeExceptionally(exception)
-        }
+        val exceptionHandler = CoroutineExceptionHandler { _, exception -> stopOnRunnerException(unit, exception) }
 
         val job = analyzerScope.launch(exceptionHandler) { runner.runLoop() }
         runnerJobs.add(job)

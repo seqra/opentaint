@@ -12,6 +12,7 @@ import java.util.BitSet
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 /**
  * One recorded rule site, still holding its IR objects (spec §4: "the ids
@@ -90,6 +91,8 @@ class MarkSetCoverage(
  *   dedup key). Exceeding it sets [overflow] and stops recording.
  * @property maxEdges cap on the number of distinct recorded call edges, and separately on the
  *   number of distinct recorded call points. Exceeding it sets [overflow] and stops recording.
+ * @property maxBytes cap on [estimatedBytes], the recorder's estimated retained size (spec §6.6,
+ *   trigger 3: 512 MB by default). Exceeding it sets [overflow] and stops recording.
  * @property recordCalls also record every call point `(caller, call statement, callee)`, which
  *   option 3* needs (spec §9); off otherwise, so the default mode pays nothing for it.
  * @property debugChecks the E1/E2 debug checks (spec §7): the prescan also records its
@@ -100,6 +103,7 @@ class MarkSetCoverage(
 class MarkSetRecorder(
     val maxSites: Int = 20_000_000,
     val maxEdges: Int = 20_000_000,
+    val maxBytes: Long = DEFAULT_MAX_BYTES,
     val recordCalls: Boolean = false,
     val debugChecks: Boolean = false,
 ) {
@@ -107,9 +111,20 @@ class MarkSetRecorder(
     @Volatile
     var active: Boolean = false
 
-    /** Set once a cap ([maxSites] or [maxEdges]) is exceeded; recording then stops. */
+    /** Set once a cap ([maxSites], [maxEdges] or [maxBytes]) is exceeded; recording then stops. */
     @Volatile
     var overflow: Boolean = false
+
+    private val bytes = AtomicLong()
+
+    /**
+     * The recorder's estimated retained size: every new entry of a recording table is charged a
+     * constant ([INTERNED_BYTES], [COND_BYTES], [SITE_ENTRY_BYTES], [SITE_BYTES], [EDGE_BYTES],
+     * [CALL_POINT_BYTES], [STATEMENT_BYTES], [CLEANER_BYTES]) once. The debug-check observation
+     * sets are not charged (only the residual memo they share with recording is): the cap matters
+     * only while the prescan records, since the mark-set phase reads [overflow] right after it.
+     */
+    val estimatedBytes: Long get() = bytes.get()
 
     /** With [debugChecks] only: true from [startObserving] (the full scan) until [checkCoverage]. */
     @Volatile
@@ -158,6 +173,7 @@ class MarkSetRecorder(
     private var observedEntryPoints = ConcurrentHashMap.newKeySet<MethodEntryPoint>()
     private var observedSites = ConcurrentHashMap.newKeySet<ObservedSite>()
     private var observedCleaners = ConcurrentHashMap.newKeySet<CleanerKey>()
+    private var unobservable = ConcurrentHashMap.newKeySet<String>()
 
     /** `(position, mark name, anyAccessor)`: the literal-id key (spec §4.1). */
     private data class LiteralKey(val position: PositionAccess, val markName: String, val anyAccessor: Boolean)
@@ -213,11 +229,11 @@ class MarkSetRecorder(
         if (!active || overflow) return
         val callerId = internMethod(caller)
         val calleeId = internMethod(callee)
-        if (debugChecks) prescanCalls.add(CallSite(call, callee))
+        if (debugChecks && prescanCalls.add(CallSite(call, callee))) charge(CALL_POINT_BYTES)
         if (recordCalls) recordCallPoint(CallPoint(callerId, call, calleeId))
         val key = edgeKey(callerId, calleeId)
         if (key in edgeKeys || !edgeKeys.add(key)) return
-        if (edgeCount.incrementAndGet() > maxEdges) {
+        if (edgeCount.incrementAndGet() > maxEdges || !charge(EDGE_BYTES)) {
             overflow = true
             return
         }
@@ -227,13 +243,14 @@ class MarkSetRecorder(
     private fun recordCallPoint(point: CallPoint) {
         if (point in callPoints || !callPoints.add(point)) return
         if (callPointCount.incrementAndGet() > maxEdges) overflow = true
+        charge(CALL_POINT_BYTES)
     }
 
     /** Records a statement at which the prescan queried any rule (§4, provider fallback). */
     fun recordStatement(statement: CommonInst) {
         if (!active || overflow) return
         if (statement in coveredStatements) return
-        coveredStatements.add(statement)
+        if (coveredStatements.add(statement)) charge(STATEMENT_BYTES)
     }
 
     /**
@@ -261,7 +278,7 @@ class MarkSetRecorder(
         synchronized(entry) {
             val conds = entry.conds
             if (cond in conds) return
-            if (siteCount.incrementAndGet() > maxSites) {
+            if (siteCount.incrementAndGet() > maxSites || !charge(SITE_BYTES)) {
                 overflow = true
                 return
             }
@@ -278,7 +295,7 @@ class MarkSetRecorder(
         val probe = SiteEntry(statement, rule, kind)
         siteEntries[probe]?.let { return it }
         probe.gens = internGens(gens)
-        return siteEntries.putIfAbsent(probe, probe) ?: probe
+        return siteEntries.putIfAbsent(probe, probe) ?: probe.also { charge(SITE_ENTRY_BYTES) }
     }
 
     /** Adds the positive atoms of a cleaner's residual to `Program.cleanerAtoms` (spec §6.3 (4)). */
@@ -287,6 +304,7 @@ class MarkSetRecorder(
         if (residual.isFalse || !residual.hasPositiveLiteral()) return
         val key = CleanerKey(statement, residual.key())
         if (key in cleanerSeen || !cleanerSeen.add(key)) return
+        charge(CLEANER_BYTES)
         val atoms = markCondOf(residual).atoms()
         synchronized(cleanerAtoms) { cleanerAtoms.or(atoms) }
     }
@@ -301,7 +319,7 @@ class MarkSetRecorder(
         if (observing) {
             observedEntryPoints.add(entryPoint)
         } else if (active && !overflow) {
-            prescanEntryPoints.add(entryPoint)
+            if (prescanEntryPoints.add(entryPoint)) charge(STATEMENT_BYTES)
         }
     }
 
@@ -342,6 +360,16 @@ class MarkSetRecorder(
     }
 
     /**
+     * Debug checks (E2): the full scan's rule residuals cannot be observed, for [reason] (e.g. the
+     * unrestricted rules are unavailable), so E2 would pass vacuously. [checkCoverage] reports it as
+     * one E2 violation per distinct reason. A no-op unless [observing].
+     */
+    fun observeUnavailable(reason: String) {
+        if (!observing) return
+        unobservable.add(reason)
+    }
+
+    /**
      * Debug checks: stops recording and starts observing the full scan. Call it after [seal],
      * instead of [release], so that the prescan's tables stay for [checkCoverage].
      */
@@ -355,8 +383,9 @@ class MarkSetRecorder(
      * Debug checks: stops observing, and returns every full-scan observation the prescan did not
      * cover (spec §7):
      * - E1: a `(call statement, callee)` or a method entry point the prescan did not create;
-     * - E2: a rule residual at a covered statement not recorded there for that rule. Uncovered
-     *   statements fall back to the delegate and are only counted.
+     * - E2: a rule residual at a covered statement not recorded there for that rule, and each
+     *   [observeUnavailable] reason. Uncovered statements fall back to the delegate and are only
+     *   counted.
      *
      * Call it once the full scan is done (no concurrent `observe*` calls).
      */
@@ -401,6 +430,10 @@ class MarkSetRecorder(
                 "E2", "cleaner at ${cleaner.statement} (${cleaner.statement.location.method}) " +
                     "with residual ${cleaner.residual.show()} was not recorded by the prescan"
             )
+        }
+
+        for (reason in unobservable) {
+            violations += CoverageViolation("E2", "the full scan's rule residuals cannot be observed: $reason")
         }
 
         return MarkSetCoverage(
@@ -505,6 +538,7 @@ class MarkSetRecorder(
         observedEntryPoints = ConcurrentHashMap.newKeySet()
         observedSites = ConcurrentHashMap.newKeySet()
         observedCleaners = ConcurrentHashMap.newKeySet()
+        unobservable = ConcurrentHashMap.newKeySet()
         synchronized(cleanerAtoms) { cleanerAtoms.clear() }
         methodCount.set(0)
         markCount.set(0)
@@ -512,6 +546,7 @@ class MarkSetRecorder(
         edgeCount.set(0)
         callPointCount.set(0)
         siteCount.set(0)
+        bytes.set(0)
     }
 
     // ---- helpers -------------------------------------------------------------
@@ -568,14 +603,33 @@ class MarkSetRecorder(
         )
     }
 
+    /**
+     * Adds [cost] to [estimatedBytes]; sets [overflow] and returns `false` once it exceeds [maxBytes].
+     * Charged by whoever added the entry, so each entry is charged once.
+     */
+    private fun charge(cost: Long): Boolean {
+        if (bytes.addAndGet(cost) <= maxBytes) return true
+        overflow = true
+        return false
+    }
+
     private fun internMethod(method: CommonMethod): Int =
-        methodIds[method] ?: methodIds.computeIfAbsent(method) { methodCount.getAndIncrement() }
+        methodIds[method] ?: methodIds.computeIfAbsent(method) {
+            charge(INTERNED_BYTES)
+            methodCount.getAndIncrement()
+        }
 
     private fun internMark(name: String): Int =
-        markIds[name] ?: markIds.computeIfAbsent(name) { markCount.getAndIncrement() }
+        markIds[name] ?: markIds.computeIfAbsent(name) {
+            charge(INTERNED_BYTES)
+            markCount.getAndIncrement()
+        }
 
     private fun internLiteral(key: LiteralKey): Int =
-        literalIds[key] ?: literalIds.computeIfAbsent(key) { literalCount.getAndIncrement() }
+        literalIds[key] ?: literalIds.computeIfAbsent(key) {
+            charge(INTERNED_BYTES)
+            literalCount.getAndIncrement()
+        }
 
     private fun edgeKey(callerId: Int, calleeId: Int): Long =
         (callerId.toLong() shl 32) or (calleeId.toLong() and 0xFFFFFFFFL)
@@ -592,13 +646,13 @@ class MarkSetRecorder(
         val expr = residual.expr
         condCache[expr]?.let { return it }
         val cond = expr.toMarkCond()
-        return condCache.putIfAbsent(expr, cond) ?: cond
+        return condCache.putIfAbsent(expr, cond) ?: cond.also { charge(COND_BYTES) }
     }
 
     private fun internGens(names: List<String>): Gens {
         gensCache[names]?.let { return it }
         val gens = Gens(names, IntArray(names.size) { internMark(names[it]) })
-        return gensCache.putIfAbsent(names, gens) ?: gens
+        return gensCache.putIfAbsent(names, gens) ?: gens.also { charge(INTERNED_BYTES) }
     }
 
     private fun TaintMarkAwareConditionExpr.toMarkCond(): MarkCond = when (this) {
@@ -623,7 +677,39 @@ class MarkSetRecorder(
         return MarkCond.Lit(markId, literalId)
     }
 
-    private companion object {
+    companion object {
+        /** The default [maxBytes]: 512 MB (spec §6.6, trigger 3). */
+        const val DEFAULT_MAX_BYTES: Long = 512L * 1024 * 1024
+
+        // The [estimatedBytes] charges: the retained size of one entry on a 64-bit JVM with
+        // compressed oops, i.e. its objects plus the concurrent-map node (32 B) and table slot
+        // (~8 B at load factor 0.75) that hold it. Estimates, not measurements: they are meant to
+        // be within a small factor, so the cap stops a runaway recording, not a large one.
+
+        /** An interned method, mark, literal or gen-mark list: map node, slot, boxed id, key share. */
+        const val INTERNED_BYTES: Long = 64
+
+        /** A distinct residual's [MarkCond] (a few `Lit`/`And`/`Or` nodes) and its memo entry. */
+        const val COND_BYTES: Long = 160
+
+        /** A `(statement, rule)` site entry: the entry (40 B), its map node and slot, the empty cond array. */
+        const val SITE_ENTRY_BYTES: Long = 96
+
+        /** One more cond of a site entry: the grown array's slot and the copy's header share. */
+        const val SITE_BYTES: Long = 16
+
+        /** A call edge: the boxed key in the dedup set (node, slot, `Long`) and in the ordered queue. */
+        const val EDGE_BYTES: Long = 96
+
+        /** A call point (option 3*) or a debug-check call site: the key object, its node and slot. */
+        const val CALL_POINT_BYTES: Long = 72
+
+        /** A covered statement or a debug-check entry point: the set node and slot. */
+        const val STATEMENT_BYTES: Long = 48
+
+        /** A recorded cleaner `(statement, residual)`: the key object, its node and slot. */
+        const val CLEANER_BYTES: Long = 72
+
         private val TRUE_KEY = Any()
 
         /** A residual key ([key]) for a debug-check message. */

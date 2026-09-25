@@ -98,11 +98,17 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
     private val markSetFlowSensitive: Boolean by option(help = "Experimental options: flow-sensitive mark-set scan (option 3*)")
         .flag(default = false)
 
+    private val markSetDebugChecks: Boolean by option(
+        help = "Experimental options: check that the mark-set prescan covers the full scan (debug checks E1/E2, slow)",
+        hidden = true,
+    ).flag(default = false)
+
     private val markSetOptions get() = MarkSetScanOptions(
         enabled = markSetScan,
         relaxed = markSetRelaxed,
         relevance = !markSetNoRelevance,
         flowSensitive = markSetFlowSensitive,
+        debugChecks = markSetDebugChecks,
     )
 
     private val sarifOptions get() = SarifGenerationOptions(

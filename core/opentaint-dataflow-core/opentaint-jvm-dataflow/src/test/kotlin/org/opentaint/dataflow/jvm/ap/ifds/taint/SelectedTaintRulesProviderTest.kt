@@ -16,6 +16,7 @@ import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.Result as ResultPosition
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMark
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
@@ -33,7 +34,10 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonInstLocation
 import org.opentaint.ir.api.jvm.JIRField
 import kotlin.test.Test
+import java.lang.reflect.Proxy
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
+import kotlin.test.assertSame
 import kotlin.test.assertTrue
 
 /**
@@ -341,5 +345,167 @@ class SelectedTaintRulesProviderTest {
         val result = provider.passTroughRulesForMethod(fakeMethod, s1, null).toList()
 
         assertEquals(listOf(rule), result)
+    }
+
+    @Test
+    fun `a restricted source is built once and returned on every query`() {
+        val markA = mark("A")
+        val rule = sourceRule(listOf(markA, mark("B")))
+        val provider = SelectedTaintRulesProvider(FixedDelegate(sources = mapOf(s1 to listOf(rule))))
+        provider.select(mapOf(s1 to mapOf(rule to setOf(markA))), coveredStatements = setOf(s1))
+
+        val first = provider.sourceRulesForMethod(fakeMethod, s1, null).single()
+        val second = provider.sourceRulesForMethod(fakeMethod, s1, null).single()
+
+        assertEquals(listOf(markA), first.actionsAfter)
+        assertSame(first, second)
+    }
+
+    @Test
+    fun `a source with every action selected is returned as the delegate's instance`() {
+        val markA = mark("A")
+        val rule = sourceRule(listOf(markA))
+        val provider = SelectedTaintRulesProvider(FixedDelegate(sources = mapOf(s1 to listOf(rule))))
+        provider.select(mapOf(s1 to mapOf(rule to setOf(markA))), coveredStatements = setOf(s1))
+
+        assertSame(rule, provider.sourceRulesForMethod(fakeMethod, s1, null).single())
+    }
+
+    @Test
+    fun `a fresh equal copy from the delegate gets the one restricted instance`() {
+        // Like the Spring entry-point rules: the delegate builds a new, equal rule on every call.
+        val markA = mark("A")
+        val selected = sourceRule(listOf(markA, mark("B")))
+        val delegate = object : FixedDelegate() {
+            override fun sourceRulesForMethod(
+                method: CommonMethod,
+                statement: CommonInst,
+                fact: FactAp?,
+                allRelevant: Boolean,
+            ): Iterable<TaintMethodSource> = listOf(selected.copy())
+        }
+        val provider = SelectedTaintRulesProvider(delegate)
+        provider.select(mapOf(s1 to mapOf(selected to setOf(markA))), coveredStatements = setOf(s1))
+
+        val first = provider.sourceRulesForMethod(fakeMethod, s1, null).single()
+        val second = provider.sourceRulesForMethod(fakeMethod, s1, null).single()
+
+        assertEquals(listOf(markA), first.actionsAfter)
+        assertSame(first, second)
+    }
+
+    /** The arguments the delegate got, compared by identity. */
+    private class Query(
+        val method: CommonMethod,
+        val statement: CommonInst,
+        val fact: FactAp?,
+        val initialFacts: Set<InitialFactAp>?,
+        val allRelevant: Boolean,
+    )
+
+    /**
+     * One restricted query: [rules] are the two rules its delegate returns, the first selected with
+     * action `A` (a source keeps only `A`) and the second not selected; [ask] runs the query.
+     */
+    private class RestrictedQuery(
+        val name: String,
+        val rules: List<CommonTaintConfigurationItem>,
+        val ask: TaintRulesProvider.(CommonMethod, CommonInst, FactAp?, Set<InitialFactAp>?) -> Iterable<CommonTaintConfigurationItem>,
+    )
+
+    private val selectedMark = mark("A")
+
+    private fun restrictedQueries(): List<RestrictedQuery> {
+        val actions = listOf(selectedMark, mark("B"))
+        val meta = TaintSinkMeta(message = "m", severity = CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null)
+        fun sinkId(i: Int) = "sink-$i"
+        return listOf(
+            RestrictedQuery("entryPointRulesForMethod", List(2) { TaintEntryPointSource(fakeMethod, trueCondition, actions, null, "ep-$it") }) { m, s, f, _ ->
+                entryPointRulesForMethod(m, s, f, allRelevant = false)
+            },
+            RestrictedQuery("sourceRulesForMethod", List(2) { TaintMethodSource(fakeMethod, trueCondition, actions, null, "src-$it") }) { m, s, f, _ ->
+                sourceRulesForMethod(m, s, f, allRelevant = false)
+            },
+            RestrictedQuery("exitSourceRulesForMethod", List(2) { TaintMethodExitSource(fakeMethod, trueCondition, actions, null, "exit-src-$it") }) { m, s, f, _ ->
+                exitSourceRulesForMethod(m, s, f, allRelevant = false)
+            },
+            RestrictedQuery("sinkRulesForMethod", List(2) { TaintMethodSink(fakeMethod, trueCondition, emptyList(), sinkId(it), meta, null) }) { m, s, f, _ ->
+                sinkRulesForMethod(m, s, f, allRelevant = false)
+            },
+            RestrictedQuery("sinkRulesForMethodEntry", List(2) { TaintMethodEntrySink(fakeMethod, trueCondition, emptyList(), sinkId(it), meta, null) }) { m, s, f, _ ->
+                sinkRulesForMethodEntry(m, s, f, allRelevant = false)
+            },
+            RestrictedQuery("sinkRulesForMethodExit", List(2) { TaintMethodExitSink(fakeMethod, trueCondition, emptyList(), sinkId(it), meta, null) }) { m, s, f, i ->
+                sinkRulesForMethodExit(m, s, f, i, allRelevant = false)
+            },
+        )
+    }
+
+    /** Answers every restricted query with [rules] and records the arguments of each call. */
+    private class RecordingDelegate(private val rules: List<CommonTaintConfigurationItem>) : FixedDelegate() {
+        val queries = mutableListOf<Query>()
+
+        @Suppress("UNCHECKED_CAST")
+        private fun <T> answer(query: Query): Iterable<T> {
+            queries += query
+            return rules as List<T>
+        }
+
+        override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+            answer<TaintEntryPointSource>(Query(method, statement, fact, null, allRelevant))
+
+        override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+            answer<TaintMethodSource>(Query(method, statement, fact, null, allRelevant))
+
+        override fun exitSourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+            answer<TaintMethodExitSource>(Query(method, statement, fact, null, allRelevant))
+
+        override fun sinkRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+            answer<TaintMethodSink>(Query(method, statement, fact, null, allRelevant))
+
+        override fun sinkRulesForMethodEntry(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
+            answer<TaintMethodEntrySink>(Query(method, statement, fact, null, allRelevant))
+
+        override fun sinkRulesForMethodExit(
+            method: CommonMethod,
+            statement: CommonInst,
+            fact: FactAp?,
+            initialFacts: Set<InitialFactAp>?,
+            allRelevant: Boolean,
+        ) = answer<TaintMethodExitSink>(Query(method, statement, fact, initialFacts, allRelevant))
+    }
+
+    @Test
+    fun `every restricted query forwards its arguments and filters the delegate's answer`() {
+        val fact = Proxy.newProxyInstance(FactAp::class.java.classLoader, arrayOf(FactAp::class.java)) { _, _, _ ->
+            error("not needed for this test")
+        } as FactAp
+        val initialFacts = setOf(fakeInitialFactAp())
+
+        for (query in restrictedQueries()) {
+            val delegate = RecordingDelegate(query.rules)
+            val provider = SelectedTaintRulesProvider(delegate)
+            val (selected, unselected) = query.rules
+            val acts: Set<CommonTaintAction> = if (selected is TaintConfigurationSource) setOf(selectedMark) else emptySet()
+            provider.select(mapOf(s1 to mapOf(selected to acts)), coveredStatements = setOf(s1))
+
+            val result = query.ask(provider, fakeMethod, s1, fact, initialFacts).toList()
+
+            val forwarded = delegate.queries.single()
+            assertSame(fakeMethod, forwarded.method, query.name)
+            assertSame(s1, forwarded.statement, query.name)
+            assertSame(fact, forwarded.fact, query.name)
+            if (query.name == "sinkRulesForMethodExit") assertSame(initialFacts, forwarded.initialFacts, query.name)
+            assertFalse(forwarded.allRelevant, query.name)
+
+            val kept = result.single()
+            assertTrue(kept !== unselected && kept.javaClass == selected.javaClass, query.name)
+            if (kept is TaintConfigurationSource) {
+                assertEquals(listOf(selectedMark), kept.actionsAfter, query.name)
+                assertEquals((selected as TaintConfigurationSource).serializedId, kept.serializedId, query.name)
+            } else {
+                assertSame(selected, kept, query.name)
+            }
+        }
     }
 }
