@@ -72,7 +72,10 @@ class JIRTaintAnalyzer(
     }
 
     override fun analysisManager() =
-        JIRAnalysisManager(cp, refManager, taintConfig, externalMethodTracker, analysisParams)
+        JIRAnalysisManager(
+            cp, refManager, taintConfig, externalMethodTracker, analysisParams,
+            markSetRecorder = createMarkSetRecorder(),
+        )
 
     override fun unitResolver() = analysisUnit
 
