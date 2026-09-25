@@ -500,6 +500,14 @@ theorem collapse_context_tree {p : Program} {E k : Node} (hwf : WF p) (hE : E �
 def JoinFree (p : Program) : Prop :=
   ∀ n pc σ c, σ ∈ p.sites n pc → c ∈ σ.abstract.cond → c.length ≤ 1
 
+/-- No sink has `trackFactsReachAnalysisEnd` gens. In v2 a sink's gens are
+zero-context facts (`InS.sinkGen`): like a joined cube, they are placed into
+every root that reaches the sink, with the condition satisfied by other roots.
+So they are a join-like placement that a per-root closure cannot see
+(`CollapseExample.sinkGen_breaks_link`). -/
+def SinkGenFree (p : Program) : Prop :=
+  ∀ n pc σ, σ ∈ p.sites n pc → σ.kind = .sink → σ.abstract.gens = []
+
 namespace CollapseLemmas
 
 theorem mem_nodeSites {p : Program} {n : Node} {pc : Pc} {σ : ESite}
@@ -516,9 +524,15 @@ theorem abstract_mem_nodeAbsSites {p : Program} {n : Node} {pc : Pc} {σ : ESite
 
 end CollapseLemmas
 
-/-- Without joined cubes, `S_E` of `Basic` (`InS`) is exactly the closure of
-`[]` under the sites reachable from the root `E`. -/
+/-- Without joined cubes and without sink gens, `S_E` of `Basic` (`InS`) is
+exactly the closure of `[]` under the sites reachable from the root `E`.
+Both hypotheses exclude a placement of marks that crosses roots: a joined cube
+reads marks of other roots, and a sink's gens land in the zero context and so
+in every root that reaches the sink (v2 `InS.sinkGen`). Without
+`SinkGenFree` the `→` direction is false (`CollapseExample.sinkGen_breaks_link`);
+the `←` direction needs neither hypothesis about sinks. -/
 theorem inS_iff_closure {p : Program} {E : Node} {m : Mark} (hwf : WF p) (hjf : JoinFree p)
+    (hsg : SinkGenFree p)
     (hE : E ∈ p.roots) : InS p E m ↔ m ∈ closure (reachSites p E) [] := by
   constructor
   · intro h
@@ -530,9 +544,12 @@ theorem inS_iff_closure {p : Program} {E : Node} {m : Mark} (hwf : WF p) (hjf : 
       have hs : σ.abstract.cond.sat (closure (reachSites p E) []) = true :=
         (dnf_sat_iff _ _).2 ⟨c, hc, fun x hx => ih x hx hE'⟩
       exact closure_closed hin hs g hg
-    | @joined E n pc σ c g _ _ hσ hc h2 _ _ _ _ _ _ =>
+    | @joined E n pc σ c g _ _ hσ hc h2 _ _ _ _ _ _ _ _ =>
       have := hjf n pc σ c (mem_nodeSites hσ) hc
       exact absurd (Nat.le_trans h2 this) (by decide)
+    | @sinkGen E n pc σ c g _ _ hσ hk _ _ _ _ _ _ _ hg _ =>
+      rw [hsg n pc σ (mem_nodeSites hσ) hk] at hg
+      cases hg
   · intro h
     refine closure_induction _ [] (InS p E) (fun _ h => by cases h) ?_ m h
     intro σ hσ S hS hs g hg
@@ -661,6 +678,8 @@ private def exProg : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ b => some b
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 example : wfb exProg = true := by decide
 example : reachList exProg 1 = [1, 2] := by decide
@@ -669,6 +688,84 @@ example : closure (reachSites exProg 1) [] = [] := by decide
 example : conceptContexts exProg 0 = [(0, []), (1, [1, 2]), (2, [1, 2]), (1, [1, 2])] := by decide
 
 end Examples
+
+/-! ## Why `inS_iff_closure` needs `SinkGenFree`
+
+Roots `0` and `1` both call node `2`. Root `0` has a source of mark `5`; node
+`2` has a sink on mark `5` whose `trackFactsReachAnalysisEnd` gen is mark `6`.
+The sink fires in the context of root `0`, and its gen is a zero-context fact,
+so `InS.sinkGen` puts `6` into `S_1` as well. The per-root closure from root
+`1` sees no source and stays empty. The program is join-free and well formed. -/
+
+namespace CollapseExample
+
+def srcSite : ESite :=
+  { rule := 0, kind := .source, cond := [[]], assigns := [⟨0, 5⟩], copies := [] }
+
+def sinkSite : ESite :=
+  { rule := 1, kind := .sink, cond := [[⟨⟨0, 5⟩, false⟩]], assigns := [⟨0, 6⟩], copies := [] }
+
+def sgProg : Program where
+  nodes := [0, 1, 2]
+  roots := [0, 1]
+  pcs := fun _ => [0]
+  succ := fun _ _ => []
+  exits := fun _ => [0]
+  sites := fun n _ => if n = 0 then [srcSite] else if n = 2 then [sinkSite] else []
+  calls := fun n _ => if n = 2 then [] else [2]
+  mapIn := fun _ _ b => some b
+  mapOut := fun _ _ b => some b
+  kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
+
+theorem sgProg_wf : WF sgProg := (wfb_iff sgProg).1 (by decide)
+
+theorem sgProg_joinFree : JoinFree sgProg := by
+  intro n pc σ c hσ hc
+  simp only [sgProg] at hσ
+  by_cases h0 : n = 0
+  · rw [if_pos h0] at hσ
+    rw [List.mem_singleton.1 hσ] at hc
+    rw [List.mem_singleton.1 hc]; decide
+  · rw [if_neg h0] at hσ
+    by_cases h2 : n = 2
+    · rw [if_pos h2] at hσ
+      rw [List.mem_singleton.1 hσ] at hc
+      rw [List.mem_singleton.1 hc]; decide
+    · rw [if_neg h2] at hσ; cases hσ
+
+theorem nodeSites_0 : (0, srcSite) ∈ sgProg.nodeSites 0 :=
+  List.mem_flatMap.2 ⟨0, List.mem_singleton_self 0, List.mem_map.2 ⟨srcSite, by
+    simp only [sgProg, if_true]; exact List.mem_singleton_self _, rfl⟩⟩
+
+theorem nodeSites_2 : (0, sinkSite) ∈ sgProg.nodeSites 2 :=
+  List.mem_flatMap.2 ⟨0, List.mem_singleton_self 0, List.mem_map.2 ⟨sinkSite, by
+    simp only [sgProg]; exact List.mem_singleton_self _, rfl⟩⟩
+
+theorem inS_0_5 : InS sgProg 0 5 :=
+  InS.single (n := 0) (pc := 0) (σ := srcSite) (c := []) (by decide) (.refl 0) nodeSites_0
+    (by decide) (by decide) (fun _ h => by cases h) (by decide)
+
+theorem inS_1_6 : InS sgProg 1 6 := by
+  refine InS.sinkGen (n := 2) (pc := 0) (σ := sinkSite) (c := [5]) (by decide)
+    (.step (b := 2) (by decide) (.refl 2)) nodeSites_2 rfl (by decide)
+    (fun _ => 0) (fun _ => 2) (fun _ _ => by decide) ?_ (fun _ _ => rfl) ?_ (by decide)
+  · intro m _; exact .step (b := 2) (by decide) (.refl 2)
+  · intro m hm
+    rw [List.mem_singleton.1 hm]; exact inS_0_5
+
+theorem closure_1 : closure (reachSites sgProg 1) [] = [] := by decide
+
+/-- A join-free, well-formed program where `S_1` (`InS`) contains mark `6`
+but the per-root closure from root `1` is empty. The sink's gen reaches root
+`1` only through the zero context, so the link needs `SinkGenFree`. -/
+theorem sinkGen_breaks_link :
+    WF sgProg ∧ JoinFree sgProg ∧ 1 ∈ sgProg.roots ∧
+      InS sgProg 1 6 ∧ 6 ∉ closure (reachSites sgProg 1) [] :=
+  ⟨sgProg_wf, sgProg_joinFree, by decide, inS_1_6, by rw [closure_1]; exact List.not_mem_nil⟩
+
+end CollapseExample
 
 /-! ## Axiom audit
 Run `./check.sh`: `AxiomAudit.lean` prints the axioms of every theorem. -/

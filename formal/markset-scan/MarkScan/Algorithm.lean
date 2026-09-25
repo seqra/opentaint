@@ -15,12 +15,18 @@ least fixpoint. This module gives two executable algorithms for it.
 * **(B) The optimized algorithm** ("signature propagation") mirrors the planned
   Kotlin code. A site's *signature* is its abstract `(cond, gens)` pair. The
   single-literal part of a round is evaluated once per distinct signature
-  reachable from a root, not once per statement. Joined cubes are evaluated
-  once per node and joined signature, on `U(node)`. `opt_eq_ref` and its
-  corollaries prove that this computes the same answers, and in the same
-  number of rounds. `closure_dedup` is the standalone form of the key fact:
-  a closure over a list of sites equals the closure over its deduplicated
-  signatures.
+  reachable from a root, not once per statement. Joined cubes and sinks are
+  evaluated once per node and signature, on the method-level union
+  `U(method node)`, and their gens go to every root that reaches the node.
+  `opt_eq_ref` and its corollaries prove that this computes the same answers,
+  and in the same number of rounds. `closure_dedup` is the standalone form of
+  the key fact: a closure over a list of sites equals the closure over its
+  deduplicated signatures.
+* **Unions suffice for applicability.** `applicable_iff_union` shows that, at a
+  reachable node, `Applicable` only depends on the node-level union `U(n)` (for
+  cubes of at most one literal) and the method-level union `U(method n)` (for
+  joined cubes). `optApplicableU` is the corresponding executable check, and
+  `optApplicableU_eq` proves it agrees with `optApplicable` on reachable nodes.
 * **Cost.** `refSteps` and `optSteps` count cube evaluations. `optSteps_le`
   gives the general upper bound, and the family `famProg r k` (`k` statements
   with the same signature in one node, reached by `r` roots) shows the gap:
@@ -291,11 +297,17 @@ open AlgorithmLemmas
 namespace Algorithm
 
 /-- Well-formed programs: roots are nodes, the node set is closed under
-calls, and every site sits at a statement listed in `pcs`. -/
+calls, every site sits at a listed node and at a statement listed in `pcs`,
+and so does every recorded cleaner atom. The last two let the algorithm
+enumerate all sites and cleaner atoms: in v2 a joined cube of a node that no
+root reaches can still be satisfied (via another context of its method), and
+`Needed.cleanerAtom` is unconditional. -/
 structure WF (p : Program) : Prop where
   roots_sub : ∀ r, r ∈ p.roots → r ∈ p.nodes
   callees_sub : ∀ n, n ∈ p.nodes → ∀ c, c ∈ p.callees n → c ∈ p.nodes
   sites_pc : ∀ n pc σ, n ∈ p.nodes → σ ∈ p.sites n pc → pc ∈ p.pcs n
+  sites_node : ∀ n pc σ, σ ∈ p.sites n pc → n ∈ p.nodes
+  cleaner_sub : ∀ n pc m, m ∈ p.cleanerAtoms n pc → n ∈ p.nodes ∧ pc ∈ p.pcs n
 
 theorem Reaches.tail {p : Program} {a b c : Node} (h : Reaches p a b) (hc : c ∈ p.callees b) :
     Reaches p a c := by
@@ -388,8 +400,9 @@ open Algorithm
 
 namespace AlgorithmLemmas
 
-theorem find_witness {l : List Node} {q : Node → Bool} (h : ∃ x, x ∈ l ∧ q x = true) :
-    (l.find? q).getD 0 ∈ l ∧ q ((l.find? q).getD 0) = true := by
+theorem find_witness {α : Type} {l : List α} {q : α → Bool} (d : α)
+    (h : ∃ x, x ∈ l ∧ q x = true) :
+    (l.find? q).getD d ∈ l ∧ q ((l.find? q).getD d) = true := by
   cases hf : l.find? q with
   | none =>
     obtain ⟨x, hx, hq⟩ := h
@@ -413,21 +426,43 @@ end AlgorithmLemmas
 
 A state assigns a mark set to every node; only the entries of roots matter. -/
 
-/-- `U(k)`: the union of the sets of the roots that reach `k`. -/
+/-- `U(k)`: the node-level union of the sets of the roots that reach `k`. -/
 def refU (p : Program) (S : Node → List Mark) (k : Node) : List Mark :=
   p.roots.flatMap fun E => if k ∈ reachList p E then S E else []
 
-/-- Evaluate cube `c` of a site at node `k`, for root `E`. A cube of at most one
-literal is read on `S E`, a joined cube on `U(k)`. -/
+/-- The pairs `(E, n')` of a root and a node it reaches. -/
+def rootPairs (p : Program) : List (Node × Node) :=
+  p.roots.flatMap fun E => (reachList p E).map fun n' => (E, n')
+
+/-- `U(method k)`: the method-level union of the sets of the roots that reach
+some node of the same method as `k`. -/
+def refUM (p : Program) (S : Node → List Mark) (k : Node) : List Mark :=
+  (rootPairs p).flatMap fun q => if p.method q.2 = p.method k then S q.1 else []
+
+/-- The executable witness for `m ∈ U(method k)`: the first pair `(E, n')` of
+`rootPairs` with `method n' = method k` and `m ∈ S E`. -/
+def umWit (p : Program) (S : Node → List Mark) (k : Node) (m : Mark) : Node × Node :=
+  ((rootPairs p).find? fun q => decide (p.method q.2 = p.method k) && decide (m ∈ S q.1)).getD (0, 0)
+
+/-- Evaluate cube `c` of a non-sink site at node `k`, for root `E`. A cube of
+at most one literal is read on `S E`, a joined cube on `U(method k)`. -/
 def refCubeOk (p : Program) (S : Node → List Mark) (E k : Node) (c : Cube) : Bool :=
   if c.length ≤ 1 then c.all (fun m => decide (m ∈ S E))
-  else c.all (fun m => decide (m ∈ refU p S k))
+  else c.all (fun m => decide (m ∈ refUM p S k))
+
+/-- Whether the site `σ` at node `k` contributes its gens to root `E`. A sink's
+gens are zero-context facts (`InS.sinkGen`): some cube must hold on
+`U(method k)`. A single-literal cube on `S E` implies this, so one evaluation
+per cube suffices for a sink too. Other sites use `refCubeOk`. -/
+def refSiteOk (p : Program) (S : Node → List Mark) (E k : Node) (σ : ESite) : Bool :=
+  if σ.kind = .sink then σ.abstract.cond.any fun c => c.all fun m => decide (m ∈ refUM p S k)
+  else σ.abstract.cond.any (refCubeOk p S E k)
 
 /-- The marks generated for root `E` in one round: the gens of every site at
-every node reachable from `E` that has a satisfied cube. -/
+every node reachable from `E` that is satisfied (`refSiteOk`). -/
 def refGens (p : Program) (S : Node → List Mark) (E : Node) : List Mark :=
   (reachList p E).flatMap fun k => (p.nodeSites k).flatMap fun ps =>
-    if ps.2.abstract.cond.any (refCubeOk p S E k) then ps.2.abstract.gens else []
+    if refSiteOk p S E k ps.2 then ps.2.abstract.gens else []
 
 def refRound (p : Program) (S : Node → List Mark) : Node → List Mark :=
   fun E => addNew (S E) (refGens p S E)
@@ -466,7 +501,7 @@ def refInS (p : Program) (E : Node) (m : Mark) : Bool :=
 def refCubeSat (p : Program) (F : Node → List Mark) (n : Node) (c : Cube) : Bool :=
   if c.length ≤ 1 then
     p.roots.any fun E => decide (n ∈ reachList p E) && c.all (fun m => decide (m ∈ F E))
-  else c.all (fun m => decide (m ∈ refU p F n))
+  else c.all (fun m => decide (m ∈ refUM p F n))
 
 def applicableOn (p : Program) (F : Node → List Mark) (n : Node) (pc : Pc) (σ : ESite) : Bool :=
   decide (σ ∈ p.sites n pc) && σ.abstract.cond.any (refCubeSat p F n)
@@ -478,8 +513,17 @@ def refApplicable (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Bool :=
 def appSites (p : Program) (app : Node → Pc → ESite → Bool) : List ESite :=
   p.nodes.flatMap fun n => ((p.nodeSites n).filter fun ps => app n ps.1 ps.2).map (·.2)
 
+/-- Seeds contributed by the selected sites: the atoms and gens of sinks, and
+the atoms of pass-throughs. -/
 def needSeeds (A : List ESite) : List Mark :=
-  A.flatMap fun σ => if σ.kind = .sink then σ.abstract.cond.atoms ++ σ.abstract.gens else []
+  A.flatMap fun σ =>
+    if σ.kind = .sink then σ.abstract.cond.atoms ++ σ.abstract.gens
+    else if σ.kind = .passThrough then σ.abstract.cond.atoms else []
+
+/-- Every recorded cleaner atom, over the listed nodes and their statements
+(`WF.cleaner_sub` makes this exhaustive). -/
+def cleanerSeeds (p : Program) : List Mark :=
+  p.nodes.flatMap fun n => (p.pcs n).flatMap (p.cleanerAtoms n)
 
 def needGens (A : List ESite) (N : List Mark) : List Mark :=
   A.flatMap fun σ => if σ.abstract.gens.any (fun g => decide (g ∈ N)) then σ.abstract.cond.atoms else []
@@ -491,12 +535,12 @@ def needStable (A : List ESite) (N : List Mark) : Bool := (needGens A N).all fun
 def needUniverse (A : List ESite) : List Mark :=
   dedup (needSeeds A ++ A.flatMap fun σ => σ.abstract.cond.atoms)
 
-/-- The backward relevance pass over the sites `A`. -/
-def neededSet (A : List ESite) : List Mark :=
-  (iterC (needStep A) (needStable A) ((needUniverse A).length + 1) (needSeeds A)).1
+/-- The backward relevance pass over the sites `A`, with the extra seeds `C`. -/
+def neededSet (A : List ESite) (C : List Mark) : List Mark :=
+  (iterC (needStep A) (needStable A) ((needUniverse A).length + 1) (needSeeds A ++ C)).1
 
 def refNeeded (p : Program) (m : Mark) : Bool :=
-  decide (m ∈ neededSet (appSites p (refApplicable p)))
+  decide (m ∈ neededSet (appSites p (refApplicable p)) (cleanerSeeds p))
 
 /-! ### Correctness of the reference algorithm -/
 
@@ -513,9 +557,46 @@ theorem mem_refU {p : Program} {S : Node → List Mark} {k : Node} {m : Mark} :
   · rintro ⟨E, hE, hk, hm⟩
     exact ⟨E, hE, by simp only [hk, if_true]; exact hm⟩
 
+theorem mem_rootPairs {p : Program} {q : Node × Node} :
+    q ∈ rootPairs p ↔ q.1 ∈ p.roots ∧ q.2 ∈ reachList p q.1 := by
+  obtain ⟨E, n'⟩ := q
+  simp only [rootPairs, List.mem_flatMap, List.mem_map, Prod.mk.injEq]
+  constructor
+  · rintro ⟨E', hE', n'', hn'', rfl, rfl⟩; exact ⟨hE', hn''⟩
+  · rintro ⟨hE, hn'⟩; exact ⟨E, hE, n', hn', rfl, rfl⟩
+
+theorem mem_refUM {p : Program} {S : Node → List Mark} {k : Node} {m : Mark} :
+    m ∈ refUM p S k ↔
+      ∃ E n', E ∈ p.roots ∧ n' ∈ reachList p E ∧ p.method n' = p.method k ∧ m ∈ S E := by
+  simp only [refUM, List.mem_flatMap]
+  constructor
+  · rintro ⟨⟨E, n'⟩, hq, hm⟩
+    obtain ⟨hE, hn'⟩ := mem_rootPairs.mp hq
+    by_cases hmeth : p.method n' = p.method k
+    · simp only [hmeth, if_true] at hm; exact ⟨E, n', hE, hn', hmeth, hm⟩
+    · simp [hmeth] at hm
+  · rintro ⟨E, n', hE, hn', hmeth, hm⟩
+    exact ⟨(E, n'), mem_rootPairs.mpr ⟨hE, hn'⟩, by simp only [hmeth, if_true]; exact hm⟩
+
+/-- The executable witness `umWit` is correct. -/
+theorem umWit_spec {p : Program} {S : Node → List Mark} {k : Node} {m : Mark}
+    (h : m ∈ refUM p S k) :
+    (umWit p S k m).1 ∈ p.roots ∧ (umWit p S k m).2 ∈ reachList p (umWit p S k m).1 ∧
+      p.method (umWit p S k m).2 = p.method k ∧ m ∈ S (umWit p S k m).1 := by
+  obtain ⟨E, n', hE, hn', hmeth, hm⟩ := mem_refUM.mp h
+  have hw := find_witness (l := rootPairs p)
+    (q := fun q => decide (p.method q.2 = p.method k) && decide (m ∈ S q.1)) (0, 0)
+    ⟨(E, n'), mem_rootPairs.mpr ⟨hE, hn'⟩, by
+      rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq]; exact ⟨hmeth, hm⟩⟩
+  obtain ⟨h1, h2⟩ := hw
+  rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h2
+  have h1' := mem_rootPairs.mp h1
+  exact ⟨h1'.1, h1'.2, h2.1, h2.2⟩
+
 theorem refCubeOk_iff {p : Program} {S : Node → List Mark} {E k : Node} {c : Cube} :
     refCubeOk p S E k c = true ↔
-      (c.length ≤ 1 ∧ ∀ m, m ∈ c → m ∈ S E) ∨ (2 ≤ c.length ∧ ∀ m, m ∈ c → m ∈ refU p S k) := by
+      (c.length ≤ 1 ∧ ∀ m, m ∈ c → m ∈ S E) ∨
+        (2 ≤ c.length ∧ ∀ m, m ∈ c → m ∈ refUM p S k) := by
   unfold refCubeOk
   by_cases hl : c.length ≤ 1
   · simp only [hl, if_true, List.all_eq_true, decide_eq_true_eq, true_and]
@@ -529,18 +610,58 @@ theorem refCubeOk_iff {p : Program} {S : Node → List Mark} {E k : Node} {c : C
     · intro h; exact ⟨by omega, h⟩
     · exact fun h => h.2
 
+theorem refSiteOk_iff {p : Program} {S : Node → List Mark} {E k : Node} {σ : ESite} :
+    refSiteOk p S E k σ = true ↔
+      (σ.kind = .sink ∧ ∃ c, c ∈ σ.abstract.cond ∧ ∀ m, m ∈ c → m ∈ refUM p S k) ∨
+      (σ.kind ≠ .sink ∧ ∃ c, c ∈ σ.abstract.cond ∧ refCubeOk p S E k c = true) := by
+  unfold refSiteOk
+  by_cases hk : σ.kind = .sink
+  · rw [if_pos hk, List.any_eq_true]
+    simp only [List.all_eq_true, decide_eq_true_eq]
+    constructor
+    · intro h; exact Or.inl ⟨hk, h⟩
+    · rintro (⟨_, h⟩ | ⟨h, _⟩)
+      · exact h
+      · exact absurd hk h
+  · rw [if_neg hk, List.any_eq_true]
+    constructor
+    · intro h; exact Or.inr ⟨hk, h⟩
+    · rintro (⟨h, _⟩ | ⟨_, h⟩)
+      · exact absurd h hk
+      · exact h
+
+/-- A cube contained in `U(method k)` makes a sink, or a site through a joined
+cube, contribute. -/
+theorem refSiteOk_of_union {p : Program} {S : Node → List Mark} {E k : Node} {σ : ESite}
+    {c : Cube} (hc : c ∈ σ.abstract.cond) (hU : ∀ m, m ∈ c → m ∈ refUM p S k)
+    (h : σ.kind = .sink ∨ 2 ≤ c.length) : refSiteOk p S E k σ = true := by
+  apply refSiteOk_iff.mpr
+  by_cases hk : σ.kind = .sink
+  · exact Or.inl ⟨hk, c, hc, hU⟩
+  · have hl : 2 ≤ c.length := h.resolve_left hk
+    exact Or.inr ⟨hk, c, hc, refCubeOk_iff.mpr (Or.inr ⟨hl, hU⟩)⟩
+
+/-- A cube of at most one literal contained in `S E`, for a root `E` that
+reaches `k`, makes any site contribute. -/
+theorem refSiteOk_of_single {p : Program} {S : Node → List Mark} {E k : Node} {σ : ESite}
+    {c : Cube} (hc : c ∈ σ.abstract.cond) (hl : c.length ≤ 1) (hE : E ∈ p.roots)
+    (hk : k ∈ reachList p E) (hS : ∀ m, m ∈ c → m ∈ S E) : refSiteOk p S E k σ = true := by
+  apply refSiteOk_iff.mpr
+  by_cases hkind : σ.kind = .sink
+  · exact Or.inl ⟨hkind, c, hc, fun m hm => mem_refUM.mpr ⟨E, k, hE, hk, rfl, hS m hm⟩⟩
+  · exact Or.inr ⟨hkind, c, hc, refCubeOk_iff.mpr (Or.inl ⟨hl, hS⟩)⟩
+
 theorem mem_refGens {p : Program} {S : Node → List Mark} {E : Node} {g : Mark} :
     g ∈ refGens p S E ↔ ∃ k, k ∈ reachList p E ∧ ∃ pc σ, (pc, σ) ∈ p.nodeSites k ∧
-      (∃ c, c ∈ σ.abstract.cond ∧ refCubeOk p S E k c = true) ∧ g ∈ σ.abstract.gens := by
+      refSiteOk p S E k σ = true ∧ g ∈ σ.abstract.gens := by
   simp only [refGens, List.mem_flatMap]
   constructor
   · rintro ⟨k, hk, ⟨pc, σ⟩, hps, hg⟩
-    by_cases hf : σ.abstract.cond.any (refCubeOk p S E k) = true
+    by_cases hf : refSiteOk p S E k σ = true
     · simp only [hf, if_true] at hg
-      exact ⟨k, hk, pc, σ, hps, List.any_eq_true.mp hf, hg⟩
+      exact ⟨k, hk, pc, σ, hps, hf, hg⟩
     · simp [hf] at hg
-  · rintro ⟨k, hk, pc, σ, hps, hc, hg⟩
-    have hf : σ.abstract.cond.any (refCubeOk p S E k) = true := List.any_eq_true.mpr hc
+  · rintro ⟨k, hk, pc, σ, hps, hf, hg⟩
     exact ⟨k, hk, (pc, σ), hps, by simp only [hf, if_true]; exact hg⟩
 
 theorem mem_refRound {p : Program} {S : Node → List Mark} {E : Node} {m : Mark} :
@@ -587,24 +708,24 @@ theorem refFinal_stable (p : Program) (hw : WF p) : refStable p (refFinal p) = t
 theorem refGens_sound (p : Program) (S : Node → List Mark)
     (hS : ∀ E, E ∈ p.roots → ∀ m, m ∈ S E → InS p E m) {E : Node} (hE : E ∈ p.roots)
     {g : Mark} (hg : g ∈ refGens p S E) : InS p E g := by
-  obtain ⟨k, hk, pc, σ, hps, ⟨c, hc, hok⟩, hg⟩ := mem_refGens.mp hg
+  obtain ⟨k, hk, pc, σ, hps, hok, hg⟩ := mem_refGens.mp hg
   have hR := reachList_reaches p E k hk
-  rcases refCubeOk_iff.mp hok with ⟨hl, hall⟩ | ⟨hl, hall⟩
-  · exact InS.single hE hR hps hc hl (fun m hm => hS E hE m (hall m hm)) hg
-  · -- the executable witness: the first root whose set has `m` and that reaches `k`
-    let w : Mark → Node := fun m =>
-      (p.roots.find? fun E' => decide (k ∈ reachList p E') && decide (m ∈ S E')).getD 0
-    have hwit : ∀ m, m ∈ c → w m ∈ p.roots ∧ k ∈ reachList p (w m) ∧ m ∈ S (w m) := by
-      intro m hm
-      obtain ⟨E', hE', hk', hm'⟩ := mem_refU.mp (hall m hm)
-      obtain ⟨h1, h2⟩ := find_witness (l := p.roots)
-        (q := fun E' => decide (k ∈ reachList p E') && decide (m ∈ S E'))
-        ⟨E', hE', by rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq]; exact ⟨hk', hm'⟩⟩
-      rw [Bool.and_eq_true, decide_eq_true_eq, decide_eq_true_eq] at h2
-      exact ⟨h1, h2.1, h2.2⟩
-    exact InS.joined hE hR hps hc hl w (fun m hm => (hwit m hm).1)
-      (fun m hm => reachList_reaches p _ _ (hwit m hm).2.1)
-      (fun m hm => hS _ (hwit m hm).1 m (hwit m hm).2.2) hg
+  -- the executable witnesses of the method-level union
+  let w : Mark → Node := fun m => (umWit p S k m).1
+  let wn : Mark → Node := fun m => (umWit p S k m).2
+  rcases refSiteOk_iff.mp hok with ⟨hkind, c, hc, hall⟩ | ⟨_, c, hc, hc'⟩
+  · exact InS.sinkGen hE hR hps hkind hc w wn
+      (fun m hm => (umWit_spec (hall m hm)).1)
+      (fun m hm => reachList_reaches p _ _ (umWit_spec (hall m hm)).2.1)
+      (fun m hm => (umWit_spec (hall m hm)).2.2.1)
+      (fun m hm => hS _ (umWit_spec (hall m hm)).1 m (umWit_spec (hall m hm)).2.2.2) hg
+  · rcases refCubeOk_iff.mp hc' with ⟨hl, hall⟩ | ⟨hl, hall⟩
+    · exact InS.single hE hR hps hc hl (fun m hm => hS E hE m (hall m hm)) hg
+    · exact InS.joined hE hR hps hc hl w wn
+        (fun m hm => (umWit_spec (hall m hm)).1)
+        (fun m hm => reachList_reaches p _ _ (umWit_spec (hall m hm)).2.1)
+        (fun m hm => (umWit_spec (hall m hm)).2.2.1)
+        (fun m hm => hS _ (umWit_spec (hall m hm)).1 m (umWit_spec (hall m hm)).2.2.2) hg
 
 /-- Soundness of the reference sets (no well-formedness needed). -/
 theorem refFinal_sound (p : Program) :
@@ -621,18 +742,20 @@ theorem refFinal_sound (p : Program) :
 theorem refFinal_complete (p : Program) (hw : WF p) {E : Node} {m : Mark} (h : InS p E m) :
     m ∈ refFinal p E := by
   have hst := refStable_iff.mp (refFinal_stable p hw)
+  have hre : ∀ E x, E ∈ p.roots → Reaches p E x → x ∈ reachList p E :=
+    fun E x hE hR => (mem_reachList p hw _ _ (hw.roots_sub _ hE)).mpr hR
   induction h with
   | @single E n pc σ c g hE hR hps hc hl _ hg ih =>
-    apply hst _ hE
-    exact mem_refGens.mpr ⟨n, (mem_reachList p hw _ _ (hw.roots_sub _ hE)).mpr hR, pc, σ, hps,
-      ⟨c, hc, refCubeOk_iff.mpr (Or.inl ⟨hl, ih⟩)⟩, hg⟩
-  | @joined E n pc σ c g hE hR hps hc hl w hwr hwR _ hg ih =>
-    apply hst _ hE
-    refine mem_refGens.mpr ⟨n, (mem_reachList p hw _ _ (hw.roots_sub _ hE)).mpr hR, pc, σ, hps,
-      ⟨c, hc, refCubeOk_iff.mpr (Or.inr ⟨hl, ?_⟩)⟩, hg⟩
-    intro m hm
-    exact mem_refU.mpr ⟨w m, hwr m hm,
-      (mem_reachList p hw _ _ (hw.roots_sub _ (hwr m hm))).mpr (hwR m hm), ih m hm⟩
+    exact hst _ hE _ (mem_refGens.mpr ⟨n, hre E n hE hR, pc, σ, hps,
+      refSiteOk_of_single hc hl hE (hre E n hE hR) ih, hg⟩)
+  | @joined E n pc σ c g hE hR hps hc hl w wn hwr hwR hwm _ hg ih =>
+    exact hst _ hE _ (mem_refGens.mpr ⟨n, hre E n hE hR, pc, σ, hps,
+      refSiteOk_of_union hc (fun m hm => mem_refUM.mpr ⟨w m, wn m, hwr m hm,
+        hre _ _ (hwr m hm) (hwR m hm), hwm m hm, ih m hm⟩) (Or.inr hl), hg⟩)
+  | @sinkGen E n pc σ c g hE hR hps hkind hc w wn hwr hwR hwm _ hg ih =>
+    exact hst _ hE _ (mem_refGens.mpr ⟨n, hre E n hE hR, pc, σ, hps,
+      refSiteOk_of_union hc (fun m hm => mem_refUM.mpr ⟨w m, wn m, hwr m hm,
+        hre _ _ (hwr m hm) (hwR m hm), hwm m hm, ih m hm⟩) (Or.inl hkind), hg⟩)
 
 theorem refFinal_iff (p : Program) (hw : WF p) {E : Node} (hE : E ∈ p.roots) (m : Mark) :
     m ∈ refFinal p E ↔ InS p E m :=
@@ -641,27 +764,27 @@ theorem refFinal_iff (p : Program) (hw : WF p) {E : Node} (hE : E ∈ p.roots) (
 theorem refCubeSat_iff (p : Program) (hw : WF p) (F : Node → List Mark)
     (hF : ∀ E, E ∈ p.roots → ∀ m, m ∈ F E ↔ InS p E m) (n : Node) (c : Cube) :
     refCubeSat p F n c = true ↔ CubeSat p n c := by
-  have hre : ∀ E, E ∈ p.roots → (n ∈ reachList p E ↔ Reaches p E n) :=
-    fun E hE => mem_reachList p hw E n (hw.roots_sub E hE)
+  have hre : ∀ E x, E ∈ p.roots → (x ∈ reachList p E ↔ Reaches p E x) :=
+    fun E x hE => mem_reachList p hw E x (hw.roots_sub E hE)
   unfold refCubeSat CubeSat
   by_cases hl : c.length ≤ 1
   · simp only [hl, if_true, List.any_eq_true, Bool.and_eq_true, decide_eq_true_eq,
       List.all_eq_true, true_and]
     constructor
     · rintro ⟨E, hE, hn, hall⟩
-      exact Or.inl ⟨E, hE, (hre E hE).mp hn, fun m hm => (hF E hE m).mp (hall m hm)⟩
+      exact Or.inl ⟨E, hE, (hre E n hE).mp hn, fun m hm => (hF E hE m).mp (hall m hm)⟩
     · rintro (⟨E, hE, hn, hall⟩ | ⟨h2, _⟩)
-      · exact ⟨E, hE, (hre E hE).mpr hn, fun m hm => (hF E hE m).mpr (hall m hm)⟩
+      · exact ⟨E, hE, (hre E n hE).mpr hn, fun m hm => (hF E hE m).mpr (hall m hm)⟩
       · omega
   · simp only [hl, if_false, List.all_eq_true, decide_eq_true_eq, false_and, false_or]
     constructor
     · intro hall
       refine ⟨by omega, fun m hm => ?_⟩
-      obtain ⟨E, hE, hn, hmE⟩ := mem_refU.mp (hall m hm)
-      exact ⟨E, hE, (hre E hE).mp hn, (hF E hE m).mp hmE⟩
+      obtain ⟨E, n', hE, hn', hmeth, hmE⟩ := mem_refUM.mp (hall m hm)
+      exact ⟨E, n', hE, (hre E n' hE).mp hn', hmeth, (hF E hE m).mp hmE⟩
     · intro ⟨_, hall⟩ m hm
-      obtain ⟨E, hE, hn, hmE⟩ := hall m hm
-      exact mem_refU.mpr ⟨E, hE, (hre E hE).mpr hn, (hF E hE m).mpr hmE⟩
+      obtain ⟨E, n', hE, hn', hmeth, hmE⟩ := hall m hm
+      exact mem_refUM.mpr ⟨E, n', hE, (hre E n' hE).mpr hn', hmeth, (hF E hE m).mpr hmE⟩
 
 theorem applicableOn_iff (p : Program) (hw : WF p) (F : Node → List Mark)
     (hF : ∀ E, E ∈ p.roots → ∀ m, m ∈ F E ↔ InS p E m) (n : Node) (pc : Pc) (σ : ESite) :
@@ -684,28 +807,32 @@ theorem mem_appSites {p : Program} {app : Node → Pc → ESite → Bool} {σ : 
   · rintro ⟨n, hn, pc, hps, happ⟩
     exact ⟨n, hn, (pc, σ), ⟨hps, happ⟩, rfl⟩
 
-theorem applicable_node (p : Program) (hw : WF p) {n : Node} {pc : Pc} {σ : ESite}
-    (h : Applicable p n pc σ) : n ∈ p.nodes := by
-  obtain ⟨_, c, _, hsat⟩ := h
-  rcases hsat with ⟨_, E, hE, hR, _⟩ | ⟨hl, hall⟩
-  · exact Reaches.nodes hw hR (hw.roots_sub E hE)
-  · cases c with
-    | nil => simp at hl
-    | cons a t =>
-      obtain ⟨E, hE, hR, _⟩ := hall a List.mem_cons_self
-      exact Reaches.nodes hw hR (hw.roots_sub E hE)
-
 theorem mem_needSeeds {A : List ESite} {m : Mark} :
-    m ∈ needSeeds A ↔ ∃ σ, σ ∈ A ∧ σ.kind = .sink ∧
-      (m ∈ σ.abstract.cond.atoms ∨ m ∈ σ.abstract.gens) := by
+    m ∈ needSeeds A ↔ ∃ σ, σ ∈ A ∧
+      ((σ.kind = .sink ∧ (m ∈ σ.abstract.cond.atoms ∨ m ∈ σ.abstract.gens)) ∨
+        (σ.kind = .passThrough ∧ m ∈ σ.abstract.cond.atoms)) := by
   simp only [needSeeds, List.mem_flatMap]
   constructor
   · rintro ⟨σ, hσ, hm⟩
     by_cases hk : σ.kind = .sink
-    · simp only [hk, if_true, List.mem_append] at hm; exact ⟨σ, hσ, hk, hm⟩
-    · simp [hk] at hm
-  · rintro ⟨σ, hσ, hk, hm⟩
-    exact ⟨σ, hσ, by simp only [hk, if_true, List.mem_append]; exact hm⟩
+    · rw [if_pos hk, List.mem_append] at hm; exact ⟨σ, hσ, Or.inl ⟨hk, hm⟩⟩
+    · rw [if_neg hk] at hm
+      by_cases hp : σ.kind = .passThrough
+      · rw [if_pos hp] at hm; exact ⟨σ, hσ, Or.inr ⟨hp, hm⟩⟩
+      · rw [if_neg hp] at hm; exact absurd hm List.not_mem_nil
+  · rintro ⟨σ, hσ, ⟨hk, hm⟩ | ⟨hp, hm⟩⟩
+    · exact ⟨σ, hσ, by rw [if_pos hk, List.mem_append]; exact hm⟩
+    · have hk : σ.kind ≠ .sink := by rw [hp]; exact fun h => Kind.noConfusion h
+      exact ⟨σ, hσ, by rw [if_neg hk, if_pos hp]; exact hm⟩
+
+theorem mem_cleanerSeeds {p : Program} (hw : WF p) {m : Mark} :
+    m ∈ cleanerSeeds p ↔ ∃ n pc, m ∈ p.cleanerAtoms n pc := by
+  simp only [cleanerSeeds, List.mem_flatMap]
+  constructor
+  · rintro ⟨n, _, pc, _, hm⟩; exact ⟨n, pc, hm⟩
+  · rintro ⟨n, pc, hm⟩
+    have ⟨hn, hpc⟩ := hw.cleaner_sub n pc m hm
+    exact ⟨n, hn, pc, hpc, hm⟩
 
 theorem mem_needGens {A : List ESite} {N : List Mark} {m : Mark} :
     m ∈ needGens A N ↔ ∃ σ, σ ∈ A ∧ (∃ g, g ∈ σ.abstract.gens ∧ g ∈ N) ∧
@@ -727,7 +854,8 @@ theorem mem_needStep {A : List ESite} {N : List Mark} {m : Mark} :
     m ∈ needStep A N ↔ m ∈ N ∨ m ∈ needGens A N := by
   simp [needStep, mem_addNew]
 
-theorem neededSet_stable (A : List ESite) : needStable A (neededSet A) = true := by
+theorem neededSet_stable (A : List ESite) (C : List Mark) :
+    needStable A (neededSet A C) = true := by
   apply iterC_stable (needStep A) (needStable A) (fun _ => True)
     (fun N => ((needUniverse A).filter fun x => !decide (x ∈ N)).length) (fun _ _ => trivial)
   · intro N _ hs
@@ -747,12 +875,13 @@ theorem neededSet_stable (A : List ESite) : needStable A (neededSet A) = true :=
   · exact Nat.lt_succ_of_le (List.length_filter_le _ _)
 
 /-- The backward pass computes `Needed`, provided `A` lists exactly the
-applicable sites. -/
-theorem neededSet_iff (p : Program) (A : List ESite)
-    (hA : ∀ σ, σ ∈ A ↔ ∃ n pc, Applicable p n pc σ) (m : Mark) :
-    m ∈ neededSet A ↔ Needed p m := by
+applicable sites and `C` exactly the recorded cleaner atoms. -/
+theorem neededSet_iff (p : Program) (A : List ESite) (C : List Mark)
+    (hA : ∀ σ, σ ∈ A ↔ ∃ n pc, Applicable p n pc σ)
+    (hC : ∀ m, m ∈ C ↔ ∃ n pc, m ∈ p.cleanerAtoms n pc) (m : Mark) :
+    m ∈ neededSet A C ↔ Needed p m := by
   have hinv := iterC_inv (needStep A) (needStable A)
-    (fun N => (∀ m, m ∈ N → Needed p m) ∧ ∀ m, m ∈ needSeeds A → m ∈ N)
+    (fun N => (∀ m, m ∈ N → Needed p m) ∧ ∀ m, m ∈ needSeeds A ++ C → m ∈ N)
     (by
       intro N ⟨hN, hseed⟩
       refine ⟨?_, fun m hm => mem_needStep.mpr (Or.inl (hseed m hm))⟩
@@ -762,30 +891,41 @@ theorem neededSet_iff (p : Program) (A : List ESite)
       · obtain ⟨σ, hσ, ⟨g, hg, hgN⟩, hat⟩ := mem_needGens.mp h
         obtain ⟨n, pc, happ⟩ := (hA σ).mp hσ
         exact Needed.trans happ hg (hN g hgN) hat)
-    ((needUniverse A).length + 1) (needSeeds A)
+    ((needUniverse A).length + 1) (needSeeds A ++ C)
     (by
       refine ⟨?_, fun _ h => h⟩
       intro m hm
-      obtain ⟨σ, hσ, hk, hm⟩ := mem_needSeeds.mp hm
-      obtain ⟨n, pc, happ⟩ := (hA σ).mp hσ
-      rcases hm with h | h
-      · exact Needed.sinkAtom happ hk h
-      · exact Needed.sinkGen happ hk h)
-  have hst : ∀ m, m ∈ needGens A (neededSet A) → m ∈ neededSet A := by
-    have := neededSet_stable A
+      rcases List.mem_append.mp hm with hm | hm
+      · obtain ⟨σ, hσ, ⟨hk, hm⟩ | ⟨hk, hm⟩⟩ := mem_needSeeds.mp hm
+        · obtain ⟨n, pc, happ⟩ := (hA σ).mp hσ
+          rcases hm with h | h
+          · exact Needed.sinkAtom happ hk h
+          · exact Needed.sinkGen happ hk h
+        · obtain ⟨n, pc, happ⟩ := (hA σ).mp hσ
+          exact Needed.passAtom happ hk hm
+      · obtain ⟨n, pc, h⟩ := (hC m).mp hm
+        exact Needed.cleanerAtom h)
+  have hst : ∀ m, m ∈ needGens A (neededSet A C) → m ∈ neededSet A C := by
+    have := neededSet_stable A C
     unfold needStable at this
     intro m hm
     exact of_decide_eq_true (List.all_eq_true.mp this m hm)
+  have hseed : ∀ m, m ∈ needSeeds A → m ∈ neededSet A C :=
+    fun m h => hinv.2 m (List.mem_append_left C h)
   constructor
   · exact hinv.1 m
   · intro h
     induction h with
     | sinkAtom happ hk hat =>
-      exact hinv.2 _ (mem_needSeeds.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, hk, Or.inl hat⟩)
+      exact hseed _ (mem_needSeeds.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, Or.inl ⟨hk, Or.inl hat⟩⟩)
     | sinkGen happ hk hg =>
-      exact hinv.2 _ (mem_needSeeds.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, hk, Or.inr hg⟩)
+      exact hseed _ (mem_needSeeds.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, Or.inl ⟨hk, Or.inr hg⟩⟩)
     | trans happ hg _ hat ih =>
       exact hst _ (mem_needGens.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, ⟨_, hg, ih⟩, hat⟩)
+    | cleanerAtom hm =>
+      exact hinv.2 _ (List.mem_append_right _ ((hC _).mpr ⟨_, _, hm⟩))
+    | passAtom happ hk hat =>
+      exact hseed _ (mem_needSeeds.mpr ⟨_, (hA _).mpr ⟨_, _, happ⟩, Or.inr ⟨hk, hat⟩⟩)
 
 theorem mem_appSites_applicable (p : Program) (hw : WF p) (app : Node → Pc → ESite → Bool)
     (happ : ∀ n pc σ, app n pc σ = true ↔ Applicable p n pc σ) (σ : ESite) :
@@ -795,7 +935,7 @@ theorem mem_appSites_applicable (p : Program) (hw : WF p) (app : Node → Pc →
   · rintro ⟨n, _, pc, _, h⟩
     exact ⟨n, pc, (happ n pc σ).mp h⟩
   · rintro ⟨n, pc, h⟩
-    have hn := applicable_node p hw h
+    have hn := hw.sites_node n pc σ h.1
     exact ⟨n, hn, pc, mem_nodeSites.mpr ⟨hw.sites_pc n pc σ hn h.1, h.1⟩, (happ n pc σ).mpr h⟩
 
 end AlgorithmLemmas
@@ -805,7 +945,8 @@ open AlgorithmLemmas
 /-! ### Main theorems for the reference algorithm -/
 
 /-- The reference algorithm computes exactly the per-root mark sets `S_E` of
-the specification, including the D1 join correction. -/
+the specification, including the method-level join correction and the
+zero-context placement of sink gens. -/
 theorem refInS_iff (p : Program) (hw : WF p) {E : Node} (hE : E ∈ p.roots) (m : Mark) :
     refInS p E m = true ↔ InS p E m := by
   unfold refInS refSets
@@ -818,12 +959,14 @@ theorem refApplicable_iff (p : Program) (hw : WF p) (n : Node) (pc : Pc) (σ : E
     refApplicable p n pc σ = true ↔ Applicable p n pc σ :=
   applicableOn_iff p hw (refFinal p) (fun _ hE m => refFinal_iff p hw hE m) n pc σ
 
-/-- The reference backward pass computes exactly the needed marks. -/
+/-- The reference backward pass computes exactly the needed marks, including
+every recorded cleaner atom and the atoms of applicable pass-throughs. -/
 theorem refNeeded_iff (p : Program) (hw : WF p) (m : Mark) :
     refNeeded p m = true ↔ Needed p m := by
   unfold refNeeded
   rw [decide_eq_true_eq]
-  exact neededSet_iff p _ (mem_appSites_applicable p hw _ (refApplicable_iff p hw)) m
+  exact neededSet_iff p _ _ (mem_appSites_applicable p hw _ (refApplicable_iff p hw))
+    (fun _ => mem_cleanerSeeds hw) m
 
 /-- The fuel `refFuel = |roots| · |distinct gens| + 1` suffices: the reference
 loop stops at a stable state, and it adds something in at most
@@ -842,15 +985,17 @@ A site's signature is its abstract `(cond, gens)` pair. The closure only
 depends on the *set* of signatures reachable from a root, and many statements
 share a signature. So the optimized round works as follows.
 * Before the loop (state-independent, computed once): `nodeSigs k` is the
-  deduplicated local signature set of node `k`, and `rootSigs E` is the
-  deduplicated union of `nodeSigs` over `reachList E`. In Kotlin this is a
-  bottom-up bitset union over the SCC condensation; here it is a direct union.
-  The point is the deduplication.
-* Per round and root: single-literal cubes are evaluated once per signature in
-  `rootSigs E` (`sigGens`).
-* Per round and node: joined cubes are evaluated once per joined signature
-  of the node, on `U(node)`. They go into a table `joinedTable` that each
-  root then reads for the nodes it reaches. -/
+  deduplicated signature set of the non-sink sites of node `k`, `sinkSigs k`
+  that of its sinks, and `rootSigs E` is the deduplicated union of `nodeSigs`
+  over `reachList E`. In Kotlin this is a bottom-up bitset union over the SCC
+  condensation; here it is a direct union. The point is the deduplication.
+* Per round and root: single-literal cubes of non-sink sites are evaluated
+  once per signature in `rootSigs E` (`sigGens`).
+* Per round and node: joined cubes of non-sink sites, and every cube of a
+  sink, are evaluated once per signature of the node, on the method-level
+  union `U(method node)`. Their gens do not depend on the root (they are
+  zero-context facts), so they go into a table `nodeTable` that each root then
+  reads for the nodes it reaches. -/
 
 abbrev Sig := Dnf × List Mark
 
@@ -867,8 +1012,20 @@ def isJoinedSig (sg : Sig) : Bool := sg.1.any fun c => decide (2 ≤ c.length)
 def joinedSat (U : List Mark) (sg : Sig) : Bool :=
   sg.1.any fun c => decide (2 ≤ c.length) && c.all fun m => decide (m ∈ U)
 
+/-- Some cube, of any length, holds on `U` (used for sinks). -/
+def anySat (U : List Mark) (sg : Sig) : Bool :=
+  sg.1.any fun c => c.all fun m => decide (m ∈ U)
+
+/-- The site of a statement entry is a sink. -/
+def isSinkSite (ps : Pc × ESite) : Bool := decide (ps.2.kind = .sink)
+
+/-- The distinct signatures of the non-sink sites of node `k`. -/
 def nodeSigs (p : Program) (k : Node) : List Sig :=
-  dedup ((p.nodeSites k).map fun ps => ps.2.abstract.sig)
+  dedup (((p.nodeSites k).filter fun ps => !isSinkSite ps).map fun ps => ps.2.abstract.sig)
+
+/-- The distinct signatures of the sinks of node `k`. -/
+def sinkSigs (p : Program) (k : Node) : List Sig :=
+  dedup (((p.nodeSites k).filter isSinkSite).map fun ps => ps.2.abstract.sig)
 
 def rootSigs (p : Program) (E : Node) : List Sig :=
   dedup ((reachList p E).flatMap (nodeSigs p))
@@ -882,23 +1039,26 @@ def reachAll (p : Program) : List Node := dedup (p.roots.flatMap (reachList p))
 def sigGens (S : List Mark) (L : List Sig) : List Mark :=
   L.flatMap fun sg => if singleSat S sg then sg.2 else []
 
-def joinedGensAt (p : Program) (S : Node → List Mark) (k : Node) : List Mark :=
-  (joinedSigs p k).flatMap fun sg => if joinedSat (refU p S k) sg then sg.2 else []
+/-- The root-independent gens of node `k`: joined signatures and sink
+signatures whose cube holds on `U(method k)`. -/
+def tableGensAt (p : Program) (S : Node → List Mark) (k : Node) : List Mark :=
+  (joinedSigs p k).flatMap (fun sg => if joinedSat (refUM p S k) sg then sg.2 else []) ++
+    (sinkSigs p k).flatMap (fun sg => if anySat (refUM p S k) sg then sg.2 else [])
 
-/-- Joined gens, evaluated once per reachable node and round. -/
-def joinedTable (p : Program) (S : Node → List Mark) : List (Node × List Mark) :=
-  (reachAll p).map fun k => (k, joinedGensAt p S k)
+/-- Root-independent gens, evaluated once per reachable node and round. -/
+def nodeTable (p : Program) (S : Node → List Mark) : List (Node × List Mark) :=
+  (reachAll p).map fun k => (k, tableGensAt p S k)
 
 def optGens (p : Program) (J : List (Node × List Mark)) (S : Node → List Mark) (E : Node) :
     List Mark :=
   sigGens (S E) (rootSigs p E) ++ (reachList p E).flatMap fun k => (J.lookup k).getD []
 
 def optRound (p : Program) (S : Node → List Mark) : Node → List Mark :=
-  let J := joinedTable p S
+  let J := nodeTable p S
   fun E => addNew (S E) (optGens p J S E)
 
 def optStable (p : Program) (S : Node → List Mark) : Bool :=
-  let J := joinedTable p S
+  let J := nodeTable p S
   p.roots.all fun E => (optGens p J S E).all fun g => decide (g ∈ S E)
 
 def optIter (p : Program) : (Node → List Mark) × Nat :=
@@ -918,7 +1078,7 @@ def optApplicable (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Bool :=
   applicableOn p (optFinal p) n pc σ
 
 def optNeeded (p : Program) (m : Mark) : Bool :=
-  decide (m ∈ neededSet (appSites p (optApplicable p)))
+  decide (m ∈ neededSet (appSites p (optApplicable p)) (cleanerSeeds p))
 
 /-- The single-literal closure of a mark set over a list of signatures. -/
 def singleClosure (L : List Sig) (fuel : Nat) (S0 : List Mark) : List Mark × Nat :=
@@ -938,6 +1098,10 @@ theorem joinedSat_iff {U : List Mark} {sg : Sig} :
     joinedSat U sg = true ↔ ∃ c, c ∈ sg.1 ∧ 2 ≤ c.length ∧ ∀ m, m ∈ c → m ∈ U := by
   simp [joinedSat, List.any_eq_true, List.all_eq_true]
 
+theorem anySat_iff {U : List Mark} {sg : Sig} :
+    anySat U sg = true ↔ ∃ c, c ∈ sg.1 ∧ ∀ m, m ∈ c → m ∈ U := by
+  simp [anySat, List.any_eq_true, List.all_eq_true]
+
 theorem mem_sigGens {S : List Mark} {L : List Sig} {g : Mark} :
     g ∈ sigGens S L ↔ ∃ sg, sg ∈ L ∧ singleSat S sg = true ∧ g ∈ sg.2 := by
   simp only [sigGens, List.mem_flatMap]
@@ -950,30 +1114,46 @@ theorem mem_sigGens {S : List Mark} {L : List Sig} {g : Mark} :
     exact ⟨sg, hsg, by simp only [h, if_true]; exact hg⟩
 
 theorem mem_nodeSigs {p : Program} {k : Node} {sg : Sig} :
-    sg ∈ nodeSigs p k ↔ ∃ pc σ, (pc, σ) ∈ p.nodeSites k ∧ σ.abstract.sig = sg := by
-  simp only [nodeSigs, mem_dedup, List.mem_map]
+    sg ∈ nodeSigs p k ↔
+      ∃ pc σ, (pc, σ) ∈ p.nodeSites k ∧ σ.kind ≠ .sink ∧ σ.abstract.sig = sg := by
+  simp only [nodeSigs, mem_dedup, List.mem_map, List.mem_filter, isSinkSite,
+    Bool.not_eq_true', decide_eq_false_iff_not]
   constructor
-  · rintro ⟨⟨pc, σ⟩, h, rfl⟩; exact ⟨pc, σ, h, rfl⟩
-  · rintro ⟨pc, σ, h, rfl⟩; exact ⟨(pc, σ), h, rfl⟩
+  · rintro ⟨⟨pc, σ⟩, ⟨h, hk⟩, rfl⟩; exact ⟨pc, σ, h, hk, rfl⟩
+  · rintro ⟨pc, σ, h, hk, rfl⟩; exact ⟨(pc, σ), ⟨h, hk⟩, rfl⟩
+
+theorem mem_sinkSigs {p : Program} {k : Node} {sg : Sig} :
+    sg ∈ sinkSigs p k ↔
+      ∃ pc σ, (pc, σ) ∈ p.nodeSites k ∧ σ.kind = .sink ∧ σ.abstract.sig = sg := by
+  simp only [sinkSigs, mem_dedup, List.mem_map, List.mem_filter, isSinkSite, decide_eq_true_eq]
+  constructor
+  · rintro ⟨⟨pc, σ⟩, ⟨h, hk⟩, rfl⟩; exact ⟨pc, σ, h, hk, rfl⟩
+  · rintro ⟨pc, σ, h, hk, rfl⟩; exact ⟨(pc, σ), ⟨h, hk⟩, rfl⟩
 
 theorem mem_rootSigs {p : Program} {E : Node} {sg : Sig} :
     sg ∈ rootSigs p E ↔ ∃ k, k ∈ reachList p E ∧ sg ∈ nodeSigs p k := by
   simp [rootSigs, mem_dedup, List.mem_flatMap]
 
-theorem mem_joinedGensAt {p : Program} {S : Node → List Mark} {k : Node} {g : Mark} :
-    g ∈ joinedGensAt p S k ↔ ∃ sg, sg ∈ nodeSigs p k ∧ joinedSat (refU p S k) sg = true ∧
-      g ∈ sg.2 := by
-  simp only [joinedGensAt, joinedSigs, List.mem_flatMap, List.mem_filter]
+theorem mem_ite_nil {c : Bool} {l : List Mark} {g : Mark} :
+    g ∈ (if c = true then l else []) ↔ c = true ∧ g ∈ l := by
+  cases c <;> simp
+
+theorem mem_tableGensAt {p : Program} {S : Node → List Mark} {k : Node} {g : Mark} :
+    g ∈ tableGensAt p S k ↔
+      (∃ sg, sg ∈ nodeSigs p k ∧ joinedSat (refUM p S k) sg = true ∧ g ∈ sg.2) ∨
+      (∃ sg, sg ∈ sinkSigs p k ∧ anySat (refUM p S k) sg = true ∧ g ∈ sg.2) := by
+  simp only [tableGensAt, joinedSigs, List.mem_append, List.mem_flatMap, List.mem_filter,
+    mem_ite_nil]
   constructor
-  · rintro ⟨sg, ⟨hsg, _⟩, hg⟩
-    by_cases h : joinedSat (refU p S k) sg = true
-    · simp only [h, if_true] at hg; exact ⟨sg, hsg, h, hg⟩
-    · simp [h] at hg
-  · rintro ⟨sg, hsg, h, hg⟩
-    have hj : isJoinedSig sg = true := by
-      obtain ⟨c, hc, hl, _⟩ := joinedSat_iff.mp h
-      exact List.any_eq_true.mpr ⟨c, hc, decide_eq_true hl⟩
-    exact ⟨sg, ⟨hsg, hj⟩, by simp only [h, if_true]; exact hg⟩
+  · rintro (⟨sg, ⟨hsg, _⟩, h, hg⟩ | ⟨sg, hsg, h, hg⟩)
+    · exact Or.inl ⟨sg, hsg, h, hg⟩
+    · exact Or.inr ⟨sg, hsg, h, hg⟩
+  · rintro (⟨sg, hsg, h, hg⟩ | ⟨sg, hsg, h, hg⟩)
+    · have hj : isJoinedSig sg = true := by
+        obtain ⟨c, hc, hl, _⟩ := joinedSat_iff.mp h
+        exact List.any_eq_true.mpr ⟨c, hc, decide_eq_true hl⟩
+      exact Or.inl ⟨sg, ⟨hsg, hj⟩, h, hg⟩
+    · exact Or.inr ⟨sg, hsg, h, hg⟩
 
 theorem mem_reachAll {p : Program} {k : Node} :
     k ∈ reachAll p ↔ ∃ E, E ∈ p.roots ∧ k ∈ reachList p E := by
@@ -982,34 +1162,43 @@ theorem mem_reachAll {p : Program} {k : Node} :
 /-- For a root, one optimized round generates exactly what one reference round
 generates (as sets). -/
 theorem mem_optGens (p : Program) (S : Node → List Mark) {E : Node} (hE : E ∈ p.roots)
-    (g : Mark) : g ∈ optGens p (joinedTable p S) S E ↔ g ∈ refGens p S E := by
+    (g : Mark) : g ∈ optGens p (nodeTable p S) S E ↔ g ∈ refGens p S E := by
   have hJ : ∀ k, k ∈ reachList p E →
-      ((joinedTable p S).lookup k).getD [] = joinedGensAt p S k := by
+      ((nodeTable p S).lookup k).getD [] = tableGensAt p S k := by
     intro k hk
-    unfold joinedTable
-    rw [lookup_map_self (joinedGensAt p S) _ k (mem_reachAll.mpr ⟨E, hE, hk⟩), Option.getD_some]
+    unfold nodeTable
+    rw [lookup_map_self (tableGensAt p S) _ k (mem_reachAll.mpr ⟨E, hE, hk⟩), Option.getD_some]
   rw [optGens, List.mem_append, mem_refGens]
   constructor
   · rintro (h | h)
     · obtain ⟨sg, hsg, hsat, hg⟩ := mem_sigGens.mp h
       obtain ⟨k, hk, hsk⟩ := mem_rootSigs.mp hsg
-      obtain ⟨pc, σ, hps, rfl⟩ := mem_nodeSigs.mp hsk
+      obtain ⟨pc, σ, hps, _, rfl⟩ := mem_nodeSigs.mp hsk
       obtain ⟨c, hc, hl, hall⟩ := singleSat_iff.mp hsat
-      exact ⟨k, hk, pc, σ, hps, ⟨c, hc, refCubeOk_iff.mpr (Or.inl ⟨hl, hall⟩)⟩, hg⟩
+      exact ⟨k, hk, pc, σ, hps, refSiteOk_of_single hc hl hE hk hall, hg⟩
     · obtain ⟨k, hk, hg⟩ := List.mem_flatMap.mp h
       rw [hJ k hk] at hg
-      obtain ⟨sg, hsk, hsat, hg⟩ := mem_joinedGensAt.mp hg
-      obtain ⟨pc, σ, hps, rfl⟩ := mem_nodeSigs.mp hsk
-      obtain ⟨c, hc, hl, hall⟩ := joinedSat_iff.mp hsat
-      exact ⟨k, hk, pc, σ, hps, ⟨c, hc, refCubeOk_iff.mpr (Or.inr ⟨hl, hall⟩)⟩, hg⟩
-  · rintro ⟨k, hk, pc, σ, hps, ⟨c, hc, hok⟩, hg⟩
-    have hsk : σ.abstract.sig ∈ nodeSigs p k := mem_nodeSigs.mpr ⟨pc, σ, hps, rfl⟩
-    rcases refCubeOk_iff.mp hok with ⟨hl, hall⟩ | ⟨hl, hall⟩
-    · exact Or.inl (mem_sigGens.mpr ⟨σ.abstract.sig, mem_rootSigs.mpr ⟨k, hk, hsk⟩,
-        singleSat_iff.mpr ⟨c, hc, hl, hall⟩, hg⟩)
-    · refine Or.inr (List.mem_flatMap.mpr ⟨k, hk, ?_⟩)
+      rcases mem_tableGensAt.mp hg with ⟨sg, hsk, hsat, hg⟩ | ⟨sg, hsk, hsat, hg⟩
+      · obtain ⟨pc, σ, hps, _, rfl⟩ := mem_nodeSigs.mp hsk
+        obtain ⟨c, hc, hl, hall⟩ := joinedSat_iff.mp hsat
+        exact ⟨k, hk, pc, σ, hps, refSiteOk_of_union hc hall (Or.inr hl), hg⟩
+      · obtain ⟨pc, σ, hps, hkind, rfl⟩ := mem_sinkSigs.mp hsk
+        obtain ⟨c, hc, hall⟩ := anySat_iff.mp hsat
+        exact ⟨k, hk, pc, σ, hps, refSiteOk_of_union hc hall (Or.inl hkind), hg⟩
+  · rintro ⟨k, hk, pc, σ, hps, hok, hg⟩
+    rcases refSiteOk_iff.mp hok with ⟨hkind, c, hc, hall⟩ | ⟨hkind, c, hc, hc'⟩
+    · have hsk : σ.abstract.sig ∈ sinkSigs p k := mem_sinkSigs.mpr ⟨pc, σ, hps, hkind, rfl⟩
+      refine Or.inr (List.mem_flatMap.mpr ⟨k, hk, ?_⟩)
       rw [hJ k hk]
-      exact mem_joinedGensAt.mpr ⟨σ.abstract.sig, hsk, joinedSat_iff.mpr ⟨c, hc, hl, hall⟩, hg⟩
+      exact mem_tableGensAt.mpr (Or.inr ⟨σ.abstract.sig, hsk, anySat_iff.mpr ⟨c, hc, hall⟩, hg⟩)
+    · have hsk : σ.abstract.sig ∈ nodeSigs p k := mem_nodeSigs.mpr ⟨pc, σ, hps, hkind, rfl⟩
+      rcases refCubeOk_iff.mp hc' with ⟨hl, hall⟩ | ⟨hl, hall⟩
+      · exact Or.inl (mem_sigGens.mpr ⟨σ.abstract.sig, mem_rootSigs.mpr ⟨k, hk, hsk⟩,
+          singleSat_iff.mpr ⟨c, hc, hl, hall⟩, hg⟩)
+      · refine Or.inr (List.mem_flatMap.mpr ⟨k, hk, ?_⟩)
+        rw [hJ k hk]
+        exact mem_tableGensAt.mpr
+          (Or.inl ⟨σ.abstract.sig, hsk, joinedSat_iff.mpr ⟨c, hc, hl, hall⟩, hg⟩)
 
 /-- Two states that agree on the roots. -/
 def RootEq (p : Program) (S T : Node → List Mark) : Prop :=
@@ -1022,25 +1211,44 @@ theorem mem_refU_congr {p : Program} {S T : Node → List Mark} (h : RootEq p S 
   · rintro ⟨E, hE, hk, hm⟩; exact ⟨E, hE, hk, (h E hE m).mp hm⟩
   · rintro ⟨E, hE, hk, hm⟩; exact ⟨E, hE, hk, (h E hE m).mpr hm⟩
 
+theorem mem_refUM_congr {p : Program} {S T : Node → List Mark} (h : RootEq p S T) (k : Node)
+    (m : Mark) : m ∈ refUM p S k ↔ m ∈ refUM p T k := by
+  rw [mem_refUM, mem_refUM]
+  constructor
+  · rintro ⟨E, n', hE, hn', hmeth, hm⟩; exact ⟨E, n', hE, hn', hmeth, (h E hE m).mp hm⟩
+  · rintro ⟨E, n', hE, hn', hmeth, hm⟩; exact ⟨E, n', hE, hn', hmeth, (h E hE m).mpr hm⟩
+
+theorem refCubeOk_congr {p : Program} {S T : Node → List Mark} (h : RootEq p S T) {E : Node}
+    (hE : E ∈ p.roots) (k : Node) (c : Cube) : refCubeOk p S E k c = refCubeOk p T E k c := by
+  apply bool_eq_of_iff
+  rw [refCubeOk_iff, refCubeOk_iff]
+  constructor
+  · rintro (⟨hl, hall⟩ | ⟨hl, hall⟩)
+    · exact Or.inl ⟨hl, fun m hm => (h E hE m).mp (hall m hm)⟩
+    · exact Or.inr ⟨hl, fun m hm => (mem_refUM_congr h k m).mp (hall m hm)⟩
+  · rintro (⟨hl, hall⟩ | ⟨hl, hall⟩)
+    · exact Or.inl ⟨hl, fun m hm => (h E hE m).mpr (hall m hm)⟩
+    · exact Or.inr ⟨hl, fun m hm => (mem_refUM_congr h k m).mpr (hall m hm)⟩
+
 /-- A round's gens depend only on the root sets, as sets. -/
 theorem mem_refGens_congr {p : Program} {S T : Node → List Mark} (h : RootEq p S T)
     {E : Node} (hE : E ∈ p.roots) (g : Mark) : g ∈ refGens p S E ↔ g ∈ refGens p T E := by
-  have hok : ∀ k c, refCubeOk p S E k c = true ↔ refCubeOk p T E k c = true := by
-    intro k c
-    rw [refCubeOk_iff, refCubeOk_iff]
+  have hok : ∀ k σ, refSiteOk p S E k σ = true ↔ refSiteOk p T E k σ = true := by
+    intro k σ
+    rw [refSiteOk_iff, refSiteOk_iff]
     constructor
-    · rintro (⟨hl, hall⟩ | ⟨hl, hall⟩)
-      · exact Or.inl ⟨hl, fun m hm => (h E hE m).mp (hall m hm)⟩
-      · exact Or.inr ⟨hl, fun m hm => (mem_refU_congr h k m).mp (hall m hm)⟩
-    · rintro (⟨hl, hall⟩ | ⟨hl, hall⟩)
-      · exact Or.inl ⟨hl, fun m hm => (h E hE m).mpr (hall m hm)⟩
-      · exact Or.inr ⟨hl, fun m hm => (mem_refU_congr h k m).mpr (hall m hm)⟩
+    · rintro (⟨hk, c, hc, hall⟩ | ⟨hk, c, hc, ho⟩)
+      · exact Or.inl ⟨hk, c, hc, fun m hm => (mem_refUM_congr h k m).mp (hall m hm)⟩
+      · exact Or.inr ⟨hk, c, hc, refCubeOk_congr h hE k c ▸ ho⟩
+    · rintro (⟨hk, c, hc, hall⟩ | ⟨hk, c, hc, ho⟩)
+      · exact Or.inl ⟨hk, c, hc, fun m hm => (mem_refUM_congr h k m).mpr (hall m hm)⟩
+      · exact Or.inr ⟨hk, c, hc, (refCubeOk_congr h hE k c).symm ▸ ho⟩
   rw [mem_refGens, mem_refGens]
   constructor
-  · rintro ⟨k, hk, pc, σ, hps, ⟨c, hc, ho⟩, hg⟩
-    exact ⟨k, hk, pc, σ, hps, ⟨c, hc, (hok k c).mp ho⟩, hg⟩
-  · rintro ⟨k, hk, pc, σ, hps, ⟨c, hc, ho⟩, hg⟩
-    exact ⟨k, hk, pc, σ, hps, ⟨c, hc, (hok k c).mpr ho⟩, hg⟩
+  · rintro ⟨k, hk, pc, σ, hps, ho, hg⟩
+    exact ⟨k, hk, pc, σ, hps, (hok k σ).mp ho, hg⟩
+  · rintro ⟨k, hk, pc, σ, hps, ho, hg⟩
+    exact ⟨k, hk, pc, σ, hps, (hok k σ).mpr ho, hg⟩
 
 theorem opt_ref_lockstep (p : Program) :
     RootEq p (optFinal p) (refFinal p) ∧ optRounds p = refRounds p := by
@@ -1082,8 +1290,8 @@ theorem refCubeSat_congr (p : Program) {F G : Node → List Mark} (h : RootEq p 
     · rintro ⟨E, hE, hn, hall⟩; exact ⟨E, hE, hn, fun m hm => (h E hE m).mpr (hall m hm)⟩
   · simp only [hl, if_false, List.all_eq_true, decide_eq_true_eq]
     constructor
-    · intro hall m hm; exact (mem_refU_congr h n m).mp (hall m hm)
-    · intro hall m hm; exact (mem_refU_congr h n m).mpr (hall m hm)
+    · intro hall m hm; exact (mem_refUM_congr h n m).mp (hall m hm)
+    · intro hall m hm; exact (mem_refUM_congr h n m).mpr (hall m hm)
 
 end AlgorithmLemmas
 
@@ -1170,17 +1378,145 @@ theorem closure_dedup (L : List Site) (fuel : Nat) (S0 : List Mark) :
       (singleClosure (dedup (L.map Site.sig)) fuel S0).2 :=
   closure_sig_congr _ _ (fun sg => (mem_dedup _ sg).symm) fuel S0
 
+/-! ## Applicability from unions only
+
+At a node reachable from some root, a cube of at most one literal is satisfied
+by some root's set iff each of its marks lies in the node-level union `U(n)`:
+it has at most one mark, and the empty cube only needs a root that reaches
+`n`. So after the fixpoint, selection only needs the per-node unions `U(n)` and
+the per-method unions `U(method n)`, not a per-root record of which signatures
+were satisfied. -/
+
+/-- Applicability read off the unions of the final sets only: a cube of at most
+one literal is checked on `U(n)`, a joined cube on `U(method n)`. -/
+def optApplicableU (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Bool :=
+  decide (σ ∈ p.sites n pc) && σ.abstract.cond.any fun c =>
+    if c.length ≤ 1 then c.all (fun m => decide (m ∈ refU p (optFinal p) n))
+    else c.all (fun m => decide (m ∈ refUM p (optFinal p) n))
+
+namespace AlgorithmLemmas
+
+/-- For a cube of at most one literal, "one witness for all marks" equals "a
+witness per mark", provided some witness exists at all (for the empty cube). -/
+theorem single_cube_swap {P : Node → Prop} {Q : Node → Mark → Prop} {c : Cube}
+    (hl : c.length ≤ 1) (hne : ∃ E, P E) :
+    (∃ E, P E ∧ ∀ m, m ∈ c → Q E m) ↔ ∀ m, m ∈ c → ∃ E, P E ∧ Q E m := by
+  constructor
+  · rintro ⟨E, hP, hQ⟩ m hm; exact ⟨E, hP, hQ m hm⟩
+  · intro h
+    match c, hl with
+    | [], _ =>
+      obtain ⟨E, hE⟩ := hne
+      exact ⟨E, hE, fun _ hm => absurd hm List.not_mem_nil⟩
+    | [a], _ =>
+      obtain ⟨E, hP, hQ⟩ := h a List.mem_cons_self
+      refine ⟨E, hP, fun m hm => ?_⟩
+      rw [List.mem_singleton] at hm; subst hm; exact hQ
+    | _ :: _ :: _, hl => simp at hl
+
+theorem refCubeSat_union (p : Program) (F : Node → List Mark) {n : Node}
+    (hn : n ∈ reachAll p) (c : Cube) :
+    refCubeSat p F n c =
+      if c.length ≤ 1 then c.all (fun m => decide (m ∈ refU p F n))
+      else c.all (fun m => decide (m ∈ refUM p F n)) := by
+  unfold refCubeSat
+  by_cases hl : c.length ≤ 1
+  · rw [if_pos hl, if_pos hl]
+    apply bool_eq_of_iff
+    simp only [List.any_eq_true, Bool.and_eq_true, decide_eq_true_eq, List.all_eq_true]
+    have hsw := single_cube_swap (P := fun E => E ∈ p.roots ∧ n ∈ reachList p E)
+      (Q := fun E m => m ∈ F E) hl (mem_reachAll.mp hn)
+    constructor
+    · rintro ⟨E, hE, hnE, hall⟩ m hm
+      obtain ⟨E', ⟨hE', hnE'⟩, hmE'⟩ := hsw.mp ⟨E, ⟨hE, hnE⟩, hall⟩ m hm
+      exact mem_refU.mpr ⟨E', hE', hnE', hmE'⟩
+    · intro hall
+      obtain ⟨E, ⟨hE, hnE⟩, hall'⟩ := hsw.mpr (fun m hm => by
+        obtain ⟨E, hE, hnE, hmE⟩ := mem_refU.mp (hall m hm)
+        exact ⟨E, ⟨hE, hnE⟩, hmE⟩)
+      exact ⟨E, hE, hnE, hall'⟩
+  · rw [if_neg hl, if_neg hl]
+
+end AlgorithmLemmas
+
+/-- `applicable_iff_union`: at a node reachable from some root, applicability
+depends only on unions. A cube of at most one literal is satisfied iff each of
+its marks is in the node-level union `U(n)`, and a joined cube iff it is
+contained in the method-level union `U(method n)`. This justifies an
+implementation that stores only per-node union bitsets, not per-root
+satisfied-signature bitsets. -/
+theorem applicable_iff_union (p : Program) {n : Node}
+    (hn : ∃ E, E ∈ p.roots ∧ Reaches p E n) (pc : Pc) (σ : ESite) :
+    Applicable p n pc σ ↔ σ ∈ p.sites n pc ∧ ∃ c, c ∈ σ.abstract.cond ∧
+      ((c.length ≤ 1 ∧ ∀ m, m ∈ c → ∃ E, E ∈ p.roots ∧ Reaches p E n ∧ InS p E m) ∨
+       (2 ≤ c.length ∧ ∀ m, m ∈ c →
+          ∃ E n', E ∈ p.roots ∧ Reaches p E n' ∧ p.method n' = p.method n ∧ InS p E m)) := by
+  have hcube : ∀ c : Cube, CubeSat p n c ↔
+      ((c.length ≤ 1 ∧ ∀ m, m ∈ c → ∃ E, E ∈ p.roots ∧ Reaches p E n ∧ InS p E m) ∨
+       (2 ≤ c.length ∧ ∀ m, m ∈ c →
+          ∃ E n', E ∈ p.roots ∧ Reaches p E n' ∧ p.method n' = p.method n ∧ InS p E m)) := by
+    intro c
+    unfold CubeSat
+    constructor
+    · rintro (⟨hl, E, hE, hR, hall⟩ | h)
+      · exact Or.inl ⟨hl, fun m hm => ⟨E, hE, hR, hall m hm⟩⟩
+      · exact Or.inr h
+    · rintro (⟨hl, hall⟩ | h)
+      · have hsw := single_cube_swap (P := fun E => E ∈ p.roots ∧ Reaches p E n)
+          (Q := fun E m => InS p E m) hl hn
+        obtain ⟨E, ⟨hE, hR⟩, hall'⟩ := hsw.mpr (fun m hm => by
+          obtain ⟨E, hE, hR, h⟩ := hall m hm
+          exact ⟨E, ⟨hE, hR⟩, h⟩)
+        exact Or.inl ⟨hl, E, hE, hR, hall'⟩
+      · exact Or.inr h
+  unfold Applicable
+  constructor
+  · rintro ⟨hs, c, hc, h⟩; exact ⟨hs, c, hc, (hcube c).mp h⟩
+  · rintro ⟨hs, c, hc, h⟩; exact ⟨hs, c, hc, (hcube c).mpr h⟩
+
+/-- The union-only check `optApplicableU` agrees with `optApplicable` at every
+node reached from some root (no well-formedness needed). -/
+theorem optApplicableU_eq_of_reachAll (p : Program) {n : Node} (hn : n ∈ reachAll p)
+    (pc : Pc) (σ : ESite) : optApplicableU p n pc σ = optApplicable p n pc σ := by
+  unfold optApplicableU optApplicable applicableOn
+  have h : refCubeSat p (optFinal p) n = fun c =>
+      if c.length ≤ 1 then c.all (fun m => decide (m ∈ refU p (optFinal p) n))
+      else c.all (fun m => decide (m ∈ refUM p (optFinal p) n)) :=
+    funext fun c => refCubeSat_union p (optFinal p) hn c
+  rw [h]
+
+/-- The union-only check `optApplicableU` agrees with `optApplicable` at every
+node reachable from a root, and hence decides `Applicable` there. An
+implementation may therefore keep only per-node and per-method union bitsets
+after the fixpoint. -/
+theorem optApplicableU_eq (p : Program) (hw : Algorithm.WF p) {n : Node}
+    (hn : ∃ E, E ∈ p.roots ∧ Reaches p E n) (pc : Pc) (σ : ESite) :
+    optApplicableU p n pc σ = optApplicable p n pc σ := by
+  obtain ⟨E, hE, hR⟩ := hn
+  exact optApplicableU_eq_of_reachAll p
+    (mem_reachAll.mpr ⟨E, hE, (mem_reachList p hw E n (hw.roots_sub E hE)).mpr hR⟩) pc σ
+
+theorem optApplicableU_iff (p : Program) (hw : Algorithm.WF p) {n : Node}
+    (hn : ∃ E, E ∈ p.roots ∧ Reaches p E n) (pc : Pc) (σ : ESite) :
+    optApplicableU p n pc σ = true ↔ Applicable p n pc σ := by
+  rw [optApplicableU_eq p hw hn]; exact optApplicable_iff p hw n pc σ
+
+
 /-! ## Cost comparison
 
 The unit of cost is one *cube evaluation*: testing one cube of one condition
 against a mark set. It is counted without short-circuiting, so it is an upper
 bound on the work of any evaluation order.
 * Reference round: every root, every node it reaches, every statement's
-  site, every cube.
-* Optimized round: every root and every *distinct* signature it reaches, every
-  cube; plus, once per reachable node, every cube of each distinct joined
-  signature of that node (`joinedTable`).
-The signature sets (`nodeSigs`, `rootSigs`, `reachAll`) do not depend on the
+  site, every cube. (A sink's cube is evaluated once, on `U(method k)`; see
+  `refSiteOk`.)
+* Optimized round: every root and every *distinct* non-sink signature it
+  reaches, every cube; plus, once per reachable node, every cube of each
+  distinct joined signature and each distinct sink signature of that node
+  (`nodeTable`).
+The unions `U`, like the signature sets (`nodeSigs`, `sinkSigs`, `rootSigs`,
+`reachAll`), are not cube evaluations and are not counted. The signature sets
+do not depend on the
 state. They are computed once before the loop, and their cost is not a
 per-round cost. The loop evaluates the gens `rounds + 1` times: once per
 round that adds marks, plus the final round that confirms stability. -/
@@ -1191,7 +1527,8 @@ def refRoundCost (p : Program) : Nat :=
 
 def optRoundCost (p : Program) : Nat :=
   (p.roots.map fun E => ((rootSigs p E).map fun sg => sg.1.length).sum).sum +
-    ((reachAll p).map fun k => ((joinedSigs p k).map fun sg => sg.1.length).sum).sum
+    ((reachAll p).map fun k => ((joinedSigs p k).map fun sg => sg.1.length).sum +
+      ((sinkSigs p k).map fun sg => sg.1.length).sum).sum
 
 /-- The reference algorithm with its step counter: `(result, cube evaluations)`. -/
 def refRun (p : Program) : (Node → List Mark) × Nat :=
@@ -1204,16 +1541,19 @@ def optRun (p : Program) : (Node → List Mark) × Nat :=
 def refSteps (p : Program) : Nat := (refRun p).2
 def optSteps (p : Program) : Nat := (optRun p).2
 
-/-- All distinct signatures of the program. -/
-def allSigs (p : Program) : List Sig := dedup (p.nodes.flatMap (nodeSigs p))
+/-- All distinct signatures of the program (of sinks and of other sites). -/
+def allSigs (p : Program) : List Sig :=
+  dedup (p.nodes.flatMap fun k => nodeSigs p k ++ sinkSigs p k)
 
 /-- The largest number of cubes in a condition. -/
 def maxCond (p : Program) : Nat := ((allSigs p).map fun sg => sg.1.length).foldl max 0
 
-/-- Statements (with multiplicity) whose site has a joined cube, over the
-reachable nodes. -/
+/-- Statements (with multiplicity) evaluated in the node table, over the
+reachable nodes: non-sink sites with a joined cube, and sinks. -/
 def joinedSiteCount (p : Program) : Nat :=
-  ((reachAll p).map fun k => ((p.nodeSites k).filter fun ps => isJoinedSig ps.2.abstract.sig).length).sum
+  ((reachAll p).map fun k =>
+    ((p.nodeSites k).filter fun ps => !isSinkSite ps && isJoinedSig ps.2.abstract.sig).length +
+      ((p.nodeSites k).filter isSinkSite).length).sum
 
 namespace AlgorithmLemmas
 
@@ -1265,7 +1605,7 @@ theorem sig_le_maxCond (p : Program) {sg : Sig} (h : sg ∈ allSigs p) : sg.1.le
   (le_foldl_max _ 0).2 _ (List.mem_map.mpr ⟨sg, h, rfl⟩)
 
 theorem mem_allSigs {p : Program} {sg : Sig} :
-    sg ∈ allSigs p ↔ ∃ k, k ∈ p.nodes ∧ sg ∈ nodeSigs p k := by
+    sg ∈ allSigs p ↔ ∃ k, k ∈ p.nodes ∧ (sg ∈ nodeSigs p k ∨ sg ∈ sinkSigs p k) := by
   simp [allSigs, mem_dedup, List.mem_flatMap]
 
 theorem reachAll_nodes (p : Program) (hw : WF p) {k : Node} (h : k ∈ reachAll p) : k ∈ p.nodes := by
@@ -1279,27 +1619,47 @@ theorem rootSigs_cost_le (p : Program) (hw : WF p) {E : Node} (hE : E ∈ p.root
     obtain ⟨k, hk, hsk⟩ := mem_rootSigs.mp hsg
     have hkn : k ∈ p.nodes :=
       Reaches.nodes hw (reachList_reaches p E k hk) (hw.roots_sub E hE)
-    exact mem_allSigs.mpr ⟨k, hkn, hsk⟩
+    exact mem_allSigs.mpr ⟨k, hkn, Or.inl hsk⟩
   refine Nat.le_trans (sum_map_le_mul _ (maxCond p) _ (fun sg h => sig_le_maxCond p (hsub sg h))) ?_
   exact Nat.mul_le_mul_right _ (length_le_of_nodup_subset _ _ (nodup_dedup _) hsub)
 
 theorem joinedSigs_cost_le (p : Program) (hw : WF p) {k : Node} (hk : k ∈ reachAll p) :
     ((joinedSigs p k).map fun sg => sg.1.length).sum ≤
-      ((p.nodeSites k).filter fun ps => isJoinedSig ps.2.abstract.sig).length * maxCond p := by
+      ((p.nodeSites k).filter fun ps => !isSinkSite ps && isJoinedSig ps.2.abstract.sig).length *
+        maxCond p := by
   have hkn := reachAll_nodes p hw hk
   have hsub : ∀ sg, sg ∈ joinedSigs p k → sg ∈ allSigs p := by
     intro sg hsg
-    exact mem_allSigs.mpr ⟨k, hkn, (List.mem_filter.mp hsg).1⟩
+    exact mem_allSigs.mpr ⟨k, hkn, Or.inl (List.mem_filter.mp hsg).1⟩
   refine Nat.le_trans (sum_map_le_mul _ (maxCond p) _ (fun sg h => sig_le_maxCond p (hsub sg h))) ?_
   apply Nat.mul_le_mul_right
   have hnd : (joinedSigs p k).Nodup := (nodup_dedup _).filter _
   have := length_le_of_nodup_subset (joinedSigs p k)
-    (((p.nodeSites k).filter fun ps => isJoinedSig ps.2.abstract.sig).map fun ps => ps.2.abstract.sig)
+    (((p.nodeSites k).filter fun ps => !isSinkSite ps && isJoinedSig ps.2.abstract.sig).map
+      fun ps => ps.2.abstract.sig)
     hnd (by
       intro sg hsg
       obtain ⟨hsk, hj⟩ := List.mem_filter.mp hsg
-      obtain ⟨pc, σ, hps, rfl⟩ := mem_nodeSigs.mp hsk
-      exact List.mem_map.mpr ⟨(pc, σ), List.mem_filter.mpr ⟨hps, hj⟩, rfl⟩)
+      obtain ⟨pc, σ, hps, hkind, rfl⟩ := mem_nodeSigs.mp hsk
+      refine List.mem_map.mpr ⟨(pc, σ), List.mem_filter.mpr ⟨hps, ?_⟩, rfl⟩
+      simp only [isSinkSite, Bool.and_eq_true, Bool.not_eq_true', decide_eq_false_iff_not]
+      exact ⟨hkind, hj⟩)
+  rw [List.length_map] at this
+  exact this
+
+theorem sinkSigs_cost_le (p : Program) (hw : WF p) {k : Node} (hk : k ∈ reachAll p) :
+    ((sinkSigs p k).map fun sg => sg.1.length).sum ≤
+      ((p.nodeSites k).filter isSinkSite).length * maxCond p := by
+  have hkn := reachAll_nodes p hw hk
+  have hsub : ∀ sg, sg ∈ sinkSigs p k → sg ∈ allSigs p :=
+    fun sg hsg => mem_allSigs.mpr ⟨k, hkn, Or.inr hsg⟩
+  refine Nat.le_trans (sum_map_le_mul _ (maxCond p) _ (fun sg h => sig_le_maxCond p (hsub sg h))) ?_
+  apply Nat.mul_le_mul_right
+  have := length_le_of_nodup_subset (sinkSigs p k)
+    (((p.nodeSites k).filter isSinkSite).map fun ps => ps.2.abstract.sig) (nodup_dedup _)
+    (fun sg hsg => by
+      obtain ⟨pc, σ, hps, hkind, rfl⟩ := mem_sinkSigs.mp hsg
+      exact List.mem_map.mpr ⟨(pc, σ), List.mem_filter.mpr ⟨hps, decide_eq_true hkind⟩, rfl⟩)
   rw [List.length_map] at this
   exact this
 
@@ -1314,8 +1674,8 @@ theorem refSteps_eq (p : Program) :
         ((p.nodeSites k).map fun ps => ps.2.abstract.cond.length).sum).sum).sum := rfl
 
 /-- One optimized round costs at most `|roots| · |distinct signatures| ·
-maxCond + |joined statements| · maxCond` cube evaluations, whatever the
-number of statements that share a signature. -/
+maxCond + |joined and sink statements| · maxCond` cube evaluations, whatever
+the number of statements that share a signature. -/
 theorem optRoundCost_le (p : Program) (hw : Algorithm.WF p) :
     optRoundCost p ≤
       p.roots.length * ((allSigs p).length * maxCond p) + joinedSiteCount p * maxCond p := by
@@ -1324,7 +1684,9 @@ theorem optRoundCost_le (p : Program) (hw : Algorithm.WF p) :
   · exact sum_map_le_mul _ _ _ (fun E hE => rootSigs_cost_le p hw hE)
   · unfold joinedSiteCount
     rw [← sum_map_mul_right]
-    exact sum_map_le _ _ _ (fun k hk => joinedSigs_cost_le p hw hk)
+    refine sum_map_le _ _ _ (fun k hk => ?_)
+    rw [Nat.add_mul]
+    exact Nat.add_le_add (joinedSigs_cost_le p hw hk) (sinkSigs_cost_le p hw hk)
 
 /-- The optimized algorithm's total cost: rounds (the same as the reference's,
 `opt_eq_ref`, and at most `|roots| · |distinct gens|` of them,
@@ -1355,7 +1717,9 @@ def famProg (r k : Nat) : Program :=
     calls := fun n _ => if n = 0 then [] else [0]
     mapIn := fun _ _ _ => none
     mapOut := fun _ _ _ => none
-    kills := fun _ _ _ => false }
+    kills := fun _ _ _ => false
+    method := id
+    cleanerAtoms := fun _ _ => [] }
 
 namespace AlgorithmLemmas
 
@@ -1385,6 +1749,11 @@ theorem fam_wf (r k : Nat) : WF (famProg r k) where
     subst hn
     change pc ∈ (if 0 = 0 then List.range k else [0])
     rw [if_pos rfl, List.mem_range]; exact hpc
+  sites_node := by
+    intro n pc σ h
+    obtain ⟨_, hn, _⟩ := fam_sites h
+    subst hn; exact List.mem_cons_self
+  cleaner_sub := fun _ _ _ h => absurd h List.not_mem_nil
 
 theorem length_flatMap_one {α β : Type} (f : α → List β) :
     ∀ (l : List α), (∀ x, x ∈ l → (f x).length = 1) → (l.flatMap f).length = l.length
@@ -1455,9 +1824,11 @@ theorem fam_opt_round_le (r k : Nat) : optRoundCost (famProg r k) ≤ r := by
   have hw := fam_wf r k
   have hsig : ∀ sg, sg ∈ allSigs (famProg r k) → sg = famSite.abstract.sig := by
     intro sg hsg
-    obtain ⟨n, _, hsn⟩ := mem_allSigs.mp hsg
-    obtain ⟨pc, σ, hps, rfl⟩ := mem_nodeSigs.mp hsn
-    rw [(fam_sites (mem_nodeSites.mp hps).2).1]
+    obtain ⟨n, _, hsn | hsn⟩ := mem_allSigs.mp hsg
+    · obtain ⟨pc, σ, hps, _, rfl⟩ := mem_nodeSigs.mp hsn
+      rw [(fam_sites (mem_nodeSites.mp hps).2).1]
+    · obtain ⟨pc, σ, hps, _, rfl⟩ := mem_sinkSigs.mp hsn
+      rw [(fam_sites (mem_nodeSites.mp hps).2).1]
   have hA : (allSigs (famProg r k)).length ≤ 1 :=
     length_le_of_nodup_subset _ [famSite.abstract.sig] (nodup_dedup _)
       (fun sg h => by rw [hsig sg h]; exact List.mem_singleton_self _)
@@ -1470,9 +1841,11 @@ theorem fam_opt_round_le (r k : Nat) : optRoundCost (famProg r k) ≤ r := by
     unfold joinedSiteCount
     apply Nat.eq_zero_of_le_zero
     have := sum_map_le_mul (fun n => (((famProg r k).nodeSites n).filter
-      fun ps => isJoinedSig ps.2.abstract.sig).length) 0 (reachAll (famProg r k))
-      (fun n _ => Nat.le_of_eq (filter_length_zero _ _ (fun ps hps => by
-        rw [fam_nodeSites hps]; rfl)))
+      fun ps => !isSinkSite ps && isJoinedSig ps.2.abstract.sig).length +
+        (((famProg r k).nodeSites n).filter isSinkSite).length) 0 (reachAll (famProg r k))
+      (fun n _ => Nat.le_of_eq (by
+        rw [filter_length_zero _ _ (fun ps hps => by rw [isSinkSite, fam_nodeSites hps]; rfl),
+          filter_length_zero _ _ (fun ps hps => by rw [isSinkSite, fam_nodeSites hps]; rfl)]))
     rw [Nat.mul_zero] at this
     exact this
   refine Nat.le_trans (optRoundCost_le _ hw) ?_
@@ -1539,7 +1912,9 @@ def algExProg : Program :=
     calls := fun n _ => if n = 0 then [] else [0]
     mapIn := fun _ _ _ => none
     mapOut := fun _ _ _ => none
-    kills := fun _ _ _ => false }
+    kills := fun _ _ _ => false
+    method := id
+    cleanerAtoms := fun _ _ => [] }
 
 example : (refFinal algExProg 1, refFinal algExProg 2) = ([10, 13], [11, 13]) := by decide
 example : refInS algExProg 1 13 = true ∧ refInS algExProg 2 13 = true ∧ refInS algExProg 1 11 = false :=
@@ -1550,6 +1925,129 @@ example : ([10, 11, 12, 13, 14].map (refNeeded algExProg)) = [true, true, false,
   decide
 example : ([10, 11, 12, 13, 14].map (optNeeded algExProg)) = [true, true, false, true, false] := by
   decide
+
+/-! ## A worked example for the v2 features
+
+Two contexts of one method: node `0` (called by root `1`) and node `3` (called
+by root `2`) both have method `0`. Node `4` is a third context of method `0`
+that no root reaches. Root `1` generates `10` and `15`, root `2` generates `11`.
+* Statement `0` of method `0` has the joined cube `10 ∧ 11 → 13`. It holds on
+  the method-level union, so `13` enters `S_1` (via node `0`) and `S_2` (via
+  node `3`).
+* `(0, 1)` is a sink `11` with `trackFactsReachAnalysisEnd` mark `20`. `11` is
+  in `U(method 0)` (from node `3`), so `InS.sinkGen` puts `20` into `S_1`. But
+  the sink is not `Applicable` at node `0`: its single-literal cube needs `11`
+  in a root that reaches node `0`, and only root `1` does.
+* `(0, 2)` is a pass-through on `15`; `(0, 3)` is a sink on `13`; `(0, 1)`
+  records the cleaner atom `30`. -/
+
+def ex2SinkGen : ESite :=
+  { rule := 6, kind := .sink, cond := [[algExLit 0 11]], assigns := [⟨0, 20⟩], copies := [] }
+def ex2Pass : ESite :=
+  { rule := 7, kind := .passThrough, cond := [[algExLit 0 15]], assigns := [], copies := [(0, 1)] }
+
+def ex2Prog : Program :=
+  { nodes := [0, 1, 2, 3, 4]
+    roots := [1, 2]
+    pcs := fun n => if n = 0 then [0, 1, 2, 3] else [0]
+    succ := fun _ _ => []
+    exits := fun _ => []
+    sites := fun n pc =>
+      if n = 1 ∧ pc = 0 then [algExSrc 10, algExSrc 15]
+      else if n = 2 ∧ pc = 0 then [algExSrc 11]
+      else if (n = 0 ∨ n = 3 ∨ n = 4) ∧ pc = 0 then [algExJoin]
+      else if n = 0 ∧ pc = 1 then [ex2SinkGen]
+      else if n = 0 ∧ pc = 2 then [ex2Pass]
+      else if n = 0 ∧ pc = 3 then [algExSink] else []
+    calls := fun n _ => if n = 1 then [0] else if n = 2 then [3] else []
+    mapIn := fun _ _ _ => none
+    mapOut := fun _ _ _ => none
+    kills := fun _ _ _ => false
+    method := fun n => if n = 3 ∨ n = 4 then 0 else n
+    cleanerAtoms := fun n pc => if n = 0 ∧ pc = 1 then [30] else [] }
+
+/-- The per-root sets: the joined gen `13` reaches both roots through the
+method-level union; the sink gen `20` reaches root `1` only (the root that
+reaches node `0`). -/
+example : ([10, 11, 13, 15, 20].map (refInS ex2Prog 1)) = [true, false, true, true, true] ∧
+    ([10, 11, 13, 15, 20].map (refInS ex2Prog 2)) = [false, true, true, false, false] := by
+  decide
+
+example : refApplicable ex2Prog 0 0 algExJoin = true ∧ refApplicable ex2Prog 3 0 algExJoin = true ∧
+    refApplicable ex2Prog 0 1 ex2SinkGen = false ∧ refApplicable ex2Prog 0 2 ex2Pass = true ∧
+    refApplicable ex2Prog 0 3 algExSink = true := by decide
+
+/-- A joined cube at the unreached context `4` of method `0` is applicable too:
+the v2 joined case of `CubeSat` does not ask for a root that reaches `n`. -/
+example : refApplicable ex2Prog 4 0 algExJoin = true := by decide
+
+/-- Needed: `13` (sink atom), `10` and `11` (backward through the join), `15`
+(pass-through atom), `30` (cleaner atom). Not `20`: the sink `11 → 20` is not
+applicable. -/
+example : ([10, 11, 13, 15, 20, 30].map (refNeeded ex2Prog)) =
+    [true, true, true, true, false, true] := by decide
+example : ([10, 11, 13, 15, 20, 30].map (optNeeded ex2Prog)) =
+    [true, true, true, true, false, true] := by decide
+example : optApplicableU ex2Prog 0 1 ex2SinkGen = false ∧ optApplicableU ex2Prog 0 0 algExJoin = true ∧
+    optApplicableU ex2Prog 3 0 algExJoin = true := by decide
+
+namespace AlgorithmLemmas
+
+theorem ex2_wf : WF ex2Prog where
+  roots_sub := by decide
+  callees_sub := by
+    intro n _ c hc
+    obtain ⟨pc, _, hc⟩ := List.mem_flatMap.mp hc
+    simp only [ex2Prog] at hc
+    split at hc
+    · rw [List.mem_singleton] at hc; subst hc; decide
+    · split at hc
+      · rw [List.mem_singleton] at hc; subst hc; decide
+      · exact absurd hc List.not_mem_nil
+  sites_pc := by
+    intro n pc σ _ h
+    simp only [ex2Prog] at h ⊢
+    repeat' split at h
+    all_goals first
+      | exact absurd h List.not_mem_nil
+      | (split <;> simp_all)
+  sites_node := by
+    intro n pc σ h
+    simp only [ex2Prog] at h ⊢
+    repeat' split at h
+    all_goals first
+      | exact absurd h List.not_mem_nil
+      | simp_all
+  cleaner_sub := by
+    intro n pc m h
+    simp only [ex2Prog] at h ⊢
+    split at h
+    · obtain ⟨rfl, rfl⟩ := ‹_ ∧ _›; decide
+    · exact absurd h List.not_mem_nil
+
+end AlgorithmLemmas
+
+/-- Design observation on v2 `InS.sinkGen`: a sink's gens are placed when one
+of its cubes lies in the method-level union `U(method n)`, even when the sink
+is not `Applicable` at `n` (its single-literal cube is read per root). Here
+`20 ∈ S_1` although the sink `11 → 20` at node `0` is never selected, so no
+restricted run can emit `20`. This is sound (an over-approximation) but
+imprecise. -/
+theorem ex2_sinkGen_not_applicable :
+    InS ex2Prog 1 20 ∧ ¬ Applicable ex2Prog 0 1 ex2SinkGen :=
+  ⟨(refInS_iff ex2Prog ex2_wf (by decide) 20).mp (by decide),
+   fun h => absurd ((refApplicable_iff ex2Prog ex2_wf 0 1 ex2SinkGen).mpr h) (by decide)⟩
+
+/-- Design observation on v2 `CubeSat`: its joined case does not require a
+root that reaches `n`, so a joined site at an unreached context of a reached
+method is `Applicable` (sound, imprecise; the algorithms reproduce it exactly,
+which is why `WF.sites_node` is needed to enumerate such sites). -/
+theorem ex2_unreached_applicable :
+    Applicable ex2Prog 4 0 algExJoin ∧ ¬ ∃ E, E ∈ ex2Prog.roots ∧ Reaches ex2Prog E 4 := by
+  refine ⟨(refApplicable_iff ex2Prog ex2_wf 4 0 algExJoin).mp (by decide), ?_⟩
+  rintro ⟨E, hE, hR⟩
+  have h4 := (mem_reachList ex2Prog ex2_wf E 4 (ex2_wf.roots_sub E hE)).mpr hR
+  exact absurd h4 ((by decide : ∀ E, E ∈ ex2Prog.roots → 4 ∉ reachList ex2Prog E) E hE)
 
 /-! ## Axiom audit
 Run `./check.sh`: `AxiomAudit.lean` prints the axioms of every theorem. -/

@@ -13,8 +13,12 @@ flow-sensitive refinement of the flow-insensitive scan `InS`:
   back to every call site reachable under `E`;
 * no kills (an over-approximation, as in `InS`);
 * the same D1 join rule as `InS`: a cube of one literal (or none) is evaluated
-  on the set of `E` at that point, a cube of two or more literals on the union
-  over every root that reaches that point.
+  on the set of `E` at that point, a cube of two or more literals on the
+  method-level union at that statement: the sets at `(n', pc)` of every root
+  reaching `(n', pc)`, for every node `n'` of the same method as `n`;
+* the same zero-context placement of sink gens as `InS.sinkGen`: once some cube
+  of a sink holds on the method-level union at `(n, pc)`, its gens go to every
+  root that reaches `(n, pc)`.
 
 Results:
 1. `fs_sound` / `pe_ptreach`: the engine model `PE` is covered, for every root
@@ -57,8 +61,13 @@ inductive PtReach (p : Program) (E : Node) : Node → Pc → Prop
 * `single`: gens of a site whose cube has at most one literal, evaluated on
   the set of `E` at `(n, pc)`.
 * `joined`: gens of a site whose cube has two or more literals. Each literal's
-  mark must be present at `(n, pc)` under some root `w m` that reaches that
-  point (the D1 join over contexts). -/
+  mark `m` must be present at `(wn m, pc)` under some root `w m` that reaches
+  that point, where `wn m` is a node of the same method as `n` (the D1 join
+  over every context of the method at the statement). The result is a
+  zero-context fact, so it goes to every root `E` reaching `(n, pc)`.
+* `sinkGen`: gens (`trackFactsReachAnalysisEnd`) of a sink with any cube that
+  holds on the same method-level union. The engine emits them in the zero
+  context, so they go to every root `E` reaching `(n, pc)`. -/
 inductive InFS (p : Program) : Node → Node → Pc → Mark → Prop
   | flow {E n : Node} {pc pc' : Pc} {m : Mark} :
       InFS p E n pc m → pc' ∈ p.succ n pc → InFS p E n pc' m
@@ -72,14 +81,22 @@ inductive InFS (p : Program) : Node → Node → Pc → Mark → Prop
       (∀ m, m ∈ c → InFS p E n pc m) → g ∈ σ.abstract.gens → InFS p E n pc g
   | joined {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
       PtReach p E n pc → σ ∈ p.sites n pc → c ∈ σ.abstract.cond → 2 ≤ c.length →
-      (w : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) n pc) →
-      (∀ m, m ∈ c → InFS p (w m) n pc m) → g ∈ σ.abstract.gens → InFS p E n pc g
+      (w wn : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) (wn m) pc) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InFS p (w m) (wn m) pc m) → g ∈ σ.abstract.gens → InFS p E n pc g
+  | sinkGen {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
+      PtReach p E n pc → σ ∈ p.sites n pc → σ.kind = .sink → c ∈ σ.abstract.cond →
+      (w wn : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) (wn m) pc) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InFS p (w m) (wn m) pc m) → g ∈ σ.abstract.gens → InFS p E n pc g
 
 /-- The cube `c` of a site at `(n, pc)` is satisfiable in the flow-sensitive
-semantics. -/
+semantics. A cube of two or more literals is evaluated on the method-level
+union at statement `pc`, as in `CubeSat` and `ECubeHolds`. -/
 def CubeSatFS (p : Program) (n : Node) (pc : Pc) (c : Cube) : Prop :=
   (c.length ≤ 1 ∧ ∃ E, PtReach p E n pc ∧ ∀ m, m ∈ c → InFS p E n pc m) ∨
-  (2 ≤ c.length ∧ ∀ m, m ∈ c → ∃ E, PtReach p E n pc ∧ InFS p E n pc m)
+  (2 ≤ c.length ∧ ∀ m, m ∈ c →
+    ∃ E n', PtReach p E n' pc ∧ p.method n' = p.method n ∧ InFS p E n' pc m)
 
 /-- Option 3* selects the site `σ` at `(n, pc)`. -/
 def ApplicableFS (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Prop :=
@@ -133,7 +150,8 @@ theorem infs_ptreach {p : Program} {E n : Node} {pc : Pc} {m : Mark} (h : InFS p
   | callIn _ hc ih => exact ih.call hc
   | ret hr _ _ _ hs _ => exact hr.succ hs
   | single hr _ _ _ _ _ _ => exact hr
-  | joined hr _ _ _ _ _ _ _ _ => exact hr
+  | joined hr _ _ _ _ _ _ _ _ _ _ => exact hr
+  | sinkGen hr _ _ _ _ _ _ _ _ _ _ => exact hr
 
 theorem reaches_snoc {p : Program} {a b c : Node} (h : Reaches p a b) (hc : c ∈ p.callees b) :
     Reaches p a c := by
@@ -180,93 +198,111 @@ theorem choose_fin {α β : Type} [DecidableEq α] (b0 : β) (P : α → β → 
       | head => exact absurd rfl hzx
       | tail _ h' => exact hg z h'
 
-/-- The combined invariant proved by induction on `PE`. -/
+/-- A context valid under `E` stays valid after `ESite.genCtx`. -/
+theorem ctxok_genCtx {p : Program} {E n : Node} {d0 : Ctx} (σ : ESite)
+    (h : CtxOkFS p E n d0) : CtxOkFS p E n (σ.genCtx d0) := by
+  unfold ESite.genCtx
+  split
+  · exact trivial
+  · exact h
+
+/-- The combined invariant proved by induction on `PE`.
+* Some root reaches the point with a valid context.
+* Every root reaching the entry of `n` reaches the point. This part is
+  context-free: it is what places zero-context sink gens in every root.
+* Every root reaching the entry of `n` with a valid context has the fact's
+  mark at the point. -/
 def Goal (p : Program) (n : Node) (d0 : Ctx) (pc : Pc) (d : Option Fact) : Prop :=
   (∃ E, PtReach p E n pc ∧ CtxOkFS p E n d0) ∧
-  (∀ E, PtReach p E n 0 → CtxOkFS p E n d0 →
-     PtReach p E n pc ∧ ∀ f, d = some f → InFS p E n pc f.mark)
+  (∀ E, PtReach p E n 0 → PtReach p E n pc) ∧
+  (∀ E, PtReach p E n 0 → CtxOkFS p E n d0 → ∀ f, d = some f → InFS p E n pc f.mark)
 
 theorem sound_aux {p : Program} {sel : Sel} {n : Node} {d0 : Ctx} {pc : Pc} {d : Option Fact}
     (h : PE p sel n d0 pc d) : Goal p n d0 pc d := by
   induction h with
   | root hr =>
-    exact ⟨⟨_, PtReach.root hr, trivial⟩, fun E hE _ => ⟨hE, fun f hf => nomatch hf⟩⟩
+    exact ⟨⟨_, PtReach.root hr, trivial⟩, fun _ h0 => h0, fun _ _ _ f hf => nomatch hf⟩
   | intra _ hs _ ih =>
-    obtain ⟨⟨E, hr, hc⟩, hall⟩ := ih
-    refine ⟨⟨E, hr.succ hs, hc⟩, fun E' h0 hc' => ?_⟩
-    obtain ⟨hr', hin⟩ := hall E' h0 hc'
-    exact ⟨hr'.succ hs, fun f hf => (hin f hf).flow hs⟩
+    obtain ⟨⟨E, hr, hc⟩, hpr, hin⟩ := ih
+    exact ⟨⟨E, hr.succ hs, hc⟩, fun E' h0 => (hpr E' h0).succ hs,
+      fun E' h0 hc' f hf => (hin E' h0 hc' f hf).flow hs⟩
   | callZero _ hc ih =>
-    obtain ⟨⟨E, hr, _⟩, _⟩ := ih
-    exact ⟨⟨E, hr.call hc, trivial⟩, fun _ h0 _ => ⟨h0, fun f hf => nomatch hf⟩⟩
+    obtain ⟨⟨E, hr, _⟩, _, _⟩ := ih
+    exact ⟨⟨E, hr.call hc, trivial⟩, fun _ h0 => h0, fun _ _ _ f hf => nomatch hf⟩
   | @callFact n c d0 pc f b _ hc _ _ ih =>
-    obtain ⟨⟨E, hr, hctx⟩, hall⟩ := ih
-    obtain ⟨_, hin⟩ := hall E (ptreach_entry hr) hctx
-    refine ⟨⟨E, hr.call hc, (hin f rfl).callIn hc⟩, fun _ h0' hc' => ⟨h0', fun f' hf' => ?_⟩⟩
+    obtain ⟨⟨E, hr, hctx⟩, _, hin⟩ := ih
+    refine ⟨⟨E, hr.call hc, (hin E (ptreach_entry hr) hctx f rfl).callIn hc⟩, fun _ h0 => h0,
+      fun _ _ hc' f' hf' => ?_⟩
     cases hf'
     exact hc'
   | @retZero n c d0 pc pc' ex g b _ hc _ hex _ hs ih1 ih2 =>
-    obtain ⟨⟨E, hr, hctx⟩, hall1⟩ := ih1
-    obtain ⟨_, hall2⟩ := ih2
-    refine ⟨⟨E, hr.succ hs, hctx⟩, fun E' h0 hc' => ?_⟩
-    obtain ⟨hr', _⟩ := hall1 E' h0 hc'
-    obtain ⟨_, hin2⟩ := hall2 E' (hr'.call hc) trivial
-    refine ⟨hr'.succ hs, fun f hf => ?_⟩
+    obtain ⟨⟨E, hr, hctx⟩, hpr1, _⟩ := ih1
+    obtain ⟨_, _, hin2⟩ := ih2
+    refine ⟨⟨E, hr.succ hs, hctx⟩, fun E' h0 => (hpr1 E' h0).succ hs, fun E' h0 _ f hf => ?_⟩
     cases hf
-    exact InFS.ret hr' hc (hin2 g rfl) hex hs
+    have hr' := hpr1 E' h0
+    exact InFS.ret hr' hc (hin2 E' (hr'.call hc) trivial g rfl) hex hs
   | @retFact n c d0 pc pc' ex f g bi b _ hc _ _ _ hex _ hs ih1 ih2 =>
-    obtain ⟨⟨E, hr, hctx⟩, hall1⟩ := ih1
-    obtain ⟨_, hall2⟩ := ih2
-    refine ⟨⟨E, hr.succ hs, hctx⟩, fun E' h0 hc' => ?_⟩
-    obtain ⟨hr', hin1⟩ := hall1 E' h0 hc'
-    have hctx2 : CtxOkFS p E' c (some ⟨bi, f.mark⟩) := (hin1 f rfl).callIn hc
-    obtain ⟨_, hin2⟩ := hall2 E' (hr'.call hc) hctx2
-    refine ⟨hr'.succ hs, fun f' hf => ?_⟩
+    obtain ⟨⟨E, hr, hctx⟩, hpr1, hin1⟩ := ih1
+    obtain ⟨_, _, hin2⟩ := ih2
+    refine ⟨⟨E, hr.succ hs, hctx⟩, fun E' h0 => (hpr1 E' h0).succ hs, fun E' h0 hc' f' hf => ?_⟩
     cases hf
-    exact InFS.ret hr' hc (hin2 g rfl) hex hs
-  | genEmpty hσ _ hcσ hpos ha _ _ ih =>
-    obtain ⟨hex, hall⟩ := ih
-    refine ⟨hex, fun E h0 hc => ?_⟩
-    obtain ⟨hr, _⟩ := hall E h0 hc
-    refine ⟨hr, fun f hf => ?_⟩
+    have hr' := hpr1 E' h0
+    have hctx2 : CtxOkFS p E' c (some ⟨bi, f.mark⟩) := (hin1 E' h0 hc' f rfl).callIn hc
+    exact InFS.ret hr' hc (hin2 E' (hr'.call hc) hctx2 g rfl) hex hs
+  | @genEmpty n d0 pc d σ c a hσ _ hcσ hpos ha _ _ ih =>
+    obtain ⟨⟨E, hr, hctx⟩, hpr, _⟩ := ih
+    refine ⟨⟨E, hr, ctxok_genCtx σ hctx⟩, hpr, fun E' h0 _ f hf => ?_⟩
     cases hf
-    exact InFS.single hr hσ (abs_mem hcσ) (by rw [hpos]; simp) (by rw [hpos]; simp) (gen_mem ha)
+    exact InFS.single (hpr E' h0) hσ (abs_mem hcσ) (by rw [hpos]; simp) (by rw [hpos]; simp)
+      (gen_mem ha)
   | @genSingle n d0 pc σ c f a hσ _ hcσ hpos ha _ _ ih =>
-    obtain ⟨hex, hall⟩ := ih
-    refine ⟨hex, fun E h0 hc => ?_⟩
-    obtain ⟨hr, hin⟩ := hall E h0 hc
-    refine ⟨hr, fun f' hf => ?_⟩
+    obtain ⟨⟨E, hr, hctx⟩, hpr, hin⟩ := ih
+    refine ⟨⟨E, hr, ctxok_genCtx σ hctx⟩, hpr, fun E' h0 hc' f' hf => ?_⟩
     cases hf
-    refine InFS.single hr hσ (abs_mem hcσ) (by rw [hpos]; simp) ?_ (gen_mem ha)
-    intro m hm
-    rw [hpos] at hm
-    simp only [List.map_cons, List.map_nil, List.mem_singleton] at hm
-    subst hm
-    exact hin f rfl
-  | @genJoined n pc σ c a hσ _ hcσ hlen ha _ w _ _ ih_fs ih0 =>
-    obtain ⟨hex, hall0⟩ := ih0
-    refine ⟨hex, fun E h0 _ => ?_⟩
-    obtain ⟨hr, _⟩ := hall0 E h0 trivial
-    refine ⟨hr, fun f' hf => ?_⟩
+    have hone : ∀ m, m ∈ c.positive.map (·.mark) → m = f.mark := by
+      intro m hm
+      rw [hpos] at hm
+      simpa using hm
+    by_cases hk : σ.kind = .sink
+    · -- Zero-context sink gen: placed in every root reaching the point, from
+      -- the witness root `E` that carries the fact.
+      have hinE := hin E (ptreach_entry hr) hctx f rfl
+      refine InFS.sinkGen (hpr E' h0) hσ hk (abs_mem hcσ) (fun _ => E) (fun _ => n)
+        (fun _ _ => hr) (fun _ _ => rfl) ?_ (gen_mem ha)
+      intro m hm
+      rw [hone m hm]
+      exact hinE
+    · have hc'' : CtxOkFS p E' n d0 := by
+        have : σ.genCtx d0 = d0 := by unfold ESite.genCtx; rw [if_neg hk]
+        rw [this] at hc'
+        exact hc'
+      refine InFS.single (hpr E' h0) hσ (abs_mem hcσ) (by rw [hpos]; simp) ?_ (gen_mem ha)
+      intro m hm
+      rw [hone m hm]
+      exact hin E' h0 hc'' f rfl
+  | @genJoined n pc σ c a hσ _ hcσ hlen ha _ wn w hwm _ _ ih_fs ih0 =>
+    obtain ⟨hex, hpr0, _⟩ := ih0
+    refine ⟨hex, hpr0, fun E h0 _ f' hf => ?_⟩
     cases hf
-    have hper : ∀ m, m ∈ c.positive.map (·.mark) →
-        ∃ E', PtReach p E' n pc ∧ InFS p E' n pc m := by
+    have hper : ∀ m, m ∈ c.positive.map (·.mark) → ∃ q : Node × Node,
+        PtReach p q.1 q.2 pc ∧ p.method q.2 = p.method n ∧ InFS p q.1 q.2 pc m := by
       intro m hm
       obtain ⟨f, hf, hfm⟩ := List.mem_map.mp hm
       subst hfm
-      obtain ⟨⟨E', hr', hctx'⟩, hall'⟩ := ih_fs f hf
-      exact ⟨E', hr', (hall' E' (ptreach_entry hr') hctx').2 f rfl⟩
-    obtain ⟨W, hW⟩ := choose_fin (0 : Node) (fun m E' => PtReach p E' n pc ∧ InFS p E' n pc m)
-      _ hper
-    exact InFS.joined hr hσ (abs_mem hcσ) (by simpa using hlen) W
-      (fun m hm => (hW m hm).1) (fun m hm => (hW m hm).2) (gen_mem ha)
+      obtain ⟨⟨E', hr', hctx'⟩, _, hin'⟩ := ih_fs f hf
+      exact ⟨(E', wn f), hr', hwm f hf, hin' E' (ptreach_entry hr') hctx' f rfl⟩
+    obtain ⟨W, hW⟩ := choose_fin ((0, 0) : Node × Node)
+      (fun m q => PtReach p q.1 q.2 pc ∧ p.method q.2 = p.method n ∧ InFS p q.1 q.2 pc m) _ hper
+    exact InFS.joined (hpr0 E h0) hσ (abs_mem hcσ) (by simpa using hlen)
+      (fun m => (W m).1) (fun m => (W m).2)
+      (fun m hm => (hW m hm).1) (fun m hm => (hW m hm).2.1) (fun m hm => (hW m hm).2.2)
+      (gen_mem ha)
   | @copy n d0 pc σ fr to m _ _ _ _ ih =>
-    obtain ⟨hex, hall⟩ := ih
-    refine ⟨hex, fun E h0 hc => ?_⟩
-    obtain ⟨hr, hin⟩ := hall E h0 hc
-    refine ⟨hr, fun f hf => ?_⟩
+    obtain ⟨hex, hpr, hin⟩ := ih
+    refine ⟨hex, hpr, fun E h0 hc f hf => ?_⟩
     cases hf
-    have h := hin ⟨fr, m⟩ rfl
+    have h := hin E h0 hc ⟨fr, m⟩ rfl
     exact h
 
 end FlowSensitiveLemmas
@@ -288,13 +324,15 @@ theorem pe_ptreach {p : Program} {sel : Sel} {n : Node} {d0 : Ctx} {pc : Pc} {d 
 has its mark in the flow-sensitive set of every root `E` that reaches the
 point and under which the context `d0` is valid (the context mark is in `n`'s
 entry set under `E`), and at least one such root exists. The context condition
-is what makes a per-root statement true for facts inside callees. -/
+is what makes a per-root statement true for facts inside callees. Sink gens
+land in the zero context, whose condition is trivial, so they are in the set of
+every root reaching the sink. -/
 theorem fs_sound {p : Program} {sel : Sel} {n : Node} {d0 : Ctx} {pc : Pc} {f : Fact}
     (h : PE p sel n d0 pc (some f)) :
     (∃ E, E ∈ p.roots ∧ PtReach p E n pc ∧ CtxOkFS p E n d0) ∧
     ∀ E, E ∈ p.roots → PtReach p E n pc → CtxOkFS p E n d0 → InFS p E n pc f.mark := by
   refine ⟨pe_ptreach h, fun E _ hr hc => ?_⟩
-  exact ((sound_aux h).2 E (ptreach_entry hr) hc).2 f rfl
+  exact (sound_aux h).2.2 E (ptreach_entry hr) hc f rfl
 
 /-- Two roots `0` and `1` both call node `2` at `pc 1`. Root `0` has an
 unconditional source of mark `1` at `pc 0` and passes it to the callee; root
@@ -310,6 +348,8 @@ def exCtx : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ b => some b
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 namespace FlowSensitiveLemmas
 
@@ -330,7 +370,8 @@ theorem exCtx_infs {E n : Node} {pc : Pc} {m : Mark} (h : InFS exCtx E n pc m) :
   | flow _ _ ih => exact ih
   | callIn _ _ ih => exact ih
   | ret _ _ _ _ _ ih => exact ih
-  | single hr hσ _ _ _ _ _ | joined hr hσ _ _ _ _ _ _ _ =>
+  | single hr hσ _ _ _ _ _ | joined hr hσ _ _ _ _ _ _ _ _ _
+  | sinkGen hr hσ _ _ _ _ _ _ _ _ _ =>
     simp only [exCtx] at hσ
     split at hσ
     · next h => exact exCtx_ptreach hr h.1
@@ -380,14 +421,16 @@ theorem fs_fires_applicable {p : Program} {sel : Sel} {n : Node} {pc : Pc} {σ :
     intro m hm
     obtain ⟨f, hf, hfm⟩ := List.mem_map.mp hm
     subst hfm
-    obtain ⟨d0, hpe⟩ := hall f hf
+    obtain ⟨n', d0, hmeth, hpe⟩ := hall f hf
     obtain ⟨⟨E, _, hr, hctx⟩, hsound⟩ := fs_sound hpe
-    exact ⟨E, hr, hsound E (ptreach_root hr) hr hctx⟩
+    exact ⟨E, n', hr, hmeth, hsound E (ptreach_root hr) hr hctx⟩
 
 /-! ## 3. Refinement of the flow-insensitive scan -/
 
 /-- Every flow-sensitive mark is a flow-insensitive mark of the same root, so
-option 3* computes subsets of the default mode's sets. -/
+option 3* computes subsets of the default mode's sets. No hypothesis on
+`method` is needed: the method-level witnesses of `InFS.joined` and
+`InFS.sinkGen` are witnesses of `InS.joined` and `InS.sinkGen`. -/
 theorem fs_refines_fi {p : Program} (hw : FSWF p) {E n : Node} {pc : Pc} {m : Mark}
     (h : InFS p E n pc m) : InS p E m := by
   induction h with
@@ -397,10 +440,14 @@ theorem fs_refines_fi {p : Program} (hw : FSWF p) {E n : Node} {pc : Pc} {m : Ma
   | @single E n pc σ c g hr hσ hc hlen _ hg ih =>
     exact InS.single (ptreach_root hr) (ptreach_reaches hw hr)
       (nodeSites_mem (hw.sites_pc n pc σ hσ) hσ) hc hlen ih hg
-  | @joined E n pc σ c g hr hσ hc hlen w hw' _ hg ih =>
+  | @joined E n pc σ c g hr hσ hc hlen w wn hw' hm' _ hg ih =>
     exact InS.joined (ptreach_root hr) (ptreach_reaches hw hr)
-      (nodeSites_mem (hw.sites_pc n pc σ hσ) hσ) hc hlen w
-      (fun m hm => ptreach_root (hw' m hm)) (fun m hm => ptreach_reaches hw (hw' m hm)) ih hg
+      (nodeSites_mem (hw.sites_pc n pc σ hσ) hσ) hc hlen w wn
+      (fun m hm => ptreach_root (hw' m hm)) (fun m hm => ptreach_reaches hw (hw' m hm)) hm' ih hg
+  | @sinkGen E n pc σ c g hr hσ hk hc w wn hw' hm' _ hg ih =>
+    exact InS.sinkGen (ptreach_root hr) (ptreach_reaches hw hr)
+      (nodeSites_mem (hw.sites_pc n pc σ hσ) hσ) hk hc w wn
+      (fun m hm => ptreach_root (hw' m hm)) (fun m hm => ptreach_reaches hw (hw' m hm)) hm' ih hg
 
 /-- Option 3* never selects a site that the default flow-insensitive mode does
 not select. -/
@@ -412,8 +459,8 @@ theorem applicableFS_implies_applicable {p : Program} (hw : FSWF p) {n : Node} {
   · exact Or.inl ⟨hlen, E, ptreach_root hr, ptreach_reaches hw hr,
       fun m hm => fs_refines_fi hw (hall m hm)⟩
   · refine Or.inr ⟨hlen, fun m hm => ?_⟩
-    obtain ⟨E, hr, hin⟩ := hall m hm
-    exact ⟨E, ptreach_root hr, ptreach_reaches hw hr, fs_refines_fi hw hin⟩
+    obtain ⟨E, n', hr, hmeth, hin⟩ := hall m hm
+    exact ⟨E, n', ptreach_root hr, ptreach_reaches hw hr, hmeth, fs_refines_fi hw hin⟩
 
 /-! ## 4. Strictness: sink before source -/
 
@@ -431,6 +478,8 @@ def exOrder : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ b => some b
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 namespace FlowSensitiveLemmas
 
@@ -463,7 +512,8 @@ theorem exOrder_inv {E n : Node} {pc : Pc} {m : Mark} (h : InFS exOrder E n pc m
     · exact absurd hs List.not_mem_nil
   | callIn _ hc _ => exact absurd hc List.not_mem_nil
   | ret _ hc _ _ _ _ => exact absurd hc List.not_mem_nil
-  | single _ hσ _ _ _ hg _ | joined _ hσ _ _ _ _ _ hg _ =>
+  | single _ hσ _ _ _ hg _ | joined _ hσ _ _ _ _ _ _ _ hg _
+  | sinkGen _ hσ _ _ _ _ _ _ _ hg _ =>
     simp only [exOrder] at hσ
     split at hσ
     · simp only [List.mem_singleton] at hσ; subst hσ; rw [sink_gens] at hg
@@ -514,13 +564,20 @@ inductive InLin (p : Program) : Node → Node → Pc → Mark → Prop
       (∀ m, m ∈ c → InLin p E n pc m) → g ∈ σ.abstract.gens → InLin p E n pc g
   | joined {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
       PtReach p E n pc → σ ∈ p.sites n pc → c ∈ σ.abstract.cond → 2 ≤ c.length →
-      (w : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) n pc) →
-      (∀ m, m ∈ c → InLin p (w m) n pc m) → g ∈ σ.abstract.gens → InLin p E n pc g
+      (w wn : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) (wn m) pc) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InLin p (w m) (wn m) pc m) → g ∈ σ.abstract.gens → InLin p E n pc g
+  | sinkGen {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
+      PtReach p E n pc → σ ∈ p.sites n pc → σ.kind = .sink → c ∈ σ.abstract.cond →
+      (w wn : Mark → Node) → (∀ m, m ∈ c → PtReach p (w m) (wn m) pc) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InLin p (w m) (wn m) pc m) → g ∈ σ.abstract.gens → InLin p E n pc g
 
 /-- Cube satisfiability in the linear reading. -/
 def CubeSatLin (p : Program) (n : Node) (pc : Pc) (c : Cube) : Prop :=
   (c.length ≤ 1 ∧ ∃ E, PtReach p E n pc ∧ ∀ m, m ∈ c → InLin p E n pc m) ∨
-  (2 ≤ c.length ∧ ∀ m, m ∈ c → ∃ E, PtReach p E n pc ∧ InLin p E n pc m)
+  (2 ≤ c.length ∧ ∀ m, m ∈ c →
+    ∃ E n', PtReach p E n' pc ∧ p.method n' = p.method n ∧ InLin p E n' pc m)
 
 /-- Site selection in the linear reading. -/
 def ApplicableLin (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Prop :=
@@ -542,6 +599,8 @@ def exLoop : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ b => some b
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 namespace FlowSensitiveLemmas
 
@@ -561,7 +620,8 @@ theorem exLoop_lin_inv {E n : Node} {pc : Pc} {m : Mark} (h : InLin exLoop E n p
         · exact absurd hs List.not_mem_nil
   | callIn _ hc _ => exact absurd hc List.not_mem_nil
   | ret _ hc _ _ _ _ _ => exact absurd hc List.not_mem_nil
-  | single _ hσ _ _ _ hg _ | joined _ hσ _ _ _ _ _ hg _ =>
+  | single _ hσ _ _ _ hg _ | joined _ hσ _ _ _ _ _ _ _ hg _
+  | sinkGen _ hσ _ _ _ _ _ _ _ hg _ =>
     simp only [exLoop] at hσ
     split at hσ
     · simp only [List.mem_singleton] at hσ; subst hσ; rw [sink_gens] at hg

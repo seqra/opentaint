@@ -130,8 +130,16 @@ residual rules recorded during the prescan.
   engine.
 * `mapIn`: caller base at a call → callee base (`none`: not passed).
 * `mapOut`: callee exit base → caller base (`none`: dropped).
-* `kills`: cleaner and implicit kills. They are per fact, and the selection
-  never changes them (assumption E4). -/
+* `kills`: cleaner and implicit kills. The model treats them as a fixed
+  predicate on a fact. This is justified by assumption E4: every positive atom
+  of a cleaner residual is `Needed` (see `cleanerAtoms`), so the restricted run
+  derives the same needed-mark facts that a kill depends on.
+* `method n`: the method of node `n`. All contexts of one method share its
+  statement numbering. The engine joins multi-fact conditions across every
+  context of the method at a statement (its assumptions are keyed by
+  `(rule, statement)`).
+* `cleanerAtoms n pc`: the positive mark atoms of the cleaner residuals
+  recorded at `(n, pc)`. -/
 structure Program where
   nodes : List Node
   roots : List Node
@@ -143,6 +151,8 @@ structure Program where
   mapIn : Node → Pc → Base → Option Base
   mapOut : Node → Pc → Base → Option Base
   kills : Node → Pc → Fact → Bool
+  method : Node → Node
+  cleanerAtoms : Node → Pc → List Mark
 
 def Program.callees (p : Program) (n : Node) : List Node :=
   (p.pcs n).flatMap (p.calls n)
@@ -172,12 +182,16 @@ def Program.nodeSites (p : Program) (n : Node) : List (Pc × ESite) :=
   (p.pcs n).flatMap fun pc => (p.sites n pc).map fun s => (pc, s)
 
 /-- The per-root mark sets `S_E` of the flow-insensitive scan, with the D1
-correction. A cube of one literal (or none) is evaluated on `S_E`, as the
-engine evaluates it on a single fact within one context. A cube of two or
-more literals is evaluated on `U(n) = ⋃ {S_E' | E' root, E' reaches n}`,
-because the engine joins facts across contexts at one statement
-(`TaintSinkTracker` assumptions are keyed by `(rule, statement)`).
-`InS p E m` means `m ∈ S_E`. -/
+correction. `InS p E m` means `m ∈ S_E`.
+* A cube of at most one literal is evaluated on `S_E`, as the engine evaluates
+  it on a single fact within one context.
+* A cube of two or more literals is evaluated on the method-level union
+  `U(method n) = ⋃ {S_E' | E' root, E' reaches some n' with method n' = method n}`.
+  The engine joins facts across contexts at one statement: `TaintSinkTracker`
+  assumptions are keyed by `(rule, statement)`. The joined result is a
+  zero-context fact, so its gens go to every root that reaches `n`.
+* A sink's `trackFactsReachAnalysisEnd` facts are also emitted in the zero
+  context (`CallToReturnZFact`), so `sinkGen` places them the same way. -/
 inductive InS (p : Program) : Node → Mark → Prop
   | single {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
       E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n →
@@ -187,8 +201,17 @@ inductive InS (p : Program) : Node → Mark → Prop
   | joined {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
       E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n →
       c ∈ σ.abstract.cond → 2 ≤ c.length →
-      (w : Mark → Node) →
-      (∀ m, m ∈ c → w m ∈ p.roots) → (∀ m, m ∈ c → Reaches p (w m) n) →
+      (w wn : Mark → Node) →
+      (∀ m, m ∈ c → w m ∈ p.roots) → (∀ m, m ∈ c → Reaches p (w m) (wn m)) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InS p (w m) m) →
+      g ∈ σ.abstract.gens → InS p E g
+  | sinkGen {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
+      E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n → σ.kind = .sink →
+      c ∈ σ.abstract.cond →
+      (w wn : Mark → Node) →
+      (∀ m, m ∈ c → w m ∈ p.roots) → (∀ m, m ∈ c → Reaches p (w m) (wn m)) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
       (∀ m, m ∈ c → InS p (w m) m) →
       g ∈ σ.abstract.gens → InS p E g
 
@@ -196,16 +219,20 @@ inductive InS (p : Program) : Node → Mark → Prop
 semantics. -/
 def CubeSat (p : Program) (n : Node) (c : Cube) : Prop :=
   (c.length ≤ 1 ∧ ∃ E, E ∈ p.roots ∧ Reaches p E n ∧ ∀ m, m ∈ c → InS p E m) ∨
-  (2 ≤ c.length ∧ ∀ m, m ∈ c → ∃ E, E ∈ p.roots ∧ Reaches p E n ∧ InS p E m)
+  (2 ≤ c.length ∧ ∀ m, m ∈ c →
+    ∃ E n', E ∈ p.roots ∧ Reaches p E n' ∧ p.method n' = p.method n ∧ InS p E m)
 
 /-- The site `σ` at `(n, pc)` is applicable: the shallow scan must select it. -/
 def Applicable (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Prop :=
   σ ∈ p.sites n pc ∧ ∃ c, c ∈ σ.abstract.cond ∧ CubeSat p n c
 
-/-- Marks needed by the full scan (the backward relevance pass). They start
-from the condition atoms and the `trackFactsReachAnalysisEnd` marks of
-applicable sinks, and close backward over applicable sites that generate a
-needed mark. -/
+/-- Marks needed by the full scan (the backward relevance pass).
+* Seeds: the condition atoms and `trackFactsReachAnalysisEnd` marks of
+  applicable sinks.
+* Closure: backward over applicable sites that generate a needed mark.
+* Also included, so that kills and copies of needed facts are unaffected by
+  pruning (E4, E8): every recorded cleaner atom, and the atoms of applicable
+  pass-throughs. -/
 inductive Needed (p : Program) : Mark → Prop
   | sinkAtom {n : Node} {pc : Pc} {σ : ESite} {m : Mark} :
       Applicable p n pc σ → σ.kind = .sink → m ∈ σ.abstract.cond.atoms → Needed p m
@@ -214,6 +241,11 @@ inductive Needed (p : Program) : Mark → Prop
   | trans {n : Node} {pc : Pc} {σ : ESite} {g m : Mark} :
       Applicable p n pc σ → g ∈ σ.abstract.gens → Needed p g →
       m ∈ σ.abstract.cond.atoms → Needed p m
+  | cleanerAtom {n : Node} {pc : Pc} {m : Mark} :
+      m ∈ p.cleanerAtoms n pc → Needed p m
+  | passAtom {n : Node} {pc : Pc} {σ : ESite} {m : Mark} :
+      Applicable p n pc σ → σ.kind = .passThrough → m ∈ σ.abstract.cond.atoms →
+      Needed p m
 
 /-! ## 5. The engine model (reference semantics)
 
@@ -237,15 +269,22 @@ def killsOpt (p : Program) (n : Node) (pc : Pc) : Option Fact → Bool
 
 abbrev Ctx := Option Fact
 
+/-- The context a generated fact lands in. Sink `trackFactsReachAnalysisEnd`
+facts are emitted as zero-context facts, whatever context the sink fired in. -/
+def ESite.genCtx (σ : ESite) (d0 : Ctx) : Ctx :=
+  if σ.kind = .sink then none else d0
+
 /-- The engine model.
 * Generated facts appear at the rule's own statement and flow on through the
   CFG.
 * A cube with no positive literal fires in every context that reaches the
   statement.
-* A single-literal cube fires on one fact and keeps that fact's context.
-* A joined cube may use facts from different contexts. Its facts are placed in
-  the zero context, which is delivered to every caller; this over-approximates
-  the engine's non-distributive edges. -/
+* A single-literal cube fires on one fact and keeps that fact's context, except
+  that sink gens go to the zero context (`ESite.genCtx`).
+* A joined cube may use facts from different contexts of any node of the same
+  method at the same statement. Its facts are placed in the zero context,
+  which is delivered to every caller; this over-approximates the engine's
+  non-distributive edges. -/
 inductive PE (p : Program) (sel : Sel) : Node → Ctx → Pc → Option Fact → Prop
   | root {r : Node} : r ∈ p.roots → PE p sel r none 0 none
   | intra {n : Node} {d0 : Ctx} {pc pc' : Pc} {d : Option Fact} :
@@ -271,15 +310,17 @@ inductive PE (p : Program) (sel : Sel) : Node → Ctx → Pc → Option Fact →
   | genEmpty {n : Node} {d0 : Ctx} {pc : Pc} {d : Option Fact} {σ : ESite} {c : ECube} {a : Fact} :
       σ ∈ p.sites n pc → sel.site n pc σ = true → c ∈ σ.cond → c.positive = [] →
       a ∈ σ.assigns → sel.act n pc σ a = true →
-      PE p sel n d0 pc d → PE p sel n d0 pc (some a)
+      PE p sel n d0 pc d → PE p sel n (σ.genCtx d0) pc (some a)
   | genSingle {n : Node} {d0 : Ctx} {pc : Pc} {σ : ESite} {c : ECube} {f a : Fact} :
       σ ∈ p.sites n pc → sel.site n pc σ = true → c ∈ σ.cond → c.positive = [f] →
       a ∈ σ.assigns → sel.act n pc σ a = true →
-      PE p sel n d0 pc (some f) → PE p sel n d0 pc (some a)
+      PE p sel n d0 pc (some f) → PE p sel n (σ.genCtx d0) pc (some a)
   | genJoined {n : Node} {pc : Pc} {σ : ESite} {c : ECube} {a : Fact} :
       σ ∈ p.sites n pc → sel.site n pc σ = true → c ∈ σ.cond → 2 ≤ c.positive.length →
       a ∈ σ.assigns → sel.act n pc σ a = true →
-      (w : Fact → Ctx) → (∀ f, f ∈ c.positive → PE p sel n (w f) pc (some f)) →
+      (wn : Fact → Node) → (w : Fact → Ctx) →
+      (∀ f, f ∈ c.positive → p.method (wn f) = p.method n) →
+      (∀ f, f ∈ c.positive → PE p sel (wn f) (w f) pc (some f)) →
       PE p sel n none pc none → PE p sel n none pc (some a)
   | copy {n : Node} {d0 : Ctx} {pc : Pc} {σ : ESite} {fr to : Base} {m : Mark} :
       σ ∈ p.sites n pc → σ.kind = .passThrough → (fr, to) ∈ σ.copies →
@@ -289,7 +330,8 @@ inductive PE (p : Program) (sel : Sel) : Node → Ctx → Pc → Option Fact →
 def ECubeHolds (p : Program) (sel : Sel) (n : Node) (pc : Pc) (c : ECube) : Prop :=
   (c.positive = [] ∧ ∃ (d0 : Ctx) (d : Option Fact), PE p sel n d0 pc d) ∨
   (∃ f, c.positive = [f] ∧ ∃ d0 : Ctx, PE p sel n d0 pc (some f)) ∨
-  (2 ≤ c.positive.length ∧ ∀ f, f ∈ c.positive → ∃ d0 : Ctx, PE p sel n d0 pc (some f))
+  (2 ≤ c.positive.length ∧ ∀ f, f ∈ c.positive →
+    ∃ (n' : Node) (d0 : Ctx), p.method n' = p.method n ∧ PE p sel n' d0 pc (some f))
 
 /-- A sink finding: the sink `σ` at `(n, pc)` fires. -/
 def Fires (p : Program) (sel : Sel) (n : Node) (pc : Pc) (σ : ESite) : Prop :=

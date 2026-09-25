@@ -36,13 +36,22 @@ node's residual sites at a statement are the union of the per-context residual
 sites at that statement. Two contexts that fold a rule to different residuals
 contribute two different `ESite`s, and both are kept. Because the site is kept
 exactly, there is no `∃ σ'` to eliminate. The `joined` case of `InS` therefore
-needs no choice. Its witness function for `q` is just `h ∘ w`, and
+needs no choice. Its witness functions for `q` are just `h ∘ w` and `h ∘ wn`, and
 `Applicable q` is stated about the same `σ`.
 
 Call edges and statements are required pointwise (`calls`, `pcs`) rather than
 on `callees`/`nodeSites`. The pointwise forms are what the merge construction
 gives directly, and the `callees`/`nodeSites` forms follow from them
 (`CoarseningLemmas.hom_callees`, `CoarseningLemmas.hom_nodeSites`).
+
+Two fields are about the v2 model.
+* `method`: two fine nodes of one method map to coarse nodes of one method.
+  The joined cases of `InS` and `CubeSat` range over every node of the
+  method, so this is what lets the witness nodes `wn` be mapped through `h`.
+  Preserving equality is weaker than asking for a function on method ids, and
+  it is exactly what the proofs use.
+* `cleanerAtoms`: the recorded cleaner atoms of `(n, pc)` are recorded at the
+  image `(h n, hp pc)`. `Needed.cleanerAtom` seeds the needed set with them.
 -/
 
 namespace MarkScan
@@ -50,14 +59,17 @@ namespace MarkScan
 /-! ## 1. Homomorphisms of programs -/
 
 /-- `q` is a coarsening of `p` along `h : Node → Node` and `hp : Pc → Pc`.
-Roots, statements, call edges and residual sites of `p` all have images in
-`q`. The engine-only fields (`succ`, `exits`, `mapIn`, `mapOut`, `kills`) are
+Roots, statements, call edges, residual sites and cleaner atoms of `p` all
+have images in `q`, and nodes of one method map to nodes of one method. The
+engine-only fields (`succ`, `exits`, `mapIn`, `mapOut`, `kills`) are
 unconstrained, because the mark-set semantics never reads them. -/
 structure Hom (p q : Program) (h : Node → Node) (hp : Pc → Pc) : Prop where
   roots : ∀ E, E ∈ p.roots → h E ∈ q.roots
   pcs : ∀ n pc, pc ∈ p.pcs n → hp pc ∈ q.pcs (h n)
   calls : ∀ n pc c, c ∈ p.calls n pc → h c ∈ q.calls (h n) (hp pc)
   sites : ∀ n pc σ, σ ∈ p.sites n pc → σ ∈ q.sites (h n) (hp pc)
+  method : ∀ n n', p.method n = p.method n' → q.method (h n) = q.method (h n')
+  cleanerAtoms : ∀ n pc m, m ∈ p.cleanerAtoms n pc → m ∈ q.cleanerAtoms (h n) (hp pc)
 
 namespace CoarseningLemmas
 
@@ -109,8 +121,11 @@ open CoarseningLemmas
 coarse node, and `fib m` lists the fine nodes merged into `m` (the contexts of
 method `m`). Statements, call edges (mapped through `h`) and residual sites
 are unioned over the fiber, and statements are not renumbered (`hp = id`).
-The engine-only fields are filled conservatively (union, first mapping, kill
-only if every context kills), but the mark-set semantics does not read them. -/
+The merged node keeps the method id of its fiber (read off the first member;
+`merge_hom` assumes the fiber is one method), and its cleaner atoms are the
+union over the fiber. The engine-only fields are filled conservatively (union,
+first mapping, kill only if every context kills), but the mark-set semantics
+does not read them. -/
 def Program.merge (p : Program) (h : Node → Node) (fib : Node → List Node) : Program where
   nodes := (p.nodes.map h).eraseDups
   roots := (p.roots.map h).eraseDups
@@ -122,12 +137,36 @@ def Program.merge (p : Program) (h : Node → Node) (fib : Node → List Node) :
   mapIn m pc b := (fib m).findSome? fun n => p.mapIn n pc b
   mapOut m pc b := (fib m).findSome? fun n => p.mapOut n pc b
   kills m pc f := (fib m).all fun n => p.kills n pc f
+  method m := match fib m with
+    | [] => m
+    | n :: _ => p.method n
+  cleanerAtoms m pc := (fib m).flatMap (p.cleanerAtoms · pc)
+
+namespace CoarseningLemmas
+
+/-- In a method-homogeneous fiber, the merged node carries the method of any
+of its members. -/
+theorem merge_method (p : Program) (h : Node → Node) (fib : Node → List Node)
+    (hfibM : ∀ m n n', n ∈ fib m → n' ∈ fib m → p.method n = p.method n')
+    {m n : Node} (hn : n ∈ fib m) : (p.merge h fib).method m = p.method n := by
+  simp only [Program.merge]
+  cases hf : fib m with
+  | nil => rw [hf] at hn; cases hn
+  | cons n0 rest =>
+    exact hfibM m n0 n (by rw [hf]; exact List.mem_cons_self) hn
+
+end CoarseningLemmas
 
 /-- The executable context-merging construction satisfies `Hom`, provided that
-every node lies in the fiber of its own image. So the `Hom` hypotheses are
-exactly what "merge contexts, union edges and residuals" provides. -/
+every node lies in the fiber of its own image and every fiber consists of
+nodes of one method (it merges contexts of a method, never two methods). So
+the `Hom` hypotheses are exactly what "merge contexts, union edges, residuals
+and cleaner atoms" provides. In v2 the fiber condition `hfibM` is new: it is
+what makes the merged node's method well defined. -/
 theorem merge_hom (p : Program) (h : Node → Node) (fib : Node → List Node)
-    (hfib : ∀ n, n ∈ fib (h n)) : Hom p (p.merge h fib) h id where
+    (hfib : ∀ n, n ∈ fib (h n))
+    (hfibM : ∀ m n n', n ∈ fib m → n' ∈ fib m → p.method n = p.method n') :
+    Hom p (p.merge h fib) h id where
   roots E hE := by
     simp only [Program.merge]
     rw [List.mem_eraseDups]
@@ -136,6 +175,10 @@ theorem merge_hom (p : Program) (h : Node → Node) (fib : Node → List Node)
   calls n pc c hc :=
     List.mem_flatMap.mpr ⟨n, hfib n, List.mem_map_of_mem hc⟩
   sites n pc σ hσ := List.mem_flatMap.mpr ⟨n, hfib n, hσ⟩
+  method n n' he := by
+    rw [merge_method p h fib hfibM (hfib n), merge_method p h fib hfibM (hfib n')]
+    exact he
+  cleanerAtoms n pc m hm := List.mem_flatMap.mpr ⟨n, hfib n, hm⟩
 
 /-! ## 3. Transfer along a homomorphism -/
 
@@ -148,17 +191,22 @@ theorem reaches_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
   | step hbc _ ih => exact .step (hom_callees H hbc) ih
 
 /-- Coarsening only grows mark sets. A mark in `S_E` of the fine graph is in
-`S_{h E}` of the coarse graph. In the joined case the coarse witness roots
-are `h ∘ w`, so no choice is needed. -/
+`S_{h E}` of the coarse graph. In the joined and sink-gen cases the coarse
+witness roots are `h ∘ w` and the witness nodes `h ∘ wn` (they stay in the
+method of `h n` by `Hom.method`), so no choice is needed. -/
 theorem inS_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
     (H : Hom p q h hp) {E : Node} {m : Mark} (hin : InS p E m) : InS q (h E) m := by
   induction hin with
   | single hE hR hs hc hl _ hg ih =>
     exact .single (H.roots _ hE) (reaches_hom H hR) (hom_nodeSites H hs) hc hl ih hg
-  | joined hE hR hs hc hl w hw hwR _ hg ih =>
+  | joined hE hR hs hc hl w wn hw hwR hwm _ hg ih =>
     exact .joined (H.roots _ hE) (reaches_hom H hR) (hom_nodeSites H hs) hc hl
-      (fun m => h (w m)) (fun m hm => H.roots _ (hw m hm))
-      (fun m hm => reaches_hom H (hwR m hm)) ih hg
+      (fun m => h (w m)) (fun m => h (wn m)) (fun m hm => H.roots _ (hw m hm))
+      (fun m hm => reaches_hom H (hwR m hm)) (fun m hm => H.method _ _ (hwm m hm)) ih hg
+  | sinkGen hE hR hs hk hc w wn hw hwR hwm _ hg ih =>
+    exact .sinkGen (H.roots _ hE) (reaches_hom H hR) (hom_nodeSites H hs) hk hc
+      (fun m => h (w m)) (fun m => h (wn m)) (fun m hm => H.roots _ (hw m hm))
+      (fun m hm => reaches_hom H (hwR m hm)) (fun m hm => H.method _ _ (hwm m hm)) ih hg
 
 /-- A cube satisfiable at a fine node is satisfiable at its coarse image. -/
 theorem cubeSat_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
@@ -166,8 +214,8 @@ theorem cubeSat_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
   rcases hc with ⟨hl, E, hE, hR, hin⟩ | ⟨hl, hall⟩
   · exact .inl ⟨hl, h E, H.roots _ hE, reaches_hom H hR, fun m hm => inS_hom H (hin m hm)⟩
   · refine .inr ⟨hl, fun m hm => ?_⟩
-    obtain ⟨E, hE, hR, hin⟩ := hall m hm
-    exact ⟨h E, H.roots _ hE, reaches_hom H hR, inS_hom H hin⟩
+    obtain ⟨E, n', hE, hR, hmeth, hin⟩ := hall m hm
+    exact ⟨h E, h n', H.roots _ hE, reaches_hom H hR, H.method _ _ hmeth, inS_hom H hin⟩
 
 /-- A site applicable at a fine `(n, pc)` is applicable at its coarse image
 `(h n, hp pc)`. Selecting what the coarse scan finds applicable therefore
@@ -179,13 +227,17 @@ theorem applicable_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
   exact ⟨H.sites n pc σ hσ, c, hc, cubeSat_hom H hsat⟩
 
 /-- Coarsening only grows the set of needed marks, so the coarse `AssignMark`
-filter never drops an action that the fine scan would keep. -/
+filter never drops an action that the fine scan would keep. The v2 seeds
+transfer too: cleaner atoms by `Hom.cleanerAtoms`, pass-through atoms by
+`applicable_hom`. -/
 theorem needed_hom {p q : Program} {h : Node → Node} {hp : Pc → Pc}
     (H : Hom p q h hp) {m : Mark} (hn : Needed p m) : Needed q m := by
   induction hn with
   | sinkAtom ha hk hm => exact .sinkAtom (applicable_hom H ha) hk hm
   | sinkGen ha hk hm => exact .sinkGen (applicable_hom H ha) hk hm
   | trans ha hg _ hm ih => exact .trans (applicable_hom H ha) hg ih hm
+  | cleanerAtom hm => exact .cleanerAtom (H.cleanerAtoms _ _ _ hm)
+  | passAtom ha hk hm => exact .passAtom (applicable_hom H ha) hk hm
 
 /-! ## 4. Statement-keyed selection -/
 
@@ -262,6 +314,8 @@ def fine : Program where
   mapIn _ _ _ := none
   mapOut _ _ _ := none
   kills _ _ _ := false
+  method n := if n = 4 then 3 else n
+  cleanerAtoms _ _ := []
 
 /-- Contexts `3` and `4` of method `M` both map to coarse node `3`. -/
 def hM (n : Node) : Node := if n = 4 then 3 else n
@@ -279,7 +333,17 @@ theorem hM_fib (n : Node) : n ∈ fibM (hM n) := by
 
 def coarse : Program := fine.merge hM fibM
 
-theorem coarse_hom : Hom fine coarse hM id := merge_hom fine hM fibM hM_fib
+theorem fibM_method (m n n' : Node) (hn : n ∈ fibM m) (hn' : n' ∈ fibM m) :
+    fine.method n = fine.method n' := by
+  unfold fibM at hn hn'
+  by_cases h3 : m = 3
+  · rw [if_pos h3] at hn hn'
+    simp only [List.mem_cons, List.not_mem_nil, or_false] at hn hn'
+    rcases hn with rfl | rfl <;> rcases hn' with rfl | rfl <;> decide
+  · rw [if_neg h3] at hn hn'
+    rw [List.mem_singleton.1 hn, List.mem_singleton.1 hn']
+
+theorem coarse_hom : Hom fine coarse hM id := merge_hom fine hM fibM hM_fib fibM_method
 
 theorem fine_callees (x : Node) :
     fine.callees x = if x = 1 then [3] else if x = 2 then [4] else if x = 3 then [5] else [] := by
@@ -318,7 +382,8 @@ theorem fine_not_inS_1_7 : ¬ InS fine 1 7 := by
   intro hin
   cases hin with
   | single _ hR hs _ _ _ hg => exact fine_gens_from_1 (fine_reach_from_1 hR) hs hg
-  | joined _ hR hs _ _ _ _ _ _ hg => exact fine_gens_from_1 (fine_reach_from_1 hR) hs hg
+  | joined _ hR hs _ _ _ _ _ _ _ _ hg => exact fine_gens_from_1 (fine_reach_from_1 hR) hs hg
+  | sinkGen _ hR hs _ _ _ _ _ _ _ _ hg => exact fine_gens_from_1 (fine_reach_from_1 hR) hs hg
 
 /-- In the per-context graph the sink at node `5` is not applicable: the only
 root that reaches it (`1`) never carries mark `7`. -/

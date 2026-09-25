@@ -37,8 +37,8 @@ theorem pe_mono {p : Program} {sel sel' : Sel}
       exact .genEmpty hσ (hs _ _ _ hsel) hc hpos ha' (ha _ _ _ _ hact) ih
   | genSingle hσ hsel hc hpos ha' hact _ ih =>
       exact .genSingle hσ (hs _ _ _ hsel) hc hpos ha' (ha _ _ _ _ hact) ih
-  | genJoined hσ hsel hc hlen ha' hact w _ _ ih ih0 =>
-      exact .genJoined hσ (hs _ _ _ hsel) hc hlen ha' (ha _ _ _ _ hact) w ih ih0
+  | genJoined hσ hsel hc hlen ha' hact wn w hm _ _ ih ih0 =>
+      exact .genJoined hσ (hs _ _ _ hsel) hc hlen ha' (ha _ _ _ _ hact) wn w hm ih ih0
   | copy hσ hk hcp _ ih => exact .copy hσ hk hcp ih
 
 namespace SelectionLemmas
@@ -51,7 +51,8 @@ theorem ecube_mono {p : Program} {sel sel' : Sel}
   rintro (⟨h0, d0, d, h⟩ | ⟨f, h1, d0, h⟩ | ⟨h2, h⟩)
   · exact .inl ⟨h0, d0, d, pe_mono hs ha h⟩
   · exact .inr (.inl ⟨f, h1, d0, pe_mono hs ha h⟩)
-  · exact .inr (.inr ⟨h2, fun f hf => (h f hf).elim fun d0 h => ⟨d0, pe_mono hs ha h⟩⟩)
+  · exact .inr (.inr ⟨h2, fun f hf => (h f hf).elim fun n' ⟨d0, hm, h⟩ =>
+      ⟨n', d0, hm, pe_mono hs ha h⟩⟩)
 
 end SelectionLemmas
 
@@ -80,7 +81,7 @@ private theorem pe_zero_ctx {p : Program} {sel : Sel} {n : Node} {d0 : Ctx} {pc 
   | retFact _ _ _ _ _ _ _ _ _ _ => intro e; cases e
   | genEmpty _ _ _ _ _ _ _ _ => intro e; cases e
   | genSingle _ _ _ _ _ _ _ _ => intro e; cases e
-  | genJoined _ _ _ _ _ _ _ _ _ _ _ => intro e; cases e
+  | genJoined => intro e; cases e
   | copy _ _ _ _ _ => intro e; cases e
 
 /-- Zero-fact reachability does not depend on the selection: every statement
@@ -100,7 +101,7 @@ theorem pe_zero_reach {p : Program} {sel sel' : Sel}
   | retFact _ _ _ _ _ _ _ hs ih1 _ => exact .intra ih1 hs rfl
   | genEmpty _ _ _ _ _ _ _ ih => exact ih
   | genSingle _ _ _ _ _ _ _ ih => exact ih
-  | genJoined _ _ _ _ _ _ _ _ _ _ ih0 => exact ih0
+  | genJoined _ _ _ _ _ _ _ _ _ _ _ _ ih0 => exact ih0
   | copy _ _ _ _ ih => exact ih
 
 /-! ## 3. Helpers on abstract sites -/
@@ -145,6 +146,14 @@ theorem site_ofScan {p : Program} {app : Node → Pc → ESite → Bool} {need :
     (Sel.ofScan app need).site n pc σ = true := by
   simp [Sel.ofScan, hAppB _ _ _ (hApp _ _ _ _ hσ hc hh)]
 
+theorem genCtx_none (σ : ESite) : σ.genCtx none = none := by
+  unfold ESite.genCtx; split <;> rfl
+
+theorem genCtx_cases (σ : ESite) (d0 : Ctx) : σ.genCtx d0 = none ∨ σ.genCtx d0 = d0 := by
+  unfold ESite.genCtx; split
+  · exact .inl rfl
+  · exact .inr rfl
+
 theorem ofScan_le_all {app : Node → Pc → ESite → Bool} {need : Mark → Bool} :
     (∀ n pc σ, (Sel.ofScan app need).site n pc σ = true → Sel.all.site n pc σ = true) ∧
     (∀ n pc σ a, (Sel.ofScan app need).act n pc σ a = true → Sel.all.act n pc σ a = true) :=
@@ -184,10 +193,11 @@ theorem sel_pe_iff {n : Node} {d0 : Ctx} {pc : Pc} {d : Option Fact} :
         have hA := hApp _ _ _ _ hσ hc (.inr (.inl ⟨_, hpos, _, h⟩))
         exact .genSingle hσ (by simp [Sel.ofScan, hAppB _ _ _ hA]) hc hpos ha
           (by simp [Sel.ofScan, hAppB _ _ _ hA]) ih
-    | genJoined hσ _ hc hlen ha _ w h _ ih ih0 =>
-        have hA := hApp _ _ _ _ hσ hc (.inr (.inr ⟨hlen, fun f hf => ⟨w f, h f hf⟩⟩))
+    | genJoined hσ _ hc hlen ha _ wn w hm h _ ih ih0 =>
+        have hA := hApp _ _ _ _ hσ hc
+          (.inr (.inr ⟨hlen, fun f hf => ⟨wn f, w f, hm f hf, h f hf⟩⟩))
         exact .genJoined hσ (by simp [Sel.ofScan, hAppB _ _ _ hA]) hc hlen ha
-          (by simp [Sel.ofScan, hAppB _ _ _ hA]) w ih ih0
+          (by simp [Sel.ofScan, hAppB _ _ _ hA]) wn w hm ih ih0
     | copy hσ hk hcp _ ih => exact .copy hσ hk hcp ih
   · exact pe_mono ofScan_le_all.1 ofScan_le_all.2
 
@@ -201,8 +211,8 @@ theorem sel_fires_iff {n : Node} {pc : Pc} {σ : ESite} :
     rcases hh with ⟨h0, d0, d, h⟩ | ⟨f, h1, d0, h⟩ | ⟨h2, h⟩
     · exact .inl ⟨h0, d0, d, (sel_pe_iff hApp hAppB).1 h⟩
     · exact .inr (.inl ⟨f, h1, d0, (sel_pe_iff hApp hAppB).1 h⟩)
-    · exact .inr (.inr ⟨h2, fun f hf => (h f hf).elim fun d0 h =>
-        ⟨d0, (sel_pe_iff hApp hAppB).1 h⟩⟩)
+    · exact .inr (.inr ⟨h2, fun f hf => (h f hf).elim fun n' ⟨d0, hm, h⟩ =>
+        ⟨n', d0, hm, (sel_pe_iff hApp hAppB).1 h⟩⟩)
   · exact fires_mono ofScan_le_all.1 ofScan_le_all.2
 
 end TSel
@@ -222,7 +232,8 @@ context `d0` is derived by the relevance-restricted scan either in the zero
 context, or in the same context `d0 = some f0` whose entry mark is itself
 needed. The second case is what `retFact` needs: when the callee context's
 mark is not needed, the callee result was produced without that context and is
-therefore reproducible in the zero context. -/
+therefore reproducible in the zero context. Sink gens land in the zero context
+in both runs (`ESite.genCtx`), so they fall under the first case. -/
 theorem rel_preserves_needed_strong {n : Node} {d0 : Ctx} {pc : Pc} {g : Fact}
     (h : PE p Sel.all n d0 pc (some g)) (hg : Needed p g.mark) :
     PE p (Sel.ofScan app need) n none pc (some g) ∨
@@ -265,8 +276,11 @@ theorem rel_preserves_needed_strong {n : Node} {d0 : Ctx} {pc : Pc} {g : Fact}
   | genEmpty hσ _ hc hpos ha _ h _ =>
       intro g e hg; cases e
       have hA := hApp _ _ _ _ hσ hc (.inl ⟨hpos, _, _, h⟩)
-      exact .inl (.genEmpty hσ (by simp [Sel.ofScan, hAppB _ _ _ hA]) hc hpos ha
-        (by simp [Sel.ofScan, hAppB _ _ _ hA, hNeed _ hg]) (pe_zero_reach h))
+      have h' := PE.genEmpty (sel := Sel.ofScan app need) hσ
+        (by simp [Sel.ofScan, hAppB _ _ _ hA]) hc hpos ha
+        (by simp [Sel.ofScan, hAppB _ _ _ hA, hNeed _ hg]) (pe_zero_reach h)
+      rw [genCtx_none] at h'
+      exact .inl h'
   | @genSingle n d0 pc σ c f a hσ _ hc hpos ha _ h ih =>
       intro g e hg; cases e
       have hA := hApp _ _ _ _ hσ hc (.inr (.inl ⟨_, hpos, _, h⟩))
@@ -277,12 +291,20 @@ theorem rel_preserves_needed_strong {n : Node} {d0 : Ctx} {pc : Pc} {g : Fact}
       have hact : (Sel.ofScan app need).act n pc σ a = true := by
         simp [Sel.ofScan, hAppB _ _ _ hA, hNeed _ hg]
       rcases ih f rfl hf with h' | ⟨f0, e0, hf0, h'⟩
-      · exact .inl (.genSingle hσ hs hc hpos ha hact h')
-      · exact .inr ⟨f0, e0, hf0, .genSingle hσ hs hc hpos ha hact h'⟩
-  | @genJoined n pc σ c a hσ _ hc hlen ha _ w h h0 ih _ =>
+      · have h'' := PE.genSingle hσ hs hc hpos ha hact h'
+        rw [genCtx_none] at h''
+        exact .inl h''
+      · -- A sink's gen lands in the zero context; any other gen keeps `d0`.
+        have h'' := PE.genSingle hσ hs hc hpos ha hact h'
+        rcases genCtx_cases σ d0 with ek | ek <;> rw [ek] at h'' ⊢
+        · exact .inl h''
+        · exact .inr ⟨f0, e0, hf0, h''⟩
+  | @genJoined n pc σ c a hσ _ hc hlen ha _ wn w hm h h0 ih _ =>
       intro g e hg; cases e
-      have hA := hApp _ _ _ _ hσ hc (.inr (.inr ⟨hlen, fun f hf => ⟨w f, h f hf⟩⟩))
-      have hex : ∀ f, f ∈ c.positive → ∃ d', PE p (Sel.ofScan app need) n d' pc (some f) := by
+      have hA := hApp _ _ _ _ hσ hc
+        (.inr (.inr ⟨hlen, fun f hf => ⟨wn f, w f, hm f hf, h f hf⟩⟩))
+      have hex : ∀ f, f ∈ c.positive →
+          ∃ d', PE p (Sel.ofScan app need) (wn f) d' pc (some f) := by
         intro f hf
         have hN : Needed p f.mark := .trans hA (gen_of_assign ha) hg (atom_of_pos hc hf)
         rcases ih f hf f rfl hN with h' | ⟨_, _, _, h'⟩
@@ -290,7 +312,7 @@ theorem rel_preserves_needed_strong {n : Node} {d0 : Ctx} {pc : Pc} {g : Fact}
         · exact ⟨_, h'⟩
       obtain ⟨w', hw'⟩ := choose_ctx _ hex
       exact .inl (.genJoined hσ (by simp [Sel.ofScan, hAppB _ _ _ hA]) hc hlen ha
-        (by simp [Sel.ofScan, hAppB _ _ _ hA, hNeed _ hg]) w' hw' (pe_zero_reach h0))
+        (by simp [Sel.ofScan, hAppB _ _ _ hA, hNeed _ hg]) wn w' hm hw' (pe_zero_reach h0))
   | copy hσ hk hcp _ ih =>
       intro g e hg; cases e
       rcases ih _ rfl hg with h' | ⟨f0, e0, hf0, h'⟩
@@ -328,9 +350,45 @@ theorem rel_fires_iff {n : Node} {pc : Pc} {σ : ESite} :
       obtain ⟨d', h'⟩ := rel_some_ctx hApp hAppB hNeed h hN
       exact .inr (.inl ⟨f, h1, d', h'⟩)
     · refine .inr (.inr ⟨h2, fun f hf => ?_⟩)
-      obtain ⟨d0, h⟩ := h f hf
-      exact rel_some_ctx hApp hAppB hNeed h (.sinkAtom hA hk (atom_of_pos hc hf))
+      obtain ⟨n', d0, hm, h⟩ := h f hf
+      obtain ⟨d', h'⟩ := rel_some_ctx hApp hAppB hNeed h (.sinkAtom hA hk (atom_of_pos hc hf))
+      exact ⟨n', d', hm, h'⟩
   · exact fires_mono ofScan_le_all.1 ofScan_le_all.2
+
+/-- T-REL, zero context: a needed fact that the baseline derives in the zero
+context is derived by the restricted scan in the zero context too. -/
+theorem rel_preserves_needed_zero {n : Node} {pc : Pc} {g : Fact}
+    (h : PE p Sel.all n none pc (some g)) (hg : Needed p g.mark) :
+    PE p (Sel.ofScan app need) n none pc (some g) := by
+  rcases rel_preserves_needed_strong hApp hAppB hNeed h hg with h' | ⟨_, e, _, _⟩
+  · exact h'
+  · cases e
+
+/-- T-REL, unneeded context: a needed fact that the baseline derives in a
+context whose entry mark is not needed is derived by the restricted scan in
+the zero context. -/
+theorem rel_unneeded_ctx_zero {n : Node} {pc : Pc} {f0 g : Fact}
+    (h : PE p Sel.all n (some f0) pc (some g)) (hg : Needed p g.mark)
+    (hf0 : ¬ Needed p f0.mark) :
+    PE p (Sel.ofScan app need) n none pc (some g) := by
+  rcases rel_preserves_needed_strong hApp hAppB hNeed h hg with h' | ⟨_, e, hf, _⟩
+  · exact h'
+  · cases e; exact absurd hf hf0
+
+/-- T-REL, context form (the reviewer's wording). For an entry context that is
+the zero context or has a needed mark, the restricted scan derives the needed
+fact in that same context or in the zero context. The hypothesis `_hd0` is not
+used: the disjunction holds for every context. The stronger claim without the
+zero-context disjunct is false for `d0 = some f0`; see
+`rel_ctx_not_preserved`. -/
+theorem rel_preserves_needed_ctx {n : Node} {d0 : Ctx} {pc : Pc} {g : Fact}
+    (h : PE p Sel.all n d0 pc (some g)) (hg : Needed p g.mark)
+    (_hd0 : d0 = none ∨ ∃ f0, d0 = some f0 ∧ Needed p f0.mark) :
+    PE p (Sel.ofScan app need) n d0 pc (some g) ∨
+    PE p (Sel.ofScan app need) n none pc (some g) := by
+  rcases rel_preserves_needed hApp hAppB hNeed h hg with h' | h'
+  · exact .inr h'
+  · exact .inl h'
 
 end TRel
 
@@ -373,6 +431,8 @@ def cex : Program where
   mapIn := fun _ _ _ => none
   mapOut := fun _ _ _ => none
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 theorem cex_pos_tr : ECube.positive [⟨⟨0, 1⟩, false⟩] = [⟨0, 1⟩] := by decide
 theorem cex_pos_sink : ECube.positive [⟨⟨0, 2⟩, false⟩] = [⟨0, 2⟩] := by decide
@@ -402,7 +462,7 @@ theorem cex_no_fact {app : Node → Pc → ESite → Bool} {need : Mark → Bool
         cases hpos
       · simp [cexSink] at ha
   | genSingle _ _ _ _ _ _ _ ih => cases ih
-  | genJoined _ _ _ hlen _ _ _ _ _ ih _ =>
+  | genJoined _ _ _ hlen _ _ _ _ _ _ _ ih _ =>
       cases hp : ECube.positive _ with
       | nil => rw [hp] at hlen; cases hlen
       | cons f _ => cases ih f (by rw [hp]; exact List.mem_cons_self)
@@ -501,6 +561,222 @@ theorem needSinkOnly_unsound :
     Fires cex Sel.all 0 0 cexSink ∧
     ∀ n pc σ, ¬ Fires cex (Sel.ofScan (fun _ _ _ => true) (needSinkOnly cex)) n pc σ :=
   ⟨cex_baseline_fires, cex_no_fires (by decide)⟩
+
+/-! ## 7. The restricted scan does not preserve contexts
+
+`rel_preserves_needed_ctx` keeps a zero-context disjunct, and it cannot be
+dropped. In `cexCtx`, root 0 generates mark 1 and calls node 1, which is
+entered in context `some ⟨0, 1⟩`. At statement 0 of node 1, a cleaner on mark 1
+kills the entry fact, and an unconditional source generates mark 3, which
+nothing needs. At statement 1, an unconditional source generates mark 2, and
+a sink fires on mark 2. The baseline derives mark 2 in context `some ⟨0, 1⟩`,
+because the fact with mark 3 keeps that context alive at statement 1. The
+restricted scan disables the mark-3 action, so that context is empty at
+statement 1 and mark 2 is derived only in the zero context. The finding is the
+same in both runs. -/
+
+namespace SelectionLemmas
+
+def cxSrcA : ESite :=
+  { rule := 0, kind := .source, cond := [[]], assigns := [⟨0, 1⟩], copies := [] }
+def cxSrcX : ESite :=
+  { rule := 1, kind := .source, cond := [[]], assigns := [⟨0, 3⟩], copies := [] }
+def cxSrcG : ESite :=
+  { rule := 2, kind := .source, cond := [[]], assigns := [⟨0, 2⟩], copies := [] }
+def cxSink : ESite :=
+  { rule := 3, kind := .sink, cond := [[⟨⟨0, 2⟩, false⟩]], assigns := [], copies := [] }
+
+/-- Root 0 calls node 1 at statement 0. The cleaner at `(1, 0)` kills mark 1
+and records the cleaner atom 1. -/
+def cexCtx : Program where
+  nodes := [0, 1]
+  roots := [0]
+  pcs := fun n => if n = 1 then [0, 1] else [0]
+  succ := fun n pc => if n = 1 ∧ pc = 0 then [1] else []
+  exits := fun n => if n = 1 then [1] else [0]
+  sites := fun n pc =>
+    if n = 0 ∧ pc = 0 then [cxSrcA]
+    else if n = 1 ∧ pc = 0 then [cxSrcX]
+    else if n = 1 ∧ pc = 1 then [cxSrcG, cxSink]
+    else []
+  calls := fun n pc => if n = 0 ∧ pc = 0 then [1] else []
+  mapIn := fun _ _ b => some b
+  mapOut := fun _ _ _ => none
+  kills := fun n pc f => n == 1 && pc == 0 && f.mark == 1
+  method := id
+  cleanerAtoms := fun n pc => if n = 1 ∧ pc = 0 then [1] else []
+
+/-- The relevance pass of `cexCtx`: exactly the marks 1 and 2. -/
+def cxNeed (m : Mark) : Bool := m == 1 || m == 2
+
+theorem genCtx_some {σ : ESite} {d0 : Ctx} {f : Fact} (h : σ.genCtx d0 = some f) :
+    d0 = some f := by
+  rcases genCtx_cases σ d0 with e | e <;> rw [e] at h
+  · cases h
+  · exact h
+
+theorem cx_sites {n : Node} {pc : Pc} {σ : ESite} (h : σ ∈ cexCtx.sites n pc) :
+    (n = 0 ∧ pc = 0 ∧ σ = cxSrcA) ∨ (n = 1 ∧ pc = 0 ∧ σ = cxSrcX) ∨
+    (n = 1 ∧ pc = 1 ∧ (σ = cxSrcG ∨ σ = cxSink)) := by
+  simp only [cexCtx] at h
+  split at h
+  · rename_i hh; simp at h; exact .inl ⟨hh.1, hh.2, h⟩
+  · split at h
+    · rename_i _ hh; simp at h; exact .inr (.inl ⟨hh.1, hh.2, h⟩)
+    · split at h
+      · rename_i _ _ hh; simp at h; exact .inr (.inr ⟨hh.1, hh.2, h⟩)
+      · simp at h
+
+theorem cx_atoms {n : Node} {pc : Pc} {σ : ESite} {m : Mark}
+    (h : σ ∈ cexCtx.sites n pc) (hm : m ∈ σ.abstract.cond.atoms) : m = 2 := by
+  have eA : cxSrcA.abstract.cond.atoms = [] := by decide
+  have eX : cxSrcX.abstract.cond.atoms = [] := by decide
+  have eG : cxSrcG.abstract.cond.atoms = [] := by decide
+  have eS : cxSink.abstract.cond.atoms = [2] := by decide
+  rcases cx_sites h with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl | rfl⟩
+  · rw [eA] at hm; cases hm
+  · rw [eX] at hm; cases hm
+  · rw [eG] at hm; cases hm
+  · rw [eS] at hm; simpa using hm
+
+theorem cx_not_pass {n : Node} {pc : Pc} {σ : ESite}
+    (h : σ ∈ cexCtx.sites n pc) : σ.kind ≠ .passThrough := by
+  rcases cx_sites h with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl | rfl⟩ <;> intro e <;> cases e
+
+theorem cx_needed {m : Mark} (h : Needed cexCtx m) : m = 1 ∨ m = 2 := by
+  cases h with
+  | sinkAtom hA _ hm => exact .inr (cx_atoms hA.1 hm)
+  | sinkGen hA hk hm =>
+      have eS : cxSink.abstract.gens = [] := by decide
+      rcases cx_sites hA.1 with ⟨_, _, rfl⟩ | ⟨_, _, rfl⟩ | ⟨_, _, rfl | rfl⟩
+      · cases hk
+      · cases hk
+      · cases hk
+      · rw [eS] at hm; cases hm
+  | trans hA _ _ hm => exact .inr (cx_atoms hA.1 hm)
+  | cleanerAtom hm =>
+      simp only [cexCtx] at hm
+      split at hm
+      · simp at hm; exact .inl hm
+      · cases hm
+  | passAtom hA hk _ => exact absurd hk (cx_not_pass hA.1)
+
+theorem cx_reach1 : Reaches cexCtx 0 1 :=
+  .step (b := 1) (by simp [Program.callees, cexCtx]) (.refl 1)
+
+theorem cx_InS2 : InS cexCtx 0 2 :=
+  .single (n := 1) (pc := 1) (σ := cxSrcG) (c := []) (by simp [cexCtx]) cx_reach1
+    (by simp [Program.nodeSites, cexCtx]) (by decide) (by decide) (by simp)
+    (by decide)
+
+theorem cx_app {n : Node} {pc : Pc} {σ : ESite} (h : σ ∈ cexCtx.sites n pc) :
+    Applicable cexCtx n pc σ := by
+  refine ⟨h, ?_⟩
+  have hsrc : ∀ τ : ESite, τ.abstract.cond = [[]] → (n = 0 ∨ n = 1) →
+      ∃ c, c ∈ τ.abstract.cond ∧ CubeSat cexCtx n c := by
+    intro τ e hn
+    refine ⟨[], by rw [e]; simp, .inl ⟨by decide, 0, by simp [cexCtx], ?_, by simp⟩⟩
+    rcases hn with rfl | rfl
+    · exact .refl 0
+    · exact cx_reach1
+  rcases cx_sites h with ⟨rfl, _, rfl⟩ | ⟨rfl, _, rfl⟩ | ⟨rfl, _, rfl | rfl⟩
+  · exact hsrc _ (by decide) (.inl rfl)
+  · exact hsrc _ (by decide) (.inr rfl)
+  · exact hsrc _ (by decide) (.inr rfl)
+  · have e : cxSink.abstract.cond = [[2]] := by decide
+    exact ⟨[2], by rw [e]; simp,
+      .inl ⟨by decide, 0, by simp [cexCtx], cx_reach1, by simp [cx_InS2]⟩⟩
+
+/-- In the restricted run of `cexCtx`, the only fact of node 1 in context
+`some ⟨0, 1⟩` is the entry fact at statement 0. -/
+theorem cx_rel_inv {app : Node → Pc → ESite → Bool} {need : Mark → Bool}
+    (h3 : need 3 = false) {n : Node} {d0 : Ctx} {pc : Pc} {d : Option Fact} :
+    PE cexCtx (Sel.ofScan app need) n d0 pc d →
+    n = 1 → d0 = some ⟨0, 1⟩ → pc = 0 ∧ d = some ⟨0, 1⟩ := by
+  intro h
+  induction h with
+  | root hr => intro hn; subst hn; simp [cexCtx] at hr
+  | intra _ _ hk ih =>
+      intro hn hd
+      obtain ⟨rfl, rfl⟩ := ih hn hd
+      subst hn
+      exact absurd hk (by decide)
+  | callZero _ _ _ => intro _ hd; cases hd
+  | callFact _ _ _ _ _ => intro _ hd; exact ⟨rfl, hd⟩
+  | retZero _ hc _ _ _ _ _ _ => intro hn; subst hn; simp [cexCtx] at hc
+  | retFact _ hc _ _ _ _ _ _ _ _ => intro hn; subst hn; simp [cexCtx] at hc
+  | genEmpty hσ _ _ _ ha hact _ ih =>
+      intro hn hd
+      obtain ⟨rfl, _⟩ := ih hn (genCtx_some hd)
+      subst hn
+      rcases cx_sites hσ with ⟨e, _, _⟩ | ⟨_, _, rfl⟩ | ⟨_, e, _⟩
+      · cases e
+      · simp only [cxSrcX, List.mem_singleton] at ha
+        subst ha
+        simp [Sel.ofScan, h3] at hact
+      · cases e
+  | genSingle hσ _ hc hpos _ _ _ ih =>
+      intro hn hd
+      obtain ⟨rfl, _⟩ := ih hn (genCtx_some hd)
+      subst hn
+      rcases cx_sites hσ with ⟨e, _, _⟩ | ⟨_, _, rfl⟩ | ⟨_, e, _⟩
+      · cases e
+      · simp only [cxSrcX, List.mem_singleton] at hc
+        subst hc
+        cases hpos
+      · cases e
+  | genJoined => intro _ hd; cases hd
+  | copy hσ hk _ _ _ => intro _ _; exact absurd hk (cx_not_pass hσ)
+
+end SelectionLemmas
+
+open SelectionLemmas in
+/-- The restricted scan does not preserve contexts. `cexCtx` satisfies the
+hypotheses of T-REL (every site is applicable, and `cxNeed` holds for every
+needed mark). Marks 1 and 2 are needed. The baseline derives mark 2 at
+`(1, 1)` in the context `some ⟨0, 1⟩`, whose entry mark is needed; the
+restricted scan does not derive it there, and derives it only in the zero
+context. -/
+theorem rel_ctx_not_preserved :
+    (∀ n pc σ c, σ ∈ cexCtx.sites n pc → c ∈ σ.cond → ECubeHolds cexCtx Sel.all n pc c →
+      Applicable cexCtx n pc σ) ∧
+    (∀ n pc σ, Applicable cexCtx n pc σ → (fun _ _ _ => true : Node → Pc → ESite → Bool) n pc σ = true) ∧
+    (∀ m, Needed cexCtx m → cxNeed m = true) ∧
+    Needed cexCtx 1 ∧ Needed cexCtx 2 ∧
+    PE cexCtx Sel.all 1 (some ⟨0, 1⟩) 1 (some ⟨0, 2⟩) ∧
+    ¬ PE cexCtx (Sel.ofScan (fun _ _ _ => true) cxNeed) 1 (some ⟨0, 1⟩) 1 (some ⟨0, 2⟩) ∧
+    PE cexCtx (Sel.ofScan (fun _ _ _ => true) cxNeed) 1 none 1 (some ⟨0, 2⟩) := by
+  refine ⟨fun _ _ _ _ h _ _ => cx_app h, fun _ _ _ _ => rfl, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · intro m hm
+    rcases cx_needed hm with rfl | rfl <;> rfl
+  · exact .cleanerAtom (n := 1) (pc := 0) (by simp [cexCtx])
+  · have hs : cxSink ∈ cexCtx.sites 1 1 := by simp [cexCtx]
+    have e : cxSink.abstract.cond.atoms = [2] := by decide
+    exact .sinkAtom (cx_app hs) rfl (by rw [e]; simp)
+  · have h0 : PE cexCtx Sel.all 0 none 0 none := .root (by simp [cexCtx])
+    have h1 : PE cexCtx Sel.all 0 none 0 (some ⟨0, 1⟩) :=
+      .genEmpty (σ := cxSrcA) (c := []) (by simp [cexCtx]) rfl (by simp [cxSrcA]) (by decide)
+        (by simp [cxSrcA]) rfl h0
+    have h2 : PE cexCtx Sel.all 1 (some ⟨0, 1⟩) 0 (some ⟨0, 1⟩) :=
+      .callFact (b := 0) h1 (by simp [cexCtx]) rfl rfl
+    have h3 : PE cexCtx Sel.all 1 (some ⟨0, 1⟩) 0 (some ⟨0, 3⟩) :=
+      .genEmpty (σ := cxSrcX) (c := []) (by simp [cexCtx]) rfl (by simp [cxSrcX]) (by decide)
+        (by simp [cxSrcX]) rfl h2
+    have h4 : PE cexCtx Sel.all 1 (some ⟨0, 1⟩) 1 (some ⟨0, 3⟩) :=
+      .intra h3 (by simp [cexCtx]) rfl
+    exact .genEmpty (σ := cxSrcG) (c := []) (by simp [cexCtx]) rfl (by simp [cxSrcG])
+      (by decide) (by simp [cxSrcG]) rfl h4
+  · intro h
+    obtain ⟨e, _⟩ := cx_rel_inv (by rfl) h rfl rfl
+    cases e
+  · have r0 : PE cexCtx (Sel.ofScan (fun _ _ _ => true) cxNeed) 0 none 0 none :=
+      .root (by simp [cexCtx])
+    have r1 : PE cexCtx (Sel.ofScan (fun _ _ _ => true) cxNeed) 1 none 0 none :=
+      .callZero r0 (by simp [cexCtx])
+    have r2 : PE cexCtx (Sel.ofScan (fun _ _ _ => true) cxNeed) 1 none 1 none :=
+      .intra r1 (by simp [cexCtx]) rfl
+    exact .genEmpty (σ := cxSrcG) (c := []) (by simp [cexCtx]) rfl
+      (by simp [cxSrcG]) (by decide) (by simp [cxSrcG]) rfl r2
 
 /-! ## Axiom audit
 Run `./check.sh`: `AxiomAudit.lean` prints the axioms of every theorem. -/

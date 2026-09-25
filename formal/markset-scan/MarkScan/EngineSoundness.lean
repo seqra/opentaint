@@ -8,10 +8,18 @@ engine model `PE`: every mark the engine can carry in a context that some root
 reaches is in that root's `S_E`, and every rule instance the engine can fire
 or use to generate a fact is `Applicable`. This holds for *any* selection.
 
+Two engine behaviours shape `InS`:
+* a joined cube may take its facts from any context of any node of the same
+  method at the statement, and its gens are zero-context facts;
+* a sink's `trackFactsReachAnalysisEnd` gens are zero-context facts too.
+Zero-context facts return to every caller, so both kinds of gens go to every
+root that reaches the site's node (`InS.joined`, `InS.sinkGen`).
+
 We also show:
 * the well-formedness hypothesis `PcWF` is necessary (without it the engine
   may use a call edge at a statement the scan never looks at);
 * the per-root collapse without the D1 correction (`InSNoJoin`) is unsound;
+* dropping `InS.sinkGen` is unsound (`sinkgen_zero_ctx_needed`);
 * the scan is incomplete: `Applicable` may hold for a sink that never fires.
 -/
 
@@ -57,9 +65,9 @@ theorem gen_mem {σ : ESite} {a : Fact} (ha : a ∈ σ.assigns) :
 /-- Finite choice over a list of marks, constructively: from a pointwise
 witness on a list we build a witness function (by case split on the decidable
 equality of marks, no choice principle). -/
-theorem list_choice (Q : Mark → Node → Prop) :
-    ∀ l : List Mark, (∀ m, m ∈ l → ∃ E, Q m E) → ∃ w : Mark → Node, ∀ m, m ∈ l → Q m (w m)
-  | [], _ => ⟨fun _ => 0, fun _ hm => by cases hm⟩
+theorem list_choice {α : Type} [Inhabited α] (Q : Mark → α → Prop) :
+    ∀ l : List Mark, (∀ m, m ∈ l → ∃ x, Q m x) → ∃ w : Mark → α, ∀ m, m ∈ l → Q m (w m)
+  | [], _ => ⟨fun _ => default, fun _ hm => by cases hm⟩
   | a :: l, h => by
     obtain ⟨E, hE⟩ := h a List.mem_cons_self
     obtain ⟨w, hw⟩ := list_choice Q l (fun m hm => h m (List.mem_cons_of_mem _ hm))
@@ -68,6 +76,15 @@ theorem list_choice (Q : Mark → Node → Prop) :
       else by
         simp only [hma, if_false]
         exact hw m ((List.mem_cons.1 hm).resolve_left hma)
+
+/-- Moving a generated fact to `σ.genCtx d0` keeps an admissible context
+admissible (it is either `d0` or the zero context). -/
+theorem ctxOk_genCtx {p : Program} {E : Node} {σ : ESite} {d0 : Ctx}
+    (h : CtxOk p E d0) : CtxOk p E (σ.genCtx d0) := by
+  unfold ESite.genCtx
+  split
+  · trivial
+  · exact h
 
 end EngineSoundnessLemmas
 
@@ -108,8 +125,10 @@ theorem pe_zero_ctx {p : Program} {sel : Sel} {n : Node} {d0 : Ctx} {pc : Pc}
 /-- Main soundness theorem. For every path edge of the engine model under any
 selection: (1) some root reaches the node in a context admissible for it, and
 (2) the fact's mark is in `S_E` for every root `E` that reaches the node with
-an admissible context. So the shallow scan's mark sets over-approximate every
-fact the precise engine can derive, whatever rules it installs. -/
+an admissible context. For the zero context (joined gens, sink gens) every
+root reaching the node is admissible. So the shallow scan's mark sets
+over-approximate every fact the precise engine can derive, whatever rules it
+installs. -/
 theorem pe_sound {p : Program} (wf : PcWF p) {sel : Sel} {n : Node} {d0 : Ctx}
     {pc : Pc} {d : Option Fact} (h : PE p sel n d0 pc d) :
     (∃ E, E ∈ p.roots ∧ Reaches p E n ∧ CtxOk p E d0) ∧
@@ -138,35 +157,52 @@ theorem pe_sound {p : Program} (wf : PcWF p) {sel : Sel} {n : Node} {d0 : Ctx}
     cases hf
     exact ihc.2 _ rfl E hE (hR.callee hc (wf.callPc _ _ _ hc)) (ihf.2 _ rfl E hE hR hctx)
   | genEmpty hs _ hc hpos ha _ _ ih =>
-    refine ⟨ih.1, ?_⟩
+    obtain ⟨E0, hE0, hR0, hctx0⟩ := ih.1
+    refine ⟨⟨E0, hE0, hR0, ctxOk_genCtx hctx0⟩, ?_⟩
     intro _ hf E hE hR _
     cases hf
     exact InS.single hE hR (mem_nodeSites (site_pc wf hs) hs) (cube_mem hc)
       (by simp [hpos]) (by simp [hpos]) (gen_mem ha)
-  | genSingle hs _ hc hpos ha _ _ ih =>
-    refine ⟨ih.1, ?_⟩
+  | @genSingle n d0 pc σ c f a hs _ hc hpos ha _ _ ih =>
+    obtain ⟨E0, hE0, hR0, hctx0⟩ := ih.1
+    refine ⟨⟨E0, hE0, hR0, ctxOk_genCtx hctx0⟩, ?_⟩
     intro _ hf E hE hR hctx
     cases hf
-    refine InS.single hE hR (mem_nodeSites (site_pc wf hs) hs) (cube_mem hc)
-      (by simp [hpos]) ?_ (gen_mem ha)
-    intro m hm
-    simp only [hpos, List.map_cons, List.map_nil, List.mem_singleton] at hm
-    subst hm
-    exact ih.2 _ rfl E hE hR hctx
-  | @genJoined n pc σ c a hs _ hc hlen ha _ w _ _ ihw ihz =>
+    have hns := mem_nodeSites (site_pc wf hs) hs
+    have hcube : ∀ m, m ∈ c.positive.map (·.mark) → m = f.mark := by
+      intro m hm
+      simpa only [hpos, List.map_cons, List.map_nil, List.mem_singleton] using hm
+    unfold ESite.genCtx at hctx
+    split at hctx
+    · -- A sink: its gen lands in the zero context, so every root reaching
+      -- `n` gets it, including roots whose own context never fires the sink.
+      rename_i hk
+      refine InS.sinkGen hE hR hns hk (cube_mem hc) (fun _ => E0) (fun _ => n)
+        (fun _ _ => hE0) (fun _ _ => hR0) (fun _ _ => rfl) ?_ (gen_mem ha)
+      intro m hm
+      rw [hcube m hm]
+      exact ih.2 _ rfl E0 hE0 hR0 hctx0
+    · refine InS.single hE hR hns (cube_mem hc) (by simp [hpos]) ?_ (gen_mem ha)
+      intro m hm
+      rw [hcube m hm]
+      exact ih.2 _ rfl E hE hR hctx
+  | @genJoined n pc σ c a hs _ hc hlen ha _ wn w hmeth _ _ ihw ihz =>
     refine ⟨ihz.1, ?_⟩
     intro _ hf E hE hR _
     cases hf
-    have hex : ∀ m, m ∈ c.positive.map (·.mark) →
-        ∃ E', E' ∈ p.roots ∧ Reaches p E' n ∧ InS p E' m := by
+    -- Each premise fact comes from some node `wn f` of the same method; the
+    -- existence half at `wn f` supplies a root reaching it.
+    have hex : ∀ m, m ∈ c.positive.map (·.mark) → ∃ x : Node × Node,
+        x.1 ∈ p.roots ∧ Reaches p x.1 x.2 ∧ p.method x.2 = p.method n ∧ InS p x.1 m := by
       intro m hm
       obtain ⟨f, hf, rfl⟩ := List.mem_map.1 hm
       obtain ⟨⟨E', hE', hR', hctx'⟩, hs'⟩ := ihw f hf
-      exact ⟨E', hE', hR', hs' f rfl E' hE' hR' hctx'⟩
+      exact ⟨(E', wn f), hE', hR', hmeth f hf, hs' f rfl E' hE' hR' hctx'⟩
     obtain ⟨w', hw'⟩ := list_choice _ _ hex
     exact InS.joined hE hR (mem_nodeSites (site_pc wf hs) hs) (cube_mem hc)
-      (by simpa using hlen) w' (fun m hm => (hw' m hm).1) (fun m hm => (hw' m hm).2.1)
-      (fun m hm => (hw' m hm).2.2) (gen_mem ha)
+      (by simpa using hlen) (fun m => (w' m).1) (fun m => (w' m).2)
+      (fun m hm => (hw' m hm).1) (fun m hm => (hw' m hm).2.1)
+      (fun m hm => (hw' m hm).2.2.1) (fun m hm => (hw' m hm).2.2.2) (gen_mem ha)
   | copy _ _ _ _ ih =>
     refine ⟨ih.1, ?_⟩
     intro _ hf E hE hR hctx
@@ -193,9 +229,9 @@ theorem ecube_applicable {p : Program} (wf : PcWF p) {sel : Sel} {n : Node}
   · refine .inr ⟨by simpa using hlen, ?_⟩
     intro m hm
     obtain ⟨f, hf, rfl⟩ := List.mem_map.1 hm
-    obtain ⟨d0, hpe⟩ := hall f hf
+    obtain ⟨n', d0, hm, hpe⟩ := hall f hf
     obtain ⟨⟨E, hE, hR, hctx⟩, hsnd⟩ := pe_sound wf hpe
-    exact ⟨E, hE, hR, hsnd f rfl E hE hR hctx⟩
+    exact ⟨E, n', hE, hR, hm, hsnd f rfl E hE hR hctx⟩
 
 /-- Every sink finding of the engine, under any selection, is at an
 `Applicable` site: the shallow scan's site selection loses no finding. -/
@@ -223,6 +259,8 @@ def noWFProgram : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ b => some b
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 end EngineSoundnessLemmas
 
@@ -241,9 +279,12 @@ theorem pcwf_needed :
 /-! ## D1: the per-root collapse is unsound
 
 `InSNoJoin` evaluates every cube, whatever its length, on a single root's set
-`S_E`. This is the collapsed reading in which `S_E` alone decides a site. -/
+`S_E`, and gives the site's gens only to that root; sinks are treated like any
+other site. This is the uncorrected, collapsed reading in which `S_E` alone
+decides a site. -/
 
-/-- Per-root mark sets without the D1 correction. -/
+/-- Per-root mark sets without the D1 correction: every cube on `S_E` alone,
+gens only to the satisfying root `E`, sinks included. -/
 inductive InSNoJoin (p : Program) : Node → Mark → Prop
   | gen {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
       E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n →
@@ -313,6 +354,8 @@ def d1Program : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ _ => none
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 namespace EngineSoundnessLemmas
 
@@ -388,8 +431,8 @@ theorem d1_fires : Fires d1Program Sel.all 3 0 d1Sink := by
         [⟨0, d1MarkA⟩, ⟨1, d1MarkB⟩] := by decide
     simpa [hpos] using hf
   rcases this with rfl | rfl
-  · exact ⟨_, hA⟩
-  · exact ⟨_, hB⟩
+  · exact ⟨3, _, rfl, hA⟩
+  · exact ⟨3, _, rfl, hB⟩
 
 /-- The collapsed per-root semantics does not select that sink: no single
 root has both `A` and `B`. Together with `d1_fires` this shows that without
@@ -460,6 +503,8 @@ def pwProgram : Program where
   mapIn := fun _ _ b => some b
   mapOut := fun _ _ _ => none
   kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
 
 namespace EngineSoundnessLemmas
 
@@ -529,6 +574,221 @@ theorem pw_not_fires : ¬ Fires pwProgram Sel.all 1 1 pwSink := by
   · rw [hpos] at h; cases h
   · cases pw_inv hpe rfl
   · rw [hpos] at h; exact absurd h (by decide)
+
+/-! ## Sink gens must reach every root that reaches the sink
+
+The engine emits a sink's `trackFactsReachAnalysisEnd` facts in the zero
+context, whatever context the sink fired in. Zero-context facts return to
+every caller. So a root that reaches the sink node, but never supplies the
+sink's condition itself, still receives the gen. `InSNoSinkGen` is `InS`
+without the `sinkGen` constructor: it gives a single-literal sink's gens only
+to the root that satisfies the sink, as a source's gens. The program below
+shows that this misses a finding.
+
+Roots `E1 = 1` and `E2 = 2` both call node `3` at their statement `1`.
+* `E1` makes `(0, A)` at statement `0` and passes it to node `3`.
+* Node `3` has a sink at statement `0` that needs `(0, A)`. When it fires, it
+  gens `(0, T)`, its `trackFactsReachAnalysisEnd` mark.
+* `E2` never has `A`. Its zero-fact call to node `3` returns the zero-context
+  `(0, T)` to its statement `2`, where a second sink that needs `(0, T)`
+  fires. -/
+
+/-- `InS` without the `sinkGen` constructor: a sink's gens go only to the root
+that satisfies it (its single-literal cube is evaluated on that root's set). -/
+inductive InSNoSinkGen (p : Program) : Node → Mark → Prop
+  | single {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
+      E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n →
+      c ∈ σ.abstract.cond → c.length ≤ 1 →
+      (∀ m, m ∈ c → InSNoSinkGen p E m) →
+      g ∈ σ.abstract.gens → InSNoSinkGen p E g
+  | joined {E n : Node} {pc : Pc} {σ : ESite} {c : Cube} {g : Mark} :
+      E ∈ p.roots → Reaches p E n → (pc, σ) ∈ p.nodeSites n →
+      c ∈ σ.abstract.cond → 2 ≤ c.length →
+      (w wn : Mark → Node) →
+      (∀ m, m ∈ c → w m ∈ p.roots) → (∀ m, m ∈ c → Reaches p (w m) (wn m)) →
+      (∀ m, m ∈ c → p.method (wn m) = p.method n) →
+      (∀ m, m ∈ c → InSNoSinkGen p (w m) m) →
+      g ∈ σ.abstract.gens → InSNoSinkGen p E g
+
+/-- `Applicable`, with `CubeSat` evaluated on `InSNoSinkGen`. -/
+def ApplicableNoSinkGen (p : Program) (n : Node) (pc : Pc) (σ : ESite) : Prop :=
+  σ ∈ p.sites n pc ∧ ∃ c, c ∈ σ.abstract.cond ∧
+    ((c.length ≤ 1 ∧ ∃ E, E ∈ p.roots ∧ Reaches p E n ∧ ∀ m, m ∈ c → InSNoSinkGen p E m) ∨
+     (2 ≤ c.length ∧ ∀ m, m ∈ c →
+       ∃ E n', E ∈ p.roots ∧ Reaches p E n' ∧ p.method n' = p.method n ∧ InSNoSinkGen p E m))
+
+namespace EngineSoundnessLemmas
+
+/-- Mark `A`. -/
+def sgMarkA : Mark := 1
+/-- Mark `T`, the first sink's `trackFactsReachAnalysisEnd` mark. -/
+def sgMarkT : Mark := 2
+
+/-- `E1`, statement `0`: unconditional source of `(0, A)`. -/
+def sgSrcA : ESite :=
+  { rule := 1, kind := .source, cond := [[]], assigns := [⟨0, sgMarkA⟩], copies := [] }
+/-- Node `3`, statement `0`: a sink that needs `(0, A)` and gens `(0, T)`. -/
+def sgSinkA : ESite :=
+  { rule := 2, kind := .sink, cond := [[⟨⟨0, sgMarkA⟩, false⟩]]
+    assigns := [⟨0, sgMarkT⟩], copies := [] }
+/-- `E2`, statement `2`: a sink that needs `(0, T)`. -/
+def sgSinkT : ESite :=
+  { rule := 3, kind := .sink, cond := [[⟨⟨0, sgMarkT⟩, false⟩]], assigns := [], copies := [] }
+
+def sgPcs : Node → List Pc
+  | 1 => [0, 1]
+  | 2 => [0, 1, 2]
+  | 3 => [0]
+  | _ => []
+
+def sgSucc : Node → Pc → List Pc
+  | 1, 0 => [1]
+  | 2, 0 => [1]
+  | 2, 1 => [2]
+  | _, _ => []
+
+def sgSites : Node → Pc → List ESite
+  | 1, 0 => [sgSrcA]
+  | 3, 0 => [sgSinkA]
+  | 2, 2 => [sgSinkT]
+  | _, _ => []
+
+def sgCalls : Node → Pc → List Node
+  | 1, 1 => [3]
+  | 2, 1 => [3]
+  | _, _ => []
+
+end EngineSoundnessLemmas
+
+/-- The sink-gen witness program. Returns keep bases. -/
+def sgProgram : Program where
+  nodes := [1, 2, 3]
+  roots := [1, 2]
+  pcs := sgPcs
+  succ := sgSucc
+  exits := fun _ => [0]
+  sites := sgSites
+  calls := sgCalls
+  mapIn := fun _ _ b => some b
+  mapOut := fun _ _ b => some b
+  kills := fun _ _ _ => false
+  method := id
+  cleanerAtoms := fun _ _ => []
+
+namespace EngineSoundnessLemmas
+
+theorem sg_calls {n pc c : Node} (h : c ∈ sgProgram.calls n pc) : c = 3 ∧ pc ∈ sgPcs n := by
+  simp only [sgProgram] at h
+  unfold sgCalls at h
+  split at h <;> simp_all [sgPcs]
+
+theorem sg_reaches {a c : Node} (h : Reaches sgProgram a c) : c = a ∨ c = 3 := by
+  induction h with
+  | refl => exact .inl rfl
+  | step hb _ ih =>
+    obtain ⟨pc, _, hpc⟩ := List.mem_flatMap.1 hb
+    have := (sg_calls hpc).1
+    rcases ih with h | h
+    · exact .inr (h.trans this)
+    · exact .inr h
+
+/-- Every abstract site of the program: the source at node `1`, the first sink
+at node `3`, the second sink at node `2`. -/
+theorem sg_nodeSites {n pc : Nat} {σ : ESite} (h : (pc, σ) ∈ sgProgram.nodeSites n) :
+    (n = 1 ∧ σ = sgSrcA) ∨ (n = 3 ∧ σ = sgSinkA) ∨ (n = 2 ∧ σ = sgSinkT) := by
+  obtain ⟨pc', _, hmem⟩ := List.mem_flatMap.1 h
+  obtain ⟨σ', hσ', heq⟩ := List.mem_map.1 hmem
+  cases heq
+  simp only [sgProgram] at hσ'
+  unfold sgSites at hσ'
+  split at hσ' <;> simp_all
+
+/-- Every cube of the program has at most one literal. -/
+theorem sg_short {n pc : Nat} {σ : ESite} {c : Cube} (h : (pc, σ) ∈ sgProgram.nodeSites n)
+    (hc : c ∈ σ.abstract.cond) : c.length ≤ 1 := by
+  have h1 : ∀ c, c ∈ sgSrcA.abstract.cond → c.length ≤ 1 := by decide
+  have h2 : ∀ c, c ∈ sgSinkA.abstract.cond → c.length ≤ 1 := by decide
+  have h3 : ∀ c, c ∈ sgSinkT.abstract.cond → c.length ≤ 1 := by decide
+  rcases sg_nodeSites h with ⟨_, rfl⟩ | ⟨_, rfl⟩ | ⟨_, rfl⟩
+  · exact h1 c hc
+  · exact h2 c hc
+  · exact h3 c hc
+
+/-- Without `sinkGen`, only `E1` has marks: `A`, and `T` from the first sink
+it satisfies. -/
+theorem sg_noSinkGen_inv {E m : Node} (h : InSNoSinkGen sgProgram E m) :
+    E = 1 ∧ (m = sgMarkA ∨ m = sgMarkT) := by
+  induction h with
+  | @single E n pc σ c g hE hR hns hc _ _ hg ih =>
+    rcases sg_nodeSites hns with ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩ | ⟨rfl, rfl⟩
+    · have hg' : g = sgMarkA := by simpa [ESite.abstract, sgSrcA] using hg
+      refine ⟨?_, .inl hg'⟩
+      rcases sg_reaches hR with h | h
+      · exact h.symm
+      · exact absurd h (by decide)
+    · have hcond : sgSinkA.abstract.cond = [[sgMarkA]] := by decide
+      rw [hcond, List.mem_singleton] at hc
+      subst hc
+      have hg' : g = sgMarkT := by simpa [ESite.abstract, sgSinkA] using hg
+      exact ⟨(ih _ List.mem_cons_self).1, .inr hg'⟩
+    · simp [ESite.abstract, sgSinkT] at hg
+  | joined _ _ hns hc hlen =>
+    exact absurd (Nat.le_trans hlen (sg_short hns hc)) (by decide)
+
+end EngineSoundnessLemmas
+
+/-- `sgProgram` satisfies the well-formedness hypothesis. -/
+theorem sgProgram_wf : PcWF sgProgram where
+  callPc := fun _ _ _ h => (sg_calls h).2
+  sitePc := by
+    intro n pc h
+    simp only [sgProgram] at h ⊢
+    unfold sgSites at h
+    split at h <;> simp_all [sgPcs]
+
+/-- The engine (with every rule installed) fires the second sink at `(2, 2)`.
+The first sink fires in node `3` under `E1`'s context `(0, A)`; its gen
+`(0, T)` lands in node `3`'s zero context and returns through `E2`'s
+zero-fact call. -/
+theorem sg_fires : Fires sgProgram Sel.all 2 2 sgSinkT := by
+  -- `E1` passes `(0, A)` to node `3`.
+  have hA : PE sgProgram Sel.all 3 (some ⟨0, sgMarkA⟩) 0 (some ⟨0, sgMarkA⟩) := by
+    have h0 : PE sgProgram Sel.all 1 none 0 (some ⟨0, sgMarkA⟩) :=
+      .genEmpty (σ := sgSrcA) (c := []) List.mem_cons_self rfl List.mem_cons_self rfl
+        List.mem_cons_self rfl (d := none) (.root (by decide))
+    exact .callFact (pc := 1) (.intra h0 List.mem_cons_self rfl) List.mem_cons_self rfl rfl
+  -- The first sink fires in that context; its gen lands in the zero context.
+  have hT : PE sgProgram Sel.all 3 none 0 (some ⟨0, sgMarkT⟩) :=
+    .genSingle (σ := sgSinkA) (c := [⟨⟨0, sgMarkA⟩, false⟩]) List.mem_cons_self rfl
+      List.mem_cons_self (by decide) List.mem_cons_self rfl hA
+  -- `E2`'s zero-fact call to node `3` returns `(0, T)`.
+  have hz : PE sgProgram Sel.all 2 none 1 none :=
+    .intra (.root (by decide)) List.mem_cons_self rfl
+  have hE2 : PE sgProgram Sel.all 2 none 2 (some ⟨0, sgMarkT⟩) :=
+    .retZero (c := 3) (ex := 0) hz List.mem_cons_self hT List.mem_cons_self rfl
+      List.mem_cons_self
+  exact ⟨List.mem_cons_self, rfl, rfl, _, List.mem_cons_self,
+    .inr (.inl ⟨⟨0, sgMarkT⟩, by decide, _, hE2⟩)⟩
+
+/-- Without `sinkGen` the scan drops that finding: `T` reaches only `E1`'s set,
+and `E1` does not reach node `2`. So a sink's gens must go to every root that
+reaches the sink node, not only to the root whose context satisfies it. -/
+theorem sinkgen_zero_ctx_needed :
+    Fires sgProgram Sel.all 2 2 sgSinkT ∧ ¬ ApplicableNoSinkGen sgProgram 2 2 sgSinkT := by
+  refine ⟨sg_fires, ?_⟩
+  rintro ⟨_, c, hc, h⟩
+  have hcond : sgSinkT.abstract.cond = [[sgMarkT]] := by decide
+  rw [hcond, List.mem_singleton] at hc
+  subst hc
+  rcases h with ⟨_, E, _, hR, hall⟩ | ⟨hlen, _⟩
+  · have h1 := (sg_noSinkGen_inv (hall _ List.mem_cons_self)).1
+    subst h1
+    rcases sg_reaches hR with h | h <;> exact absurd h (by decide)
+  · exact absurd hlen (by decide)
+
+/-- With `sinkGen` the scan selects it, as `fires_applicable` guarantees. -/
+theorem sg_applicable : Applicable sgProgram 2 2 sgSinkT :=
+  fires_applicable sgProgram_wf sg_fires
 
 /-! ## Axiom audit
 Run `./check.sh`: `AxiomAudit.lean` prints the axioms of every theorem. -/

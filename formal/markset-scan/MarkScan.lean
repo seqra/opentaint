@@ -6,4 +6,5 @@ import MarkScan.Selection
 import MarkScan.Coarsening
 import MarkScan.Algorithm
 import MarkScan.FlowSensitive
+import MarkScan.Relaxed
 import MarkScan.Integration

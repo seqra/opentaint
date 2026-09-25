@@ -1,6 +1,7 @@
 import MarkScan.EngineSoundness
 import MarkScan.Selection
 import MarkScan.Coarsening
+import MarkScan.Relaxed
 
 /-!
 # End-to-end exactness of the mark-set selection
@@ -35,6 +36,19 @@ theorem markset_exact_coarse {p q : Program} (wf : PcWF p)
     Fires p Sel.all n pc σ ↔
       Fires p (Sel.ofScan (fun n pc σ => appK (stmtOf (h n) (hp pc)) σ) need) n pc σ :=
   markset_exact wf (coarse_keyed_overapprox H hK) (coarse_needed_overapprox H hN)
+
+/-- Option 4*: a selection that over-approximates the corrected relaxed
+semantics is still exact. The relaxed sets are coarser than the exact ones
+(`applicable_relax`, `needed_relax`), so they discharge the hypotheses of
+`markset_exact`. -/
+theorem markset_exact_relaxed {p : Program} (wf : PcWF p)
+    {app : Node → Pc → ESite → Bool} {need : Mark → Bool}
+    (hAppR : ∀ n pc σ, ApplicableRelax p n pc σ → app n pc σ = true)
+    (hNeedR : ∀ m, NeededRelax p m → need m = true)
+    {n : Node} {pc : Pc} {σ : ESite} :
+    Fires p Sel.all n pc σ ↔ Fires p (Sel.ofScan app need) n pc σ :=
+  markset_exact wf (fun n pc σ h => hAppR n pc σ (applicable_relax h))
+    (fun m h => hNeedR m (needed_relax h))
 
 /-! ## Axiom audit
 Run `./check.sh`: `AxiomAudit.lean` prints the axioms of every theorem. -/
