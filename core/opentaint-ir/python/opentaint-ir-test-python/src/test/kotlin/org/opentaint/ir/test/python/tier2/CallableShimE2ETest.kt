@@ -1,0 +1,85 @@
+package org.opentaint.ir.test.python.tier2
+
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRAssign
+import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRGlobalNameRef
+import org.opentaint.ir.api.python.PIRLocalVar
+import org.opentaint.ir.api.python.PIRReadNameExpr
+import org.opentaint.ir.test.python.PIRTestBase
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertTrue
+
+@Tag("tier2")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class CallableShimE2ETest : PIRTestBase() {
+
+    private lateinit var cp: PIRClasspath
+
+    companion object {
+        val SOURCE = """
+def cse_capturing(x):
+    def inner(p):
+        return x + p
+    return inner(7)
+""".trimIndent()
+    }
+
+    @BeforeAll
+    fun setup() { cp = buildFromSource(SOURCE) }
+
+
+    @Test
+    fun `capturing inner produces synthetic adapter class in module`() {
+        val module = cp.modules.first()
+        val adapters = module.classes.filter { it.name.startsWith("<closure_") }
+        assertTrue(adapters.isNotEmpty(),
+            "module should contain a synthesized adapter class; classes=${module.classes.map { it.name }}")
+        val adapter = adapters.first()
+        val methodNames = adapter.methods.map { it.name }
+        assertTrue("__init__" in methodNames, "adapter should expose __init__, got $methodNames")
+        assertTrue("__call__" in methodNames, "adapter should expose __call__, got $methodNames")
+    }
+
+    @Test
+    fun `outer's call site is a PIRCall on FlatLocal('inner')`() {
+        val outer = cp.modules.flatMap { it.functions }.first { it.name == "cse_capturing" }
+        val userCalls = outer.instList.filterIsInstance<PIRCall>().filter {
+            (it.callee as? PIRLocalVar)?.name == "inner"
+        }
+        assertTrue(userCalls.isNotEmpty(), "expected a PIRCall on the bound inner local")
+        // Call passes only user-supplied args (no implicit <self>).
+        for (call in userCalls) {
+            assertEquals(1, call.args.size, "expected one arg (7), got ${call.args}")
+        }
+    }
+
+    @Test
+    fun `bind site is a constructor call on the adapter class`() {
+        val outer = cp.modules.flatMap { it.functions }.first { it.name == "cse_capturing" }
+        // Build a map: localVar.index → qualifiedName for every PIRReadNameExpr(GlobalNameRef).
+        val nameByLocal = outer.instList
+            .filterIsInstance<PIRAssign>()
+            .mapNotNull { a ->
+                val ref = (a.expr as? PIRReadNameExpr)?.ref as? PIRGlobalNameRef ?: return@mapNotNull null
+                a.target.index to ref.qualifiedName
+            }
+            .toMap()
+
+        val ctor = outer.instList.filterIsInstance<PIRCall>().firstOrNull { call ->
+            val callee = call.callee as? PIRLocalVar ?: return@firstOrNull false
+            val qn = nameByLocal[callee.index] ?: return@firstOrNull false
+            qn.substringAfterLast('.').let {
+                it.startsWith("<closure_") && !it.endsWith("_impl>")
+            }
+        }
+        assertNotNull(ctor, "expected a PIRCall to the adapter class constructor")
+        // Constructor receives one positional arg (the env dict).
+        assertEquals(1, ctor!!.args.size)
+    }
+}

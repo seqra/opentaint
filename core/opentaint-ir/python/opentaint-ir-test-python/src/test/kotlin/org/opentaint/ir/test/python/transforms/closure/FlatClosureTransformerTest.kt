@@ -1,0 +1,990 @@
+package org.opentaint.ir.test.python.transforms.closure
+
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.opentaint.ir.api.python.PIRDiagnostic
+import org.opentaint.ir.impl.python.flat.FlatAnyType
+import org.opentaint.ir.impl.python.flat.FlatAssign
+import org.opentaint.ir.impl.python.flat.FlatBinOp
+import org.opentaint.ir.impl.python.flat.FlatBinaryOperator
+import org.opentaint.ir.impl.python.flat.FlatBindFunction
+import org.opentaint.ir.impl.python.flat.FlatBlock
+import org.opentaint.ir.impl.python.flat.FlatBuildDict
+import org.opentaint.ir.impl.python.flat.FlatBuildList
+import org.opentaint.ir.impl.python.flat.FlatCFG
+import org.opentaint.ir.impl.python.flat.FlatCall
+import org.opentaint.ir.impl.python.flat.FlatCallArg
+import org.opentaint.ir.impl.python.flat.FlatClass
+import org.opentaint.ir.impl.python.flat.FlatClassType
+import org.opentaint.ir.impl.python.flat.FlatDecorator
+import org.opentaint.ir.impl.python.flat.FlatDeleteAttr
+import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
+import org.opentaint.ir.impl.python.flat.FlatExceptHandler
+import org.opentaint.ir.impl.python.flat.FlatFunctionIR
+import org.opentaint.ir.impl.python.flat.FlatFunctionKind
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
+import org.opentaint.ir.impl.python.flat.FlatInst
+import org.opentaint.ir.impl.python.flat.FlatIntConst
+import org.opentaint.ir.impl.python.flat.FlatLoadAttr
+import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
+import org.opentaint.ir.impl.python.flat.FlatLocal
+import org.opentaint.ir.impl.python.flat.FlatModuleIR
+import org.opentaint.ir.impl.python.flat.FlatNextIter
+import org.opentaint.ir.impl.python.flat.FlatParamKind
+import org.opentaint.ir.impl.python.flat.FlatParameter
+import org.opentaint.ir.impl.python.flat.FlatParameterRef
+import org.opentaint.ir.impl.python.flat.FlatReturn
+import org.opentaint.ir.impl.python.flat.FlatStoreAttr
+import org.opentaint.ir.impl.python.flat.FlatStrConst
+import org.opentaint.ir.impl.python.flat.FlatUnpack
+import org.opentaint.ir.impl.python.flat.FlatValue
+import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
+import org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer
+import kotlin.test.assertEquals
+import kotlin.test.assertNotNull
+import kotlin.test.assertNull
+import kotlin.test.assertTrue
+import kotlin.test.assertFalse
+
+@Tag("tier2")
+class FlatClosureTransformerTest {
+
+    private val moduleName = "m"
+
+    private fun fn(
+        name: String,
+        qualifiedName: String,
+        parent: String?,
+        kind: FlatFunctionKind,
+        params: List<String> = emptyList(),
+        body: List<FlatInst> = listOf(FlatReturn(null)),
+        nonlocal: Set<String> = emptySet(),
+        global: Set<String> = emptySet(),
+        decorators: List<FlatDecorator> = emptyList(),
+        blocks: List<FlatBlock>? = null,
+    ): FlatFunctionIR {
+        val parameters = params.map {
+            FlatParameter(
+                name = it,
+                type = FlatAnyType,
+                kind = FlatParamKind.POSITIONAL_OR_KEYWORD,
+                hasDefault = false,
+                defaultValue = null,
+            )
+        }
+        val cfg = if (blocks != null) {
+            FlatCFG(blocks = blocks, entryBlock = blocks.first().label, exitBlocks = listOf(blocks.last().label))
+        } else {
+            FlatCFG(
+                blocks = listOf(FlatBlock(0, body, emptyList())),
+                entryBlock = 0,
+                exitBlocks = listOf(0),
+            )
+        }
+        return FlatFunctionIR(
+            name = name,
+            qualifiedName = qualifiedName,
+            parentQualifiedName = parent,
+            kind = kind,
+            cfg = cfg,
+            parameters = parameters,
+            returnType = FlatAnyType,
+            isAsync = false,
+            isGenerator = false,
+            decorators = decorators,
+            nonlocalNames = nonlocal,
+            globalNames = global,
+        )
+    }
+
+    private fun moduleInit(): FlatFunctionIR =
+        fn(
+            name = "<module>",
+            qualifiedName = "$moduleName.<module>",
+            parent = null,
+            kind = FlatFunctionKind.MODULE_INIT,
+        )
+
+    private fun module(
+        functions: List<FlatFunctionIR>,
+        classes: List<FlatClass> = emptyList(),
+    ): FlatModuleIR = FlatModuleIR(
+        moduleName = moduleName,
+        path = "$moduleName.py",
+        functions = functions,
+        moduleInit = moduleInit(),
+        classes = classes,
+        fields = emptyList(),
+        diagnostics = emptyList<PIRDiagnostic>(),
+    )
+
+    private fun klass(
+        name: String,
+        qualifiedName: String,
+        methods: List<FlatFunctionIR> = emptyList(),
+    ) = FlatClass(
+        name = name,
+        qualifiedName = qualifiedName,
+        baseClasses = emptyList(),
+        mro = emptyList(),
+        methods = methods,
+        fields = emptyList(),
+        nestedClasses = emptyList(),
+        decorators = emptyList(),
+        isAbstract = false,
+        isDataclass = false,
+        isEnum = false,
+    )
+
+    private fun local(name: String) = FlatLocal(name)
+
+    private fun cellName(n: String) = "\$cell\$$n"
+
+    private fun lookup(out: FlatModuleIR, qn: String): FlatFunctionIR {
+        out.functions.firstOrNull { it.qualifiedName == qn }?.let { return it }
+        if (out.moduleInit.qualifiedName == qn) return out.moduleInit
+        for (c in out.classes) {
+            c.methods.firstOrNull { it.qualifiedName == qn }?.let { return it }
+        }
+        val baseName = qn.substringAfterLast('.')
+        val implName = "<closure_${baseName}_impl>"
+        out.functions.firstOrNull { it.name == implName }?.let { return it }
+        error("Function $qn not found in rewritten module")
+    }
+
+    private fun adapter(out: FlatModuleIR, baseName: String): FlatClass {
+        val expected = "<closure_$baseName>"
+        return out.classes.firstOrNull { it.name == expected }
+            ?: error("Adapter class $expected not found in rewritten module")
+    }
+
+    private fun entryInsts(fn: FlatFunctionIR): List<FlatInst> =
+        fn.cfg.blocks.first { it.label == fn.cfg.entryBlock }.instructions
+
+    private fun calleeQn(call: FlatCall, insts: List<FlatInst>): String? {
+        val callee = call.callee as? FlatLocal ?: return null
+        for (inst in insts) {
+            if (inst === call) break
+            if (inst is FlatReadName &&
+                (inst.target as? FlatLocal)?.name == callee.name
+            ) {
+                return (inst.ref as? FlatGlobalNameRef)?.qualifiedName
+            }
+        }
+        return null
+    }
+
+    @Test
+    fun `self injected when closureVars non-empty`() {
+        // outer has x; inner reads x. inner must get <self> param at index 0.
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenInner = lookup(out, innerQn)
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, rewrittenInner.parameters[0].name)
+        assertEquals("p", rewrittenInner.parameters[1].name)
+        assertEquals(setOf("x"), rewrittenInner.closureVars)
+    }
+
+    @Test
+    fun `non-capturing nested has no self`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("p"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenInner = lookup(out, innerQn)
+        assertEquals(listOf("p"), rewrittenInner.parameters.map { it.name })
+        assertEquals(emptySet(), rewrittenInner.closureVars)
+    }
+
+    @Test
+    fun `prologue contains pir_cell calls for each cellVar`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(
+                FlatBinOp(local("t0"), local("a"), local("b"), FlatBinaryOperator.ADD),
+                FlatReturn(local("t0")),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("a"), FlatIntConst(1)),
+                FlatAssign(local("b"), FlatIntConst(2)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenOuter = lookup(out, outerQn)
+        val insts = entryInsts(rewrittenOuter)
+        val cellCtorQn = "builtins.${ClosureRuntime.CELL_CLASS_NAME}"
+        val cellCalls = insts.filterIsInstance<FlatCall>().filter {
+            calleeQn(it, insts) == cellCtorQn
+        }
+        assertEquals(2, cellCalls.size)
+        val targets = cellCalls.mapNotNull { (it.target as? FlatLocal)?.name }.toSet()
+        assertEquals(setOf(cellName("a"), cellName("b")), targets)
+        assertTrue(insts[0] is FlatReadName, "first inst should be the cell-ctor FlatReadName, got ${insts[0]}")
+        assertTrue(
+            insts[1] is FlatCall && calleeQn(insts[1] as FlatCall, insts) == cellCtorQn,
+            "second inst should be the cell allocation FlatCall, got ${insts[1]}",
+        )
+    }
+
+    @Test
+    fun `parameter cells seeded`() {
+        // outer(x): def inner(): return x  → outer.cellVars = {x}, x is param
+        //
+        // The fixture mirrors `CfgBuild.buildFunctionCfg`: the parameter-binding prologue is the
+        // body's first instruction, and `defaultRewrite` redirecting its cell-managed target
+        // through a temp + `FlatStoreAttr` is what seeds `$cell$x` — the rewriter's own prologue
+        // emits no explicit seed.
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            params = listOf("x"),
+            body = listOf(
+                FlatAssign(local("x"), FlatParameterRef("x")),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenOuter = lookup(out, outerQn)
+        val insts = entryInsts(rewrittenOuter)
+
+        val allocIdx = insts.indexOfFirst {
+            it is FlatCall &&
+                calleeQn(it, insts) == "builtins.${ClosureRuntime.CELL_CLASS_NAME}" &&
+                (it.target as? FlatLocal)?.name == cellName("x")
+        }
+        assertTrue(allocIdx >= 0, "expected cell-alloc for x; insts=$insts")
+
+        val seedStore = insts.drop(allocIdx + 1).filterIsInstance<FlatStoreAttr>().firstOrNull { s ->
+            (s.obj as? FlatLocal)?.name == cellName("x") &&
+                s.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
+        }
+        assertNotNull(seedStore, "expected FlatStoreAttr seeding ${cellName("x")}; insts=$insts")
+        val seedTemp = (seedStore!!.value as FlatLocal).name
+        val seedAssign = insts.filterIsInstance<FlatAssign>().firstOrNull {
+            (it.target as? FlatLocal)?.name == seedTemp && it.source is FlatParameterRef
+        }
+        assertNotNull(seedAssign,
+            "expected FlatAssign($seedTemp, FlatParameterRef(\"x\")) preceding the seed store; insts=$insts")
+        assertEquals("x", (seedAssign!!.source as FlatParameterRef).name)
+    }
+
+    @Test
+    fun `body reads through FlatLoadAttr and substitution flows`() {
+        // def outer():
+        //     x = 1
+        //     def inner(): return x
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenInner = lookup(out, innerQn)
+        val insts = entryInsts(rewrittenInner)
+        val ret = insts.last() as FlatReturn
+        val retVal = ret.value as FlatLocal
+        assertTrue(retVal.name.startsWith("\$t"), "Return value should be a fresh temp, got ${retVal.name}")
+        val loadIdx = insts.indexOfFirst {
+            it is FlatLoadAttr &&
+                (it.target as? FlatLocal)?.name == retVal.name &&
+                (it.obj as? FlatLocal)?.name == cellName("x") &&
+                it.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
+        }
+        assertTrue(loadIdx >= 0, "No matching FlatLoadAttr found in: $insts")
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatBinOp target captured`() {
+        // count = count + 1, with count captured (nonlocal write).
+        val outerQn = "m.outer"
+        val incQn = "m.outer.inc"
+        val inc = fn(
+            name = "inc",
+            qualifiedName = incQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            nonlocal = setOf("count"),
+            body = listOf(
+                FlatBinOp(local("count"), local("count"), FlatIntConst(1), FlatBinaryOperator.ADD),
+                FlatReturn(null),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("count"), FlatIntConst(0)),
+                FlatBindFunction(local("inc"), FlatGlobalNameRef(incQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inc)))
+        val rewrittenInc = lookup(out, incQn)
+        val insts = entryInsts(rewrittenInc)
+        val binIdx = insts.indexOfFirst { it is FlatBinOp }
+        assertTrue(binIdx >= 0)
+        val bin = insts[binIdx] as FlatBinOp
+        val tempName = (bin.target as FlatLocal).name
+        assertTrue(tempName.startsWith("\$t"))
+        val store = insts[binIdx + 1] as FlatStoreAttr
+        assertEquals(cellName("count"), (store.obj as FlatLocal).name)
+        assertEquals(ClosureRuntime.CELL_VALUE_ATTR_NAME, store.attribute)
+        assertEquals(tempName, (store.value as FlatLocal).name)
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatCall target captured`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            nonlocal = setOf("v"),
+            body = listOf(
+                FlatCall(target = local("v"), callee = local("f"), args = emptyList()),
+                FlatReturn(null),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            params = listOf("f"),
+            body = listOf(
+                FlatAssign(local("v"), FlatIntConst(0)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, innerQn))
+        val callIdx = insts.indexOfFirst { it is FlatCall && (it as FlatCall).target != null }
+        val call = insts[callIdx] as FlatCall
+        val tempName = (call.target as FlatLocal).name
+        assertTrue(tempName.startsWith("\$t"))
+        val store = insts[callIdx + 1] as FlatStoreAttr
+        assertEquals(cellName("v"), (store.obj as FlatLocal).name)
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatBuildList target captured`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            nonlocal = setOf("xs"),
+            body = listOf(
+                FlatBuildList(target = local("xs"), elements = listOf(FlatIntConst(1), FlatIntConst(2))),
+                FlatReturn(null),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("xs"), FlatIntConst(0)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, innerQn))
+        val buildIdx = insts.indexOfFirst { it is FlatBuildList }
+        val build = insts[buildIdx] as FlatBuildList
+        val tempName = (build.target as FlatLocal).name
+        assertTrue(tempName.startsWith("\$t"))
+        val store = insts[buildIdx + 1] as FlatStoreAttr
+        assertEquals(cellName("xs"), (store.obj as FlatLocal).name)
+        assertEquals(tempName, (store.value as FlatLocal).name)
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatNextIter target captured`() {
+        // for-loop where the loop variable is captured by an inner def.
+        // Only build the structure we need to inspect for FlatNextIter rewrite.
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("i"))),
+        )
+        val entryBlock = FlatBlock(
+            label = 0,
+            instructions = listOf(
+                FlatAssign(local("it"), FlatIntConst(0)),
+                FlatNextIter(target = local("i"), iterator = local("it"), bodyBlock = 1, exitBlock = 2),
+            ),
+            exceptionHandlers = emptyList(),
+        )
+        val bodyBlock = FlatBlock(
+            label = 1,
+            instructions = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                org.opentaint.ir.impl.python.flat.FlatGoto(0),
+            ),
+            exceptionHandlers = emptyList(),
+        )
+        val exitBlock = FlatBlock(
+            label = 2,
+            instructions = listOf(FlatReturn(null)),
+            exceptionHandlers = emptyList(),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            blocks = listOf(entryBlock, bodyBlock, exitBlock),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenOuter = lookup(out, outerQn)
+        val rewrittenEntry = rewrittenOuter.cfg.blocks.first { it.label == 0 }.instructions
+        val nextInst = rewrittenEntry.last() as FlatNextIter
+        val tempName = (nextInst.target as FlatLocal).name
+        assertTrue(tempName.startsWith("\$t"))
+        val store = rewrittenOuter.cfg.blocks.first { it.label == 1 }.instructions.first() as FlatStoreAttr
+        assertEquals(cellName("i"), (store.obj as FlatLocal).name)
+        assertEquals(tempName, (store.value as FlatLocal).name)
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatExceptHandler target captured`() {
+        // try: ... except E as e: ... where e is captured by inner.
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("e"))),
+        )
+        val handlerBlock = FlatBlock(
+            label = 1,
+            instructions = listOf(
+                FlatExceptHandler(target = local("e"), exceptionTypes = listOf(FlatClassType("Exception"))),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+            exceptionHandlers = emptyList(),
+        )
+        val entryBlock = FlatBlock(
+            label = 0,
+            instructions = listOf(org.opentaint.ir.impl.python.flat.FlatGoto(1)),
+            exceptionHandlers = emptyList(),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            blocks = listOf(entryBlock, handlerBlock),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenOuter = lookup(out, outerQn)
+        val handlerInsts = rewrittenOuter.cfg.blocks.first { it.label == 1 }.instructions
+        val hIdx = handlerInsts.indexOfFirst { it is FlatExceptHandler }
+        val h = handlerInsts[hIdx] as FlatExceptHandler
+        val tempName = (h.target as FlatLocal).name
+        assertTrue(tempName.startsWith("\$t"))
+        val store = handlerInsts[hIdx + 1] as FlatStoreAttr
+        assertEquals(cellName("e"), (store.obj as FlatLocal).name)
+        assertEquals(tempName, (store.value as FlatLocal).name)
+    }
+
+    @Test
+    fun `body writes through FlatStoreAttr - FlatUnpack mixed cell-managed and not`() {
+        // a, b = pair  where a is captured but b is not.
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("a"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            params = listOf("pair"),
+            body = listOf(
+                FlatUnpack(targets = listOf(local("a"), local("b")), source = local("pair"), starIndex = -1),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, outerQn))
+        val unpackIdx = insts.indexOfFirst { it is FlatUnpack }
+        val unpack = insts[unpackIdx] as FlatUnpack
+        val a = unpack.targets[0] as FlatLocal
+        val b = unpack.targets[1] as FlatLocal
+        assertTrue(a.name.startsWith("\$t"), "Captured slot should be redirected to temp, got ${a.name}")
+        assertEquals("b", b.name, "Non-captured slot should be unchanged")
+        val storeIdx = unpackIdx + 1
+        val store = insts[storeIdx] as FlatStoreAttr
+        assertEquals(cellName("a"), (store.obj as FlatLocal).name)
+        assertEquals(a.name, (store.value as FlatLocal).name)
+    }
+
+    @Test
+    fun `delete local of captured name lowers to delete attr`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatDeleteLocal(local("x")),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, outerQn))
+        assertFalse(insts.any { it is FlatDeleteLocal }, "FlatDeleteLocal(x) should be lowered")
+        val del = insts.filterIsInstance<FlatDeleteAttr>().firstOrNull {
+            (it.obj as? FlatLocal)?.name == cellName("x") && it.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
+        }
+        assertNotNull(del, "Expected FlatDeleteAttr on \$cell\$x")
+    }
+
+    @Test
+    fun `bind site for capturing child emits build dict and constructor call`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, outerQn))
+        assertFalse(
+            insts.any { it is FlatBindFunction },
+            "Capturing-child bind should be rewritten to a constructor call",
+        )
+        val buildIdx = insts.indexOfFirst { it is FlatBuildDict }
+        assertTrue(buildIdx >= 0)
+        val buildDict = insts[buildIdx] as FlatBuildDict
+        assertEquals(listOf(FlatStrConst("x") as FlatValue), buildDict.keys)
+        assertEquals(listOf(local(cellName("x")) as FlatValue), buildDict.values)
+        val read = insts[buildIdx + 1] as FlatReadName
+        assertEquals("$moduleName.<closure_inner>", (read.ref as FlatGlobalNameRef).qualifiedName)
+        val ctor = insts[buildIdx + 2] as FlatCall
+        assertEquals("inner", (ctor.target as FlatLocal).name)
+        assertEquals((read.target as FlatLocal).name, (ctor.callee as FlatLocal).name)
+        assertEquals(1, ctor.args.size)
+        assertEquals((buildDict.target as FlatLocal).name, (ctor.args[0].value as FlatLocal).name)
+    }
+
+    @Test
+    fun `capturing nested def emits adapter class with init and call`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val cls = adapter(out, "inner")
+        assertTrue(cls.name.contains('<') && cls.name.contains('>'),
+            "Adapter class name should contain angle brackets, got ${cls.name}")
+        assertEquals("$moduleName.${cls.name}", cls.qualifiedName)
+        assertEquals(2, cls.methods.size)
+        assertEquals("__init__", cls.methods[0].name)
+        assertEquals("__call__", cls.methods[1].name)
+
+        val initInsts = cls.methods[0].cfg.blocks.first().instructions
+        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), cls.methods[0].parameters.map { it.name })
+        val store = initInsts.filterIsInstance<FlatStoreAttr>().single()
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
+        assertEquals("self", (store.obj as FlatLocal).name)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatLocal).name)
+
+        val callMethod = cls.methods[1]
+        assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
+        val callInsts = callMethod.cfg.blocks.first().instructions
+        val implCall = callInsts.filterIsInstance<FlatCall>().single()
+        assertEquals(2, implCall.args.size)
+        assertEquals("self", (implCall.args[0].value as FlatLocal).name)
+        assertEquals("p", (implCall.args[1].value as FlatLocal).name)
+        assertEquals("$moduleName.<closure_inner_impl>", calleeQn(implCall, callInsts))
+    }
+
+    @Test
+    fun `non-capturing nested def emits no adapter class and no impl rename`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("p"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        assertTrue(
+            out.classes.none { it.name.startsWith("<closure_") },
+            "Non-capturing child should not synthesize an adapter class",
+        )
+        assertNotNull(out.functions.firstOrNull { it.qualifiedName == innerQn })
+    }
+
+    @Test
+    fun `bind site for non-capturing child has no env attach`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("p"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenOuter = lookup(out, outerQn)
+        val insts = entryInsts(rewrittenOuter)
+        assertFalse(
+            insts.any {
+                it is FlatStoreAttr && it.attribute == ClosureRuntime.ENV_ATTR_NAME
+            },
+            "Non-capturing child should not trigger env attach",
+        )
+        assertFalse(
+            insts.any { it is FlatBuildDict },
+            "Non-capturing child should not trigger env build",
+        )
+    }
+
+    @Test
+    fun `calls to closure bearing children pass only user args`() {
+        // outer creates inner (which captures x), then calls inner(42).
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            params = listOf("p"),
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatCall(target = local("r"), callee = local("inner"), args = listOf(FlatCallArg(FlatIntConst(42)))),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val insts = entryInsts(lookup(out, outerQn))
+        val userCall = insts.filterIsInstance<FlatCall>().firstOrNull {
+            val callee = it.callee
+            callee is FlatLocal && callee.name == "inner"
+        }
+        assertNotNull(userCall)
+        assertEquals(1, userCall!!.args.size)
+        assertEquals(FlatIntConst(42), userCall.args[0].value)
+    }
+
+    @Test
+    fun `decorated nested def keeps decorators and binds`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val deco = FlatDecorator(name = "mydeco", qualifiedName = "m.mydeco", arguments = emptyList())
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            decorators = listOf(deco),
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        val rewrittenInner = lookup(out, innerQn)
+        assertEquals(listOf(deco), rewrittenInner.decorators)
+        val cls = adapter(out, "inner")
+        assertEquals(emptyList(), cls.methods[0].decorators)
+        assertEquals(emptyList(), cls.methods[1].decorators)
+        val outerInsts = entryInsts(lookup(out, outerQn))
+        val ctor = outerInsts.filterIsInstance<FlatCall>().firstOrNull {
+            calleeQn(it, outerInsts) == cls.qualifiedName
+        }
+        assertNotNull(ctor)
+    }
+
+    @Test
+    fun `transitive capture through method-in-class-inside-function pass-through`() {
+        // outer (TOP_LEVEL) → m (METHOD, parent=outer) → inner (NESTED_DEF,
+        // parent=m) reads x from outer.
+        //
+        // Closure-root status derives from "no parent": m has one (outer), so it forwards x
+        // through cells like any other inner scope. No diagnostic, no `ClosureRewriteLimitation`.
+        val outerQn = "m.outer"
+        val mQn = "m.outer.C.m"
+        val innerQn = "m.outer.C.m.inner"
+
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = mQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(FlatReturn(local("x"))),
+        )
+        val method = fn(
+            name = "m",
+            qualifiedName = mQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.METHOD,
+            params = listOf("self"),
+            body = listOf(
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("x"), FlatIntConst(1)),
+                FlatReturn(null),
+            ),
+        )
+
+        val out = FlatClosureTransformer.transform(module(listOf(outer, method, inner)))
+
+        val outerInsts = entryInsts(lookup(out, outerQn))
+        assertTrue(
+            outerInsts.any {
+                it is FlatCall &&
+                    calleeQn(it, outerInsts) == "builtins.${ClosureRuntime.CELL_CLASS_NAME}" &&
+                    (it.target as? FlatLocal)?.name == cellName("x")
+            },
+            "outer should allocate \$cell\$x",
+        )
+        val rewrittenInner = lookup(out, innerQn)
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, rewrittenInner.parameters[0].name)
+        assertEquals(setOf("x"), rewrittenInner.closureVars)
+        val rewrittenM = lookup(out, mQn)
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, rewrittenM.parameters[0].name)
+        assertEquals(setOf("x"), rewrittenM.closureVars)
+        assertEquals(emptyList(), out.diagnostics.filter { it.functionName == mQn })
+    }
+
+    @Test
+    fun `closureVars populated on rewritten FlatFunctionIR`() {
+        val outerQn = "m.outer"
+        val innerQn = "m.outer.inner"
+        val inner = fn(
+            name = "inner",
+            qualifiedName = innerQn,
+            parent = outerQn,
+            kind = FlatFunctionKind.NESTED_DEF,
+            body = listOf(
+                FlatBinOp(local("t"), local("a"), local("b"), FlatBinaryOperator.ADD),
+                FlatReturn(local("t")),
+            ),
+        )
+        val outer = fn(
+            name = "outer",
+            qualifiedName = outerQn,
+            parent = null,
+            kind = FlatFunctionKind.TOP_LEVEL,
+            body = listOf(
+                FlatAssign(local("a"), FlatIntConst(1)),
+                FlatAssign(local("b"), FlatIntConst(2)),
+                FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
+                FlatReturn(null),
+            ),
+        )
+        val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
+        assertEquals(setOf("a", "b"), lookup(out, innerQn).closureVars)
+        assertEquals(emptySet(), lookup(out, outerQn).closureVars)
+    }
+
+    @Test
+    fun `module init untouched when no closures`() {
+        val out = FlatClosureTransformer.transform(module(functions = emptyList()))
+        assertEquals(emptyList(), out.moduleInit.parameters.map { it.name })
+        assertEquals(emptySet(), out.moduleInit.closureVars)
+        assertEquals(0, out.diagnostics.size)
+    }
+}
