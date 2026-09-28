@@ -230,9 +230,15 @@ Rule handling inside the sequent FF:
 * **`x = C.f` where `C.f` has a static-field source**: a demand `x·M` for the
   source's mark is a finding.
 * **`JMethodEnterInst`** (the backward exit):
-  * Fact: a demand on `Argument`/`This` that matches `sourceRulesForMethodEntry`
-    is a finding, unless the demand came from a caller through the root of an
-    argument (below).
+  * Fact: a demand on `Argument`/`This`/`ClassStatic` that matches
+    `sourceRulesForMethodEntry` is a finding, unless the demand came from a
+    caller through the root of an argument (below). Entry rules that assign
+    a mark to a static state variable (`ClassStatic`, e.g. the semgrep
+    `pattern-inside` of a method signature) are matched like argument rules;
+    forward creates their facts in `propagateZero` and keeps them at the exit.
+  * Fact on a zero-to-fact edge, in a run restricted to zero-edge-only exit
+    sinks of this method: the demand (and the condition demands of matched
+    sources) is not propagated further, see "Zero-edge-only exit sinks" below.
   * Zero: seed demands for entry sinks (`sinkRulesForMethodEntry`).
 
 A source match never kills the demand: the demand keeps flowing (to `x` at
@@ -276,6 +282,45 @@ rule of this method (all marks of `sourceRulesForMethodEntry`, like
 Not mirrored: forward's drop also removes an entry mark that a *call* source
 inside the method put on an argument root; backward only suppresses entry
 source findings.
+
+**Zero-edge-only exit sinks.** Every production and test rules provider is
+wrapped in `JIRMethodExitRuleProvider`, which returns method-exit sinks only
+when `initialFacts` is empty: forward checks an exit sink of method `m` only
+on facts of `m`'s **zero-to-fact** edges, i.e. facts created by sources in
+`m`, in `m`'s callees (zero-to-fact summaries) or by `m`'s own entry sources.
+A fact that entered `m` from a caller (fact-to-fact edge) never triggers it.
+Backward sees the same flow from the sink: a demand seeded at `return x` of
+`m` is a zero-to-fact demand of `m`; it may be satisfied inside `m`, in the
+callees it enters, or by `m`'s entry sources, but not by leaving `m` through
+its `JMethodEnterInst` towards the callers.
+
+* An exit sink is zero-edge-only when the provider returns it for
+  `initialFacts = null` but not for a fact-edge probe
+  (`initialFacts = {mostAbstractInitialAp(Return)}`,
+  `JIRBackwardTaintRules.isZeroEdgeOnlyExitSink`). This asks the provider
+  itself, so a provider that does not filter (e.g. Spring controller methods
+  in `SpringRuleProvider`) keeps the ordinary behaviour.
+* Demands carry no provenance, so the restriction is applied per run: when
+  the run is restricted and **every** allowed occurrence is a zero-edge-only
+  exit sink of the method being exited, `JMethodEnterInst` propagates nothing
+  on zero-to-fact edges (`keepsZeroEdgeDemandsAtMethodEnter`, memoised per
+  method in the tracker and reset by `configureRun`). Source matches and end
+  requirements are still recorded first. In such a run every zero-to-fact
+  demand of `m` stems from the run's seeds: sink seeds elsewhere are not
+  allowed, and end demands never need to leave `m` to reach its `return`
+  statement (a `return` is the first statement backward). Fact-to-fact edges
+  of `m` (demands from its callers, e.g. end demands) are unaffected.
+* Runs where the rule cannot be applied over-approximate (the demand escapes
+  to the callers). A discovery run that seeded a zero-edge-only exit sink is
+  therefore never `exact`, and a positive of a multi-member group is isolated
+  anyway (12.5), so every reported verdict comes from a run that applies it.
+  The tracker records the seeded zero-edge-only occurrences
+  (`zeroEdgeOnlySinks`) for the discovery check.
+* Not mirrored: forward never reports an exit sink whose condition is
+  constant-true (`applyUnconditionalSinks` is a stub) and fires method-entry
+  sinks only for constant-true conditions (`JIRMethodStartFlowFunction`);
+  backward records the former as unconditional and seeds demands for the
+  latter (`BackwardSmokeTest` relies on it). No suite exercises either.
 
 ### 4.1 Implementation notes
 
@@ -504,10 +549,49 @@ evaluator `TaintPassActionPreconditionEvaluator` is unchanged):
   over-approximates. Non-mark conditions (types, constants) are already
   folded into the rewritten condition by `prepareCallStatementRules`.
 
+**User-rule summary rewriting** (`JIRMethodCallRuleBasedSummaryRewriter`,
+inverted by `JIRBackwardSummaryRewriter`). Forward indexes, per call
+statement, the user-defined source and cleaner rules of the callee
+(`UserDefinedRuleInfo`, condition not constant-false after the non-mark
+rewrite): for every base of an `AssignMark` / `RemoveMark` position it
+removes **every** mark of the rule's `relevantTaintMarks` at that position
+(`RemoveMark(mark, position, Exact)`, with the `<string-bytes>` twin for a
+`String` position). It rewrites three kinds of facts, independent of the
+rule's mark condition: the final fact of every fact-to-fact summary applied
+at the call (zero-to-fact summaries are not rewritten), the result of every
+pass-through / default-propagation rule, and the caller fact kept across an
+unresolved call. The rule models the call, so its marks must not also flow
+through the callee body or a generic pass rule. Backward inverts each:
+
+* Summaries: the forward final fact is the backward summary's **initial**
+  fact (the callee demand at its exit). `prepareFactToFactSummary` runs the
+  same action index over it (`JIRMethodCallRuleBasedSummaryRewriter.removeMarkActions`,
+  positions from `JIRTaintCleanActionEvaluator.removeMarkPositions`): if it
+  contains `position·M·$` the summary is dropped; if an abstract node is read
+  on the way, the accessor is added to the exclusions of both the initial and
+  the final fact, exactly as forward refines its rewritten summary. A
+  refined `ret.*/{M}` no longer applies to a caller demand `r·M` (the delta is
+  filtered by the exclusions) and still applies to `r.f·M`. Initial facts
+  are single paths in `Tree`/`Cactus`, so "contains" means "is"; an `Automata`
+  initial graph is dropped as a whole (over-cleaning, not exercised).
+  Zero-to-fact summaries (sinks inside the callee) are not rewritten, like
+  forward's zero-to-fact summaries (sources inside the callee): the demand
+  still enters the callee, so sources inside it are found.
+* Inverse pass-through: the demand at the rule's `to` (`callerFact.rebase(startBase)`)
+  is rewritten with the forward rewriter itself before the inverse pass; the
+  refinement joins the pass reader.
+* Unresolved keep: the kept caller demand is rewritten with the forward
+  rewriter, keyed by its caller base like forward (a `ClassStatic` state
+  demand is the intended case; a caller `Argument(i)` demand is matched
+  against the callee's `Argument(i)` rules, a forward quirk mirrored as is).
+
+This is what makes the semgrep `pattern-not-inside … clean($X)` samples
+agree: `clean` carries a user source or cleaner whose relevant marks include
+the demanded one, so the demand dies at the call although `clean`'s body
+passes the value through.
+
 Not mirrored from forward (documented omissions):
 
-* `JIRMethodCallRuleBasedSummaryRewriter` (user-rule-based rewriting of
-  pass-through and default-propagation facts) is forward-only.
 * The external-method tracker is not fed by backward resolution failures.
 * No per-statement call FF cache (the FF is cheap to build; its helpers are
   lazy).
@@ -602,8 +686,10 @@ minus two parts:
   the call FF, on the demand before it enters the callee (section 5); the
   summary is already mapped back to the call locals, and aliasing it again
   would duplicate that work in the opposite direction.
-* Dropped: `prepareFactToFactSummary` / `prepareNDFactToFactSummary` rewriting
-  (`JIRMethodCallRuleBasedSummaryRewriter`), forward-only (section 5).
+* Kept, inverted: `prepareFactToFactSummary` rewrites the backward summary's
+  initial fact with the user-rule index (section 5, "User-rule summary
+  rewriting"). `prepareNDFactToFactSummary` keeps the default: backward
+  never creates non-distributive edges.
 
 ## 6a. Helper API (`JIRBackwardTaintRules`)
 
@@ -644,6 +730,8 @@ Sink → demand seeds (zero fact):
 | `methodEntrySinkDemands(statement: JIRInst)` | `JMethodEnterInst` | `sinkRulesForMethodEntry` | `Argument`/`This`/`ClassStatic` kept; others dropped |
 | `recordSinkDemands(statement, demands): List<FinalFactAp>` | any | – | skips demands the run does not allow (`acceptsSeed`), records `BackwardSeededSink` and `BackwardDemandSeed` / `BackwardUnconditionalSink` in the tracker and returns the seed facts to emit |
 | `matchEndRequirement(statement, fact): FinalFactReader?` | call, `return`, `JMethodEnterInst` | end-requirement targets of the run | records `BackwardEndRequirementReached` (12.6); the reader carries the refinement |
+| `isZeroEdgeOnlyExitSink(statement, rule): Boolean` | `recordSinkDemands`, below | provider probe with a fact-edge `initialFacts` | section 4, "Zero-edge-only exit sinks"; `recordSinkDemands` records such seeds (`addZeroEdgeOnlySink`) |
+| `keepsZeroEdgeDemandsAtMethodEnter(statement): Boolean` | sequent FF at `JMethodEnterInst`, zero-to-fact edges | restricted occurrences of the run | `false` iff every allowed occurrence is a zero-edge-only exit sink of this method |
 
 Seeds are built from the positive mark literals of the rewritten
 condition after `removeNegated()` (both `And` and `Or` branches, duplicates
@@ -664,7 +752,7 @@ Demand → source match (fact):
 |---|---|---|
 | `matchCallSources(statement, callExpr, returnValue, callerFact, startBase)` | call FF, for each `(callerFact, startBase)` of the section 3 call → start mapping | `callerFact.rebase(startBase)`; condition demands mapped callee → caller |
 | `matchMethodExitSources(statement: JIRReturnInst, fact)` | sequent FF at `return x`, **before** `Return` is rebased to `x` | `fact` as is; condition demands on `Return` rebased to `x` |
-| `matchMethodEntrySources(statement, fact)` | sequent FF at `JMethodEnterInst` | `fact` as is (only `Argument`/`This` bases can match) |
+| `matchMethodEntrySources(statement, fact)` | sequent FF at `JMethodEnterInst` | `fact` as is (only `Argument`/`This`/`ClassStatic` bases can match) |
 | `matchStaticFieldSources(statement: JIRAssignInst, fact)` | sequent FF at `x = C.f` | `fact.rebase(Return)` when `fact.base` is `x` |
 | `recordSourceMatches(statement, result)` | any | records one `BackwardSourceFinding` per `(Found, mark)` and one `BackwardConditionalSource` per `ConditionDemand` |
 | `recordMethodEntrySourceMatches(statement, result, initialFacts)` | sequent FF at `JMethodEnterInst` | `recordSourceMatches` unless the edge's initial facts all come from a caller through an argument root (section 4) |
@@ -764,7 +852,10 @@ BackwardEndRequirementReached(statement, rule: TaintConfigurationSink)
 ```
 
 `configureRun(restrictedTo)` sets the occurrences allowed to seed (`null`: all)
-and derives the end-requirement targets per statement; `satisfiedMarks()` and
+and derives the end-requirement targets per statement (it also clears the
+per-method memo of `keepsZeroEdgeDemands`); `addZeroEdgeOnlySink` /
+`zeroEdgeOnlySinks()` hold the seeded zero-edge-only exit sinks of the run
+(cleared by `reset()`); `satisfiedMarks()` and
 `vulnerableSinks(checkEndRequirements)` evaluate a run (12.5). The run
 configuration survives `reset()`. Storage is `ConcurrentHashMap.newKeySet`, so records are
 deduplicated and safe to add from the runner threads. The manager exposes it
@@ -1187,7 +1278,8 @@ misses source matches). Attribution is done by restricting the seeds.
   and, in restricted runs, the end requirement holds (12.6).
 * **Discovery run**: every occurrence is seeded, no end demands. It
   enumerates the occurrences and their marks. Its verdict is final only when
-  a single occurrence was seeded and it has no end requirement (`exact`).
+  a single occurrence was seeded, it has no end requirement and it is not a
+  zero-edge-only exit sink (`exact`; section 4).
 * **Why discovery is not a candidate filter** (deviation from the initial
   design, which isolated only the discovery positives): discovery is not an
   over-approximation of the isolated runs. Demands of different sinks with the
@@ -1329,4 +1421,52 @@ Backward failures by cause (inputs for Phase 2):
 Other forward/backward differences noticed, not covered by a failing test:
 forward fires method-entry sinks only for constant-true conditions and
 method-exit sinks only on zero-to-fact edges (`JIRMethodExitRuleProvider`)
-and never unconditionally; backward seeds all of them.
+and never unconditionally; backward seeds all of them. (The zero-to-fact
+restriction turned out to be covered after all, see 12.8.)
+
+### 12.8 Phase 2B: querylang failures (causes 3-5)
+
+All three are fixed; the core suite gained `BackwardPipelineTest` regression
+cases for each (both directions, each fails backward without its fix).
+
+* **Cause 3 and 4** needed two mechanisms, each load-bearing (removing
+  either one brings all three samples back):
+  * *User-rule summary rewriting* (section 5). In
+    `RuleReturnWithNotInsideSignature$Negative` the `method`'s own exit sink
+    demands `ret·$PARAM;2` at `%r = clean(o)`; `clean`'s user source (relevant
+    marks `$PARAM;2`, `$PARAM;5`, `$<ARTIFICIAL>_0;5` at `arg0` and `Result`)
+    now refines `clean`'s summary `ret.* → arg(0).*` to exclude them, so the
+    demand no longer reaches `o`. In `TrickyPatterNot$NegativeSimple` the user
+    cleaners on `clean` do the same for `ret·$NAME_&_$SINK;4`. The cleaner
+    condition (`ContainsMark(arg0)`) plays no role: forward's rewriter ignores
+    mark conditions, and forward's own cleaner acts on the argument fact
+    entering the call, which the result demand never is.
+  * *Zero-edge-only exit sinks* (section 4). The remaining finding was the
+    exit sink of `clean` itself (`anyFunction()` exit sinks, occurrence
+    `return o` / `return s` in `clean`): its demand left `clean` through the
+    zero-to-fact summary to the caller's argument and the caller's source.
+    Forward never checks it, because `clean`'s exit fact comes from the
+    caller (fact-to-fact edge).
+* **Cause 5**: `matchMethodEntrySources` accepts `ClassStatic` demands
+  (section 4). The caller-argument-root suppression is unchanged: it only
+  concerns `Argument`/`This` initial facts, and forward keeps entry marks on
+  `ClassStatic` facts at the exit.
+
+Not fixed here, observed while checking: forward applies its own cleaner
+only to the argument fact entering the call; a backward demand that a
+callee summary produces on that argument (e.g. from a sink inside the callee
+or a result demand through `return arg`) is not filtered by the call's
+cleaners. User-rule cleaners are covered by the summary rewriting above;
+for other cleaners this is an over-approximation (FP direction, found by
+inspection, not measured) that no
+suite exercises.
+
+Measured (from `core/`, JUnit XML parsed with an XML parser; the backward
+pipeline log is present in every suite that runs an analysis):
+
+| Suite | Forward | Backward |
+|---|---|---|
+| `org.opentaint.jvm.*` | 1680 tests, 0 failed, 8 skipped | 1680 tests, 10 failed, 30 skipped |
+| `opentaint-java-querylang` | 207 tests, 0 failed, 23 skipped | 207 tests, 0 failed, 23 skipped |
+
+The ten core backward failures are exactly causes 1 and 2 of 12.7.
