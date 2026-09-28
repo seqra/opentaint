@@ -12,7 +12,6 @@ import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApMode
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.automata.AutomataApManager
-import org.opentaint.dataflow.ap.ifds.access.baseonly.BaseOnlyApManager
 import org.opentaint.dataflow.ap.ifds.access.cactus.CactusApManager
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
@@ -77,7 +76,7 @@ abstract class BackwardAnalysisTest : AnalysisTest() {
                 it.cleanup()
             }
 
-            manager.selectPhase(TaintAnalysisManager.Phase.FullScan())
+            manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
             it.resetApManager(createApManager(cancellation, refManager))
             it.runAnalysis(startMethods, timeout = 1.minutes, cancellationTimeout = 10.seconds)
 
@@ -111,8 +110,6 @@ abstract class BackwardAnalysisTest : AnalysisTest() {
         ApMode.Tree -> TreeApManager(analysisUnrollStrategy, refManager, cancellation)
         ApMode.Cactus -> CactusApManager(analysisUnrollStrategy, cancellation)
         ApMode.Automata -> AutomataApManager(analysisUnrollStrategy, cancellation)
-        ApMode.BaseOnly -> BaseOnlyApManager(analysisUnrollStrategy, cancellation, fieldSensitive = false)
-        ApMode.BaseOnlyField -> BaseOnlyApManager(analysisUnrollStrategy, cancellation, fieldSensitive = true)
     }
 
     fun BackwardResult.reachedSources(sourceMethodName: String, mark: String): List<JIRBackwardFindingTracker.BackwardSourceFinding> =

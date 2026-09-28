@@ -56,15 +56,9 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
             "the any-field sink is demanded as the star x.[any].M; in Automata an Exact cleaner on x returns the star unchanged, " +
                 "so the demand still matches the root-level mark the Plain source produced and the cleaner removed"
 
-        private const val BASE_ONLY_ROOT_DEMAND =
-            "base-only access paths seed the sink demand at the root with an open field tail (x.M/*): Exact cleaners never remove it and " +
-                "the any-field cleaner keeps root marks, then a field write y.f = v moves it to v; forward holds y.f.M, which the cleaner " +
-                "removes or the root check does not match"
-
         private val ALL_MODES = ApMode.entries.toSet()
         private val TREE = setOf(ApMode.Tree)
         private val AUTOMATA = setOf(ApMode.Automata)
-        private val BASE_ONLY_FIELD = setOf(ApMode.BaseOnlyField)
 
         private fun divergence(suite: String, case: String, rule: String, reason: String, modes: Set<ApMode>, backwardReaches: Boolean) =
             Divergence("$suite/$case", rule, reason, modes, backwardReaches)
@@ -93,20 +87,6 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
 
             for (sink in listOf("sequenceAfterM1Sink", "sequenceAfterM2Sink", "sequenceAfterM4SourceSink", "sequenceAfterM3Sink", "sequenceAllCleanSink")) {
                 add(divergence(flow, "sequentialMarks", "$sink-m1", AUTOMATA_STAR_KEPT, AUTOMATA, true))
-            }
-
-            add(divergence(dsl, "field-store", "field-store-plain", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
-            add(divergence(dsl, "field-store", "field-store-cleaned", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
-            add(divergence(dsl, "helperSourceAndCleanerExample-cleaned", "helper-source-sink", BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
-            val baseOnlyFieldSequential = listOf(
-                "sequenceAfterM2Sink-m2", "sequenceAfterM4SourceSink-m2", "sequenceAfterM3Sink-m2", "sequenceAfterM3Sink-m3",
-                "sequenceAllCleanSink-m2", "sequenceAllCleanSink-m3", "sequenceAllCleanSink-m4",
-                "sequenceNestedAfterPlainSink-m2", "sequenceNestedAfterPlainSink-m3", "sequenceNestedAfterPlainSink-m4",
-                "sequenceNestedAfterAnySink-m2", "sequenceNestedAfterAnySink-m3", "sequenceNestedAfterAnySink-m4",
-            )
-            baseOnlyFieldSequential.forEach { add(divergence(flow, "sequentialMarks", it, BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true)) }
-            listOf("cleanBeforeNewSourceSink-m1", "newSourceAfterCleanSink-m1", "newSourceCleanedSink-m1", "newSourceCleanedSink-m2").forEach {
-                add(divergence(flow, "cleanThenRetain", it, BASE_ONLY_ROOT_DEMAND, BASE_ONLY_FIELD, true))
             }
         }
     }
@@ -231,12 +211,4 @@ class TreeBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
 
 class AutomataBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
     override val apMode: ApMode = ApMode.Automata
-}
-
-class BaseOnlyBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
-    override val apMode: ApMode = ApMode.BaseOnly
-}
-
-class BaseOnlyFieldBackwardForwardDifferentialTest : BackwardForwardDifferentialTest() {
-    override val apMode: ApMode = ApMode.BaseOnlyField
 }

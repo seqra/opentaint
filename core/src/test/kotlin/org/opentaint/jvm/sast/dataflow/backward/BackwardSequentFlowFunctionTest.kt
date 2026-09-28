@@ -64,7 +64,7 @@ class BackwardSequentFlowFunctionTest : BackwardAnalysisTest() {
             ?: error("No '$inst' in $method: ${jirMethod.instList}")
 
         val manager = JIRBackwardAnalysisManager(cp, refManager, createRulesProvider(config), recordDemandSeeds = true)
-        manager.selectPhase(TaintAnalysisManager.Phase.FullScan())
+        manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
         val forwardGraph = createAnalysisGraph()
         val exit = jirMethod.instList.single { it is JMethodExitNormalInst }
         val enter = jirMethod.instList.single { it is JMethodEnterInst }
