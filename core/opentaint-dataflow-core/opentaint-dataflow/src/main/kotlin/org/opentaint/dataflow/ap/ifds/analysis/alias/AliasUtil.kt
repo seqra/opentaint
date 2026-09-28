@@ -131,3 +131,22 @@ inline fun <AliasAccessor> unapplyAlias(
 
     body(result)
 }
+
+inline fun <AliasAccessor> unapplyAlias(
+    fact: FinalFactAp,
+    newBase: AccessPathBase.LocalVar,
+    alias: CommonAliasApInfo<AliasAccessor>,
+    apAccessor: AliasAccessor.() -> Accessor,
+    body: (FinalFactAp) -> Unit
+) {
+    if (alias.base != fact.base) {
+        return
+    }
+
+    val result = alias.accessors.fold(fact.rebase(newBase)) { f, accessor ->
+        val apAccessor = accessor.apAccessor()
+        f.readAccessor(apAccessor) ?: return
+    }
+
+    body(result)
+}

@@ -1,15 +1,17 @@
 package org.opentaint.dataflow.taint
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
+import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.util.Maybe
-import org.opentaint.util.flatMap
 import org.opentaint.util.fmap
 
 interface PassActionEvaluator<T> {
@@ -105,22 +107,53 @@ class TaintPassActionEvaluator(
     }
 }
 
-class TaintPassActionInverseEvaluator(
+interface PreconditionFactBuilder<F : FactAp> {
+    fun mkFact(position: PositionAccess, positionFact: F, exclusions: ExclusionSet): F
+    fun mkFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor, exclusions: ExclusionSet): F
+    fun filterByPositionType(position: PositionAccess, fact: F): F?
+}
+
+class InitialPreconditionFactBuilder(
+    private val apManager: ApManager,
+) : PreconditionFactBuilder<InitialFactAp> {
+    override fun mkFact(position: PositionAccess, positionFact: InitialFactAp, exclusions: ExclusionSet): InitialFactAp =
+        mkAccessPath(position, positionFact, exclusions)
+
+    override fun mkFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor, exclusions: ExclusionSet): InitialFactAp =
+        apManager.mkInitialAccessPath(PositionAccess.Complex(position, mark), ExclusionSet.Universe)
+            .replaceExclusions(exclusions)
+
+    override fun filterByPositionType(position: PositionAccess, fact: InitialFactAp): InitialFactAp = fact
+}
+
+class FinalPreconditionFactBuilder(
     private val apManager: ApManager,
     private val factTypeChecker: FactTypeChecker,
-    private val factReader: FinalFactReader,
     private val positionTypeResolver: PositionTypeResolver,
-) : PassActionEvaluator<EvaluatedPass> {
-    val relevantPositionBase = hashSetOf<AccessPathBase>()
+) : PreconditionFactBuilder<FinalFactAp> {
+    override fun mkFact(position: PositionAccess, positionFact: FinalFactAp, exclusions: ExclusionSet): FinalFactAp =
+        mkAccessPath(position, positionFact, exclusions)
 
+    override fun mkFactWithTaintMark(position: PositionAccess, mark: TaintMarkAccessor, exclusions: ExclusionSet): FinalFactAp =
+        apManager.mkAccessPath(position, exclusions, mark)
+
+    override fun filterByPositionType(position: PositionAccess, fact: FinalFactAp): FinalFactAp? =
+        factTypeChecker.filterFactByLocalType(positionTypeResolver.resolve(position), fact)
+}
+
+class TaintPassActionPreconditionEvaluator<F>(
+    private val factReader: FactReader,
+    private val fact: F,
+    private val factBuilder: PreconditionFactBuilder<F>,
+) : PassActionEvaluator<Pair<CommonTaintAction, F>> where F : FactAp, F : ReadableAccessorList<F> {
     override fun propagateData(
         rule: CommonTaintConfigurationItem,
         action: CommonTaintAction,
         from: PositionAccess,
         to: PositionAccess
-    ): Maybe<List<EvaluatedPass>> =
-        copyAllFactsInverse(from, to).fmap { facts ->
-            facts.map { EvaluatedPass(rule, action, it) }
+    ): Maybe<List<Pair<CommonTaintAction, F>>> =
+        copyAllFactsPrecondition(from, to).fmap { facts ->
+            facts.map { action to it }
         }
 
     override fun propagateTaint(
@@ -129,120 +162,59 @@ class TaintPassActionInverseEvaluator(
         from: PositionAccess,
         to: PositionAccess,
         mark: TaintMarkAccessor
-    ): Maybe<List<EvaluatedPass>> =
-        copyFinalFactInverse(from, to, mark).fmap { facts ->
-            facts.map { EvaluatedPass(rule, action, it) }
+    ): Maybe<List<Pair<CommonTaintAction, F>>> =
+        copyFinalFactPrecondition(from, to, mark).fmap { facts ->
+            facts.map { action to it }
         }
 
-    private fun copyAllFactsInverse(
+    private fun copyAllFactsPrecondition(
         fromPosAccess: PositionAccess,
         toPosAccess: PositionAccess,
-    ): Maybe<List<FinalFactAp>> {
-        relevantPositionBase += toPosAccess.base()
+    ): Maybe<List<F>> {
+        if (!factReader.containsPosition(toPosAccess)) return Maybe.none()
 
-        if (!factReader.containsPosition(toPosAccess)) {
-            return Maybe.none()
-        }
-
-        val toPositionBaseType = positionTypeResolver.resolve(toPosAccess)
-
-        val fact = factTypeChecker.filterFactByLocalType(toPositionBaseType, factReader.factAp)
+        val typedFact = factBuilder.filterByPositionType(toPosAccess, fact)
             ?: return Maybe.some(emptyList())
 
-        val factApDelta = readPosition(
-            ap = fact,
+        val factApDelta = readPositionUtil(
+            ap = typedFact,
+            apBase = typedFact.base,
             position = toPosAccess,
             onMismatch = { _, _ -> return Maybe.none() },
             matchedNode = { it }
         )
 
-        val fromPositionBaseType = positionTypeResolver.resolve(fromPosAccess)
-
-        val resultFact = mkAccessPath(fromPosAccess, factApDelta, fact.exclusions)
-        val wellTypedFact = factTypeChecker.filterFactByLocalType(fromPositionBaseType, resultFact)
-            ?: return Maybe.none()
-
-        return Maybe.some(listOf(wellTypedFact))
-    }
-
-    private fun copyFinalFactInverse(
-        fromPosAccess: PositionAccess,
-        toPosAccess: PositionAccess,
-        markRestriction: TaintMarkAccessor,
-    ): Maybe<List<FinalFactAp>> {
-        relevantPositionBase += toPosAccess.base()
-
-        if (!factReader.containsPositionWithTaintMark(toPosAccess, markRestriction)) return Maybe.none()
-
-        val copiedFact = apManager.mkAccessPath(fromPosAccess, factReader.factAp.exclusions, markRestriction)
-
-        val fromPositionBaseType = positionTypeResolver.resolve(fromPosAccess)
-        val wellTypedCopy = factTypeChecker.filterFactByLocalType(fromPositionBaseType, copiedFact)
-            ?: return Maybe.none()
-
-        return Maybe.some(listOf(wellTypedCopy))
-    }
-}
-
-class TaintPassActionPreconditionEvaluator(
-    private val factReader: InitialFactReader,
-) : PassActionEvaluator<Pair<CommonTaintAction, InitialFactAp>> {
-    override fun propagateData(
-        rule: CommonTaintConfigurationItem,
-        action: CommonTaintAction,
-        from: PositionAccess,
-        to: PositionAccess
-    ): Maybe<List<Pair<CommonTaintAction, InitialFactAp>>> {
-        return Maybe.from(listOf(to)).flatMap { toVar ->
-            copyAllFactsPrecondition(from, toVar).fmap { facts ->
-                facts.map { action to it }
-            }
-        }
-    }
-
-    override fun propagateTaint(
-        rule: CommonTaintConfigurationItem,
-        action: CommonTaintAction,
-        from: PositionAccess,
-        to: PositionAccess,
-        mark: TaintMarkAccessor
-    ): Maybe<List<Pair<CommonTaintAction, InitialFactAp>>> {
-        return copyFinalFactPrecondition(from, to, mark).fmap { facts ->
-            facts.map { action to it }
-        }
-    }
-
-    private fun copyAllFactsPrecondition(
-        fromPosAccess: PositionAccess,
-        toPosAccess: PositionAccess,
-    ): Maybe<List<InitialFactAp>> {
-        if (!factReader.containsPosition(toPosAccess)) return Maybe.none()
-
-        val fact = factReader.fact
-        val factApDelta = readPosition(
-            ap = fact,
-            position = toPosAccess,
-            onMismatch = { _, _ ->
-                error("Failed to read $fromPosAccess from $fact")
-            },
-            matchedNode = { it }
-        )
-        val preconditionFact = mkAccessPath(fromPosAccess, factApDelta, fact.exclusions)
-
-        return Maybe.some(listOf(preconditionFact))
+        val preconditionFact = factBuilder.mkFact(fromPosAccess, factApDelta, typedFact.exclusions)
+        return preconditionFact.withPositionType(fromPosAccess)
     }
 
     private fun copyFinalFactPrecondition(
         fromPosAccess: PositionAccess,
         toPosAccess: PositionAccess,
         mark: TaintMarkAccessor,
-    ): Maybe<List<InitialFactAp>> {
+    ): Maybe<List<F>> {
         if (!factReader.containsPositionWithTaintMark(toPosAccess, mark)) return Maybe.none()
 
-        val preconditionFact = factReader
-            .createInitialFactWithTaintMark(fromPosAccess, mark)
-            .replaceExclusions(factReader.fact.exclusions)
+        val preconditionFact = factBuilder.mkFactWithTaintMark(fromPosAccess, mark, fact.exclusions)
+        return preconditionFact.withPositionType(fromPosAccess)
+    }
 
-        return Maybe.some(listOf(preconditionFact))
+    private fun F.withPositionType(position: PositionAccess): Maybe<List<F>> {
+        val wellTypedFact = factBuilder.filterByPositionType(position, this) ?: return Maybe.none()
+        return Maybe.some(listOf(wellTypedFact))
     }
 }
+
+fun TaintPassActionPreconditionEvaluator(
+    factReader: InitialFactReader,
+): TaintPassActionPreconditionEvaluator<InitialFactAp> =
+    TaintPassActionPreconditionEvaluator(factReader, factReader.fact, InitialPreconditionFactBuilder(factReader.apManager))
+
+fun TaintPassActionPreconditionEvaluator(
+    factReader: FinalFactReader,
+    factTypeChecker: FactTypeChecker,
+    positionTypeResolver: PositionTypeResolver,
+): TaintPassActionPreconditionEvaluator<FinalFactAp> = TaintPassActionPreconditionEvaluator(
+    factReader, factReader.factAp,
+    FinalPreconditionFactBuilder(factReader.apManager, factTypeChecker, positionTypeResolver)
+)

@@ -2,6 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds
 
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
+import org.opentaint.dataflow.configuration.CommonTaintAssignAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -11,6 +12,7 @@ import org.opentaint.dataflow.configuration.jvm.RemoveAllMarks
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
@@ -20,7 +22,10 @@ import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PassActionEvaluator
 import org.opentaint.dataflow.taint.SourceActionEvaluator
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
+import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
+import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.applyCleanerActions
+import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.util.Maybe
 import org.opentaint.util.maybeFlatMap
 
@@ -77,18 +82,19 @@ object TaintConfigUtils {
     private fun <T> List<RuleWithCondition<T>>.applicableRules(
         conditionEvaluator: TaintFactAwareConditionEvaluator?
     ): List<T> {
-        val applicableRules = filter {
-            val simplifiedCondition = it.condition
-            val conditionExpr = when {
-                simplifiedCondition.isFalse -> return@filter false
-                simplifiedCondition.isTrue -> return@filter true
-                else -> simplifiedCondition.expr
-            }
+        val applicableRules = filter { it.isApplicable(conditionEvaluator) }
+        return applicableRules.map { it.rule }
+    }
 
-            conditionEvaluator?.evalWithAssumptionsCheck(conditionExpr) ?: false
+    fun RuleWithCondition<*>.isApplicable(conditionEvaluator: TaintFactAwareConditionEvaluator?): Boolean {
+        val simplifiedCondition = condition
+        val conditionExpr = when {
+            simplifiedCondition.isFalse -> return false
+            simplifiedCondition.isTrue -> return true
+            else -> simplifiedCondition.expr
         }
 
-        return applicableRules.map { it.rule }
+        return conditionEvaluator?.evalWithAssumptionsCheck(conditionExpr) ?: false
     }
 
     inline fun <T> Iterable<T>.applyCleanerActions(
@@ -137,4 +143,14 @@ object TaintConfigUtils {
 
     fun <T> SourceActionEvaluator<T>.accept(rule: CommonTaintConfigurationItem, action: AssignMark): Maybe<List<T>> =
         evaluate(rule, action, action.position.resolveAp(), TaintMarkAccessor(action.mark.name))
+
+    fun <R : TaintConfigurationSource> TaintSourceActionPreconditionEvaluator.evaluateSourceRule(
+        rule: RuleWithCondition<R>,
+        mkSource: (R, Set<CommonTaintAssignAction>) -> Unit,
+        mkPass: (R, Set<CommonTaintAssignAction>, TaintMarkAwareConditionExpr) -> Unit,
+    ) = evaluateSourceRulePrecondition(
+        rule, rule.rule.actionsAfter, this,
+        evalAction = { r, a -> accept(r, a) },
+        mkSource, mkPass
+    )
 }

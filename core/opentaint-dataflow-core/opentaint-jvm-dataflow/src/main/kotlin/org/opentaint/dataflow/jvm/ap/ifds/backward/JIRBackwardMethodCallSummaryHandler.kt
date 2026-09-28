@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallRuleBasedSummaryRewriter
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 
 class JIRBackwardMethodCallSummaryHandler(
@@ -19,7 +20,7 @@ class JIRBackwardMethodCallSummaryHandler(
     override val factTypeChecker: FactTypeChecker get() = analysisContext.factTypeChecker
 
     private val summaryRewriter by lazy {
-        JIRBackwardSummaryRewriter(statement, analysisContext, apManager)
+        JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
@@ -51,5 +52,5 @@ class JIRBackwardMethodCallSummaryHandler(
     }
 
     override fun prepareFactToFactSummary(summaryEdge: Edge.FactToFact): List<Edge.FactToFact> =
-        listOfNotNull(summaryRewriter.rewriteSummary(summaryEdge))
+        listOfNotNull(summaryRewriter.rewriteSummaryInitialFact(summaryEdge))
 }

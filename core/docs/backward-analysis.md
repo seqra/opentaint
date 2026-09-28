@@ -524,9 +524,9 @@ part of `f` the cleaner does not remove. A value that is in the demand `d`
 after the call was, before the call, a value that survived the cleaner, so the
 demand before the call is `clean(d)`. The backward FF therefore runs the
 **forward cleaner code on the demand itself**
-(`TaintConfigUtils.applyCleaner` with `JIRTaintCleanActionEvaluator`, on
-`d` rebased to the callee base), exactly as forward
-`applyCleanersOrCallToStart` does:
+(`JIRMethodCallCleaner.applyCleanersOrCallToStart`, the helper the forward
+call FF uses, on `d` rebased to the callee base). The only backward hook is
+the `CleanerInputs` expansion (the star unrolling of section 11.3):
 
 * a removed alternative (`EvaluatedCleanAction.fact == null`) → `Drop`
   (with the rule trace for user-defined rules, as forward);
@@ -567,17 +567,23 @@ Consequences:
   forward's default propagation). An unknown callee is assumed not to write
   the heap, as in forward.
 * Inverse pass-through: pass rules (`passRulesForCallStatement` plus
-  `defaultGetModel.defaultPropagationRules(callee)`) evaluated with
-  `TaintPassActionInverseEvaluator` (see "Pass inversion"). A demand on the
+  `defaultGetModel.defaultPropagationRules(callee)`) evaluated by the trace
+  code's `JIRMethodCallPrecondition.evaluatePassRules` (see "Pass
+  inversion"). A demand on the
   rule's `to` becomes a demand on its `from`, filtered by the cleaners of the
   call, mapped callee → caller (`mapCalleeToCaller`: `Return` results
   dropped) and emitted call-to-return with trace `Rule(rule, action)`.
 * `startBase == Return`: nothing else. The result demand dies unless a pass
   rule regenerates it.
 
-**Pass inversion** (`TaintPassActionInverseEvaluator`, `opentaint-dataflow`
-`taint/Propagator.kt`, a sibling of `TaintPassActionEvaluator`; the trace
-evaluator `TaintPassActionPreconditionEvaluator` is unchanged):
+**Pass inversion** is the trace precondition of a pass rule: the evaluator
+is `TaintPassActionPreconditionEvaluator` (`opentaint-dataflow`
+`taint/Propagator.kt`), generic over the fact kind. The trace code builds it
+over an `InitialFactReader` (`InitialPreconditionFactBuilder`: no type
+filter), backward over a `FinalFactReader` (`FinalPreconditionFactBuilder`:
+the type filters below). Rule iteration and condition handling are the trace
+`evaluatePassRulePrecondition`, with an identity exit → return mapping
+(backward maps after the cleaners):
 
 * `CopyAllMarks(from, to)`: if the demand contains `to`
   (`FinalFactReader.containsPosition`, refining an abstract demand exactly as
@@ -596,8 +602,8 @@ evaluator `TaintPassActionPreconditionEvaluator` is unchanged):
   over-approximates. Non-mark conditions (types, constants) are already
   folded into the rewritten condition by `prepareCallStatementRules`.
 
-**User-rule summary rewriting** (`JIRMethodCallRuleBasedSummaryRewriter`,
-inverted by `JIRBackwardSummaryRewriter`). Forward indexes, per call
+**User-rule summary rewriting** (`JIRMethodCallRuleBasedSummaryRewriter`;
+the backward inversion is its `rewriteSummaryInitialFact`). Forward indexes, per call
 statement, the user-defined source and cleaner rules of the callee
 (`UserDefinedRuleInfo`, condition not constant-false after the non-mark
 rewrite): for every base of an `AssignMark` / `RemoveMark` position it
@@ -612,8 +618,9 @@ through the callee body or a generic pass rule. Backward inverts each:
 
 * Summaries: the forward final fact is the backward summary's **initial**
   fact (the callee demand at its exit). `prepareFactToFactSummary` runs the
-  same action index over it (`JIRMethodCallRuleBasedSummaryRewriter.removeMarkActions`,
-  positions from `JIRTaintCleanActionEvaluator.removeMarkPositions`): if it
+  same action index over it (`rewriteSummaryInitialFact`, positions from
+  `JIRTaintCleanActionEvaluator.removeMarkPositions`, which forward's
+  `RemoveMark` evaluation uses as well): if it
   contains `position·M·$` the summary is dropped; if an abstract node is read
   on the way, the accessor is added to the exclusions of both the initial and
   the final fact, exactly as forward refines its rewritten summary. A
@@ -704,14 +711,44 @@ Corrections to the above, found against the code:
   match passes a `FinalFactReader`, which records the refinement when the
   demand is abstract; that reader is returned to the caller (see the helper
   API) so its refinement can be merged into the emitted edges.
-* `TaintPassActionPreconditionEvaluator` still needs an `InitialFactReader`:
-  `copyAllFactsPrecondition` reads the `InitialFactAp` and rebuilds an
-  `InitialFactAp`. It cannot evaluate a `FinalFactAp` demand, so Phase 2a
-  added the sibling `TaintPassActionInverseEvaluator` (see "Pass inversion").
+* `TaintPassActionPreconditionEvaluator` is generic over the fact kind
+  (`PreconditionFactBuilder`), so trace resolution and backward share it
+  (see "Pass inversion"). Its read mismatch after a successful
+  `containsPosition` answers `none` instead of failing; for the unfiltered
+  trace fact that branch is unreachable.
 * Conditions of cleaner, source and pass rules are evaluated with the rewritten
   condition of `prepareCallStatementRules`, which uses the **forward** alias
   analysis at the call statement. This is sound for backward because the call
   statement is the same instruction in both directions.
+
+### 5.1 Code shared with forward and trace resolution
+
+The backward call side is the trace precondition run on `FinalFactAp`
+demands, plus the forward cleaner. Shared, not copied:
+
+| Backward step | Shared code |
+|---|---|
+| source match at a call | `JIRMethodCallPrecondition.evaluateSourceRules` (rule lookup, `TaintConfigUtils.evaluateSourceRule`) |
+| inverse pass-through | `JIRMethodCallPrecondition.evaluatePassRules` → `evaluatePassRulePrecondition` → `TaintPassActionPreconditionEvaluator<FinalFactAp>` |
+| cleaner filter | `JIRMethodCallCleaner` (forward call FF), backward adds only `CleanerInputs` |
+| user-rule rewriting | `JIRMethodCallRuleBasedSummaryRewriter` (`rewriteSummaryFact` for demands, `rewriteSummaryInitialFact` for summaries) |
+| call-site aliases | `aliasesPersistedThroughCall` (forward `forEachAliasAfterCallStatement`) and `unapplyAlias` (trace alias preimage) |
+| cleaner condition | `TaintConfigUtils.isApplicable` |
+
+Kept separate because the semantics differ:
+
+* Call → start mapping: trace maps the result variable to `Return` **and**
+  to the argument/receiver positions it also occupies; backward maps it to
+  `Return` only (section 3). `JIRBackwardMethodCallFactMapper` delegates the
+  rest to the forward mapper.
+* Sink seeds (`demandFacts`) versus `preconditionDnf`: a seed demands every
+  positive literal independently and expands an any-accessor literal to two
+  demands; the DNF builds cubes and needs every fact at the statement, which
+  a backward run does not have.
+* `JIRMethodStartPrecondition` only reports unconditional entry sources, per
+  action; backward also turns conditional ones into demands.
+* `JIRBackwardEndRequirement` and the star unroller have no forward
+  counterpart.
 
 ## 6. Summaries (`JIRBackwardMethodCallSummaryHandler`)
 
@@ -763,7 +800,6 @@ sealed interface SourceMatch {
 }
 
 class SourceMatchResult(val matches: List<SourceMatch>, val reader: FinalFactReader?) {
-    val found: List<SourceMatch.Found>
     val conditionDemands: List<FinalFactAp>
 }
 ```
@@ -797,7 +833,7 @@ Demand → source match (fact):
 
 | Function | Use at | Demand read as |
 |---|---|---|
-| `matchCallSources(statement, callExpr, returnValue, callerFact, startBase)` | call FF, for each `(callerFact, startBase)` of the section 3 call → start mapping | `callerFact.rebase(startBase)`; condition demands mapped callee → caller |
+| `matchCallSources(statement, precondition, callerFact, startBase)` | call FF, for each `(callerFact, startBase)` of the section 3 call → start mapping | `callerFact.rebase(startBase)`; condition demands mapped callee → caller |
 | `matchMethodExitSources(statement: JIRReturnInst, fact)` | sequent FF at `return x`, **before** `Return` is rebased to `x` | `fact` as is; condition demands on `Return` rebased to `x` |
 | `matchMethodEntrySources(statement, fact)` | sequent FF at `JMethodEnterInst` | `fact` as is (only `Argument`/`This`/`ClassStatic` bases can match) |
 | `matchStaticFieldSources(statement: JIRAssignInst, fact)` | sequent FF at `x = C.f` | `fact.rebase(Return)` when `fact.base` is `x` |
@@ -806,7 +842,10 @@ Demand → source match (fact):
 | `mapCalleeToCaller(statement, calleeFact): FinalFactAp?` | any call | section 3 exit → return mapping, single result |
 
 Matching uses `evaluateSourceRulePrecondition` with a
-`TaintSourceActionPreconditionEvaluator` over a `FinalFactReader`: the demand
+`TaintSourceActionPreconditionEvaluator` over a `FinalFactReader`
+(`TaintConfigUtils.evaluateSourceRule`; at a call site through the trace
+code's `JIRMethodCallPrecondition.evaluateSourceRules`, the same rule lookup
+the trace resolver uses): the demand
 must contain `position·M·$` for an `AssignMark(position, M)` of the rule
 (`[any]` positions also match their base). Negated mark literals of the source
 condition count as satisfied; the remaining positive literals become
