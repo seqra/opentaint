@@ -1,7 +1,7 @@
 # Backward JVM taint analysis
 
 `JIRBackwardAnalysisManager` (package `org.opentaint.dataflow.jvm.ap.ifds.backward`,
-module `opentaint-jvm-dataflow`) is a subclass of the forward `JIRAnalysisManager`.
+module `opentaint-jvm-dataflow`) wraps the forward `JIRAnalysisManager`.
 It runs the **unchanged** generic IFDS engine once over the reversed application
 graph (`ApplicationGraph.reversed`) with rules whose sources and sinks are
 swapped per statement (section 7), so a finding is an ordinary sink report at the statement of
@@ -48,26 +48,47 @@ a source producing its mark is a source finding.
 
 ## 2. Components
 
+Backward reuses forward code through wrappers: every backward component
+implements the engine interface itself and holds forward instances, delegating
+with Kotlin interface delegation where the behaviour is the same and calling
+forward members explicitly where roles are swapped. No forward class is open
+and no backward class extends a forward class.
+
 `JIRBackwardAnalysisManager(forward)` is created by
-`JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
-manager's classpath, rules, `relevantRuleIds` and parameters; its method
-contexts answer rule queries through `JIRBackwardTaintAnalysisContext`
-(section 7). It inherits the call resolver (applied to `graph.reversed`), language manager,
-context serializer, fact type checker and edge post-processor, and overrides
-only:
+`JIRAnalysisManager.createBackwardAnalysisManager`. It implements
+`TaintAnalysisManager` by delegation to its own `JIRAnalysisManager`
+(`delegate`), built from the forward manager's classpath, reference manager,
+rules, external method tracker, parameters and `relevantRuleIds` set. The
+delegate supplies the phase, the call resolver (applied to `graph.reversed`),
+language manager, context serializer, fact type checker and edge
+post-processor; the backward manager overrides only:
 
 | Hook | Backward |
 |---|---|
-| context | `JIRBackwardMethodAnalysisContext` (see section 1; backward fact mapper, backward taint context) |
+| context | a `JIRMethodAnalysisContext` (see section 1) built from the delegate's forward context of the method, with the backward entry point, a `JIRBackwardTaintAnalysisContext` and `JIRBackwardMethodCallFactMapper` |
 | entry points | entry points of the reversed method graph |
 | method inst graph | built from `JIRBackwardExitWiringGraph(graph.reversed).reversed` (section 1) |
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
 
-Backward-only helpers: `JIRBackwardTaintAnalysisContext`,
-`JIRBackwardExitWiringGraph`, `JIRBackwardMethodCallFactMapper` (delegates to
-the forward mapper).
+The method context is a real forward class instance rather than a wrapper
+because the engine, `JIRCallResolver` and every forward helper downcast to
+`JIRMethodAnalysisContext`. Its variation points are constructor parameters:
+`taint` has the type of the extracted interface `JIRTaintRuleContext`
+(implemented by `JIRTaintAnalysisContext`) and `methodCallFactMapper`
+defaults to `JIRMethodCallFactMapper`.
+
+| Backward component | Implements | Holds and delegates to |
+|---|---|---|
+| `JIRBackwardTaintAnalysisContext` | `JIRTaintRuleContext` by a forward `JIRTaintAnalysisContext` | the forward rule queries, swapped per statement (section 7); `bindAnalysisContext` binds both |
+| `JIRBackwardMethodSequentFlowFunction` | `MethodSequentFlowFunction`, `JIRSequentTransfer` | a forward `JIRMethodSequentFlowFunction` created with `transfer = this`: its Z2F/F2F/NDF2F plumbing and operand decomposition call back the backward `propagate` and assignment primitives, which call the forward primitives explicitly (section 5) |
+| `JIRBackwardMethodCallFlowFunction` | `MethodCallFlowFunction.Default` | a forward `JIRMethodCallFlowFunction`: `propagateZeroToZero`, `applyTaintRules`, `applyCleanersOrCallToStart` with the backward clean-action evaluator |
+| `JIRBackwardMethodCallSummaryHandler` | `MethodCallSummaryHandler` by a forward `JIRMethodCallSummaryHandler(withCallAliases = false)` | everything except summary rewriting (`prepare*Summary` return the edge) |
+| `JIRBackwardMethodStartFlowFunction` | `MethodStartFlowFunction` | the forward start FF for type checks |
+| `JIRBackwardTaintCleanActionEvaluator` | supplies `removeFinalFact` to a forward `JIRTaintCleanActionEvaluator` | the core `TaintCleanActionEvaluator` (section 8) |
+| `JIRBackwardMethodCallFactMapper` | `MethodCallFactMapper` by `JIRMethodCallFactMapper` | the forward mapper |
+| `JIRBackwardExitWiringGraph` | `ApplicationGraph` by the forward graph | the forward method graphs (section 1) |
 
 Call-site mapping: a demand on the call's result variable maps to `Return`
 only (for `x = f(x)` the post-call `x` is the result); every other base maps
@@ -144,19 +165,29 @@ A report never kills the demand; refinements are propagated as in forward.
 
 ## 5. Code shared with forward
 
-Shared code stays in the forward classes; backward subclasses or calls them.
+Shared code stays in the forward classes. Members that backward calls are
+`internal`, and the points where backward differs are constructor parameters or
+function arguments whose default is the forward behaviour.
 
-| Forward origin | Backward use |
-|---|---|
-| `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
-| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected, `cleanActionEvaluator` protected open) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step with `JIRBackwardTaintCleanActionEvaluator` |
-| `JIRTaintCleanActionEvaluator` (open; `removeFinalFact` protected open) | `JIRBackwardTaintCleanActionEvaluator` extends it and keeps the `[any]` subtree at the position of an `Exact` `RemoveMark` (section 8) |
-| `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types), `applyMethodExitSinkRules` / `applyMethodExitSourceRules` (protected) | every report and every rule-created demand |
-| `JIRMethodCallSummaryHandler` (open; `applyCallAliases` protected open) | `JIRBackwardMethodCallSummaryHandler` extends it (backward exit mapping, no aliases, no rewriting) |
-| `JIRMethodStartFlowFunction` | held by `JIRBackwardMethodStartFlowFunction` for type checks |
-| `TaintPassActionEvaluator`, `TaintConfigUtils.accept` | inverse pass-through (swapped positions) |
-| `JIRMethodCallRuleBasedSummaryRewriter.rewriteSummaryFact` | user-rule rewriting of demands |
-| `aliasesPersistedThroughCall` (extracted from `forEachAliasAfterCallStatement`) | call-site alias inversion |
+| Forward class | Change | Backward use |
+|---|---|---|
+| `JIRMethodSequentFlowFunction` | implements the internal `JIRSequentTransfer` (`propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`); constructor parameter `transfer` (default: itself) receives the plumbing's `propagate` calls and the operand decomposition's primitive calls; `applyMethodExitSinkRules`, `applyMethodExitSourceRules` and `FactRefiner` are internal; the class is internal | `JIRBackwardMethodSequentFlowFunction` reuses the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters and implements the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
+| `JIRMethodCallFlowFunction` | `applyTaintRules` extracted from `propagateFact`; `applyTaintRules` and `applyCleanersOrCallToStart` are internal, the latter takes the clean-action evaluator as an argument (default: `JIRTaintCleanActionEvaluator(typeResolver)`) | `JIRBackwardMethodCallFlowFunction` delegates `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step with the backward evaluator |
+| `JIRTaintCleanActionEvaluator` | constructor parameter `removeFinalFact` (default: `TaintCleanActionEvaluator.removeFinalFact`) | `JIRBackwardTaintCleanActionEvaluator` keeps the `[any]` subtree at the position of an `Exact` `RemoveMark` (section 8) |
+| `JIRMethodCallSummaryHandler` | constructor parameter `withCallAliases` (default `true`); exit facts are mapped with the context's `methodCallFactMapper` | `JIRBackwardMethodCallSummaryHandler` delegates to it (backward exit mapping, no aliases) |
+| `JIRTaintAnalysisContext` | implements the extracted interface `JIRTaintRuleContext` (its rule queries, `bindAnalysisContext`, `reset`, `externalMethodTracker`) | wrapped by `JIRBackwardTaintAnalysisContext` |
+| `JIRMethodAnalysisContext` | `taint: JIRTaintRuleContext`; constructor parameter `methodCallFactMapper` | built by the backward manager (section 2) |
+| `JIRAnalysisManager` | constructor parameter `relevantRuleIds`; `contexts` and `rootRefManager` are internal | delegate of the backward manager; the forward contexts' lambda trackers (section 6) |
+| `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types) | the call util maps rule conditions with the context's `methodCallFactMapper` | every report and every rule-created demand |
+| `JIRMethodStartFlowFunction` | none | held by `JIRBackwardMethodStartFlowFunction` for type checks |
+| `TaintPassActionEvaluator`, `TaintConfigUtils.accept` | none | inverse pass-through (swapped positions) |
+| `JIRMethodCallRuleBasedSummaryRewriter.rewriteSummaryFact` | none | user-rule rewriting of demands |
+| `aliasesPersistedThroughCall` | extracted from `forEachAliasAfterCallStatement` | call-site alias inversion |
+
+`JIRTaintRuleContext` is extracted because the forward flow functions and
+utilities read rules through `JIRMethodAnalysisContext.taint`, and each swapped
+query is computed from several forward queries of the same statement; the
+forward class only gains `override` modifiers.
 
 ## 6. TaintAnalyzer pipeline
 
@@ -186,9 +217,9 @@ the resolution failure, as forward does.
 
 ## 7. Backward taint context
 
-`JIRBackwardTaintAnalysisContext` extends the forward `JIRTaintAnalysisContext`
-(open; its rule queries are open and `analysisContext` is protected) and
-overrides the rule queries: each one asks the forward context (`super`) for the
+`JIRBackwardTaintAnalysisContext` implements `JIRTaintRuleContext` by delegation
+to a forward `JIRTaintAnalysisContext` bound to the same method context and
+overrides the rule queries: each one asks the forward context for the
 forward rules at the same statement, prepared as in forward (non-mark atoms
 evaluated at that statement by `JIRMarkAwareConditionRewriter`), and swaps
 them by the prepared condition. The forward rule code consumes the result
@@ -257,8 +288,8 @@ forward step treats the `[any]` directly at the cleaned position as possibly
 empty: `RemoveMark(M, x)` clears `M` on `x` and under `x.[any]`, which deletes
 a whole star demand `x.[any]·M` although forward keeps `x.f·M` (the residual
 "`M` below at least one accessor" is not representable). Backward
-(`JIRBackwardTaintCleanActionEvaluator`) runs the forward step and, for an
-`Exact` `RemoveMark(M, P)` whose position `P` has no `[any]`, adds the
+(`JIRBackwardTaintCleanActionEvaluator`, passed as the forward evaluator's
+`removeFinalFact`) runs the forward step and, for an `Exact` `RemoveMark(M, P)` whose position `P` has no `[any]`, adds the
 demand's subtree `P.[any]·…` back unchanged when the step changed the demand:
 only the rest of the demand is cleaned. Concrete demands absorbed into the
 star survive with it. This over-approximates on paths where `M` sits directly
