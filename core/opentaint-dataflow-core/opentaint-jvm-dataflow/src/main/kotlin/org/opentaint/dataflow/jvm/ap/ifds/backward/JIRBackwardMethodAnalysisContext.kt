@@ -16,11 +16,7 @@ class JIRBackwardMethodAnalysisContext(
     forward.aliasAnalysis,
     forward.taint,
 ) {
-    val forwardEntryPoint = forward.methodEntryPoint.statement
-
     val rules get() = (analysisManager as JIRBackwardAnalysisManager).rules
-
-    val starUnroller get() = (analysisManager as JIRBackwardAnalysisManager).starUnroller
 
     override val methodCallFactMapper: MethodCallFactMapper
         get() = JIRBackwardMethodCallFactMapper

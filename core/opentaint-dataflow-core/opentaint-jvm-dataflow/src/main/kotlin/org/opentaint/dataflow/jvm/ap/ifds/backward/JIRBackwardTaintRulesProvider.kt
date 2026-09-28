@@ -164,17 +164,18 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
     override fun cleanerRulesForMethod(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintCleaner> =
-        base.cleanerRulesForMethod(method, statement, fact, allRelevant).map { rule ->
+        base.cleanerRulesForMethod(method, statement, fact, allRelevant).flatMap { rule ->
             derive(Derivation.SHADOW, rule) {
+                val condition = rule.condition.markFree() ?: return@derive emptyList()
                 val removals = rule.actionsAfter.filterIsInstance<RemoveMark>().map { it.copy(mark = it.mark.shadow()) }
                 listOf(
                     rule.copy(
-                        condition = rule.condition.withShadowMarks(),
+                        condition = condition,
                         actionsAfter = rule.actionsAfter + removals,
                         info = rule.info.withShadowMarks(),
                     )
                 )
-            }.single()
+            }
         }
 
     override fun selectRules(ruleIds: Set<String>) = base.selectRules(ruleIds)
@@ -226,10 +227,13 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
         .filter { it.marks.isNotEmpty() && !(callSite && it.demandsResult()) }
         .map { cube -> create(mkAnd(cube.rest.toList()), cube.actions(shadow)) }
 
-    private inline fun <T> residualSinks(sink: TaintConfigurationSink, create: (Condition) -> T): List<T> {
-        val cubes = sink.condition.cubes().filter { it.marks.isEmpty() }
-        if (cubes.isEmpty()) return emptyList()
-        return listOf(create(mkOr(cubes.map { mkAnd(it.rest.toList()) })))
+    private inline fun <T> residualSinks(sink: TaintConfigurationSink, create: (Condition) -> T): List<T> =
+        listOfNotNull(sink.condition.markFree()?.let(create))
+
+    private fun Condition.markFree(): Condition? {
+        val cubes = cubes().filter { it.marks.isEmpty() }
+        if (cubes.isEmpty()) return null
+        return mkOr(cubes.map { mkAnd(it.rest.toList()) })
     }
 
     private fun syntheticMeta(source: TaintConfigurationSource): Pair<String, TaintSinkMeta> {
@@ -276,18 +280,6 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
             return CommonCondition.Atom(ContainsMarkOnAnyField(position.base, mark))
         }
         return CommonCondition.Atom(ContainsMark(position, mark))
-    }
-
-    private fun Condition.withShadowMarks(): Condition = when (this) {
-        is CommonCondition.True -> this
-        is CommonCondition.Atom -> when (val atom = atom) {
-            is ContainsMark -> mkOr(listOf(this, CommonCondition.Atom(atom.copy(mark = atom.mark.shadow()))))
-            is ContainsMarkOnAnyField -> mkOr(listOf(this, CommonCondition.Atom(atom.copy(mark = atom.mark.shadow()))))
-            else -> this
-        }
-        is CommonCondition.Not -> CommonCondition.Not(arg.withShadowMarks())
-        is CommonCondition.And -> CommonCondition.And(args.map { it.withShadowMarks() })
-        is CommonCondition.Or -> CommonCondition.Or(args.map { it.withShadowMarks() })
     }
 
     private class ShadowRuleInfo(original: UserDefinedRuleInfo) : UserDefinedRuleInfo {

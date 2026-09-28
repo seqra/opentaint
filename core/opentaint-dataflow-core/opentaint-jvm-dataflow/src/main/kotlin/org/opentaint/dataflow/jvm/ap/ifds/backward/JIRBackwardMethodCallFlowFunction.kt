@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -16,32 +15,22 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffect
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
-import org.opentaint.dataflow.configuration.TaintCleanReach
-import org.opentaint.dataflow.configuration.jvm.PositionAccessor
-import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
-import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
-import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applicableRules
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallRuleBasedSummaryRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.aliasesPersistedThroughCall
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.markPositions
-import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.EvaluatedPass
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PassActionEvaluator
 import org.opentaint.dataflow.taint.PositionAccess
-import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
-import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
-import org.opentaint.jvm.graph.JMethodEnterInst
 import org.opentaint.util.onSome
 
 class JIRBackwardMethodCallFlowFunction(
@@ -108,14 +97,12 @@ class JIRBackwardMethodCallFlowFunction(
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
         addCallToStart: (FinalFactReader, FinalFactAp, AccessPathBase, TraceInfo) -> Unit,
     ) {
-        for (input in cleanerInputs(callerFact.rebase(startFactBase))) {
-            applyCleanersOrCallToStart(
-                factReader, input, startFactBase,
-                { reader, fact, trace -> addCallToReturn(reader, fact.rebase(callerFact.base), trace) },
-                { reader, fact, base, trace -> addCallToStart(reader, fact.rebase(callerFact.base), base, trace) },
-                addUnchecked
-            )
-        }
+        applyCleanersOrCallToStart(
+            factReader, callerFact, startFactBase,
+            { reader, fact, trace -> addCallToReturn(reader, fact.rebase(callerFact.base), trace) },
+            { reader, fact, base, trace -> addCallToStart(reader, fact.rebase(callerFact.base), base, trace) },
+            addUnchecked
+        )
     }
 
     private fun callSiteAliasDemands(factReader: FinalFactReader): List<FinalFactAp> {
@@ -148,47 +135,6 @@ class JIRBackwardMethodCallFlowFunction(
             addAll(callExpr.args)
             returnValue?.let { add(it) }
         }.mapNotNull { MethodFlowFunctionUtils.accessPathBase(it) as? AccessPathBase.LocalVar }.distinct()
-    }
-
-    private fun cleanerInputs(calleeFact: FinalFactAp): List<FinalFactAp> {
-        val marks = starRootMarksRemoved(calleeFact)
-        if (marks.isEmpty() || marks.any { it in methodEntryAnyFieldMarks }) return listOf(calleeFact)
-        return analysisContext.starUnroller.unroll(calleeFact, calleeBaseType(calleeFact.base)) ?: listOf(calleeFact)
-    }
-
-    private fun starRootMarksRemoved(calleeFact: FinalFactAp): Set<TaintMarkAccessor> {
-        if (!calleeFact.startsWithAccessor(AnyAccessor)) return emptySet()
-        val star = calleeFact.readAccessor(AnyAccessor) ?: return emptySet()
-        val root = PositionAccess.Simple(calleeFact.base)
-
-        val cleanRules = analysisContext.taint.cleanRulesForCallStatement(statement, callExpr, returnValue, calleeFact)
-        val conditionEvaluator = TaintFactAwareConditionEvaluator(
-            listOf(FinalFactReader(calleeFact, apManager)), markAfterAnyAccessorResolver = null
-        )
-
-        return cleanRules.applicableRules(conditionEvaluator).flatMapTo(hashSetOf()) { rule ->
-            rule.actionsAfter.mapNotNull { action ->
-                if (action !is RemoveMark || action.reach != TaintCleanReach.Exact) return@mapNotNull null
-                if (action.position.resolveAp() != root) return@mapNotNull null
-                TaintMarkAccessor(action.mark.name).takeIf { star.startsWithAccessor(it) }
-            }
-        }
-    }
-
-    private val methodEntryAnyFieldMarks: Set<TaintMarkAccessor> by lazy {
-        val enter = analysisContext.forwardEntryPoint as? JMethodEnterInst ?: return@lazy emptySet()
-        analysisContext.taint.sinkRulesForMethodEntry(enter, fact = null).flatMapTo(hashSetOf()) { rule ->
-            rule.rule.condition.markPositions()
-                .filter { (it.position as? PositionWithAccess)?.access == PositionAccessor.AnyFieldAccessor }
-                .map { TaintMarkAccessor(it.mark.name) }
-        }
-    }
-
-    private fun calleeBaseType(base: AccessPathBase): JIRType? = when (base) {
-        is AccessPathBase.Return -> returnValue?.type
-        is AccessPathBase.This -> (callExpr as? JIRInstanceCallExpr)?.instance?.type
-        is AccessPathBase.Argument -> callExpr.args.getOrNull(base.idx)?.type
-        else -> null
     }
 
     override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) =

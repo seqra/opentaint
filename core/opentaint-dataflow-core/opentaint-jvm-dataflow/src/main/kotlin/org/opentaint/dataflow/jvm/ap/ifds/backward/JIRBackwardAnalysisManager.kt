@@ -45,7 +45,6 @@ class JIRBackwardAnalysisManager private constructor(
 
     override val relevantRuleIds get() = forward.relevantRuleIds
 
-    val starUnroller = JIRBackwardStarUnroller(cp)
     private val nonExitingStarts = JIRBackwardNonExitingStarts()
 
     private val forwardContexts by lazy { forward.contexts.groupBy { it.methodEntryPoint.method } }
