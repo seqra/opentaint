@@ -15,15 +15,15 @@ import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
-import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.evaluateSourceRule
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardConditionalSource
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardEndRequirementReached
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardSeededSink
-import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.dataflow.taint.mkAccessPath
 import org.opentaint.dataflow.taint.removeNegated
 import org.opentaint.ir.api.jvm.JIRField
@@ -156,14 +156,13 @@ class JIRBackwardTaintRules(
 
     fun matchCallSources(
         statement: JIRInst,
-        precondition: JIRMethodCallPrecondition,
-        callerFact: FinalFactAp,
-        startBase: AccessPathBase,
+        callExpr: JIRCallExpr,
+        returnValue: JIRImmediate?,
+        calleeFact: FinalFactAp,
     ): SourceMatchResult {
-        val reader = FinalFactReader(callerFact.rebase(startBase), apManager)
-        val collector = SourceMatchCollector(reader) { calleeFact -> mapCalleeToCaller(statement, calleeFact) }
-        precondition.evaluateSourceRules(reader, collector.found, collector.conditional)
-        return collector.result()
+        val rules = taint.sourceRulesForCallStatement(statement, callExpr, returnValue, fact = null)
+        val reader = FinalFactReader(calleeFact, apManager)
+        return matchSources(rules, reader) { conditionFact -> mapCalleeToCaller(statement, conditionFact) }
     }
 
     fun matchMethodExitSources(statement: JIRReturnInst, fact: FinalFactAp): SourceMatchResult {
@@ -280,8 +279,10 @@ class JIRBackwardTaintRules(
     ): SourceMatchResult {
         val evaluator = TaintSourceActionPreconditionEvaluator(reader)
         val collector = SourceMatchCollector(reader, mapConditionFact)
-        for (ruleWithCondition in rules) {
-            evaluator.evaluateSourceRule(ruleWithCondition, collector.found, collector.conditional)
+        for (rule in rules) {
+            evaluateSourceRulePrecondition(
+                rule, rule.rule.actionsAfter, evaluator, { r, a -> accept(r, a) }, collector.found, collector.conditional
+            )
         }
         return collector.result()
     }

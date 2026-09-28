@@ -12,7 +12,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 
-class JIRMethodCallSummaryHandler(
+open class JIRMethodCallSummaryHandler(
     private val statement: JIRInst,
     private val analysisContext: JIRMethodAnalysisContext,
     private val apManager: ApManager
@@ -89,7 +89,7 @@ class JIRMethodCallSummaryHandler(
             )
         }
 
-    private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+    protected open fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
         analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, fact) { aliased ->
             body(aliased)
         }

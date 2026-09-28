@@ -45,19 +45,19 @@ class JIRTaintCleanActionEvaluator(
         rule: CommonTaintConfigurationItem,
         action: RemoveMark,
     ): List<EvaluatedCleanAction> {
-        val mark = TaintMarkAccessor(action.mark.name)
-        return removeMarkPositions(action).fold(listOf(initialFact)) { facts, position ->
-            facts.flatMap { f -> evaluator.removeFinalFact(f, position, mark, rule, action, action.reach) }
-        }
-    }
-
-    fun removeMarkPositions(action: RemoveMark): List<PositionAccess> {
         val variable = action.position.resolveAp()
-        if (positionTypeResolver.resolve(variable)?.typeName != STRING) {
-            return listOf(variable)
+        val mark = TaintMarkAccessor(action.mark.name)
+        val cleaned = evaluator.removeFinalFact(initialFact, variable, mark, rule, action, action.reach)
+
+        val positionType = positionTypeResolver.resolve(variable)
+        if (positionType?.typeName != STRING) {
+            return cleaned
         }
 
-        return listOf(variable, PositionWithAccess(action.position, stringBytes).resolveAp())
+        val stringBytesVar = PositionWithAccess(action.position, stringBytes).resolveAp()
+        return cleaned.flatMap { f ->
+            evaluator.removeFinalFact(f, stringBytesVar, mark, rule, action, action.reach)
+        }
     }
 
     companion object {

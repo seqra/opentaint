@@ -12,25 +12,30 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToRetu
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper.factIsRelevantToMethodCall
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyPassThrough
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRMethodCallTaintUtil
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FactWithMarkAfterAnyAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionEvaluator
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.merge
 import org.opentaint.util.onSome
 
-class JIRMethodCallFlowFunction(
+open class JIRMethodCallFlowFunction(
     private val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
@@ -42,10 +47,6 @@ class JIRMethodCallFlowFunction(
 
     private val summaryRewriter by lazy {
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
-    }
-
-    private val cleaner by lazy {
-        JIRMethodCallCleaner(apManager, analysisContext, returnValue, callExpr, statement)
     }
 
     val typeResolver by lazy {
@@ -131,7 +132,7 @@ class JIRMethodCallFlowFunction(
             factAp = factAp,
             checker = analysisContext.factTypeChecker,
         ) { callerFact, startFactBase ->
-            cleaner.applyCleanersOrCallToStart(
+            applyCleanersOrCallToStart(
                 factReader, callerFact, startFactBase,
                 addCallToReturn, addCallToStart, addUnchecked
             )
@@ -140,6 +141,81 @@ class JIRMethodCallFlowFunction(
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
         }
+    }
+
+    protected fun applyCleanersOrCallToStart(
+        originalFactReader: FinalFactReader,
+        unmappedCallerFactAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
+        addCallToReturnUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+    ) {
+        val method = callExpr.callee
+
+        val callerFact = unmappedCallerFactAp.rebase(startFactBase)
+        val conditionFactReader = FinalFactReader(callerFact, apManager)
+
+        val conditionEvaluator = TaintFactAwareConditionEvaluator(
+            listOf(conditionFactReader),
+            markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
+        )
+
+        val cleaner = JIRTaintCleanActionEvaluator(typeResolver)
+
+        val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
+        val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)
+        val cleanerResults = applyCleaner(
+            cleanRules,
+            factReaderBeforeCleaner,
+            conditionEvaluator,
+            cleaner
+        )
+
+        originalFactReader.updateRefinement(listOf(conditionFactReader))
+
+        for (cleanerResult in cleanerResults) {
+            val factReaderAfterCleaner = cleanerResult.fact
+            if (factReaderAfterCleaner == null) {
+                val trace = cleanerResult.action
+                    ?.takeIf { (it.rule as? TaintConfigurationItem)?.info is UserDefinedRuleInfo }
+                    ?.let { TraceInfo.Rule(it.rule, it.action) }
+                addCallToReturnUnchecked(MethodCallFlowFunction.Drop(trace))
+                continue
+            }
+
+            propagateCleanedFact(
+                method,
+                factReaderAfterCleaner,
+                originalFactReader,
+                addCallToReturn,
+                startFactBase,
+                addCallToStart
+            )
+        }
+    }
+
+    private fun propagateCleanedFact(
+        method: JIRMethod,
+        factReaderAfterCleaner: FinalFactReader,
+        originalFactReader: FinalFactReader,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        startFactBase: AccessPathBase,
+        addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit
+    ) {
+        originalFactReader.updateRefinement(listOf(factReaderAfterCleaner))
+
+        val cleanedFact = factReaderAfterCleaner.factAp
+        check(cleanedFact.base == startFactBase)
+
+        val unmappedFact = cleanedFact.rebase(originalFactReader.factAp.base)
+
+        // FIXME: adhoc for constructors:
+        if (method.isConstructor) {
+            addCallToReturn(originalFactReader, unmappedFact, TraceInfo.Flow)
+        }
+
+        addCallToStart(originalFactReader, unmappedFact, startFactBase, TraceInfo.Flow)
     }
 
     private fun applySinkRules(
@@ -265,6 +341,11 @@ class JIRMethodCallFlowFunction(
     private fun FinalFactAp.mapExitToReturnFact(): FinalFactAp? =
         JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, this, analysisContext.factTypeChecker)
             .singleOrNull()
+
+
+    private fun FinalFactReader.updateRefinement(conditionFactReaders: List<FinalFactReader>) {
+        conditionFactReaders.forEach { updateRefinement(it) }
+    }
 
     private inline fun FinalFactAp.forEachSourceFactWithAliases(crossinline body: (FinalFactAp) -> Unit) =
         forEachFactWithAliases(originalFact = null, body)

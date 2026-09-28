@@ -17,33 +17,34 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFa
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
-import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
+import org.opentaint.dataflow.configuration.CommonTaintAction
+import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
-import org.opentaint.dataflow.configuration.jvm.TaintCleaner
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
-import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.isApplicable
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallCleaner
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
+import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applicableRules
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallRuleBasedSummaryRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.aliasesPersistedThroughCall
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
-import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.EvaluatedPass
 import org.opentaint.dataflow.taint.FinalFactReader
+import org.opentaint.dataflow.taint.PassActionEvaluator
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
-import org.opentaint.dataflow.taint.TaintPassActionPreconditionEvaluator
+import org.opentaint.dataflow.taint.TaintPassActionEvaluator
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.jvm.graph.JMethodEnterInst
+import org.opentaint.util.onSome
 
 class JIRBackwardMethodCallFlowFunction(
     private val apManager: ApManager,
@@ -51,23 +52,11 @@ class JIRBackwardMethodCallFlowFunction(
     private val returnValue: JIRImmediate?,
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
-) : MethodCallFlowFunction.Default {
+) : JIRMethodCallFlowFunction(apManager, analysisContext, returnValue, callExpr, statement, generateTrace = false) {
     private val rules by lazy { JIRBackwardTaintRules(apManager, analysisContext) }
-
-    private val precondition by lazy {
-        JIRMethodCallPrecondition(apManager, analysisContext, returnValue, callExpr, statement)
-    }
-
-    private val cleaner by lazy {
-        JIRMethodCallCleaner(apManager, analysisContext, returnValue, callExpr, statement)
-    }
 
     private val summaryRewriter by lazy {
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
-    }
-
-    private val typeResolver by lazy {
-        JIRMethodPositionBaseTypeResolver(callExpr.method.method)
     }
 
     override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
@@ -75,9 +64,7 @@ class JIRBackwardMethodCallFlowFunction(
         add(CallToStartZeroFact)
 
         val demands = rules.callSinkDemands(statement, callExpr, returnValue)
-        rules.recordSinkDemands(statement, demands).forEach { seed ->
-            add(CallToReturnZFact(seed, TraceInfo.Flow))
-        }
+        rules.recordSinkDemands(statement, demands).mapTo(this) { CallToReturnZFact(it, TraceInfo.Flow) }
     }
 
     override fun propagateFact(
@@ -94,45 +81,54 @@ class JIRBackwardMethodCallFlowFunction(
         rules.matchEndRequirement(statement, factAp)?.let { factReader.updateRefinement(it) }
 
         val demands = mutableListOf<FinalFactAp>()
-
         if (JIRBackwardMethodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, factAp)) {
             demands += factAp
         } else {
             skipCall()
         }
-
         demands += callSiteAliasDemands(factReader)
 
         val conditionDemands = mutableListOf<FinalFactAp>()
-
         for (demand in demands) {
             JIRBackwardMethodCallFactMapper.mapMethodCallToStartFlowFact(
-                statement,
-                callee = callExpr.callee,
-                callExpr = callExpr,
-                returnValue = returnValue,
-                factAp = demand,
-                checker = analysisContext.factTypeChecker,
+                statement, callExpr.callee, callExpr, returnValue, demand, analysisContext.factTypeChecker
             ) { callerFact, startFactBase ->
-                val sourceMatches = rules.matchCallSources(statement, precondition, callerFact, startFactBase)
-                rules.recordSourceMatches(sourceMatches)
-                sourceMatches.reader?.let { factReader.updateRefinement(it) }
-                conditionDemands += sourceMatches.conditionDemands
+                val sources = rules.matchCallSources(statement, callExpr, returnValue, callerFact.rebase(startFactBase))
+                rules.recordSourceMatches(sources)
+                sources.reader?.let { factReader.updateRefinement(it) }
+                conditionDemands += sources.conditionDemands
 
-                cleaner.applyCleanersOrCallToStart(
-                    factReader, callerFact, startFactBase,
-                    addCallToReturn, addCallToStart, addUnchecked,
-                    ::cleanerInputs
-                )
+                applyCleaners(factReader, callerFact, startFactBase, addCallToReturn, addUnchecked) { reader, fact, base, trace ->
+                    for ((rewritten, rewriteReader) in summaryRewriter.rewriteSummaryFact(fact.rebase(base))) {
+                        reader.updateRefinement(rewriteReader)
+                        addCallToStart(reader, rewritten.rebase(fact.base), base, trace)
+                    }
+                }
             }
         }
 
-        for (demand in conditionDemands) {
-            addCallToReturn(factReader, demand, TraceInfo.Flow)
-        }
+        conditionDemands.forEach { addCallToReturn(factReader, it, TraceInfo.Flow) }
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
+        }
+    }
+
+    private fun applyCleaners(
+        factReader: FinalFactReader,
+        callerFact: FinalFactAp,
+        startFactBase: AccessPathBase,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+        addCallToStart: (FinalFactReader, FinalFactAp, AccessPathBase, TraceInfo) -> Unit,
+    ) {
+        for (input in cleanerInputs(callerFact.rebase(startFactBase))) {
+            applyCleanersOrCallToStart(
+                factReader, input, startFactBase,
+                { reader, fact, trace -> addCallToReturn(reader, fact.rebase(callerFact.base), trace) },
+                { reader, fact, base, trace -> addCallToStart(reader, fact.rebase(callerFact.base), base, trace) },
+                addUnchecked
+            )
         }
     }
 
@@ -168,37 +164,29 @@ class JIRBackwardMethodCallFlowFunction(
         }.mapNotNull { MethodFlowFunctionUtils.accessPathBase(it) as? AccessPathBase.LocalVar }.distinct()
     }
 
-    private fun cleanerInputs(
-        calleeFact: FinalFactAp,
-        cleanRules: List<RuleWithCondition<TaintCleaner>>,
-        conditionEvaluator: TaintFactAwareConditionEvaluator,
-    ): List<FinalFactAp> {
-        val marks = starRootMarksRemoved(calleeFact, cleanRules, conditionEvaluator)
+    private fun cleanerInputs(calleeFact: FinalFactAp): List<FinalFactAp> {
+        val marks = starRootMarksRemoved(calleeFact)
         if (marks.isEmpty() || marks.any { it in methodEntryAnyFieldMarks }) return listOf(calleeFact)
         return analysisContext.starUnroller.unroll(calleeFact, calleeBaseType(calleeFact.base)) ?: listOf(calleeFact)
     }
 
-    private fun starRootMarksRemoved(
-        calleeFact: FinalFactAp,
-        cleanRules: List<RuleWithCondition<TaintCleaner>>,
-        conditionEvaluator: TaintFactAwareConditionEvaluator,
-    ): Set<TaintMarkAccessor> {
+    private fun starRootMarksRemoved(calleeFact: FinalFactAp): Set<TaintMarkAccessor> {
         if (!calleeFact.startsWithAccessor(AnyAccessor)) return emptySet()
         val star = calleeFact.readAccessor(AnyAccessor) ?: return emptySet()
         val root = PositionAccess.Simple(calleeFact.base)
 
-        val marks = hashSetOf<TaintMarkAccessor>()
-        for (ruleWithCondition in cleanRules) {
-            val ruleMarks = ruleWithCondition.rule.actionsAfter.mapNotNull { action ->
+        val cleanRules = analysisContext.taint.cleanRulesForCallStatement(statement, callExpr, returnValue, calleeFact)
+        val conditionEvaluator = TaintFactAwareConditionEvaluator(
+            listOf(FinalFactReader(calleeFact, apManager)), markAfterAnyAccessorResolver = null
+        )
+
+        return cleanRules.applicableRules(conditionEvaluator).flatMapTo(hashSetOf()) { rule ->
+            rule.actionsAfter.mapNotNull { action ->
                 if (action !is RemoveMark || action.reach != TaintCleanReach.Exact) return@mapNotNull null
                 if (action.position.resolveAp() != root) return@mapNotNull null
                 TaintMarkAccessor(action.mark.name).takeIf { star.startsWithAccessor(it) }
             }
-            if (ruleMarks.isNotEmpty() && ruleWithCondition.isApplicable(conditionEvaluator)) {
-                marks += ruleMarks
-            }
         }
-        return marks
     }
 
     private val methodEntryAnyFieldMarks: Set<TaintMarkAccessor> by lazy {
@@ -280,19 +268,10 @@ class JIRBackwardMethodCallFlowFunction(
             val passFactReader = FinalFactReader(rewriteReader.refineFact(demand), apManager)
             passFactReader.updateRefinement(rewriteReader)
 
-            val passEvaluator = TaintPassActionPreconditionEvaluator(
-                passFactReader, analysisContext.factTypeChecker, typeResolver
-            )
-
-            val passes = mutableListOf<EvaluatedPass>()
-            precondition.evaluatePassRules(passEvaluator, mapExit2Return = { listOf(it) }) { rule, action, fact, _ ->
-                passes += EvaluatedPass(rule, action, fact)
-            }
-
-            for (pass in passes) {
-                cleaner.applyCleaners(passFactReader, pass.fact, ::cleanerInputs, onDrop = { }) { cleaned ->
-                    val mappedFact = rules.mapCalleeToCaller(statement, cleaned.factAp) ?: return@applyCleaners
-                    addCallToReturn(passFactReader, mappedFact, TraceInfo.Rule(pass.rule, pass.action))
+            for (pass in invertedPassThrough(passFactReader)) {
+                val trace = TraceInfo.Rule(pass.rule, pass.action)
+                applyCleaners(passFactReader, pass.fact, pass.fact.base, { _, _, _ -> }, {}) { reader, fact, _, _ ->
+                    rules.mapCalleeToCaller(statement, fact)?.let { addCallToReturn(reader, it, trace) }
                 }
             }
 
@@ -302,5 +281,31 @@ class JIRBackwardMethodCallFlowFunction(
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
         }
+    }
+
+    private fun invertedPassThrough(factReader: FinalFactReader): List<EvaluatedPass> {
+        val evaluator = TaintPassActionEvaluator(apManager, analysisContext.factTypeChecker, factReader, typeResolver)
+        val inverse = object : PassActionEvaluator<EvaluatedPass> {
+            override fun propagateData(
+                rule: CommonTaintConfigurationItem, action: CommonTaintAction, from: PositionAccess, to: PositionAccess,
+            ) = evaluator.propagateData(rule, action, to, from)
+
+            override fun propagateTaint(
+                rule: CommonTaintConfigurationItem, action: CommonTaintAction,
+                from: PositionAccess, to: PositionAccess, mark: TaintMarkAccessor,
+            ) = evaluator.propagateTaint(rule, action, to, from, mark)
+        }
+
+        val passRules = analysisContext.taint.passRulesForCallStatement(statement, callExpr, returnValue, fact = null).toMutableList()
+        analysisContext.analysisManager.params.defaultGetModel?.run {
+            passRules += defaultPropagationRules(callExpr.method.method)
+        }
+
+        val passes = mutableListOf<EvaluatedPass>()
+        for (rule in passRules) {
+            if (rule.condition.isFalse) continue
+            rule.rule.actionsAfter.forEach { action -> inverse.accept(rule.rule, action).onSome { passes += it } }
+        }
+        return passes.filter { it.fact != factReader.factAp }
     }
 }

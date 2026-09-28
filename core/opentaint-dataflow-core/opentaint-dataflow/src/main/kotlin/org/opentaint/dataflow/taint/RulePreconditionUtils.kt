@@ -6,10 +6,8 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
-import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition.PassRuleCondition
@@ -73,62 +71,40 @@ fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction> evaluateSour
 fun  <R: CommonTaintConfigurationItem, A: CommonTaintAction> evaluatePassRulePrecondition(
     ruleWithCond: RuleWithCondition<R>,
     ruleActions: List<A>,
-    preconditionEvaluator: TaintPassActionPreconditionEvaluator<InitialFactAp>,
-    evalAction: TaintPassActionPreconditionEvaluator<InitialFactAp>.(R, A) -> Maybe<List<Pair<CommonTaintAction, InitialFactAp>>>,
+    preconditionEvaluator: TaintPassActionPreconditionEvaluator,
+    evalAction: TaintPassActionPreconditionEvaluator.(R, A) -> Maybe<List<Pair<CommonTaintAction, InitialFactAp>>>,
     mapExit2Return: (InitialFactAp) -> List<InitialFactAp>,
 ): List<TaintRulePrecondition> {
-    val result = mutableListOf<TaintRulePrecondition>()
-    evaluatePassRulePrecondition(
-        ruleWithCond, ruleActions, preconditionEvaluator, evalAction, mapExit2Return
-    ) { rule, action, fact, expr ->
-        result += passRulePrecondition(rule, action, fact, expr)
-    }
-    return result
-}
-
-fun passRulePrecondition(
-    rule: CommonTaintConfigurationItem,
-    action: CommonTaintAction,
-    fact: InitialFactAp,
-    expr: TaintMarkAwareConditionExpr?,
-): TaintRulePrecondition.Pass {
-    val cond = if (expr == null) {
-        PassRuleCondition.Fact(fact)
-    } else {
-        PassRuleCondition.FactWithExpr(fact, expr)
-    }
-    return TaintRulePrecondition.Pass(rule, setOf(action), cond)
-}
-
-fun <R : CommonTaintConfigurationItem, A : CommonTaintAction, F> evaluatePassRulePrecondition(
-    ruleWithCond: RuleWithCondition<R>,
-    ruleActions: List<A>,
-    preconditionEvaluator: TaintPassActionPreconditionEvaluator<F>,
-    evalAction: TaintPassActionPreconditionEvaluator<F>.(R, A) -> Maybe<List<Pair<CommonTaintAction, F>>>,
-    mapExit2Return: (F) -> List<F>,
-    mkPass: (R, CommonTaintAction, F, TaintMarkAwareConditionExpr?) -> Unit,
-) where F : FactAp, F : ReadableAccessorList<F> {
     val rule = ruleWithCond.rule
+    val actions = ruleActions.maybeFlatMap {
+        preconditionEvaluator.evalAction(rule, it)
+    }
+    if (actions.isNone) return emptyList()
+
+    val passActions = actions.getOrThrow()
 
     val simplifiedCondition = ruleWithCond.condition
+
     val simplifiedExpr = when {
-        simplifiedCondition.isFalse -> return
+        simplifiedCondition.isFalse -> return emptyList()
         simplifiedCondition.isTrue -> null
         else -> simplifiedCondition.expr
     }
 
-    val actions = ruleActions.maybeFlatMap {
-        preconditionEvaluator.evalAction(rule, it)
-    }
-    if (actions.isNone) return
-
     // We always treat negated mark condition as satisfied
     val exprWithoutNegations = simplifiedExpr?.removeNegated()
 
-    for ((action, fact) in actions.getOrThrow()) {
-        for (mappedFact in mapExit2Return(fact)) {
-            mkPass(rule, action, mappedFact, exprWithoutNegations)
+    val mappedAction = passActions.flatMap { (action, fact) ->
+        mapExit2Return(fact).map { action to it }
+    }
+
+    return mappedAction.map { (action, fact) ->
+        val cond = if (exprWithoutNegations == null) {
+            PassRuleCondition.Fact(fact)
+        } else {
+            PassRuleCondition.FactWithExpr(fact, exprWithoutNegations)
         }
+        TaintRulePrecondition.Pass(rule, setOf(action), cond)
     }
 }
 
