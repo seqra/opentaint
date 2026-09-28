@@ -22,6 +22,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
+import org.opentaint.common.sast.dataflow.AnalysisDirection
 import org.opentaint.common.sast.dataflow.DummySerializationContext
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -32,6 +33,8 @@ import kotlin.time.Duration.Companion.seconds
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 abstract class BackwardAnalysisTest : AnalysisTest() {
+    override val analysisDirection: AnalysisDirection = AnalysisDirection.FORWARD
+
     data class BackwardResult(
         val status: TaintAnalysisUnitRunnerManager.Status,
         val sourceFindings: List<JIRBackwardFindingTracker.BackwardSourceFinding>,

@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.dataflow.AnalysisDirection
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.config.JavaDefaultConfigLoader
@@ -114,6 +115,8 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
+    open val analysisDirection: AnalysisDirection = AnalysisDirection.fromEnvironment()
+
     protected class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -158,7 +161,8 @@ abstract class AnalysisTest : BasicTestUtils() {
     fun runAnalysis(
         config: SerializedTaintConfig,
         entryPointClass: String,
-        entryPointMethod: String
+        entryPointMethod: String,
+        direction: AnalysisDirection = analysisDirection,
     ): List<VulnerabilityWithTrace> {
         val ep = findEntryPoint(entryPointClass, entryPointMethod)
         val cls = ep.enclosingClass
@@ -167,7 +171,8 @@ abstract class AnalysisTest : BasicTestUtils() {
 
         val options = TaintAnalyzerOptions(
             ifdsTimeout = 1.minutes,
-            ifdsApMode = apMode
+            ifdsApMode = apMode,
+            analysisDirection = direction,
         )
 
         val analyzer = object : TaintAnalyzer<JIRMethod, JIRInst>(options) {
