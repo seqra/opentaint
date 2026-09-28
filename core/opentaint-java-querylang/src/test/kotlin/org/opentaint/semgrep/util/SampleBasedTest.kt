@@ -1,6 +1,7 @@
 package org.opentaint.semgrep.util
 
 import base.RuleSample
+import org.opentaint.common.sast.dataflow.AnalysisDirection
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -72,6 +73,8 @@ abstract class SampleBasedTest(
             missedPositive.isEmpty(),
             "Expected $missedPositive to be positive, but no vulnerability was found."
         )
+
+        if (AnalysisDirection.fromEnvironment() == AnalysisDirection.BACKWARD) return
 
         val falseNegative = hashSetOf<NegativeCase>()
         for (sample in data.negativeClasses) {

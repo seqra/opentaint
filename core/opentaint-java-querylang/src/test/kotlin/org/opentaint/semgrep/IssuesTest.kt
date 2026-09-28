@@ -107,6 +107,7 @@ class IssuesTest : SampleBasedTest() {
     @Test
     fun `issue 97`() = runTest<issue97>()
 
+    // False positive in backward mode due to the mark conjunction
     @Test
     fun `issue chain-pattern order-sensitive match`() = runTest<issueChain>(EXPECT_STATE_VAR)
 
