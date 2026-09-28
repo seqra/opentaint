@@ -300,7 +300,7 @@ class JIRBackwardTaintRules(
                 evalAction = { r, a -> evaluate(r, a, a.position.resolveAp(), TaintMarkAccessor(a.mark.name)) },
                 mkSource = { r, actions -> matches += SourceMatch.Found(r, actions.marks()) },
                 mkPass = { r, actions, expr ->
-                    val facts = expr.demandFacts().mapNotNull(mapConditionFact)
+                    val facts = expr.demandFacts(reader.factAp.exclusions).mapNotNull(mapConditionFact)
                     matches += SourceMatch.ConditionDemand(r, actions.marks(), expr, facts)
                 },
             )
@@ -312,10 +312,12 @@ class JIRBackwardTaintRules(
     private fun Set<CommonTaintAssignAction>.marks(): Set<TaintMarkAccessor> =
         mapTo(hashSetOf()) { TaintMarkAccessor((it as AssignMark).mark.name) }
 
-    private fun TaintMarkAwareConditionExpr.demandFacts(): List<FinalFactAp> {
+    private fun TaintMarkAwareConditionExpr.demandFacts(
+        exclusions: ExclusionSet = ExclusionSet.Universe,
+    ): List<FinalFactAp> {
         val positions = mutableListOf<Pair<PositionAccess, TaintMarkAccessor>>()
         collectPositiveMarkPositions(positions)
-        return positions.distinct().map { (position, mark) -> apManager.mkAccessPath(position, ExclusionSet.Universe, mark) }
+        return positions.distinct().map { (position, mark) -> apManager.mkAccessPath(position, exclusions, mark) }
     }
 
     private fun TaintMarkAwareConditionExpr.collectPositiveMarkPositions(
