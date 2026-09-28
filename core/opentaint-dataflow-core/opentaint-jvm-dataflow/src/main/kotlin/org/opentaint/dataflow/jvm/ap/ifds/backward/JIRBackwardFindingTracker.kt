@@ -1,8 +1,8 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
-import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
+import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.ir.api.jvm.JIRMethod
@@ -16,8 +16,10 @@ class JIRBackwardFindingTracker {
         val rule: TaintConfigurationSink,
         val condition: TaintMarkAwareConditionExpr?,
         val endRequirement: JIRBackwardEndRequirement?,
+        val zeroEdgeOnly: Boolean,
+        val sinkTracker: TaintSinkTracker,
     ) {
-        val occurrence: BackwardSinkOccurrence get() = BackwardSinkOccurrence(rule, statement)
+        val occurrence: Pair<JIRInst, TaintConfigurationSink> get() = statement to rule
 
         fun demandedMarks(): Set<TaintMarkAccessor> {
             val marks = hashSetOf<TaintMarkAccessor>()
@@ -41,37 +43,27 @@ class JIRBackwardFindingTracker {
     private val seededSinks = ConcurrentHashMap.newKeySet<BackwardSeededSink>()
     private val conditionalSources = ConcurrentHashMap.newKeySet<BackwardConditionalSource>()
     private val endRequirementsReached = ConcurrentHashMap.newKeySet<BackwardEndRequirementReached>()
-    private val zeroEdgeOnlySinks = ConcurrentHashMap.newKeySet<BackwardSinkOccurrence>()
 
     @Volatile
-    var restrictedTo: Set<BackwardSinkOccurrence>? = null
+    var endRequirementTargets: Map<JIRInst, List<TaintConfigurationSink>> = emptyMap()
         private set
 
     @Volatile
-    private var endRequirementTargets: Map<JIRInst, List<TaintConfigurationSink>> = emptyMap()
+    private var zeroEdgeDemandsDroppedAt: JIRMethod? = null
 
-    private val zeroEdgeDemandsKept = ConcurrentHashMap<JIRMethod, Boolean>()
-
-    fun configureRun(restrictedTo: Set<BackwardSinkOccurrence>?) {
-        this.restrictedTo = restrictedTo
-        endRequirementTargets = restrictedTo.orEmpty()
-            .filter { (it.rule as TaintConfigurationSink).trackFactsReachAnalysisEnd.isNotEmpty() }
-            .groupBy({ it.statement as JIRInst }, { it.rule as TaintConfigurationSink })
-        zeroEdgeDemandsKept.clear()
+    fun configureRun(
+        endRequirementTargets: Map<JIRInst, List<TaintConfigurationSink>>,
+        zeroEdgeDemandsDroppedAt: JIRMethod?,
+    ) {
+        this.endRequirementTargets = endRequirementTargets
+        this.zeroEdgeDemandsDroppedAt = zeroEdgeDemandsDroppedAt
+        reset()
     }
 
-    fun keepsZeroEdgeDemands(method: JIRMethod, compute: () -> Boolean): Boolean =
-        zeroEdgeDemandsKept.computeIfAbsent(method) { compute() }
-
-    val hasEndRequirementTargets: Boolean get() = endRequirementTargets.isNotEmpty()
+    fun keepsZeroEdgeDemands(method: JIRMethod): Boolean = method != zeroEdgeDemandsDroppedAt
 
     fun endRequirementTargets(statement: JIRInst): List<TaintConfigurationSink> =
         endRequirementTargets[statement].orEmpty()
-
-    fun acceptsSeed(statement: JIRInst, rule: TaintConfigurationSink): Boolean {
-        val restricted = restrictedTo ?: return true
-        return BackwardSinkOccurrence(rule, statement) in restricted
-    }
 
     fun addSourceMarks(marks: Set<TaintMarkAccessor>) {
         sourceMarks.addAll(marks)
@@ -89,13 +81,7 @@ class JIRBackwardFindingTracker {
         endRequirementsReached.add(reached)
     }
 
-    fun addZeroEdgeOnlySink(occurrence: BackwardSinkOccurrence) {
-        zeroEdgeOnlySinks.add(occurrence)
-    }
-
     fun seededSinks(): List<BackwardSeededSink> = seededSinks.toList()
-
-    val hasZeroEdgeOnlySinks: Boolean get() = zeroEdgeOnlySinks.isNotEmpty()
 
     private fun satisfiedMarks(): Set<TaintMarkAccessor> {
         val satisfied = sourceMarks.toHashSet()
@@ -128,12 +114,11 @@ class JIRBackwardFindingTracker {
         }
     }
 
-    fun reset() {
+    private fun reset() {
         sourceMarks.clear()
         seededSinks.clear()
         conditionalSources.clear()
         endRequirementsReached.clear()
-        zeroEdgeOnlySinks.clear()
     }
 
     companion object {

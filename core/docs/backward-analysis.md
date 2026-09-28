@@ -44,7 +44,8 @@ a source producing its mark is a source finding.
 
 `JIRBackwardAnalysisManager(forward)` is created by
 `JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
-manager's classpath, rules, `relevantRuleIds` and parameters. It inherits the
+manager's classpath, `relevantRuleIds` and parameters. Its rules are the
+forward rules wrapped in `JIRBackwardSinkSelection` (section 7). It inherits the
 call resolver (applied to `graph.reversed`), method inst graph, language
 manager, context serializer, fact type checker and edge post-processor, and
 overrides only:
@@ -56,7 +57,7 @@ overrides only:
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
-| `selectPhase`, run protocol | reset / configure `JIRBackwardFindingTracker` (section 6) |
+| run protocol | `prepareNextBackwardRun`, driven by `JIRBackwardSinkAttribution` (sections 6, 7) |
 
 Backward-only helpers: `JIRBackwardTaintRules` (sink → demand seeds,
 demand → source match), `JIRBackwardFindingTracker`, `JIRBackwardEndRequirement`,
@@ -151,11 +152,10 @@ Shared code stays in the forward classes; backward subclasses or calls them.
   `OPENTAINT_ANALYSIS_DIRECTION` (else `FORWARD`). `configureDefaultTest`
   forwards the Gradle property to test JVMs.
 * Generic API (`BackwardTaintAnalysisManager.kt`): one interface, implemented
-  by `JIRAnalysisManager`, with `createBackwardAnalysisManager()`,
-  `prepareBackwardRun(analysisEndMethods, restrictedTo)` (`restrictedTo` is
-  `null` for discovery, else a set of `(sink rule, statement)` occurrences) and
-  `backwardRunResult()`. A manager that does not implement it (Go) runs
-  forward.
+  by `JIRAnalysisManager`, with `createBackwardAnalysisManager()` and
+  `prepareNextBackwardRun(analysisEndMethods, timeLeft)`, which configures the
+  next run and returns its timeout, or `null` when no run is left. A manager
+  that does not implement it (Go) runs forward.
 
 `TaintAnalyzer.analyzeBackward`:
 
@@ -163,15 +163,12 @@ Shared code stays in the forward classes; backward subclasses or calls them.
    in forward mode. It fills the `relevantRuleIds` set and the forward
    contexts' lambda trackers, both read by the backward manager. The backward
    manager never runs a prescan of its own.
-2. A separate engine over the reversed graph. Every backward run is
-   `selectPhase(FullScan)` (rule selection from the shared ids) →
-   `prepareBackwardRun` → `resetApManager` → `runAnalysis(entry methods)`.
-3. Discovery, grouped and isolated runs (section 7) within 90% of the
-   timeout. When no time is left, unchecked occurrences keep their last
-   verdict.
-4. One `TaintVulnerability` per reported occurrence, merged by
-   `(rule id, statement)`, then the forward `reportedVulnerabilities` step
-   (summary, CWE filter).
+2. A separate engine over the reversed graph. While
+   `prepareNextBackwardRun` (given what is left of 90% of the timeout)
+   returns a timeout: `selectPhase(FullScan)` (rule selection from the shared
+   ids) → `resetApManager` → `runAnalysis(entry methods)`.
+3. The engine's vulnerabilities, then the forward `reportedVulnerabilities`
+   step (summary, CWE filter).
 
 Lambdas: forward resolves lambda calls from type-info facts created in the
 prescan and keeps them in the context's `lambdaCallResolution` trackers. A
@@ -182,7 +179,11 @@ the resolution failure, as forward does.
 ## 7. Sink attribution by isolation
 
 Demands carry marks only, so a source finding does not say which sink
-demanded it. Attribution restricts the seeds instead:
+demanded it. Attribution restricts the seeds instead, at the rule provider:
+`JIRBackwardSinkSelection` wraps the rules of every backward taint context and,
+while a selection of `(statement, sink rule)` pairs is active, returns call,
+method-exit and method-entry sink rules only for the selected pairs. Seeding is
+unaware of the selection. `JIRBackwardSinkAttribution` plans the runs:
 
 * A run records every seeded occurrence with its positive condition and end
   requirement. Satisfied marks are the marks of all source findings, closed
@@ -196,6 +197,12 @@ demanded it. Attribution restricts the seeds instead:
 * Grouped runs seed groups of occurrences with pairwise disjoint demanded
   marks (deterministic greedy grouping). A single-member group is final; the
   positives of larger groups are re-checked in isolated runs.
+* Runs share what is left of the budget: discovery half of it, grouped runs
+  an equal part of half (all of it when no group has more than one member),
+  isolated runs an equal part of the rest. When no time is left, unchecked
+  occurrences keep their last verdict.
+* After the last run every reported occurrence is added once to the engine's
+  `TaintSinkTracker` as an unconditional vulnerability.
 
 Satisfied marks are global to a run, so two literals on the same mark at
 different positions are satisfied by either.

@@ -2,7 +2,6 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
-import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -95,17 +94,12 @@ class JIRBackwardTaintRules(
         val findings = context.findings
         val seeds = mutableListOf<FinalFactAp>()
         for (demand in demands) {
-            if (!findings.acceptsSeed(statement, demand.rule)) continue
-
             findings.addSeededSink(
                 BackwardSeededSink(
-                    context.methodEntryPoint, statement, demand.rule, demand.condition, demand.endRequirement
+                    context.methodEntryPoint, statement, demand.rule, demand.condition, demand.endRequirement,
+                    isZeroEdgeOnlyExitSink(statement, demand.rule), taint.taintSinkTracker
                 )
             )
-
-            if (isZeroEdgeOnlyExitSink(statement, demand.rule)) {
-                findings.addZeroEdgeOnlySink(BackwardSinkOccurrence(demand.rule, statement))
-            }
 
             if (demand.condition == null) continue
 
@@ -114,7 +108,7 @@ class JIRBackwardTaintRules(
         return seeds
     }
 
-    fun isZeroEdgeOnlyExitSink(statement: JIRInst, rule: TaintConfigurationSink): Boolean {
+    private fun isZeroEdgeOnlyExitSink(statement: JIRInst, rule: TaintConfigurationSink): Boolean {
         if (rule !is TaintMethodExitSink) return false
 
         val factEdgeProbe = setOf(apManager.mostAbstractInitialAp(AccessPathBase.Return))
@@ -122,19 +116,8 @@ class JIRBackwardTaintRules(
             .none { it.rule == rule }
     }
 
-    fun keepsZeroEdgeDemandsAtMethodEnter(statement: JIRInst): Boolean {
-        val restricted = context.findings.restrictedTo
-        if (restricted.isNullOrEmpty()) return true
-
-        val method = statement.location.method
-        return context.findings.keepsZeroEdgeDemands(method) {
-            !restricted.all { occurrence ->
-                val occurrenceStatement = occurrence.statement as JIRInst
-                val rule = occurrence.rule as TaintConfigurationSink
-                occurrenceStatement.location.method == method && isZeroEdgeOnlyExitSink(occurrenceStatement, rule)
-            }
-        }
-    }
+    fun keepsZeroEdgeDemandsAtMethodEnter(statement: JIRInst): Boolean =
+        context.findings.keepsZeroEdgeDemands(statement.location.method)
 
     fun matchEndRequirement(statement: JIRInst, fact: FinalFactAp): FinalFactReader? {
         val rules = context.findings.endRequirementTargets(statement)

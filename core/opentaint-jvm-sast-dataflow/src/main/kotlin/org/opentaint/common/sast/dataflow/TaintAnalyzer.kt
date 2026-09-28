@@ -4,8 +4,6 @@ import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
-import org.opentaint.dataflow.ap.ifds.BackwardRunResult
-import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
@@ -145,10 +143,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     ): Pair<List<VulnerabilityWithTrace>, Status> {
         val analysisStart = TimeSource.Monotonic.markNow()
         val analysisEnd: Set<CommonMethod> = entryPoints.toHashSet()
-        val remaining = { options.ifdsTimeout * 0.9 - analysisStart.elapsedNow() }
+        val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
 
         logger.info { "Start prescan phase" }
-        prescan(entryPoints.map { MethodWithContext(it, EmptyMethodContext) })
+        prescan(startMethods)
         ifdsEngine.cleanup()
         logger.info { "Finish prescan phase" }
 
@@ -161,80 +159,24 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             options.debugOptions?.taintRulesStatsSamplingPeriod,
         )
 
-        fun run(restrictedTo: Set<BackwardSinkOccurrence>?, timeout: Duration): BackwardRunResult {
+        while (true) {
+            val timeLeft = options.ifdsTimeout * 0.9 - analysisStart.elapsedNow()
+            val timeout = manager.prepareNextBackwardRun(analysisEnd, timeLeft) ?: break
             manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
-            manager.prepareBackwardRun(analysisEnd, restrictedTo)
             engine.resetApManager(apManager)
-            val startMethods = analysisEnd.map { MethodWithContext(it, EmptyMethodContext) }
             runCatching { engine.runAnalysis(startMethods, timeout = timeout, cancellationTimeout = 30.seconds) }
                 .onFailure { logger.error(it) { "Backward analysis failed" } }
-            return manager.backwardRunResult()
         }
-
-        val discovery = run(restrictedTo = null, remaining() * 0.5)
-        val reported = hashMapOf<BackwardSinkOccurrence, MethodEntryPoint>()
-        val candidates = linkedMapOf<BackwardSinkOccurrence, MethodEntryPoint>()
-
-        val groups = if (discovery.exact) emptyList() else groupByDisjointMarks(discovery.seeded)
-        if (discovery.exact) reported += discovery.vulnerable
-        val groupShare = if (groups.any { it.size > 1 }) 0.5 else 1.0
-        for ((idx, group) in groups.withIndex()) {
-            if (!remaining().isPositive()) {
-                groups.drop(idx).flatten().forEach { o -> discovery.vulnerable[o]?.let { reported[o] = it } }
-                break
-            }
-            val result = run(group.toSet(), remaining() * groupShare / (groups.size - idx))
-            if (result.exact) reported += result.vulnerable else candidates += result.vulnerable
-        }
-
-        val pending = candidates.entries.toList()
-        for ((idx, candidate) in pending.withIndex()) {
-            if (!remaining().isPositive()) {
-                pending.drop(idx).forEach { reported[it.key] = it.value }
-                break
-            }
-            run(setOf(candidate.key), remaining() / (pending.size - idx)).vulnerable[candidate.key]?.let {
-                reported[candidate.key] = it
-            }
-        }
-        logger.info { "Finish backward scan phase: ${discovery.seeded.size} sinks, ${reported.size} vulnerable" }
+        logger.info { "Finish backward scan phase" }
 
         val analysisStatus = listOf(ifdsEngine.status.get(), engine.status.get())
             .firstOrNull { it != TaintAnalysisUnitRunnerManager.Status.OK } ?: TaintAnalysisUnitRunnerManager.Status.OK
+        val vulnerabilities = engine.getVulnerabilities()
         engine.close()
 
-        val vulnerabilities = linkedMapOf<Pair<String, CommonInst>, TaintSinkTracker.TaintVulnerability>()
-        for ((occurrence, methodEntryPoint) in reported) {
-            val vulnerability = vulnerabilities.getOrPut(occurrence.rule.id to occurrence.statement) {
-                TaintSinkTracker.TaintVulnerability(occurrence.statement, occurrence.rule.id, hashMapOf())
-            }
-            val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(methodEntryPoint)
-            vulnerability.vulnerabilityRules.putIfAbsent(occurrence.rule, node)
-        }
-
-        val traces = reportedVulnerabilities(vulnerabilities.values.toList())
+        val traces = reportedVulnerabilities(vulnerabilities)
             .map { VulnerabilityWithTrace(it, TracePathGenerationResult.Simple) }
         return traces to Status(analysisStatus, TaintAnalysisUnitRunnerManager.Status.OK)
-    }
-
-    private fun groupByDisjointMarks(
-        occurrences: Map<BackwardSinkOccurrence, Set<TaintMarkAccessor>>,
-    ): List<List<BackwardSinkOccurrence>> {
-        val groups = mutableListOf<Pair<MutableList<BackwardSinkOccurrence>, MutableSet<TaintMarkAccessor>>>()
-        val ordered = occurrences.entries.sortedBy { (occurrence, _) ->
-            "${occurrence.statement.location.method}#${occurrence.statement.location.index}#${occurrence.rule.id}"
-        }
-
-        for ((occurrence, marks) in ordered) {
-            val group = groups.firstOrNull { (_, used) -> marks.none { it in used } }
-            if (group != null) {
-                group.first += occurrence
-                group.second += marks
-            } else {
-                groups += mutableListOf(occurrence) to marks.toHashSet()
-            }
-        }
-        return groups.map { it.first }
     }
 
     private fun prescan(startMethods: List<MethodWithContext>) {

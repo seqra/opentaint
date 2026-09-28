@@ -2,14 +2,10 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
-import org.opentaint.dataflow.ap.ifds.BackwardRunResult
-import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.MethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
@@ -24,7 +20,6 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
-import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
@@ -45,10 +40,14 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.locals
 import org.opentaint.util.analysis.ApplicationGraph
+import kotlin.time.Duration
 
-class JIRBackwardAnalysisManager(
+class JIRBackwardAnalysisManager private constructor(
     private val forward: JIRAnalysisManager,
-) : JIRAnalysisManager(forward.cp, forward.rootRefManager, forward.taintConfig, forward.externalMethodTracker, forward.params) {
+    sinkSelection: JIRBackwardSinkSelection,
+) : JIRAnalysisManager(forward.cp, forward.rootRefManager, sinkSelection, forward.externalMethodTracker, forward.params) {
+    constructor(forward: JIRAnalysisManager) : this(forward, JIRBackwardSinkSelection(forward.taintConfig))
+
     override val relevantRuleIds get() = forward.relevantRuleIds
 
     override fun createBackwardAnalysisManager(): BackwardTaintAnalysisManager = this
@@ -56,37 +55,16 @@ class JIRBackwardAnalysisManager(
     val findings = JIRBackwardFindingTracker()
     val starUnroller = JIRBackwardStarUnroller(cp)
     private val nonExitingStarts = JIRBackwardNonExitingStarts()
+    private val attribution = JIRBackwardSinkAttribution(findings, sinkSelection)
 
     private val forwardContexts by lazy { forward.contexts.groupBy { it.methodEntryPoint.method } }
 
     @Volatile
     private var analysisEndMethods: Set<CommonMethod> = emptySet()
 
-    override fun prepareBackwardRun(analysisEndMethods: Set<CommonMethod>, restrictedTo: Set<BackwardSinkOccurrence>?) {
+    override fun prepareNextBackwardRun(analysisEndMethods: Set<CommonMethod>, timeLeft: Duration): Duration? {
         this.analysisEndMethods = analysisEndMethods
-        findings.configureRun(restrictedTo)
-    }
-
-    override fun backwardRunResult(): BackwardRunResult {
-        val restricted = findings.restrictedTo
-        val seededSinks = findings.seededSinks()
-
-        val seeded = hashMapOf<BackwardSinkOccurrence, MutableSet<TaintMarkAccessor>>()
-        seededSinks.forEach { seeded.getOrPut(it.occurrence, ::hashSetOf).addAll(it.demandedMarks()) }
-
-        val vulnerable = hashMapOf<BackwardSinkOccurrence, MethodEntryPoint>()
-        findings.vulnerableSinks(checkEndRequirements = restricted != null).forEach {
-            vulnerable.putIfAbsent(it.occurrence, it.methodEntryPoint)
-        }
-
-        val exact = restricted?.let { it.size <= 1 }
-            ?: (seeded.size <= 1 && seededSinks.all { it.endRequirement == null } && !findings.hasZeroEdgeOnlySinks)
-        return BackwardRunResult(seeded, vulnerable, exact)
-    }
-
-    override fun selectPhase(phase: Phase) {
-        findings.reset()
-        super.selectPhase(phase)
+        return attribution.nextRun(timeLeft)
     }
 
     override fun getMethodCallResolver(
@@ -146,11 +124,8 @@ class JIRBackwardAnalysisManager(
     }
 
     private fun endDemands(apManager: ApManager, method: JIRMethod): List<FinalFactAp> {
-        if (!findings.hasEndRequirementTargets) return emptyList()
-        val occurrences = findings.restrictedTo ?: return emptyList()
-
-        val requirements = occurrences.mapNotNull {
-            JIRBackwardEndRequirement.of(apManager, factTypeChecker, it.rule as TaintConfigurationSink, it.statement as JIRInst)
+        val requirements = findings.endRequirementTargets.flatMap { (statement, rules) ->
+            rules.mapNotNull { JIRBackwardEndRequirement.of(apManager, factTypeChecker, it, statement) }
         }
         if (requirements.isEmpty()) return emptyList()
 
