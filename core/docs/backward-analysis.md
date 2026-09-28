@@ -2,8 +2,10 @@
 
 `JIRBackwardAnalysisManager` (package `org.opentaint.dataflow.jvm.ap.ifds.backward`,
 module `opentaint-jvm-dataflow`) is a subclass of the forward `JIRAnalysisManager`.
-It runs the **unchanged** generic IFDS engine over the reversed application graph
-(`ApplicationGraph.reversed`). `TaintAnalyzer` selects it with
+It runs the **unchanged** generic IFDS engine once over the reversed application
+graph (`ApplicationGraph.reversed`) with rules whose sources and sinks are
+swapped (section 7), so a finding is an ordinary sink report at the statement of
+an unconditional source. `TaintAnalyzer` selects it with
 `-Popentaint.analysis.direction=backward` (section 6). Trace resolution is out
 of scope: backward vulnerabilities carry no traces.
 
@@ -42,13 +44,13 @@ a source producing its mark is a source finding.
 
 ## 2. Components
 
-`JIRBackwardAnalysisManager(forward)` is created by
+`JIRBackwardAnalysisManager(forward, analysisEndMethods)` is created by
 `JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
 manager's classpath, `relevantRuleIds` and parameters. Its rules are the
-forward rules wrapped in `JIRBackwardSinkSelection` (section 7). It inherits the
-call resolver (applied to `graph.reversed`), method inst graph, language
-manager, context serializer, fact type checker and edge post-processor, and
-overrides only:
+forward rules wrapped in `JIRBackwardTaintRulesProvider` (section 7). It
+inherits the call resolver (applied to `graph.reversed`), method inst graph,
+language manager, context serializer, fact type checker and edge
+post-processor, and overrides only:
 
 | Hook | Backward |
 |---|---|
@@ -57,17 +59,17 @@ overrides only:
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
-| run protocol | `prepareNextBackwardRun`, driven by `JIRBackwardSinkAttribution` (sections 6, 7) |
 
-Backward-only helpers: `JIRBackwardTaintRules` (sink → demand seeds,
-demand → source match), `JIRBackwardFindingTracker`, `JIRBackwardEndRequirement`,
-`JIRBackwardStarUnroller`, `JIRBackwardMethodCallFactMapper` (delegates to the
-forward mapper).
+Backward-only helpers: `JIRBackwardTaintRulesProvider`, `JIRBackwardStarUnroller`,
+`JIRBackwardNonExitingStarts`, `JIRBackwardMethodCallFactMapper` (delegates to
+the forward mapper).
 
 Call-site mapping: a demand on the call's result variable maps to `Return`
 only (for `x = f(x)` the post-call `x` is the result); every other base maps
 like forward. Exit → return maps `Argument`/`This` back to the call locals and
-answers nothing for `Return`.
+answers nothing for `Return`. The mapping is the context's `methodCallFactMapper`,
+which `JIRMethodCallTaintUtil` also uses for rule conditions, so the same rule
+code reads a pre-call fact in forward and a post-call demand in backward.
 
 ## 3. Statement semantics
 
@@ -87,33 +89,33 @@ both kill `L`.
 Type filters, the abstraction split (`removeAbstraction` plus an excluded
 `abstractOnly` when a field is read from an abstract demand) and refinements
 are the forward code itself (section 5). Field and array writes also move
-demands through the `findAlias` aliases of the written instance. Rule hooks:
+demands through the `findAlias` aliases of the written instance. Rule hooks (all rules are the swapped ones of section 7; the forward rule
+code applies them):
 
-* `return x`: exit-sink seeds; exit-source matches before `Return` is rebased.
-* `x = C.f`: static-field source matches.
-* `JMethodEnterInst`: entry-sink seeds and entry-source matches on
-  `Argument`/`This`/`ClassStatic` demands. An entry-source finding is
-  suppressed when every initial fact of the edge is an `Argument`/`This` root
-  carrying an entry mark: forward drops exactly those marks at the exit
-  (`dropArgumentsLocalTaintMarks`).
-* Zero-edge-only exit sinks: forward checks a method-exit sink only on facts
-  of zero-to-fact edges (`JIRMethodExitRuleProvider`). When a restricted run
-  (section 7) seeds only such sinks of the exited method, `JMethodEnterInst`
-  does not propagate zero-to-fact demands to the callers.
+* `return x`: on Zero, the forward exit-source step (`applyMethodExitSourceRules`)
+  seeds demands at `Return`/`Argument`/`This`/`ClassStatic`; on a demand, the
+  forward exit-sink step (`applyMethodExitSinkRules`) reports and the
+  exit-source step adds condition demands. All resulting facts are post-return
+  positions and go through the backward `Return := x` step.
+* `x = C.f`: derived static-field sinks (`sinkRulesForStaticField`) are applied
+  to a demand on `x` by `JIRSequentTaintUtil` with `x` as the result base.
+* `JMethodEnterInst`: derived entry sinks are applied by `JIRSequentTaintUtil`
+  (unconditional entry sinks on Zero). They are skipped when every initial fact
+  of the edge is an `Argument`/`This` root carrying an entry mark: forward drops
+  exactly those marks at the exit (`dropArgumentsLocalTaintMarks`). The demand
+  then leaves the method without its zero-edge marks (section 8) unless an
+  initial fact is abstract or carries one.
 
-A source match never kills the demand. Condition demands of a conditional
-source are emitted next to it; refinements are propagated as in forward.
+A report never kills the demand; refinements are propagated as in forward.
 
 ## 4. Call semantics
 
-* Zero: demand seeds for every sink rule whose condition is not
-  constant-false, from the positive mark literals of the condition
-  (`position·M·$`; an any-field literal also demands `position.[any]·M`).
-* Source match: the precondition rule evaluation
-  (`evaluateSourceRulePrecondition` with `TaintSourceActionPreconditionEvaluator`)
-  over the demand rebased to the callee base. Conditional sources turn into
-  condition demands. Method exit/entry and static-field sources use the same
-  evaluation.
+* Rules: the forward `propagateZeroToZero` runs unchanged (unconditional
+  derived sources seed pre-call demands on arguments and their call-site
+  aliases; residual unconditional sinks report). On a demand and on each
+  call-site alias demand, the forward `applyTaintRules` (the sink and source
+  step of `propagateFact`) reports derived sinks and emits the condition
+  demands of swapped conditional sources.
 * Cleaners: a value in the demand after the call survived the cleaner, so the
   demand before the call is `clean(demand)`, computed by the forward cleaner
   step; removed alternatives become `Drop`.
@@ -137,11 +139,11 @@ Shared code stays in the forward classes; backward subclasses or calls them.
 | Forward origin | Backward use |
 |---|---|
 | `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
-| `JIRMethodCallFlowFunction` (open; `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it and runs the forward cleaner step on each demand, once per star-unrolled input |
+| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step once per star-unrolled input |
+| `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types), `applyMethodExitSinkRules` / `applyMethodExitSourceRules` (protected) | every report and every rule-created demand |
 | `JIRMethodCallSummaryHandler` (open; `applyCallAliases` protected open) | `JIRBackwardMethodCallSummaryHandler` extends it (backward exit mapping, no aliases, no rewriting) |
 | `JIRMethodStartFlowFunction` | held by `JIRBackwardMethodStartFlowFunction` for type checks |
 | `TaintPassActionEvaluator`, `TaintConfigUtils.accept`/`applicableRules` | inverse pass-through (swapped positions), star-unroll cleaner check |
-| `evaluateSourceRulePrecondition`, `TaintSourceActionPreconditionEvaluator` (takes any `FactReader`) | all source matches |
 | `JIRMethodCallRuleBasedSummaryRewriter.rewriteSummaryFact` | user-rule rewriting of demands |
 | `aliasesPersistedThroughCall` (extracted from `forEachAliasAfterCallStatement`) | call-site alias inversion |
 
@@ -152,21 +154,16 @@ Shared code stays in the forward classes; backward subclasses or calls them.
   `OPENTAINT_ANALYSIS_DIRECTION` (else `FORWARD`). `configureDefaultTest`
   forwards the Gradle property to test JVMs.
 * Generic API (`BackwardTaintAnalysisManager.kt`): one interface, implemented
-  by `JIRAnalysisManager`, with `createBackwardAnalysisManager()` and
-  `prepareNextBackwardRun(analysisEndMethods, timeLeft)`, which configures the
-  next run and returns its timeout, or `null` when no run is left. A manager
-  that does not implement it (Go) runs forward.
+  by `JIRAnalysisManager`, with `createBackwardAnalysisManager(analysisEndMethods)`.
+  A manager that does not implement it (Go) runs forward.
 
 `TaintAnalyzer.analyzeBackward`:
 
 1. Forward prescan on the forward graph with the forward manager, exactly as
    in forward mode. It fills the `relevantRuleIds` set and the forward
-   contexts' lambda trackers, both read by the backward manager. The backward
-   manager never runs a prescan of its own.
-2. A separate engine over the reversed graph. While
-   `prepareNextBackwardRun` (given what is left of 90% of the timeout)
-   returns a timeout: `selectPhase(FullScan)` (rule selection from the shared
-   ids) → `resetApManager` → `runAnalysis(entry methods)`.
+   contexts' lambda trackers, both read by the backward manager.
+2. One run of a separate engine over the reversed graph: `selectPhase(FullScan)`
+   → `resetApManager` → `runAnalysis(entry methods)` with 90% of the timeout.
 3. The engine's vulnerabilities, then the forward `reportedVulnerabilities`
    step (summary, CWE filter).
 
@@ -176,48 +173,68 @@ backward context copies the trackers of all forward contexts of its method, so
 the unchanged resolver resolves a lambda call to those classes and also keeps
 the resolution failure, as forward does.
 
-## 7. Sink attribution by isolation
+## 7. Backward rule provider
 
-Demands carry marks only, so a source finding does not say which sink
-demanded it. Attribution restricts the seeds instead, at the rule provider:
-`JIRBackwardSinkSelection` wraps the rules of every backward taint context and,
-while a selection of `(statement, sink rule)` pairs is active, returns call,
-method-exit and method-entry sink rules only for the selected pairs. Seeding is
-unaware of the selection. `JIRBackwardSinkAttribution` plans the runs:
+`JIRBackwardTaintRulesProvider` wraps the forward provider and answers every
+query with the swapped rules, derived once per rule. Conditions are split into
+DNF cubes of positive mark literals plus other literals; negated mark literals
+are dropped (forward treats them as satisfied) and a cube containing another
+cube is dropped (absorption). A cube with no mark literal is *unconditional*.
 
-* A run records every seeded occurrence with its positive condition and end
-  requirement. Satisfied marks are the marks of all source findings, closed
-  under conditional sources whose condition holds. An occurrence is
-  vulnerable when its condition holds under the satisfied marks and, in
-  restricted runs, its end requirement was reached.
-* Discovery seeds every occurrence. Its verdict is final only for a single
-  seeded occurrence without end requirement that is not a zero-edge-only exit
-  sink: demands of different sinks merge in one access path, so discovery is
-  not an over-approximation of isolated runs.
-* Grouped runs seed groups of occurrences with pairwise disjoint demanded
-  marks (deterministic greedy grouping). A single-member group is final; the
-  positives of larger groups are re-checked in isolated runs.
-* Runs share what is left of the budget: discovery half of it, grouped runs
-  an equal part of half (all of it when no group has more than one member),
-  isolated runs an equal part of the rest. When no time is left, unchecked
-  occurrences keep their last verdict.
-* After the last run every reported occurrence is added once to the engine's
-  `TaintSinkTracker` as an unconditional vulnerability.
+| Forward rule | Backward rule |
+|---|---|
+| unconditional call / exit / entry-point / static-field source, `AssignMark(M, P)` | sink of the matching kind (call, exit, entry; static fields: `sinkRulesForStaticField`) at the same method with `ContainsMark(P, M)` (and its zero-edge copy), plus the source's other literals. `P.[any]` becomes `ContainsMarkOnAnyField(P, M)` |
+| conditional call / exit source `C ⇒ AssignMark(M, P)` | per cube: source with condition `ContainsMark(P, M)` assigning the cube's marks at their positions (twice: plain and zero-edge marks) |
+| conditional entry-point source | none (forward applies only unconditional entry sources) |
+| call sink, positive literals `M@P` | per cube: source assigning `M@P`; it fires on Zero (pre-call demands) |
+| method-exit sink | per cube: exit source assigning the zero-edge marks (section 8) |
+| method-entry sink with mark literals | none (forward fires only unconditional entry sinks) |
+| unconditional call / entry sink | the sink itself (reported on Zero) |
+| sink with end requirement `AssignMark(K, P')` | the derived source, or the unconditional residual sink, gets the extra literal `ContainsMark(P', K)` |
+| pass-through, cleaner | unchanged (inverted by the flow functions), plus zero-edge copies of `CopyMark` / `RemoveMark` actions and of cleaner-condition marks |
 
-Satisfied marks are global to a run, so two literals on the same mark at
-different positions are satisfied by either.
+Call-site cubes whose mark literal is on `Result` are dropped: forward reads a
+call's condition before the call, where the result never holds a fact.
+Queries with `allRelevant` (the summary rewriter) return the original sources.
 
-## 8. End-fact requirements
+Positions: a call statement's backward edge is its post-state, so derived sinks
+of call sources read the post-call demand (result as `Return`, arguments as
+`Argument`), while call-sink seeds are pre-call demands (the call FF's
+call-to-return output). Exit rules act on post-return positions and the
+resulting facts cross `Return := x`; entry rules act at `JMethodEnterInst`.
+
+Reported id and meta of a derived sink: `TaintRulesProvider.sinkMetaForSource`.
+`JIRSemgrepRuleProvider` finds the semgrep rule (automaton) containing the
+source's serialized item and takes the id and meta of any of its sinks;
+`JIRCombinedTaintRulesProvider` asks its base, then the combined provider.
+Without an answer (hand-written configs) the id is the source's serialized id,
+else its mark names, with an empty warning meta and no CWE, which the CWE
+filter keeps.
+
+## 8. Zero-edge-only exit sinks and end-fact requirements
+
+Forward checks a method-exit sink only on facts of zero-to-fact edges
+(`JIRMethodExitRuleProvider`): the taint must be created inside the method's
+dynamic extent. Demands seeded by an exit sink therefore use *zero-edge marks*
+(`M$zero-edge`). Every rule that reads, copies or clears `M` treats its
+zero-edge copy the same way, and a derived sink reports either. At
+`JMethodEnterInst` zero-edge marks are removed from the demand unless an
+initial fact of the edge is abstract or carries one: seeded or
+requirement-triggered demands of the method itself (zero edges, or initial
+facts without zero-edge marks) never reach the callers, while zero-edge
+demands a caller passed in return to it through the summary. Exit sinks are
+treated as zero-edge-only in every chain, as `JIRMethodExitRuleProvider`
+makes them in all analysis configurations.
 
 Forward confirms a sink with `trackFactsReachAnalysisEnd` only if the fact it
-creates after the sink reaches the analysis end uncleaned.
-`JIRBackwardEndRequirement` computes that fact like forward (single required
-fact only). Restricted runs emulate the confirmation with end demands emitted
-by the start flow function at the normal exit: the fact rebased to every local
-of every analysed method, plus arguments, `this`, `Return` and `ClassStatic`
-at the analysis entry methods. The demands flow backward and cleaners drop
-them; at the occurrence's statement a demand containing the required position
-and mark marks the requirement as reached.
+creates after the sink reaches the analysis end uncleaned (a single required
+fact; otherwise the finding is reported unconfirmed). Backward seeds *end
+demands* in the start flow function at the normal exit: every requirement
+`(P', K)` of a sink rule found in the methods of the forward prescan, rebased
+to every local of every analysed method, plus arguments, `this`, `Return` and
+`ClassStatic` at the analysis entry methods. The derived rule of such a sink
+carries `ContainsMark(P', K)` (section 7), so it fires only where an end
+demand survived the cleaners back to the sink statement.
 
 ## 9. Star unrolling before `Exact` cleaners
 
@@ -248,8 +265,21 @@ node is not final. The code is shared with forward.
 
 * No traces, preconditions or SARIF code flows; SARIF tests skip in backward
   mode.
-* Side-effect summaries are not modelled; end requirements are only emulated
-  in restricted runs, and not at exceptional exits or non-exiting starts.
+* A finding is reported when one demand of a sink cube reaches an unconditional
+  source: conjunctions of marks are over-approximated (each conjunct is
+  demanded on its own). Querylang cases that report in backward only for this
+  reason: `ExampleTest.test rule return not inside prefix`,
+  `ExampleTest.test rule with ellipsis method invocation and pattern not`,
+  `IssuesTest.issue chain-pattern order-sensitive match` (a value mark in
+  conjunction with the automaton's global state mark).
+* Findings are located at the source statement and carry the derived rule; the
+  JVM test harness judges backward results by presence only.
+* End-requirement shapes are collected from the methods of the forward
+  prescan; end demands are not seeded at exceptional exits or non-exiting
+  starts.
+* Constant-true exit sinks are not reported (forward reports them on any
+  zero-rooted fact at the exit).
+* Side-effect summaries are not modelled.
 * Lambda calls resolve only to lambdas the forward prescan found; the
   trackers of all forward contexts of a method are merged.
 * A refined backward edge that produces no demand does not emit a side-effect
@@ -261,7 +291,5 @@ node is not final. The code is shared with forward.
   not fire.
 * Cleaners of a call do not filter demands that a callee summary produces on
   its arguments (user-rule cleaners are applied to the start demand).
-* Forward fires method-entry sinks only for constant-true conditions and never
-  reports constant-true exit sinks; backward seeds both.
 * Base-only modes are field-insensitive in both directions; Cactus is
   unmaintained.
