@@ -17,9 +17,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
-import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.MemoryAccess
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.RefAccess
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.StaticRefAccess
@@ -27,7 +25,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.positiveMarks
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintAnalysisContext.Companion.positiveMarks
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -181,21 +179,15 @@ class JIRBackwardMethodSequentFlowFunction(
         val lhv = accessPathBase(inst.lhv) ?: return
         if (fact.base != lhv) return
 
-        val sinks = analysisContext.rules.sinkRulesForStaticField(field, inst)
-        val sources = analysisContext.rules.sourceRulesForStaticField(field, inst, fact = null).toList()
+        val sinks = analysisContext.backwardTaint.sinkRulesForStaticField(field, inst)
+        val sources = analysisContext.taint.sourceRulesForStaticField(field, inst, fact = null)
         if (sinks.isEmpty() && sources.isEmpty()) return
 
-        val rewriter = JIRMarkAwareConditionRewriter(
-            CalleePositionToJIRValueResolver(inst.location.method), analysisContext, inst
-        )
-
         val util = sinkUtil<TaintMethodSink>(lhv)
-        val sinkRules = sinks.map { RuleWithCondition(it, rewriter.rewrite(it.condition)) }
-        util.applySinkRules(sinkRules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver = null)
+        util.applySinkRules(sinks, FinalFactReader(fact, apManager), markAfterAnyFieldResolver = null)
         util.conditionReaders.forEach(refiner::add)
 
-        val sourceRules = sources.map { RuleWithCondition(it, rewriter.rewrite(it.condition)) }
-        demands += applySourceRules(sourceRules, lhv, fact, refiner)
+        demands += applySourceRules(sources, lhv, fact, refiner)
     }
 
     private fun leavesThroughArgumentRoot(

@@ -30,13 +30,13 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 
-class JIRTaintAnalysisContext(
+open class JIRTaintAnalysisContext(
     override val taintSinkTracker: TaintSinkTracker,
     private val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val relevantRuleIds: MutableSet<String>,
 ) : TaintAnalysisContext {
-    private lateinit var analysisContext: JIRMethodAnalysisContext
+    protected lateinit var analysisContext: JIRMethodAnalysisContext
 
     fun bindAnalysisContext(analysisContext: JIRMethodAnalysisContext) {
         this.analysisContext = analysisContext
@@ -55,12 +55,12 @@ class JIRTaintAnalysisContext(
         return taintConfig.sourceRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
     }
 
-    fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
+    open fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
         if (analysisContext.phase is Phase.Prescan) return emptyList()
         return taintConfig.cleanerRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
     }
 
-    fun sourceRulesForCallStatement(
+    open fun sourceRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -71,7 +71,7 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
-    fun sinkRulesForCallStatement(
+    open fun sinkRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -82,7 +82,7 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
-    fun cleanRulesForCallStatement(
+    open fun cleanRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -121,7 +121,7 @@ class JIRTaintAnalysisContext(
         }.handlePhase()
     }
 
-    fun sourceRulesForStaticField(
+    open fun sourceRulesForStaticField(
         field: JIRField,
         statement: JIRInst,
         fact: FinalFactAp?
@@ -133,7 +133,7 @@ class JIRTaintAnalysisContext(
         RuleWithCondition(it, RuleConditionRewriter.trueExpr)
     }.handlePhase()
 
-    fun sourceRulesForMethodExit(
+    open fun sourceRulesForMethodExit(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(
@@ -142,7 +142,7 @@ class JIRTaintAnalysisContext(
         statement
     )
 
-    fun sinkRulesForMethodExit(
+    open fun sinkRulesForMethodExit(
         statement: JIRInst,
         fact: FinalFactAp?,
         initialFacts: Set<InitialFactAp>?
@@ -152,13 +152,13 @@ class JIRTaintAnalysisContext(
         statement
     )
 
-    fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
+    open fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
         taintConfig.sinkRulesForMethodEntry(statement.location.method, statement, fact),
         TaintMethodEntrySink::condition,
         statement
     )
 
-    fun sourceRulesForMethodEntry(
+    open fun sourceRulesForMethodEntry(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(

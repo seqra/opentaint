@@ -38,11 +38,9 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 
-class JIRBackwardAnalysisManager private constructor(
+class JIRBackwardAnalysisManager(
     private val forward: JIRAnalysisManager,
-    val rules: JIRBackwardTaintRulesProvider,
-) : JIRAnalysisManager(forward.cp, forward.rootRefManager, rules, forward.externalMethodTracker, forward.params) {
-    constructor(forward: JIRAnalysisManager) : this(forward, JIRBackwardTaintRulesProvider(forward.taintConfig))
+) : JIRAnalysisManager(forward.cp, forward.rootRefManager, forward.taintConfig, forward.externalMethodTracker, forward.params) {
 
     override val relevantRuleIds get() = forward.relevantRuleIds
 

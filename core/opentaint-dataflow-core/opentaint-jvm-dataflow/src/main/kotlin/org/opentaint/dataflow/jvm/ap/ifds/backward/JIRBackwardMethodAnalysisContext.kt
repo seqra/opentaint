@@ -14,9 +14,14 @@ class JIRBackwardMethodAnalysisContext(
     forward.factTypeChecker,
     forward.localVariableReachability,
     forward.aliasAnalysis,
-    forward.taint,
+    JIRBackwardTaintAnalysisContext(
+        forward.taint.taintSinkTracker,
+        forward.analysisManager.taintConfig,
+        forward.taint.externalMethodTracker,
+        forward.taint.relevantRuleIds,
+    ),
 ) {
-    val rules get() = (analysisManager as JIRBackwardAnalysisManager).rules
+    val backwardTaint get() = taint as JIRBackwardTaintAnalysisContext
 
     override val methodCallFactMapper: MethodCallFactMapper
         get() = JIRBackwardMethodCallFactMapper
