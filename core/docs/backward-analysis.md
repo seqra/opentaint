@@ -72,8 +72,8 @@ both kill `L`.
 | `x = y.f` / `x = C.f` / `x = a[i]` | `x.P` | `y.f.P` / `ClassStatic.<C>.f.P` / `a.[e].P` |
 | `x = a op b` | `x.P` | `a.P`, `b.P` |
 | `x = const / new / ...` | `x.P` | none |
-| `y.f = x` (strong) | `y.f.P` | `x.P`, plus `y` with `f` cleared |
-| `C.f = x`, `a[i] = x` (weak, as forward) | `ClassStatic.<C>.f.P` / `a.[e].P` | `x.P` and the demand itself |
+| `y.f = x`, `C.f = x` (strong) | `y.f.P` / `ClassStatic.<C>.f.P` | `x.P`, plus `y` / `ClassStatic.<C>` with `f` cleared |
+| `a[i] = x` (weak, as forward) | `a.[e].P` | `x.P` and the demand itself |
 | `return x` / `throw x` | `Return.P` / `Exception.P` | `x.P` |
 
 Type filters, the abstraction split (`removeAbstraction` plus an excluded
@@ -128,7 +128,7 @@ Shared code stays in the forward classes; backward subclasses or calls them.
 
 | Forward origin | Backward use |
 |---|---|
-| `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays and statics) plus the forward read of `y.f` into `x` (including the abstraction split) |
+| `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
 | `JIRMethodCallFlowFunction` (open; `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it and runs the forward cleaner step on each demand, once per star-unrolled input |
 | `JIRMethodCallSummaryHandler` (open; `applyCallAliases` protected open) | `JIRBackwardMethodCallSummaryHandler` extends it (backward exit mapping, no aliases, no rewriting) |
 | `JIRMethodStartFlowFunction` | held by `JIRBackwardMethodStartFlowFunction` for type checks |

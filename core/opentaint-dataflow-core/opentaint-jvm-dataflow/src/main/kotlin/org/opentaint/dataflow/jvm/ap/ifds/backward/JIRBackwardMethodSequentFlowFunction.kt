@@ -10,7 +10,9 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceIn
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.MemoryAccess
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.RefAccess
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.StaticRefAccess
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -140,7 +142,10 @@ class JIRBackwardMethodSequentFlowFunction(
         propagateFact: (FinalFactAp) -> Unit,
         propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
     ) {
-        super.fieldWrite(access, assignFrom = null, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+        when (access) {
+            is RefAccess -> super.fieldWrite(access, null, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+            is StaticRefAccess -> clearStaticField(access, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+        }
 
         val value = assignFrom?.takeUnless { it is AccessPathBase.Constant } ?: return
         val readValue = { fact: FinalFactAp, exclude: (FinalFactAp, Accessor) -> Unit ->
@@ -153,6 +158,31 @@ class JIRBackwardMethodSequentFlowFunction(
         forEachWriteAlias(access, factAp, propagateFactWithAccessorExclude) { aliased ->
             readValue(aliased) { _, accessor -> propagateFactWithAccessorExclude(factAp, accessor) }
         }
+    }
+
+    private fun clearStaticField(
+        access: StaticRefAccess,
+        factAp: FinalFactAp,
+        unchanged: (FinalFactAp) -> Unit,
+        propagateFact: (FinalFactAp) -> Unit,
+        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
+    ) {
+        val classAccess = RefAccess(access.base, access.classStaticAccessor)
+        super.fieldWrite(classAccess, null, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
+
+        val classFields = AccessPathBase.LocalVar.create(-1)
+        val restore = { fields: FinalFactAp ->
+            val restored = fields.writeToAccessor(access.base, access.classStaticAccessor)
+            if (restored == factAp) unchanged(restored) else propagateFact(restored)
+        }
+
+        super.fieldRead(classFields, classAccess, factAp, {}, { fields ->
+            if (fields.base == classFields) {
+                super.fieldWrite(RefAccess(classFields, access.accessor), null, fields, restore, restore) { _, accessor ->
+                    propagateFactWithAccessorExclude(factAp, accessor)
+                }
+            }
+        }, { _, _ -> })
     }
 
     private inline fun forEachWriteAlias(
