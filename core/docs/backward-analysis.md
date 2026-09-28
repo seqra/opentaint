@@ -247,16 +247,18 @@ the provider keeps a cleaner only with the mark-free cubes of its condition
 (evaluated at the call site like any other condition) and drops it when there
 are none. Demands pass the ignored cleaners unchanged.
 
-`MethodTaintConfigurationResolver` (shared with forward) rewrites a cleaner
-condition against its actions. `RemoveMark(M, P)` checks `ContainsMark(P, M)`
-on the fact before removing (either reach), so it is a no-op when that
-literal is false and the literal can be assumed. The condition is put in
-negation normal form, assumed literals become `True` and their negations
-`False`, and the result is folded (constants, flattening, duplicates). A
-literal is implied only for its own action, so the rewrite is kept only when
-assuming each action's literal alone gives the same condition:
-`ContainsMark(x, M)` with removals from `x` and `y` stays conditional. A
-cleaner is left unchanged when an action implies no literal: `RemoveAllMarks`,
+`MethodTaintConfigurationResolver` (shared with forward) rewrites cleaner
+conditions against their actions, so `resolveMethodRule` returns a list of
+rules. A cleaner with several actions is split into one cleaner per action;
+each condition is simplified against its own action and cleaners whose
+simplified conditions are equal are joined again. `RemoveMark(M, P)` checks
+`ContainsMark(P, M)` on the fact before removing (either reach), so it is a
+no-op when that literal is false and the literal can be assumed: the condition
+is put in negation normal form, the literal becomes `True` and its negation
+`False`, and the result is folded (constants, flattening, duplicates). The
+split is equivalent to the original cleaner because all applicable cleaners'
+conditions are evaluated on the same fact before any action runs. An action
+implies no literal, and keeps the original condition, for `RemoveAllMarks`,
 any-field positions (no presence check; the removal records an exclusion on
 an abstract fact where `ContainsMarkOnAnyField` is false) and `String`
 positions (the removal also clears `<string-bytes>`, which `new String(byte[])`

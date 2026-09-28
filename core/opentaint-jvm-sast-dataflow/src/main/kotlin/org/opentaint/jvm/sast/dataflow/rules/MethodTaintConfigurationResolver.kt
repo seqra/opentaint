@@ -179,64 +179,64 @@ class MethodTaintConfigurationResolver(
             if (condition.isFalse()) return@mapNotNull null
 
             resolveMethodRule(condition, it)
-        }
+        }.flatten()
     }
 
     private fun SerializedRule.resolveMethodRule(
         condition: Condition,
         ctx: AnyArgSpecializationCtx,
-    ): TaintConfigurationItem = when (this) {
+    ): List<TaintConfigurationItem> = when (this) {
         is SerializedRule.EntryPoint -> {
-            TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            listOf(TaintEntryPointSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId))
         }
 
         is SerializedRule.Source -> {
-            TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            listOf(TaintMethodSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId))
         }
 
         is SerializedRule.MethodExitSource -> {
-            TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId)
+            listOf(TaintMethodExitSource(method, condition, taint.flatMap { it.resolveWithArray(ctx) }, info, serializedId))
         }
 
         is SerializedRule.Sink -> {
-            TaintMethodSink(
+            listOf(TaintMethodSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
-            )
+            ))
         }
 
         is SerializedRule.MethodExitSink -> {
-            TaintMethodExitSink(
+            listOf(TaintMethodExitSink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
-            )
+            ))
         }
 
         is SerializedRule.MethodEntrySink -> {
-            TaintMethodEntrySink(
+            listOf(TaintMethodEntrySink(
                 method, condition,
                 trackFactsReachAnalysisEnd?.flatMap { it.resolveNoArray(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
-            )
+            ))
         }
 
         is SerializedRule.PassThrough -> {
-            TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info, serializedId)
+            listOf(TaintPassThrough(method, condition, copy.flatMap { it.resolve(ctx) }, info, serializedId))
         }
 
         is SerializedRule.Cleaner -> {
-            val actions = cleans.flatMap { it.resolve(ctx) }
-            TaintCleaner(method, condition.assumeActions(actions), actions, info, serializedId)
+            cleans.flatMap { it.resolve(ctx) }
+                .groupBy { condition.assumeAction(it) }
+                .filterKeys { !it.isFalse() }
+                .map { (actionCondition, actions) -> TaintCleaner(method, actionCondition, actions, info, serializedId) }
         }
     }
 
-    private fun Condition.assumeActions(actions: List<Action>): Condition {
-        val assumed = actions.map { it.assumedLiteral() ?: return this }.toSet()
-        val nnf = toNnf(negated = false)
-        val rewritten = nnf.assume(assumed)
-        return if (assumed.all { nnf.assume(setOf(it)) == rewritten }) rewritten else this
+    private fun Condition.assumeAction(action: Action): Condition {
+        val assumed = action.assumedLiteral() ?: return this
+        return toNnf(negated = false).assume(setOf(assumed))
     }
 
     private fun Action.assumedLiteral(): ContainsMark? {
