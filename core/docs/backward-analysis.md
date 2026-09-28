@@ -40,11 +40,11 @@ a source producing its mark is a source finding.
   and reach no exit, and adds one representative of every bottom strongly
   connected component of that region as an extra entry point; every statement
   of the region is backward-reachable from one of them. Like the exceptional
-  exit they start with Zero only (no caller demands, no end demands).
+  exit they start with Zero only (no caller demands).
 
 ## 2. Components
 
-`JIRBackwardAnalysisManager(forward, analysisEndMethods)` is created by
+`JIRBackwardAnalysisManager(forward)` is created by
 `JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
 manager's classpath, `relevantRuleIds` and parameters. Its rules are the
 forward rules wrapped in `JIRBackwardTaintRulesProvider` (section 7). It
@@ -93,7 +93,8 @@ demands through the `findAlias` aliases of the written instance. Rule hooks (all
 code applies them):
 
 * `return x`: on Zero, the forward exit-source step (`applyMethodExitSourceRules`)
-  seeds demands at `Return`/`Argument`/`This`/`ClassStatic`; on a demand, the
+  seeds demands at `Return`/`Argument`/`This`/`ClassStatic` and unconditional
+  exit sinks report (also at `throw x`); on a demand, the
   forward exit-sink step (`applyMethodExitSinkRules`) reports and the
   exit-source step adds condition demands. All resulting facts are post-return
   positions and go through the backward `Return := x` step.
@@ -154,7 +155,7 @@ Shared code stays in the forward classes; backward subclasses or calls them.
   `OPENTAINT_ANALYSIS_DIRECTION` (else `FORWARD`). `configureDefaultTest`
   forwards the Gradle property to test JVMs.
 * Generic API (`BackwardTaintAnalysisManager.kt`): one interface, implemented
-  by `JIRAnalysisManager`, with `createBackwardAnalysisManager(analysisEndMethods)`.
+  by `JIRAnalysisManager`, with `createBackwardAnalysisManager()`.
   A manager that does not implement it (Go) runs forward.
 
 `TaintAnalyzer.analyzeBackward`:
@@ -189,9 +190,11 @@ cube is dropped (absorption). A cube with no mark literal is *unconditional*.
 | call sink, positive literals `M@P` | per cube: source assigning `M@P`; it fires on Zero (pre-call demands) |
 | method-exit sink | per cube: exit source assigning the zero-edge marks (section 8) |
 | method-entry sink with mark literals | none (forward fires only unconditional entry sinks) |
-| unconditional call / entry sink | the sink itself (reported on Zero) |
-| sink with end requirement `AssignMark(K, P')` | the derived source, or the unconditional residual sink, gets the extra literal `ContainsMark(P', K)` |
+| unconditional call / entry / exit sink | the sink itself with the mark-free cubes (reported on Zero) |
 | pass-through, cleaner | unchanged (inverted by the flow functions), plus zero-edge copies of `CopyMark` / `RemoveMark` actions and of cleaner-condition marks |
+
+`trackFactsReachAnalysisEnd` is ignored: every derived rule is built as if the
+sink had none.
 
 Call-site cubes whose mark literal is on `Result` are dropped: forward reads a
 call's condition before the call, where the result never holds a fact.
@@ -211,7 +214,7 @@ Without an answer (hand-written configs) the id is the source's serialized id,
 else its mark names, with an empty warning meta and no CWE, which the CWE
 filter keeps.
 
-## 8. Zero-edge-only exit sinks and end-fact requirements
+## 8. Zero-edge-only exit sinks
 
 Forward checks a method-exit sink only on facts of zero-to-fact edges
 (`JIRMethodExitRuleProvider`): the taint must be created inside the method's
@@ -219,22 +222,12 @@ dynamic extent. Demands seeded by an exit sink therefore use *zero-edge marks*
 (`M$zero-edge`). Every rule that reads, copies or clears `M` treats its
 zero-edge copy the same way, and a derived sink reports either. At
 `JMethodEnterInst` zero-edge marks are removed from the demand unless an
-initial fact of the edge is abstract or carries one: seeded or
-requirement-triggered demands of the method itself (zero edges, or initial
-facts without zero-edge marks) never reach the callers, while zero-edge
-demands a caller passed in return to it through the summary. Exit sinks are
-treated as zero-edge-only in every chain, as `JIRMethodExitRuleProvider`
-makes them in all analysis configurations.
-
-Forward confirms a sink with `trackFactsReachAnalysisEnd` only if the fact it
-creates after the sink reaches the analysis end uncleaned (a single required
-fact; otherwise the finding is reported unconfirmed). Backward seeds *end
-demands* in the start flow function at the normal exit: every requirement
-`(P', K)` of a sink rule found in the methods of the forward prescan, rebased
-to every local of every analysed method, plus arguments, `this`, `Return` and
-`ClassStatic` at the analysis entry methods. The derived rule of such a sink
-carries `ContainsMark(P', K)` (section 7), so it fires only where an end
-demand survived the cleaners back to the sink statement.
+initial fact of the edge is abstract or carries one: seeded demands of the
+method itself (zero edges, or initial facts without zero-edge marks) never
+reach the callers, while zero-edge demands a caller passed in return to it
+through the summary. Exit sinks are treated as zero-edge-only in every
+chain, as `JIRMethodExitRuleProvider` makes them in all analysis
+configurations.
 
 ## 9. Star unrolling before `Exact` cleaners
 
@@ -273,12 +266,15 @@ node is not final. The code is shared with forward.
   `IssuesTest.issue chain-pattern order-sensitive match` (a value mark in
   conjunction with the automaton's global state mark).
 * Findings are located at the source statement and carry the derived rule; the
-  JVM test harness judges backward results by presence only.
-* End-requirement shapes are collected from the methods of the forward
-  prescan; end demands are not seeded at exceptional exits or non-exiting
-  starts.
-* Constant-true exit sinks are not reported (forward reports them on any
-  zero-rooted fact at the exit).
+  JVM test harness judges backward results by presence only, and the querylang
+  harness does not check negative samples in backward mode.
+* Sinks with `trackFactsReachAnalysisEnd` are reported without checking that
+  the fact they create reaches the analysis end. Querylang cases that report
+  in backward for this reason: `ExampleTest.test rule with pattern-not-inside
+  suffix`, `test rule pattern-not with signature`, `test rule with several
+  suffix cleaners`, `test cleaner after sink 0` and `test cleaner after sink 1`.
+* Unconditional exit sinks are reported whenever Zero reaches the exit;
+  forward does not report them.
 * Side-effect summaries are not modelled.
 * Lambda calls resolve only to lambdas the forward prescan found; the
   trackers of all forward contexts of a method are merged.
