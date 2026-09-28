@@ -3,35 +3,13 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
-import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
-import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import java.util.concurrent.ConcurrentHashMap
 
-class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) {
-    data class BackwardSourceFinding(
-        val methodEntryPoint: MethodEntryPoint,
-        val statement: JIRInst,
-        val rule: TaintConfigurationSource,
-        val mark: TaintMarkAccessor,
-    )
-
-    data class BackwardUnconditionalSink(
-        val methodEntryPoint: MethodEntryPoint,
-        val statement: JIRInst,
-        val rule: TaintConfigurationSink,
-    )
-
-    data class BackwardDemandSeed(
-        val methodEntryPoint: MethodEntryPoint,
-        val statement: JIRInst,
-        val rule: TaintConfigurationSink,
-        val fact: FinalFactAp,
-    )
-
+class JIRBackwardFindingTracker {
     data class BackwardSeededSink(
         val methodEntryPoint: MethodEntryPoint,
         val statement: JIRInst,
@@ -50,9 +28,6 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
     }
 
     data class BackwardConditionalSource(
-        val methodEntryPoint: MethodEntryPoint,
-        val statement: JIRInst,
-        val rule: TaintConfigurationSource,
         val marks: Set<TaintMarkAccessor>,
         val condition: TaintMarkAwareConditionExpr,
     )
@@ -62,9 +37,7 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
         val rule: TaintConfigurationSink,
     )
 
-    private val sourceFindings = ConcurrentHashMap.newKeySet<BackwardSourceFinding>()
-    private val unconditionalSinks = ConcurrentHashMap.newKeySet<BackwardUnconditionalSink>()
-    private val demandSeeds = ConcurrentHashMap.newKeySet<BackwardDemandSeed>()
+    private val sourceMarks = ConcurrentHashMap.newKeySet<TaintMarkAccessor>()
     private val seededSinks = ConcurrentHashMap.newKeySet<BackwardSeededSink>()
     private val conditionalSources = ConcurrentHashMap.newKeySet<BackwardConditionalSource>()
     private val endRequirementsReached = ConcurrentHashMap.newKeySet<BackwardEndRequirementReached>()
@@ -100,17 +73,8 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
         return BackwardSinkOccurrence(rule, statement) in restricted
     }
 
-    fun addSourceFinding(finding: BackwardSourceFinding) {
-        sourceFindings.add(finding)
-    }
-
-    fun addUnconditionalSink(finding: BackwardUnconditionalSink) {
-        unconditionalSinks.add(finding)
-    }
-
-    fun addDemandSeed(seed: BackwardDemandSeed) {
-        if (!recordDemandSeeds) return
-        demandSeeds.add(seed)
+    fun addSourceMarks(marks: Set<TaintMarkAccessor>) {
+        sourceMarks.addAll(marks)
     }
 
     fun addSeededSink(sink: BackwardSeededSink) {
@@ -129,22 +93,12 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
         zeroEdgeOnlySinks.add(occurrence)
     }
 
-    fun sourceFindings(): List<BackwardSourceFinding> = sourceFindings.toList()
-
-    fun unconditionalSinks(): List<BackwardUnconditionalSink> = unconditionalSinks.toList()
-
-    fun demandSeeds(): List<BackwardDemandSeed> = demandSeeds.toList()
-
     fun seededSinks(): List<BackwardSeededSink> = seededSinks.toList()
 
-    fun conditionalSources(): List<BackwardConditionalSource> = conditionalSources.toList()
+    val hasZeroEdgeOnlySinks: Boolean get() = zeroEdgeOnlySinks.isNotEmpty()
 
-    fun endRequirementsReached(): List<BackwardEndRequirementReached> = endRequirementsReached.toList()
-
-    fun zeroEdgeOnlySinks(): List<BackwardSinkOccurrence> = zeroEdgeOnlySinks.toList()
-
-    fun satisfiedMarks(): Set<TaintMarkAccessor> {
-        val satisfied = sourceFindings.mapTo(hashSetOf()) { it.mark }
+    private fun satisfiedMarks(): Set<TaintMarkAccessor> {
+        val satisfied = sourceMarks.toHashSet()
         val pending = conditionalSources.toMutableList()
 
         var changed = true
@@ -175,9 +129,7 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
     }
 
     fun reset() {
-        sourceFindings.clear()
-        unconditionalSinks.clear()
-        demandSeeds.clear()
+        sourceMarks.clear()
         seededSinks.clear()
         conditionalSources.clear()
         endRequirementsReached.clear()

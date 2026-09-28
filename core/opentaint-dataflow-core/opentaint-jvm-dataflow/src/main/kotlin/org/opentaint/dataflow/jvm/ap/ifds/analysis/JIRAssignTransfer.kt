@@ -14,7 +14,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.clearField
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayRemoveAfterWrite
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccess
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -78,7 +78,7 @@ class JIRAssignTransfer(
         }
 
         var filtered = fact
-        val fromAccess = MethodFlowFunctionUtils.assignedValue(assignFrom)?.let { value ->
+        val fromAccess = assignedValue(assignFrom)?.let { value ->
             val access = MethodFlowFunctionUtils.mkAccess(value) ?: return
             filtered = access.filterFactBaseType(assignFrom, filtered) ?: return
             access
@@ -384,4 +384,27 @@ class JIRAssignTransfer(
     }
 
     private fun auxiliaryBase() = AccessPathBase.LocalVar.create(-1)
+
+    private fun assignedValue(expr: JIRExpr): JIRValue? = when (expr) {
+        is JIRCastExpr -> expr.operand
+        is JIRImmediate -> expr
+        is JIRArrayAccess -> expr
+        is JIRFieldRef -> expr
+        else -> null
+    }
+
+    private val MemoryAccess.accessor: Accessor
+        get() = when (this) {
+            is RefAccess -> accessor
+            is StaticRefAccess -> accessor
+        }
+
+    private val MemoryAccess.accessors: List<Accessor>
+        get() = when (this) {
+            is RefAccess -> listOf(accessor)
+            is StaticRefAccess -> listOf(classStaticAccessor, accessor)
+        }
+
+    private fun FinalFactAp.writeToAccess(access: MemoryAccess): FinalFactAp =
+        access.accessors.foldRight(this) { accessor, fact -> fact.writeToAccessor(access.base, accessor) }
 }

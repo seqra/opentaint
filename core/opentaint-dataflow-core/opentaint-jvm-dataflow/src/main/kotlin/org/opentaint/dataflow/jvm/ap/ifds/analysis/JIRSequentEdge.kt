@@ -20,11 +20,11 @@ sealed class JIRSequentEdge(
 
     fun unchanged() = add(Sequent.Unchanged)
 
-    fun propagate(fact: FinalFactAp, trace: TraceInfo = TraceInfo.Flow) = add(edge(fact, trace))
+    fun propagate(fact: FinalFactAp) = add(edge(fact, TraceInfo.Flow))
 
     abstract fun propagateRefined(refinement: ExclusionSet, fact: FinalFactAp, trace: TraceInfo = TraceInfo.Flow)
 
-    abstract fun propagateExcluded(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo = TraceInfo.Flow)
+    abstract fun propagateExcluded(fact: FinalFactAp, accessor: Accessor)
 
     abstract fun requireRefinement(refinement: ExclusionSet)
 
@@ -58,8 +58,8 @@ sealed class JIRSequentEdge(
             add(Sequent.FactToFact(initialFact.refine(refinement), fact.refine(refinement), trace))
         }
 
-        override fun propagateExcluded(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
-            add(Sequent.FactToFact(initialFact.excludeField(accessor), fact.excludeField(accessor), trace))
+        override fun propagateExcluded(fact: FinalFactAp, accessor: Accessor) {
+            add(Sequent.FactToFact(initialFact.excludeField(accessor), fact.excludeField(accessor), TraceInfo.Flow))
         }
 
         override fun requireRefinement(refinement: ExclusionSet) {
@@ -74,10 +74,10 @@ sealed class JIRSequentEdge(
     ) : JIRSequentEdge(sequents, current) {
         override fun propagateRefined(refinement: ExclusionSet, fact: FinalFactAp, trace: TraceInfo) {
             requireRefinement(refinement)
-            propagate(fact, trace)
+            add(edge(fact, trace))
         }
 
-        override fun propagateExcluded(fact: FinalFactAp, accessor: Accessor, trace: TraceInfo) {
+        override fun propagateExcluded(fact: FinalFactAp, accessor: Accessor) {
             error("$kind edge can't be refined: $current")
         }
 

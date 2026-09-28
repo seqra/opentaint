@@ -60,26 +60,24 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.jvm.graph.JApplicationGraph
 import org.opentaint.util.analysis.ApplicationGraph
-import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class JIRBackwardAnalysisManager(
     cp: JIRClasspath,
     refManager: RefManager,
-    val taintConfig: TaintRulesProvider,
-    val externalMethodTracker: ExternalMethodTracker? = null,
-    override val params: JIRAnalysisManager.Params = JIRAnalysisManager.Params(),
-    recordDemandSeeds: Boolean = false,
-    private val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
-    private val lambdaRegistry: JIRLambdaRegistry? = null,
+    private val taintConfig: TaintRulesProvider,
+    private val externalMethodTracker: ExternalMethodTracker?,
+    override val params: JIRAnalysisManager.Params,
+    private val relevantRuleIds: MutableSet<String>,
+    private val lambdaRegistry: JIRLambdaRegistry,
 ) : JIRLanguageManager(cp), BackwardTaintAnalysisManager, JIRAnalysisManagerBase {
     private val refManager = refManager.softRefManager("JIRBackwardAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
-    val findings = JIRBackwardFindingTracker(recordDemandSeeds)
+    private val findings = JIRBackwardFindingTracker()
 
-    val starUnroller = JIRBackwardStarUnroller(cp)
+    private val starUnroller = JIRBackwardStarUnroller(cp)
 
     private val contexts = ConcurrentLinkedQueue<JIRBackwardMethodAnalysisContext>()
 
@@ -112,7 +110,7 @@ class JIRBackwardAnalysisManager(
         val exact = when (run) {
             is BackwardRun.Restricted -> run.occurrences.size <= 1
             else -> seeded.size <= 1 && seededSinks.all { it.endRequirement == null } &&
-                findings.zeroEdgeOnlySinks().isEmpty()
+                !findings.hasZeroEdgeOnlySinks
         }
         return BackwardRunResult(seeded, vulnerable, exact)
     }
@@ -186,7 +184,7 @@ class JIRBackwardAnalysisManager(
         val jIRCallResolver = JIRCallResolver(cp, unitResolver)
         return JIRMethodCallResolver(
             jIRCallResolver, runner, externalMethodTracker,
-            lambdaRegistry, replayRegisteredLambdas = lambdaRegistry != null,
+            lambdaRegistry, replayRegisteredLambdas = true,
         )
     }
 

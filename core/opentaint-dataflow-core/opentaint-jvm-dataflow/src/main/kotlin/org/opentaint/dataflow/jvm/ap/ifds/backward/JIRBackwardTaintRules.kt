@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -18,11 +17,8 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.evaluateSourceRule
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardConditionalSource
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardDemandSeed
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardEndRequirementReached
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardSeededSink
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardSourceFinding
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardUnconditionalSink
 import org.opentaint.dataflow.jvm.ap.ifds.trace.JIRMethodCallPrecondition
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
@@ -37,7 +33,6 @@ import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
-import org.opentaint.jvm.graph.JMethodEnterInst
 
 class JIRBackwardTaintRules(
     private val apManager: ApManager,
@@ -51,16 +46,11 @@ class JIRBackwardTaintRules(
     )
 
     sealed interface SourceMatch {
-        val rule: TaintConfigurationSource
         val marks: Set<TaintMarkAccessor>
 
-        data class Found(
-            override val rule: TaintConfigurationSource,
-            override val marks: Set<TaintMarkAccessor>,
-        ) : SourceMatch
+        data class Found(override val marks: Set<TaintMarkAccessor>) : SourceMatch
 
         data class ConditionDemand(
-            override val rule: TaintConfigurationSource,
             override val marks: Set<TaintMarkAccessor>,
             val condition: TaintMarkAwareConditionExpr,
             val facts: List<FinalFactAp>,
@@ -117,15 +107,9 @@ class JIRBackwardTaintRules(
                 findings.addZeroEdgeOnlySink(BackwardSinkOccurrence(demand.rule, statement))
             }
 
-            if (demand.condition == null) {
-                findings.addUnconditionalSink(BackwardUnconditionalSink(context.methodEntryPoint, statement, demand.rule))
-                continue
-            }
+            if (demand.condition == null) continue
 
-            for (seed in demand.seeds) {
-                findings.addDemandSeed(BackwardDemandSeed(context.methodEntryPoint, statement, demand.rule, seed))
-                seeds += seed
-            }
+            seeds += demand.seeds
         }
         return seeds
     }
@@ -167,20 +151,6 @@ class JIRBackwardTaintRules(
         return reader
     }
 
-    fun registerPrescanCallSources(statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?) {
-        if (context.phase !is Phase.Prescan) return
-        taint.sourceRulesForCallStatement(statement, callExpr, returnValue, fact = null)
-    }
-
-    fun registerPrescanStatementSources(statement: JIRInst) {
-        if (context.phase !is Phase.Prescan) return
-        when (statement) {
-            is JIRReturnInst -> taint.sourceRulesForMethodExit(statement, fact = null)
-            is JMethodEnterInst -> taint.sourceRulesForMethodEntry(statement, fact = null)
-            is JIRAssignInst -> staticFieldRead(statement)?.let { taint.sourceRulesForStaticField(it, statement, fact = null) }
-        }
-    }
-
     private fun staticFieldRead(statement: JIRAssignInst): JIRField? =
         (statement.rhv as? JIRFieldRef)?.field?.field?.takeIf { it.isStatic }
 
@@ -192,7 +162,7 @@ class JIRBackwardTaintRules(
     ): SourceMatchResult {
         val reader = FinalFactReader(callerFact.rebase(startBase), apManager)
         val collector = SourceMatchCollector(reader) { calleeFact -> mapCalleeToCaller(statement, calleeFact) }
-        precondition.evaluateSourceRules(reader, collector::found, collector::conditional)
+        precondition.evaluateSourceRules(reader, collector.found, collector.conditional)
         return collector.result()
     }
 
@@ -221,7 +191,7 @@ class JIRBackwardTaintRules(
     fun recordMethodEntrySourceMatches(statement: JIRInst, result: SourceMatchResult, initialFacts: Set<InitialFactAp>) {
         if (result.matches.isEmpty()) return
         if (initialFacts.isNotEmpty() && initialFacts.all { leavesThroughArgumentRoot(statement, it) }) return
-        recordSourceMatches(statement, result)
+        recordSourceMatches(result)
     }
 
     private fun leavesThroughArgumentRoot(statement: JIRInst, initialFact: InitialFactAp): Boolean {
@@ -251,19 +221,12 @@ class JIRBackwardTaintRules(
         return matchSources(rules, reader) { null }
     }
 
-    fun recordSourceMatches(statement: JIRInst, result: SourceMatchResult) {
+    fun recordSourceMatches(result: SourceMatchResult) {
         for (match in result.matches) {
             when (match) {
-                is SourceMatch.Found -> for (mark in match.marks) {
-                    context.findings.addSourceFinding(
-                        BackwardSourceFinding(context.methodEntryPoint, statement, match.rule, mark)
-                    )
-                }
-
+                is SourceMatch.Found -> context.findings.addSourceMarks(match.marks)
                 is SourceMatch.ConditionDemand -> context.findings.addConditionalSource(
-                    BackwardConditionalSource(
-                        context.methodEntryPoint, statement, match.rule, match.marks, match.condition
-                    )
+                    BackwardConditionalSource(match.marks, match.condition)
                 )
             }
         }
@@ -318,7 +281,7 @@ class JIRBackwardTaintRules(
         val evaluator = TaintSourceActionPreconditionEvaluator(reader)
         val collector = SourceMatchCollector(reader, mapConditionFact)
         for (ruleWithCondition in rules) {
-            evaluator.evaluateSourceRule(ruleWithCondition, collector::found, collector::conditional)
+            evaluator.evaluateSourceRule(ruleWithCondition, collector.found, collector.conditional)
         }
         return collector.result()
     }
@@ -329,14 +292,15 @@ class JIRBackwardTaintRules(
     ) {
         private val matches = mutableListOf<SourceMatch>()
 
-        fun found(rule: TaintConfigurationSource, actions: Set<CommonTaintAssignAction>) {
-            matches += SourceMatch.Found(rule, actions.marks())
+        val found: (TaintConfigurationSource, Set<CommonTaintAssignAction>) -> Unit = { _, actions ->
+            matches += SourceMatch.Found(actions.marks())
         }
 
-        fun conditional(rule: TaintConfigurationSource, actions: Set<CommonTaintAssignAction>, expr: TaintMarkAwareConditionExpr) {
-            val facts = expr.demandFacts(reader.factAp.exclusions).mapNotNull(mapConditionFact)
-            matches += SourceMatch.ConditionDemand(rule, actions.marks(), expr, facts)
-        }
+        val conditional: (TaintConfigurationSource, Set<CommonTaintAssignAction>, TaintMarkAwareConditionExpr) -> Unit =
+            { _, actions, expr ->
+                val facts = expr.demandFacts(reader.factAp.exclusions).mapNotNull(mapConditionFact)
+                matches += SourceMatch.ConditionDemand(actions.marks(), expr, facts)
+            }
 
         fun result() = SourceMatchResult(matches, reader)
     }

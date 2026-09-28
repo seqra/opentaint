@@ -8,19 +8,21 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnNonDistributiveFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
+import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
-import org.opentaint.dataflow.ap.ifds.analysis.alias.unapplyAlias
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.isApplicable
@@ -71,7 +73,6 @@ class JIRBackwardMethodCallFlowFunction(
     override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
         add(CallToReturnZeroFact)
         add(CallToStartZeroFact)
-        rules.registerPrescanCallSources(statement, callExpr, returnValue)
 
         val demands = rules.callSinkDemands(statement, callExpr, returnValue)
         rules.recordSinkDemands(statement, demands).forEach { seed ->
@@ -114,7 +115,7 @@ class JIRBackwardMethodCallFlowFunction(
                 checker = analysisContext.factTypeChecker,
             ) { callerFact, startFactBase ->
                 val sourceMatches = rules.matchCallSources(statement, precondition, callerFact, startFactBase)
-                rules.recordSourceMatches(statement, sourceMatches)
+                rules.recordSourceMatches(sourceMatches)
                 sourceMatches.reader?.let { factReader.updateRefinement(it) }
                 conditionDemands += sourceMatches.conditionDemands
 
@@ -150,7 +151,10 @@ class JIRBackwardMethodCallFlowFunction(
                 }
                 if (!factReader.containsPosition(position)) continue
 
-                unapplyAlias(factAp, local, alias, AliasAccessor::apAccessor) { result += it }
+                val unaliased = alias.accessors.fold(factAp.rebase(local) as FinalFactAp?) { fact, accessor ->
+                    fact?.readAccessor(accessor.apAccessor())
+                }
+                unaliased?.let { result += it }
             }
         }
         return result
@@ -209,11 +213,60 @@ class JIRBackwardMethodCallFlowFunction(
         else -> null
     }
 
+    override fun propagateZeroToFactResolutionFailure(currentFactAp: FinalFactAp, startFactBase: AccessPathBase) =
+        buildSet<CallToReturnZFact> {
+            propagateUnresolvedCallFact(
+                currentFactAp, startFactBase,
+                addSideEffectRequirement = { check(!it.hasRefinement) { "Can't refine Zero fact" } },
+                addCallToReturn = { factReader, factAp, trace ->
+                    check(!factReader.hasRefinement) { "Can't refine Zero fact" }
+                    this += CallToReturnZFact(factAp, trace)
+                },
+            )
+        }
+
+    override fun propagateFactToFactResolutionFailure(
+        initialFactAp: InitialFactAp,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+    ) = buildSet<FactCallFailureFact> {
+        propagateUnresolvedCallFact(
+            currentFactAp, startFactBase,
+            addSideEffectRequirement = { factReader ->
+                this += SideEffectRequirement(factReader.refineFact(initialFactAp.replaceExclusions(ExclusionSet.Empty)))
+            },
+            addCallToReturn = { factReader, factAp, trace ->
+                this += CallToReturnFFact(factReader.refineFact(initialFactAp), factReader.refineFact(factAp), trace)
+            },
+        )
+    }
+
+    override fun propagateNDFactToFactResolutionFailure(
+        initialFacts: Set<InitialFactAp>,
+        currentFactAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+    ) = buildSet<CallToReturnNonDistributiveFact> {
+        propagateUnresolvedCallFact(
+            currentFactAp, startFactBase,
+            addSideEffectRequirement = { check(!it.hasRefinement) { "Can't refine NDF2F edge" } },
+            addCallToReturn = { factReader, factAp, trace ->
+                check(!factReader.hasRefinement) { "Can't refine NDF2F edge" }
+                this += CallToReturnNonDistributiveFact(initialFacts, factAp, trace)
+            },
+        )
+    }
+
     override fun propagateUnresolvedCallFact(
         factAp: FinalFactAp,
-        startFactBase: AccessPathBase,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
         addSideEffectRequirement: (FinalFactReader) -> Unit,
+    ): Unit = error("Unresolved backward call requires the start fact base")
+
+    private fun propagateUnresolvedCallFact(
+        factAp: FinalFactAp,
+        startFactBase: AccessPathBase,
+        addSideEffectRequirement: (FinalFactReader) -> Unit,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo?) -> Unit,
     ) {
         if (startFactBase != AccessPathBase.Return) {
             for ((keptFact, keptReader) in summaryRewriter.rewriteSummaryFact(factAp)) {

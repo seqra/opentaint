@@ -38,7 +38,7 @@ class JIRMethodCallResolver(
     val callResolver: JIRCallResolver,
     val runner: TaintAnalysisUnitRunner,
     val externalMethodTracker: ExternalMethodTracker?,
-    private val lambdaRegistry: JIRLambdaRegistry? = null,
+    private val lambdaRegistry: JIRLambdaRegistry,
     private val replayRegisteredLambdas: Boolean = false,
 ) : MethodCallResolver {
     override fun resolveMethodCall(
@@ -122,8 +122,7 @@ class JIRMethodCallResolver(
     }
 
     private fun registeredLambdaImplementations(location: JIRInst, lambdaMethod: JIRMethod): List<MethodWithContext> {
-        val registry = lambdaRegistry ?: return emptyList()
-        return registry.registeredLambdas(location.location.method, location.location.index).map { lambdaClass ->
+        return lambdaRegistry.registeredLambdas(location.location.method, location.location.index).map { lambdaClass ->
             val methodImpl = lambdaClass.findMethodOrNull(lambdaMethod.name, lambdaMethod.description)
                 ?: error("Lambda class $lambdaClass has no lambda method $lambdaMethod")
             MethodWithContext(methodImpl, EmptyMethodContext)
@@ -159,7 +158,7 @@ class JIRMethodCallResolver(
             }
 
             lambdaResolver.addLambda(cls)
-            lambdaRegistry?.register(location.location.method, location.location.index, cls)
+            lambdaRegistry.register(location.location.method, location.location.index, cls)
         }
     }
 

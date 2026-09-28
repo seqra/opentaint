@@ -10,7 +10,7 @@ class JIRBackwardMethodStartFlowFunction(
     apManager: ApManager,
     context: JIRBackwardMethodAnalysisContext,
     private val exceptionalExit: Boolean,
-    private val endDemands: List<FinalFactAp> = emptyList(),
+    private val endDemands: List<FinalFactAp>,
 ) : MethodStartFlowFunction {
     private val forwardStartFlowFunction = JIRMethodStartFlowFunction(apManager, context)
 

@@ -12,6 +12,7 @@ import org.opentaint.dataflow.ap.ifds.access.ReadableAccessorList
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.util.Maybe
+import org.opentaint.util.flatMap
 import org.opentaint.util.fmap
 
 interface PassActionEvaluator<T> {
@@ -151,10 +152,13 @@ class TaintPassActionPreconditionEvaluator<F>(
         action: CommonTaintAction,
         from: PositionAccess,
         to: PositionAccess
-    ): Maybe<List<Pair<CommonTaintAction, F>>> =
-        copyAllFactsPrecondition(from, to).fmap { facts ->
-            facts.map { action to it }
+    ): Maybe<List<Pair<CommonTaintAction, F>>> {
+        return Maybe.from(listOf(to)).flatMap { toVar ->
+            copyAllFactsPrecondition(from, toVar).fmap { facts ->
+                facts.map { action to it }
+            }
         }
+    }
 
     override fun propagateTaint(
         rule: CommonTaintConfigurationItem,
@@ -162,10 +166,11 @@ class TaintPassActionPreconditionEvaluator<F>(
         from: PositionAccess,
         to: PositionAccess,
         mark: TaintMarkAccessor
-    ): Maybe<List<Pair<CommonTaintAction, F>>> =
-        copyFinalFactPrecondition(from, to, mark).fmap { facts ->
+    ): Maybe<List<Pair<CommonTaintAction, F>>> {
+        return copyFinalFactPrecondition(from, to, mark).fmap { facts ->
             facts.map { action to it }
         }
+    }
 
     private fun copyAllFactsPrecondition(
         fromPosAccess: PositionAccess,

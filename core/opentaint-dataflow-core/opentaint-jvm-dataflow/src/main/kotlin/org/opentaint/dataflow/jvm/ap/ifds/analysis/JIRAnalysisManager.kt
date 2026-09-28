@@ -106,9 +106,7 @@ class JIRAnalysisManager(
     }
 
     override fun createBackwardAnalysisManager(): JIRBackwardAnalysisManager = JIRBackwardAnalysisManager(
-        cp, baseRefManager, taintConfig, externalMethodTracker, params,
-        relevantRuleIds = relevantRuleIds,
-        lambdaRegistry = lambdaRegistry,
+        cp, baseRefManager, taintConfig, externalMethodTracker, params, relevantRuleIds, lambdaRegistry
     )
 
     override fun getMethodAnalysisContext(

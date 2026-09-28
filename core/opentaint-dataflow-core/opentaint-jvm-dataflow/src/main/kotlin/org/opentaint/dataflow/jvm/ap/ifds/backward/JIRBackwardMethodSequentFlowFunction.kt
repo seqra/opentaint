@@ -28,7 +28,6 @@ class JIRBackwardMethodSequentFlowFunction(
 
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         add(Sequent.ZeroToZero)
-        rules.registerPrescanStatementSources(currentInst)
 
         val demands = when (currentInst) {
             is JIRReturnInst -> rules.methodExitSinkDemands(currentInst)
@@ -91,7 +90,7 @@ class JIRBackwardMethodSequentFlowFunction(
     private fun methodExit(inst: JIRReturnInst, fact: FinalFactAp, edge: JIRSequentEdge) {
         val requirementReader = rules.matchEndRequirement(inst, fact)
         val sources = rules.matchMethodExitSources(inst, fact)
-        rules.recordSourceMatches(inst, sources)
+        rules.recordSourceMatches(sources)
 
         val demands = mutableListOf<FinalFactAp>()
         val returnBase = inst.returnValue?.let { accessPathBase(it) }
@@ -117,7 +116,7 @@ class JIRBackwardMethodSequentFlowFunction(
     private fun assign(inst: JIRAssignInst, edge: JIRSequentEdge) {
         assignTransfer.assign(inst, edge) { demand, staticFact ->
             val sources = rules.matchStaticFieldSources(inst, demand)
-            rules.recordSourceMatches(inst, sources)
+            rules.recordSourceMatches(sources)
             edge.keepAll(listOf(staticFact) + sources.conditionDemands, sources.reader)
         }
     }

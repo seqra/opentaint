@@ -70,7 +70,7 @@ fun <R: CommonTaintConfigurationSource, A: CommonTaintAssignAction> evaluateSour
     mkPass(rule, sourceActions, exprWithoutNegations)
 }
 
-fun <R : CommonTaintConfigurationItem, A : CommonTaintAction> evaluatePassRulePrecondition(
+fun  <R: CommonTaintConfigurationItem, A: CommonTaintAction> evaluatePassRulePrecondition(
     ruleWithCond: RuleWithCondition<R>,
     ruleActions: List<A>,
     preconditionEvaluator: TaintPassActionPreconditionEvaluator<InitialFactAp>,
