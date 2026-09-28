@@ -49,13 +49,12 @@ overrides only:
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
-| `selectPhase` | also resets `JIRBackwardFindingTracker` |
-| `isReachable`, `isValidMethodExitFact` | `true`, `Argument`/`This`/`ClassStatic` bases |
-| run protocol | `prepareBackwardRun`, `backwardRunResult` (section 6) |
+| `selectPhase`, run protocol | reset / configure `JIRBackwardFindingTracker` (section 6) |
 
 Backward-only helpers: `JIRBackwardTaintRules` (sink → demand seeds,
 demand → source match), `JIRBackwardFindingTracker`, `JIRBackwardEndRequirement`,
-`JIRBackwardStarUnroller`, `JIRBackwardMethodCallFactMapper`.
+`JIRBackwardStarUnroller`, `JIRBackwardMethodCallFactMapper` (delegates to the
+forward mapper).
 
 Call-site mapping: a demand on the call's result variable maps to `Return`
 only (for `x = f(x)` the post-call `x` is the result); every other base maps
@@ -121,9 +120,7 @@ source are emitted next to it; refinements are propagated as in forward.
   the call locals that persist through the call; backward inverts this by
   reading the demand through each such alias and processing the result like
   the original demand.
-* Summaries: the handler is the forward one without call aliases and without
-  summary rewriting; it emits a side-effect requirement whenever applying a
-  summary refines the caller's initial fact.
+* Summaries: the forward handler without call aliases and summary rewriting.
 
 ## 5. Code shared with forward
 
@@ -139,7 +136,6 @@ Shared code stays in the forward classes; backward subclasses or calls them.
 | `evaluateSourceRulePrecondition`, `TaintSourceActionPreconditionEvaluator` (takes any `FactReader`) | all source matches |
 | `JIRMethodCallRuleBasedSummaryRewriter.rewriteSummaryFact` | user-rule rewriting of demands |
 | `aliasesPersistedThroughCall` (extracted from `forEachAliasAfterCallStatement`) | call-site alias inversion |
-| `JIRMethodCallFactMapper` | delegate of `JIRBackwardMethodCallFactMapper` |
 
 ## 6. TaintAnalyzer pipeline
 
@@ -251,7 +247,7 @@ node is not final. The code is shared with forward.
   cleaner condition naming a mark at another position than the demand does
   not fire.
 * Cleaners of a call do not filter demands that a callee summary produces on
-  its arguments (user-rule cleaners are covered by the summary rewriting).
+  its arguments (user-rule cleaners are applied to the start demand).
 * Forward fires method-entry sinks only for constant-true conditions and never
   reports constant-true exit sinks; backward seeds both.
 * Base-only modes are field-insensitive in both directions; Cactus is
