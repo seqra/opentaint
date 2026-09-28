@@ -46,6 +46,10 @@ class JIRBackwardMethodCallFlowFunction(
 
     private val taintCtx get() = analysisContext.taint
 
+    private val summaryRewriter by lazy {
+        JIRBackwardSummaryRewriter(statement, analysisContext, apManager)
+    }
+
     private val typeResolver by lazy {
         JIRMethodPositionBaseTypeResolver(callExpr.method.method)
     }
@@ -224,35 +228,42 @@ class JIRBackwardMethodCallFlowFunction(
         addSideEffectRequirement: (FinalFactReader) -> Unit,
     ) {
         if (startFactBase != AccessPathBase.Return) {
-            addCallToReturn(FinalFactReader(factAp, apManager), factAp, null)
+            for ((keptFact, keptReader) in summaryRewriter.rewriteDemand(factAp)) {
+                addCallToReturn(keptReader, keptReader.refineFact(keptFact), null)
+            }
         }
 
         val factReader = FinalFactReader(factAp, apManager)
-        val passFactReader = FinalFactReader(factAp.rebase(startFactBase), apManager)
+        val calleeFact = factAp.rebase(startFactBase)
 
-        val passEvaluator = TaintPassActionInverseEvaluator(
-            apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
-        )
-
-        val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, passFactReader.factAp)
+        val passRules = taintCtx.passRulesForCallStatement(statement, callExpr, returnValue, calleeFact)
             .toMutableList()
 
         analysisContext.analysisManager.params.defaultGetModel?.run {
             passRules += defaultPropagationRules(callExpr.callee)
         }
 
-        for (evaluatedPass in applyInversePassThrough(passRules, passEvaluator)) {
-            val survivingFacts = applyCleaners(passFactReader, evaluatedPass.fact) { }
-            for (factReaderAfterCleaner in survivingFacts) {
-                passFactReader.updateRefinement(factReaderAfterCleaner)
+        for ((demand, rewriteReader) in summaryRewriter.rewriteDemand(calleeFact)) {
+            val passFactReader = FinalFactReader(rewriteReader.refineFact(demand), apManager)
+            passFactReader.updateRefinement(rewriteReader)
 
-                val mappedFact = rules.mapCalleeToCaller(statement, factReaderAfterCleaner.factAp) ?: continue
-                val trace = TraceInfo.Rule(evaluatedPass.rule, evaluatedPass.action)
-                addCallToReturn(passFactReader, mappedFact, trace)
+            val passEvaluator = TaintPassActionInverseEvaluator(
+                apManager, analysisContext.factTypeChecker, passFactReader, typeResolver
+            )
+
+            for (evaluatedPass in applyInversePassThrough(passRules, passEvaluator)) {
+                val survivingFacts = applyCleaners(passFactReader, evaluatedPass.fact) { }
+                for (factReaderAfterCleaner in survivingFacts) {
+                    passFactReader.updateRefinement(factReaderAfterCleaner)
+
+                    val mappedFact = rules.mapCalleeToCaller(statement, factReaderAfterCleaner.factAp) ?: continue
+                    val trace = TraceInfo.Rule(evaluatedPass.rule, evaluatedPass.action)
+                    addCallToReturn(passFactReader, mappedFact, trace)
+                }
             }
-        }
 
-        factReader.updateRefinement(passFactReader)
+            factReader.updateRefinement(passFactReader)
+        }
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)

@@ -196,7 +196,13 @@ class JIRBackwardMethodSequentFlowFunction(
         val requirementReader = rules.matchEndRequirement(currentInst, fact)
         val sources = rules.matchMethodEntrySources(currentInst, fact)
         rules.recordMethodEntrySourceMatches(currentInst, sources, out.initialFacts)
-        out.keepAll(mergeReaders(fact, sources.reader, requirementReader), listOf(fact) + sources.conditionDemands)
+
+        val demands = if (out.initialFacts.isEmpty() && !rules.keepsZeroEdgeDemandsAtMethodEnter(currentInst)) {
+            emptyList()
+        } else {
+            listOf(fact) + sources.conditionDemands
+        }
+        out.keepAll(mergeReaders(fact, sources.reader, requirementReader), demands)
     }
 
     private fun assign(inst: JIRAssignInst, currentFact: FinalFactAp, out: DemandOutput) {

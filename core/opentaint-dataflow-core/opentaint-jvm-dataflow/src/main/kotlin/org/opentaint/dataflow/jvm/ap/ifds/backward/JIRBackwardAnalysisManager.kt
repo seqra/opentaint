@@ -109,7 +109,8 @@ class JIRBackwardAnalysisManager(
 
         val exact = when (run) {
             is BackwardRun.Restricted -> run.occurrences.size <= 1
-            else -> seeded.size <= 1 && seededSinks.all { it.endRequirement == null }
+            else -> seeded.size <= 1 && seededSinks.all { it.endRequirement == null } &&
+                findings.zeroEdgeOnlySinks().isEmpty()
         }
         return BackwardRunResult(seeded, vulnerable, exact)
     }
@@ -307,7 +308,7 @@ class JIRBackwardAnalysisManager(
     ): MethodCallSummaryHandler {
         jIRDowncast<JIRInst>(statement)
         jIRDowncast<JIRBackwardMethodAnalysisContext>(analysisContext)
-        return JIRBackwardMethodCallSummaryHandler(statement, analysisContext)
+        return JIRBackwardMethodCallSummaryHandler(statement, analysisContext, apManager)
     }
 
     override fun getMethodSideEffectSummaryHandler(

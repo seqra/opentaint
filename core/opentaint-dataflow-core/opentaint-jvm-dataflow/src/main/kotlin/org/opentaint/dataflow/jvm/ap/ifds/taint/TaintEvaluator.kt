@@ -60,6 +60,15 @@ class JIRTaintCleanActionEvaluator(
         }
     }
 
+    fun removeMarkPositions(action: RemoveMark): List<PositionAccess> {
+        val variable = action.position.resolveAp()
+        if (positionTypeResolver.resolve(variable)?.typeName != STRING) {
+            return listOf(variable)
+        }
+
+        return listOf(variable, PositionWithAccess(action.position, stringBytes).resolveAp())
+    }
+
     companion object {
         private const val STRING = "java.lang.String"
 

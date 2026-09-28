@@ -87,6 +87,14 @@ class JIRMethodCallRuleBasedSummaryRewriter(
         result
     }
 
+    fun removeMarkActions(base: AccessPathBase): List<RemoveMark> =
+        userRuleDefinedActions[base].orEmpty().flatMap { (mark, actions) ->
+            val taintMark = TaintMark(mark)
+            actions.flatMap { action ->
+                action.positions.map { RemoveMark(taintMark, it, TaintCleanReach.Exact) }
+            }
+        }
+
     fun rewriteSummaryFact(fact: FinalFactAp): List<Pair<FinalFactAp, FinalFactReader>> {
         val startFactReader = FinalFactReader(fact, apManager)
         val actionsForBase = userRuleDefinedActions[fact.base].orEmpty()

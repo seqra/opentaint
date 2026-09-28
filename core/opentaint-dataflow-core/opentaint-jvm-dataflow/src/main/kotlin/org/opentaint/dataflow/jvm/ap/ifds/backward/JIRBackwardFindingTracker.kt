@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.taint.TaintMarkAwareConditionExpr
+import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import java.util.concurrent.ConcurrentHashMap
 
@@ -67,6 +68,7 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
     private val seededSinks = ConcurrentHashMap.newKeySet<BackwardSeededSink>()
     private val conditionalSources = ConcurrentHashMap.newKeySet<BackwardConditionalSource>()
     private val endRequirementsReached = ConcurrentHashMap.newKeySet<BackwardEndRequirementReached>()
+    private val zeroEdgeOnlySinks = ConcurrentHashMap.newKeySet<BackwardSinkOccurrence>()
 
     @Volatile
     var restrictedTo: Set<BackwardSinkOccurrence>? = null
@@ -75,12 +77,18 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
     @Volatile
     private var endRequirementTargets: Map<JIRInst, List<TaintConfigurationSink>> = emptyMap()
 
+    private val zeroEdgeDemandsKept = ConcurrentHashMap<JIRMethod, Boolean>()
+
     fun configureRun(restrictedTo: Set<BackwardSinkOccurrence>?) {
         this.restrictedTo = restrictedTo
         endRequirementTargets = restrictedTo.orEmpty()
             .filter { (it.rule as TaintConfigurationSink).trackFactsReachAnalysisEnd.isNotEmpty() }
             .groupBy({ it.statement as JIRInst }, { it.rule as TaintConfigurationSink })
+        zeroEdgeDemandsKept.clear()
     }
+
+    fun keepsZeroEdgeDemands(method: JIRMethod, compute: () -> Boolean): Boolean =
+        zeroEdgeDemandsKept.computeIfAbsent(method) { compute() }
 
     val hasEndRequirementTargets: Boolean get() = endRequirementTargets.isNotEmpty()
 
@@ -117,6 +125,10 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
         endRequirementsReached.add(reached)
     }
 
+    fun addZeroEdgeOnlySink(occurrence: BackwardSinkOccurrence) {
+        zeroEdgeOnlySinks.add(occurrence)
+    }
+
     fun sourceFindings(): List<BackwardSourceFinding> = sourceFindings.toList()
 
     fun unconditionalSinks(): List<BackwardUnconditionalSink> = unconditionalSinks.toList()
@@ -128,6 +140,8 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
     fun conditionalSources(): List<BackwardConditionalSource> = conditionalSources.toList()
 
     fun endRequirementsReached(): List<BackwardEndRequirementReached> = endRequirementsReached.toList()
+
+    fun zeroEdgeOnlySinks(): List<BackwardSinkOccurrence> = zeroEdgeOnlySinks.toList()
 
     fun satisfiedMarks(): Set<TaintMarkAccessor> {
         val satisfied = sourceFindings.mapTo(hashSetOf()) { it.mark }
@@ -167,6 +181,7 @@ class JIRBackwardFindingTracker(private val recordDemandSeeds: Boolean = false) 
         seededSinks.clear()
         conditionalSources.clear()
         endRequirementsReached.clear()
+        zeroEdgeOnlySinks.clear()
     }
 
     companion object {
