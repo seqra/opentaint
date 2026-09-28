@@ -16,7 +16,7 @@ a source producing its mark is a source finding.
 
 | Engine notion | Forward | Backward |
 |---|---|---|
-| method entry point | `JMethodEnterInst` | `JMethodExitNormalInst`, `JMethodExitExceptionalInst` (Zero only) |
+| method entry point | `JMethodEnterInst` | `JMethodExitNormalInst`; `JMethodExitExceptionalInst` and non-exiting starts (Zero only) |
 | successors of `s` | forward successors | forward predecessors |
 | summary emission point | method exits | `JMethodEnterInst` |
 | edge at `s` | state before `s` | state after `s` |
@@ -32,6 +32,13 @@ a source producing its mark is a source finding.
   demand ever enters a callee through an exception (forward never propagates a
   fact to the caller along an exception either). No demand has the
   `Exception` base.
+* Non-exiting starts: code with no forward path to any exit is never
+  backward-reachable from the exits. `JIRBackwardNonExitingStarts` takes the
+  statements of the forward method graph that are reachable from the entry
+  and reach no exit, and adds one representative of every bottom strongly
+  connected component of that region as an extra entry point; every statement
+  of the region is backward-reachable from one of them. Like the exceptional
+  exit they start with Zero only (no caller demands, no end demands).
 
 ## 2. Components
 
@@ -45,7 +52,7 @@ overrides only:
 | Hook | Backward |
 |---|---|
 | context | `JIRBackwardMethodAnalysisContext` (see section 1; backward fact mapper) |
-| entry points | entry points of the reversed method graph |
+| entry points | entry points of the reversed method graph plus non-exiting starts |
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
@@ -235,8 +242,7 @@ node is not final. The code is shared with forward.
 * No traces, preconditions or SARIF code flows; SARIF tests skip in backward
   mode.
 * Side-effect summaries are not modelled; end requirements are only emulated
-  in restricted runs, and not at exceptional exits.
-* Code from which no exit is reachable is not analysed.
+  in restricted runs, and not at exceptional exits or non-exiting starts.
 * Lambda calls resolve only to lambdas the forward prescan found; the
   trackers of all forward contexts of a method are merged.
 * A refined backward edge that produces no demand does not emit a side-effect

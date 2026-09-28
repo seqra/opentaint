@@ -55,6 +55,7 @@ class JIRBackwardAnalysisManager(
 
     val findings = JIRBackwardFindingTracker()
     val starUnroller = JIRBackwardStarUnroller(cp)
+    private val nonExitingStarts = JIRBackwardNonExitingStarts()
 
     private val forwardContexts by lazy { forward.contexts.groupBy { it.methodEntryPoint.method } }
 
@@ -129,7 +130,7 @@ class JIRBackwardAnalysisManager(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
     ): MethodEntrypointResolver = object : MethodEntrypointResolver {
         override fun resolveEntryPoints(method: CommonMethod, context: MethodContext): List<CommonInst> =
-            graph.methodGraph(method).entryPoints().toList()
+            graph.methodGraph(method).entryPoints().toList() + nonExitingStarts.resolve(graph.reversed.methodGraph(method))
     }
 
     override fun getMethodStartFlowFunction(
@@ -138,9 +139,10 @@ class JIRBackwardAnalysisManager(
     ): MethodStartFlowFunction {
         analysisContext as JIRBackwardMethodAnalysisContext
         val entryPoint = analysisContext.methodEntryPoint
-        val exceptionalExit = producesExceptionalControlFlow(entryPoint.statement)
-        val endDemands = if (exceptionalExit) emptyList() else endDemands(apManager, entryPoint.method as JIRMethod)
-        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, exceptionalExit, endDemands)
+        val zeroOnly = producesExceptionalControlFlow(entryPoint.statement) ||
+            nonExitingStarts.isNonExitingStart(entryPoint.method, entryPoint.statement)
+        val endDemands = if (zeroOnly) emptyList() else endDemands(apManager, entryPoint.method as JIRMethod)
+        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, zeroOnly, endDemands)
     }
 
     private fun endDemands(apManager: ApManager, method: JIRMethod): List<FinalFactAp> {
