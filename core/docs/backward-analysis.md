@@ -40,12 +40,11 @@ a source producing its mark is a source finding.
   `methodGraph` request (no caching) it marks, in a `BitSet` over instruction
   indices, the statements from which an exit is reachable (walking
   predecessors from the exit points) and gives every other statement an
-  extra forward edge to `JMethodExitNormalInst`. The backward manager builds
-  its method inst graph from `JIRBackwardExitWiringGraph(forward).reversed`,
-  so that code is backward-reachable from the normal exit. Consequence: a
-  caller demand entering at the normal exit also flows into that code. This
-  over-approximates (the code never returns, so no demand of the caller
-  truly depends on it) and can only add findings, never lose one.
+  extra forward edge to `JMethodExitExceptionalInst`. The backward manager
+  builds its method inst graph from `JIRBackwardExitWiringGraph(forward).reversed`,
+  so that code is backward-reachable from the exceptional exit. That start is
+  zero-only, so sinks in the code are seeded while caller demands, which
+  enter at the normal exit, do not flow into code that never returns.
 
 ## 2. Components
 

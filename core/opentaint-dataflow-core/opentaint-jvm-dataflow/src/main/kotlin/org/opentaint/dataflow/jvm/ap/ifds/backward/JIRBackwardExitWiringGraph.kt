@@ -3,7 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.jvm.graph.JMethodExitNormalInst
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.BitSet
 
@@ -13,7 +13,7 @@ class JIRBackwardExitWiringGraph(
 
     override fun methodGraph(method: CommonMethod): ApplicationGraph.MethodGraph<CommonMethod, CommonInst> {
         val graph = forward.methodGraph(method)
-        val normalExit = graph.exitPoints().firstOrNull { it is JMethodExitNormalInst } ?: return graph
+        val exceptionalExit = graph.exitPoints().firstOrNull { it is JMethodExitExceptionalInst } ?: return graph
 
         val exiting = BitSet()
         val unprocessed = ArrayDeque<CommonInst>()
@@ -27,25 +27,25 @@ class JIRBackwardExitWiringGraph(
         }
 
         if (graph.statements().all { exiting.get(it.index) }) return graph
-        return ExitWiredMethodGraph(this, graph, normalExit, exiting)
+        return ExitWiredMethodGraph(this, graph, exceptionalExit, exiting)
     }
 
     private class ExitWiredMethodGraph(
         override val applicationGraph: ApplicationGraph<CommonMethod, CommonInst>,
         private val graph: ApplicationGraph.MethodGraph<CommonMethod, CommonInst>,
-        private val normalExit: CommonInst,
+        private val exceptionalExit: CommonInst,
         private val exiting: BitSet,
     ) : ApplicationGraph.MethodGraph<CommonMethod, CommonInst> by graph {
 
         override fun successors(node: CommonInst): Sequence<CommonInst> {
             val successors = graph.successors(node)
             if (exiting.get(node.index)) return successors
-            return successors + normalExit
+            return successors + exceptionalExit
         }
 
         override fun predecessors(node: CommonInst): Sequence<CommonInst> {
             val predecessors = graph.predecessors(node)
-            if (node != normalExit) return predecessors
+            if (node != exceptionalExit) return predecessors
             return predecessors + graph.statements().filter { !exiting.get(it.index) }
         }
     }
