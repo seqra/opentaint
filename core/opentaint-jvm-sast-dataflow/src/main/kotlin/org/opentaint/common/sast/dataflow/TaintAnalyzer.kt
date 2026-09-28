@@ -68,7 +68,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     fun analyzeWithIfds(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
         val manager = analysisManager
         if (options.analysisDirection == AnalysisDirection.BACKWARD && manager is BackwardTaintAnalysisManager) {
-            return analyzeBackward(manager.createBackwardAnalysisManager(entryPoints.toHashSet()), entryPoints)
+            return analyzeBackward(manager.createBackwardAnalysisManager(), entryPoints)
         }
         return analyzeStaged(entryPoints)
     }

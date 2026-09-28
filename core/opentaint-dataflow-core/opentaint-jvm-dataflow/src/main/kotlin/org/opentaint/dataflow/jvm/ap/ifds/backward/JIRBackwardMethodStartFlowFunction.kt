@@ -10,14 +10,10 @@ class JIRBackwardMethodStartFlowFunction(
     apManager: ApManager,
     context: JIRBackwardMethodAnalysisContext,
     private val zeroOnly: Boolean,
-    private val endDemands: List<FinalFactAp>,
 ) : MethodStartFlowFunction {
     private val forwardStartFlowFunction = JIRMethodStartFlowFunction(apManager, context)
 
-    override fun propagateZero(): List<StartFact> = buildList {
-        add(StartFact.Zero)
-        endDemands.mapTo(this) { StartFact.Fact(it) }
-    }
+    override fun propagateZero(): List<StartFact> = listOf(StartFact.Zero)
 
     override fun propagateFact(fact: FinalFactAp): List<StartFact.Fact> {
         if (zeroOnly) return emptyList()

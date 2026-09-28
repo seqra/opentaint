@@ -218,20 +218,14 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
         shadow: Boolean,
         callSite: Boolean,
         create: (Condition, List<AssignMark>) -> T,
-    ): List<T> {
-        val requirement = endRequirement(sink)?.let { it.contained(it.mark) }
-        return sink.condition.cubes()
-            .filter { it.marks.isNotEmpty() && !(callSite && it.demandsResult()) }
-            .map { cube ->
-                create(mkAnd(cube.rest.toList() + listOfNotNull(requirement)), cube.actions(shadow))
-            }
-    }
+    ): List<T> = sink.condition.cubes()
+        .filter { it.marks.isNotEmpty() && !(callSite && it.demandsResult()) }
+        .map { cube -> create(mkAnd(cube.rest.toList()), cube.actions(shadow)) }
 
     private inline fun <T> residualSinks(sink: TaintConfigurationSink, create: (Condition) -> T): List<T> {
-        val requirement = endRequirement(sink)?.let { it.contained(it.mark) }
         val cubes = sink.condition.cubes().filter { it.marks.isEmpty() }
         if (cubes.isEmpty()) return emptyList()
-        return listOf(create(mkOr(cubes.map { mkAnd(it.rest.toList() + listOfNotNull(requirement)) })))
+        return listOf(create(mkOr(cubes.map { mkAnd(it.rest.toList()) })))
     }
 
     private fun syntheticMeta(source: TaintConfigurationSource): Pair<String, TaintSinkMeta> {
@@ -317,9 +311,6 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
         private fun TaintMark.shadowIf(shadow: Boolean): TaintMark = if (shadow) shadow() else this
 
         fun isShadowMark(mark: TaintMarkAccessor): Boolean = mark.mark.endsWith(SHADOW_SUFFIX)
-
-        fun endRequirement(sink: TaintConfigurationSink): AssignMark? =
-            sink.trackFactsReachAnalysisEnd.distinct().singleOrNull()
 
         fun Condition.markPositions(): List<AssignMark> = when (this) {
             is CommonCondition.True -> emptyList()

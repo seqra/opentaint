@@ -102,8 +102,7 @@ open class JIRAnalysisManager(
         return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
     }
 
-    override fun createBackwardAnalysisManager(analysisEndMethods: Set<CommonMethod>): TaintAnalysisManager =
-        JIRBackwardAnalysisManager(this, analysisEndMethods)
+    override fun createBackwardAnalysisManager(): TaintAnalysisManager = JIRBackwardAnalysisManager(this)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
