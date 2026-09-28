@@ -327,15 +327,57 @@ its `JMethodEnterInst` towards the callers.
 
 ### 4.1 Implementation notes
 
-The FF mirrors forward's callback structure. `propagate` receives one output
-object per edge kind with `unchanged`, `propagateFact`,
-`propagateFactWithRefinement(reader, fact)` and
-`propagateFactWithAccessorExclude(fact, accessor)`. For `FactToFact` the last
-two refine the initial fact exactly like forward (`reader.refineFact` on both
+The statement semantics are shared with the forward sequent FF. Both FFs
+write their outputs through `JIRSequentEdge` (`analysis/JIRSequentEdge.kt`),
+one object per edge kind with `unchanged`, `propagate`,
+`propagateRefined(refinement, fact)`, `propagateExcluded(fact, accessor)` and
+`requireRefinement(refinement)`. For `FactToFact` the refining operations
+refine the initial fact exactly like forward (union of the refinement on both
 facts, or `exclude(accessor)` on both). `ZeroToFact` and `NDFactToFact` edges
-cannot be refined; as in forward, a refinement there is an error. Demands on
-these edges come from sink seeds (`position·M·$` with `ExclusionSet.Universe`),
-so they are never abstract and never need one.
+cannot be refined; a refinement there is an error in both directions. Demands
+on these edges come from sink seeds (`position·M·$` with
+`ExclusionSet.Universe`), so they are never abstract and never need one.
+
+Assignments, and the `Return`/`Exception` rebasing of `return`/`throw`, are
+handled by `JIRAssignTransfer` (`analysis/JIRAssignTransfer.kt`),
+parameterised by `Direction.FORWARD` or `Direction.BACKWARD`. For `L = R`
+forward moves facts `R → L` and backward moves demands `L → R`; both kill `L`.
+The transfer therefore shares, between the two directions:
+
+* the operand decomposition and the type filters (cast, immediate, array,
+  field ref, binary operands, lhs);
+* `assignBase` for base-to-base moves (`x = y`, `return x`, `throw x`);
+* the accessor chain of a memory access (`MemoryAccess.accessors`,
+  `writeToAccess`): forward `x.f = y` and backward `y = x.f` both prepend it;
+* `readField`, the abstraction-splitting read (`removeAbstraction` plus
+  `abstractOnly` with the accessor excluded): forward `y = x.f` and backward
+  `x.f = y` (and the aliased and array writes) both read it;
+* `clearField`, the abstraction-splitting strong update: forward `x.f = y`
+  on a fact without `y` and backward `x.f = y` both clear it.
+
+What stays direction-specific is how the pieces are composed: forward keeps
+the fact on the read source (with the array re-emit hack), aliases the written
+fact and uses auxiliary bases for `a.x = a` and static reads; backward keeps
+the kill on the lhs, applies a static write as a strong write over `<C>` then
+`f` (`strongWrite`, re-prepending `<C>` at the second level), makes array
+writes weak and moves writes through `findAlias` of the written instance. The
+backward FF itself only adds the rule hooks (exit and entry sinks and sources,
+static-field sources through the transfer's `staticRead` callback, end
+requirements).
+
+`JIRMethodSequentPrecondition` (forward trace resolution) is also a backward
+step, but on `InitialFactAp`. It shares the operand decomposition
+(`assignedValue`, `mkAccess`) and the accessor chains (`writeToAccess`,
+`MemoryAccess.accessors`) with the transfer, but not the transfer itself:
+`InitialFactAp` and `FinalFactAp` have no common typed interface for
+`rebase`/`prependAccessor`/`readAccessor`/`clearAccessor`, initial facts have
+no abstraction split (the core of `readField`/`clearField`), the result
+protocol differs (`null` means unchanged, a list is the set of preconditions)
+and several cases intentionally differ from the backward FF (a constant rhs is
+a precondition, an array write rebuilds the element path instead of keeping
+the fact, an array read is its own precondition, aliases are applied to the
+whole fact through `forEachPossibleAliasAtStatement`). A generic core would
+need an operations adapter larger than the code it would remove.
 
 An output fact equal to the incoming one is emitted as `Sequent.Unchanged`,
 any other one as a new edge. Every case below builds its outputs from the
