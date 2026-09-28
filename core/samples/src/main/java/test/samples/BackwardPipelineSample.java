@@ -76,6 +76,47 @@ public class BackwardPipelineSample {
         sinkWrapped(wrapped);
     }
 
+    public void userRuleOnResolvedCallee() {
+        String data = source();
+        String modelled = modelled(data);
+        sinkA(modelled);
+    }
+
+    public void userRuleOnUnresolvedCallee() {
+        String data = source();
+        String trimmed = data.trim();
+        sinkA(trimmed);
+    }
+
+    public void exitSinkSourceInCaller() {
+        String data = source();
+        exitHelper(data);
+    }
+
+    public void exitSinkSourceInside() {
+        exitHelperWithSource();
+    }
+
+    public void entryStateSource() {
+        withState();
+    }
+
+    private String modelled(String data) {
+        return data;
+    }
+
+    private String exitHelper(String data) {
+        return data;
+    }
+
+    private String exitHelperWithSource() {
+        return source();
+    }
+
+    private void withState() {
+        sinkA("constant");
+    }
+
     private String wrapInCallee(String data) {
         String wrapped = wrap(data);
         return wrapped;
