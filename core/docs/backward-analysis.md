@@ -119,8 +119,9 @@ A report never kills the demand; refinements are propagated as in forward.
   demands of swapped conditional sources.
 * Cleaners: a value in the demand after the call survived the cleaner, so the
   demand before the call is `clean(demand)`, computed by the forward cleaner
-  step; removed alternatives become `Drop`. Only unconditional cleaners are
-  applied (section 9).
+  step, except that an `Exact` cleaner keeps the `[any]` part of the demand;
+  removed alternatives become `Drop`. Only unconditional cleaners are applied
+  (section 9).
 * Resolution failure: the caller demand is kept (except for `Return`), and
   pass-through rules are inverted by the forward `TaintPassActionEvaluator`
   with `from` and `to` swapped (a demand on the rule's `to` becomes a demand on
@@ -141,7 +142,8 @@ Shared code stays in the forward classes; backward subclasses or calls them.
 | Forward origin | Backward use |
 |---|---|
 | `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
-| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step |
+| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected, `cleanActionEvaluator` protected open) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step with `JIRBackwardTaintCleanActionEvaluator` |
+| `JIRTaintCleanActionEvaluator` (open; `removeFinalFact` protected open) | `JIRBackwardTaintCleanActionEvaluator` extends it and keeps the `[any]` subtree at the position of an `Exact` `RemoveMark` (section 9) |
 | `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types), `applyMethodExitSinkRules` / `applyMethodExitSourceRules` (protected) | every report and every rule-created demand |
 | `JIRMethodCallSummaryHandler` (open; `applyCallAliases` protected open) | `JIRBackwardMethodCallSummaryHandler` extends it (backward exit mapping, no aliases, no rewriting) |
 | `JIRMethodStartFlowFunction` | held by `JIRBackwardMethodStartFlowFunction` for type checks |
@@ -250,10 +252,26 @@ normalised: `RemoveAllMarks`, `ExactAndAnyField` reach, any-field positions
 records an exclusion on it) and `String` positions (the removal also clears
 `<string-bytes>`, which the condition does not read).
 
-An unconditional `Exact` cleaner `RemoveMark(M, x)` removes a whole star
-demand `x.[any]·M` (`Cleaner.kt` cannot represent the residual "`M` below at
-least one accessor"), although forward keeps `x.f·M`. Concrete demands on the
-same base and mark are absorbed into the star, so they are lost too.
+`RemoveMark` cannot remove `[any]` unless its own position has `[any]`. The
+forward step treats the `[any]` directly at the cleaned position as possibly
+empty: `RemoveMark(M, x)` clears `M` on `x` and under `x.[any]`, which deletes
+a whole star demand `x.[any]·M` although forward keeps `x.f·M` (the residual
+"`M` below at least one accessor" is not representable). Backward
+(`JIRBackwardTaintCleanActionEvaluator`) runs the forward step and, for an
+`Exact` `RemoveMark(M, P)` whose position `P` has no `[any]`, adds the
+demand's subtree `P.[any]·…` back unchanged when the step changed the demand:
+only the rest of the demand is cleaned. Concrete demands absorbed into the
+star survive with it. This over-approximates on paths where `M` sits directly
+on `P`: the kept star still matches a source of `M` on `P` that the cleaner
+removed.
+
+Cleaners whose reach includes the `[any]` subtree keep the forward step:
+`ExactAndAnyField` reach and positions with `[any]` (they clear `M` at every
+depth below the position), and `RemoveAllMarks` (it removes the whole subtree
+at its position, `[any]` included, as forward does). The forward step handles
+`[any]` specially only at the cleaned position, so no other part of the
+demand needs keeping. The user-rule cleaners of the summary rewriter
+(section 4) keep the forward step.
 
 ## 10. Automata any-field exclusion depth
 
@@ -294,10 +312,10 @@ node is not final. The code is shared with forward.
   requirement.
 * Mark literals of pass-through conditions are treated as satisfied;
   cleaners whose conditions need a mark are ignored (section 9).
-* An any-field sink behind an unconditional `Exact` cleaner of its value is
-  not reported (section 9). JVM cases: `CleanerDslAnalysisTest` matrix
-  `AnyField-Plain-*` and `field-store-any`,
-  `CleanerDslControlFlowAnalysisTest` `sequenceNestedAfterPlainSink-m1`.
+* An any-field sink behind an `Exact` cleaner of its value is reported when
+  the mark sits on the value itself, which the cleaner removed (section 9).
+  JVM case: `CleanerDslAnalysisTest` matrix with a plain source
+  (`Plain-Plain-AnyField-field-depth0`).
 * Cleaners of a call do not filter demands that a callee summary produces on
   its arguments (user-rule cleaners are applied to the start demand).
 * Base-only modes are field-insensitive in both directions; Cactus is

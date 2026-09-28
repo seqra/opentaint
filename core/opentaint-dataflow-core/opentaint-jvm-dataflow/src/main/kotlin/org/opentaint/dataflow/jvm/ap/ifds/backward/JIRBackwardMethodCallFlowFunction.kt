@@ -44,6 +44,8 @@ class JIRBackwardMethodCallFlowFunction(
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
+    override fun cleanActionEvaluator() = JIRBackwardTaintCleanActionEvaluator(typeResolver)
+
     override fun propagateFact(
         initialFacts: Set<InitialFactAp>,
         exclusion: ExclusionSet,

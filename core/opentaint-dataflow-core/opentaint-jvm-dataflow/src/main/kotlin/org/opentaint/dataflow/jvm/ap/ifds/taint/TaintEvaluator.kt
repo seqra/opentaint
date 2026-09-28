@@ -7,6 +7,7 @@ import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
 import org.opentaint.dataflow.configuration.jvm.Condition
@@ -26,7 +27,7 @@ interface ConditionEvaluator<T> {
     fun eval(condition: Condition): T
 }
 
-class JIRTaintCleanActionEvaluator(
+open class JIRTaintCleanActionEvaluator(
     private val positionTypeResolver: PositionTypeResolver,
 ) {
     private val evaluator = TaintCleanActionEvaluator()
@@ -47,7 +48,7 @@ class JIRTaintCleanActionEvaluator(
     ): List<EvaluatedCleanAction> {
         val variable = action.position.resolveAp()
         val mark = TaintMarkAccessor(action.mark.name)
-        val cleaned = evaluator.removeFinalFact(initialFact, variable, mark, rule, action, action.reach)
+        val cleaned = removeFinalFact(initialFact, variable, mark, rule, action, action.reach)
 
         val positionType = positionTypeResolver.resolve(variable)
         if (positionType?.typeName != STRING) {
@@ -56,9 +57,18 @@ class JIRTaintCleanActionEvaluator(
 
         val stringBytesVar = PositionWithAccess(action.position, stringBytes).resolveAp()
         return cleaned.flatMap { f ->
-            evaluator.removeFinalFact(f, stringBytesVar, mark, rule, action, action.reach)
+            removeFinalFact(f, stringBytesVar, mark, rule, action, action.reach)
         }
     }
+
+    protected open fun removeFinalFact(
+        evc: EvaluatedCleanAction,
+        from: PositionAccess,
+        mark: TaintMarkAccessor,
+        rule: CommonTaintConfigurationItem,
+        action: RemoveMark,
+        reach: TaintCleanReach,
+    ): List<EvaluatedCleanAction> = evaluator.removeFinalFact(evc, from, mark, rule, action, reach)
 
     companion object {
         private const val STRING = "java.lang.String"
