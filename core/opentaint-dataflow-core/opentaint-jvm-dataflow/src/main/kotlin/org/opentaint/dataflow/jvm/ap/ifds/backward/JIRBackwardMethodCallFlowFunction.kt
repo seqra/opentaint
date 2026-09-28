@@ -17,6 +17,7 @@ import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallRuleBasedSummaryRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.aliasesPersistedThroughCall
@@ -33,18 +34,22 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.util.onSome
 
-class JIRBackwardMethodCallFlowFunction(
+internal class JIRBackwardMethodCallFlowFunction(
     private val apManager: ApManager,
-    private val analysisContext: JIRBackwardMethodAnalysisContext,
+    private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
-) : JIRMethodCallFlowFunction(apManager, analysisContext, returnValue, callExpr, statement, generateTrace = false) {
+) : MethodCallFlowFunction.Default {
+    private val forward = JIRMethodCallFlowFunction(apManager, analysisContext, returnValue, callExpr, statement, generateTrace = false)
+
     private val summaryRewriter by lazy {
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
     }
 
-    override fun cleanActionEvaluator() = JIRBackwardTaintCleanActionEvaluator(typeResolver)
+    private val cleanActionEvaluator = JIRBackwardTaintCleanActionEvaluator()
+
+    override fun propagateZeroToZero(): Set<MethodCallFlowFunction.ZeroCallFact> = forward.propagateZeroToZero()
 
     override fun propagateFact(
         initialFacts: Set<InitialFactAp>,
@@ -68,7 +73,7 @@ class JIRBackwardMethodCallFlowFunction(
 
         for (demand in demands) {
             val demandReader = if (demand === factAp) factReader else FinalFactReader(demand, apManager)
-            applyTaintRules(initialFacts, exclusion, demandReader, { reader, fact, trace ->
+            forward.applyTaintRules(initialFacts, exclusion, demandReader, { reader, fact, trace ->
                 factReader.updateRefinement(reader)
                 addCallToReturn(factReader, fact, trace)
             }, addUnchecked)
@@ -99,11 +104,12 @@ class JIRBackwardMethodCallFlowFunction(
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
         addCallToStart: (FinalFactReader, FinalFactAp, AccessPathBase, TraceInfo) -> Unit,
     ) {
-        applyCleanersOrCallToStart(
+        forward.applyCleanersOrCallToStart(
             factReader, callerFact, startFactBase,
             { reader, fact, trace -> addCallToReturn(reader, fact.rebase(callerFact.base), trace) },
             { reader, fact, base, trace -> addCallToStart(reader, fact.rebase(callerFact.base), base, trace) },
-            addUnchecked
+            addUnchecked,
+            cleanActionEvaluator.evaluator(forward.typeResolver),
         )
     }
 
@@ -225,7 +231,7 @@ class JIRBackwardMethodCallFlowFunction(
     }
 
     private fun invertedPassThrough(factReader: FinalFactReader): List<EvaluatedPass> {
-        val evaluator = TaintPassActionEvaluator(apManager, analysisContext.factTypeChecker, factReader, typeResolver)
+        val evaluator = TaintPassActionEvaluator(apManager, analysisContext.factTypeChecker, factReader, forward.typeResolver)
         val inverse = object : PassActionEvaluator<EvaluatedPass> {
             override fun propagateData(
                 rule: CommonTaintConfigurationItem, action: CommonTaintAction, from: PositionAccess, to: PositionAccess,

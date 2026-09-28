@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.MethodContext
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -26,7 +27,8 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature.JIRLambdaClass
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallResolver
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallSummaryHandler
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.util.getOrCreate
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
@@ -38,11 +40,17 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 
-class JIRBackwardAnalysisManager(
+internal class JIRBackwardAnalysisManager private constructor(
     private val forward: JIRAnalysisManager,
-) : JIRAnalysisManager(forward.cp, forward.rootRefManager, forward.taintConfig, forward.externalMethodTracker, forward.params) {
-
-    override val relevantRuleIds get() = forward.relevantRuleIds
+    private val delegate: JIRAnalysisManager,
+) : TaintAnalysisManager by delegate {
+    constructor(forward: JIRAnalysisManager) : this(
+        forward,
+        JIRAnalysisManager(
+            forward.cp, forward.rootRefManager, forward.taintConfig,
+            forward.externalMethodTracker, forward.params, forward.relevantRuleIds
+        )
+    )
 
     private val forwardContexts by lazy { forward.contexts.groupBy { it.methodEntryPoint.method } }
 
@@ -50,7 +58,7 @@ class JIRBackwardAnalysisManager(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
         unitResolver: UnitResolver<CommonMethod>,
         runner: TaintAnalysisUnitRunner
-    ): JIRMethodCallResolver = super.getMethodCallResolver(graph.reversed, unitResolver, runner)
+    ): MethodCallResolver = delegate.getMethodCallResolver(graph.reversed, unitResolver, runner)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
@@ -61,14 +69,27 @@ class JIRBackwardAnalysisManager(
     ): MethodAnalysisContext {
         val forwardGraph = graph.reversed
         val forwardEntryPoint = forwardGraph.methodGraph(methodEntryPoint.method).entryPoints().first()
-        val forwardContext = super.getMethodAnalysisContext(
+        val forwardContext = delegate.getMethodAnalysisContext(
             methodEntryPoint.copy(statement = forwardEntryPoint), forwardGraph,
             callResolver, taintAnalysisContext, contextForEmptyMethod
         ) as JIRMethodAnalysisContext
 
-        return JIRBackwardMethodAnalysisContext(forwardContext, methodEntryPoint).also {
+        val forwardTaint = JIRTaintAnalysisContext(
+            taintAnalysisContext.taintSinkTracker, delegate.taintConfig, delegate.externalMethodTracker, delegate.relevantRuleIds
+        )
+
+        return JIRMethodAnalysisContext(
+            delegate,
+            forwardContext.refManager,
+            methodEntryPoint,
+            forwardContext.factTypeChecker,
+            forwardContext.localVariableReachability,
+            forwardContext.aliasAnalysis,
+            JIRBackwardTaintAnalysisContext(forwardTaint, delegate.taintConfig),
+            JIRBackwardMethodCallFactMapper,
+        ).also {
             addForwardLambdas(it)
-            contexts.add(it)
+            delegate.contexts.add(it)
         }
     }
 
@@ -94,13 +115,13 @@ class JIRBackwardAnalysisManager(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
         analysisContext: MethodAnalysisContext,
         method: CommonMethod
-    ): MethodInstGraph = super.getMethodInstGraph(JIRBackwardExitWiringGraph(graph.reversed).reversed, analysisContext, method)
+    ): MethodInstGraph = delegate.getMethodInstGraph(JIRBackwardExitWiringGraph(graph.reversed).reversed, analysisContext, method)
 
     override fun getMethodStartFlowFunction(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext
     ): MethodStartFlowFunction {
-        analysisContext as JIRBackwardMethodAnalysisContext
+        analysisContext as JIRMethodAnalysisContext
         val entryPoint = analysisContext.methodEntryPoint
         val zeroOnly = producesExceptionalControlFlow(entryPoint.statement)
         return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, zeroOnly)
@@ -130,8 +151,12 @@ class JIRBackwardAnalysisManager(
         analysisContext: MethodAnalysisContext,
         currentInst: CommonInst,
         generateTrace: Boolean
-    ): MethodSequentFlowFunction =
-        JIRBackwardMethodSequentFlowFunction(apManager, analysisContext as JIRBackwardMethodAnalysisContext, currentInst as JIRInst)
+    ): MethodSequentFlowFunction {
+        analysisContext as JIRMethodAnalysisContext
+        return JIRBackwardMethodSequentFlowFunction(
+            apManager, analysisContext, analysisContext.taint as JIRBackwardTaintAnalysisContext, currentInst as JIRInst
+        )
+    }
 
     override fun getMethodCallFlowFunction(
         apManager: ApManager,
@@ -141,7 +166,7 @@ class JIRBackwardAnalysisManager(
         statement: CommonInst,
         generateTrace: Boolean
     ): MethodCallFlowFunction = JIRBackwardMethodCallFlowFunction(
-        apManager, analysisContext as JIRBackwardMethodAnalysisContext,
+        apManager, analysisContext as JIRMethodAnalysisContext,
         returnValue as JIRImmediate?, callExpr as JIRCallExpr, statement as JIRInst
     )
 
@@ -149,8 +174,9 @@ class JIRBackwardAnalysisManager(
         apManager: ApManager,
         analysisContext: MethodAnalysisContext,
         statement: CommonInst
-    ): MethodCallSummaryHandler =
-        JIRBackwardMethodCallSummaryHandler(statement as JIRInst, analysisContext as JIRMethodAnalysisContext, apManager)
+    ): MethodCallSummaryHandler = JIRBackwardMethodCallSummaryHandler(
+        JIRMethodCallSummaryHandler(statement as JIRInst, analysisContext as JIRMethodAnalysisContext, apManager, withCallAliases = false)
+    )
 
     override fun getMethodSideEffectSummaryHandler(
         apManager: ApManager,

@@ -11,28 +11,26 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
-import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintRuleContext
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
 import java.lang.ref.Reference
 
-open class JIRMethodAnalysisContext(
+class JIRMethodAnalysisContext(
     val analysisManager: JIRAnalysisManager,
     val refManager: SoftReferenceManager,
     override val methodEntryPoint: MethodEntryPoint,
     val factTypeChecker: JIRFactTypeChecker,
     val localVariableReachability: JIRLocalVariableReachability,
     val aliasAnalysis: JIRLocalAliasAnalysis?,
-    val taint: JIRTaintAnalysisContext,
+    val taint: JIRTaintRuleContext,
+    override val methodCallFactMapper: MethodCallFactMapper = JIRMethodCallFactMapper,
 ) : MethodAnalysisContext {
     init {
         taint.bindAnalysisContext(this)
     }
 
     val phase: Phase get() = analysisManager.phase
-
-    override val methodCallFactMapper: MethodCallFactMapper
-        get() = JIRMethodCallFactMapper
 
     val taintMarksAssignedOnMethodEnter = hashSetOf<TaintMarkAccessor>()
 

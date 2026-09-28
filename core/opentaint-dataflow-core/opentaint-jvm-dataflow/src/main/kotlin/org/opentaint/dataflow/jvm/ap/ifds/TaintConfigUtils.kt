@@ -74,7 +74,7 @@ object TaintConfigUtils {
         )
     }
 
-    internal fun <T> List<RuleWithCondition<T>>.applicableRules(
+    private fun <T> List<RuleWithCondition<T>>.applicableRules(
         conditionEvaluator: TaintFactAwareConditionEvaluator?
     ): List<T> {
         val applicableRules = filter {

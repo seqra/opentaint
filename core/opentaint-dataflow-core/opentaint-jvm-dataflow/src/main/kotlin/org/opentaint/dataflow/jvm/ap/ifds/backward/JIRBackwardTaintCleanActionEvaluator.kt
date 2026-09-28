@@ -10,14 +10,18 @@ import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
 import org.opentaint.dataflow.taint.EvaluatedCleanAction
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
+import org.opentaint.dataflow.taint.TaintCleanActionEvaluator
 import org.opentaint.dataflow.taint.accessors
 import org.opentaint.dataflow.taint.base
 import org.opentaint.dataflow.taint.hasAnyField
 
-class JIRBackwardTaintCleanActionEvaluator(
-    positionTypeResolver: PositionTypeResolver,
-) : JIRTaintCleanActionEvaluator(positionTypeResolver) {
-    override fun removeFinalFact(
+internal class JIRBackwardTaintCleanActionEvaluator(
+    private val forward: TaintCleanActionEvaluator = TaintCleanActionEvaluator(),
+) {
+    fun evaluator(positionTypeResolver: PositionTypeResolver): JIRTaintCleanActionEvaluator =
+        JIRTaintCleanActionEvaluator(positionTypeResolver, ::removeFinalFact)
+
+    private fun removeFinalFact(
         evc: EvaluatedCleanAction,
         from: PositionAccess,
         mark: TaintMarkAccessor,
@@ -25,7 +29,7 @@ class JIRBackwardTaintCleanActionEvaluator(
         action: RemoveMark,
         reach: TaintCleanReach,
     ): List<EvaluatedCleanAction> {
-        val cleaned = super.removeFinalFact(evc, from, mark, rule, action, reach)
+        val cleaned = forward.removeFinalFact(evc, from, mark, rule, action, reach)
         if (reach != TaintCleanReach.Exact || from.hasAnyField()) return cleaned
         if (cleaned.singleOrNull() === evc) return cleaned
 

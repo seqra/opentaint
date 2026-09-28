@@ -4,9 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
-import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import org.opentaint.dataflow.configuration.jvm.AssignMark
@@ -31,8 +29,10 @@ import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintRuleContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
@@ -46,14 +46,19 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 
-class JIRBackwardTaintAnalysisContext(
-    taintSinkTracker: TaintSinkTracker,
+internal class JIRBackwardTaintAnalysisContext(
+    private val forward: JIRTaintAnalysisContext,
     private val rules: TaintRulesProvider,
-    externalMethodTracker: ExternalMethodTracker?,
-    relevantRuleIds: MutableSet<String>,
-) : JIRTaintAnalysisContext(taintSinkTracker, rules, externalMethodTracker, relevantRuleIds) {
+) : JIRTaintRuleContext by forward {
+    private lateinit var analysisContext: JIRMethodAnalysisContext
+
+    override fun bindAnalysisContext(analysisContext: JIRMethodAnalysisContext) {
+        this.analysisContext = analysisContext
+        forward.bindAnalysisContext(analysisContext)
+    }
+
     override fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
-        val cleaners = super.allRelevantCleanRulesForCallStatement(statement)
+        val cleaners = forward.allRelevantCleanRulesForCallStatement(statement)
         val callExpr = statement.callExpr ?: return cleaners
         val returnValue = (statement as? JIRAssignInst)?.lhv as? JIRImmediate
         val rewriter = JIRMarkAwareConditionRewriter(
@@ -68,25 +73,25 @@ class JIRBackwardTaintAnalysisContext(
     override fun sourceRulesForCallStatement(
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?, fact: FinalFactAp?
     ): List<RuleWithCondition<TaintMethodSource>> =
-        conditionalSources(super.sourceRulesForCallStatement(statement, callExpr, returnValue, fact), dropResult = true) { source, marks ->
+        conditionalSources(forward.sourceRulesForCallStatement(statement, callExpr, returnValue, fact), dropResult = true) { source, marks ->
             source.copy(condition = source.produced(), actionsAfter = marks)
-        } + seedingSources(super.sinkRulesForCallStatement(statement, callExpr, returnValue, fact), dropResult = true) { sink, marks ->
+        } + seedingSources(forward.sinkRulesForCallStatement(statement, callExpr, returnValue, fact), dropResult = true) { sink, marks ->
             TaintMethodSource(sink.method, mkTrue(), marks, sink.info, sink.serializedId)
         }
 
     override fun sinkRulesForCallStatement(
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?, fact: FinalFactAp?
     ): List<RuleWithCondition<TaintMethodSink>> =
-        sourceSinks(super.sourceRulesForCallStatement(statement, callExpr, returnValue, fact)) { source, id, meta ->
+        sourceSinks(forward.sourceRulesForCallStatement(statement, callExpr, returnValue, fact)) { source, id, meta ->
             TaintMethodSink(source.method, source.produced(), emptyList(), id, meta, source.info, source.serializedId)
-        } + unconditional(super.sinkRulesForCallStatement(statement, callExpr, returnValue, fact), TaintConfigurationSink::condition) {
+        } + unconditional(forward.sinkRulesForCallStatement(statement, callExpr, returnValue, fact), TaintConfigurationSink::condition) {
             it.copy(condition = mkTrue(), trackFactsReachAnalysisEnd = emptyList())
         }
 
     override fun cleanRulesForCallStatement(
         statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?, fact: FinalFactAp?
     ): List<RuleWithCondition<TaintCleaner>> =
-        unconditional(super.cleanRulesForCallStatement(statement, callExpr, returnValue, fact), TaintCleaner::condition) { it }
+        unconditional(forward.cleanRulesForCallStatement(statement, callExpr, returnValue, fact), TaintCleaner::condition) { it }
 
     override fun sourceRulesForStaticField(
         field: JIRField, statement: JIRInst, fact: FinalFactAp?
@@ -101,7 +106,7 @@ class JIRBackwardTaintAnalysisContext(
         }
 
     override fun sourceRulesForMethodExit(statement: JIRInst, fact: FinalFactAp?): List<RuleWithCondition<TaintMethodExitSource>> =
-        conditionalSources(super.sourceRulesForMethodExit(statement, fact), dropResult = false) { source, marks ->
+        conditionalSources(forward.sourceRulesForMethodExit(statement, fact), dropResult = false) { source, marks ->
             source.copy(condition = source.produced(), actionsAfter = marks)
         } + seedingSources(exitSinks(statement, fact), dropResult = false) { sink, marks ->
             TaintMethodExitSource(sink.method, mkTrue(), marks, sink.info, sink.serializedId)
@@ -110,28 +115,28 @@ class JIRBackwardTaintAnalysisContext(
     override fun sinkRulesForMethodExit(
         statement: JIRInst, fact: FinalFactAp?, initialFacts: Set<InitialFactAp>?
     ): List<RuleWithCondition<TaintMethodExitSink>> =
-        sourceSinks(super.sourceRulesForMethodExit(statement, fact)) { source, id, meta ->
+        sourceSinks(forward.sourceRulesForMethodExit(statement, fact)) { source, id, meta ->
             TaintMethodExitSink(source.method, source.produced(), emptyList(), id, meta, source.info, source.serializedId)
         } + unconditional(exitSinks(statement, fact), TaintConfigurationSink::condition) {
             it.copy(condition = mkTrue(), trackFactsReachAnalysisEnd = emptyList())
         }
 
     override fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?): List<RuleWithCondition<TaintMethodEntrySink>> =
-        sourceSinks(super.sourceRulesForMethodEntry(statement, fact)) { source, id, meta ->
+        sourceSinks(forward.sourceRulesForMethodEntry(statement, fact)) { source, id, meta ->
             TaintMethodEntrySink(source.method, source.produced(), emptyList(), id, meta, source.info, source.serializedId)
-        } + unconditional(super.sinkRulesForMethodEntry(statement, fact), TaintConfigurationSink::condition) {
+        } + unconditional(forward.sinkRulesForMethodEntry(statement, fact), TaintConfigurationSink::condition) {
             it.copy(condition = mkTrue(), trackFactsReachAnalysisEnd = emptyList())
         }
 
     override fun sourceRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?): List<RuleWithCondition<TaintEntryPointSource>> =
-        conditionalSources(super.sourceRulesForMethodEntry(statement, fact), dropResult = true) { source, marks ->
+        conditionalSources(forward.sourceRulesForMethodEntry(statement, fact), dropResult = true) { source, marks ->
             source.copy(condition = source.produced(), actionsAfter = marks)
-        } + seedingSources(super.sinkRulesForMethodEntry(statement, fact), dropResult = true) { sink, marks ->
+        } + seedingSources(forward.sinkRulesForMethodEntry(statement, fact), dropResult = true) { sink, marks ->
             TaintEntryPointSource(sink.method, mkTrue(), marks, sink.info, sink.serializedId)
         }
 
     private fun exitSinks(statement: JIRInst, fact: FinalFactAp?) =
-        super.sinkRulesForMethodExit(statement, fact, initialFacts = emptySet())
+        forward.sinkRulesForMethodExit(statement, fact, initialFacts = emptySet())
 
     private fun staticFieldSources(
         field: JIRField, statement: JIRInst, fact: FinalFactAp?

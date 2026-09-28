@@ -58,12 +58,13 @@ import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
-open class JIRAnalysisManager(
+class JIRAnalysisManager(
     cp: JIRClasspath,
     refManager: RefManager,
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
+    internal val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
 ) : JIRLanguageManager(cp), BackwardTaintAnalysisManager {
     internal val rootRefManager = refManager
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
@@ -75,7 +76,6 @@ open class JIRAnalysisManager(
         val defaultGetModel: JIRMethodGetDefault? = null,
     )
 
-    internal open val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     internal val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan

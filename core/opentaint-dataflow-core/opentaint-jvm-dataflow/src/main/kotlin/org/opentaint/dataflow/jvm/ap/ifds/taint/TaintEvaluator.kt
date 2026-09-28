@@ -27,8 +27,11 @@ interface ConditionEvaluator<T> {
     fun eval(condition: Condition): T
 }
 
-open class JIRTaintCleanActionEvaluator(
+class JIRTaintCleanActionEvaluator(
     private val positionTypeResolver: PositionTypeResolver,
+    private val removeFinalFact: (
+        EvaluatedCleanAction, PositionAccess, TaintMarkAccessor, CommonTaintConfigurationItem, RemoveMark, TaintCleanReach
+    ) -> List<EvaluatedCleanAction> = TaintCleanActionEvaluator()::removeFinalFact,
 ) {
     private val evaluator = TaintCleanActionEvaluator()
 
@@ -60,15 +63,6 @@ open class JIRTaintCleanActionEvaluator(
             removeFinalFact(f, stringBytesVar, mark, rule, action, action.reach)
         }
     }
-
-    protected open fun removeFinalFact(
-        evc: EvaluatedCleanAction,
-        from: PositionAccess,
-        mark: TaintMarkAccessor,
-        rule: CommonTaintConfigurationItem,
-        action: RemoveMark,
-        reach: TaintCleanReach,
-    ): List<EvaluatedCleanAction> = evaluator.removeFinalFact(evc, from, mark, rule, action, reach)
 
     companion object {
         private const val STRING = "java.lang.String"

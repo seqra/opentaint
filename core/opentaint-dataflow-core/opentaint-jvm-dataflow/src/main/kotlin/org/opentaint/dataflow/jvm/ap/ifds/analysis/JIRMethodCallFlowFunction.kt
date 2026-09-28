@@ -35,7 +35,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.merge
 import org.opentaint.util.onSome
 
-open class JIRMethodCallFlowFunction(
+class JIRMethodCallFlowFunction(
     private val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,
@@ -116,7 +116,7 @@ open class JIRMethodCallFlowFunction(
         }
     }
 
-    protected fun applyTaintRules(
+    internal fun applyTaintRules(
         initialFacts: Set<InitialFactAp>,
         exclusion: ExclusionSet,
         factReader: FinalFactReader,
@@ -153,16 +153,14 @@ open class JIRMethodCallFlowFunction(
         )
     }
 
-    protected open fun cleanActionEvaluator(): JIRTaintCleanActionEvaluator =
-        JIRTaintCleanActionEvaluator(typeResolver)
-
-    protected fun applyCleanersOrCallToStart(
+    internal fun applyCleanersOrCallToStart(
         originalFactReader: FinalFactReader,
         unmappedCallerFactAp: FinalFactAp,
         startFactBase: AccessPathBase,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
         addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
         addCallToReturnUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+        cleaner: JIRTaintCleanActionEvaluator = JIRTaintCleanActionEvaluator(typeResolver),
     ) {
         val method = callExpr.callee
 
@@ -173,8 +171,6 @@ open class JIRMethodCallFlowFunction(
             listOf(conditionFactReader),
             markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
         )
-
-        val cleaner = cleanActionEvaluator()
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
         val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)
