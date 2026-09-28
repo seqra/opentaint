@@ -21,6 +21,7 @@ class BackwardPipelineTest : AnalysisTest() {
         const val LAMBDA_CLS = "test.samples.LambdaDataFlowSample"
         const val MARK = "tainted"
         const val DONE = "done"
+        const val WRAPPED = "wrapped"
         const val STATE = "state"
         const val STATE_VAR = "backward.pipeline.state"
     }
@@ -102,6 +103,18 @@ class BackwardPipelineTest : AnalysisTest() {
         assertBothDirections(staticRequirementConfig, "staticRequirementCleaned", emptySet())
         assertBothDirections(staticRequirementConfig, "staticRequirementCleanedInCallee", emptySet())
         assertBothDirections(staticRequirementConfig, "staticRequirementKept", setOf("sink-a"))
+    }
+
+    @Test
+    fun `conditional source inside a callee reached from the caller`() {
+        val config = SerializedTaintConfig(
+            source = listOf(
+                sourceRule(CLS, "source", MARK),
+                sourceRule(CLS, "wrap", WRAPPED, condition = listOf(Argument(0) to MARK)),
+            ),
+            sink = listOf(sinkRule(CLS, "sinkWrapped", "sink-wrapped", listOf(Argument(0) to WRAPPED))),
+        )
+        assertBothDirections(config, "conditionalSourceInCallee", setOf("sink-wrapped"))
     }
 
     @Test

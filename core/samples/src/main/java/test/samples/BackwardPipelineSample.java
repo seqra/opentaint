@@ -17,6 +17,13 @@ public class BackwardPipelineSample {
     public static void finishState() {
     }
 
+    public static String wrap(String data) {
+        return data;
+    }
+
+    public static void sinkWrapped(String data) {
+    }
+
     public void sharedMarkOneReached() {
         String data = source();
         sinkA(data);
@@ -61,6 +68,17 @@ public class BackwardPipelineSample {
     public void staticRequirementKept() {
         String data = source();
         sinkInCallee(data);
+    }
+
+    public void conditionalSourceInCallee() {
+        String data = source();
+        String wrapped = wrapInCallee(data);
+        sinkWrapped(wrapped);
+    }
+
+    private String wrapInCallee(String data) {
+        String wrapped = wrap(data);
+        return wrapped;
     }
 
     private void finishData(String data) {
