@@ -168,6 +168,7 @@ class JIRBackwardMethodSequentFlowFunction(
     }
 
     private fun methodExit(inst: JIRReturnInst, fact: FinalFactAp, out: DemandOutput) {
+        val requirementReader = rules.matchEndRequirement(inst, fact)
         val sources = rules.matchMethodExitSources(inst, fact)
         rules.recordSourceMatches(inst, sources)
 
@@ -176,7 +177,13 @@ class JIRBackwardMethodSequentFlowFunction(
         exitValueDemand(AccessPathBase.Return, returnBase, fact)?.let { demands += it }
         demands += sources.conditionDemands
 
-        out.keepAll(sources.reader, demands)
+        out.keepAll(mergeReaders(fact, sources.reader, requirementReader), demands)
+    }
+
+    private fun mergeReaders(fact: FinalFactAp, vararg readers: FinalFactReader?): FinalFactReader? {
+        val present = readers.filterNotNull()
+        if (present.size <= 1) return present.singleOrNull()
+        return FinalFactReader(fact, apManager).also { merged -> present.forEach { merged.updateRefinement(it) } }
     }
 
     private fun exitValueDemand(exitBase: AccessPathBase, valueBase: AccessPathBase?, fact: FinalFactAp): FinalFactAp? {
@@ -186,9 +193,10 @@ class JIRBackwardMethodSequentFlowFunction(
     }
 
     private fun methodEnter(fact: FinalFactAp, out: DemandOutput) {
+        val requirementReader = rules.matchEndRequirement(currentInst, fact)
         val sources = rules.matchMethodEntrySources(currentInst, fact)
         rules.recordMethodEntrySourceMatches(currentInst, sources, out.initialFacts)
-        out.keepAll(sources.reader, listOf(fact) + sources.conditionDemands)
+        out.keepAll(mergeReaders(fact, sources.reader, requirementReader), listOf(fact) + sources.conditionDemands)
     }
 
     private fun assign(inst: JIRAssignInst, currentFact: FinalFactAp, out: DemandOutput) {

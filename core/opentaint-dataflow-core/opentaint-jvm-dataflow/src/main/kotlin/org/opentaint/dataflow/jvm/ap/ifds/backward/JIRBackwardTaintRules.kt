@@ -14,7 +14,10 @@ import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardConditionalSource
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardDemandSeed
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardEndRequirementReached
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardSeededSink
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardSourceFinding
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardFindingTracker.BackwardUnconditionalSink
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
@@ -38,12 +41,12 @@ class JIRBackwardTaintRules(
     private val apManager: ApManager,
     private val context: JIRBackwardMethodAnalysisContext,
 ) {
-    sealed interface SinkDemand {
-        val rule: TaintConfigurationSink
-
-        data class Seed(override val rule: TaintConfigurationSink, val fact: FinalFactAp) : SinkDemand
-        data class Unconditional(override val rule: TaintConfigurationSink) : SinkDemand
-    }
+    class SinkDemand(
+        val rule: TaintConfigurationSink,
+        val condition: TaintMarkAwareConditionExpr?,
+        val seeds: List<FinalFactAp>,
+        val endRequirement: JIRBackwardEndRequirement?,
+    )
 
     sealed interface SourceMatch {
         val rule: TaintConfigurationSource
@@ -57,6 +60,7 @@ class JIRBackwardTaintRules(
         data class ConditionDemand(
             override val rule: TaintConfigurationSource,
             override val marks: Set<TaintMarkAccessor>,
+            val condition: TaintMarkAwareConditionExpr,
             val facts: List<FinalFactAp>,
         ) : SourceMatch
     }
@@ -85,36 +89,57 @@ class JIRBackwardTaintRules(
         returnValue: JIRImmediate?,
     ): List<SinkDemand> {
         val rules = taint.sinkRulesForCallStatement(statement, callExpr, returnValue, fact = null)
-        return sinkDemands(rules) { calleeFact -> mapCalleeToCaller(statement, calleeFact) }
+        return sinkDemands(statement, rules) { calleeFact -> mapCalleeToCaller(statement, calleeFact) }
     }
 
     fun methodExitSinkDemands(statement: JIRReturnInst): List<SinkDemand> {
         val rules = taint.sinkRulesForMethodExit(statement, fact = null, initialFacts = null)
-        return sinkDemands(rules) { fact -> mapMethodExitFact(statement, fact) }
+        return sinkDemands(statement, rules) { fact -> mapMethodExitFact(statement, fact) }
     }
 
     fun methodEntrySinkDemands(statement: JIRInst): List<SinkDemand> {
         val rules = taint.sinkRulesForMethodEntry(statement, fact = null)
-        return sinkDemands(rules) { fact -> fact.takeIf { isMethodBoundaryBase(it.base) } }
+        return sinkDemands(statement, rules) { fact -> fact.takeIf { isMethodBoundaryBase(it.base) } }
     }
 
     fun recordSinkDemands(statement: JIRInst, demands: List<SinkDemand>): List<FinalFactAp> {
+        val findings = context.findings
         val seeds = mutableListOf<FinalFactAp>()
         for (demand in demands) {
-            when (demand) {
-                is SinkDemand.Seed -> {
-                    context.findings.addDemandSeed(
-                        BackwardDemandSeed(context.methodEntryPoint, statement, demand.rule, demand.fact)
-                    )
-                    seeds += demand.fact
-                }
+            if (!findings.acceptsSeed(statement, demand.rule)) continue
 
-                is SinkDemand.Unconditional -> context.findings.addUnconditionalSink(
-                    BackwardUnconditionalSink(context.methodEntryPoint, statement, demand.rule)
+            findings.addSeededSink(
+                BackwardSeededSink(
+                    context.methodEntryPoint, statement, demand.rule, demand.condition, demand.endRequirement
                 )
+            )
+
+            if (demand.condition == null) {
+                findings.addUnconditionalSink(BackwardUnconditionalSink(context.methodEntryPoint, statement, demand.rule))
+                continue
+            }
+
+            for (seed in demand.seeds) {
+                findings.addDemandSeed(BackwardDemandSeed(context.methodEntryPoint, statement, demand.rule, seed))
+                seeds += seed
             }
         }
         return seeds
+    }
+
+    fun matchEndRequirement(statement: JIRInst, fact: FinalFactAp): FinalFactReader? {
+        val rules = context.findings.endRequirementTargets(statement)
+        if (rules.isEmpty()) return null
+
+        val reader = FinalFactReader(fact, apManager)
+        for (rule in rules) {
+            val requirement = JIRBackwardEndRequirement.of(apManager, factTypeChecker, rule, statement) ?: continue
+            if (requirement.fact.base != fact.base) continue
+            if (!reader.containsPositionWithTaintMark(requirement.position, requirement.mark)) continue
+
+            context.findings.addEndRequirementReached(BackwardEndRequirementReached(statement, rule))
+        }
+        return reader
     }
 
     fun registerPrescanCallSources(statement: JIRInst, callExpr: JIRCallExpr, returnValue: JIRImmediate?) {
@@ -171,7 +196,7 @@ class JIRBackwardTaintRules(
     }
 
     fun recordMethodEntrySourceMatches(statement: JIRInst, result: SourceMatchResult, initialFacts: Set<InitialFactAp>) {
-        if (result.found.isEmpty()) return
+        if (result.matches.isEmpty()) return
         if (initialFacts.isNotEmpty() && initialFacts.all { leavesThroughArgumentRoot(statement, it) }) return
         recordSourceMatches(statement, result)
     }
@@ -201,10 +226,18 @@ class JIRBackwardTaintRules(
     }
 
     fun recordSourceMatches(statement: JIRInst, result: SourceMatchResult) {
-        for (match in result.found) {
-            for (mark in match.marks) {
-                context.findings.addSourceFinding(
-                    BackwardSourceFinding(context.methodEntryPoint, statement, match.rule, mark)
+        for (match in result.matches) {
+            when (match) {
+                is SourceMatch.Found -> for (mark in match.marks) {
+                    context.findings.addSourceFinding(
+                        BackwardSourceFinding(context.methodEntryPoint, statement, match.rule, mark)
+                    )
+                }
+
+                is SourceMatch.ConditionDemand -> context.findings.addConditionalSource(
+                    BackwardConditionalSource(
+                        context.methodEntryPoint, statement, match.rule, match.marks, match.condition
+                    )
                 )
             }
         }
@@ -231,6 +264,7 @@ class JIRBackwardTaintRules(
         JIRBackwardMethodCallFactMapper.isValidMethodExitFactBase(base)
 
     private inline fun <R : TaintConfigurationSink> sinkDemands(
+        statement: JIRInst,
         rules: List<RuleWithCondition<R>>,
         mapFact: (FinalFactAp) -> FinalFactAp?,
     ): List<SinkDemand> {
@@ -243,15 +277,9 @@ class JIRBackwardTaintRules(
             if (condition.isFalse) continue
 
             val positiveExpr = if (condition.isTrue) null else condition.expr.removeNegated()
-            if (positiveExpr == null) {
-                result += SinkDemand.Unconditional(rule)
-                continue
-            }
-
-            for (fact in positiveExpr.demandFacts()) {
-                val mapped = mapFact(fact) ?: continue
-                result += SinkDemand.Seed(rule, mapped)
-            }
+            val seeds = positiveExpr?.demandFacts()?.mapNotNull { mapFact(it) }.orEmpty()
+            val endRequirement = JIRBackwardEndRequirement.of(apManager, factTypeChecker, rule, statement)
+            result += SinkDemand(rule, positiveExpr, seeds, endRequirement)
         }
         return result
     }
@@ -273,7 +301,7 @@ class JIRBackwardTaintRules(
                 mkSource = { r, actions -> matches += SourceMatch.Found(r, actions.marks()) },
                 mkPass = { r, actions, expr ->
                     val facts = expr.demandFacts().mapNotNull(mapConditionFact)
-                    matches += SourceMatch.ConditionDemand(r, actions.marks(), facts)
+                    matches += SourceMatch.ConditionDemand(r, actions.marks(), expr, facts)
                 },
             )
         }

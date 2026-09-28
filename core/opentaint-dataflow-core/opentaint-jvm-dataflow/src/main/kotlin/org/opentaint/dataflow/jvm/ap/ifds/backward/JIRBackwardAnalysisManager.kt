@@ -2,8 +2,12 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.BackwardRun
+import org.opentaint.dataflow.ap.ifds.BackwardRunResult
+import org.opentaint.dataflow.ap.ifds.BackwardSinkOccurrence
+import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -26,7 +30,9 @@ import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
+import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaRegistry
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -35,6 +41,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRAnalysisManagerBase
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSummaryEdgeProcessor
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -45,6 +52,9 @@ import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.CommonValue
 import org.opentaint.ir.api.jvm.JIRClasspath
+import org.opentaint.ir.api.jvm.JIRMethod
+import org.opentaint.ir.api.jvm.PredefinedPrimitives
+import org.opentaint.ir.api.jvm.ext.cfg.locals
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
@@ -60,15 +70,94 @@ class JIRBackwardAnalysisManager(
     val externalMethodTracker: ExternalMethodTracker? = null,
     override val params: JIRAnalysisManager.Params = JIRAnalysisManager.Params(),
     recordDemandSeeds: Boolean = false,
-) : JIRLanguageManager(cp), TaintAnalysisManager, JIRAnalysisManagerBase {
+    private val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
+    private val lambdaRegistry: JIRLambdaRegistry? = null,
+) : JIRLanguageManager(cp), BackwardTaintAnalysisManager, JIRAnalysisManagerBase {
     private val refManager = refManager.softRefManager("JIRBackwardAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
     val findings = JIRBackwardFindingTracker(recordDemandSeeds)
 
-    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
     private val contexts = ConcurrentLinkedQueue<JIRBackwardMethodAnalysisContext>()
+
+    @Volatile
+    private var currentRun: BackwardRun? = null
+
+    override fun prepareRun(run: BackwardRun) {
+        currentRun = run
+        when (run) {
+            is BackwardRun.Discovery -> findings.configureRun(restrictedTo = null)
+            is BackwardRun.Restricted -> findings.configureRun(restrictedTo = run.occurrences)
+        }
+    }
+
+    override fun runResult(): BackwardRunResult {
+        val run = currentRun
+        val restricted = run is BackwardRun.Restricted
+        val seededSinks = findings.seededSinks()
+
+        val seeded = hashMapOf<BackwardSinkOccurrence, MutableSet<TaintMarkAccessor>>()
+        for (sink in seededSinks) {
+            seeded.getOrPut(sink.occurrence, ::hashSetOf).addAll(sink.demandedMarks())
+        }
+
+        val vulnerable = hashMapOf<BackwardSinkOccurrence, MethodEntryPoint>()
+        for (sink in findings.vulnerableSinks(checkEndRequirements = restricted)) {
+            vulnerable.putIfAbsent(sink.occurrence, sink.methodEntryPoint)
+        }
+
+        val exact = when (run) {
+            is BackwardRun.Restricted -> run.occurrences.size <= 1
+            else -> seeded.size <= 1 && seededSinks.all { it.endRequirement == null }
+        }
+        return BackwardRunResult(seeded, vulnerable, exact)
+    }
+
+    private fun endDemands(
+        apManager: ApManager,
+        entryPoint: MethodEntryPoint,
+        exceptionalExit: Boolean,
+    ): List<FinalFactAp> {
+        if (exceptionalExit || !findings.hasEndRequirementTargets) return emptyList()
+
+        val run = currentRun as? BackwardRun.Restricted ?: return emptyList()
+        val method = entryPoint.method as JIRMethod
+        val analysisEnd = method in run.analysisEndMethods
+
+        val requirements = run.occurrences.mapNotNull { occurrence ->
+            val rule = occurrence.rule as TaintConfigurationSink
+            JIRBackwardEndRequirement.of(apManager, factTypeChecker, rule, occurrence.statement as JIRInst)
+        }
+        if (requirements.isEmpty()) return emptyList()
+
+        val bases = endDemandBases(method, analysisEnd)
+        val demands = mutableListOf<FinalFactAp>()
+        for (requirement in requirements) {
+            if (requirement.analysisEndOnly) {
+                if (analysisEnd) demands += requirement.fact
+                continue
+            }
+
+            bases.mapTo(demands) { requirement.fact.rebase(it) }
+        }
+        return demands
+    }
+
+    private fun endDemandBases(method: JIRMethod, analysisEnd: Boolean): Set<AccessPathBase> {
+        val bases = hashSetOf<AccessPathBase>()
+        for (local in method.instList.locals) {
+            val base = MethodFlowFunctionUtils.accessPathBase(local) ?: continue
+            if (base is AccessPathBase.LocalVar || analysisEnd) bases += base
+        }
+
+        if (analysisEnd) {
+            method.parameters.indices.mapTo(bases) { AccessPathBase.Argument(it) }
+            if (!method.isStatic) bases += AccessPathBase.This
+            if (method.returnType.typeName != PredefinedPrimitives.Void) bases += AccessPathBase.Return
+        }
+        return bases
+    }
 
     private var currentPhase: Phase = Phase.Prescan
     override val phase: Phase get() = currentPhase
@@ -92,7 +181,10 @@ class JIRBackwardAnalysisManager(
         jIRDowncast<JIRUnitResolver>(unitResolver)
 
         val jIRCallResolver = JIRCallResolver(cp, unitResolver)
-        return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
+        return JIRMethodCallResolver(
+            jIRCallResolver, runner, externalMethodTracker,
+            lambdaRegistry, replayRegisteredLambdas = lambdaRegistry != null,
+        )
     }
 
     override fun getMethodAnalysisContext(
@@ -165,8 +257,10 @@ class JIRBackwardAnalysisManager(
         analysisContext: MethodAnalysisContext
     ): MethodStartFlowFunction {
         jIRDowncast<JIRBackwardMethodAnalysisContext>(analysisContext)
-        val exceptionalExit = producesExceptionalControlFlow(analysisContext.methodEntryPoint.statement)
-        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, exceptionalExit)
+        val entryPoint = analysisContext.methodEntryPoint
+        val exceptionalExit = producesExceptionalControlFlow(entryPoint.statement)
+        val endDemands = endDemands(apManager, entryPoint, exceptionalExit)
+        return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, exceptionalExit, endDemands)
     }
 
     override fun getMethodStartPrecondition(

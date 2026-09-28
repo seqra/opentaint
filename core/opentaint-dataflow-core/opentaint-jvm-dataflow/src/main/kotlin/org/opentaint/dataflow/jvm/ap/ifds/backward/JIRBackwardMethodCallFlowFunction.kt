@@ -72,6 +72,8 @@ class JIRBackwardMethodCallFlowFunction(
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
         val factReader = FinalFactReader(factAp, apManager)
+        rules.matchEndRequirement(statement, factAp)?.let { factReader.updateRefinement(it) }
+
         val demands = mutableListOf<FinalFactAp>()
 
         if (JIRBackwardMethodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, factAp)) {
