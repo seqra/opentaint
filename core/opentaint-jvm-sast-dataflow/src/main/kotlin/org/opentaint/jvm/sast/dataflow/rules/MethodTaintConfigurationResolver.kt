@@ -4,7 +4,6 @@ import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentHashMapOf
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
-import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.Argument
@@ -68,6 +67,7 @@ import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.mkOr
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
+import org.opentaint.dataflow.configuration.toNnf
 import org.opentaint.ir.api.jvm.JIRAnnotated
 import org.opentaint.ir.api.jvm.JIRAnnotation
 import org.opentaint.ir.api.jvm.JIRClassType
@@ -228,23 +228,41 @@ class MethodTaintConfigurationResolver(
 
         is SerializedRule.Cleaner -> {
             val actions = cleans.flatMap { it.resolve(ctx) }
-            val cleanerCondition = if (condition.checksRemovedMarks(actions)) mkTrue() else condition
-            TaintCleaner(method, cleanerCondition, actions, info, serializedId)
+            TaintCleaner(method, condition.assumeActions(actions), actions, info, serializedId)
         }
     }
 
-    private fun Condition.checksRemovedMarks(actions: List<Action>): Boolean {
-        val checks = (this as? CommonCondition.Or)?.args ?: listOf(this)
-        val checked = checks.map { check ->
-            (check as? CommonCondition.Atom)?.atom as? ContainsMark ?: return false
-        }
-        val removed = actions.flatMap { action ->
-            if (action !is RemoveMark || action.reach != TaintCleanReach.Exact) return false
-            val position = action.position
-            if (position.hasAnyField() || position.isString()) return false
-            position.resolveArrayPosition().map { ContainsMark(it, action.mark) }
-        }
-        return checked.toSet() == removed.toSet()
+    private fun Condition.assumeActions(actions: List<Action>): Condition {
+        val assumed = actions.map { it.assumedLiteral() ?: return this }.toSet()
+        val nnf = toNnf(negated = false)
+        val rewritten = nnf.assume(assumed)
+        return if (assumed.all { nnf.assume(setOf(it)) == rewritten }) rewritten else this
+    }
+
+    private fun Action.assumedLiteral(): ContainsMark? {
+        if (this !is RemoveMark || position.hasAnyField() || position.isString()) return null
+        return ContainsMark(position, mark)
+    }
+
+    private fun Condition.assume(assumed: Set<JirCondition>): Condition = when (this) {
+        is CommonCondition.True -> this
+        is CommonCondition.Atom -> if (atom in assumed) mkTrue() else this
+        is CommonCondition.Not -> if ((arg as? CommonCondition.Atom)?.atom in assumed) mkFalse() else this
+        is CommonCondition.And -> args.map { it.assume(assumed) }
+            .junction(absorbing = mkFalse(), neutral = mkTrue(), ::mkAnd) { (it as? CommonCondition.And)?.args }
+
+        is CommonCondition.Or -> args.map { it.assume(assumed) }
+            .junction(absorbing = mkTrue(), neutral = mkFalse(), ::mkOr) { (it as? CommonCondition.Or)?.args }
+    }
+
+    private inline fun List<Condition>.junction(
+        absorbing: Condition,
+        neutral: Condition,
+        make: (List<Condition>) -> Condition,
+        operands: (Condition) -> List<Condition>?,
+    ): Condition {
+        val args = flatMap { operands(it) ?: listOf(it) }.filter { it != neutral }.distinct()
+        return if (absorbing in args) absorbing else make(args)
     }
 
     private fun Position.hasAnyField(): Boolean =

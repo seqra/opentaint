@@ -241,16 +241,20 @@ the provider keeps a cleaner only with the mark-free cubes of its condition
 (evaluated at the call site like any other condition) and drops it when there
 are none. Demands pass the ignored cleaners unchanged.
 
-`MethodTaintConfigurationResolver` (shared with forward) makes the common
-conditional cleaners unconditional. The condition becomes `True` when every
-action is an `Exact` `RemoveMark(M, P)` and the resolved condition is exactly
-the disjunction of the `ContainsMark(M, P)` checks the resolver derives from
-those actions (`P` and, for array and `Object` positions, `P.[e]`). A removal
-of an absent mark is a no-op, so forward removes the same marks. Not
-normalised: `RemoveAllMarks`, `ExactAndAnyField` reach, any-field positions
-(`ContainsMarkOnAnyField` is false on an abstract fact, while the removal
-records an exclusion on it) and `String` positions (the removal also clears
-`<string-bytes>`, which the condition does not read).
+`MethodTaintConfigurationResolver` (shared with forward) rewrites a cleaner
+condition against its actions. `RemoveMark(M, P)` checks `ContainsMark(P, M)`
+on the fact before removing (either reach), so it is a no-op when that
+literal is false and the literal can be assumed. The condition is put in
+negation normal form, assumed literals become `True` and their negations
+`False`, and the result is folded (constants, flattening, duplicates). A
+literal is implied only for its own action, so the rewrite is kept only when
+assuming each action's literal alone gives the same condition:
+`ContainsMark(x, M)` with removals from `x` and `y` stays conditional. A
+cleaner is left unchanged when an action implies no literal: `RemoveAllMarks`,
+any-field positions (no presence check; the removal records an exclusion on
+an abstract fact where `ContainsMarkOnAnyField` is false) and `String`
+positions (the removal also clears `<string-bytes>`, which `new String(byte[])`
+taints and the condition does not read).
 
 `RemoveMark` cannot remove `[any]` unless its own position has `[any]`. The
 forward step treats the `[any]` directly at the cleaned position as possibly
