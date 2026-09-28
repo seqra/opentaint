@@ -68,7 +68,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     fun analyzeWithIfds(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
         val manager = analysisManager
         if (options.analysisDirection == AnalysisDirection.BACKWARD && manager is BackwardTaintAnalysisManager) {
-            return analyzeBackward(manager.createBackwardAnalysisManager(), entryPoints)
+            return analyzeBackward(manager.createBackwardAnalysisManager(entryPoints.toHashSet()), entryPoints)
         }
         return analyzeStaged(entryPoints)
     }
@@ -138,11 +138,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     @Suppress("UNCHECKED_CAST")
     private fun analyzeBackward(
-        manager: BackwardTaintAnalysisManager,
+        manager: TaintAnalysisManager,
         entryPoints: List<Method>,
     ): Pair<List<VulnerabilityWithTrace>, Status> {
         val analysisStart = TimeSource.Monotonic.markNow()
-        val analysisEnd: Set<CommonMethod> = entryPoints.toHashSet()
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
 
         logger.info { "Start prescan phase" }
@@ -159,14 +158,11 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             options.debugOptions?.taintRulesStatsSamplingPeriod,
         )
 
-        while (true) {
-            val timeLeft = options.ifdsTimeout * 0.9 - analysisStart.elapsedNow()
-            val timeout = manager.prepareNextBackwardRun(analysisEnd, timeLeft) ?: break
-            manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
-            engine.resetApManager(apManager)
-            runCatching { engine.runAnalysis(startMethods, timeout = timeout, cancellationTimeout = 30.seconds) }
-                .onFailure { logger.error(it) { "Backward analysis failed" } }
-        }
+        manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
+        engine.resetApManager(apManager)
+        val timeout = options.ifdsTimeout * 0.9 - analysisStart.elapsedNow()
+        runCatching { engine.runAnalysis(startMethods, timeout = timeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Backward analysis failed" } }
         logger.info { "Finish backward scan phase" }
 
         val analysisStatus = listOf(ifdsEngine.status.get(), engine.status.get())

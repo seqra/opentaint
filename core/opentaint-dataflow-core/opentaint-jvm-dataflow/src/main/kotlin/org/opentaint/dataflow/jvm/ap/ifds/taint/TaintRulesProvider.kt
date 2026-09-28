@@ -7,6 +7,7 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.dataflow.configuration.CommonTaintRulesProvider
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
@@ -14,6 +15,7 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
+import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 
 interface TaintRulesProvider : CommonTaintRulesProvider {
@@ -28,4 +30,6 @@ interface TaintRulesProvider : CommonTaintRulesProvider {
     fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean = false): Iterable<TaintStaticFieldSource>
 
     fun selectRules(ruleIds: Set<String>)
+
+    fun sinkMetaForSource(source: TaintConfigurationSource): Pair<String, TaintSinkMeta>? = null
 }

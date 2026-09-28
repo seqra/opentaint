@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
 import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -101,7 +102,8 @@ open class JIRAnalysisManager(
         return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
     }
 
-    override fun createBackwardAnalysisManager(): BackwardTaintAnalysisManager = JIRBackwardAnalysisManager(this)
+    override fun createBackwardAnalysisManager(analysisEndMethods: Set<CommonMethod>): TaintAnalysisManager =
+        JIRBackwardAnalysisManager(this, analysisEndMethods)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,

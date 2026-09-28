@@ -9,8 +9,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceIn
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo.Rule
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.VulnerabilityTriggerPosition
 import org.opentaint.dataflow.configuration.jvm.JirCondition
-import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
-import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.taint.FinalFactReader
@@ -19,44 +19,44 @@ import org.opentaint.dataflow.taint.TaintUtil
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.onSome
 
-class JIRSequentTaintUtil(
+class JIRSequentTaintUtil<Source : TaintConfigurationSource, Sink : TaintConfigurationSink>(
     apManager: ApManager,
     val statement: JIRInst,
     val analysisContext: JIRMethodAnalysisContext,
     val generateTrace: Boolean,
     val methodResult: AccessPathBase,
-) : TaintUtil<JirCondition, TaintMethodExitSource, TaintMethodExitSink, TraceInfo>(apManager) {
+) : TaintUtil<JirCondition, Source, Sink, TraceInfo>(apManager) {
     private val sinkTracker get() = analysisContext.taint.taintSinkTracker
 
-    override fun sourceAssumptionsManager(): RuleAssumptionsManager<TaintMethodExitSource> =
-        object : RuleAssumptionsManager<TaintMethodExitSource> {
+    override fun sourceAssumptionsManager(): RuleAssumptionsManager<Source> =
+        object : RuleAssumptionsManager<Source> {
             override fun storeAssumptions(
-                rule: TaintMethodExitSource,
+                rule: Source,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) = storeInfo {
                 sinkTracker.addSourceRuleAssumptions(rule, statement, assumptions)
             }
 
-            override fun currentAssumptions(rule: TaintMethodExitSource): Set<InitialFactAp> =
+            override fun currentAssumptions(rule: Source): Set<InitialFactAp> =
                 sinkTracker.currentSourceRuleAssumptions(rule, statement)
 
             override fun currentAssumptionPreconditions(
-                rule: TaintMethodExitSource,
+                rule: Source,
                 assumptions: List<InitialFactAp>
             ) = sinkTracker.currentSourceRuleAssumptionsPreconditions(rule, statement, assumptions)
         }
 
-    override fun sinkAssumptionsManager(): RuleAssumptionsManager<TaintMethodExitSink> =
-        object : RuleAssumptionsManager<TaintMethodExitSink> {
+    override fun sinkAssumptionsManager(): RuleAssumptionsManager<Sink> =
+        object : RuleAssumptionsManager<Sink> {
             override fun storeAssumptions(
-                rule: TaintMethodExitSink,
+                rule: Sink,
                 assumptions: Map<InitialFactAp, Set<InitialFactAp>>
             ) =
                 storeInfo {
                     sinkTracker.addSinkRuleAssumptions(rule, statement, assumptions)
                 }
 
-            override fun currentAssumptions(rule: TaintMethodExitSink): Set<InitialFactAp> =
+            override fun currentAssumptions(rule: Sink): Set<InitialFactAp> =
                 sinkTracker.currentSinkRuleAssumptions(rule, statement)
         }
 
@@ -74,7 +74,7 @@ class JIRSequentTaintUtil(
     val factsAfterSink = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
 
     override fun handleReachedSink(
-        rule: TaintMethodExitSink,
+        rule: Sink,
         factReader: FinalFactReader?,
         rawEvaluatedFacts: List<InitialFactAp>
     ) {
@@ -122,7 +122,7 @@ class JIRSequentTaintUtil(
     }
 
     override fun applySourceAction(
-        rule: TaintMethodExitSource,
+        rule: Source,
         sourceEvaluator: TaintSourceActionEvaluator,
 
         createFinalFact: (FinalFactAp, TraceInfo) -> Unit

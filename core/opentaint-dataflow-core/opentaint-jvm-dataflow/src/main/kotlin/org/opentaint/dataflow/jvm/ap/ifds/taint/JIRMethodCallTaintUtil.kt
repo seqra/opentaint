@@ -22,6 +22,7 @@ import org.opentaint.dataflow.taint.FinalFactReaderWithPrefix
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
 import org.opentaint.dataflow.taint.TaintUtil
+import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.onSome
@@ -66,11 +67,11 @@ class JIRMethodCallTaintUtil(
 
     override fun conditionFact(factReader: FinalFactReader): List<FinalFactReader> {
         val conditionFactReaders = mutableListOf<FinalFactReader>()
-        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
+        analysisContext.methodCallFactMapper.mapMethodCallToStartFlowFact(
             statement,
             callee = callExpr.callee,
             callExpr = callExpr,
-            returnValue = null,
+            returnValue = (statement as? JIRAssignInst)?.lhv,
             factAp = factReader.factAp,
             checker = analysisContext.factTypeChecker
         ) { callerFact, startFactBase ->

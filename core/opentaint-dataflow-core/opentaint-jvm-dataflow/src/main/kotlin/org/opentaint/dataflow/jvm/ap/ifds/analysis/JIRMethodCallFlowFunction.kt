@@ -95,6 +95,34 @@ open class JIRMethodCallFlowFunction(
 
         val factReader = FinalFactReader(factAp, apManager)
 
+        applyTaintRules(initialFacts, exclusion, factReader, addCallToReturn, addUnchecked)
+
+        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
+            statement,
+            callee = callExpr.callee,
+            callExpr = callExpr,
+            returnValue = null,
+            factAp = factAp,
+            checker = analysisContext.factTypeChecker,
+        ) { callerFact, startFactBase ->
+            applyCleanersOrCallToStart(
+                factReader, callerFact, startFactBase,
+                addCallToReturn, addCallToStart, addUnchecked
+            )
+        }
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
+        }
+    }
+
+    protected fun applyTaintRules(
+        initialFacts: Set<InitialFactAp>,
+        exclusion: ExclusionSet,
+        factReader: FinalFactReader,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+    ) {
         val markAfterAnyFieldResolver = createMarkAfterAccessorResolver(
             analysisContext.methodEntryPoint, initialFacts
         ) { i, k ->
@@ -123,24 +151,6 @@ open class JIRMethodCallFlowFunction(
                 }
             }
         )
-
-        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
-            statement,
-            callee = callExpr.callee,
-            callExpr = callExpr,
-            returnValue = null,
-            factAp = factAp,
-            checker = analysisContext.factTypeChecker,
-        ) { callerFact, startFactBase ->
-            applyCleanersOrCallToStart(
-                factReader, callerFact, startFactBase,
-                addCallToReturn, addCallToStart, addUnchecked
-            )
-        }
-
-        if (factReader.hasRefinement) {
-            addSideEffectRequirement(factReader)
-        }
     }
 
     protected fun applyCleanersOrCallToStart(

@@ -238,14 +238,6 @@ class MethodTaintConfigurationResolver(
         return "generated-id-${ruleIdGen.incrementAndGet()}"
     }
 
-    private fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
-        message = meta?.message() ?: "",
-        severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
-        cwe = meta?.cwe
-    )
-
-    private fun SinkMetaData.message(): String? = note
-
     data class AnyArgSpecializationCtx(val positions: Map<String, Argument>) {
         fun resolve(anyArg: PositionBase.AnyArgument): Argument =
             positions[anyArg.classifier]
@@ -728,3 +720,11 @@ class MethodTaintConfigurationResolver(
 
     fun JirCondition.atom() = CommonCondition.Atom(this)
 }
+
+fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
+    message = meta?.message() ?: "",
+    severity = meta?.severity ?: CommonTaintConfigurationSinkMeta.Severity.Warning,
+    cwe = meta?.cwe
+)
+
+private fun SinkMetaData.message(): String? = note

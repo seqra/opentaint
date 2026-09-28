@@ -18,7 +18,7 @@ class JIRBackwardMethodAnalysisContext(
 ) {
     val forwardEntryPoint = forward.methodEntryPoint.statement
 
-    val findings get() = (analysisManager as JIRBackwardAnalysisManager).findings
+    val rules get() = (analysisManager as JIRBackwardAnalysisManager).rules
 
     val starUnroller get() = (analysisManager as JIRBackwardAnalysisManager).starUnroller
 

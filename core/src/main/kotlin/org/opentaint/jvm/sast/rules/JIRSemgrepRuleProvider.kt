@@ -4,17 +4,21 @@ import org.opentaint.common.sast.rules.SemgrepRuleProvider
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
+import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedFieldRule
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedRule
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
+import org.opentaint.dataflow.configuration.jvm.serialized.SinkRule
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.jvm.sast.dataflow.JIRTaintRulesProvider
 import org.opentaint.jvm.sast.dataflow.rules.TaintConfiguration
+import org.opentaint.jvm.sast.dataflow.rules.meta
 import org.opentaint.semgrep.pattern.TaintRuleFromSemgrep
 
 class JIRSemgrepRuleProvider(
@@ -46,6 +50,20 @@ class JIRSemgrepRuleProvider(
         base.selectRules(ruleIds)
         selectRelevantSemgrepRules(ruleIds)
     }
+
+    private val sinkMetaByRuleItem: Map<String, Pair<String, TaintSinkMeta>> by lazy {
+        val result = hashMapOf<String, Pair<String, TaintSinkMeta>>()
+        for (rule in rules) {
+            val items = rule.taintRules.flatMap { it.rules }
+            val sink = items.firstNotNullOfOrNull { it as? SinkRule } ?: continue
+            val sinkMeta = (sink.id ?: rule.ruleId) to sink.meta()
+            items.forEach { item -> item.serializedId?.let { result[it] = sinkMeta } }
+        }
+        result
+    }
+
+    override fun sinkMetaForSource(source: TaintConfigurationSource): Pair<String, TaintSinkMeta>? =
+        source.serializedId?.let { sinkMetaByRuleItem[it] } ?: base.sinkMetaForSource(source)
 
     override fun entryPointRulesForMethod(
         method: CommonMethod,

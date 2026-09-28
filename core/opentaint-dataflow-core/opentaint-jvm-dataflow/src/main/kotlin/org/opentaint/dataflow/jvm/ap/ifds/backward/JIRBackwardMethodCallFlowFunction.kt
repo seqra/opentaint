@@ -11,12 +11,9 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnFFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnNonDistributiveFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToReturnZeroFact
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.CallToStartZeroFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.FactCallFailureFact
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.SideEffectRequirement
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 import org.opentaint.dataflow.configuration.TaintCleanReach
@@ -30,6 +27,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodCallRuleBasedSummaryRewriter
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.aliasesPersistedThroughCall
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.markPositions
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.EvaluatedPass
@@ -53,18 +51,8 @@ class JIRBackwardMethodCallFlowFunction(
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
 ) : JIRMethodCallFlowFunction(apManager, analysisContext, returnValue, callExpr, statement, generateTrace = false) {
-    private val rules by lazy { JIRBackwardTaintRules(apManager, analysisContext) }
-
     private val summaryRewriter by lazy {
         JIRMethodCallRuleBasedSummaryRewriter(statement, analysisContext, apManager)
-    }
-
-    override fun propagateZeroToZero(): Set<ZeroCallFact> = buildSet {
-        add(CallToReturnZeroFact)
-        add(CallToStartZeroFact)
-
-        val demands = rules.callSinkDemands(statement, callExpr, returnValue)
-        rules.recordSinkDemands(statement, demands).mapTo(this) { CallToReturnZFact(it, TraceInfo.Flow) }
     }
 
     override fun propagateFact(
@@ -78,7 +66,6 @@ class JIRBackwardMethodCallFlowFunction(
         addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
     ) {
         val factReader = FinalFactReader(factAp, apManager)
-        rules.matchEndRequirement(statement, factAp)?.let { factReader.updateRefinement(it) }
 
         val demands = mutableListOf<FinalFactAp>()
         if (JIRBackwardMethodCallFactMapper.factIsRelevantToMethodCall(statement, returnValue, callExpr, factAp)) {
@@ -88,16 +75,17 @@ class JIRBackwardMethodCallFlowFunction(
         }
         demands += callSiteAliasDemands(factReader)
 
-        val conditionDemands = mutableListOf<FinalFactAp>()
         for (demand in demands) {
+            val demandReader = if (demand === factAp) factReader else FinalFactReader(demand, apManager)
+            applyTaintRules(initialFacts, exclusion, demandReader, { reader, fact, trace ->
+                factReader.updateRefinement(reader)
+                addCallToReturn(factReader, fact, trace)
+            }, addUnchecked)
+            factReader.updateRefinement(demandReader)
+
             JIRBackwardMethodCallFactMapper.mapMethodCallToStartFlowFact(
                 statement, callExpr.callee, callExpr, returnValue, demand, analysisContext.factTypeChecker
             ) { callerFact, startFactBase ->
-                val sources = rules.matchCallSources(statement, callExpr, returnValue, callerFact.rebase(startFactBase))
-                rules.recordSourceMatches(sources)
-                sources.reader?.let { factReader.updateRefinement(it) }
-                conditionDemands += sources.conditionDemands
-
                 applyCleaners(factReader, callerFact, startFactBase, addCallToReturn, addUnchecked) { reader, fact, base, trace ->
                     for ((rewritten, rewriteReader) in summaryRewriter.rewriteSummaryFact(fact.rebase(base))) {
                         reader.updateRefinement(rewriteReader)
@@ -106,8 +94,6 @@ class JIRBackwardMethodCallFlowFunction(
                 }
             }
         }
-
-        conditionDemands.forEach { addCallToReturn(factReader, it, TraceInfo.Flow) }
 
         if (factReader.hasRefinement) {
             addSideEffectRequirement(factReader)
@@ -191,7 +177,11 @@ class JIRBackwardMethodCallFlowFunction(
 
     private val methodEntryAnyFieldMarks: Set<TaintMarkAccessor> by lazy {
         val enter = analysisContext.forwardEntryPoint as? JMethodEnterInst ?: return@lazy emptySet()
-        rules.methodEntryMarks(enter) { (it.position as? PositionWithAccess)?.access == PositionAccessor.AnyFieldAccessor }
+        analysisContext.taint.sinkRulesForMethodEntry(enter, fact = null).flatMapTo(hashSetOf()) { rule ->
+            rule.rule.condition.markPositions()
+                .filter { (it.position as? PositionWithAccess)?.access == PositionAccessor.AnyFieldAccessor }
+                .map { TaintMarkAccessor(it.mark.name) }
+        }
     }
 
     private fun calleeBaseType(base: AccessPathBase): JIRType? = when (base) {
@@ -271,7 +261,10 @@ class JIRBackwardMethodCallFlowFunction(
             for (pass in invertedPassThrough(passFactReader)) {
                 val trace = TraceInfo.Rule(pass.rule, pass.action)
                 applyCleaners(passFactReader, pass.fact, pass.fact.base, { _, _, _ -> }, {}) { reader, fact, _, _ ->
-                    rules.mapCalleeToCaller(statement, fact)?.let { addCallToReturn(reader, it, trace) }
+                    JIRBackwardMethodCallFactMapper
+                        .mapMethodExitToReturnFlowFact(statement, fact, analysisContext.factTypeChecker)
+                        .singleOrNull()
+                        ?.let { addCallToReturn(reader, it, trace) }
                 }
             }
 
