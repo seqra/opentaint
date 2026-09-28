@@ -19,7 +19,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallResolver.MethodCallReso
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
 import org.opentaint.dataflow.call.tryExtractCallTypeInfo
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaRegistry
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.LambdaAnonymousClassFeature
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
@@ -37,9 +36,7 @@ import org.opentaint.ir.api.jvm.ext.findMethodOrNull
 class JIRMethodCallResolver(
     val callResolver: JIRCallResolver,
     val runner: TaintAnalysisUnitRunner,
-    val externalMethodTracker: ExternalMethodTracker?,
-    private val lambdaRegistry: JIRLambdaRegistry,
-    private val replayRegisteredLambdas: Boolean = false,
+    val externalMethodTracker: ExternalMethodTracker?
 ) : MethodCallResolver {
     override fun resolveMethodCall(
         callerContext: MethodAnalysisContext,
@@ -101,13 +98,6 @@ class JIRMethodCallResolver(
             is JIRCallResolver.MethodResolutionResult.Lambda -> {
                 analyzer.handleMethodCallResolutionFailure(callExpr, failureHandler)
 
-                if (replayRegisteredLambdas) {
-                    registeredLambdaImplementations(location, resolvedCallee.method).forEach {
-                        analyzer.handleResolvedMethodCall(it, handler)
-                    }
-                    return
-                }
-
                 val locationIdx = location.location.index
                 val lambdaResolver = callerContext.lambdaCallResolution.getOrCreate(locationIdx) {
                     JIRLambdaTracker.LambdaTracker(resolvedCallee.method)
@@ -116,22 +106,13 @@ class JIRMethodCallResolver(
                 val subscription = LambdaSubscription(runner, callerContext.methodEntryPoint, handler)
                 lambdaResolver.addSubscriber(subscription)
 
-                tryExtractLambdaType(callerContext, location, lambdaResolver, handler, analyzer)
+                tryExtractLambdaType(callerContext, lambdaResolver, handler, analyzer)
             }
-        }
-    }
-
-    private fun registeredLambdaImplementations(location: JIRInst, lambdaMethod: JIRMethod): List<MethodWithContext> {
-        return lambdaRegistry.registeredLambdas(location.location.method, location.location.index).map { lambdaClass ->
-            val methodImpl = lambdaClass.findMethodOrNull(lambdaMethod.name, lambdaMethod.description)
-                ?: error("Lambda class $lambdaClass has no lambda method $lambdaMethod")
-            MethodWithContext(methodImpl, EmptyMethodContext)
         }
     }
 
     private fun tryExtractLambdaType(
         context: JIRMethodAnalysisContext,
-        location: JIRInst,
         lambdaResolver: JIRLambdaTracker.LambdaTracker,
         handler: MethodCallHandler,
         analyzer: MethodAnalyzer,
@@ -158,7 +139,6 @@ class JIRMethodCallResolver(
             }
 
             lambdaResolver.addLambda(cls)
-            lambdaRegistry.register(location.location.method, location.location.index, cls)
         }
     }
 
@@ -201,14 +181,7 @@ class JIRMethodCallResolver(
                 listOf(MethodCallResolutionResult.ResolvedMethod(resolvedCallee.method))
             }
 
-            is JIRCallResolver.MethodResolutionResult.Lambda -> if (replayRegisteredLambdas) {
-                val resolvedLambdas = mutableListOf<MethodCallResolutionResult>()
-                resolvedLambdas += MethodCallResolutionResult.ResolutionFailure
-                registeredLambdaImplementations(location, resolvedCallee.method).mapTo(resolvedLambdas) {
-                    MethodCallResolutionResult.ResolvedMethod(it)
-                }
-                resolvedLambdas
-            } else {
+            is JIRCallResolver.MethodResolutionResult.Lambda -> {
                 val locationIdx = location.location.index
                 val lambdaResolver = callerContext.lambdaCallResolution.getOrCreate(locationIdx) {
                     JIRLambdaTracker.LambdaTracker(resolvedCallee.method)

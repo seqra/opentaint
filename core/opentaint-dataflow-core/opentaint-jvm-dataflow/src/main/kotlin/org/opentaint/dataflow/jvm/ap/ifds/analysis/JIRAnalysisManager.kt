@@ -3,9 +3,8 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
-import org.opentaint.dataflow.ap.ifds.BackwardCapableTaintAnalysisManager
+import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
-import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunner
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -28,7 +27,6 @@ import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRCallResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaRegistry
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLanguageManager
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
@@ -59,17 +57,15 @@ import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 
-class JIRAnalysisManager(
+open class JIRAnalysisManager(
     cp: JIRClasspath,
     refManager: RefManager,
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
-    override val params: Params = Params(),
-) : JIRLanguageManager(cp), TaintAnalysisManager, JIRAnalysisManagerBase, BackwardCapableTaintAnalysisManager {
-    private val baseRefManager = refManager
+    val params: Params = Params(),
+) : JIRLanguageManager(cp), BackwardTaintAnalysisManager {
+    internal val rootRefManager = refManager
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
-
-    private val lambdaRegistry = JIRLambdaRegistry()
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
 
@@ -78,11 +74,11 @@ class JIRAnalysisManager(
         val defaultGetModel: JIRMethodGetDefault? = null,
     )
 
-    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
-    private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
+    internal open val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
+    internal val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan
-    override val phase: Phase get() = currentPhase
+    val phase: Phase get() = currentPhase
 
     override fun selectPhase(phase: Phase) {
         currentPhase = phase
@@ -102,12 +98,10 @@ class JIRAnalysisManager(
         jIRDowncast<JIRUnitResolver>(unitResolver)
 
         val jIRCallResolver = JIRCallResolver(cp, unitResolver)
-        return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker, lambdaRegistry)
+        return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
     }
 
-    override fun createBackwardAnalysisManager(): JIRBackwardAnalysisManager = JIRBackwardAnalysisManager(
-        cp, baseRefManager, taintConfig, externalMethodTracker, params, relevantRuleIds, lambdaRegistry
-    )
+    override fun createBackwardAnalysisManager(): BackwardTaintAnalysisManager = JIRBackwardAnalysisManager(this)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,

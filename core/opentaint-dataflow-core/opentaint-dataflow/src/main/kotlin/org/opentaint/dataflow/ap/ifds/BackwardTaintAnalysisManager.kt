@@ -4,33 +4,16 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSink
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 
-interface BackwardCapableTaintAnalysisManager {
-    fun createBackwardAnalysisManager(): BackwardTaintAnalysisManager
-}
-
 interface BackwardTaintAnalysisManager : TaintAnalysisManager {
-    fun prepareRun(run: BackwardRun)
+    fun createBackwardAnalysisManager(): BackwardTaintAnalysisManager
 
-    fun runResult(): BackwardRunResult
+    fun prepareBackwardRun(analysisEndMethods: Set<CommonMethod>, restrictedTo: Set<BackwardSinkOccurrence>?): Unit =
+        error("Not a backward analysis manager")
+
+    fun backwardRunResult(): BackwardRunResult = error("Not a backward analysis manager")
 }
 
-data class BackwardSinkOccurrence(
-    val rule: CommonTaintConfigurationSink,
-    val statement: CommonInst,
-)
-
-sealed interface BackwardRun {
-    val analysisEndMethods: Set<CommonMethod>
-
-    data class Discovery(
-        override val analysisEndMethods: Set<CommonMethod>,
-    ) : BackwardRun
-
-    data class Restricted(
-        override val analysisEndMethods: Set<CommonMethod>,
-        val occurrences: Set<BackwardSinkOccurrence>,
-    ) : BackwardRun
-}
+data class BackwardSinkOccurrence(val rule: CommonTaintConfigurationSink, val statement: CommonInst)
 
 class BackwardRunResult(
     val seeded: Map<BackwardSinkOccurrence, Set<TaintMarkAccessor>>,
