@@ -4,7 +4,7 @@
 module `opentaint-jvm-dataflow`) is a subclass of the forward `JIRAnalysisManager`.
 It runs the **unchanged** generic IFDS engine once over the reversed application
 graph (`ApplicationGraph.reversed`) with rules whose sources and sinks are
-swapped (section 7), so a finding is an ordinary sink report at the statement of
+swapped per statement (section 7), so a finding is an ordinary sink report at the statement of
 an unconditional source. `TaintAnalyzer` selects it with
 `-Popentaint.analysis.direction=backward` (section 6). Trace resolution is out
 of scope: backward vulnerabilities carry no traces.
@@ -50,22 +50,22 @@ a source producing its mark is a source finding.
 
 `JIRBackwardAnalysisManager(forward)` is created by
 `JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
-manager's classpath, `relevantRuleIds` and parameters. Its rules are the
-forward rules wrapped in `JIRBackwardTaintRulesProvider` (section 7). It
-inherits the call resolver (applied to `graph.reversed`), language manager,
+manager's classpath, rules, `relevantRuleIds` and parameters; its method
+contexts answer rule queries through `JIRBackwardTaintAnalysisContext`
+(section 7). It inherits the call resolver (applied to `graph.reversed`), language manager,
 context serializer, fact type checker and edge post-processor, and overrides
 only:
 
 | Hook | Backward |
 |---|---|
-| context | `JIRBackwardMethodAnalysisContext` (see section 1; backward fact mapper) |
+| context | `JIRBackwardMethodAnalysisContext` (see section 1; backward fact mapper, backward taint context) |
 | entry points | entry points of the reversed method graph |
 | method inst graph | built from `JIRBackwardExitWiringGraph(graph.reversed).reversed` (section 1) |
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
 
-Backward-only helpers: `JIRBackwardTaintRulesProvider`,
+Backward-only helpers: `JIRBackwardTaintAnalysisContext`,
 `JIRBackwardExitWiringGraph`, `JIRBackwardMethodCallFactMapper` (delegates to
 the forward mapper).
 
@@ -103,12 +103,12 @@ code applies them):
   forward exit-sink step (`applyMethodExitSinkRules`) reports and the
   exit-source step adds condition demands. All resulting facts are post-return
   positions and go through the backward `Return := x` step.
-* `x = C.f`: derived static-field sinks (`sinkRulesForStaticField`) report and
-  derived static-field sources (`sourceRulesForStaticField`) add condition
+* `x = C.f`: the context's static-field sinks (`sinkRulesForStaticField`) report and
+  its static-field sources (`sourceRulesForStaticField`) add condition
   demands, both applied to a demand on `x` by `JIRSequentTaintUtil` with `x`
   as the result base.
-* `JMethodEnterInst`: derived entry sinks report and derived entry sources
-  (`entryPointRulesForMethod`) seed demands on Zero and add condition demands
+* `JMethodEnterInst`: backward entry sinks report and backward entry sources
+  (`sourceRulesForMethodEntry`) seed demands on Zero and add condition demands
   on a demand, all through `JIRSequentTaintUtil`. On a demand they are skipped
   when every initial fact of the edge is an `Argument`/`This` root carrying an
   entry mark: forward drops exactly those marks at the exit
@@ -184,34 +184,37 @@ backward context copies the trackers of all forward contexts of its method, so
 the unchanged resolver resolves a lambda call to those classes and also keeps
 the resolution failure, as forward does.
 
-## 7. Backward rule provider
+## 7. Backward taint context
 
-`JIRBackwardTaintRulesProvider` wraps the forward provider and answers every
-query with the swapped rules, derived once per rule. A condition is put in
-negation normal form. Its *marks* are all its positive mark literals
-(`ContainsMark`, `ContainsMarkOnAnyField`), regardless of the `And`/`Or`
-structure; its *rest* is the condition with every mark literal, positive or
-negated, replaced by `True` and folded (constants, flattening, duplicates), so
-negated mark literals are treated as satisfied. A rule without marks is
-*unconditional*. A mark `ContainsMarkOnAnyField(P, M)` is assigned both at `P`
-and at `P.[any]`.
+`JIRBackwardTaintAnalysisContext` extends the forward `JIRTaintAnalysisContext`
+(open; its rule queries are open and `analysisContext` is protected) and
+overrides the rule queries: each one asks the forward context (`super`) for the
+forward rules at the same statement, prepared as in forward (non-mark atoms
+evaluated at that statement by `JIRMarkAwareConditionRewriter`), and swaps
+them by the prepared condition. The forward rule code consumes the result
+unchanged. The static-field sources, which forward prepares only when
+unconditional, are prepared with the same rewriter.
 
-| Forward rule | Backward rule |
-|---|---|
-| unconditional call / exit / entry-point / static-field source, `AssignMark(M, P)` | sink of the matching kind (call, exit, entry; static fields: `sinkRulesForStaticField`) at the same method with condition rest ∧ `ContainsMark(P, M)` (a disjunction over the actions). `P.[any]` becomes `ContainsMarkOnAnyField(P, M)` |
-| conditional call / exit / entry-point / static-field source | source of the same kind with condition rest ∧ the produced marks (as above), assigning every mark at its position |
-| conditional call / exit / method-entry sink | source (call, exit, entry point) with condition rest assigning every mark; it fires on Zero (seeds) |
-| unconditional call / entry / exit sink | the sink with condition rest (reported on Zero) |
-| pass-through | unchanged (inverted by the flow functions) |
-| cleaner | unconditional: kept with condition rest; conditional: none (section 8) |
+A prepared condition is `False` (the rule is dropped by the preparation),
+`True`, or an expression over mark literals. Negated literals are ignored: an
+expression is *conditional* when it has a positive literal, and then its
+*marks* are all its positive literals regardless of the `And`/`Or` structure;
+otherwise the rule is *unconditional*. A mark `ContainsMarkOnAnyField(P, M)` is
+assigned both at `P` and at `P.[any]`.
 
-`trackFactsReachAnalysisEnd` is ignored: every derived rule is built as if the
-sink had none.
+| Forward rule | Unconditional | Conditional |
+|---|---|---|
+| source (call, exit, entry point, static field), `AssignMark(M, P)` | sink of the matching kind (static fields: `sinkRulesForStaticField`, a method sink) with condition `ContainsMark(P, M)` (a disjunction over the actions; `P.[any]` becomes `ContainsMarkOnAnyField(P, M)`) | source of the same kind with the same condition, assigning the marks |
+| sink (call, exit, method entry) | the sink, without `trackFactsReachAnalysisEnd` (reported on Zero) | source (call, exit, entry point) with condition `True`, assigning the marks; it fires on Zero (seeds) |
+| cleaner | applied | ignored (section 8) |
+| pass-through | unchanged (inverted by the flow functions) | unchanged |
 
-Marks on `Result` are not assigned for call, entry and static-field rules (a
-rule with no other mark derives nothing): forward reads such a condition
-before the statement, where the result holds no fact.
-Queries with `allRelevant` (the summary rewriter) return the original sources.
+`trackFactsReachAnalysisEnd` is ignored. Marks on `Result` are not assigned for
+call, entry and static-field rules (a rule with no other mark derives
+nothing): forward reads such a condition before the statement, where the
+result holds no fact. Forward exit sinks are queried as on a zero-to-fact edge.
+The summary rewriter's all-relevant sources are the forward ones; its
+all-relevant cleaners drop those that are conditional at the call.
 
 Positions: a call statement's backward edge is its post-state, so derived sinks
 of call sources read the post-call demand (result as `Return`, arguments as
@@ -230,10 +233,9 @@ filter keeps.
 ## 8. Cleaners
 
 A cleaner condition with a mark literal reads the forward fact before the
-call, which a demand does not determine, so backward ignores such cleaners:
-the provider drops a cleaner with a mark literal and keeps the others with the
-rest of their condition (section 7), evaluated at the call site like any other
-condition. Demands pass the ignored cleaners unchanged.
+call, which a demand does not determine, so backward ignores cleaners that
+are conditional at the call (section 7) and applies the unconditional ones.
+Demands pass the ignored cleaners unchanged.
 
 `MethodTaintConfigurationResolver` (shared with forward) rewrites cleaner
 conditions against their actions, so `resolveMethodRule` returns a list of
@@ -306,16 +308,13 @@ node is not final. The code is shared with forward.
 * Forward checks a method-exit sink only on facts of zero-to-fact edges
   (`JIRMethodExitRuleProvider`); backward exit-sink demands reach the callers
   like any other demand, so taint created by a caller is also reported.
-* A rule with a mark literal in one disjunct and none in another (`A ∨ M@P`)
-  is treated as conditional only: the mark-free disjunct `A` alone neither
-  reports (sink) nor is reported (source).
 * Side-effect summaries are not modelled.
 * Lambda calls resolve only to lambdas the forward prescan found; the
   trackers of all forward contexts of a method are merged.
 * A refined backward edge that produces no demand does not emit a side-effect
   requirement.
 * Mark literals of pass-through conditions are treated as satisfied;
-  cleaners whose conditions need a mark are ignored (section 8).
+  cleaners that are conditional at the call are ignored (section 8).
 * An any-field sink behind an `Exact` cleaner of its value is reported when
   the mark sits on the value itself, which the cleaner removed (section 8).
   JVM case: `CleanerDslAnalysisTest` matrix with a plain source
