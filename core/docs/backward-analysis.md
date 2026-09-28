@@ -118,6 +118,7 @@ The code lives in package `org.opentaint.dataflow.jvm.ap.ifds.backward`, module
 | call resolver | the existing `JIRMethodCallResolver` / `JIRCallResolver` |
 | findings | `JIRBackwardFindingTracker` |
 | rule inversion helpers | `JIRBackwardTaintRules` (sink → demand seeds, source → match) |
+| star unrolling at `Exact` cleaners | `JIRBackwardStarUnroller` (one per manager, section 11.3) |
 
 Manager details:
 
@@ -141,7 +142,9 @@ Manager details:
 * The backward context (`JIRBackwardMethodAnalysisContext`) additionally
   carries `forwardEntryPoint` (the forward entry used to seed alias analysis,
   reused for the empty-context analyzer like `localVariableReachability` and
-  `aliasAnalysis`) and `findings` (the manager's tracker).
+  `aliasAnalysis`), `findings` (the manager's tracker) and `starUnroller`
+  (the manager's `JIRBackwardStarUnroller`, which caches the unrolled
+  accessors per class).
 * The backward call FF is **not** cached per statement (forward caches it in
   `JIRMethodAnalysisContext.cachedCallFF`, typed to the forward class). A cache
   can be added to `JIRBackwardMethodAnalysisContext` if construction becomes
@@ -492,6 +495,8 @@ Consequences:
 * `RemoveMark(P, M)` drops a demand `P·M·$`; a demand `P.f·M·$` survives
   (reach `Exact`), a demand under `[any]` is split exactly as forward
   (`TaintCleanReach.Exact` vs `ExactAndAnyField` handled by `Cleaner.kt`).
+  A star demand `P.[any]·M` at the root of `P` is unrolled first (section
+  11.3), because `Cleaner.kt` would remove the whole star.
 * `RemoveAllMarks(P)` drops every demand at or below `P`.
 * A `Result` cleaner drops a demand on the call result before it reaches
   the callee or pass-through. Forward applies user-defined `Result` cleaners
@@ -883,8 +888,11 @@ as `JIRBackwardAnalysisManager.findings` and resets it in `selectPhase`.
 * **Code that reaches no exit** (an infinite loop) is never analysed.
 * **Any-field demands.** A `ContainsMarkOnAnyAccessorLiteral` is demanded as
   the star path `x.[any]·M`. No access-path model can express "a path of
-  length at least one", so an `Exact` cleaner on `x` cannot be inverted
-  precisely on it (section 11).
+  length at least one", so an `Exact` cleaner on `x` unrolls the star over
+  the accessors of `x`'s static type (section 11.3). Accessors the type
+  does not declare (fields the rules invent, such as `<rule-storage>` or
+  `Map#MapValue`) are not unrolled, and a value typed as an interface or
+  `Object` keeps the old behaviour (the star is dropped).
 * **Sinks with only negated mark literals** are recorded as unconditional,
   matching the "negated mark condition is satisfied" convention of
   `removeNegated` in the trace preconditions.
@@ -1001,8 +1009,8 @@ Tree: 631 sink groups; 628 of them come from the 130 forward-suite cases, 3 from
 | | groups |
 |---|---|
 | agree from the start | 609 |
-| fixed (backward bugs, below) | 11 |
-| accepted divergences (forward suites) | 8 groups, 18 sink rules |
+| fixed (backward bugs, below) | 18 |
+| accepted divergences (forward suites) | 1 group, 1 sink rule |
 | evidence cases (all three behave as predicted) | 3 |
 
 Bugs fixed:
@@ -1018,14 +1026,19 @@ Bugs fixed:
    `%t` through the pass-through and copies the fact to `sb` because `%t`
    aliases `sb` after the call. The backward demand on `sb` never became a
    demand on `%t`. Fix: section 5, "Call-site aliases".
+3. **Star demand dropped by an `Exact` cleaner** (7 groups:
+   `CleanerDsl/matrix-N-AnyField` `…-AnyField-Plain-AnyField-field-depth0-markK`
+   ×5, `CleanerDsl/field-store` `field-store-any`,
+   `CleanerDslControlFlow/sequentialMarks` `sequenceNestedAfterPlainSink-m1`,
+   plus the evidence case `nestedStoreThenCleanerThenAnySink`). Fix: the
+   star is unrolled over the static type at the cleaner (section 11.3).
 
 Accepted divergences (Tree):
 
 | Case | Cause | Verdict |
 |---|---|---|
 | `JavaDataFlowReachability/lambdaCaptureFlow` | The sink is inside a lambda body reached through `fn.apply` on a captured `Function` parameter. Resolving it needs forward type-info facts (section 9). Verified: backward analyses `lambdaCaptureFlow`, `lambdaCapture`, the local lambda `g` and its body, never the sink lambda, and records no demand seed. | inherent (all modes) |
-| `CleanerDsl/matrix-N-AnyField`, `…-AnyField-Plain-AnyField-field-depth0-markK` (5 groups, 15 rules), `CleanerDsl/field-store` `field-store-any`, `CleanerDslControlFlow/sequentialMarks` `sequenceNestedAfterPlainSink-m1` | Star path vs. `Exact` cleaner, section 11.3. Backward misses. | inherent to the access-path models |
-| evidence `nestedStoreThenCleanerThenAnySink` | Same, minimal: `value.k.value = source(); applyPlainClean(value); anySink(value)`. Forward reaches, backward does not. | inherent |
+| evidence `nestedStoreThenCleanerThenAnySink` | Agrees since the star unrolling (section 11.3): `value.k.value = source(); applyPlainClean(value); anySink(value)` is reached in both directions. | fixed |
 | evidence `inlineCleanerThenFieldSink` | The dual: any-field entry fact, `Exact` cleaner in the same method, plain sink on `value.k`. Forward misses (it holds the star fact and the cleaner removes all of it), backward reaches (it demands the concrete `value.k·M`, which the cleaner keeps). `calleeCleanerThenFieldSink`, the same flow with the cleaner inside a callee, is reached by both. | inherent; forward result contradicts its own DSL matrix |
 
 ### 11.3 Star paths and `Exact` cleaners
@@ -1033,26 +1046,76 @@ Accepted divergences (Tree):
 `x.[any]·M` is a star: it covers `x·M` and every `x.f…·M`
 (`TreeApManager`: `contains(M)` and `readAccessor` see through `[any]`). The
 residual after an `Exact` cleaner `RemoveMark(x, M)`, "`M` below a path of
-length at least one", is not representable. `Cleaner.kt`'s `Exact` branch
-clears `M` directly after `[any]` and so removes the whole star (unit check:
-`clean(arg0.[any]·M, Mark(arg0, M, Exact))` has no survivor in Tree and
-Cactus; Automata returns the star unchanged; base-only has no `[any]`).
+length at least one", is not representable in any access-path model.
+`Cleaner.kt`'s `Exact` branch clears `M` directly after `[any]` and so
+removes the whole star (unit check: `clean(arg0.[any]·M, Mark(arg0, M, Exact))`
+has no survivor in Tree and Cactus; Automata returns the star unchanged;
+base-only has no `[any]`).
 
 * Forward meets a star **fact** only from an `AnyField` source, and usually
   not at the cleaner: when the cleaner runs in a summarised callee, the
   callee sees an abstract fact and the summary materialises concrete
   `x.k…·M` paths, which survive. When the cleaner runs in the method that
-  holds the star fact, forward loses the whole fact (`inlineCleanerThenFieldSink`).
+  holds the star fact, forward loses the whole fact (`inlineCleanerThenFieldSink`,
+  `CleanerDslAnalysisTest` "returning exact cleaner follows AnyField").
 * Backward meets a star **demand** from every any-field sink, and always
-  concretely (seeds are never abstract). An `Exact` cleaner on its base drops
-  it in Tree, even when the flow reaches the sink through a concrete field
-  (`nestedStoreThenCleanerThenAnySink`, where forward holds
-  `value.k.value·M`). In Automata the cleaner keeps the star, and the demand
-  then also matches a root-level mark that the cleaner did remove (FP,
-  section 11.4).
+  concretely (seeds are never abstract). Without special handling an `Exact`
+  cleaner on its base dropped it in Tree, even when the flow reaches the
+  sink through a concrete field (`nestedStoreThenCleanerThenAnySink`, where
+  forward holds `value.k.value·M`), and kept it in Automata, where the demand
+  then also matched the root-level mark the cleaner removed (FP).
 
-A precise fix needs a "non-empty star" node in the access-path models, or a
-type-driven unrolling of the star at the cleaner.
+**Unrolling** (`JIRBackwardMethodCallFlowFunction.cleanerInputs`,
+`JIRBackwardStarUnroller`). Before the cleaners of a call run on a demand
+`d` (rebased to the callee), the call FF checks whether an applicable rule
+(condition not false, and true on `d` when it is not constant) has a
+`RemoveMark(P, M)` with reach `Exact` and `P` the root of `d`, for a mark `M`
+that `d` holds right after its root `[any]`. If so, `d` is replaced by the
+equivalent union
+
+* `d` without its root `[any]` edge (`clearAccessor([any])`),
+* the star content at length zero (`readAccessor([any]).clearAccessor([any])`),
+* `a · d.readAccessor(a)` for every accessor `a` of the static type of the
+  cleaned value,
+
+and the cleaners run on each part. The root parts lose `M` exactly as
+before; the parts below an accessor keep the star, which is the residual
+restricted to the unrolled accessors. The static type is the caller-side
+type of the call local (`args[i].type`, the receiver's type, or the result
+variable's type). The accessors are the element accessor for an array type,
+and for a class type the instance fields declared by the class, its
+superclasses and all its subclasses (`JIRHierarchyInfo`), as
+`FieldAccessor(declaring class, name, type)`, the key forward uses for field
+reads and writes. Interfaces, `java.lang.Object` and other types are not
+unrolled (the star is dropped as before). The unrolled set is cached per class.
+
+Soundness of the restriction: forward can only put a mark below `x` through
+an accessor that its own type filter accepts for `x`'s type, which for real
+fields is a field of a super- or subclass. Not covered: fields that exist
+only in rules (`<rule-storage>`, `Iterable#Element`, `Map#MapValue`, …),
+which a concretely typed collection or builder can carry. In Tree the
+production unroll strategy does not let the star cover `<rule-storage>`
+either.
+
+**Entry sources of the cleaner's method.** Forward applies a method's
+entry-point sources inside the method, so an any-field entry source makes
+the star a concrete fact at every cleaner of that method, and the `Exact`
+branch drops it whole (`CleanerDslAnalysisTest` "returning exact cleaner
+follows AnyField and preserves unrelated marks" pins this). A demand cannot
+tell whether it will meet that source or a star from a caller (which forward
+holds abstractly, so it survives). The call FF therefore does not unroll
+when the cleaner's method has an entry-point source (condition not false)
+that assigns one of the cleaned marks to an any-field position; the star is
+dropped as before. This loses the flow when the same star also comes from a
+caller, and it does not cover the other concrete stars forward drops (an
+any-field call source in the same method, or a star returned by a callee):
+there backward reaches, like the accepted `inlineCleanerThenFieldSink`
+divergence.
+
+Automata and base-only: Automata's star demand is unrolled the same way (the
+parts are built through `readAccessor`/`prependAccessor`, which follow the
+`[any]` self-loop), which also removes the Automata FPs of section 11.4.
+Base-only modes have no `[any]` accessor and are unchanged.
 
 ### 11.4 Access-path modes
 
@@ -1075,16 +1138,36 @@ cannot express strong updates, and `P·M` reads as `P.[any]·M`, so
 
 | Mode | Pinned divergences | Agree only with the suite expectation |
 |---|---|---|
-| Automata | 12 groups: lambda; `streamFlatMapFlow` (backward reaches); `matrix-N-Plain` `Plain-Plain-AnyField-field-depth0` (5 groups, 15 rules) and `sequentialMarks` `…-m1` at 5 checkpoints (backward FP) | `recursive-any-only-depth2` (forward misses) |
+| Automata | 2 groups: lambda; `streamFlatMapFlow` (backward reaches). The 10 "Automata star kept" groups (`matrix-N-Plain` `Plain-Plain-AnyField-field-depth0`, 5 groups, 15 rules, and `sequentialMarks` `…-m1` at 5 checkpoints, backward FP) agree since the star unrolling (11.3) | `recursive-any-only-depth2` (forward misses) |
 | BaseOnly | lambda only | none |
 | BaseOnlyField | 13 groups, 21 rules: lambda; `field-store` plain and cleaned; `helperSourceAndCleanerExample-cleaned`; `sequentialMarks` m2–m4 at 6 checkpoints; `cleanThenRetain` m1/m2 at 3 checkpoints (backward FP) | 300 matrix groups (forward FP) |
 
 Mechanisms:
 
-* **Automata star kept.** An `Exact` cleaner leaves the Automata star demand
-  unchanged (the self-loop `[any]` graph is returned as is), so the demand
-  matches the root mark a `Plain` source produced after the cleaner removed
-  it. Verified by the unit check and by the fact dumps.
+* **Automata star kept** (fixed). An `Exact` cleaner leaves the Automata
+  star demand unchanged (the self-loop `[any]` graph is returned as is), so
+  the demand matched the root mark a `Plain` source produced after the
+  cleaner removed it. The unrolling of 11.3 now runs the cleaner on the
+  root parts and the per-accessor parts separately.
+* **Automata any-field exclusion depth** (fixed, shared `ApManager` code).
+  An any-field cleaner on an abstract fact records the cleaned mark as a
+  deep exclusion of the abstract tail, which a later summary application
+  (`concat`) enforces on the delta. `AccessGraphFinalFactAp` always
+  recorded it "from depth 1" (keep the mark at the delta root), which is
+  only right when the abstraction point is the cleaned position itself.
+  For `arg0.f.*` (the backward demand after `return b.f`), the delta root is
+  already one level below the cleaned `arg0`, and the kept mark became the
+  demand `arg0.f·M` that matched the any-field entry source
+  (`AutomataDeepCleanSummaryAnalysisTest` "in-helper starred clean …",
+  "clean plus depth-2 constant store …"). The same happens after a nested
+  summary: `concat` of `arg0.*{d1 M}` with the delta `f.*` kept "depth 1"
+  for the new abstraction point `arg0.f.*` ("in-helper nested starred clean").
+  Fix, mirroring `AccessTree`: `clearAllAccessorOccurrences` records "from
+  depth 1" only when `keepStartAccessor` holds and the graph's initial node
+  is its final node, "from depth 0" otherwise, and `concat` collapses the
+  prefix's exclusion to depth 0 when the delta's initial node is not its
+  final node. Pinned by `AnyFieldExclusionDepthContractTest` (Tree and
+  Automata). Forward uses the same code; its suites are unchanged (12.7).
 * **Base-only root demand.** A base-only sink seed is `x·M` with an open
   field tail (`x![M].$/*`); any-field positions collapse to it, because
   `prependAccessor([any])` is absorbed. `Exact` cleaners never remove it,
@@ -1107,8 +1190,8 @@ Mechanisms:
 **Cactus** is not part of the committed test: forward cannot run there
 (`AccessCactus.equalTo` throws `NotImplementedError` in
 `JIRMethodCallSummaryHandler.hasMemoryEffect`, even for `simpleDataFlow`).
-Against the forward suite expectation, backward in Cactus disagrees on 24 of
-631 groups:
+Against the forward suite expectation, backward in Cactus disagreed on 24 of
+631 groups (measured before the star unrolling of 11.3, not re-measured):
 
 * 3 groups crash (`deepCleanerPipeline`, `starred-depth2/3-sanitized`):
   Cactus summary application leaves an abstract node (`arg(0).*/*`) on a
@@ -1134,7 +1217,9 @@ references.
 
 ### 11.5 Forward observations
 
-Found while validating; forward is unchanged:
+Found while validating; forward is unchanged except for the Automata
+any-field exclusion depth fix of 11.4, which only removes facts the cleaner
+already removed:
 
 * `inlineCleanerThenFieldSink`: an `Exact` cleaner in the method that holds an
   any-field fact removes the whole star, so a field-level flow that the
@@ -1379,17 +1464,27 @@ with `Universe` exclusions on fact edges (6a, aborted the run with
 its positive, `IssuesTest` and "RuleWithEllipsisInvocationAndPatternNot"
 aborted silently).
 
+Phase 2A (star unrolling, Automata exclusion depth), same commands, JUnit
+XML parsed:
+
+| Suite | Forward | Backward |
+|---|---|---|
+| `org.opentaint.jvm.*` | 1676 tests, 0 failed, 8 skipped | 1676 tests, 0 failed, 30 skipped |
+| `opentaint-java-querylang` | 207 tests, 0 failed, 23 skipped | 207 tests, 4 failed (causes 3–5 below), 23 skipped |
+| `opentaint-dataflow` / `opentaint-jvm-dataflow` unit tests | 151 / 96, 0 failed | – |
+
 Backward failures by cause (inputs for Phase 2):
 
-1. **Star demand and `Exact` cleaner** (11.3, inherent to the access-path
-   models; exactly the 11.2 accepted divergences). FN.
+1. **Star demand and `Exact` cleaner** (11.3). FN. Fixed in Phase 2A by
+   unrolling the star over the static type at the cleaner.
    `CleanerDslAnalysisTest` "plain and AnyField matrix … (1..5 marks)" (only
    `AnyField-Plain-AnyField-field-depth0-markK`), "field stores distinguish a
    plain cleaner from an AnyField cleaner" (`field-store-any`),
    `CleanerDslControlFlowAnalysisTest` "marks are accumulated and removed
    independently in a long sequence" (`sequenceNestedAfterPlainSink-m1`).
-2. **Automata any-field cleaner keeps the demand** (11.4 "Automata star
-   kept"). FP, Automata only (the Tree variants pass).
+2. **Automata any-field cleaner keeps the demand** (11.4 "Automata
+   any-field exclusion depth"). FP, Automata only. Fixed in Phase 2A in
+   `AccessGraphFinalFactAp` (shared with forward).
    `AutomataDeepCleanSummaryAnalysisTest` "clean plus depth-2 constant store
    returns a silent object", "in-helper starred clean silences the read in
    the same summary", "in-helper nested starred clean silences the read"
