@@ -14,6 +14,7 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithConditi
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
+import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
 import org.opentaint.dataflow.jvm.ap.ifds.CalleePositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
@@ -45,10 +46,15 @@ class JIRBackwardMethodSequentFlowFunction(
         add(Sequent.ZeroToZero)
 
         when (currentInst) {
-            is JIRReturnInst -> for ((fact, _) in applyMethodExitSourceRules(AccessPathBase.Return, fact = null, refiner = null)) {
-                val zeroFact: (FinalFactAp) -> Unit = { add(Sequent.ZeroToFact(it, TraceInfo.Flow)) }
-                simpleAssign(AccessPathBase.Return, returnValue(currentInst), fact, zeroFact, zeroFact)
+            is JIRReturnInst -> {
+                for ((fact, _) in applyMethodExitSourceRules(AccessPathBase.Return, fact = null, refiner = null)) {
+                    val zeroFact: (FinalFactAp) -> Unit = { add(Sequent.ZeroToFact(it, TraceInfo.Flow)) }
+                    simpleAssign(AccessPathBase.Return, returnValue(currentInst), fact, zeroFact, zeroFact)
+                }
+                applyUnconditionalExitSinks(AccessPathBase.Return)
             }
+
+            is JIRThrowInst -> applyUnconditionalExitSinks(AccessPathBase.Exception)
 
             is JMethodEnterInst -> sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
                 .applySinkRules(entrySinkRules(currentInst), factReader = null, markAfterAnyFieldResolver = null)
@@ -113,6 +119,11 @@ class JIRBackwardMethodSequentFlowFunction(
                 propagateFactWithRefinement(refiner, demand, TraceInfo.Flow)
             }
         }
+    }
+
+    private fun applyUnconditionalExitSinks(methodResult: AccessPathBase) {
+        val rules = analysisContext.taint.sinkRulesForMethodExit(currentInst, fact = null, initialFacts = emptySet())
+        sinkUtil<TaintMethodExitSink>(methodResult).applySinkRules(rules, factReader = null, markAfterAnyFieldResolver = null)
     }
 
     private fun returnValue(inst: JIRReturnInst): AccessPathBase? = inst.returnValue?.let { accessPathBase(it) }

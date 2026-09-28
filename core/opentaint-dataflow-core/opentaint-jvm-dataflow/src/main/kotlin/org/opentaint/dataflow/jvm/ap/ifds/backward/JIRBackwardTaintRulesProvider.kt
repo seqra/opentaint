@@ -129,6 +129,10 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
                     TaintMethodExitSink(source.method, condition, emptyList(), id, meta, source.info, source.serializedId)
                 }
             }
+        } + base.sinkRulesForMethodExit(method, statement, fact, initialFacts = emptySet(), allRelevant).flatMap { sink ->
+            derive(Derivation.RESIDUAL_SINKS, sink) {
+                residualSinks(sink) { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
+            }
         }
 
     fun sinkRulesForStaticField(field: JIRField, statement: CommonInst): List<TaintMethodSink> {
