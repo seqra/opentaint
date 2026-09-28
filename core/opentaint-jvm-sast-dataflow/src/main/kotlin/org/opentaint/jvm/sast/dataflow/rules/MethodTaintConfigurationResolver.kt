@@ -174,12 +174,12 @@ class MethodTaintConfigurationResolver(
         }
 
         val contexts = anyArgSpecializationContexts(serializedCondition, actions)
-        return contexts.mapNotNull {
+        return contexts.flatMap {
             val condition = resolveCondition(serializedCondition, it).simplify()
-            if (condition.isFalse()) return@mapNotNull null
+            if (condition.isFalse()) return@flatMap emptyList()
 
             resolveMethodRule(condition, it)
-        }.flatten()
+        }
     }
 
     private fun SerializedRule.resolveMethodRule(
@@ -235,13 +235,18 @@ class MethodTaintConfigurationResolver(
     }
 
     private fun Condition.assumeAction(action: Action): Condition {
-        val assumed = action.assumedLiteral() ?: return this
-        return toNnf(negated = false).assume(setOf(assumed))
+        val assumed = action.assumedLiterals()
+        if (assumed.isEmpty()) return this
+        return toNnf(negated = false).assume(assumed)
     }
 
-    private fun Action.assumedLiteral(): ContainsMark? {
-        if (this !is RemoveMark || position.hasAnyField() || position.isString()) return null
-        return ContainsMark(position, mark)
+    private fun Action.assumedLiterals(): Set<JirCondition> {
+        if (this !is RemoveMark) return emptySet()
+        val position = position
+        if (position is PositionWithAccess && position.access == PositionAccessor.AnyFieldAccessor) {
+            return setOf(ContainsMarkOnAnyField(position.base, mark), ContainsMark(position, mark))
+        }
+        return setOf(ContainsMark(position, mark))
     }
 
     private fun Condition.assume(assumed: Set<JirCondition>): Condition = when (this) {
@@ -263,16 +268,6 @@ class MethodTaintConfigurationResolver(
     ): Condition {
         val args = flatMap { operands(it) ?: listOf(it) }.filter { it != neutral }.distinct()
         return if (absorbing in args) absorbing else make(args)
-    }
-
-    private fun Position.hasAnyField(): Boolean =
-        this is PositionWithAccess && (access == PositionAccessor.AnyFieldAccessor || base.hasAnyField())
-
-    private fun Position.isString(): Boolean = when (this) {
-        is Argument -> method.parameters.getOrNull(index)?.type?.typeName == JAVA_LANG_STRING
-        is Result -> method.returnType.typeName == JAVA_LANG_STRING
-        is This -> method.enclosingClass.name == JAVA_LANG_STRING
-        is ClassStatic, is PositionWithAccess -> false
     }
 
     private val ruleIdGen = AtomicInteger()
@@ -766,7 +761,6 @@ class MethodTaintConfigurationResolver(
     fun JirCondition.atom() = CommonCondition.Atom(this)
 }
 
-private const val JAVA_LANG_STRING = "java.lang.String"
 
 fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
     message = meta?.message() ?: "",

@@ -257,12 +257,10 @@ no-op when that literal is false and the literal can be assumed: the condition
 is put in negation normal form, the literal becomes `True` and its negation
 `False`, and the result is folded (constants, flattening, duplicates). The
 split is equivalent to the original cleaner because all applicable cleaners'
-conditions are evaluated on the same fact before any action runs. An action
-implies no literal, and keeps the original condition, for `RemoveAllMarks`,
-any-field positions (no presence check; the removal records an exclusion on
-an abstract fact where `ContainsMarkOnAnyField` is false) and `String`
-positions (the removal also clears `<string-bytes>`, which `new String(byte[])`
-taints and the condition does not read).
+conditions are evaluated on the same fact before any action runs.
+`RemoveAllMarks` implies no literal and keeps the original condition. For an
+any-field position `P = base.[any]` both `ContainsMarkOnAnyField(base, M)` (the
+form an any-field condition resolves to) and `ContainsMark(P, M)` are assumed.
 
 `RemoveMark` cannot remove `[any]` unless its own position has `[any]`. The
 forward step treats the `[any]` directly at the cleaned position as possibly
