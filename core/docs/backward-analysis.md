@@ -60,7 +60,7 @@ post-processor, and overrides only:
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
 
-Backward-only helpers: `JIRBackwardTaintRulesProvider`, `JIRBackwardStarUnroller`,
+Backward-only helpers: `JIRBackwardTaintRulesProvider`,
 `JIRBackwardNonExitingStarts`, `JIRBackwardMethodCallFactMapper` (delegates to
 the forward mapper).
 
@@ -119,7 +119,8 @@ A report never kills the demand; refinements are propagated as in forward.
   demands of swapped conditional sources.
 * Cleaners: a value in the demand after the call survived the cleaner, so the
   demand before the call is `clean(demand)`, computed by the forward cleaner
-  step; removed alternatives become `Drop`.
+  step; removed alternatives become `Drop`. Only unconditional cleaners are
+  applied (section 9).
 * Resolution failure: the caller demand is kept (except for `Return`), and
   pass-through rules are inverted by the forward `TaintPassActionEvaluator`
   with `from` and `to` swapped (a demand on the rule's `to` becomes a demand on
@@ -140,11 +141,11 @@ Shared code stays in the forward classes; backward subclasses or calls them.
 | Forward origin | Backward use |
 |---|---|
 | `JIRMethodSequentFlowFunction` (open; `propagate`, `simpleAssign`, `fieldRead`, `fieldWrite`, `FactRefiner` are protected) | `JIRBackwardMethodSequentFlowFunction` extends it and inherits the Z2F/F2F/NDF2F plumbing, operand decomposition and type filters. It overrides the three assignment primitives with roles swapped: `simpleAssign` moves `L → R` and kills `L`; `x = y.f` is the forward write move of the demand into `y.f` (from an auxiliary base, including forward write aliasing); `y.f = x` is the forward write with no value (strong clear, weak arrays) plus the forward read of `y.f` into `x` (including the abstraction split). The forward static write clears nothing (it tests `f` against a fact that starts with `<C>`; forward drops such findings in trace resolution), so `C.f = x` clears `<C>` from `ClassStatic` and `f` from the `<C>` subtree with two forward `RefAccess` writes and puts the rest back under `<C>` |
-| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step once per star-unrolled input |
+| `JIRMethodCallFlowFunction` (open; `applyTaintRules`, `applyCleanersOrCallToStart` protected) | `JIRBackwardMethodCallFlowFunction` extends it, inherits `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step |
 | `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types), `applyMethodExitSinkRules` / `applyMethodExitSourceRules` (protected) | every report and every rule-created demand |
 | `JIRMethodCallSummaryHandler` (open; `applyCallAliases` protected open) | `JIRBackwardMethodCallSummaryHandler` extends it (backward exit mapping, no aliases, no rewriting) |
 | `JIRMethodStartFlowFunction` | held by `JIRBackwardMethodStartFlowFunction` for type checks |
-| `TaintPassActionEvaluator`, `TaintConfigUtils.accept`/`applicableRules` | inverse pass-through (swapped positions), star-unroll cleaner check |
+| `TaintPassActionEvaluator`, `TaintConfigUtils.accept` | inverse pass-through (swapped positions) |
 | `JIRMethodCallRuleBasedSummaryRewriter.rewriteSummaryFact` | user-rule rewriting of demands |
 | `aliasesPersistedThroughCall` (extracted from `forEachAliasAfterCallStatement`) | call-site alias inversion |
 
@@ -191,7 +192,8 @@ cube is dropped (absorption). A cube with no mark literal is *unconditional*.
 | method-exit sink | per cube: exit source assigning the zero-edge marks (section 8) |
 | method-entry sink with mark literals | none (forward fires only unconditional entry sinks) |
 | unconditional call / entry / exit sink | the sink itself with the mark-free cubes (reported on Zero) |
-| pass-through, cleaner | unchanged (inverted by the flow functions), plus zero-edge copies of `CopyMark` / `RemoveMark` actions and of cleaner-condition marks |
+| pass-through | unchanged (inverted by the flow functions), plus zero-edge copies of `CopyMark` actions |
+| cleaner | the disjunction of its mark-free cubes, plus zero-edge copies of `RemoveMark` actions; none when every cube has a mark literal (section 9) |
 
 `trackFactsReachAnalysisEnd` is ignored: every derived rule is built as if the
 sink had none.
@@ -229,19 +231,29 @@ through the summary. Exit sinks are treated as zero-edge-only in every
 chain, as `JIRMethodExitRuleProvider` makes them in all analysis
 configurations.
 
-## 9. Star unrolling before `Exact` cleaners
+## 9. Cleaners
 
-An any-field sink demands the star `x.[any]·M`. The residual of an `Exact`
-cleaner `RemoveMark(x, M)` ("`M` below a path of length at least one") is not
-representable, and `Cleaner.kt` removes the whole star. Before the cleaners of
-a call run on such a demand, the call FF (`cleanerInputs`) replaces it by the
-equivalent union of the demand without its root `[any]`, the star content at
-length zero, and `a · demand.readAccessor(a)` for every accessor `a` of the
-cleaned value's static type (`JIRBackwardStarUnroller`: the element accessor
-for arrays; instance fields of the class, its superclasses and subclasses).
-Interfaces and `Object` are not unrolled. Unrolling is skipped when the
-cleaner's method has an any-field entry source for a cleaned mark, because
-forward drops that concrete star whole.
+A cleaner condition with a mark literal reads the forward fact before the
+call, which a demand does not determine, so backward ignores such cleaners:
+the provider keeps a cleaner only with the mark-free cubes of its condition
+(evaluated at the call site like any other condition) and drops it when there
+are none. Demands pass the ignored cleaners unchanged.
+
+`MethodTaintConfigurationResolver` (shared with forward) makes the common
+conditional cleaners unconditional. The condition becomes `True` when every
+action is an `Exact` `RemoveMark(M, P)` and the resolved condition is exactly
+the disjunction of the `ContainsMark(M, P)` checks the resolver derives from
+those actions (`P` and, for array and `Object` positions, `P.[e]`). A removal
+of an absent mark is a no-op, so forward removes the same marks. Not
+normalised: `RemoveAllMarks`, `ExactAndAnyField` reach, any-field positions
+(`ContainsMarkOnAnyField` is false on an abstract fact, while the removal
+records an exclusion on it) and `String` positions (the removal also clears
+`<string-bytes>`, which the condition does not read).
+
+An unconditional `Exact` cleaner `RemoveMark(M, x)` removes a whole star
+demand `x.[any]·M` (`Cleaner.kt` cannot represent the residual "`M` below at
+least one accessor"), although forward keeps `x.f·M`. Concrete demands on the
+same base and mark are absorbed into the star, so they are lost too.
 
 ## 10. Automata any-field exclusion depth
 
@@ -280,11 +292,12 @@ node is not final. The code is shared with forward.
   trackers of all forward contexts of a method are merged.
 * A refined backward edge that produces no demand does not emit a side-effect
   requirement.
-* Star unrolling covers only accessors of the static type, not rule-only
-  fields (`<rule-storage>`, `Map#MapValue`).
-* Mark literals of pass-through conditions are treated as satisfied; a
-  cleaner condition naming a mark at another position than the demand does
-  not fire.
+* Mark literals of pass-through conditions are treated as satisfied;
+  cleaners whose conditions need a mark are ignored (section 9).
+* An any-field sink behind an unconditional `Exact` cleaner of its value is
+  not reported (section 9). JVM cases: `CleanerDslAnalysisTest` matrix
+  `AnyField-Plain-*` and `field-store-any`,
+  `CleanerDslControlFlowAnalysisTest` `sequenceNestedAfterPlainSink-m1`.
 * Cleaners of a call do not filter demands that a callee summary produces on
   its arguments (user-rule cleaners are applied to the start demand).
 * Base-only modes are field-insensitive in both directions; Cactus is
