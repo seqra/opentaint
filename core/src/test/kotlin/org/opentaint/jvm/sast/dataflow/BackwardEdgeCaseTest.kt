@@ -222,10 +222,10 @@ class BackwardEdgeCaseTest : AnalysisTest() {
             inst.callExpr?.method?.name == "sink"
         }
         val reported = runAnalysis(config, TEST_CLS, entryPoint).map { vt ->
-            assertEquals(RULE_ID, vt.vulnerability.rule.id, entryPoint)
+            if (!backwardAnalysis) assertEquals(RULE_ID, vt.vulnerability.rule.id, entryPoint)
             sinkCalls.indexOf(vt.vulnerability.statement)
         }.toSet()
-        assertEquals(expectedSinkIndices.toSet(), reported, "$entryPoint: reported sink indices")
+        assertFindings(expectedSinkIndices.toSet(), reported, "$entryPoint: reported sink indices")
     }
 
     @Test

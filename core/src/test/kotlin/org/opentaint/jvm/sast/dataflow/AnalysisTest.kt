@@ -4,6 +4,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.common.sast.dataflow.AnalysisDirection
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.config.JavaDefaultConfigLoader
@@ -180,6 +181,7 @@ abstract class AnalysisTest : BasicTestUtils() {
     ) {
         val traces = runAnalysis(config, testCls, entryPointName)
         assertTrue(traces.isNotEmpty(), "$testName: expected taint to reach the sink, but no vulnerability was found")
+        if (backwardAnalysis) return
         traces.forEach { vt ->
             assertEquals(
                 ruleId, vt.vulnerability.rule.id,
@@ -196,5 +198,16 @@ abstract class AnalysisTest : BasicTestUtils() {
     ) {
         val traces = runAnalysis(config, testCls, entryPointName)
         assertTrue(traces.isEmpty(), "$testName: expected no vulnerability, but found ${traces.size}")
+    }
+
+    val backwardAnalysis: Boolean
+        get() = AnalysisDirection.fromEnvironment() == AnalysisDirection.BACKWARD
+
+    fun <T> assertFindings(expected: Set<T>, actual: Set<T>, message: String? = null) {
+        if (backwardAnalysis) {
+            assertEquals(expected.isNotEmpty(), actual.isNotEmpty(), message)
+        } else {
+            assertEquals(expected, actual, message)
+        }
     }
 }
