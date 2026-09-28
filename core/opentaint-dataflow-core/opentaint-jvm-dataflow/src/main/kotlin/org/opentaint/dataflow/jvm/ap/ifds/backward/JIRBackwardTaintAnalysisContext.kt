@@ -46,7 +46,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 
-internal class JIRBackwardTaintAnalysisContext(
+class JIRBackwardTaintAnalysisContext(
     private val forward: JIRTaintAnalysisContext,
     private val rules: TaintRulesProvider,
 ) : JIRTaintRuleContext by forward {

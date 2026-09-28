@@ -39,7 +39,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.jvm.graph.JMethodEnterInst
 
-internal class JIRBackwardMethodSequentFlowFunction(
+class JIRBackwardMethodSequentFlowFunction(
     private val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val taint: JIRBackwardTaintAnalysisContext,

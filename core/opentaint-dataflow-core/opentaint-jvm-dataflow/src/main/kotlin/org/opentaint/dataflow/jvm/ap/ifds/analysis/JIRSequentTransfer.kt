@@ -8,7 +8,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 
-internal interface JIRSequentTransfer {
+interface JIRSequentTransfer {
     fun propagate(
         initialFacts: Set<InitialFactAp>?,
         factAp: FinalFactAp,

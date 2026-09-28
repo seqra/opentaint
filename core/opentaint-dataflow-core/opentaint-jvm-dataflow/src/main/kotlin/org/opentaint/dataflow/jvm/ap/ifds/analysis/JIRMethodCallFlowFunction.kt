@@ -116,7 +116,7 @@ class JIRMethodCallFlowFunction(
         }
     }
 
-    internal fun applyTaintRules(
+    fun applyTaintRules(
         initialFacts: Set<InitialFactAp>,
         exclusion: ExclusionSet,
         factReader: FinalFactReader,
@@ -153,7 +153,7 @@ class JIRMethodCallFlowFunction(
         )
     }
 
-    internal fun applyCleanersOrCallToStart(
+    fun applyCleanersOrCallToStart(
         originalFactReader: FinalFactReader,
         unmappedCallerFactAp: FinalFactAp,
         startFactBase: AccessPathBase,

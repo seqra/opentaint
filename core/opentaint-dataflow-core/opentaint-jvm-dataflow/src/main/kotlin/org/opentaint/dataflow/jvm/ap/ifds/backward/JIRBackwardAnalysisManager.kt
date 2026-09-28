@@ -40,7 +40,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.util.analysis.ApplicationGraph
 
-internal class JIRBackwardAnalysisManager private constructor(
+class JIRBackwardAnalysisManager private constructor(
     private val forward: JIRAnalysisManager,
     private val delegate: JIRAnalysisManager,
 ) : TaintAnalysisManager by delegate {

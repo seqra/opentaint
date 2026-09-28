@@ -7,7 +7,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodStartFlowFunction.StartFact
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodStartFlowFunction
 
-internal class JIRBackwardMethodStartFlowFunction(
+class JIRBackwardMethodStartFlowFunction(
     apManager: ApManager,
     context: JIRMethodAnalysisContext,
     private val zeroOnly: Boolean,

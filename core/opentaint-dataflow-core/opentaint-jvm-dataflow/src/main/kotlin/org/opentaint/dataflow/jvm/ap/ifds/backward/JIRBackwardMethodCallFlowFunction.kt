@@ -34,7 +34,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
 import org.opentaint.util.onSome
 
-internal class JIRBackwardMethodCallFlowFunction(
+class JIRBackwardMethodCallFlowFunction(
     private val apManager: ApManager,
     private val analysisContext: JIRMethodAnalysisContext,
     private val returnValue: JIRImmediate?,

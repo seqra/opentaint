@@ -64,9 +64,9 @@ class JIRAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
-    internal val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
+    val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
 ) : JIRLanguageManager(cp), BackwardTaintAnalysisManager {
-    internal val rootRefManager = refManager
+    val rootRefManager = refManager
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
@@ -76,7 +76,7 @@ class JIRAnalysisManager(
         val defaultGetModel: JIRMethodGetDefault? = null,
     )
 
-    internal val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
+    val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan
     val phase: Phase get() = currentPhase

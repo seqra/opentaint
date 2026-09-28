@@ -15,7 +15,7 @@ import org.opentaint.dataflow.taint.accessors
 import org.opentaint.dataflow.taint.base
 import org.opentaint.dataflow.taint.hasAnyField
 
-internal class JIRBackwardTaintCleanActionEvaluator(
+class JIRBackwardTaintCleanActionEvaluator(
     private val forward: TaintCleanActionEvaluator = TaintCleanActionEvaluator(),
 ) {
     fun evaluator(positionTypeResolver: PositionTypeResolver): JIRTaintCleanActionEvaluator =
