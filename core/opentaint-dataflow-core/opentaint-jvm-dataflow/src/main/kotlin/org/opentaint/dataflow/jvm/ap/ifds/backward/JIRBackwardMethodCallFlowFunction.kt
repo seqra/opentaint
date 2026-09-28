@@ -1,7 +1,9 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.AnyAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -13,6 +15,11 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.Drop
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFlowFunction.ZeroCallFact
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
+import org.opentaint.dataflow.configuration.TaintCleanReach
+import org.opentaint.dataflow.configuration.jvm.PositionAccessor
+import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
+import org.opentaint.dataflow.configuration.jvm.RemoveMark
+import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
@@ -23,16 +30,19 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodPositionBaseTypeResolver
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.applyCleaner
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintCleanActionEvaluator
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.jvm.util.callee
 import org.opentaint.dataflow.taint.EvaluatedPass
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.TaintFactAwareConditionEvaluator
 import org.opentaint.dataflow.taint.TaintPassActionInverseEvaluator
+import org.opentaint.ir.api.jvm.JIRType
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstanceCallExpr
+import org.opentaint.jvm.graph.JMethodEnterInst
 import org.opentaint.util.onSome
 
 class JIRBackwardMethodCallFlowFunction(
@@ -196,12 +206,10 @@ class JIRBackwardMethodCallFlowFunction(
         )
 
         val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, calleeFact)
-        val cleanerResults = applyCleaner(
-            cleanRules,
-            FinalFactReader(calleeFact, apManager),
-            conditionEvaluator,
-            JIRTaintCleanActionEvaluator(typeResolver)
-        )
+        val actionEvaluator = JIRTaintCleanActionEvaluator(typeResolver)
+        val cleanerResults = cleanerInputs(calleeFact, cleanRules, conditionEvaluator).flatMap { fact ->
+            applyCleaner(cleanRules, FinalFactReader(fact, apManager), conditionEvaluator, actionEvaluator)
+        }
 
         refinementReader.updateRefinement(conditionFactReader)
 
@@ -219,6 +227,64 @@ class JIRBackwardMethodCallFlowFunction(
             onDrop(trace)
         }
         return survivingFacts
+    }
+
+    private fun cleanerInputs(
+        calleeFact: FinalFactAp,
+        cleanRules: List<RuleWithCondition<TaintCleaner>>,
+        conditionEvaluator: TaintFactAwareConditionEvaluator,
+    ): List<FinalFactAp> {
+        val marks = starRootMarksRemoved(calleeFact, cleanRules, conditionEvaluator)
+        if (marks.isEmpty() || marks.any { it in methodEntryAnyFieldMarks }) return listOf(calleeFact)
+        return analysisContext.starUnroller.unroll(calleeFact, calleeBaseType(calleeFact.base)) ?: listOf(calleeFact)
+    }
+
+    private fun starRootMarksRemoved(
+        calleeFact: FinalFactAp,
+        cleanRules: List<RuleWithCondition<TaintCleaner>>,
+        conditionEvaluator: TaintFactAwareConditionEvaluator,
+    ): Set<TaintMarkAccessor> {
+        if (!calleeFact.startsWithAccessor(AnyAccessor)) return emptySet()
+        val star = calleeFact.readAccessor(AnyAccessor) ?: return emptySet()
+        val root = PositionAccess.Simple(calleeFact.base)
+
+        val marks = hashSetOf<TaintMarkAccessor>()
+        for (ruleWithCondition in cleanRules) {
+            val ruleMarks = ruleWithCondition.rule.actionsAfter.mapNotNull { action ->
+                if (action !is RemoveMark || action.reach != TaintCleanReach.Exact) return@mapNotNull null
+                if (action.position.resolveAp() != root) return@mapNotNull null
+                TaintMarkAccessor(action.mark.name).takeIf { star.startsWithAccessor(it) }
+            }
+            if (ruleMarks.isNotEmpty() && ruleWithCondition.isApplicable(conditionEvaluator)) {
+                marks += ruleMarks
+            }
+        }
+        return marks
+    }
+
+    private val methodEntryAnyFieldMarks: Set<TaintMarkAccessor> by lazy {
+        val enter = analysisContext.forwardEntryPoint as? JMethodEnterInst ?: return@lazy emptySet()
+        taintCtx.sourceRulesForMethodEntry(enter, fact = null)
+            .filter { !it.condition.isFalse }
+            .flatMapTo(hashSetOf()) { ruleWithCondition ->
+                ruleWithCondition.rule.actionsAfter
+                    .filter { (it.position as? PositionWithAccess)?.access == PositionAccessor.AnyFieldAccessor }
+                    .map { TaintMarkAccessor(it.mark.name) }
+            }
+    }
+
+    private fun RuleWithCondition<TaintCleaner>.isApplicable(conditionEvaluator: TaintFactAwareConditionEvaluator): Boolean =
+        when {
+            condition.isFalse -> false
+            condition.isTrue -> true
+            else -> conditionEvaluator.evalWithAssumptionsCheck(condition.expr)
+        }
+
+    private fun calleeBaseType(base: AccessPathBase): JIRType? = when (base) {
+        is AccessPathBase.Return -> returnValue?.type
+        is AccessPathBase.This -> (callExpr as? JIRInstanceCallExpr)?.instance?.type
+        is AccessPathBase.Argument -> callExpr.args.getOrNull(base.idx)?.type
+        else -> null
     }
 
     override fun propagateUnresolvedCallFact(

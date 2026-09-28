@@ -40,10 +40,6 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
         private const val LAMBDA_RESOLUTION =
             "lambda call resolution needs forward type-info facts; the lambda body holding the sink is never analysed backward, so no demand is seeded"
 
-        private const val STAR_DEMAND_EXACT_CLEANER =
-            "the any-field sink is demanded as the star path x.[any].M; an Exact cleaner on x removes the whole star in Cleaner.kt, " +
-                "while forward holds the mark on concrete paths x.f...M that the same cleaner keeps"
-
         private const val STAR_FACT_EXACT_CLEANER =
             "forward holds the any-field entry fact as the star path x.[any].M when the Exact cleaner on x runs in the same method and " +
                 "Cleaner.kt removes the whole star; backward demands the concrete path x.k.M, which the cleaner keeps"
@@ -51,10 +47,6 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
         private const val FORWARD_KNOWN_FALSE_NEGATIVE =
             "the forward suite disables this flow as a known false negative (List<List<T>>); the nested element is representable here " +
                 "and backward reports the real flow, while forward drops the vulnerability its IFDS facts reach"
-
-        private const val AUTOMATA_STAR_KEPT =
-            "the any-field sink is demanded as the star x.[any].M; in Automata an Exact cleaner on x returns the star unchanged, " +
-                "so the demand still matches the root-level mark the Plain source produced and the cleaner removed"
 
         private val ALL_MODES = ApMode.entries.toSet()
         private val TREE = setOf(ApMode.Tree)
@@ -65,29 +57,11 @@ abstract class BackwardForwardDifferentialTest : BackwardAnalysisTest() {
 
         val commonDivergences: List<Divergence> = buildList {
             val java = ForwardSuiteCases.JAVA_REACHABILITY
-            val dsl = ForwardSuiteCases.CLEANER_DSL
-            val flow = ForwardSuiteCases.CLEANER_CONTROL_FLOW
             val dual = ForwardSuiteCases.CLEANER_STAR_DUAL
 
             add(divergence(java, "lambdaCaptureFlow", "reach", LAMBDA_RESOLUTION, ALL_MODES, false))
             add(divergence(java, "streamFlatMapFlow", "reach", FORWARD_KNOWN_FALSE_NEGATIVE, AUTOMATA, true))
-
-            for (markCount in 1..5) {
-                for (mark in 1..markCount) {
-                    val anyPlainAny = "cleaner-dsl-matrix-AnyField-Plain-AnyField-field-depth0-mark$mark"
-                    add(divergence(dsl, "matrix-$markCount-AnyField", anyPlainAny, STAR_DEMAND_EXACT_CLEANER, TREE, false))
-                    val plainPlainAny = "cleaner-dsl-matrix-Plain-Plain-AnyField-field-depth0-mark$mark"
-                    add(divergence(dsl, "matrix-$markCount-Plain", plainPlainAny, AUTOMATA_STAR_KEPT, AUTOMATA, true))
-                }
-            }
-            add(divergence(dsl, "field-store", "field-store-any", STAR_DEMAND_EXACT_CLEANER, TREE, false))
-            add(divergence(flow, "sequentialMarks", "sequenceNestedAfterPlainSink-m1", STAR_DEMAND_EXACT_CLEANER, TREE, false))
-            add(divergence(dual, "nestedStoreThenCleanerThenAnySink", "any-sink", STAR_DEMAND_EXACT_CLEANER, TREE, false))
             add(divergence(dual, "inlineCleanerThenFieldSink", "field-sink", STAR_FACT_EXACT_CLEANER, TREE, true))
-
-            for (sink in listOf("sequenceAfterM1Sink", "sequenceAfterM2Sink", "sequenceAfterM4SourceSink", "sequenceAfterM3Sink", "sequenceAllCleanSink")) {
-                add(divergence(flow, "sequentialMarks", "$sink-m1", AUTOMATA_STAR_KEPT, AUTOMATA, true))
-            }
         }
     }
 

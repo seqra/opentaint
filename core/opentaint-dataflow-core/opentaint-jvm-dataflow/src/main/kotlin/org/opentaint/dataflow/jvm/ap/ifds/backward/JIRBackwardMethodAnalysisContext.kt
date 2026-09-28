@@ -21,6 +21,7 @@ class JIRBackwardMethodAnalysisContext(
     taint: JIRTaintAnalysisContext,
     val forwardEntryPoint: JIRInst?,
     val findings: JIRBackwardFindingTracker,
+    val starUnroller: JIRBackwardStarUnroller,
 ) : JIRMethodAnalysisContext(
     analysisManager,
     refManager,

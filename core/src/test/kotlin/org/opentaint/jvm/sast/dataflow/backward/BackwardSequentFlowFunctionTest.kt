@@ -83,6 +83,7 @@ class BackwardSequentFlowFunctionTest : BackwardAnalysisTest() {
             ),
             forwardEntryPoint = enter,
             findings = manager.findings,
+            starUnroller = manager.starUnroller,
         )
 
         return Fixture(JIRBackwardMethodSequentFlowFunction(apManager, context, statement), manager, statement)

@@ -79,6 +79,8 @@ class JIRBackwardAnalysisManager(
 
     val findings = JIRBackwardFindingTracker(recordDemandSeeds)
 
+    val starUnroller = JIRBackwardStarUnroller(cp)
+
     private val contexts = ConcurrentLinkedQueue<JIRBackwardMethodAnalysisContext>()
 
     @Volatile
@@ -238,6 +240,7 @@ class JIRBackwardAnalysisManager(
             taintContext,
             forwardEntryPoint,
             findings,
+            starUnroller,
         ).also {
             contexts.add(it)
         }
