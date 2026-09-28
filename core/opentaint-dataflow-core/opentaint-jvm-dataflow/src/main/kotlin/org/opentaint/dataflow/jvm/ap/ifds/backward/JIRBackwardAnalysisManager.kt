@@ -19,6 +19,7 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodStartPrecondition
+import org.opentaint.dataflow.graph.MethodInstGraph
 import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
@@ -44,8 +45,6 @@ class JIRBackwardAnalysisManager private constructor(
     constructor(forward: JIRAnalysisManager) : this(forward, JIRBackwardTaintRulesProvider(forward.taintConfig))
 
     override val relevantRuleIds get() = forward.relevantRuleIds
-
-    private val nonExitingStarts = JIRBackwardNonExitingStarts()
 
     private val forwardContexts by lazy { forward.contexts.groupBy { it.methodEntryPoint.method } }
 
@@ -90,8 +89,14 @@ class JIRBackwardAnalysisManager private constructor(
         graph: ApplicationGraph<CommonMethod, CommonInst>,
     ): MethodEntrypointResolver = object : MethodEntrypointResolver {
         override fun resolveEntryPoints(method: CommonMethod, context: MethodContext): List<CommonInst> =
-            graph.methodGraph(method).entryPoints().toList() + nonExitingStarts.resolve(graph.reversed.methodGraph(method))
+            graph.methodGraph(method).entryPoints().toList()
     }
+
+    override fun getMethodInstGraph(
+        graph: ApplicationGraph<CommonMethod, CommonInst>,
+        analysisContext: MethodAnalysisContext,
+        method: CommonMethod
+    ): MethodInstGraph = super.getMethodInstGraph(JIRBackwardExitWiringGraph(graph.reversed).reversed, analysisContext, method)
 
     override fun getMethodStartFlowFunction(
         apManager: ApManager,
@@ -99,8 +104,7 @@ class JIRBackwardAnalysisManager private constructor(
     ): MethodStartFlowFunction {
         analysisContext as JIRBackwardMethodAnalysisContext
         val entryPoint = analysisContext.methodEntryPoint
-        val zeroOnly = producesExceptionalControlFlow(entryPoint.statement) ||
-            nonExitingStarts.isNonExitingStart(entryPoint.method, entryPoint.statement)
+        val zeroOnly = producesExceptionalControlFlow(entryPoint.statement)
         return JIRBackwardMethodStartFlowFunction(apManager, analysisContext, zeroOnly)
     }
 

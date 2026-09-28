@@ -18,7 +18,7 @@ a source producing its mark is a source finding.
 
 | Engine notion | Forward | Backward |
 |---|---|---|
-| method entry point | `JMethodEnterInst` | `JMethodExitNormalInst`; `JMethodExitExceptionalInst` and non-exiting starts (Zero only) |
+| method entry point | `JMethodEnterInst` | `JMethodExitNormalInst`; `JMethodExitExceptionalInst` (Zero only) |
 | successors of `s` | forward successors | forward predecessors |
 | summary emission point | method exits | `JMethodEnterInst` |
 | edge at `s` | state before `s` | state after `s` |
@@ -34,13 +34,18 @@ a source producing its mark is a source finding.
   demand ever enters a callee through an exception (forward never propagates a
   fact to the caller along an exception either). No demand has the
   `Exception` base.
-* Non-exiting starts: code with no forward path to any exit is never
-  backward-reachable from the exits. `JIRBackwardNonExitingStarts` takes the
-  statements of the forward method graph that are reachable from the entry
-  and reach no exit, and adds one representative of every bottom strongly
-  connected component of that region as an extra entry point; every statement
-  of the region is backward-reachable from one of them. Like the exceptional
-  exit they start with Zero only (no caller demands).
+* Code that reaches no exit (an infinite loop after a sink) has no forward
+  path to an exit, so it would never be backward-reachable from the exits.
+  `JIRBackwardExitWiringGraph` wraps the forward application graph: on every
+  `methodGraph` request (no caching) it marks, in a `BitSet` over instruction
+  indices, the statements from which an exit is reachable (walking
+  predecessors from the exit points) and gives every other statement an
+  extra forward edge to `JMethodExitNormalInst`. The backward manager builds
+  its method inst graph from `JIRBackwardExitWiringGraph(forward).reversed`,
+  so that code is backward-reachable from the normal exit. Consequence: a
+  caller demand entering at the normal exit also flows into that code. This
+  over-approximates (the code never returns, so no demand of the caller
+  truly depends on it) and can only add findings, never lose one.
 
 ## 2. Components
 
@@ -48,20 +53,21 @@ a source producing its mark is a source finding.
 `JIRAnalysisManager.createBackwardAnalysisManager` and shares the forward
 manager's classpath, `relevantRuleIds` and parameters. Its rules are the
 forward rules wrapped in `JIRBackwardTaintRulesProvider` (section 7). It
-inherits the call resolver (applied to `graph.reversed`), method inst graph,
-language manager, context serializer, fact type checker and edge
-post-processor, and overrides only:
+inherits the call resolver (applied to `graph.reversed`), language manager,
+context serializer, fact type checker and edge post-processor, and overrides
+only:
 
 | Hook | Backward |
 |---|---|
 | context | `JIRBackwardMethodAnalysisContext` (see section 1; backward fact mapper) |
-| entry points | entry points of the reversed method graph plus non-exiting starts |
+| entry points | entry points of the reversed method graph |
+| method inst graph | built from `JIRBackwardExitWiringGraph(graph.reversed).reversed` (section 1) |
 | start / sequent / call FF | `JIRBackwardMethodStartFlowFunction` / `...SequentFlowFunction` / `...CallFlowFunction` |
 | summary handler | `JIRBackwardMethodCallSummaryHandler` |
 | preconditions, side effects | trivial (`JIRBackwardPreconditions.kt`, empty handler) |
 
 Backward-only helpers: `JIRBackwardTaintRulesProvider`,
-`JIRBackwardNonExitingStarts`, `JIRBackwardMethodCallFactMapper` (delegates to
+`JIRBackwardExitWiringGraph`, `JIRBackwardMethodCallFactMapper` (delegates to
 the forward mapper).
 
 Call-site mapping: a demand on the call's result variable maps to `Return`
