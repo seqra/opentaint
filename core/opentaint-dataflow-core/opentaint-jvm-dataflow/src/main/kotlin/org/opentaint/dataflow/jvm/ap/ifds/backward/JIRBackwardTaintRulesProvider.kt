@@ -1,24 +1,21 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.AssignMark
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.ContainsMark
-import org.opentaint.dataflow.configuration.jvm.CopyMark
 import org.opentaint.dataflow.configuration.jvm.JirCondition
 import org.opentaint.dataflow.configuration.jvm.PositionAccessor
 import org.opentaint.dataflow.configuration.jvm.PositionWithAccess
-import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
-import org.opentaint.dataflow.configuration.jvm.TaintMark
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
@@ -27,10 +24,10 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
-import org.opentaint.dataflow.configuration.jvm.serialized.ItemInfo
-import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.configuration.mkAnd
+import org.opentaint.dataflow.configuration.mkFalse
 import org.opentaint.dataflow.configuration.mkOr
+import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.configuration.simplify
 import org.opentaint.dataflow.jvm.ap.ifds.taint.ContainsMarkOnAnyField
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -41,33 +38,29 @@ import org.opentaint.ir.api.jvm.JIRField
 import java.util.concurrent.ConcurrentHashMap
 
 class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : TaintRulesProvider {
-    private enum class Derivation { SOURCE_SINKS, SINK_SOURCES, CONDITIONAL_SOURCES, RESIDUAL_SINKS, SHADOW }
+    private enum class Derivation { SOURCE_SINKS, SINK_SOURCES, CONDITIONAL_SOURCES, RESIDUAL_SINKS, CLEANERS }
 
-    private val derived = ConcurrentHashMap<Pair<Derivation, Any>, List<Any>>()
+    private val cache = ConcurrentHashMap<Pair<Derivation, Any>, List<Any>>()
 
     override fun entryPointRulesForMethod(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
-    ): Iterable<TaintEntryPointSource> = emptyList()
+    ): Iterable<TaintEntryPointSource> =
+        base.sinkRulesForMethodEntry(method, statement, fact, allRelevant).derived(Derivation.SINK_SOURCES) { sink ->
+            sinkSource(sink, dropResult = true) { c, a -> TaintEntryPointSource(sink.method, c, a, sink.info, sink.serializedId) }
+        } + base.entryPointRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.CONDITIONAL_SOURCES) {
+            conditionalSource(it, dropResult = true) { c, a -> it.copy(condition = c, actionsAfter = a) }
+        }
 
     override fun sourceRulesForMethod(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintMethodSource> {
         val sources = base.sourceRulesForMethod(method, statement, fact, allRelevant)
-        if (allRelevant) return sources.map { it.withShadowInfo() }
+        if (allRelevant) return sources
 
-        val sinks = base.sinkRulesForMethod(method, statement, fact, allRelevant)
-        return sinks.flatMap { sink ->
-            derive(Derivation.SINK_SOURCES, sink) {
-                sinkSources(sink, shadow = false, callSite = true) { condition, actions ->
-                    TaintMethodSource(sink.method, condition, actions, sink.info, sink.serializedId)
-                }
-            }
-        } + sources.flatMap { source ->
-            derive(Derivation.CONDITIONAL_SOURCES, source) {
-                conditionalSources(source, callSite = true) { condition, actions ->
-                    source.copy(condition = condition, actionsAfter = actions)
-                }
-            }
+        return base.sinkRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.SINK_SOURCES) { sink ->
+            sinkSource(sink, dropResult = true) { c, a -> TaintMethodSource(sink.method, c, a, sink.info, sink.serializedId) }
+        } + sources.derived(Derivation.CONDITIONAL_SOURCES) {
+            conditionalSource(it, dropResult = true) { c, a -> it.copy(condition = c, actionsAfter = a) }
         }
     }
 
@@ -75,107 +68,75 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintMethodExitSource> {
         val sinks = base.sinkRulesForMethodExit(method, statement, fact, initialFacts = emptySet(), allRelevant)
-        return sinks.flatMap { sink ->
-            derive(Derivation.SINK_SOURCES, sink) {
-                sinkSources(sink, shadow = true, callSite = false) { condition, actions ->
-                    TaintMethodExitSource(sink.method, condition, actions, sink.info, sink.serializedId)
-                }
-            }
-        } + base.exitSourceRulesForMethod(method, statement, fact, allRelevant).flatMap { source ->
-            derive(Derivation.CONDITIONAL_SOURCES, source) {
-                conditionalSources(source, callSite = false) { condition, actions ->
-                    source.copy(condition = condition, actionsAfter = actions)
-                }
-            }
+        return sinks.derived(Derivation.SINK_SOURCES) { sink ->
+            sinkSource(sink, dropResult = false) { c, a -> TaintMethodExitSource(sink.method, c, a, sink.info, sink.serializedId) }
+        } + base.exitSourceRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.CONDITIONAL_SOURCES) {
+            conditionalSource(it, dropResult = false) { c, a -> it.copy(condition = c, actionsAfter = a) }
         }
     }
 
     override fun sinkRulesForMethod(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintMethodSink> =
-        base.sourceRulesForMethod(method, statement, fact, allRelevant).flatMap { source ->
-            derive(Derivation.SOURCE_SINKS, source) {
-                sourceSinks(source) { condition, id, meta ->
-                    TaintMethodSink(source.method, condition, emptyList(), id, meta, source.info, source.serializedId)
-                }
+        base.sourceRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.SOURCE_SINKS) { source ->
+            sourceSink(source) { c, id, meta ->
+                TaintMethodSink(source.method, c, emptyList(), id, meta, source.info, source.serializedId)
             }
-        } + base.sinkRulesForMethod(method, statement, fact, allRelevant).flatMap { sink ->
-            derive(Derivation.RESIDUAL_SINKS, sink) {
-                residualSinks(sink) { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
-            }
+        } + base.sinkRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.RESIDUAL_SINKS) { sink ->
+            sink.condition.markFree()?.let { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
         }
 
     override fun sinkRulesForMethodEntry(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintMethodEntrySink> =
-        base.entryPointRulesForMethod(method, statement, fact, allRelevant).flatMap { source ->
-            derive(Derivation.SOURCE_SINKS, source) {
-                sourceSinks(source) { condition, id, meta ->
-                    TaintMethodEntrySink(source.method, condition, emptyList(), id, meta, source.info, source.serializedId)
-                }
+        base.entryPointRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.SOURCE_SINKS) { source ->
+            sourceSink(source) { c, id, meta ->
+                TaintMethodEntrySink(source.method, c, emptyList(), id, meta, source.info, source.serializedId)
             }
-        } + base.sinkRulesForMethodEntry(method, statement, fact, allRelevant).flatMap { sink ->
-            derive(Derivation.RESIDUAL_SINKS, sink) {
-                residualSinks(sink) { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
-            }
+        } + base.sinkRulesForMethodEntry(method, statement, fact, allRelevant).derived(Derivation.RESIDUAL_SINKS) { sink ->
+            sink.condition.markFree()?.let { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
         }
 
     override fun sinkRulesForMethodExit(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, initialFacts: Set<InitialFactAp>?, allRelevant: Boolean
-    ): Iterable<TaintMethodExitSink> =
-        base.exitSourceRulesForMethod(method, statement, fact, allRelevant).flatMap { source ->
-            derive(Derivation.SOURCE_SINKS, source) {
-                sourceSinks(source) { condition, id, meta ->
-                    TaintMethodExitSink(source.method, condition, emptyList(), id, meta, source.info, source.serializedId)
-                }
+    ): Iterable<TaintMethodExitSink> {
+        val sinks = base.sinkRulesForMethodExit(method, statement, fact, initialFacts = emptySet(), allRelevant)
+        return base.exitSourceRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.SOURCE_SINKS) { source ->
+            sourceSink(source) { c, id, meta ->
+                TaintMethodExitSink(source.method, c, emptyList(), id, meta, source.info, source.serializedId)
             }
-        } + base.sinkRulesForMethodExit(method, statement, fact, initialFacts = emptySet(), allRelevant).flatMap { sink ->
-            derive(Derivation.RESIDUAL_SINKS, sink) {
-                residualSinks(sink) { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
-            }
+        } + sinks.derived(Derivation.RESIDUAL_SINKS) { sink ->
+            sink.condition.markFree()?.let { sink.copy(condition = it, trackFactsReachAnalysisEnd = emptyList()) }
         }
+    }
 
     fun sinkRulesForStaticField(field: JIRField, statement: CommonInst): List<TaintMethodSink> {
         val method = statement.location.method
         return base.sourceRulesForStaticField(field, statement, fact = null).flatMap { source ->
             derive(Derivation.SOURCE_SINKS, source to method) {
-                sourceSinks(source) { condition, id, meta ->
-                    TaintMethodSink(method, condition, emptyList(), id, meta, source.info, source.serializedId)
-                }
+                listOfNotNull(sourceSink(source) { c, id, meta ->
+                    TaintMethodSink(method, c, emptyList(), id, meta, source.info, source.serializedId)
+                })
             }
         }
     }
 
     override fun sourceRulesForStaticField(
         field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
-    ): Iterable<TaintStaticFieldSource> = emptyList()
+    ): Iterable<TaintStaticFieldSource> =
+        base.sourceRulesForStaticField(field, statement, fact, allRelevant).derived(Derivation.CONDITIONAL_SOURCES) {
+            conditionalSource(it, dropResult = true) { c, a -> it.copy(condition = c, actionsAfter = a) }
+        }
 
     override fun passTroughRulesForMethod(
         method: CommonMethod, statement: CommonInst?, fact: FactAp?, allRelevant: Boolean
-    ): Iterable<TaintPassThrough> =
-        base.passTroughRulesForMethod(method, statement, fact, allRelevant).map { rule ->
-            val copies = rule.actionsAfter.filterIsInstance<CopyMark>()
-            if (copies.isEmpty()) return@map rule
-            derive(Derivation.SHADOW, rule) {
-                listOf(rule.copy(actionsAfter = rule.actionsAfter + copies.map { it.copy(mark = it.mark.shadow()) }))
-            }.single()
-        }
+    ): Iterable<TaintPassThrough> = base.passTroughRulesForMethod(method, statement, fact, allRelevant)
 
     override fun cleanerRulesForMethod(
         method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean
     ): Iterable<TaintCleaner> =
-        base.cleanerRulesForMethod(method, statement, fact, allRelevant).flatMap { rule ->
-            derive(Derivation.SHADOW, rule) {
-                val condition = rule.condition.markFree() ?: return@derive emptyList()
-                val removals = rule.actionsAfter.filterIsInstance<RemoveMark>().map { it.copy(mark = it.mark.shadow()) }
-                listOf(
-                    rule.copy(
-                        condition = condition,
-                        actionsAfter = rule.actionsAfter + removals,
-                        info = rule.info.withShadowMarks(),
-                    )
-                )
-            }
+        base.cleanerRulesForMethod(method, statement, fact, allRelevant).derived(Derivation.CLEANERS) { rule ->
+            rule.condition.markFree()?.let { rule.copy(condition = it) }
         }
 
     override fun selectRules(ruleIds: Set<String>) = base.selectRules(ruleIds)
@@ -183,98 +144,82 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
     override fun sinkMetaForSource(source: TaintConfigurationSource): Pair<String, TaintSinkMeta>? =
         base.sinkMetaForSource(source)
 
-    private fun TaintMethodSource.withShadowInfo(): TaintMethodSource {
-        if (info !is UserDefinedRuleInfo) return this
-        return derive(Derivation.SHADOW, this) { listOf(copy(info = info.withShadowMarks())) }.single()
-    }
-
     @Suppress("UNCHECKED_CAST")
     private inline fun <T> derive(kind: Derivation, rule: Any, crossinline body: () -> List<T>): List<T> =
-        derived.computeIfAbsent(kind to rule) { body() as List<Any> } as List<T>
+        cache.computeIfAbsent(kind to rule) { body() as List<Any> } as List<T>
 
-    private inline fun <T> sourceSinks(
+    private inline fun <R : Any, T> Iterable<R>.derived(kind: Derivation, crossinline body: (R) -> T?): List<T> =
+        flatMap { rule -> derive(kind, rule) { listOfNotNull(body(rule)) } }
+
+    private inline fun <T> sourceSink(
         source: TaintConfigurationSource,
         create: (Condition, String, TaintSinkMeta) -> T,
-    ): List<T> {
-        val unconditional = source.condition.cubes().filter { it.marks.isEmpty() }
-        if (unconditional.isEmpty() || source.actionsAfter.isEmpty()) return emptyList()
+    ): T? {
+        val condition = source.condition.markFree() ?: return null
+        if (source.actionsAfter.isEmpty()) return null
 
-        val produced = source.actionsAfter.flatMap { listOf(it.contained(it.mark), it.contained(it.mark.shadow())) }
-        val condition = mkAnd(listOf(mkOr(unconditional.map { mkAnd(it.rest.toList()) }), mkOr(produced)))
         val (id, meta) = base.sinkMetaForSource(source) ?: syntheticMeta(source)
-        return listOf(create(condition, id, meta))
+        return create(conjunction(listOf(condition, source.produced())), id, meta)
     }
 
-    private inline fun <T> conditionalSources(
+    private inline fun <T> conditionalSource(
         source: TaintConfigurationSource,
-        callSite: Boolean,
+        dropResult: Boolean,
         create: (Condition, List<AssignMark>) -> T,
-    ): List<T> = source.condition.cubes()
-        .filter { it.marks.isNotEmpty() && !(callSite && it.demandsResult()) }
-        .flatMap { cube ->
-            listOf(false, true).map { shadow ->
-                val produced = mkOr(source.actionsAfter.map { it.contained(it.mark.shadowIf(shadow)) })
-                create(mkAnd(cube.rest.toList() + produced), cube.actions(shadow))
-            }
-        }
+    ): T? {
+        val (condition, marks) = source.condition.markDemands(dropResult) ?: return null
+        if (source.actionsAfter.isEmpty()) return null
+        return create(conjunction(listOf(condition, source.produced())), marks)
+    }
 
-    private inline fun <T> sinkSources(
+    private inline fun <T> sinkSource(
         sink: TaintConfigurationSink,
-        shadow: Boolean,
-        callSite: Boolean,
+        dropResult: Boolean,
         create: (Condition, List<AssignMark>) -> T,
-    ): List<T> = sink.condition.cubes()
-        .filter { it.marks.isNotEmpty() && !(callSite && it.demandsResult()) }
-        .map { cube -> create(mkAnd(cube.rest.toList()), cube.actions(shadow)) }
-
-    private inline fun <T> residualSinks(sink: TaintConfigurationSink, create: (Condition) -> T): List<T> =
-        listOfNotNull(sink.condition.markFree()?.let(create))
+    ): T? =
+        sink.condition.markDemands(dropResult)?.let { (condition, marks) -> create(condition, marks) }
 
     private fun Condition.markFree(): Condition? {
-        val cubes = cubes().filter { it.marks.isEmpty() }
-        if (cubes.isEmpty()) return null
-        return mkOr(cubes.map { mkAnd(it.rest.toList()) })
+        val nnf = simplify()
+        if (nnf.positiveMarks().isNotEmpty()) return null
+        return nnf.withoutMarks().takeUnless { it.isFalse() }
     }
 
-    private fun syntheticMeta(source: TaintConfigurationSource): Pair<String, TaintSinkMeta> {
-        val id = source.serializedId ?: source.actionsAfter.joinToString(",") { it.mark.name }
-        return id to TaintSinkMeta(message = "", CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null)
-    }
-
-    private class Cube(val marks: Set<JirCondition>, val rest: Set<Condition>) {
-        operator fun plus(other: Cube) = Cube(marks + other.marks, rest + other.rest)
-
-        fun subsumes(other: Cube): Boolean = other.marks.containsAll(marks) && other.rest.containsAll(rest)
-
-        fun actions(shadow: Boolean): List<AssignMark> = marks.flatMap { it.markActions().orEmpty() }
-            .map { it.copy(mark = it.mark.shadowIf(shadow)) }
+    private fun Condition.markDemands(dropResult: Boolean): Pair<Condition, List<AssignMark>>? {
+        val nnf = simplify()
+        val marks = nnf.positiveMarks()
+            .filter { !dropResult || it.position.resolveBaseAp() != AccessPathBase.Return }
             .distinct()
-
-        fun demandsResult(): Boolean =
-            marks.any { atom -> atom.markActions().orEmpty().any { it.position.resolveBaseAp() == AccessPathBase.Return } }
+        val condition = nnf.withoutMarks()
+        if (marks.isEmpty() || condition.isFalse()) return null
+        return condition to marks
     }
 
-    private fun Condition.cubes(): List<Cube> {
-        val cubes = simplify().nnfCubes().distinctBy { it.marks to it.rest }
-        return cubes.filter { cube -> cubes.none { it !== cube && it.subsumes(cube) && !cube.subsumes(it) } }
+    private fun Condition.withoutMarks(): Condition = when (this) {
+        is CommonCondition.True -> this
+        is CommonCondition.Atom -> if (atom.markActions() != null) mkTrue() else this
+        is CommonCondition.Not -> if ((arg as? CommonCondition.Atom)?.atom?.markActions() != null) mkTrue() else this
+        is CommonCondition.And -> conjunction(args.map { it.withoutMarks() })
+        is CommonCondition.Or -> args.map { it.withoutMarks() }
+            .junction(absorbing = mkTrue(), neutral = mkFalse(), ::mkOr) { (it as? CommonCondition.Or)?.args }
     }
 
-    private fun Condition.nnfCubes(): List<Cube> = when (this) {
-        is CommonCondition.True -> listOf(EMPTY_CUBE)
-        is CommonCondition.Atom -> listOf(if (atom.markActions() != null) Cube(setOf(atom), emptySet()) else Cube(emptySet(), setOf(this)))
-        is CommonCondition.Not -> when (val arg = arg) {
-            is CommonCondition.True -> emptyList()
-            is CommonCondition.Atom -> listOf(if (arg.atom.markActions() != null) EMPTY_CUBE else Cube(emptySet(), setOf(this)))
-            else -> error("Condition is not in NNF: $this")
-        }
-        is CommonCondition.And -> args.fold(listOf(EMPTY_CUBE)) { cubes, arg ->
-            val argCubes = arg.nnfCubes()
-            cubes.flatMap { cube -> argCubes.map { cube + it } }
-        }
-        is CommonCondition.Or -> args.flatMap { it.nnfCubes() }
+    private fun conjunction(args: List<Condition>): Condition =
+        args.junction(absorbing = mkFalse(), neutral = mkTrue(), ::mkAnd) { (it as? CommonCondition.And)?.args }
+
+    private inline fun List<Condition>.junction(
+        absorbing: Condition,
+        neutral: Condition,
+        make: (List<Condition>) -> Condition,
+        operands: (Condition) -> List<Condition>?,
+    ): Condition {
+        val args = flatMap { operands(it) ?: listOf(it) }.filter { it != neutral }.distinct()
+        return if (absorbing in args) absorbing else make(args)
     }
 
-    private fun AssignMark.contained(mark: TaintMark): Condition {
+    private fun TaintConfigurationSource.produced(): Condition = mkOr(actionsAfter.map { it.contained() })
+
+    private fun AssignMark.contained(): Condition {
         val position = position
         if (position is PositionWithAccess && position.access == PositionAccessor.AnyFieldAccessor) {
             return CommonCondition.Atom(ContainsMarkOnAnyField(position.base, mark))
@@ -282,17 +227,12 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
         return CommonCondition.Atom(ContainsMark(position, mark))
     }
 
-    private class ShadowRuleInfo(original: UserDefinedRuleInfo) : UserDefinedRuleInfo {
-        override val relevantTaintMarks: Set<String> =
-            original.relevantTaintMarks + original.relevantTaintMarks.map { TaintMark(it).shadow().name }
+    private fun syntheticMeta(source: TaintConfigurationSource): Pair<String, TaintSinkMeta> {
+        val id = source.serializedId ?: source.actionsAfter.joinToString(",") { it.mark.name }
+        return id to TaintSinkMeta(message = "", CommonTaintConfigurationSinkMeta.Severity.Warning, cwe = null)
     }
 
-    private fun ItemInfo?.withShadowMarks(): ItemInfo? = if (this is UserDefinedRuleInfo) ShadowRuleInfo(this) else this
-
     companion object {
-        private const val SHADOW_SUFFIX = "\$zero-edge"
-        private val EMPTY_CUBE = Cube(emptySet(), emptySet())
-
         private fun JirCondition.markActions(): List<AssignMark>? = when (this) {
             is ContainsMark -> listOf(AssignMark(mark, position))
             is ContainsMarkOnAnyField -> listOf(
@@ -302,24 +242,11 @@ class JIRBackwardTaintRulesProvider(private val base: TaintRulesProvider) : Tain
             else -> null
         }
 
-        private fun TaintMark.shadow(): TaintMark = TaintMark(name + SHADOW_SUFFIX)
-
-        private fun TaintMark.shadowIf(shadow: Boolean): TaintMark = if (shadow) shadow() else this
-
-        fun isShadowMark(mark: TaintMarkAccessor): Boolean = mark.mark.endsWith(SHADOW_SUFFIX)
-
-        fun Condition.markPositions(): List<AssignMark> = when (this) {
-            is CommonCondition.True -> emptyList()
-            is CommonCondition.Atom -> when (val atom = atom) {
-                is ContainsMark -> listOf(AssignMark(atom.mark, atom.position))
-                is ContainsMarkOnAnyField -> listOf(
-                    AssignMark(atom.mark, PositionWithAccess(atom.position, PositionAccessor.AnyFieldAccessor))
-                )
-                else -> emptyList()
-            }
-            is CommonCondition.Not -> arg.markPositions()
-            is CommonCondition.And -> args.flatMap { it.markPositions() }
-            is CommonCondition.Or -> args.flatMap { it.markPositions() }
+        fun Condition.positiveMarks(): List<AssignMark> = when (this) {
+            is CommonCondition.Atom -> atom.markActions().orEmpty()
+            is CommonCondition.And -> args.flatMap { it.positiveMarks() }
+            is CommonCondition.Or -> args.flatMap { it.positiveMarks() }
+            is CommonCondition.True, is CommonCondition.Not -> emptyList()
         }
     }
 }

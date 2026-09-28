@@ -2,8 +2,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.FactTypeChecker
-import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -11,8 +10,10 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
+import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
+import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
@@ -26,8 +27,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.isShadowMark
-import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.markPositions
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintRulesProvider.Companion.positiveMarks
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -56,8 +56,12 @@ class JIRBackwardMethodSequentFlowFunction(
 
             is JIRThrowInst -> applyUnconditionalExitSinks(AccessPathBase.Exception)
 
-            is JMethodEnterInst -> sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
-                .applySinkRules(entrySinkRules(currentInst), factReader = null, markAfterAnyFieldResolver = null)
+            is JMethodEnterInst -> {
+                sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
+                    .applySinkRules(entrySinkRules(currentInst), factReader = null, markAfterAnyFieldResolver = null)
+                applySourceRules(entrySourceRules(currentInst), AccessPathBase.Return, fact = null, refiner = null)
+                    .forEach { add(Sequent.ZeroToFact(it, TraceInfo.Flow)) }
+            }
         }
     }
 
@@ -75,8 +79,8 @@ class JIRBackwardMethodSequentFlowFunction(
 
         when (currentInst) {
             is JIRAssignInst -> {
-                applyStaticFieldSinks(currentInst, factAp, refiner)
-                if (!refiner.hasRefinement) return super.propagate(
+                applyStaticFieldRules(currentInst, factAp, refiner, demands)
+                if (!refiner.hasRefinement && demands.isEmpty()) return super.propagate(
                     initialFacts, factAp, unchanged, propagateFact,
                     propagateFactWithRefinement, propagateFactWithAccessorExclude, sideEffect
                 )
@@ -99,14 +103,17 @@ class JIRBackwardMethodSequentFlowFunction(
             }
 
             is JMethodEnterInst -> {
-                val rules = entrySinkRules(currentInst)
-                if (!leavesThroughArgumentRoot(rules, initialFacts.orEmpty())) {
+                val sinks = entrySinkRules(currentInst)
+                val sources = entrySourceRules(currentInst)
+                val conditions = sinks.map { it.rule.condition } + sources.map { it.rule.condition }
+                if (!leavesThroughArgumentRoot(conditions, initialFacts.orEmpty())) {
                     val util = sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
-                    util.applySinkRules(rules, FinalFactReader(factAp, apManager), markAfterAnyFieldResolver = null)
+                    util.applySinkRules(sinks, FinalFactReader(factAp, apManager), markAfterAnyFieldResolver = null)
                     util.conditionReaders.forEach(refiner::add)
+                    demands += applySourceRules(sources, AccessPathBase.Return, factAp, refiner)
                 }
 
-                keptAtMethodEnter(initialFacts.orEmpty(), factAp)?.let(demands::add)
+                demands += factAp
             }
 
             else -> unchanged()
@@ -136,53 +143,74 @@ class JIRBackwardMethodSequentFlowFunction(
     private fun entrySinkRules(inst: JIRInst): List<RuleWithCondition<TaintMethodEntrySink>> =
         analysisContext.taint.sinkRulesForMethodEntry(inst, fact = null)
 
-    private fun applyStaticFieldSinks(inst: JIRAssignInst, fact: FinalFactAp, refiner: FactRefiner) {
+    private fun entrySourceRules(inst: JIRInst): List<RuleWithCondition<TaintEntryPointSource>> =
+        analysisContext.taint.sourceRulesForMethodEntry(inst, fact = null)
+
+    private fun <Source : TaintConfigurationSource> applySourceRules(
+        rules: List<RuleWithCondition<Source>>,
+        methodResult: AccessPathBase,
+        fact: FinalFactAp?,
+        refiner: FactRefiner?,
+    ): List<FinalFactAp> {
+        if (rules.isEmpty()) return emptyList()
+
+        val result = mutableListOf<FinalFactAp>()
+        val util = JIRSequentTaintUtil<Source, TaintConfigurationSink>(
+            apManager, currentInst, analysisContext, generateTrace = false, methodResult
+        )
+        util.applySourceRules(
+            rules,
+            initialFacts = emptySet(),
+            factReader = fact?.let { FinalFactReader(it, apManager) },
+            exclusion = fact?.exclusions ?: ExclusionSet.Universe,
+            createFinalFact = { f, _ -> result += f },
+            createEdge = { _, _, _ -> error("Unused operation") },
+            createNDEdge = { _, _, _ -> error("Unused operation") }
+        )
+        refiner?.let { util.conditionReaders.forEach(it::add) }
+        return result
+    }
+
+    private fun applyStaticFieldRules(
+        inst: JIRAssignInst,
+        fact: FinalFactAp,
+        refiner: FactRefiner,
+        demands: MutableList<FinalFactAp>,
+    ) {
         val field = (inst.rhv as? JIRFieldRef)?.field?.field?.takeIf { it.isStatic } ?: return
         val lhv = accessPathBase(inst.lhv) ?: return
         if (fact.base != lhv) return
 
         val sinks = analysisContext.rules.sinkRulesForStaticField(field, inst)
-        if (sinks.isEmpty()) return
+        val sources = analysisContext.rules.sourceRulesForStaticField(field, inst, fact = null).toList()
+        if (sinks.isEmpty() && sources.isEmpty()) return
 
         val rewriter = JIRMarkAwareConditionRewriter(
             CalleePositionToJIRValueResolver(inst.location.method), analysisContext, inst
         )
-        val rules = sinks.map { RuleWithCondition(it, rewriter.rewrite(it.condition)) }
 
         val util = sinkUtil<TaintMethodSink>(lhv)
-        util.applySinkRules(rules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver = null)
+        val sinkRules = sinks.map { RuleWithCondition(it, rewriter.rewrite(it.condition)) }
+        util.applySinkRules(sinkRules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver = null)
         util.conditionReaders.forEach(refiner::add)
+
+        val sourceRules = sources.map { RuleWithCondition(it, rewriter.rewrite(it.condition)) }
+        demands += applySourceRules(sourceRules, lhv, fact, refiner)
     }
 
     private fun leavesThroughArgumentRoot(
-        rules: List<RuleWithCondition<TaintMethodEntrySink>>,
+        conditions: List<Condition>,
         initialFacts: Set<InitialFactAp>,
     ): Boolean {
         if (initialFacts.isEmpty()) return false
 
-        val marks = rules.flatMapTo(hashSetOf()) { rule ->
-            rule.rule.condition.markPositions().map { TaintMarkAccessor(it.mark.name) }
+        val marks = conditions.flatMapTo(hashSetOf()) { condition ->
+            condition.positiveMarks().map { TaintMarkAccessor(it.mark.name) }
         }
         return initialFacts.all { initialFact ->
             val base = initialFact.base
             (base is AccessPathBase.Argument || base is AccessPathBase.This) &&
                 marks.any { initialFact.startsWithAccessor(it) }
-        }
-    }
-
-    private fun keptAtMethodEnter(initialFacts: Set<InitialFactAp>, fact: FinalFactAp): FinalFactAp? {
-        if (!fact.getAllAccessors().any(::isShadowMarkAccessor)) return fact
-        if (initialFacts.any { it.isAbstract() || it.getAllAccessors().any(::isShadowMarkAccessor) }) return fact
-        return fact.filterFact(ShadowMarkRemover)
-    }
-
-    private fun isShadowMarkAccessor(accessor: Accessor): Boolean = accessor is TaintMarkAccessor && isShadowMark(accessor)
-
-    private object ShadowMarkRemover : FactTypeChecker.FactApFilter {
-        override fun check(accessor: Accessor): FilterResult = when {
-            accessor !is TaintMarkAccessor -> FilterResult.FilterNext(this)
-            isShadowMark(accessor) -> FilterResult.Reject
-            else -> FilterResult.Accept
         }
     }
 
