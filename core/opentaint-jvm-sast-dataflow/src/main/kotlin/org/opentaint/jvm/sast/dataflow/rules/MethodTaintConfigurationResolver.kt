@@ -4,6 +4,7 @@ import kotlinx.collections.immutable.PersistentMap
 import kotlinx.collections.immutable.persistentHashMapOf
 import org.opentaint.dataflow.configuration.CommonCondition
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
+import org.opentaint.dataflow.configuration.TaintCleanReach
 import org.opentaint.dataflow.configuration.isFalse
 import org.opentaint.dataflow.configuration.jvm.Action
 import org.opentaint.dataflow.configuration.jvm.Argument
@@ -226,8 +227,34 @@ class MethodTaintConfigurationResolver(
         }
 
         is SerializedRule.Cleaner -> {
-            TaintCleaner(method, condition, cleans.flatMap { it.resolve(ctx) }, info, serializedId)
+            val actions = cleans.flatMap { it.resolve(ctx) }
+            val cleanerCondition = if (condition.checksRemovedMarks(actions)) mkTrue() else condition
+            TaintCleaner(method, cleanerCondition, actions, info, serializedId)
         }
+    }
+
+    private fun Condition.checksRemovedMarks(actions: List<Action>): Boolean {
+        val checks = (this as? CommonCondition.Or)?.args ?: listOf(this)
+        val checked = checks.map { check ->
+            (check as? CommonCondition.Atom)?.atom as? ContainsMark ?: return false
+        }
+        val removed = actions.flatMap { action ->
+            if (action !is RemoveMark || action.reach != TaintCleanReach.Exact) return false
+            val position = action.position
+            if (position.hasAnyField() || position.isString()) return false
+            position.resolveArrayPosition().map { ContainsMark(it, action.mark) }
+        }
+        return checked.toSet() == removed.toSet()
+    }
+
+    private fun Position.hasAnyField(): Boolean =
+        this is PositionWithAccess && (access == PositionAccessor.AnyFieldAccessor || base.hasAnyField())
+
+    private fun Position.isString(): Boolean = when (this) {
+        is Argument -> method.parameters.getOrNull(index)?.type?.typeName == JAVA_LANG_STRING
+        is Result -> method.returnType.typeName == JAVA_LANG_STRING
+        is This -> method.enclosingClass.name == JAVA_LANG_STRING
+        is ClassStatic, is PositionWithAccess -> false
     }
 
     private val ruleIdGen = AtomicInteger()
@@ -720,6 +747,8 @@ class MethodTaintConfigurationResolver(
 
     fun JirCondition.atom() = CommonCondition.Atom(this)
 }
+
+private const val JAVA_LANG_STRING = "java.lang.String"
 
 fun SinkRule.meta(): TaintSinkMeta = TaintSinkMeta(
     message = meta?.message() ?: "",
