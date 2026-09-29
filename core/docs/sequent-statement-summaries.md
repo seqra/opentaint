@@ -135,8 +135,8 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 
 - Tree (`AccessPath` + `AccessTree`): empty delta -> abstract node built from the path accessors
   (`createAbstractNodeFromAccessors`) annotated with the delta deep exclusion; node delta -> the
-  path accessors prepended to the delta node (`concatToLeafAbstractNodes` of the abstract path node,
-  so type filtering and access limits match `AccessTree.concat`).
+  path accessors prepended to the delta node one by one (`AccessNode.addParent`, the operation
+  behind `AccessTree.prependAccessor`, so access limits and normalization match prepend).
 - Automata: `AccessGraphFinalFactAp(base, initial.access, exclusions).concat(typeChecker, delta)`.
 - Cactus: built through `createAbstractNodeFromAp` + `AccessCactus.concat` when the manager is
   reachable, otherwise unsupported (the cactus initial fact is a stub).

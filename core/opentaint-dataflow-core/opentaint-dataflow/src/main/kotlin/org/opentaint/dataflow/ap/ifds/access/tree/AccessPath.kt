@@ -22,6 +22,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isT
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 import org.opentaint.dataflow.util.foldRightInt
 import org.opentaint.dataflow.util.reversedForEachInt
+import java.util.IdentityHashMap
 
 class AccessPath(
     private val apManager: TreeApManager,
@@ -189,10 +190,23 @@ class AccessPath(
     }
 
     override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
-        val node = with(apManager) {
-            createAbstractNodeFromAccessors(access?.toList() ?: IntArrayList())
+        val accessors = access?.toList() ?: IntArrayList()
+        return when (delta) {
+            is AccessTree.EmptyAccessTreeDelta -> {
+                val node = with(apManager) { createAbstractNodeFromAccessors(accessors) }
+                val annotated = delta.deepAccessorExclusion
+                    ?.let { node.annotateAbstractNodes(it, IdentityHashMap()) }
+                    ?: node
+                AccessTree(apManager, base, annotated, exclusions)
+            }
+
+            is AccessTree.NodeAccessTreeDelta -> {
+                val node = accessors.foldRightInt(delta.node) { accessor, acc -> acc.addParent(accessor) }
+                AccessTree(apManager, base, node, exclusions)
+            }
+
+            else -> error("Unexpected delta: $delta")
         }
-        return AccessTree(apManager, base, node, exclusions).concat(typeChecker, delta)
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {
