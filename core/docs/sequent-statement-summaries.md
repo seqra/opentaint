@@ -1,6 +1,6 @@
 # Sequent flow function via per-statement summaries
 
-Status: approved design, 2026-09-29. Branch `saloed/sequent-summaries` (from `origin/main` ce24bbbb9).
+Status: implemented, 2026-09-29. Branch `saloed/sequent-summaries` (from `origin/main` ce24bbbb9), final commit f94be0921.
 
 ## 1. Goal
 
@@ -147,3 +147,19 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 reset in `resetAnalysisCache` (the `ApManager` changes between phases). `generateTrace` is part of the
 key because it changes the Z2F handling of exit rules. The flow function computes its summary
 with a synchronized `lazy`; the summary is immutable, so trace-resolution workers may share it.
+
+## 7. Implementation notes
+
+Accepted deviations/decisions from the design above:
+
+1. Exit precondition: the queried fact at an exit boundary yields `Unchanged` plus exit-source
+   preconditions; the identity from `preconditionForFact` is only used by the recursive conditional
+   exit source (literal identity made SARIF show `return` twice).
+2. Exit rules keep the condition-reader refinement for facts unchanged by the rules (emitted
+   through the refinement path instead of `Unchanged`).
+3. `isTraceRequiredInstruction` = `JIRReturnInst || JMethodExitNormalInst`.
+4. A kill edge refinement is emitted as `SideEffectRequirement` (user decision).
+5. Generated methods (`JIRLambdaMethod`, `OpentaintLambdaProxyMethod`, `SpringGeneratedMethod`)
+   apply `JMethodBoundaryInstFeature` lazily in `instList`.
+6. javac with kept local names never emits `x = x.f` on one local; the composition case is
+   unit-tested on a constructed instruction.
