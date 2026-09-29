@@ -2,11 +2,12 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -14,31 +15,15 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.clearField
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.excludeField
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayReadAccessor
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayRemoveAfterWrite
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
 import org.opentaint.dataflow.taint.DefaultFactWithMarkAfterAnyFieldResolver.Companion.createMarkAfterAccessorResolver
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionEvaluator
-import org.opentaint.ir.api.jvm.JIRType
-import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
-import org.opentaint.ir.api.jvm.cfg.JIRBinaryExpr
-import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
-import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
-import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
-import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
-import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.jvm.graph.JMethodExitExceptionalInst
 import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.onSome
@@ -50,6 +35,10 @@ class JIRMethodSequentFlowFunction(
     private val generateTrace: Boolean,
 ): MethodSequentFlowFunction {
     private val factTypeChecker get() = analysisContext.factTypeChecker
+
+    private val summary: JIRStatementSummary by lazy {
+        JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis)
+    }
 
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         add(Sequent.ZeroToZero)
@@ -73,17 +62,18 @@ class JIRMethodSequentFlowFunction(
             initialFacts = emptySet<InitialFactAp>().takeIf { !generateTrace },
             factAp = currentFactAp,
             unchanged = { add(Sequent.Unchanged) },
-            propagateFact = { fact, trace ->
-                add(Sequent.ZeroToFact(fact, trace))
+            propagateTransferred = { fact, refinement ->
+                check(refinement == null || refinement is ExclusionSet.Universe) {
+                    "Zero to Fact edge can't be refined: $currentFactAp"
+                }
+                add(Sequent.ZeroToFact(fact, TraceInfo.Flow))
             },
+            refineInitial = { },
             propagateFactWithRefinement = { refiner, fact, trace ->
                 check(!refiner.hasRefinement) {
                     "Zero to Fact edge can't be refined: $currentFactAp"
                 }
                 add(Sequent.ZeroToFact(fact, trace))
-            },
-            propagateFactWithAccessorExclude = { _, _, _ ->
-                error("Zero to Fact edge can't be refined: $currentFactAp")
             },
             sideEffect = { add(it) }
         )
@@ -97,17 +87,19 @@ class JIRMethodSequentFlowFunction(
             initialFacts = setOf(initialFactAp),
             factAp = currentFactAp,
             unchanged = { add(Sequent.Unchanged) },
-            propagateFact = { fact, trace ->
-                add(Sequent.FactToFact(initialFactAp, fact, trace))
+            propagateTransferred = { fact, refinement ->
+                val initial = if (refinement == null) initialFactAp else initialFactAp.replaceExclusions(refinement)
+                add(Sequent.FactToFact(initial, fact, TraceInfo.Flow))
+            },
+            refineInitial = { exclusion ->
+                val refinedInitial = initialFactAp.replaceExclusions(exclusion)
+                if (refinedInitial != initialFactAp) {
+                    add(Sequent.SideEffectRequirement(refinedInitial))
+                }
             },
             propagateFactWithRefinement = { refiner, fact, trace ->
                 val refinedInitial = refiner.refineFact(initialFactAp)
                 val refinedFact = refiner.refineFact(fact)
-                add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
-            },
-            propagateFactWithAccessorExclude = { fact, accessor, trace ->
-                val refinedInitial = initialFactAp.excludeField(accessor)
-                val refinedFact = fact.excludeField(accessor)
                 add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
             },
             sideEffect = { add(it) }
@@ -122,17 +114,18 @@ class JIRMethodSequentFlowFunction(
             initialFacts = initialFacts,
             factAp = currentFactAp,
             unchanged = { add(Sequent.Unchanged) },
-            propagateFact = { fact, trace ->
-                add(Sequent.NDFactToFact(initialFacts, fact, trace))
+            propagateTransferred = { fact, refinement ->
+                check(refinement == null || refinement is ExclusionSet.Universe) {
+                    "NDF2F edge can't be refined: $currentFactAp"
+                }
+                add(Sequent.NDFactToFact(initialFacts, fact, TraceInfo.Flow))
             },
+            refineInitial = { },
             propagateFactWithRefinement = { refiner, fact, trace ->
                 check(!refiner.hasRefinement) {
                     "NDF2F edge can't be refined: $currentFactAp"
                 }
                 add(Sequent.NDFactToFact(initialFacts, fact, trace))
-            },
-            propagateFactWithAccessorExclude = { _, _, _ ->
-                error("NDF2F edge can't be refined: $currentFactAp")
             },
             sideEffect = { add(it) }
         )
@@ -142,35 +135,12 @@ class JIRMethodSequentFlowFunction(
         initialFacts: Set<InitialFactAp>?,
         factAp: FinalFactAp,
         unchanged: () -> Unit,
-        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        propagateTransferred: (FinalFactAp, ExclusionSet?) -> Unit,
+        refineInitial: (ExclusionSet) -> Unit,
         propagateFactWithRefinement: (FactRefiner, FinalFactAp, TraceInfo) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor, TraceInfo) -> Unit,
         sideEffect: (Sequent.SideEffect) -> Unit
     ) {
         when (currentInst) {
-            is JIRAssignInst -> {
-                sequentFlowAssign(
-                    currentInst.rhv, currentInst.lhv, factAp,
-                    unchanged,
-                    { propagateFact(it, TraceInfo.Flow) },
-                    { f, a -> propagateFactWithAccessorExclude(f, a, TraceInfo.Flow) }
-                )
-            }
-
-            is JIRReturnInst -> {
-                val access = currentInst.returnValue?.let { accessPathBase(it) }
-                simpleAssign(AccessPathBase.Return, access, factAp, { unchanged() }) {
-                    propagateFact(it, TraceInfo.Flow)
-                }
-            }
-
-            is JIRThrowInst -> {
-                val access = accessPathBase(currentInst.throwable)
-                simpleAssign(AccessPathBase.Exception, access, factAp, { unchanged() }) {
-                    propagateFact(it, TraceInfo.Flow)
-                }
-            }
-
             is JMethodExitNormalInst -> {
                 propagateExitFact(
                     initialFacts, AccessPathBase.Return,
@@ -186,9 +156,48 @@ class JIRMethodSequentFlowFunction(
             }
 
             else -> {
-                unchanged()
+                if (!transfer(factAp, propagateTransferred, refineInitial)) {
+                    unchanged()
+                }
             }
         }
+    }
+
+    private fun transfer(
+        factAp: FinalFactAp,
+        emit: (FinalFactAp, ExclusionSet?) -> Unit,
+        refine: (ExclusionSet) -> Unit
+    ): Boolean {
+        val edges = summary.edges[factAp.base] ?: return false
+
+        var fact = factAp
+        summary.typeFilters[fact.base]?.forEach { type ->
+            fact = factTypeChecker.filterFactByLocalType(type, fact) ?: return true
+        }
+
+        for (edge in edges) {
+            for (effect in MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(fact, edge.from)) {
+                val to = edge.to
+                when (effect) {
+                    is SummaryEdgeApplication.SummaryApRefinement -> {
+                        if (to == null) continue
+                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
+                        emit(result.replaceExclusions(fact.exclusions), null)
+                    }
+
+                    is SummaryEdgeApplication.SummaryExclusionRefinement -> {
+                        if (to == null) {
+                            refine(effect.exclusion)
+                            continue
+                        }
+                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
+                        emit(result.replaceExclusions(effect.exclusion), effect.exclusion)
+                    }
+                }
+            }
+        }
+
+        return true
     }
 
     private fun propagateExitFact(
@@ -220,379 +229,6 @@ class JIRMethodSequentFlowFunction(
             }
         }
 
-    }
-
-    private fun sequentFlowAssign(
-        assignFrom: JIRExpr,
-        assignTo: JIRValue,
-        currentFactAp: FinalFactAp,
-        unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        var fact = currentFactAp
-
-        val assignFromAccess = when (assignFrom) {
-            is JIRCastExpr -> MethodFlowFunctionUtils.mkAccess(assignFrom.operand)
-                ?.apply { fact = filterFactBaseType(assignFrom.type, fact) ?: return }
-                ?: return
-
-            is JIRImmediate -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-                ?.apply { fact = filterFactBaseType(assignFrom.type, fact) ?: return }
-                ?: return
-
-            is JIRArrayAccess -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-                ?.apply { fact = filterFactBaseType(assignFrom.array.type, fact) ?: return }
-                ?: return
-
-            is JIRFieldRef -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-                ?.apply { fact = filterFactBaseType(assignFrom.instance?.type, fact) ?: return }
-                ?.apply { fact = filterFactBaseType(assignFrom.field.enclosingType, fact) ?: return }
-                ?: return
-
-            is JIRBinaryExpr -> {
-                sequentFlowAssign(assignFrom.lhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
-                sequentFlowAssign(assignFrom.rhv, assignTo, currentFactAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
-                return
-            }
-
-            else -> null
-        }
-
-        val assignToAccess = when (assignTo) {
-            is JIRImmediate -> MethodFlowFunctionUtils.mkAccess(assignTo)
-                ?.apply { fact = filterFactBaseType(assignTo.type, fact) ?: return }
-                ?: return
-
-            is JIRArrayAccess -> MethodFlowFunctionUtils.mkAccess(assignTo)
-                ?.apply { fact = filterFactBaseType(assignTo.array.type, fact) ?: return }
-                ?: return
-
-            is JIRFieldRef -> MethodFlowFunctionUtils.mkAccess(assignTo)
-                ?.apply { fact = filterFactBaseType(assignTo.instance?.type, fact) ?: return }
-                ?.apply { fact = filterFactBaseType(assignTo.field.enclosingType, fact) ?: return }
-                ?: return
-
-            else -> error("Assign to complex value: $assignTo")
-        }
-
-        val factModified = fact != currentFactAp
-        val onUnchanged: (FinalFactAp) -> Unit = if (factModified) propagateFact else { _ -> unchanged() }
-
-        when {
-            assignFromAccess is MethodFlowFunctionUtils.MemoryAccess -> {
-                check(assignToAccess !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $assignTo = $assignFrom" }
-                fieldRead(
-                    assignToAccess.base, assignFromAccess, fact,
-                    onUnchanged, propagateFact, propagateFactWithAccessorExclude
-                )
-            }
-
-            assignToAccess is MethodFlowFunctionUtils.MemoryAccess -> {
-                fieldWrite(
-                    assignToAccess, assignFromAccess?.base, fact,
-                    onUnchanged, propagateFact, propagateFactWithAccessorExclude
-                )
-            }
-
-            else -> simpleAssign(assignToAccess.base, assignFromAccess?.base, fact, onUnchanged, propagateFact)
-        }
-    }
-
-    private fun MethodFlowFunctionUtils.Access.filterFactBaseType(
-        expectedType: JIRType?,
-        factAp: FinalFactAp
-    ): FinalFactAp? {
-        if (factAp.base != this.base || expectedType == null) return factAp
-        return factTypeChecker.filterFactByLocalType(expectedType, factAp)
-    }
-
-    private fun simpleAssign(
-        assignTo: AccessPathBase,
-        assignFrom: AccessPathBase?,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-    ) {
-        if (assignTo == assignFrom) {
-            unchanged(factAp)
-            return
-        }
-
-        // Assign can't overwrite fact
-        if (assignTo != factAp.base) {
-            unchanged(factAp)
-        }
-
-        if (assignFrom == factAp.base) {
-            propagateFact(factAp.rebase(assignTo))
-        }
-    }
-
-    private fun fieldRead(
-        assignTo: AccessPathBase,
-        access: MethodFlowFunctionUtils.MemoryAccess,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) = when (access) {
-        is MethodFlowFunctionUtils.RefAccess -> fieldRead(
-            assignTo, access.base, access.accessor, factAp,
-            unchanged, propagateFact, propagateFactWithAccessorExclude
-        )
-
-        is MethodFlowFunctionUtils.StaticRefAccess -> {
-            /**
-             * x = <static>.<class>.a | f(<static>.<class>.a)
-             * -------------------
-             * b = <static>.<class> | f(<static>.<class>.a), f(b.a)
-             * x = b.a
-             */
-
-            val auxiliaryBase = AccessPathBase.LocalVar.create(-1) // b
-            fieldRead(
-                auxiliaryBase,
-                access.base, access.classStaticAccessor, factAp,
-                unchanged = {
-                    if (it.base != auxiliaryBase) {
-                        unchanged(it)
-                    }
-                },
-                propagateFact = { f ->
-                    if (f.base != auxiliaryBase) {
-                        propagateFact(f)
-                    } else {
-                        fieldRead(
-                            assignTo,
-                            auxiliaryBase, access.accessor,
-                            factAp = f,
-                            unchanged = {
-                                if (it.base != auxiliaryBase) {
-                                    unchanged(it)
-                                }
-                            },
-                            propagateFact = {
-                                if (it.base != auxiliaryBase) {
-                                    propagateFact(it)
-                                }
-                            },
-                            propagateFactWithAccessorExclude = { f, ex ->
-                                if (f.base != auxiliaryBase) {
-                                    propagateFactWithAccessorExclude(f, ex)
-                                } else{
-                                    propagateFactWithAccessorExclude(factAp, ex)
-                                }
-                            }
-                        )
-                    }
-                },
-                propagateFactWithAccessorExclude = { f, ex ->
-                    if (f.base != auxiliaryBase) {
-                        propagateFactWithAccessorExclude(f, ex)
-                    }
-                }
-            )
-        }
-    }
-
-    private fun fieldRead(
-        assignTo: AccessPathBase,
-        instance: AccessPathBase,
-        accessor: Accessor,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        // Assign can't overwrite fact
-        if (assignTo != factAp.base) {
-            if (accessor !is ElementAccessor) {
-                unchanged(factAp)
-            } else {
-                propagateFact(factAp)
-            }
-        }
-
-        if (!factAp.mayReadAccessor(instance, accessor)) {
-            // Fact is irrelevant to current reading
-            return
-        }
-
-        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
-            val nonAbstractAp = factAp.removeAbstraction()
-            if (nonAbstractAp != null) {
-                fieldRead(
-                    assignTo, instance, accessor, nonAbstractAp,
-                    unchanged, propagateFact, propagateFactWithAccessorExclude
-                )
-            }
-
-            propagateAbstractFactWithFieldExcluded(factAp, accessor, propagateFactWithAccessorExclude)
-
-            return
-        }
-
-        check(factAp.startsWithAccessor(accessor))
-
-        val newAp = factAp.readAccessorTo(newBase = assignTo, accessor = accessor)
-        propagateFact(newAp)
-    }
-
-    private fun fieldWrite(
-        access: MethodFlowFunctionUtils.MemoryAccess,
-        assignFrom: AccessPathBase?,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) = when (access) {
-        is MethodFlowFunctionUtils.RefAccess -> fieldWrite(
-            access.base, listOf(access.accessor), assignFrom, factAp,
-            unchanged, propagateFact, propagateFactWithAccessorExclude
-        )
-
-        is MethodFlowFunctionUtils.StaticRefAccess -> fieldWrite(
-            access.base, listOf(access.accessor, access.classStaticAccessor), assignFrom, factAp,
-            unchanged, propagateFact, propagateFactWithAccessorExclude
-        )
-    }
-
-    private fun fieldWrite(
-        instance: AccessPathBase,
-        accessors: List<Accessor>,
-        assignFrom: AccessPathBase?,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        if (assignFrom == instance) {
-            if (factAp.base != instance) {
-                // Fact is irrelevant to current writing
-                unchanged(factAp)
-                return
-            } else {
-                /**
-                 * a.x = a | f(a)
-                 * -------------------
-                 * b = a | f(a), f(b)
-                 * a.x = b | f(b), f(b -> a.x), f(a -> a / {x})
-                 */
-
-                val auxiliaryBase = AccessPathBase.LocalVar.create(-1) // b
-                check(auxiliaryBase != instance)
-
-                fieldWrite(
-                    instance = instance,
-                    accessors = accessors,
-                    assignFrom = auxiliaryBase,
-                    factAp = factAp.rebase(auxiliaryBase), // f(b)
-                    unchanged = {
-                        if (it.base != auxiliaryBase) {
-                            unchanged(it)
-                        }
-                    },
-                    propagateFact = {
-                        if (it.base != auxiliaryBase) {
-                            propagateFact(it)
-                        }
-                    },
-                    propagateFactWithAccessorExclude = { f, a ->
-                        if (f.base != auxiliaryBase) {
-                            propagateFactWithAccessorExclude(f, a)
-                        }
-                    }
-                )
-
-                fieldWrite(
-                    instance = instance,
-                    accessors = accessors,
-                    assignFrom = auxiliaryBase,
-                    factAp = factAp, // f(a)
-                    unchanged = {
-                        if (it.base != auxiliaryBase) {
-                            unchanged(it)
-                        }
-                    },
-                    propagateFact = {
-                        if (it.base != auxiliaryBase) {
-                            propagateFact(it)
-                        }
-                    },
-                    propagateFactWithAccessorExclude = { f, a ->
-                        if (f.base != auxiliaryBase) {
-                            propagateFactWithAccessorExclude(f, a)
-                        }
-                    }
-                )
-
-                return
-            }
-        }
-
-        if (factAp.base == assignFrom) {
-            // Original rhs fact
-            unchanged(factAp)
-
-            // New lhs fact
-            val newAp = accessors.fold(factAp) { f, a -> f.writeToAccessor(instance, a) }
-            propagateFact(newAp)
-
-            analysisContext.aliasAnalysis?.forEachAliasAtStatement(currentInst, newAp) { aliased ->
-                propagateFact(aliased)
-            }
-
-            return
-        }
-
-        // We have fact on lhs and NO fact on the rhs -> remove fact from lhs
-
-        // todo hack: keep fact on the array elements
-        if (factAp.base == instance && accessors.any { it is ElementAccessor }) {
-            propagateFact(factAp)
-            return
-        }
-
-        val accessor = accessors.first()
-
-        if (!factAp.mayRemoveAfterWrite(instance, accessor)) {
-            // Fact is irrelevant to current writing
-            unchanged(factAp)
-            return
-        }
-
-        if (factAp.isAbstract() && accessor !in factAp.exclusions) {
-            val nonAbstractAp = factAp.removeAbstraction()
-            if (nonAbstractAp != null) {
-                fieldWrite(
-                    instance, accessors, assignFrom, nonAbstractAp,
-                    unchanged, propagateFact, propagateFactWithAccessorExclude
-                )
-            }
-
-            propagateAbstractFactWithFieldExcluded(factAp, accessor, propagateFactWithAccessorExclude)
-
-            return
-        }
-
-        check(factAp.startsWithAccessor(accessor))
-
-        val newAp = factAp.clearField(accessor) ?: return
-        propagateFact(newAp)
-    }
-
-    private fun propagateAbstractFactWithFieldExcluded(
-        factAp: FinalFactAp,
-        accessor: Accessor,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        val abstractAp = factAp.abstractOnly()
-        propagateFactWithAccessorExclude(abstractAp, accessor)
-
-        analysisContext.aliasAnalysis?.forEachAliasAtStatement(currentInst, abstractAp) { aliased ->
-            propagateFactWithAccessorExclude(aliased, accessor)
-        }
     }
 
     private fun applyMethodExitSinkRules(

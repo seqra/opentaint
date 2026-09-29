@@ -5,8 +5,6 @@ import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.FieldAccessor
-import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
-import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.ir.api.jvm.JIRField
 import org.opentaint.ir.api.jvm.cfg.JIRArgument
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
@@ -73,28 +71,4 @@ object MethodFlowFunctionUtils {
         is JIRConstant -> AccessPathBase.Constant(value.type.typeName, "$value")
         else -> null
     }
-
-    fun FinalFactAp.mayReadAccessor(base: AccessPathBase, accessor: Accessor): Boolean = when {
-        this.base != base -> false
-        startsWithAccessor(accessor) -> true
-        else -> isAbstract() && accessor !in exclusions
-    }
-
-    fun FinalFactAp.mayRemoveAfterWrite(base: AccessPathBase, accessor: Accessor): Boolean = when {
-        this.base != base -> false
-        startsWithAccessor(accessor) -> true
-        else -> isAbstract() && accessor !in exclusions
-    }
-
-    fun FinalFactAp.readAccessorTo(newBase: AccessPathBase, accessor: Accessor): FinalFactAp =
-        readAccessor(accessor)?.rebase(newBase) ?: error("Can't drop field")
-
-    fun FinalFactAp.writeToAccessor(newBase: AccessPathBase, accessor: Accessor): FinalFactAp =
-        prependAccessor(accessor).rebase(newBase)
-
-    fun FinalFactAp.clearField(field: Accessor): FinalFactAp? = clearAccessor(field)
-
-    fun InitialFactAp.excludeField(field: Accessor) = exclude(field)
-
-    fun FinalFactAp.excludeField(field: Accessor) = exclude(field)
 }

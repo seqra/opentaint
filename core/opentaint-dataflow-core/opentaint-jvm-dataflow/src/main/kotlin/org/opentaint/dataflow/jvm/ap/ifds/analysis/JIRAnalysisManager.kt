@@ -203,7 +203,9 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(currentInst)
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
-        return JIRMethodSequentFlowFunction(apManager, analysisContext, currentInst, generateTrace)
+        return analysisContext.cachedSequentFF(currentInst.location.index, generateTrace) {
+            JIRMethodSequentFlowFunction(apManager, analysisContext, currentInst, generateTrace)
+        }
     }
 
     override fun getMethodCallFlowFunction(

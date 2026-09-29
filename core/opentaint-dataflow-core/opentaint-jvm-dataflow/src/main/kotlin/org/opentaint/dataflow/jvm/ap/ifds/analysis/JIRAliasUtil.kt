@@ -19,9 +19,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.locals
 
-fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) =
-    forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
-
 fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: InitialFactAp, body: (InitialFactAp) -> Unit) =
     forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
