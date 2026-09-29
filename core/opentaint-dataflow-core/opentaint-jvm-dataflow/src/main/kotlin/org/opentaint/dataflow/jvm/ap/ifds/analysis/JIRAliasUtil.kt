@@ -61,6 +61,19 @@ fun JIRLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
     statement, fact, bases, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body
 )
 
+fun JIRLocalAliasAnalysis.forEachAliasPathAtStatement(
+    statement: JIRInst,
+    base: AccessPathBase,
+    body: (AccessPathBase, List<Accessor>) -> Unit
+) {
+    val local = base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(local, statement) ?: return
+    aliases.forEach { alias ->
+        val info = alias.relevantApInfo() ?: return@forEach
+        body(info.base, info.accessors.map { it.apAccessor() })
+    }
+}
+
 private fun AliasInfo.relevantApInfo(): AliasApInfo? =
     (this as? AliasApInfo)?.takeIf { it.base !is AccessPathBase.Constant }
 
