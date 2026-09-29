@@ -38,7 +38,7 @@ Path prefixes used below:
 ## Review Focus
 
 - Abstract incoming facts (`y.*`) on a field read must still trigger the `y.f.*` initial-fact refinement (FN risk) — pinned by the `x = y.f` edge set in Task 4 and the end-to-end suites in Task 5.
-- `x = x.f`: concrete `x.g` must be killed while the abstract part survives excluded — pinned by the `abstractOnly` edge in Task 4.
+- `x = x.f`: concrete `x.g` must be killed and an abstract `x.*` must still request `x.f.*` — pinned by the composed kill edge `x/{f} -> ⊥` in Task 4 and its `SideEffectRequirement` emission in Task 5.
 - Exit-sink vulnerabilities recorded on a boundary instruction: trace confirmation and SARIF location must not crash or lose the location — covered by Task 3 (`MultiReturnDataFlowTest`, SARIF exit-sink tests, querylang requirement sinks).
 - Lambda / Spring generated methods must behave like ordinary methods after gaining boundaries — Task 2 probe + suites.
 - Concurrent trace workers reading the cached flow function — Task 5 uses a synchronized cache and an immutable lazily-built summary.
@@ -419,12 +419,12 @@ git commit -m "refactor(jvm): apply method exit rules on exit boundary instructi
 
 **Files:**
 - Create: `JDF/analysis/JIRStatementSummary.kt`
+- Modify: `JDF/analysis/JIRAliasUtil.kt` (new alias-path helper)
 - Create: `JSAMPLES/sample/sequent/StatementSummarySample.java`
 - Test: `JDFT/ap/ifds/analysis/JIRStatementSummaryTest.kt` (create)
 
 **Interfaces:**
-- Consumes: `MethodFlowFunctionUtils.mkAccess`, `accessPathBase`, `Access`/`Simple`/`RefAccess`/`StaticRefAccess`/`MemoryAccess`;
-  `JIRLocalAliasAnalysis.forEachAliasAtStatement(statement, fact: InitialFactAp, body)` (`JDF/analysis/JIRAliasUtil.kt`).
+- Consumes: `MethodFlowFunctionUtils.mkAccess`, `accessPathBase`, `Access` / `MemoryAccess` / `RefAccess` / `StaticRefAccess`.
 - Produces:
 
 ```kotlin
@@ -432,17 +432,22 @@ class JIRStatementSummary(
     val edges: Map<AccessPathBase, List<Edge>>,
     val typeFilters: Map<AccessPathBase, List<JIRType>>,
 ) {
-    data class Edge(val from: InitialFactAp, val to: InitialFactAp, val abstractOnly: Boolean = false)
+    data class Edge(val from: InitialFactAp, val to: InitialFactAp?)
 
     companion object {
         val Empty: JIRStatementSummary
         fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary
     }
 }
+
+fun JIRLocalAliasAnalysis.forEachAliasPathAtStatement(
+    statement: JIRInst, base: AccessPathBase, body: (AccessPathBase, List<Accessor>) -> Unit
+)
 ```
 
-`edges` is keyed by `from.base`; a base the statement writes without an edge from it maps to an
-empty list (kill); a base absent from `edges` is untouched.
+`edges` is keyed by `from.base`; a base the statement touches but has no edge from maps to an
+empty list (kill); a base absent from `edges` is untouched. `to == null` is a kill edge that keeps
+the refinement of `from` (spec §3 "Kill edges").
 
 - [ ] **Step 1: Sample**
 
@@ -452,6 +457,7 @@ package sample.sequent;
 public class StatementSummarySample {
     static Object sField;
     Object f;
+    StatementSummarySample next;
 
     Object fieldRead(StatementSummarySample y) { return y.f; }
     void fieldWrite(StatementSummarySample y, Object x) { y.f = x; }
@@ -462,7 +468,14 @@ public class StatementSummarySample {
     void selfWrite(StatementSummarySample a) { a.f = a; }
     String cast(Object y) { return (String) y; }
     int binary(int a, int b) { return a + b; }
-    StatementSummarySample selfRead(StatementSummarySample x) { x = (StatementSummarySample) x.f; return x; }
+
+    StatementSummarySample selfRead(StatementSummarySample start) {
+        StatementSummarySample n = start;
+        while (n.next != null) {
+            n = n.next;
+        }
+        return n;
+    }
 }
 ```
 
@@ -491,8 +504,10 @@ import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
+import org.opentaint.ir.api.jvm.cfg.JIRValue
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 class JIRStatementSummaryTest : BasicTestUtils() {
     private object UnrollStrategy : AnyAccessorUnrollStrategy {
@@ -502,28 +517,27 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     private val ap = TreeApManager(UnrollStrategy, RefManager(), Cancellation())
     private val cls = "sample.sequent.StatementSummarySample"
     private val field = FieldAccessor(cls, "f", "java.lang.Object")
+    private val next = FieldAccessor(cls, "next", cls)
     private val staticField = FieldAccessor(cls, "sField", "java.lang.Object")
     private val classStatic = ClassStaticAccessor(cls)
 
     private fun insts(method: String): List<JIRInst> = findMethod(cls, method).instList.instructions
-    private inline fun <reified T> assignWith(method: String, pred: (JIRAssignInst) -> Boolean = { true }): JIRAssignInst =
-        insts(method).filterIsInstance<JIRAssignInst>().first { it.rhv is T && pred(it) }
-    private fun ret(method: String) = insts(method).filterIsInstance<JIRReturnInst>().single()
+    private fun assigns(method: String) = insts(method).filterIsInstance<JIRAssignInst>()
+    private fun base(v: JIRValue) = accessPathBase(v)!!
 
     private fun p(base: AccessPathBase, vararg path: Accessor): InitialFactAp =
         path.foldRight(ap.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
-    private fun InitialFactAp.ex(a: Accessor) = exclude(a)
 
     private fun summary(inst: JIRInst) = JIRStatementSummary.build(ap, inst, aliasAnalysis = null)
     private fun edges(inst: JIRInst) = summary(inst).edges.values.flatten().toSet()
 
     @Test
     fun `field read splits the instance and kills the target`() {
-        val inst = assignWith<JIRFieldRef>("fieldRead")
-        val x = accessPathBase(inst.lhv)!!
-        val y = accessPathBase((inst.rhv as JIRFieldRef).instance!!)!!
+        val inst = assigns("fieldRead").first { it.rhv is JIRFieldRef }
+        val x = base(inst.lhv)
+        val y = base((inst.rhv as JIRFieldRef).instance!!)
         assertEquals(setOf(
-            Edge(p(y).ex(field), p(y)),
+            Edge(p(y).exclude(field), p(y)),
             Edge(p(y, field), p(y, field)),
             Edge(p(y, field), p(x)),
         ), edges(inst))
@@ -532,11 +546,11 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `field write is a strong update of the field`() {
-        val inst = insts("fieldWrite").filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
-        val y = accessPathBase((inst.lhv as JIRFieldRef).instance!!)!!
-        val x = accessPathBase(inst.rhv as org.opentaint.ir.api.jvm.cfg.JIRValue)!!
+        val inst = assigns("fieldWrite").first { it.lhv is JIRFieldRef }
+        val y = base((inst.lhv as JIRFieldRef).instance!!)
+        val x = base(inst.rhv as JIRValue)
         assertEquals(setOf(
-            Edge(p(y).ex(field), p(y)),
+            Edge(p(y).exclude(field), p(y)),
             Edge(p(x), p(x)),
             Edge(p(x), p(y, field)),
         ), edges(inst))
@@ -544,12 +558,12 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `static read splits the class static base`() {
-        val inst = assignWith<JIRFieldRef>("staticRead")
-        val x = accessPathBase(inst.lhv)!!
+        val inst = assigns("staticRead").first { it.rhv is JIRFieldRef }
+        val x = base(inst.lhv)
         val s = AccessPathBase.ClassStatic
         assertEquals(setOf(
-            Edge(p(s).ex(classStatic), p(s)),
-            Edge(p(s, classStatic).ex(staticField), p(s, classStatic)),
+            Edge(p(s).exclude(classStatic), p(s)),
+            Edge(p(s, classStatic).exclude(staticField), p(s, classStatic)),
             Edge(p(s, classStatic, staticField), p(s, classStatic, staticField)),
             Edge(p(s, classStatic, staticField), p(x)),
         ), edges(inst))
@@ -557,12 +571,12 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `static write is a strong update of the static field`() {
-        val inst = insts("staticWrite").filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
-        val x = accessPathBase(inst.rhv as org.opentaint.ir.api.jvm.cfg.JIRValue)!!
+        val inst = assigns("staticWrite").first { it.lhv is JIRFieldRef }
+        val x = base(inst.rhv as JIRValue)
         val s = AccessPathBase.ClassStatic
         assertEquals(setOf(
-            Edge(p(s).ex(classStatic), p(s)),
-            Edge(p(s, classStatic).ex(staticField), p(s, classStatic)),
+            Edge(p(s).exclude(classStatic), p(s)),
+            Edge(p(s, classStatic).exclude(staticField), p(s, classStatic)),
             Edge(p(x), p(x)),
             Edge(p(x), p(s, classStatic, staticField)),
         ), edges(inst))
@@ -570,11 +584,11 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `array read is split like a field read`() {
-        val inst = assignWith<JIRArrayAccess>("arrayRead")
-        val x = accessPathBase(inst.lhv)!!
-        val y = accessPathBase((inst.rhv as JIRArrayAccess).array)!!
+        val inst = assigns("arrayRead").first { it.rhv is JIRArrayAccess }
+        val x = base(inst.lhv)
+        val y = base((inst.rhv as JIRArrayAccess).array)
         assertEquals(setOf(
-            Edge(p(y).ex(ElementAccessor), p(y)),
+            Edge(p(y).exclude(ElementAccessor), p(y)),
             Edge(p(y, ElementAccessor), p(y, ElementAccessor)),
             Edge(p(y, ElementAccessor), p(x)),
         ), edges(inst))
@@ -582,9 +596,9 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `array write is weak`() {
-        val inst = insts("arrayWrite").filterIsInstance<JIRAssignInst>().first { it.lhv is JIRArrayAccess }
-        val y = accessPathBase((inst.lhv as JIRArrayAccess).array)!!
-        val x = accessPathBase(inst.rhv as org.opentaint.ir.api.jvm.cfg.JIRValue)!!
+        val inst = assigns("arrayWrite").first { it.lhv is JIRArrayAccess }
+        val y = base((inst.lhv as JIRArrayAccess).array)
+        val x = base(inst.rhv as JIRValue)
         assertEquals(setOf(
             Edge(p(y), p(y)),
             Edge(p(x), p(x)),
@@ -594,43 +608,44 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `self write moves the old value into the field`() {
-        val inst = insts("selfWrite").filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
-        val a = accessPathBase(inst.rhv as org.opentaint.ir.api.jvm.cfg.JIRValue)!!
+        val inst = assigns("selfWrite").first { it.lhv is JIRFieldRef }
+        val a = base(inst.rhv as JIRValue)
         assertEquals(setOf(
-            Edge(p(a).ex(field), p(a)),
+            Edge(p(a).exclude(field), p(a)),
             Edge(p(a), p(a, field)),
         ), edges(inst))
     }
 
     @Test
-    fun `self read keeps only the abstract part of the target`() {
-        val inst = assignWith<JIRFieldRef>("selfRead")
-        val x = accessPathBase(inst.lhv)!!
-        val y = accessPathBase((inst.rhv as JIRFieldRef).instance!!)!!
-        if (x != y) return
+    fun `self read is the composition of a read into a temporary and a move`() {
+        val inst = assigns("selfRead").first {
+            val rhv = it.rhv
+            rhv is JIRFieldRef && rhv.instance?.let(::accessPathBase) == accessPathBase(it.lhv)
+        }
+        val x = base(inst.lhv)
         assertEquals(setOf(
-            Edge(p(x).ex(field), p(x), abstractOnly = true),
-            Edge(p(x, field), p(x)),
+            Edge(p(x).exclude(next), null),
+            Edge(p(x, next), p(x)),
         ), edges(inst))
     }
 
     @Test
     fun `cast moves the operand and filters it by the cast type`() {
-        val inst = assignWith<JIRCastExpr>("cast")
-        val x = accessPathBase(inst.lhv)!!
+        val inst = assigns("cast").first { it.rhv is JIRCastExpr }
+        val x = base(inst.lhv)
         val cast = inst.rhv as JIRCastExpr
-        val y = accessPathBase(cast.operand)!!
+        val y = base(cast.operand)
         assertEquals(setOf(Edge(p(y), p(y)), Edge(p(y), p(x))), edges(inst))
-        assert(cast.type in summary(inst).typeFilters[y].orEmpty())
+        assertTrue(cast.type in summary(inst).typeFilters[y].orEmpty())
     }
 
     @Test
     fun `binary expression moves both operands`() {
-        val inst = assignWith<JIRBinaryExpr>("binary")
-        val z = accessPathBase(inst.lhv)!!
+        val inst = assigns("binary").first { it.rhv is JIRBinaryExpr }
+        val z = base(inst.lhv)
         val bin = inst.rhv as JIRBinaryExpr
-        val a = accessPathBase(bin.lhv)!!
-        val b = accessPathBase(bin.rhv)!!
+        val a = base(bin.lhv)
+        val b = base(bin.rhv)
         assertEquals(setOf(
             Edge(p(a), p(a)), Edge(p(a), p(z)),
             Edge(p(b), p(b)), Edge(p(b), p(z)),
@@ -639,24 +654,48 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     @Test
     fun `return moves the value to the result and kills the old result`() {
-        val inst = ret("cast")
-        val x = accessPathBase(inst.returnValue!!)!!
+        val inst = insts("cast").filterIsInstance<JIRReturnInst>().single()
+        val x = base(inst.returnValue!!)
         assertEquals(setOf(Edge(p(x), p(x)), Edge(p(x), p(AccessPathBase.Return))), edges(inst))
         assertEquals(emptyList(), summary(inst).edges[AccessPathBase.Return])
     }
 }
 ```
 
-(The `selfRead` sample is compiled by javac into `x = x.f` only if the IR keeps the parameter
-local; the test skips itself otherwise — keep it, it pins the case when it occurs. If `javac`
-places the cast between, locate the `JIRFieldRef` assignment as written.)
+(If javac/JIR does not produce `n = n.next` with the same local in `selfRead`, the `first { }`
+lookup throws: adjust the sample until it does — the case must be pinned, never skipped.)
 
 - [ ] **Step 3: Run test to verify it fails**
 
 Run: `./gradlew :opentaint-dataflow-core:opentaint-jvm-dataflow:test --tests '*JIRStatementSummaryTest*'`
 Expected: compilation FAIL, `JIRStatementSummary` unresolved.
 
-- [ ] **Step 4: Implement `JIRStatementSummary.kt`**
+- [ ] **Step 4: Alias-path helper**
+
+In `JIRAliasUtil.kt`:
+
+```kotlin
+fun JIRLocalAliasAnalysis.forEachAliasPathAtStatement(
+    statement: JIRInst,
+    base: AccessPathBase,
+    body: (AccessPathBase, List<Accessor>) -> Unit
+) {
+    val local = base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(local, statement) ?: return
+    aliases.forEach { alias ->
+        val info = alias.relevantApInfo() ?: return@forEach
+        body(info.base, info.accessors.map { it.apAccessor() })
+    }
+}
+```
+
+(An alias `A` of `y` with accessors `acc` means the fact `y.p` also exists as `A.acc.p` — the same
+fold `applyAlias` performs.)
+
+- [ ] **Step 5: Implement `JIRStatementSummary.kt`**
+
+The builder works on a small internal pattern (`base`, accessor list, exclusions), composes
+patterns, then converts them to `InitialFactAp` once.
 
 ```kotlin
 package org.opentaint.dataflow.jvm.ap.ifds.analysis
@@ -686,39 +725,127 @@ class JIRStatementSummary(
     val edges: Map<AccessPathBase, List<Edge>>,
     val typeFilters: Map<AccessPathBase, List<JIRType>>,
 ) {
-    data class Edge(val from: InitialFactAp, val to: InitialFactAp, val abstractOnly: Boolean = false)
+    data class Edge(val from: InitialFactAp, val to: InitialFactAp?)
 
     companion object {
         val Empty = JIRStatementSummary(emptyMap(), emptyMap())
 
-        fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
-            Builder(apManager, inst, aliasAnalysis).build()
+        fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary {
+            val builder = Builder(inst, aliasAnalysis)
+            val transfer = builder.build() ?: return Empty
+            return JIRStatementSummary(transfer.toEdges(apManager), builder.typeFilters)
+        }
+
+        private val temporary = AccessPathBase.LocalVar.create(-1)
+    }
+
+    private data class Pattern(
+        val base: AccessPathBase,
+        val accessors: List<Accessor> = emptyList(),
+        val exclusions: Set<Accessor> = emptySet(),
+    ) {
+        fun exclude(accessor: Accessor) = copy(exclusions = exclusions + accessor)
+        fun append(rest: List<Accessor>) = copy(accessors = accessors + rest)
+
+        fun toFact(apManager: ApManager): InitialFactAp {
+            val path = accessors.foldRight(apManager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
+            return exclusions.fold(path) { f, a -> f.exclude(a) }
+        }
+    }
+
+    private data class PatternEdge(val from: Pattern, val to: Pattern?)
+
+    private class Transfer {
+        val edges = linkedMapOf<AccessPathBase, LinkedHashSet<PatternEdge>>()
+
+        fun touch(base: AccessPathBase) = edges.getOrPut(base) { linkedSetOf() }
+
+        fun add(from: Pattern, to: Pattern?) {
+            touch(from.base) += PatternEdge(from, to)
+        }
+
+        fun then(second: Transfer): Transfer {
+            val result = Transfer()
+            for ((base, firstEdges) in edges) {
+                result.touch(base)
+                for (edge in firstEdges) {
+                    val to = edge.to
+                    val secondEdges = to?.let { second.edges[it.base] }
+                    if (secondEdges == null) {
+                        result.add(edge.from, to)
+                        continue
+                    }
+
+                    var matched = false
+                    for (next in secondEdges) {
+                        val composed = compose(edge.from, to, next) ?: continue
+                        result.add(composed.from, composed.to)
+                        matched = true
+                    }
+
+                    if (!matched && edge.from.exclusions.isNotEmpty()) {
+                        result.add(edge.from, null)
+                    }
+                }
+            }
+
+            for ((base, secondEdges) in second.edges) {
+                if (base in edges) continue
+                result.touch(base)
+                secondEdges.forEach { result.add(it.from, it.to) }
+            }
+
+            return result
+        }
+
+        private fun compose(a: Pattern, b: Pattern, next: PatternEdge): PatternEdge? {
+            val c = next.from
+            val d = next.to
+            if (c.base != b.base) return null
+
+            if (b.accessors.size >= c.accessors.size && b.accessors.subList(0, c.accessors.size) == c.accessors) {
+                val rest = b.accessors.subList(c.accessors.size, b.accessors.size)
+                if (rest.isNotEmpty() && rest.first() in c.exclusions) return null
+                val from = if (rest.isEmpty()) a.copy(exclusions = a.exclusions + c.exclusions) else a
+                return PatternEdge(from, d?.append(rest))
+            }
+
+            if (c.accessors.subList(0, b.accessors.size) == b.accessors) {
+                val rest = c.accessors.subList(b.accessors.size, c.accessors.size)
+                if (rest.first() in a.exclusions) return null
+                return PatternEdge(a.append(rest).copy(exclusions = c.exclusions), d)
+            }
+
+            return null
+        }
+
+        fun eliminate(base: AccessPathBase): Transfer {
+            val result = Transfer()
+            for ((from, fromEdges) in edges) {
+                if (from == base) continue
+                result.touch(from)
+                fromEdges.filter { it.to?.base != base }.forEach { result.add(it.from, it.to) }
+            }
+            return result
+        }
+
+        fun toEdges(apManager: ApManager): Map<AccessPathBase, List<Edge>> =
+            edges.mapValues { (_, patternEdges) ->
+                patternEdges.map { Edge(it.from.toFact(apManager), it.to?.toFact(apManager)) }
+            }
     }
 
     private class Builder(
-        private val apManager: ApManager,
         private val inst: JIRInst,
         private val aliasAnalysis: JIRLocalAliasAnalysis?,
     ) {
-        private val edges = hashMapOf<AccessPathBase, LinkedHashSet<Edge>>()
-        private val typeFilters = hashMapOf<AccessPathBase, MutableList<JIRType>>()
+        val typeFilters = hashMapOf<AccessPathBase, MutableList<JIRType>>()
 
-        fun build(): JIRStatementSummary {
-            when (inst) {
-                is JIRAssignInst -> assign(inst.lhv, inst.rhv)
-                is JIRReturnInst -> move(AccessPathBase.Return, inst.returnValue?.let { accessPathBase(it) })
-                is JIRThrowInst -> move(AccessPathBase.Exception, accessPathBase(inst.throwable))
-                else -> return Empty
-            }
-            return JIRStatementSummary(edges.mapValues { it.value.toList() }, typeFilters)
-        }
-
-        private fun ap(base: AccessPathBase): InitialFactAp = apManager.mostAbstractInitialAp(base)
-
-        private fun touch(base: AccessPathBase) = edges.getOrPut(base) { linkedSetOf() }
-
-        private fun edge(from: InitialFactAp, to: InitialFactAp, abstractOnly: Boolean = false) {
-            touch(from.base) += Edge(from, to, abstractOnly)
+        fun build(): Transfer? = when (inst) {
+            is JIRAssignInst -> Transfer().also { assign(it, inst.lhv, inst.rhv) }
+            is JIRReturnInst -> Transfer().also { move(it, AccessPathBase.Return, inst.returnValue?.let { v -> accessPathBase(v) }) }
+            is JIRThrowInst -> Transfer().also { move(it, AccessPathBase.Exception, accessPathBase(inst.throwable)) }
+            else -> null
         }
 
         private fun filter(access: MethodFlowFunctionUtils.Access, type: JIRType?) {
@@ -726,10 +853,10 @@ class JIRStatementSummary(
             typeFilters.getOrPut(access.base) { mutableListOf() } += type
         }
 
-        private fun assign(lhv: JIRValue, rhv: JIRExpr) {
+        private fun assign(t: Transfer, lhv: JIRValue, rhv: JIRExpr) {
             if (rhv is JIRBinaryExpr) {
-                assign(lhv, rhv.lhv)
-                assign(lhv, rhv.rhv)
+                assign(t, lhv, rhv.lhv)
+                assign(t, lhv, rhv.rhv)
                 return
             }
 
@@ -757,20 +884,28 @@ class JIRStatementSummary(
             when {
                 from is MethodFlowFunctionUtils.MemoryAccess -> {
                     check(to !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $lhv = $rhv" }
-                    read(to.base, from)
+                    if (to.base != from.base) {
+                        read(t, to.base, from)
+                    } else {
+                        val first = Transfer().also { read(it, temporary, from) }
+                        val second = Transfer().also { move(it, to.base, temporary) }
+                        first.then(second).eliminate(temporary).edges.forEach { (base, edges) ->
+                            t.touch(base).addAll(edges)
+                        }
+                    }
                 }
 
-                to is MethodFlowFunctionUtils.MemoryAccess -> write(to, from?.base)
+                to is MethodFlowFunctionUtils.MemoryAccess -> write(t, to, from?.base)
 
-                else -> move(to.base, from?.base)
+                else -> move(t, to.base, from?.base)
             }
         }
 
-        private fun move(to: AccessPathBase, from: AccessPathBase?) {
-            touch(to)
+        private fun move(t: Transfer, to: AccessPathBase, from: AccessPathBase?) {
+            t.touch(to)
             if (from == null) return
-            edge(ap(from), ap(from))
-            if (from != to) edge(ap(from), ap(to))
+            t.add(Pattern(from), Pattern(from))
+            if (from != to) t.add(Pattern(from), Pattern(to))
         }
 
         private fun path(access: MethodFlowFunctionUtils.MemoryAccess): List<Accessor> = when (access) {
@@ -778,72 +913,68 @@ class JIRStatementSummary(
             is MethodFlowFunctionUtils.StaticRefAccess -> listOf(access.classStaticAccessor, access.accessor)
         }
 
-        private fun at(base: AccessPathBase, accessors: List<Accessor>): InitialFactAp =
-            accessors.foldRight(ap(base)) { a, f -> f.prependAccessor(a) }
-
-        private fun split(base: AccessPathBase, accessors: List<Accessor>) {
+        private fun split(t: Transfer, base: AccessPathBase, accessors: List<Accessor>) {
             for (i in accessors.indices) {
-                val prefix = at(base, accessors.subList(0, i))
-                edge(prefix.exclude(accessors[i]), prefix)
+                val prefix = Pattern(base, accessors.subList(0, i))
+                t.add(prefix.exclude(accessors[i]), prefix)
             }
         }
 
-        private fun read(to: AccessPathBase, access: MethodFlowFunctionUtils.MemoryAccess) {
-            val base = access.base
-            val accessors = path(access)
-            val source = at(base, accessors)
-
-            touch(to)
-            if (base != to) {
-                split(base, accessors)
-                edge(source, source)
-            } else {
-                edge(ap(base).exclude(accessors.first()), ap(base), abstractOnly = true)
+        private fun aliases(t: Transfer, base: AccessPathBase, accessor: Accessor) {
+            aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
+                t.add(Pattern(base).exclude(accessor), Pattern(aliasBase, aliasAccessors))
             }
-            edge(source, ap(to))
-            abstractAliases(base, accessors.first())
         }
 
-        private fun write(access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
+        private fun read(t: Transfer, to: AccessPathBase, access: MethodFlowFunctionUtils.MemoryAccess) {
+            val accessors = path(access)
+            val source = Pattern(access.base, accessors)
+
+            t.touch(to)
+            split(t, access.base, accessors)
+            t.add(source, source)
+            t.add(source, Pattern(to))
+            aliases(t, access.base, accessors.first())
+        }
+
+        private fun write(t: Transfer, access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
             val base = access.base
             val accessors = path(access)
-            val target = at(base, accessors)
+            val target = Pattern(base, accessors)
 
             if (accessors.first() is ElementAccessor) {
-                edge(ap(base), ap(base))
+                t.add(Pattern(base), Pattern(base))
             } else {
-                split(base, accessors)
-                abstractAliases(base, accessors.first())
+                split(t, base, accessors)
+                aliases(t, base, accessors.first())
             }
 
             if (from == null) return
-            if (from != base) edge(ap(from), ap(from))
-            edge(ap(from), target)
-            aliasAnalysis?.forEachAliasAtStatement(inst, target) { aliased -> edge(ap(from), aliased) }
-        }
-
-        private fun abstractAliases(base: AccessPathBase, accessor: Accessor) {
-            val from = ap(base).exclude(accessor)
-            aliasAnalysis?.forEachAliasAtStatement(inst, ap(base)) { aliased -> edge(from, aliased, abstractOnly = true) }
+            if (from != base) t.add(Pattern(from), Pattern(from))
+            t.add(Pattern(from), target)
+            aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
+                t.add(Pattern(from), Pattern(aliasBase, aliasAccessors + accessors))
+            }
         }
     }
 }
 ```
 
-Notes for the implementer (they encode the spec table, do not deviate):
-- `split(base, [a1..an])` emits `base.a1..ai/{a(i+1)} -> base.a1..ai` for every prefix — the identity
-  of everything except the accessed path, which makes abstract incoming facts refine on the accessed accessor.
-- An element write keeps the whole array (weak) and skips the abstract aliases, like today's
-  "keep fact on the array elements" branch.
-- Alias edges exist only for `LocalVar` bases (`forEachAliasAtStatement` returns nothing otherwise).
+Notes for the implementer (they encode the spec, do not deviate):
+- `split(base, [a1..an])` emits `base.a1..ai/{a(i+1)} -> base.a1..ai` for every prefix: the identity of
+  everything except the accessed path, which makes abstract incoming facts refine on the accessed accessor.
+- `x = x.f` / `x = x[i]` are `read(tmp) then move(x, tmp)` with `tmp` eliminated (spec §3 "Composition").
+  The composed kill edge `x/{f} -> ⊥` is load-bearing.
+- An element write keeps the whole array (weak) and adds no abstract aliases.
+- `AccessPathBase.LocalVar.create(-1)` is the same temporary base the old flow function used.
 
-- [ ] **Step 5: Run the test**
+- [ ] **Step 6: Run the test**
 
 Run: `./gradlew :opentaint-dataflow-core:opentaint-jvm-dataflow:test --tests '*JIRStatementSummaryTest*'`
-Expected: PASS. If an expectation fails because javac emitted a different shape (e.g. an extra
-local), fix the instruction lookup in the test, never the expected edge set.
+Expected: PASS (11 tests). If an expectation fails because javac emitted a different shape, fix the
+instruction lookup or the sample, never the expected edge set.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
 git add core/opentaint-dataflow-core/opentaint-jvm-dataflow
@@ -905,7 +1036,7 @@ In `JIRMethodSequentFlowFunction`:
         JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis)
     }
 
-    private fun transfer(factAp: FinalFactAp, emit: (FinalFactAp, ExclusionSet?) -> Unit): Boolean {
+    private fun transfer(factAp: FinalFactAp, emit: (FinalFactAp, ExclusionSet?) -> Unit, refine: (ExclusionSet) -> Unit): Boolean {
         val edges = summary.edges[factAp.base] ?: return false
 
         var fact = factAp
@@ -915,15 +1046,20 @@ In `JIRMethodSequentFlowFunction`:
 
         for (edge in edges) {
             for (effect in MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(fact, edge.from)) {
+                val to = edge.to
                 when (effect) {
                     is SummaryEdgeApplication.SummaryApRefinement -> {
-                        if (edge.abstractOnly) continue
-                        val result = edge.to.concat(factTypeChecker, effect.delta) ?: continue
+                        if (to == null) continue
+                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
                         emit(result.replaceExclusions(fact.exclusions), null)
                     }
 
                     is SummaryEdgeApplication.SummaryExclusionRefinement -> {
-                        val result = edge.to.concat(factTypeChecker, effect.delta) ?: continue
+                        if (to == null) {
+                            refine(effect.exclusion)
+                            continue
+                        }
+                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
                         emit(result.replaceExclusions(effect.exclusion), effect.exclusion)
                     }
                 }
@@ -937,7 +1073,9 @@ In `JIRMethodSequentFlowFunction`:
 2. Replace the three `propagate*` entry points' bodies so the non-exit path goes through
    `transfer` and emits per edge kind:
    - Z2F: `emit = { f, refinement -> check(refinement == null || refinement is ExclusionSet.Universe); add(Sequent.ZeroToFact(f, TraceInfo.Flow)) }`
-   - F2F: `emit = { f, refinement -> add(Sequent.FactToFact(if (refinement == null) initialFactAp else initialFactAp.replaceExclusions(refinement), f, TraceInfo.Flow)) }`
+   - F2F: `emit = { f, refinement -> add(Sequent.FactToFact(if (refinement == null) initialFactAp else initialFactAp.replaceExclusions(refinement), f, TraceInfo.Flow)) }`,
+     `refine = { ex -> initialFactAp.replaceExclusions(ex).takeIf { it != initialFactAp }?.let { add(Sequent.SideEffectRequirement(it)) } }`
+   - Z2F / NDF2F: `refine = { }` (their exclusions are `Universe`, nothing to refine)
    - NDF2F: `emit = { f, refinement -> check(refinement == null || refinement is ExclusionSet.Universe); add(Sequent.NDFactToFact(initialFacts, f, TraceInfo.Flow)) }`
 
    `propagate(...)` becomes
@@ -949,13 +1087,14 @@ In `JIRMethodSequentFlowFunction`:
             return
         }
 
-        if (!transfer(factAp, propagateTransferred)) {
+        if (!transfer(factAp, propagateTransferred, refineInitial)) {
             unchanged()
         }
 ```
 
-   with `propagateTransferred: (FinalFactAp, ExclusionSet?) -> Unit` replacing the `propagateFact`
-   and `propagateFactWithAccessorExclude` parameters.
+   with `propagateTransferred: (FinalFactAp, ExclusionSet?) -> Unit` and
+   `refineInitial: (ExclusionSet) -> Unit` replacing the `propagateFact` and
+   `propagateFactWithAccessorExclude` parameters.
 3. Delete the now-unused per-fact transfer code: `sequentFlowAssign`, `filterFactBaseType`,
    `simpleAssign`, both `fieldRead`, both `fieldWrite`, `propagateAbstractFactWithFieldExcluded`, and the
    imports only they used (`mayReadAccessor`, `mayRemoveAfterWrite`, `readAccessorTo`,

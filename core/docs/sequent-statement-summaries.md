@@ -52,7 +52,7 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
 class JIRStatementSummary(
     val edges: Map<AccessPathBase, List<Edge>>,     // keyed by from.base
     val typeFilters: Map<AccessPathBase, List<JIRType>>,
-) { data class Edge(val from: InitialFactAp, val to: InitialFactAp, val abstractOnly: Boolean = false) }
+) { data class Edge(val from: InitialFactAp, val to: InitialFactAp?) }
 ```
 
 A base absent from `edges` is not touched by the statement. A touched base without an edge from some
@@ -65,23 +65,39 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | Statement | Edges |
 |---|---|
 | `x = y`, `x = (T) y`, `x = a op b` | per operand `o`: `o -> o`, `o -> x` |
-| `x = y.f` | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x` |
+| `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `y/{f} -> A` for every alias `A` of `y` |
+| `x = x.f` | composition of `tmp = x.f` and `x = tmp`: `x/{f} -> ⊥`, `x.f -> x` (+ `x/{f} -> A`) |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
-| `x = y[i]` | `y/{[e]} -> y`, `y.[e] -> y.[e]`, `y.[e] -> x` |
-| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `x -> A.f` for every alias `A` of `y` |
+| `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` by composition) |
+| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `y/{f} -> A`, `x -> A.f` for every alias `A` of `y` |
 | `y[i] = x` | `y -> y`, `x -> x`, `x -> y.[e]`, `x -> A.[e]` for every alias `A` of `y` |
 | `C.f = x` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `x -> x`, `x -> <C>.C.f` |
 | `return x` / `throw x` | `x -> x`, `x -> Return` / `x -> Exception` |
 | `x = <other>` (new, constant, ...) | none from `x` (kill) |
 | other statements | no edges |
 
-An `abstractOnly` edge applies only to the abstract part of a fact (the empty-delta effect of
-section 4). The written local `x` gets no identity edge: `x = x` keeps `x -> x`, `x = x op y`
-keeps `x -> x` from its own operand, and `x = x.f` keeps only the abstract part
-(`x/{f} -> x` abstract-only, `x.f -> x`), exactly as today. For every field / element read or
-field write on a local `y`, the abstract part is also aliased: `y/{a} -> A` abstract-only for every
-alias `A` of `y` (current `propagateAbstractFactWithFieldExcluded`). Aliases come from
-`findAlias(base, statement)` and depend on the base only.
+The written local `x` gets no identity edge (`x = x` and `x = x op y` keep `x -> x` from the
+operand). `A` stands for an alias path of `y` at the statement (`findAlias(base, statement)`,
+local bases only); alias edges are plain edges.
+
+**Kill edges.** `from -> ⊥` kills the matched part but keeps the refinement carried by `from`'s
+exclusions. It appears only through composition.
+
+**Composition.** A statement whose read target is its own instance (`x = x.f`, `x = x[i]`) is the
+composition `S2 ∘ S1` of `S1 = (tmp = x.f)` and `S2 = (x = tmp)` with the temporary base eliminated.
+For an `S1` edge `a -> b`:
+- `b = ⊥` or `b.base` not touched by `S2`: `a -> b` is kept.
+- otherwise, for every `S2` edge `c -> d` with `c.base == b.base`:
+  - `c` is a prefix of `b` (`b = c.r`, `r` not starting with an accessor excluded by `c`):
+    `a' -> d.r`, where `a' = a` if `r` is non-empty, else `a` with `c`'s exclusions added;
+  - `b` is a strict prefix of `c` (`c = b.r`, `r` not starting with an accessor excluded by `a`):
+    `a.r -> d` with `c`'s exclusions;
+  - if no `S2` edge matches and `a` has exclusions: `a -> ⊥`.
+- `S2` edges from bases `S1` does not touch are kept; edges from or to the temporary base are dropped.
+
+Example: `S1 = {x/{f} -> x, x.f -> x.f, x.f -> tmp}`, `S2 = {tmp -> tmp, tmp -> x}` with `x` killed
+gives `{x/{f} -> ⊥, x.f -> x}`. `x/{f} -> ⊥` is what makes an abstract `x.*` request `x.f.*`
+(the delta of `x.*` against `x.f.*` is empty), exactly as the two separate statements do.
 
 `typeFilters` carry the declared-type filtering of today's `filterFactBaseType`: for every access
 of the statement, the operand base maps to the static types (cast type, local type, array type,
@@ -99,11 +115,14 @@ For an incoming fact `F` (Z2F, F2F, NDF2F):
 2. Apply `typeFilters[F.base]`.
 3. For each edge with `from.base == F.base`, for each effect of
    `MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(F, from)`:
-   - `SummaryApRefinement(delta)` (skipped for `abstractOnly` edges):
-     `R = to.concat(typeChecker, delta)` with `F.exclusions`; emit with the unchanged initial fact.
+   - `SummaryApRefinement(delta)`: `R = to.concat(typeChecker, delta)` with `F.exclusions`;
+     emit with the unchanged initial fact. Nothing for a kill edge.
    - `SummaryExclusionRefinement(delta, ex)`: `R = to.concat(typeChecker, delta)` with `ex`;
      emit `FactToFact(initial.replaceExclusions(ex), R)` for F2F. For Z2F / NDF2F `ex` is
-     `Universe` and the edge kind is kept.
+     `Universe` and the edge kind is kept. For a kill edge on F2F: emit
+     `SideEffectRequirement(initial.replaceExclusions(ex))` when that differs from `initial`
+     (refinement without a fact; the same sequent the JVM call summary handler emits for refined
+     summaries); nothing otherwise.
    Results are emitted even when equal to `F` (no `Unchanged`).
 4. After-rules on the exit boundary instructions (section 2) run on the transferred facts.
 
