@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.SUBSEQUENT_ARRAY_ELEMENTS_LIMIT
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
@@ -185,6 +186,13 @@ class AccessPath(
                 return AccessPath(apManager, base, node, exclusions)
             }
         }
+    }
+
+    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
+        val node = with(apManager) {
+            createAbstractNodeFromAccessors(access?.toList() ?: IntArrayList())
+        }
+        return AccessTree(apManager, base, node, exclusions).concat(typeChecker, delta)
     }
 
     override fun contains(factAp: InitialFactAp): Boolean {

@@ -41,6 +41,7 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
 
     fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, Delta>>
     fun concat(delta: Delta): InitialFactAp
+    fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp?
 
     fun contains(factAp: InitialFactAp): Boolean
 

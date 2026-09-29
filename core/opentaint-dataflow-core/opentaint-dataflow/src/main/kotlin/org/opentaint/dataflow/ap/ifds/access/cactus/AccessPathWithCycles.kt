@@ -71,6 +71,9 @@ class AccessPathWithCycles(
         return this
     }
 
+    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? =
+        error("Cactus initial fact does not support final delta concat")
+
     // todo: rewrite stub implementation
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         return emptyList()
