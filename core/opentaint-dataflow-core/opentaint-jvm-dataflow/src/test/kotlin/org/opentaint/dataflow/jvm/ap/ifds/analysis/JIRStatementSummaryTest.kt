@@ -133,7 +133,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     }
 
     @Test
-    fun `self read is the composition of a read into a temporary and a move`() {
+    fun `self read keeps only the read field and refines the overwritten instance`() {
         val fieldRead = assigns("selfRead").first { (it.rhv as? JIRFieldRef)?.field?.name == "next" }
         val rhv = fieldRead.rhv as JIRFieldRef
         val instance = rhv.instance!!

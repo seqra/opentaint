@@ -31,113 +31,32 @@ class JIRStatementSummary(
         val Empty = JIRStatementSummary(emptyMap(), emptyMap())
 
         fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary {
-            val builder = Builder(inst, aliasAnalysis)
-            val transfer = builder.build() ?: return Empty
-            return JIRStatementSummary(transfer.toEdges(apManager), builder.typeFilters)
-        }
-
-        private val temporary = AccessPathBase.LocalVar.create(-1)
-    }
-
-    private data class Pattern(
-        val base: AccessPathBase,
-        val accessors: List<Accessor> = emptyList(),
-        val exclusions: Set<Accessor> = emptySet(),
-    ) {
-        fun exclude(accessor: Accessor) = copy(exclusions = exclusions + accessor)
-        fun append(rest: List<Accessor>) = copy(accessors = accessors + rest)
-
-        fun toFact(apManager: ApManager): InitialFactAp {
-            val path = accessors.foldRight(apManager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
-            return exclusions.fold(path) { f, a -> f.exclude(a) }
-        }
-    }
-
-    private data class PatternEdge(val from: Pattern, val to: Pattern?)
-
-    private class Transfer {
-        val edges = linkedMapOf<AccessPathBase, LinkedHashSet<PatternEdge>>()
-
-        fun touch(base: AccessPathBase) = edges.getOrPut(base) { linkedSetOf() }
-
-        fun add(from: Pattern, to: Pattern?) {
-            touch(from.base) += PatternEdge(from, to)
-        }
-
-        fun then(second: Transfer): Transfer {
-            val result = Transfer()
-            for ((base, firstEdges) in edges) {
-                result.touch(base)
-                for (edge in firstEdges) {
-                    val to = edge.to
-                    val secondEdges = to?.let { second.edges[it.base] }
-                    if (secondEdges == null) {
-                        result.add(edge.from, to)
-                        continue
-                    }
-
-                    var matched = false
-                    for (next in secondEdges) {
-                        val composed = compose(edge.from, to, next) ?: continue
-                        result.add(composed.from, composed.to)
-                        matched = true
-                    }
-
-                    if (!matched && edge.from.exclusions.isNotEmpty()) {
-                        result.add(edge.from, null)
-                    }
-                }
+            val builder = Builder(apManager, inst, aliasAnalysis)
+            when (inst) {
+                is JIRAssignInst -> builder.assign(inst.lhv, inst.rhv)
+                is JIRReturnInst -> builder.move(AccessPathBase.Return, inst.returnValue?.let { accessPathBase(it) })
+                is JIRThrowInst -> builder.move(AccessPathBase.Exception, accessPathBase(inst.throwable))
+                else -> return Empty
             }
-
-            for ((base, secondEdges) in second.edges) {
-                if (base in edges) continue
-                result.touch(base)
-                secondEdges.forEach { result.add(it.from, it.to) }
-            }
-
-            return result
+            return JIRStatementSummary(builder.edges.mapValues { it.value.toList() }, builder.typeFilters)
         }
-
-        private fun compose(a: Pattern, b: Pattern, next: PatternEdge): PatternEdge? {
-            val c = next.from
-            val d = next.to
-            if (c.base != b.base) return null
-
-            if (b.accessors.size < c.accessors.size || b.accessors.subList(0, c.accessors.size) != c.accessors) return null
-
-            val rest = b.accessors.subList(c.accessors.size, b.accessors.size)
-            if (rest.isNotEmpty() && rest.first() in c.exclusions) return null
-            val from = if (rest.isEmpty()) a.copy(exclusions = a.exclusions + c.exclusions) else a
-            return PatternEdge(from, d?.append(rest))
-        }
-
-        fun eliminate(base: AccessPathBase): Transfer {
-            val result = Transfer()
-            for ((from, fromEdges) in edges) {
-                if (from == base) continue
-                result.touch(from)
-                fromEdges.filter { it.to?.base != base }.forEach { result.add(it.from, it.to) }
-            }
-            return result
-        }
-
-        fun toEdges(apManager: ApManager): Map<AccessPathBase, List<Edge>> =
-            edges.mapValues { (_, patternEdges) ->
-                patternEdges.map { Edge(it.from.toFact(apManager), it.to?.toFact(apManager)) }
-            }
     }
 
     private class Builder(
+        private val apManager: ApManager,
         private val inst: JIRInst,
         private val aliasAnalysis: JIRLocalAliasAnalysis?,
     ) {
+        val edges = linkedMapOf<AccessPathBase, LinkedHashSet<Edge>>()
         val typeFilters = hashMapOf<AccessPathBase, MutableList<JIRType>>()
 
-        fun build(): Transfer? = when (inst) {
-            is JIRAssignInst -> Transfer().also { assign(it, inst.lhv, inst.rhv) }
-            is JIRReturnInst -> Transfer().also { move(it, AccessPathBase.Return, inst.returnValue?.let { v -> accessPathBase(v) }) }
-            is JIRThrowInst -> Transfer().also { move(it, AccessPathBase.Exception, accessPathBase(inst.throwable)) }
-            else -> null
+        private fun fact(base: AccessPathBase, accessors: List<Accessor> = emptyList()): InitialFactAp =
+            accessors.foldRight(apManager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
+
+        private fun touch(base: AccessPathBase) = edges.getOrPut(base) { linkedSetOf() }
+
+        private fun edge(from: InitialFactAp, to: InitialFactAp?) {
+            touch(from.base) += Edge(from, to)
         }
 
         private fun filter(access: MethodFlowFunctionUtils.Access, type: JIRType?) {
@@ -145,10 +64,10 @@ class JIRStatementSummary(
             typeFilters.getOrPut(access.base) { mutableListOf() } += type
         }
 
-        private fun assign(t: Transfer, lhv: JIRValue, rhv: JIRExpr) {
+        fun assign(lhv: JIRValue, rhv: JIRExpr) {
             if (rhv is JIRBinaryExpr) {
-                assign(t, lhv, rhv.lhv)
-                assign(t, lhv, rhv.rhv)
+                assign(lhv, rhv.lhv)
+                assign(lhv, rhv.rhv)
                 return
             }
 
@@ -176,28 +95,20 @@ class JIRStatementSummary(
             when {
                 from is MethodFlowFunctionUtils.MemoryAccess -> {
                     check(to !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $lhv = $rhv" }
-                    if (to.base != from.base) {
-                        read(t, to.base, from)
-                    } else {
-                        val first = Transfer().also { read(it, temporary, from) }
-                        val second = Transfer().also { move(it, to.base, temporary) }
-                        first.then(second).eliminate(temporary).edges.forEach { (base, edges) ->
-                            t.touch(base).addAll(edges)
-                        }
-                    }
+                    read(to.base, from)
                 }
 
-                to is MethodFlowFunctionUtils.MemoryAccess -> write(t, to, from?.base)
+                to is MethodFlowFunctionUtils.MemoryAccess -> write(to, from?.base)
 
-                else -> move(t, to.base, from?.base)
+                else -> move(to.base, from?.base)
             }
         }
 
-        private fun move(t: Transfer, to: AccessPathBase, from: AccessPathBase?) {
-            t.touch(to)
+        fun move(to: AccessPathBase, from: AccessPathBase?) {
+            touch(to)
             if (from == null) return
-            t.add(Pattern(from), Pattern(from))
-            if (from != to) t.add(Pattern(from), Pattern(to))
+            edge(fact(from), fact(from))
+            if (from != to) edge(fact(from), fact(to))
         }
 
         private fun path(access: MethodFlowFunctionUtils.MemoryAccess): List<Accessor> = when (access) {
@@ -205,47 +116,52 @@ class JIRStatementSummary(
             is MethodFlowFunctionUtils.StaticRefAccess -> listOf(access.classStaticAccessor, access.accessor)
         }
 
-        private fun split(t: Transfer, base: AccessPathBase, accessors: List<Accessor>) {
+        private fun keepAllExcept(base: AccessPathBase, accessors: List<Accessor>) {
             for (i in accessors.indices) {
-                val prefix = Pattern(base, accessors.subList(0, i))
-                t.add(prefix.exclude(accessors[i]), prefix)
+                val prefix = fact(base, accessors.subList(0, i))
+                edge(prefix.exclude(accessors[i]), prefix)
             }
         }
 
-        private fun aliases(t: Transfer, base: AccessPathBase, accessor: Accessor, written: AccessPathBase? = null) {
+        private fun aliasRest(base: AccessPathBase, accessor: Accessor, written: AccessPathBase?) {
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                if (aliasBase != written) t.add(Pattern(base).exclude(accessor), Pattern(aliasBase, aliasAccessors))
+                if (aliasBase != written) edge(fact(base).exclude(accessor), fact(aliasBase, aliasAccessors))
             }
         }
 
-        private fun read(t: Transfer, to: AccessPathBase, access: MethodFlowFunctionUtils.MemoryAccess) {
-            val accessors = path(access)
-            val source = Pattern(access.base, accessors)
-
-            t.touch(to)
-            split(t, access.base, accessors)
-            t.add(source, source)
-            t.add(source, Pattern(to))
-            aliases(t, access.base, accessors.first(), written = to)
-        }
-
-        private fun write(t: Transfer, access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
+        private fun read(to: AccessPathBase, access: MethodFlowFunctionUtils.MemoryAccess) {
             val base = access.base
             val accessors = path(access)
-            val target = Pattern(base, accessors)
+            val source = fact(base, accessors)
+
+            touch(to)
+            if (base != to) {
+                keepAllExcept(base, accessors)
+                edge(source, source)
+            } else {
+                edge(fact(base).exclude(accessors.first()), null)
+            }
+            edge(source, fact(to))
+            aliasRest(base, accessors.first(), written = to)
+        }
+
+        private fun write(access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
+            val base = access.base
+            val accessors = path(access)
+            val target = fact(base, accessors)
 
             if (accessors.first() is ElementAccessor) {
-                t.add(Pattern(base), Pattern(base))
+                edge(fact(base), fact(base))
             } else {
-                split(t, base, accessors)
-                aliases(t, base, accessors.first())
+                keepAllExcept(base, accessors)
+                aliasRest(base, accessors.first(), written = null)
             }
 
             if (from == null) return
-            if (from != base) t.add(Pattern(from), Pattern(from))
-            t.add(Pattern(from), target)
+            if (from != base) edge(fact(from), fact(from))
+            edge(fact(from), target)
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                t.add(Pattern(from), Pattern(aliasBase, aliasAccessors + accessors))
+                edge(fact(from), fact(aliasBase, aliasAccessors + accessors))
             }
         }
     }

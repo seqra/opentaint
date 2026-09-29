@@ -66,9 +66,9 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 |---|---|
 | `x = y`, `x = (T) y`, `x = a op b` | per operand `o`: `o -> o`, `o -> x` |
 | `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `y/{f} -> A` for every alias `A` of `y` not based on `x` |
-| `x = x.f` | composition of `tmp = x.f` and `x = tmp`: `x/{f} -> ⊥`, `x.f -> x` (+ `x/{f} -> A`) |
+| `x = x.f` | `x/{f} -> ⊥`, `x.f -> x`, `x/{f} -> A` for every alias `A` of `x` |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
-| `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` by composition) |
+| `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` as `x = x.f`) |
 | `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `y/{f} -> A`, `x -> A.f` for every alias `A` of `y` |
 | `y[i] = x` | `y -> y`, `x -> x`, `x -> y.[e]`, `x -> A.[e]` for every alias `A` of `y` |
 | `C.f = x` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `x -> x`, `x -> <C>.C.f` |
@@ -81,23 +81,10 @@ operand). `A` stands for an alias path of `y` at the statement (`findAlias(base,
 local bases only); alias edges are plain edges.
 
 **Kill edges.** `from -> ⊥` kills the matched part but keeps the refinement carried by `from`'s
-exclusions. It appears only through composition.
-
-**Composition.** A statement whose read target is its own instance (`x = x.f`, `x = x[i]`) is the
-composition `S2 ∘ S1` of `S1 = (tmp = x.f)` and `S2 = (x = tmp)` with the temporary base eliminated.
-For an `S1` edge `a -> b`:
-- `b = ⊥` or `b.base` not touched by `S2`: `a -> b` is kept.
-- otherwise, for every `S2` edge `c -> d` with `c.base == b.base`:
-  - `c` is a prefix of `b` (`b = c.r`, `r` not starting with an accessor excluded by `c`):
-    `a' -> d.r`, where `a' = a` if `r` is non-empty, else `a` with `c`'s exclusions added;
-  - if no `S2` edge matches and `a` has exclusions: `a -> ⊥`.
-  `S2` is a move from the temporary, so every `S2` edge source is an accessor-less base and can
-  only be a prefix of `b`; the converse case (`b` a strict prefix of `c`) never arises.
-- `S2` edges from bases `S1` does not touch are kept; edges from or to the temporary base are dropped.
-
-Example: `S1 = {x/{f} -> x, x.f -> x.f, x.f -> tmp}`, `S2 = {tmp -> tmp, tmp -> x}` with `x` killed
-gives `{x/{f} -> ⊥, x.f -> x}`. `x/{f} -> ⊥` is what makes an abstract `x.*` request `x.f.*`
-(the delta of `x.*` against `x.f.*` is empty), exactly as the two separate statements do.
+exclusions. It appears only for a read whose target is its own instance (`x = x.f`, `x = x[i]`):
+the old `x` is overwritten, so nothing of it survives except `x.f -> x`, yet `x/{f} -> ⊥` is what
+makes an abstract `x.*` request `x.f.*` (the delta of `x.*` against `x.f.*` is empty). This is the
+same result as the two statements `tmp = x.f; x = tmp`.
 
 `typeFilters` carry the declared-type filtering of today's `filterFactBaseType`: for every access
 of the statement, the operand base maps to the static types (cast type, local type, array type,
@@ -161,5 +148,5 @@ Accepted deviations/decisions from the design above:
 4. A kill edge refinement is emitted as `SideEffectRequirement` (user decision).
 5. Generated methods (`JIRLambdaMethod`, `OpentaintLambdaProxyMethod`, `SpringGeneratedMethod`)
    apply `JMethodBoundaryInstFeature` lazily in `instList`.
-6. javac with kept local names never emits `x = x.f` on one local; the composition case is
+6. javac with kept local names never emits `x = x.f` on one local; the self-read case is
    unit-tested on a constructed instruction.
