@@ -52,7 +52,7 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
 class JIRStatementSummary(
     val edges: Map<AccessPathBase, List<Edge>>,     // keyed by from.base
     val typeFilters: Map<AccessPathBase, List<JIRType>>,
-) { class Edge(val from: InitialFactAp, val to: InitialFactAp) }
+) { data class Edge(val from: InitialFactAp, val to: InitialFactAp, val abstractOnly: Boolean = false) }
 ```
 
 A base absent from `edges` is not touched by the statement. A touched base without an edge from some
@@ -67,7 +67,7 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | `x = y`, `x = (T) y`, `x = a op b` | per operand `o`: `o -> o`, `o -> x` |
 | `x = y.f` | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x` |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
-| `x = y[i]` | `y -> y`, `y.[e] -> x` |
+| `x = y[i]` | `y/{[e]} -> y`, `y.[e] -> y.[e]`, `y.[e] -> x` |
 | `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `x -> A.f` for every alias `A` of `y` |
 | `y[i] = x` | `y -> y`, `x -> x`, `x -> y.[e]`, `x -> A.[e]` for every alias `A` of `y` |
 | `C.f = x` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `x -> x`, `x -> <C>.C.f` |
@@ -75,9 +75,12 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | `x = <other>` (new, constant, ...) | none from `x` (kill) |
 | other statements | no edges |
 
-The written local `x` gets no identity edge unless it is also an operand (`x = x.f`: `x/{f} -> x`,
-`x.f -> x.f`, `x.f -> x`). Aliases of the abstract part (`y/{f} -> A` for every alias `A` of `y`)
-keep the current `propagateAbstractFactWithFieldExcluded` behaviour. Aliases come from
+An `abstractOnly` edge applies only to the abstract part of a fact (the empty-delta effect of
+section 4). The written local `x` gets no identity edge: `x = x` keeps `x -> x`, `x = x op y`
+keeps `x -> x` from its own operand, and `x = x.f` keeps only the abstract part
+(`x/{f} -> x` abstract-only, `x.f -> x`), exactly as today. For every field / element read or
+field write on a local `y`, the abstract part is also aliased: `y/{a} -> A` abstract-only for every
+alias `A` of `y` (current `propagateAbstractFactWithFieldExcluded`). Aliases come from
 `findAlias(base, statement)` and depend on the base only.
 
 `typeFilters` carry the declared-type filtering of today's `filterFactBaseType`: for every access
@@ -96,8 +99,8 @@ For an incoming fact `F` (Z2F, F2F, NDF2F):
 2. Apply `typeFilters[F.base]`.
 3. For each edge with `from.base == F.base`, for each effect of
    `MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(F, from)`:
-   - `SummaryApRefinement(delta)`: `R = to.concat(typeChecker, delta)` with `F.exclusions`;
-     emit with the unchanged initial fact.
+   - `SummaryApRefinement(delta)` (skipped for `abstractOnly` edges):
+     `R = to.concat(typeChecker, delta)` with `F.exclusions`; emit with the unchanged initial fact.
    - `SummaryExclusionRefinement(delta, ex)`: `R = to.concat(typeChecker, delta)` with `ex`;
      emit `FactToFact(initial.replaceExclusions(ex), R)` for F2F. For Z2F / NDF2F `ex` is
      `Universe` and the edge kind is kept.
