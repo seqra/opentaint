@@ -65,7 +65,7 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | Statement | Edges |
 |---|---|
 | `x = y`, `x = (T) y`, `x = a op b` | per operand `o`: `o -> o`, `o -> x` |
-| `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `y/{f} -> A` for every alias `A` of `y` |
+| `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `y/{f} -> A` for every alias `A` of `y` not based on `x` |
 | `x = x.f` | composition of `tmp = x.f` and `x = tmp`: `x/{f} -> ⊥`, `x.f -> x` (+ `x/{f} -> A`) |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
 | `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` by composition) |
@@ -90,9 +90,9 @@ For an `S1` edge `a -> b`:
 - otherwise, for every `S2` edge `c -> d` with `c.base == b.base`:
   - `c` is a prefix of `b` (`b = c.r`, `r` not starting with an accessor excluded by `c`):
     `a' -> d.r`, where `a' = a` if `r` is non-empty, else `a` with `c`'s exclusions added;
-  - `b` is a strict prefix of `c` (`c = b.r`, `r` not starting with an accessor excluded by `a`):
-    `a.r -> d` with `c`'s exclusions;
   - if no `S2` edge matches and `a` has exclusions: `a -> ⊥`.
+  `S2` is a move from the temporary, so every `S2` edge source is an accessor-less base and can
+  only be a prefix of `b`; the converse case (`b` a strict prefix of `c`) never arises.
 - `S2` edges from bases `S1` does not touch are kept; edges from or to the temporary base are dropped.
 
 Example: `S1 = {x/{f} -> x, x.f -> x.f, x.f -> tmp}`, `S2 = {tmp -> tmp, tmp -> x}` with `x` killed

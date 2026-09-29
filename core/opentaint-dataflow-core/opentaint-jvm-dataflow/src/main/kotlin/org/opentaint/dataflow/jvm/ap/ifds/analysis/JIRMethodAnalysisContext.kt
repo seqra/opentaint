@@ -66,6 +66,7 @@ class JIRMethodAnalysisContext(
         }
     }
 
+    @Volatile
     private var sequentFFCache: Reference<Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction>>? = null
     private fun getSequentFFCache(): Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction> {
         sequentFFCache?.get()?.let { return it }

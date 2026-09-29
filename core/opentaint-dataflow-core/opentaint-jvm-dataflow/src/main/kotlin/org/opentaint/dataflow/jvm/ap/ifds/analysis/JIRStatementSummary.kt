@@ -103,20 +103,12 @@ class JIRStatementSummary(
             val d = next.to
             if (c.base != b.base) return null
 
-            if (b.accessors.size >= c.accessors.size && b.accessors.subList(0, c.accessors.size) == c.accessors) {
-                val rest = b.accessors.subList(c.accessors.size, b.accessors.size)
-                if (rest.isNotEmpty() && rest.first() in c.exclusions) return null
-                val from = if (rest.isEmpty()) a.copy(exclusions = a.exclusions + c.exclusions) else a
-                return PatternEdge(from, d?.append(rest))
-            }
+            if (b.accessors.size < c.accessors.size || b.accessors.subList(0, c.accessors.size) != c.accessors) return null
 
-            if (c.accessors.subList(0, b.accessors.size) == b.accessors) {
-                val rest = c.accessors.subList(b.accessors.size, c.accessors.size)
-                if (rest.first() in a.exclusions) return null
-                return PatternEdge(a.append(rest).copy(exclusions = c.exclusions), d)
-            }
-
-            return null
+            val rest = b.accessors.subList(c.accessors.size, b.accessors.size)
+            if (rest.isNotEmpty() && rest.first() in c.exclusions) return null
+            val from = if (rest.isEmpty()) a.copy(exclusions = a.exclusions + c.exclusions) else a
+            return PatternEdge(from, d?.append(rest))
         }
 
         fun eliminate(base: AccessPathBase): Transfer {
@@ -220,9 +212,9 @@ class JIRStatementSummary(
             }
         }
 
-        private fun aliases(t: Transfer, base: AccessPathBase, accessor: Accessor) {
+        private fun aliases(t: Transfer, base: AccessPathBase, accessor: Accessor, written: AccessPathBase? = null) {
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                t.add(Pattern(base).exclude(accessor), Pattern(aliasBase, aliasAccessors))
+                if (aliasBase != written) t.add(Pattern(base).exclude(accessor), Pattern(aliasBase, aliasAccessors))
             }
         }
 
@@ -234,7 +226,7 @@ class JIRStatementSummary(
             split(t, access.base, accessors)
             t.add(source, source)
             t.add(source, Pattern(to))
-            aliases(t, access.base, accessors.first())
+            aliases(t, access.base, accessors.first(), written = to)
         }
 
         private fun write(t: Transfer, access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
