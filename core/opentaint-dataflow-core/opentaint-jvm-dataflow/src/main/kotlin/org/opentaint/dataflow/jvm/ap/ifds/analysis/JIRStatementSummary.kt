@@ -37,8 +37,8 @@ object JIRStatementSummary {
         val builder = StatementSummaryBuilder(apManager, keepAliasPropagationEdges)
         when (inst) {
             is JIRAssignInst -> builder.assign(inst, aliasAnalysis, inst.lhv, inst.rhv)
-            is JIRReturnInst -> builder.move(AccessPathBase.Return, inst.returnValue?.let { accessPathBase(it) })
-            is JIRThrowInst -> builder.move(AccessPathBase.Exception, accessPathBase(inst.throwable))
+            is JIRReturnInst -> builder.move(AccessPathBase.Return, inst.returnValue?.let { valueBase(it) })
+            is JIRThrowInst -> builder.move(AccessPathBase.Exception, valueBase(inst.throwable))
             else -> return null
         }
         return builder
@@ -77,6 +77,8 @@ object JIRStatementSummary {
             else -> error("Assign to complex value: $lhv")
         }
 
+        val value = from?.base?.takeUnless { it is AccessPathBase.Constant }
+
         when {
             from is MethodFlowFunctionUtils.MemoryAccess -> {
                 check(to !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $lhv = $rhv" }
@@ -89,14 +91,17 @@ object JIRStatementSummary {
                     base = to.base,
                     accessors = accessors,
                     weak = accessors.first() is ElementAccessor,
-                    values = listOfNotNull(from?.base),
+                    values = listOfNotNull(value),
                     aliasPaths = aliasPaths(inst, aliasAnalysis, to.base),
                 )
             }
 
-            else -> move(to.base, from?.base)
+            else -> move(to.base, value)
         }
     }
+
+    private fun valueBase(value: JIRValue): AccessPathBase? =
+        accessPathBase(value)?.takeUnless { it is AccessPathBase.Constant }
 
     private fun path(access: MethodFlowFunctionUtils.MemoryAccess): List<Accessor> = when (access) {
         is MethodFlowFunctionUtils.RefAccess -> listOf(access.accessor)

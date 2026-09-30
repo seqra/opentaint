@@ -14,6 +14,7 @@ public class StatementSummarySample {
     void selfWrite(StatementSummarySample a) { a.f = a; }
     String cast(Object y) { return (String) y; }
     int binary(int a, int b) { return a + b; }
+    Object constant() { return "c"; }
 
     StatementSummarySample selfRead(StatementSummarySample start) {
         StatementSummarySample n = start;

@@ -153,9 +153,12 @@ class JIRBackwardAnalysisManager private constructor(
         generateTrace: Boolean
     ): MethodSequentFlowFunction {
         analysisContext as JIRMethodAnalysisContext
-        return JIRBackwardMethodSequentFlowFunction(
-            apManager, analysisContext, analysisContext.taint as JIRBackwardTaintAnalysisContext, currentInst as JIRInst
-        )
+        currentInst as JIRInst
+        return analysisContext.cachedSequentFF(currentInst.location.index, generateTrace = false) {
+            JIRBackwardMethodSequentFlowFunction(
+                apManager, analysisContext, analysisContext.taint as JIRBackwardTaintAnalysisContext, currentInst
+            )
+        }
     }
 
     override fun getMethodCallFlowFunction(

@@ -82,7 +82,7 @@ defaults to `JIRMethodCallFactMapper`.
 | Backward component | Implements | Holds and delegates to |
 |---|---|---|
 | `JIRBackwardTaintAnalysisContext` | `JIRTaintRuleContext` by a forward `JIRTaintAnalysisContext` | the forward rule queries, swapped per statement (section 7); `bindAnalysisContext` binds both |
-| `JIRBackwardMethodSequentFlowFunction` | `MethodSequentFlowFunction` | a forward `JIRMethodSequentFlowFunction` whose atomic steps it calls with roles swapped (section 5.1) |
+| `JIRBackwardMethodSequentFlowFunction` | `MethodSequentFlowFunction` | the reversed forward statement summaries applied by the core `transfer`, and a forward `JIRMethodSequentFlowFunction` for its exit rule hooks (section 5.1) |
 | `JIRBackwardMethodCallFlowFunction` | `MethodCallFlowFunction.Default` | a forward `JIRMethodCallFlowFunction`: `propagateZeroToZero`, `applyTaintRules`, `applyCleanersOrCallToStart` with the backward clean-action evaluator |
 | `JIRBackwardMethodCallSummaryHandler` | `MethodCallSummaryHandler` by a forward `JIRMethodCallSummaryHandler(withCallAliases = false)` | everything except summary rewriting (`prepare*Summary` return the edge) |
 | `JIRBackwardMethodStartFlowFunction` | `MethodStartFlowFunction` | the forward start FF for type checks |
@@ -112,18 +112,21 @@ both kill `L`.
 | `a[i] = x` (weak, as forward) | `a.[e].P` | `x.P` and the demand itself |
 | `return x` / `throw x` | `Return.P` / `Exception.P` | `x.P` |
 
-Type filters, the abstraction split (`removeAbstraction` plus an excluded
-`abstractOnly` when a field is read from an abstract demand) and refinements
-are the forward code itself (section 5.1). Field and array writes also move
-demands through the `findAlias` aliases of the written instance. Rule hooks (all rules are the swapped ones of section 7; the forward rule
-code applies them):
+Every row is the forward statement summary reversed (section 5.1): type
+filters are the forward ones, and a field or array write also moves the
+demands on the aliases of the written instance (`forEachAliasPathAtStatement`)
+to the value. Constants carry no facts, so a demand assigned from a constant
+is dropped. Rule hooks (all rules are the swapped ones of section 7; the
+forward rule code applies them):
 
-* `return x`: on Zero, the forward exit-source step (`applyMethodExitSourceRules`)
+* Exit boundaries (`JMethodExitNormalInst` with `Return`,
+  `JMethodExitExceptionalInst` with `Exception`), as in forward: on Zero, the
+  forward exit-source step (`applyMethodExitSourceRules`, normal exit only)
   seeds demands at `Return`/`Argument`/`This`/`ClassStatic` and unconditional
-  exit sinks report (also at `throw x`); on a demand, the
-  forward exit-sink step (`applyMethodExitSinkRules`) reports and the
-  exit-source step adds condition demands. All resulting facts are post-return
-  positions and go through the backward `Return := x` step.
+  exit sinks report; on a demand, the forward exit-sink step
+  (`applyMethodExitSinkRules`) reports and the exit-source step adds condition
+  demands. All resulting facts are post-return positions; `return x` then
+  moves `Return` to `x` like any other statement.
 * `x = C.f`: the context's static-field sinks (`sinkRulesForStaticField`) report and
   its static-field sources (`sourceRulesForStaticField`) add condition
   demands, both applied to a demand on `x` by `JIRSequentTaintUtil` with `x`
@@ -171,12 +174,13 @@ function arguments whose default is the forward behaviour.
 
 | Forward class | Change | Backward use |
 |---|---|---|
-| `JIRMethodSequentFlowFunction` | split into public atomic steps that the forward flow function composes (section 5.1) | `JIRBackwardMethodSequentFlowFunction` composes the same steps with roles swapped |
+| `JIRMethodSequentFlowFunction` | the exit rule hooks and `FactRefiner` are public (section 5.1) | `JIRBackwardMethodSequentFlowFunction` calls them at the exit boundaries |
+| `JIRStatementSummary`, `StatementSummaryBuilder` | constants carry no facts; `buildReversed` keeps the per-base type filters | `buildReversed` is the backward statement semantics (section 5.1) |
 | `JIRMethodCallFlowFunction` | `applyTaintRules` extracted from `propagateFact`; `applyTaintRules` and `applyCleanersOrCallToStart` are public, the latter takes the clean-action evaluator as an argument (default: `JIRTaintCleanActionEvaluator(typeResolver)`) | `JIRBackwardMethodCallFlowFunction` delegates `propagateZeroToZero` (seeds, unconditional sinks), applies `applyTaintRules` to every demand and runs the forward cleaner step with the backward evaluator |
 | `JIRTaintCleanActionEvaluator` | constructor parameter `removeFinalFact` (default: `TaintCleanActionEvaluator.removeFinalFact`) | `JIRBackwardTaintCleanActionEvaluator` keeps the `[any]` subtree at the position of an `Exact` `RemoveMark` (section 8) |
 | `JIRMethodCallSummaryHandler` | constructor parameter `withCallAliases` (default `true`); exit facts are mapped with the context's `methodCallFactMapper` | `JIRBackwardMethodCallSummaryHandler` delegates to it (backward exit mapping, no aliases) |
 | `JIRTaintAnalysisContext` | implements the extracted interface `JIRTaintRuleContext` (its rule queries, `bindAnalysisContext`, `reset`, `externalMethodTracker`) | wrapped by `JIRBackwardTaintAnalysisContext` |
-| `JIRMethodAnalysisContext` | `taint: JIRTaintRuleContext`; constructor parameter `methodCallFactMapper` | built by the backward manager (section 2) |
+| `JIRMethodAnalysisContext` | `taint: JIRTaintRuleContext`; constructor parameter `methodCallFactMapper`; the per-statement sequent FF cache holds any `MethodSequentFlowFunction` | built by the backward manager (section 2), caches the backward sequent FF |
 | `JIRAnalysisManager` | constructor parameter `relevantRuleIds`; `contexts` and `rootRefManager` are public | delegate of the backward manager; the forward contexts' lambda trackers (section 6) |
 | `JIRMethodCallTaintUtil`, `JIRSequentTaintUtil` (generic over source and sink types) | the call util maps rule conditions with the context's `methodCallFactMapper` | every report and every rule-created demand |
 | `JIRMethodStartFlowFunction` | none | held by `JIRBackwardMethodStartFlowFunction` for type checks |
@@ -189,40 +193,34 @@ utilities read rules through `JIRMethodAnalysisContext.taint`, and each swapped
 query is computed from several forward queries of the same statement; the
 forward class only gains `override` modifiers.
 
-### 5.1 Sequent flow-function steps
+### 5.1 Sequent flow function
 
-The public steps of `JIRMethodSequentFlowFunction` are its extension points.
-Each takes a fact and reports results through its callbacks: `unchanged` (the
-input fact, possibly type-filtered, survives), `propagateFact` (a new fact) and
-`propagateFactWithAccessorExclude` (a fact valid only with the accessor
-excluded from the edge).
-
-| Step | Contract |
-|---|---|
-| `SequentEmitter.zeroToFact` / `factToFact` / `ndFactToFact` | turns step results into the `Sequent`s of the edge kind: `unchanged`, `propagateFact`, `propagateFactWithRefinement` (F2F adds the refiner's exclusions to the initial and the final fact; Z2F and NDF2F require no refinement), `propagateFactWithAccessorExclude` (F2F excludes the accessor from both facts; Z2F and NDF2F fail), `sideEffect` |
-| `FactRefiner` | collects the exclusions read by rule conditions |
-| `forEachAssignOperands(rhv, lhv, fact, body)` | calls `body(from, to, fact)` once per value operand of `lhv = rhv` (twice for a binary expression); `from` is `null` when the operand has no access path, at most one side is a memory access, and `fact` is filtered by the operand types (a rejected fact yields no call). If `fact` differs from the input, callers report "unchanged" as a propagation of `fact` |
-| `simpleAssign(to, from, fact, …)` | `to := from`: a fact not on `to` is unchanged, a fact on `from` is rebased to `to` |
-| `fieldRead(to, access, fact, …)` | `to := access`: a fact not on `to` is unchanged (propagated for an array read); the fact's value at `access` is rebased to `to`; an abstract fact that may hold the accessor is split into `removeAbstraction()` (read recursively) and `abstractOnly()` with the accessor excluded (also for its statement aliases). A static field is read through `ClassStatic.<C>` into an auxiliary base |
-| `moveIntoField(access, fact, …)` | prepends the accessors of `access` (`f`, or `<C>.f` for a static field) to the fact, rebases it to the access base, and also propagates the statement aliases of the result |
-| `clearWrittenField(access, fact, …)` | strong update of `access` on a fact that receives no value: an unrelated fact is unchanged, a fact on a written array is kept (weak), a concrete fact loses the accessor's subtree, an abstract fact is split as in `fieldRead`. Only the first accessor is tested, so for a static `access` it tests `f` where the fact has `<C>` |
-| `applyMethodExitSinkRules`, `applyMethodExitSourceRules` | exit rule hooks at a result base: report sinks or create source facts and add their condition readers to the refiner |
-
-Composition per statement (`from`, `to` from `forEachAssignOperands`):
+Forward and backward share the per-statement summaries of the forward sequent
+flow function. `JIRStatementSummary.build` gives the forward edges
+`from → to` (`InitialFactAp → InitialFactAp`, or a kill edge `from → ⊥`) per
+touched base; `JIRStatementSummary.buildReversed` gives the edges `to → from`,
+drops the kill edges, keeps the per-base type filters and adds the
+refinement edges of a write: the path `a.p.f` of every alias `a.p` of `y` in
+`y.f = x` (and the written path `a.[e]` of a weak element write `a[i] = x`,
+whose forward edge is the plain identity) is kept and refined one accessor at
+a time, so an abstract demand on the instance is refined down to the written
+path and reaches `x`. The core `MethodSequentFlowFunction.transfer` applies either
+direction like any summary edge (delta, then concat); a demand on a base the
+summary does not touch is `Unchanged`. For `x = y` the reversed summary kills
+the demand on `x` and moves it to `y`.
 
 | Statement | Forward | Backward |
 |---|---|---|
-| `x = y`, cast, `x = a op b`, `x = const` | `simpleAssign(x, y)` | a demand on `x` is rebased to `y` (dropped for a constant), others unchanged |
-| `x = y.f`, `x = C.f`, `x = a[i]` | `fieldRead(x, y.f)` | a demand on `x` goes through `moveIntoField(y.f)`, others unchanged |
-| `y.f = x`, `a[i] = x` | a fact on `x` is unchanged and goes through `moveIntoField(y.f)`, any other through `clearWrittenField(y.f)`; `a.f = a` through an auxiliary base | `clearWrittenField(y.f)`, then `fieldRead(x, y.f)` keeping the results on `x`, also on the demand read through each `findAlias` alias of `y` |
-| `C.f = x` | as `y.f = x` | `clearWrittenField` of `<C>` on `ClassStatic`, `fieldRead` of the `<C>` subtree into an auxiliary base, `clearWrittenField` of `f` there and the rest put back under `<C>`; then `fieldRead(x, C.f)` |
-| `return x`, `throw x` | `simpleAssign(Return, x)`, then the exit source and sink hooks | the exit sink and source hooks (`return` only), then `Return`/`Exception` rebased to `x` |
+| assign, `return x`, `throw x` | `transfer(build)` | `transfer(buildReversed)`, after the static-field rules for `x = C.f` |
+| `JMethodExitNormalInst`, `JMethodExitExceptionalInst` | exit source and sink hooks | the same hooks; the demand is kept |
+| `JMethodEnterInst` | unchanged | entry sink and source hooks; the demand is kept |
 
-The backward base move is not `simpleAssign` with swapped roles: for `x = y`
-it kills the demand on `x`, which `simpleAssign(y, x)` keeps. When a
-statement's rules (static-field or entry rules, section 3) refine the demand
-or add demands, the backward step results are collected and emitted with the
-refiner.
+The edge kinds are emitted as in forward: an F2F result becomes
+`FactToFact(initial with the result's exclusions, result)` (`ZeroToFact` for a
+`Universe` result), Z2F and NDF2F results must be unrefined. When a
+statement's rules refine the demand or add demands, the transfer results are
+collected and emitted with the refiner's exclusions. The backward FF is cached
+per statement in the backward method context, like the forward one.
 
 ## 6. TaintAnalyzer pipeline
 

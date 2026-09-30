@@ -215,6 +215,26 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     }
 
     @Test
+    fun `reversed array write keeps the element refinable`() {
+        val inst = assigns("arrayWrite").first { it.lhv is JIRArrayAccess }
+        val y = base((inst.lhv as JIRArrayAccess).array)
+        val x = base(inst.rhv as JIRValue)
+        val reversed = JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null)
+        assertEquals(setOf(
+            Edge(p(y).exclude(ElementAccessor), p(y)),
+            Edge(p(y, ElementAccessor), p(y, ElementAccessor)),
+            Edge(p(y, ElementAccessor), p(x)),
+        ), reversed.find(y)!!.edges.toSet())
+    }
+
+    @Test
+    fun `constant carries no facts`() {
+        val inst = insts("constant").filterIsInstance<JIRReturnInst>().single()
+        assertEquals(emptySet(), edges(inst))
+        assertEquals(emptySet(), preconditions(inst, p(AccessPathBase.Return, g)))
+    }
+
+    @Test
     fun `reversed kill has no preconditions`() {
         val inst = insts("staticWrite").filterIsInstance<JIRReturnInst>().single()
         assertEquals(emptySet(), preconditions(inst, p(AccessPathBase.Return, g)))

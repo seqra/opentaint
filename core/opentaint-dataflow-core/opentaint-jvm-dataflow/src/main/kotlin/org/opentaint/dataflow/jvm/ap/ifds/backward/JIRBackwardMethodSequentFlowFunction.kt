@@ -1,7 +1,6 @@
 package org.opentaint.dataflow.jvm.ap.ifds.backward
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
@@ -10,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.configuration.jvm.Condition
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSink
@@ -18,26 +18,20 @@ import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSink
-import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis.AliasApInfo
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.MemoryAccess
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.RefAccess
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.StaticRefAccess
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.writeToAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction.FactRefiner
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodSequentFlowFunction.SequentEmitter
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.apAccessor
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary
 import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardTaintAnalysisContext.Companion.positiveMarks
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
 import org.opentaint.dataflow.taint.FinalFactReader
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRInst
-import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
-import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.jvm.graph.JMethodEnterInst
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 
 class JIRBackwardMethodSequentFlowFunction(
     private val apManager: ApManager,
@@ -47,31 +41,22 @@ class JIRBackwardMethodSequentFlowFunction(
 ) : MethodSequentFlowFunction {
     private val forward = JIRMethodSequentFlowFunction(apManager, analysisContext, currentInst, generateTrace = false)
 
-    override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet<Sequent> {
-        propagate(emptySet(), currentFactAp, SequentEmitter.zeroToFact(this, currentFactAp))
-    }
-
-    override fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp) = buildSet<Sequent> {
-        propagate(setOf(initialFactAp), currentFactAp, SequentEmitter.factToFact(this, initialFactAp, currentFactAp))
-    }
-
-    override fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp) = buildSet<Sequent> {
-        propagate(initialFacts, currentFactAp, SequentEmitter.ndFactToFact(this, initialFacts, currentFactAp))
+    private val summary: StatementSummary by lazy {
+        JIRStatementSummary.buildReversed(apManager, currentInst, analysisContext.aliasAnalysis)
     }
 
     override fun propagateZeroToZero(): Set<Sequent> = buildSet {
         add(Sequent.ZeroToZero)
 
         when (currentInst) {
-            is JIRReturnInst -> {
+            is JMethodExitNormalInst -> {
                 for ((fact, _) in forward.applyMethodExitSourceRules(AccessPathBase.Return, fact = null, refiner = null)) {
-                    val zeroFact: (FinalFactAp) -> Unit = { add(Sequent.ZeroToFact(it, TraceInfo.Flow)) }
-                    moveDemand(AccessPathBase.Return, returnValue(currentInst), fact, zeroFact, zeroFact)
+                    add(Sequent.ZeroToFact(fact, TraceInfo.Flow))
                 }
                 applyUnconditionalExitSinks(AccessPathBase.Return)
             }
 
-            is JIRThrowInst -> applyUnconditionalExitSinks(AccessPathBase.Exception)
+            is JMethodExitExceptionalInst -> applyUnconditionalExitSinks(AccessPathBase.Exception)
 
             is JMethodEnterInst -> {
                 sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
@@ -82,71 +67,131 @@ class JIRBackwardMethodSequentFlowFunction(
         }
     }
 
-    private fun propagate(
+    override fun propagateZeroToFact(currentFactAp: FinalFactAp) = buildSet {
+        propagate(
+            initialFacts = emptySet(),
+            factAp = currentFactAp,
+            propagateFact = { fact ->
+                check(fact.exclusions is ExclusionSet.Universe) {
+                    "Zero to Fact edge can't be refined: $currentFactAp"
+                }
+                add(Sequent.ZeroToFact(fact, TraceInfo.Flow))
+            },
+            refineInitial = { },
+        )
+    }
+
+    override fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp) = buildSet {
+        propagate(
+            initialFacts = setOf(initialFactAp),
+            factAp = currentFactAp,
+            propagateFact = { fact ->
+                if (fact.exclusions is ExclusionSet.Universe) {
+                    add(Sequent.ZeroToFact(fact, TraceInfo.Flow))
+                } else {
+                    add(Sequent.FactToFact(initialFactAp.replaceExclusions(fact.exclusions), fact, TraceInfo.Flow))
+                }
+            },
+            refineInitial = { exclusions ->
+                val refinedInitial = initialFactAp.replaceExclusions(exclusions)
+                if (refinedInitial != initialFactAp) {
+                    add(Sequent.SideEffectRequirement(refinedInitial))
+                }
+            },
+        )
+    }
+
+    override fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp) = buildSet {
+        propagate(
+            initialFacts = initialFacts,
+            factAp = currentFactAp,
+            propagateFact = { fact ->
+                check(fact.exclusions is ExclusionSet.Universe) {
+                    "NDF2F edge can't be refined: $currentFactAp"
+                }
+                add(Sequent.NDFactToFact(initialFacts, fact, TraceInfo.Flow))
+            },
+            refineInitial = { },
+        )
+    }
+
+    private fun MutableSet<Sequent>.propagate(
         initialFacts: Set<InitialFactAp>,
         factAp: FinalFactAp,
-        emitter: SequentEmitter,
+        propagateFact: (FinalFactAp) -> Unit,
+        refineInitial: (ExclusionSet) -> Unit,
     ) {
         val refiner = FactRefiner()
         val demands = mutableListOf<FinalFactAp>()
 
         when (currentInst) {
-            is JIRAssignInst -> {
-                applyStaticFieldRules(currentInst, factAp, refiner, demands)
-                val exclude = { fact: FinalFactAp, accessor: Accessor ->
-                    emitter.propagateFactWithAccessorExclude(fact, accessor, TraceInfo.Flow)
+            is JMethodExitNormalInst -> propagateExitFact(AccessPathBase.Return, initialFacts, factAp, refiner, demands)
+            is JMethodExitExceptionalInst -> propagateExitFact(AccessPathBase.Exception, initialFacts, factAp, refiner, demands)
+            is JMethodEnterInst -> propagateEnterFact(currentInst, initialFacts, factAp, refiner, demands)
+
+            else -> {
+                if (currentInst is JIRAssignInst) {
+                    applyStaticFieldRules(currentInst, factAp, refiner, demands)
                 }
 
                 if (!refiner.hasRefinement && demands.isEmpty()) {
-                    assign(currentInst, factAp, emitter::unchanged, { emitter.propagateFact(it, TraceInfo.Flow) }, exclude)
-                } else {
-                    assign(currentInst, factAp, { demands += factAp }, demands::add, exclude)
-                }
-            }
-
-            is JIRReturnInst -> {
-                forward.applyMethodExitSinkRules(AccessPathBase.Return, factAp, initialFacts, emitter::sideEffect, refiner)
-                val facts = listOf(factAp) + forward.applyMethodExitSourceRules(AccessPathBase.Return, factAp, refiner).map { it.first }
-                facts.forEach { moveDemand(AccessPathBase.Return, returnValue(currentInst), it, demands::add, demands::add) }
-            }
-
-            is JIRThrowInst -> {
-                val throwable = accessPathBase(currentInst.throwable)
-                moveDemand(AccessPathBase.Exception, throwable, factAp, demands::add, demands::add)
-            }
-
-            is JMethodEnterInst -> {
-                val sinks = entrySinkRules(currentInst)
-                val sources = entrySourceRules(currentInst)
-                val conditions = sinks.map { it.rule.condition } + sources.map { it.rule.condition }
-                if (!leavesThroughArgumentRoot(conditions, initialFacts)) {
-                    val util = sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
-                    util.applySinkRules(sinks, FinalFactReader(factAp, apManager), markAfterAnyFieldResolver = null)
-                    util.conditionReaders.forEach(refiner::add)
-                    demands += applySourceRules(sources, AccessPathBase.Return, factAp, refiner)
+                    if (!transfer(summary, factAp, analysisContext.factTypeChecker, propagateFact, refineInitial)) {
+                        add(Sequent.Unchanged)
+                    }
+                    return
                 }
 
-                demands += factAp
+                if (!transfer(summary, factAp, analysisContext.factTypeChecker, demands::add, refineInitial)) {
+                    demands += factAp
+                }
             }
-
-            else -> emitter.unchanged()
         }
 
         for (demand in demands) {
             if (demand == factAp && !refiner.hasRefinement) {
-                emitter.unchanged()
+                add(Sequent.Unchanged)
             } else {
-                emitter.propagateFactWithRefinement(refiner, demand, TraceInfo.Flow)
+                propagateFact(refiner.refineFact(demand))
             }
         }
+    }
+
+    private fun MutableSet<Sequent>.propagateExitFact(
+        exitBase: AccessPathBase,
+        initialFacts: Set<InitialFactAp>,
+        factAp: FinalFactAp,
+        refiner: FactRefiner,
+        demands: MutableList<FinalFactAp>,
+    ) {
+        forward.applyMethodExitSinkRules(exitBase, factAp, initialFacts, sideEffect = { add(it) }, refiner)
+        demands += factAp
+        forward.applyMethodExitSourceRules(exitBase, factAp, refiner).mapTo(demands) { it.first }
+    }
+
+    private fun propagateEnterFact(
+        inst: JMethodEnterInst,
+        initialFacts: Set<InitialFactAp>,
+        factAp: FinalFactAp,
+        refiner: FactRefiner,
+        demands: MutableList<FinalFactAp>,
+    ) {
+        val sinks = entrySinkRules(inst)
+        val sources = entrySourceRules(inst)
+        val conditions = sinks.map { it.rule.condition } + sources.map { it.rule.condition }
+        if (!leavesThroughArgumentRoot(conditions, initialFacts)) {
+            val util = sinkUtil<TaintMethodEntrySink>(AccessPathBase.Return)
+            util.applySinkRules(sinks, FinalFactReader(factAp, apManager), markAfterAnyFieldResolver = null)
+            util.conditionReaders.forEach(refiner::add)
+            demands += applySourceRules(sources, AccessPathBase.Return, factAp, refiner)
+        }
+
+        demands += factAp
     }
 
     private fun applyUnconditionalExitSinks(methodResult: AccessPathBase) {
         val rules = taint.sinkRulesForMethodExit(currentInst, fact = null, initialFacts = emptySet())
         sinkUtil<TaintMethodExitSink>(methodResult).applySinkRules(rules, factReader = null, markAfterAnyFieldResolver = null)
     }
-
-    private fun returnValue(inst: JIRReturnInst): AccessPathBase? = inst.returnValue?.let { accessPathBase(it) }
 
     private fun <Sink : TaintConfigurationSink> sinkUtil(methodResult: AccessPathBase) =
         JIRSequentTaintUtil<TaintConfigurationSource, Sink>(
@@ -218,121 +263,6 @@ class JIRBackwardMethodSequentFlowFunction(
             val base = initialFact.base
             (base is AccessPathBase.Argument || base is AccessPathBase.This) &&
                 marks.any { initialFact.startsWithAccessor(it) }
-        }
-    }
-
-    private fun assign(
-        inst: JIRAssignInst,
-        factAp: FinalFactAp,
-        unchanged: () -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit,
-    ) = forward.forEachAssignOperands(inst.rhv, inst.lhv, factAp) { assignFrom, assignTo, fact ->
-        val onUnchanged: (FinalFactAp) -> Unit = if (fact != factAp) propagateFact else { _ -> unchanged() }
-
-        when {
-            assignFrom is MemoryAccess -> readDemand(assignTo.base, assignFrom, fact, onUnchanged, propagateFact)
-            assignTo is MemoryAccess -> writeDemand(
-                assignTo, assignFrom?.base, fact, onUnchanged, propagateFact, propagateFactWithAccessorExclude
-            )
-            else -> moveDemand(assignTo.base, assignFrom?.base, fact, onUnchanged, propagateFact)
-        }
-    }
-
-    private fun moveDemand(
-        assignTo: AccessPathBase,
-        assignFrom: AccessPathBase?,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-    ) {
-        if (assignTo != factAp.base || assignTo == assignFrom) return unchanged(factAp)
-        if (assignFrom != null && assignFrom !is AccessPathBase.Constant) propagateFact(factAp.rebase(assignFrom))
-    }
-
-    private fun readDemand(
-        assignTo: AccessPathBase,
-        access: MemoryAccess,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-    ) {
-        if (factAp.base != assignTo) return unchanged(factAp)
-        forward.moveIntoField(access, factAp, propagateFact)
-    }
-
-    private fun writeDemand(
-        access: MemoryAccess,
-        assignFrom: AccessPathBase?,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        when (access) {
-            is RefAccess -> forward.clearWrittenField(access, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
-            is StaticRefAccess -> clearStaticField(access, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
-        }
-
-        val value = assignFrom?.takeUnless { it is AccessPathBase.Constant } ?: return
-        val readValue = { fact: FinalFactAp, exclude: (FinalFactAp, Accessor) -> Unit ->
-            forward.fieldRead(value, access, fact, {}, { if (it.base == value) propagateFact(it) }, exclude)
-        }
-
-        readValue(factAp, propagateFactWithAccessorExclude)
-
-        if (access !is RefAccess || factAp.base == access.base) return
-        forEachWriteAlias(access, factAp, propagateFactWithAccessorExclude) { aliased ->
-            readValue(aliased) { _, accessor -> propagateFactWithAccessorExclude(factAp, accessor) }
-        }
-    }
-
-    private fun clearStaticField(
-        access: StaticRefAccess,
-        factAp: FinalFactAp,
-        unchanged: (FinalFactAp) -> Unit,
-        propagateFact: (FinalFactAp) -> Unit,
-        propagateFactWithAccessorExclude: (FinalFactAp, Accessor) -> Unit
-    ) {
-        val classAccess = RefAccess(access.base, access.classStaticAccessor)
-        forward.clearWrittenField(classAccess, factAp, unchanged, propagateFact, propagateFactWithAccessorExclude)
-
-        val classFields = AccessPathBase.LocalVar.create(-1)
-        val restore = { fields: FinalFactAp ->
-            val restored = fields.writeToAccessor(access.base, access.classStaticAccessor)
-            if (restored == factAp) unchanged(restored) else propagateFact(restored)
-        }
-
-        forward.fieldRead(classFields, classAccess, factAp, {}, { fields ->
-            if (fields.base == classFields) {
-                forward.clearWrittenField(RefAccess(classFields, access.accessor), fields, restore, restore) { _, accessor ->
-                    propagateFactWithAccessorExclude(factAp, accessor)
-                }
-            }
-        }, { _, _ -> })
-    }
-
-    private inline fun forEachWriteAlias(
-        access: RefAccess,
-        factAp: FinalFactAp,
-        exclude: (FinalFactAp, Accessor) -> Unit,
-        body: (FinalFactAp) -> Unit,
-    ) {
-        val instance = access.base as? AccessPathBase.LocalVar ?: return
-        val aliases = analysisContext.aliasAnalysis?.findAlias(instance, currentInst) ?: return
-
-        for (alias in aliases) {
-            if (alias !is AliasApInfo || alias.base != factAp.base) continue
-
-            var aliased: FinalFactAp? = factAp
-            for (aliasAccessor in alias.accessors) {
-                val current = aliased ?: break
-                val accessor = aliasAccessor.apAccessor()
-                if (current.isAbstract() && accessor !in current.exclusions) exclude(factAp, accessor)
-                aliased = current.readAccessor(accessor)
-            }
-
-            aliased?.let { body(it.rebase(instance)) }
         }
     }
 }

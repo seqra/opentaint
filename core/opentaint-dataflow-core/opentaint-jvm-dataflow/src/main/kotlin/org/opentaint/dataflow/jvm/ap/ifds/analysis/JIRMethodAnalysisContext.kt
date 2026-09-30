@@ -6,6 +6,7 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
@@ -42,7 +43,7 @@ class JIRMethodAnalysisContext(
     fun cachedCallSH(stmtIdx: Int, body: () -> JIRMethodCallSummaryHandler): JIRMethodCallSummaryHandler =
         getCallSHCache().computeIfAbsent(stmtIdx) { body() }
 
-    fun cachedSequentFF(stmtIdx: Int, generateTrace: Boolean, body: () -> JIRMethodSequentFlowFunction): JIRMethodSequentFlowFunction {
+    fun cachedSequentFF(stmtIdx: Int, generateTrace: Boolean, body: () -> MethodSequentFlowFunction): MethodSequentFlowFunction {
         val cache = getSequentFFCache()
         val key = stmtIdx * 2 + if (generateTrace) 1 else 0
         return synchronized(cache) { cache.computeIfAbsent(key) { body() } }
@@ -65,10 +66,10 @@ class JIRMethodAnalysisContext(
     }
 
     @Volatile
-    private var sequentFFCache: Reference<Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction>>? = null
-    private fun getSequentFFCache(): Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction> {
+    private var sequentFFCache: Reference<Int2ObjectOpenHashMap<MethodSequentFlowFunction>>? = null
+    private fun getSequentFFCache(): Int2ObjectOpenHashMap<MethodSequentFlowFunction> {
         sequentFFCache?.get()?.let { return it }
-        return int2ObjectMap<JIRMethodSequentFlowFunction>().also {
+        return int2ObjectMap<MethodSequentFlowFunction>().also {
             sequentFFCache = refManager.createRef(it)
         }
     }
