@@ -108,7 +108,9 @@ class PIRMethodSequentFlowFunction(
             unchanged = { this += Sequent.Unchanged },
             propagateFact = { it, traceInfo -> this += Sequent.FactToFact(initialFactAp, it, traceInfo) },
             propagateFactWithAccessorExclude = { fact, accessor, traceInfo ->
-                this += Sequent.FactToFact(initialFactAp.exclude(accessor), fact.exclude(accessor), traceInfo)
+                val refinedInitial = initialFactAp.exclude(accessor)
+                this += Sequent.FactToFact(refinedInitial, fact.exclude(accessor), traceInfo)
+                this += Sequent.SideEffectRequirement(refinedInitial)
             },
             addSideEffectRequirement = { reader ->
                 this += Sequent.SideEffectRequirement(
