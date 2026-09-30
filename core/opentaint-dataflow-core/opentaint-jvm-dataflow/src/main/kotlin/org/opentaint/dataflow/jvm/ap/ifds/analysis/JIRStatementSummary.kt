@@ -93,8 +93,7 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
                     val idx = bases.indexOf(to.base)
                     check(idx >= 0) { "Edge target is not a touched base: $edge" }
 
-                    val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
-                    if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
+                    reversedEdges[idx] += Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
                 }
             }
 
