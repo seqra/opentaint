@@ -69,11 +69,11 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | Statement | Edges |
 |---|---|
 | `x = y`, `x = (T) y`, `x = a op b` | per operand `o`: `o -> o`, `o -> x` |
-| `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `A -> A`, `y/{f} -> A` for every alias `A` of `y` not based on `x` |
-| `x = x.f` | `x/{f} -> ⊥`, `x.f -> x`, `A -> A`, `x/{f} -> A` for every alias `A` of `x` |
+| `x = y.f` (`y != x`) | `y/{f} -> y`, `y.f -> y.f`, `y.f -> x`, `y/{f} -> A` for every alias `A` of `y` not based on `x`; backward only: `A -> A` |
+| `x = x.f` | `x/{f} -> ⊥`, `x.f -> x`, `x/{f} -> A` for every alias `A` of `x`; backward only: `A -> A` |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
 | `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` as `x = x.f`) |
-| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`; for every alias path `A = a.p` of `y`: the split along `a.p.f` (`a/{p1} -> a`, ..., `a.p/{f} -> a.p`), `a.p.f -> a.p.f` (weak: may-alias), `x -> a.p.f` |
+| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `x -> a.p.f` for every alias path `a.p` of `y`; backward only: the split along `a.p.f` (`a/{p1} -> a`, ..., `a.p/{f} -> a.p`) and `a.p.f -> a.p.f` (weak: may-alias) |
 | `y[i] = x` | `y -> y`, `x -> x`, `x -> y.[e]`, `x -> A.[e]` for every alias `A` of `y` |
 | `C.f = x` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `x -> x`, `x -> <C>.C.f` |
 | `return x` / `throw x` | `x -> x`, `x -> Return` / `x -> Exception` |
@@ -138,13 +138,16 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 
 ## 5a. Preconditions from reversed summaries
 
-`JIRStatementSummary.reversed()` swaps every forward edge `from -> to` into `to' -> from'`, where
-`to'` is `to` with `from`'s exclusions (they describe the matched part of the value) and `from'` is
-`from` without exclusions; kill edges are dropped. It is a pure swap because the forward summary is
-closed: every edge target is a touched base. Alias targets of a write are touched by the split
-along the alias path; alias targets of a read by an identity edge `A -> A` (their facts survive the
-statement, now as explicit edges instead of `Unchanged`). A base
-the statement does not touch has no entry. The precondition uses `build(...).reversed()`.
+`JIRStatementSummary.build` and `JIRStatementSummary.buildReversed` share one builder. Besides the
+forward edges it records backward-only edges: the survival of alias targets (`A -> A` at a read; the
+split along the alias path plus the weak written field at a write). Forward they add nothing (an
+untouched alias base passes as `Unchanged`), so `build` omits them. Backward they are required: without
+them an alias base would look touched with only the alias edges, a spurious kill. `buildReversed`
+swaps every forward and backward-only edge `from -> to` into `to' -> from'`, where `to'` is `to` with
+`from`'s exclusions (they describe the matched part of the value) and `from'` is `from` without
+exclusions; kill edges are dropped. Every edge target is a base of the reversed summary. Because the
+two summaries are built with different edge sets, reversing is not an involution and there is no
+`reverse` operation on a built summary.
 
 `JIRMethodSequentPrecondition` computes the preconditions of an initial fact `q` as
 `to'.concat(d)` with `q`'s exclusions for every reversed edge and every

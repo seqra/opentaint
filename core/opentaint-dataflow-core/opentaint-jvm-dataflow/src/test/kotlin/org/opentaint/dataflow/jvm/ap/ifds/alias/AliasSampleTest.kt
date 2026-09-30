@@ -588,7 +588,7 @@ class AliasSampleTest : BasicTestUtils() {
     }
 
     @Test
-    fun `field write through an alias splits the alias path and keeps the written field weak`() {
+    fun `field write through an alias adds the value forward and keeps the alias path backward`() {
         val method = findMethod(HEAP_SAMPLE, "writeThroughFieldAlias")
         val aa = aaForMethod(method)
         val write = method.instList.filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
@@ -610,15 +610,12 @@ class AliasSampleTest : BasicTestUtils() {
                 Edge(p(y).exclude(value), p(y)),
                 Edge(p(x), p(x)),
                 Edge(p(x), p(y, value)),
-                Edge(p(a).exclude(box), p(a)),
-                Edge(p(a, box).exclude(value), p(a, box)),
-                Edge(p(a, box, value), p(a, box, value)),
                 Edge(p(x), p(a, box, value)),
             ),
             summary.transfers.flatMap { it.edges.asList() }.toSet()
         )
 
-        val reversed = summary.reversed()
+        val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
         fun preconditions(fact: InitialFactAp): Set<InitialFactAp> =
             reversed.find(fact.base)!!.edges
                 .flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }

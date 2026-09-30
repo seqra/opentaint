@@ -38,37 +38,24 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         return null
     }
 
-    fun reversed(): JIRStatementSummary {
-        val reversedEdges = Array(transfers.size) { ArrayList<Edge>(2) }
-
-        for (transfer in transfers) {
-            for (edge in transfer.edges) {
-                val to = edge.to ?: continue
-                val idx = transfers.indexOfFirst { it.base == to.base }
-                check(idx >= 0) { "Edge target is not a touched base: $edge" }
-
-                val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
-                if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
-            }
-        }
-
-        return JIRStatementSummary(Array(transfers.size) { i ->
-            BaseTransfer(transfers[i].base, reversedEdges[i].toTypedArray(), emptyArray())
-        })
-    }
-
     companion object {
         val Empty = JIRStatementSummary(emptyArray())
 
-        fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary {
+        fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
+            builder(apManager, inst, aliasAnalysis)?.build() ?: Empty
+
+        fun buildReversed(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
+            builder(apManager, inst, aliasAnalysis)?.buildReversed() ?: Empty
+
+        private fun builder(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): Builder? {
             val builder = Builder(apManager, inst, aliasAnalysis)
             when (inst) {
                 is JIRAssignInst -> builder.assign(inst.lhv, inst.rhv)
                 is JIRReturnInst -> builder.move(AccessPathBase.Return, inst.returnValue?.let { accessPathBase(it) })
                 is JIRThrowInst -> builder.move(AccessPathBase.Exception, accessPathBase(inst.throwable))
-                else -> return Empty
+                else -> return null
             }
-            return builder.build()
+            return builder
         }
     }
 
@@ -81,6 +68,7 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         private val edges = ArrayList<ArrayList<Edge>>(2)
         private val filterBases = ArrayList<AccessPathBase>(2)
         private val filterTypes = ArrayList<JIRType>(2)
+        private val backwardOnlyEdges = ArrayList<Edge>(2)
 
         fun build(): JIRStatementSummary {
             val transfers = Array(bases.size) { i ->
@@ -89,6 +77,28 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
                 BaseTransfer(base, edges[i].toTypedArray(), types.toTypedArray())
             }
             return JIRStatementSummary(transfers)
+        }
+
+        fun buildReversed(): JIRStatementSummary {
+            val reversedBases = ArrayList<AccessPathBase>(bases)
+            backwardOnlyEdges.forEach { if (it.from.base !in reversedBases) reversedBases += it.from.base }
+            val reversedEdges = Array(reversedBases.size) { ArrayList<Edge>(2) }
+
+            fun reverse(edge: Edge) {
+                val to = edge.to ?: return
+                val idx = reversedBases.indexOf(to.base)
+                check(idx >= 0) { "Edge target is not a touched base: $edge" }
+
+                val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
+                if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
+            }
+
+            edges.forEach { it.forEach(::reverse) }
+            backwardOnlyEdges.forEach(::reverse)
+
+            return JIRStatementSummary(Array(reversedBases.size) { i ->
+                BaseTransfer(reversedBases[i], reversedEdges[i].toTypedArray(), emptyArray())
+            })
         }
 
         private fun fact(base: AccessPathBase, accessors: List<Accessor> = emptyList()): InitialFactAp =
@@ -105,6 +115,20 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             val baseEdges = touch(from.base)
             val edge = Edge(from, to)
             if (edge !in baseEdges) baseEdges += edge
+        }
+
+        private fun backwardOnlyEdge(from: InitialFactAp, to: InitialFactAp) {
+            val edge = Edge(from, to)
+            if (edge !in backwardOnlyEdges) backwardOnlyEdges += edge
+        }
+
+        private fun keepBackwardOnly(base: AccessPathBase, accessors: List<Accessor>) {
+            for (i in accessors.indices) {
+                val prefix = fact(base, accessors.subList(0, i))
+                backwardOnlyEdge(prefix.exclude(accessors[i]), prefix)
+            }
+            val target = fact(base, accessors)
+            backwardOnlyEdge(target, target)
         }
 
         private fun filter(access: MethodFlowFunctionUtils.Access, type: JIRType?) {
@@ -173,7 +197,7 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         }
 
         private fun keepAliasBase(base: AccessPathBase, aliasBase: AccessPathBase) {
-            if (aliasBase != base) edge(fact(aliasBase), fact(aliasBase))
+            if (aliasBase != base) keepBackwardOnly(aliasBase, emptyList())
         }
 
         private fun aliasRest(base: AccessPathBase, accessor: Accessor, written: AccessPathBase?) {
@@ -219,10 +243,8 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
                 if (aliasBase != base) {
                     val aliasPath = aliasAccessors + accessors
-                    val aliasTarget = fact(aliasBase, aliasPath)
-                    keepAllExcept(aliasBase, aliasPath)
-                    edge(aliasTarget, aliasTarget)
-                    if (from != null) edge(fact(from), aliasTarget)
+                    keepBackwardOnly(aliasBase, aliasPath)
+                    if (from != null) edge(fact(from), fact(aliasBase, aliasPath))
                 }
             }
         }
