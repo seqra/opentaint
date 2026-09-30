@@ -19,9 +19,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.locals
 
-fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: FinalFactAp, body: (FinalFactAp) -> Unit) =
-    forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
-
 fun JIRLocalAliasAnalysis.forEachAliasAtStatement(statement: JIRInst, fact: InitialFactAp, body: (InitialFactAp) -> Unit) =
     forEachAliasAtStatement(statement, fact, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body)
 
@@ -60,6 +57,19 @@ fun JIRLocalAliasAnalysis.forEachAliasAtStatementAmongBases(
 ) = forEachAliasAtStatementAmongBases(
     statement, fact, bases, AliasInfo::relevantApInfo, AliasAccessor::apAccessor, body
 )
+
+fun JIRLocalAliasAnalysis.forEachAliasPathAtStatement(
+    statement: JIRInst,
+    base: AccessPathBase,
+    body: (AccessPathBase, List<Accessor>) -> Unit
+) {
+    val local = base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(local, statement) ?: return
+    aliases.forEach { alias ->
+        val info = alias.relevantApInfo() ?: return@forEach
+        body(info.base, info.accessors.map { it.apAccessor() })
+    }
+}
 
 private fun AliasInfo.relevantApInfo(): AliasApInfo? =
     (this as? AliasApInfo)?.takeIf { it.base !is AccessPathBase.Constant }

@@ -1,8 +1,13 @@
 package org.opentaint.dataflow.ap.ifds.analysis
 
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
+import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.SideEffectKind
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.configuration.CommonTaintAction
 import org.opentaint.dataflow.configuration.CommonTaintConfigurationItem
 
@@ -32,4 +37,43 @@ interface MethodSequentFlowFunction {
     fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent>
     fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp): Set<Sequent>
     fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp): Set<Sequent>
+
+    fun transfer(
+        summary: StatementSummary,
+        fact: FinalFactAp,
+        typeChecker: FactTypeChecker,
+        propagateFact: (FinalFactAp) -> Unit,
+        refineInitial: (ExclusionSet) -> Unit,
+    ): Boolean {
+        val transfer = summary.find(fact.base) ?: return false
+
+        var filtered = fact
+        for (type in transfer.typeFilters) {
+            filtered = typeChecker.filterFactByLocalType(type, filtered) ?: return true
+        }
+
+        for (edge in transfer.edges) {
+            val to = edge.to
+            for (effect in MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(filtered, edge.from)) {
+                when (effect) {
+                    is SummaryEdgeApplication.SummaryApRefinement -> {
+                        if (to == null) continue
+                        val result = to.concat(typeChecker, effect.delta) ?: continue
+                        propagateFact(result.replaceExclusions(filtered.exclusions))
+                    }
+
+                    is SummaryEdgeApplication.SummaryExclusionRefinement -> {
+                        if (to == null) {
+                            refineInitial(effect.exclusion)
+                            continue
+                        }
+                        val result = to.concat(typeChecker, effect.delta) ?: continue
+                        propagateFact(result.replaceExclusions(effect.exclusion))
+                    }
+                }
+            }
+        }
+
+        return true
+    }
 }

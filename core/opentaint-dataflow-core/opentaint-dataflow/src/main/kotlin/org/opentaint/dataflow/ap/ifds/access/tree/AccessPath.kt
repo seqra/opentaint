@@ -9,6 +9,7 @@ import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.SUBSEQUENT_ARRAY_ELEMENTS_LIMIT
+import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode.Companion.createAbstractNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
@@ -21,6 +22,7 @@ import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isT
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isTypeInfoAccessor
 import org.opentaint.dataflow.util.foldRightInt
 import org.opentaint.dataflow.util.reversedForEachInt
+import java.util.IdentityHashMap
 
 class AccessPath(
     private val apManager: TreeApManager,
@@ -121,6 +123,23 @@ class AccessPath(
         }
     }
 
+    override fun delta(other: InitialFactAp): List<InitialFactAp.Delta> {
+        other as AccessPath
+
+        if (base != other.base) return emptyList()
+
+        var node = access
+        var otherNode = other.access
+        while (otherNode != null) {
+            if (node == null || node.accessor != otherNode.accessor) return emptyList()
+            node = node.next
+            otherNode = otherNode.next
+        }
+
+        if (node == null) return listOf(AccessPathDelta.Empty)
+        return listOfNotNull(node.filter(other.exclusions)?.let { AccessPathDelta.Delta(it) })
+    }
+
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 
@@ -184,6 +203,26 @@ class AccessPath(
                 val node = access?.concat(delta.node) ?: delta.node
                 return AccessPath(apManager, base, node, exclusions)
             }
+        }
+    }
+
+    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? {
+        val accessors = access?.toList() ?: IntArrayList()
+        return when (delta) {
+            is AccessTree.EmptyAccessTreeDelta -> {
+                val node = with(apManager) { createAbstractNodeFromAccessors(accessors) }
+                val annotated = delta.deepAccessorExclusion
+                    ?.let { node.annotateAbstractNodes(it, IdentityHashMap()) }
+                    ?: node
+                AccessTree(apManager, base, annotated, exclusions)
+            }
+
+            is AccessTree.NodeAccessTreeDelta -> {
+                val node = accessors.foldRightInt(delta.node) { accessor, acc -> acc.addParent(accessor) }
+                AccessTree(apManager, base, node, exclusions)
+            }
+
+            else -> error("Unexpected delta: $delta")
         }
     }
 

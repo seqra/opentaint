@@ -5,6 +5,7 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo.Flow
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
@@ -15,8 +16,12 @@ import org.opentaint.ir.go.api.GoIRFunction
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.client.GoIRClient
 import org.opentaint.ir.go.client.GoIRLoadConfig
+import org.opentaint.dataflow.go.analysis.forEachAliasPathAtStatement
+import org.opentaint.dataflow.go.analysis.alias.GoLocalAliasAnalysis
 import org.opentaint.ir.go.inst.GoIRAssignInst
+import org.opentaint.ir.go.inst.GoIRFieldStore
 import org.opentaint.ir.go.inst.GoIRPhi
+import org.opentaint.ir.go.value.GoIRConstValue
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 import kotlin.test.assertEquals
@@ -38,6 +43,8 @@ class GoSequentExactTest {
             func Deref(p *interface{}) interface{} { return *p }
             func FieldRead(b *Box) interface{} { return b.v }
             func Phi(a, b interface{}, c bool) interface{} { var r interface{}; if c { r = a } else { r = b }; return r }
+            type Pair struct{ value string; extra string }
+            func CopyThenOverwrite(s string) string { o := Pair{value: s, extra: "x"}; c := o; o.value = "safe"; return c.value }
             """.trimIndent()
         )
         program = client.buildFromDir(dir, GoIRLoadConfig()).program
@@ -66,7 +73,10 @@ class GoSequentExactTest {
             val onOther = FactSpec(unrelated, emptyList())
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.FactToFact(onSrc.initial(), onDst.final(), Flow)),
+                setOf(
+                    Sequent.FactToFact(onSrc.initial(), onSrc.final(), Flow),
+                    Sequent.FactToFact(onSrc.initial(), onDst.final(), Flow),
+                ),
                 ff.propagateFactToFact(onSrc.initial(), onSrc.final()),
                 "fact on source survives and propagates to destination",
             )
@@ -82,8 +92,11 @@ class GoSequentExactTest {
             )
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.ZeroToFact(onDst.final(), Flow)),
-                ff.propagateZeroToFact(onSrc.final()),
+                setOf(
+                    Sequent.ZeroToFact(onSrc.final(ExclusionSet.Universe), Flow),
+                    Sequent.ZeroToFact(onDst.final(ExclusionSet.Universe), Flow),
+                ),
+                ff.propagateZeroToFact(onSrc.final(ExclusionSet.Universe)),
             )
 
             assertTrue(Sequent.ZeroToZero in ff.propagateZeroToZero())
@@ -115,7 +128,10 @@ class GoSequentExactTest {
             val onDst = FactSpec(dst, emptyList())
 
             assertEquals(
-                setOf(Sequent.Unchanged, Sequent.FactToFact(onField.initial(), onDst.final(), Flow)),
+                setOf(
+                    Sequent.FactToFact(onField.initial(), onField.final(), Flow),
+                    Sequent.FactToFact(onField.initial(), onDst.final(), Flow),
+                ),
                 ff.propagateFactToFact(onField.initial(), onField.final()),
                 "reading base.field into the register strips the field accessor",
             )
@@ -147,6 +163,41 @@ class GoSequentExactTest {
             )
 
             assertEquals(emptySet(), ff(phi).propagateFactToFact(onDst.initial(), onDst.final()))
+        }
+    }
+
+    @Test
+    fun `alias of an overwritten field is unchanged with the stored value as precondition`() {
+        val fn = func("CopyThenOverwrite")
+        val fixture = SequentFixture(program, fn)
+        val store = fn.body!!.instructions.filterIsInstance<GoIRFieldStore>()
+            .single { (it.value as? GoIRConstValue)?.value?.toString()?.contains("safe") == true }
+        val instance = GoFlowFunctionUtils.accessPathBase(store.base, fn)
+        val stored = GoFlowFunctionUtils.accessPathBase(store.value, fn)
+        val field = GoFlowFunctionUtils.fieldAccessorFromStore(store)
+        val aliases = mutableListOf<AccessPathBase>()
+        GoLocalAliasAnalysis(fn).forEachAliasPathAtStatement(store, instance) { base, accessors ->
+            if (base != instance && accessors.isEmpty()) aliases += base
+        }
+        assertTrue(aliases.isNotEmpty(), "the copy must alias the overwritten instance")
+
+        with(fixture) {
+            for (alias in aliases) {
+                val onAliasField = FactSpec(alias, listOf(field))
+                assertEquals(
+                    setOf<Sequent>(Sequent.Unchanged),
+                    ff(store).propagateFactToFact(onAliasField.initial(), onAliasField.final()),
+                    "the forward flow does not touch the alias",
+                )
+                assertEquals(
+                    setOf(
+                        SequentPrecondition.Unchanged,
+                        PreconditionFactsForInitialFact(onAliasField.initial(), listOf(FactSpec(stored, emptyList()).initial())),
+                    ),
+                    pre(store).factPrecondition(onAliasField.initial()),
+                    "the alias survives unchanged and may hold the stored value",
+                )
+            }
         }
     }
 }

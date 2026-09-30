@@ -44,6 +44,12 @@ class JIRMethodAnalysisContext(
     fun cachedCallSH(stmtIdx: Int, body: () -> JIRMethodCallSummaryHandler): JIRMethodCallSummaryHandler =
         getCallSHCache().computeIfAbsent(stmtIdx) { body() }
 
+    fun cachedSequentFF(stmtIdx: Int, generateTrace: Boolean, body: () -> JIRMethodSequentFlowFunction): JIRMethodSequentFlowFunction {
+        val cache = getSequentFFCache()
+        val key = stmtIdx * 2 + if (generateTrace) 1 else 0
+        return synchronized(cache) { cache.computeIfAbsent(key) { body() } }
+    }
+
     private var callFFCache: Reference<Int2ObjectOpenHashMap<JIRMethodCallFlowFunction>>? = null
     private fun getCallFFCache(): Int2ObjectOpenHashMap<JIRMethodCallFlowFunction> {
         callFFCache?.get()?.let { return it }
@@ -60,11 +66,21 @@ class JIRMethodAnalysisContext(
         }
     }
 
+    @Volatile
+    private var sequentFFCache: Reference<Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction>>? = null
+    private fun getSequentFFCache(): Int2ObjectOpenHashMap<JIRMethodSequentFlowFunction> {
+        sequentFFCache?.get()?.let { return it }
+        return int2ObjectMap<JIRMethodSequentFlowFunction>().also {
+            sequentFFCache = refManager.createRef(it)
+        }
+    }
+
     fun resetAnalysisCache() {
         taint.reset()
         lambdaCallResolution.values.forEach { it.resetSubscribers() }
         taintMarksAssignedOnMethodEnter.clear()
         callFFCache?.clear()
         callSHCache?.clear()
+        sequentFFCache?.clear()
     }
 }
