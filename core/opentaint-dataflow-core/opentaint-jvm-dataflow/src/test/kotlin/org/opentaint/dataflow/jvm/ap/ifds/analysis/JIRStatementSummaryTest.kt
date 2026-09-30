@@ -50,7 +50,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     private val g = FieldAccessor(cls, "g", "java.lang.Object")
 
     private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? =
-        JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null).find(fact.base)?.edges
+        JIRStatementSummary.build(ap, inst, aliasAnalysis = null).reversed().find(fact.base)?.edges
             ?.flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }
             ?.toSet()
 

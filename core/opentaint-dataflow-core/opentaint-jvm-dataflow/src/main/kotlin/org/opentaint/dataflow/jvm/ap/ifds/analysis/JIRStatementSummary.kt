@@ -38,31 +38,23 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         return null
     }
 
-    fun reversed(apManager: ApManager): JIRStatementSummary {
-        val bases = ArrayList<AccessPathBase>(transfers.size)
-        val edges = ArrayList<ArrayList<Edge>>(transfers.size)
-        transfers.forEach {
-            bases += it.base
-            edges += ArrayList<Edge>(2)
-        }
+    fun reversed(): JIRStatementSummary {
+        val reversedEdges = Array(transfers.size) { ArrayList<Edge>(2) }
 
         for (transfer in transfers) {
             for (edge in transfer.edges) {
                 val to = edge.to ?: continue
-                var idx = bases.indexOf(to.base)
-                if (idx < 0) {
-                    idx = bases.size
-                    bases += to.base
-                    val identity = apManager.mostAbstractInitialAp(to.base)
-                    edges += arrayListOf(Edge(identity, identity))
-                }
+                val idx = transfers.indexOfFirst { it.base == to.base }
+                check(idx >= 0) { "Edge target is not a touched base: $edge" }
 
                 val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
-                if (reversed !in edges[idx]) edges[idx] += reversed
+                if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
             }
         }
 
-        return JIRStatementSummary(Array(bases.size) { i -> BaseTransfer(bases[i], edges[i].toTypedArray(), emptyArray()) })
+        return JIRStatementSummary(Array(transfers.size) { i ->
+            BaseTransfer(transfers[i].base, reversedEdges[i].toTypedArray(), emptyArray())
+        })
     }
 
     companion object {
@@ -78,9 +70,6 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             }
             return builder.build()
         }
-
-        fun buildReversed(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
-            build(apManager, inst, aliasAnalysis).reversed(apManager)
     }
 
     private class Builder(
@@ -183,9 +172,16 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             }
         }
 
+        private fun keepAliasBase(base: AccessPathBase, aliasBase: AccessPathBase) {
+            if (aliasBase != base) edge(fact(aliasBase), fact(aliasBase))
+        }
+
         private fun aliasRest(base: AccessPathBase, accessor: Accessor, written: AccessPathBase?) {
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                if (aliasBase != written) edge(fact(base).exclude(accessor), fact(aliasBase, aliasAccessors))
+                if (aliasBase != written) {
+                    keepAliasBase(base, aliasBase)
+                    edge(fact(base).exclude(accessor), fact(aliasBase, aliasAccessors))
+                }
             }
         }
 
@@ -221,6 +217,7 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             if (from != base) edge(fact(from), fact(from))
             edge(fact(from), target)
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
+                keepAliasBase(base, aliasBase)
                 edge(fact(from), fact(aliasBase, aliasAccessors + accessors))
             }
         }

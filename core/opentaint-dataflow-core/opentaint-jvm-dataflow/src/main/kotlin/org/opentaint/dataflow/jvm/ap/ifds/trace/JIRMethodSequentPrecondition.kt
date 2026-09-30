@@ -33,7 +33,7 @@ class JIRMethodSequentPrecondition(
     private val analysisContext: JIRMethodAnalysisContext,
 ) : MethodSequentPrecondition {
     private val summary: JIRStatementSummary by lazy {
-        JIRStatementSummary.buildReversed(apManager, currentInst, analysisContext.aliasAnalysis)
+        JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis).reversed()
     }
 
     override fun factPrecondition(
