@@ -61,21 +61,13 @@ class JIRMethodSequentFlowFunction(
             // todo: in trace mode we can't distinguish z2f from f2f
             initialFacts = emptySet<InitialFactAp>().takeIf { !generateTrace },
             factAp = currentFactAp,
-            unchanged = { add(Sequent.Unchanged) },
-            propagateTransferred = { fact, refinement ->
-                check(refinement == null || refinement is ExclusionSet.Universe) {
-                    "Zero to Fact edge can't be refined: $currentFactAp"
-                }
-                add(Sequent.ZeroToFact(fact, TraceInfo.Flow))
-            },
-            refineInitial = { },
-            propagateFactWithRefinement = { refiner, fact, trace ->
-                check(!refiner.hasRefinement) {
+            propagateFact = { fact, trace ->
+                check(fact.exclusions is ExclusionSet.Universe) {
                     "Zero to Fact edge can't be refined: $currentFactAp"
                 }
                 add(Sequent.ZeroToFact(fact, trace))
             },
-            sideEffect = { add(it) }
+            refineInitial = { },
         )
     }
 
@@ -86,23 +78,19 @@ class JIRMethodSequentFlowFunction(
         propagate(
             initialFacts = setOf(initialFactAp),
             factAp = currentFactAp,
-            unchanged = { add(Sequent.Unchanged) },
-            propagateTransferred = { fact, refinement ->
-                val initial = if (refinement == null) initialFactAp else initialFactAp.replaceExclusions(refinement)
-                add(Sequent.FactToFact(initial, fact, TraceInfo.Flow))
+            propagateFact = { fact, trace ->
+                if (fact.exclusions is ExclusionSet.Universe) {
+                    add(Sequent.ZeroToFact(fact, trace))
+                } else {
+                    add(Sequent.FactToFact(initialFactAp.replaceExclusions(fact.exclusions), fact, trace))
+                }
             },
-            refineInitial = { exclusion ->
-                val refinedInitial = initialFactAp.replaceExclusions(exclusion)
+            refineInitial = { exclusions ->
+                val refinedInitial = initialFactAp.replaceExclusions(exclusions)
                 if (refinedInitial != initialFactAp) {
                     add(Sequent.SideEffectRequirement(refinedInitial))
                 }
             },
-            propagateFactWithRefinement = { refiner, fact, trace ->
-                val refinedInitial = refiner.refineFact(initialFactAp)
-                val refinedFact = refiner.refineFact(fact)
-                add(Sequent.FactToFact(refinedInitial, refinedFact, trace))
-            },
-            sideEffect = { add(it) }
         )
     }
 
@@ -113,51 +101,34 @@ class JIRMethodSequentFlowFunction(
         propagate(
             initialFacts = initialFacts,
             factAp = currentFactAp,
-            unchanged = { add(Sequent.Unchanged) },
-            propagateTransferred = { fact, refinement ->
-                check(refinement == null || refinement is ExclusionSet.Universe) {
-                    "NDF2F edge can't be refined: $currentFactAp"
-                }
-                add(Sequent.NDFactToFact(initialFacts, fact, TraceInfo.Flow))
-            },
-            refineInitial = { },
-            propagateFactWithRefinement = { refiner, fact, trace ->
-                check(!refiner.hasRefinement) {
+            propagateFact = { fact, trace ->
+                check(fact.exclusions is ExclusionSet.Universe) {
                     "NDF2F edge can't be refined: $currentFactAp"
                 }
                 add(Sequent.NDFactToFact(initialFacts, fact, trace))
             },
-            sideEffect = { add(it) }
+            refineInitial = { },
         )
     }
 
-    private fun propagate(
+    private fun MutableSet<Sequent>.propagate(
         initialFacts: Set<InitialFactAp>?,
         factAp: FinalFactAp,
-        unchanged: () -> Unit,
-        propagateTransferred: (FinalFactAp, ExclusionSet?) -> Unit,
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
         refineInitial: (ExclusionSet) -> Unit,
-        propagateFactWithRefinement: (FactRefiner, FinalFactAp, TraceInfo) -> Unit,
-        sideEffect: (Sequent.SideEffect) -> Unit
     ) {
         when (currentInst) {
             is JMethodExitNormalInst -> {
-                propagateExitFact(
-                    initialFacts, AccessPathBase.Return,
-                    factAp, unchanged, propagateFactWithRefinement, sideEffect
-                )
+                propagateExitFact(initialFacts, AccessPathBase.Return, factAp, propagateFact)
             }
 
             is JMethodExitExceptionalInst -> {
-                propagateExitFact(
-                    initialFacts, AccessPathBase.Exception,
-                    factAp, unchanged, propagateFactWithRefinement, sideEffect
-                )
+                propagateExitFact(initialFacts, AccessPathBase.Exception, factAp, propagateFact)
             }
 
             else -> {
-                if (!transfer(factAp, propagateTransferred, refineInitial)) {
-                    unchanged()
+                if (!transfer(factAp, propagateFact, refineInitial)) {
+                    add(Sequent.Unchanged)
                 }
             }
         }
@@ -165,33 +136,33 @@ class JIRMethodSequentFlowFunction(
 
     private fun transfer(
         factAp: FinalFactAp,
-        emit: (FinalFactAp, ExclusionSet?) -> Unit,
-        refine: (ExclusionSet) -> Unit
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
+        refineInitial: (ExclusionSet) -> Unit,
     ): Boolean {
-        val edges = summary.edges[factAp.base] ?: return false
+        val transfer = summary.find(factAp.base) ?: return false
 
         var fact = factAp
-        summary.typeFilters[fact.base]?.forEach { type ->
+        for (type in transfer.typeFilters) {
             fact = factTypeChecker.filterFactByLocalType(type, fact) ?: return true
         }
 
-        for (edge in edges) {
+        for (edge in transfer.edges) {
+            val to = edge.to
             for (effect in MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(fact, edge.from)) {
-                val to = edge.to
                 when (effect) {
                     is SummaryEdgeApplication.SummaryApRefinement -> {
                         if (to == null) continue
                         val result = to.concat(factTypeChecker, effect.delta) ?: continue
-                        emit(result.replaceExclusions(fact.exclusions), null)
+                        propagateFact(result.replaceExclusions(fact.exclusions), TraceInfo.Flow)
                     }
 
                     is SummaryEdgeApplication.SummaryExclusionRefinement -> {
                         if (to == null) {
-                            refine(effect.exclusion)
+                            refineInitial(effect.exclusion)
                             continue
                         }
                         val result = to.concat(factTypeChecker, effect.delta) ?: continue
-                        emit(result.replaceExclusions(effect.exclusion), effect.exclusion)
+                        propagateFact(result.replaceExclusions(effect.exclusion), TraceInfo.Flow)
                     }
                 }
             }
@@ -200,13 +171,11 @@ class JIRMethodSequentFlowFunction(
         return true
     }
 
-    private fun propagateExitFact(
+    private fun MutableSet<Sequent>.propagateExitFact(
         initialFacts: Set<InitialFactAp>?,
         exitBase: AccessPathBase,
         factAp: FinalFactAp,
-        unchanged: () -> Unit,
-        propagateFactWithRefinement: (FactRefiner, FinalFactAp, TraceInfo) -> Unit,
-        sideEffect: (Sequent.SideEffect) -> Unit
+        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
     ) {
         val refiner = FactRefiner()
         val resultFacts = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
@@ -216,19 +185,20 @@ class JIRMethodSequentFlowFunction(
         while (resultFacts.isNotEmpty()) {
             val (resultFact, factTrace) = resultFacts.removeLast()
 
-            val (factsToDrop, newSources) = applyMethodExitSinkRules(exitBase, resultFact, initialFacts, sideEffect, refiner)
+            val (factsToDrop, newSources) = applyMethodExitSinkRules(
+                exitBase, resultFact, initialFacts, sideEffect = { add(it) }, refiner
+            )
             resultFacts.addAll(newSources)
 
             val propagatedFact = resultFact.dropFinalFacts(factsToDrop)
                 ?.dropArgumentsLocalTaintMarks(initialFacts != null && initialFacts.isEmpty())
 
             if (propagatedFact == factAp && !refiner.hasRefinement) {
-                unchanged()
+                add(Sequent.Unchanged)
             } else if (propagatedFact != null) {
-                propagateFactWithRefinement(refiner, propagatedFact, factTrace)
+                propagateFact(refiner.refineFact(propagatedFact), factTrace)
             }
         }
-
     }
 
     private fun applyMethodExitSinkRules(
@@ -389,11 +359,6 @@ class JIRMethodSequentFlowFunction(
             if (reader.hasRefinement) {
                 refinement = refinement.union(reader.getRefinement())
             }
-        }
-
-        fun refineFact(factAp: InitialFactAp): InitialFactAp {
-            if (!hasRefinement) return factAp
-            return factAp.replaceExclusions(factAp.exclusions.union(refinement))
         }
 
         fun refineFact(factAp: FinalFactAp): FinalFactAp {

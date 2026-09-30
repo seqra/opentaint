@@ -50,13 +50,16 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
 ## 3. Per-statement summary
 
 ```
-class JIRStatementSummary(
-    val edges: Map<AccessPathBase, List<Edge>>,     // keyed by from.base
-    val typeFilters: Map<AccessPathBase, List<JIRType>>,
-) { data class Edge(val from: InitialFactAp, val to: InitialFactAp?) }
+class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
+    data class Edge(val from: InitialFactAp, val to: InitialFactAp?)
+    class BaseTransfer(val base: AccessPathBase, val edges: Array<Edge>, val typeFilters: Array<JIRType>)
+    fun find(base: AccessPathBase): BaseTransfer?
+}
 ```
 
-A base absent from `edges` is not touched by the statement. A touched base without an edge from some
+A statement touches one to three bases, so the summary is one `BaseTransfer` per touched base
+(edges from that base and its type filters) found by a linear scan; no maps or linked collections.
+A base without a `BaseTransfer` is not touched by the statement. A touched base without an edge from some
 part of its value loses that part (kill). All edges read the values before the statement, so
 self-referencing statements (`a.x = a`) need no auxiliary base.
 
@@ -100,18 +103,22 @@ For an incoming fact `F` (Z2F, F2F, NDF2F):
    without after-rules it yields `Unchanged`; on an exit boundary instruction it yields `Unchanged`
    when the exit rules leave it as is (current behaviour). `Unchanged` is produced only for
    irrelevant facts.
-2. Apply `typeFilters[F.base]`.
+2. Apply the type filters of `F.base`.
 3. For each edge with `from.base == F.base`, for each effect of
    `MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(F, from)`:
-   - `SummaryApRefinement(delta)`: `R = to.concat(typeChecker, delta)` with `F.exclusions`;
-     emit with the unchanged initial fact. Nothing for a kill edge.
-   - `SummaryExclusionRefinement(delta, ex)`: `R = to.concat(typeChecker, delta)` with `ex`;
-     emit `FactToFact(initial.replaceExclusions(ex), R)` for F2F. For Z2F / NDF2F `ex` is
-     `Universe` and the edge kind is kept. For a kill edge on F2F: emit
+   - `SummaryApRefinement(delta)`: emit `R = to.concat(typeChecker, delta)` with `F.exclusions`.
+     Nothing for a kill edge.
+   - `SummaryExclusionRefinement(delta, ex)`: emit `R = to.concat(typeChecker, delta)` with `ex`.
+     For a kill edge on F2F: emit
      `SideEffectRequirement(initial.replaceExclusions(ex))` when that differs from `initial`
      (refinement without a fact; the same sequent the JVM call summary handler emits for refined
      summaries); nothing otherwise.
    Results are emitted even when equal to `F` (no `Unchanged`).
+   Emitting a fact `R` (transfer and exit rules alike): on F2F the initial fact takes `R`'s
+   exclusions, `FactToFact(initial.replaceExclusions(R.exclusions), R)`, so initial and final
+   exclusions always match; an `R` with `Universe` exclusions (a rule-created fact independent of the
+   initial fact) is emitted as `ZeroToFact(R)`. Z2F / NDF2F only ever emit `Universe` facts (checked)
+   and keep their edge kind.
 4. After-rules on the exit boundary instructions (section 2) run on the transferred facts.
 
 Zero-to-zero keeps its current content: type-info facts for lambda `new`, static-field

@@ -45,7 +45,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
         path.foldRight(ap.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
 
     private fun summary(inst: JIRInst) = JIRStatementSummary.build(ap, inst, aliasAnalysis = null)
-    private fun edges(inst: JIRInst) = summary(inst).edges.values.flatten().toSet()
+    private fun edges(inst: JIRInst) = summary(inst).transfers.flatMap { it.edges.asList() }.toSet()
 
     @Test
     fun `field read splits the instance and kills the target`() {
@@ -57,7 +57,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
             Edge(p(y, field), p(y, field)),
             Edge(p(y, field), p(x)),
         ), edges(inst))
-        assertEquals(emptyList(), summary(inst).edges[x])
+        assertEquals(emptyList(), summary(inst).find(x)?.edges?.asList())
     }
 
     @Test
@@ -152,7 +152,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
         val cast = inst.rhv as JIRCastExpr
         val y = base(cast.operand)
         assertEquals(setOf(Edge(p(y), p(y)), Edge(p(y), p(x))), edges(inst))
-        assertTrue(cast.type in summary(inst).typeFilters[y].orEmpty())
+        assertTrue(cast.type in summary(inst).find(y)?.typeFilters.orEmpty())
     }
 
     @Test
@@ -173,6 +173,6 @@ class JIRStatementSummaryTest : BasicTestUtils() {
         val inst = insts("cast").filterIsInstance<JIRReturnInst>().single()
         val x = base(inst.returnValue!!)
         assertEquals(setOf(Edge(p(x), p(x)), Edge(p(x), p(AccessPathBase.Return))), edges(inst))
-        assertEquals(emptyList(), summary(inst).edges[AccessPathBase.Return])
+        assertEquals(emptyList(), summary(inst).find(AccessPathBase.Return)?.edges?.asList())
     }
 }

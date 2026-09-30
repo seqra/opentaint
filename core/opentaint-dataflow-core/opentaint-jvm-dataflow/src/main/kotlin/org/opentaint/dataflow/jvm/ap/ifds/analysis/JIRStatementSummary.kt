@@ -21,14 +21,24 @@ import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 
-class JIRStatementSummary(
-    val edges: Map<AccessPathBase, List<Edge>>,
-    val typeFilters: Map<AccessPathBase, List<JIRType>>,
-) {
+class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
     data class Edge(val from: InitialFactAp, val to: InitialFactAp?)
 
+    class BaseTransfer(
+        val base: AccessPathBase,
+        val edges: Array<Edge>,
+        val typeFilters: Array<JIRType>,
+    )
+
+    fun find(base: AccessPathBase): BaseTransfer? {
+        for (transfer in transfers) {
+            if (transfer.base == base) return transfer
+        }
+        return null
+    }
+
     companion object {
-        val Empty = JIRStatementSummary(emptyMap(), emptyMap())
+        val Empty = JIRStatementSummary(emptyArray())
 
         fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary {
             val builder = Builder(apManager, inst, aliasAnalysis)
@@ -38,7 +48,7 @@ class JIRStatementSummary(
                 is JIRThrowInst -> builder.move(AccessPathBase.Exception, accessPathBase(inst.throwable))
                 else -> return Empty
             }
-            return JIRStatementSummary(builder.edges.mapValues { it.value.toList() }, builder.typeFilters)
+            return builder.build()
         }
     }
 
@@ -47,21 +57,40 @@ class JIRStatementSummary(
         private val inst: JIRInst,
         private val aliasAnalysis: JIRLocalAliasAnalysis?,
     ) {
-        val edges = linkedMapOf<AccessPathBase, LinkedHashSet<Edge>>()
-        val typeFilters = hashMapOf<AccessPathBase, MutableList<JIRType>>()
+        private val bases = ArrayList<AccessPathBase>(2)
+        private val edges = ArrayList<ArrayList<Edge>>(2)
+        private val filterBases = ArrayList<AccessPathBase>(2)
+        private val filterTypes = ArrayList<JIRType>(2)
+
+        fun build(): JIRStatementSummary {
+            val transfers = Array(bases.size) { i ->
+                val base = bases[i]
+                val types = filterTypes.filterIndexed { j, _ -> filterBases[j] == base }.distinct()
+                BaseTransfer(base, edges[i].toTypedArray(), types.toTypedArray())
+            }
+            return JIRStatementSummary(transfers)
+        }
 
         private fun fact(base: AccessPathBase, accessors: List<Accessor> = emptyList()): InitialFactAp =
             accessors.foldRight(apManager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
 
-        private fun touch(base: AccessPathBase) = edges.getOrPut(base) { linkedSetOf() }
+        private fun touch(base: AccessPathBase): ArrayList<Edge> {
+            val idx = bases.indexOf(base)
+            if (idx >= 0) return edges[idx]
+            bases += base
+            return ArrayList<Edge>(2).also { edges += it }
+        }
 
         private fun edge(from: InitialFactAp, to: InitialFactAp?) {
-            touch(from.base) += Edge(from, to)
+            val baseEdges = touch(from.base)
+            val edge = Edge(from, to)
+            if (edge !in baseEdges) baseEdges += edge
         }
 
         private fun filter(access: MethodFlowFunctionUtils.Access, type: JIRType?) {
             if (type == null) return
-            typeFilters.getOrPut(access.base) { mutableListOf() } += type
+            filterBases += access.base
+            filterTypes += type
         }
 
         fun assign(lhv: JIRValue, rhv: JIRExpr) {
