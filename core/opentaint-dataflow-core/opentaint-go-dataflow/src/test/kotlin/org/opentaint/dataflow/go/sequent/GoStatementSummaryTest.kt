@@ -1,5 +1,10 @@
 package org.opentaint.dataflow.go.sequent
 
+import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -61,7 +66,7 @@ class GoStatementSummaryTest {
 
     private fun StatementSummary.forward(fact: FinalFactAp): Set<FinalFactAp> {
         val produced = hashSetOf<FinalFactAp>()
-        transfer(fact, FactTypeChecker.Dummy, { produced += it }, { })
+        SummaryApplication.transfer(this, fact, FactTypeChecker.Dummy, { produced += it }, { })
         return produced
     }
 
@@ -92,9 +97,9 @@ class GoStatementSummaryTest {
             assertEquals(setOf(onOther.final()), summary.forward(onOther.final()))
 
             val reversed = buildReversed(store)
-            assertEquals(listOf(onValue.initial()), reversed.preconditions(onField.initial()))
-            assertNull(reversed.preconditions(onOther.initial()))
-            assertNull(reversed.preconditions(onValue.initial()))
+            assertEquals(listOf(onValue.initial()), reversed.preconditionFacts(onField.initial()))
+            assertEquals(listOf(onOther.initial()), reversed.preconditionFacts(onOther.initial()))
+            assertEquals(listOf(onValue.initial()), reversed.preconditionFacts(onValue.initial()))
         }
     }
 
@@ -129,9 +134,17 @@ class GoStatementSummaryTest {
             assertEquals(emptySet(), summary.forward(onValue.final()))
 
             val reversed = buildReversed(lookup)
-            assertEquals(listOf(onElement.initial()), reversed.preconditions(onValue.initial()))
-            assertEquals(emptyList(), reversed.preconditions(onOk.initial()))
-            assertNull(reversed.preconditions(FactSpec(AccessPathBase.LocalVar(900), emptyList()).initial()))
+            assertEquals(listOf(onElement.initial()), reversed.preconditionFacts(onValue.initial()))
+            assertEquals(emptyList(), reversed.preconditionFacts(onOk.initial()))
+            assertNull(reversed.preconditionFacts(FactSpec(AccessPathBase.LocalVar(900), emptyList()).initial()))
         }
+    }
+
+    private object SummaryApplication : MethodSequentFlowFunction, MethodSequentPrecondition {
+        override fun propagateZeroToZero(): Set<Sequent> = error("unused")
+        override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> = error("unused")
     }
 }

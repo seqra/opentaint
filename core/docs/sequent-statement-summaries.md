@@ -149,7 +149,7 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 
 ## 5a. Preconditions from reversed summaries
 
-`JIRStatementSummary.build` and `JIRStatementSummary.buildReversed` run the same translation on a builder with a
+`build` and `buildReversed` (JVM `JIRStatementSummary`, Go `GoStatementSummary`) run the same translation on a builder with a
 flag that keeps or omits the alias propagation edges: the survival of the aliased location at a field
 write (the split along the alias path plus the weak written field). Forward they add nothing (an
 untouched alias base passes as `Unchanged`), so `build` omits them. Backward they are required:
@@ -160,25 +160,27 @@ exclusions; kill edges are dropped. Every edge target is then a touched base. Be
 summaries come from different edge sets, reversing is not an involution and a built summary has no
 `reverse` operation. Field reads do not touch aliases (a read changes no memory).
 
-`StatementSummary.preconditions` (used by `JIRMethodSequentPrecondition`) computes the preconditions of an initial fact `q` as
-`to'.concat(d)` with `q`'s exclusions for every reversed edge and every
-`d in q.delta(from')`. The new `InitialFactAp.delta(other: InitialFactAp): List<InitialFactAp.Delta>`
-returns the suffix of this fact after `other`'s path, filtered by `other`'s exclusions (tree: path
-walk; automata: `AccessGraph.delta`; cactus: unsupported). An untouched base, or a result equal to
-`[q]`, is `Unchanged`; a touched base without a matching edge has no precondition (kill).
+`StatementSummary.preconditionFacts` computes the preconditions of an initial fact `q` on a reversed
+summary as `to'.concat(d)` with `q`'s exclusions for every reversed edge and every `d in q.delta(from')`
+(`null` for a base the summary does not touch). `InitialFactAp.delta(other: InitialFactAp)` returns the
+suffix of this fact after `other`'s path, filtered by `other`'s exclusions (tree: path walk; automata:
+`AccessGraph.delta`; cactus: unsupported).
 
-`StatementSummary.sequentPreconditions` maps these to the sequent preconditions used by
-`JIRMethodSequentPrecondition` and `GoMethodSequentPrecondition`. The builder records the bases the
-forward summary touches; a base of the reversed summary that forward leaves untouched (an alias base,
-touched only by the alias propagation edges) is marked `unchangedForward`. For such a base the
-survival (every precondition on the fact's own base) is `Unchanged`, plus
-`PreconditionFactsForInitialFact` with the preconditions on other bases (the written values). This
-mirrors the forward pass, where that fact is `Unchanged`. It is required by the engine: `MethodAnalyzer`
-does not store an edge propagated as `Unchanged` at the successor statement, and the trace resolver
-(`MethodTraceResolver.containsEntryEdge`, `MethodAnalyzerEdgeSearcher`) requires a stored edge for the
-fact after the statement before it follows an explicit precondition. Naming the survival explicitly
-drops the trace (the vulnerability is filtered as having no trace); this happens on both JVM (a may
-alias through a conditional, `FieldFlowSample.mayAliasFieldWriteFlow`) and Go (`structCopy003T`).
+The application code lives on the core interfaces, not on the summary:
+`MethodSequentFlowFunction.transfer(summary, fact, typeChecker, propagateFact, refineInitial)` applies a
+summary forward, and `MethodSequentPrecondition.sequentPreconditions(forward, reversed, fact)` maps the
+reversed application to sequent preconditions. The precondition consults the forward summary: a base the
+forward summary does not touch (an alias base, touched backward only by the alias propagation edges)
+answers `Unchanged` for its survival, plus `PreconditionFactsForInitialFact` with the preconditions on
+other bases (the written values); a touched base answers the explicit preconditions, a result equal to
+`[q]` normalised to `Unchanged`, no matching edge meaning no precondition (kill). This mirrors the forward
+pass exactly and is required by the engine: `MethodAnalyzer` does not store an edge propagated as
+`Unchanged`, and the trace resolver (`MethodTraceResolver.containsEntryEdge`, `MethodAnalyzerEdgeSearcher`)
+requires a stored edge for the fact after the statement before it follows an explicit precondition.
+Naming the survival explicitly drops the trace; this happens on both JVM (a may alias through a
+conditional, `FieldFlowSample.mayAliasFieldWriteFlow`) and Go (`structCopy003T`). A backward analysis
+over the reversed summary uses `transfer` and keeps the alias propagation edges, which drive its
+abstraction refinement (`a.*` refines on the alias path down to the written field).
 
 ## 6. Caching
 

@@ -33,7 +33,11 @@ class JIRMethodSequentPrecondition(
     private val currentInst: JIRInst,
     private val analysisContext: JIRMethodAnalysisContext,
 ) : MethodSequentPrecondition {
-    private val summary: StatementSummary by lazy {
+    private val forwardSummary: StatementSummary by lazy {
+        JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis)
+    }
+
+    private val reversedSummary: StatementSummary by lazy {
         JIRStatementSummary.buildReversed(apManager, currentInst, analysisContext.aliasAnalysis)
     }
 
@@ -67,7 +71,7 @@ class JIRMethodSequentPrecondition(
     private fun preconditionForFact(fact: InitialFactAp): Set<SequentPrecondition> = when (currentInst) {
         is JMethodExitNormalInst, is JMethodExitExceptionalInst -> setOf(PreconditionFactsForInitialFact(fact, listOf(fact)))
 
-        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> summary.sequentPreconditions(fact)
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> sequentPreconditions(forwardSummary, reversedSummary, fact)
 
         else -> emptySet()
     }

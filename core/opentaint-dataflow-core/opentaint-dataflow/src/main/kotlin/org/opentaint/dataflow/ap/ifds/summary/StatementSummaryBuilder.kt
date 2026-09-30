@@ -17,7 +17,6 @@ class StatementSummaryBuilder(
     private val edges = ArrayList<ArrayList<Edge>>(2)
     private val filterBases = ArrayList<AccessPathBase>(2)
     private val filterTypes = ArrayList<CommonType>(2)
-    private val forwardBases = ArrayList<AccessPathBase>(2)
 
     fun build(): StatementSummary {
         val transfers = Array(bases.size) { i ->
@@ -42,7 +41,7 @@ class StatementSummaryBuilder(
         }
 
         return StatementSummary(Array(bases.size) { i ->
-            BaseTransfer(bases[i], reversedEdges[i].toTypedArray(), emptyArray(), unchangedForward = bases[i] !in forwardBases)
+            BaseTransfer(bases[i], reversedEdges[i].toTypedArray(), emptyArray())
         })
     }
 
@@ -51,15 +50,9 @@ class StatementSummaryBuilder(
 
     fun touch(base: AccessPathBase) {
         baseEdges(base)
-        if (base !in forwardBases) forwardBases += base
     }
 
     fun edge(from: InitialFactAp, to: InitialFactAp?) {
-        touch(from.base)
-        addEdge(from, to)
-    }
-
-    private fun addEdge(from: InitialFactAp, to: InitialFactAp?) {
         val baseEdges = baseEdges(from.base)
         val edge = Edge(from, to)
         if (edge !in baseEdges) baseEdges += edge
@@ -134,21 +127,17 @@ class StatementSummaryBuilder(
         return ArrayList<Edge>(2).also { edges += it }
     }
 
-    private fun keepAllExcept(
-        base: AccessPathBase,
-        accessors: List<Accessor>,
-        add: (InitialFactAp, InitialFactAp) -> Unit = ::edge,
-    ) {
+    private fun keepAllExcept(base: AccessPathBase, accessors: List<Accessor>) {
         for (i in accessors.indices) {
             val prefix = fact(base, accessors.subList(0, i))
-            add(prefix.exclude(accessors[i]), prefix)
+            edge(prefix.exclude(accessors[i]), prefix)
         }
     }
 
     private fun aliasPropagation(base: AccessPathBase, accessors: List<Accessor>) {
         if (!keepAliasPropagationEdges) return
-        keepAllExcept(base, accessors, ::addEdge)
+        keepAllExcept(base, accessors)
         val target = fact(base, accessors)
-        addEdge(target, target)
+        edge(target, target)
     }
 }

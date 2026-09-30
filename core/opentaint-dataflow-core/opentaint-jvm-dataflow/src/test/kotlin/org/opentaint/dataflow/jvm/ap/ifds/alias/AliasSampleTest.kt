@@ -1,5 +1,8 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
+import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import kotlinx.coroutines.runBlocking
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
@@ -623,7 +626,7 @@ class AliasSampleTest : BasicTestUtils() {
         val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
         fun preconditions(fact: InitialFactAp): Set<InitialFactAp> {
             checkNotNull(reversed.find(fact.base))
-            return (reversed.preconditions(fact) ?: listOf(fact)).toSet()
+            return (reversed.preconditionFacts(fact) ?: listOf(fact)).toSet()
         }
 
         assertEquals(setOf(p(a, box, value, h), p(x, h)), preconditions(p(a, box, value, h)))
@@ -634,12 +637,12 @@ class AliasSampleTest : BasicTestUtils() {
         val aliasFact = p(a, box, value, h)
         assertEquals(
             setOf(SequentPrecondition.Unchanged, PreconditionFactsForInitialFact(aliasFact, listOf(p(x, h)))),
-            reversed.sequentPreconditions(aliasFact)
+            SummaryApplication.sequentPreconditions(summary, reversed, aliasFact)
         )
-        assertEquals(setOf(SequentPrecondition.Unchanged), reversed.sequentPreconditions(p(a, box, h)))
+        assertEquals(setOf(SequentPrecondition.Unchanged), SummaryApplication.sequentPreconditions(summary, reversed, p(a, box, h)))
         assertEquals(
             setOf(PreconditionFactsForInitialFact(p(y, value, h), listOf(p(x, h)))),
-            reversed.sequentPreconditions(p(y, value, h))
+            SummaryApplication.sequentPreconditions(summary, reversed, p(y, value, h))
         )
     }
 
@@ -663,7 +666,7 @@ class AliasSampleTest : BasicTestUtils() {
         val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
         fun backward(fact: FinalFactAp): Set<FinalFactAp> {
             val produced = hashSetOf<FinalFactAp>()
-            reversed.transfer(fact, FactTypeChecker.Dummy, { produced += it }, { })
+            SummaryApplication.transfer(reversed, fact, FactTypeChecker.Dummy, { produced += it }, { })
             return produced
         }
 
@@ -672,7 +675,7 @@ class AliasSampleTest : BasicTestUtils() {
         assertEquals(setOf(f(a, box, value), f(x)), backward(f(a, box, value)), "a.box.value.* reaches the value")
 
         val forward = JIRStatementSummary.build(ap, write, aa)
-        assertEquals(false, forward.transfer(f(a), FactTypeChecker.Dummy, { }, { }), "forward leaves the alias base untouched")
+        assertEquals(false, SummaryApplication.transfer(forward, f(a), FactTypeChecker.Dummy, { }, { }), "forward leaves the alias base untouched")
     }
 
     private object NoUnroll : AnyAccessorUnrollStrategy {
@@ -747,5 +750,13 @@ class AliasSampleTest : BasicTestUtils() {
         private const val FIELD_NEXT = "next"
         private const val FIELD_DATA = "data"
         private const val FIELD_INTERPROC = "field"
+    }
+
+    private object SummaryApplication : MethodSequentFlowFunction, MethodSequentPrecondition {
+        override fun propagateZeroToZero(): Set<Sequent> = error("unused")
+        override fun propagateZeroToFact(currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun propagateFactToFact(initialFactAp: InitialFactAp, currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun propagateNDFactToFact(initialFacts: Set<InitialFactAp>, currentFactAp: FinalFactAp): Set<Sequent> = error("unused")
+        override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> = error("unused")
     }
 }

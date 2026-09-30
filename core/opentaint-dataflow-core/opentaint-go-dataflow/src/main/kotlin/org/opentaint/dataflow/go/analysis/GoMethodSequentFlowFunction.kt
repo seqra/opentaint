@@ -95,7 +95,7 @@ class GoMethodSequentFlowFunction(
         refineInitial: (ExclusionSet) -> Unit,
     ) {
         val typeChecker = context.analysisManager.factTypeChecker
-        if (!summary.transfer(factAp, typeChecker, propagateFact, refineInitial)) {
+        if (!transfer(summary, factAp, typeChecker, propagateFact, refineInitial)) {
             add(Sequent.Unchanged)
         }
     }

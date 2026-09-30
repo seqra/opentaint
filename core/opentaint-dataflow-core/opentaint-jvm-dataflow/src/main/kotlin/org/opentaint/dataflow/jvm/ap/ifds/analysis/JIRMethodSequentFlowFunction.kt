@@ -126,7 +126,7 @@ class JIRMethodSequentFlowFunction(
             }
 
             else -> {
-                if (!summary.transfer(factAp, factTypeChecker, { propagateFact(it, TraceInfo.Flow) }, refineInitial)) {
+                if (!transfer(summary, factAp, factTypeChecker, { propagateFact(it, TraceInfo.Flow) }, refineInitial)) {
                     add(Sequent.Unchanged)
                 }
             }

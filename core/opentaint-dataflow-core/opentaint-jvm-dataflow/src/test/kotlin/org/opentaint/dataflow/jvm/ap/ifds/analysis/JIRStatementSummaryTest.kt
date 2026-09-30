@@ -52,7 +52,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? {
         val reversed = JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null)
         if (reversed.find(fact.base) == null) return null
-        return (reversed.preconditions(fact) ?: listOf(fact)).toSet()
+        return (reversed.preconditionFacts(fact) ?: listOf(fact)).toSet()
     }
 
     @Test

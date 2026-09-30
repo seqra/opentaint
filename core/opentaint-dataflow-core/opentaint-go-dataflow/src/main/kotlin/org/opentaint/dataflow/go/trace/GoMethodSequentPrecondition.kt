@@ -20,12 +20,16 @@ class GoMethodSequentPrecondition(
     private val currentInst: GoIRInst,
     private val analysisContext: GoMethodAnalysisContext,
 ) : MethodSequentPrecondition {
-    private val summary: StatementSummary by lazy {
+    private val forwardSummary: StatementSummary by lazy {
+        GoStatementSummary.build(apManager, currentInst, analysisContext.method, analysisContext.aliasAnalysis)
+    }
+
+    private val reversedSummary: StatementSummary by lazy {
         GoStatementSummary.buildReversed(apManager, currentInst, analysisContext.method, analysisContext.aliasAnalysis)
     }
 
     override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
-        val result = summary.sequentPreconditions(fact).toHashSet()
+        val result = sequentPreconditions(forwardSummary, reversedSummary, fact).toHashSet()
         result.unconditionalGlobalOrFieldReadSourceRulePrecondition(fact)
         return result.ifEmpty { setOf(SequentPrecondition.Unchanged) }
     }
