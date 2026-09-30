@@ -20,14 +20,6 @@ class StatementSummary(val transfers: Array<BaseTransfer>) {
         return null
     }
 
-    fun preconditionFacts(fact: InitialFactAp): List<InitialFactAp>? {
-        val transfer = find(fact.base) ?: return null
-        return transfer.edges.flatMap { edge ->
-            val to = edge.to ?: return@flatMap emptyList()
-            fact.delta(edge.from).map { to.concat(it).replaceExclusions(fact.exclusions) }
-        }.distinct()
-    }
-
     companion object {
         val Empty = StatementSummary(emptyArray())
     }

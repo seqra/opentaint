@@ -29,7 +29,7 @@ interface MethodSequentPrecondition {
         reversed: StatementSummary,
         fact: InitialFactAp,
     ): Set<SequentPrecondition> {
-        val facts = reversed.preconditionFacts(fact) ?: return emptySet()
+        val facts = preconditionFacts(reversed, fact) ?: return emptySet()
 
         if (forward.find(fact.base) == null) {
             val otherBases = facts.filter { it.base != fact.base }
@@ -39,5 +39,13 @@ interface MethodSequentPrecondition {
 
         if (facts == listOf(fact)) return emptySet()
         return setOf(PreconditionFactsForInitialFact(fact, facts))
+    }
+
+    fun preconditionFacts(reversed: StatementSummary, fact: InitialFactAp): List<InitialFactAp>? {
+        val transfer = reversed.find(fact.base) ?: return null
+        return transfer.edges.flatMap { edge ->
+            val to = edge.to ?: return@flatMap emptyList()
+            fact.delta(edge.from).map { to.concat(it).replaceExclusions(fact.exclusions) }
+        }.distinct()
     }
 }

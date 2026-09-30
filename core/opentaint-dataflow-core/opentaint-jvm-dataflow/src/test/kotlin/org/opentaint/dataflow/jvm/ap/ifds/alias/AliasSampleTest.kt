@@ -626,7 +626,7 @@ class AliasSampleTest : BasicTestUtils() {
         val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
         fun preconditions(fact: InitialFactAp): Set<InitialFactAp> {
             checkNotNull(reversed.find(fact.base))
-            return (reversed.preconditionFacts(fact) ?: listOf(fact)).toSet()
+            return (SummaryApplication.preconditionFacts(reversed, fact) ?: listOf(fact)).toSet()
         }
 
         assertEquals(setOf(p(a, box, value, h), p(x, h)), preconditions(p(a, box, value, h)))

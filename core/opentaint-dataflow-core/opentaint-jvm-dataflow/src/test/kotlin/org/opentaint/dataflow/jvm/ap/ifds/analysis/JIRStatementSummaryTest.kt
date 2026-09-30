@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.jvm.ap.ifds.analysis
 
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
@@ -52,7 +54,7 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? {
         val reversed = JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null)
         if (reversed.find(fact.base) == null) return null
-        return (reversed.preconditionFacts(fact) ?: listOf(fact)).toSet()
+        return (SummaryApplication.preconditionFacts(reversed, fact) ?: listOf(fact)).toSet()
     }
 
     @Test
@@ -216,5 +218,9 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     fun `reversed kill has no preconditions`() {
         val inst = insts("staticWrite").filterIsInstance<JIRReturnInst>().single()
         assertEquals(emptySet(), preconditions(inst, p(AccessPathBase.Return, g)))
+    }
+
+    private object SummaryApplication : MethodSequentPrecondition {
+        override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> = error("unused")
     }
 }

@@ -97,9 +97,9 @@ class GoStatementSummaryTest {
             assertEquals(setOf(onOther.final()), summary.forward(onOther.final()))
 
             val reversed = buildReversed(store)
-            assertEquals(listOf(onValue.initial()), reversed.preconditionFacts(onField.initial()))
-            assertEquals(listOf(onOther.initial()), reversed.preconditionFacts(onOther.initial()))
-            assertEquals(listOf(onValue.initial()), reversed.preconditionFacts(onValue.initial()))
+            assertEquals(listOf(onValue.initial()), SummaryApplication.preconditionFacts(reversed, onField.initial()))
+            assertEquals(listOf(onOther.initial()), SummaryApplication.preconditionFacts(reversed, onOther.initial()))
+            assertEquals(listOf(onValue.initial()), SummaryApplication.preconditionFacts(reversed, onValue.initial()))
         }
     }
 
@@ -134,9 +134,9 @@ class GoStatementSummaryTest {
             assertEquals(emptySet(), summary.forward(onValue.final()))
 
             val reversed = buildReversed(lookup)
-            assertEquals(listOf(onElement.initial()), reversed.preconditionFacts(onValue.initial()))
-            assertEquals(emptyList(), reversed.preconditionFacts(onOk.initial()))
-            assertNull(reversed.preconditionFacts(FactSpec(AccessPathBase.LocalVar(900), emptyList()).initial()))
+            assertEquals(listOf(onElement.initial()), SummaryApplication.preconditionFacts(reversed, onValue.initial()))
+            assertEquals(emptyList(), SummaryApplication.preconditionFacts(reversed, onOk.initial()))
+            assertNull(SummaryApplication.preconditionFacts(reversed, FactSpec(AccessPathBase.LocalVar(900), emptyList()).initial()))
         }
     }
 
