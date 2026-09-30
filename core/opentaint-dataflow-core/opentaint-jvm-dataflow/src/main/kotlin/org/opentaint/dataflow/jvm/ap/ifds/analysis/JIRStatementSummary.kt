@@ -204,21 +204,26 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         private fun write(access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
             val base = access.base
             val accessors = path(access)
-            val target = fact(base, accessors)
 
             if (accessors.first() is ElementAccessor) {
                 edge(fact(base), fact(base))
             } else {
                 keepAllExcept(base, accessors)
-                aliasRest(base, accessors.first(), written = null)
             }
 
-            if (from == null) return
-            if (from != base) edge(fact(from), fact(from))
-            edge(fact(from), target)
+            if (from != null) {
+                if (from != base) edge(fact(from), fact(from))
+                edge(fact(from), fact(base, accessors))
+            }
+
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                keepAliasBase(base, aliasBase)
-                edge(fact(from), fact(aliasBase, aliasAccessors + accessors))
+                if (aliasBase != base) {
+                    val aliasPath = aliasAccessors + accessors
+                    val aliasTarget = fact(aliasBase, aliasPath)
+                    keepAllExcept(aliasBase, aliasPath)
+                    edge(aliasTarget, aliasTarget)
+                    if (from != null) edge(fact(from), aliasTarget)
+                }
             }
         }
     }

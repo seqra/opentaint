@@ -1,6 +1,16 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
+import kotlin.test.assertEquals
+import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
+import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary.Edge
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
+import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+import org.opentaint.dataflow.ap.ifds.FieldAccessor
+import org.opentaint.dataflow.ap.ifds.Accessor
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
@@ -575,6 +585,53 @@ class AliasSampleTest : BasicTestUtils() {
         val aa = aaForMethod(method, interProcParams(depth = 1))
         val sink = method.findSinkCall("sinkOneValue")
         assertTrue { aa.sinkArgApAliases(sink).isNotEmpty() }
+    }
+
+    @Test
+    fun `field write through an alias splits the alias path and keeps the written field weak`() {
+        val method = findMethod(HEAP_SAMPLE, "writeThroughFieldAlias")
+        val aa = aaForMethod(method)
+        val write = method.instList.filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
+
+        val ap = TreeApManager(NoUnroll, RefManager(), Cancellation())
+        fun p(base: AccessPathBase, vararg path: Accessor): InitialFactAp =
+            path.foldRight(ap.mostAbstractInitialAp(base)) { acc, f -> f.prependAccessor(acc) }
+
+        val a = Argument(0)
+        val y = accessPathBase((write.lhv as JIRFieldRef).instance!!)!!
+        val x = accessPathBase(write.rhv as JIRValue)!!
+        val box = FieldAccessor("$HEAP_SAMPLE\$Nested", "box", "$HEAP_SAMPLE\$Box")
+        val value = FieldAccessor("$HEAP_SAMPLE\$Box", "value", "java.lang.Object")
+        val h = FieldAccessor("$HEAP_SAMPLE\$Box", "h", "java.lang.Object")
+
+        val summary = JIRStatementSummary.build(ap, write, aa)
+        assertEquals(
+            setOf(
+                Edge(p(y).exclude(value), p(y)),
+                Edge(p(x), p(x)),
+                Edge(p(x), p(y, value)),
+                Edge(p(a).exclude(box), p(a)),
+                Edge(p(a, box).exclude(value), p(a, box)),
+                Edge(p(a, box, value), p(a, box, value)),
+                Edge(p(x), p(a, box, value)),
+            ),
+            summary.transfers.flatMap { it.edges.asList() }.toSet()
+        )
+
+        val reversed = summary.reversed()
+        fun preconditions(fact: InitialFactAp): Set<InitialFactAp> =
+            reversed.find(fact.base)!!.edges
+                .flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }
+                .toSet()
+
+        assertEquals(setOf(p(a, box, value, h), p(x, h)), preconditions(p(a, box, value, h)))
+        assertEquals(setOf(p(x, h)), preconditions(p(y, value, h)))
+        assertEquals(setOf(p(a, box, h)), preconditions(p(a, box, h)))
+        assertEquals(setOf(p(a, h)), preconditions(p(a, h)))
+    }
+
+    private object NoUnroll : AnyAccessorUnrollStrategy {
+        override fun unrollAccessor(accessor: Accessor): Boolean = false
     }
 
     private fun aaForMethod(

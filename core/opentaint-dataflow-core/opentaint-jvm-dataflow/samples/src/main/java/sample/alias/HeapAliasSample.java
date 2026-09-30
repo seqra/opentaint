@@ -113,6 +113,11 @@ public class HeapAliasSample {
         sinkOneValue(dst);
     }
 
+    static void writeThroughFieldAlias(Nested a, Object x) {
+        Box y = a.box;
+        y.value = x;
+    }
+
     static void sinkOneValue(Object v) { }
     static void sinkTwoValues(Object v1, Object v2) { }
 }

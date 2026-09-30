@@ -73,7 +73,7 @@ Notation: `y` is `mostAbstractInitialAp(y)` (`y.*`, empty exclusions), `y/{f}` i
 | `x = x.f` | `x/{f} -> ⊥`, `x.f -> x`, `A -> A`, `x/{f} -> A` for every alias `A` of `x` |
 | `x = C.f` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `<C>.C.f -> <C>.C.f`, `<C>.C.f -> x` |
 | `x = y[i]` | as `x = y.f` with `f = [e]` (`x = x[i]` as `x = x.f`) |
-| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`, `A -> A`, `y/{f} -> A`, `x -> A.f` for every alias `A` of `y` |
+| `y.f = x` | `y/{f} -> y`, `x -> x`, `x -> y.f`; for every alias path `A = a.p` of `y`: the split along `a.p.f` (`a/{p1} -> a`, ..., `a.p/{f} -> a.p`), `a.p.f -> a.p.f` (weak: may-alias), `x -> a.p.f` |
 | `y[i] = x` | `y -> y`, `x -> x`, `x -> y.[e]`, `x -> A.[e]` for every alias `A` of `y` |
 | `C.f = x` | `<C>/{C} -> <C>`, `<C>.C/{f} -> <C>.C`, `x -> x`, `x -> <C>.C.f` |
 | `return x` / `throw x` | `x -> x`, `x -> Return` / `x -> Exception` |
@@ -141,8 +141,9 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 `JIRStatementSummary.reversed()` swaps every forward edge `from -> to` into `to' -> from'`, where
 `to'` is `to` with `from`'s exclusions (they describe the matched part of the value) and `from'` is
 `from` without exclusions; kill edges are dropped. It is a pure swap because the forward summary is
-closed: every edge target is a touched base. Alias targets are made touched by an identity edge
-`A -> A` (their facts survive the statement, now as explicit edges instead of `Unchanged`). A base
+closed: every edge target is a touched base. Alias targets of a write are touched by the split
+along the alias path; alias targets of a read by an identity edge `A -> A` (their facts survive the
+statement, now as explicit edges instead of `Unchanged`). A base
 the statement does not touch has no entry. The precondition uses `build(...).reversed()`.
 
 `JIRMethodSequentPrecondition` computes the preconditions of an initial fact `q` as
