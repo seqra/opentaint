@@ -1,6 +1,9 @@
 package org.opentaint.dataflow.jvm.ap.ifds.alias
 
 import kotlinx.coroutines.runBlocking
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
+import org.opentaint.dataflow.ap.ifds.FactTypeChecker
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import kotlin.test.assertEquals
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
@@ -638,6 +641,38 @@ class AliasSampleTest : BasicTestUtils() {
             setOf(PreconditionFactsForInitialFact(p(y, value, h), listOf(p(x, h)))),
             reversed.sequentPreconditions(p(y, value, h))
         )
+    }
+
+    @Test
+    fun `backward transfer refines an abstract alias base down to the written field`() {
+        val method = findMethod(HEAP_SAMPLE, "writeThroughFieldAlias")
+        val aa = aaForMethod(method)
+        val write = method.instList.filterIsInstance<JIRAssignInst>().first { it.lhv is JIRFieldRef }
+
+        val ap = TreeApManager(NoUnroll, RefManager(), Cancellation())
+        fun f(base: AccessPathBase, vararg path: Accessor): FinalFactAp =
+            path.foldRight(ap.mostAbstractFinalAp(base).replaceExclusions(ExclusionSet.Empty)) { acc, fact ->
+                fact.prependAccessor(acc)
+            }
+
+        val a = Argument(0)
+        val x = accessPathBase(write.rhv as JIRValue)!!
+        val box = FieldAccessor("$HEAP_SAMPLE\$Nested", "box", "$HEAP_SAMPLE\$Box")
+        val value = FieldAccessor("$HEAP_SAMPLE\$Box", "value", "java.lang.Object")
+
+        val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
+        fun backward(fact: FinalFactAp): Set<FinalFactAp> {
+            val produced = hashSetOf<FinalFactAp>()
+            reversed.transfer(fact, FactTypeChecker.Dummy, { produced += it }, { })
+            return produced
+        }
+
+        assertEquals(setOf(f(a).exclude(box)), backward(f(a)), "a.* refines on box")
+        assertEquals(setOf(f(a, box).exclude(value)), backward(f(a, box)), "a.box.* refines on value")
+        assertEquals(setOf(f(a, box, value), f(x)), backward(f(a, box, value)), "a.box.value.* reaches the value")
+
+        val forward = JIRStatementSummary.build(ap, write, aa)
+        assertEquals(false, forward.transfer(f(a), FactTypeChecker.Dummy, { }, { }), "forward leaves the alias base untouched")
     }
 
     private object NoUnroll : AnyAccessorUnrollStrategy {
