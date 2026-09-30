@@ -39,7 +39,7 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
 - Consumers of the exit statement:
   - `JIRMethodSequentPrecondition` applies the exit source precondition on the exit boundary
     instructions; on `return` / `throw` it only rebases `Return` / `Exception` to the returned value.
-    The precondition is otherwise unchanged (reversed-summary preconditions are a follow-up).
+    On assignments, `return` and `throw` it uses the reversed statement summary (section 5a).
   - `VulnerabilityChecker` treats an exit boundary instruction as a final trace node (it has no
     successors).
   - SARIF treats an exit boundary instruction as a generated location and resolves it to the last
@@ -135,6 +135,21 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 - Automata: `AccessGraphFinalFactAp(base, initial.access, exclusions).concat(typeChecker, delta)`.
 - Cactus: unsupported. The cactus initial fact is a stub, so the JVM sequent flow function cannot
   run in Cactus mode.
+
+## 5a. Preconditions from reversed summaries
+
+`JIRStatementSummary.buildReversed` builds the forward summary and swaps every edge
+`from -> to` into `to' -> from'`, where `to'` is `to` with `from`'s exclusions (they describe the
+matched part of the value) and `from'` is `from` without exclusions. Kill edges are dropped; a base
+that only receives alias edges gets an identity edge (its facts survive the statement). A base the
+statement does not touch has no entry.
+
+`JIRMethodSequentPrecondition` computes the preconditions of an initial fact `q` as
+`to'.concat(d)` with `q`'s exclusions for every reversed edge and every
+`d in q.delta(from')`. The new `InitialFactAp.delta(other: InitialFactAp): List<InitialFactAp.Delta>`
+returns the suffix of this fact after `other`'s path, filtered by `other`'s exclusions (tree: path
+walk; automata: `AccessGraph.delta`; cactus: unsupported). An untouched base, or a result equal to
+`[q]`, is `Unchanged`; a touched base without a matching edge has no precondition (kill).
 
 ## 6. Caching
 

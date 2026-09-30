@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
@@ -37,6 +38,33 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         return null
     }
 
+    fun reversed(apManager: ApManager): JIRStatementSummary {
+        val bases = ArrayList<AccessPathBase>(transfers.size)
+        val edges = ArrayList<ArrayList<Edge>>(transfers.size)
+        transfers.forEach {
+            bases += it.base
+            edges += ArrayList<Edge>(2)
+        }
+
+        for (transfer in transfers) {
+            for (edge in transfer.edges) {
+                val to = edge.to ?: continue
+                var idx = bases.indexOf(to.base)
+                if (idx < 0) {
+                    idx = bases.size
+                    bases += to.base
+                    val identity = apManager.mostAbstractInitialAp(to.base)
+                    edges += arrayListOf(Edge(identity, identity))
+                }
+
+                val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
+                if (reversed !in edges[idx]) edges[idx] += reversed
+            }
+        }
+
+        return JIRStatementSummary(Array(bases.size) { i -> BaseTransfer(bases[i], edges[i].toTypedArray(), emptyArray()) })
+    }
+
     companion object {
         val Empty = JIRStatementSummary(emptyArray())
 
@@ -50,6 +78,9 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             }
             return builder.build()
         }
+
+        fun buildReversed(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
+            build(apManager, inst, aliasAnalysis).reversed(apManager)
     }
 
     private class Builder(

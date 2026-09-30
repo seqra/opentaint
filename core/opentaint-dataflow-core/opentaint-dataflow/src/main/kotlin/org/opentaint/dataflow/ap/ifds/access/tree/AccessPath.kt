@@ -123,6 +123,23 @@ class AccessPath(
         }
     }
 
+    override fun delta(other: InitialFactAp): List<InitialFactAp.Delta> {
+        other as AccessPath
+
+        if (base != other.base) return emptyList()
+
+        var node = access
+        var otherNode = other.access
+        while (otherNode != null) {
+            if (node == null || node.accessor != otherNode.accessor) return emptyList()
+            node = node.next
+            otherNode = otherNode.next
+        }
+
+        if (node == null) return listOf(AccessPathDelta.Empty)
+        return listOfNotNull(node.filter(other.exclusions)?.let { AccessPathDelta.Delta(it) })
+    }
+
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 

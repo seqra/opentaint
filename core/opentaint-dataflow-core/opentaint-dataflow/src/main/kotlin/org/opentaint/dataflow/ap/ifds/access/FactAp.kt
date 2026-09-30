@@ -39,6 +39,7 @@ interface InitialFactAp : FactAp, ReadableAccessorList<InitialFactAp> {
         fun concat(other: Delta): Delta
     }
 
+    fun delta(other: InitialFactAp): List<Delta>
     fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, Delta>>
     fun concat(delta: Delta): InitialFactAp
     fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp?

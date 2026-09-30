@@ -47,6 +47,13 @@ class JIRStatementSummaryTest : BasicTestUtils() {
     private fun summary(inst: JIRInst) = JIRStatementSummary.build(ap, inst, aliasAnalysis = null)
     private fun edges(inst: JIRInst) = summary(inst).transfers.flatMap { it.edges.asList() }.toSet()
 
+    private val g = FieldAccessor(cls, "g", "java.lang.Object")
+
+    private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? =
+        JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null).find(fact.base)?.edges
+            ?.flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }
+            ?.toSet()
+
     @Test
     fun `field read splits the instance and kills the target`() {
         val inst = assigns("fieldRead").first { it.rhv is JIRFieldRef }
@@ -174,5 +181,39 @@ class JIRStatementSummaryTest : BasicTestUtils() {
         val x = base(inst.returnValue!!)
         assertEquals(setOf(Edge(p(x), p(x)), Edge(p(x), p(AccessPathBase.Return))), edges(inst))
         assertEquals(emptyList(), summary(inst).find(AccessPathBase.Return)?.edges?.asList())
+    }
+
+    @Test
+    fun `reversed field read maps the target back into the field`() {
+        val inst = assigns("fieldRead").first { it.rhv is JIRFieldRef }
+        val x = base(inst.lhv)
+        val y = base((inst.rhv as JIRFieldRef).instance!!)
+        assertEquals(setOf(p(y, field, g)), preconditions(inst, p(x, g)))
+        assertEquals(setOf(p(y, g)), preconditions(inst, p(y, g)))
+        assertEquals(setOf(p(y, field, g)), preconditions(inst, p(y, field, g)))
+    }
+
+    @Test
+    fun `reversed field write maps the field back to the value and keeps the rest`() {
+        val inst = assigns("fieldWrite").first { it.lhv is JIRFieldRef }
+        val y = base((inst.lhv as JIRFieldRef).instance!!)
+        val x = base(inst.rhv as JIRValue)
+        assertEquals(setOf(p(x, g)), preconditions(inst, p(y, field, g)))
+        assertEquals(setOf(p(y, g)), preconditions(inst, p(y, g)))
+        assertEquals(setOf(p(x, g)), preconditions(inst, p(x, g)))
+    }
+
+    @Test
+    fun `reversed return maps the result back to the value`() {
+        val inst = insts("cast").filterIsInstance<JIRReturnInst>().single()
+        val x = base(inst.returnValue!!)
+        assertEquals(setOf(p(x, g)), preconditions(inst, p(AccessPathBase.Return, g)))
+        assertEquals(null, preconditions(inst, p(AccessPathBase.This, g)))
+    }
+
+    @Test
+    fun `reversed kill has no preconditions`() {
+        val inst = insts("staticWrite").filterIsInstance<JIRReturnInst>().single()
+        assertEquals(emptySet(), preconditions(inst, p(AccessPathBase.Return, g)))
     }
 }

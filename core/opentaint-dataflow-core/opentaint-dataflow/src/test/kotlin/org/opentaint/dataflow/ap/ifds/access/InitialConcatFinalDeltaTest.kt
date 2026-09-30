@@ -66,4 +66,32 @@ class InitialConcatFinalDeltaTest {
             assertEquals(m.concrete(y, a, b).toString(), result.toString(), m::class.simpleName)
         }
     }
+
+    @Test
+    fun `initial delta is the suffix after the other path`() {
+        for (m in managers()) {
+            val fact = m.initial(x, a, b)
+            val delta = fact.delta(m.initial(x, a)).single()
+            assertEquals(m.initial(y, c, b), m.initial(y, c).concat(delta), m::class.simpleName)
+        }
+    }
+
+    @Test
+    fun `initial delta of an equal path is empty`() {
+        for (m in managers()) {
+            val delta = m.initial(x, a).delta(m.initial(x, a)).single()
+            assertEquals(true, delta.isEmpty, m::class.simpleName)
+            assertEquals(m.initial(y), m.initial(y).concat(delta), m::class.simpleName)
+        }
+    }
+
+    @Test
+    fun `initial delta does not match a different path or an excluded suffix`() {
+        for (m in managers()) {
+            assertEquals(emptyList(), m.initial(x, a, b).delta(m.initial(x, b)), m::class.simpleName)
+            assertEquals(emptyList(), m.initial(x, a).delta(m.initial(x, a, b)), m::class.simpleName)
+            assertEquals(emptyList(), m.initial(x, a, b).delta(m.initial(x, a).exclude(b)), m::class.simpleName)
+            assertEquals(emptyList(), m.initial(x, a).delta(m.initial(y, a)), m::class.simpleName)
+        }
+    }
 }
