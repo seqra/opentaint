@@ -14,7 +14,7 @@ class Holder:
 
 # A tainted field on the receiver reaches a sink via `self` inside an
 # instance method: the receiver (carrying `.data`) maps to the callee's
-# self = Argument(0), and the prologue assign exposes it to the body.
+# self = Argument(0).
 def receiver_field_to_self():
     obj = Holder()
     obj.data = source()

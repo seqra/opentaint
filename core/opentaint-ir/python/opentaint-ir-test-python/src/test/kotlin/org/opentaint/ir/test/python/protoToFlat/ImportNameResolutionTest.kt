@@ -34,6 +34,7 @@ import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import org.opentaint.ir.impl.python.flat.FlatModuleNameRef
 import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatNextIter
+import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.flat.FlatRaise
 import org.opentaint.ir.impl.python.flat.FlatReturn
 import org.opentaint.ir.impl.python.flat.FlatStoreAttr
@@ -60,6 +61,16 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
         for (block in fn.cfg.blocks) {
             for (inst in block.instructions) {
                 forEachOperand(inst) { v -> if (v is FlatLocal) out.add(v.name) }
+            }
+        }
+        return out
+    }
+
+    private fun parameterReads(fn: FlatFunctionIR): Set<String> {
+        val out = HashSet<String>()
+        for (block in fn.cfg.blocks) {
+            for (inst in block.instructions) {
+                forEachOperand(inst) { v -> if (v is FlatParameterRef) out.add(v.name) }
             }
         }
         return out
@@ -645,8 +656,8 @@ class ImportNameResolutionTest : RawFlatModuleTestBase() {
             "the function with the import sees FlatModuleRef(missing_pkg)",
         )
         assertTrue(
-            "missing_pkg" in localReads(noImport),
-            "the sibling function's parameter must surface as FlatLocal; got locals=${localReads(noImport)}, modules=${moduleRefs(noImport)}",
+            "missing_pkg" in parameterReads(noImport),
+            "the sibling function's parameter must surface as FlatParameterRef; got parameters=${parameterReads(noImport)}, modules=${moduleRefs(noImport)}",
         )
         assertFalse(
             "missing_pkg" in moduleRefs(noImport),

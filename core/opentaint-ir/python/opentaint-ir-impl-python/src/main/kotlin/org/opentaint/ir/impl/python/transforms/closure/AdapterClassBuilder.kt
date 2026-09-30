@@ -15,6 +15,7 @@ import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatParamKind
 import org.opentaint.ir.impl.python.flat.FlatParameter
+import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.flat.FlatReturn
 import org.opentaint.ir.impl.python.flat.FlatStoreAttr
 
@@ -54,20 +55,20 @@ internal fun buildAdapterClass(originalImpl: FlatFunctionIR, moduleName: String)
 }
 
 private fun buildInitMethod(adapterQn: String): FlatFunctionIR {
-    val selfLocal = FlatLocal("self")
-    val envParamLocal = FlatLocal(ClosureRuntime.ENV_ATTR_NAME)
+    val selfParam = FlatParameterRef("self")
+    val envParam = FlatParameterRef(ClosureRuntime.ENV_ATTR_NAME)
     val cfg = FlatCFG(
         blocks = listOf(
             FlatBlock(
                 label = 0,
                 instructions = listOf(
                     FlatStoreAttr(
-                        obj = selfLocal,
+                        obj = selfParam,
                         attribute = ClosureRuntime.ENV_ATTR_NAME,
-                        value = envParamLocal,
+                        value = envParam,
                     ),
                     // Constructors return their instance (see CfgSession.constructorSelf).
-                    FlatReturn(selfLocal),
+                    FlatReturn(selfParam),
                 ),
                 exceptionHandlers = emptyList(),
             ),
@@ -104,7 +105,7 @@ private fun buildCallMethod(
     val callParams = listOf(plainParameter("self")) + implUserParams
 
     val tmpReturn = FlatLocal("\$ret")
-    val forwardArgs = listOf(FlatCallArg(FlatLocal("self"), FlatArgKind.POSITIONAL)) +
+    val forwardArgs = listOf(FlatCallArg(FlatParameterRef("self"), FlatArgKind.POSITIONAL)) +
         implUserParams.map { p -> forwardArgFor(p) }
 
     val calleeLocal = FlatLocal("\$callee")
@@ -148,7 +149,7 @@ private fun buildCallMethod(
 }
 
 private fun forwardArgFor(p: FlatParameter): FlatCallArg {
-    val v = FlatLocal(p.name)
+    val v = FlatParameterRef(p.name, p.type)
     return when (p.kind) {
         FlatParamKind.POSITIONAL_OR_KEYWORD ->
             FlatCallArg(v, FlatArgKind.POSITIONAL)

@@ -1,12 +1,11 @@
 package org.opentaint.ir.impl.python.protoToFlat.cfg
 
-import org.opentaint.ir.impl.python.flat.FlatAssign
 import org.opentaint.ir.impl.python.flat.FlatCFG
-import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatParameter
 import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.protoToFlat.ImportManager
 import org.opentaint.ir.impl.python.protoToFlat.ModuleContext
+import org.opentaint.ir.impl.python.protoToFlat.Scope
 import org.opentaint.ir.impl.python.protoToFlat.recordImports
 import org.opentaint.ir.impl.python.protoToFlat.recordImportsFrom
 import org.opentaint.ir.impl.python.protoToFlat.toPhysicalLocation
@@ -37,27 +36,20 @@ internal object CfgBuild {
         isConstructor: Boolean = false,
     ): CfgBuildResult {
         val constructorSelf = if (isConstructor) {
-            parameters.firstOrNull()?.let { FlatLocal(it.name, it.type) }
+            parameters.firstOrNull()?.let { FlatParameterRef(it.name, it.type) }
         } else {
             null
         }
 
         val session = CfgSession(
             module = module,
+            scope = Scope(parameters),
             currentFunctionQualifiedName = qualifiedName,
             currentFunctionName = functionName,
             imports = imports,
             constructorSelf = constructorSelf,
         )
         return runOrEmpty(module, sourceLabel, errorPrefix) {
-            for (param in parameters) {
-                session.emit(
-                    FlatAssign(
-                        target = FlatLocal(param.name, param.type),
-                        source = FlatParameterRef(param.name, param.type),
-                    ),
-                )
-            }
             session.visitBlock(body)
             if (!session.currentBlockTerminated()) session.emitReturn(null)
             CfgBuildResult(session.finalizeCfg(), session.nonlocalNames, session.globalNames)
@@ -68,7 +60,7 @@ internal object CfgBuild {
         module: ModuleContext,
         statements: List<MypyStmtProto>,
     ): FlatCFG {
-        val session = CfgSession(module = module)
+        val session = CfgSession(module = module, scope = Scope(emptyList()))
         return runOrEmpty(
             module,
             sourceLabel = "__module_init__",

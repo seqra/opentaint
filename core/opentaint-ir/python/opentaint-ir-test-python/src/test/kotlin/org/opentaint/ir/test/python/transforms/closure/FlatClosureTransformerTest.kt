@@ -284,11 +284,6 @@ class FlatClosureTransformerTest {
     @Test
     fun `parameter cells seeded`() {
         // outer(x): def inner(): return x  → outer.cellVars = {x}, x is param
-        //
-        // The fixture mirrors `CfgBuild.buildFunctionCfg`: the parameter-binding prologue is the
-        // body's first instruction, and `defaultRewrite` redirecting its cell-managed target
-        // through a temp + `FlatStoreAttr` is what seeds `$cell$x` — the rewriter's own prologue
-        // emits no explicit seed.
         val outerQn = "m.outer"
         val innerQn = "m.outer.inner"
         val inner = fn(
@@ -305,7 +300,6 @@ class FlatClosureTransformerTest {
             kind = FlatFunctionKind.TOP_LEVEL,
             params = listOf("x"),
             body = listOf(
-                FlatAssign(local("x"), FlatParameterRef("x")),
                 FlatBindFunction(local("inner"), FlatGlobalNameRef(innerQn)),
                 FlatReturn(null),
             ),
@@ -327,13 +321,7 @@ class FlatClosureTransformerTest {
                 s.attribute == ClosureRuntime.CELL_VALUE_ATTR_NAME
         }
         assertNotNull(seedStore, "expected FlatStoreAttr seeding ${cellName("x")}; insts=$insts")
-        val seedTemp = (seedStore!!.value as FlatLocal).name
-        val seedAssign = insts.filterIsInstance<FlatAssign>().firstOrNull {
-            (it.target as? FlatLocal)?.name == seedTemp && it.source is FlatParameterRef
-        }
-        assertNotNull(seedAssign,
-            "expected FlatAssign($seedTemp, FlatParameterRef(\"x\")) preceding the seed store; insts=$insts")
-        assertEquals("x", (seedAssign!!.source as FlatParameterRef).name)
+        assertEquals(FlatParameterRef("x"), seedStore!!.value)
     }
 
     @Test
@@ -736,16 +724,16 @@ class FlatClosureTransformerTest {
         assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), cls.methods[0].parameters.map { it.name })
         val store = initInsts.filterIsInstance<FlatStoreAttr>().single()
         assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
-        assertEquals("self", (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatLocal).name)
+        assertEquals("self", (store.obj as FlatParameterRef).name)
+        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatParameterRef).name)
 
         val callMethod = cls.methods[1]
         assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
         val callInsts = callMethod.cfg.blocks.first().instructions
         val implCall = callInsts.filterIsInstance<FlatCall>().single()
         assertEquals(2, implCall.args.size)
-        assertEquals("self", (implCall.args[0].value as FlatLocal).name)
-        assertEquals("p", (implCall.args[1].value as FlatLocal).name)
+        assertEquals("self", (implCall.args[0].value as FlatParameterRef).name)
+        assertEquals("p", (implCall.args[1].value as FlatParameterRef).name)
         assertEquals("$moduleName.<closure_inner_impl>", calleeQn(implCall, callInsts))
     }
 

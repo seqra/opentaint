@@ -13,7 +13,7 @@ import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRListExpr
 import org.opentaint.ir.api.python.PIRLoadAttr
 import org.opentaint.ir.api.python.PIRModuleNameRef
-import org.opentaint.ir.api.python.PIRParameterRef
+import org.opentaint.ir.api.python.PIRParameter
 import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRSetExpr
 import org.opentaint.ir.api.python.PIRStringExpr
@@ -23,7 +23,7 @@ import org.opentaint.ir.api.python.PIRUnionType
 import org.opentaint.ir.api.python.PythonNames
 
 class PIRMethodQFNameReconstructor private constructor(
-    private val method: PIRFunction,
+    method: PIRFunction,
     applicationGraph: PIRApplicationGraph,
 ) : PIRMethodIntraproceduralWalker<PIRMethodQFNameReconstructor.Binding>(method, applicationGraph) {
     private val cp = applicationGraph.cp
@@ -56,7 +56,6 @@ class PIRMethodQFNameReconstructor private constructor(
 
     override fun seed(inst: PIRInstruction): List<Binding> = when (inst) {
         is PIRAssign -> when (val rhv = inst.expr) {
-            is PIRParameterRef -> bind(rhv.type).ifEmpty { receiver(rhv) }
             is PIRBindFunctionExpr -> listOf(Binding.Function(rhv.function.qualifiedName))
 
             is PIRReadNameExpr -> when (val ref = rhv.ref) {
@@ -126,7 +125,9 @@ class PIRMethodQFNameReconstructor private constructor(
         is Binding.Module -> emptyList()
     }
 
-    private fun receiver(param: PIRParameterRef): List<Binding> {
+    override fun seedParameter(param: PIRParameter): List<Binding> = bind(param.type).ifEmpty { receiver(param) }
+
+    private fun receiver(param: PIRParameter): List<Binding> {
         val cls = method.enclosingClass ?: return emptyList()
         if (param.index != 0 || method.isStaticMethod) return emptyList()
         return listOf(if (method.isClassMethod) Binding.Class(cls.qualifiedName) else Binding.Instance(cls.qualifiedName))

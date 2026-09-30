@@ -122,6 +122,15 @@ internal class RewriteCtx(
                     args = emptyList(),
                 ),
             )
+            fn.parameters.firstOrNull { it.name == name }?.let { param ->
+                add(
+                    FlatStoreAttr(
+                        obj = cellLocal,
+                        attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
+                        value = FlatParameterRef(param.name, param.type),
+                    ),
+                )
+            }
         }
         if (receivedCells.isNotEmpty()) {
             add(
@@ -152,11 +161,16 @@ internal class RewriteCtx(
         location: PIRPhysicalLocation?,
         into: MutableList<FlatInst>,
     ): FlatValue {
-        if (value !is FlatLocal || !isCellManaged(value.name)) return value
+        val name = when (value) {
+            is FlatLocal -> value.name
+            is FlatParameterRef -> value.name
+            else -> return value
+        }
+        if (!isCellManaged(name)) return value
         val tmp = freshTemp()
         into += FlatLoadAttr(
             target = tmp,
-            obj = cellLocals.getValue(value.name),
+            obj = cellLocals.getValue(name),
             attribute = ClosureRuntime.CELL_VALUE_ATTR_NAME,
             physicalLocation = location,
         )

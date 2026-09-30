@@ -7,10 +7,11 @@ import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
 import org.opentaint.ir.api.python.PIRLoadAttr
 import org.opentaint.ir.api.python.PIRLocal
+import org.opentaint.ir.api.python.PIRParameter
 import org.opentaint.ir.api.python.targets
 
 abstract class PIRMethodIntraproceduralWalker<V : Any>(
-    method: PIRFunction,
+    val method: PIRFunction,
     applicationGraph: PIRApplicationGraph,
 ) {
     protected val graph = applicationGraph.methodGraph(method)
@@ -19,6 +20,10 @@ abstract class PIRMethodIntraproceduralWalker<V : Any>(
     private val storage = MutableList(method.instList.size) { hashSetOf<Fact<V>>() }
 
     protected fun walk() {
+        for (param in method.parameters) {
+            val values = seedParameter(param)
+            graph.entryPoints().forEach { entry -> values.forEach { addEntry(entry, Fact(param.index, it)) } }
+        }
         for (inst in graph.statements()) {
             // seed runs before the target check: it may record names for target-less calls
             val values = seed(inst)
@@ -32,6 +37,8 @@ abstract class PIRMethodIntraproceduralWalker<V : Any>(
     }
 
     protected abstract fun seed(inst: PIRInstruction): List<V>
+
+    protected open fun seedParameter(param: PIRParameter): List<V> = emptyList()
 
     protected open fun attributeRead(inst: PIRLoadAttr, obj: V): List<V> = emptyList()
 

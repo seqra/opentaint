@@ -167,9 +167,11 @@ This is the JVM engine's approach. The Python engine currently uses a simpler ap
 
 ### Critical: Parameter Naming in PIR
 
-PIR represents function parameters as `PIRLocal` in the body (NOT `PIRParameterRef`). If `accessPathBase()` mapped parameter-named locals to `LocalVar(i)`, the callee's summary edges would have `LocalVar(i)` initial bases — but the caller subscriptions expect `Argument(i)`.
+PIR reads a parameter that the body never rebinds directly as `PIRParameterRef`, which `PIRFlowFunctionUtils.accessPathBase()` maps to `Argument(i)`. Summary initial bases therefore match the caller's `Argument(i)` subscriptions, and cleaners or post-sink facts on a parameter land on `Argument(i)`.
 
-**Fix**: `PIRFlowFunctionUtils.accessPathBase()` checks if a `PIRLocal` name matches a method parameter and maps it to `Argument(i)`. This ensures summary initial bases match subscription expectations.
+A parameter that the body rebinds (assignment, `for`, `with ... as`, `except ... as`, walrus, `del`, nested `def`) is copied once at entry into a `PIRLocalVar` of the same name, and every use in the body goes through that copy (`LocalVar`). This is done by the `ParameterBinding` flat transform, which runs before closure lowering; proto→flat lowering emits every parameter use as `FlatParameterRef`.
+
+Alias expansion (`PIRAliasUtil`, core `AliasUtil`) only handles `LocalVar` bases, so facts on `Argument(i)` get no alias expansion (same restriction as JVM).
 
 ## 6. Lessons Learned
 
