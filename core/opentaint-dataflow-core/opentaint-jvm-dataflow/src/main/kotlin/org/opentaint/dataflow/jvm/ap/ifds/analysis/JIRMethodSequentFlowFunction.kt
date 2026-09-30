@@ -6,8 +6,6 @@ import org.opentaint.dataflow.ap.ifds.ExclusionSet
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker
 import org.opentaint.dataflow.ap.ifds.FactTypeChecker.FilterResult
 import org.opentaint.dataflow.ap.ifds.FinalAccessor
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
-import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
@@ -15,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
@@ -36,7 +35,7 @@ class JIRMethodSequentFlowFunction(
 ): MethodSequentFlowFunction {
     private val factTypeChecker get() = analysisContext.factTypeChecker
 
-    private val summary: JIRStatementSummary by lazy {
+    private val summary: StatementSummary by lazy {
         JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis)
     }
 
@@ -127,48 +126,11 @@ class JIRMethodSequentFlowFunction(
             }
 
             else -> {
-                if (!transfer(factAp, propagateFact, refineInitial)) {
+                if (!summary.transfer(factAp, factTypeChecker, { propagateFact(it, TraceInfo.Flow) }, refineInitial)) {
                     add(Sequent.Unchanged)
                 }
             }
         }
-    }
-
-    private fun transfer(
-        factAp: FinalFactAp,
-        propagateFact: (FinalFactAp, TraceInfo) -> Unit,
-        refineInitial: (ExclusionSet) -> Unit,
-    ): Boolean {
-        val transfer = summary.find(factAp.base) ?: return false
-
-        var fact = factAp
-        for (type in transfer.typeFilters) {
-            fact = factTypeChecker.filterFactByLocalType(type, fact) ?: return true
-        }
-
-        for (edge in transfer.edges) {
-            val to = edge.to
-            for (effect in MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(fact, edge.from)) {
-                when (effect) {
-                    is SummaryEdgeApplication.SummaryApRefinement -> {
-                        if (to == null) continue
-                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
-                        propagateFact(result.replaceExclusions(fact.exclusions), TraceInfo.Flow)
-                    }
-
-                    is SummaryEdgeApplication.SummaryExclusionRefinement -> {
-                        if (to == null) {
-                            refineInitial(effect.exclusion)
-                            continue
-                        }
-                        val result = to.concat(factTypeChecker, effect.delta) ?: continue
-                        propagateFact(result.replaceExclusions(effect.exclusion), TraceInfo.Flow)
-                    }
-                }
-            }
-        }
-
-        return true
     }
 
     private fun MutableSet<Sequent>.propagateExitFact(

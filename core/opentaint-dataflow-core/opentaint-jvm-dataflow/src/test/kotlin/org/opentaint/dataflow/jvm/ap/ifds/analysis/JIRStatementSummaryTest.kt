@@ -8,9 +8,9 @@ import org.opentaint.dataflow.ap.ifds.FieldAccessor
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary.Edge
 import org.opentaint.dataflow.jvm.BasicTestUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary.Edge
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
 import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
@@ -49,10 +49,11 @@ class JIRStatementSummaryTest : BasicTestUtils() {
 
     private val g = FieldAccessor(cls, "g", "java.lang.Object")
 
-    private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? =
-        JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null).find(fact.base)?.edges
-            ?.flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }
-            ?.toSet()
+    private fun preconditions(inst: JIRInst, fact: InitialFactAp): Set<InitialFactAp>? {
+        val reversed = JIRStatementSummary.buildReversed(ap, inst, aliasAnalysis = null)
+        if (reversed.find(fact.base) == null) return null
+        return (reversed.preconditions(fact) ?: listOf(fact)).toSet()
+    }
 
     @Test
     fun `field read splits the instance and kills the target`() {

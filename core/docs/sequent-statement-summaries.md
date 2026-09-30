@@ -50,12 +50,23 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
 ## 3. Per-statement summary
 
 ```
-class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
+class StatementSummary(val transfers: Array<BaseTransfer>) {
     data class Edge(val from: InitialFactAp, val to: InitialFactAp?)
-    class BaseTransfer(val base: AccessPathBase, val edges: Array<Edge>, val typeFilters: Array<JIRType>)
+    class BaseTransfer(val base: AccessPathBase, val edges: Array<Edge>, val typeFilters: Array<CommonType>)
     fun find(base: AccessPathBase): BaseTransfer?
+    fun transfer(fact: FinalFactAp, typeChecker: FactTypeChecker, propagateFact: (FinalFactAp) -> Unit, refineInitial: (ExclusionSet) -> Unit): Boolean
+    fun preconditions(fact: InitialFactAp): List<InitialFactAp>?
 }
 ```
+
+The summary and its builder live in the language-independent core
+(`org.opentaint.dataflow.ap.ifds.summary`). `StatementSummaryBuilder` offers the statement primitives
+(`move`, `read`, `write` with weak/strong update and alias paths, `filter`, plus the raw `fact` /
+`touch` / `edge`), the alias propagation edges, `build` and `buildReversed`; `transfer` is the
+forward application of section 4 and `preconditions` the backward application of section 5a. A
+language only translates its statements into builder calls: the JVM translator is the
+`JIRStatementSummary` object below (element writes are weak, field and static writes strong, alias
+paths from `forEachAliasPathAtStatement`).
 
 A statement touches one to three bases, so the summary is one `BaseTransfer` per touched base
 (edges from that base and its type filters) found by a linear scan; no maps or linked collections.
@@ -138,7 +149,7 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
 
 ## 5a. Preconditions from reversed summaries
 
-`JIRStatementSummary.build` and `JIRStatementSummary.buildReversed` run the same builder with a
+`JIRStatementSummary.build` and `JIRStatementSummary.buildReversed` run the same translation on a builder with a
 flag that keeps or omits the alias propagation edges: the survival of the aliased location at a field
 write (the split along the alias path plus the weak written field). Forward they add nothing (an
 untouched alias base passes as `Unchanged`), so `build` omits them. Backward they are required:
@@ -149,7 +160,7 @@ exclusions; kill edges are dropped. Every edge target is then a touched base. Be
 summaries come from different edge sets, reversing is not an involution and a built summary has no
 `reverse` operation. Field reads do not touch aliases (a read changes no memory).
 
-`JIRMethodSequentPrecondition` computes the preconditions of an initial fact `q` as
+`StatementSummary.preconditions` (used by `JIRMethodSequentPrecondition`) computes the preconditions of an initial fact `q` as
 `to'.concat(d)` with `q`'s exclusions for every reversed edge and every
 `d in q.delta(from')`. The new `InitialFactAp.delta(other: InitialFactAp): List<InitialFactAp.Delta>`
 returns the suffix of this fact after `other`'s path, filtered by `other`'s exclusions (tree: path

@@ -4,7 +4,7 @@ import kotlinx.coroutines.runBlocking
 import kotlin.test.assertEquals
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary.Edge
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary.Edge
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.ap.ifds.access.tree.TreeApManager
@@ -616,10 +616,10 @@ class AliasSampleTest : BasicTestUtils() {
         )
 
         val reversed = JIRStatementSummary.buildReversed(ap, write, aa)
-        fun preconditions(fact: InitialFactAp): Set<InitialFactAp> =
-            reversed.find(fact.base)!!.edges
-                .flatMap { edge -> fact.delta(edge.from).map { edge.to!!.concat(it).replaceExclusions(fact.exclusions) } }
-                .toSet()
+        fun preconditions(fact: InitialFactAp): Set<InitialFactAp> {
+            checkNotNull(reversed.find(fact.base))
+            return (reversed.preconditions(fact) ?: listOf(fact)).toSet()
+        }
 
         assertEquals(setOf(p(a, box, value, h), p(x, h)), preconditions(p(a, box, value, h)))
         assertEquals(setOf(p(x, h)), preconditions(p(y, value, h)))

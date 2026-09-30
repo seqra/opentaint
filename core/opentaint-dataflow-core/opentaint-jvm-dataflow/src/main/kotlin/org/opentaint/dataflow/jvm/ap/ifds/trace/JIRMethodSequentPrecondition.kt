@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
@@ -32,7 +33,7 @@ class JIRMethodSequentPrecondition(
     private val currentInst: JIRInst,
     private val analysisContext: JIRMethodAnalysisContext,
 ) : MethodSequentPrecondition {
-    private val summary: JIRStatementSummary by lazy {
+    private val summary: StatementSummary by lazy {
         JIRStatementSummary.buildReversed(apManager, currentInst, analysisContext.aliasAnalysis)
     }
 
@@ -69,18 +70,9 @@ class JIRMethodSequentPrecondition(
     private fun preconditionForFact(fact: InitialFactAp): List<InitialFactAp>? = when (currentInst) {
         is JMethodExitNormalInst, is JMethodExitExceptionalInst -> listOf(fact)
 
-        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> {
-            summary.find(fact.base)?.let { transfer ->
-                transfer.edges.flatMap { reversedTransfer(fact, it) }.distinct().takeIf { it != listOf(fact) }
-            }
-        }
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> summary.preconditions(fact)
 
         else -> null
-    }
-
-    private fun reversedTransfer(fact: InitialFactAp, edge: JIRStatementSummary.Edge): List<InitialFactAp> {
-        val to = edge.to ?: return emptyList()
-        return fact.delta(edge.from).map { to.concat(it).replaceExclusions(fact.exclusions) }
     }
 
     private fun MutableSet<SequentPrecondition>.unconditionalSourcesPrecondition(fact: InitialFactAp) {
