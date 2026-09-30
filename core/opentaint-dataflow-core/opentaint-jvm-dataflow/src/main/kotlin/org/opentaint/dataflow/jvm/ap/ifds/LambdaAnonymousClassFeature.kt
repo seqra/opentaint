@@ -53,6 +53,7 @@ import org.opentaint.ir.impl.features.classpaths.virtual.JIRVirtualParameter
 import org.opentaint.ir.impl.types.JIRClassTypeImpl
 import org.opentaint.ir.impl.types.JIRTypedFieldImpl
 import org.opentaint.ir.impl.types.substition.JIRSubstitutorImpl
+import org.opentaint.jvm.graph.JMethodBoundaryInstFeature
 import java.util.Objects
 import java.util.concurrent.ConcurrentHashMap
 
@@ -308,7 +309,9 @@ class LambdaAnonymousClassFeature : JIRClasspathExtFeature {
         parameters: List<JIRVirtualParameter>,
         private val instructions: JIRInstList<JIRInst>
     ) : JIRVirtualMethodImpl(name, returnType = returnType, parameters = parameters, description = description) {
-        override val instList: JIRInstList<JIRInst> get() = instructions
+        override val instList: JIRInstList<JIRInst> by lazy {
+            JMethodBoundaryInstFeature.transformInstList(this, instructions)
+        }
 
         override fun hashCode(): Int = originalMethod.hashCode()
 
@@ -364,7 +367,9 @@ class LambdaAnonymousClassFeature : JIRClasspathExtFeature {
         parameters: List<JIRVirtualParameter>,
         private val instructions: JIRInstList<JIRInst>
     ) : JIRVirtualMethodImpl(name, returnType = returnType, parameters = parameters, description = description) {
-        override val instList: JIRInstList<JIRInst> get() = instructions
+        override val instList: JIRInstList<JIRInst> by lazy {
+            JMethodBoundaryInstFeature.transformInstList(this, instructions)
+        }
 
         override fun hashCode(): Int = Objects.hash(name, enclosingClass)
 

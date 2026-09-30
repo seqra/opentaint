@@ -218,7 +218,7 @@ class JirSarifGenerator(
         relevantLocations: List<List<IntermediateLocation>>?
     ): IntermediateLocation? {
         if (TraceMessageBuilder.isGeneratedLocation(statement)) {
-            val normalLocation = TraceMessageBuilder.tryResolveNormalGeneratedLocation(statement)
+            val normalLocation = TraceMessageBuilder.tryResolveNormalGeneratedLocation(statement, relevantLocations)
                 ?: return null
             return statementLocation(normalLocation, type, relevantLocations)
         }

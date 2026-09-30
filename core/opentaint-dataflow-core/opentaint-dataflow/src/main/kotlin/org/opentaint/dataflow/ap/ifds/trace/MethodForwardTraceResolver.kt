@@ -111,6 +111,7 @@ class MethodForwardTraceResolver(
 
         val initialEdge = ZeroToFact(methodEntryPoint, initialStatement, initialFact)
         if (!startAtStatement) {
+            builder.handleEdgeToMethodEnd(initialEdge, initialEdge, EdgeReason.Unchanged)
             builder.propagateEdgeToSuccessors(initialEdge, initialEdge, EdgeReason.Unchanged)
         } else {
             builder.enqueue(initialEdge)

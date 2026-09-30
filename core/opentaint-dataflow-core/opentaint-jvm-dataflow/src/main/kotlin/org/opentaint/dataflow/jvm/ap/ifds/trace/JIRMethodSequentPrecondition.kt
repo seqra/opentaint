@@ -32,6 +32,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.maybeFlatMap
 
 class JIRMethodSequentPrecondition(
@@ -42,43 +44,40 @@ class JIRMethodSequentPrecondition(
 
     override fun factPrecondition(
         fact: InitialFactAp,
-    ): Set<SequentPrecondition> {
-        if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
-            return setOf(SequentPrecondition.Unchanged)
+    ): Set<SequentPrecondition> = when (currentInst) {
+        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> methodExitPrecondition(fact)
+
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> {
+            val results = mutableSetOf<SequentPrecondition>()
+            results.computeFactPrecondition(fact)
+            results
         }
 
-        val results = mutableSetOf<SequentPrecondition>()
-        results.computeFactPrecondition(fact, applyExitSourceRules = true)
+        else -> setOf(SequentPrecondition.Unchanged)
+    }
+
+    private fun methodExitPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
+        val results = mutableSetOf<SequentPrecondition>(SequentPrecondition.Unchanged)
+        results.methodExitSourcePrecondition(fact)
         return results
     }
 
-    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(
-        fact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ) {
-        val factPrecondition = computePrecondition(fact, applyExitSourceRules)
+    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(fact: InitialFactAp) {
+        val factPrecondition = computePrecondition(fact)
         this += factPrecondition.ifEmpty { setOf(SequentPrecondition.Unchanged) }
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
-            this += computePrecondition(aliasedFact, applyExitSourceRules)
+            this += computePrecondition(aliasedFact)
         }
     }
 
-    private fun computePrecondition(
-        aliasedFact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ): Set<SequentPrecondition> {
+    private fun computePrecondition(aliasedFact: InitialFactAp): Set<SequentPrecondition> {
         val precondition = mutableSetOf<SequentPrecondition>()
         preconditionForFact(aliasedFact)?.let {
             precondition += PreconditionFactsForInitialFact(aliasedFact, it)
         }
 
         precondition.unconditionalSourcesPrecondition(aliasedFact)
-
-        if (applyExitSourceRules) {
-            precondition.methodExitSourcePrecondition(aliasedFact)
-        }
-
         return precondition
     }
 
@@ -111,6 +110,8 @@ class JIRMethodSequentPrecondition(
 
                 return listOf(fact.rebase(base))
             }
+
+            is JMethodExitNormalInst, is JMethodExitExceptionalInst -> return listOf(fact)
 
             else -> return null
         }
@@ -335,7 +336,7 @@ class JIRMethodSequentPrecondition(
                         }
 
                         val preFact = factCube.facts.single()
-                        computeFactPrecondition(preFact, applyExitSourceRules = false)
+                        computeFactPrecondition(preFact)
                     }
                 }
             )
