@@ -7,6 +7,8 @@ import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils
 import org.opentaint.dataflow.ap.ifds.MethodSummaryEdgeApplicationUtils.SummaryEdgeApplication
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.ir.api.common.CommonType
 
 class StatementSummary(val transfers: Array<BaseTransfer>) {
@@ -16,6 +18,7 @@ class StatementSummary(val transfers: Array<BaseTransfer>) {
         val base: AccessPathBase,
         val edges: Array<Edge>,
         val typeFilters: Array<CommonType>,
+        val unchangedForward: Boolean = false,
     )
 
     fun find(base: AccessPathBase): BaseTransfer? {
@@ -65,12 +68,29 @@ class StatementSummary(val transfers: Array<BaseTransfer>) {
 
     fun preconditions(fact: InitialFactAp): List<InitialFactAp>? {
         val transfer = find(fact.base) ?: return null
-        val result = transfer.edges.flatMap { edge ->
+        val result = transfer.preconditionFacts(fact)
+        return result.takeIf { it != listOf(fact) }
+    }
+
+    fun sequentPreconditions(fact: InitialFactAp): Set<SequentPrecondition> {
+        val transfer = find(fact.base) ?: return emptySet()
+        val result = transfer.preconditionFacts(fact)
+
+        if (transfer.unchangedForward) {
+            val otherBases = result.filter { it.base != fact.base }
+            if (otherBases.isEmpty()) return setOf(SequentPrecondition.Unchanged)
+            return setOf(SequentPrecondition.Unchanged, PreconditionFactsForInitialFact(fact, otherBases))
+        }
+
+        if (result == listOf(fact)) return emptySet()
+        return setOf(PreconditionFactsForInitialFact(fact, result))
+    }
+
+    private fun BaseTransfer.preconditionFacts(fact: InitialFactAp): List<InitialFactAp> =
+        edges.flatMap { edge ->
             val to = edge.to ?: return@flatMap emptyList()
             fact.delta(edge.from).map { to.concat(it).replaceExclusions(fact.exclusions) }
         }.distinct()
-        return result.takeIf { it != listOf(fact) }
-    }
 
     companion object {
         val Empty = StatementSummary(emptyArray())

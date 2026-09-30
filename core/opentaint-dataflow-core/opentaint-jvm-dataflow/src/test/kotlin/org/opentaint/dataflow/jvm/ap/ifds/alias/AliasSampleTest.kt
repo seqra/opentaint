@@ -16,6 +16,8 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AccessPathBase.Companion.Argument
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.configuration.jvm.TaintCleaner
 import org.opentaint.dataflow.configuration.jvm.TaintEntryPointSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodEntrySink
@@ -625,6 +627,17 @@ class AliasSampleTest : BasicTestUtils() {
         assertEquals(setOf(p(x, h)), preconditions(p(y, value, h)))
         assertEquals(setOf(p(a, box, h)), preconditions(p(a, box, h)))
         assertEquals(setOf(p(a, h)), preconditions(p(a, h)))
+
+        val aliasFact = p(a, box, value, h)
+        assertEquals(
+            setOf(SequentPrecondition.Unchanged, PreconditionFactsForInitialFact(aliasFact, listOf(p(x, h)))),
+            reversed.sequentPreconditions(aliasFact)
+        )
+        assertEquals(setOf(SequentPrecondition.Unchanged), reversed.sequentPreconditions(p(a, box, h)))
+        assertEquals(
+            setOf(PreconditionFactsForInitialFact(p(y, value, h), listOf(p(x, h)))),
+            reversed.sequentPreconditions(p(y, value, h))
+        )
     }
 
     private object NoUnroll : AnyAccessorUnrollStrategy {

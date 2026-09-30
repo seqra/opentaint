@@ -20,6 +20,16 @@ public class FieldFlowSample {
         sink(data);
     }
 
+    public void mayAliasFieldWriteFlow(boolean flag) {
+        ClassWithField safe = new ClassWithField();
+        ClassWithField tainted = new ClassWithField();
+        tainted.field = source();
+
+        ClassWithField alias = flag ? safe : tainted;
+        safe.field = "safe";
+        sink(alias.field);
+    }
+
     public String source() { return "tainted"; }
     public void sink(String data) { }
 }

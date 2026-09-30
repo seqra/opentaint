@@ -75,6 +75,23 @@ class JavaDataFlowReachabilityTest : AnalysisTest() {
     }
 
     @Test
+    fun `field flow - may-alias field survives write through other alias`() {
+        val testCls = "$SAMPLE_PACKAGE.FieldFlowSample"
+        val config = SerializedTaintConfig(
+            source = listOf(sourceRule(testCls, "source", TAINT_MARK)),
+            sink = listOf(sinkRule(testCls, "sink", "field-flow-rule", listOf(Argument(0) to TAINT_MARK)))
+        )
+
+        assertReachable(
+            config = config,
+            testCls = testCls,
+            entryPointName = "mayAliasFieldWriteFlow",
+            ruleId = "field-flow-rule",
+            testName = "may-alias field write flow"
+        )
+    }
+
+    @Test
     fun `interprocedural flow - source to sink through chained methods`() {
         val testCls = "$SAMPLE_PACKAGE.InterproceduralDataFlowSample"
         val config = SerializedTaintConfig(

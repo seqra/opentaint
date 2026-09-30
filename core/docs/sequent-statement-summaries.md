@@ -167,6 +167,19 @@ returns the suffix of this fact after `other`'s path, filtered by `other`'s excl
 walk; automata: `AccessGraph.delta`; cactus: unsupported). An untouched base, or a result equal to
 `[q]`, is `Unchanged`; a touched base without a matching edge has no precondition (kill).
 
+`StatementSummary.sequentPreconditions` maps these to the sequent preconditions used by
+`JIRMethodSequentPrecondition` and `GoMethodSequentPrecondition`. The builder records the bases the
+forward summary touches; a base of the reversed summary that forward leaves untouched (an alias base,
+touched only by the alias propagation edges) is marked `unchangedForward`. For such a base the
+survival (every precondition on the fact's own base) is `Unchanged`, plus
+`PreconditionFactsForInitialFact` with the preconditions on other bases (the written values). This
+mirrors the forward pass, where that fact is `Unchanged`. It is required by the engine: `MethodAnalyzer`
+does not store an edge propagated as `Unchanged` at the successor statement, and the trace resolver
+(`MethodTraceResolver.containsEntryEdge`, `MethodAnalyzerEdgeSearcher`) requires a stored edge for the
+fact after the statement before it follows an explicit precondition. Naming the survival explicitly
+drops the trace (the vulnerability is filtered as having no trace); this happens on both JVM (a may
+alias through a conditional, `FieldFlowSample.mayAliasFieldWriteFlow`) and Go (`structCopy003T`).
+
 ## 6. Caching
 
 `JIRMethodAnalysisContext` gets `cachedSequentFF(stmtIdx, generateTrace)` next to `cachedCallFF`,
@@ -191,8 +204,4 @@ Accepted deviations/decisions from the design above:
    unit-tested on a constructed instruction.
 7. Go uses the same summaries (`GoStatementSummary`, `GoMethodSequentFlowFunction`,
    `GoMethodSequentPrecondition`; flow functions cached per statement in `GoMethodAnalysisContext`).
-   Go has no type filters. The Go precondition answers a fact whose base only the reversed summary
-   touches (an alias base, touched only by the alias propagation edges) with `Unchanged` plus the
-   preconditions on other bases: forward, that fact is `Unchanged` and no edge is stored for it at the
-   statement, so a precondition naming it there would make the trace edge search stop at a statement
-   without the edge (lost trace, e.g. `structCopy003T`).
+   Go has no type filters.

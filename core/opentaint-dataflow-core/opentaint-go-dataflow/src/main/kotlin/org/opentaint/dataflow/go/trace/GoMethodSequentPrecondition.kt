@@ -5,7 +5,6 @@ import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
-import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.go.analysis.GoMethodAnalysisContext
@@ -25,31 +24,10 @@ class GoMethodSequentPrecondition(
         GoStatementSummary.buildReversed(apManager, currentInst, analysisContext.method, analysisContext.aliasAnalysis)
     }
 
-    private val forwardSummary: StatementSummary by lazy {
-        GoStatementSummary.build(apManager, currentInst, analysisContext.method, analysisContext.aliasAnalysis)
-    }
-
     override fun factPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
-        val result = hashSetOf<SequentPrecondition>()
-        summary.preconditions(fact)?.let { result.addFactPreconditions(fact, it) }
+        val result = summary.sequentPreconditions(fact).toHashSet()
         result.unconditionalGlobalOrFieldReadSourceRulePrecondition(fact)
         return result.ifEmpty { setOf(SequentPrecondition.Unchanged) }
-    }
-
-    private fun MutableSet<SequentPrecondition>.addFactPreconditions(
-        fact: InitialFactAp,
-        preconditions: List<InitialFactAp>,
-    ) {
-        if (forwardSummary.find(fact.base) != null) {
-            this += PreconditionFactsForInitialFact(fact, preconditions)
-            return
-        }
-
-        this += SequentPrecondition.Unchanged
-        val aliasPreconditions = preconditions.filter { it.base != fact.base }
-        if (aliasPreconditions.isNotEmpty()) {
-            this += PreconditionFactsForInitialFact(fact, aliasPreconditions)
-        }
     }
 
     private fun MutableSet<SequentPrecondition>.unconditionalGlobalOrFieldReadSourceRulePrecondition(

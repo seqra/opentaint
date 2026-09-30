@@ -58,21 +58,18 @@ class JIRMethodSequentPrecondition(
     }
 
     private fun MutableSet<SequentPrecondition>.computeFactPrecondition(fact: InitialFactAp) {
-        val precondition = mutableSetOf<SequentPrecondition>()
-        preconditionForFact(fact)?.let {
-            precondition += PreconditionFactsForInitialFact(fact, it)
-        }
+        val precondition = preconditionForFact(fact).toMutableSet()
 
         precondition.unconditionalSourcesPrecondition(fact)
         this += precondition.ifEmpty { setOf(SequentPrecondition.Unchanged) }
     }
 
-    private fun preconditionForFact(fact: InitialFactAp): List<InitialFactAp>? = when (currentInst) {
-        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> listOf(fact)
+    private fun preconditionForFact(fact: InitialFactAp): Set<SequentPrecondition> = when (currentInst) {
+        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> setOf(PreconditionFactsForInitialFact(fact, listOf(fact)))
 
-        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> summary.preconditions(fact)
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> summary.sequentPreconditions(fact)
 
-        else -> null
+        else -> emptySet()
     }
 
     private fun MutableSet<SequentPrecondition>.unconditionalSourcesPrecondition(fact: InitialFactAp) {
