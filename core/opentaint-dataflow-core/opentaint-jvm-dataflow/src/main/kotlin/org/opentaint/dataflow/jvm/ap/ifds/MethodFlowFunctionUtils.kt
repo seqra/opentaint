@@ -13,12 +13,9 @@ import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRConstant
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
-import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
 import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRValue
-import org.opentaint.jvm.graph.JMethodExitExceptionalInst
-import org.opentaint.jvm.graph.JMethodExitNormalInst
 
 object MethodFlowFunctionUtils {
 
@@ -100,10 +97,4 @@ object MethodFlowFunctionUtils {
     fun InitialFactAp.excludeField(field: Accessor) = exclude(field)
 
     fun FinalFactAp.excludeField(field: Accessor) = exclude(field)
-
-    fun JIRInst.methodExitBase(): AccessPathBase? = when (this) {
-        is JMethodExitNormalInst -> AccessPathBase.Return
-        is JMethodExitExceptionalInst -> AccessPathBase.Exception
-        else -> null
-    }
 }

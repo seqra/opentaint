@@ -18,7 +18,6 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.clearField
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.excludeField
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.methodExitBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayRemoveAfterWrite
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
@@ -40,6 +39,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
 import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.onSome
 
@@ -171,13 +171,22 @@ class JIRMethodSequentFlowFunction(
                 }
             }
 
+            is JMethodExitNormalInst -> {
+                propagateExitFact(
+                    initialFacts, AccessPathBase.Return,
+                    factAp, unchanged, propagateFactWithRefinement, sideEffect
+                )
+            }
+
+            is JMethodExitExceptionalInst -> {
+                propagateExitFact(
+                    initialFacts, AccessPathBase.Exception,
+                    factAp, unchanged, propagateFactWithRefinement, sideEffect
+                )
+            }
+
             else -> {
-                val exitBase = currentInst.methodExitBase()
-                if (exitBase == null) {
-                    unchanged()
-                } else {
-                    propagateExitFact(initialFacts, exitBase, factAp, unchanged, propagateFactWithRefinement, sideEffect)
-                }
+                unchanged()
             }
         }
     }

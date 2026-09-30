@@ -13,7 +13,6 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPre
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.methodExitBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
@@ -33,6 +32,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.maybeFlatMap
 
 class JIRMethodSequentPrecondition(
@@ -43,18 +44,16 @@ class JIRMethodSequentPrecondition(
 
     override fun factPrecondition(
         fact: InitialFactAp,
-    ): Set<SequentPrecondition> {
-        if (currentInst.methodExitBase() != null) {
-            return methodExitPrecondition(fact)
+    ): Set<SequentPrecondition> = when (currentInst) {
+        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> methodExitPrecondition(fact)
+
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> {
+            val results = mutableSetOf<SequentPrecondition>()
+            results.computeFactPrecondition(fact, applyExitSourceRules = false)
+            results
         }
 
-        if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
-            return setOf(SequentPrecondition.Unchanged)
-        }
-
-        val results = mutableSetOf<SequentPrecondition>()
-        results.computeFactPrecondition(fact, applyExitSourceRules = false)
-        return results
+        else -> setOf(SequentPrecondition.Unchanged)
     }
 
     private fun methodExitPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
@@ -128,7 +127,9 @@ class JIRMethodSequentPrecondition(
                 return listOf(fact.rebase(base))
             }
 
-            else -> return if (currentInst.methodExitBase() != null) listOf(fact) else null
+            is JMethodExitNormalInst, is JMethodExitExceptionalInst -> return listOf(fact)
+
+            else -> return null
         }
     }
 
