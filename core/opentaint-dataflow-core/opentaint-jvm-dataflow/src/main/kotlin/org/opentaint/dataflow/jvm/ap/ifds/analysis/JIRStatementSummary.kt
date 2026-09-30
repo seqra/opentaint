@@ -42,13 +42,18 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         val Empty = JIRStatementSummary(emptyArray())
 
         fun build(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
-            builder(apManager, inst, aliasAnalysis)?.build() ?: Empty
+            builder(apManager, inst, aliasAnalysis, keepAliasPropagationEdges = false)?.build() ?: Empty
 
         fun buildReversed(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): JIRStatementSummary =
-            builder(apManager, inst, aliasAnalysis)?.buildReversed() ?: Empty
+            builder(apManager, inst, aliasAnalysis, keepAliasPropagationEdges = true)?.buildReversed() ?: Empty
 
-        private fun builder(apManager: ApManager, inst: JIRInst, aliasAnalysis: JIRLocalAliasAnalysis?): Builder? {
-            val builder = Builder(apManager, inst, aliasAnalysis)
+        private fun builder(
+            apManager: ApManager,
+            inst: JIRInst,
+            aliasAnalysis: JIRLocalAliasAnalysis?,
+            keepAliasPropagationEdges: Boolean,
+        ): Builder? {
+            val builder = Builder(apManager, inst, aliasAnalysis, keepAliasPropagationEdges)
             when (inst) {
                 is JIRAssignInst -> builder.assign(inst.lhv, inst.rhv)
                 is JIRReturnInst -> builder.move(AccessPathBase.Return, inst.returnValue?.let { accessPathBase(it) })
@@ -63,12 +68,12 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         private val apManager: ApManager,
         private val inst: JIRInst,
         private val aliasAnalysis: JIRLocalAliasAnalysis?,
+        private val keepAliasPropagationEdges: Boolean,
     ) {
         private val bases = ArrayList<AccessPathBase>(2)
         private val edges = ArrayList<ArrayList<Edge>>(2)
         private val filterBases = ArrayList<AccessPathBase>(2)
         private val filterTypes = ArrayList<JIRType>(2)
-        private val backwardOnlyEdges = ArrayList<Edge>(2)
 
         fun build(): JIRStatementSummary {
             val transfers = Array(bases.size) { i ->
@@ -80,24 +85,21 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
         }
 
         fun buildReversed(): JIRStatementSummary {
-            val reversedBases = ArrayList<AccessPathBase>(bases)
-            backwardOnlyEdges.forEach { if (it.from.base !in reversedBases) reversedBases += it.from.base }
-            val reversedEdges = Array(reversedBases.size) { ArrayList<Edge>(2) }
+            val reversedEdges = Array(bases.size) { ArrayList<Edge>(2) }
 
-            fun reverse(edge: Edge) {
-                val to = edge.to ?: return
-                val idx = reversedBases.indexOf(to.base)
-                check(idx >= 0) { "Edge target is not a touched base: $edge" }
+            for (baseEdges in edges) {
+                for (edge in baseEdges) {
+                    val to = edge.to ?: continue
+                    val idx = bases.indexOf(to.base)
+                    check(idx >= 0) { "Edge target is not a touched base: $edge" }
 
-                val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
-                if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
+                    val reversed = Edge(to.replaceExclusions(edge.from.exclusions), edge.from.replaceExclusions(ExclusionSet.Empty))
+                    if (reversed !in reversedEdges[idx]) reversedEdges[idx] += reversed
+                }
             }
 
-            edges.forEach { it.forEach(::reverse) }
-            backwardOnlyEdges.forEach(::reverse)
-
-            return JIRStatementSummary(Array(reversedBases.size) { i ->
-                BaseTransfer(reversedBases[i], reversedEdges[i].toTypedArray(), emptyArray())
+            return JIRStatementSummary(Array(bases.size) { i ->
+                BaseTransfer(bases[i], reversedEdges[i].toTypedArray(), emptyArray())
             })
         }
 
@@ -115,20 +117,6 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             val baseEdges = touch(from.base)
             val edge = Edge(from, to)
             if (edge !in baseEdges) baseEdges += edge
-        }
-
-        private fun backwardOnlyEdge(from: InitialFactAp, to: InitialFactAp) {
-            val edge = Edge(from, to)
-            if (edge !in backwardOnlyEdges) backwardOnlyEdges += edge
-        }
-
-        private fun keepBackwardOnly(base: AccessPathBase, accessors: List<Accessor>) {
-            for (i in accessors.indices) {
-                val prefix = fact(base, accessors.subList(0, i))
-                backwardOnlyEdge(prefix.exclude(accessors[i]), prefix)
-            }
-            val target = fact(base, accessors)
-            backwardOnlyEdge(target, target)
         }
 
         private fun filter(access: MethodFlowFunctionUtils.Access, type: JIRType?) {
@@ -196,17 +184,11 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             }
         }
 
-        private fun keepAliasBase(base: AccessPathBase, aliasBase: AccessPathBase) {
-            if (aliasBase != base) keepBackwardOnly(aliasBase, emptyList())
-        }
-
-        private fun aliasRest(base: AccessPathBase, accessor: Accessor, written: AccessPathBase?) {
-            aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
-                if (aliasBase != written) {
-                    keepAliasBase(base, aliasBase)
-                    edge(fact(base).exclude(accessor), fact(aliasBase, aliasAccessors))
-                }
-            }
+        private fun aliasPropagation(base: AccessPathBase, accessors: List<Accessor>) {
+            if (!keepAliasPropagationEdges) return
+            keepAllExcept(base, accessors)
+            val target = fact(base, accessors)
+            edge(target, target)
         }
 
         private fun read(to: AccessPathBase, access: MethodFlowFunctionUtils.MemoryAccess) {
@@ -222,7 +204,6 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
                 edge(fact(base).exclude(accessors.first()), null)
             }
             edge(source, fact(to))
-            aliasRest(base, accessors.first(), written = to)
         }
 
         private fun write(access: MethodFlowFunctionUtils.MemoryAccess, from: AccessPathBase?) {
@@ -243,7 +224,7 @@ class JIRStatementSummary(val transfers: Array<BaseTransfer>) {
             aliasAnalysis?.forEachAliasPathAtStatement(inst, base) { aliasBase, aliasAccessors ->
                 if (aliasBase != base) {
                     val aliasPath = aliasAccessors + accessors
-                    keepBackwardOnly(aliasBase, aliasPath)
+                    aliasPropagation(aliasBase, aliasPath)
                     if (from != null) edge(fact(from), fact(aliasBase, aliasPath))
                 }
             }
