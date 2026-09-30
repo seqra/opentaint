@@ -42,8 +42,9 @@ Method exits are the boundary instructions added by `JMethodBoundaryInstFeature`
     The precondition is otherwise unchanged (reversed-summary preconditions are a follow-up).
   - `VulnerabilityChecker` treats an exit boundary instruction as a final trace node (it has no
     successors).
-  - SARIF resolves the location of a vulnerability reported on an exit boundary instruction from
-    the preceding `return` / `throw` of its trace, as trace paths already do.
+  - SARIF treats an exit boundary instruction as a generated location and resolves it to the last
+    `return` / `throw` of the relevant trace locations, falling back to the method's last
+    `return` / `throw`, as trace paths already do.
   - `JIRAnalysisManager.isTraceRequiredInstruction` follows the rule application point.
 
 ## 3. Per-statement summary
@@ -125,8 +126,8 @@ New operation `InitialFactAp.concat(typeChecker: FactTypeChecker, delta: FinalFa
   path accessors prepended to the delta node one by one (`AccessNode.addParent`, the operation
   behind `AccessTree.prependAccessor`, so access limits and normalization match prepend).
 - Automata: `AccessGraphFinalFactAp(base, initial.access, exclusions).concat(typeChecker, delta)`.
-- Cactus: built through `createAbstractNodeFromAp` + `AccessCactus.concat` when the manager is
-  reachable, otherwise unsupported (the cactus initial fact is a stub).
+- Cactus: unsupported. The cactus initial fact is a stub, so the JVM sequent flow function cannot
+  run in Cactus mode.
 
 ## 6. Caching
 
