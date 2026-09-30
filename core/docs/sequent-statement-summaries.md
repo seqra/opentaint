@@ -189,3 +189,10 @@ Accepted deviations/decisions from the design above:
    apply `JMethodBoundaryInstFeature` lazily in `instList`.
 6. javac with kept local names never emits `x = x.f` on one local; the self-read case is
    unit-tested on a constructed instruction.
+7. Go uses the same summaries (`GoStatementSummary`, `GoMethodSequentFlowFunction`,
+   `GoMethodSequentPrecondition`; flow functions cached per statement in `GoMethodAnalysisContext`).
+   Go has no type filters. The Go precondition answers a fact whose base only the reversed summary
+   touches (an alias base, touched only by the alias propagation edges) with `Unchanged` plus the
+   preconditions on other bases: forward, that fact is `Unchanged` and no edge is stored for it at the
+   statement, so a precondition naming it there would make the trace edge search stop at a statement
+   without the edge (lost trace, e.g. `structCopy003T`).
