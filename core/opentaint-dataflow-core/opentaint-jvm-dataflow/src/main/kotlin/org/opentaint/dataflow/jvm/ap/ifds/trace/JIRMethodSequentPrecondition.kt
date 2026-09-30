@@ -13,6 +13,7 @@ import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPre
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.methodExitBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
@@ -43,12 +44,27 @@ class JIRMethodSequentPrecondition(
     override fun factPrecondition(
         fact: InitialFactAp,
     ): Set<SequentPrecondition> {
+        if (currentInst.methodExitBase() != null) {
+            return methodExitPrecondition(fact)
+        }
+
         if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
             return setOf(SequentPrecondition.Unchanged)
         }
 
         val results = mutableSetOf<SequentPrecondition>()
-        results.computeFactPrecondition(fact, applyExitSourceRules = true)
+        results.computeFactPrecondition(fact, applyExitSourceRules = false)
+        return results
+    }
+
+    private fun methodExitPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
+        val results = mutableSetOf<SequentPrecondition>(SequentPrecondition.Unchanged)
+        results.methodExitSourcePrecondition(fact)
+
+        analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
+            results += computePrecondition(aliasedFact, applyExitSourceRules = true)
+        }
+
         return results
     }
 
@@ -112,7 +128,7 @@ class JIRMethodSequentPrecondition(
                 return listOf(fact.rebase(base))
             }
 
-            else -> return null
+            else -> return if (currentInst.methodExitBase() != null) listOf(fact) else null
         }
     }
 

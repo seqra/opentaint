@@ -37,6 +37,8 @@ import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
 import org.opentaint.jvm.graph.JMethodBoundaryInst
 import org.opentaint.jvm.graph.JMethodEnterInst
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.jvm.sast.project.spring.GeneratedSpringRegistry
 import org.opentaint.jvm.sast.project.spring.SpringGeneratedMethod
 import org.opentaint.semgrep.pattern.Mark
@@ -1134,8 +1136,17 @@ class TraceMessageBuilder(
             return false
         }
 
-        fun tryResolveNormalGeneratedLocation(stmt: CommonInst): CommonInst? {
+        fun tryResolveNormalGeneratedLocation(
+            stmt: CommonInst,
+            relevantLocations: List<List<IntermediateLocation>>?
+        ): CommonInst? {
             if (stmt is JMethodEnterInst) return stmt.location.method.instList.first()
+            if (stmt is JMethodExitNormalInst) {
+                return tryResolveExitLocation(stmt, relevantLocations) { it is JIRReturnInst }
+            }
+            if (stmt is JMethodExitExceptionalInst) {
+                return tryResolveExitLocation(stmt, relevantLocations) { it is JIRThrowInst }
+            }
             if (stmt is JMethodBoundaryInst) return null
             val locationMethod = stmt.location.method
             if (locationMethod is JIRLambdaMethod) {
@@ -1145,6 +1156,14 @@ class TraceMessageBuilder(
             }
             return null
         }
+
+        private inline fun tryResolveExitLocation(
+            stmt: JMethodBoundaryInst,
+            relevantLocations: List<List<IntermediateLocation>>?,
+            isExit: (CommonInst) -> Boolean
+        ): CommonInst? =
+            relevantLocations?.firstOrNull()?.lastOrNull { isExit(it.inst) }?.inst
+                ?: stmt.location.method.instList.instructions.lastOrNull { isExit(it) }
 
         fun isAbnormalLocation(stmt: CommonInst): Boolean =
             stmt is JIRInst && stmt.lineNumber == 0

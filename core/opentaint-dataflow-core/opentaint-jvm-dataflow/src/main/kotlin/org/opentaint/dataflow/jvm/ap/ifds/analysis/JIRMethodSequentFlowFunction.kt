@@ -18,6 +18,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.clearField
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.excludeField
+import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.methodExitBase
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayReadAccessor
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.mayRemoveAfterWrite
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.readAccessorTo
@@ -39,6 +40,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.onSome
 
 class JIRMethodSequentFlowFunction(
@@ -157,22 +159,25 @@ class JIRMethodSequentFlowFunction(
 
             is JIRReturnInst -> {
                 val access = currentInst.returnValue?.let { accessPathBase(it) }
-                propagateExitFact(
-                    initialFacts, AccessPathBase.Return,
-                    access, factAp, unchanged, propagateFactWithRefinement, sideEffect
-                )
+                simpleAssign(AccessPathBase.Return, access, factAp, { unchanged() }) {
+                    propagateFact(it, TraceInfo.Flow)
+                }
             }
 
             is JIRThrowInst -> {
                 val access = accessPathBase(currentInst.throwable)
-                propagateExitFact(
-                    initialFacts, AccessPathBase.Exception,
-                    access, factAp, unchanged, propagateFactWithRefinement, sideEffect
-                )
+                simpleAssign(AccessPathBase.Exception, access, factAp, { unchanged() }) {
+                    propagateFact(it, TraceInfo.Flow)
+                }
             }
 
             else -> {
-                unchanged()
+                val exitBase = currentInst.methodExitBase()
+                if (exitBase == null) {
+                    unchanged()
+                } else {
+                    propagateExitFact(initialFacts, exitBase, factAp, unchanged, propagateFactWithRefinement, sideEffect)
+                }
             }
         }
     }
@@ -180,33 +185,15 @@ class JIRMethodSequentFlowFunction(
     private fun propagateExitFact(
         initialFacts: Set<InitialFactAp>?,
         exitBase: AccessPathBase,
-        access: AccessPathBase?,
         factAp: FinalFactAp,
         unchanged: () -> Unit,
         propagateFactWithRefinement: (FactRefiner, FinalFactAp, TraceInfo) -> Unit,
         sideEffect: (Sequent.SideEffect) -> Unit
     ) {
         val refiner = FactRefiner()
-
-        val currentFacts = mutableListOf<FinalFactAp>()
-
-        simpleAssign(
-            exitBase, access, factAp,
-            unchanged = {
-                currentFacts += it
-            },
-            propagateFact = {
-                propagateFactWithRefinement(refiner, it, TraceInfo.Flow)
-                currentFacts += it
-            }
-        )
-
         val resultFacts = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
-
-        currentFacts.forEach { currentFact ->
-            resultFacts += currentFact to TraceInfo.Flow
-            resultFacts += applyMethodExitSourceRules(exitBase, currentFact, refiner)
-        }
+        resultFacts += factAp to TraceInfo.Flow
+        resultFacts += applyMethodExitSourceRules(exitBase, factAp, refiner)
 
         while (resultFacts.isNotEmpty()) {
             val (resultFact, factTrace) = resultFacts.removeLast()
@@ -217,7 +204,7 @@ class JIRMethodSequentFlowFunction(
             val propagatedFact = resultFact.dropFinalFacts(factsToDrop)
                 ?.dropArgumentsLocalTaintMarks(initialFacts != null && initialFacts.isEmpty())
 
-            if (propagatedFact == factAp) {
+            if (propagatedFact == factAp && !refiner.hasRefinement) {
                 unchanged()
             } else if (propagatedFact != null) {
                 propagateFactWithRefinement(refiner, propagatedFact, factTrace)
@@ -625,7 +612,7 @@ class JIRMethodSequentFlowFunction(
     }
 
     private fun applyUnconditionalSinks() = with(analysisContext.taint) {
-        if (currentInst !is JIRReturnInst) return
+        if (currentInst !is JMethodExitNormalInst) return
 
         val sinkRules = sinkRulesForMethodExit(currentInst, fact = null, initialFacts = null).toList()
         sinkRules.forEach {
@@ -662,7 +649,7 @@ class JIRMethodSequentFlowFunction(
     }
 
     private fun MutableSet<Sequent>.applyUnconditionalSources() {
-        if (currentInst is JIRReturnInst) {
+        if (currentInst is JMethodExitNormalInst) {
             applyMethodExitSourceRules(AccessPathBase.Return, fact = null, refiner = null).forEach { (fact, trace) ->
                 this += Sequent.ZeroToFact(fact, trace)
             }
