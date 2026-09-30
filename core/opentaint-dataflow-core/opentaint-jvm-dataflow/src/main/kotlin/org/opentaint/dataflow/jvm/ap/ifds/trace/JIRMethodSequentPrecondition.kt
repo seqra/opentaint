@@ -49,7 +49,7 @@ class JIRMethodSequentPrecondition(
 
         is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> {
             val results = mutableSetOf<SequentPrecondition>()
-            results.computeFactPrecondition(fact, applyExitSourceRules = false)
+            results.computeFactPrecondition(fact)
             results
         }
 
@@ -59,41 +59,25 @@ class JIRMethodSequentPrecondition(
     private fun methodExitPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
         val results = mutableSetOf<SequentPrecondition>(SequentPrecondition.Unchanged)
         results.methodExitSourcePrecondition(fact)
-
-        analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
-            results += computePrecondition(aliasedFact, applyExitSourceRules = true)
-        }
-
         return results
     }
 
-    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(
-        fact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ) {
-        val factPrecondition = computePrecondition(fact, applyExitSourceRules)
+    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(fact: InitialFactAp) {
+        val factPrecondition = computePrecondition(fact)
         this += factPrecondition.ifEmpty { setOf(SequentPrecondition.Unchanged) }
 
         analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
-            this += computePrecondition(aliasedFact, applyExitSourceRules)
+            this += computePrecondition(aliasedFact)
         }
     }
 
-    private fun computePrecondition(
-        aliasedFact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ): Set<SequentPrecondition> {
+    private fun computePrecondition(aliasedFact: InitialFactAp): Set<SequentPrecondition> {
         val precondition = mutableSetOf<SequentPrecondition>()
         preconditionForFact(aliasedFact)?.let {
             precondition += PreconditionFactsForInitialFact(aliasedFact, it)
         }
 
         precondition.unconditionalSourcesPrecondition(aliasedFact)
-
-        if (applyExitSourceRules) {
-            precondition.methodExitSourcePrecondition(aliasedFact)
-        }
-
         return precondition
     }
 
@@ -352,7 +336,7 @@ class JIRMethodSequentPrecondition(
                         }
 
                         val preFact = factCube.facts.single()
-                        computeFactPrecondition(preFact, applyExitSourceRules = false)
+                        computeFactPrecondition(preFact)
                     }
                 }
             )
