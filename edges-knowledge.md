@@ -169,7 +169,7 @@ This is the JVM engine's approach. The Python engine currently uses a simpler ap
 
 PIR reads a parameter that the body never rebinds directly as `PIRParameterRef`, which `PIRFlowFunctionUtils.accessPathBase()` maps to `Argument(i)`. Summary initial bases therefore match the caller's `Argument(i)` subscriptions, and cleaners or post-sink facts on a parameter land on `Argument(i)`.
 
-A parameter that the body rebinds (assignment, `for`, `with ... as`, `except ... as`, walrus, `del`, nested `def`) is copied once at entry into a `PIRLocalVar` of the same name, and every use in the body goes through that copy (`LocalVar`). This is done by the `ParameterBinding` flat transform, which runs before closure lowering; proto→flat lowering emits every parameter use as `FlatParameterRef`.
+A parameter that the body rebinds (assignment, `for`, `with ... as`, `except ... as`, walrus, `del`, nested `def`) is copied once at entry into a `PIRLocalVar` of the same name, and every use in the body goes through that copy (`LocalVar`). Proto→flat lowering emits every parameter use as `FlatParameterRef`, and `CfgBuild.buildFunctionCfg` then introduces the copy for written parameters (`bindParameters`), before closure lowering.
 
 Alias expansion (`PIRAliasUtil`, core `AliasUtil`) only handles `LocalVar` bases, so facts on `Argument(i)` get no alias expansion (same restriction as JVM).
 

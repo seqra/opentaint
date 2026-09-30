@@ -1,16 +1,23 @@
 package org.opentaint.ir.impl.python.protoToFlat.cfg
 
+import org.opentaint.ir.impl.python.flat.FlatAssign
 import org.opentaint.ir.impl.python.flat.FlatCFG
+import org.opentaint.ir.impl.python.flat.FlatDeleteLocal
+import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatParameter
 import org.opentaint.ir.impl.python.flat.FlatParameterRef
+import org.opentaint.ir.impl.python.flat.FlatValue
+import org.opentaint.ir.impl.python.flat.mapOperand
+import org.opentaint.ir.impl.python.flat.mapTarget
+import org.opentaint.ir.impl.python.flat.targets
+import org.opentaint.ir.impl.python.proto.MypyBlockProto
+import org.opentaint.ir.impl.python.proto.MypyStmtProto
 import org.opentaint.ir.impl.python.protoToFlat.ImportManager
 import org.opentaint.ir.impl.python.protoToFlat.ModuleContext
 import org.opentaint.ir.impl.python.protoToFlat.Scope
 import org.opentaint.ir.impl.python.protoToFlat.recordImports
 import org.opentaint.ir.impl.python.protoToFlat.recordImportsFrom
 import org.opentaint.ir.impl.python.protoToFlat.toPhysicalLocation
-import org.opentaint.ir.impl.python.proto.MypyBlockProto
-import org.opentaint.ir.impl.python.proto.MypyStmtProto
 
 internal object CfgBuild {
 
@@ -52,7 +59,39 @@ internal object CfgBuild {
         return runOrEmpty(module, sourceLabel, errorPrefix) {
             session.visitBlock(body)
             if (!session.currentBlockTerminated()) session.emitReturn(null)
-            CfgBuildResult(session.finalizeCfg(), session.nonlocalNames, session.globalNames)
+            CfgBuildResult(bindParameters(session.finalizeCfg(), parameters), session.nonlocalNames, session.globalNames)
+        }
+    }
+
+    // Makes parameters immutable: a parameter the body writes is copied into a local at entry
+    // and all its uses are renamed to that local; read-only parameters stay FlatParameterRef.
+    private fun bindParameters(cfg: FlatCFG, parameters: List<FlatParameter>): FlatCFG {
+        val written = writtenParameterNames(cfg)
+        val copied = parameters.filter { it.name in written }
+        if (copied.isEmpty()) return cfg
+
+        val locals = copied.associate { it.name to FlatLocal(it.name, it.type) }
+        val prologue = copied.map { FlatAssign(locals.getValue(it.name), FlatParameterRef(it.name, it.type)) }
+
+        fun toLocal(v: FlatValue): FlatValue {
+            if (v !is FlatParameterRef) return v
+
+            return locals.getOrDefault(v.name, v)
+        }
+
+        val blocks = cfg.blocks.map { block ->
+            val body = block.instructions.map { it.mapOperand(::toLocal).mapTarget(::toLocal) }
+            block.copy(instructions = if (block.label == cfg.entryBlock) prologue + body else body)
+        }
+        return cfg.copy(blocks = blocks)
+    }
+
+    private fun writtenParameterNames(cfg: FlatCFG): Set<String> = buildSet {
+        for (block in cfg.blocks) {
+            for (inst in block.instructions) {
+                for (target in inst.targets) if (target is FlatParameterRef) add(target.name)
+                if (inst is FlatDeleteLocal) (inst.local as? FlatParameterRef)?.let { add(it.name) }
+            }
         }
     }
 

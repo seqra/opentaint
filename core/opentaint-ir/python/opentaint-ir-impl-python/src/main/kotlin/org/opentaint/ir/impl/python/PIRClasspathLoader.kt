@@ -9,7 +9,6 @@ import org.opentaint.ir.api.python.PIRSettings
 import org.opentaint.ir.impl.python.flatToPir.FlatToPirConverter
 import org.opentaint.ir.impl.python.proto.BuildEventProto
 import org.opentaint.ir.impl.python.protoToFlat.ProtoToFlat
-import org.opentaint.ir.impl.python.transforms.ParameterBinding
 import org.opentaint.ir.impl.python.transforms.closure.FlatClosureTransformer
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -65,8 +64,7 @@ class PIRClasspathLoader(private val settings: PIRSettings) {
 
                 val astModuleProto = event.module
                 val flat = ProtoToFlat.lowerModule(astModuleProto)
-                val flatWithParameters = ParameterBinding.transform(flat)
-                val flatWithClosure = FlatClosureTransformer.transform(flatWithParameters)
+                val flatWithClosure = FlatClosureTransformer.transform(flat)
                 val module = FlatToPirConverter(flatWithClosure).convert()
                 logDiagnostics(module)
                 result.add(module)
