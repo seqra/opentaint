@@ -61,18 +61,19 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
         val notCoveredByAny: Int?,
     )
 
+    // A nested [any] edge of the suffix is left out of the trie: the trie then matches a subset of the
+    // suffix language, so getNonMatchingNode trims less but never trims a path the suffix does not cover.
     init {
         if (suffixNode.accessors != null && suffixNode.accessorNodes != null) {
             val unprocessed = ArrayDeque<RawNodeWithParent>()
             suffixNode.forEachAccessor { accessor, accessorNode ->
+                if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
                 val notCoveredByAny = if (accessor.coveredByAny()) null else 1
                 unprocessed.addLast(RawNodeWithParent(accessorNode, accessor, root, 1, notCoveredByAny))
             }
 
             while (unprocessed.isNotEmpty()) {
                 val (node, accessor, triePar, depth, notCoveredByAny) = unprocessed.removeFirst()
-                // disallowing [any]->...->[any]
-                check(accessor != ANY_ACCESSOR_IDX)
 
                 val curNotCoveredByAny = when {
                     notCoveredByAny != null -> notCoveredByAny
@@ -104,6 +105,7 @@ class AccessTreeAnySuffixMatcher(suffixNode: AccessTree.AccessNode) {
                 triePar.children.put(accessor, newTrieNode)
 
                 node.forEachAccessor { accessor, accessorNode ->
+                    if (accessor == ANY_ACCESSOR_IDX) return@forEachAccessor
                     unprocessed.addLast(RawNodeWithParent(accessorNode, accessor, newTrieNode, depth + 1, curNotCoveredByAny))
                 }
             }

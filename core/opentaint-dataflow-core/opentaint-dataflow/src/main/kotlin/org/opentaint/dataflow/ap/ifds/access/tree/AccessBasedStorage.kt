@@ -3,6 +3,7 @@ package org.opentaint.dataflow.ap.ifds.access.tree
 import it.unimi.dsi.fastutil.ints.IntArrayList
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessPath.AccessNode.Companion.createNodeFromAccessors
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.util.forEachEntry
 import org.opentaint.dataflow.util.forEachInt
@@ -46,31 +47,43 @@ abstract class AccessBasedStorage<S : AccessBasedStorage<S>>(
         return storage as S
     }
 
+    /**
+     * A trie whose keys may contain [any] must enable this (checked once per [filterContains] at the root).
+     * Then every node under an [any] key is a candidate for any pattern that reaches the key's parent:
+     * an over-approximation, the exact match is done later by [AccessTree.delta].
+     */
+    protected open val matchesAnyKeys: Boolean get() = false
+
     fun filterContains(pattern: AccessTree.AccessNode): Sequence<S> {
         val nodes = mutableListOf<S>()
-        collectNodesContains(pattern, nodes)
+        collectNodesContains(pattern, nodes, matchesAnyKeys)
         return nodes.asSequence()
     }
 
-    private fun collectNodesContains(pattern: AccessTree.AccessNode, nodes: MutableList<S>) {
+    private fun collectNodesContains(pattern: AccessTree.AccessNode, nodes: MutableList<S>, anyKeys: Boolean) {
         @Suppress("UNCHECKED_CAST")
         nodes.add(this as S)
+
+        if (anyKeys) {
+            children.get(ANY_ACCESSOR_IDX)?.let { nodes += it.allNodes() }
+        }
 
         if (pattern.isFinal) {
             children.get(FINAL_ACCESSOR_IDX)?.let { nodes.add(it) }
         }
 
         pattern.forEachAccessor { accessor, accessorPattern ->
-            collectNodesContainsAccessor(accessorPattern, accessor, nodes)
+            collectNodesContainsAccessor(accessorPattern, accessor, nodes, anyKeys)
         }
     }
 
     open fun collectNodesContainsAccessor(
         pattern: AccessTree.AccessNode,
         accessor: AccessorIdx,
-        nodes: MutableList<S>
+        nodes: MutableList<S>,
+        anyKeys: Boolean,
     ) {
-        children.get(accessor)?.collectNodesContains(pattern, nodes)
+        children.get(accessor)?.collectNodesContains(pattern, nodes, anyKeys)
     }
 
     fun allNodes(): Sequence<S> {

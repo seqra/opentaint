@@ -11,17 +11,37 @@ class MethodFinalTreeApSummariesStorage(
     override fun createStorage(): Storage<AccessTree.AccessNode> = MethodZeroToFactSummaryEdgeStorage(apManager)
 
     private class MethodZeroToFactSummaryEdgeStorage(val apManager: TreeApManager): Storage<AccessTree.AccessNode> {
-        private val treeStorage = MergingTreeSummaryStorage(apManager)
+        // finals without [any], and the [any] parts of finals
+        private val completeStorage = MergingTreeSummaryStorage(apManager)
+        private val anyStorage = MergingTreeSummaryStorage(apManager)
 
         override fun add(edges: List<AccessTree.AccessNode>, added: MutableList<Z2FBBuilder<AccessTree.AccessNode>>) {
-            edges.forEach { treeStorage.add(it) }
+            edges.forEach { final ->
+                if (!final.containsAny) {
+                    completeStorage.add(final)
+                    return@forEach
+                }
 
-            val delta = treeStorage.getAndResetDelta() ?: return
-            added += ZeroEdgeBuilderBuilder(apManager).setNode(delta)
+                val split = final.splitAny()
+                split.complete?.let { completeStorage.add(it) }
+                split.any?.let { anyStorage.add(it) }
+            }
+
+            completeStorage.getAndResetDelta()?.let { added += ZeroEdgeBuilderBuilder(apManager).setNode(it) }
+            anyStorage.getAndResetDelta()?.let { added += ZeroEdgeBuilderBuilder(apManager).setNode(it) }
         }
 
         override fun collectEdges(dst: MutableList<Z2FBBuilder<AccessTree.AccessNode>>) {
-            treeStorage.edges()?.let { dst += ZeroEdgeBuilderBuilder(apManager).setNode(it) }
+            collectCompleteEdges(dst)
+            collectAnyEdges(dst)
+        }
+
+        fun collectCompleteEdges(dst: MutableList<Z2FBBuilder<AccessTree.AccessNode>>) {
+            completeStorage.edges()?.let { dst += ZeroEdgeBuilderBuilder(apManager).setNode(it) }
+        }
+
+        fun collectAnyEdges(dst: MutableList<Z2FBBuilder<AccessTree.AccessNode>>) {
+            anyStorage.edges()?.let { dst += ZeroEdgeBuilderBuilder(apManager).setNode(it) }
         }
     }
 
