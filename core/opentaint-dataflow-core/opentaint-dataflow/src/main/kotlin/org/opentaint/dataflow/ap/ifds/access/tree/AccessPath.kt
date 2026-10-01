@@ -42,8 +42,10 @@ class AccessPath(
         AccessPath(apManager, base, access, exclusions)
 
     override fun getAllAccessors(): Set<Accessor> =
-        access?.accessorList()?.toSet().orEmpty()
+        access?.allAccessors().orEmpty()
 
+    // readAccessor, startsWithAccessor, getStartAccessors, clearAccessor and delta(AccessPath) are
+    // syntactic: an [any] in the path is compared as an ordinary accessor symbol.
     override fun startsWithAccessor(accessor: Accessor): Boolean = with(apManager) {
         if (access == null) return false
         return access.accessor.accessor == accessor
@@ -63,6 +65,9 @@ class AccessPath(
         val accessorIdx = with(apManager) { accessor.idx }
 
         if (access == null) {
+            // [any].* == *
+            if (accessorIdx == ANY_ACCESSOR_IDX) return this
+
             return AccessPath(apManager, base, AccessNode(apManager, accessorIdx, next = null), exclusions)
         }
 
@@ -100,7 +105,7 @@ class AccessPath(
                 with(node.manager) { setOf(node.accessor.accessor) }
 
             override fun getAllAccessors(): Set<Accessor> =
-                node.accessorList().toSet()
+                node.allAccessors()
 
             override fun readAccessor(accessor: Accessor): InitialFactAp.Delta? = with(node.manager) {
                 if (node.accessor.accessor == accessor) return node.next?.let { Delta(it) }
@@ -140,6 +145,11 @@ class AccessPath(
         return listOfNotNull(node.filter(other.exclusions)?.let { AccessPathDelta.Delta(it) })
     }
 
+    /**
+     * An [any] step of this path only follows the raw [any] edge of the tree (or splits at an abstract
+     * tree node, as a concrete accessor does). It does not unroll the [any] over the tree's concrete
+     * edges, so a tree that holds the [any] content only as concrete accessors is not matched.
+     */
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 
@@ -163,6 +173,8 @@ class AccessPath(
                 }
 
                 null
+            } else if (node.accessor == ANY_ACCESSOR_IDX) {
+                otherNode.getAnyChild()
             } else {
                 otherNode.getChild(node.accessor)
             }
@@ -264,7 +276,14 @@ class AccessPath(
         val next: AccessNode?
     ) {
         private val hash: Int
-        val size: Int
+
+        // size in the low 31 bits, containsAny in the sign bit: keeps the node at its old footprint
+        private val sizeAndAnyFlag: Int
+
+        val size: Int get() = sizeAndAnyFlag and Int.MAX_VALUE
+
+        /** This node or one of its successors is an [any] accessor. */
+        val containsAny: Boolean get() = sizeAndAnyFlag < 0
 
         init {
             var hash = accessor
@@ -275,7 +294,8 @@ class AccessPath(
         init {
             var size = 1
             if (next != null) size += next.size
-            this.size = size
+            val containsAny = accessor == ANY_ACCESSOR_IDX || next?.containsAny == true
+            this.sizeAndAnyFlag = if (containsAny) size or Int.MIN_VALUE else size
         }
 
         override fun hashCode(): Int = hash
@@ -309,7 +329,29 @@ class AccessPath(
             return node
         }
 
+        fun endsWithFinal(): Boolean {
+            var node = this
+            while (true) {
+                node = node.next ?: return node.accessor == FINAL_ACCESSOR_IDX
+            }
+        }
+
         fun accessorList(): List<Accessor> = toList().map { with(manager) { it.accessor } }
+
+        /** All accessors of the path except [any], consistent with [AccessTree.AccessNode.collectAccessorsTo]. */
+        fun allAccessors(): Set<Accessor> {
+            if (!containsAny) return accessorList().toSet()
+
+            val result = hashSetOf<Accessor>()
+            var node = this
+            while (true) {
+                val accessor = node.accessor
+                if (accessor != ANY_ACCESSOR_IDX) {
+                    result.add(with(manager) { accessor.accessor })
+                }
+                node = node.next ?: return result
+            }
+        }
 
         override fun toString(): String = accessorList().joinToString("") { it.toSuffix() }
 
@@ -332,7 +374,10 @@ class AccessPath(
                     AccessNode(manager, accessor, this)
                 }
 
-                accessor == ANY_ACCESSOR_IDX -> this // todo: All accessors are not supported in tree base ap
+                accessor == ANY_ACCESSOR_IDX -> {
+                    // [any].[any] == [any]
+                    if (this.accessor == ANY_ACCESSOR_IDX) this else AccessNode(manager, accessor, this)
+                }
 
                 accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> AccessNode(manager, accessor, this)
                 accessor.isTypeInfoAccessor() -> AccessNode(manager, accessor, this)

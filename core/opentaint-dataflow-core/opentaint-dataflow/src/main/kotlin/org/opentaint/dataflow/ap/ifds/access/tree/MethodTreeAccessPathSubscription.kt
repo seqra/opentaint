@@ -8,6 +8,7 @@ import org.opentaint.dataflow.ap.ifds.access.common.CommonFactNDEdgeSubBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.CommonZeroEdgeSubBuilder
 import org.opentaint.dataflow.ap.ifds.access.common.ndf2f.DefaultNDF2FSubStorage
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ANY_ACCESSOR_IDX
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.FINAL_ACCESSOR_IDX
 import org.opentaint.dataflow.util.PersistentBitSet.Companion.emptyPersistentBitSet
 import org.opentaint.dataflow.util.SoftReferenceManager
@@ -276,6 +277,9 @@ private class AccessTreeIndexImpl {
         var currentPath = path
 
         while (true) {
+            // [any] matches zero or more accessors: every tree with the concrete prefix is a candidate
+            if (currentPath.accessor == ANY_ACCESSOR_IDX) return currentNode.index
+
             currentNode = currentNode.findChild(currentPath.accessor) ?: return null
             currentPath = currentPath.next ?: return currentNode.index
         }

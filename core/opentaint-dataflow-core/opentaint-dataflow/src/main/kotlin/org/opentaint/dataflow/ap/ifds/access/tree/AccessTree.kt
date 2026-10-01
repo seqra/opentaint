@@ -180,8 +180,10 @@ class AccessTree(
 
         if (base != other.base) return emptyList()
 
-        var node = access
         val access = other.access
+        if (access != null && access.containsAny) return deltaWithAny(access, other.exclusions)
+
+        var node = this.access
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
@@ -191,7 +193,21 @@ class AccessTree(
             node = node.getChild(accessor) ?: return emptyList()
         }
 
-        val filteredNode = when (val exclusion = other.exclusions) {
+        return deltaAtNode(node, other.exclusions)
+    }
+
+    private fun deltaWithAny(path: AccessPath.AccessNode, exclusions: ExclusionSet): List<FinalFactAp.Delta> {
+        val matched = access.matchPathWithAny(path)
+        if (matched.isEmpty()) return emptyList()
+
+        if (path.endsWithFinal()) return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
+
+        val node = matched.reduce { acc, n -> acc.mergeAdd(n) }
+        return deltaAtNode(node, exclusions)
+    }
+
+    private fun deltaAtNode(node: AccessNode, exclusions: ExclusionSet): List<FinalFactAp.Delta> {
+        val filteredNode = when (val exclusion = exclusions) {
             ExclusionSet.Empty -> node
             is ExclusionSet.Concrete -> node.filter(exclusion)
             ExclusionSet.Universe -> error("Unexpected universe exclusion in initial fact")
@@ -272,6 +288,9 @@ class AccessTree(
         @JvmField val maxDepth: Int
         @JvmField val containsStatic: Boolean
 
+        /** This node or a node below it has an [any] edge. Derived from the structure; not part of hash/equals. */
+        @JvmField val containsAny: Boolean
+
         init {
             check(deepAccessorExclusion == null || isAbstract) {
                 "AnyFieldAccessorExclusions on a non-abstract node"
@@ -282,6 +301,8 @@ class AccessTree(
             var hash = 0L
             var depth = 0
             var containsStatic = false
+            var hasAnyEdge = false
+            var containsAny = false
 
             if (isAbstract) hash += 1
             if (deepAccessorExclusion != null) hash += deepAccessorExclusion.hashCode().toLong() shl 3
@@ -292,25 +313,35 @@ class AccessTree(
             }
 
             if (accessors != null) {
-                containsStatic = accessors.any { it.isStaticAccessor() }
+                for (accessor in accessors) {
+                    if (accessor.isStaticAccessor()) containsStatic = true
+                    if (accessor == ANY_ACCESSOR_IDX) hasAnyEdge = true
+                }
+                containsAny = hasAnyEdge
             }
 
             if (accessorNodes != null) {
-                val accessorsHash = accessorNodes.sumOf { it.hash }
+                var accessorsHash = 0L
+                var childDepth = 0
+                for (node in accessorNodes) {
+                    accessorsHash += node.hash
+                    if (node.maxDepth > childDepth) childDepth = node.maxDepth
+                    if (node.containsStatic) containsStatic = true
+                    if (node.containsAny) containsAny = true
+                }
                 hash += accessorsHash shl 5
 
-                depth = accessorNodes.maxOf { it.maxDepth } + 1
-
-                containsStatic = containsStatic || accessorNodes.any { it.containsStatic }
+                depth = childDepth + 1
             }
 
-            if (containsAnyAccessor()) {
+            if (hasAnyEdge) {
                 depth += 10_000
             }
 
             this.hash = hash
             this.maxDepth = depth
             this.containsStatic = containsStatic
+            this.containsAny = containsAny
         }
 
         init {
@@ -386,7 +417,11 @@ class AccessTree(
             accessorNodes?.getOrNull(accessorIndex(accessor))
 
         fun containsAnyAccessor(): Boolean =
-            accessorIndex(ANY_ACCESSOR_IDX) >= 0
+            containsAny && accessorIndex(ANY_ACCESSOR_IDX) >= 0
+
+        /** The raw child of this node's own [any] edge, without any unrolling. */
+        fun getAnyChild(): AccessNode? =
+            if (containsAny) getNodeByAccessor(ANY_ACCESSOR_IDX) else null
 
         fun contains(accessor: AccessorIdx): Boolean {
             if (accessor == FINAL_ACCESSOR_IDX) return isFinal
@@ -394,7 +429,7 @@ class AccessTree(
             val accessorIdx = accessorIndex(accessor)
             if (accessorIdx >= 0) return true
 
-            val anyAccessorNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
+            val anyAccessorNode = getAnyChild()
                 ?: return false
 
             if (anyAccessorNode.contains(accessor)) return true
@@ -417,7 +452,7 @@ class AccessTree(
 
             val node = getNodeByAccessor(accessor)
 
-            val anyAccessorNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
+            val anyAccessorNode = getAnyChild()
                 ?: return node
 
             val anyChild = anyAccessorNode.getNodeByAccessor(accessor)
@@ -472,6 +507,7 @@ class AccessTree(
                 return isEmptyAbstract
             }
 
+            // Syntactic: the tree must be exactly this chain, an [any] in the path matches only a raw [any] edge
             var node = this
             otherAccess.toList().forEachInt { accessor ->
                 if (accessor == FINAL_ACCESSOR_IDX) {
@@ -479,7 +515,7 @@ class AccessTree(
                 }
 
                 if (node.accessors?.size != 1) return false
-                node = node.getChild(accessor) ?: return false
+                node = node.getNodeByAccessor(accessor) ?: return false
             }
 
             return node.isEmptyAbstract
@@ -490,12 +526,58 @@ class AccessTree(
                 return isAbstract
             }
 
+            if (otherAccess.containsAny) {
+                val matched = matchPathWithAny(otherAccess)
+                return if (otherAccess.endsWithFinal()) matched.isNotEmpty() else matched.any { it.isAbstract }
+            }
+
             var node = this
             otherAccess.toList().forEachInt { accessor ->
                 if (accessor == FINAL_ACCESSOR_IDX) return node.isFinal
                 node = node.getChild(accessor) ?: return false
             }
             return node.isAbstract
+        }
+
+        /**
+         * Semantic match of a path with [any]: every [any] of the path matches zero or more accessors covered
+         * by any, so the current position becomes a set of nodes. Returns the nodes reached after the whole
+         * path; a FINAL step maps every final node to [TreeApManager.finalNode].
+         */
+        internal fun matchPathWithAny(path: AccessPath.AccessNode): List<AccessNode> {
+            var current: List<AccessNode> = listOf(this)
+            var pathNode: AccessPath.AccessNode = path
+            while (true) {
+                val accessor = pathNode.accessor
+                current = when (accessor) {
+                    ANY_ACCESSOR_IDX -> anyClosure(current)
+                    FINAL_ACCESSOR_IDX -> if (current.any { it.isFinal }) listOf(manager.finalNode) else emptyList()
+                    else -> current.mapNotNull { it.getChild(accessor) }
+                }
+
+                if (current.isEmpty()) return current
+                pathNode = pathNode.next ?: return current
+            }
+        }
+
+        // Closure over raw edges that [any] can match: covered accessors and [any] edges themselves.
+        // getChild must not be used here: it allocates fresh nodes and the closure would not terminate.
+        private fun anyClosure(nodes: List<AccessNode>): List<AccessNode> {
+            val visited = IdentityHashMap<AccessNode, Unit>()
+            val result = mutableListOf<AccessNode>()
+            val stack = nodes.toMutableList()
+            while (stack.isNotEmpty()) {
+                val node = stack.removeLast()
+                if (visited.put(node, Unit) != null) continue
+                result.add(node)
+
+                node.forEachAccessor { accessor, child ->
+                    if (accessor == ANY_ACCESSOR_IDX || manager.isCoveredByAny(accessor)) {
+                        stack.add(child)
+                    }
+                }
+            }
+            return result
         }
 
         sealed interface MatchResult {
@@ -972,10 +1054,15 @@ class AccessTree(
             if (a.accessors == null || b.accessors == null)
                 return
 
+            if (!a.containsAny && !b.containsAny) {
+                pushSharedChildPairs(a, b, stack)
+                return
+            }
+
             val aAccessorsUntrimmed = a.accessors
             val aNodesUntrimmed = a.accessorNodes!!
 
-            val aAnyIdx = aAccessorsUntrimmed.indexOf(ANY_ACCESSOR_IDX)
+            val aAnyIdx = if (a.containsAny) aAccessorsUntrimmed.indexOf(ANY_ACCESSOR_IDX) else -1
             val bTrimmed =
                 if (aAnyIdx >= 0)
                     AccessTreeAnySuffixMatcher(aNodesUntrimmed[aAnyIdx]).getNonMatchingNode(b)
@@ -984,7 +1071,7 @@ class AccessTree(
             val bAccessorsUntrimmed = bTrimmed.accessors
             val bNodesUntrimmed = bTrimmed.accessorNodes
 
-            val bAnyIdx = bAccessorsUntrimmed?.indexOf(ANY_ACCESSOR_IDX) ?: -1
+            val bAnyIdx = if (bTrimmed.containsAny) bAccessorsUntrimmed?.indexOf(ANY_ACCESSOR_IDX) ?: -1 else -1
             val aTrimmed =
                 if (bAnyIdx >= 0)
                     AccessTreeAnySuffixMatcher(bNodesUntrimmed!![bAnyIdx]).getNonMatchingNode(a)
@@ -1031,7 +1118,7 @@ class AccessTree(
         fun filterAccessNode(filter: FactTypeChecker.FactApFilter): AccessNode? = with(manager) {
             // An any-accessor matches zero or more accessors. If the filter rejects it, only the
             // empty match stays: remove the edge, keep its subtree at this node, then filter.
-            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
+            val anyNode = getAnyChild()
             if (anyNode != null && filter.check(ANY_ACCESSOR_IDX.accessor) === FactTypeChecker.FilterResult.Reject) {
                 return removeSingleAccessor(ANY_ACCESSOR_IDX).mergeAdd(anyNode).filterAccessNode(filter)
             }
@@ -1329,6 +1416,8 @@ class AccessTree(
         fun filterStartsWith(accessPath: AccessPath.AccessNode?): AccessNode? {
             if (accessPath == null) return this
 
+            if (accessPath.containsAny) return filterStartsWithAny(accessPath)
+
             if (maxDepth < accessPath.size) {
                 return null
             }
@@ -1363,6 +1452,92 @@ class AccessTree(
             }
 
             return parentAccessors.foldRight(filteredTreeNode, ::create)
+        }
+
+        /**
+         * The result keeps only the concrete path prefix before the first [any] and the whole subtree below it,
+         * so its delta for [accessPath] is exactly the delta of this tree. Rebuilding the [any] part of the path
+         * as a tree edge would over-approximate that delta and could nest [any] edges.
+         */
+        private fun filterStartsWithAny(accessPath: AccessPath.AccessNode): AccessNode? {
+            if (matchPathWithAny(accessPath).isEmpty()) return null
+
+            val parentAccessors = IntArrayList()
+            var node = this
+            var pathNode: AccessPath.AccessNode = accessPath
+            while (pathNode.accessor != ANY_ACCESSOR_IDX) {
+                node = node.getChild(pathNode.accessor) ?: return null
+                parentAccessors.add(pathNode.accessor)
+                pathNode = pathNode.next ?: break
+            }
+
+            return parentAccessors.foldRight(node, ::create)
+        }
+
+        class AnySplit(val complete: AccessNode?, val any: AccessNode?)
+
+        /**
+         * Partitions the root-to-leaf paths of this tree: a path through an [any] edge goes to [AnySplit.any],
+         * every other path (including this node's own abstract/final marks) goes to [AnySplit.complete].
+         */
+        fun splitAny(): AnySplit {
+            if (!containsAny) return AnySplit(this, null)
+            return splitAnyCached(IdentityHashMap())
+        }
+
+        private fun splitAnyCached(cache: IdentityHashMap<AccessNode, AnySplit>): AnySplit {
+            cache[this]?.let { return it }
+
+            manager.cancellation.checkpoint()
+
+            val accessors = accessors!!
+            val accessorNodes = accessorNodes!!
+
+            val completeAccessors = IntArrayList(accessors.size)
+            val completeNodes = ArrayList<AccessNode>(accessors.size)
+            val anyAccessors = IntArrayList(accessors.size)
+            val anyNodes = ArrayList<AccessNode>(accessors.size)
+
+            for (i in accessors.indices) {
+                val accessor = accessors[i]
+                val child = accessorNodes[i]
+
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    anyAccessors.add(accessor)
+                    anyNodes.add(child)
+                    continue
+                }
+
+                if (!child.containsAny) {
+                    completeAccessors.add(accessor)
+                    completeNodes.add(child)
+                    continue
+                }
+
+                val childSplit = child.splitAnyCached(cache)
+                childSplit.complete?.let {
+                    completeAccessors.add(accessor)
+                    completeNodes.add(it)
+                }
+                childSplit.any?.let {
+                    anyAccessors.add(accessor)
+                    anyNodes.add(it)
+                }
+            }
+
+            val complete = manager.create(
+                isAbstract, isFinal, deepAccessorExclusion,
+                completeAccessors.toIntArray(), completeNodes.toTypedArray()
+            ).takeIf { !it.isEmpty }
+
+            val any = manager.create(
+                isAbstract = false, isFinal = false, deepAccessorExclusion = null,
+                anyAccessors.toIntArray(), anyNodes.toTypedArray()
+            ).takeIf { !it.isEmpty }
+
+            val result = AnySplit(complete, any)
+            cache[this] = result
+            return result
         }
 
         private inline fun mergeAccessors(
