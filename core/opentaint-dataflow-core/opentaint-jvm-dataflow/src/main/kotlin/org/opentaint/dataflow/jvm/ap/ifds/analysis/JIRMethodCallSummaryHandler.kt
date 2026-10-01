@@ -9,13 +9,13 @@ import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler
 import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryEdge
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 
 class JIRMethodCallSummaryHandler(
     private val statement: JIRInst,
     private val analysisContext: JIRMethodAnalysisContext,
-    private val apManager: ApManager
+    private val apManager: ApManager,
+    private val withCallAliases: Boolean = true,
 ) : MethodCallSummaryHandler {
     override val factTypeChecker: FactTypeChecker get() = analysisContext.factTypeChecker
 
@@ -24,7 +24,7 @@ class JIRMethodCallSummaryHandler(
     }
 
     override fun mapMethodExitToReturnFlowFact(fact: FinalFactAp): List<FinalFactAp> =
-        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
+        analysisContext.methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact, factTypeChecker)
 
     override fun handleZeroToZero(summaryFact: FinalFactAp?): Set<Sequent> =
         super.handleZeroToZero(summaryFact).flatMapTo(hashSetOf()) { seq ->
@@ -90,6 +90,7 @@ class JIRMethodCallSummaryHandler(
         }
 
     private fun applyCallAliases(fact: FinalFactAp, body: (FinalFactAp) -> Unit) {
+        if (!withCallAliases) return
         analysisContext.aliasAnalysis?.forEachAliasAfterCallStatement(statement, fact) { aliased ->
             body(aliased)
         }

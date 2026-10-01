@@ -17,6 +17,9 @@ import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
+private const val ANALYSIS_DIRECTION_PROPERTY = "opentaint.analysis.direction"
+private const val ANALYSIS_DIRECTION_ENV = "OPENTAINT_ANALYSIS_DIRECTION"
+
 fun Project.configureDefault(projectName: String) {
     configureDefaultKotlin()
     configureDefaultJvm()
@@ -59,6 +62,13 @@ fun Project.configureDefaultTest() {
         useJUnitPlatform()
 
         maxHeapSize = "1G"
+
+        val analysisDirection = providers.gradleProperty(ANALYSIS_DIRECTION_PROPERTY).orNull
+            ?: providers.environmentVariable(ANALYSIS_DIRECTION_ENV).orNull
+        if (analysisDirection != null) {
+            systemProperty(ANALYSIS_DIRECTION_PROPERTY, analysisDirection)
+            inputs.property(ANALYSIS_DIRECTION_PROPERTY, analysisDirection)
+        }
 
         testLogging {
             events("passed")

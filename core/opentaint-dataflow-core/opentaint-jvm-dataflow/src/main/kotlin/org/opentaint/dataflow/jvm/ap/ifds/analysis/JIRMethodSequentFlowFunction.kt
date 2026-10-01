@@ -14,6 +14,8 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.TraceInfo
 import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
+import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
+import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSource
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRSequentTaintUtil
@@ -163,7 +165,7 @@ class JIRMethodSequentFlowFunction(
         }
     }
 
-    private fun applyMethodExitSinkRules(
+    fun applyMethodExitSinkRules(
         methodResult: AccessPathBase, fact: FinalFactAp,
         initialFacts: Set<InitialFactAp>?,
         sideEffect: (Sequent.SideEffect) -> Unit,
@@ -178,7 +180,7 @@ class JIRMethodSequentFlowFunction(
             }
         }
 
-        val taintUtil = JIRSequentTaintUtil(apManager, currentInst, analysisContext, generateTrace, methodResult)
+        val taintUtil = JIRSequentTaintUtil<TaintMethodExitSource, TaintMethodExitSink>(apManager, currentInst, analysisContext, generateTrace, methodResult)
         taintUtil.applySinkRules(sinkRules, FinalFactReader(fact, apManager), markAfterAnyFieldResolver)
 
         taintUtil.conditionReaders.forEach { refiner.add(it) }
@@ -199,7 +201,7 @@ class JIRMethodSequentFlowFunction(
         }
     }
 
-    private fun applyMethodExitSourceRules(
+    fun applyMethodExitSourceRules(
         methodResult: AccessPathBase, fact: FinalFactAp?, refiner: FactRefiner?,
     ): List<Pair<FinalFactAp, TraceInfo>> = with(analysisContext.taint) {
         val sourceRules = sourceRulesForMethodExit(currentInst, fact).toList()
@@ -207,7 +209,7 @@ class JIRMethodSequentFlowFunction(
 
         val result = mutableListOf<Pair<FinalFactAp, TraceInfo>>()
 
-        val taintUtil = JIRSequentTaintUtil(apManager, currentInst, analysisContext, generateTrace, methodResult)
+        val taintUtil = JIRSequentTaintUtil<TaintMethodExitSource, TaintMethodExitSink>(apManager, currentInst, analysisContext, generateTrace, methodResult)
         taintUtil.applySourceRules(
             sourceRules,
             initialFacts = emptySet(),
@@ -313,7 +315,7 @@ class JIRMethodSequentFlowFunction(
         }
     }
 
-    private class FactRefiner {
+    class FactRefiner {
         private var refinement: ExclusionSet = ExclusionSet.Empty
         val hasRefinement: Boolean get() = refinement !is ExclusionSet.Empty
 

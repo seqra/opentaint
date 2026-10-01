@@ -2,7 +2,9 @@ package org.opentaint.jvm.sast.dataflow
 
 import org.opentaint.dataflow.ap.ifds.access.FactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.configuration.jvm.TaintConfigurationSource
 import org.opentaint.dataflow.configuration.jvm.TaintMethodExitSink
+import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -96,4 +98,7 @@ class JIRCombinedTaintRulesProvider(
         base.selectRules(ruleIds)
         combined.selectRules(ruleIds)
     }
+
+    override fun sinkMetaForSource(source: TaintConfigurationSource): Pair<String, TaintSinkMeta>? =
+        base.sinkMetaForSource(source) ?: combined.sinkMetaForSource(source)
 }

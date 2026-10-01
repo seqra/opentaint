@@ -20,9 +20,7 @@ class StatementSummaryBuilder(
 
     fun build(): StatementSummary {
         val transfers = Array(bases.size) { i ->
-            val base = bases[i]
-            val types = filterTypes.filterIndexed { j, _ -> filterBases[j] == base }.distinct()
-            BaseTransfer(base, edges[i].toTypedArray(), types.toTypedArray())
+            BaseTransfer(bases[i], edges[i].toTypedArray(), typeFilters(bases[i]))
         }
         return StatementSummary(transfers)
     }
@@ -41,9 +39,12 @@ class StatementSummaryBuilder(
         }
 
         return StatementSummary(Array(bases.size) { i ->
-            BaseTransfer(bases[i], reversedEdges[i].toTypedArray(), emptyArray())
+            BaseTransfer(bases[i], reversedEdges[i].toTypedArray(), typeFilters(bases[i]))
         })
     }
+
+    private fun typeFilters(base: AccessPathBase): Array<CommonType> =
+        filterTypes.filterIndexed { j, _ -> filterBases[j] == base }.distinct().toTypedArray()
 
     fun fact(base: AccessPathBase, accessors: List<Accessor> = emptyList()): InitialFactAp =
         accessors.foldRight(apManager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
@@ -99,10 +100,10 @@ class StatementSummaryBuilder(
         aliasPaths: List<Pair<AccessPathBase, List<Accessor>>>,
     ) {
         touch(base)
-        if (weak) {
-            edge(fact(base), fact(base))
-        } else {
-            keepAllExcept(base, accessors)
+        when {
+            !weak -> keepAllExcept(base, accessors)
+            keepAliasPropagationEdges -> keepRefined(base, accessors)
+            else -> edge(fact(base), fact(base))
         }
 
         for (value in values) {
@@ -113,7 +114,7 @@ class StatementSummaryBuilder(
         for ((aliasBase, aliasAccessors) in aliasPaths) {
             if (aliasBase == base) continue
             val aliasPath = aliasAccessors + accessors
-            aliasPropagation(aliasBase, aliasPath)
+            if (keepAliasPropagationEdges) keepRefined(aliasBase, aliasPath)
             for (value in values) {
                 edge(fact(value), fact(aliasBase, aliasPath))
             }
@@ -134,8 +135,7 @@ class StatementSummaryBuilder(
         }
     }
 
-    private fun aliasPropagation(base: AccessPathBase, accessors: List<Accessor>) {
-        if (!keepAliasPropagationEdges) return
+    private fun keepRefined(base: AccessPathBase, accessors: List<Accessor>) {
         keepAllExcept(base, accessors)
         val target = fact(base, accessors)
         edge(target, target)

@@ -95,6 +95,34 @@ class JIRMethodCallFlowFunction(
 
         val factReader = FinalFactReader(factAp, apManager)
 
+        applyTaintRules(initialFacts, exclusion, factReader, addCallToReturn, addUnchecked)
+
+        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
+            statement,
+            callee = callExpr.callee,
+            callExpr = callExpr,
+            returnValue = null,
+            factAp = factAp,
+            checker = analysisContext.factTypeChecker,
+        ) { callerFact, startFactBase ->
+            applyCleanersOrCallToStart(
+                factReader, callerFact, startFactBase,
+                addCallToReturn, addCallToStart, addUnchecked
+            )
+        }
+
+        if (factReader.hasRefinement) {
+            addSideEffectRequirement(factReader)
+        }
+    }
+
+    fun applyTaintRules(
+        initialFacts: Set<InitialFactAp>,
+        exclusion: ExclusionSet,
+        factReader: FinalFactReader,
+        addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
+        addUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+    ) {
         val markAfterAnyFieldResolver = createMarkAfterAccessorResolver(
             analysisContext.methodEntryPoint, initialFacts
         ) { i, k ->
@@ -123,33 +151,16 @@ class JIRMethodCallFlowFunction(
                 }
             }
         )
-
-        JIRMethodCallFactMapper.mapMethodCallToStartFlowFact(
-            statement,
-            callee = callExpr.callee,
-            callExpr = callExpr,
-            returnValue = null,
-            factAp = factAp,
-            checker = analysisContext.factTypeChecker,
-        ) { callerFact, startFactBase ->
-            applyCleanersOrCallToStart(
-                factReader, callerFact, startFactBase,
-                addCallToReturn, addCallToStart, addUnchecked
-            )
-        }
-
-        if (factReader.hasRefinement) {
-            addSideEffectRequirement(factReader)
-        }
     }
 
-    private fun applyCleanersOrCallToStart(
+    fun applyCleanersOrCallToStart(
         originalFactReader: FinalFactReader,
         unmappedCallerFactAp: FinalFactAp,
         startFactBase: AccessPathBase,
         addCallToReturn: (FinalFactReader, FinalFactAp, TraceInfo) -> Unit,
         addCallToStart: (factReader: FinalFactReader, callerFactAp: FinalFactAp, startFactBase: AccessPathBase, TraceInfo) -> Unit,
         addCallToReturnUnchecked: (MethodCallFlowFunction.CallFact) -> Unit,
+        cleaner: JIRTaintCleanActionEvaluator = JIRTaintCleanActionEvaluator(typeResolver),
     ) {
         val method = callExpr.callee
 
@@ -160,8 +171,6 @@ class JIRMethodCallFlowFunction(
             listOf(conditionFactReader),
             markAfterAnyAccessorResolver = null // we don't expect such marks in pass rules
         )
-
-        val cleaner = JIRTaintCleanActionEvaluator(typeResolver)
 
         val factReaderBeforeCleaner = FinalFactReader(callerFact, apManager)
         val cleanRules = taintCtx.cleanRulesForCallStatement(statement, callExpr, returnValue, callerFact)

@@ -4,6 +4,7 @@ import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.AnyAccessor
+import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.EmptyMethodContext
@@ -35,6 +36,7 @@ import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.configuration.jvm.TaintSinkMeta
+import org.opentaint.dataflow.graph.reversed
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.RefManager
@@ -64,6 +66,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
     val ifdsEngine by lazy { createIfdsEngine() }
 
     fun analyzeWithIfds(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
+        val manager = analysisManager
+        if (options.analysisDirection == AnalysisDirection.BACKWARD && manager is BackwardTaintAnalysisManager) {
+            return analyzeBackward(manager.createBackwardAnalysisManager(), entryPoints)
+        }
         return analyzeStaged(entryPoints)
     }
 
@@ -130,6 +136,45 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
         return fullScanResult
     }
 
+    @Suppress("UNCHECKED_CAST")
+    private fun analyzeBackward(
+        manager: TaintAnalysisManager,
+        entryPoints: List<Method>,
+    ): Pair<List<VulnerabilityWithTrace>, Status> {
+        val analysisStart = TimeSource.Monotonic.markNow()
+        val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
+
+        logger.info { "Start prescan phase" }
+        prescan(startMethods)
+        ifdsEngine.cleanup()
+        logger.info { "Finish prescan phase" }
+
+        logger.info { "Start backward scan phase" }
+        val engine = TaintAnalysisUnitRunnerManager(
+            refManager, cancellation, manager,
+            (ifdsAnalysisGraph as ApplicationGraph<CommonMethod, CommonInst>).reversed,
+            unitResolver() as UnitResolver<CommonMethod>,
+            DummySerializationContext,
+            options.debugOptions?.taintRulesStatsSamplingPeriod,
+        )
+
+        manager.selectPhase(TaintAnalysisManager.Phase.FullScan)
+        engine.resetApManager(apManager)
+        val timeout = options.ifdsTimeout * 0.9 - analysisStart.elapsedNow()
+        runCatching { engine.runAnalysis(startMethods, timeout = timeout, cancellationTimeout = 30.seconds) }
+            .onFailure { logger.error(it) { "Backward analysis failed" } }
+        logger.info { "Finish backward scan phase" }
+
+        val analysisStatus = listOf(ifdsEngine.status.get(), engine.status.get())
+            .firstOrNull { it != TaintAnalysisUnitRunnerManager.Status.OK } ?: TaintAnalysisUnitRunnerManager.Status.OK
+        val vulnerabilities = engine.getVulnerabilities()
+        engine.close()
+
+        val traces = reportedVulnerabilities(vulnerabilities)
+            .map { VulnerabilityWithTrace(it, TracePathGenerationResult.Simple) }
+        return traces to Status(analysisStatus, TaintAnalysisUnitRunnerManager.Status.OK)
+    }
+
     private fun prescan(startMethods: List<MethodWithContext>) {
         analysisManager.selectPhase(TaintAnalysisManager.Phase.Prescan)
         ifdsEngine.resetApManager(TreeApManager(AnyAccessorDisabled, refManager, cancellation))
@@ -170,7 +215,7 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
         logger.info { "Start vulnerability confirmation" }
         val vulnCheckTimeout = options.ifdsTimeout - analysisStart.elapsedNow()
-        var vulnerabilities = if (!vulnCheckTimeout.isPositive()) {
+        val vulnerabilities = if (!vulnCheckTimeout.isPositive()) {
             logger.warn { "No time remaining for vulnerability confirmation" }
             allVulnerabilities
         } else {
@@ -180,6 +225,13 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             )
         }
 
+        return traceVulnerabilities(analysisStart, entryPoints, analysisStatus, reportedVulnerabilities(vulnerabilities))
+    }
+
+    private fun reportedVulnerabilities(
+        found: List<TaintSinkTracker.TaintVulnerability>,
+    ): List<TaintSinkTracker.TaintVulnerability> {
+        var vulnerabilities = found
         logger.info { "Total vulnerabilities: ${vulnerabilities.size}" }
 
         if (options.debugOptions?.enableVulnSummary == true) {
@@ -197,6 +249,15 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
             logger.info { "Vulnerabilities with cwe ${options.analysisCwe}: ${vulnerabilities.size}" }
         }
 
+        return vulnerabilities
+    }
+
+    private fun traceVulnerabilities(
+        analysisStart: TimeSource.Monotonic.ValueTimeMark,
+        entryPoints: List<Method>,
+        analysisStatus: TaintAnalysisUnitRunnerManager.Status,
+        vulnerabilities: List<TaintSinkTracker.TaintVulnerability>,
+    ): Pair<List<VulnerabilityWithTrace>, Status> {
         logger.info { "Start trace generation" }
         val leftTime = options.ifdsTimeout - analysisStart.elapsedNow()
         val traceResolutionTimeout = leftTime * 0.90 // Reserve 10% of time for report creation

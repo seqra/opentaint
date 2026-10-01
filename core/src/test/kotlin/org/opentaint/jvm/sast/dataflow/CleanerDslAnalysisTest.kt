@@ -1,6 +1,5 @@
 package org.opentaint.jvm.sast.dataflow
 
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -236,7 +235,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
                 }
             }
 
-            assertEquals(expected, matrixFindings(markCount, sourceReach))
+            assertFindings(expected, matrixFindings(markCount, sourceReach))
         }
     }
 
@@ -257,7 +256,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             }
         }
 
-        assertEquals(expectedControls, findings)
+        assertFindings(expectedControls, findings)
     }
 
     @ParameterizedTest(name = "clean {0} of 5 marks")
@@ -291,7 +290,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
         val findings = findingIds(config, "cleanMarks$cleanCount")
         val expected = allMarks.drop(cleanCount).mapTo(hashSetOf()) { "mark-selective-$it" }
 
-        assertEquals(expected, findings)
+        assertFindings(expected, findings)
     }
 
     @Test
@@ -313,7 +312,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
         val findings = runAnalysis(config, TEST_CLS, "fieldStoreExamples")
             .mapTo(hashSetOf()) { it.vulnerability.rule.id }
 
-        assertEquals(setOf("field-store-any"), findings)
+        assertFindings(setOf("field-store-any"), findings)
     }
 
     @Test
@@ -374,11 +373,11 @@ class CleanerDslAnalysisTest : AnalysisTest() {
         mark: String,
         sourceReach: Reach,
     ) {
-        assertEquals(
+        assertFindings(
             emptySet<String>(),
             findingIds(helperConfig(sink, mark, sourceReach), entryPoint),
         )
-        assertEquals(
+        assertFindings(
             setOf("$mark-sink"),
             findingIds(
                 helperConfig(sink, mark, sourceReach, cleanersEnabled = false),
@@ -417,7 +416,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
         val findings = runAnalysis(config, TEST_CLS, "conditionalExample")
             .mapTo(hashSetOf()) { it.vulnerability.rule.id }
 
-        assertEquals(setOf("conditional-a", "conditional-x"), findings)
+        assertFindings(setOf("conditional-a", "conditional-x"), findings)
     }
 
     @Test
@@ -459,7 +458,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             ),
         )
 
-        assertEquals(
+        assertFindings(
             setOf("returning-unrelated-exact"),
             findingIds(config, "returningPlainCleaner"),
         )
@@ -496,7 +495,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             ),
         )
 
-        assertEquals(
+        assertFindings(
             setOf("returning-any-unrelated"),
             findingIds(config, "returningAnyCleaner"),
         )
@@ -513,7 +512,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             ),
         )
 
-        assertEquals(
+        assertFindings(
             setOf("any-only-root", "any-only-child"),
             findingIds(config, "anyOnlySourceExample"),
         )
@@ -546,7 +545,7 @@ class CleanerDslAnalysisTest : AnalysisTest() {
             ),
         )
 
-        assertEquals(
+        assertFindings(
             setOf(
                 "recursive-any-only-root",
                 "recursive-any-only-child",

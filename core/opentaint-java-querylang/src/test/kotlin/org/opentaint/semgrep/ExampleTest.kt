@@ -38,9 +38,11 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test rule with intersection`() = runTest<example.RuleWithIntersection>()
 
+    // False positive in backward mode due to the ignored sink assigns
     @Test
     fun `test rule with pattern-not-inside suffix`() = runTest<example.RuleWithNotInsideSuffix>()
 
+    // False positive in backward mode due to the ignored sink assigns
     @Test
     fun `test rule pattern-not with signature`() = runTest<example.RulePatternNotWithSignature>()
 
@@ -53,6 +55,7 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test rule with ellipsis method invocation`() = runTest<example.RuleWithEllipsisMethodInvocation>()
 
+    // False positive in backward mode due to the mark conjunction
     @Test
     fun `test rule with ellipsis method invocation and pattern not`() = runTest<example.RuleWithEllipsisInvocationAndPatternNot>(EXPECT_STATE_VAR)
 
@@ -69,6 +72,7 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test simple pass`() = runTest<example.RuleWithSimplePass>(EXPECT_STATE_VAR)
 
+    // False positive in backward mode due to the ignored sink assigns
     @Test
     fun `test rule with several suffix cleaners`() = runTest<example.RuleWithSeveralSuffixCleaners>()
 
@@ -136,9 +140,11 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test rule return 6`() = runTest<example.RuleReturn6>()
 
+    // False positive in backward mode due to the ignored sink assigns
     @Test
     fun `test cleaner after sink 0`() = runTest<example.CleanerAfterSink0>(EXPECT_STATE_VAR)
 
+    // False positive in backward mode due to the ignored sink assigns
     @Test
     fun `test cleaner after sink 1`() = runTest<example.CleanerAfterSink1>()
 
@@ -148,6 +154,7 @@ class ExampleTest : SampleBasedTest() {
     @Test
     fun `test rule return not inside`() = runTest<example.RuleReturnNotInside>()
 
+    // False positive in backward mode due to the mark conjunction
     @Test
     fun `test rule return not inside prefix`() = runTest<example.RuleReturnNotInsidePrefix>(EXPECT_STATE_VAR)
 

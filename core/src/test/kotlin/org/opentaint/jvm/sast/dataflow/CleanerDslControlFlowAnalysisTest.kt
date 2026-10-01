@@ -1,6 +1,5 @@
 package org.opentaint.jvm.sast.dataflow
 
-import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.opentaint.dataflow.ap.ifds.Accessor
 import org.opentaint.dataflow.ap.ifds.ElementAccessor
@@ -162,7 +161,7 @@ class CleanerDslControlFlowAnalysisTest : AnalysisTest() {
             .mapTo(hashSetOf()) { it.vulnerability.rule.id }
         val expected = checkpoints.flatMapTo(hashSetOf()) { it.expectedRuleIds }
 
-        assertEquals(expected, actual)
+        assertFindings(expected, actual)
     }
 
     private fun assertSourceScenario(

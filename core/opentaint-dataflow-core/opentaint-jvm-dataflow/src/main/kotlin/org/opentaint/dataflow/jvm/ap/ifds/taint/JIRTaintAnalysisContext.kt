@@ -4,7 +4,6 @@ import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.taint.ExternalMethodTracker
-import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.configuration.isTrue
@@ -33,16 +32,16 @@ import org.opentaint.ir.api.jvm.ext.cfg.callExpr
 class JIRTaintAnalysisContext(
     override val taintSinkTracker: TaintSinkTracker,
     private val taintConfig: TaintRulesProvider,
-    val externalMethodTracker: ExternalMethodTracker? = null,
+    override val externalMethodTracker: ExternalMethodTracker? = null,
     val relevantRuleIds: MutableSet<String>,
-) : TaintAnalysisContext {
+) : JIRTaintRuleContext {
     private lateinit var analysisContext: JIRMethodAnalysisContext
 
-    fun bindAnalysisContext(analysisContext: JIRMethodAnalysisContext) {
+    override fun bindAnalysisContext(analysisContext: JIRMethodAnalysisContext) {
         this.analysisContext = analysisContext
     }
 
-    fun reset() {
+    override fun reset() {
         taintSinkTracker.reset()
     }
 
@@ -50,17 +49,17 @@ class JIRTaintAnalysisContext(
     private fun JIRCallExpr.calleeMethod(): JIRMethod = method.method
     private fun JIRInst.calleeMethod(): JIRMethod = callExpr().calleeMethod()
 
-    fun allRelevantSourceRulesForCallStatement(statement: JIRInst): Iterable<TaintMethodSource> {
+    override fun allRelevantSourceRulesForCallStatement(statement: JIRInst): Iterable<TaintMethodSource> {
         if (analysisContext.phase is Phase.Prescan) return emptyList()
         return taintConfig.sourceRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
     }
 
-    fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
+    override fun allRelevantCleanRulesForCallStatement(statement: JIRInst): Iterable<TaintCleaner> {
         if (analysisContext.phase is Phase.Prescan) return emptyList()
         return taintConfig.cleanerRulesForMethod(statement.calleeMethod(), statement, fact = null, allRelevant = true)
     }
 
-    fun sourceRulesForCallStatement(
+    override fun sourceRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -71,7 +70,7 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
-    fun sinkRulesForCallStatement(
+    override fun sinkRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -82,7 +81,7 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
-    fun cleanRulesForCallStatement(
+    override fun cleanRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -93,7 +92,7 @@ class JIRTaintAnalysisContext(
         statement, callExpr, returnValue
     )
 
-    fun passRulesForCallStatement(
+    override fun passRulesForCallStatement(
         statement: JIRInst,
         callExpr: JIRCallExpr,
         returnValue: JIRImmediate?,
@@ -121,7 +120,7 @@ class JIRTaintAnalysisContext(
         }.handlePhase()
     }
 
-    fun sourceRulesForStaticField(
+    override fun sourceRulesForStaticField(
         field: JIRField,
         statement: JIRInst,
         fact: FinalFactAp?
@@ -133,7 +132,7 @@ class JIRTaintAnalysisContext(
         RuleWithCondition(it, RuleConditionRewriter.trueExpr)
     }.handlePhase()
 
-    fun sourceRulesForMethodExit(
+    override fun sourceRulesForMethodExit(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(
@@ -142,7 +141,7 @@ class JIRTaintAnalysisContext(
         statement
     )
 
-    fun sinkRulesForMethodExit(
+    override fun sinkRulesForMethodExit(
         statement: JIRInst,
         fact: FinalFactAp?,
         initialFacts: Set<InitialFactAp>?
@@ -152,13 +151,13 @@ class JIRTaintAnalysisContext(
         statement
     )
 
-    fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
+    override fun sinkRulesForMethodEntry(statement: JIRInst, fact: FinalFactAp?) = prepareMethodRules(
         taintConfig.sinkRulesForMethodEntry(statement.location.method, statement, fact),
         TaintMethodEntrySink::condition,
         statement
     )
 
-    fun sourceRulesForMethodEntry(
+    override fun sourceRulesForMethodEntry(
         statement: JIRInst,
         fact: FinalFactAp?
     ) = prepareMethodRules(

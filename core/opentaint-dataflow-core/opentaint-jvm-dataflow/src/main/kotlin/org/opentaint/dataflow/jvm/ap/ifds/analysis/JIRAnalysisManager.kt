@@ -3,6 +3,7 @@ package org.opentaint.dataflow.jvm.ap.ifds.analysis
 import mu.KLogger
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.AnalysisRunner
+import org.opentaint.dataflow.ap.ifds.BackwardTaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
@@ -32,6 +33,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodContextSerializer
+import org.opentaint.dataflow.jvm.ap.ifds.backward.JIRBackwardAnalysisManager
 import org.opentaint.dataflow.jvm.ap.ifds.jIRDowncast
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -62,7 +64,9 @@ class JIRAnalysisManager(
     val taintConfig: TaintRulesProvider,
     val externalMethodTracker: ExternalMethodTracker? = null,
     val params: Params = Params(),
-) : JIRLanguageManager(cp), TaintAnalysisManager {
+    val relevantRuleIds: MutableSet<String> = ConcurrentHashMap.newKeySet(),
+) : JIRLanguageManager(cp), BackwardTaintAnalysisManager {
+    val rootRefManager = refManager
     private val refManager = refManager.softRefManager("JIRAnalysisManager")
 
     override val factTypeChecker = JIRFactTypeChecker(cp)
@@ -72,8 +76,7 @@ class JIRAnalysisManager(
         val defaultGetModel: JIRMethodGetDefault? = null,
     )
 
-    private val relevantRuleIds = ConcurrentHashMap.newKeySet<String>()
-    private val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
+    val contexts = ConcurrentLinkedQueue<JIRMethodAnalysisContext>()
 
     private var currentPhase: Phase = Phase.Prescan
     val phase: Phase get() = currentPhase
@@ -98,6 +101,8 @@ class JIRAnalysisManager(
         val jIRCallResolver = JIRCallResolver(cp, unitResolver)
         return JIRMethodCallResolver(jIRCallResolver, runner, externalMethodTracker)
     }
+
+    override fun createBackwardAnalysisManager(): TaintAnalysisManager = JIRBackwardAnalysisManager(this)
 
     override fun getMethodAnalysisContext(
         methodEntryPoint: MethodEntryPoint,
