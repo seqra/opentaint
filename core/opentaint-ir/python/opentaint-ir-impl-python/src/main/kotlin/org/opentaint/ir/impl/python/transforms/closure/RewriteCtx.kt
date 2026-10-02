@@ -3,7 +3,6 @@ package org.opentaint.ir.impl.python.transforms.closure
 import org.opentaint.ir.api.python.PIRPhysicalLocation
 import org.opentaint.ir.impl.python.flat.FlatAnyType
 import org.opentaint.ir.impl.python.flat.FlatBindFunction
-import org.opentaint.ir.impl.python.flat.FlatBuildDict
 import org.opentaint.ir.impl.python.flat.FlatCall
 import org.opentaint.ir.impl.python.flat.FlatCallArg
 import org.opentaint.ir.impl.python.flat.FlatClass
@@ -14,14 +13,12 @@ import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
-import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
 import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatNextIter
 import org.opentaint.ir.impl.python.flat.FlatParamKind
 import org.opentaint.ir.impl.python.flat.FlatParameter
 import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.flat.FlatStoreAttr
-import org.opentaint.ir.impl.python.flat.FlatStrConst
 import org.opentaint.ir.impl.python.flat.FlatValue
 import org.opentaint.ir.impl.python.flat.mapOperand
 import org.opentaint.ir.impl.python.flat.mapTarget
@@ -47,15 +44,10 @@ internal class RewriteCtx(
     }
     private val originalParamNames: Set<String> = fn.parameters.map { it.name }.toSet()
     private var tempCounter: Int = 0
-    private val envLocal: FlatLocal = FlatLocal(ClosureRuntime.ENV_LOCAL_NAME)
     private val blockPrologues: MutableMap<Int, MutableList<FlatInst>> = mutableMapOf()
 
     init {
         for (paramName in originalParamNames) {
-            check(paramName != ClosureRuntime.ENV_LOCAL_NAME) {
-                "Closure rewrite reserved name '${ClosureRuntime.ENV_LOCAL_NAME}' collides with " +
-                    "parameter of ${fn.qualifiedName}"
-            }
             check(!paramName.startsWith(ClosureRuntime.CELL_LOCAL_PREFIX)) {
                 "Closure rewrite reserved prefix '${ClosureRuntime.CELL_LOCAL_PREFIX}' collides " +
                     "with parameter '$paramName' of ${fn.qualifiedName}"
@@ -100,7 +92,11 @@ internal class RewriteCtx(
             )
         }
 
-        val adapter = if (isCapturing) buildAdapterClass(fn, moduleName) else null
+        val adapter = if (isCapturing) {
+            buildAdapterClass(fn, ClosureRuntime.capturedOrder(ci.closureVars), moduleName)
+        } else {
+            null
+        }
 
         return RewriteOutput(impl = rebuiltImpl, adapterClass = adapter)
     }
@@ -132,23 +128,14 @@ internal class RewriteCtx(
                 )
             }
         }
-        if (receivedCells.isNotEmpty()) {
+        for (name in receivedCells) {
             add(
                 FlatLoadAttr(
-                    target = envLocal,
+                    target = cellLocals.getValue(name),
                     obj = FlatParameterRef(ClosureRuntime.SELF_PARAM_NAME),
-                    attribute = ClosureRuntime.ENV_ATTR_NAME,
+                    attribute = name,
                 ),
             )
-            for (name in receivedCells) {
-                add(
-                    FlatLoadSubscript(
-                        target = cellLocals.getValue(name),
-                        obj = envLocal,
-                        index = FlatStrConst(name),
-                    ),
-                )
-            }
         }
     }
 
@@ -252,9 +239,6 @@ internal class RewriteCtx(
         val pre = ArrayList<FlatInst>()
         val post = ArrayList<FlatInst>()
 
-        val (envBuildInst, envValueLocal) = buildEnvDict(childClosureVars, location)
-        pre += envBuildInst
-
         val callTarget = redirectTarget(inst.target, location, post)
 
         val adapterLocal = freshTemp()
@@ -267,31 +251,22 @@ internal class RewriteCtx(
         val core = FlatCall(
             target = callTarget,
             callee = adapterLocal,
-            args = listOf(FlatCallArg(envValueLocal)),
+            args = capturedCellArgs(childClosureVars),
             physicalLocation = location,
         )
 
         return pre + core + post
     }
 
-    private fun buildEnvDict(childClosureVars: Set<String>, location: PIRPhysicalLocation?): Pair<FlatInst, FlatLocal> {
-        val keys: List<FlatValue> = childClosureVars.map { FlatStrConst(it) }
-        val values: List<FlatValue> = childClosureVars.map { name ->
-            cellLocals[name]
+    private fun capturedCellArgs(childClosureVars: Set<String>): List<FlatCallArg> =
+        ClosureRuntime.capturedOrder(childClosureVars).map { name ->
+            val cell = cellLocals[name]
                 ?: throw ClosureRewriteLimitation(
                     "Closure rewrite: child captures '$name' but parent " +
                         "${fn.qualifiedName} has no cell for it (cells: ${cellLocals.keys})",
                 )
+            FlatCallArg(cell)
         }
-        val envTarget = freshTemp()
-        val envInst = FlatBuildDict(
-            target = envTarget,
-            keys = keys,
-            values = values,
-            physicalLocation = location,
-        )
-        return envInst to envTarget
-    }
 
     private companion object {
         private fun selfParameter(): FlatParameter = FlatParameter(

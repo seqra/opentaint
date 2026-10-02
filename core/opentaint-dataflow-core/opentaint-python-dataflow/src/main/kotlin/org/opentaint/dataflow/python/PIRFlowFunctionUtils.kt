@@ -20,6 +20,7 @@ import org.opentaint.dataflow.taint.PositionAccess
 import org.opentaint.dataflow.taint.PositionTypeResolver
 import org.opentaint.ir.api.common.CommonType
 import org.opentaint.ir.api.python.PIRCall
+import org.opentaint.ir.api.python.PythonNames
 
 object PIRFlowFunctionUtils {
     fun Position.resolveAp(call: PIRCall? = null): PositionAccess? = resolveBaseAp(call)?.let { resolveAp(it) }
@@ -79,5 +80,5 @@ object PIRFlowFunctionUtils {
         override fun resolve(position: PositionAccess): CommonType? = null
     }
 
-    val SELF_ACCESSOR = mkFieldAccessor("\$PIR_SELF")
+    val SELF_ACCESSOR = mkFieldAccessor(PythonNames.BOUND_SELF_ATTR)
 }

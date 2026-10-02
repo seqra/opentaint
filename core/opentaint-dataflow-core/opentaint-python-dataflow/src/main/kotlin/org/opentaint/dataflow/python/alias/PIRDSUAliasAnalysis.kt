@@ -42,7 +42,7 @@ class PIRDSUAliasAnalysis(
     private val aliasManager = AAInfoManager()
     private val dsuMergeStrategy = DsuMergeStrategy(aliasManager)
 
-    private val selfField = AliasAccessor.Field("\$PIR_SELF")
+    private val selfField = AliasAccessor.Field(PythonNames.BOUND_SELF_ATTR)
 
     private class DsuMergeStrategy(private val manager: AAInfoManager) : IntDisjointSets.RankStrategy {
         override fun compare(a: Int, b: Int): Int =

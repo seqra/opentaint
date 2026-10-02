@@ -9,7 +9,6 @@ import org.opentaint.ir.impl.python.flat.FlatBinOp
 import org.opentaint.ir.impl.python.flat.FlatBinaryOperator
 import org.opentaint.ir.impl.python.flat.FlatBindFunction
 import org.opentaint.ir.impl.python.flat.FlatBlock
-import org.opentaint.ir.impl.python.flat.FlatBuildDict
 import org.opentaint.ir.impl.python.flat.FlatBuildList
 import org.opentaint.ir.impl.python.flat.FlatCFG
 import org.opentaint.ir.impl.python.flat.FlatCall
@@ -36,7 +35,6 @@ import org.opentaint.ir.impl.python.flat.FlatParameter
 import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.flat.FlatReturn
 import org.opentaint.ir.impl.python.flat.FlatStoreAttr
-import org.opentaint.ir.impl.python.flat.FlatStrConst
 import org.opentaint.ir.impl.python.flat.FlatUnpack
 import org.opentaint.ir.impl.python.flat.FlatValue
 import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
@@ -647,7 +645,7 @@ class FlatClosureTransformerTest {
     }
 
     @Test
-    fun `bind site for capturing child emits build dict and constructor call`() {
+    fun `bind site for capturing child passes cells to the adapter constructor`() {
         val outerQn = "m.outer"
         val innerQn = "m.outer.inner"
         val inner = fn(
@@ -674,18 +672,15 @@ class FlatClosureTransformerTest {
             insts.any { it is FlatBindFunction },
             "Capturing-child bind should be rewritten to a constructor call",
         )
-        val buildIdx = insts.indexOfFirst { it is FlatBuildDict }
-        assertTrue(buildIdx >= 0)
-        val buildDict = insts[buildIdx] as FlatBuildDict
-        assertEquals(listOf(FlatStrConst("x") as FlatValue), buildDict.keys)
-        assertEquals(listOf(local(cellName("x")) as FlatValue), buildDict.values)
-        val read = insts[buildIdx + 1] as FlatReadName
-        assertEquals("$moduleName.<closure_inner>", (read.ref as FlatGlobalNameRef).qualifiedName)
-        val ctor = insts[buildIdx + 2] as FlatCall
+        val readIdx = insts.indexOfFirst {
+            it is FlatReadName && (it.ref as? FlatGlobalNameRef)?.qualifiedName == "$moduleName.<closure_inner>"
+        }
+        assertTrue(readIdx >= 0)
+        val read = insts[readIdx] as FlatReadName
+        val ctor = insts[readIdx + 1] as FlatCall
         assertEquals("inner", (ctor.target as FlatLocal).name)
         assertEquals((read.target as FlatLocal).name, (ctor.callee as FlatLocal).name)
-        assertEquals(1, ctor.args.size)
-        assertEquals((buildDict.target as FlatLocal).name, (ctor.args[0].value as FlatLocal).name)
+        assertEquals(listOf(local(cellName("x")) as FlatValue), ctor.args.map { it.value })
     }
 
     @Test
@@ -721,11 +716,10 @@ class FlatClosureTransformerTest {
         assertEquals("__call__", cls.methods[1].name)
 
         val initInsts = cls.methods[0].cfg.blocks.first().instructions
-        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), cls.methods[0].parameters.map { it.name })
-        val store = initInsts.filterIsInstance<FlatStoreAttr>().single()
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
-        assertEquals("self", (store.obj as FlatParameterRef).name)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatParameterRef).name)
+        assertEquals(listOf(ClosureRuntime.SELF_PARAM_NAME, "x"), cls.methods[0].parameters.map { it.name })
+        val store = initInsts.filterIsInstance<FlatStoreAttr>().single { it.attribute == "x" }
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (store.obj as FlatParameterRef).name)
+        assertEquals("x", (store.value as FlatParameterRef).name)
 
         val callMethod = cls.methods[1]
         assertEquals(listOf("self", "p"), callMethod.parameters.map { it.name })
@@ -768,7 +762,7 @@ class FlatClosureTransformerTest {
     }
 
     @Test
-    fun `bind site for non-capturing child has no env attach`() {
+    fun `bind site for non-capturing child keeps its plain bind`() {
         val outerQn = "m.outer"
         val innerQn = "m.outer.inner"
         val inner = fn(
@@ -792,15 +786,9 @@ class FlatClosureTransformerTest {
         val out = FlatClosureTransformer.transform(module(listOf(outer, inner)))
         val rewrittenOuter = lookup(out, outerQn)
         val insts = entryInsts(rewrittenOuter)
-        assertFalse(
-            insts.any {
-                it is FlatStoreAttr && it.attribute == ClosureRuntime.ENV_ATTR_NAME
-            },
-            "Non-capturing child should not trigger env attach",
-        )
-        assertFalse(
-            insts.any { it is FlatBuildDict },
-            "Non-capturing child should not trigger env build",
+        assertTrue(
+            insts.any { it is FlatBindFunction },
+            "Non-capturing child should keep its plain bind, not an adapter construction",
         )
     }
 

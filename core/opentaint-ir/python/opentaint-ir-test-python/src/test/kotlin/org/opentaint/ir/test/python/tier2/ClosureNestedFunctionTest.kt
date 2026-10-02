@@ -12,7 +12,6 @@ import org.opentaint.ir.api.python.PIRAssign
 import org.opentaint.ir.api.python.PIRBranch
 import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClasspath
-import org.opentaint.ir.api.python.PIRDictExpr
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRGlobalNameRef
 import org.opentaint.ir.api.python.PIRInstruction
@@ -24,8 +23,6 @@ import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReadNameExpr
 import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.ir.api.python.PIRStoreAttr
-import org.opentaint.ir.api.python.PIRStrConst
-import org.opentaint.ir.api.python.PIRSubscriptExpr
 import org.opentaint.ir.api.python.isAssignOf
 import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
 import org.opentaint.ir.test.python.PIRTestBase
@@ -654,34 +651,19 @@ def cnf_inv31_route(app):
     }
 
     @Test
-    fun `reader prologue extracts cell value from self closure env`() {
+    fun `reader prologue loads its cell from a self attribute`() {
         val reader = findNestedFunc("cnf_closure_read.reader")!!
         val insts = reader.instList
 
-        val envLoad = insts.filterIsInstance<PIRLoadAttr>().firstOrNull { la ->
+        val cellLoad = insts.filterIsInstance<PIRLoadAttr>().firstOrNull { la ->
             val obj = la.obj
-            obj is PIRParameterRef && obj.name == ClosureRuntime.SELF_PARAM_NAME &&
-                la.attribute == ClosureRuntime.ENV_ATTR_NAME
+            obj is PIRParameterRef && obj.name == ClosureRuntime.SELF_PARAM_NAME && la.attribute == "value"
         }
-        assertNotNull(envLoad,
-            "reader should have a PIRLoadAttr extracting ${ClosureRuntime.ENV_ATTR_NAME} " +
-                "from ${ClosureRuntime.SELF_PARAM_NAME}; insts=$insts")
-
-        val envLocalName = (envLoad!!.target as? PIRLocalVar)?.name
-        assertNotNull(envLocalName, "envLoad target should be a PIRLocalVar")
-        assertTrue(envLocalName!!.startsWith("\$env"),
-            "env local name should start with \$env, got: $envLocalName")
-
-        val cellAssign = insts.filterIsInstance<PIRAssign>().firstOrNull { a ->
-            val tgt = a.target
-            val expr = a.expr
-            tgt is PIRLocalVar && tgt.name.startsWith("\$cell\$value") &&
-                expr is PIRSubscriptExpr &&
-                (expr.obj as? PIRLocalVar)?.name == envLocalName &&
-                (expr.index as? PIRStrConst)?.value == "value"
-        }
-        assertNotNull(cellAssign,
-            "reader should have a PIRAssign(\$cell\$value = \$env[\"value\"]); insts=$insts")
+        assertNotNull(cellLoad,
+            "reader should load attr 'value' from ${ClosureRuntime.SELF_PARAM_NAME}; insts=$insts")
+        val cellLocalName = (cellLoad!!.target as? PIRLocalVar)?.name
+        assertTrue(cellLocalName?.startsWith("\$cell\$value") == true,
+            "cell load target should be a \$cell\$value local, got: $cellLocalName")
     }
 
     @Test
@@ -729,9 +711,9 @@ def cnf_inv31_route(app):
         assertTrue(adapterCtors.isNotEmpty(),
             "outer should have a PIRCall to the synthesized adapter class constructor")
 
-        val dictAssigns = insts.filterIsInstance<PIRAssign>().filter { it.expr is PIRDictExpr }
-        assertTrue(dictAssigns.isNotEmpty(),
-            "outer should have at least one PIRAssign building the env dict (PIRDictExpr)")
+        val ctorArgs = adapterCtors.single().args.map { (it.value as? PIRLocalVar)?.name }
+        assertEquals(listOf(ClosureRuntime.cellLocalName("value")), ctorArgs,
+            "adapter constructor should receive the captured cell positionally")
     }
 
     @Test

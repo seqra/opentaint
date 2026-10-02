@@ -85,6 +85,7 @@ import org.opentaint.ir.api.python.PIRUnreachable
 import org.opentaint.ir.api.python.PIRValue
 import org.opentaint.ir.api.python.PIRYield
 import org.opentaint.ir.api.python.PIRYieldFrom
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.impl.python.transforms.closure.ClosureRuntime
 
 class PIRReconstructor {
@@ -356,7 +357,10 @@ def _closure_class(f):
                 if (t != null) listOf("${val_(t)} = $call")
                 else listOf(call)
             }
-            is PIRStoreAttr -> listOf("${val_(inst.obj)}.${inst.attribute} = ${val_(inst.value)}")
+            is PIRStoreAttr ->
+                // todo: drop adapter hack
+                if (inst.attribute == PythonNames.BOUND_SELF_ATTR) emptyList()
+                else listOf("${val_(inst.obj)}.${inst.attribute} = ${val_(inst.value)}")
             is PIRStoreSubscript -> listOf("${val_(inst.obj)}[${val_(inst.index)}] = ${val_(inst.value)}")
             is PIRStoreGlobal -> listOf("${inst.ref.qualifiedName.substringAfterLast('.')} = ${val_(inst.value)}")
             is PIRStoreClosure -> listOf("${inst.name} = ${val_(inst.value)}")

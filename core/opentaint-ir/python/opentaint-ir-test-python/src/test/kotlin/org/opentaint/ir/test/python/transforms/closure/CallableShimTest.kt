@@ -3,6 +3,7 @@ package org.opentaint.ir.test.python.transforms.closure
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.python.PIRDiagnostic
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.impl.python.flat.FlatAnyType
 import org.opentaint.ir.impl.python.flat.FlatArgKind
 import org.opentaint.ir.impl.python.flat.FlatAssign
@@ -152,15 +153,26 @@ class CallableShimTest {
     }
 
     @Test
-    fun `init method stores the closure env attr on self`() {
+    fun `init method stores each captured cell as an attr on self`() {
         val out = simpleCapturingModule()
         val cls = adapterFor(out, "inner")
         val initMethod = cls.methods[0]
-        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), initMethod.parameters.map { it.name })
-        val store = initMethod.cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>().single()
-        assertEquals("self", (store.obj as FlatParameterRef).name)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatParameterRef).name)
+        assertEquals(listOf(ClosureRuntime.SELF_PARAM_NAME, "x"), initMethod.parameters.map { it.name })
+        val store = initMethod.cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>()
+            .single { it.attribute == "x" }
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (store.obj as FlatParameterRef).name)
+        assertEquals("x", (store.value as FlatParameterRef).name)
+    }
+
+    @Test
+    fun `init method binds self as its own receiver`() {
+        val out = simpleCapturingModule()
+        val cls = adapterFor(out, "inner")
+        val stores = cls.methods[0].cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>()
+        assertEquals(listOf("x", PythonNames.BOUND_SELF_ATTR), stores.map { it.attribute })
+        val selfStore = stores.last()
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (selfStore.obj as FlatParameterRef).name)
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (selfStore.value as FlatParameterRef).name)
     }
 
     @Test
