@@ -60,6 +60,8 @@ tasks.withType<Test> {
     environment("TEST_SAMPLES_JAR", testSamplesJar.absolutePath)
 
     jvmArgs = listOf("-Xmx4g")
+    systemProperty("opentaint.markset.diff", project.findProperty("marksetDiff") ?: "false")
+    systemProperty("opentaint.markset.flowSensitive", project.findProperty("marksetFlowSensitive") ?: "false")
 }
 
 val kotlinGrammar = layout.projectDirectory.dir("src/main/antlr-kotlin")

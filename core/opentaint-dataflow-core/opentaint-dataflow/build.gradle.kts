@@ -21,4 +21,6 @@ dependencies {
 
     implementation(Libs.fastutil)
     implementation(Libs.jdot)
+
+    testImplementation(KotlinDependency.Libs.kotlinx_serialization_json)
 }
