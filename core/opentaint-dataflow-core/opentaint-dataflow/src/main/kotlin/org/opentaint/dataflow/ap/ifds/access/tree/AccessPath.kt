@@ -65,9 +65,6 @@ class AccessPath(
         val accessorIdx = with(apManager) { accessor.idx }
 
         if (access == null) {
-            // [any].* == *
-            if (accessorIdx == ANY_ACCESSOR_IDX) return this
-
             return AccessPath(apManager, base, AccessNode(apManager, accessorIdx, next = null), exclusions)
         }
 

@@ -52,14 +52,6 @@ class AnyAccessPathTest {
         accessors.foldRight(manager.mostAbstractInitialAp(base)) { a, f -> f.prependAccessor(a) }
             .replaceExclusions(exclusions) as AccessPath
 
-    /** Built without normalization, so a trailing [any] is kept. */
-    private fun rawInitial(vararg accessors: Accessor): AccessPath {
-        val node = accessors.foldRight(null as AccessPath.AccessNode?) { a, n ->
-            AccessPath.AccessNode(manager, with(manager) { a.idx }, n)
-        }
-        return AccessPath(manager, base, node, ExclusionSet.Empty)
-    }
-
     private fun finalInitial(vararg accessors: Accessor): AccessPath =
         accessors.foldRight(manager.createFinalInitialAp(base, ExclusionSet.Empty)) { a, f -> f.prependAccessor(a) }
             as AccessPath
@@ -162,10 +154,11 @@ class AnyAccessPathTest {
     }
 
     @Test
-    fun `any over the abstract path is the abstract path`() {
-        val abstract = manager.mostAbstractInitialAp(base)
-        assertSame(abstract, abstract.prependAccessor(AnyAccessor))
-        assertEquals(initial(A), initial(A, AnyAccessor))
+    fun `trailing any is kept`() {
+        val anyOnly = manager.mostAbstractInitialAp(base).prependAccessor(AnyAccessor) as AccessPath
+        assertEquals(listOf<Accessor>(AnyAccessor), anyOnly.access!!.accessorList())
+        assertEquals(listOf(A, AnyAccessor), initial(A, AnyAccessor).access!!.accessorList())
+        assertFalse(initial(A) == initial(A, AnyAccessor))
     }
 
     @Test
@@ -190,7 +183,7 @@ class AnyAccessPathTest {
 
     @Test
     fun `path with any concatenates into a tree with an any edge`() {
-        val path = rawInitial(A, AnyAccessor)
+        val path = initial(A, AnyAccessor)
         val delta = abstractTree().delta(initial()).single()
         val tree = path.concat(FactTypeChecker.Dummy, delta) as AccessTree
         assertEquals(abstractTree(A, AnyAccessor), tree)
@@ -229,7 +222,7 @@ class AnyAccessPathTest {
     @Test
     fun `trailing any takes only the any edge subtree`() {
         val tree = merged(finalTree(A, AnyAccessor, X), finalTree(A, F))
-        assertEquals(finalTree(X).access, tree.deltaNode(rawInitial(A, AnyAccessor)))
+        assertEquals(finalTree(X).access, tree.deltaNode(initial(A, AnyAccessor)))
     }
 
     @Test
