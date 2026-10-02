@@ -85,38 +85,18 @@ class AnySummaryStorageTest {
     /* ---------- nested [any] ---------- */
 
     @Test
-    fun `merging trees with nested any does not crash`() {
-        // a.[any].f.[any].g.$ : what a path with two [any]s becomes as a tree
-        val nested = merged(finalTree(A, AnyAccessor, F, AnyAccessor, G))
-        val other = finalTree(A, AnyAccessor, K)
+    fun `trees with a collapsed second any merge`() {
+        // a.[any].f.[any].g.$ is built as a.[any].g.$
+        val collapsed = finalTree(A, AnyAccessor, F, AnyAccessor, G)
+        assertEquals(finalTree(A, AnyAccessor, G), collapsed)
 
         val storage = MergingTreeSummaryStorage(manager)
-        assertTrue(storage.add(nested.access))
-        assertTrue(storage.add(other.access))
+        assertTrue(storage.add(collapsed.access))
+        assertTrue(storage.add(finalTree(A, AnyAccessor, K).access))
 
         val edges = AccessTree(manager, base, storage.edges()!!, ExclusionSet.Empty)
-        assertTrue(edges.contains(finalInitialOf(initial(A, AnyAccessor, F, AnyAccessor, G))))
+        assertTrue(edges.contains(finalInitialOf(initial(A, AnyAccessor, G))))
         assertTrue(edges.contains(finalInitialOf(initial(A, AnyAccessor, K))))
-
-        // the other direction of the merge builds the matcher from the nested side
-        val reversed = MergingTreeSummaryStorage(manager)
-        assertTrue(reversed.add(other.access))
-        assertTrue(reversed.add(nested.access))
-        assertEquals(storage.edges(), reversed.edges())
-    }
-
-    @Test
-    fun `nested any is still trimmed only where it is covered`() {
-        // a.[any].f.[any].g.$ covers a.x.f.g.$ (x covered), so the merge may drop it, but it must keep a.m...
-        val nested = finalTree(A, AnyAccessor, F, AnyAccessor, G).access
-        val covered = finalTree(A, H, F, G).access
-        val notCovered = finalTree(A, F, K).access
-
-        val merged = nested.mergeAdd(covered).mergeAdd(notCovered)
-        val tree = AccessTree(manager, base, merged, ExclusionSet.Empty)
-
-        assertTrue(tree.contains(finalInitialOf(initial(A, F, K))))
-        assertTrue(tree.contains(finalInitialOf(initial(A, AnyAccessor, F, AnyAccessor, G))))
     }
 
     private fun finalInitialOf(path: AccessPath): AccessPath {
@@ -231,7 +211,7 @@ class AnySummaryStorageTest {
     }
 
     @Test
-    fun `f2f any edges with nested any finals merge`() {
+    fun `f2f any edges with a collapsed second any merge`() {
         val storage = f2fStorage()
         assertEquals(1, storage.add(initial(A) to finalTree(A, AnyAccessor, F, AnyAccessor, G)).size)
         assertEquals(1, storage.add(initial(A) to finalTree(A, AnyAccessor, K)).size)

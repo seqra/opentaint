@@ -322,6 +322,15 @@ class AccessPath(
             return node
         }
 
+        private fun firstAnyNode(): AccessNode? {
+            if (!containsAny) return null
+            var node = this
+            while (node.accessor != ANY_ACCESSOR_IDX) {
+                node = node.next ?: return null
+            }
+            return node
+        }
+
         fun accessorList(): List<Accessor> = toList().map { with(manager) { it.accessor } }
 
         /** All accessors of the path except [any], consistent with [AccessTree.AccessNode.collectAccessorsTo]. */
@@ -360,10 +369,8 @@ class AccessPath(
                     AccessNode(manager, accessor, this)
                 }
 
-                accessor == ANY_ACCESSOR_IDX -> {
-                    // [any].[any] == [any]
-                    if (this.accessor == ANY_ACCESSOR_IDX) this else AccessNode(manager, accessor, this)
-                }
+                // A path holds at most one [any]: [any].p.[any].y == [any].y
+                accessor == ANY_ACCESSOR_IDX -> firstAnyNode() ?: AccessNode(manager, accessor, this)
 
                 accessor == TYPE_INFO_GROUP_ACCESSOR_IDX -> AccessNode(manager, accessor, this)
                 accessor.isTypeInfoAccessor() -> AccessNode(manager, accessor, this)

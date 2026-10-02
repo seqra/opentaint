@@ -154,6 +154,50 @@ class AnyAccessPathTest {
     }
 
     @Test
+    fun `second any collapses everything back to the first`() {
+        assertEquals(listOf(A, AnyAccessor, F), initial(A, AnyAccessor, G, AnyAccessor, F).access!!.accessorList())
+        assertEquals(listOf(A, AnyAccessor, F), initial(A, AnyAccessor, G, H, AnyAccessor, AnyAccessor, F).access!!.accessorList())
+        assertEquals(listOf<Accessor>(AnyAccessor), initial(AnyAccessor, G, AnyAccessor).access!!.accessorList())
+        assertEquals(listOf(A, AnyAccessor, MARK), initial(A, AnyAccessor, G, AnyAccessor, MARK).access!!.accessorList())
+    }
+
+    @Test
+    fun `path concat collapses a second any`() {
+        val delta = initial(AnyAccessor, F).delta(initial()).single()
+        val path = initial(A, AnyAccessor, G).concat(delta) as AccessPath
+        assertEquals(listOf(A, AnyAccessor, F), path.access!!.accessorList())
+    }
+
+    @Test
+    fun `tree prepend collapses a second any`() {
+        assertEquals(finalTree(A, AnyAccessor, F), finalTree(A, AnyAccessor, G, AnyAccessor, F))
+
+        // only the branch with an [any] is collapsed: [any].(g.$ + h.[any].f.$) == [any].(g.$ + f.$)
+        val below = merged(finalTree(G), finalTree(H, AnyAccessor, F))
+        val tree = below.prependAccessor(AnyAccessor).prependAccessor(A) as AccessTree
+        assertFalse(tree.node(A).getAnyChild()!!.containsAny)
+        assertEquals(merged(finalTree(A, AnyAccessor, G), finalTree(A, AnyAccessor, F)), tree)
+    }
+
+    @Test
+    fun `tree concat collapses an any below an any`() {
+        val delta = AccessTree.NodeAccessTreeDelta(manager, finalTree(AnyAccessor, F).access)
+        val tree = abstractTree(A, AnyAccessor, G).concat(FactTypeChecker.Dummy, delta) as AccessTree
+        assertEquals(finalTree(A, AnyAccessor, F), tree)
+
+        // without an [any] above the leaf nothing collapses
+        val plain = abstractTree(A, G).concat(FactTypeChecker.Dummy, delta) as AccessTree
+        assertEquals(finalTree(A, G, AnyAccessor, F), plain)
+    }
+
+    @Test
+    fun `path concat with a tree delta collapses a second any`() {
+        val nodeDelta = finalTree(AnyAccessor, F).delta(initial()).single()
+        val tree = initial(A, AnyAccessor, G).concat(FactTypeChecker.Dummy, nodeDelta) as AccessTree
+        assertEquals(finalTree(A, AnyAccessor, F), tree)
+    }
+
+    @Test
     fun `trailing any is kept`() {
         val anyOnly = manager.mostAbstractInitialAp(base).prependAccessor(AnyAccessor) as AccessPath
         assertEquals(listOf<Accessor>(AnyAccessor), anyOnly.access!!.accessorList())

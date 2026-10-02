@@ -613,14 +613,47 @@ class AccessTree(
             return annotated
         }
 
-        private fun prependAnyAccessor(): AccessNode {
-            val anyNode = getNodeByAccessor(ANY_ACCESSOR_IDX)
-            val nextNode = if (anyNode == null) {
-                this
-            } else {
-                removeSingleAccessor(ANY_ACCESSOR_IDX).mergeAdd(anyNode)
+        private fun prependAnyAccessor(): AccessNode =
+            create(ANY_ACCESSOR_IDX, collapseAny())
+
+        /**
+         * A path holds at most one [any]: `[any].p.[any].y == [any].y`. Removes every [any] of this tree by
+         * replacing each path `p.[any].y` with `y`, so the result can be placed under a new [any] edge.
+         */
+        private fun collapseAny(): AccessNode {
+            var node = this
+            while (node.containsAny) {
+                val split = node.splitAny()
+                var collapsed = split.complete ?: manager.emptyNode
+                split.any?.forEachAnySubtree(IdentityHashMap()) { collapsed = collapsed.mergeAdd(it) }
+                node = collapsed
             }
-            return create(ANY_ACCESSOR_IDX, nextNode)
+            return node
+        }
+
+        // Calls body with the child of the first [any] edge on every path of this tree
+        private fun forEachAnySubtree(visited: IdentityHashMap<AccessNode, Unit>, body: (AccessNode) -> Unit) {
+            if (visited.put(this, Unit) != null) return
+            forEachAccessor { accessor, child ->
+                if (accessor == ANY_ACCESSOR_IDX) {
+                    body(child)
+                } else if (child.containsAny) {
+                    child.forEachAnySubtree(visited, body)
+                }
+            }
+        }
+
+        /** Restores the at-most-one-[any]-per-path invariant: collapses every [any] nested under another one. */
+        private fun normalizeNestedAny(cache: IdentityHashMap<AccessNode, AccessNode>): AccessNode {
+            if (!containsAny) return this
+            cache[this]?.let { return it }
+
+            val result = transformAccessors { accessor, child ->
+                if (accessor == ANY_ACCESSOR_IDX) child.collapseAny() else child.normalizeNestedAny(cache)
+            }
+
+            cache[this] = result
+            return result
         }
 
         private fun limitElementAccess(limit: Int): AccessNode {
@@ -1149,9 +1182,13 @@ class AccessTree(
         ): AccessNode? {
             val filteredOther = FilteredNode.create(manager, other)
 
-            return concatToLeafAbstractNodes(
+            val result = concatToLeafAbstractNodes(
                 typeChecker, filteredOther, IntArrayList(), SUBSEQUENT_ARRAY_ELEMENTS_LIMIT,
             )
+
+            // Only an [any] of other placed below an [any] of this can nest
+            if (result == null || !containsAny || !other.containsAny) return result
+            return result.normalizeNestedAny(IdentityHashMap())
         }
 
         fun internNodes(
