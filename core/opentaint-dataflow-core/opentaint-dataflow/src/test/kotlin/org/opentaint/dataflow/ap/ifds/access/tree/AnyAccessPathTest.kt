@@ -200,70 +200,49 @@ class AnyAccessPathTest {
         assertEquals(finalTree(A, AnyAccessor, F), withNode)
     }
 
-    /* ---------- AccessTree.delta / contains with [any] in the path ---------- */
+    /* ---------- AccessTree.delta / contains with [any] in the path: exact match ---------- */
 
     @Test
-    fun `any matches zero accessors`() {
-        val tree = abstractTree(A, F)
+    fun `any in the path does not match concrete accessors`() {
+        val path = initial(A, AnyAccessor, F)
+        for (tree in listOf(abstractTree(A, F), abstractTree(A, G, H, F))) {
+            assertTrue(tree.delta(path).isEmpty())
+            assertFalse(tree.contains(path))
+        }
+    }
+
+    @Test
+    fun `any in the path matches the tree any edge`() {
+        val tree = abstractTree(A, AnyAccessor, F)
         assertTrue(tree.hasEmptyDeltaFor(initial(A, AnyAccessor, F)))
         assertTrue(tree.contains(initial(A, AnyAccessor, F)))
+        assertFalse(tree.contains(initial(A, AnyAccessor, G)))
+        assertFalse(tree.contains(initial(AnyAccessor, F)))
     }
 
     @Test
-    fun `any matches several covered accessors`() {
-        val tree = abstractTree(A, G, H, F)
-        assertTrue(tree.hasEmptyDeltaFor(initial(A, AnyAccessor, F)))
-        assertTrue(tree.contains(initial(A, AnyAccessor, F)))
-        assertTrue(tree.contains(initial(AnyAccessor, F)))
+    fun `delta through the any edge ignores concrete branches`() {
+        val tree = merged(finalTree(A, AnyAccessor, F, X), finalTree(A, F, Y), finalTree(A, G, F, Y))
+        assertEquals(finalTree(X).access, tree.deltaNode(initial(A, AnyAccessor, F)))
     }
 
     @Test
-    fun `any does not match an uncovered accessor`() {
-        val tree = abstractTree(A, NOT_COVERED, F)
-        assertTrue(tree.delta(initial(A, AnyAccessor, F)).isEmpty())
-        assertFalse(tree.contains(initial(A, AnyAccessor, F)))
+    fun `trailing any takes only the any edge subtree`() {
+        val tree = merged(finalTree(A, AnyAccessor, X), finalTree(A, F))
+        assertEquals(finalTree(X).access, tree.deltaNode(rawInitial(A, AnyAccessor)))
     }
 
     @Test
-    fun `delta merges every match`() {
-        val tree = merged(finalTree(A, F, X), finalTree(A, G, F, Y), finalTree(A, X))
-        val delta = tree.deltaNode(initial(A, AnyAccessor, F))
-        assertNotNull(delta)
-
-        assertEquals(merged(finalTree(X), finalTree(Y)).access, delta)
-        assertFalse(tree.contains(initial(A, AnyAccessor, F)))
+    fun `any path matches final only through the any edge`() {
+        assertTrue(finalTree(A, AnyAccessor).hasEmptyDeltaFor(finalInitial(A, AnyAccessor)))
+        assertTrue(finalTree(A, AnyAccessor).contains(finalInitial(A, AnyAccessor)))
+        assertTrue(finalTree(A, G).delta(finalInitial(A, AnyAccessor)).isEmpty())
+        assertFalse(finalTree(A, G).contains(finalInitial(A, AnyAccessor)))
     }
 
     @Test
-    fun `trailing any collects every suffix`() {
-        val tree = merged(finalTree(A, F, X), finalTree(A, MARK))
-        val delta = tree.deltaNode(rawInitial(A, AnyAccessor))
-        assertNotNull(delta)
-
-        val expected = merged(finalTree(F, X), finalTree(X), finalTree(MARK), finalTree()).access
-        assertEquals(expected, delta)
-    }
-
-    @Test
-    fun `any path matches a tree any edge`() {
-        val tree = abstractTree(A, AnyAccessor, MARK)
-        assertTrue(tree.hasEmptyDeltaFor(initial(A, AnyAccessor, MARK)))
-        assertTrue(tree.contains(initial(A, AnyAccessor, MARK)))
-        assertFalse(tree.contains(initial(A, MARK, AnyAccessor, F)))
-    }
-
-    @Test
-    fun `any path matches final`() {
-        val tree = finalTree(A, G, H)
-        assertTrue(tree.hasEmptyDeltaFor(finalInitial(A, AnyAccessor)))
-        assertTrue(tree.contains(finalInitial(A, AnyAccessor)))
-        assertFalse(abstractTree(A, G).contains(finalInitial(A, AnyAccessor)))
-        assertFalse(finalTree(A, MARK).contains(finalInitial(A, AnyAccessor)))
-    }
-
-    @Test
-    fun `delta with any applies the exclusions to the merged node`() {
-        val tree = merged(finalTree(A, F, X), finalTree(A, G, F, Y))
+    fun `delta with any applies the exclusions`() {
+        val tree = merged(finalTree(A, AnyAccessor, F, X), finalTree(A, AnyAccessor, F, Y))
         val delta = tree.deltaNode(initial(A, AnyAccessor, F, exclusions = ExclusionSet.Empty.add(X)))
         assertEquals(finalTree(Y).access, delta)
     }
@@ -282,24 +261,21 @@ class AnyAccessPathTest {
     /* ---------- filterStartsWith ---------- */
 
     @Test
-    fun `filterStartsWith with any keeps the delta exact`() {
-        val tree = merged(finalTree(A, F, X), finalTree(A, G, F, Y), finalTree(H))
+    fun `filterStartsWith with any follows the any edge exactly`() {
+        val tree = merged(finalTree(A, AnyAccessor, F, X), finalTree(A, G, F, Y), finalTree(H))
         val path = initial(A, AnyAccessor, F)
 
         val filtered = tree.access.filterStartsWith(path.access)
-        assertNotNull(filtered)
-        assertFalse(filtered.contains(with(manager) { H.idx }))
+        assertEquals(finalTree(A, AnyAccessor, F, X).access, filtered)
 
-        val filteredTree = AccessTree(manager, base, filtered, ExclusionSet.Empty)
+        val filteredTree = AccessTree(manager, base, filtered!!, ExclusionSet.Empty)
         assertEquals(tree.delta(path), filteredTree.delta(path))
     }
 
     @Test
-    fun `filterStartsWith with any drops trees without a match`() {
-        val tree = merged(finalTree(A, NOT_COVERED, F), finalTree(H))
-        assertNull(tree.access.filterStartsWith(initial(A, AnyAccessor, F).access))
-        assertNull(tree.access.filterStartsWith(initial(G, AnyAccessor).access))
-        assertNotNull(finalTree(A, G, F).access.filterStartsWith(initial(AnyAccessor, F).access))
+    fun `filterStartsWith with any drops trees without an any edge`() {
+        assertNull(finalTree(A, G, F).access.filterStartsWith(initial(A, AnyAccessor, F).access))
+        assertNull(finalTree(A, F).access.filterStartsWith(initial(AnyAccessor, F).access))
     }
 
     /* ---------- syntactic operations ---------- */

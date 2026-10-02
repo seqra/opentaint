@@ -38,15 +38,14 @@ private abstract class F2FInitialStorage<SN : F2FInitialStorage<SN, S>, S : Modi
     override fun collectNodesContainsAccessor(
         pattern: AccessTreeNode,
         accessor: AccessorIdx,
-        nodes: MutableList<SN>,
-        anyKeys: Boolean,
+        nodes: MutableList<SN>
     ) {
         if (accessor == ANY_ACCESSOR_IDX) {
             nodes += allNodes()
             return
         }
 
-        super.collectNodesContainsAccessor(pattern, accessor, nodes, anyKeys)
+        super.collectNodesContainsAccessor(pattern, accessor, nodes)
     }
 
     fun collectAllSummariesTo(dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>) {
@@ -60,11 +59,8 @@ private abstract class F2FInitialStorage<SN : F2FInitialStorage<SN, S>, S : Modi
 
 private class MethodTaintedSummariesInitialApStorage(
     apManager: TreeApManager,
-    private val anyKeys: Boolean,
 ) : F2FInitialStorage<MethodTaintedSummariesInitialApStorage, MethodTaintedSummariesMergingStorage>(apManager) {
-    override fun createStorage() = MethodTaintedSummariesInitialApStorage(manager, anyKeys)
-
-    override val matchesAnyKeys: Boolean get() = anyKeys
+    override fun createStorage() = MethodTaintedSummariesInitialApStorage(manager)
 
     fun getOrCreate(initialAccess: AccessPath.AccessNode?): MethodTaintedSummariesMergingStorage =
         getOrCreateNode(initialAccess).getOrCreateCurrent(initialAccess)
@@ -184,10 +180,10 @@ private class MethodTaintedSummariesGroupedByFactStorage(
 ) : CommonF2FSummary.Storage<AccessPath.AccessNode?, AccessTreeNode> {
     // complete edges: no [any] in the initial nor in the final
     private val idEdges = MethodTaintedSummariesIdStorage(apManager)
-    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(apManager, anyKeys = false)
+    private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(apManager)
 
     // any-edges: [any] in the initial (whole edge), or the [any] part of a final
-    private val anyEdges = MethodTaintedSummariesInitialApStorage(apManager, anyKeys = true)
+    private val anyEdges = MethodTaintedSummariesInitialApStorage(apManager)
 
     override fun add(
         edges: List<CommonF2FSummary.StorageEdge<AccessPath.AccessNode?, AccessTreeNode>>,

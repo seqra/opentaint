@@ -44,8 +44,8 @@ class AccessPath(
     override fun getAllAccessors(): Set<Accessor> =
         access?.allAccessors().orEmpty()
 
-    // readAccessor, startsWithAccessor, getStartAccessors, clearAccessor and delta(AccessPath) are
-    // syntactic: an [any] in the path is compared as an ordinary accessor symbol.
+    // [any] is matched syntactically everywhere: it is compared as an ordinary accessor symbol,
+    // and against a tree it matches only the tree's own [any] edge.
     override fun startsWithAccessor(accessor: Accessor): Boolean = with(apManager) {
         if (access == null) return false
         return access.accessor.accessor == accessor
@@ -145,11 +145,7 @@ class AccessPath(
         return listOfNotNull(node.filter(other.exclusions)?.let { AccessPathDelta.Delta(it) })
     }
 
-    /**
-     * An [any] step of this path only follows the raw [any] edge of the tree (or splits at an abstract
-     * tree node, as a concrete accessor does). It does not unroll the [any] over the tree's concrete
-     * edges, so a tree that holds the [any] content only as concrete accessors is not matched.
-     */
+    // An [any] step of this path matches only the raw [any] edge of the tree (or splits at an abstract tree node)
     override fun splitDelta(other: FinalFactAp): List<Pair<InitialFactAp, InitialFactAp.Delta>> {
         other as AccessTree
 
@@ -327,13 +323,6 @@ class AccessPath(
                 node = node.addParent(accessor)
             }
             return node
-        }
-
-        fun endsWithFinal(): Boolean {
-            var node = this
-            while (true) {
-                node = node.next ?: return node.accessor == FINAL_ACCESSOR_IDX
-            }
         }
 
         fun accessorList(): List<Accessor> = toList().map { with(manager) { it.accessor } }

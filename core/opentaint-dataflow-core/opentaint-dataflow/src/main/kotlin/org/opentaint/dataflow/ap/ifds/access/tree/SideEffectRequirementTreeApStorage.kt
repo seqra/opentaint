@@ -50,16 +50,10 @@ private class SideEffectRequirementStorage(
 ) : AccessBasedStorage<SideEffectRequirementStorage>(apManager) {
     var requirement: AccessPath? = null
 
-    // set on the root once a requirement with [any] is stored
-    private var hasAnyKeys = false
-    override val matchesAnyKeys: Boolean get() = hasAnyKeys
-
     override fun createStorage() = SideEffectRequirementStorage(apManager)
 
-    fun mergeAdd(requirement: AccessPath): SideEffectRequirementStorage? {
-        if (requirement.access?.containsAny == true) hasAnyKeys = true
-        return getOrCreateNode(requirement.access).mergeAddCurrent(requirement)
-    }
+    fun mergeAdd(requirement: AccessPath): SideEffectRequirementStorage? =
+        getOrCreateNode(requirement.access).mergeAddCurrent(requirement)
 
     fun findRequirements(access: AccessTree.AccessNode): Sequence<AccessPath> =
         filterContains(access).mapNotNull { it.requirement }

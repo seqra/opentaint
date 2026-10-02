@@ -183,7 +183,7 @@ class AnySummaryStorageTest {
     }
 
     @Test
-    fun `f2f initial with any is stored whole and found through the any key`() {
+    fun `f2f initial with any is stored whole and found only by an any pattern`() {
         val storage = f2fStorage()
         val initialAp = initial(A, AnyAccessor, F)
         val final = merged(finalTree(H, G), finalTree(H, AnyAccessor, K))
@@ -193,18 +193,20 @@ class AnySummaryStorageTest {
         assertEquals(initialAp, edge.initialFactAp)
         assertEquals(final.access, edge.factAp.node())
 
-        // a concrete caller fact a.g.f.$ walks a, then reaches the [any] key
-        assertEquals(listOf(edge), storage.find(finalTree(A, G, F)))
-        assertEquals(listOf(edge), storage.find(finalTree(A, F)))
+        // [any] is matched exactly: only a caller fact with the [any] edge reaches the key
+        assertEquals(listOf(edge), storage.find(finalTree(A, AnyAccessor, F)))
+        assertTrue(storage.find(finalTree(A, G, F)).isEmpty())
+        assertTrue(storage.find(finalTree(A, F)).isEmpty())
         assertTrue(storage.find(finalTree(H, F)).isEmpty())
         assertEquals(listOf(edge), storage.find(null))
     }
 
     @Test
-    fun `f2f any key at the root is found by any pattern`() {
+    fun `f2f any key at the root is found only by an any pattern`() {
         val storage = f2fStorage()
         val edge = storage.add(initial(AnyAccessor, F) to finalTree(G)).single()
-        assertEquals(listOf(edge), storage.find(finalTree(H, H, F)))
+        assertEquals(listOf(edge), storage.find(finalTree(AnyAccessor, F)))
+        assertTrue(storage.find(finalTree(H, H, F)).isEmpty())
     }
 
     @Test
@@ -330,7 +332,7 @@ class AnySummaryStorageTest {
     /* ---------- side effects ---------- */
 
     @Test
-    fun `fact side effect with any initial is found through the any key`() {
+    fun `fact side effect with any initial is found only by an any pattern`() {
         val storage = FactSideEffectSummariesTreeApStorage(entryInst, manager)
         val summary = FactSideEffectSummary(initial(A, AnyAccessor, F), Kind)
         val complete = FactSideEffectSummary(initial(H), Kind)
@@ -340,8 +342,12 @@ class AnySummaryStorageTest {
         assertEquals(setOf(summary, complete), added.toSet())
 
         val found = mutableListOf<FactSideEffectSummary>()
-        storage.filterTaintedTo(found, finalTree(A, G, F))
+        storage.filterTaintedTo(found, finalTree(A, AnyAccessor, F))
         assertEquals(listOf(summary), found)
+
+        val notFound = mutableListOf<FactSideEffectSummary>()
+        storage.filterTaintedTo(notFound, finalTree(A, G, F))
+        assertTrue(notFound.isEmpty())
 
         val foundComplete = mutableListOf<FactSideEffectSummary>()
         storage.filterTaintedTo(foundComplete, finalTree(H, G))
@@ -349,17 +355,17 @@ class AnySummaryStorageTest {
     }
 
     @Test
-    fun `side effect requirement with any is found through the any key`() {
+    fun `side effect requirement with any is found only by an any pattern`() {
         val storage = SideEffectRequirementTreeApStorage(manager)
         val requirement = initial(A, AnyAccessor, F)
         assertEquals(listOf<InitialFactAp>(requirement), storage.add(listOf(requirement)))
 
         val found = mutableListOf<InitialFactAp>()
-        storage.filterTo(found, finalTree(A, G, F))
+        storage.filterTo(found, finalTree(A, AnyAccessor, F))
         assertEquals(listOf<InitialFactAp>(requirement), found)
 
         val notFound = mutableListOf<InitialFactAp>()
-        storage.filterTo(notFound, finalTree(H, F))
+        storage.filterTo(notFound, finalTree(A, G, F))
         assertTrue(notFound.isEmpty())
     }
 

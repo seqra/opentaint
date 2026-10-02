@@ -21,16 +21,10 @@ private class TaintedSESummariesInitialApStorage(val apManager: TreeApManager) :
     AccessBasedStorage<TaintedSESummariesInitialApStorage>(apManager) {
     private var current: TaintedSESummariesMergingStorage? = null
 
-    // set on the root once a key with [any] is stored
-    private var hasAnyKeys = false
-    override val matchesAnyKeys: Boolean get() = hasAnyKeys
-
     override fun createStorage() = TaintedSESummariesInitialApStorage(apManager)
 
-    fun getOrCreate(initialAccess: AccessPath.AccessNode?): TaintedSESummariesMergingStorage {
-        if (initialAccess != null && initialAccess.containsAny) hasAnyKeys = true
-        return getOrCreateNode(initialAccess).getOrCreateCurrent(initialAccess)
-    }
+    fun getOrCreate(initialAccess: AccessPath.AccessNode?): TaintedSESummariesMergingStorage =
+        getOrCreateNode(initialAccess).getOrCreateCurrent(initialAccess)
 
     fun filterSummariesTo(dst: MutableList<FactSEBuilder<AccessPath.AccessNode?>>, containsPattern: AccessTreeNode) {
         filterContains(containsPattern).forEach { node ->

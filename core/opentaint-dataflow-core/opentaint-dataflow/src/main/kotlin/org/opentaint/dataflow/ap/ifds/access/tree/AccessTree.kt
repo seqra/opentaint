@@ -180,34 +180,18 @@ class AccessTree(
 
         if (base != other.base) return emptyList()
 
+        var node = access
         val access = other.access
-        if (access != null && access.containsAny) return deltaWithAny(access, other.exclusions)
-
-        var node = this.access
         access?.toList()?.forEachInt { accessor ->
             if (accessor == FINAL_ACCESSOR_IDX) {
                 if (!node.isFinal) return emptyList()
                 return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
             }
 
-            node = node.getChild(accessor) ?: return emptyList()
+            node = node.getPathChild(accessor) ?: return emptyList()
         }
 
-        return deltaAtNode(node, other.exclusions)
-    }
-
-    private fun deltaWithAny(path: AccessPath.AccessNode, exclusions: ExclusionSet): List<FinalFactAp.Delta> {
-        val matched = access.matchPathWithAny(path)
-        if (matched.isEmpty()) return emptyList()
-
-        if (path.endsWithFinal()) return listOf(EmptyAccessTreeDelta(deepAccessorExclusion = null))
-
-        val node = matched.reduce { acc, n -> acc.mergeAdd(n) }
-        return deltaAtNode(node, exclusions)
-    }
-
-    private fun deltaAtNode(node: AccessNode, exclusions: ExclusionSet): List<FinalFactAp.Delta> {
-        val filteredNode = when (val exclusion = exclusions) {
+        val filteredNode = when (val exclusion = other.exclusions) {
             ExclusionSet.Empty -> node
             is ExclusionSet.Concrete -> node.filter(exclusion)
             ExclusionSet.Universe -> error("Unexpected universe exclusion in initial fact")
@@ -526,59 +510,20 @@ class AccessTree(
                 return isAbstract
             }
 
-            if (otherAccess.containsAny) {
-                val matched = matchPathWithAny(otherAccess)
-                return if (otherAccess.endsWithFinal()) matched.isNotEmpty() else matched.any { it.isAbstract }
-            }
-
             var node = this
             otherAccess.toList().forEachInt { accessor ->
                 if (accessor == FINAL_ACCESSOR_IDX) return node.isFinal
-                node = node.getChild(accessor) ?: return false
+                node = node.getPathChild(accessor) ?: return false
             }
             return node.isAbstract
         }
 
         /**
-         * Semantic match of a path with [any]: every [any] of the path matches zero or more accessors covered
-         * by any, so the current position becomes a set of nodes. Returns the nodes reached after the whole
-         * path; a FINAL step maps every final node to [TreeApManager.finalNode].
+         * Child for an access path step. An [any] of the path is matched syntactically: only by the raw
+         * [any] edge of the tree, never by its concrete accessors.
          */
-        internal fun matchPathWithAny(path: AccessPath.AccessNode): List<AccessNode> {
-            var current: List<AccessNode> = listOf(this)
-            var pathNode: AccessPath.AccessNode = path
-            while (true) {
-                val accessor = pathNode.accessor
-                current = when (accessor) {
-                    ANY_ACCESSOR_IDX -> anyClosure(current)
-                    FINAL_ACCESSOR_IDX -> if (current.any { it.isFinal }) listOf(manager.finalNode) else emptyList()
-                    else -> current.mapNotNull { it.getChild(accessor) }
-                }
-
-                if (current.isEmpty()) return current
-                pathNode = pathNode.next ?: return current
-            }
-        }
-
-        // Closure over raw edges that [any] can match: covered accessors and [any] edges themselves.
-        // getChild must not be used here: it allocates fresh nodes and the closure would not terminate.
-        private fun anyClosure(nodes: List<AccessNode>): List<AccessNode> {
-            val visited = IdentityHashMap<AccessNode, Unit>()
-            val result = mutableListOf<AccessNode>()
-            val stack = nodes.toMutableList()
-            while (stack.isNotEmpty()) {
-                val node = stack.removeLast()
-                if (visited.put(node, Unit) != null) continue
-                result.add(node)
-
-                node.forEachAccessor { accessor, child ->
-                    if (accessor == ANY_ACCESSOR_IDX || manager.isCoveredByAny(accessor)) {
-                        stack.add(child)
-                    }
-                }
-            }
-            return result
-        }
+        fun getPathChild(accessor: AccessorIdx): AccessNode? =
+            if (accessor == ANY_ACCESSOR_IDX) getAnyChild() else getChild(accessor)
 
         sealed interface MatchResult {
             data object NotMatched : MatchResult
@@ -1416,8 +1361,6 @@ class AccessTree(
         fun filterStartsWith(accessPath: AccessPath.AccessNode?): AccessNode? {
             if (accessPath == null) return this
 
-            if (accessPath.containsAny) return filterStartsWithAny(accessPath)
-
             if (maxDepth < accessPath.size) {
                 return null
             }
@@ -1438,7 +1381,7 @@ class AccessTree(
                     }
 
                     else -> {
-                        filteredTreeNode.getChild(accessor)
+                        filteredTreeNode.getPathChild(accessor)
                             ?.also { parentAccessors.add(accessor) }
                             ?: return null
                     }
@@ -1452,26 +1395,6 @@ class AccessTree(
             }
 
             return parentAccessors.foldRight(filteredTreeNode, ::create)
-        }
-
-        /**
-         * The result keeps only the concrete path prefix before the first [any] and the whole subtree below it,
-         * so its delta for [accessPath] is exactly the delta of this tree. Rebuilding the [any] part of the path
-         * as a tree edge would over-approximate that delta and could nest [any] edges.
-         */
-        private fun filterStartsWithAny(accessPath: AccessPath.AccessNode): AccessNode? {
-            if (matchPathWithAny(accessPath).isEmpty()) return null
-
-            val parentAccessors = IntArrayList()
-            var node = this
-            var pathNode: AccessPath.AccessNode = accessPath
-            while (pathNode.accessor != ANY_ACCESSOR_IDX) {
-                node = node.getChild(pathNode.accessor) ?: return null
-                parentAccessors.add(pathNode.accessor)
-                pathNode = pathNode.next ?: break
-            }
-
-            return parentAccessors.foldRight(node, ::create)
         }
 
         class AnySplit(val complete: AccessNode?, val any: AccessNode?)
