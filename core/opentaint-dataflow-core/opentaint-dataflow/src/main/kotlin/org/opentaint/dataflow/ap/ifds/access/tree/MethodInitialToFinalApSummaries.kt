@@ -178,8 +178,12 @@ private class SummariesIdStorageNode(
 private class MethodTaintedSummariesGroupedByFactStorage(
     apManager: TreeApManager,
 ) : CommonF2FSummary.Storage<AccessPath.AccessNode?, AccessTreeNode> {
+    // complete edges: no [any] in the initial nor in the final
     private val idEdges = MethodTaintedSummariesIdStorage(apManager)
     private val nonUniverseAccessPath = MethodTaintedSummariesInitialApStorage(apManager)
+
+    // any-edges: [any] in the initial (whole edge), or the [any] part of a final
+    private val anyEdges = MethodTaintedSummariesInitialApStorage(apManager)
 
     override fun add(
         edges: List<CommonF2FSummary.StorageEdge<AccessPath.AccessNode?, AccessTreeNode>>,
@@ -195,10 +199,43 @@ private class MethodTaintedSummariesGroupedByFactStorage(
         val modifiedStorages = mutableListOf<ModifiableStorage>()
 
         for (edge in edges) {
-            addNonUniverseEdge(edge.initial, edge.final, edge.exclusion, modifiedStorages)
+            addEdge(edge.initial, edge.final, edge.exclusion, modifiedStorages)
         }
 
         modifiedStorages.flatMapTo(added) { it.getAndResetDelta() }
+    }
+
+    private fun addEdge(
+        initialAccess: AccessPath.AccessNode?,
+        exitAccess: AccessTreeNode,
+        exclusion: ExclusionSet,
+        modifiedStorages: MutableList<ModifiableStorage>
+    ) {
+        if (initialAccess != null && initialAccess.containsAny) {
+            addAnyEdge(initialAccess, exitAccess, exclusion, modifiedStorages)
+            return
+        }
+
+        if (!exitAccess.containsAny) {
+            addNonUniverseEdge(initialAccess, exitAccess, exclusion, modifiedStorages)
+            return
+        }
+
+        val split = exitAccess.splitAny()
+        split.complete?.let { addNonUniverseEdge(initialAccess, it, exclusion, modifiedStorages) }
+        split.any?.let { addAnyEdge(initialAccess, it, exclusion, modifiedStorages) }
+    }
+
+    private fun addAnyEdge(
+        initialAccess: AccessPath.AccessNode?,
+        exitAccess: AccessTreeNode,
+        exclusion: ExclusionSet,
+        modifiedStorages: MutableList<ModifiableStorage>
+    ) {
+        val storage = anyEdges.getOrCreate(initialAccess)
+        if (storage.add(exitAccess, exclusion)) {
+            modifiedStorages.add(storage)
+        }
     }
 
     private fun addNonUniverseEdge(
@@ -235,21 +272,32 @@ private class MethodTaintedSummariesGroupedByFactStorage(
         dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>,
         initialFactPatter: AccessTreeNode?
     ) {
+        collectCompleteSummariesTo(dst, initialFactPatter)
+        collectAnySummariesTo(dst, initialFactPatter)
+    }
+
+    fun collectCompleteSummariesTo(
+        dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>,
+        initialFactPatter: AccessTreeNode?
+    ) {
         if (initialFactPatter != null) {
-            filterSummariesTo(dst, initialFactPatter)
+            idEdges.filterSummariesTo(dst, initialFactPatter)
+            nonUniverseAccessPath.filterSummariesTo(dst, initialFactPatter)
         } else {
-            collectAllSummariesTo(dst)
+            idEdges.collectAllSummariesTo(dst)
+            nonUniverseAccessPath.collectAllSummariesTo(dst)
         }
     }
 
-    private fun filterSummariesTo(dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>, containsPattern: AccessTreeNode) {
-        idEdges.filterSummariesTo(dst, containsPattern)
-        nonUniverseAccessPath.filterSummariesTo(dst, containsPattern)
-    }
-
-    private fun collectAllSummariesTo(dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>) {
-        idEdges.collectAllSummariesTo(dst)
-        nonUniverseAccessPath.collectAllSummariesTo(dst)
+    fun collectAnySummariesTo(
+        dst: MutableList<F2FBBuilder<AccessPath.AccessNode?, AccessTreeNode>>,
+        initialFactPatter: AccessTreeNode?
+    ) {
+        if (initialFactPatter != null) {
+            anyEdges.filterSummariesTo(dst, initialFactPatter)
+        } else {
+            anyEdges.collectAllSummariesTo(dst)
+        }
     }
 }
 

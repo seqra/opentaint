@@ -44,33 +44,68 @@ class MethodNDInitialToFinalApSummaries(
         private inner class FactStorage(
             override val storageIdx: Int,
         ) : Storage<AccessPath.AccessNode?, AccessNode> {
-            private var edges: AccessNode? = null
-            private var edgesDelta: AccessNode? = null
+            // an index whose initial set has an AP with [any] keeps everything in the any part
+            private val anyInitial: Boolean = initialApStorage[storageIdx].stream().anyMatch { apIdx ->
+                (getInitialApByIdx(apIdx) as AccessPath).access?.containsAny == true
+            }
+
+            private val complete = FinalTrees()
+            private val any = FinalTrees()
 
             override fun add(element: AccessNode): Storage<AccessPath.AccessNode?, AccessNode>? {
-                val currentEdges = edges
-                if (currentEdges == null) {
-                    edges = element
-                    edgesDelta = element
-                    return this
-                }
+                if (anyInitial) return if (any.add(element)) this else null
+                if (!element.containsAny) return if (complete.add(element)) this else null
 
-                val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(element)
-                if (modificationDelta == null) return null
-
-                edges = modifiedEdges
-                edgesDelta = edgesDelta?.mergeAdd(modificationDelta) ?: modificationDelta
-                return this
+                val split = element.splitAny()
+                val completeModified = split.complete?.let { complete.add(it) } ?: false
+                val anyModified = split.any?.let { any.add(it) } ?: false
+                return if (completeModified || anyModified) this else null
             }
 
             override fun getAndResetDelta(delta: MutableList<AccessNode>) {
-                delta += edgesDelta ?: return
-                edgesDelta = null
+                complete.getAndResetDelta(delta)
+                any.getAndResetDelta(delta)
             }
 
             override fun collectTo(dst: MutableList<AccessNode>) {
-                edges?.let { dst += it }
+                collectCompleteTo(dst)
+                collectAnyTo(dst)
             }
+
+            fun collectCompleteTo(dst: MutableList<AccessNode>) {
+                complete.edges?.let { dst += it }
+            }
+
+            fun collectAnyTo(dst: MutableList<AccessNode>) {
+                any.edges?.let { dst += it }
+            }
+        }
+    }
+
+    private class FinalTrees {
+        var edges: AccessNode? = null
+            private set
+        private var edgesDelta: AccessNode? = null
+
+        fun add(element: AccessNode): Boolean {
+            val currentEdges = edges
+            if (currentEdges == null) {
+                edges = element
+                edgesDelta = element
+                return true
+            }
+
+            val (modifiedEdges, modificationDelta) = currentEdges.mergeAddDelta(element)
+            if (modificationDelta == null) return false
+
+            edges = modifiedEdges
+            edgesDelta = edgesDelta?.mergeAdd(modificationDelta) ?: modificationDelta
+            return true
+        }
+
+        fun getAndResetDelta(delta: MutableList<AccessNode>) {
+            delta += edgesDelta ?: return
+            edgesDelta = null
         }
     }
 }
