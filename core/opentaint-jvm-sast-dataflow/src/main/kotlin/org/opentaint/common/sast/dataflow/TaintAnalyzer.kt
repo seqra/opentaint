@@ -87,7 +87,10 @@ abstract class TaintAnalyzer<Method: CommonMethod, Statement: CommonInst>(
 
     private val apManager by lazy {
         when (options.ifdsApMode) {
-            ApMode.Tree -> TreeApManager(unrollStrategy, refManager, cancellation)
+            ApMode.Tree -> TreeApManager(
+                unrollStrategy, refManager, cancellation,
+                fieldLimit = System.getProperty("opentaint.treeFieldLimit")?.toIntOrNull() ?: Int.MAX_VALUE,
+            )
             ApMode.Cactus -> CactusApManager(unrollStrategy, cancellation)
             ApMode.Automata -> AutomataApManager(unrollStrategy, cancellation)
         }

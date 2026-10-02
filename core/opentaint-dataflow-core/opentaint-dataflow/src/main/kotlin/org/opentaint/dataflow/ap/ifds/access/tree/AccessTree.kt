@@ -41,12 +41,22 @@ import java.util.IdentityHashMap
 import java.util.Optional
 import kotlin.jvm.optionals.getOrNull
 
-class AccessTree(
+class AccessTree private constructor(
     val apManager: TreeApManager,
     override val base: AccessPathBase,
     val access: AccessNode,
-    override val exclusions: ExclusionSet
+    override val exclusions: ExclusionSet,
+    checkFieldLimit: Boolean,
 ) : FinalFactAp {
+    constructor(apManager: TreeApManager, base: AccessPathBase, access: AccessNode, exclusions: ExclusionSet) :
+        this(apManager, base, access, exclusions, checkFieldLimit = true)
+
+    init {
+        if (TREE_FIELD_LIMIT_CHECK && checkFieldLimit && apManager.isFieldLimited) {
+            TreeFieldLimitCheck.checkFinal(this)
+        }
+    }
+
     override fun rebase(newBase: AccessPathBase): FinalFactAp =
         AccessTree(apManager, newBase, access, exclusions)
 
@@ -258,6 +268,15 @@ class AccessTree(
         return result
     }
 
+    companion object {
+        /**
+         * A summary-matching window ([AccessNode.filterStartsWith]): the matched path is rebuilt on top of an
+         * unrolled [any], so it may exceed the field limit. It is only read, never propagated as a fact.
+         */
+        fun matchWindow(apManager: TreeApManager, base: AccessPathBase, access: AccessNode, exclusions: ExclusionSet) =
+            AccessTree(apManager, base, access, exclusions, checkFieldLimit = false)
+    }
+
     class AccessNode private constructor(
         val manager: TreeApManager,
         @JvmField val interned: Boolean,
@@ -274,6 +293,15 @@ class AccessTree(
 
         /** This node or a node below it has an [any] edge. Derived from the structure; not part of hash/equals. */
         @JvmField val containsAny: Boolean
+
+        // Saturating Short: keeps the node at its old footprint
+        @JvmField val boundedDepthRaw: Short
+
+        /**
+         * Max number of [TreeApManager.isCounted] accessors on a path from this node.
+         * Always 0 for an unlimited manager. Derived from the structure; not part of hash/equals.
+         */
+        val boundedDepth: Int get() = boundedDepthRaw.toInt()
 
         init {
             check(deepAccessorExclusion == null || isAbstract) {
@@ -304,14 +332,23 @@ class AccessTree(
                 containsAny = hasAnyEdge
             }
 
+            var boundedDepth = 0
             if (accessorNodes != null) {
+                val limited = manager.isFieldLimited
                 var accessorsHash = 0L
                 var childDepth = 0
-                for (node in accessorNodes) {
+                for (i in accessorNodes.indices) {
+                    val node = accessorNodes[i]
                     accessorsHash += node.hash
                     if (node.maxDepth > childDepth) childDepth = node.maxDepth
                     if (node.containsStatic) containsStatic = true
                     if (node.containsAny) containsAny = true
+
+                    if (limited) {
+                        var bd = node.boundedDepthRaw.toInt()
+                        if (manager.isCounted(accessors!![i])) bd++
+                        if (bd > boundedDepth) boundedDepth = bd
+                    }
                 }
                 hash += accessorsHash shl 5
 
@@ -326,6 +363,7 @@ class AccessTree(
             this.maxDepth = depth
             this.containsStatic = containsStatic
             this.containsAny = containsAny
+            this.boundedDepthRaw = minOf(boundedDepth, Short.MAX_VALUE.toInt()).toShort()
         }
 
         init {
@@ -458,8 +496,8 @@ class AccessTree(
                 accessor == FINAL_ACCESSOR_IDX -> null
                 accessor == ELEMENT_ACCESSOR_IDX -> manager.create(
                     elementAccess = limitElementAccess(limit = SUBSEQUENT_ARRAY_ELEMENTS_LIMIT)
-                )
-                accessor.isFieldAccessor() -> addParentFieldAccess(accessor)
+                ).limitFields(TreeFieldLimitCheck.PREPEND)
+                accessor.isFieldAccessor() -> addParentFieldAccess(accessor).limitFields(TreeFieldLimitCheck.PREPEND)
                 accessor.isStaticAccessor() -> create(accessor, this)
                 accessor == VALUE_ACCESSOR_IDX -> {
                     if (accessors?.any { !it.isTaintMarkAccessor() } == true) {
@@ -654,6 +692,176 @@ class AccessTree(
 
             cache[this] = result
             return result
+        }
+
+        /**
+         * Enforces [TreeApManager.fieldLimit]: every path with more counted accessors than the limit is
+         * rewritten to `prefix.[any].suffix`. The prefix runs up to the first counted accessor over the limit
+         * (or up to an [any] that comes before it), the suffix is the part after the last counted or [any]
+         * accessor. Paths within the limit, and subtrees that hold only such paths, are kept as is.
+         */
+        fun limitFields(): AccessNode = limitFields(TreeFieldLimitCheck.OTHER)
+
+        internal fun limitFields(site: Int): AccessNode {
+            if (boundedDepth <= manager.fieldLimit) return this
+
+            val result = FieldLimiter(manager).limit(this, manager.fieldLimit)
+            if (TREE_FIELD_LIMIT_CHECK) TreeFieldLimitCheck.truncated(site)
+            return result
+        }
+
+        private class FieldLimiter(private val manager: TreeApManager) {
+            private val limited = Int2ObjectOpenHashMap<IdentityHashMap<AccessNode, AccessNode>>()
+            private val underAny = Int2ObjectOpenHashMap<IdentityHashMap<AccessNode, AccessNode>>()
+            private val cleaned = IdentityHashMap<AccessNode, AccessNode?>()
+
+            private fun isCountedOrAny(accessor: AccessorIdx): Boolean =
+                accessor == ANY_ACCESSOR_IDX || manager.isCounted(accessor)
+
+            /** No [any] above [node]; [budget] counted accessors are still allowed below it. */
+            fun limit(node: AccessNode, budget: Int): AccessNode {
+                if (node.boundedDepth <= budget) return node
+
+                val cache = limited.getOrCreate(budget, ::IdentityHashMap)
+                cache[node]?.let { return it }
+
+                manager.cancellation.checkpoint()
+
+                // Budget exhausted: every counted edge is collapsed into an [any] edge of this node
+                val collapsed = if (budget == 0) {
+                    val strip = Strip()
+                    node.forEachAccessor { accessor, child ->
+                        if (accessor != ANY_ACCESSOR_IDX && manager.isCounted(accessor)) strip.add(child)
+                    }
+                    strip.merged()
+                } else {
+                    null
+                }
+
+                var result = node.transformAccessors { accessor, child ->
+                    when {
+                        accessor == ANY_ACCESSOR_IDX -> {
+                            val anyChild = limitUnderAny(child, budget)
+                            if (collapsed == null) anyChild else anyChild.mergeAdd(collapsed)
+                        }
+
+                        manager.isCounted(accessor) -> if (budget > 0) limit(child, budget - 1) else null
+                        else -> limit(child, budget)
+                    }
+                }
+
+                if (collapsed != null && node.getAnyChild() == null) {
+                    result = result.bulkMergeAddAccessors(listOf(IntObjectImmutablePair(ANY_ACCESSOR_IDX, collapsed)))
+                }
+
+                cache[node] = result
+                return result
+            }
+
+            /**
+             * [node] is the child of an [any] edge with [budget] counted accessors left. A path `p.x.rest` that
+             * overflows at `x` becomes `strip(rest)` merged at [node]: `a.[any].p.x.rest -> a.[any].strip(rest)`.
+             */
+            private fun limitUnderAny(node: AccessNode, budget: Int): AccessNode {
+                if (node.boundedDepth <= budget) return node
+
+                val cache = underAny.getOrCreate(budget, ::IdentityHashMap)
+                cache[node]?.let { return it }
+
+                val overflow = Strip()
+                val kept = keepUnderAny(node, budget, overflow, Int2ObjectOpenHashMap())
+                val stripped = overflow.merged()
+
+                val result = when {
+                    kept == null -> stripped ?: error("Empty node after field limit")
+                    stripped == null -> kept
+                    else -> kept.mergeAdd(stripped)
+                }
+
+                cache[node] = result
+                return result
+            }
+
+            private fun keepUnderAny(
+                node: AccessNode,
+                budget: Int,
+                overflow: Strip,
+                cache: Int2ObjectOpenHashMap<IdentityHashMap<AccessNode, AccessNode?>>,
+            ): AccessNode? {
+                if (node.boundedDepth <= budget) return node
+
+                val budgetCache = cache.getOrCreate(budget, ::IdentityHashMap)
+                if (budgetCache.containsKey(node)) return budgetCache[node]
+
+                manager.cancellation.checkpoint()
+
+                val result = node.transformAccessorsNonEmpty { accessor, child ->
+                    when {
+                        // A nested [any] breaks the invariant: absorb it into the [any] above
+                        accessor == ANY_ACCESSOR_IDX -> {
+                            overflow.add(child)
+                            null
+                        }
+
+                        manager.isCounted(accessor) -> if (budget > 0) {
+                            keepUnderAny(child, budget - 1, overflow, cache)
+                        } else {
+                            overflow.add(child)
+                            null
+                        }
+
+                        else -> keepUnderAny(child, budget, overflow, cache)
+                    }
+                }
+
+                budgetCache[node] = result
+                return result
+            }
+
+            /** The paths of [node] that hold no counted or [any] accessor. */
+            private fun clean(node: AccessNode): AccessNode? {
+                if (node.boundedDepth == 0 && !node.containsAny) return node
+                if (cleaned.containsKey(node)) return cleaned[node]
+
+                val result = node.transformAccessorsNonEmpty { accessor, child ->
+                    if (isCountedOrAny(accessor)) null else clean(child)
+                }
+
+                cleaned[node] = result
+                return result
+            }
+
+            /**
+             * Suffixes of collapsed subtrees: the clean part of each collapsed child and of every node entered by
+             * a counted or [any] edge below it, i.e. what follows the last counted or [any] accessor of a path.
+             */
+            private inner class Strip {
+                private val targets = arrayListOf<AccessNode>()
+                private val isTarget = IdentityHashMap<AccessNode, Unit>()
+                private val visited = IdentityHashMap<AccessNode, Unit>()
+
+                fun add(node: AccessNode) = visit(node, target = true)
+
+                private fun visit(node: AccessNode, target: Boolean) {
+                    if (target && isTarget.put(node, Unit) == null) targets.add(node)
+
+                    if (node.boundedDepth == 0 && !node.containsAny) return
+                    if (visited.put(node, Unit) != null) return
+
+                    node.forEachAccessor { accessor, child ->
+                        visit(child, isCountedOrAny(accessor))
+                    }
+                }
+
+                fun merged(): AccessNode? {
+                    var result: AccessNode? = null
+                    for (target in targets) {
+                        val suffix = clean(target) ?: continue
+                        result = result?.mergeAdd(suffix) ?: suffix
+                    }
+                    return result
+                }
+            }
         }
 
         private fun limitElementAccess(limit: Int): AccessNode {
@@ -1187,8 +1395,9 @@ class AccessTree(
             )
 
             // Only an [any] of other placed below an [any] of this can nest
-            if (result == null || !containsAny || !other.containsAny) return result
-            return result.normalizeNestedAny(IdentityHashMap())
+            if (result == null) return null
+            val normalized = if (!containsAny || !other.containsAny) result else result.normalizeNestedAny(IdentityHashMap())
+            return normalized.limitFields(TreeFieldLimitCheck.CONCAT)
         }
 
         fun internNodes(
@@ -1968,7 +2177,7 @@ class AccessTree(
                         FINAL_ACCESSOR_IDX -> finalNode
                         else -> create(accessor, node)
                     }
-                }
+                }.limitFields(TreeFieldLimitCheck.OTHER)
 
             @JvmStatic
             fun TreeApManager.createAbstractNodeFromAccessors(accessors: IntList): AccessNode {
@@ -1980,7 +2189,7 @@ class AccessTree(
                     }
                 }
 
-                return result
+                return result.limitFields(TreeFieldLimitCheck.OTHER)
             }
 
             private fun <K, V: Any> Object2ObjectOpenHashMap<K, V>.getComputedResult(key: K): V =

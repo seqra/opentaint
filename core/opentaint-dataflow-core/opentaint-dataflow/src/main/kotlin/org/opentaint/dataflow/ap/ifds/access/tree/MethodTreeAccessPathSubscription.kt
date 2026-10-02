@@ -1,6 +1,9 @@
 package org.opentaint.dataflow.ap.ifds.access.tree
 
 import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap
+import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ExclusionSet
+import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
 import org.opentaint.dataflow.ap.ifds.access.common.CommonAPSub
 import org.opentaint.dataflow.ap.ifds.access.common.CommonFactEdgeSubBuilder
@@ -313,14 +316,20 @@ private class SummaryEdgeFactTreeSubscriptionStorage(
     }
 }
 
+// Caller facts of a subscription are filterStartsWith windows: matched against a summary, never propagated
+private interface TreeMatchWindowAccess : TreeFinalApAccess {
+    override fun createFinal(base: AccessPathBase, ap: AccessTree.AccessNode, ex: ExclusionSet): FinalFactAp =
+        AccessTree.matchWindow(apManager, base, ap, ex)
+}
+
 private class ZeroEdgeSubBuilder(
     override val apManager: TreeApManager,
-) : CommonZeroEdgeSubBuilder<AccessTree.AccessNode>(), TreeFinalApAccess
+) : CommonZeroEdgeSubBuilder<AccessTree.AccessNode>(), TreeMatchWindowAccess
 
 private class FactEdgeSubBuilder(
     override val apManager: TreeApManager,
-) : CommonFactEdgeSubBuilder<AccessTree.AccessNode>(), TreeFinalApAccess
+) : CommonFactEdgeSubBuilder<AccessTree.AccessNode>(), TreeMatchWindowAccess
 
 private class FactNDEdgeSubBuilder(
     override val apManager: TreeApManager,
-) : CommonFactNDEdgeSubBuilder<AccessTree.AccessNode>(), TreeFinalApAccess
+) : CommonFactNDEdgeSubBuilder<AccessTree.AccessNode>(), TreeMatchWindowAccess

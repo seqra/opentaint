@@ -30,6 +30,12 @@ class AccessPath(
     val access: AccessNode?,
     override val exclusions: ExclusionSet
 ): InitialFactAp {
+    init {
+        if (TREE_FIELD_LIMIT_CHECK && apManager.isFieldLimited) {
+            TreeFieldLimitCheck.checkInitial(apManager, this)
+        }
+    }
+
     override fun rebase(newBase: AccessPathBase): InitialFactAp =
         AccessPath(apManager, newBase, access, exclusions)
 

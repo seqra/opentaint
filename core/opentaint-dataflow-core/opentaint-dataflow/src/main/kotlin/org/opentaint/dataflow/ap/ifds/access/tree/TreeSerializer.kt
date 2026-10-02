@@ -57,7 +57,7 @@ internal class TreeSerializer(
         val access = with (accessNodeSerializer) {
             readAccessNode()
         }
-        return AccessTree(apManager, base, access, exclusions)
+        return AccessTree(apManager, base, access.limitFields(), exclusions)
     }
 
     override fun DataInputStream.readInitialAp(): InitialFactAp {

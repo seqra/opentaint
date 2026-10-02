@@ -25,6 +25,8 @@ import org.opentaint.dataflow.ap.ifds.access.SideEffectRequirementApStorage
 import org.opentaint.dataflow.ap.ifds.access.tree.AccessTree.AccessNode
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorIdx
 import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.ELEMENT_ACCESSOR_IDX
+import org.opentaint.dataflow.ap.ifds.access.util.AccessorInterner.Companion.isFieldAccessor
 import org.opentaint.dataflow.ap.ifds.serialization.ApSerializer
 import org.opentaint.dataflow.ap.ifds.serialization.SummarySerializationContext
 import org.opentaint.dataflow.util.Cancellation
@@ -35,10 +37,30 @@ class TreeApManager(
     override val anyAccessorUnrollStrategy: AnyAccessorUnrollStrategy,
     refManager: RefManager,
     override val cancellation: Cancellation,
+    fieldLimit: Int = Int.MAX_VALUE,
 ) : ApManager {
+    /**
+     * Max number of [isCounted] accessors on a root-to-leaf path of a final fact tree.
+     * The per-node count saturates at [Short.MAX_VALUE], so a limit at or above it means no limit.
+     */
+    val fieldLimit: Int = if (fieldLimit >= Short.MAX_VALUE) Int.MAX_VALUE else fieldLimit
+
+    init {
+        require(fieldLimit >= 0) { "Negative field limit: $fieldLimit" }
+    }
+
     val refManager = refManager.softRefManager("Tree")
 
     val interner = AccessorInterner()
+
+    val isFieldLimited: Boolean get() = fieldLimit != Int.MAX_VALUE
+
+    // 0: unknown, 1: counted, 2: not counted; indexed by the field index (idx shr 2)
+    @Volatile
+    private var countedFields = ByteArray(64)
+
+    @Volatile
+    private var elementCounted: Byte = 0
 
     val Accessor.idx: AccessorIdx
         get() = interner.index(this)
@@ -49,6 +71,51 @@ class TreeApManager(
 
     fun isCoveredByAny(accessor: AccessorIdx) =
         anyAccessorUnrollStrategy.unrollAccessor(accessor.accessor)
+
+    /**
+     * A field or element accessor covered by [any]: the accessors the [fieldLimit] counts.
+     * Must not be called on an unlimited manager (its strategy may reject any queries).
+     */
+    fun isCounted(accessor: AccessorIdx): Boolean {
+        if (accessor == ELEMENT_ACCESSOR_IDX) {
+            val counted = elementCounted
+            if (counted != UNKNOWN) return counted == COUNTED
+            return computeElementCounted()
+        }
+
+        if (!accessor.isFieldAccessor()) return false
+
+        val fieldIdx = accessor ushr 2
+        val fields = countedFields
+        if (fieldIdx < fields.size) {
+            val counted = fields[fieldIdx]
+            if (counted != UNKNOWN) return counted == COUNTED
+        }
+        return computeFieldCounted(accessor, fieldIdx)
+    }
+
+    @Synchronized
+    private fun computeElementCounted(): Boolean {
+        if (elementCounted == UNKNOWN) {
+            elementCounted = if (isCoveredByAny(ELEMENT_ACCESSOR_IDX)) COUNTED else NOT_COUNTED
+        }
+        return elementCounted == COUNTED
+    }
+
+    @Synchronized
+    private fun computeFieldCounted(accessor: AccessorIdx, fieldIdx: Int): Boolean {
+        var fields = countedFields
+        if (fieldIdx < fields.size && fields[fieldIdx] != UNKNOWN) return fields[fieldIdx] == COUNTED
+
+        if (fieldIdx >= fields.size) {
+            fields = fields.copyOf(maxOf(fieldIdx + 1, fields.size * 2))
+        }
+
+        val counted = isCoveredByAny(accessor)
+        fields[fieldIdx] = if (counted) COUNTED else NOT_COUNTED
+        countedFields = fields
+        return counted
+    }
 
     override fun initialFactAbstraction(methodInitialStatement: CommonInst): InitialFactAbstraction =
         TreeInitialFactAbstraction(this)
@@ -138,4 +205,10 @@ class TreeApManager(
         this,
         isAbstract = true, isFinal = true,
     )
+
+    private companion object {
+        const val UNKNOWN: Byte = 0
+        const val COUNTED: Byte = 1
+        const val NOT_COUNTED: Byte = 2
+    }
 }
