@@ -30,8 +30,8 @@ opentaint test rule reachability <rule> \
   --project-model <model> \
   -o <results-dir>/report.sarif \
   --ruleset builtin --ruleset .opentaint/rules \
-  --passthrough-approximations .opentaint/pass-through \
-  --dataflow-approximations .opentaint/dataflow
+  --passthrough-models .opentaint/pass-through \
+  --java-models .opentaint/dataflow
 ```
 
 `<results-dir>` is `.opentaint/test-results/<name>` for a test model, `.opentaint/results` for the main scan. The per-instruction facts are in the sibling `<results-dir>/debug-ifds-fact-reachability.sarif`, not the `-o` file — the `-o` SARIF only shows whether the rule fired. Read that sibling to find the kill:

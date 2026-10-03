@@ -17,15 +17,21 @@ import (
 
 var pullCmd = &cobra.Command{
 	Use:   "pull",
-	Short: "Download autobuilder, analyzer binaries, rules and Java runtime",
-	Long: `Download all necessary binaries and assets:
-- OpenTaint autobuilder JAR
-- OpenTaint analyzer JAR
-- OpenTaint rules archive
-- Java runtime (Temurin JRE)
+	Short: "Download the analysis toolchain and Java runtime",
+	Long: `Download the toolchain into the local cache. The toolchain contains the analyzer, the autobuilder, the built-in rules, and a Java runtime. After the download, OpenTaint can build and scan projects without network access.
 
-This prepares the environment with all required dependencies for offline analysis.
-When bundled artifacts are present (from a release archive), they will be used directly.`,
+If a release archive supplied bundled artifacts, OpenTaint uses them. They are not downloaded again.
+
+Run "opentaint pull" one time before your first scan. To remove old downloads, use "opentaint prune".`,
+	Example: `  # Download the toolchain before the first scan
+  opentaint pull
+
+  # Download a different Java runtime version
+  opentaint pull --java-version 17
+
+  # Recipe: prepare a machine that will have no network access
+  opentaint pull
+  opentaint health`,
 	Run: func(cmd *cobra.Command, args []string) {
 		out.Section("OpenTaint Pull").
 			Field("Autobuilder", globals.Config.Autobuilder.Version).
@@ -40,7 +46,7 @@ When bundled artifacts are present (from a release archive), they will be used d
 		installCurrent := utils.IsInstallCurrent()
 		if !installCurrent {
 			if err := utils.CleanInstallDir(); err != nil {
-				out.Fatalf("Failed to clean install directory: %s", err)
+				failf("Failed to clean install directory: %s", err)
 			}
 		}
 
@@ -50,26 +56,29 @@ When bundled artifacts are present (from a release archive), they will be used d
 		for _, spec := range artifacts {
 			node, err := downloadArtifact(spec, installNextToBinary, installCurrent)
 			if err != nil {
-				out.Fatalf("Failed to download %s: %s", spec.Kind(), err)
+				failf("Failed to download %s: %s", spec.Kind(), err)
 			}
 			summaryNodes = append(summaryNodes, node)
 		}
 
 		javaNode, err := downloadJava(installNextToBinary, installCurrent)
 		if err != nil {
-			out.Fatalf("Failed to download Java: %s", err)
+			failf("Failed to download Java: %s", err)
 		}
 		summaryNodes = append(summaryNodes, javaNode)
 
 		// Write version marker after all downloads succeed
 		if err := utils.WriteInstallVersionMarker(); err != nil {
-			out.Fatalf("Failed to write install version marker: %s", err)
+			failf("Failed to write install version marker: %s", err)
 		}
 
 		out.Blank()
 		out.Section("Pull Summary").
 			Child(summaryNodes...).
 			Render()
+
+		out.Successf("Pull completed.")
+		suggest("To scan your project, run:", "opentaint scan .")
 	},
 }
 

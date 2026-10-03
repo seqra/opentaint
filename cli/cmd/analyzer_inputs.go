@@ -6,7 +6,7 @@ import (
 
 func addDataflowApproximations(b *AnalyzerBuilder, paths []string, analyzerJarPath, projectModelDir string) {
 	for _, approxPath := range paths {
-		absApproxPath := log.AbsPathOrExit(approxPath, "dataflow-approximations")
+		absApproxPath := log.AbsPathOrExit(approxPath, "java-models")
 		compiledPath, err := compileApproximationsIfNeeded(absApproxPath, analyzerJarPath, projectModelDir)
 		if err != nil {
 			out.Fatalf("Approximation compilation failed: %s", err)
@@ -17,6 +17,6 @@ func addDataflowApproximations(b *AnalyzerBuilder, paths []string, analyzerJarPa
 
 func addPassthroughApproximations(b *AnalyzerBuilder, paths []string) {
 	for _, passthrough := range paths {
-		b.AddPassthroughApproximations(log.AbsPathOrExit(passthrough, "passthrough-approximations"))
+		b.AddPassthroughApproximations(log.AbsPathOrExit(passthrough, "passthrough-models"))
 	}
 }

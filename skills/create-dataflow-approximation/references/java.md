@@ -65,7 +65,7 @@ Run `test approximation run` over the compiled test project applying this batch'
 ```bash
 opentaint test approximation run .opentaint/test-compiled/<batch> \
   -o .opentaint/test-results/<batch> \
-  --dataflow-approximations .opentaint/dataflow/<batch>
+  --java-models .opentaint/dataflow/<batch>
 ```
 
 `test approximation run` applies its own bundled fixed source→sink rule automatically — you don't author or pass one. The CLI auto-compiles the `.java` sources against the analyzer JAR (for `@Approximate`, `OpentaintNdUtil`, `ArgumentTypeContext`) and the project's dependencies; if compilation fails it reports the errors and aborts before the tests. A positive sample is a `falseNegative` until the model propagates taint. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:
