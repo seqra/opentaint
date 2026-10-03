@@ -46,7 +46,6 @@ class JIRIntraProcAliasAnalysis(
 ) {
     companion object {
         private val logger = object : KLogging() {}.logger
-        private const val HEAP_CHAIN_LIMIT = 5
     }
 
     data class JIRInstGraph(
@@ -104,6 +103,7 @@ class JIRIntraProcAliasAnalysis(
         fun AAInfo.convertToAliasInfo(
             depth: Int,
             cancellation: AnalysisCancellation?,
+            isValidAccessorTransition: (AliasAccessor?, AliasAccessor) -> Boolean,
             resolveHeapInstance: (Int) -> List<AliasInfo>
         ): List<AliasInfo> {
             if (this !is HeapAlias) {
@@ -111,13 +111,15 @@ class JIRIntraProcAliasAnalysis(
                 return listOfNotNull(base)
             }
 
-            if (depth > HEAP_CHAIN_LIMIT) {
+            if (depth > JIR_ALIAS_HEAP_CHAIN_LIMIT) {
                 return emptyList()
             }
 
             cancellation?.checkpoint()
 
             val instances = resolveHeapInstance(instance)
+                .filterNot { it is AliasApInfo && it.accessors.size >= JIR_ALIAS_HEAP_CHAIN_LIMIT }
+
             val accessor = when (val a = this.heapAccessor) {
                 is ArrayAlias -> AliasAccessor.Array
                 is FieldAlias -> a.field
@@ -127,9 +129,31 @@ class JIRIntraProcAliasAnalysis(
             return instances.mapNotNull {
                 when (it) {
                     is AliasAllocInfo -> return@mapNotNull null
-                    is AliasApInfo -> AliasApInfo(it.base, it.accessors + accessor)
+                    is AliasApInfo -> {
+                        if (!isValidAccessorTransition(it.accessors.lastOrNull(), accessor)) {
+                            return@mapNotNull null
+                        }
+                        val accessors = it.accessors + accessor
+                        if (accessors.containsFieldPermutation()) {
+                            return@mapNotNull null
+                        }
+                        AliasApInfo(it.base, accessors)
+                    }
                 }
             }
+        }
+
+        private fun List<AliasAccessor>.containsFieldPermutation(): Boolean {
+            var previous: AliasAccessor.Field? = null
+            val completedRuns = hashSetOf<AliasAccessor.Field>()
+            for (accessor in this) {
+                val field = accessor as? AliasAccessor.Field ?: continue
+                if (field == previous) continue
+                previous?.let { completedRuns += it }
+                if (field in completedRuns) return true
+                previous = field
+            }
+            return false
         }
 
         fun convertBaseAccessor(cur: AAInfo): AliasInfo? {
@@ -254,3 +278,5 @@ class JIRIntraProcAliasAnalysis(
         }
     }
 }
+
+internal const val JIR_ALIAS_HEAP_CHAIN_LIMIT = 5

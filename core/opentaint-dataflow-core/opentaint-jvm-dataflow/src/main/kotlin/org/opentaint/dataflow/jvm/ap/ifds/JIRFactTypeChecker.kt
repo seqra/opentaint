@@ -291,6 +291,10 @@ class JIRFactTypeChecker(private val cp: JIRClasspath) : FactTypeChecker {
         }
     }
 
+    fun typesMayOverlap(firstTypeName: String, secondTypeName: String): Boolean =
+        typeMayHaveSubtypeOf(firstTypeName, secondTypeName) ||
+            typeMayHaveSubtypeOf(secondTypeName, firstTypeName)
+
     private fun computeTypeMayHaveSubtypeOf(
         typeName: String, requiredTypeName: String
     ): Boolean {

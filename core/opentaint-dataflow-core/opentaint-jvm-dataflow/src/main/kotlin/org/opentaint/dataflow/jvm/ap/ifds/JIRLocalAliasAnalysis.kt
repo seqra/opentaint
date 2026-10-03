@@ -5,6 +5,7 @@ import org.opentaint.dataflow.ap.ifds.analysis.alias.AAHeapAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AAInfo
 import org.opentaint.dataflow.ap.ifds.analysis.alias.AnalysisResult
 import org.opentaint.dataflow.ap.ifds.analysis.alias.ContextInfo
+import org.opentaint.dataflow.ap.ifds.analysis.alias.HeapAlias
 import org.opentaint.dataflow.ap.ifds.analysis.alias.LocalAliasAnalysis
 import org.opentaint.dataflow.configuration.jvm.Argument
 import org.opentaint.dataflow.configuration.jvm.ClassStatic
@@ -23,6 +24,7 @@ import org.opentaint.dataflow.jvm.ap.ifds.alias.ExternalCallModelProvider.Extern
 import org.opentaint.dataflow.jvm.ap.ifds.alias.FieldAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRIntraProcAliasAnalysis.Convert.convertToAliasInfo
+import org.opentaint.dataflow.jvm.ap.ifds.alias.JIRAliasPathCompressor
 import org.opentaint.dataflow.jvm.ap.ifds.alias.LocalAlias
 import org.opentaint.dataflow.jvm.ap.ifds.alias.RefValue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
@@ -30,6 +32,8 @@ import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRLocalVar
+import org.opentaint.ir.api.jvm.ext.cfg.locals
 import org.opentaint.jvm.graph.JApplicationGraph
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
@@ -42,6 +46,7 @@ class JIRLocalAliasAnalysis(
     private val localVariableReachability: JIRLocalVariableReachability,
     private val cancellation: Cancellation,
     private val languageManager: JIRLanguageManager,
+    private val factTypeChecker: JIRFactTypeChecker,
     private val params: Params,
 ) : LocalAliasAnalysis<AliasInfo, AliasAccessor>() {
     data class Params(
@@ -66,7 +71,61 @@ class JIRLocalAliasAnalysis(
         info: AAInfo,
         depth: Int,
         convertInstance: (Int) -> List<AliasInfo>
-    ): List<AliasInfo> = info.convertToAliasInfo(depth, null, convertInstance)
+    ): List<AliasInfo> = info
+        .convertToAliasInfo(depth, null, ::isValidAccessorTransition, convertInstance)
+        .filterNot { it is AliasApInfo && !isValidBaseAccessorTransition(it) }
+
+    private fun isValidAccessorTransition(previous: AliasAccessor?, next: AliasAccessor): Boolean =
+        isValidAliasAccessorTransition(previous, next, factTypeChecker::typesMayOverlap)
+
+    private fun isValidBaseAccessorTransition(alias: AliasApInfo): Boolean {
+        return isValidAliasBaseAccessorTransition(
+            alias.base.typeName(),
+            alias.accessors.firstOrNull(),
+            factTypeChecker::typesMayOverlap,
+        )
+    }
+
+    private val localTypes by lazy {
+        entryPoint.location.method.instList.locals
+            .filterIsInstance<JIRLocalVar>()
+            .associate { it.index to it.type.typeName }
+    }
+
+    // Even small permutation sets multiply downstream IFDS facts, so compress every non-empty set.
+    override val aliasCompressionThreshold: Int = 0
+
+    override fun compressAliases(aliases: List<AliasInfo>): List<AliasInfo> =
+        JIRAliasPathCompressor.compress(aliases, cancellation::checkpoint)
+
+    override fun filterAliases(query: AAInfo, aliases: List<AliasInfo>): List<AliasInfo> {
+        val queryType = query.typeName() ?: return aliases
+        return aliases.filter { alias ->
+            val aliasType = (alias as? AliasApInfo)?.heapResultTypeName() ?: return@filter true
+            isAliasResultTypeCompatible(queryType, aliasType, factTypeChecker::typesMayOverlap)
+        }
+    }
+
+    private fun AAInfo.typeName(): String? = when (this) {
+        is LocalAlias.SimpleLoc -> loc.typeName()
+        is HeapAlias -> (heapAccessor as? FieldAlias)?.field?.fieldType
+        else -> null
+    }
+
+    private fun RefValue.typeName(): String? = when (this) {
+        is RefValue.Local -> if (ctx == ContextInfo.rootContext) localTypes[idx] else null
+        is RefValue.Arg -> entryPoint.location.method.parameters.getOrNull(idx)?.type?.typeName
+        is RefValue.This -> entryPoint.location.method.enclosingClass.name
+        is RefValue.Static -> type
+    }
+
+    private fun AccessPathBase.typeName(): String? = when (this) {
+        is AccessPathBase.Argument -> entryPoint.location.method.parameters.getOrNull(idx)?.type?.typeName
+        is AccessPathBase.LocalVar -> localTypes[idx]
+        is AccessPathBase.Constant -> typeName
+        AccessPathBase.This -> entryPoint.location.method.enclosingClass.name
+        else -> null
+    }
 
     private inner class CallModelProvider : ExternalCallModelProvider {
         override fun provideModel(method: JIRMethod): List<ExternalAssign> {
@@ -107,10 +166,16 @@ class JIRLocalAliasAnalysis(
         private fun PositionAccessor.toAaAccessor(): AAHeapAccessor? = when (this) {
             is PositionAccessor.AnyFieldAccessor -> null
             is PositionAccessor.ElementAccessor -> ArrayAlias
-            is PositionAccessor.FieldAccessor -> FieldAlias(
-                AliasAccessor.Field(className, fieldName, fieldType),
-                isImmutable = false
-            )
+            is PositionAccessor.FieldAccessor -> {
+                if (fieldName == "<rule-storage>") {
+                    null
+                } else {
+                    FieldAlias(
+                        AliasAccessor.Field(className, fieldName, fieldType),
+                        isImmutable = false
+                    )
+                }
+            }
         }
     }
 
@@ -139,3 +204,63 @@ class JIRLocalAliasAnalysis(
 
     data class AliasAllocInfo(val allocInst: Int) : AliasInfo
 }
+
+internal fun JIRLocalAliasAnalysis.AliasApInfo.heapResultTypeName(): String? =
+    when (val accessor = accessors.lastOrNull()) {
+        is AliasAccessor.Field -> accessor.fieldType
+        is AliasAccessor.Static -> accessor.typeName
+        // Direct alias sets can model value propagation between different runtime types.
+        is AliasAccessor.Array, null -> null
+    }
+
+internal fun isValidAliasAccessorTransition(
+    previous: AliasAccessor?,
+    next: AliasAccessor,
+    typesMayOverlap: (String, String) -> Boolean,
+): Boolean {
+    if (previous is AliasAccessor.Array ||
+        previous is AliasAccessor.Field && previous.fieldType == "java.lang.Object"
+    ) {
+        return false
+    }
+
+    if (next is AliasAccessor.Array) {
+        return previous == null ||
+            previous is AliasAccessor.Field && previous.fieldType.isArrayTypeName()
+    }
+
+    val field = next as? AliasAccessor.Field ?: return true
+    if (previous != null && field.isErasedContainerAccessor()) return false
+
+    val previousType = when (previous) {
+        is AliasAccessor.Field -> previous.fieldType
+        is AliasAccessor.Static -> previous.typeName
+        is AliasAccessor.Array -> error("handled above")
+        null -> return true
+    }
+    return typesMayOverlap(previousType, field.className)
+}
+
+private fun String.isArrayTypeName(): Boolean = endsWith("[]") || startsWith("[")
+
+private fun AliasAccessor.Field.isErasedContainerAccessor(): Boolean =
+    fieldType == "java.lang.Object" &&
+        fieldName in ERASED_CONTAINER_ACCESSOR_NAMES
+
+private val ERASED_CONTAINER_ACCESSOR_NAMES = setOf("Element", "MapKey", "MapValue")
+
+internal fun isValidAliasBaseAccessorTransition(
+    baseType: String?,
+    first: AliasAccessor?,
+    typesMayOverlap: (String, String) -> Boolean,
+): Boolean {
+    val field = first as? AliasAccessor.Field ?: return true
+    return baseType == null || typesMayOverlap(baseType, field.className)
+}
+
+internal fun isAliasResultTypeCompatible(
+    queryType: String,
+    aliasType: String,
+    typesMayOverlap: (String, String) -> Boolean,
+): Boolean = queryType == aliasType ||
+    typesMayOverlap(queryType, aliasType)
