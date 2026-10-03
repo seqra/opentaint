@@ -25,12 +25,15 @@ import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisUnitStorage
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker
 import org.opentaint.dataflow.ap.ifds.taint.TaintSinkTracker.TaintVulnerability
 import org.opentaint.dataflow.ap.ifds.trace.ParallelProcessingContext
+import org.opentaint.dataflow.ap.ifds.trace.ExactProcessingTimeBudget
 import org.opentaint.dataflow.ap.ifds.trace.TraceResolver
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VerifiedVulnerability
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityChecker.VulnerabilityVerificationStatus
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithInterproceduralTrace
 import org.opentaint.dataflow.ap.ifds.trace.VulnerabilityWithTrace
+import org.opentaint.dataflow.ap.ifds.trace.action.ActionableRulesCollectionResult
+import org.opentaint.dataflow.ap.ifds.trace.action.collectActionableRules
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathGenerationResult
 import org.opentaint.dataflow.ap.ifds.trace.path.TracePathResolveParams
 import org.opentaint.dataflow.ap.ifds.trace.path.generateTracePath
@@ -126,6 +129,7 @@ class TaintAnalysisUnitRunnerManager(
 
     fun resetApManager(manager: ApManager) {
         this.activeApManager = manager
+        status.set(Status.OK)
         runnerForUnit.elements().iterator().forEach { it.resetApManager(manager) }
         unitStorage.elements().iterator().forEach { it.resetApManager(manager) }
 
@@ -213,6 +217,33 @@ class TaintAnalysisUnitRunnerManager(
         return vulnerabilities
     }
 
+    fun resolveVulnerabilityActionableRules(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        timeout: Duration,
+        cancellationTimeout: Duration,
+        exactTimeBudget: ExactProcessingTimeBudget<TaintVulnerability>? = null,
+    ): List<ActionableRulesCollectionResult> {
+        if (vulnerabilities.isEmpty()) return emptyList()
+        if (!timeout.isPositive()) {
+            return vulnerabilities.map { ActionableRulesCollectionResult.Unprocessed }
+        }
+
+        cancellation.activate()
+        val memoryManager = MemoryManager(refManager, TRACE_GENERATION_MEMORY_THRESHOLD) {
+            cancellation.cancel()
+            updateFailureStatus(Status.OOM)
+            logger.error { "Running low on memory, stopping actionable rules resolution" }
+        }
+        return memoryManager.runWithMemoryManager {
+            resolveTraceActionableRulesWithCancellation(
+                vulnerabilities,
+                timeout,
+                cancellationTimeout,
+                exactTimeBudget,
+            )
+        }
+    }
+
     fun resolveVulnerabilityTraces(
         vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
         resolverParams: TracePathResolveParams,
@@ -240,7 +271,8 @@ class TaintAnalysisUnitRunnerManager(
         vulnerabilities: List<TaintVulnerability>,
         resolverParams: TraceResolver.Params,
         timeout: Duration,
-        cancellationTimeout: Duration
+        cancellationTimeout: Duration,
+        exactTimeBudget: ExactProcessingTimeBudget<TaintVulnerability>? = null,
     ): List<VulnerabilityWithInterproceduralTrace> {
         if (vulnerabilities.isEmpty()) return emptyList()
         cancellation.activate()
@@ -253,7 +285,7 @@ class TaintAnalysisUnitRunnerManager(
 
         return traceResolverMemoryManager.runWithMemoryManager {
             resolveVulnerabilityTracesWithCancellation(
-                entryPoints, vulnerabilities, resolverParams, timeout, cancellationTimeout
+                entryPoints, vulnerabilities, resolverParams, timeout, cancellationTimeout, exactTimeBudget,
             )
         }
     }
@@ -264,6 +296,7 @@ class TaintAnalysisUnitRunnerManager(
         resolverParams: TraceResolver.Params,
         timeout: Duration,
         cancellationTimeout: Duration,
+        exactTimeBudget: ExactProcessingTimeBudget<TaintVulnerability>?,
     ): List<VulnerabilityWithInterproceduralTrace> {
         val traceResolver = TraceResolver(entryPoints, this, resolverParams, cancellation)
 
@@ -272,24 +305,60 @@ class TaintAnalysisUnitRunnerManager(
             analyzerDispatcher, name = "Trace resolution", states
         ) {
             override fun processItem(item: TraceResolver.State): ProcessingResult<TraceResolver.State, VulnerabilityWithInterproceduralTrace> {
-                val res = traceResolver.resolveTrace(item)
+                if (exactTimeBudget?.isExhausted(item.vulnerability) == true) {
+                    return ProcessingResult.Done(unprocessedTrace(item.vulnerability))
+                }
+
+                val measurement = exactTimeBudget?.measure(
+                    item.vulnerability,
+                    ExactProcessingTimeBudget.Stage.TRACE_RESOLUTION,
+                    cancellation,
+                ) { operationCancellation ->
+                    traceResolver.resolveTrace(item, operationCancellation::isActive)
+                }
+                val res = measurement?.value ?: traceResolver.resolveTrace(item)
+                if (measurement?.snapshot?.exhausted == true) {
+                    reportExactTime(item.vulnerability, "trace_limit")
+                    return ProcessingResult.Done(unprocessedTrace(item.vulnerability))
+                }
                 return when (res) {
                     is TraceResolver.TraceResolutionResult.InProgress -> {
                         ProcessingResult.Running(res.state)
                     }
 
                     is TraceResolver.TraceResolutionResult.NoTrace -> {
+                        reportExactTime(res.vulnerability, "no_trace")
                         ProcessingResult.Done(VulnerabilityWithInterproceduralTrace(res.vulnerability, trace = null))
                     }
 
                     is TraceResolver.TraceResolutionResult.Resolved -> {
+                        reportExactTime(res.vulnerability, "trace_resolved")
                         ProcessingResult.Done(VulnerabilityWithInterproceduralTrace(res.vulnerability, res.trace))
                     }
                 }
             }
 
-            override fun createUnprocessed(item: TraceResolver.State): VulnerabilityWithInterproceduralTrace =
-                VulnerabilityWithInterproceduralTrace(item.vulnerability, trace = null)
+            private fun unprocessedTrace(vulnerability: TaintVulnerability) =
+                VulnerabilityWithInterproceduralTrace(
+                    vulnerability, trace = null, traceResolutionCompleted = false,
+                )
+
+            private fun reportExactTime(vulnerability: TaintVulnerability, outcome: String) {
+                val snapshot = exactTimeBudget?.snapshot(vulnerability) ?: return
+                logger.debug {
+                    "Exact shallow rule search time: stage=trace outcome=$outcome " +
+                        "trace_ns=${snapshot.traceResolution.inWholeNanoseconds} " +
+                        "rules_ns=${snapshot.ruleSearch.inWholeNanoseconds} " +
+                        "total_ns=${snapshot.total.inWholeNanoseconds} " +
+                        "limit_ns=${snapshot.limit.inWholeNanoseconds} " +
+                        "rule=${vulnerability.ruleId} sink=${vulnerability.statement}"
+                }
+            }
+
+            override fun createUnprocessed(item: TraceResolver.State): VulnerabilityWithInterproceduralTrace {
+                reportExactTime(item.vulnerability, "global_limit")
+                return unprocessedTrace(item.vulnerability)
+            }
 
             private var prevStats: MethodStats? = null
 
@@ -348,6 +417,89 @@ class TaintAnalysisUnitRunnerManager(
         return traceResolutionContext.processAll(
             progressScope, timeout, cancellationTimeout, cancellation
         )
+    }
+
+    private fun resolveTraceActionableRulesWithCancellation(
+        vulnerabilities: List<VulnerabilityWithInterproceduralTrace>,
+        timeout: Duration,
+        cancellationTimeout: Duration,
+        exactTimeBudget: ExactProcessingTimeBudget<TaintVulnerability>?,
+    ): List<ActionableRulesCollectionResult> {
+        val context = object : ParallelProcessingContext<
+            VulnerabilityWithInterproceduralTrace,
+            ActionableRulesCollectionResult,
+            >(
+            analyzerDispatcher,
+            name = "Trace actionable entries resolution",
+            tasks = vulnerabilities,
+        ) {
+            override fun processItem(
+                item: VulnerabilityWithInterproceduralTrace,
+            ): ProcessingResult<VulnerabilityWithInterproceduralTrace, ActionableRulesCollectionResult> {
+                if (!item.traceResolutionCompleted) {
+                    reportExactTime(item, "trace_unprocessed")
+                    return ProcessingResult.Done(ActionableRulesCollectionResult.Unprocessed)
+                }
+                if (exactTimeBudget?.isExhausted(item.vulnerability) == true) {
+                    reportExactTime(item, "rule_limit")
+                    return ProcessingResult.Done(ActionableRulesCollectionResult.Unprocessed)
+                }
+
+                val measurement = exactTimeBudget?.measure(
+                    item.vulnerability,
+                    ExactProcessingTimeBudget.Stage.RULE_SEARCH,
+                    cancellation,
+                ) { operationCancellation ->
+                    collectActionableRules(
+                        item,
+                        operationCancellation,
+                    )
+                }
+                val resolved = measurement?.value ?: collectActionableRules(item)
+                if (measurement?.snapshot?.exhausted == true) {
+                    reportExactTime(item, "rule_limit")
+                    return ProcessingResult.Done(ActionableRulesCollectionResult.Unprocessed)
+                }
+
+                val result = if (
+                    resolved === ActionableRulesCollectionResult.Failed && !cancellation.isActive()
+                ) {
+                    ActionableRulesCollectionResult.Unprocessed
+                } else {
+                    resolved
+                }
+                reportExactTime(item, result::class.simpleName ?: "unknown")
+                return ProcessingResult.Done(result)
+            }
+
+            private fun reportExactTime(
+                item: VulnerabilityWithInterproceduralTrace,
+                outcome: String,
+            ) {
+                val snapshot = exactTimeBudget?.snapshot(item.vulnerability) ?: return
+                logger.debug {
+                    "Exact shallow rule search time: stage=rules outcome=$outcome " +
+                        "trace_ns=${snapshot.traceResolution.inWholeNanoseconds} " +
+                        "rules_ns=${snapshot.ruleSearch.inWholeNanoseconds} " +
+                        "total_ns=${snapshot.total.inWholeNanoseconds} " +
+                        "limit_ns=${snapshot.limit.inWholeNanoseconds} " +
+                        "rule=${item.vulnerability.ruleId} sink=${item.vulnerability.statement}"
+                }
+            }
+
+            override fun createUnprocessed(
+                item: VulnerabilityWithInterproceduralTrace,
+            ): ActionableRulesCollectionResult {
+                reportExactTime(item, "global_limit")
+                return ActionableRulesCollectionResult.Unprocessed
+            }
+
+            override fun reportStats() {
+                logger.info { reportMemoryUsage() }
+            }
+        }
+
+        return context.processAll(progressScope, timeout, cancellationTimeout, cancellation)
     }
 
     fun confirmVulnerabilities(

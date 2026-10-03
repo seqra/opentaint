@@ -107,7 +107,23 @@ interface MethodEdgesFinalApSet {
 }
 
 interface MethodEdgesInitialToFinalApSet {
-    fun add(statement: CommonInst, initialAp: InitialFactAp, finalAp: FinalFactAp): Pair<InitialFactAp, FinalFactAp>?
+    fun add(
+        statement: CommonInst,
+        initialAp: InitialFactAp,
+        finalAp: FinalFactAp,
+    ): List<Pair<InitialFactAp, FinalFactAp>>
+    fun addAll(
+        statement: CommonInst,
+        initialAps: Iterable<InitialFactAp>,
+        finalAp: FinalFactAp,
+        emitDelta: (InitialFactAp, FinalFactAp) -> Unit,
+    ) {
+        initialAps.forEach { initialAp ->
+            add(statement, initialAp, finalAp).forEach { (addedInitial, addedFinal) ->
+                emitDelta(addedInitial, addedFinal)
+            }
+        }
+    }
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst)
     fun collectApAtStatement(collection: MutableList<Pair<InitialFactAp, FinalFactAp>>, statement: CommonInst, finalFactPattern: InitialFactAp)
     fun collectApAtStatement(collection: MutableList<FinalFactAp>, statement: CommonInst, initialAp: InitialFactAp, finalFactPattern: InitialFactAp)
@@ -139,7 +155,16 @@ interface MethodFinalApSummariesStorage {
 interface MethodInitialToFinalApSummariesStorage {
     fun add(edges: List<Edge.FactToFact>, added: MutableList<FactToFactEdgeBuilder>)
     fun filterEdgesTo(dst: MutableList<FactToFactEdgeBuilder>, initialFactPattern: FinalFactAp?, finalFactBase: AccessPathBase?)
+    fun storageStats(): InitialToFinalSummaryStorageStats? = null
+    fun filterEdgesByFinalTo(dst: MutableList<FactToFactEdgeBuilder>, finalFactPattern: FinalFactAp) {
+        filterEdgesTo(dst, initialFactPattern = null, finalFactBase = finalFactPattern.base)
+    }
 }
+
+data class InitialToFinalSummaryStorageStats(
+    val edgeCount: Long,
+    val finalFactSizeSum: Long,
+)
 
 interface MethodNDInitialToFinalApSummariesStorage {
     fun add(edges: List<Edge.NDFactToFact>, added: MutableList<NDFactToFactEdgeBuilder>)

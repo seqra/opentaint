@@ -14,8 +14,12 @@ abstract class DefaultNDF2FSummaryStorageWithAp<IAP, FAP : Any>(
     private val ap = arrayListOf<InitialFactAp>()
 
     override fun initialApIdx(ap: InitialFactAp): Int = apIdx.getOrCreateIndex(ap.base, getInitialAccess(ap)) {
+        val idx = this.ap.size
         this.ap.add(ap)
+        initialApAdded(idx, ap)
     }
+
+    protected open fun initialApAdded(idx: Int, ap: InitialFactAp) = Unit
 
     override fun getInitialApByIdx(idx: Int): InitialFactAp = ap[idx]
 

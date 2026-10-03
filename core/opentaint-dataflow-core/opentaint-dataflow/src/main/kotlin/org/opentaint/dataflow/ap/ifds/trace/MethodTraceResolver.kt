@@ -15,6 +15,7 @@ import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdgeSearcher
 import org.opentaint.dataflow.ap.ifds.MethodAnalyzerEdges
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.FinalFactAp
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
@@ -640,7 +641,7 @@ class MethodTraceResolver(
     private inline fun TraceBuilder.traverseReachableNodes(reachable: BitSet, initial: BitSet, next: (Int) -> CompactIntSet) {
         initial.forEach { unprocessedEntryIds.add(it) }
 
-        while (unprocessedEntryIds.isNotEmpty()) {
+        while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
             steps++
 
             val entryId = unprocessedEntryIds.removeInt(unprocessedEntryIds.lastIndex)
@@ -655,7 +656,7 @@ class MethodTraceResolver(
         processedEntryIds = CompactIntSet()
         unprocessedEntryIds.add(finalEntryId)
 
-        while (unprocessedEntryIds.isNotEmpty()) {
+        while (unprocessedEntryIds.isNotEmpty() && cancellation.isActive()) {
             val entryId = unprocessedEntryIds.removeInt(unprocessedEntryIds.lastIndex)
 
             if (processedEntryIds.contains(entryId)) continue
@@ -708,17 +709,21 @@ class MethodTraceResolver(
 
     private fun TraceBuilder.fullTrace(traceKind: TraceKind): List<FullStart2FinalTrace> {
         val allSuccessors = successors()
+        if (!cancellation.isActive()) return emptyList()
 
         val result = mutableListOf<FullStart2FinalTrace>()
         startEntryIds.forEach { entryId: Int ->
+            if (!cancellation.isActive()) return@forEach
             val mapper = EntryMapper(entryManager)
             val finalEntry = mapper.translate(finalEntryId)
             val startEntry = mapper.translate(entryId)
-            val successors = mapper.translateSuccessors(entryId, allSuccessors)
+            val successors = mapper.translateSuccessors(entryId, allSuccessors, cancellation)
+            if (!cancellation.isActive()) return@forEach
             val entries = mapper.entries.toTypedArray()
 
             val actionVariants = Int2ObjectOpenHashMap<List<ActionVariant>>()
             unsafeActionVariants().forEachIntEntry { key, value ->
+                if (!cancellation.isActive()) return@forEachIntEntry
                 if (!mapper.isTranslated(key)) return@forEachIntEntry
 
                 val translatedId = mapper.translate(key)
@@ -730,18 +735,19 @@ class MethodTraceResolver(
             )
         }
 
-        return result
+        return result.takeIf { cancellation.isActive() }.orEmpty()
     }
 
     private fun EntryMapper.translateSuccessors(
         start: Int,
-        allSuccessors: Int2ObjectOpenHashMap<CompactIntSet>
+        allSuccessors: Int2ObjectOpenHashMap<CompactIntSet>,
+        cancellation: Cancellation,
     ): Int2ObjectOpenHashMap<CompactIntSet> {
         val result = Int2ObjectOpenHashMap<CompactIntSet>()
 
         val unprocessed = IntArrayList()
         unprocessed.add(start)
-        while (unprocessed.isNotEmpty()) {
+        while (unprocessed.isNotEmpty() && cancellation.isActive()) {
             val node = unprocessed.removeInt(unprocessed.lastIndex)
 
             val translatedNode = translate(node)
@@ -762,6 +768,7 @@ class MethodTraceResolver(
     private fun TraceBuilder.successors(): Int2ObjectOpenHashMap<CompactIntSet> {
         val allSuccessors = Int2ObjectOpenHashMap<CompactIntSet>()
         for ((entryId, entryPredecessorIds) in predecessors) {
+            if (!cancellation.isActive()) break
             entryPredecessorIds.forEach { predecessorId: Int ->
                 allSuccessors.computeIfAbsent(predecessorId) { CompactIntSet() }.add(entryId)
             }
@@ -1359,7 +1366,8 @@ class MethodTraceResolver(
             null -> null
             is MergedPrimaryUnresolvedCallSkip -> listOf(primaryAction.action)
             is MergedPrimaryCall2StartAction -> {
-                resolveCallSummary(statement, primaryAction.calleeEntryPoint, primaryAction.call2Start)
+                val callee = primaryAction.calleeEntryPoint.overApproximateContext(primaryAction.call2Start)
+                resolveCallSummary(statement, callee, primaryAction.call2Start)
             }
         }
 
@@ -1376,6 +1384,19 @@ class MethodTraceResolver(
         resolvedRuleActions.forEachCartesianProduct { ruleActionGroup ->
             addResolved(resolvedPrimaryAction, ruleActionGroup.toHashSet())
         }
+    }
+
+    private fun MethodEntryPoint.overApproximateContext(
+        call2Start: Set<PartiallyResolvedCallAction.Call2Start>,
+    ): MethodEntryPoint {
+        val manager = analysisManager as? TaintAnalysisManager ?: return this
+        val contextIndependentFact = call2Start.all { action ->
+            action.currentEdge.fact.base == AccessPathBase.ClassStatic
+        }
+        val method = manager.overApproximateMethodContext(
+            MethodWithContext(method, context), contextIndependentFact,
+        )
+        return MethodEntryPoint(method.ctx, statement)
     }
 
     private fun resolveCallSummary(

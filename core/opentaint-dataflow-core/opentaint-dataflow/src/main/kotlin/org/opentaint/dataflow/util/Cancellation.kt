@@ -2,7 +2,12 @@ package org.opentaint.dataflow.util
 
 import java.util.concurrent.CancellationException
 
-class Cancellation {
+class Cancellation private constructor(
+    private val parent: Cancellation?,
+    private val additionalCondition: (() -> Boolean)?,
+) {
+    constructor() : this(parent = null, additionalCondition = null)
+
     class Cancelled : CancellationException("Operation cancelled") {
         override fun fillInStackTrace(): Throwable = this
     }
@@ -18,10 +23,14 @@ class Cancellation {
         isActive = false
     }
 
-    fun isActive(): Boolean = isActive
+    fun isActive(): Boolean =
+        isActive && parent?.isActive() != false && additionalCondition?.invoke() != false
+
+    fun derive(additionalCondition: () -> Boolean): Cancellation =
+        Cancellation(parent = this, additionalCondition = additionalCondition)
 
     fun checkpoint() {
-        if (isActive) return
+        if (isActive()) return
         throw Cancelled()
     }
 }

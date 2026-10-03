@@ -24,8 +24,8 @@ class MethodEdgesInitialToFinalAutomataApSet(
         statement: CommonInst,
         initialAp: InitialFactAp,
         finalAp: FinalFactAp
-    ): Pair<InitialFactAp, FinalFactAp>? =
-        add(statement, initialAp as AccessGraphInitialFactAp, finalAp as AccessGraphFinalFactAp)
+    ): List<Pair<InitialFactAp, FinalFactAp>> =
+        listOfNotNull(addOne(statement, initialAp as AccessGraphInitialFactAp, finalAp as AccessGraphFinalFactAp))
 
     override fun collectApAtStatement(
         collection: MutableList<Pair<InitialFactAp, FinalFactAp>>,
@@ -69,7 +69,7 @@ class MethodEdgesInitialToFinalAutomataApSet(
         storage.collectTo(collection, statement, finalFactPattern)
     }
 
-    private fun add(
+    private fun addOne(
         statement: CommonInst,
         initialAp: AccessGraphInitialFactAp,
         finalAp: AccessGraphFinalFactAp
