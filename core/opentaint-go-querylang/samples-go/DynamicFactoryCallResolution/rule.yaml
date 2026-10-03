@@ -1,0 +1,12 @@
+rules:
+  - id: dynamic-factory-call-resolution
+    languages: [go]
+    severity: WARNING
+    message: "Input.ID reaches Sink through a factory-created object"
+    mode: taint
+    pattern-sources:
+      - pattern: "($I : *DynamicFactoryCallResolution.Input).ID"
+    pattern-sinks:
+      - patterns:
+          - pattern: "DynamicFactoryCallResolution.Sink($UNTRUSTED)"
+          - focus-metavariable: $UNTRUSTED

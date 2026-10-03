@@ -49,6 +49,15 @@ class GoProjectAnalyzer(
         return filtered
     }
 
+    override fun AnalysisCtx.selectProjectPrescanRoots(): List<GoIRFunction> = cp.packages.values
+        .asSequence()
+        .filter { it.isProject }
+        .flatMap { pkg -> (pkg.functions + listOfNotNull(pkg.initFunction)).asSequence() }
+        .filter { it.hasBody }
+        .distinct()
+        .sortedBy { it.fullName }
+        .toList()
+
     override fun ruleStrategy() = GoLanguageStrategy()
     override fun defaultConfigLoader() = GoDefaultConfigLoader
     override fun configLoader() = GoConfigurationLoader()

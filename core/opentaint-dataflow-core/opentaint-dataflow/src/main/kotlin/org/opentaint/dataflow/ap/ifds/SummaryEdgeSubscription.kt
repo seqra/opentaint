@@ -741,7 +741,7 @@ class SummaryEdgeSubscriptionManager(
 
 class SummaryEdgeStorageWithSubscribers(
     private val apManager: ApManager,
-    private val methodEntryPoint: MethodEntryPoint,
+    val methodEntryPoint: MethodEntryPoint,
 ) {
     interface Subscriber {
         fun newSummaryEdges(edges: List<Edge>)

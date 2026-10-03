@@ -30,6 +30,7 @@ import org.opentaint.dataflow.jvm.ifds.JIRUnitResolver
 import org.opentaint.ir.api.jvm.JIRMethod
 import org.opentaint.ir.api.jvm.RegisteredLocation
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.ext.hasBody
 import org.opentaint.ir.impl.features.usagesExt
 import org.opentaint.jvm.graph.JApplicationGraphImpl
 import org.opentaint.jvm.graph.JApplicationSingleExitGraph
@@ -112,6 +113,8 @@ abstract class AnalysisTest : BasicTestUtils() {
 
     open val analysisUnrollStrategy: AnyAccessorUnrollStrategy = AnyAccessorUnrollStrategy.AnyAccessorDisabled
 
+    open val wholeClassPrescan: Boolean = false
+
     private class SingleLocationUnit(val loc: RegisteredLocation) : JIRUnitResolver {
         override fun resolve(method: JIRMethod): UnitType {
             if (method.enclosingClass.declaration.location == loc || isApproximation(method)) {
@@ -167,7 +170,12 @@ abstract class AnalysisTest : BasicTestUtils() {
         }
 
         return analyzer.use {
-            it.analyzeWithIfds(listOf(ep)).first
+            val prescanRoots = if (wholeClassPrescan) {
+                cls.declaredMethods.filter { it.hasBody }
+            } else {
+                listOf(ep)
+            }
+            it.analyzeWithIfds(listOf(ep), prescanRoots).first
         }
     }
 
