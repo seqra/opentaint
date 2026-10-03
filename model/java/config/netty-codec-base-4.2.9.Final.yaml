@@ -124,14 +124,14 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .java.lang.Iterable#Element#java.lang.Object
+    - '[*]'
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Value#java.lang.Object
   - from:
     - arg(1)
-    - '[*]'
+    - .java.lang.Iterable#Element#java.lang.Object
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
@@ -334,14 +334,14 @@ passThrough:
   copy:
   - from:
     - arg(1)
-    - .java.lang.Iterable#Element#java.lang.Object
+    - '[*]'
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object
     - .java.util.Map$Entry#Value#java.lang.Object
   - from:
     - arg(1)
-    - '[*]'
+    - .java.lang.Iterable#Element#java.lang.Object
     to:
     - this
     - .java.lang.Iterable#Element#java.lang.Object

@@ -14,7 +14,7 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from:
-    - arg(0)
+    - arg(1)
     - '[*]'
     to:
     - result

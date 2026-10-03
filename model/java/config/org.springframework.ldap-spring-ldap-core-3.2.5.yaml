@@ -10,7 +10,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
     to: result
 - function: org.springframework.ldap.filter.NotFilter#<init>
   copy:
@@ -21,31 +21,31 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
 - function: org.springframework.ldap.filter.LikeFilter#<init>
   copy:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
 - function: org.springframework.ldap.filter.WhitespaceWildcardsFilter#<init>
   copy:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
 - function: org.springframework.ldap.support.LdapEncoder#toTwoCharHex
   copy:
   - from: arg(0)
@@ -55,22 +55,22 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
 - function: org.springframework.ldap.filter.Filter#encode
   signature: (java.lang.StringBuffer) *
   bypassVerification: true
   copy:
   - from:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
     to: result
   - from:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
     to: arg(0)
 - function: org.springframework.ldap.filter.AndFilter#and
   copy:
@@ -81,18 +81,18 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
 - function: org.springframework.ldap.filter.EqualsFilter#<init>
   copy:
   - from: arg(1)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer
   - from: arg(0)
     to:
     - this
-    - .org.springframework.ldap.filter.Filter#filter#java.lang.Object
+    - .org.springframework.ldap.filter.Filter#filter#java.lang.StringBuffer

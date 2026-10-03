@@ -14,22 +14,22 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
 - function: org.apache.oro.text.regex.PatternMatcherInput#match
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -37,7 +37,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -46,11 +46,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheRandom#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheRandom#entries#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheRandom#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheRandom#entries#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -101,8 +101,6 @@ passThrough:
   copy:
   - from: arg(0)
     to: result
-  - from: arg(0)
-    to: result
 - function:
     package: org.apache.oro.text.regex
     class: Perl5Substitution
@@ -112,11 +110,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.Perl5Substitution#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.Perl5Substitution#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.Perl5Substitution#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.Perl5Substitution#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -125,7 +123,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -164,11 +162,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheLRU#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheLRU#entries#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheLRU#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheLRU#entries#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -178,11 +176,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.Perl5Substitution#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.Perl5Substitution#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.Perl5Substitution#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.Perl5Substitution#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -228,11 +226,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(2)
@@ -242,14 +240,14 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
 - function: org.apache.oro.text.regex.PatternMatcherInput#charAt
   copy:
   - from: arg(0)
     to: result
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -262,17 +260,17 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
   - from: arg(0)
     to: this
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
 - function: org.apache.oro.text.regex.Util#substitute
   signature:
     params:
@@ -314,11 +312,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(2)
@@ -328,17 +326,17 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
 - function: org.apache.oro.text.PatternCache#addPattern
   copy:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.PatternCache#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCache#entries#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.PatternCache#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCache#entries#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)
@@ -347,7 +345,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -356,13 +354,13 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheFIFO2#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheFIFO2#entries#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheFIFO2#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheFIFO2#entries#java.lang.Object
   - from: arg(0)
     to: this
 - function: org.apache.oro.text.regex.MatchResult#endOffset
@@ -376,15 +374,15 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.MatchActionProcessor#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.MatchActionProcessor#content#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.MatchActionProcessor#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.MatchActionProcessor#content#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.MatchActionProcessor#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.MatchActionProcessor#content#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(2)
@@ -395,7 +393,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -411,7 +409,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcherInput#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcherInput#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -420,11 +418,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(2)
@@ -434,12 +432,12 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
 - function: org.apache.oro.text.regex.PatternMatcher#getMatch
   copy:
   - from:
     - this
-    - .org.apache.oro.text.regex.PatternMatcher#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.regex.PatternMatcher#input#java.lang.Object
     to: result
   - from: this
     to: result
@@ -466,11 +464,11 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheFIFO#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheFIFO#entries#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .org.apache.oro.text.PatternCacheFIFO#<rule-storage>#java.lang.Object
+    - .org.apache.oro.text.PatternCacheFIFO#entries#java.lang.Object
   - from: arg(1)
     to: this
   - from: arg(0)

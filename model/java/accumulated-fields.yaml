@@ -95,6 +95,9 @@ fields:
 - typeName: java.net.URI
   fieldName: value
   fieldType: java.lang.String
+- typeName: java.net.URI
+  fieldName: path
+  fieldType: java.lang.String
 - typeName: java.net.URL
   fieldName: spec
   fieldType: java.lang.String

@@ -2379,15 +2379,6 @@ passThrough:
     to:
     - result
     - .java.lang.Iterable#Element#java.lang.Object
-- function: com.google.common.collect.ImmutableCollection$Builder#add
-  signature: (*) *
-  copy:
-  - from:
-    - arg(0)
-    - '[*]'
-    to:
-    - this
-    - .java.lang.Iterable#Element#java.lang.Object
 - function: com.google.common.collect.ImmutableMap$Builder#put
   signature: (*) *
   copy:
