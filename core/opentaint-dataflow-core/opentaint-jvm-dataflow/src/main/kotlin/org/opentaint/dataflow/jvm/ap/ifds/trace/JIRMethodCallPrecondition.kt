@@ -1,15 +1,16 @@
 package org.opentaint.dataflow.jvm.ap.ifds.trace
 
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.MethodWithContext
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.ap.ifds.taint.TaintAnalysisContext.RuleWithCondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallFailurePreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact
-import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallPreconditionFact.CallFailurePreconditionFact
+import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.CallSuccessPreconditionFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodCallPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
 import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
@@ -39,8 +40,6 @@ class JIRMethodCallPrecondition(
     private val callExpr: JIRCallExpr,
     private val statement: JIRInst,
 ) : MethodCallPrecondition.Default {
-    private val methodCallFactMapper: MethodCallFactMapper get() = analysisContext.methodCallFactMapper
-
     private val taintCtx get() = analysisContext.taint
 
     override fun factPrecondition(fact: InitialFactAp): List<CallPrecondition> {
@@ -63,13 +62,21 @@ class JIRMethodCallPrecondition(
         val preconditions = mutableListOf<CallFailurePreconditionFact>()
 
         if (startFactBase != AccessPathBase.Return) {
-            preconditions += CallPreconditionFact.UnresolvedCallSkip
+            preconditions += MethodCallPrecondition.UnresolvedCallSkip
         }
 
         preconditions += rulePreconditionForFactResolutionFailure(fact, startFactBase)
 
         return preconditions
     }
+
+    override fun factPreconditionResolutionSuccess(
+        fact: InitialFactAp,
+        startFactBase: AccessPathBase,
+        method: MethodWithContext
+    ): List<CallSuccessPreconditionFact> = listOf(
+        MethodCallPrecondition.CallToStartResolved(fact, startFactBase, method)
+    )
 
     private fun preconditionForFact(fact: InitialFactAp): List<CallPreconditionFact>? {
         if (!factIsRelevantToMethodCall(statement, returnValue, callExpr, fact)) {
@@ -102,9 +109,9 @@ class JIRMethodCallPrecondition(
         val rulePreconditions = mutableListOf<TaintRulePrecondition>()
         rulePreconditions.factSourceRulePrecondition(fact, startBase)
 
-        rulePreconditions.mapTo(this) { CallPreconditionFact.CallToReturnTaintRule(it) }
+        rulePreconditions.mapTo(this) { MethodCallPrecondition.CallToReturnTaintRule(it) }
 
-        this += CallPreconditionFact.CallToStart(fact, startBase)
+        this += MethodCallPrecondition.CallToStart(fact, startBase)
     }
 
     private fun rulePreconditionForFactResolutionFailure(
@@ -114,7 +121,7 @@ class JIRMethodCallPrecondition(
         val rulePreconditions = mutableListOf<TaintRulePrecondition>()
         rulePreconditions.factPassRulePrecondition(fact, startBase)
 
-        return rulePreconditions.map { CallPreconditionFact.CallToReturnTaintRule(it) }
+        return rulePreconditions.map { MethodCallPrecondition.CallToReturnTaintRule(it) }
     }
 
     private fun MutableList<TaintRulePrecondition>.factSourceRulePrecondition(
@@ -178,5 +185,5 @@ class JIRMethodCallPrecondition(
         statement.location.method.instList.toList()
 
     override fun mapExit2Return(fact: InitialFactAp): List<InitialFactAp> =
-        methodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
+        JIRMethodCallFactMapper.mapMethodExitToReturnFlowFact(statement, fact)
 }

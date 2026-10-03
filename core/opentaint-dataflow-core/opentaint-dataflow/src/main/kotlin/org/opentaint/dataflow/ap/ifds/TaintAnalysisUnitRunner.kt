@@ -506,11 +506,12 @@ class TaintAnalysisUnitRunner(
     fun resolveCalleeFact(
         methodEntryPoint: MethodEntryPoint,
         statement: CommonInst,
-        factAp: FinalFactAp
+        factAp: FinalFactAp,
+        callee: MethodEntryPoint,
     ): Set<FinalFactAp> {
         val methodRunners = methodAnalyzers(methodEntryPoint)
         val runner = methodRunners.getAnalyzer(methodEntryPoint)
-        return runner.resolveCalleeFact(statement, factAp)
+        return runner.resolveCalleeFact(statement, factAp, callee)
     }
 
     companion object {

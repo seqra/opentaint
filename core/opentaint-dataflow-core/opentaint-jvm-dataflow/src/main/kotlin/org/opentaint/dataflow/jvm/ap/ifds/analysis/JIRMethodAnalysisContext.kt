@@ -5,12 +5,10 @@ import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager.Phase
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.JIRFactTypeChecker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLambdaTracker
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalAliasAnalysis
 import org.opentaint.dataflow.jvm.ap.ifds.JIRLocalVariableReachability
-import org.opentaint.dataflow.jvm.ap.ifds.JIRMethodCallFactMapper
 import org.opentaint.dataflow.jvm.ap.ifds.taint.JIRTaintAnalysisContext
 import org.opentaint.dataflow.util.SoftReferenceManager
 import org.opentaint.dataflow.util.int2ObjectMap
@@ -30,9 +28,6 @@ class JIRMethodAnalysisContext(
     }
 
     val phase: Phase get() = analysisManager.phase
-
-    override val methodCallFactMapper: MethodCallFactMapper
-        get() = JIRMethodCallFactMapper
 
     val taintMarksAssignedOnMethodEnter = hashSetOf<TaintMarkAccessor>()
 

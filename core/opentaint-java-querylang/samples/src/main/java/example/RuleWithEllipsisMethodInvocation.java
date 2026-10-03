@@ -6,7 +6,7 @@ import base.RuleSet;
 @RuleSet("example/RuleWithEllipsisMethodInvocation.yaml")
 public abstract class RuleWithEllipsisMethodInvocation implements RuleSample {
     Inner src() {
-        return new Inner(new Object());
+        return new Inner(new Inner2());
     }
 
     void sink(String data) {}
@@ -15,7 +15,7 @@ public abstract class RuleWithEllipsisMethodInvocation implements RuleSample {
         @Override
         public void entrypoint() {
             Inner data = src();
-            String str = data.getObjGood().toString();
+            String str = data.getInner().toString();
             sink(str);
         }
     }
@@ -33,19 +33,27 @@ public abstract class RuleWithEllipsisMethodInvocation implements RuleSample {
         @Override
         public void entrypoint() {
             Inner data = src();
-            String str = data.getObjGood().getClass().toString();
+            String str = data.getInner().getObjGood().toString();
             sink(str);
         }
     }
 
-    static final private class Inner {
-        final private Object obj;
+    private static final class Inner2 {
+        final private Object obj = new Object();
 
-        public Inner(Object obj) {
+        public Object getObjGood() {
+            return obj;
+        }
+    }
+
+    static final private class Inner {
+        final private Inner2 obj;
+
+        public Inner(Inner2 obj) {
             this.obj = obj;
         }
 
-        public Object getObjGood() {
+        public Inner2 getInner() {
             return obj;
         }
     }
