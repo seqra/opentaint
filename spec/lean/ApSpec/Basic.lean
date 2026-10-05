@@ -8,7 +8,8 @@
     * `Loc`      a concrete marked location: the value at `base.path` carries `mark`.
     * `PFact`    a path fact: (base, path, tail kind, mark). The CONCEPT of a fact.
     * `AFact`    a final path fact plus the LAYER of its edge: `demand = true` is
-                 the demand layer (`~`, `Zero~`); every approximation step sets it.
+                 the demand layer (`~`, `Zero~`); only the AP operations set it
+                 (spec §4.2); a micro edge has no layer.
     * `den`      the pair relation of an edge (initial fact -> final fact).
     * `applyEdge` the ONE core operation (delta-concat). It applies a statement
                  micro edge, a call binding edge, or a callee summary edge.
@@ -92,10 +93,14 @@ inductive Kind where
 deriving DecidableEq, Repr
 
 /-- Taint mark: `star` = abstract (pass the mark of the initial fact through),
-    `conc t` = the concrete mark `t`. -/
+    `conc t` = the concrete mark `t`, `starEx x` = abstract except the marks of `x`
+    (`*∖x`: the mark of the initial fact passes, unless it is in `x`). `starEx` occurs only
+    on FINAL facts: a cleaner puts it there (spec §4.7); premises have `star` or
+    `conc t`. `starEx []` means the same as `star`. -/
 inductive MarkA where
   | star
   | conc (t : Mark)
+  | starEx (x : List Mark)
 deriving DecidableEq, Repr
 
 /-- A path fact: the concept of a fact. -/
@@ -106,9 +111,10 @@ structure PFact where
   mark : MarkA
 deriving DecidableEq, Repr
 
-/-- A final path fact with the layer of its edge. `demand = true` (the `~` layer)
-    means that some step of its derivation over-approximated. The flag never goes
-    back to `false`. -/
+/-- A final path fact with the layer of its PROPAGATION edge. `demand = true` (the `~`
+    layer) means that an AP operation of its derivation over-approximated (spec §4.2); the
+    expected over-approximations of a path-insensitive engine do not set it. The flag
+    never goes back to `false`. -/
 structure AFact where
   fact   : PFact
   demand : Bool
@@ -130,12 +136,20 @@ def tailF : Kind → List Acc → List Acc → Prop
   | .exact,  _, τ => τ = []
 
 def MarkA.admits : MarkA → Mark → Prop
-  | .star,   _ => True
-  | .conc t, m => m = t
+  | .star,     _ => True
+  | .conc t,   m => m = t
+  | .starEx x, m => memB m x = false
 
 def MarkA.out : MarkA → Mark → Mark
-  | .star,   m => m
-  | .conc t, _ => t
+  | .star,     m => m
+  | .conc t,   _ => t
+  | .starEx _, m => m
+
+/-- The mark of a FINAL fact lets the mark `m` of the initial fact through: only `starEx x`
+    stops the marks of `x`. -/
+def MarkA.passes : MarkA → Mark → Prop
+  | .starEx x, m => memB m x = false
+  | _,         _ => True
 
 /-- The location set of a fact read as a premise. -/
 def PFact.covers (i : PFact) (l : Loc) : Prop :=
@@ -145,7 +159,7 @@ def PFact.covers (i : PFact) (l : Loc) : Prop :=
     flows to `l1` at the edge's statement. -/
 def den (i f : PFact) (l0 l1 : Loc) : Prop :=
   l0.base = i.base ∧ l1.base = f.base ∧ i.mark.admits l0.mark ∧
-  l1.mark = f.mark.out l0.mark ∧
+  l1.mark = f.mark.out l0.mark ∧ f.mark.passes l0.mark ∧
   ∃ σ τ, l0.path = i.path ++ σ ∧ l1.path = f.path ++ τ ∧ tailI i.kind σ ∧ tailF f.kind σ τ
 
 /-! ## 5. Path utilities -/
@@ -204,10 +218,22 @@ def Res.none : Res := ⟨[], []⟩
 
 def Res.append (a b : Res) : Res := ⟨a.facts ++ b.facts, a.reqs ++ b.reqs⟩
 
-/-- The mark of a result: `star` on the target passes the fact mark through. -/
+/-- The mark of a result: `star` on the target passes the fact mark through.
+    (Version 4; `applyEdge` now uses `markComp`.) -/
 def markOutA : MarkA → MarkA → MarkA
-  | .star,   m => m
-  | .conc t, _ => .conc t
+  | .star,     m => m
+  | .conc t,   _ => .conc t
+  | .starEx _, m => m
+
+/-- The mark of a result, for a target mark and a fact mark. A target `*∖x` (a summary
+    conclusion behind a cleaner) stops a concrete fact mark in `x` (no result) and adds `x`
+    to the exclusion of an abstract fact mark. -/
+def markComp : MarkA → MarkA → Option MarkA
+  | .star,     m          => some m
+  | .conc t,   _          => some (.conc t)
+  | .starEx x, .star      => some (.starEx x)
+  | .starEx x, .starEx y  => some (.starEx (x ++ y))
+  | .starEx x, .conc t    => if memB t x then none else some (.conc t)
 
 /-- Mark gate of a premise mark against a fact mark. -/
 inductive Gate where
@@ -216,9 +242,11 @@ inductive Gate where
   | req (t : Mark)
 
 def markGate : MarkA → MarkA → Gate
-  | .star,   _        => .ok
-  | .conc t, .conc t' => if Nat.beq t t' then .ok else .no
-  | .conc t, .star    => .req t
+  | .star,     _         => .ok
+  | .conc t,   .conc t'  => if Nat.beq t t' then .ok else .no
+  | .conc t,   .star     => .req t
+  | .conc t,   .starEx x => if memB t x then .no else .req t
+  | .starEx _, _         => .ok      -- a premise never has `starEx`
 
 /-- The correlation constraint that an uncorrelated result forgets. A correlated
     `*` fact restricts the initial continuation `σ0` by its own exclusion, and (at
@@ -276,6 +304,7 @@ def aboveCase (ck fk : Kind) (r : List Acc) (toPath : List Acc) (tk : Kind) :
 def AFact.norm (f : AFact) : AFact :=
   match f.fact.kind, f.fact.mark, f.demand with
   | .star _, .star, false => f
+  | .star _, .starEx _, false => f
   | .star .univ, _, _ => ⟨⟨f.fact.base, f.fact.path, .exact, f.fact.mark⟩, true⟩
   | .star (.set _), _, _ => ⟨⟨f.fact.base, f.fact.path, .any, f.fact.mark⟩, true⟩
   | _, _, _ => f
@@ -295,7 +324,10 @@ def applyEdge (c : AFact) (fr to : PFact) : Res :=
       match markGate fr.mark c.fact.mark with
       | .no    => Res.none
       | .req t => ⟨[], [t]⟩
-      | .ok    => ⟨[AFact.norm ⟨⟨to.base, p, k, markOutA to.mark c.fact.mark⟩, c.demand || ap⟩], []⟩
+      | .ok    =>
+        match markComp to.mark c.fact.mark with
+        | none   => Res.none
+        | some m => ⟨[AFact.norm ⟨⟨to.base, p, k, m⟩, c.demand || ap⟩], []⟩
   else Res.none
 
 /-- Apply a callee summary edge `i → g` (the summary carries the layer of its own edge). -/
@@ -354,9 +386,48 @@ structure Call where
   toCallee   : List MicroEdge
   fromCallee : List MicroEdge
 
+/-- The reach of a cleaner from its position `x.p` (spec §4.7): only `x.p`; everything strictly
+    below `x.p` (the position `x.p.*`); `x.p` and everything below it. -/
+inductive CleanReach where
+  | exact
+  | below
+  | atAndBelow
+deriving DecidableEq, Repr
+
+/-- A cleaner at a statement: it removes the mark `mark` (`none`: every mark) from the
+    locations of its position. -/
+structure Cleaner where
+  base  : Base
+  path  : List Acc
+  reach : CleanReach
+  mark  : Option Mark
+deriving DecidableEq, Repr
+
+/-- The continuation `σ` below the position is in the reach. -/
+def CleanReach.inB : CleanReach → List Acc → Bool
+  | .exact,      σ => σ.isEmpty
+  | .below,      σ => !σ.isEmpty
+  | .atAndBelow, _ => true
+
+/-- The mark `m` is cleaned. -/
+def Cleaner.markB (cl : Cleaner) (m : Mark) : Bool :=
+  match cl.mark with
+  | none   => true
+  | some t => Nat.beq m t
+
+/-- The concrete location `l` loses its taint at the cleaner. -/
+def Cleaner.cleansB (cl : Cleaner) (l : Loc) : Bool :=
+  Nat.beq l.base cl.base && cl.markB l.mark &&
+  (match dropPrefix cl.path l.path with
+   | some σ => cl.reach.inB σ
+   | none   => false)
+
 inductive Instr where
   | stmt (s : Stmt)
   | call (c : Call)
+  | clean (cl : Cleaner)
+  -- a type filter on the base `b`: the locations of `b` whose path `may` rejects do not exist
+  | filt (b : Base) (may : List Acc → Bool)
 
 structure Program where
   entry : MethodId → Node
@@ -373,6 +444,9 @@ structure Program.WF (P : Program) : Prop where
     ∀ e, e ∈ c.toCallee → e.1.mark = .star
   fromStar : ∀ M n c n', (M, n, Instr.call c, n') ∈ P.edges →
     ∀ e, e ∈ c.fromCallee → e.1.mark = .star
+  /-- a type filter is prefix-closed: a path that may exist has prefixes that may exist -/
+  filtPrefix : ∀ M n b may n', (M, n, Instr.filt b may, n') ∈ P.edges →
+    ∀ p q, may (p ++ q) = true → may p = true
 
 /-- Concrete data flow: the value at entry location `l0` of method `M` flows to
     location `l` at node `n`. -/
@@ -390,6 +464,14 @@ inductive Flow (P : Program) : MethodId → Loc → Node → Loc → Prop where
       Flow P c.callee l1 (P.exit c.callee) l2 →
       e2 ∈ c.fromCallee → den e2.1 e2.2 l2 l3 →
       Flow P M l0 n' l3
+  -- a cleaner: the location keeps its value unless the cleaner cleans it
+  | clean {M l0 n l n' cl} :
+      Flow P M l0 n l → (M, n, Instr.clean cl, n') ∈ P.edges →
+      cl.cleansB l = false → Flow P M l0 n' l
+  -- a type filter: a location of the filtered base exists only if its path may exist
+  | filt {M l0 n l n' b may} :
+      Flow P M l0 n l → (M, n, Instr.filt b may, n') ∈ P.edges →
+      (l.base = b → may l.path = true) → Flow P M l0 n' l
 
 /-! ## 9. Abstraction helpers -/
 
@@ -398,6 +480,7 @@ inductive Flow (P : Program) : MethodId → Loc → Node → Loc → Prop where
 def startFact (i : PFact) : AFact :=
   match i.kind, i.mark with
   | .star _, .star   => ⟨i, false⟩
+  | .star _, .starEx _ => ⟨i, false⟩
   | .star _, .conc t => ⟨⟨i.base, i.path, .any, .conc t⟩, true⟩
   | .any,    m       => ⟨⟨i.base, i.path, .any, m⟩, true⟩
   | .exact,  _       => ⟨i, false⟩
@@ -413,9 +496,13 @@ def tailSubB : Kind → Kind → Bool
   | .exact,   _        => false
 
 def markSubB : MarkA → MarkA → Bool
-  | .star,   _        => true
-  | .conc t, .conc t' => Nat.beq t t'
-  | .conc _, .star    => false
+  | .star,     _         => true
+  | .conc t,   .conc t'  => Nat.beq t t'
+  | .conc _,   .star     => false
+  | .conc _,   .starEx _ => false
+  | .starEx x, .star     => x.isEmpty
+  | .starEx x, .conc t   => !memB t x
+  | .starEx x, .starEx y => x.all (fun t => memB t y)
 
 /-- `coversB i c`: the location set of `c` is inside the location set of `i`. -/
 def coversB (i c : PFact) : Bool :=
@@ -451,6 +538,7 @@ deriving DecidableEq, Repr
 def check (i : PFact) (f : AFact) (s : PFact) : Check :=
   match s.mark with
   | .star => .none
+  | .starEx _ => .none
   | .conc T =>
     if overlapB f.fact s then
       match f.fact.mark with
@@ -458,8 +546,84 @@ def check (i : PFact) (f : AFact) (s : PFact) : Check :=
       | .star   =>
         match i.mark with
         | .conc t => if Nat.beq t T then .triggered else .none
-        | .star   => .request T
+        | _       => .request T
+      | .starEx x =>
+        -- a cleaned mark neither triggers nor raises a request
+        if memB T x then .none else
+        match i.mark with
+        | .conc t => if Nat.beq t T then .triggered else .none
+        | _       => .request T
     else .none
+
+/-- A request for the mark `t` climbs through an added fact with this mark: the fact mark is
+    abstract and does not exclude `t`. -/
+def climbsB : MarkA → Mark → Bool
+  | .star,     _ => true
+  | .starEx x, t => !memB t x
+  | .conc _,   _ => false
+
+/-! ### The cleaner on a fact (spec §4.7) -/
+
+/-- The position of a fact against the cleaned locations (marks ignored). `inside`: every
+    location of the fact is cleaned; `disjoint`: none is; `part`: otherwise (the safe default). -/
+inductive CPos where
+  | inside
+  | disjoint
+  | part
+deriving DecidableEq, Repr
+
+def cleanPos (cl : Cleaner) (c : PFact) : CPos :=
+  if Nat.beq c.base cl.base then
+    match relate cl.path c.path with
+    | .below (_ :: _) =>
+      match cl.reach with
+      | .exact => .disjoint
+      | _      => .inside
+    | .below [] =>
+      match cl.reach, c.kind with
+      | .atAndBelow, _      => .inside
+      | .exact,      .exact => .inside
+      | .exact,      _      => .part
+      | .below,      .exact => .disjoint
+      | .below,      _      => .part
+    | .above r =>
+      match c.kind with
+      | .exact  => .disjoint
+      | .star e => if e.admits r then .part else .disjoint
+      | .any    => .part
+    | .apart => .disjoint
+  else .disjoint
+
+/-- Add the mark `t` to the exclusion of an abstract mark. -/
+def addEx : MarkA → Mark → MarkA
+  | .star,     t => .starEx [t]
+  | .starEx x, t => .starEx (t :: x)
+  | .conc t',  _ => .conc t'
+
+/-- The part of a concrete-mark fact that a cleaner does not definitely clean: an `[any]` fact
+    at the position under a cleaner of everything strictly below keeps only the position
+    itself; any other part stays as it is, in the demand layer. -/
+def concPart (cl : Cleaner) (c : AFact) : AFact :=
+  match c.fact.kind, cl.reach, relate cl.path c.fact.path with
+  | .any, .below, .below [] => ⟨⟨c.fact.base, c.fact.path, .exact, c.fact.mark⟩, c.demand⟩
+  | _,    _,      _         => ⟨c.fact, true⟩
+
+/-- The cleaner on one fact (spec §4.7). For an abstract mark and one cleaned mark `t`: the
+    fact continues without `t` (`*∖{t}`), and if the fact is only partly cleaned, the mark `t`
+    is requested (run 1) and comes back as a concrete fact, which the cleaner cleans exactly. -/
+def cleanRes (cl : Cleaner) (c : AFact) : Res :=
+  match cleanPos cl c.fact with
+  | .disjoint => ⟨[c], []⟩
+  | .inside =>
+    match c.fact.mark, cl.mark with
+    | .conc t, _      => if cl.markB t then Res.none else ⟨[c], []⟩
+    | m,       some t => ⟨[⟨⟨c.fact.base, c.fact.path, c.fact.kind, addEx m t⟩, c.demand⟩], []⟩
+    | _,       none   => Res.none
+  | .part =>
+    match c.fact.mark, cl.mark with
+    | .conc t, _      => if cl.markB t then ⟨[concPart cl c], []⟩ else ⟨[c], []⟩
+    | m,       some t => ⟨[⟨⟨c.fact.base, c.fact.path, c.fact.kind, addEx m t⟩, c.demand⟩], [t]⟩
+    | _,       none   => ⟨[AFact.norm ⟨c.fact, true⟩], []⟩     -- W2: a demand `*` fact becomes `[any]`
 
 /-- The initial fact emitted to answer the request `(i, t)` with the added fact
     `a` (bidirectional-task.md §4). An exact match at the requested chain gives the
@@ -539,10 +703,21 @@ inductive D : Obj → Prop where
   | reqUp {m j t M ic n f n' c e a} :
       D (.req m j t) → D (.edge M ic n f) → (M, n, Instr.call c, n') ∈ P.edges →
       c.callee = m → e ∈ c.toCallee → a ∈ (applyEdge f e.1 e.2).facts →
-      a.fact.mark = .star → overlapB a.fact j = true → D (.req M ic t)
+      climbsB a.fact.mark t = true → overlapB a.fact j = true → D (.req M ic t)
   | vuln {M i n f s} :
       D (.edge M i n f) → (M, n, s) ∈ sinks → check i f s = .triggered →
       D (.vuln M n s f.demand)
+  -- a cleaner (spec §4.7)
+  | clean {M i n f n' cl f'} :
+      D (.edge M i n f) → (M, n, Instr.clean cl, n') ∈ P.edges →
+      f' ∈ (cleanRes cl f).facts → D (.edge M i n' f')
+  | reqClean {M i n f n' cl t} :
+      D (.edge M i n f) → (M, n, Instr.clean cl, n') ∈ P.edges →
+      t ∈ (cleanRes cl f).reqs → D (.req M i t)
+  -- a type filter (spec §4.8): a fact whose path may exist passes; another one is dropped
+  | filt {M i n f n' b may} :
+      D (.edge M i n f) → (M, n, Instr.filt b may, n') ∈ P.edges →
+      (f.fact.base = b → may f.fact.path = true) → D (.edge M i n' f)
 
 end Closure
 
@@ -559,10 +734,10 @@ inductive Reach (P : Program) (roots : List MethodId) : MethodId → Node → Lo
 
 /-- An unrestricted abstraction policy. The zero fact serves itself; an added fact that a
     pattern of `demand` overlaps is served by its `*` projection with the mark `*`; otherwise
-    the most abstract fact. Run 1 of the spec (§7.2) uses it with the EMPTY demand
+    the most abstract fact. Run 1 of the spec (§6.2) uses it with the EMPTY demand
     (`policy1` in `Restricted.lean`): the most abstract fact. The non-empty case is the
     version-2 refinement policy; later versions replace it by the strict, mark-aware emission
-    (`emitM` in `Restricted.lean`, spec §7.3). -/
+    (`emitM` in `Restricted.lean`, spec §6.3). -/
 def policy (demand : MethodId → List PFact) (m : MethodId) (a : PFact) : PFact :=
   if a = zeroFact then zeroFact
   else if (demand m).any (fun d => overlapB d a) then ⟨a.base, a.path, .star Excl.empty, .star⟩
@@ -587,11 +762,13 @@ def revKinds : Kind → Kind → Kind × Kind
     The new premise mark is the mark the record produces. -/
 def revEdge (i f : PFact) : PFact × PFact :=
   let pm : MarkA := match f.mark with
-    | .star   => i.mark
-    | .conc t => .conc t
+    | .star     => i.mark
+    | .conc t   => .conc t
+    | .starEx _ => i.mark
   let fm : MarkA := match f.mark with
-    | .star   => .star
-    | .conc _ => i.mark
+    | .star     => .star
+    | .conc _   => i.mark
+    | .starEx x => .starEx x
   (⟨f.base, f.path, (revKinds i.kind f.kind).1, pm⟩, ⟨i.base, i.path, (revKinds i.kind f.kind).2, fm⟩)
 
 end ApSpec

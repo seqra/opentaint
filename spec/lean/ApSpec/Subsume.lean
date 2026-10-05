@@ -1,7 +1,9 @@
 /-
-  ApSpec.Subsume — subsumption of FINAL facts and of RECORDS (edge store, spec §10.1).
+  ApSpec.Subsume — subsumption of FINAL facts and of RECORDS (edge store, spec §8.1).
 
-  Part 1 (final facts): `subsumesB`, `subsumes_sound`.
+  Part 1 (final facts): `subsumesB`, `subsumes_sound`. Version 5: the marks of the
+  two facts are compared with their exclusions (`markSubsB`): a stored `*∖Xs`
+  subsumes a new `*∖Xn` if `Xs ⊆ Xn`, and a stored `*` subsumes every abstract mark.
   Part 2 (edges, v2): the conclusion exclusion `*/E` is the exclusion of the edge.
     * Merge rule 2 (same premise, same conclusion, exclusions E1 and E2) is EXACT:
       the pairs of `*/(E1 ∩ E2)` are the pairs of `*/E1` and the pairs of `*/E2`
@@ -13,6 +15,10 @@
       decidable test, `recordSubsumesB_sound` its soundness.
     * Subsumption keeps the layer: a demand record never subsumes a complete record
       (`recordSubsumesLB`, `recordSubsumesLB_layer`, the examples at the end).
+  Part 3 (mark exclusions, v5): the same two rules for the mark `*∖x`.
+    * Two conclusions that differ only in the mark exclusions `x1` and `x2` merge
+      EXACTLY into the mark `*∖(x1 ∩ x2)` (`merge_mark_inter`).
+    * A union of mark exclusions loses pairs (`union_marks_loses_pairs`).
 
   The premise reading `coversB` is NOT a subsumption test for final facts: a final
   `[any]` fact with the mark `*` does not cover a final `$` fact with the mark `T`
@@ -26,9 +32,22 @@ namespace ApSpec.Subsume
 open ApSpec
 
 def markEqB : MarkA → MarkA → Bool
-  | .star,   .star   => true
-  | .conc a, .conc b => Nat.beq a b
-  | _,       _       => false
+  | .star,     .star     => true
+  | .conc a,   .conc b   => Nat.beq a b
+  | .starEx x, .starEx y => decide (x = y)
+  | _,         _         => false
+
+/-- `markSubsB m1 m2`: the FINAL mark `m1` lets through every pair that the final
+    mark `m2` lets through, with the same output mark. Equal concrete marks; for
+    abstract marks (`*` is `*∖[]`), `*∖Xs` subsumes `*∖Xn` if `Xs ⊆ Xn`. A concrete
+    mark and an abstract mark never subsume each other. -/
+def markSubsB : MarkA → MarkA → Bool
+  | .conc a,    .conc b    => Nat.beq a b
+  | .star,      .star      => true
+  | .star,      .starEx _  => true
+  | .starEx xs, .star      => xs.isEmpty
+  | .starEx xs, .starEx xn => xs.all (fun a => memB a xn)
+  | _,          _          => false
 
 def samePathB (p q : List Acc) : Bool :=
   match dropPrefix p q with
@@ -36,11 +55,11 @@ def samePathB (p q : List Acc) : Bool :=
   | _       => false
 
 /-- `subsumesB f1 f2`: the final fact `f1` covers every pair of the final fact `f2`
-    (same base, same mark; `[any]` covers everything at or below its path; a `*`
+    (same base, a mark that subsumes (`markSubsB`); `[any]` covers everything at or below its path; a `*`
     leaf covers a `*` leaf with more exclusions at the same path; `$` covers `$`
     and `*/Universe` at the same path). -/
 def subsumesB (f1 f2 : PFact) : Bool :=
-  Nat.beq f1.base f2.base && markEqB f1.mark f2.mark &&
+  Nat.beq f1.base f2.base && markSubsB f1.mark f2.mark &&
   match f1.kind, f2.kind with
   | .any,     _                => (dropPrefix f1.path f2.path).isSome
   | .star e1, .star e2         => e1.subB e2 && samePathB f1.path f2.path
@@ -49,13 +68,64 @@ def subsumesB (f1 f2 : PFact) : Bool :=
   | _,        _                => false
 
 theorem markEqB_eq {a b : MarkA} (h : markEqB a b = true) : a = b := by
-  cases a <;> cases b
-  · rfl
-  · cases h
-  · cases h
-  · rename_i x y
-    have := CoreAux.beq_iff.mp h
-    rw [this]
+  cases a with
+  | star =>
+    cases b with
+    | star => rfl
+    | conc _ => cases h
+    | starEx _ => cases h
+  | conc x =>
+    cases b with
+    | star => cases h
+    | conc y =>
+      have h' : Nat.beq x y = true := h
+      rw [CoreAux.beq_iff.mp h']
+    | starEx _ => cases h
+  | starEx x =>
+    cases b with
+    | star => cases h
+    | conc _ => cases h
+    | starEx y =>
+      have h' : decide (x = y) = true := h
+      rw [of_decide_eq_true h']
+
+/-- SOUNDNESS of the mark test: if `m2` lets the initial mark `x` through, then `m1`
+    lets it through too, with the same output mark. -/
+theorem markSubsB_sound {m1 m2 : MarkA} {x : Mark} (h : markSubsB m1 m2 = true)
+    (hp : m2.passes x) : m1.out x = m2.out x ∧ m1.passes x := by
+  cases m1 with
+  | conc a =>
+    cases m2 with
+    | conc b =>
+      have h' : Nat.beq a b = true := h
+      rw [CoreAux.beq_iff.mp h']
+      exact ⟨rfl, trivial⟩
+    | star => cases h
+    | starEx _ => cases h
+  | star =>
+    cases m2 with
+    | star => exact ⟨rfl, trivial⟩
+    | starEx _ => exact ⟨rfl, trivial⟩
+    | conc _ => cases h
+  | starEx xs =>
+    cases m2 with
+    | conc _ => cases h
+    | star =>
+      cases xs with
+      | nil => exact ⟨rfl, rfl⟩
+      | cons _ _ => cases h
+    | starEx xn =>
+      refine ⟨rfl, ?_⟩
+      have hp' : memB x xn = false := hp
+      show memB x xs = false
+      cases hx : memB x xs with
+      | false => rfl
+      | true =>
+        have h' : xs.all (fun a => memB a xn) = true := h
+        rw [CoreAux.memB_of_all hx h'] at hp'
+        cases hp'
+
+#print axioms markSubsB_sound
 
 theorem samePathB_eq {p q : List Acc} (h : samePathB p q = true) : q = p := by
   unfold samePathB at h
@@ -73,10 +143,10 @@ theorem subsumes_sound {i f1 f2 : PFact} {l0 l1 : Loc} (h : subsumesB f1 f2 = tr
   rw [Bool.and_eq_true, Bool.and_eq_true] at h
   obtain ⟨⟨hb, hm⟩, hk⟩ := h
   have hbase : f1.base = f2.base := CoreAux.beq_iff.mp hb
-  have hmark : f1.mark = f2.mark := markEqB_eq hm
-  obtain ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩ := hd
+  obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, htf⟩ := hd
+  have ⟨hout, hps'⟩ := markSubsB_sound hm hps
   have hb1' : l1.base = f1.base := by rw [hb1, hbase]
-  have hm1' : l1.mark = f1.mark.out l0.mark := by rw [hm1, hmark]
+  have hm1' : l1.mark = f1.mark.out l0.mark := by rw [hm1, hout]
   cases hk1 : f1.kind with
   | any =>
     rw [hk1] at hk
@@ -84,7 +154,7 @@ theorem subsumes_sound {i f1 f2 : PFact} {l0 l1 : Loc} (h : subsumesB f1 f2 = tr
     | none => rw [hdp] at hk; cases hk
     | some r =>
       have hq := CoreAux.dropPrefix_some.mp hdp
-      refine ⟨hb0, hb1', hm0, hm1', σ, r ++ τ, hp0, ?_, hti, ?_⟩
+      refine ⟨hb0, hb1', hm0, hm1', hps', σ, r ++ τ, hp0, ?_, hti, ?_⟩
       · rw [hp1, hq, List.append_assoc]
       · rw [hk1]; trivial
   | star e1 =>
@@ -95,7 +165,7 @@ theorem subsumes_sound {i f1 f2 : PFact} {l0 l1 : Loc} (h : subsumesB f1 f2 = tr
       have hpe := samePathB_eq hsp
       rw [hk2] at htf
       obtain ⟨hτ, ha2⟩ := htf
-      refine ⟨hb0, hb1', hm0, hm1', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
+      refine ⟨hb0, hb1', hm0, hm1', hps', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
       rw [hk1]
       exact ⟨hτ, CoreAux.Excl.subB_sound hsub ha2⟩
     | any => rw [hk1, hk2] at hk; cases hk
@@ -106,7 +176,7 @@ theorem subsumes_sound {i f1 f2 : PFact} {l0 l1 : Loc} (h : subsumesB f1 f2 = tr
       rw [hk1, hk2] at hk
       have hpe := samePathB_eq hk
       rw [hk2] at htf
-      refine ⟨hb0, hb1', hm0, hm1', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
+      refine ⟨hb0, hb1', hm0, hm1', hps', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
       rw [hk1]; exact htf
     | star e2 =>
       cases e2 with
@@ -116,7 +186,7 @@ theorem subsumes_sound {i f1 f2 : PFact} {l0 l1 : Loc} (h : subsumesB f1 f2 = tr
         rw [hk2] at htf
         obtain ⟨hτ, hu⟩ := htf
         have hσ : σ = [] := CoreAux.univ_admits hu
-        refine ⟨hb0, hb1', hm0, hm1', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
+        refine ⟨hb0, hb1', hm0, hm1', hps', σ, τ, hp0, by rw [hp1, hpe], hti, ?_⟩
         rw [hk1]
         show τ = []
         rw [hτ, hσ]
@@ -134,6 +204,16 @@ example : subsumesB ⟨1, [], .any, .conc 5⟩ ⟨1, [2, 3], .exact, .conc 5⟩ 
 -- intersection join direction: fewer exclusions subsume more exclusions
 example : subsumesB ⟨1, [], .star (.set []), .star⟩ ⟨1, [], .star (.set [2]), .star⟩ = true := by decide
 example : subsumesB ⟨1, [], .star (.set [2]), .star⟩ ⟨1, [], .star (.set []), .star⟩ = false := by decide
+-- version 5, mark exclusions: fewer excluded marks subsume more excluded marks
+example : subsumesB ⟨1, [], .star (.set []), .starEx [5]⟩ ⟨1, [], .star (.set []), .starEx [6, 5]⟩ = true := by
+  decide
+example : subsumesB ⟨1, [], .star (.set []), .starEx [6, 5]⟩ ⟨1, [], .star (.set []), .starEx [5]⟩ = false := by
+  decide
+-- a stored `*` subsumes every abstract mark; a stored `*∖{5}` does not subsume `*`
+example : subsumesB ⟨1, [], .any, .star⟩ ⟨1, [2], .exact, .starEx [5]⟩ = true := by decide
+example : subsumesB ⟨1, [], .any, .starEx [5]⟩ ⟨1, [2], .exact, .star⟩ = false := by decide
+-- an abstract mark never subsumes a concrete mark (the output marks differ)
+example : subsumesB ⟨1, [], .any, .starEx []⟩ ⟨1, [], .exact, .conc 5⟩ = false := by decide
 
 /-! ## Part 2. Edges: merge and record subsumption -/
 
@@ -193,19 +273,19 @@ theorem merge_inter {i : PFact} {b : Base} {q : List Acc} {E1 E2 : Excl} {m : Ma
     den i ⟨b, q, .star (E1.inter E2), m⟩ l0 l1 ↔
       den i ⟨b, q, .star E1, m⟩ l0 l1 ∨ den i ⟨b, q, .star E2, m⟩ l0 l1 := by
   constructor
-  · intro ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ha⟩
+  · intro ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ha⟩
     have ha' : (E1.admits σ || E2.admits σ) = true := by rw [← admits_inter]; exact ha
     rw [Bool.or_eq_true] at ha'
     rcases ha' with ha' | ha'
-    · exact Or.inl ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ha'⟩
-    · exact Or.inr ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ha'⟩
+    · exact Or.inl ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ha'⟩
+    · exact Or.inr ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ha'⟩
   · intro h
-    rcases h with ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ha⟩ |
-                  ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ha⟩
-    · refine ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ?_⟩
+    rcases h with ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ha⟩ |
+                  ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ha⟩
+    · refine ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ?_⟩
       show (E1.inter E2).admits σ = true
       rw [admits_inter, ha]; rfl
-    · refine ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, hτ, ?_⟩
+    · refine ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, hτ, ?_⟩
       show (E1.inter E2).admits σ = true
       rw [admits_inter, ha, Bool.or_true]
 
@@ -219,8 +299,8 @@ theorem union_loses_pairs :
     den ⟨10, [], .star Excl.empty, .star⟩ ⟨11, [], .star Excl.empty, .star⟩ ⟨10, [2], 0⟩ ⟨11, [2], 0⟩ ∧
     ¬ den ⟨10, [], .star Excl.empty, .star⟩ ⟨11, [], .star (Excl.empty.union (.set [2])), .star⟩
         ⟨10, [2], 0⟩ ⟨11, [2], 0⟩ := by
-  refine ⟨⟨rfl, rfl, trivial, rfl, [2], [2], rfl, rfl, rfl, rfl, rfl⟩, ?_⟩
-  intro ⟨_, _, _, _, σ, τ, hp0, _, _, _, ha⟩
+  refine ⟨⟨rfl, rfl, trivial, rfl, trivial, [2], [2], rfl, rfl, rfl, rfl, rfl⟩, ?_⟩
+  intro ⟨_, _, _, _, _, σ, τ, hp0, _, _, _, ha⟩
   have hs : σ = [2] := hp0.symm
   subst hs
   exact absurd ha (by decide)
@@ -247,7 +327,7 @@ theorem record_subsumes_gen {i1 f1 i2 f2 : PFact} {P1 P2 E1 E2 : Excl} {r : List
     (hip : i2.path = i1.path ++ r) (hfp : f2.path = f1.path ++ r)
     (hc : suffixOkB r P1 P2 E1 E2 = true) :
     den i2 f2 l0 l1 → den i1 f1 l0 l1 := by
-  intro ⟨h0, h1, h2, h3, σ, τ, hp0, hp1, hti, htf⟩
+  intro ⟨h0, h1, h2, h3, h4, σ, τ, hp0, hp1, hti, htf⟩
   rw [hk2] at hti
   rw [hf2] at htf
   obtain ⟨hτ, ha⟩ := htf
@@ -261,7 +341,7 @@ theorem record_subsumes_gen {i1 f1 i2 f2 : PFact} {P1 P2 E1 E2 : Excl} {r : List
       rw [CoreAux.admits_append_cons, CoreAux.admits_append_cons]
       exact ⟨hs1, hs2⟩
   refine ⟨by rw [h0, hib], by rw [h1, hfb], by rw [← him]; exact h2, by rw [h3, hfm],
-    r ++ σ, r ++ σ, ?_, ?_, ?_, ?_⟩
+    by rw [← hfm]; exact h4, r ++ σ, r ++ σ, ?_, ?_, ?_, ?_⟩
   · rw [hp0, hip, List.append_assoc]
   · rw [hp1, hfp, hτ, List.append_assoc]
   · rw [hk1]; exact hP.1
@@ -385,8 +465,8 @@ example : recordSubsumesB gen (pf a [f, g] st, pf b [h, f] st) = false := by dec
     general record and not a pair of the specific record. -/
 theorem reverse_fails :
     den gen.1 gen.2 ⟨a, [f], 0⟩ ⟨b, [h], 0⟩ ∧ ¬ den spec.1 spec.2 ⟨a, [f], 0⟩ ⟨b, [h], 0⟩ := by
-  refine ⟨⟨rfl, rfl, trivial, rfl, [], [], rfl, rfl, rfl, rfl, rfl⟩, ?_⟩
-  intro ⟨_, _, _, _, σ, τ, hp0, _⟩
+  refine ⟨⟨rfl, rfl, trivial, rfl, trivial, [], [], rfl, rfl, rfl, rfl, rfl⟩, ?_⟩
+  intro ⟨_, _, _, _, _, σ, τ, hp0, _⟩
   have hp0' : [f] = [f, g] ++ σ := hp0
   have hl := congrArg List.length hp0'
   simp only [List.length_append, List.length_cons, List.length_nil] at hl
@@ -411,5 +491,69 @@ example : recordSubsumesB (genDemand.1, genDemand.2.fact) (specComplete.1, specC
 example : recordSubsumesLB (gen.1, ⟨gen.2, false⟩) specComplete = true := by decide
 
 end Examples
+
+/-! ## Part 3. Mark exclusions: merge and union -/
+
+/-- The intersection of two mark exclusion lists. -/
+def markInter (x1 x2 : List Mark) : List Mark := x1.filter (fun m => memB m x2)
+
+/-- MERGE RULE 2 FOR MARKS. Two conclusions `(b, q, k, *∖x1)` and `(b, q, k, *∖x2)` of the
+    same premise merge into `(b, q, k, *∖(x1 ∩ x2))`. The merge is exact: it has the same
+    pairs as the two conclusions. -/
+theorem merge_mark_inter {i : PFact} {b : Base} {q : List Acc} {k : Kind} {x1 x2 : List Mark}
+    {l0 l1 : Loc} :
+    den i ⟨b, q, k, .starEx (markInter x1 x2)⟩ l0 l1 ↔
+      den i ⟨b, q, k, .starEx x1⟩ l0 l1 ∨ den i ⟨b, q, k, .starEx x2⟩ l0 l1 := by
+  constructor
+  · intro ⟨h0, h1, h2, h3, h4, hr⟩
+    have h4' : memB l0.mark (markInter x1 x2) = false := h4
+    unfold markInter at h4'
+    rw [memB_filter] at h4'
+    cases hx1 : memB l0.mark x1 with
+    | false => exact Or.inl ⟨h0, h1, h2, h3, hx1, hr⟩
+    | true =>
+      rw [hx1, Bool.true_and] at h4'
+      exact Or.inr ⟨h0, h1, h2, h3, h4', hr⟩
+  · intro h
+    rcases h with ⟨h0, h1, h2, h3, h4, hr⟩ | ⟨h0, h1, h2, h3, h4, hr⟩
+    · refine ⟨h0, h1, h2, h3, ?_, hr⟩
+      have h4' : memB l0.mark x1 = false := h4
+      show memB l0.mark (markInter x1 x2) = false
+      unfold markInter
+      rw [memB_filter, h4', Bool.false_and]
+    · refine ⟨h0, h1, h2, h3, ?_, hr⟩
+      have h4' : memB l0.mark x2 = false := h4
+      show memB l0.mark (markInter x1 x2) = false
+      unfold markInter
+      rw [memB_filter, h4', Bool.and_false]
+
+#print axioms merge_mark_inter
+
+/-- The mark `*∖[]` has the same pairs as the mark `*`. So the merge of a `*` conclusion
+    with a `*∖x` conclusion is the `*` conclusion (`markInter [] x = []`). -/
+theorem den_starEx_nil {i : PFact} {b : Base} {q : List Acc} {k : Kind} {l0 l1 : Loc} :
+    den i ⟨b, q, k, .starEx []⟩ l0 l1 ↔ den i ⟨b, q, k, .star⟩ l0 l1 :=
+  ⟨fun ⟨h0, h1, h2, h3, _, hr⟩ => ⟨h0, h1, h2, h3, trivial, hr⟩,
+   fun ⟨h0, h1, h2, h3, _, hr⟩ => ⟨h0, h1, h2, h3, rfl, hr⟩⟩
+
+#print axioms den_starEx_nil
+
+/-- A union of mark exclusions is FORBIDDEN: it loses pairs. The edge
+    `(10, ., *, *) → (11, ., *, *∖{5})` has the pair `(10, ., 6) ↦ (11, ., 6)`; the merge
+    with the exclusion `{6}` of another conclusion (the mark `*∖{5, 6}`) removes it. -/
+theorem union_marks_loses_pairs :
+    den ⟨10, [], .star Excl.empty, .star⟩ ⟨11, [], .star Excl.empty, .starEx [5]⟩
+        ⟨10, [], 6⟩ ⟨11, [], 6⟩ ∧
+    ¬ den ⟨10, [], .star Excl.empty, .star⟩ ⟨11, [], .star Excl.empty, .starEx ([5] ++ [6])⟩
+        ⟨10, [], 6⟩ ⟨11, [], 6⟩ := by
+  refine ⟨⟨rfl, rfl, trivial, rfl, rfl, [], [], rfl, rfl, rfl, rfl, rfl⟩, ?_⟩
+  intro ⟨_, _, _, _, hp, _⟩
+  have hp' : memB 6 ([5] ++ [6]) = false := hp
+  exact absurd hp' (by decide)
+
+#print axioms union_marks_loses_pairs
+
+-- Merge rule 2 on concrete mark exclusions: {5, 6} ∩ {6, 7} = {6}.
+example : markInter [5, 6] [6, 7] = [6] := by decide
 
 end ApSpec.Subsume

@@ -2,7 +2,11 @@
   ApSpec.Cases — the cases of bidirectional-task.md as executable test vectors.
 
   Each `example` is checked by `decide` (kernel evaluation, no extra axiom).
-  The same vectors are the reference for the Kotlin unit tests (spec §10).
+  The same vectors are the reference for the Kotlin unit tests (spec §13).
+
+  Round 5 (namespace `ApSpec.CleanCases`, at the end): the cleaner with a mark exclusion
+  (`cleanRes`, `markComp`, `check`, `markGate`, `climbsB` on `*∖x`) and the type filter
+  (`filt`, prefix-closed predicate on the first accessor).
 -/
 import ApSpec.Basic
 
@@ -213,7 +217,9 @@ example : applicable (pf x [] (star (.set [f])) .star) (pf x [] (star Excl.empty
 /-! ### F16: an uncorrelated result can still be complete -/
 
 -- an any-field rule "every location under b flows somewhere under a": from the abstract fact
--- b.*/{} the result (a, ., [any], *) is EXACT (no exclusion restricts the correlation)
+-- b.*/{} the result (a, ., [any], *) is EXACT (no exclusion restricts the correlation).
+-- This is the model result. The implementation applies W6 (ap.md §2.3, F41) and puts every
+-- [any] conclusion in the demand layer (`Invariant.demand_of_any_ok`).
 example : (applyEdge (cf b [] (star Excl.empty) .star) (pf b [] (star Excl.empty) .star)
       (pf a [] .any .star)).facts = [cf a [] .any .star] := by decide
 -- with an exclusion on the fact, the same result is a demand fact
@@ -275,7 +281,7 @@ example : (⟨pf r0 [] .exact (.conc T2), true⟩ : AFact).complete = false := b
 example : (⟨pf a [] .any (.conc T), false⟩ : AFact).complete = false := by decide
 example : (cf a [] (star E1) .star).complete = true := by decide
 
-/-! ### the abstraction policy (spec §7.2) satisfies (A1) -/
+/-! ### the abstraction policy (spec §6.1, §6.2) satisfies (A1) -/
 
 def dem : MethodId → List PFact := fun _ => [pf x [f] .any .star]
 -- zero serves zero
@@ -288,3 +294,247 @@ example : applicable (policy dem 0 (pf x [f, g] .exact (.conc T))) (pf x [f, g] 
 example : applicable (policy dem 0 (pf x [g] .any (.conc T))) (pf x [g] .any (.conc T)) = true := by decide
 
 end ApSpec.Cases
+
+/-! ## Round 5: cleaners with a mark exclusion, and type filters (spec §4.7, §4.8)
+
+  The names of this section: the base `x = 1` (and two other bases `y = 4`, `r = 5`), the
+  accessors `f = 2`, `g = 3`, the marks `T = 7`, `U = 8`, and the tail `st = *` with the empty
+  exclusion. A mark `*∖{T}` is `.starEx [T]`. Each vector is checked by `decide`, except the
+  vectors on `markGate`: `Gate` has no `DecidableEq`, so the kernel checks them by `rfl`. -/
+
+namespace ApSpec.CleanCases
+open ApSpec
+
+def x : Base := 1
+def y : Base := 4
+def r : Base := 5
+def f : Acc := 2
+def g : Acc := 3
+def T : Mark := 7
+def U : Mark := 8
+def st : Kind := .star (.set [])
+
+/-- A final fact in the normal layer. -/
+def cf (b : Base) (p : List Acc) (k : Kind) (m : MarkA) : AFact := ⟨⟨b, p, k, m⟩, false⟩
+/-- A final fact in the demand layer. -/
+def df (b : Base) (p : List Acc) (k : Kind) (m : MarkA) : AFact := ⟨⟨b, p, k, m⟩, true⟩
+
+/-- The result of the cleaner as a pair (facts, requests). -/
+def cr (cl : Cleaner) (c : AFact) : List AFact × List Mark :=
+  ((cleanRes cl c).facts, (cleanRes cl c).reqs)
+
+/-! ### The cleaner of `T` on `x.*` (everything strictly below `x`) -/
+
+def clBelow : Cleaner := ⟨x, [], .below, some T⟩
+
+-- a `*` fact at `x`: the location `x` itself is not cleaned, the locations below it are.
+-- So the fact is partly cleaned: it continues as `*∖{T}`, and the request `T` goes to the premise.
+example : cleanPos clBelow (cf x [] st .star).fact = .part := by decide
+theorem clBelow_star_at : cr clBelow (cf x [] st .star) = ([cf x [] st (.starEx [T])], [T]) := by
+  decide
+#print axioms clBelow_star_at
+
+-- a `*` fact at `x.f`: every location is cleaned. The fact continues as `*∖{T}`, no request.
+example : cleanPos clBelow (cf x [f] st .star).fact = .inside := by decide
+theorem clBelow_star_below : cr clBelow (cf x [f] st .star) = ([cf x [f] st (.starEx [T])], []) := by
+  decide
+#print axioms clBelow_star_below
+
+-- a concrete `T` fact at `x.f`: dropped
+theorem clBelow_conc_T : cr clBelow (cf x [f] .exact (.conc T)) = ([], []) := by decide
+#print axioms clBelow_conc_T
+
+-- `(x,.,[any],T)`: only the position `x` itself is not cleaned, so the fact keeps only `(x,.,$,T)`
+example : cleanPos clBelow (df x [] .any (.conc T)).fact = .part := by decide
+theorem clBelow_any_T : cr clBelow (df x [] .any (.conc T)) = ([df x [] .exact (.conc T)], []) := by
+  decide
+#print axioms clBelow_any_T
+
+-- a concrete fact with another mark `U`: unchanged
+theorem clBelow_conc_U : cr clBelow (cf x [f] .exact (.conc U)) = ([cf x [f] .exact (.conc U)], []) := by
+  decide
+#print axioms clBelow_conc_U
+
+-- a fact on another base: unchanged
+example : cleanPos clBelow (cf y [f] st .star).fact = .disjoint := by decide
+theorem clBelow_other_base : cr clBelow (cf y [f] st .star) = ([cf y [f] st .star], []) := by decide
+#print axioms clBelow_other_base
+example : cr clBelow (cf y [f] .exact (.conc T)) = ([cf y [f] .exact (.conc T)], []) := by decide
+
+-- a second cleaner adds its mark to the exclusion: `*∖{T}` becomes `*∖{U, T}`
+example : cr ⟨x, [], .below, some U⟩ (cf x [f] st (.starEx [T])) =
+    ([cf x [f] st (.starEx [U, T])], []) := by decide
+
+/-! ### The cleaner of `T` on `x.f` only (`exact`) -/
+
+def clExact : Cleaner := ⟨x, [f], .exact, some T⟩
+
+-- a `*` fact at `x.f`: the location `x.f` itself is cleaned, the locations below it are not.
+-- So the fact is partly cleaned: `*∖{T}`, and the request `T`.
+example : cleanPos clExact (cf x [f] st .star).fact = .part := by decide
+theorem clExact_star_at : cr clExact (cf x [f] st .star) = ([cf x [f] st (.starEx [T])], [T]) := by
+  decide
+#print axioms clExact_star_at
+
+-- `(x,.f,$,T)`: dropped
+example : cleanPos clExact (cf x [f] .exact (.conc T)).fact = .inside := by decide
+theorem clExact_conc_at : cr clExact (cf x [f] .exact (.conc T)) = ([], []) := by decide
+#print axioms clExact_conc_at
+
+-- `(x,.f.g,$,T)`: below the cleaned location, unchanged
+example : cleanPos clExact (cf x [f, g] .exact (.conc T)).fact = .disjoint := by decide
+theorem clExact_conc_below : cr clExact (cf x [f, g] .exact (.conc T)) =
+    ([cf x [f, g] .exact (.conc T)], []) := by decide
+#print axioms clExact_conc_below
+
+/-! ### The cleaner of every mark on `x` and everything below it -/
+
+def clAll : Cleaner := ⟨x, [], .atAndBelow, none⟩
+
+-- a `*` fact at `x.f`: every location is cleaned, for every mark: dropped
+theorem clAll_star_below : cr clAll (cf x [f] st .star) = ([], []) := by decide
+#print axioms clAll_star_below
+
+-- a `*` fact on another base: unchanged
+theorem clAll_other_base : cr clAll (cf y [f] st .star) = ([cf y [f] st .star], []) := by decide
+#print axioms clAll_other_base
+
+/-! ### The result mark `markComp`, and a summary conclusion behind a cleaner -/
+
+-- a target `*∖{T}` stops the concrete mark `T` and lets `U` through
+theorem markComp_stops : markComp (.starEx [T]) (.conc T) = none := by decide
+theorem markComp_passes : markComp (.starEx [T]) (.conc U) = some (.conc U) := by decide
+theorem markComp_star : markComp (.starEx [T]) .star = some (.starEx [T]) := by decide
+#print axioms markComp_stops
+#print axioms markComp_passes
+#print axioms markComp_star
+-- two exclusions join
+example : markComp (.starEx [T]) (.starEx [U]) = some (.starEx [T, U]) := by decide
+
+/-- The callee summary premise `(x,.,*,{},*)` and its conclusion `(r,.,*,{},*∖{T})`: a cleaner of
+    `T` is on the path from the entry to the exit. -/
+def sumI : PFact := ⟨x, [], st, .star⟩
+def sumC : PFact := ⟨r, [], st, .starEx [T]⟩
+
+-- a caller fact with the mark `T`: no fact
+theorem applyEdge_cleaned_T : (applyEdge (cf x [f] .exact (.conc T)) sumI sumC).facts = [] := by decide
+-- a caller fact with the mark `U`: the fact `(r,.f,$,U)`
+theorem applyEdge_cleaned_U :
+    (applyEdge (cf x [f] .exact (.conc U)) sumI sumC).facts = [cf r [f] .exact (.conc U)] := by decide
+#print axioms applyEdge_cleaned_T
+#print axioms applyEdge_cleaned_U
+-- no request in both
+example : (applyEdge (cf x [f] .exact (.conc T)) sumI sumC).reqs = [] := by decide
+example : (applyEdge (cf x [f] .exact (.conc U)) sumI sumC).reqs = [] := by decide
+-- a `*` caller fact: the result keeps the exclusion, `(r,.f,*,{},*∖{T})` in the normal layer
+example : (applyEdge (cf x [f] st .star) sumI sumC).facts = [cf r [f] st (.starEx [T])] := by decide
+-- the same through `applySummary` (the summary edge is in the normal layer)
+example : (applySummary (cf x [f] .exact (.conc T)) sumI ⟨sumC, false⟩).facts = [] := by decide
+example : (applySummary (cf x [f] .exact (.conc U)) sumI ⟨sumC, false⟩).facts =
+    [cf r [f] .exact (.conc U)] := by decide
+
+/-! ### The sink check on a `*∖{T}` fact -/
+
+def sinkT : PFact := ⟨x, [], .exact, .conc T⟩
+def sinkU : PFact := ⟨x, [], .exact, .conc U⟩
+
+-- under a `*` premise: a sink for the cleaned mark `T` gives nothing (no request); a sink for `U`
+-- requests `U`
+theorem check_cleaned_T : check sumI (cf x [] st (.starEx [T])) sinkT = .none := by decide
+theorem check_cleaned_U : check sumI (cf x [] st (.starEx [T])) sinkU = .request U := by decide
+#print axioms check_cleaned_T
+#print axioms check_cleaned_U
+-- under a concrete premise `T`: the cleaned mark does not trigger
+example : check ⟨x, [], st, .conc T⟩ (cf x [] st (.starEx [T])) sinkT = .none := by decide
+
+/-! ### The mark gate and the climb of a request -/
+
+-- a summary premise with the mark `T` against a `*∖{T}` caller fact: no application, no request
+theorem markGate_cleaned : markGate (.conc T) (.starEx [T]) = .no := rfl
+-- against a `*∖{T}` caller fact, the premise mark `U` raises the request `U`
+example : markGate (.conc U) (.starEx [T]) = .req U := rfl
+#print axioms markGate_cleaned
+
+-- the request `T` does not climb through an added fact `*∖{T}`; the request `U` does
+theorem climbs_cleaned_T : climbsB (.starEx [T]) T = false := by decide
+theorem climbs_cleaned_U : climbsB (.starEx [T]) U = true := by decide
+#print axioms climbs_cleaned_T
+#print axioms climbs_cleaned_U
+
+/-! ### The type filter (spec §4.8) -/
+
+/-- The type filter of `x`: the type of `x` has the field `f` but not the field `g`. As the real
+    checker does, the predicate reads only the first accessor of the path. -/
+def mayX : List Acc → Bool
+  | []     => true
+  | a :: _ => !Nat.beq a g
+
+/-- The filter predicate is prefix-closed (the field `filtPrefix` of `Program.WF`). -/
+theorem mayX_prefix : ∀ p q, mayX (p ++ q) = true → mayX p = true
+  | [],     _, _ => rfl
+  | _ :: _, _, h => h
+#print axioms mayX_prefix
+
+/-- The condition of rule `filt` as a Boolean: the fact is on another base, or its path may exist. -/
+def filtPassB (b : Base) (may : List Acc → Bool) (c : AFact) : Bool :=
+  !Nat.beq c.fact.base b || may c.fact.path
+
+/-- The Boolean is the condition of rule `filt` (and of `Flow.filt` for a location). -/
+theorem filtPassB_iff (b : Base) (may : List Acc → Bool) (c : AFact) :
+    filtPassB b may c = true ↔ (c.fact.base = b → may c.fact.path = true) := by
+  unfold filtPassB
+  cases hb : Nat.beq c.fact.base b with
+  | false =>
+    constructor
+    · intro _ h
+      rw [h, Nat.beq_refl] at hb
+      cases hb
+    · intro _
+      rfl
+  | true =>
+    constructor
+    · intro h _
+      exact h
+    · intro h
+      exact h (Nat.eq_of_beq_eq_true hb)
+#print axioms filtPassB_iff
+
+-- on the base `x`, a fact passes the filter iff its path is accepted
+theorem filt_star_root : filtPassB x mayX (cf x [] st .star) = true := by decide
+theorem filt_field_f : filtPassB x mayX (cf x [f] st .star) = true := by decide
+theorem filt_field_g : filtPassB x mayX (cf x [g] .exact (.conc T)) = false := by decide
+#print axioms filt_star_root
+#print axioms filt_field_f
+#print axioms filt_field_g
+example : filtPassB x mayX (cf x [f, g] .exact (.conc T)) = true := by decide
+example : filtPassB x mayX (df x [g, f] .any (.conc T)) = false := by decide
+-- the same as `mayX` on the path, for every fact on `x` in this list
+example : ∀ c ∈ [cf x [] st .star, cf x [f] st .star, cf x [g] .exact (.conc T),
+    cf x [f, g] .exact (.conc T), df x [g, f] .any (.conc T)],
+    filtPassB x mayX c = mayX c.fact.path := by decide
+-- another base: the filter of `x` does not apply
+example : filtPassB x mayX (cf y [g] .exact (.conc T)) = true := by decide
+-- a covering fact passes: the location `x.f.g` may exist, the fact `(x,.f,*)` covers it
+example : mayX [f, g] = true ∧ filtPassB x mayX (cf x [f] st .star) = true := by decide
+
+/-- A program with one type filter edge on `x`. It is well formed: `mayX` is prefix-closed. -/
+def Pfilt : Program := ⟨fun _ => 0, fun _ => 1, [(0, 0, .filt x mayX, 1)]⟩
+
+theorem Pfilt_wf : Pfilt.WF := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · intro M n s n' hE
+    cases hE with
+    | tail _ hE => cases hE
+  · intro M n c n' hE
+    cases hE with
+    | tail _ hE => cases hE
+  · intro M n c n' hE
+    cases hE with
+    | tail _ hE => cases hE
+  · intro M n b may n' hE
+    cases hE with
+    | head => exact mayX_prefix
+    | tail _ hE => cases hE
+#print axioms Pfilt_wf
+
+end ApSpec.CleanCases

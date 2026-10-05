@@ -24,7 +24,7 @@
     N2. A key without the base mixes the bases. A root fact (`path = []`) then
         gets every record of the method. The key `base :: path` keeps the
         completeness (`applicable_mem_candidatesB`, `demand_completeB`).
-    N3. The standing request match (spec §8.3) is an overlap query, not an
+    N3. The standing request match (spec §4.5, §8.8) is an overlap query, not an
         exact-key query. The exact-key request store cannot answer it; a path
         index on `method :: base :: path` answers it (`standing_complete`).
     N4. The cost bound `|q| + 1` counts key-path nodes. In a left-child /
@@ -1407,7 +1407,7 @@ theorem requestStore_equiv {rs : List ReqRec} {m : MethodId} {i : PFact} {t : Ma
 
 #print axioms requestStore_equiv
 
-/-- The STANDING match of a request (spec §8.3), the concept: the requests of
+/-- The STANDING match of a request (spec §4.5, §8.8), the concept: the requests of
     the method `M` whose initial fact overlaps the added fact `a`. -/
 def standing (rs : List ReqRec) (M : MethodId) (a : PFact) : List ReqRec :=
   rs.filter (fun r => decide (r.method = M) && overlapB a r.initial)
@@ -1600,7 +1600,7 @@ def reqs : List ReqRec := [⟨1, pf 1 [] st, 5⟩, ⟨1, pf 1 [f] st, 6⟩, ⟨1
 #eval KMap.lookup (requestStore reqs) (1, pf 1 [f] st)      -- [6]
 example : KMap.lookup (requestStore reqs) (1, pf 1 [] st) = [5, 7] := by decide
 
-/-- DESIGN NOTE 3. The standing match (spec §8.3) of the added fact
+/-- DESIGN NOTE 3. The standing match (spec §4.5, §8.8) of the added fact
     `(1, .f.g, *, {}, T)` overlaps all three requests, but its key is in no
     bucket: the exact-key map cannot answer the standing match. The path
     index `standingQuery` answers it. -/

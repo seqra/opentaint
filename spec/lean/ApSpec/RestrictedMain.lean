@@ -4,7 +4,8 @@
   The coverage, iteration and exactness theorems are generic over the emission, the
   satisfaction and the restriction (`RestrictedCoverage.lean`, `RestrictedExact.lean`).
   `RestrictedCore.lean` proves that the rules satisfy the contracts. This file joins them.
-  The spec rules of version 4 are `emitM`, `satI`, `restrictU` (section "Version 4": `vuln_found_M`,
+  The spec rules are `emitM` (since version 4), `satI` (since version 5) and `restrictU` (section
+  "The spec rules": `vuln_found_M`,
   `iteration_sound_M`, `iteration_sound_M_identity`, `closed_records_exactM`, `confirmed_real_M`,
   `no_request_M`). The version-3 rules `emitS`, `satS`, `restrictS` come first, as the record of the
   review:
@@ -78,7 +79,7 @@ theorem iteration_sound_S_identity {P : Program} {counted : Acc → Bool} {Ls : 
 theorem closed_records_exactR {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
-    (hwf : P.WF) (hrecs : RExact.RecsExact P recs)
+    (hwf : P.WF) (hmw : Exact.MarkWF P) (hup : Exact.FiltUp P) (hrecs : RExact.RecsExact P recs)
     {M : MethodId} {i : PFact}
     (hi : DR P counted L demand emitS satS restrictS recs sinks roots (.init M i))
     (hnoreq : ∀ t, ¬ DR P counted L demand emitS satS restrictS recs sinks roots (.req M i t))
@@ -99,7 +100,7 @@ theorem closed_records_exactR {P : Program} {counted : Acc → Bool} {L : Nat}
       ⟨g, hg, hd, _⟩ | hrq
     · exact ⟨g, hg, hd⟩
     · exact absurd hrq (hnoreq _)
-  exact RExact.closed_exactR RCore.restrictS_sub hrecs hcov hcomp h0 l
+  exact RExact.closed_exactR hmw hup RExact.satS_mark RCore.restrictS_sub hrecs hcov hcomp h0 l
 
 #print axioms closed_records_exactR
 
@@ -107,21 +108,22 @@ theorem closed_records_exactR {P : Program} {counted : Acc → Bool} {L : Nat}
 theorem confirmed_real_S {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
+    (hmw : Exact.MarkWF P) (hup : Exact.FiltUp P)
     (hrecs : RExact.RecsExact P recs) {M : MethodId} {n : Node} {s : PFact}
     (h : RExact.ConfirmedR P counted L demand emitS satS restrictS recs sinks roots M n s) :
     ∃ l, Reach P roots M n l ∧ s.covers l :=
-  RExact.confirmed_realR RCore.restrictS_sub hrecs h
+  RExact.confirmed_realR hmw hup RExact.satS_mark RCore.restrictS_sub hrecs h
 
 #print axioms confirmed_real_S
 
-/-! ## Version 4: the spec rules `emitM`, `satI`, `restrictU`
+/-! ## The spec rules `emitM`, `satI`, `restrictU` (versions 4 and 5)
 
-  A version-4 run is concrete (`RExact.DR_concrete`), so the agreed restriction `restrictU` gives the
+  A restricted run of the spec rules is concrete (`RExact.DR_concrete`), so the agreed restriction `restrictU` gives the
   same closure as `restrictS` (`RExact.restrict_U_eq_S_M`), whose contract holds. The emission
   contract holds for the concrete added facts (`RCore.emitM_contract_I`), and every added fact of the
   run is concrete (`RCov.emitOn_of_conc`). -/
 
-/-- The same run with `restrictU` and with `restrictS` (version 4). -/
+/-- The same run with `restrictU` and with `restrictS` (the spec rules). -/
 theorem runU_eq_S {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId} :
@@ -129,7 +131,7 @@ theorem runU_eq_S {P : Program} {counted : Acc → Bool} {L : Nat}
       DR P counted L demand emitM satI restrictS recs sinks roots :=
   RExact.restrict_U_eq_S_M
 
-/-- A version-4 restricted run reports every real vulnerability whose witness is demanded, and its
+/-- A restricted run of the spec rules reports every real vulnerability whose witness is demanded, and its
     own summaries demand the witness again. -/
 theorem vuln_found_M {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
@@ -148,7 +150,7 @@ theorem vuln_found_M {P : Program} {counted : Acc → Bool} {L : Nat}
 
 #print axioms vuln_found_M
 
-/-- The run sequence of version 4 is the same with `restrictU` and with `restrictS`. -/
+/-- The run sequence of the spec rules is the same with `restrictU` and with `restrictS`. -/
 theorem runSeqU_eq_S {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
     {dem : Nat → MethodId → DemandEdge → Prop} {recs : Nat → MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId} (k : Nat) :
@@ -158,7 +160,7 @@ theorem runSeqU_eq_S {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
   | zero => rfl
   | succ k => exact runU_eq_S
 
-/-- THE ITERATION THEOREM for the spec rules of version 4. If every backward step keeps the
+/-- THE ITERATION THEOREM for the spec rules. If every backward step keeps the
     vulnerability witnesses that the summaries of the previous forward run demand (contract B),
     every forward run reports every real vulnerability. -/
 theorem iteration_sound_M {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
@@ -182,7 +184,7 @@ theorem iteration_sound_M {P : Program} {counted : Acc → Bool} {Ls : Nat → N
 
 #print axioms iteration_sound_M
 
-/-- The identity run sequence of version 4 is the same with `restrictU` and with `restrictS`. -/
+/-- The identity run sequence of the spec rules is the same with `restrictU` and with `restrictS`. -/
 theorem runSeqIdU_eq_S {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
     {recs : Nat → MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId} :
@@ -199,7 +201,7 @@ theorem runSeqIdU_eq_S {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
     rw [runSeqIdU_eq_S k]
     exact runU_eq_S
 
-/-- The iteration theorem of version 4 with the identity backward step: no hypothesis on the
+/-- The iteration theorem of the spec rules with the identity backward step: no hypothesis on the
     backward run. -/
 theorem iteration_sound_M_identity {P : Program} {counted : Acc → Bool} {Ls : Nat → Nat}
     {recs : Nat → MethodId → PFact × AFact → Prop}
@@ -218,13 +220,13 @@ theorem iteration_sound_M_identity {P : Program} {counted : Acc → Bool} {Ls : 
 
 #print axioms iteration_sound_M_identity
 
-/-- R5 for a version-4 run: if every exit edge of the initial fact `i` is in the normal layer, every
+/-- R5 for a restricted run of the spec rules: if every exit edge of the initial fact `i` is in the normal layer, every
     DEMANDED flow from the location set of `i` to the exit has a record, and every record pair is a
-    real flow. No hypothesis on requests: a version-4 run has none. -/
+    real flow. No hypothesis on requests: such a run has none. -/
 theorem closed_records_exactM {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
-    (hwf : P.WF) (hrecs : RExact.RecsExact P recs)
+    (hwf : P.WF) (hmw : Exact.MarkWF P) (hup : Exact.FiltUp P) (hrecs : RExact.RecsExact P recs)
     {M : MethodId} {i : PFact}
     (hi : DR P counted L demand emitM satI restrictU recs sinks roots (.init M i))
     (hcomp : ∀ g, DR P counted L demand emitM satI restrictU recs sinks roots
@@ -247,22 +249,37 @@ theorem closed_records_exactM {P : Program} {counted : Acc → Bool} {L : Nat}
       ⟨g, hg, hd, _⟩ | hrq
     · exact ⟨g, hg, hd⟩
     · exact absurd hrq (RExact.DR_no_requestM _ _ _)
-  exact RExact.closed_exactR RCore.restrictS_sub hrecs hcov hcomp h0 l
+  exact RExact.closed_exactR hmw hup RExact.satI_mark RCore.restrictS_sub hrecs hcov hcomp h0 l
 
 #print axioms closed_records_exactM
 
-/-- A confirmed vulnerability of a version-4 run is real. -/
+/-- A confirmed vulnerability of a restricted run of the spec rules is real. -/
 theorem confirmed_real_M {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
+    (hmw : Exact.MarkWF P) (hup : Exact.FiltUp P)
     (hrecs : RExact.RecsExact P recs) {M : MethodId} {n : Node} {s : PFact}
     (h : RExact.ConfirmedM P counted L demand emitM satI restrictU recs sinks roots M n s) :
     ∃ l, Reach P roots M n l ∧ s.covers l :=
-  RExact.confirmed_realM_gen RCore.restrictU_sub hrecs h
+  RExact.confirmed_realM_gen hmw hup RExact.satI_mark RCore.restrictU_sub hrecs h
 
 #print axioms confirmed_real_M
 
-/-- A version-4 run raises no mark request: requests are needed only in run 1. -/
+/-- The same for a real program with type filters: the valid form (the locations that every
+    filter accepts; the sink pattern covers only valid locations). -/
+theorem confirmed_real_M_valid {P : Program} {counted : Acc → Bool} {L : Nat}
+    {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
+    {sinks : List (MethodId × Node × PFact)} {roots : List MethodId} {ok : Loc → Prop}
+    (hmw : Exact.MarkWF P) (hv : Exact.FiltValid P ok) (hbo : Exact.BackOK P ok)
+    (hrecs : RExact.RecsExactV P ok recs) {M : MethodId} {n : Node} {s : PFact}
+    (hok : ∀ l, s.covers l → ok l)
+    (h : RExact.ConfirmedM P counted L demand emitM satI restrictU recs sinks roots M n s) :
+    ∃ l, Reach P roots M n l ∧ s.covers l :=
+  RExact.confirmed_realM_gen_valid hmw hv hbo RExact.satI_mark RCore.restrictU_sub hrecs hok h
+
+#print axioms confirmed_real_M_valid
+
+/-- A restricted run of the spec rules raises no mark request: requests are needed only in run 1. -/
 theorem no_request_M {P : Program} {counted : Acc → Bool} {L : Nat}
     {demand : MethodId → DemandEdge → Prop} {recs : MethodId → PFact × AFact → Prop}
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
@@ -313,7 +330,7 @@ theorem everyWitness_contract_fails :
     refine ReachR.down (d := ⟨zeroFact, none⟩) (c := call1) (e := zb) (l1 := zeroLoc)
       (ReachR.root (List.Mem.head _) (FlowR.start 0 zeroLoc)) (List.Mem.head _)
       (List.Mem.head _) ?_ ⟨r0_init1, Or.inl rfl⟩ ?_ (FlowR.start 1 zeroLoc)
-    · exact ⟨rfl, rfl, rfl, rfl, [], [], rfl, rfl, rfl, rfl⟩
+    · exact ⟨rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩
     · exact ⟨rfl, ⟨[], rfl, rfl⟩, rfl⟩
   have key : ∀ M n l, ReachR Pq (fun _ _ => False) [0] M n l → M = 0 := by
     intro M n l h

@@ -3,7 +3,8 @@
   (`Restricted.lean`): the emission table, the satisfaction of a premise and the
   restriction of a summary edge by a demand edge.
 
-  Main results of version 4 (the spec rules `emitM`, `satO`, `restrictU`;
+  Main results of version 4 (`emitM`, `satO`, `restrictU`; version 5 replaced `satO` by `satI`, see the
+  `satI` sections;
   constructive; see the `#print axioms` lines):
    V4.1 `meetK_tailI`         the meet of two tails admits what both tails admit.
    V4.2 `emitM_contract`      THE MAIN RESULT: the mark-aware emission serves every demanded
@@ -20,6 +21,24 @@
                               the added fact, or the demand chain below it.
    V4.8 `restrictU_eq_S_nonstar`   the two restrictions agree on a conclusion without `*`.
    Also: `emitM_sat` (the added fact satisfies its emission), `emitM_serves`, `emitM_cases`.
+
+  Version 5 (the mark `*∖x` of a cleaner, spec §4.7):
+    * `den` has the conjunct `f.mark.passes l0.mark`; the proofs carry it. No contract changes.
+    * `summary_stepR` (statement unchanged): the request case of `applySummary_sound` now gives a
+      fact mark that is not concrete (`*` or `*∖y`), and a `*∖x` premise raises no request.
+    * `markSubB_refl` has the `starEx` case.
+    * CHANGED STATEMENT: `markMatchB_eq_markSubB` needs a demand mark that is not `*∖x`
+      (`markMatchB_starEx_ne` is the counterexample without this condition).
+    * `satI` (round 5) compares the location part of the fact with the premise, and the marks
+      only as `markSubB j.mark a.mark`. `emitM_satI`, `emitM_contract_I`, `satI_contract` are
+      proved for it (statements unchanged).
+    * NEW: `satI_markSub` (a cleaned fact `*∖x` satisfies a `*` premise that its location part
+      covers), `satI_conc_record` (R4: a concrete fact satisfies a `*`-premise record that its
+      location part covers), `satI_star` (both, for every fact mark). `applicable_markSub_star`,
+      `satO_markSub_star`: the run-1 rule and `satO` have the same property.
+    * RECORD: `satIold` is the version-4 form of `satI`. `satIold_satI`: `satI` accepts all that it
+      accepts. `satIold_markSub_fails`, `satIold_conc_record_fails` (decide witnesses) and
+      `satIold_markSub_iff` show why the form was changed.
 
   Results of version 3 (kept as the record of the review):
     1. `emitS_contract`      the sound emission table serves every demanded location.
@@ -339,7 +358,7 @@ theorem outKind_cases (k : Kind) : outKind k = .any ∨ outKind k = .exact := by
   | exact => exact Or.inr rfl
 
 theorem coversLoc_of_den {i f : PFact} {l0 l1 : Loc} (h : den i f l0 l1) : i.coversLoc l0 := by
-  obtain ⟨hb0, _, _, _, σ, _, hp0, _, hti, _⟩ := h
+  obtain ⟨hb0, _, _, _, _, σ, _, hp0, _, hti, _⟩ := h
   exact ⟨hb0, σ, hp0, hti⟩
 
 /-- Two patterns with a common location overlap (marks are ignored). -/
@@ -477,8 +496,8 @@ theorem restrictConcS_sub {sc g' : AFact} {p : PFact} (h : restrictConcS sc p = 
   · subst h
     refine ⟨rfl, ?_⟩
     intro j l1 l2 hd
-    obtain ⟨hb1, hb2, hm1, hm2, σ, τ, hp1, hp2, hti, _⟩ := hd
-    refine ⟨hb1, hb2, hm1, hm2, σ, r ++ τ, hp1, ?_, hti, ?_⟩
+    obtain ⟨hb1, hb2, hm1, hm2, hps, σ, τ, hp1, hp2, hti, _⟩ := hd
+    refine ⟨hb1, hb2, hm1, hm2, hps, σ, r ++ τ, hp1, ?_, hti, ?_⟩
     · rw [hp2]
       show p.path ++ τ = sc.fact.path ++ (r ++ τ)
       rw [hP, List.append_assoc]
@@ -493,7 +512,7 @@ theorem restrictS_contract : RestrictContract restrictS := by
   have hR : restrictS j g d = restrictConcS g p := restrictWith_of hdout hov
   rw [hR]
   have hden0 := hden
-  obtain ⟨hb1, hb2, hm1, hm2, σ, τ, hp1, hp2, hti, htf⟩ := hden
+  obtain ⟨hb1, hb2, hm1, hm2, hps, σ, τ, hp1, hp2, hti, htf⟩ := hden
   obtain ⟨hbp, σ', hpp, htp⟩ := hp
   have hb : Nat.beq g.fact.base p.base = true := by rw [← hb2, ← hbp]; exact Nat.beq_refl _
   have hpath : p.path ++ σ' = g.fact.path ++ τ := by rw [← hpp, ← hp2]
@@ -528,7 +547,7 @@ theorem restrictS_contract : RestrictContract restrictS := by
         rw [if_pos hb, hrel, hk]
         dsimp only
         cases p.kind <;> rfl
-      · refine ⟨hb1, hb2, hm1, hm2, σ, σ', hp1, hpp, hti, ?_⟩
+      · refine ⟨hb1, hb2, hm1, hm2, hps, σ, σ', hp1, hpp, hti, ?_⟩
         cases hpk : p.kind with
         | exact =>
           rw [hpk] at htp
@@ -563,7 +582,7 @@ theorem restrictU_witness_none : restrictU wJ wG wDE = none := by decide
 theorem restrictS_vector : restrictS wJ wG wDE = some wG := by decide
 
 theorem wDen : den wJ wG.fact wL1 wL2 :=
-  ⟨rfl, rfl, trivial, rfl, [4, 5], [4, 5], rfl, rfl, rfl, ⟨rfl, rfl⟩⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [4, 5], [4, 5], rfl, rfl, rfl, ⟨rfl, rfl⟩⟩
 
 theorem restrictU_fails : ¬ RestrictContract restrictU := by
   intro h
@@ -630,15 +649,28 @@ theorem summary_stepR {sat : PFact → PFact → Bool} (hsc : SatContract sat)
   · exact h
   · exfalso
     have hm := hsc.1 j a.fact hs
-    rw [hst] at hm
     have hreq : (applySummary a j g).reqs = (applyEdge a j g.fact).reqs := rfl
     cases hj : j.mark with
     | star =>
       rw [hreq, applyEdge_reqs_of_star hj] at hq
       cases hq
+    | starEx x =>
+      -- a `*∖x` premise has the gate `ok`: no request
+      have h0 : (applyEdge a j g.fact).reqs = [] := by
+        apply CoreAux.reqs_of_gate
+        intro t ht
+        rw [hj] at ht
+        exact Gate.noConfusion ht
+      rw [hreq, h0] at hq
+      cases hq
     | conc t =>
+      -- the fact mark is `*` or `*∖y`: a concrete premise mark does not admit it
       rw [hj] at hm
-      cases hm
+      rcases CoreAux.abs_cases hst with hst' | ⟨y, hst'⟩
+      · rw [hst'] at hm
+        cases hm
+      · rw [hst'] at hm
+        cases hm
 
 #print axioms summary_stepR
 
@@ -838,10 +870,28 @@ theorem markSubB_refl (m : MarkA) : markSubB m m = true := by
   cases m with
   | star => rfl
   | conc t => exact Nat.beq_refl t
+  | starEx x =>
+    show x.all (fun t => memB t x) = true
+    exact List.all_eq_true.mpr (fun t ht => CoreAux.memB_iff.mpr ht)
 
-/-- The mark match of the emission is the mark inclusion of the premise. -/
-theorem markMatchB_eq_markSubB (m1 m2 : MarkA) : markMatchB m1 m2 = markSubB m1 m2 := by
-  cases m1 <;> cases m2 <;> rfl
+/-- The mark match of the emission is the mark inclusion of the premise, for a demand mark
+    that is not `*∖x` (a demand pattern has the mark `*` or `conc T`). Version 5 adds this
+    condition: `markMatchB_starEx_ne` shows that it is necessary. -/
+theorem markMatchB_eq_markSubB (m1 m2 : MarkA) (h1 : ∀ x, m1 ≠ .starEx x) :
+    markMatchB m1 m2 = markSubB m1 m2 := by
+  cases m1 with
+  | star => cases m2 <;> rfl
+  | conc t => cases m2 <;> rfl
+  | starEx x => exact absurd rfl (h1 x)
+
+/-- Without the condition, the equation is false: `markMatchB` admits every mark for a `*∖x`
+    demand mark, `markSubB` does not. -/
+theorem markMatchB_starEx_ne : markMatchB (.starEx [0]) .star ≠ markSubB (.starEx [0]) .star := by
+  decide
+
+#print axioms markSubB_refl
+#print axioms markMatchB_eq_markSubB
+#print axioms markMatchB_starEx_ne
 
 /-! ## 12. The meet of two tails -/
 
@@ -1115,6 +1165,7 @@ theorem emitM_contract : EmitContractConc emitM satO := by
     exact h'
   cases hmd : d.mark with
   | star => rfl
+  | starEx _ => rfl
   | conc T =>
     rw [hmd] at hdm
     have hlT : l.mark = T := hdm
@@ -1143,8 +1194,19 @@ theorem emitM_not_full : ¬ EmitContract emitM satO := by
   rw [emitM_nf_none] at hj
   cases hj
 
+/-- The same for EVERY satisfaction relation (also the spec rule `satI`): `emitM` gives
+    nothing for the `*`-mark added fact, whatever the satisfaction. -/
+theorem emitM_not_full_any (sat : PFact → PFact → Bool) : ¬ EmitContract emitM sat := by
+  intro h
+  have hd : nfD.covers nfL := ⟨rfl, ⟨[], rfl, rfl⟩, rfl⟩
+  have ha : nfA.covers nfL := ⟨rfl, ⟨[], rfl, rfl⟩, trivial⟩
+  obtain ⟨j, hj, _, _⟩ := h nfD nfA nfL hd ha
+  rw [emitM_nf_none] at hj
+  cases hj
+
 #print axioms emitM_nf_none
 #print axioms emitM_not_full
+#print axioms emitM_not_full_any
 
 /-! ## 19. The overlap satisfaction keeps the contract -/
 
@@ -1206,10 +1268,16 @@ theorem restrictU_eq_S_nonstar {j : PFact} {g : AFact} {d : DemandEdge}
 #print axioms restrictU_eq_S_nonstar
 
 
-/-! ## Version 4: the satisfaction `satI` (the premise lies inside the fact)
+/-! ## The satisfaction `satI` (the location part of the fact covers the premise)
 
   From the review of version 4 (M2): `satI` suffices for the emission contract and the
-  satisfaction contract, and it rejects the cross-context reads that `satO` admits. -/
+  satisfaction contract, and it rejects the cross-context reads that `satO` admits.
+  Round 5: `satI j a` compares the LOCATIONS of `a` and `j` (`coversB` on `a` with the mark `*`),
+  and the marks only as the contract needs (`markSubB j.mark a.mark`). The version-4 form
+  `satIold` (`coversB a j && markSubB j.mark a.mark`) is kept below as the record: it also
+  compared the marks in the other direction, so a cleaned fact `*∖x` did not satisfy a `*` premise
+  (`satIold_markSub_fails`), and a concrete fact did not satisfy a `*`-premise record
+  (`satIold_conc_record_fails`). Every pair that `satIold` accepts, `satI` accepts (`satIold_satI`). -/
 
 theorem tailSub_meet (k d : Kind) : tailSubB k (meetK k d) = true := by
   cases k with
@@ -1221,9 +1289,28 @@ theorem tailSub_meet (k d : Kind) : tailSubB k (meetK k d) = true := by
     | exact => rfl
     | star e2 => exact Invariant.subB_union_right e2 (subB_refl e1)
 
-theorem emitM_satI {d a j : PFact} (h : emitM d a = some j) : satI j a = true := by
-  have hm : j.mark = a.mark := emitM_mark h
+/-- The version-4 form of `satI` (the record): the fact covers the premise WITH the marks. -/
+def satIold (j a : PFact) : Bool := coversB a j && markSubB j.mark a.mark
+
+/-- A cover test on a fact gives the cover test on its location part (the mark `*`). -/
+theorem coversB_markStar {a j : PFact} (h : coversB a j = true) :
+    coversB ⟨a.base, a.path, a.kind, .star⟩ j = true := by
+  unfold coversB at h ⊢
+  rw [Bool.and_eq_true, Bool.and_eq_true] at h ⊢
+  exact ⟨⟨h.1.1, rfl⟩, h.2⟩
+
+/-- `satI` accepts every pair that the version-4 form accepts. -/
+theorem satIold_satI {j a : PFact} (h : satIold j a = true) : satI j a = true := by
+  unfold satIold at h
+  rw [Bool.and_eq_true] at h
   unfold satI
+  rw [coversB_markStar h.1, h.2]
+  rfl
+
+/-- The added fact satisfies its emission, in the version-4 form. -/
+theorem emitM_satIold {d a j : PFact} (h : emitM d a = some j) : satIold j a = true := by
+  have hm : j.mark = a.mark := emitM_mark h
+  unfold satIold
   rw [Bool.and_eq_true]
   refine ⟨?_, by rw [hm]; exact markSubB_refl _⟩
   obtain ⟨hb, _, ⟨hq, h1⟩ | ⟨x, r, hq, _, h2⟩ | ⟨r, _, hP, hr, hx, h3⟩⟩ := emitM_cases h
@@ -1248,6 +1335,9 @@ theorem emitM_satI {d a j : PFact} (h : emitM d a = some j) : satI j a = true :=
     | nil => exact absurd rfl hr
     | cons y r' => exact hx
 
+theorem emitM_satI {d a j : PFact} (h : emitM d a = some j) : satI j a = true :=
+  satIold_satI (emitM_satIold h)
+
 /-- The spec emission satisfies the emission contract for concrete facts with `satI`. -/
 theorem emitM_contract_I : EmitContractConc emitM satI := by
   intro d a l t ham hd ha
@@ -1257,8 +1347,7 @@ theorem emitM_contract_I : EmitContractConc emitM satI := by
 theorem satI_contract : SatContract satI := by
   refine ⟨fun j a h => ?_, fun j a t h ham => ?_⟩
   · unfold satI at h; rw [Bool.and_eq_true] at h; exact h.2
-  · -- no answer exists in a concrete run; the clause still holds
-    unfold satI at h ⊢
+  · unfold satI at h ⊢
     rw [Bool.and_eq_true] at h ⊢
     obtain ⟨hc, _⟩ := h
     refine ⟨?_, markSub_answer ham⟩
@@ -1268,7 +1357,7 @@ theorem satI_contract : SatContract satI := by
     · rename_i hk hdp
       rw [Bool.and_eq_true, Bool.and_eq_true] at hc ⊢
       obtain ⟨⟨hb, _⟩, _⟩ := hc
-      refine ⟨⟨hb, by rw [ham]; exact Nat.beq_refl t⟩, ?_⟩
+      refine ⟨⟨hb, rfl⟩, ?_⟩
       have hpe : a.path = j.path := by
         have := Store.dropPrefix_some hdp; rwa [List.append_nil] at this
       simp only
@@ -1278,10 +1367,111 @@ theorem satI_contract : SatContract satI := by
       rw [hk]; rfl
     · rw [Bool.and_eq_true, Bool.and_eq_true] at hc ⊢
       obtain ⟨⟨hb, _⟩, hp⟩ := hc
-      exact ⟨⟨hb, by rw [ham]; exact Nat.beq_refl t⟩, hp⟩
+      exact ⟨⟨hb, rfl⟩, hp⟩
 
+#print axioms satIold_satI
+#print axioms emitM_satIold
 #print axioms emitM_satI
 #print axioms emitM_contract_I
 #print axioms satI_contract
+
+/-! ## Round 5: a `*` premise reads every fact mark
+
+  A cleaner gives an abstract fact the mark `*∖x` (spec §4.7); a restricted run has facts with a
+  concrete mark and may reuse a persisted record with a `*` premise (R4). In both cases the fact
+  satisfies the `*` premise when its location part covers the premise. -/
+
+/-- A fact with any mark satisfies a `*` premise that its location part covers. -/
+theorem satI_star {j a : PFact} (hj : j.mark = .star)
+    (hc : coversB ⟨a.base, a.path, a.kind, .star⟩ j = true) : satI j a = true := by
+  unfold satI
+  rw [hc, hj]
+  rfl
+
+/-- THE PROPERTY: a cleaned fact (the mark `*∖x`) satisfies a `*` premise that its location
+    part covers, so it still reads the summaries of an abstract premise. -/
+theorem satI_markSub {j a : PFact} {x : List Mark} (hj : j.mark = .star) (_ha : a.mark = .starEx x)
+    (hc : coversB ⟨a.base, a.path, a.kind, .star⟩ j = true) : satI j a = true :=
+  satI_star hj hc
+
+/-- R4 reuse in a restricted run: a fact with a concrete mark satisfies a persisted record with a
+    `*` premise whose location set it covers. -/
+theorem satI_conc_record {j a : PFact} {t : Mark} (hj : j.mark = .star) (_ha : a.mark = .conc t)
+    (hc : coversB ⟨a.base, a.path, a.kind, .star⟩ j = true) : satI j a = true :=
+  satI_star hj hc
+
+/-- The run-1 subscription also ignores the fact mark for a `*` premise. -/
+theorem applicable_markSub_star {j a : PFact} (hj : j.mark = .star) :
+    applicable j a = applicable j ⟨a.base, a.path, a.kind, .star⟩ := by
+  unfold applicable coversB
+  rw [hj]
+  rfl
+
+/-- `satO` also ignores the fact mark for a `*` premise. -/
+theorem satO_markSub_star {j a : PFact} (hj : j.mark = .star) :
+    satO j a = satO j ⟨a.base, a.path, a.kind, .star⟩ := by
+  unfold satO overlapB
+  rw [hj]
+  rfl
+
+/-! ### The record: the version-4 form `satIold` did not have the property -/
+
+/-- The witnesses: the `*` premise `1.$`, the cleaned fact `1.$` with the mark `*∖{5}`, and the
+    concrete fact `1.$` with the mark `5`. -/
+def cxJ : PFact := ⟨1, [], .exact, .star⟩
+def cxA : PFact := ⟨1, [], .exact, .starEx [5]⟩
+def cxC : PFact := ⟨1, [], .exact, .conc 5⟩
+
+theorem satIold_cx : satIold cxJ cxA = false := by decide
+theorem satIold_cxC : satIold cxJ cxC = false := by decide
+theorem satI_cx : satI cxJ cxA = true := by decide
+theorem satI_cxC : satI cxJ cxC = true := by decide
+theorem applicable_cx : applicable cxJ cxA = true := by decide
+theorem satO_cx : satO cxJ cxA = true := by decide
+
+/-- The version-4 form fails the property of `satI_markSub`. -/
+theorem satIold_markSub_fails :
+    ¬ ∀ (j a : PFact) (x : List Mark), j.mark = .star → a.mark = .starEx x →
+      coversB ⟨a.base, a.path, a.kind, .star⟩ j = true → satIold j a = true := by
+  intro h
+  have h1 := h cxJ cxA [5] rfl rfl (by decide)
+  rw [satIold_cx] at h1
+  exact Bool.noConfusion h1
+
+/-- The version-4 form fails the property of `satI_conc_record`. -/
+theorem satIold_conc_record_fails :
+    ¬ ∀ (j a : PFact) (t : Mark), j.mark = .star → a.mark = .conc t →
+      coversB ⟨a.base, a.path, a.kind, .star⟩ j = true → satIold j a = true := by
+  intro h
+  have h1 := h cxJ cxC 5 rfl rfl (by decide)
+  rw [satIold_cxC] at h1
+  exact Bool.noConfusion h1
+
+/-- The exact condition of the version-4 form: a fact with the mark `*∖x` satisfies a `*` premise
+    if and only if `x = []` and its location part covers the premise. -/
+theorem satIold_markSub_iff {j a : PFact} {x : List Mark} (hj : j.mark = .star)
+    (ha : a.mark = .starEx x) :
+    satIold j a = (x.isEmpty && coversB ⟨a.base, a.path, a.kind, .star⟩ j) := by
+  unfold satIold coversB
+  rw [hj, ha]
+  show ((Nat.beq a.base j.base && x.isEmpty && _) && true) =
+    (x.isEmpty && (Nat.beq a.base j.base && true && _))
+  cases x.isEmpty <;> cases Nat.beq a.base j.base <;>
+    simp only [Bool.and_true, Bool.true_and, Bool.and_false, Bool.false_and]
+
+#print axioms satI_star
+#print axioms satI_markSub
+#print axioms satI_conc_record
+#print axioms applicable_markSub_star
+#print axioms satO_markSub_star
+#print axioms satIold_cx
+#print axioms satIold_cxC
+#print axioms satI_cx
+#print axioms satI_cxC
+#print axioms applicable_cx
+#print axioms satO_cx
+#print axioms satIold_markSub_fails
+#print axioms satIold_conc_record_fails
+#print axioms satIold_markSub_iff
 
 end ApSpec.RCore

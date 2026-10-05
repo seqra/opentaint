@@ -4,10 +4,10 @@
   Run 1 is the closure `D` of `Basic.lean` with the abstraction `policy1` (the most
   abstract fact; no demand). Every later run is the closure `DR` below:
     * the abstraction emits an initial fact only through the emission table `emit`
-      (spec §7.3), from a demand edge of the callee;
+      (spec §6.3), from a demand edge of the callee;
     * a callee summary edge is applied only after the restriction `restrict` by a demand
       edge of the callee (spec §6.4);
-    * the caller applies a summary when its fact SATISFIES the premise (`sat`, spec §6.3);
+    * the caller applies a summary when its fact SATISFIES the premise (`sat`, spec §4.3);
     * persisted complete records (`recs`) of earlier runs are applied as they are.
 
   The demand edges come from the previous run (in the other direction). They are
@@ -17,7 +17,7 @@
   The restriction compares LOCATIONS only (marks are ignored); the emission `emitM` and the
   entry coverage of `FlowR`/`ReachR` also compare the mark.
 
-  The rules of the spec (version 4):
+  The rules of the spec (versions 4 and 5):
     * `emitM` (§1b): the MARK-AWARE emission. A demand entry pattern with the concrete mark `T`
       asks for `T`: an added fact with the mark `T` emits its matching part (`a ∩ D-c`); another
       mark gives nothing. No request is necessary: a restricted run starts from the zero fact and
@@ -53,7 +53,7 @@ def policy1 : MethodId → PFact → PFact := policy (fun _ => [])
 /-- The most abstract initial fact on the demand chain. -/
 def chainFact (d : PFact) (p : List Acc) : PFact := ⟨d.base, p, .star Excl.empty, .star⟩
 
-/-! ## 1. The emission table (spec §7.3) -/
+/-! ## 1. The version-3 emission tables (the record of the review) -/
 
 /-- The emission table as agreed in the review. `d` is the demand entry pattern (D-c),
     `a` the added fact. -/
@@ -96,7 +96,7 @@ def emitS (d a : PFact) : Option PFact :=
     | .apart => none
   else none
 
-/-! ## 1b. The mark-aware emission (spec §7.3, version 4) -/
+/-! ## 1b. The mark-aware emission (spec §6.3) -/
 
 /-- The meet of two premise tails at the same path: the continuations that both admit. -/
 def meetK : Kind → Kind → Kind
@@ -110,11 +110,13 @@ def meetK : Kind → Kind → Kind
     a concrete demand mark `T` needs the concrete mark `T` (a `*` fact mark never meets it in a
     restricted run: every added fact there has a concrete mark). -/
 def markMatchB : MarkA → MarkA → Bool
-  | .star,   _        => true
-  | .conc t, .conc t' => Nat.beq t t'
-  | .conc _, .star    => false
+  | .star,     _         => true
+  | .conc t,   .conc t'  => Nat.beq t t'
+  | .conc _,   .star     => false
+  | .conc _,   .starEx _ => false
+  | .starEx _, _         => true     -- a demand pattern never has `starEx`
 
-/-- The emission of version 4: the part of the added fact `a` that the demand entry pattern `d`
+/-- The spec emission (since version 4): the part of the added fact `a` that the demand entry pattern `d`
     covers (`a ∩ D-c`), with the mark of `a`. -/
 def emitM (d a : PFact) : Option PFact :=
   if Nat.beq d.base a.base && markMatchB d.mark a.mark then
@@ -125,7 +127,7 @@ def emitM (d a : PFact) : Option PFact :=
     | .apart    => none
   else none
 
-/-! ## 2. Satisfaction of a summary premise (spec §6.3) -/
+/-! ## 2. Satisfaction of a summary premise (spec §4.3) -/
 
 /-- The added fact `a` is strictly above the premise `j`. -/
 def aboveB (j a : PFact) : Bool :=
@@ -149,18 +151,20 @@ def satS (j a : PFact) : Bool :=
      | some (x :: r) => admitsTailB a.kind (x :: r)
      | _ => false))
 
-/-- The satisfaction of version 4: the premise overlaps the fact (a common location, marks
+/-- The overlap satisfaction (version 4; sound, but not the spec rule): the premise overlaps the fact (a common location, marks
     ignored) and the premise mark admits the fact mark (so the mark gate never raises a request
     from a summary application). -/
 def satO (j a : PFact) : Bool :=
   overlapB j a && markSubB j.mark a.mark
 
-/-- The satisfaction of version 4 (the spec rule): the premise lies INSIDE the fact (the fact
+/-- The spec satisfaction (version 5): the premise lies INSIDE the fact (the fact
     covers every location of the premise) and the premise mark admits the fact mark. The emitted
     fact `a ∩ D-c` always lies inside its added fact, so this is enough; it rejects the reads of a
     coarser sibling premise that `satO` admits (review of version 4, M2). -/
 def satI (j a : PFact) : Bool :=
-  coversB a j && markSubB j.mark a.mark
+  coversB ⟨a.base, a.path, a.kind, .star⟩ j && markSubB j.mark a.mark
+-- (the location part of `a` covers `j`; the marks are compared only as the contract needs: a concrete fact
+--  satisfies a `*`-premise record, and a cleaned fact `*∖x` satisfies a `*` premise — review of round 5)
 
 /-! ## 3. Restriction of a summary edge by a demand edge (spec §6.4) -/
 
@@ -268,10 +272,19 @@ inductive DR : Obj → Prop where
   | reqUp {m j t M ic n f n' c e a} :
       DR (.req m j t) → DR (.edge M ic n f) → (M, n, Instr.call c, n') ∈ P.edges →
       c.callee = m → e ∈ c.toCallee → a ∈ (applyEdge f e.1 e.2).facts →
-      a.fact.mark = .star → overlapB a.fact j = true → DR (.req M ic t)
+      climbsB a.fact.mark t = true → overlapB a.fact j = true → DR (.req M ic t)
   | vuln {M i n f s} :
       DR (.edge M i n f) → (M, n, s) ∈ sinks → check i f s = .triggered →
       DR (.vuln M n s f.demand)
+  | clean {M i n f n' cl f'} :
+      DR (.edge M i n f) → (M, n, Instr.clean cl, n') ∈ P.edges →
+      f' ∈ (cleanRes cl f).facts → DR (.edge M i n' f')
+  | reqClean {M i n f n' cl t} :
+      DR (.edge M i n f) → (M, n, Instr.clean cl, n') ∈ P.edges →
+      t ∈ (cleanRes cl f).reqs → DR (.req M i t)
+  | filt {M i n f n' b may} :
+      DR (.edge M i n f) → (M, n, Instr.filt b may, n') ∈ P.edges →
+      (f.fact.base = b → may f.fact.path = true) → DR (.edge M i n' f)
 
 end ClosureR
 
@@ -296,6 +309,12 @@ inductive FlowR (P : Program) (demand : MethodId → DemandEdge → Prop) :
       demand c.callee d → d.din.covers l1 → d.dout = some p → p.coversLoc l2 →
       e2 ∈ c.fromCallee → den e2.1 e2.2 l2 l3 →
       FlowR P demand M l0 n' l3
+  | clean {M l0 n l n' cl} :
+      FlowR P demand M l0 n l → (M, n, Instr.clean cl, n') ∈ P.edges →
+      cl.cleansB l = false → FlowR P demand M l0 n' l
+  | filt {M l0 n l n' b may} :
+      FlowR P demand M l0 n l → (M, n, Instr.filt b may, n') ∈ P.edges →
+      (l.base = b → may l.path = true) → FlowR P demand M l0 n' l
 
 /-- A concrete vulnerability witness whose every step is demanded: each call down enters
     a location that a demand entry pattern of the callee covers (with its mark). -/

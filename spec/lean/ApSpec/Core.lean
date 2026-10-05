@@ -192,16 +192,29 @@ theorem tailSubB_sound {a b : Kind} {σ : List Acc} :
 
 /-! ## Marks -/
 
-theorem admits_out (m : MarkA) (x : Mark) : m.admits (m.out x) := by
+/-- An admitted mark passes. -/
+theorem passes_of_admits {m : MarkA} {x : Mark} : m.admits x → m.passes x := by
+  intro h
+  cases m with
+  | star => trivial
+  | conc t => trivial
+  | starEx xs => exact h
+
+/-- Version 5: the hypothesis `m.passes x` is new (a `*∖x` mark admits its output only if
+    the input passes). -/
+theorem admits_out (m : MarkA) (x : Mark) : m.passes x → m.admits (m.out x) := by
+  intro h
   cases m with
   | star => trivial
   | conc t => rfl
+  | starEx xs => exact h
 
 theorem out_of_admits {m : MarkA} {x : Mark} : m.admits x → x = m.out x := by
   intro h
   cases m with
   | star => rfl
   | conc t => exact h
+  | starEx xs => rfl
 
 theorem markOutA_out (a b : MarkA) (x : Mark) : (markOutA a b).out x = a.out (b.out x) := by
   cases a <;> rfl
@@ -210,6 +223,145 @@ theorem markOutA_conc {a : MarkA} {t : Mark} : ∃ t', markOutA a (.conc t) = .c
   cases a with
   | star => exact ⟨t, rfl⟩
   | conc t' => exact ⟨t', rfl⟩
+  | starEx _ => exact ⟨t, rfl⟩
+
+/-- A mark that is not concrete is `*` or `*∖x`. -/
+theorem abs_cases {m : MarkA} (h : ∀ t, m ≠ .conc t) : m = .star ∨ ∃ x, m = .starEx x := by
+  cases m with
+  | star => exact .inl rfl
+  | conc t => exact absurd rfl (h t)
+  | starEx x => exact .inr ⟨x, rfl⟩
+
+/-! ### The result mark `markComp` -/
+
+/-- The result mark composes the output marks. -/
+theorem markComp_out {tm cm m : MarkA} {x : Mark} :
+    markComp tm cm = some m → m.out x = tm.out (cm.out x) := by
+  intro h
+  cases tm with
+  | star => rw [← Option.some.inj h]; rfl
+  | conc t => rw [← Option.some.inj h]; rfl
+  | starEx y =>
+    cases cm with
+    | star => rw [← Option.some.inj h]; rfl
+    | starEx z => rw [← Option.some.inj h]; rfl
+    | conc t =>
+      have h' : (if memB t y = true then none else some (MarkA.conc t)) = some m := h
+      cases hm : memB t y with
+      | true => rw [hm, if_pos rfl] at h'; exact nomatch h'
+      | false => rw [hm, if_neg Bool.false_ne_true] at h'; rw [← Option.some.inj h']; rfl
+
+/-- The result mark lets the input mark pass if both edges let it pass. -/
+theorem markComp_passes {tm cm m : MarkA} {x : Mark} :
+    markComp tm cm = some m → cm.passes x → tm.passes (cm.out x) → m.passes x := by
+  intro h hc ht
+  cases tm with
+  | star => rw [← Option.some.inj h]; exact hc
+  | conc t => rw [← Option.some.inj h]; trivial
+  | starEx y =>
+    cases cm with
+    | star => rw [← Option.some.inj h]; exact ht
+    | starEx z =>
+      rw [← Option.some.inj h]
+      have h1 : memB x y = false := ht
+      have h2 : memB x z = false := hc
+      show memB x (y ++ z) = false
+      rw [memB_append, h1, h2]; rfl
+    | conc t =>
+      have h' : (if memB t y = true then none else some (MarkA.conc t)) = some m := h
+      cases hm : memB t y with
+      | true => rw [hm, if_pos rfl] at h'; exact nomatch h'
+      | false => rw [hm, if_neg Bool.false_ne_true] at h'; rw [← Option.some.inj h']; trivial
+
+/-- `markComp` is sound: a result mark covers the composed mark relation of the two edges. -/
+theorem markComp_sound {tm cm m : MarkA} {x : Mark} :
+    markComp tm cm = some m → cm.passes x → tm.passes (cm.out x) →
+    m.out x = tm.out (cm.out x) ∧ m.passes x :=
+  fun h hc ht => ⟨markComp_out h, markComp_passes h hc ht⟩
+
+/-- No result mark: the target is `*∖y` and the fact mark is a concrete mark in `y`. -/
+theorem markComp_none {tm cm : MarkA} :
+    markComp tm cm = none → ∃ y t, tm = .starEx y ∧ cm = .conc t ∧ memB t y = true := by
+  intro h
+  cases tm with
+  | star => exact nomatch h
+  | conc t => exact nomatch h
+  | starEx y =>
+    cases cm with
+    | star => exact nomatch h
+    | starEx z => exact nomatch h
+    | conc t =>
+      have h' : (if memB t y = true then none else some (MarkA.conc t)) = none := h
+      cases hm : memB t y with
+      | true => exact ⟨y, t, rfl, rfl, hm⟩
+      | false => rw [hm, if_neg Bool.false_ne_true] at h'; exact nomatch h'
+
+/-- No result mark: no pair goes through the two edges (the target stops the mark). -/
+theorem markComp_none_no_pair {tm cm : MarkA} {x : Mark} :
+    markComp tm cm = none → ¬ tm.passes (cm.out x) := by
+  intro h hp
+  obtain ⟨y, t, htm, hcm, hm⟩ := markComp_none h
+  subst htm
+  subst hcm
+  have hp' : memB t y = false := hp
+  rw [hm] at hp'
+  exact Bool.noConfusion hp'
+
+/-- If the target lets the mark pass, a result mark exists. -/
+theorem markComp_some {tm cm : MarkA} {x : Mark} :
+    tm.passes (cm.out x) → ∃ m, markComp tm cm = some m := by
+  intro hp
+  cases hc : markComp tm cm with
+  | none => exact absurd hp (markComp_none_no_pair hc)
+  | some m => exact ⟨m, rfl⟩
+
+/-- Exactness of `markComp` for a non-concrete target: a pair of the result mark passes
+    both edges. (A concrete target forgets the exclusion of the fact mark.) -/
+theorem markComp_passes_rev {tm cm m : MarkA} {x : Mark} :
+    markComp tm cm = some m → (∀ t, tm ≠ .conc t) → m.passes x →
+    cm.passes x ∧ tm.passes (cm.out x) := by
+  intro h hn hp
+  cases tm with
+  | star => rw [← Option.some.inj h] at hp; exact ⟨hp, trivial⟩
+  | conc t => exact absurd rfl (hn t)
+  | starEx y =>
+    cases cm with
+    | star => rw [← Option.some.inj h] at hp; exact ⟨trivial, hp⟩
+    | starEx z =>
+      rw [← Option.some.inj h] at hp
+      have hp' : memB x (y ++ z) = false := hp
+      rw [memB_append] at hp'
+      cases hy : memB x y with
+      | true => rw [hy] at hp'; exact Bool.noConfusion hp'
+      | false =>
+        rw [hy] at hp'
+        exact ⟨hp', hy⟩
+    | conc t =>
+      have h' : (if memB t y = true then none else some (MarkA.conc t)) = some m := h
+      cases hm : memB t y with
+      | true => rw [hm, if_pos rfl] at h'; exact nomatch h'
+      | false => exact ⟨trivial, hm⟩
+
+/-- Without a `*∖x` target, `markComp` is the version-4 `markOutA`. -/
+theorem markComp_eq_markOutA {tm cm : MarkA} (h : ∀ y, tm ≠ .starEx y) :
+    markComp tm cm = some (markOutA tm cm) := by
+  cases tm with
+  | star => rfl
+  | conc t => rfl
+  | starEx y => exact absurd rfl (h y)
+
+/-- A concrete fact mark gives a concrete result mark. -/
+theorem markComp_conc {tm m : MarkA} {t : Mark} :
+    markComp tm (.conc t) = some m → ∃ t', m = .conc t' := by
+  intro h
+  cases tm with
+  | star => exact ⟨t, (Option.some.inj h).symm⟩
+  | conc t' => exact ⟨t', (Option.some.inj h).symm⟩
+  | starEx y =>
+    have h' : (if memB t y = true then none else some (MarkA.conc t)) = some m := h
+    cases hm : memB t y with
+    | true => rw [hm, if_pos rfl] at h'; exact nomatch h'
+    | false => rw [hm, if_neg Bool.false_ne_true] at h'; exact ⟨t, (Option.some.inj h').symm⟩
 
 theorem markSubB_sound {a b : MarkA} {x : Mark} : markSubB a b = true → b.admits x → a.admits x := by
   intro hs hb
@@ -223,23 +375,64 @@ theorem markSubB_sound {a b : MarkA} {x : Mark} : markSubB a b = true → b.admi
       have h2 : t = t' := beq_iff.mp hs
       show x = t
       rw [h1, h2]
+    | starEx _ => exact Bool.noConfusion hs
+  | starEx xs =>
+    cases b with
+    | star =>
+      cases xs with
+      | nil => rfl
+      | cons _ _ => exact Bool.noConfusion hs
+    | conc t =>
+      have h1 : x = t := hb
+      have h2 : (!memB t xs) = true := hs
+      show memB x xs = false
+      rw [h1]
+      cases hm : memB t xs with
+      | false => rfl
+      | true => rw [hm] at h2; exact Bool.noConfusion h2
+    | starEx ys =>
+      have h1 : memB x ys = false := hb
+      have h2 : xs.all (fun t => memB t ys) = true := hs
+      show memB x xs = false
+      cases hm : memB x xs with
+      | false => rfl
+      | true => rw [memB_of_all hm h2] at h1; exact Bool.noConfusion h1
 
-/-- The mark gate passes, or it asks for the mark `x` of a mark-abstract fact. -/
+/-- The mark gate passes, or it asks for the mark `x` of a mark-abstract fact.
+    Version 5: the hypothesis `cm.passes x` is new, and the request case says that the fact
+    mark is not concrete (it is `*` or `*∖y`). Without `cm.passes x` the statement is false:
+    see `gate_cases_needs_passes`. -/
 theorem gate_cases {fm cm : MarkA} {x : Mark} :
-    fm.admits (cm.out x) → markGate fm cm = .ok ∨ (cm = .star ∧ markGate fm cm = .req x) := by
-  intro h
+    fm.admits (cm.out x) → cm.passes x →
+    markGate fm cm = .ok ∨ ((∀ t, cm ≠ .conc t) ∧ markGate fm cm = .req x) := by
+  intro h hp
   cases fm with
   | star => exact Or.inl rfl
+  | starEx _ => exact Or.inl rfl
   | conc t =>
     cases cm with
     | star =>
       have h' : x = t := h
-      exact Or.inr ⟨rfl, by rw [h']; rfl⟩
+      exact Or.inr ⟨fun _ hc => MarkA.noConfusion hc, by rw [h']; rfl⟩
     | conc t' =>
       have h' : t' = t := h
       left
       show (if Nat.beq t t' = true then Gate.ok else Gate.no) = Gate.ok
       rw [h', if_pos (Nat.beq_refl t)]
+    | starEx y =>
+      have h' : x = t := h
+      have hp' : memB x y = false := hp
+      right
+      refine ⟨fun _ hc => MarkA.noConfusion hc, ?_⟩
+      show (if memB t y = true then Gate.no else Gate.req t) = Gate.req x
+      rw [← h', hp', if_neg Bool.false_ne_true]
+
+/-- The version-4 form of `gate_cases` is false: the premise `conc 0` admits the output
+    `0` of the fact mark `*∖{0}`, but the gate is `no` (and the fact mark is not `*`). -/
+theorem gate_cases_needs_passes :
+    (MarkA.conc 0).admits ((MarkA.starEx [0]).out 0) ∧
+    markGate (.conc 0) (.starEx [0]) = .no ∧ ¬ (MarkA.starEx [0]).passes 0 :=
+  ⟨rfl, rfl, fun h => Bool.noConfusion h⟩
 
 /-! ## Paths -/
 
@@ -345,11 +538,19 @@ def geo (ck fk : Kind) (P q toPath : List Acc) (tk : Kind) : Option (List Acc ×
   | .above r => aboveCase ck fk r toPath tk
   | .apart   => none
 
+/-- The result of `applyEdge` after the mark gate passes, for a given result mark. -/
+def finM (c : AFact) (to : PFact) (p : List Acc) (k : Kind) (ap : Bool) : Option MarkA → Res
+  | none   => Res.none
+  | some m => ⟨[AFact.norm ⟨⟨to.base, p, k, m⟩, c.demand || ap⟩], []⟩
+
 /-- The result of `applyEdge` for a given gate. -/
 def finG (c : AFact) (to : PFact) (p : List Acc) (k : Kind) (ap : Bool) : Gate → Res
   | .no    => Res.none
   | .req t => ⟨[], [t]⟩
-  | .ok    => ⟨[AFact.norm ⟨⟨to.base, p, k, markOutA to.mark c.fact.mark⟩, c.demand || ap⟩], []⟩
+  | .ok    => finM c to p k ap (markComp to.mark c.fact.mark)
+
+theorem finG_ok (c : AFact) (to : PFact) (p : List Acc) (k : Kind) (ap : Bool) :
+    finG c to p k ap .ok = finM c to p k ap (markComp to.mark c.fact.mark) := rfl
 
 /-- The result of `applyEdge` for a given geometric result. -/
 def fin (c : AFact) (fr to : PFact) : Option (List Acc × Kind × Bool) → Res
@@ -361,10 +562,7 @@ theorem norm_mark (f : AFact) : f.norm.fact.mark = f.fact.mark := by
   obtain ⟨⟨b, p, k, m⟩, ap⟩ := f
   unfold AFact.norm
   cases k with
-  | star e =>
-    cases m with
-    | star => cases ap <;> cases e <;> rfl
-    | conc t => cases e <;> rfl
+  | star e => cases m <;> cases ap <;> cases e <;> rfl
   | any => rfl
   | exact => rfl
 
@@ -373,10 +571,11 @@ theorem norm_sound {i : PFact} {f : AFact} {l0 l1 : Loc} :
     den i f.fact l0 l1 → den i f.norm.fact l0 l1 := by
   intro h
   obtain ⟨⟨b, p, k, m⟩, ap⟩ := f
-  obtain ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩ := h
+  obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, htf⟩ := h
   have hstar : ∀ k', (∀ σ τ, tailF k σ τ → tailF k' σ τ) →
       den i ⟨b, p, k', m⟩ l0 l1 :=
-    fun k' hk => ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, hk σ τ htf⟩
+    fun k' hk => ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, hk σ τ htf⟩
+  have hself : den i ⟨b, p, k, m⟩ l0 l1 := ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, htf⟩
   unfold AFact.norm
   cases k with
   | star e =>
@@ -390,7 +589,14 @@ theorem norm_sound {i : PFact} {f : AFact} {l0 l1 : Loc} :
     cases m with
     | star =>
       cases ap with
-      | false => cases e <;> exact ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩
+      | false => cases e <;> exact hself
+      | true =>
+        cases e with
+        | univ => exact hstar .exact (hex)
+        | set xs => exact hstar .any (hany _)
+    | starEx x =>
+      cases ap with
+      | false => cases e <;> exact hself
       | true =>
         cases e with
         | univ => exact hstar .exact (hex)
@@ -399,8 +605,8 @@ theorem norm_sound {i : PFact} {f : AFact} {l0 l1 : Loc} :
       cases e with
       | univ => exact hstar .exact (hex)
       | set xs => exact hstar .any (hany _)
-  | any => exact ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩
-  | exact => exact ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩
+  | any => exact hself
+  | exact => exact hself
 
 theorem applyEdge_eq (c : AFact) (fr to : PFact) :
     applyEdge c fr to =
@@ -520,19 +726,28 @@ theorem geo_sound {ck fk tk : Kind} {P q toPath σ τ σ' τ' : List Acc}
     rw [hτ] at hc
     exact above_sound hr hc ht
 
-/-- The result fact of the `ok` gate covers the composed pair. -/
-theorem den_result {ic to : PFact} {cm : MarkA} {p : List Acc} {k : Kind} {l0 l1 l2 : Loc}
+/-- The result fact of the `ok` gate covers the composed pair.
+    Version 5: the result mark is `m` with `markComp to.mark cm = some m`, and the new
+    hypotheses `hps`, `hps2` are the `passes` conjuncts of the two pairs. -/
+theorem den_result {ic to : PFact} {cm m : MarkA} {p : List Acc} {k : Kind} {l0 l1 l2 : Loc}
     {σ τ'' : List Acc}
     (hb0 : l0.base = ic.base) (hm0 : ic.mark.admits l0.mark) (hm1 : l1.mark = cm.out l0.mark)
+    (hps : cm.passes l0.mark)
     (hb2 : l2.base = to.base) (hm2 : l2.mark = to.mark.out l1.mark)
+    (hps2 : to.mark.passes l1.mark) (hmc : markComp to.mark cm = some m)
     (hp0 : l0.path = ic.path ++ σ) (hti : tailI ic.kind σ)
     (hp2 : l2.path = p ++ τ'') (htf : tailF k σ τ'') :
-    den ic ⟨to.base, p, k, markOutA to.mark cm⟩ l0 l2 :=
-  ⟨hb0, hb2, hm0, by rw [hm2, hm1, markOutA_out], σ, τ'', hp0, hp2, hti, htf⟩
+    den ic ⟨to.base, p, k, m⟩ l0 l2 := by
+  have hps2' : to.mark.passes (cm.out l0.mark) := by rw [← hm1]; exact hps2
+  obtain ⟨ho, hp⟩ := markComp_sound hmc hps hps2'
+  exact ⟨hb0, hb2, hm0, by rw [hm2, hm1, ho], hp, σ, τ'', hp0, hp2, hti, htf⟩
 
-theorem mem_applyEdge_facts {c r : AFact} {fr to : PFact} :
-    r ∈ (applyEdge c fr to).facts → r.fact.mark = markOutA to.mark c.fact.mark := by
-  intro h
+/-- The shape of an `applyEdge` result: the geometry gives `(p, k, ap)`, the gate passes,
+    `markComp` gives the mark `m`, and the result is the normal form of that fact. -/
+theorem mem_applyEdge_facts_inv {c r : AFact} {fr to : PFact} (h : r ∈ (applyEdge c fr to).facts) :
+    ∃ p k ap m, geo c.fact.kind fr.kind fr.path c.fact.path to.path to.kind = some (p, k, ap) ∧
+      markGate fr.mark c.fact.mark = .ok ∧ markComp to.mark c.fact.mark = some m ∧
+      r = AFact.norm ⟨⟨to.base, p, k, m⟩, c.demand || ap⟩ := by
   rw [applyEdge_eq] at h
   cases hb : Nat.beq c.fact.base fr.base with
   | false =>
@@ -549,15 +764,28 @@ theorem mem_applyEdge_facts {c r : AFact} {fr to : PFact} :
       rw [hg, fin_some] at h
       cases hgt : markGate fr.mark c.fact.mark with
       | ok =>
-        rw [hgt] at h
-        have hr := List.mem_singleton.mp h
-        rw [hr, norm_mark]
+        rw [hgt, finG_ok] at h
+        cases hmc : markComp to.mark c.fact.mark with
+        | none =>
+          rw [hmc] at h
+          exact absurd h List.not_mem_nil
+        | some m =>
+          rw [hmc] at h
+          exact ⟨p, k, ap, m, rfl, rfl, rfl, List.mem_singleton.mp h⟩
       | no =>
         rw [hgt] at h
         exact absurd h List.not_mem_nil
       | req t =>
         rw [hgt] at h
         exact absurd h List.not_mem_nil
+
+/-- Version 5: the mark of a result is the `markComp` mark (it was `markOutA`). -/
+theorem mem_applyEdge_facts {c r : AFact} {fr to : PFact} :
+    r ∈ (applyEdge c fr to).facts → markComp to.mark c.fact.mark = some r.fact.mark := by
+  intro h
+  obtain ⟨p, k, ap, m, _, _, hmc, hr⟩ := mem_applyEdge_facts_inv h
+  rw [hr, norm_mark]
+  exact hmc
 
 theorem reqs_of_gate {c : AFact} {fr to : PFact} :
     (∀ t, markGate fr.mark c.fact.mark ≠ .req t) → (applyEdge c fr to).reqs = [] := by
@@ -573,7 +801,9 @@ theorem reqs_of_gate {c : AFact} {fr to : PFact} :
       obtain ⟨p, k, ap⟩ := x
       rw [fin_some]
       cases hgt : markGate fr.mark c.fact.mark with
-      | ok => rfl
+      | ok =>
+        rw [finG_ok]
+        cases markComp to.mark c.fact.mark <;> rfl
       | no => rfl
       | req t => exact absurd hgt (hn t)
 
@@ -585,10 +815,10 @@ namespace ApSpec
 theorem den_covers_final {i f : PFact} {l0 l1 : Loc} :
     den i f l0 l1 → f.covers l1 := by
   intro h
-  obtain ⟨_, hb1, _, hm1, σ, τ, _, hp1, _, htf⟩ := h
+  obtain ⟨_, hb1, _, hm1, hps, σ, τ, _, hp1, _, htf⟩ := h
   refine ⟨hb1, ⟨τ, hp1, CoreAux.tailI_of_tailF htf⟩, ?_⟩
   rw [hm1]
-  exact CoreAux.admits_out f.mark l0.mark
+  exact CoreAux.admits_out f.mark l0.mark hps
 
 /-- The start fact covers the identity on the location set of the initial fact. -/
 theorem startFact_sound {i : PFact} {l0 : Loc} :
@@ -597,19 +827,15 @@ theorem startFact_sound {i : PFact} {l0 : Loc} :
   intro h
   obtain ⟨hb, ⟨σ, hp, ht⟩, hm⟩ := h
   have hmo : l0.mark = im.out l0.mark := CoreAux.out_of_admits hm
+  have hps : im.passes l0.mark := CoreAux.passes_of_admits hm
   cases ik with
   | star e =>
     cases im with
-    | star => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, rfl, ht⟩
-    | conc t => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, trivial⟩
-  | any =>
-    cases im with
-    | star => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, trivial⟩
-    | conc t => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, trivial⟩
-  | exact =>
-    cases im with
-    | star => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, ht⟩
-    | conc t => exact ⟨hb, hb, hm, hmo, σ, σ, hp, hp, ht, ht⟩
+    | star => exact ⟨hb, hb, hm, hmo, hps, σ, σ, hp, hp, ht, rfl, ht⟩
+    | starEx x => exact ⟨hb, hb, hm, hmo, hps, σ, σ, hp, hp, ht, rfl, ht⟩
+    | conc t => exact ⟨hb, hb, hm, hmo, hps, σ, σ, hp, hp, ht, trivial⟩
+  | any => cases im <;> exact ⟨hb, hb, hm, hmo, hps, σ, σ, hp, hp, ht, trivial⟩
+  | exact => cases im <;> exact ⟨hb, hb, hm, hmo, hps, σ, σ, hp, hp, ht, ht⟩
 
 theorem startFact_mark {i : PFact} : (startFact i).fact.mark = i.mark := by
   obtain ⟨ib, ip, ik, im⟩ := i
@@ -623,20 +849,22 @@ theorem limitF_sound {counted : Acc → Bool} {L : Nat} {i : PFact} {f : AFact} 
   cases hc : cutPath counted L f.fact.path with
   | none => exact h
   | some p =>
-    obtain ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, _⟩ := h
+    obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, _⟩ := h
     obtain ⟨s, hs⟩ := CoreAux.cutPath_prefix hc
-    refine ⟨hb0, hb1, hm0, hm1, σ, s ++ τ, hp0, ?_, hti, trivial⟩
+    refine ⟨hb0, hb1, hm0, hm1, hps, σ, s ++ τ, hp0, ?_, hti, trivial⟩
     rw [hp1, hs, List.append_assoc]
 
 /-- THE CORE LEMMA. `applyEdge` covers the composition of the fact relation and
-    the edge relation, or it raises the request for the mark that the premise needs. -/
+    the edge relation, or it raises the request for the mark that the premise needs.
+    Version 5: the request case says that the fact mark is not concrete (`*` or `*∖x`; it
+    was `= .star`): the gate of a concrete premise mark against `*∖x` also raises a request. -/
 theorem applyEdge_sound {ic fr to : PFact} {c : AFact} {l0 l1 l2 : Loc} :
     den ic c.fact l0 l1 → den fr to l1 l2 →
     (∃ r, r ∈ (applyEdge c fr to).facts ∧ den ic r.fact l0 l2) ∨
-    (c.fact.mark = .star ∧ l0.mark ∈ (applyEdge c fr to).reqs) := by
+    ((∀ t, c.fact.mark ≠ .conc t) ∧ l0.mark ∈ (applyEdge c fr to).reqs) := by
   intro h1 h2
-  obtain ⟨hb0, hb1, hm0, hm1, σ, τ, hp0, hp1, hti, htf⟩ := h1
-  obtain ⟨hb1', hb2, hm1', hm2, σ', τ', hp1', hp2, hti', htf'⟩ := h2
+  obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, htf⟩ := h1
+  obtain ⟨hb1', hb2, hm1', hm2, hps2, σ', τ', hp1', hp2, hti', htf'⟩ := h2
   have hbase : Nat.beq c.fact.base fr.base = true := by
     rw [← hb1, hb1']; exact Nat.beq_refl _
   have hpath : c.fact.path ++ τ = fr.path ++ σ' := by rw [← hp1, hp1']
@@ -644,12 +872,17 @@ theorem applyEdge_sound {ic fr to : PFact} {c : AFact} {l0 l1 l2 : Loc} :
     CoreAux.geo_sound (toPath := to.path) hpath htf hti' htf'
   rw [CoreAux.applyEdge_eq, if_pos hbase, hgeo, CoreAux.fin_some]
   have hadm : fr.mark.admits (c.fact.mark.out l0.mark) := by rw [← hm1]; exact hm1'
-  rcases CoreAux.gate_cases hadm with hg | ⟨hcs, hg⟩
-  · rw [hg]
-    left
-    exact ⟨AFact.norm ⟨⟨to.base, p, k, markOutA to.mark c.fact.mark⟩, c.demand || ap⟩,
-      List.mem_singleton.mpr rfl,
-      CoreAux.norm_sound (CoreAux.den_result hb0 hm0 hm1 hb2 hm2 hp0 hti (by rw [hp2, hp2'']) htf'')⟩
+  have hps2' : to.mark.passes (c.fact.mark.out l0.mark) := by rw [← hm1]; exact hps2
+  rcases CoreAux.gate_cases hadm hps with hg | ⟨hcs, hg⟩
+  · rw [hg, CoreAux.finG_ok]
+    cases hmc : markComp to.mark c.fact.mark with
+    | none => exact absurd hps2' (CoreAux.markComp_none_no_pair hmc)
+    | some m =>
+      left
+      exact ⟨AFact.norm ⟨⟨to.base, p, k, m⟩, c.demand || ap⟩,
+        List.mem_singleton.mpr rfl,
+        CoreAux.norm_sound (CoreAux.den_result hb0 hm0 hm1 hps hb2 hm2 hps2 hmc hp0 hti
+          (by rw [hp2, hp2'']) htf'')⟩
   · rw [hg]
     right
     exact ⟨hcs, List.mem_singleton.mpr rfl⟩
@@ -667,8 +900,9 @@ theorem applyEdge_reqs_of_star {c : AFact} {fr to : PFact} :
 theorem applyEdge_mark_conc {c r : AFact} {fr to : PFact} {t : Mark} :
     c.fact.mark = .conc t → r ∈ (applyEdge c fr to).facts → ∃ t', r.fact.mark = .conc t' := by
   intro hc hr
-  rw [CoreAux.mem_applyEdge_facts hr, hc]
-  exact CoreAux.markOutA_conc
+  have h := CoreAux.mem_applyEdge_facts hr
+  rw [hc] at h
+  exact CoreAux.markComp_conc h
 
 /-- No request comes from a fact with a concrete mark. -/
 theorem applyEdge_reqs_of_conc {c : AFact} {fr to : PFact} {t : Mark} :
@@ -679,6 +913,7 @@ theorem applyEdge_reqs_of_conc {c : AFact} {fr to : PFact} {t : Mark} :
   rw [hc] at ht
   cases hm : fr.mark with
   | star => rw [hm] at ht; exact Gate.noConfusion ht
+  | starEx _ => rw [hm] at ht; exact Gate.noConfusion ht
   | conc t0 =>
     rw [hm] at ht
     have ht' : (if Nat.beq t0 t = true then Gate.ok else Gate.no) = Gate.req t' := ht
@@ -690,7 +925,7 @@ theorem applyEdge_reqs_of_conc {c : AFact} {fr to : PFact} {t : Mark} :
 theorem applySummary_sound {ic j : PFact} {a g : AFact} {l0 l1 l2 : Loc} :
     den ic a.fact l0 l1 → den j g.fact l1 l2 →
     (∃ r, r ∈ (applySummary a j g).facts ∧ den ic r.fact l0 l2) ∨
-    (a.fact.mark = .star ∧ l0.mark ∈ (applySummary a j g).reqs) := by
+    ((∀ t, a.fact.mark ≠ .conc t) ∧ l0.mark ∈ (applySummary a j g).reqs) := by
   intro h1 h2
   rcases applyEdge_sound h1 h2 with ⟨r, hr, hd⟩ | ⟨hs, hreq⟩
   · left
@@ -756,14 +991,18 @@ theorem applyAll_reqs_of_conc {c : AFact} {t : Mark} (hc : c.fact.mark = .conc t
     rfl
 
 
+/-- The sink check on the initial fact (for an abstract fact mark that lets `T` pass). -/
+def checkI (i : PFact) (T : Mark) : Check :=
+  match i.mark with
+  | .conc t => if Nat.beq t T then .triggered else .none
+  | _       => .request T
+
 /-- The sink check after the mark and overlap tests pass. -/
 def checkIn (i : PFact) (f : AFact) (T : Mark) : Check :=
   match f.fact.mark with
-  | .conc t => if Nat.beq t T then .triggered else .none
-  | .star   =>
-    match i.mark with
-    | .conc t => if Nat.beq t T then .triggered else .none
-    | .star   => .request T
+  | .conc t   => if Nat.beq t T then .triggered else .none
+  | .star     => checkI i T
+  | .starEx x => if memB T x then .none else checkI i T
 
 theorem check_eq_in {i s : PFact} {f : AFact} {T : Mark} :
     s.mark = .conc T → overlapB f.fact s = true → check i f s = checkIn i f T := by
@@ -773,6 +1012,59 @@ theorem check_eq_in {i s : PFact} {f : AFact} {T : Mark} :
   show (if overlapB f.fact s = true then _ else _) = _
   rw [if_pos ho]
   rfl
+
+theorem check_eq_none {i s : PFact} {f : AFact} {T : Mark} :
+    s.mark = .conc T → overlapB f.fact s = false → check i f s = .none := by
+  intro hs ho
+  unfold check
+  rw [hs]
+  show (if overlapB f.fact s = true then _ else _) = _
+  rw [ho, if_neg Bool.false_ne_true]
+
+theorem checkIn_conc {i : PFact} {f : AFact} {T t : Mark} (h : f.fact.mark = .conc t) :
+    checkIn i f T = if Nat.beq t T then .triggered else .none := by
+  unfold checkIn
+  rw [h]
+
+theorem checkIn_star {i : PFact} {f : AFact} {T : Mark} (h : f.fact.mark = .star) :
+    checkIn i f T = checkI i T := by
+  unfold checkIn
+  rw [h]
+
+theorem checkIn_starEx {i : PFact} {f : AFact} {T : Mark} {x : List Mark}
+    (h : f.fact.mark = .starEx x) :
+    checkIn i f T = if memB T x then .none else checkI i T := by
+  unfold checkIn
+  rw [h]
+
+/-- The check on the initial fact: a concrete initial mark `T` triggers; an abstract one
+    raises the request `T`. -/
+theorem checkI_sound {i : PFact} {T x : Mark} (hm : i.mark.admits x) (hx : x = T) :
+    checkI i T = .triggered ∨ (checkI i T = .request x ∧ ∀ t, i.mark ≠ .conc t) := by
+  unfold checkI
+  cases hi : i.mark with
+  | conc t' =>
+    rw [hi] at hm
+    have ht : t' = T := by rw [← hx]; exact hm.symm
+    left
+    show (if Nat.beq t' T = true then Check.triggered else Check.none) = Check.triggered
+    rw [ht, if_pos (Nat.beq_refl T)]
+  | star =>
+    right
+    exact ⟨show Check.request T = Check.request x by rw [hx], fun _ h => MarkA.noConfusion h⟩
+  | starEx _ =>
+    right
+    exact ⟨show Check.request T = Check.request x by rw [hx], fun _ h => MarkA.noConfusion h⟩
+
+theorem checkI_request {i : PFact} {T t : Mark} :
+    checkI i T = .request t → ∀ t', i.mark ≠ .conc t' := by
+  intro h t' hi
+  unfold checkI at h
+  rw [hi] at h
+  have h' : (if Nat.beq t' T = true then Check.triggered else Check.none) = Check.request t := h
+  cases hq : Nat.beq t' T with
+  | true => rw [hq, if_pos rfl] at h'; exact Check.noConfusion h'
+  | false => rw [hq, if_neg Bool.false_ne_true] at h'; exact Check.noConfusion h'
 
 end ApSpec.CoreAux
 
@@ -785,7 +1077,7 @@ theorem transfer_sound {counted : Acc → Bool} {L : Nat} {s : Stmt} {ic : PFact
     (∀ e, e ∈ s.edges → memB e.1.base s.touched = true) →
     den ic c.fact l0 l → s.step l l' →
     (∃ r, r ∈ (transfer counted L s c).facts ∧ den ic r.fact l0 l') ∨
-    (c.fact.mark = .star ∧ l0.mark ∈ (transfer counted L s c).reqs) := by
+    ((∀ t, c.fact.mark ≠ .conc t) ∧ l0.mark ∈ (transfer counted L s c).reqs) := by
   intro hwf hden hstep
   have hb : l.base = c.fact.base := hden.2.1
   unfold transfer
@@ -880,6 +1172,7 @@ theorem applicable_mark {i c : PFact} {t : Mark} :
   rw [hi] at hms
   cases hc : c.mark with
   | star => rw [hc] at hms; exact Bool.noConfusion hms
+  | starEx _ => rw [hc] at hms; exact Bool.noConfusion hms
   | conc t' =>
     rw [hc] at hms
     have h' : Nat.beq t t' = true := hms
@@ -985,58 +1278,631 @@ theorem policy_applicable (demand : MethodId → List PFact) (m : MethodId) (a :
     · rw [if_neg hd]; exact hcov _ hroot
 
 /-- The sink check is sound: a covered tainted location triggers the sink, or
-    raises the request for the sink mark on a mark-abstract initial fact. -/
+    raises the request for the sink mark on a mark-abstract initial fact.
+    Version 5: the request case says that the initial mark is not concrete (it was
+    `i.mark = .star`; for an initial mark `*∖x` the check also gives the request, see
+    `check_request_starEx_initial`). -/
 theorem check_sound {i s : PFact} {f : AFact} {l0 l : Loc} {T : Mark} :
     s.mark = .conc T → den i f.fact l0 l → s.covers l →
-    check i f s = .triggered ∨ (check i f s = .request l0.mark ∧ i.mark = .star) := by
+    check i f s = .triggered ∨ (check i f s = .request l0.mark ∧ ∀ t, i.mark ≠ .conc t) := by
   intro hsm hden hs
   have hov : overlapB f.fact s = true := overlapB_of_common (den_covers_final hden) hs
   have hlT : l.mark = T := by
     have h := hs.2.2
     rw [hsm] at h
     exact h
-  obtain ⟨_, _, hm0, hm1, _⟩ := hden
+  obtain ⟨_, _, hm0, hm1, hps, _⟩ := hden
   rw [CoreAux.check_eq_in hsm hov]
-  unfold CoreAux.checkIn
   cases hf : f.fact.mark with
   | conc t' =>
     rw [hf] at hm1
     have ht : t' = T := by rw [← hlT, hm1]; rfl
     left
-    show (if Nat.beq t' T = true then Check.triggered else Check.none) = Check.triggered
-    rw [ht, if_pos (Nat.beq_refl T)]
+    rw [CoreAux.checkIn_conc hf, ht, if_pos (Nat.beq_refl T)]
   | star =>
     rw [hf] at hm1
     have h0 : l0.mark = T := by rw [← hlT, hm1]; rfl
-    cases hi : i.mark with
-    | conc t' =>
-      rw [hi] at hm0
-      have ht : t' = T := by rw [← h0]; exact hm0.symm
-      left
-      show (if Nat.beq t' T = true then Check.triggered else Check.none) = Check.triggered
-      rw [ht, if_pos (Nat.beq_refl T)]
-    | star =>
-      right
-      exact ⟨by rw [h0], rfl⟩
+    rw [CoreAux.checkIn_star hf]
+    exact CoreAux.checkI_sound hm0 h0
+  | starEx x =>
+    rw [hf] at hm1 hps
+    have h0 : l0.mark = T := by rw [← hlT, hm1]; rfl
+    have hx : memB T x = false := by rw [← h0]; exact hps
+    rw [CoreAux.checkIn_starEx hf, hx, if_neg Bool.false_ne_true]
+    exact CoreAux.checkI_sound hm0 h0
 
-/-- A sink check never raises a request on a concrete-mark initial fact. -/
+/-- A sink check never raises a request on a concrete-mark initial fact.
+    Version 5: the conclusion is `∀ t', i.mark ≠ .conc t'` (it was `i.mark = .star`, which is
+    false for an initial mark `*∖x`: see `check_request_starEx_initial`). -/
 theorem check_request_star {i s : PFact} {f : AFact} {t : Mark} :
-    check i f s = .request t → i.mark = .star := by
+    check i f s = .request t → ∀ t', i.mark ≠ .conc t' := by
   intro h
-  unfold check at h
-  split at h
-  · exact Check.noConfusion h
-  · split at h
-    · split at h
-      · split at h
-        · exact Check.noConfusion h
-        · exact Check.noConfusion h
-      · split at h
-        · split at h
-          · exact Check.noConfusion h
-          · exact Check.noConfusion h
-        · assumption
-    · exact Check.noConfusion h
+  cases hs : s.mark with
+  | star =>
+    unfold check at h
+    rw [hs] at h
+    exact Check.noConfusion h
+  | starEx _ =>
+    unfold check at h
+    rw [hs] at h
+    exact Check.noConfusion h
+  | conc T =>
+    cases hov : overlapB f.fact s with
+    | false =>
+      rw [CoreAux.check_eq_none hs hov] at h
+      exact Check.noConfusion h
+    | true =>
+      rw [CoreAux.check_eq_in hs hov] at h
+      cases hf : f.fact.mark with
+      | conc t0 =>
+        rw [CoreAux.checkIn_conc hf] at h
+        cases hq : Nat.beq t0 T with
+        | true => rw [hq, if_pos rfl] at h; exact Check.noConfusion h
+        | false => rw [hq, if_neg Bool.false_ne_true] at h; exact Check.noConfusion h
+      | star =>
+        rw [CoreAux.checkIn_star hf] at h
+        exact CoreAux.checkI_request h
+      | starEx x =>
+        rw [CoreAux.checkIn_starEx hf] at h
+        cases hx : memB T x with
+        | true => rw [hx, if_pos rfl] at h; exact Check.noConfusion h
+        | false =>
+          rw [hx, if_neg Bool.false_ne_true] at h
+          exact CoreAux.checkI_request h
+
+/-- The version-4 conclusion `i.mark = .star` of `check_sound` and `check_request_star` is
+    false for an initial mark `*∖[]`: the check raises the request, and the pair exists. -/
+theorem check_request_starEx_initial :
+    check ⟨0, [], .exact, .starEx []⟩ ⟨⟨0, [], .exact, .star⟩, false⟩ ⟨0, [], .exact, .conc 5⟩ =
+      .request 5 ∧
+    den ⟨0, [], .exact, .starEx []⟩ ⟨0, [], .exact, .star⟩ ⟨0, [], 5⟩ ⟨0, [], 5⟩ :=
+  ⟨rfl, rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩
+
+end ApSpec
+
+/-! ## Relative positions: inversion -/
+
+namespace ApSpec.CoreAux
+open ApSpec
+
+theorem relate_below_inv {p q r : List Acc} (h : relate p q = .below r) : q = p ++ r := by
+  unfold relate at h
+  cases hd : dropPrefix p q with
+  | some r' =>
+    rw [hd] at h
+    have hr : r' = r := Rel.below.inj h
+    rw [← hr]
+    exact dropPrefix_some.mp hd
+  | none =>
+    rw [hd] at h
+    cases hd2 : dropPrefix q p with
+    | some r' => rw [hd2] at h; exact Rel.noConfusion h
+    | none => rw [hd2] at h; exact Rel.noConfusion h
+
+theorem relate_above_inv {p q r : List Acc} (h : relate p q = .above r) :
+    p = q ++ r ∧ r ≠ [] := by
+  unfold relate at h
+  cases hd : dropPrefix p q with
+  | some r' => rw [hd] at h; exact Rel.noConfusion h
+  | none =>
+    rw [hd] at h
+    cases hd2 : dropPrefix q p with
+    | none => rw [hd2] at h; exact Rel.noConfusion h
+    | some r' =>
+      rw [hd2] at h
+      have hr : r' = r := Rel.above.inj h
+      rw [hr] at hd2
+      have hP := dropPrefix_some.mp hd2
+      refine ⟨hP, fun hr0 => ?_⟩
+      rw [hr0, List.append_nil] at hP
+      have h0 : dropPrefix p q = some [] := dropPrefix_some.mpr (by rw [hP, List.append_nil])
+      rw [hd] at h0
+      exact nomatch h0
+
+theorem relate_apart_inv {p q : List Acc} (h : relate p q = .apart) :
+    ∀ s t, p ++ s ≠ q ++ t := by
+  intro s t he
+  rcases relate_common he with ⟨r, hr, _, _⟩ | ⟨r, hr, _, _, _⟩
+  · rw [hr] at h; exact Rel.noConfusion h
+  · rw [hr] at h; exact Rel.noConfusion h
+
+end ApSpec.CoreAux
+
+namespace ApSpec
+
+/-! ## Abstract marks and the request climb -/
+
+/-- An abstract final mark passes the entry mark through. -/
+theorem den_mark_abs {i f : PFact} {l0 l1 : Loc} (hd : den i f l0 l1)
+    (h : ∀ t, f.mark ≠ .conc t) : l1.mark = l0.mark := by
+  have hm := hd.2.2.2.1
+  cases hf : f.mark with
+  | star => rw [hf] at hm; exact hm
+  | conc t => exact absurd hf (h t)
+  | starEx x => rw [hf] at hm; exact hm
+
+/-- A request for `t` climbs through an abstract-mark fact whose location has the mark `t`. -/
+theorem climbsB_of_covers {f : PFact} {l : Loc} {t : Mark} :
+    f.covers l → l.mark = t → (∀ t', f.mark ≠ .conc t') → climbsB f.mark t = true := by
+  intro hc hl ha
+  have hadm := hc.2.2
+  cases hf : f.mark with
+  | star => rfl
+  | conc t' => exact absurd hf (ha t')
+  | starEx x =>
+    rw [hf] at hadm
+    have h' : memB l.mark x = false := hadm
+    show (!memB t x) = true
+    rw [← hl, h']
+    rfl
+
+/-- The same for a pair: the request for the entry mark climbs through an abstract-mark fact. -/
+theorem climbsB_of_den {i f : PFact} {l0 l1 : Loc} :
+    den i f l0 l1 → (∀ t', f.mark ≠ .conc t') → climbsB f.mark l0.mark = true := by
+  intro hd ha
+  exact climbsB_of_covers (den_covers_final hd) (den_mark_abs hd ha) ha
+
+/-- A request climbs only through an abstract-mark fact. -/
+theorem climbsB_abs {m : MarkA} {t : Mark} : climbsB m t = true → ∀ t', m ≠ .conc t' := by
+  intro h t' hm
+  rw [hm] at h
+  exact Bool.noConfusion h
+
+/-! ## The cleaner (spec §4.7) -/
+
+/-- The location `l` is at the position of the cleaner (marks ignored). -/
+def Cleaner.posB (cl : Cleaner) (l : Loc) : Bool :=
+  Nat.beq l.base cl.base &&
+  (match dropPrefix cl.path l.path with
+   | some σ => cl.reach.inB σ
+   | none   => false)
+
+/-- The cleaner cleans a location iff it cleans its mark and the location is at its position. -/
+theorem Cleaner.cleansB_eq (cl : Cleaner) (l : Loc) :
+    cl.cleansB l = (cl.markB l.mark && cl.posB l) := by
+  unfold Cleaner.cleansB Cleaner.posB
+  cases Nat.beq l.base cl.base <;> cases cl.markB l.mark <;>
+    cases dropPrefix cl.path l.path <;> rfl
+
+theorem Cleaner.posB_of {cl : Cleaner} {l : Loc} {σ : List Acc}
+    (hb : Nat.beq l.base cl.base = true) (hp : l.path = cl.path ++ σ)
+    (hin : cl.reach.inB σ = true) : cl.posB l = true := by
+  unfold Cleaner.posB
+  rw [hb, CoreAux.dropPrefix_some.mpr hp]
+  exact hin
+
+theorem Cleaner.posB_false {cl : Cleaner} {l : Loc}
+    (h : Nat.beq l.base cl.base = true → ∀ σ, l.path = cl.path ++ σ → cl.reach.inB σ = false) :
+    cl.posB l = false := by
+  unfold Cleaner.posB
+  cases hb : Nat.beq l.base cl.base with
+  | false => rfl
+  | true =>
+    cases hd : dropPrefix cl.path l.path with
+    | none => rfl
+    | some σ => exact h hb σ (CoreAux.dropPrefix_some.mp hd)
+
+/-- CLEANER, `inside`: every location of the fact (marks ignored) is at the cleaned position. -/
+theorem cleanPos_inside_sound {cl : Cleaner} {c : PFact} {l : Loc} :
+    cleanPos cl c = .inside → l.base = c.base →
+    (∃ τ, l.path = c.path ++ τ ∧ tailI c.kind τ) → cl.posB l = true := by
+  intro h hb hloc
+  obtain ⟨τ, hp, ht⟩ := hloc
+  unfold cleanPos at h
+  cases hbe : Nat.beq c.base cl.base with
+  | false => rw [hbe, if_neg Bool.false_ne_true] at h; exact CPos.noConfusion h
+  | true =>
+    rw [hbe, if_pos rfl] at h
+    have hb' : Nat.beq l.base cl.base = true := by rw [hb]; exact hbe
+    cases hrel : relate cl.path c.path with
+    | below r =>
+      rw [hrel] at h
+      have hq := CoreAux.relate_below_inv hrel
+      cases r with
+      | cons a r =>
+        refine Cleaner.posB_of hb' (σ := a :: r ++ τ) (by rw [hp, hq, List.append_assoc]) ?_
+        cases hr : cl.reach with
+        | exact => rw [hr] at h; exact CPos.noConfusion h
+        | below => rfl
+        | atAndBelow => rfl
+      | nil =>
+        refine Cleaner.posB_of hb' (σ := τ) (by rw [hp, hq, List.append_nil]) ?_
+        cases hr : cl.reach with
+        | atAndBelow => rfl
+        | exact =>
+          rw [hr] at h
+          cases hk : c.kind with
+          | exact =>
+            rw [hk] at ht
+            have hτ : τ = [] := ht
+            rw [hτ]
+            rfl
+          | star e => rw [hk] at h; exact CPos.noConfusion h
+          | any => rw [hk] at h; exact CPos.noConfusion h
+        | below =>
+          rw [hr] at h
+          cases hk : c.kind with
+          | exact => rw [hk] at h; exact CPos.noConfusion h
+          | star e => rw [hk] at h; exact CPos.noConfusion h
+          | any => rw [hk] at h; exact CPos.noConfusion h
+    | above r =>
+      rw [hrel] at h
+      cases hk : c.kind with
+      | exact => rw [hk] at h; exact CPos.noConfusion h
+      | star e =>
+        rw [hk] at h
+        cases hea : e.admits r with
+        | true =>
+          have h' : (if e.admits r = true then CPos.part else CPos.disjoint) = CPos.inside := h
+          rw [hea, if_pos rfl] at h'
+          exact CPos.noConfusion h'
+        | false =>
+          have h' : (if e.admits r = true then CPos.part else CPos.disjoint) = CPos.inside := h
+          rw [hea, if_neg Bool.false_ne_true] at h'
+          exact CPos.noConfusion h'
+      | any => rw [hk] at h; exact CPos.noConfusion h
+    | apart => rw [hrel] at h; exact CPos.noConfusion h
+
+/-- CLEANER, `disjoint`: no location of the fact (marks ignored) is at the cleaned position. -/
+theorem cleanPos_disjoint_sound {cl : Cleaner} {c : PFact} {l : Loc} :
+    cleanPos cl c = .disjoint → l.base = c.base →
+    (∃ τ, l.path = c.path ++ τ ∧ tailI c.kind τ) → cl.posB l = false := by
+  intro h hb hloc
+  obtain ⟨τ, hp, ht⟩ := hloc
+  apply Cleaner.posB_false
+  intro hb' σ hσ
+  have hbe : Nat.beq c.base cl.base = true := by rw [← hb]; exact hb'
+  unfold cleanPos at h
+  rw [hbe, if_pos rfl] at h
+  have hcommon : cl.path ++ σ = c.path ++ τ := by rw [← hσ, hp]
+  rcases CoreAux.relate_common hcommon with ⟨r, hrel, _, hστ⟩ | ⟨r, hrel, _, hr, hτ⟩
+  · rw [hrel] at h
+    cases r with
+    | cons a r =>
+      cases hrc : cl.reach with
+      | exact => rw [hστ]; rfl
+      | below => rw [hrc] at h; exact CPos.noConfusion h
+      | atAndBelow => rw [hrc] at h; exact CPos.noConfusion h
+    | nil =>
+      cases hrc : cl.reach with
+      | atAndBelow => rw [hrc] at h; exact CPos.noConfusion h
+      | exact =>
+        rw [hrc] at h
+        cases hk : c.kind with
+        | exact => rw [hk] at h; exact CPos.noConfusion h
+        | star e => rw [hk] at h; exact CPos.noConfusion h
+        | any => rw [hk] at h; exact CPos.noConfusion h
+      | below =>
+        rw [hrc] at h
+        cases hk : c.kind with
+        | exact =>
+          rw [hk] at ht
+          have hτ0 : τ = [] := ht
+          rw [hστ, hτ0]
+          rfl
+        | star e => rw [hk] at h; exact CPos.noConfusion h
+        | any => rw [hk] at h; exact CPos.noConfusion h
+  · rw [hrel] at h
+    cases hk : c.kind with
+    | exact =>
+      rw [hk] at ht
+      have hτ0 : τ = [] := ht
+      rw [hτ0] at hτ
+      cases r with
+      | nil => exact absurd rfl hr
+      | cons a r' => exact nomatch hτ
+    | star e =>
+      rw [hk] at h ht
+      have hea : admitsTailB (.star e) r = true :=
+        CoreAux.tailI_append_admits (k := .star e) (by rw [← hτ]; exact ht)
+      have h' : (if e.admits r = true then CPos.part else CPos.disjoint) = CPos.disjoint := h
+      have hea' : e.admits r = true := hea
+      rw [hea', if_pos rfl] at h'
+      exact CPos.noConfusion h'
+    | any => rw [hk] at h; exact CPos.noConfusion h
+
+/-- `addEx` keeps the output mark. -/
+theorem addEx_out (m : MarkA) (t x : Mark) : (addEx m t).out x = m.out x := by
+  cases m <;> rfl
+
+/-- `addEx` lets a mark other than `t` pass if `m` lets it pass. -/
+theorem addEx_passes {m : MarkA} {t x : Mark} :
+    m.passes x → Nat.beq x t = false → (addEx m t).passes x := by
+  intro hp hx
+  cases m with
+  | star =>
+    show (Nat.beq x t || false) = false
+    rw [hx]; rfl
+  | starEx y =>
+    have hy : memB x y = false := hp
+    show (Nat.beq x t || memB x y) = false
+    rw [hx, hy]; rfl
+  | conc t' => trivial
+
+/-- An `addEx` fact covers every pair of the input fact whose entry mark is not `t`. -/
+theorem den_addEx {i f : PFact} {l0 l : Loc} {t : Mark} :
+    den i f l0 l → Nat.beq l0.mark t = false → den i ⟨f.base, f.path, f.kind, addEx f.mark t⟩ l0 l := by
+  intro hd hx
+  obtain ⟨hb0, hb1, hm0, hm1, hps, rest⟩ := hd
+  exact ⟨hb0, hb1, hm0, by rw [addEx_out]; exact hm1, addEx_passes hps hx, rest⟩
+
+/-- Exactness of `addEx`: an `addEx` pair is a pair of the input fact. -/
+theorem den_of_addEx {i f : PFact} {l0 l : Loc} {t : Mark} :
+    den i ⟨f.base, f.path, f.kind, addEx f.mark t⟩ l0 l → den i f l0 l := by
+  intro hd
+  obtain ⟨hb0, hb1, hm0, hm1, hps, rest⟩ := hd
+  refine ⟨hb0, hb1, hm0, by rw [← addEx_out f.mark t]; exact hm1, ?_, rest⟩
+  cases hf : f.mark with
+  | star => trivial
+  | conc t' => trivial
+  | starEx y =>
+    rw [hf] at hps
+    have h : (Nat.beq l0.mark t || memB l0.mark y) = false := hps
+    show memB l0.mark y = false
+    cases hy : memB l0.mark y with
+    | false => rfl
+    | true => rw [hy, Bool.or_true] at h; exact Bool.noConfusion h
+
+/-- `concPart` keeps the mark. -/
+theorem concPart_mark (cl : Cleaner) (c : AFact) : (concPart cl c).fact.mark = c.fact.mark := by
+  unfold concPart
+  split <;> rfl
+
+/-- `concPart` covers every pair whose end location the cleaner does not clean. -/
+theorem concPart_sound {cl : Cleaner} {i : PFact} {c : AFact} {l0 l : Loc} :
+    den i c.fact l0 l → cl.cleansB l = false → cl.markB l.mark = true →
+    Nat.beq c.fact.base cl.base = true → den i (concPart cl c).fact l0 l := by
+  intro hd hcl hmk hbe
+  unfold concPart
+  split
+  · next hk hr hrel =>
+    obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, _⟩ := hd
+    refine ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, ?_⟩
+    show τ = []
+    have hq := CoreAux.relate_below_inv hrel
+    cases τ with
+    | nil => rfl
+    | cons a τ' =>
+      exfalso
+      have hb' : Nat.beq l.base cl.base = true := by rw [hb1]; exact hbe
+      have hpos : cl.posB l = true :=
+        Cleaner.posB_of hb' (σ := a :: τ') (by rw [hp1, hq, List.append_nil]) (by rw [hr]; rfl)
+      rw [Cleaner.cleansB_eq, hmk, hpos] at hcl
+      exact Bool.noConfusion hcl
+  · exact hd
+
+/-- Exactness of `concPart`: a pair of the result is a pair of the input fact. -/
+theorem den_of_concPart {cl : Cleaner} {i : PFact} {c : AFact} {l0 l : Loc} :
+    den i (concPart cl c).fact l0 l → den i c.fact l0 l := by
+  unfold concPart
+  split
+  · next hk _ _ =>
+    intro hd
+    obtain ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, _⟩ := hd
+    refine ⟨hb0, hb1, hm0, hm1, hps, σ, τ, hp0, hp1, hti, ?_⟩
+    rw [hk]
+    trivial
+  · exact id
+
+/-- THE LOCAL LEMMA OF THE CLEANER. A pair of the input fact whose end location the cleaner
+    does not clean is covered by a result fact, or the entry mark is requested on an
+    abstract-mark fact (case `part`: the request gives a concrete fact, which the cleaner
+    then cleans exactly). -/
+theorem cleanRes_sound {cl : Cleaner} {i : PFact} {c : AFact} {l0 l : Loc} :
+    den i c.fact l0 l → cl.cleansB l = false →
+    (∃ r, r ∈ (cleanRes cl c).facts ∧ den i r.fact l0 l) ∨
+    ((∀ t, c.fact.mark ≠ .conc t) ∧ l0.mark ∈ (cleanRes cl c).reqs) := by
+  intro hd hcl
+  have hb1 : l.base = c.fact.base := hd.2.1
+  have hloc : ∃ τ, l.path = c.fact.path ++ τ ∧ tailI c.fact.kind τ := by
+    obtain ⟨_, _, _, _, _, σ, τ, _, hp1, _, htf⟩ := hd
+    exact ⟨τ, hp1, CoreAux.tailI_of_tailF htf⟩
+  have hm1 : l.mark = c.fact.mark.out l0.mark := hd.2.2.2.1
+  -- the cleaner does not clean the mark of `l`, or `l` is not at its position
+  have hsplit : cl.markB l.mark = false ∨ cl.posB l = false := by
+    rw [Cleaner.cleansB_eq] at hcl
+    cases hmk : cl.markB l.mark with
+    | false => exact .inl rfl
+    | true => rw [hmk] at hcl; exact .inr hcl
+  -- an abstract fact mark and a cleaned mark `t`: the entry mark is `t`, or `addEx` covers
+  have habs : ∀ t, (∀ t', c.fact.mark ≠ .conc t') → cl.mark = some t →
+      cl.markB l.mark = false → Nat.beq l0.mark t = false := by
+    intro t ha hclm hmk
+    rw [den_mark_abs hd ha] at hmk
+    unfold Cleaner.markB at hmk
+    rw [hclm] at hmk
+    exact hmk
+  unfold cleanRes
+  cases hpos : cleanPos cl c.fact with
+  | disjoint => exact .inl ⟨c, List.mem_singleton.mpr rfl, hd⟩
+  | inside =>
+    have hin := cleanPos_inside_sound hpos hb1 hloc
+    have hmk : cl.markB l.mark = false := by
+      rcases hsplit with h | h
+      · exact h
+      · rw [hin] at h; exact Bool.noConfusion h
+    cases hcm : c.fact.mark with
+    | conc t =>
+      rw [hcm] at hm1
+      have hlt : l.mark = t := hm1
+      rw [hlt] at hmk
+      show (∃ r, r ∈ (if cl.markB t = true then Res.none else ⟨[c], []⟩ : Res).facts ∧ _) ∨ _
+      rw [hmk, if_neg Bool.false_ne_true]
+      exact .inl ⟨c, List.mem_singleton.mpr rfl, hd⟩
+    | star =>
+      have ha : ∀ t', c.fact.mark ≠ .conc t' := fun t' h => by rw [hcm] at h; exact MarkA.noConfusion h
+      cases hclm : cl.mark with
+      | none =>
+        unfold Cleaner.markB at hmk
+        rw [hclm] at hmk
+        exact Bool.noConfusion hmk
+      | some t =>
+        have hx := habs t ha hclm hmk
+        refine .inl ⟨_, List.mem_singleton.mpr rfl, ?_⟩
+        have h := den_addEx (t := t) hd hx
+        rw [hcm] at h
+        exact h
+    | starEx y =>
+      have ha : ∀ t', c.fact.mark ≠ .conc t' := fun t' h => by rw [hcm] at h; exact MarkA.noConfusion h
+      cases hclm : cl.mark with
+      | none =>
+        unfold Cleaner.markB at hmk
+        rw [hclm] at hmk
+        exact Bool.noConfusion hmk
+      | some t =>
+        have hx := habs t ha hclm hmk
+        refine .inl ⟨_, List.mem_singleton.mpr rfl, ?_⟩
+        have h := den_addEx (t := t) hd hx
+        rw [hcm] at h
+        exact h
+  | part =>
+    cases hcm : c.fact.mark with
+    | conc t =>
+      cases hmt : cl.markB t with
+      | true =>
+        show (∃ r, r ∈ (if cl.markB t = true then (⟨[concPart cl c], []⟩ : Res)
+          else ⟨[c], []⟩).facts ∧ _) ∨ _
+        rw [hmt, if_pos rfl]
+        have hbe : Nat.beq c.fact.base cl.base = true := by
+          unfold cleanPos at hpos
+          cases hbe : Nat.beq c.fact.base cl.base with
+          | true => rfl
+          | false => rw [hbe, if_neg Bool.false_ne_true] at hpos; exact CPos.noConfusion hpos
+        rw [hcm] at hm1
+        have hlt : l.mark = t := hm1
+        have hmk : cl.markB l.mark = true := by rw [hlt]; exact hmt
+        exact .inl ⟨concPart cl c, List.mem_singleton.mpr rfl, concPart_sound hd hcl hmk hbe⟩
+      | false =>
+        show (∃ r, r ∈ (if cl.markB t = true then (⟨[concPart cl c], []⟩ : Res)
+          else ⟨[c], []⟩).facts ∧ _) ∨ _
+        rw [hmt, if_neg Bool.false_ne_true]
+        exact .inl ⟨c, List.mem_singleton.mpr rfl, hd⟩
+    | star =>
+      have ha : ∀ t', c.fact.mark ≠ .conc t' := fun t' h => by rw [hcm] at h; exact MarkA.noConfusion h
+      cases hclm : cl.mark with
+      | none => exact .inl ⟨AFact.norm ⟨c.fact, true⟩, List.mem_singleton.mpr rfl,
+          CoreAux.norm_sound (f := ⟨c.fact, true⟩) hd⟩
+      | some t =>
+        cases hx : Nat.beq l0.mark t with
+        | true =>
+          exact .inr ⟨fun _ h0 => MarkA.noConfusion h0,
+            List.mem_singleton.mpr (CoreAux.beq_iff.mp hx)⟩
+        | false =>
+          refine .inl ⟨_, List.mem_singleton.mpr rfl, ?_⟩
+          have h := den_addEx (t := t) hd hx
+          rw [hcm] at h
+          exact h
+    | starEx y =>
+      have ha : ∀ t', c.fact.mark ≠ .conc t' := fun t' h => by rw [hcm] at h; exact MarkA.noConfusion h
+      cases hclm : cl.mark with
+      | none => exact .inl ⟨AFact.norm ⟨c.fact, true⟩, List.mem_singleton.mpr rfl,
+          CoreAux.norm_sound (f := ⟨c.fact, true⟩) hd⟩
+      | some t =>
+        cases hx : Nat.beq l0.mark t with
+        | true =>
+          exact .inr ⟨fun _ h0 => MarkA.noConfusion h0,
+            List.mem_singleton.mpr (CoreAux.beq_iff.mp hx)⟩
+        | false =>
+          refine .inl ⟨_, List.mem_singleton.mpr rfl, ?_⟩
+          have h := den_addEx (t := t) hd hx
+          rw [hcm] at h
+          exact h
+
+/-- The cleaner raises a request only on an abstract-mark fact, and only for its cleaned mark. -/
+theorem cleanRes_reqs_abstract {cl : Cleaner} {c : AFact} {t : Mark} :
+    t ∈ (cleanRes cl c).reqs → (∀ t', c.fact.mark ≠ .conc t') ∧ cl.mark = some t := by
+  intro h
+  unfold cleanRes at h
+  cases hpos : cleanPos cl c.fact with
+  | disjoint => rw [hpos] at h; exact absurd h List.not_mem_nil
+  | inside =>
+    rw [hpos] at h
+    cases hcm : c.fact.mark with
+    | conc t0 =>
+      rw [hcm] at h
+      have h' : t ∈ (if cl.markB t0 = true then Res.none else (⟨[c], []⟩ : Res)).reqs := h
+      cases hmt : cl.markB t0 with
+      | true => rw [hmt, if_pos rfl] at h'; exact absurd h' List.not_mem_nil
+      | false => rw [hmt, if_neg Bool.false_ne_true] at h'; exact absurd h' List.not_mem_nil
+    | star =>
+      rw [hcm] at h
+      cases hclm : cl.mark with
+      | none => rw [hclm] at h; exact absurd h List.not_mem_nil
+      | some t' => rw [hclm] at h; exact absurd h List.not_mem_nil
+    | starEx y =>
+      rw [hcm] at h
+      cases hclm : cl.mark with
+      | none => rw [hclm] at h; exact absurd h List.not_mem_nil
+      | some t' => rw [hclm] at h; exact absurd h List.not_mem_nil
+  | part =>
+    rw [hpos] at h
+    cases hcm : c.fact.mark with
+    | conc t0 =>
+      rw [hcm] at h
+      have h' : t ∈ (if cl.markB t0 = true then (⟨[concPart cl c], []⟩ : Res)
+        else ⟨[c], []⟩).reqs := h
+      cases hmt : cl.markB t0 with
+      | true => rw [hmt, if_pos rfl] at h'; exact absurd h' List.not_mem_nil
+      | false => rw [hmt, if_neg Bool.false_ne_true] at h'; exact absurd h' List.not_mem_nil
+    | star =>
+      rw [hcm] at h
+      cases hclm : cl.mark with
+      | none => rw [hclm] at h; exact absurd h List.not_mem_nil
+      | some t' =>
+        rw [hclm] at h
+        have ht : t = t' := List.mem_singleton.mp h
+        exact ⟨fun _ h0 => MarkA.noConfusion h0, by rw [ht]⟩
+    | starEx y =>
+      rw [hcm] at h
+      cases hclm : cl.mark with
+      | none => rw [hclm] at h; exact absurd h List.not_mem_nil
+      | some t' =>
+        rw [hclm] at h
+        have ht : t = t' := List.mem_singleton.mp h
+        exact ⟨fun _ h0 => MarkA.noConfusion h0, by rw [ht]⟩
+
+/-- A concrete input mark gives concrete result marks (the same mark). -/
+theorem cleanRes_mark_conc {cl : Cleaner} {c r : AFact} {t : Mark} :
+    c.fact.mark = .conc t → r ∈ (cleanRes cl c).facts → ∃ t', r.fact.mark = .conc t' := by
+  intro hc h
+  refine ⟨t, ?_⟩
+  unfold cleanRes at h
+  cases hpos : cleanPos cl c.fact with
+  | disjoint =>
+    rw [hpos] at h
+    rw [List.mem_singleton.mp h, hc]
+  | inside =>
+    rw [hpos, hc] at h
+    have h' : r ∈ (if cl.markB t = true then Res.none else (⟨[c], []⟩ : Res)).facts := h
+    cases hmt : cl.markB t with
+    | true => rw [hmt, if_pos rfl] at h'; exact absurd h' List.not_mem_nil
+    | false =>
+      rw [hmt, if_neg Bool.false_ne_true] at h'
+      rw [List.mem_singleton.mp h', hc]
+  | part =>
+    rw [hpos, hc] at h
+    have h' : r ∈ (if cl.markB t = true then (⟨[concPart cl c], []⟩ : Res)
+      else ⟨[c], []⟩).facts := h
+    cases hmt : cl.markB t with
+    | true =>
+      rw [hmt, if_pos rfl] at h'
+      rw [List.mem_singleton.mp h', concPart_mark, hc]
+    | false =>
+      rw [hmt, if_neg Bool.false_ne_true] at h'
+      rw [List.mem_singleton.mp h', hc]
+
+/-! ## The type filter (spec §4.8) -/
+
+/-- TYPE FILTER: a fact that covers a location that may exist may exist too (the filter
+    predicate is prefix-closed). So the filter never drops a covering fact. -/
+theorem filt_keeps {may : List Acc → Bool} {b : Base} {i f : PFact} {l0 l : Loc} :
+    (∀ p q, may (p ++ q) = true → may p = true) → den i f l0 l →
+    (l.base = b → may l.path = true) → (f.base = b → may f.path = true) := by
+  intro hpre hd hl hfb
+  obtain ⟨_, hb1, _, _, _, σ, τ, _, hp1, _, _⟩ := hd
+  have hm := hl (by rw [hb1]; exact hfb)
+  rw [hp1] at hm
+  exact hpre _ _ hm
 
 end ApSpec
 
@@ -1066,3 +1932,35 @@ end ApSpec
 #print axioms ApSpec.answerInit_mark
 #print axioms ApSpec.check_sound
 #print axioms ApSpec.check_request_star
+#print axioms ApSpec.check_request_starEx_initial
+#print axioms ApSpec.CoreAux.norm_sound
+#print axioms ApSpec.CoreAux.markSubB_sound
+#print axioms ApSpec.CoreAux.gate_cases
+#print axioms ApSpec.CoreAux.gate_cases_needs_passes
+#print axioms ApSpec.CoreAux.markComp_sound
+#print axioms ApSpec.CoreAux.markComp_none
+#print axioms ApSpec.CoreAux.markComp_none_no_pair
+#print axioms ApSpec.CoreAux.markComp_some
+#print axioms ApSpec.CoreAux.markComp_passes_rev
+#print axioms ApSpec.CoreAux.markComp_eq_markOutA
+#print axioms ApSpec.CoreAux.markComp_conc
+#print axioms ApSpec.CoreAux.mem_applyEdge_facts_inv
+#print axioms ApSpec.CoreAux.mem_applyEdge_facts
+#print axioms ApSpec.CoreAux.relate_below_inv
+#print axioms ApSpec.CoreAux.relate_above_inv
+#print axioms ApSpec.CoreAux.relate_apart_inv
+#print axioms ApSpec.den_mark_abs
+#print axioms ApSpec.climbsB_of_covers
+#print axioms ApSpec.climbsB_of_den
+#print axioms ApSpec.climbsB_abs
+#print axioms ApSpec.Cleaner.cleansB_eq
+#print axioms ApSpec.cleanPos_inside_sound
+#print axioms ApSpec.cleanPos_disjoint_sound
+#print axioms ApSpec.den_addEx
+#print axioms ApSpec.den_of_addEx
+#print axioms ApSpec.concPart_sound
+#print axioms ApSpec.den_of_concPart
+#print axioms ApSpec.cleanRes_sound
+#print axioms ApSpec.cleanRes_reqs_abstract
+#print axioms ApSpec.cleanRes_mark_conc
+#print axioms ApSpec.filt_keeps
