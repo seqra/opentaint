@@ -557,10 +557,12 @@ inductive Reach (P : Program) (roots : List MethodId) : MethodId → Node → Lo
 
 /-! ## 12. The abstraction policy -/
 
-/-- The abstraction policy of the spec (§7.2, without the closed-reuse step):
-    the zero fact serves itself; an added fact that a demand final of the previous
-    run overlaps is served by its `*` projection with the mark `*` (the chain comes
-    from the added fact, the demand covers it); otherwise the most abstract fact. -/
+/-- An unrestricted abstraction policy. The zero fact serves itself; an added fact that a
+    pattern of `demand` overlaps is served by its `*` projection with the mark `*`; otherwise
+    the most abstract fact. Run 1 of the spec (§7.2) uses it with the EMPTY demand
+    (`policy1` in `Restricted.lean`): the most abstract fact. The non-empty case is the
+    version-2 refinement policy; later versions replace it by the strict, mark-aware emission
+    (`emitM` in `Restricted.lean`, spec §7.3). -/
 def policy (demand : MethodId → List PFact) (m : MethodId) (a : PFact) : PFact :=
   if a = zeroFact then zeroFact
   else if (demand m).any (fun d => overlapB d a) then ⟨a.base, a.path, .star Excl.empty, .star⟩

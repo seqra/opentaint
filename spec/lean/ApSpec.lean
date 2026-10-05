@@ -10,3 +10,11 @@ import ApSpec.Reverse
 import ApSpec.Closed
 import ApSpec.Subsume
 import ApSpec.Confirmed
+import ApSpec.SharedExcl
+import ApSpec.Restricted
+import ApSpec.RestrictedCore
+import ApSpec.RestrictedCoverage
+import ApSpec.RestrictedExact
+import ApSpec.RestrictedCases
+import ApSpec.RestrictedMain
+import ApSpec.RestrictedStore
