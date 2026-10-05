@@ -46,17 +46,17 @@
       fun restrict(j: PFact, g: AFact): List<AFact> =
           near(j.path).mapNotNull { d -> restrictS(j, g, d) }
 
-      // ... or per edge tree of the premise j (one tree per layer and exclusion)
+      // ... or per edge tree of the premise j (one tree per layer, exclusion and mark exclusion)
       fun restrictTrees(b: Base, j: PFact, t: EdgeTree): List<EdgeTree> =
           near(j.path).mapNotNull { d -> restrictTreeE(true, b, j, t, d) }
   }
 
-  // ---- 3. The restriction of an edge tree (premise j, layer, exclusion E) ----
+  // ---- 3. The restriction of an edge tree (premise j, layer, exclusion E, mark exclusion X) ----
   fun restrictTreeE(keep: Boolean, b: Base, j: PFact, t: EdgeTree, d: DemandEdge): EdgeTree? {
       val dout = d.dout ?: return null                 // no D-p: no summary
       if (!overlap(j, d.din)) return null              // R-p := S-p, or nothing
-      if (b != dout.base) return EdgeTree(t.excl, t.demand, Tree.EMPTY)
-      return EdgeTree(t.excl, t.demand,
+      if (b != dout.base) return EdgeTree(t.excl, t.mx, t.demand, Tree.EMPTY)
+      return EdgeTree(t.excl, t.mx, t.demand,
           rTree(keep, t.excl, dout.kind, MarkSet.EMPTY, dout.path, t.tree))
   }
 
@@ -90,6 +90,11 @@
       and the sharing of the kept subtrees.
     * `restrictTreeE_inv`: the result keeps the trie invariants (well formed, no `*` leaf
       in the demand layer).
+    * Version 5 (cleaners, mark exclusion `mx` of an edge tree): `restrictTree_mx`,
+      `restrictTreeU_mx`, `restrictTreeW_mx`, `restrictTreeE_mx`: the result tree has the
+      mark exclusion of the input tree (and its exclusion and layer). `rC_markX`: the walk
+      does not read the marks, so it commutes with the read `markX mx` of the stored flag
+      `*`; the exactness theorems above keep their statements (§4.2a, checked).
     * Version 4 (`emitM`, §2.5): `emitM_local`, `emit_complete_M`, `emit_completeK_M`,
       `emit_lookup_equiv_M`, `emit_lookup_equivK_M`, `initR_premise_equiv_M`: as for
       `emitS`/`emitU`. The cost note `emitM_exact_prefix`: an exact added fact is emitted only
@@ -1145,8 +1150,9 @@ theorem emitM_exact_cost (ds : List DemandEdge) (a : PFact) (hk : a.kind = .exac
 
 /-! ## 3. The restriction of an edge tree
 
-A summary premise `j` has edge trees of conclusions: ONE tree per (layer, exclusion `E`)
-(Tree.lean). The restriction by a demand edge `d` (`restrictS j g d`, for every conclusion
+A summary premise `j` has edge trees of conclusions: ONE tree per (layer, exclusion `E`,
+mark exclusion `X`) (Tree.lean; version 5 adds `X`, and the abstract mark of the tree is
+`starM X`). The restriction by a demand edge `d` (`restrictS j g d`, for every conclusion
 `g` of the tree) is one walk down `D-p = dout.path`:
   * ABOVE `D-p` (a proper prefix): a `*` flag stays if `E` admits the rest of the chain
     (S rule; the U rule drops it); each `[any]` mark moves to `D-p` as one `[any]` leaf
@@ -1157,9 +1163,12 @@ A summary premise `j` has edge trees of conclusions: ONE tree per (layer, exclus
     a non-empty continuation reads only its first accessor (`admitsTailB_cons`), so a child
     is kept or dropped as a whole subtree, and the kept subtree is SHARED.
 
-The result fits ONE tree with the same exclusion `E` and the same layer: a kept `*` leaf
-keeps `E`, a moved leaf is `[any]` or `$` (no exclusion, W1), and `restrictConcS` keeps the
-layer bit. So the equivalence is EXACT (`restrictTreeE_mem_S`). -/
+The result fits ONE tree with the same exclusion `E`, the same mark exclusion `X` and the
+same layer: a kept `*` leaf keeps `E`, a moved leaf is `[any]` or `$` (no exclusion, W1),
+`restrictConcS` keeps the layer bit, and it keeps the mark of each conclusion. The walk does
+not read the marks, so the stored flag `*` stays the flag `*`, and the result tree reads it
+with the same `X` (`rC_markX`, `restrictTreeE_mx`). So the equivalence is EXACT
+(`restrictTreeE_mem_S`). -/
 
 section TreeR
 open ApSpec.Tree
@@ -1288,6 +1297,45 @@ theorem rC_cons (keep : Bool) (dk : Kind) (a c : Acc) (q : List Acc) (x : RFact)
 
 theorem rC_nil (keep : Bool) (dk : Kind) (x : RFact) :
     rC keep dk [] x = if admitsTailB dk x.path then some x else none := rfl
+
+/-- Version 5. `rC` reads only the path and the kind of the conclusion, and the result keeps
+    the mark of the conclusion. So `rC` and the read of the mark exclusion `X` of the tree
+    (`markX X`) commute. -/
+theorem rC_markX (keep : Bool) (dk : Kind) (q : List Acc) (X : List Mark) (x : RFact) :
+    rC keep dk q (markX X x) = (rC keep dk q x).map (markX X) := by
+  obtain ⟨xp, xk, xm⟩ := x
+  show (match relate q xp with
+    | .below r => if admitsTailB dk r then some (⟨xp, xk, mxMark X xm⟩ : RFact) else none
+    | .above r =>
+      match xk with
+      | .star e => if (keep && e.admits r) then some (⟨xp, xk, mxMark X xm⟩ : RFact) else none
+      | .any    => some ⟨q, kd dk, mxMark X xm⟩
+      | .exact  => none
+    | .apart => none) =
+    (match relate q xp with
+    | .below r => if admitsTailB dk r then some (⟨xp, xk, xm⟩ : RFact) else none
+    | .above r =>
+      match xk with
+      | .star e => if (keep && e.admits r) then some (⟨xp, xk, xm⟩ : RFact) else none
+      | .any    => some ⟨q, kd dk, xm⟩
+      | .exact  => none
+    | .apart => none).map (markX X)
+  cases relate q xp with
+  | below r =>
+    dsimp only
+    by_cases h2 : admitsTailB dk r = true
+    · rw [if_pos h2, if_pos h2]; rfl
+    · rw [if_neg h2, if_neg h2]; rfl
+  | above r =>
+    cases xk with
+    | star e =>
+      dsimp only
+      by_cases h3 : (keep && e.admits r) = true
+      · rw [if_pos h3, if_pos h3]; rfl
+      · rw [if_neg h3, if_neg h3]; rfl
+    | any => rfl
+    | exact => rfl
+  | apart => rfl
 
 theorem admitsTailB_nil (k : Kind) : admitsTailB k [] = true := by
   cases k with
@@ -1581,8 +1629,8 @@ theorem rTree_mem (keep : Bool) (E : Excl) (dk : Kind) (q : List Acc) :
     `dout`. `keep = true`: the S rule (`restrictConcS`); `keep = false`: the U rule. -/
 def restrictTreeW (keep : Bool) (b : Base) (t : EdgeTree) (dout : PFact) : EdgeTree :=
   if Nat.beq b dout.base then
-    ⟨t.excl, t.demand, rTree keep t.excl dout.kind MarkSet.empty dout.path t.tree⟩
-  else ⟨t.excl, t.demand, emptyTree⟩
+    ⟨t.excl, t.mx, t.demand, rTree keep t.excl dout.kind MarkSet.empty dout.path t.tree⟩
+  else ⟨t.excl, t.mx, t.demand, emptyTree⟩
 
 /-- The restriction of a tree by `D-p`, S rule. -/
 def restrictTree (b : Base) (t : EdgeTree) (dout : PFact) : EdgeTree := restrictTreeW true b t dout
@@ -1612,7 +1660,7 @@ theorem restrictTreeW_mem (keep : Bool) (rc : AFact → PFact → Option AFact) 
     (t : EdgeTree) (hwf : t.tree.wf = true) (a : AFact) :
     a ∈ toAFacts b (restrictTreeW keep b t dout) ↔ ∃ c, c ∈ toAFacts b t ∧ rc c dout = some a := by
   have hR : (∃ c, c ∈ toAFacts b t ∧ rc c dout = some a) ↔
-      ∃ x, x ∈ treeRF t.excl t.tree ∧ rc ⟨x.toP b, t.demand⟩ dout = some a := by
+      ∃ x, x ∈ treeRF t.excl t.tree ∧ rc ⟨(markX t.mx x).toP b, t.demand⟩ dout = some a := by
     constructor
     · rintro ⟨c, hc, h⟩
       obtain ⟨x, hx, rfl⟩ := (mem_toAFacts b t c).mp hc
@@ -1628,14 +1676,14 @@ theorem restrictTreeW_mem (keep : Bool) (rc : AFact → PFact → Option AFact) 
       rcases (rTree_mem keep t.excl dout.kind dout.path MarkSet.empty t.tree hwf y).mp hy with
         ⟨m, hm, _⟩ | ⟨x, hx, hxy⟩
       · exact absurd hm has_empty
-      · exact ⟨x, hx, by rw [hrc, if_pos hb, hxy]; rfl⟩
+      · exact ⟨x, hx, by rw [hrc, if_pos hb, rC_markX, hxy]; rfl⟩
     · rintro ⟨x, hx, h⟩
-      rw [hrc, if_pos hb] at h
+      rw [hrc, if_pos hb, rC_markX] at h
       cases hxy : rC keep dout.kind dout.path x with
       | none => rw [hxy] at h; exact nomatch h
       | some y =>
         rw [hxy] at h
-        have h' : (⟨y.toP b, t.demand⟩ : AFact) = a := Option.some.inj h
+        have h' : (⟨(markX t.mx y).toP b, t.demand⟩ : AFact) = a := Option.some.inj h
         exact ⟨y, (rTree_mem keep t.excl dout.kind dout.path MarkSet.empty t.tree hwf y).mpr
           (Or.inr ⟨x, hx, hxy⟩), h'.symm⟩
   · have hn : ¬ (Nat.beq b dout.base = true) := by rw [hb]; exact Bool.false_ne_true
@@ -2037,6 +2085,59 @@ theorem restrictTreeE_inv (keep : Bool) (b : Base) (j : PFact) (t : EdgeTree) (d
 
 #print axioms restrictTreeE_inv
 
+/-- Version 5. The restriction keeps the mark exclusion of the tree: the result tree reads
+    its stored flag `*` as the abstract mark `starM t.mx` of the input tree. -/
+theorem restrictTreeW_mx (keep : Bool) (b : Base) (t : EdgeTree) (dout : PFact) :
+    (restrictTreeW keep b t dout).mx = t.mx := by
+  unfold restrictTreeW
+  rcases Bool.eq_false_or_eq_true (Nat.beq b dout.base) with hb | hb
+  · rw [if_pos hb]
+  · have hn : ¬ (Nat.beq b dout.base = true) := by rw [hb]; exact Bool.false_ne_true
+    rw [if_neg hn]
+
+/-- MAIN (version 5). The restriction of a tree by `D-p` (S rule) has the mark exclusion of
+    the input tree. -/
+theorem restrictTree_mx (b : Base) (t : EdgeTree) (dout : PFact) :
+    (restrictTree b t dout).mx = t.mx :=
+  restrictTreeW_mx true b t dout
+
+/-- The same for the U rule. -/
+theorem restrictTreeU_mx (b : Base) (t : EdgeTree) (dout : PFact) :
+    (restrictTreeU b t dout).mx = t.mx :=
+  restrictTreeW_mx false b t dout
+
+/-- MAIN (version 5). The restriction of the edge tree of the premise `j` by a demand edge
+    keeps the whole key of the tree: the exclusion, the mark exclusion and the layer. -/
+theorem restrictTreeE_mx (keep : Bool) (b : Base) (j : PFact) (t : EdgeTree) (d : DemandEdge)
+    (t' : EdgeTree) (h : restrictTreeE keep b j t d = some t') :
+    t'.mx = t.mx ∧ t'.excl = t.excl ∧ t'.demand = t.demand := by
+  have hW : ∀ p, (restrictTreeW keep b t p).excl = t.excl ∧
+      (restrictTreeW keep b t p).demand = t.demand := by
+    intro p
+    unfold restrictTreeW
+    rcases Bool.eq_false_or_eq_true (Nat.beq b p.base) with hb | hb
+    · rw [if_pos hb]; exact ⟨rfl, rfl⟩
+    · have hn : ¬ (Nat.beq b p.base = true) := by rw [hb]; exact Bool.false_ne_true
+      rw [if_neg hn]; exact ⟨rfl, rfl⟩
+  unfold restrictTreeE at h
+  cases hd : d.dout with
+  | none => rw [hd] at h; exact nomatch h
+  | some p =>
+    have h' : (if overlapB j d.din = true then some (restrictTreeW keep b t p) else none) = some t' := by
+      rw [hd] at h; exact h
+    rcases Bool.eq_false_or_eq_true (overlapB j d.din) with ho | ho
+    · rw [if_pos ho] at h'
+      cases h'
+      exact ⟨restrictTreeW_mx keep b t p, hW p⟩
+    · have hn : ¬ (overlapB j d.din = true) := by rw [ho]; exact Bool.false_ne_true
+      rw [if_neg hn] at h'
+      exact nomatch h'
+
+#print axioms restrictTreeW_mx
+#print axioms restrictTree_mx
+#print axioms restrictTreeU_mx
+#print axioms restrictTreeE_mx
+
 end TreeR
 
 /-! ## 4. Examples (decide-checked) -/
@@ -2090,11 +2191,11 @@ def T : Mark := 5
 def E1 : Excl := .set [h]
 
 /-- The tree of conclusions on base `b` with the exclusion `E1` (Tree.lean, `Ex.tE1`). -/
-def tE1 : EdgeTree := ⟨E1, false, fromList
+def tE1 : EdgeTree := ⟨E1, [], false, fromList
   [ ⟨b, [f], .star E1, .star⟩, ⟨b, [], .star E1, .star⟩, ⟨b, [], .any, .star⟩,
     ⟨b, [], .exact, .star⟩, ⟨b, [h], .any, .conc T⟩, ⟨b, [f, g], .exact, .conc T⟩,
     ⟨b, [f, g], .star E1, .star⟩ ]⟩
-def tD : EdgeTree := ⟨Excl.empty, true, fromList [⟨b, [], .any, .conc T⟩, ⟨b, [f], .exact, .star⟩,
+def tD : EdgeTree := ⟨Excl.empty, [], true, fromList [⟨b, [], .any, .conc T⟩, ⟨b, [f], .exact, .star⟩,
   ⟨b, [f, h], .any, .star⟩, ⟨b, [g], .any, .star⟩]⟩
 def trees : List EdgeTree := [tE1, tD]
 
@@ -2138,6 +2239,43 @@ example : (optFacts b (restrictTreeE true b j0 tE1 ⟨pf x [] st, some (pf b [f]
     ⟨⟨b, [f], .exact, .star⟩, false⟩ = true := by decide
 
 #eval (restrictTreeE true b j0 tE1 dFG)
+
+/-! ### 4.2a Trees with a mark exclusion (version 5, cleaners) -/
+
+def U : Mark := 6
+
+/-- A tree behind a cleaner of the mark `T` (Tree.lean, `Ex.tX`): its abstract mark is
+    `*∖{T}`. The trie stores the flag `*`. -/
+def tX : EdgeTree := ⟨E1, [T], false, fromList [⟨b, [f], .star E1, .starEx [T]⟩,
+  ⟨b, [], .star E1, .starEx [T]⟩, ⟨b, [], .any, .starEx [T]⟩, ⟨b, [h], .any, .conc U⟩,
+  ⟨b, [f, g], .exact, .starEx [T]⟩, ⟨b, [f, g], .star E1, .starEx [T]⟩]⟩
+def tXD : EdgeTree := ⟨Excl.empty, [T], true, fromList [⟨b, [f], .exact, .starEx [T]⟩,
+  ⟨b, [g], .any, .starEx [T]⟩, ⟨b, [], .any, .conc T⟩, ⟨b, [f, h], .any, .starEx [T]⟩]⟩
+def treesX : List EdgeTree := [tX, tXD]
+
+-- tree form = list form (S and U) for the trees with a mark exclusion
+example : treesX.all (fun t => dsR.all (fun d =>
+    Tree.Ex.sameSetA (optFacts b (restrictTreeE true b j0 t d))
+      ((toAFacts b t).filterMap (fun c => restrictS j0 c d)) &&
+    Tree.Ex.sameSetA (optFacts b (restrictTreeE false b j0 t d))
+      ((toAFacts b t).filterMap (fun c => restrictU j0 c d)))) = true := by decide
+
+-- every result tree keeps the mark exclusion `{T}` (and the exclusion and the layer)
+example : treesX.all (fun t => dsR.all (fun d =>
+    (restrictTreeE true b j0 t d).all (fun t' => t'.mx == t.mx && t'.excl == t.excl &&
+      t'.demand == t.demand) &&
+    (restrictTreeE false b j0 t d).all (fun t' => t'.mx == t.mx && t'.excl == t.excl &&
+      t'.demand == t.demand))) = true := by decide
+
+-- the root `[any]` leaf with the mark `*∖{T}` moves to `D-p` and keeps the mark `*∖{T}`;
+-- the correlated root `*` leaf stays with `*∖{T}` (S rule); the concrete mark `U` below
+-- `.h` is dropped (apart)
+example : ((optFacts b (restrictTreeE true b j0 tX dFG)).contains
+      ⟨⟨b, [f, g], .any, .starEx [T]⟩, false⟩,
+    (optFacts b (restrictTreeE true b j0 tX dFG)).contains ⟨⟨b, [], .star E1, .starEx [T]⟩, false⟩,
+    (optFacts b (restrictTreeE true b j0 tX dFG)).contains ⟨⟨b, [f, g], .any, .star⟩, false⟩,
+    (optFacts b (restrictTreeE true b j0 tX dFG)).contains ⟨⟨b, [h], .any, .conc U⟩, false⟩)
+    = (true, true, false, false) := by decide
 
 /-! ### 4.3 Cost and sharing -/
 
@@ -2200,6 +2338,7 @@ end Ex
 #print axioms fromList_pruned
 #print axioms mEnts_fromList
 #print axioms rC_cons
+#print axioms rC_markX
 #print axioms root_rC
 #print axioms kids_rC
 #print axioms mem_keepKids

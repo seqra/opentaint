@@ -2,13 +2,21 @@
   ApSpec.Tree — the edge tree (storage design v2) as an optimization of the
   CONCEPT of a final fact (a list of path facts with one base).
 
-  Storage design (spec §9.2, design item 6): ONE TREE per (premise, layer,
-  exclusion E). A `*` leaf is a flag: the exclusion `E` belongs to the whole
-  tree, and the layer (the demand bit) is part of the key. `[any]` and `$`
-  leaves carry no exclusion (W1).
-    * Merge rule 1: same premise, same layer, same E  → the union of the trees.
-    * Merge rule 2: same premise, same layer, same tree, E1 and E2 → E1 ∩ E2.
-    * A union of exclusions is FORBIDDEN (counterexample in section 5).
+  Storage design (spec §7.2, design item 6): ONE TREE per (premise, layer,
+  exclusion E, mark exclusion X). A `*` leaf is a flag: the exclusion `E` belongs
+  to the whole tree, and the layer (the demand bit) is part of the key. `[any]`
+  and `$` leaves carry no exclusion (W1).
+  Version 5 (cleaners): the abstract mark of the tree is `*∖X` (`starM X`; `*` if
+  `X` is empty). The mark exclusion `X` belongs to the whole tree, as `E` does: the
+  trie stores the abstract mark as the flag `*`, and `toAFacts` reads it as
+  `starM X` on every leaf with the abstract mark (`*`, `[any]` and `$` leaves).
+  Concrete marks `conc t` do not change. With `X = []` the representation is the
+  representation of version 4.
+    * Merge rule 1: same premise, layer, E and X  → the union of the trees.
+    * Merge rule 2: same premise, layer, X and tree, E1 and E2 → E1 ∩ E2.
+    * Merge rule 2 for marks (`rule2_mark`): same premise, layer, E and tree,
+      X1 and X2 → X1 ∩ X2.
+    * A union of exclusions is FORBIDDEN (counterexamples in section 9).
 
   The module:
     (a) defines the trie, the edge tree and its path facts (`toAFacts`);
@@ -46,10 +54,36 @@ def RFact.toP (b : Base) (x : RFact) : PFact := ⟨b, x.path, x.kind, x.mark⟩
 /-- The relative fact of a path fact (the base is removed). -/
 def ofP (f : PFact) : RFact := ⟨f.path, f.kind, f.mark⟩
 
+/-- The abstract mark of a tree with the mark exclusion `X`: `*` if `X` is empty,
+    else `*∖X`. -/
+def starM : List Mark → MarkA
+  | []     => .star
+  | t :: x => .starEx (t :: x)
+
+/-- Read a stored mark in a tree with the mark exclusion `X`: the stored abstract
+    mark `*` becomes `starM X`; other marks do not change. -/
+def mxMark (X : List Mark) : MarkA → MarkA
+  | .star => starM X
+  | m     => m
+
+/-- Read a stored relative fact in a tree with the mark exclusion `X`. -/
+def markX (X : List Mark) (x : RFact) : RFact := ⟨x.path, x.kind, mxMark X x.mark⟩
+
+/-- The stored form of a mark: every abstract mark becomes the flag `*`. -/
+def stripM : MarkA → MarkA
+  | .starEx _ => .star
+  | m         => m
+
+/-- The stored form of a path fact. -/
+def stripF (f : PFact) : PFact := ⟨f.base, f.path, f.kind, stripM f.mark⟩
+
+/-- The intersection of two mark exclusions. -/
+def mxInter (x1 x2 : List Mark) : List Mark := x1.filter (fun t => memB t x2)
+
 /-- The final part of `den`: with the initial continuation `σ` and the initial
     mark `m0`, the fact reaches the final path `q` with the final mark `m1`. -/
 def RFact.sem (x : RFact) (σ : List Acc) (m0 : Mark) (q : List Acc) (m1 : Mark) : Prop :=
-  m1 = x.mark.out m0 ∧ ∃ τ, q = x.path ++ τ ∧ tailF x.kind σ τ
+  m1 = x.mark.out m0 ∧ x.mark.passes m0 ∧ ∃ τ, q = x.path ++ τ ∧ tailF x.kind σ τ
 
 /-- The meaning of a list of relative facts. -/
 def semL (L : List RFact) (σ : List Acc) (m0 : Mark) (q : List Acc) (m1 : Mark) : Prop :=
@@ -68,10 +102,10 @@ theorem den_toP {i : PFact} {b : Base} {x : RFact} {l0 l1 : Loc} :
       (l0.base = i.base ∧ l1.base = b ∧ i.mark.admits l0.mark ∧
         ∃ σ, l0.path = i.path ++ σ ∧ tailI i.kind σ ∧ x.sem σ l0.mark l1.path l1.mark) := by
   constructor
-  · rintro ⟨h1, h2, h3, h4, σ, τ, h5, h6, h7, h8⟩
-    exact ⟨h1, h2, h3, σ, h5, h7, h4, τ, h6, h8⟩
-  · rintro ⟨h1, h2, h3, σ, h5, h7, h4, τ, h6, h8⟩
-    exact ⟨h1, h2, h3, h4, σ, τ, h5, h6, h7, h8⟩
+  · rintro ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, h7, h8⟩
+    exact ⟨h1, h2, h3, σ, h5, h7, h4, hp, τ, h6, h8⟩
+  · rintro ⟨h1, h2, h3, σ, h5, h7, h4, hp, τ, h6, h8⟩
+    exact ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, h7, h8⟩
 
 theorem denL_map {i : PFact} {b : Base} {L : List RFact} {l0 l1 : Loc} :
     denL i (L.map (RFact.toP b)) l0 l1 ↔
@@ -135,10 +169,10 @@ theorem Eqv.nil_append (A : List RFact) : Eqv ([] ++ A) A := fun _ _ _ _ => Iff.
 theorem RFact.sem_cons {a : Acc} {x : RFact} {σ m0 q m1} :
     (x.cons a).sem σ m0 q m1 ↔ ∃ q', q = a :: q' ∧ x.sem σ m0 q' m1 := by
   constructor
-  · rintro ⟨hm, τ, hq, ht⟩
-    exact ⟨x.path ++ τ, hq, hm, τ, rfl, ht⟩
-  · rintro ⟨q', rfl, hm, τ, rfl, ht⟩
-    exact ⟨hm, τ, rfl, ht⟩
+  · rintro ⟨hm, hp, τ, hq, ht⟩
+    exact ⟨x.path ++ τ, hq, hm, hp, τ, rfl, ht⟩
+  · rintro ⟨q', rfl, hm, hp, τ, rfl, ht⟩
+    exact ⟨hm, hp, τ, rfl, ht⟩
 
 theorem semL_map_cons {a : Acc} {A : List RFact} {σ m0 q m1} :
     semL (A.map (RFact.cons a)) σ m0 q m1 ↔ ∃ q', q = a :: q' ∧ semL A σ m0 q' m1 := by
@@ -247,13 +281,19 @@ def tailFB : Kind → List Acc → List Acc → Bool
   | .exact,  _, τ => τ.isEmpty
 
 def markAdmB : MarkA → Mark → Bool
-  | .star,   _ => true
-  | .conc t, m => Nat.beq m t
+  | .star,     _ => true
+  | .conc t,   m => Nat.beq m t
+  | .starEx x, m => !memB m x
+
+/-- `MarkA.passes` as a Boolean function. -/
+def passesB : MarkA → Mark → Bool
+  | .starEx x, m => !memB m x
+  | _,         _ => true
 
 /-- `den` as a Boolean function. -/
 def denB (i f : PFact) (l0 l1 : Loc) : Bool :=
   Nat.beq l0.base i.base && Nat.beq l1.base f.base && markAdmB i.mark l0.mark &&
-    Nat.beq l1.mark (f.mark.out l0.mark) &&
+    Nat.beq l1.mark (f.mark.out l0.mark) && passesB f.mark l0.mark &&
     (match dropPrefix i.path l0.path, dropPrefix f.path l1.path with
      | some σ, some τ => admitsTailB i.kind σ && tailFB f.kind σ τ
      | _,      _      => false)
@@ -286,20 +326,31 @@ theorem markAdm_iff (m : MarkA) (t : Mark) : m.admits t ↔ markAdmB m t = true 
   cases m with
   | star => exact ⟨fun _ => rfl, fun _ => trivial⟩
   | conc c => exact beq_iff.symm
+  | starEx x =>
+    show memB t x = false ↔ (!memB t x) = true
+    rw [Bool.not_eq_true']
+
+theorem passes_iff (m : MarkA) (t : Mark) : m.passes t ↔ passesB m t = true := by
+  cases m with
+  | star => exact ⟨fun _ => rfl, fun _ => trivial⟩
+  | conc c => exact ⟨fun _ => rfl, fun _ => trivial⟩
+  | starEx x =>
+    show memB t x = false ↔ (!memB t x) = true
+    rw [Bool.not_eq_true']
 
 theorem den_iff_denB (i f : PFact) (l0 l1 : Loc) : den i f l0 l1 ↔ denB i f l0 l1 = true := by
   unfold den denB
-  rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, beq_iff, beq_iff,
-    beq_iff, ← markAdm_iff]
+  rw [Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true, Bool.and_eq_true,
+    beq_iff, beq_iff, beq_iff, ← markAdm_iff, ← passes_iff]
   constructor
-  · rintro ⟨h1, h2, h3, h4, σ, τ, h5, h6, h7, h8⟩
-    refine ⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, ?_⟩
+  · rintro ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, h7, h8⟩
+    refine ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, hp⟩, ?_⟩
     rw [(dropPrefix_spec _ _ σ).mpr h5, (dropPrefix_spec _ _ τ).mpr h6]
     show (admitsTailB i.kind σ && tailFB f.kind σ τ) = true
     rw [Bool.and_eq_true, ← tailI_iff, ← tailF_iff]
     exact ⟨h7, h8⟩
-  · rintro ⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, h5⟩
-    refine ⟨h1, h2, h3, h4, ?_⟩
+  · rintro ⟨⟨⟨⟨⟨h1, h2⟩, h3⟩, h4⟩, hp⟩, h5⟩
+    refine ⟨h1, h2, h3, h4, hp, ?_⟩
     cases hσ : dropPrefix i.path l0.path with
     | none => rw [hσ] at h5; exact nomatch h5
     | some σ =>
@@ -335,7 +386,8 @@ theorem denA_iff_denAB (i : PFact) (as : List AFact) (d : Bool) (l0 l1 : Loc) :
 
 /-! ## 2. The payload of a node -/
 
-/-- A set of marks: `star` is the abstract mark, `conc` the concrete marks. -/
+/-- A set of marks: `star` is the abstract mark (the flag `*`; in an edge tree
+    with the mark exclusion `X` it means `starM X`), `conc` the concrete marks. -/
 structure MarkSet where
   star : Bool
   conc : List Mark
@@ -346,18 +398,22 @@ def MarkSet.empty : MarkSet := ⟨false, []⟩
 /-- Union of two mark sets. -/
 def MarkSet.union (m1 m2 : MarkSet) : MarkSet := ⟨m1.star || m2.star, m1.conc ++ m2.conc⟩
 
-/-- Add one mark (no duplicate concrete mark). -/
+/-- Add one mark (no duplicate concrete mark). Every abstract mark sets the flag
+    `*` (the mark exclusion belongs to the tree, as the exclusion `E` does). -/
 def MarkSet.add : MarkA → MarkSet → MarkSet
-  | .star,   ms => ⟨true, ms.conc⟩
-  | .conc t, ms => if memB t ms.conc then ms else ⟨ms.star, t :: ms.conc⟩
+  | .star,     ms => ⟨true, ms.conc⟩
+  | .conc t,   ms => if memB t ms.conc then ms else ⟨ms.star, t :: ms.conc⟩
+  | .starEx _, ms => ⟨true, ms.conc⟩
 
-/-- The mark set contains the mark. -/
+/-- The mark set contains the mark (in the stored form: `*∖x` is never stored). -/
 def MarkSet.Has (ms : MarkSet) : MarkA → Prop
-  | .star   => ms.star = true
-  | .conc t => t ∈ ms.conc
+  | .star     => ms.star = true
+  | .conc t   => t ∈ ms.conc
+  | .starEx _ => False
 
 /-- The payload of the node at path `p` of a tree with exclusion `E`:
-    * `star = true` — the abstract leaf `p.*/E` (mark `*`; `E` is the tree's),
+    * `star = true` — the abstract leaf `p.*/E` (stored mark `*`; `E` and the mark
+                      exclusion are the tree's),
     * `anyM`        — the leaves `p.[any]` with these marks (no exclusion, W1),
     * `exactM`      — the leaves `p.$` with these marks. -/
 structure Payload where
@@ -372,13 +428,25 @@ def Payload.empty : Payload := ⟨false, MarkSet.empty, MarkSet.empty⟩
 def Payload.union (p1 p2 : Payload) : Payload :=
   ⟨p1.star || p2.star, p1.anyM.union p2.anyM, p1.exactM.union p2.exactM⟩
 
-/-- A path fact FITS a tree with exclusion `E`: a `*` tail has the exclusion
-    `E` and the mark `*`. -/
+/-- A path fact in the stored form FITS a tree with exclusion `E`: a `*` tail has
+    the exclusion `E` and the mark `*`; the mark `*∖x` is not a stored mark. -/
 def fitsB (E : Excl) (k : Kind) (m : MarkA) : Bool :=
   match k, m with
-  | .star e, .star   => decide (e = E)
-  | .star _, .conc _ => false
-  | _,       _       => true
+  | .star e, .star     => decide (e = E)
+  | _,       .starEx _ => false
+  | .star _, .conc _   => false
+  | _,       _         => true
+
+/-- The mark `m` is a mark of a tree with the mark exclusion `X`: a concrete mark,
+    or the abstract mark `starM X` of the tree. -/
+def markFitsB (X : List Mark) : MarkA → Bool
+  | .conc _ => true
+  | m       => decide (m = starM X)
+
+/-- A path fact FITS an edge tree with the exclusion `E` and the mark exclusion
+    `X`: its stored form fits `E`, and its mark is a mark of the tree. -/
+def fitsX (E : Excl) (X : List Mark) (k : Kind) (m : MarkA) : Bool :=
+  fitsB E k (stripM m) && markFitsB X m
 
 /-- Add one leaf to a payload (the `*` exclusion must be the tree's). -/
 def Payload.add (k : Kind) (m : MarkA) (pl : Payload) : Payload :=
@@ -473,16 +541,20 @@ theorem has_union {m1 m2 : MarkSet} {m : MarkA} :
     show (m1.star || m2.star) = true ↔ m1.star = true ∨ m2.star = true
     rw [Bool.or_eq_true]
   | conc t => exact List.mem_append
+  | starEx x => exact ⟨fun h => h.elim, fun h => h.elim id id⟩
 
 theorem has_empty {m : MarkA} : ¬ MarkSet.empty.Has m := by
   cases m with
   | star => exact fun h => nomatch h
   | conc t => exact fun h => nomatch h
+  | starEx x => exact fun h => h
 
+/-- Adding a mark adds its stored form (version 5: `stripM m`; for `*` and `conc t`
+    it is `m`). -/
 theorem has_add {ms : MarkSet} {m m' : MarkA} :
-    (ms.add m).Has m' ↔ m' = m ∨ ms.Has m' := by
-  cases m with
-  | star =>
+    (ms.add m).Has m' ↔ m' = stripM m ∨ ms.Has m' := by
+  have hstar : ∀ ms' : MarkSet, (⟨true, ms'.conc⟩ : MarkSet).Has m' ↔ m' = .star ∨ ms'.Has m' := by
+    intro ms'
     cases m' with
     | star => exact ⟨fun _ => Or.inl rfl, fun _ => rfl⟩
     | conc t' =>
@@ -491,7 +563,17 @@ theorem has_add {ms : MarkSet} {m m' : MarkA} :
       · rintro (h | h)
         · exact nomatch h
         · exact h
+    | starEx x' =>
+      constructor
+      · intro h; exact h.elim
+      · rintro (h | h)
+        · exact nomatch h
+        · exact h
+  cases m with
+  | star => exact hstar ms
+  | starEx x => exact hstar ms
   | conc t =>
+    show _ ↔ m' = .conc t ∨ ms.Has m'
     cases hm : memB t ms.conc with
     | true =>
       have hmem : t ∈ ms.conc := memB_iff.mp hm
@@ -523,6 +605,12 @@ theorem has_add {ms : MarkSet} {m m' : MarkA} :
         · rintro (h | h)
           · cases h; exact Or.inl rfl
           · exact Or.inr h
+      | starEx x' =>
+        constructor
+        · intro h; exact h.elim
+        · rintro (h | h)
+          · exact nomatch h
+          · exact h
 
 theorem mem_starRF {E : Excl} {s : Bool} {y : RFact} :
     y ∈ starRF E s ↔ s = true ∧ y = ⟨[], .star E, .star⟩ := by
@@ -558,6 +646,7 @@ theorem mem_msRF {k : Kind} {ms : MarkSet} {y : RFact} :
     | conc t =>
       right
       exact List.mem_map.mpr ⟨t, hm, rfl⟩
+    | starEx x => exact hm.elim
 
 theorem mem_payRF {E : Excl} {pl : Payload} {y : RFact} :
     y ∈ payRF E pl ↔
@@ -571,18 +660,18 @@ theorem sem_star_inter {e1 e2 : Excl} {σ m0 q m1} :
     RFact.sem ⟨[], .star (Excl.inter e1 e2), .star⟩ σ m0 q m1 ↔
       RFact.sem ⟨[], .star e1, .star⟩ σ m0 q m1 ∨ RFact.sem ⟨[], .star e2, .star⟩ σ m0 q m1 := by
   constructor
-  · rintro ⟨hm, τ, hq, hτ, ha⟩
+  · rintro ⟨hm, hp, τ, hq, hτ, ha⟩
     have ha' : (e1.admits σ || e2.admits σ) = true := by rw [← admits_inter]; exact ha
     cases h1 : e1.admits σ with
-    | true => exact Or.inl ⟨hm, τ, hq, hτ, h1⟩
+    | true => exact Or.inl ⟨hm, hp, τ, hq, hτ, h1⟩
     | false =>
       rw [h1, Bool.false_or] at ha'
-      exact Or.inr ⟨hm, τ, hq, hτ, ha'⟩
-  · rintro (⟨hm, τ, hq, hτ, ha⟩ | ⟨hm, τ, hq, hτ, ha⟩)
-    · refine ⟨hm, τ, hq, hτ, ?_⟩
+      exact Or.inr ⟨hm, hp, τ, hq, hτ, ha'⟩
+  · rintro (⟨hm, hp, τ, hq, hτ, ha⟩ | ⟨hm, hp, τ, hq, hτ, ha⟩)
+    · refine ⟨hm, hp, τ, hq, hτ, ?_⟩
       show (Excl.inter e1 e2).admits σ = true
       rw [admits_inter, ha, Bool.true_or]
-    · refine ⟨hm, τ, hq, hτ, ?_⟩
+    · refine ⟨hm, hp, τ, hq, hτ, ?_⟩
       show (Excl.inter e1 e2).admits σ = true
       rw [admits_inter, ha, Bool.or_true]
 
@@ -623,15 +712,21 @@ theorem Payload.union_mem (E : Excl) (p1 p2 : Payload) :
     · exact Or.inr (Or.inl ⟨m, has_union.mpr (Or.inr hm), rfl⟩)
     · exact Or.inr (Or.inr ⟨m, has_union.mpr (Or.inr hm), rfl⟩)
 
+/-- A fitting mark is in the stored form. -/
+theorem fitsB_strip {E : Excl} {k : Kind} {m : MarkA} (hf : fitsB E k m = true) : stripM m = m := by
+  cases k <;> cases m <;> first | rfl | exact nomatch hf
+
 /-- Adding a fitting leaf to a payload adds exactly that leaf. -/
 theorem Payload.add_mem (E : Excl) {k : Kind} {m : MarkA} (pl : Payload) (hf : fitsB E k m = true) :
     MemEq (payRF E (pl.add k m)) (payRF E pl ++ [⟨[], k, m⟩]) := by
   intro y
   rw [List.mem_append, List.mem_singleton]
+  have hs := fitsB_strip hf
   cases k with
   | star e =>
     cases m with
     | conc t => exact nomatch hf
+    | starEx x => exact nomatch hf
     | star =>
       have he : e = E := of_decide_eq_true hf
       subst he
@@ -654,14 +749,14 @@ theorem Payload.add_mem (E : Excl) {k : Kind} {m : MarkA} (pl : Payload) (hf : f
     · rintro (h | ⟨m', hm', rfl⟩ | h)
       · exact Or.inl (Or.inl h)
       · rcases has_add.mp hm' with h | h
-        · subst h; exact Or.inr rfl
+        · rw [h, hs]; exact Or.inr rfl
         · exact Or.inl (Or.inr (Or.inl ⟨m', h, rfl⟩))
       · exact Or.inl (Or.inr (Or.inr h))
     · rintro ((h | ⟨m', hm', rfl⟩ | h) | rfl)
       · exact Or.inl h
       · exact Or.inr (Or.inl ⟨m', has_add.mpr (Or.inr hm'), rfl⟩)
       · exact Or.inr (Or.inr h)
-      · exact Or.inr (Or.inl ⟨m, has_add.mpr (Or.inl rfl), rfl⟩)
+      · exact Or.inr (Or.inl ⟨m, has_add.mpr (Or.inl hs.symm), rfl⟩)
   | exact =>
     show y ∈ payRF E ⟨pl.star, pl.anyM, pl.exactM.add m⟩ ↔ _
     rw [mem_payRF, mem_payRF]
@@ -670,13 +765,13 @@ theorem Payload.add_mem (E : Excl) {k : Kind} {m : MarkA} (pl : Payload) (hf : f
       · exact Or.inl (Or.inl h)
       · exact Or.inl (Or.inr (Or.inl h))
       · rcases has_add.mp hm' with h | h
-        · subst h; exact Or.inr rfl
+        · rw [h, hs]; exact Or.inr rfl
         · exact Or.inl (Or.inr (Or.inr ⟨m', h, rfl⟩))
     · rintro ((h | h | ⟨m', hm', rfl⟩) | rfl)
       · exact Or.inl h
       · exact Or.inr (Or.inl h)
       · exact Or.inr (Or.inr ⟨m', has_add.mpr (Or.inr hm'), rfl⟩)
-      · exact Or.inr (Or.inr ⟨m, has_add.mpr (Or.inl rfl), rfl⟩)
+      · exact Or.inr (Or.inr ⟨m, has_add.mpr (Or.inl hs.symm), rfl⟩)
 
 /-! ## 3. The trie and the edge tree -/
 
@@ -703,17 +798,19 @@ def trieRF (E : Excl) : Trie → List RFact
 /-- The relative facts of a tree with exclusion `E`. -/
 def treeRF (E : Excl) (t : Tree) : List RFact := payRF E t.root ++ trieRF E t.kids
 
-/-- The edge tree: ONE tree per (premise, layer, exclusion). The premise is the
-    initial fact of the edge; it is outside this structure. -/
+/-- The edge tree: ONE tree per (premise, layer, exclusion, mark exclusion). The
+    premise is the initial fact of the edge; it is outside this structure. The mark
+    exclusion `mx` gives the abstract mark `starM mx` of the tree. -/
 structure EdgeTree where
   excl   : Excl
+  mx     : List Mark
   demand : Bool
   tree   : Tree
 deriving DecidableEq, Repr
 
 /-- The final path facts of an edge tree on base `b`: the CONCEPT it encodes. -/
 def toAFacts (b : Base) (t : EdgeTree) : List AFact :=
-  (treeRF t.excl t.tree).map (fun x => ⟨x.toP b, t.demand⟩)
+  (treeRF t.excl t.tree).map (fun x => ⟨(markX t.mx x).toP b, t.demand⟩)
 
 theorem trieRF_cons {E : Excl} {a : Acc} {h : Payload} {bl nx : Trie} :
     trieRF E (.cons a h bl nx) = (treeRF E ⟨h, bl⟩).map (RFact.cons a) ++ trieRF E nx := rfl
@@ -729,7 +826,7 @@ theorem map_cons_pre (a : Acc) (p : List Acc) (X : List RFact) :
   rw [List.map_map]; rfl
 
 theorem mem_toAFacts (b : Base) (t : EdgeTree) (a : AFact) :
-    a ∈ toAFacts b t ↔ ∃ x, x ∈ treeRF t.excl t.tree ∧ a = ⟨x.toP b, t.demand⟩ := by
+    a ∈ toAFacts b t ↔ ∃ x, x ∈ treeRF t.excl t.tree ∧ a = ⟨(markX t.mx x).toP b, t.demand⟩ := by
   unfold toAFacts
   rw [List.mem_map]
   constructor
@@ -738,14 +835,16 @@ theorem mem_toAFacts (b : Base) (t : EdgeTree) (a : AFact) :
 
 theorem denA_toAFacts {i : PFact} {b : Base} {t : EdgeTree} {d : Bool} {l0 l1 : Loc} :
     denA i (toAFacts b t) d l0 l1 ↔
-      t.demand = d ∧ denL i ((treeRF t.excl t.tree).map (RFact.toP b)) l0 l1 := by
+      t.demand = d ∧ denL i (((treeRF t.excl t.tree).map (markX t.mx)).map (RFact.toP b)) l0 l1 := by
   constructor
   · rintro ⟨a, ha, hd, hden⟩
     obtain ⟨x, hx, rfl⟩ := (mem_toAFacts b t a).mp ha
-    exact ⟨hd, x.toP b, List.mem_map.mpr ⟨x, hx, rfl⟩, hden⟩
+    exact ⟨hd, (markX t.mx x).toP b,
+      List.mem_map.mpr ⟨markX t.mx x, List.mem_map.mpr ⟨x, hx, rfl⟩, rfl⟩, hden⟩
   · rintro ⟨hd, f, hf, hden⟩
-    obtain ⟨x, hx, rfl⟩ := List.mem_map.mp hf
-    exact ⟨⟨x.toP b, t.demand⟩, (mem_toAFacts b t _).mpr ⟨x, hx, rfl⟩, hd, hden⟩
+    obtain ⟨y, hy, rfl⟩ := List.mem_map.mp hf
+    obtain ⟨x, hx, rfl⟩ := List.mem_map.mp hy
+    exact ⟨⟨(markX t.mx x).toP b, t.demand⟩, (mem_toAFacts b t _).mpr ⟨x, hx, rfl⟩, hd, hden⟩
 
 /-! ### The walk that changes the subtree at a path -/
 
@@ -825,23 +924,61 @@ theorem insert_memEq {E : Excl} {f : PFact} (hf : fitsB E f.kind f.mark = true) 
 theorem toP_ofP {f : PFact} {b : Base} (hb : f.base = b) : (ofP f).toP b = f := by
   cases f; cases hb; rfl
 
-/-- Insert into an edge tree. -/
-def EdgeTree.insert (f : PFact) (t : EdgeTree) : EdgeTree := ⟨t.excl, t.demand, Tree.insert f t.tree⟩
+/-- The tree stores the abstract mark of a fact as the flag `*`: inserting a fact
+    and inserting its stored form give the same tree. -/
+theorem insert_stripF (f : PFact) (t : Tree) : insert f t = insert (stripF f) t := by
+  have hp : ∀ k : Kind, ∀ pl : Payload, pl.add k f.mark = pl.add k (stripM f.mark) := by
+    intro k pl
+    rcases f with ⟨fb, fp, fk, fm⟩
+    cases k <;> cases fm <;> rfl
+  unfold insert
+  show atPath f.path (fun s => ⟨s.root.add f.kind f.mark, s.kids⟩) t =
+    atPath f.path (fun s => ⟨s.root.add f.kind (stripM f.mark), s.kids⟩) t
+  have hg : (fun s : Tree => (⟨s.root.add f.kind f.mark, s.kids⟩ : Tree)) =
+      (fun s : Tree => (⟨s.root.add f.kind (stripM f.mark), s.kids⟩ : Tree)) :=
+    funext (fun s => by rw [hp f.kind s.root])
+  rw [hg]
 
-/-- MAIN 1. Insert is exact (membership) for a fact that fits the tree. -/
+/-- A mark of the tree comes back from its stored form. -/
+theorem mxMark_stripM {X : List Mark} {m : MarkA} (hm : markFitsB X m = true) :
+    mxMark X (stripM m) = m := by
+  cases m with
+  | star => exact (of_decide_eq_true hm).symm
+  | conc t => rfl
+  | starEx x => exact (of_decide_eq_true hm).symm
+
+theorem markX_ofP_stripF {X : List Mark} {f : PFact} (hm : markFitsB X f.mark = true) :
+    markX X (ofP (stripF f)) = ofP f := by
+  show (⟨f.path, f.kind, mxMark X (stripM f.mark)⟩ : RFact) = ⟨f.path, f.kind, f.mark⟩
+  rw [mxMark_stripM hm]
+
+theorem fitsX_parts {E : Excl} {X : List Mark} {k : Kind} {m : MarkA}
+    (hf : fitsX E X k m = true) : fitsB E k (stripM m) = true ∧ markFitsB X m = true :=
+  Bool.and_eq_true _ _ ▸ hf
+
+/-- Insert into an edge tree. -/
+def EdgeTree.insert (f : PFact) (t : EdgeTree) : EdgeTree :=
+  ⟨t.excl, t.mx, t.demand, Tree.insert f t.tree⟩
+
+/-- MAIN 1. Insert is exact (membership) for a fact that fits the tree.
+    (Version 5: the fact fits the exclusion AND the mark exclusion, `fitsX`.) -/
 theorem insert_mem {b : Base} (t : EdgeTree) (f : PFact) (hb : f.base = b)
-    (hf : fitsB t.excl f.kind f.mark = true) (a : AFact) :
+    (hf : fitsX t.excl t.mx f.kind f.mark = true) (a : AFact) :
     a ∈ toAFacts b (t.insert f) ↔ a = ⟨f, t.demand⟩ ∨ a ∈ toAFacts b t := by
+  obtain ⟨hf1, hf2⟩ := fitsX_parts hf
   rw [mem_toAFacts, mem_toAFacts]
-  have h := insert_memEq hf t.tree
+  have h := insert_memEq (f := stripF f) hf1 t.tree
+  show (∃ x, x ∈ treeRF t.excl (Tree.insert f t.tree) ∧ a = ⟨(markX t.mx x).toP b, t.demand⟩) ↔ _
+  rw [insert_stripF]
+  have hb' : (ofP f).toP b = f := toP_ofP hb
   constructor
   · rintro ⟨x, hx, rfl⟩
     rcases List.mem_append.mp ((h x).mp hx) with hx | hx
     · exact Or.inr ⟨x, hx, rfl⟩
-    · rw [List.mem_singleton.mp hx, toP_ofP hb]; exact Or.inl rfl
+    · rw [List.mem_singleton.mp hx, markX_ofP_stripF hf2, hb']; exact Or.inl rfl
   · rintro (rfl | ⟨x, hx, rfl⟩)
-    · exact ⟨ofP f, (h _).mpr (List.mem_append.mpr (Or.inr (List.mem_singleton.mpr rfl))),
-        by rw [toP_ofP hb]; rfl⟩
+    · exact ⟨ofP (stripF f), (h _).mpr (List.mem_append.mpr (Or.inr (List.mem_singleton.mpr rfl))),
+        by rw [markX_ofP_stripF hf2, hb']⟩
     · exact ⟨x, (h x).mpr (List.mem_append.mpr (Or.inl hx)), rfl⟩
 
 /-! ## 5. The merge rules -/
@@ -889,17 +1026,19 @@ theorem merge_memEq (E : Excl) (t1 t2 : Tree) :
   rw [h1, h2]
   simp only [or_assoc, or_left_comm]
 
-/-- Merge rule 1: two edge trees with the same key (premise, layer, E). -/
-def EdgeTree.merge1 (t1 t2 : EdgeTree) : EdgeTree := ⟨t1.excl, t1.demand, merge t1.tree t2.tree⟩
+/-- Merge rule 1: two edge trees with the same key (premise, layer, E, X). -/
+def EdgeTree.merge1 (t1 t2 : EdgeTree) : EdgeTree :=
+  ⟨t1.excl, t1.mx, t1.demand, merge t1.tree t2.tree⟩
 
-/-- MAIN 2a. Merge rule 1 is the union of the path facts (membership). -/
-theorem rule1_mem (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl)
+/-- MAIN 2a. Merge rule 1 is the union of the path facts (membership).
+    (Version 5: the key has the mark exclusion, `hX`.) -/
+theorem rule1_mem (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl) (hX : t1.mx = t2.mx)
     (hd : t1.demand = t2.demand) (a : AFact) :
     a ∈ toAFacts b (t1.merge1 t2) ↔ a ∈ toAFacts b t1 ∨ a ∈ toAFacts b t2 := by
-  rcases t1 with ⟨E, d, T1⟩
-  rcases t2 with ⟨E2, d2, T2⟩
-  dsimp only at hE hd
-  subst hE hd
+  rcases t1 with ⟨E, X, d, T1⟩
+  rcases t2 with ⟨E2, X2, d2, T2⟩
+  dsimp only at hE hX hd
+  subst hE hX hd
   rw [mem_toAFacts, mem_toAFacts, mem_toAFacts]
   have h := merge_memEq E T1 T2
   constructor
@@ -911,14 +1050,14 @@ theorem rule1_mem (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl)
     · exact ⟨x, (h x).mpr (List.mem_append.mpr (Or.inl hx)), rfl⟩
     · exact ⟨x, (h x).mpr (List.mem_append.mpr (Or.inr hx)), rfl⟩
 
-theorem rule1_den (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl)
+theorem rule1_den (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl) (hX : t1.mx = t2.mx)
     (hd : t1.demand = t2.demand) {i : PFact} {d : Bool} {l0 l1 : Loc} :
     denA i (toAFacts b (t1.merge1 t2)) d l0 l1 ↔ denA i (toAFacts b t1 ++ toAFacts b t2) d l0 l1 := by
   constructor
   · rintro ⟨a, ha, hdd, hden⟩
-    exact ⟨a, List.mem_append.mpr ((rule1_mem b t1 t2 hE hd a).mp ha), hdd, hden⟩
+    exact ⟨a, List.mem_append.mpr ((rule1_mem b t1 t2 hE hX hd a).mp ha), hdd, hden⟩
   · rintro ⟨a, ha, hdd, hden⟩
-    exact ⟨a, (rule1_mem b t1 t2 hE hd a).mpr (List.mem_append.mp ha), hdd, hden⟩
+    exact ⟨a, (rule1_mem b t1 t2 hE hX hd a).mpr (List.mem_append.mp ha), hdd, hden⟩
 
 /-! ### Merge rule 2: the same tree with two exclusions -/
 
@@ -977,18 +1116,18 @@ theorem sem_star_inter' {p : List Acc} {m : MarkA} {e1 e2 : Excl} {σ m0 q m1} :
     RFact.sem ⟨p, .star (Excl.inter e1 e2), m⟩ σ m0 q m1 ↔
       RFact.sem ⟨p, .star e1, m⟩ σ m0 q m1 ∨ RFact.sem ⟨p, .star e2, m⟩ σ m0 q m1 := by
   constructor
-  · rintro ⟨hm, τ, hq, hτ, ha⟩
+  · rintro ⟨hm, hp, τ, hq, hτ, ha⟩
     have ha' : (e1.admits σ || e2.admits σ) = true := by rw [← admits_inter]; exact ha
     cases h1 : e1.admits σ with
-    | true => exact Or.inl ⟨hm, τ, hq, hτ, h1⟩
+    | true => exact Or.inl ⟨hm, hp, τ, hq, hτ, h1⟩
     | false =>
       rw [h1, Bool.false_or] at ha'
-      exact Or.inr ⟨hm, τ, hq, hτ, ha'⟩
-  · rintro (⟨hm, τ, hq, hτ, ha⟩ | ⟨hm, τ, hq, hτ, ha⟩)
-    · refine ⟨hm, τ, hq, hτ, ?_⟩
+      exact Or.inr ⟨hm, hp, τ, hq, hτ, ha'⟩
+  · rintro (⟨hm, hp, τ, hq, hτ, ha⟩ | ⟨hm, hp, τ, hq, hτ, ha⟩)
+    · refine ⟨hm, hp, τ, hq, hτ, ?_⟩
       show (Excl.inter e1 e2).admits σ = true
       rw [admits_inter, ha, Bool.true_or]
-    · refine ⟨hm, τ, hq, hτ, ?_⟩
+    · refine ⟨hm, hp, τ, hq, hτ, ?_⟩
       show (Excl.inter e1 e2).admits σ = true
       rw [admits_inter, ha, Bool.or_true]
 
@@ -1027,20 +1166,131 @@ theorem rule2_eqv (E1 E2 : Excl) (T : Tree) :
     · exact ⟨x, hx, (sem_setExcl_inter E1 E2 x).mpr (Or.inl hs)⟩
     · exact ⟨x, hx, (sem_setExcl_inter E1 E2 x).mpr (Or.inr hs)⟩
 
-/-- Merge rule 2: the same tree (and layer) with two exclusions. -/
-def EdgeTree.merge2 (t1 t2 : EdgeTree) : EdgeTree := ⟨t1.excl.inter t2.excl, t1.demand, t1.tree⟩
+/-- The mark exclusion of a tree and the exclusion of its `*` leaves are
+    independent. -/
+theorem markX_setExcl (X : List Mark) (E : Excl) (x : RFact) :
+    markX X (setExcl E x) = setExcl E (markX X x) := by
+  rcases x with ⟨p, k, m⟩; cases k <;> rfl
 
-/-- MAIN 2b. Merge rule 2 is exact: it means the pairs of both edge trees. -/
-theorem rule2_den (b : Base) (t1 t2 : EdgeTree) (hT : t1.tree = t2.tree)
+/-- `rule2_eqv` for the facts of a tree with the mark exclusion `X`. -/
+theorem rule2_eqvX (X : List Mark) (E1 E2 : Excl) (T : Tree) :
+    Eqv ((treeRF (E1.inter E2) T).map (markX X))
+      ((treeRF E1 T).map (markX X) ++ (treeRF E2 T).map (markX X)) := by
+  rw [treeRF_setExcl (E1.inter E2) Excl.empty T, treeRF_setExcl E1 Excl.empty T,
+    treeRF_setExcl E2 Excl.empty T, List.map_map, List.map_map, List.map_map]
+  intro σ m0 q m1
+  rw [semL_append, semL_map, semL_map, semL_map]
+  have key : ∀ x : RFact, ((markX X ∘ setExcl (E1.inter E2)) x).sem σ m0 q m1 ↔
+      ((markX X ∘ setExcl E1) x).sem σ m0 q m1 ∨ ((markX X ∘ setExcl E2) x).sem σ m0 q m1 := by
+    intro x
+    show (markX X (setExcl (E1.inter E2) x)).sem σ m0 q m1 ↔
+      (markX X (setExcl E1 x)).sem σ m0 q m1 ∨ (markX X (setExcl E2 x)).sem σ m0 q m1
+    rw [markX_setExcl, markX_setExcl, markX_setExcl]
+    exact sem_setExcl_inter E1 E2 (markX X x)
+  constructor
+  · rintro ⟨x, hx, hs⟩
+    rcases (key x).mp hs with h | h
+    · exact Or.inl ⟨x, hx, h⟩
+    · exact Or.inr ⟨x, hx, h⟩
+  · rintro (⟨x, hx, hs⟩ | ⟨x, hx, hs⟩)
+    · exact ⟨x, hx, (key x).mpr (Or.inl hs)⟩
+    · exact ⟨x, hx, (key x).mpr (Or.inr hs)⟩
+
+/-- Merge rule 2: the same tree (and layer, and mark exclusion) with two exclusions. -/
+def EdgeTree.merge2 (t1 t2 : EdgeTree) : EdgeTree :=
+  ⟨t1.excl.inter t2.excl, t1.mx, t1.demand, t1.tree⟩
+
+/-- MAIN 2b. Merge rule 2 is exact: it means the pairs of both edge trees.
+    (Version 5: the two trees have the same mark exclusion, `hX`.) -/
+theorem rule2_den (b : Base) (t1 t2 : EdgeTree) (hT : t1.tree = t2.tree) (hX : t1.mx = t2.mx)
     (hd : t1.demand = t2.demand) {i : PFact} {d : Bool} {l0 l1 : Loc} :
     denA i (toAFacts b (t1.merge2 t2)) d l0 l1 ↔ denA i (toAFacts b t1 ++ toAFacts b t2) d l0 l1 := by
-  rcases t1 with ⟨E1, d1, T⟩
-  rcases t2 with ⟨E2, d2, T2⟩
-  dsimp only at hT hd
-  subst hT hd
+  rcases t1 with ⟨E1, X, d1, T⟩
+  rcases t2 with ⟨E2, X2, d2, T2⟩
+  dsimp only at hT hX hd
+  subst hT hX hd
   rw [denA_append, denA_toAFacts, denA_toAFacts, denA_toAFacts]
-  show (d1 = d ∧ denL i ((treeRF (E1.inter E2) T).map (RFact.toP b)) l0 l1) ↔ _
-  rw [(rule2_eqv E1 E2 T).den, List.map_append, denL_append']
+  show (d1 = d ∧ denL i (((treeRF (E1.inter E2) T).map (markX X)).map (RFact.toP b)) l0 l1) ↔ _
+  rw [(rule2_eqvX X E1 E2 T).den, List.map_append, denL_append']
+  constructor
+  · rintro ⟨hd, h | h⟩
+    · exact Or.inl ⟨hd, h⟩
+    · exact Or.inr ⟨hd, h⟩
+  · rintro (⟨hd, h⟩ | ⟨hd, h⟩)
+    · exact ⟨hd, Or.inl h⟩
+    · exact ⟨hd, Or.inr h⟩
+
+/-! ### Merge rule 2 for marks: the same tree with two mark exclusions -/
+
+theorem out_starM (X : List Mark) (m : Mark) : (starM X).out m = m := by
+  cases X <;> rfl
+
+theorem passes_starM (X : List Mark) (m : Mark) : (starM X).passes m ↔ memB m X = false := by
+  cases X with
+  | nil => exact ⟨fun _ => rfl, fun _ => trivial⟩
+  | cons t x => exact Iff.rfl
+
+/-- WHY intersection is the exact join of two mark exclusions: the abstract mark
+    `starM (X1 ∩ X2)` lets a mark through iff `starM X1` or `starM X2` does. -/
+theorem passes_mxInter (X1 X2 : List Mark) (m : Mark) :
+    (starM (mxInter X1 X2)).passes m ↔ (starM X1).passes m ∨ (starM X2).passes m := by
+  rw [passes_starM, passes_starM, passes_starM]
+  show memB m (X1.filter (fun t => memB t X2)) = false ↔ _
+  rw [memB_filter, Bool.and_eq_false_iff]
+
+theorem sem_markX_inter (X1 X2 : List Mark) (x : RFact) {σ m0 q m1} :
+    (markX (mxInter X1 X2) x).sem σ m0 q m1 ↔
+      (markX X1 x).sem σ m0 q m1 ∨ (markX X2 x).sem σ m0 q m1 := by
+  rcases x with ⟨p, k, m⟩
+  cases m with
+  | star =>
+    show (m1 = (starM (mxInter X1 X2)).out m0 ∧ (starM (mxInter X1 X2)).passes m0 ∧ _) ↔
+      (m1 = (starM X1).out m0 ∧ (starM X1).passes m0 ∧ _) ∨
+      (m1 = (starM X2).out m0 ∧ (starM X2).passes m0 ∧ _)
+    rw [out_starM, out_starM, out_starM, passes_mxInter]
+    constructor
+    · rintro ⟨hm, hp | hp, ht⟩
+      · exact Or.inl ⟨hm, hp, ht⟩
+      · exact Or.inr ⟨hm, hp, ht⟩
+    · rintro (⟨hm, hp, ht⟩ | ⟨hm, hp, ht⟩)
+      · exact ⟨hm, Or.inl hp, ht⟩
+      · exact ⟨hm, Or.inr hp, ht⟩
+  | conc t => exact or_self_iff.symm
+  | starEx y => exact or_self_iff.symm
+
+/-- WHY rule 2 for marks is exact: the same tree under `X1 ∩ X2` means the same
+    pairs as the tree under `X1` together with the tree under `X2`. -/
+theorem rule2_mark_eqv (X1 X2 : List Mark) (E : Excl) (T : Tree) :
+    Eqv ((treeRF E T).map (markX (mxInter X1 X2)))
+      ((treeRF E T).map (markX X1) ++ (treeRF E T).map (markX X2)) := by
+  intro σ m0 q m1
+  rw [semL_append, semL_map, semL_map, semL_map]
+  constructor
+  · rintro ⟨x, hx, hs⟩
+    rcases (sem_markX_inter X1 X2 x).mp hs with h | h
+    · exact Or.inl ⟨x, hx, h⟩
+    · exact Or.inr ⟨x, hx, h⟩
+  · rintro (⟨x, hx, hs⟩ | ⟨x, hx, hs⟩)
+    · exact ⟨x, hx, (sem_markX_inter X1 X2 x).mpr (Or.inl hs)⟩
+    · exact ⟨x, hx, (sem_markX_inter X1 X2 x).mpr (Or.inr hs)⟩
+
+/-- Merge rule 2 for marks: the same tree (and layer, and exclusion) with two mark
+    exclusions. -/
+def EdgeTree.merge2m (t1 t2 : EdgeTree) : EdgeTree :=
+  ⟨t1.excl, mxInter t1.mx t2.mx, t1.demand, t1.tree⟩
+
+/-- MAIN 2c. Merge rule 2 for marks is exact: the tree with the intersection of the
+    two mark exclusions means the union of the pairs of both edge trees. -/
+theorem rule2_mark (b : Base) (t1 t2 : EdgeTree) (hE : t1.excl = t2.excl) (hT : t1.tree = t2.tree)
+    (hd : t1.demand = t2.demand) {i : PFact} {d : Bool} {l0 l1 : Loc} :
+    denA i (toAFacts b (t1.merge2m t2)) d l0 l1 ↔ denA i (toAFacts b t1 ++ toAFacts b t2) d l0 l1 := by
+  rcases t1 with ⟨E, X1, d1, T⟩
+  rcases t2 with ⟨E2, X2, d2, T2⟩
+  dsimp only at hE hT hd
+  subst hE hT hd
+  rw [denA_append, denA_toAFacts, denA_toAFacts, denA_toAFacts]
+  show (d1 = d ∧ denL i (((treeRF E T).map (markX (mxInter X1 X2))).map (RFact.toP b)) l0 l1) ↔ _
+  rw [(rule2_mark_eqv X1 X2 E T).den, List.map_append, denL_append']
   constructor
   · rintro ⟨hd, h | h⟩
     · exact Or.inl ⟨hd, h⟩
@@ -1063,7 +1313,7 @@ theorem treeRF_prepend (E : Excl) (a : Acc) (t : Tree) :
 
 /-- MAIN 3. Prepend is `map (prepend a)` on the path facts (list equality). -/
 theorem toAFacts_prepend (b : Base) (a : Acc) (t : EdgeTree) :
-    toAFacts b ⟨t.excl, t.demand, prepend a t.tree⟩ =
+    toAFacts b ⟨t.excl, t.mx, t.demand, prepend a t.tree⟩ =
       (toAFacts b t).map (fun c => ⟨prependF a c.fact, c.demand⟩) := by
   unfold toAFacts
   rw [treeRF_prepend, List.map_map, List.map_map]; rfl
@@ -1099,7 +1349,7 @@ def subtreeAt : List Acc → Tree → Option Tree
 
 /-! ### Legal facts -/
 
-/-- A legal final fact: a `*` tail has the abstract mark. -/
+/-- A legal final fact: a `*` tail has an abstract mark (`*` or `*∖x`, W2). -/
 def legalB (k : Kind) (m : MarkA) : Bool :=
   match k, m with
   | .star _, .conc _ => false
@@ -1132,13 +1382,15 @@ theorem treeRF_legal (E : Excl) (t : Tree) (x : RFact) (hx : x ∈ treeRF E t) :
   · exact payRF_legal hx
   · exact trieRF_legal E t.kids x hx
 
-/-- `AFact.norm` (design decision F9) does not change a legal fact with `demand = false`. -/
+/-- `AFact.norm` (design decision F9) does not change a legal fact with `demand = false`.
+    (Version 5: a `*` tail with the mark `*∖x` is legal, W2.) -/
 theorem norm_legal (b : Base) (p : List Acc) (k : Kind) (m : MarkA) (hl : legalB k m = true) :
     AFact.norm ⟨⟨b, p, k, m⟩, false⟩ = ⟨⟨b, p, k, m⟩, false⟩ := by
   cases k with
   | star e => cases m with
     | star => rfl
     | conc t => exact nomatch hl
+    | starEx x => rfl
   | any => rfl
   | exact => rfl
 
@@ -1212,26 +1464,47 @@ theorem applyEdge_eq2 (fb tb : Base) (fp tp : List Acc) (e e' : Excl) (x : RFact
     cases xm with
     | conc t => exact nomatch hl
     | star =>
-    cases relate fp xp with
-    | below r =>
-      cases r with
-      | nil =>
-        simp only [belowCase, admitsTailB, Excl.admits_nil, ↓reduceIte, tailExcl, belowS,
-          belowNilS, markGate, markOutA, Bool.or_false, norm_legal _ _ (.star _) .star rfl,
-          List.map, RFact.pre, List.append_nil]
-      | cons a r =>
-        simp only [belowCase, admitsTailB, belowS]
-        rcases Bool.eq_false_or_eq_true (e.admits (a :: r)) with h1 | h1 <;>
-        rcases Bool.eq_false_or_eq_true (e'.admits (a :: r)) with h2 | h2 <;>
-          simp only [h1, h2, Bool.false_eq_true, ↓reduceIte, Bool.and_false, Bool.and_true,
-            markGate, markOutA, Bool.or_false, norm_legal _ _ (.star _) .star rfl, List.map,
-            RFact.pre, Res.none]
-    | above r =>
-      simp only [aboveCase, aboveS]
-      rcases Bool.eq_false_or_eq_true (admitsTailB (.star ec) r) with h1 | h1 <;>
-        simp only [h1, Bool.false_eq_true, ↓reduceIte, markGate, markOutA, tailExcl,
-          norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, Res.none, List.append_nil]
-    | apart => rfl
+      cases relate fp xp with
+      | below r =>
+        cases r with
+        | nil =>
+          simp only [belowCase, admitsTailB, Excl.admits_nil, ↓reduceIte, tailExcl, belowS,
+            belowNilS, markGate, markComp, Bool.or_false, norm_legal _ _ (.star _) .star rfl,
+            List.map, RFact.pre, List.append_nil]
+        | cons a r =>
+          simp only [belowCase, admitsTailB, belowS]
+          rcases Bool.eq_false_or_eq_true (e.admits (a :: r)) with h1 | h1 <;>
+          rcases Bool.eq_false_or_eq_true (e'.admits (a :: r)) with h2 | h2 <;>
+            simp only [h1, h2, Bool.false_eq_true, ↓reduceIte, Bool.and_false, Bool.and_true,
+              markGate, markComp, Bool.or_false, norm_legal _ _ (.star _) .star rfl, List.map,
+              RFact.pre, Res.none]
+      | above r =>
+        simp only [aboveCase, aboveS]
+        rcases Bool.eq_false_or_eq_true (admitsTailB (.star ec) r) with h1 | h1 <;>
+          simp only [h1, Bool.false_eq_true, ↓reduceIte, markGate, markComp, tailExcl,
+            norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, Res.none, List.append_nil]
+      | apart => rfl
+    | starEx y =>
+      cases relate fp xp with
+      | below r =>
+        cases r with
+        | nil =>
+          simp only [belowCase, admitsTailB, Excl.admits_nil, ↓reduceIte, tailExcl, belowS,
+            belowNilS, markGate, markComp, Bool.or_false, norm_legal _ _ (.star _) (.starEx y) rfl,
+            List.map, RFact.pre, List.append_nil]
+        | cons a r =>
+          simp only [belowCase, admitsTailB, belowS]
+          rcases Bool.eq_false_or_eq_true (e.admits (a :: r)) with h1 | h1 <;>
+          rcases Bool.eq_false_or_eq_true (e'.admits (a :: r)) with h2 | h2 <;>
+            simp only [h1, h2, Bool.false_eq_true, ↓reduceIte, Bool.and_false, Bool.and_true,
+              markGate, markComp, Bool.or_false, norm_legal _ _ (.star _) (.starEx y) rfl, List.map,
+              RFact.pre, Res.none]
+      | above r =>
+        simp only [aboveCase, aboveS]
+        rcases Bool.eq_false_or_eq_true (admitsTailB (.star ec) r) with h1 | h1 <;>
+          simp only [h1, Bool.false_eq_true, ↓reduceIte, markGate, markComp, tailExcl,
+            norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, Res.none, List.append_nil]
+      | apart => rfl
   | any =>
     cases relate fp xp with
     | below r =>
@@ -1240,16 +1513,16 @@ theorem applyEdge_eq2 (fb tb : Base) (fp tp : List Acc) (e e' : Excl) (x : RFact
         simp only [belowCase, admitsTailB, Excl.admits_nil, ↓reduceIte, tailExcl, belowS,
           belowNilS]
         cases e.union e' <;>
-          simp only [markGate, markOutA, norm_nonstar _ _ .exact _ _ rfl,
+          simp only [markGate, markComp, norm_nonstar _ _ .exact _ _ rfl,
             norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, List.append_nil]
       | cons a r =>
         simp only [belowCase, admitsTailB, belowS]
         rcases Bool.eq_false_or_eq_true (e.admits (a :: r)) with h1 | h1 <;>
         rcases Bool.eq_false_or_eq_true (e'.admits (a :: r)) with h2 | h2 <;>
           simp only [h1, h2, Bool.false_eq_true, ↓reduceIte, Bool.and_false, Bool.and_true,
-            markGate, markOutA, norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, Res.none]
+            markGate, markComp, norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, Res.none]
     | above r =>
-      simp only [aboveCase, aboveS, admitsTailB, ↓reduceIte, markGate, markOutA, tailExcl,
+      simp only [aboveCase, aboveS, admitsTailB, ↓reduceIte, markGate, markComp, tailExcl,
         norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, List.append_nil]
     | apart => rfl
   | exact =>
@@ -1258,23 +1531,70 @@ theorem applyEdge_eq2 (fb tb : Base) (fp tp : List Acc) (e e' : Excl) (x : RFact
       cases r with
       | nil =>
         simp only [belowCase, admitsTailB, Excl.admits_nil, ↓reduceIte, belowS,
-          belowNilS, markGate, markOutA, norm_nonstar _ _ .exact _ _ rfl, List.map, RFact.pre,
+          belowNilS, markGate, markComp, norm_nonstar _ _ .exact _ _ rfl, List.map, RFact.pre,
           List.append_nil]
       | cons a r =>
         simp only [belowCase, admitsTailB, belowS]
         rcases Bool.eq_false_or_eq_true (e.admits (a :: r)) with h1 | h1 <;>
         rcases Bool.eq_false_or_eq_true (e'.admits (a :: r)) with h2 | h2 <;>
           simp only [h1, h2, Bool.false_eq_true, ↓reduceIte, Bool.and_false, Bool.and_true,
-            markGate, markOutA, norm_nonstar _ _ .exact _ _ rfl, List.map, RFact.pre, Res.none]
+            markGate, markComp, norm_nonstar _ _ .exact _ _ rfl, List.map, RFact.pre, Res.none]
     | above r =>
       cases r with
       | nil =>
-        simp only [aboveCase, aboveS, admitsTailB, ↓reduceIte, markGate, markOutA, tailExcl,
+        simp only [aboveCase, aboveS, admitsTailB, ↓reduceIte, markGate, markComp, tailExcl,
           norm_nonstar _ _ .any _ _ rfl, List.map, RFact.pre, List.append_nil]
       | cons a r =>
         simp only [aboveCase, admitsTailB, Bool.false_eq_true, ↓reduceIte, aboveS, List.map]
         rfl
     | apart => rfl
+/-! ### The mark exclusion of the tree passes through the micro edge -/
+
+theorem legal_markX (X : List Mark) {x : RFact} (hl : legalB x.kind x.mark = true) :
+    legalB (markX X x).kind (markX X x).mark = true := by
+  rcases x with ⟨p, k, m⟩
+  cases k <;> cases m <;> (try cases X) <;> first | rfl | exact hl
+
+theorem belowNilS_markX (X : List Mark) (ex : Excl) (ck : Kind) (m : MarkA) :
+    belowNilS ex ck (mxMark X m) = (belowNilS ex ck m).map (fun p => (markX X p.1, p.2)) := by
+  cases ck <;> cases ex <;> rfl
+
+theorem belowS_markX (X : List Mark) (e e' : Excl) (ck : Kind) (m : MarkA) (r : List Acc) :
+    belowS e e' ck (mxMark X m) r = (belowS e e' ck m r).map (fun p => (markX X p.1, p.2)) := by
+  cases r with
+  | nil => exact belowNilS_markX X _ ck m
+  | cons a r =>
+    show (if (e.admits (a :: r) && e'.admits (a :: r)) = true then _ else _) =
+      List.map _ (if (e.admits (a :: r) && e'.admits (a :: r)) = true then _ else _)
+    cases (e.admits (a :: r) && e'.admits (a :: r)) <;> rfl
+
+theorem aboveS_markX (X : List Mark) (ex : Excl) (ck : Kind) (m : MarkA) (r : List Acc) :
+    aboveS ex ck (mxMark X m) r = (aboveS ex ck m r).map (fun p => (markX X p.1, p.2)) := by
+  unfold aboveS
+  cases admitsTailB ck r <;> rfl
+
+/-- `stepR` only passes the mark through: it commutes with the reading of the mark
+    exclusion. -/
+theorem stepR_markX (X : List Mark) (e e' : Excl) (fp : List Acc) (x : RFact) :
+    stepR e e' fp (markX X x) = (stepR e e' fp x).map (fun p => (markX X p.1, p.2)) := by
+  rcases x with ⟨p, k, m⟩
+  show stepR e e' fp ⟨p, k, mxMark X m⟩ = _
+  unfold stepR
+  dsimp only
+  cases relate fp p with
+  | below r => exact belowS_markX X e e' k m r
+  | above r => exact aboveS_markX X (e.union e') k m r
+  | apart => rfl
+
+/-- `applyEdge_eq2` for a fact of a tree with the mark exclusion `X`. -/
+theorem applyEdge_eqX (fb tb : Base) (fp tp : List Acc) (e e' : Excl) (X : List Mark) (x : RFact)
+    (ap0 : Bool) (hl : legalB x.kind x.mark = true) (hd : ap0 = true → x.kind.isStar = false) :
+    (applyEdge ⟨(markX X x).toP fb, ap0⟩ ⟨fb, fp, .star e, .star⟩ ⟨tb, tp, .star e', .star⟩).facts
+      = (stepR e e' fp x).map (fun p => ⟨(markX X (p.1.pre tp)).toP tb, ap0 || p.2⟩) := by
+  rw [applyEdge_eq2 fb tb fp tp e e' (markX X x) ap0 (legal_markX X hl) hd, stepR_markX,
+    List.map_map]
+  rfl
+
 theorem pair_mem_singleton {y z : RFact} {b c : Bool} : (y, b) ∈ [(z, c)] ↔ y = z ∧ b = c := by
   rw [List.mem_singleton]
   constructor
@@ -1493,6 +1813,7 @@ theorem mem_contribB (E ex : Excl) (b0 : Bool) (a : Acc) (q : List Acc) (pl : Pa
         obtain ⟨m, hm, rfl⟩ := hy
         cases m with
         | conc t => exact nomatch hm
+        | starEx x => exact hm.elim
         | star =>
           have hm' : (pl.star && E.admits (a :: q)) = true := hm
           rw [Bool.and_eq_true] at hm'
@@ -1880,7 +2201,9 @@ def starTree : Tree := ⟨⟨true, MarkSet.empty, MarkSet.empty⟩, .nil⟩
 def anyTree (M : MarkSet) : Tree := ⟨⟨false, M, MarkSet.empty⟩, .nil⟩
 
 /-- The tree form of `applyEdge` for a micro edge `fr → to` with `*` tails and
-    abstract marks, on ONE edge tree (premise, layer, E). The results are grouped
+    abstract marks, on ONE edge tree (premise, layer, E, X). Every output tree keeps
+    the mark exclusion `X` of the input: the target mark `*` passes the mark
+    `starM X` of a fact through (`markComp .star m = some m`). The results are grouped
     by (exclusion, layer):
     * the results with step bit `false` stay in the layer of the input, in a tree
       with the exclusion `E`; the root `*` leaf goes to a tree with the exclusion
@@ -1898,15 +2221,15 @@ def applyTreeE (b : Base) (t : EdgeTree) (fr to : PFact) : List EdgeTree :=
     let M  := resM t.excl e e' fr.path t.tree
     let E2 := t.excl.union (e.union e')
     if t.demand then
-      [⟨t.excl, true, prependPath to.path ⟨addAny A.root M, A.kids⟩⟩]
+      [⟨t.excl, t.mx, true, prependPath to.path ⟨addAny A.root M, A.kids⟩⟩]
     else
       (if st then
         (if E2 = t.excl then
-          [⟨t.excl, false, prependPath to.path ⟨⟨true, A.root.anyM, A.root.exactM⟩, A.kids⟩⟩]
+          [⟨t.excl, t.mx, false, prependPath to.path ⟨⟨true, A.root.anyM, A.root.exactM⟩, A.kids⟩⟩]
         else
-          [⟨t.excl, false, prependPath to.path A⟩, ⟨E2, false, prependPath to.path starTree⟩])
-      else [⟨t.excl, false, prependPath to.path A⟩]) ++
-      [⟨Excl.empty, true, prependPath to.path (anyTree M)⟩]
+          [⟨t.excl, t.mx, false, prependPath to.path A⟩, ⟨E2, t.mx, false, prependPath to.path starTree⟩])
+      else [⟨t.excl, t.mx, false, prependPath to.path A⟩]) ++
+      [⟨Excl.empty, t.mx, true, prependPath to.path (anyTree M)⟩]
   else []
 
 /-! ### No `*` leaf (the invariant of the demand layer) -/
@@ -2004,9 +2327,10 @@ theorem resStar_noStar (E e e' : Excl) (q : List Acc) (t : Tree) (ht : t.noStar 
     resStar E e e' q t = false :=
   (noStar_iff.mp (walkG_noStar _ q t ht)).1
 
-theorem mem_toAFacts_pp (tb : Base) (tp : List Acc) (E : Excl) (d : Bool) (T : Tree) (a : AFact) :
-    a ∈ toAFacts tb ⟨E, d, prependPath tp T⟩ ↔
-      ∃ y, y ∈ treeRF E T ∧ a = ⟨(y.pre tp).toP tb, d⟩ := by
+theorem mem_toAFacts_pp (tb : Base) (tp : List Acc) (E : Excl) (X : List Mark) (d : Bool) (T : Tree)
+    (a : AFact) :
+    a ∈ toAFacts tb ⟨E, X, d, prependPath tp T⟩ ↔
+      ∃ y, y ∈ treeRF E T ∧ a = ⟨(markX X (y.pre tp)).toP tb, d⟩ := by
   rw [mem_toAFacts]
   show (∃ x, x ∈ treeRF E (prependPath tp T) ∧ _) ↔ _
   rw [treeRF_prependPath]
@@ -2026,7 +2350,7 @@ theorem applyTreeE_mem (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
     (htm : to.mark = .star) (a : AFact) :
     a ∈ (applyTreeE b t fr to).flatMap (toAFacts to.base) ↔
       ∃ c, c ∈ toAFacts b t ∧ a ∈ (applyEdge c fr to).facts := by
-  rcases t with ⟨E, d, T⟩
+  rcases t with ⟨E, X, d, T⟩
   rcases fr with ⟨fb, fp, fk, fm⟩
   rcases to with ⟨tb, tp, tk, tm⟩
   dsimp only at hfk htk hfm htm hwf hinv
@@ -2036,20 +2360,20 @@ theorem applyTreeE_mem (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
   rcases Bool.eq_false_or_eq_true (Nat.beq b fb) with hb | hb
   · have hb' : b = fb := Nat.eq_of_beq_eq_true hb
     subst hb'
-    have hR : (∃ c, c ∈ toAFacts b ⟨E, d, T⟩ ∧
+    have hR : (∃ c, c ∈ toAFacts b ⟨E, X, d, T⟩ ∧
         a ∈ (applyEdge c ⟨b, fp, .star e, .star⟩ ⟨tb, tp, .star e', .star⟩).facts) ↔
-        ∃ y s, y ∈ resL s E e e' fp T ∧ a = ⟨(y.pre tp).toP tb, d || s⟩ := by
+        ∃ y s, y ∈ resL s E e e' fp T ∧ a = ⟨(markX X (y.pre tp)).toP tb, d || s⟩ := by
       constructor
       · rintro ⟨c, hc, ha⟩
         obtain ⟨x, hx, rfl⟩ := (mem_toAFacts b _ c).mp hc
-        rw [applyEdge_eq2 b tb fp tp e e' x d (treeRF_legal E T x hx)
+        rw [applyEdge_eqX b tb fp tp e e' X x d (treeRF_legal E T x hx)
           (fun h => treeRF_noStar E T (hinv h) x hx), List.mem_map] at ha
         obtain ⟨⟨y, s⟩, hp, rfl⟩ := ha
         exact ⟨y, s, (resL_spec s E e e' fp T hwf y).mpr ⟨x, hx, hp⟩, rfl⟩
       · rintro ⟨y, s, hy, rfl⟩
         obtain ⟨x, hx, hp⟩ := (resL_spec s E e e' fp T hwf y).mp hy
-        refine ⟨⟨x.toP b, d⟩, (mem_toAFacts b _ _).mpr ⟨x, hx, rfl⟩, ?_⟩
-        rw [applyEdge_eq2 b tb fp tp e e' x d (treeRF_legal E T x hx)
+        refine ⟨⟨(markX X x).toP b, d⟩, (mem_toAFacts b _ _).mpr ⟨x, hx, rfl⟩, ?_⟩
+        rw [applyEdge_eqX b tb fp tp e e' X x d (treeRF_legal E T x hx)
           (fun h => treeRF_noStar E T (hinv h) x hx), List.mem_map]
         exact ⟨(y, s), hp, rfl⟩
     rw [hR]
@@ -2093,8 +2417,8 @@ theorem applyTreeE_mem (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
     | false =>
       simp only [Bool.false_eq_true, ↓reduceIte]
       rw [List.flatMap_append, List.mem_append]
-      have hC : a ∈ [(⟨Excl.empty, true, prependPath tp (anyTree (resM E e e' fp T))⟩ : EdgeTree)].flatMap
-          (toAFacts tb) ↔ ∃ y, y ∈ msRF .any (resM E e e' fp T) ∧ a = ⟨(y.pre tp).toP tb, true⟩ := by
+      have hC : a ∈ [(⟨Excl.empty, X, true, prependPath tp (anyTree (resM E e e' fp T))⟩ : EdgeTree)].flatMap
+          (toAFacts tb) ↔ ∃ y, y ∈ msRF .any (resM E e e' fp T) ∧ a = ⟨(markX X (y.pre tp)).toP tb, true⟩ := by
         rw [List.flatMap_cons, List.flatMap_nil, List.append_nil, mem_toAFacts_pp]
         constructor
         · rintro ⟨y, hy, rfl⟩
@@ -2113,12 +2437,12 @@ theorem applyTreeE_mem (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
           exact Or.inr (Or.inl ⟨m, hm, rfl⟩)
       have hX : a ∈ (if resStar E e e' fp T = true then
             (if E.union (e.union e') = E then
-              [(⟨E, false, prependPath tp ⟨⟨true, (resA E e e' fp T).root.anyM,
+              [(⟨E, X, false, prependPath tp ⟨⟨true, (resA E e e' fp T).root.anyM,
                 (resA E e e' fp T).root.exactM⟩, (resA E e e' fp T).kids⟩⟩ : EdgeTree)]
-            else [⟨E, false, prependPath tp (resA E e e' fp T)⟩,
-              ⟨E.union (e.union e'), false, prependPath tp starTree⟩])
-          else [⟨E, false, prependPath tp (resA E e e' fp T)⟩]).flatMap (toAFacts tb) ↔
-          ∃ y, y ∈ resL false E e e' fp T ∧ a = ⟨(y.pre tp).toP tb, false⟩ := by
+            else [⟨E, X, false, prependPath tp (resA E e e' fp T)⟩,
+              ⟨E.union (e.union e'), X, false, prependPath tp starTree⟩])
+          else [⟨E, X, false, prependPath tp (resA E e e' fp T)⟩]).flatMap (toAFacts tb) ↔
+          ∃ y, y ∈ resL false E e e' fp T ∧ a = ⟨(markX X (y.pre tp)).toP tb, false⟩ := by
         have hAstar : (resA E e e' fp T).root.star = false := by
           show (payBelowN (e.union e') _).star = false
           cases e.union e' with
@@ -2206,7 +2530,7 @@ theorem applyTreeE_mem (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
     · intro h; exact nomatch h
     · rintro ⟨c, hc, ha⟩
       obtain ⟨x, _, rfl⟩ := (mem_toAFacts b _ c).mp hc
-      have hnil : (applyEdge ⟨x.toP b, d⟩ ⟨fb, fp, .star e, .star⟩
+      have hnil : (applyEdge ⟨(markX X x).toP b, d⟩ ⟨fb, fp, .star e, .star⟩
           ⟨tb, tp, .star e', .star⟩).facts = [] := by
         unfold applyEdge
         simp only [RFact.toP, hb, Bool.false_eq_true, ↓reduceIte]
@@ -2354,7 +2678,7 @@ theorem applyTreeE_inv (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true)
     (hinv : t.demand = true → t.tree.noStar = true) (fr to : PFact) :
     ∀ t', t' ∈ applyTreeE b t fr to →
       t'.tree.wf = true ∧ (t'.demand = true → t'.tree.noStar = true) := by
-  rcases t with ⟨E, d, T⟩
+  rcases t with ⟨E, X, d, T⟩
   dsimp only at hwf hinv
   intro t' ht'
   unfold applyTreeE at ht'
@@ -2421,7 +2745,7 @@ theorem applyTreeE_star_normal (b : Base) (t : EdgeTree) (hwf : t.tree.wf = true
     (exclusion, layer). -/
 theorem applyTreeE_grouped (b : Base) (t : EdgeTree) (fr to : PFact) :
     ((applyTreeE b t fr to).map (fun t' => (t'.excl, t'.demand))).Nodup := by
-  rcases t with ⟨E, d, T⟩
+  rcases t with ⟨E, X, d, T⟩
   unfold applyTreeE
   dsimp only
   have hne : ∀ (E1 E2 : Excl), (E1, false) ≠ (E2, true) := fun _ _ h => nomatch congrArg Prod.snd h
@@ -2460,6 +2784,53 @@ theorem applyTreeE_grouped (b : Base) (t : EdgeTree) (fr to : PFact) :
   · simp only [hb, Bool.false_eq_true, ↓reduceIte, List.map_nil]
     exact List.nodup_nil
 
+/-- MAIN 6b. `applyTreeE` keeps the mark exclusion: every output tree has the mark
+    exclusion of the input tree. -/
+theorem applyTreeE_mx (b : Base) (t : EdgeTree) (fr to : PFact) :
+    ∀ t', t' ∈ applyTreeE b t fr to → t'.mx = t.mx := by
+  intro t' ht'
+  unfold applyTreeE at ht'
+  dsimp only at ht'
+  rcases Bool.eq_false_or_eq_true (Nat.beq b fr.base) with hb | hb
+  · simp only [hb, ↓reduceIte] at ht'
+    cases hd : t.demand with
+    | true =>
+      simp only [hd, ↓reduceIte, List.mem_singleton] at ht'
+      subst ht'; rfl
+    | false =>
+      simp only [hd, Bool.false_eq_true, ↓reduceIte] at ht'
+      rcases List.mem_append.mp ht' with ht' | ht'
+      · cases hst : resStar t.excl (tailExcl fr.kind) (tailExcl to.kind) fr.path t.tree with
+        | false =>
+          simp only [hst, Bool.false_eq_true, ↓reduceIte, List.mem_singleton] at ht'
+          subst ht'; rfl
+        | true =>
+          simp only [hst, ↓reduceIte] at ht'
+          by_cases hE2 : t.excl.union ((tailExcl fr.kind).union (tailExcl to.kind)) = t.excl
+          · rw [if_pos hE2, List.mem_singleton] at ht'
+            subst ht'; rfl
+          · rw [if_neg hE2] at ht'
+            rcases List.mem_cons.mp ht' with rfl | ht'
+            · rfl
+            · rw [List.mem_singleton] at ht'
+              subst ht'; rfl
+      · rw [List.mem_singleton] at ht'
+        subst ht'; rfl
+  · simp only [hb, Bool.false_eq_true, ↓reduceIte] at ht'
+    exact nomatch ht'
+
+/-- MAIN 6c. The output trees are grouped by the whole key (exclusion, mark
+    exclusion, layer). -/
+theorem applyTreeE_grouped_key (b : Base) (t : EdgeTree) (fr to : PFact) :
+    ((applyTreeE b t fr to).map (fun t' => (t'.excl, t'.mx, t'.demand))).Nodup := by
+  have h : List.Pairwise (fun u v : Excl × Bool => u ≠ v)
+      (((applyTreeE b t fr to).map (fun t' => (t'.excl, t'.mx, t'.demand))).map
+        (fun k : Excl × List Mark × Bool => (k.1, k.2.2))) := by
+    rw [List.map_map]
+    exact applyTreeE_grouped b t fr to
+  exact List.Pairwise.of_map (R := fun u v => u ≠ v) (S := fun u v => u ≠ v) _
+    (fun _ _ hne heq => hne (by rw [heq])) h
+
 /-! ## 8. Build a tree from a list -/
 
 def fromList (fs : List PFact) : Tree := fs.foldr Tree.insert emptyTree
@@ -2480,19 +2851,33 @@ theorem fromList_memEq (E : Excl) (fs : List PFact)
     refine MemEq.trans (MemEq.append ih' (MemEq.refl _)) ?_
     exact MemEq.append_comm _ _
 
-/-- The edge tree built from a list of facts that fit `E`, on base `b`, holds
-    exactly these facts in the layer `d`. -/
-theorem fromList_mem (b : Base) (E : Excl) (d : Bool) (fs : List PFact)
-    (hb : ∀ f, f ∈ fs → f.base = b) (hf : ∀ f, f ∈ fs → fitsB E f.kind f.mark = true)
-    (a : AFact) : a ∈ toAFacts b ⟨E, d, fromList fs⟩ ↔ ∃ f, f ∈ fs ∧ a = ⟨f, d⟩ := by
+theorem fromList_stripF (fs : List PFact) : fromList fs = fromList (fs.map stripF) := by
+  induction fs with
+  | nil => rfl
+  | cons f fs ih =>
+    show insert f (fromList fs) = insert (stripF f) (fromList (fs.map stripF))
+    rw [← ih, insert_stripF]
+
+/-- The edge tree built from a list of facts that fit `E` and `X`, on base `b`,
+    holds exactly these facts in the layer `d`. (Version 5: the key has the mark
+    exclusion `X`, and the facts fit it, `fitsX`.) -/
+theorem fromList_mem (b : Base) (E : Excl) (X : List Mark) (d : Bool) (fs : List PFact)
+    (hb : ∀ f, f ∈ fs → f.base = b) (hf : ∀ f, f ∈ fs → fitsX E X f.kind f.mark = true)
+    (a : AFact) : a ∈ toAFacts b ⟨E, X, d, fromList fs⟩ ↔ ∃ f, f ∈ fs ∧ a = ⟨f, d⟩ := by
   rw [mem_toAFacts]
-  have h := fromList_memEq E fs hf
+  show (∃ x, x ∈ treeRF E (fromList fs) ∧ a = ⟨(markX X x).toP b, d⟩) ↔ _
+  rw [fromList_stripF]
+  have h := fromList_memEq E (fs.map stripF) (fun g hg => by
+    obtain ⟨f, hfm, rfl⟩ := List.mem_map.mp hg
+    exact (fitsX_parts (hf f hfm)).1)
   constructor
   · rintro ⟨x, hx, rfl⟩
-    obtain ⟨f, hfm, rfl⟩ := List.mem_map.mp ((h x).mp hx)
-    exact ⟨f, hfm, by rw [toP_ofP (hb f hfm)]⟩
+    obtain ⟨g, hg, rfl⟩ := List.mem_map.mp ((h x).mp hx)
+    obtain ⟨f, hfm, rfl⟩ := List.mem_map.mp hg
+    exact ⟨f, hfm, by rw [markX_ofP_stripF (fitsX_parts (hf f hfm)).2, toP_ofP (hb f hfm)]⟩
   · rintro ⟨f, hfm, rfl⟩
-    exact ⟨ofP f, (h _).mpr (List.mem_map.mpr ⟨f, hfm, rfl⟩), by rw [toP_ofP (hb f hfm)]⟩
+    exact ⟨ofP (stripF f), (h _).mpr (List.mem_map.mpr ⟨stripF f, List.mem_map.mpr ⟨f, hfm, rfl⟩, rfl⟩),
+      by rw [markX_ofP_stripF (fitsX_parts (hf f hfm)).2, toP_ofP (hb f hfm)]⟩
 
 /-! ## 9. Complexity -/
 
@@ -2819,9 +3204,9 @@ def factsE1 : List PFact :=
     ⟨b, [f, g], .star E1, .star⟩ ]
 
 /-- One edge tree per (layer, exclusion): `E1`, `{f}`, and the demand layer. -/
-def tE1 : EdgeTree := ⟨E1, false, fromList factsE1⟩
-def tF : EdgeTree := ⟨.set [f], false, fromList [⟨b, [], .star (.set [f]), .star⟩]⟩
-def tD : EdgeTree := ⟨Excl.empty, true, fromList [⟨b, [], .any, .conc T⟩, ⟨b, [f], .exact, .star⟩,
+def tE1 : EdgeTree := ⟨E1, [], false, fromList factsE1⟩
+def tF : EdgeTree := ⟨.set [f], [], false, fromList [⟨b, [], .star (.set [f]), .star⟩]⟩
+def tD : EdgeTree := ⟨Excl.empty, [], true, fromList [⟨b, [], .any, .conc T⟩, ⟨b, [f], .exact, .star⟩,
   ⟨b, [f, h], .any, .star⟩, ⟨b, [g], .any, .star⟩]⟩
 def treesB : List EdgeTree := [tE1, tF, tD]
 
@@ -2858,7 +3243,7 @@ example : treesB.all (fun t => storeEdges.all (fun e =>
 #eval applyTreeE b tE1 (⟨b, [f], .star Excl.empty, .star⟩) (⟨a, [], .star Excl.empty, .star⟩)
 
 /-- A tree on base `a` for the strong update `a.f = b`. -/
-def tA : EdgeTree := ⟨E1, false, fromList [⟨a, [], .star E1, .star⟩, ⟨a, [f], .star E1, .star⟩,
+def tA : EdgeTree := ⟨E1, [], false, fromList [⟨a, [], .star E1, .star⟩, ⟨a, [f], .star E1, .star⟩,
   ⟨a, [g], .exact, .conc T⟩]⟩
 
 -- the strong update keeps `.g`, drops `.f`, and moves the root `*` leaf to a NEW
@@ -2875,23 +3260,23 @@ example : sameSetA ((applyTreeE a tA (⟨a, [], .star (.set [f]), .star⟩)
 
 /-! ### Merge rules and the forbidden union of exclusions -/
 
-def t1 : EdgeTree := ⟨Excl.empty, false, fromList [⟨b, [], .star Excl.empty, .star⟩]⟩
-def t2 : EdgeTree := ⟨.set [h], false, fromList [⟨b, [f], .star (.set [h]), .star⟩]⟩
+def t1 : EdgeTree := ⟨Excl.empty, [], false, fromList [⟨b, [], .star Excl.empty, .star⟩]⟩
+def t2 : EdgeTree := ⟨.set [h], [], false, fromList [⟨b, [f], .star (.set [h]), .star⟩]⟩
 def i0 : PFact := ⟨b, [], .star Excl.empty, .star⟩
 def l0 : Loc := ⟨b, [h], 0⟩
 
 -- rule 1 on two trees with the same key: the union of the facts
-example : sameSetA (toAFacts b (t1.merge1 ⟨Excl.empty, false, fromList [⟨b, [g], .exact, .star⟩]⟩))
+example : sameSetA (toAFacts b (t1.merge1 ⟨Excl.empty, [], false, fromList [⟨b, [g], .exact, .star⟩]⟩))
     (toAFacts b t1 ++ [⟨⟨b, [g], .exact, .star⟩, false⟩]) = true := by decide
 
 -- rule 2 on the same tree: `{h} ∩ {f} = {}`; the continuation `.h` comes back
-def tSameH : EdgeTree := ⟨.set [h], false, fromList [⟨b, [], .star (.set [h]), .star⟩]⟩
-def tSameF : EdgeTree := ⟨.set [f], false, fromList [⟨b, [], .star (.set [f]), .star⟩]⟩
+def tSameH : EdgeTree := ⟨.set [h], [], false, fromList [⟨b, [], .star (.set [h]), .star⟩]⟩
+def tSameF : EdgeTree := ⟨.set [f], [], false, fromList [⟨b, [], .star (.set [f]), .star⟩]⟩
 example : (denAB i0 (toAFacts b (tSameH.merge2 tSameF)) false l0 l0,
     denAB i0 (toAFacts b tSameH ++ toAFacts b tSameF) false l0 l0) = (true, true) := by decide
 
 /-- FORBIDDEN: a union of exclusions across two DIFFERENT trees. -/
-def tUnion : EdgeTree := ⟨t1.excl.union t2.excl, false, merge t1.tree t2.tree⟩
+def tUnion : EdgeTree := ⟨t1.excl.union t2.excl, [], false, merge t1.tree t2.tree⟩
 
 -- it LOSES a pair: (b.h ↦ b.h) is a pair of `t1`, not of the merged tree
 example : denA i0 (toAFacts b t1 ++ toAFacts b t2) false l0 l0 ∧
@@ -2900,11 +3285,75 @@ example : denA i0 (toAFacts b t1 ++ toAFacts b t2) false l0 l0 ∧
   decide
 
 /-- An intersection across two different trees is not exact either: it ADDS a pair. -/
-def tInter : EdgeTree := ⟨t1.excl.inter t2.excl, false, merge t1.tree t2.tree⟩
+def tInter : EdgeTree := ⟨t1.excl.inter t2.excl, [], false, merge t1.tree t2.tree⟩
 def l1' : Loc := ⟨b, [f, h], 0⟩
 
 example : denA i0 (toAFacts b tInter) false l0 l1' ∧
     ¬ denA i0 (toAFacts b t1 ++ toAFacts b t2) false l0 l1' := by
+  rw [denA_iff_denAB, denA_iff_denAB]
+  decide
+
+/-! ### Trees with a mark exclusion (version 5, cleaners) -/
+
+def U : Mark := 6
+
+/-- A tree behind a cleaner of the mark `T`: its abstract mark is `*∖{T}`. -/
+def tX : EdgeTree := ⟨E1, [T], false, fromList [⟨b, [f], .star E1, .starEx [T]⟩,
+  ⟨b, [], .star E1, .starEx [T]⟩, ⟨b, [], .any, .starEx [T]⟩, ⟨b, [h], .any, .conc U⟩,
+  ⟨b, [f, g], .exact, .starEx [T]⟩]⟩
+def tXD : EdgeTree := ⟨Excl.empty, [T], true, fromList [⟨b, [f], .exact, .starEx [T]⟩,
+  ⟨b, [g], .any, .starEx [T]⟩, ⟨b, [], .any, .conc T⟩]⟩
+
+-- the trie stores the flag `*`; `toAFacts` reads it as `*∖{T}`
+#eval toAFacts b tX
+example : sameSetA (toAFacts b tXD) [⟨⟨b, [f], .exact, .starEx [T]⟩, true⟩,
+    ⟨⟨b, [g], .any, .starEx [T]⟩, true⟩, ⟨⟨b, [], .any, .conc T⟩, true⟩] = true := by decide
+
+-- tree form = list form on whole `AFact`s, for trees with a mark exclusion
+example : [tX, tXD].all (fun t => loadEdges.all (fun e =>
+    sameSetA ((applyTreeE b t e.1 e.2).flatMap (toAFacts e.2.base))
+      (applyList (toAFacts b t) e.1 e.2))) = true := by decide
+example : [tX, tXD].all (fun t => storeEdges.all (fun e =>
+    sameSetA ((applyTreeE b t e.1 e.2).flatMap (toAFacts e.2.base))
+      (applyList (toAFacts b t) e.1 e.2))) = true := by decide
+
+/-- The strong update `a.f = b` on a tree with the mark exclusion `{T}`. -/
+def tAX : EdgeTree := ⟨E1, [T], false, fromList [⟨a, [], .star E1, .starEx [T]⟩,
+  ⟨a, [f], .star E1, .starEx [T]⟩, ⟨a, [g], .exact, .conc T⟩]⟩
+
+-- every output tree keeps the mark exclusion `{T}`
+example : (applyTreeE a tAX (⟨a, [], .star (.set [f]), .star⟩)
+    (⟨a, [], .star Excl.empty, .star⟩)).map (fun t => (t.excl, t.mx, t.demand))
+    = [(E1, [T], false), (E1.union ((Excl.set [f]).union Excl.empty), [T], false),
+       (Excl.empty, [T], true)] := by
+  decide
+example : sameSetA ((applyTreeE a tAX (⟨a, [], .star (.set [f]), .star⟩)
+    (⟨a, [], .star Excl.empty, .star⟩)).flatMap (toAFacts a))
+    (applyList (toAFacts a tAX) (⟨a, [], .star (.set [f]), .star⟩)
+      (⟨a, [], .star Excl.empty, .star⟩)) = true := by decide
+
+/-! ### Merge rule 2 for marks and the forbidden union of mark exclusions -/
+
+def lT : Loc := ⟨b, [h], T⟩
+def lU : Loc := ⟨b, [h], U⟩
+def tMT : EdgeTree := ⟨Excl.empty, [T], false, fromList [⟨b, [], .star Excl.empty, .starEx [T]⟩]⟩
+def tMU : EdgeTree := ⟨Excl.empty, [U], false, fromList [⟨b, [], .star Excl.empty, .starEx [U]⟩]⟩
+
+-- rule 2 for marks: `{T} ∩ {U} = {}`; the mark `T` comes back (from `tMU`), and the
+-- mark `U` too (from `tMT`)
+example : (denAB i0 (toAFacts b (tMT.merge2m tMU)) false lT lT,
+    denAB i0 (toAFacts b tMT ++ toAFacts b tMU) false lT lT,
+    denAB i0 (toAFacts b tMT) false lT lT,
+    denAB i0 (toAFacts b (tMT.merge2m tMU)) false lU lU,
+    denAB i0 (toAFacts b tMT ++ toAFacts b tMU) false lU lU) = (true, true, false, true, true) := by
+  decide
+
+/-- FORBIDDEN: a union of mark exclusions. -/
+def tUnionM : EdgeTree := ⟨Excl.empty, tMT.mx ++ tMU.mx, false, tMT.tree⟩
+
+-- it LOSES a pair: (b.h ↦ b.h) with the mark `T` is a pair of `tMU`, not of the merged tree
+example : denA i0 (toAFacts b tMT ++ toAFacts b tMU) false lT lT ∧
+    ¬ denA i0 (toAFacts b tUnionM) false lT lT := by
   rw [denA_iff_denAB, denA_iff_denAB]
   decide
 
@@ -2928,6 +3377,12 @@ end Ex
 #print axioms rule1_den
 #print axioms rule2_eqv
 #print axioms rule2_den
+#print axioms rule2_eqvX
+#print axioms rule2_mark_eqv
+#print axioms rule2_mark
+#print axioms insert_stripF
+#print axioms stepR_markX
+#print axioms applyEdge_eqX
 #print axioms toAFacts_prepend
 #print axioms applyEdge_eq2
 #print axioms resL_spec
@@ -2936,6 +3391,8 @@ end Ex
 #print axioms applyTreeE_inv
 #print axioms applyTreeE_star_normal
 #print axioms applyTreeE_grouped
+#print axioms applyTreeE_mx
+#print axioms applyTreeE_grouped_key
 #print axioms walkG_fst
 #print axioms insert_wf
 #print axioms merge_wf

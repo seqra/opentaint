@@ -18,6 +18,7 @@ open ApSpec
 theorem closed_records_exact {P : Program} {counted : Acc → Bool} {L : Nat}
     {α : MethodId → PFact → PFact} {sinks : List (MethodId × Node × PFact)}
     {roots : List MethodId} (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
+    (hmw : Exact.MarkWF P) (hup : Exact.FiltUp P)
     {M : MethodId} {i : PFact}
     (hi : D P counted L α sinks roots (.init M i))
     (hnoreq : ∀ t, ¬ D P counted L α sinks roots (.req M i t))
@@ -31,8 +32,31 @@ theorem closed_records_exact {P : Program} {counted : Acc → Bool} {L : Nat}
     rcases Coverage.coverage P counted L α sinks roots hwf hα hfl i hi hc with hcv | hrq
     · exact hcv
     · exact absurd hrq (hnoreq _)
-  exact Exact.closed_exact hcov hcomp h0 l
+  exact Exact.closed_exact hmw hup hcov hcomp h0 l
 
 #print axioms closed_records_exact
+
+/-- The same for the VALID end locations (the locations that every type filter accepts): the
+    form for a real type filter (`Exact.closed_exact_valid`). -/
+theorem closed_records_exact_valid {P : Program} {counted : Acc → Bool} {L : Nat}
+    {α : MethodId → PFact → PFact} {sinks : List (MethodId × Node × PFact)}
+    {roots : List MethodId} (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
+    {ok : Loc → Prop} (hmw : Exact.MarkWF P) (hv : Exact.FiltValid P ok) (hbo : Exact.BackOK P ok)
+    {M : MethodId} {i : PFact}
+    (hi : D P counted L α sinks roots (.init M i))
+    (hnoreq : ∀ t, ¬ D P counted L α sinks roots (.req M i t))
+    (hcomp : ∀ g, D P counted L α sinks roots (.edge M i (P.exit M) g) → g.demand = false)
+    {l0 : Loc} (h0 : i.covers l0) (l : Loc) (hok : ok l) :
+    Flow P M l0 (P.exit M) l ↔
+      ∃ g, D P counted L α sinks roots (.edge M i (P.exit M) g) ∧ den i g.fact l0 l := by
+  have hcov : ∀ l0 l, i.covers l0 → Flow P M l0 (P.exit M) l →
+      ∃ g, D P counted L α sinks roots (.edge M i (P.exit M) g) ∧ den i g.fact l0 l := by
+    intro l0 l hc hfl
+    rcases Coverage.coverage P counted L α sinks roots hwf hα hfl i hi hc with hcv | hrq
+    · exact hcv
+    · exact absurd hrq (hnoreq _)
+  exact Exact.closed_exact_valid hmw hv hbo hcov hcomp h0 l hok
+
+#print axioms closed_records_exact_valid
 
 end ApSpec.Closed

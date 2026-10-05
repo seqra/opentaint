@@ -24,6 +24,17 @@
     * version 4 (`emitM`): the contract for concrete added facts `EmitContractConc emit sat`,
       and a mark-copying emission `EmitCopiesMark emit`. Then every object of the run is
       concrete (`concInvR_all`), so the contract holds on the run (`emitOn_of_conc`).
+
+  Version 5 (cleaners and type filters), as in `Coverage`:
+    * a mark that is "abstract" is now a mark that is not concrete (`*` or `*∖x`), in
+      `req_initial_starR`, `reach_strongR` and `reach_strongD`;
+    * the coverage inductions have the cases `clean` (`cleanRes_sound`: a result fact covers the
+      pair, or the rule `reqClean` requests the entry mark) and `filt` (`filt_keeps` with
+      `Program.WF.filtPrefix`). The demanded flow that they give has the same constructor;
+    * the rule `reqUp` needs `climbsB` on the added fact (`climbsB_of_covers`);
+    * the cleaner on a concrete fact gives concrete facts and no request
+      (`cleanRes_mark_conc`, `cleanRes_reqs_abstract`), so a run with a mark-copying emission
+      stays concrete (`concInvR_all`).
 -/
 import ApSpec.Restricted
 import ApSpec.Coverage
@@ -46,10 +57,14 @@ theorem sat_step {sat : PFact → PFact → Bool} (hS : SatContract sat) {i j : 
   · exfalso
     have hm := hS.1 j a.fact hsat
     rcases mark_cases j.mark with hj | ⟨t, hj⟩
-    · rw [applySummary_reqs, applyEdge_reqs_of_star hj] at hq
+    · rw [applySummary_reqs, applyEdge_reqs_of_abs hj] at hq
       cases hq
-    · rw [hj, hst] at hm
-      exact Bool.noConfusion hm
+    · -- A concrete premise mark admits only the same concrete fact mark.
+      rw [hj] at hm
+      cases hfm : a.fact.mark with
+      | conc t' => exact hst t' hfm
+      | star => rw [hfm] at hm; exact Bool.noConfusion hm
+      | starEx _ => rw [hfm] at hm; exact Bool.noConfusion hm
 
 /-- The version-4 emission copies the mark of the added fact. -/
 theorem emitM_copies : EmitCopiesMark emitM := by
@@ -84,6 +99,8 @@ theorem flowR_mono {P : Program} {d1 d2 : MethodId → DemandEdge → Prop}
   | pass _ he hm ih => exact FlowR.pass ih he hm
   | call _ he he1 hd1 _ hdem hdin hdout hp he2 hd2 ih ihc =>
     exact FlowR.call ih he he1 hd1 ihc (h _ _ hdem) hdin hdout hp he2 hd2
+  | clean _ he hcl ih => exact FlowR.clean ih he hcl
+  | filt _ he hl ih => exact FlowR.filt ih he hl
 
 #print axioms flowR_mono
 
@@ -107,6 +124,8 @@ theorem flowR_flow {P : Program} {demand : MethodId → DemandEdge → Prop}
   | step _ he hs ih => exact Flow.step ih he hs
   | pass _ he hm ih => exact Flow.pass ih he hm
   | call _ he he1 hd1 _ _ _ _ _ he2 hd2 ih ihc => exact Flow.call ih he he1 hd1 ihc he2 hd2
+  | clean _ he hcl ih => exact Flow.clean ih he hcl
+  | filt _ he hl ih => exact Flow.filt ih he hl
 
 #print axioms flowR_flow
 
@@ -146,6 +165,11 @@ theorem edgeInvR_all {o : Obj} (h : DRr o) : EdgeInv o := by
     obtain ⟨t1, h1⟩ := ih t ht
     exact transfer_mark_conc h1 hf'
   | pass _ _ _ ih => exact ih
+  | clean _ _ hf' ih =>
+    intro t ht
+    obtain ⟨t1, h1⟩ := ih t ht
+    exact cleanRes_mark_conc h1 hf'
+  | filt _ _ _ ih => exact ih
   | ret _ _ _ ha _ _ _ _ _ hr _ hr' ih _ _ =>
     intro t ht
     obtain ⟨t1, h1⟩ := ih t ht
@@ -168,6 +192,7 @@ theorem edgeInvR_all {o : Obj} (h : DRr o) : EdgeInv o := by
   | answer _ _ _ _ _ _ => trivial
   | reqUp _ _ _ _ _ _ _ _ _ _ => trivial
   | vuln _ _ _ _ => trivial
+  | reqClean _ _ _ _ => trivial
 
 /-- Invariant (b) of `DR`: an edge of a concrete-mark initial fact has a concrete-mark
     final fact. -/
@@ -188,14 +213,21 @@ theorem reqInvR_all {o : Obj} (h : DRr o) : ReqInv o := by
       rw [transfer_reqs_of_conc h1] at hq
       cases hq
   | reqSink _ _ hc _ => exact check_request_star hc
-  | @reqUp _ _ _ _ ic _ _ _ _ _ _ _ hf _ _ _ ha ham _ _ _ =>
+  | @reqUp _ _ _ _ ic _ _ _ _ _ _ _ hf _ _ _ ha hcl _ _ _ =>
     rcases mark_cases ic.mark with hm | ⟨t0, hm⟩
     · exact hm
     · exfalso
       obtain ⟨t1, h1⟩ := edge_concR P counted L demand emit sat restrict recs sinks roots hf hm
       obtain ⟨t2, h2⟩ := applyEdge_mark_conc h1 ha
-      rw [ham] at h2
-      cases h2
+      exact climbsB_abs hcl t2 h2
+  | @reqClean _ i _ _ _ _ _ hf _ hq _ =>
+    rcases mark_cases i.mark with hm | ⟨t0, hm⟩
+    · exact hm
+    · exfalso
+      obtain ⟨t1, h1⟩ := edge_concR P counted L demand emit sat restrict recs sinks roots hf hm
+      exact (cleanRes_reqs_abstract hq).1 t1 h1
+  | clean _ _ _ _ => trivial
+  | filt _ _ _ _ => trivial
   | root _ => trivial
   | start _ _ => trivial
   | step _ _ _ _ => trivial
@@ -207,9 +239,11 @@ theorem reqInvR_all {o : Obj} (h : DRr o) : ReqInv o := by
   | answer _ _ _ _ _ _ => trivial
   | vuln _ _ _ _ => trivial
 
-/-- Invariant (a) of `DR`: every request is on a mark-abstract initial fact. -/
+/-- Invariant (a) of `DR`: every request is on a mark-abstract initial fact. Version 5: the
+    conclusion is "the mark is not concrete" (it was `i.mark = .star`; an emission may give a
+    premise with the mark `*∖x`, and its sink check raises a request). -/
 theorem req_initial_starR {M : MethodId} {i : PFact} {t : Mark}
-    (h : DRr (.req M i t)) : i.mark = .star :=
+    (h : DRr (.req M i t)) : ∀ t', i.mark ≠ .conc t' :=
   reqInvR_all P counted L demand emit sat restrict recs sinks roots h
 
 #print axioms req_initial_starR
@@ -238,6 +272,13 @@ theorem concInvR_all (hcm : EmitCopiesMark emit) {o : Obj} (h : DRr o) : ConcInv
     rw [transfer_reqs_of_conc h1] at hq
     cases hq
   | pass _ _ _ ih => exact ih
+  | clean _ _ hf' ih =>
+    obtain ⟨hi, ⟨t1, h1⟩⟩ := ih
+    exact ⟨hi, cleanRes_mark_conc h1 hf'⟩
+  | reqClean _ _ hq ih =>
+    obtain ⟨_, ⟨t1, h1⟩⟩ := ih
+    exact (cleanRes_reqs_abstract hq).1 t1 h1
+  | filt _ _ _ ih => exact ih
   | added _ _ _ ha ih =>
     obtain ⟨_, ⟨t1, h1⟩⟩ := ih
     exact applyEdge_mark_conc h1 ha
@@ -258,9 +299,7 @@ theorem concInvR_all (hcm : EmitCopiesMark emit) {o : Obj} (h : DRr o) : ConcInv
     exact ⟨hi, t4, by rw [limitF_mark]; exact h4⟩
   | reqSink _ _ hc ih =>
     obtain ⟨⟨t, ht⟩, _⟩ := ih
-    have hst := check_request_star hc
-    rw [ht] at hst
-    cases hst
+    exact check_request_star hc t ht
   | answer _ _ _ _ ih _ => exact ih.elim
   | reqUp _ _ _ _ _ _ _ _ ih _ => exact ih.elim
   | vuln _ _ _ _ => trivial
@@ -378,8 +417,8 @@ theorem coverageR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : SatContr
       · -- The callee raises the request on its initial fact.
         rcases mark_cases a.fact.mark with ham | ⟨t', ham⟩
         · -- The added fact is mark-abstract: the request climbs to the caller.
-          have hup := DR.reqUp hreq hf he rfl he1 ha ham hov
-          rw [den_mark_star hda ham] at hup
+          have hup := DR.reqUp hreq hf he rfl he1 ha (climbsB_of_covers hac rfl ham) hov
+          rw [den_mark_abs hda ham] at hup
           exact .inr hup
         · -- The added fact is concrete: it answers the request.
           have hmk := den_mark_conc hda ham
@@ -389,9 +428,24 @@ theorem coverageR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : SatContr
           rcases ihc _ hans hc' with ⟨g, hg, hdg, hfc'⟩ | hreq'
           · exact .inl (fin _ hans hc' hsat' g hg hdg hfc')
           · exfalso
-            have hst := req_initial_starR P counted L demand emit sat restrict recs sinks roots hreq'
-            rw [answerInit_mark] at hst
-            cases hst
+            exact req_initial_starR P counted L demand emit sat restrict recs sinks roots hreq'
+              l1.mark answerInit_mark
+    · exact .inr hr
+  | @clean M l0 n l n' cl _ he hcl ih =>
+    intro i hi hc
+    rcases ih i hi hc with ⟨f, hf, hd, hfr⟩ | hr
+    · -- A pair that the cleaner does not clean: a result fact covers it, or the cleaner
+      -- requests the entry mark on the initial fact.
+      rcases cleanRes_sound hd hcl with ⟨r, hr, hdr⟩ | ⟨_, hq⟩
+      · exact .inl ⟨r, DR.clean hf he hr, hdr, FlowR.clean hfr he hcl⟩
+      · exact .inr (DR.reqClean hf he hq)
+    · exact .inr hr
+  | @filt M l0 n l n' b may _ he hl ih =>
+    intro i hi hc
+    rcases ih i hi hc with ⟨f, hf, hd, hfr⟩ | hr
+    · -- The filter keeps a fact that covers a location that may exist.
+      exact .inl ⟨f, DR.filt hf he (filt_keeps (hwf.filtPrefix M n b may n' he) hd hl), hd,
+        FlowR.filt hfr he hl⟩
     · exact .inr hr
 
 #print axioms coverageR
@@ -406,24 +460,22 @@ theorem coverage_concR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : Sat
   rcases coverageR P counted L demand emit sat restrict recs sinks roots hwf hE hS hR hfl i hi hc
     with h | hr
   · exact h
-  · exfalso
-    have hst := req_initial_starR P counted L demand emit sat restrict recs sinks roots hr
-    rw [ht] at hst
-    cases hst
+  · exact absurd ht (req_initial_starR P counted L demand emit sat restrict recs sinks roots hr t)
 
 #print axioms coverage_concR
 
 /-! ### 2.4 The vulnerability theorem of `DR` -/
 
 /-- The strengthened reach statement of `DR` (as `Coverage.reach_strong`). The demanded
-    witness is also demanded by the summaries of this run. -/
+    witness is also demanded by the summaries of this run. Version 5: "mark-abstract" is
+    `∀ t, i.mark ≠ .conc t` (it was `i.mark = .star`; an emission may give the mark `*∖x`). -/
 theorem reach_strongR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : SatContract sat)
     (hR : RestrictContract restrict)
     {M : MethodId} {n : Node} {l : Loc} (hRe : ReachR P demand roots M n l) :
     ReachR P (summaryDemand P DRr) roots M n l ∧
     ∃ l0 i f, DRr (.edge M i n f) ∧ den i f.fact l0 l ∧
       ((∃ t, i.mark = .conc t) ∨
-       (i.mark = .star ∧ (DRr (.req M i l0.mark) →
+       ((∀ t, i.mark ≠ .conc t) ∧ (DRr (.req M i l0.mark) →
           ∃ i' f', DRr (.edge M i' n f') ∧ den i' f'.fact l0 l ∧
             ∃ t, i'.mark = .conc t))) := by
   induction hRe with
@@ -448,13 +500,12 @@ theorem reach_strongR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : SatC
         rcases mark_cases a.fact.mark with ham | ⟨t', ham⟩
         · -- The request climbs to the caller. The caller gives a concrete-mark edge, and
           -- its binding is a concrete added fact.
-          have hup := DR.reqUp hreq hf he rfl he1 ha ham (overlapB_of_common hac hjc)
-          rw [den_mark_star hda ham] at hup
+          have hup := DR.reqUp hreq hf he rfl he1 ha (climbsB_of_covers hac rfl ham)
+            (overlapB_of_common hac hjc)
+          rw [den_mark_abs hda ham] at hup
           rcases hdisj with ⟨t, ht⟩ | ⟨_, himp⟩
-          · exfalso
-            have hst := req_initial_starR P counted L demand emit sat restrict recs sinks roots hup
-            rw [ht] at hst
-            cases hst
+          · exact absurd ht
+              (req_initial_starR P counted L demand emit sat restrict recs sinks roots hup t)
           · obtain ⟨i', f', hf', hd', t, ht⟩ := himp hup
             obtain ⟨a', ha', hda'⟩ := bind_in hwf he he1 hd' hd1
             obtain ⟨t1, h1⟩ := edge_concR P counted L demand emit sat restrict recs sinks roots hf' ht
@@ -502,19 +553,59 @@ theorem vuln_foundR (hwf : P.WF) (hE : EmitContractOn DRr emit sat) (hS : SatCon
   · exact ⟨_, DR.vuln hf hs htr⟩
   · have hreq := DR.reqSink hf hs hrq
     rcases hdisj with ⟨t, ht⟩ | ⟨_, himp⟩
-    · exfalso
-      rw [ht] at hist
-      cases hist
+    · exact absurd ht (hist t)
     · obtain ⟨i', f', hf', hd', t, ht⟩ := himp hreq
       rcases check_sound hT hd' hsc with htr' | ⟨_, hist'⟩
       · exact ⟨_, DR.vuln hf' hs htr'⟩
-      · exfalso
-        rw [ht] at hist'
-        cases hist'
+      · exact absurd ht (hist' t)
 
 #print axioms vuln_foundR
 
 end Restricted
+
+/-! ### 2.5 Why the request invariant changed (version 5)
+
+The version-4 conclusion `i.mark = .star` of `req_initial_starR` is false now. An emission that
+gives the premise `*∖[]` (the mark `starEx []`) and a sink at the callee entry give a request on
+that premise: the sink check of a `*∖x` fact raises a request when its initial mark is not
+concrete. With `emitM` this does not occur (the run is concrete, `no_reqR`). -/
+
+namespace Witness
+
+/-- The callee premise with the mark `*∖[]`. -/
+def wJ : PFact := ⟨5, [], .exact, .starEx []⟩
+/-- The sink pattern at the callee entry. -/
+def wS : PFact := ⟨5, [], .exact, .conc 7⟩
+/-- One call from method 0 to method 1; it binds base 0 to base 5. -/
+def wC : Call := ⟨1, [0], [(⟨0, [], .exact, .star⟩, ⟨5, [], .exact, .star⟩)], []⟩
+def wP : Program := ⟨fun _ => 0, fun _ => 1, [(0, 0, Instr.call wC, 1)]⟩
+
+/-- The run of the witness: every demand edge, the emission gives `wJ`, no records. -/
+abbrev wDR : Obj → Prop :=
+  DR wP (fun _ => true) 0 (fun _ _ => True) (fun _ _ => some wJ) (fun _ _ => true)
+    (fun _ _ _ => none) (fun _ _ => False) [(1, 0, wS)] [0]
+
+theorem req_initial_starR_v4_false : wDR (.req 1 wJ 7) ∧ wJ.mark ≠ .star := by
+  have h0 : wDR (.init 0 zeroFact) := DR.root (List.mem_singleton.mpr rfl)
+  have h1 : wDR (.edge 0 zeroFact 0 ⟨zeroFact, false⟩) := DR.start h0
+  have he : ((0 : MethodId), (0 : Node), Instr.call wC, (1 : Node)) ∈ wP.edges :=
+    List.mem_singleton.mpr rfl
+  have he1 : (⟨(⟨0, [], .exact, .star⟩ : PFact), ⟨5, [], .exact, .star⟩⟩ : MicroEdge) ∈
+      wC.toCallee := List.mem_singleton.mpr rfl
+  have ha : (⟨⟨5, [], .exact, .conc zeroMark⟩, false⟩ : AFact) ∈
+      (applyEdge ⟨zeroFact, false⟩ ⟨0, [], .exact, .star⟩ ⟨5, [], .exact, .star⟩).facts :=
+    List.mem_singleton.mpr rfl
+  have h2 : wDR (.added 1 ⟨5, [], .exact, .conc zeroMark⟩) := DR.added h1 he he1 ha
+  have h3 : wDR (.init 1 wJ) :=
+    DR.initR (d := ⟨wJ, none⟩) h2 trivial rfl
+  have h4 : wDR (.edge 1 wJ 0 ⟨wJ, false⟩) := DR.start h3
+  have h5 : wDR (.req 1 wJ 7) :=
+    DR.reqSink h4 (List.mem_singleton.mpr rfl) rfl
+  exact ⟨h5, fun h => MarkA.noConfusion h⟩
+
+#print axioms req_initial_starR_v4_false
+
+end Witness
 
 /-! ## 3. Run 1: the unrestricted closure `D` -/
 
@@ -577,8 +668,8 @@ theorem coverageD (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
       · exact .inl (fin _ (D.initA hadd) hjc hapj g hg hdg hfc')
       · rcases mark_cases a.fact.mark with ham | ⟨t', ham⟩
         · -- The added fact is mark-abstract: the request climbs to the caller.
-          have hup := D.reqUp hreq hf he rfl he1 ha ham hov
-          rw [den_mark_star hda ham] at hup
+          have hup := D.reqUp hreq hf he rfl he1 ha (climbsB_of_covers hac rfl ham) hov
+          rw [den_mark_abs hda ham] at hup
           exact .inr hup
         · -- The added fact is concrete: it answers the request.
           have hmk := den_mark_conc hda ham
@@ -588,9 +679,23 @@ theorem coverageD (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
           rcases ihc _ hans hc' with ⟨g, hg, hdg, hfc'⟩ | hreq'
           · exact .inl (fin _ hans hc' hap' g hg hdg hfc')
           · exfalso
-            have hst := req_initial_star P counted L α sinks roots hreq'
-            rw [answerInit_mark] at hst
-            cases hst
+            exact req_initial_star P counted L α sinks roots hreq' l1.mark answerInit_mark
+    · exact .inr hr
+  | @clean M l0 n l n' cl _ he hcl ih =>
+    intro i hi hc
+    rcases ih i hi hc with ⟨f, hf, hd, hfr⟩ | hr
+    · -- A pair that the cleaner does not clean: a result fact covers it, or the cleaner
+      -- requests the entry mark on the initial fact.
+      rcases cleanRes_sound hd hcl with ⟨r, hr, hdr⟩ | ⟨_, hq⟩
+      · exact .inl ⟨r, D.clean hf he hr, hdr, FlowR.clean hfr he hcl⟩
+      · exact .inr (D.reqClean hf he hq)
+    · exact .inr hr
+  | @filt M l0 n l n' b may _ he hl ih =>
+    intro i hi hc
+    rcases ih i hi hc with ⟨f, hf, hd, hfr⟩ | hr
+    · -- The filter keeps a fact that covers a location that may exist.
+      exact .inl ⟨f, D.filt hf he (filt_keeps (hwf.filtPrefix M n b may n' he) hd hl), hd,
+        FlowR.filt hfr he hl⟩
     · exact .inr hr
 
 #print axioms coverageD
@@ -603,21 +708,19 @@ theorem coverage_concD (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true
     ∃ f, Dr (.edge M i n f) ∧ den i f.fact l0 l ∧ FlowR P (summaryDemand P Dr) M l0 n l := by
   rcases coverageD P counted L α sinks roots hwf hα hfl i hi hc with h | hr
   · exact h
-  · exfalso
-    have hst := req_initial_star P counted L α sinks roots hr
-    rw [ht] at hst
-    cases hst
+  · exact absurd ht (req_initial_star P counted L α sinks roots hr t)
 
 #print axioms coverage_concD
 
 /-- The strengthened reach statement of run 1 (as `Coverage.reach_strong`). The concrete
-    witness is demanded by the summaries of run 1. -/
+    witness is demanded by the summaries of run 1. Version 5: "mark-abstract" is
+    `∀ t, i.mark ≠ .conc t` (it was `i.mark = .star`; an abstraction `α` may give `*∖x`). -/
 theorem reach_strongD (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
     {M : MethodId} {n : Node} {l : Loc} (hRe : Reach P roots M n l) :
     ReachR P (summaryDemand P Dr) roots M n l ∧
     ∃ l0 i f, Dr (.edge M i n f) ∧ den i f.fact l0 l ∧
       ((∃ t, i.mark = .conc t) ∨
-       (i.mark = .star ∧ (Dr (.req M i l0.mark) →
+       ((∀ t, i.mark ≠ .conc t) ∧ (Dr (.req M i l0.mark) →
           ∃ i' f', Dr (.edge M i' n f') ∧ den i' f'.fact l0 l ∧ ∃ t, i'.mark = .conc t))) := by
   induction hRe with
   | root hM hfl =>
@@ -638,13 +741,11 @@ theorem reach_strongD (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
       intro hreq
       have hconc : ∃ a', Dr (.added c.callee a') ∧ a'.covers l1 ∧ a'.mark = .conc l1.mark := by
         rcases mark_cases a.fact.mark with ham | ⟨t', ham⟩
-        · have hup := D.reqUp hreq hf he rfl he1 ha ham (overlapB_of_common hac hjc)
-          rw [den_mark_star hda ham] at hup
+        · have hup := D.reqUp hreq hf he rfl he1 ha (climbsB_of_covers hac rfl ham)
+            (overlapB_of_common hac hjc)
+          rw [den_mark_abs hda ham] at hup
           rcases hdisj with ⟨t, ht⟩ | ⟨_, himp⟩
-          · exfalso
-            have hst := req_initial_star P counted L α sinks roots hup
-            rw [ht] at hst
-            cases hst
+          · exact absurd ht (req_initial_star P counted L α sinks roots hup t)
           · obtain ⟨i', f', hf', hd', t, ht⟩ := himp hup
             obtain ⟨a', ha', hda'⟩ := bind_in hwf he he1 hd' hd1
             obtain ⟨t1, h1⟩ := edge_conc P counted L α sinks roots hf' ht

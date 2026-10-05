@@ -71,14 +71,14 @@ theorem den_shared_excl (b b' : Base) (p q : List Acc) (Ef Et : Excl) (m m' : Ma
       den ⟨b, p, .star Excl.empty, m⟩ ⟨b', q, .star (Ef.union Et), m'⟩ l0 l1 := by
   unfold den
   constructor
-  · rintro ⟨h1, h2, h3, h4, σ, τ, h5, h6, h7, h8, h9⟩
-    refine ⟨h1, h2, h3, h4, σ, τ, h5, h6, CoreAux.empty_admits σ, h8, ?_⟩
+  · rintro ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, h7, h8, h9⟩
+    refine ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, CoreAux.empty_admits σ, h8, ?_⟩
     show (Ef.union Et).admits σ = true
     rw [CoreAux.Excl.admits_union]
     have h7' : Ef.admits σ = true := h7
     rw [h7', h9]
     rfl
-  · rintro ⟨h1, h2, h3, h4, σ, τ, h5, h6, _, h8, h9⟩
+  · rintro ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, _, h8, h9⟩
     have h9' : (Ef.union Et).admits σ = true := h9
     rw [CoreAux.Excl.admits_union] at h9'
     have hEf : Ef.admits σ = true := by
@@ -89,7 +89,7 @@ theorem den_shared_excl (b b' : Base) (p q : List Acc) (Ef Et : Excl) (m m' : Ma
       cases hx : Et.admits σ
       · rw [hx, Bool.and_false] at h9'; exact Bool.noConfusion h9'
       · rfl
-    exact ⟨h1, h2, h3, h4, σ, τ, h5, h6, hEf, h8, hEt⟩
+    exact ⟨h1, h2, h3, h4, hp, σ, τ, h5, h6, hEf, h8, hEt⟩
 
 #print axioms den_shared_excl
 

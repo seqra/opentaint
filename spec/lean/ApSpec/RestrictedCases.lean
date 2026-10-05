@@ -14,10 +14,13 @@
   admits every mark, so `d.din.covers` holds on the round-3 witnesses).
   Part 1 also has the version-4 vectors: the mark-aware emission `emitM`, the meet `meetK`
   and the satisfaction `satO`.
-  Part 4: programs 1 and 2 under the version-4 rules (`emitM`, `satO`, the AGREED
+  Part 4: programs 1 and 2 under the spec rules (`emitM`, `satI` since version 5, the AGREED
           restriction `restrictU`) with the demands of the backward run (concrete mark `T`).
           Both runs find the vulnerability, with no request. Every fact of the runs has the
           concrete mark `T`, so the two rows where `U` and `S` differ do not occur.
+  Round 5: the programs have no cleaner and no type filter (`p1_no_clean`, `p1_no_filt`,
+  `p2_no_clean`, `p2_no_filt`). So the field `filtPrefix` of `Program.WF` holds with no case,
+  and the rules `clean`, `reqClean`, `filt` of `DR` add no object to the closures.
 -/
 import ApSpec.Restricted
 
@@ -277,8 +280,23 @@ def dem1 : MethodId → DemandEdge → Prop := fun m d =>
   (m = 1 ∧ d = ⟨⟨1, [2, 3], .any, .star⟩, none⟩) ∨ (m = 2 ∧ d = ⟨⟨3, [1, 4], .any, .star⟩, none⟩)
 def noRecs : MethodId → PFact × AFact → Prop := fun _ _ => False
 
+/-- Program 1 has no cleaner and no type filter: these edges are not in the program. -/
+theorem p1_no_clean {M n cl n'} (h : (M, n, Instr.clean cl, n') ∈ P1.edges) : False := by
+  cases h with
+  | tail _ h => cases h with
+    | tail _ h => cases h with
+      | tail _ h => cases h with
+        | tail _ h => cases h
+
+theorem p1_no_filt {M n b may n'} (h : (M, n, Instr.filt b may, n') ∈ P1.edges) : False := by
+  cases h with
+  | tail _ h => cases h with
+    | tail _ h => cases h with
+      | tail _ h => cases h with
+        | tail _ h => cases h
+
 theorem p1_wf : P1.WF := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro M n s n' hE e he
     cases hE with
     | head =>
@@ -317,6 +335,8 @@ theorem p1_wf : P1.WF := by
         | tail _ hE => cases hE with
           | head => cases he
           | tail _ hE => cases hE
+  · intro M n b may n' hE
+    exact (p1_no_filt hE).elim
 
 #print axioms p1_wf
 
@@ -328,13 +348,13 @@ def l1 : Loc := ⟨2, [1, 4, 5], 1⟩
 def l2 : Loc := ⟨3, [1, 4, 5], 1⟩
 
 theorem den_src : den zeroFact ⟨1, [2, 3, 1, 4, 5], .exact, .conc 1⟩ zeroLoc l0 :=
-  ⟨rfl, rfl, rfl, rfl, [], [], rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩
 theorem den_cx : den ⟨1, [], st, .star⟩ ⟨1, [], st, .star⟩ l0 l0 :=
-  ⟨rfl, rfl, trivial, rfl, [2, 3, 1, 4, 5], [2, 3, 1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [2, 3, 1, 4, 5], [2, 3, 1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 theorem den_rd : den ⟨1, [2, 3], st, .star⟩ ⟨2, [], st, .star⟩ l0 l1 :=
-  ⟨rfl, rfl, trivial, rfl, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 theorem den_my : den ⟨2, [], st, .star⟩ ⟨3, [], st, .star⟩ l1 l2 :=
-  ⟨rfl, rfl, trivial, rfl, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 
 end Prog1
 
@@ -582,6 +602,10 @@ theorem inv1 {o : Obj} (hD : R1U o) : Inv1 o := by
     | head =>
       exact (by decide : ∀ x ∈ edges1, x.1 = 2 → False) (2, i, 0, f) ih rfl
     | tail _ hs => cases hs
+  -- the program has no cleaner and no type filter
+  | clean _ hE _ _ => exact (p1_no_clean hE).elim
+  | reqClean _ hE _ _ => exact (p1_no_clean hE).elim
+  | filt _ hE _ _ => exact (p1_no_filt hE).elim
 
 end Prog1
 
@@ -613,8 +637,21 @@ def sinks2 : List (MethodId × Node × PFact) := [(0, 2, sink2)]
 def dem2 : MethodId → DemandEdge → Prop := fun m d =>
   m = 1 ∧ d = ⟨⟨3, [2, 3], .any, .star⟩, some ⟨4, [1, 4], .any, .star⟩⟩
 
+/-- Program 2 has no cleaner and no type filter: these edges are not in the program. -/
+theorem p2_no_clean {M n cl n'} (h : (M, n, Instr.clean cl, n') ∈ P2.edges) : False := by
+  cases h with
+  | tail _ h => cases h with
+    | tail _ h => cases h with
+      | tail _ h => cases h
+
+theorem p2_no_filt {M n b may n'} (h : (M, n, Instr.filt b may, n') ∈ P2.edges) : False := by
+  cases h with
+  | tail _ h => cases h with
+    | tail _ h => cases h with
+      | tail _ h => cases h
+
 theorem p2_wf : P2.WF := by
-  refine ⟨?_, ?_, ?_⟩
+  refine ⟨?_, ?_, ?_, ?_⟩
   · intro M n s n' hE e he
     cases hE with
     | head =>
@@ -648,6 +685,8 @@ theorem p2_wf : P2.WF := by
         | tail _ he => cases he
       | tail _ hE => cases hE with
         | tail _ hE => cases hE
+  · intro M n b may n' hE
+    exact (p2_no_filt hE).elim
 
 #print axioms p2_wf
 
@@ -660,13 +699,13 @@ def l2 : Loc := ⟨4, [1, 4, 5], 1⟩
 def l3 : Loc := ⟨2, [1, 4, 5], 1⟩
 
 theorem den_src : den zeroFact ⟨1, [2, 3, 1, 4, 5], .exact, .conc 1⟩ zeroLoc l0 :=
-  ⟨rfl, rfl, rfl, rfl, [], [], rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩
 theorem den_in : den ⟨1, [], st, .star⟩ ⟨3, [], st, .star⟩ l0 l1 :=
-  ⟨rfl, rfl, trivial, rfl, [2, 3, 1, 4, 5], [2, 3, 1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [2, 3, 1, 4, 5], [2, 3, 1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 theorem den_rd : den ⟨3, [2, 3], st, .star⟩ ⟨4, [], st, .star⟩ l1 l2 :=
-  ⟨rfl, rfl, trivial, rfl, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 theorem den_out : den ⟨4, [], st, .star⟩ ⟨2, [], st, .star⟩ l2 l3 :=
-  ⟨rfl, rfl, trivial, rfl, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
+  ⟨rfl, rfl, trivial, rfl, trivial, [1, 4, 5], [1, 4, 5], rfl, rfl, rfl, rfl, rfl⟩
 
 def dd : DemandEdge := ⟨⟨3, [2, 3], .any, .star⟩, some ⟨4, [1, 4], .any, .star⟩⟩
 
@@ -874,6 +913,10 @@ theorem inv2 {o : Obj} (hD : R2U o) : Inv2 o := by
       rw [hn] at hc
       cases hc
     | tail _ hs => cases hs
+  -- the program has no cleaner and no type filter
+  | clean _ hE _ _ => exact (p2_no_clean hE).elim
+  | reqClean _ hE _ _ => exact (p2_no_clean hE).elim
+  | filt _ hE _ _ => exact (p2_no_filt hE).elim
 
 end Prog2
 
