@@ -8,7 +8,11 @@
     * a callee summary edge is applied only after the restriction `restrict` by a demand
       edge of the callee (spec §6.4);
     * the caller applies a summary when its fact SATISFIES the premise (`sat`, spec §4.3);
-    * persisted complete records (`recs`) of earlier runs are applied as they are.
+    * persisted complete records (`recs`) of earlier runs are applied as they are, and can
+      ALWAYS be reused (the user's decision): a record applies when the caller fact satisfies
+      its premise (`sat`) OR when its premise covers the caller fact (`applicable`, the run-1
+      direction). With `satI` alone, a run-1 record with the premise `(arg0, [], *, {}, *)`
+      would never apply to a concrete caller fact such as `(arg0, [f], $, T)`.
 
   The demand edges come from the previous run (in the other direction). They are
   given here in FORWARD orientation: `din` is the entry pattern (D-c, the conclusion of
@@ -255,11 +259,14 @@ inductive DR : Obj → Prop where
       r ∈ (applySummary a j g').facts →
       e2 ∈ c.fromCallee → r' ∈ (applyEdge r e2.1 e2.2).facts →
       DR (.edge M i n' (limitF counted L r'))
-  -- a persisted complete record of the callee
+  -- a persisted complete record of the callee. A record can always be reused (the user's
+  -- decision): it applies if the caller fact satisfies its premise (`sat`), OR if the premise
+  -- covers the caller fact (`applicable`, the run-1 direction). A record is exact (a normal-layer
+  -- edge of an earlier run, `RExact.RecsExact`), so both applications are exact.
   | retRec {M i n f n' c e1 a j g r e2 r'} :
       DR (.edge M i n f) → (M, n, Instr.call c, n') ∈ P.edges →
       e1 ∈ c.toCallee → a ∈ (applyEdge f e1.1 e1.2).facts →
-      recs c.callee (j, g) → sat j a.fact = true →
+      recs c.callee (j, g) → (sat j a.fact = true ∨ applicable j a.fact = true) →
       r ∈ (applySummary a j g).facts →
       e2 ∈ c.fromCallee → r' ∈ (applyEdge r e2.1 e2.2).facts →
       DR (.edge M i n' (limitF counted L r'))

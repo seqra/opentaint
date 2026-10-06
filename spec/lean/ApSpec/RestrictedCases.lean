@@ -18,6 +18,11 @@
           restriction `restrictU`) with the demands of the backward run (concrete mark `T`).
           Both runs find the vulnerability, with no request. Every fact of the runs has the
           concrete mark `T`, so the two rows where `U` and `S` differ do not occur.
+  Part 5: program 3, RECORD REUSE (the rule `retRec` applies a record by `sat` OR `applicable`).
+          The run-1 record `(arg0,.,*,{},*) → (ret,.,*,{},*)` (`p3_run1_record`) applies to the
+          caller fact `(arg0,.f,$,T)`, which does not satisfy it by `satI`, and gives `(r,.f,$,T)`
+          in the normal layer (`p3_reuse`); the sink triggers on it (`p3_found_reuse`). Its
+          exactness is `RMain.p3_reuse_exact`.
   Round 5: the programs have no cleaner and no type filter (`p1_no_clean`, `p1_no_filt`,
   `p2_no_clean`, `p2_no_filt`). So the field `filtPrefix` of `Program.WF` holds with no case,
   and the rules `clean`, `reqClean`, `filt` of `DR` add no object to the closures.
@@ -1117,5 +1122,145 @@ theorem p2_found_M :
   exact DR.vuln e2' (s := sink2) (List.Mem.head _) (by decide)
 
 #print axioms p2_found_M
+
+/-! ## Part 5. Program 3: a persisted record is reused by `applicable` (the user's decision)
+
+```
+root():   x.f = source();  r = id(x);  sink(r.f);    // method 0, the call at node 1, sink at 2
+id(arg0): ret = arg0;                                // method 1, exit node 1
+```
+  Accessor f=1. Bases zero=0, x=1, r=2, arg0=3, ret=4. Mark T=1. L = 3.
+  Run 1 (the closure `D` with `policy1`) serves the added fact `(arg0,.f,$,T)` of `id` with the
+  most abstract fact `(arg0,.,*,{},*)`; its exit record is `(arg0,.,*,{},*) → (ret,.,*,{},*)`
+  (`p3_run1_record`). A later restricted run reuses it. The caller fact (bound into `id`) is
+  `(arg0,.f,$,T)`. The record premise does NOT lie inside it (`satI` is false: with the version-5
+  rule alone the record never applies), but it COVERS it (`applicable` is true). The rule
+  `retRec` applies the record and gives `(ret,.f,$,T)`; the binding back gives `(r,.f,$,T)`, in
+  the NORMAL layer (`p3_reuse`), and the sink triggers on it (`p3_found_reuse`). The run has NO
+  demand: `id` gets no initial fact, so the record is the only summary of `id`. -/
+
+def src3 : Stmt := ⟨[0], [(zeroFact, zeroFact), (zeroFact, ⟨1, [1], .exact, .conc 1⟩)]⟩
+def callId : Call := ⟨1, [1, 2], [(⟨1, [], st, .star⟩, ⟨3, [], st, .star⟩)],
+  [(⟨4, [], st, .star⟩, ⟨2, [], st, .star⟩)]⟩
+def cp3 : Stmt := ⟨[3, 4], [(⟨3, [], st, .star⟩, ⟨3, [], st, .star⟩),
+  (⟨3, [], st, .star⟩, ⟨4, [], st, .star⟩)]⟩
+def P3 : Program := ⟨fun _ => 0, fun m => if m = 1 then 1 else 2,
+  [(0, 0, .stmt src3, 1), (0, 1, .call callId, 2), (1, 0, .stmt cp3, 1)]⟩
+def sink3 : PFact := ⟨2, [1], .exact, .conc 1⟩
+def sinks3 : List (MethodId × Node × PFact) := [(0, 2, sink3)]
+/-- No demand: the restricted run emits no initial fact for `id`. -/
+def noDem : MethodId → DemandEdge → Prop := fun _ _ => False
+
+namespace Prog3
+
+def bx : MicroEdge := (⟨1, [], st, .star⟩, ⟨3, [], st, .star⟩)
+def br : MicroEdge := (⟨4, [], st, .star⟩, ⟨2, [], st, .star⟩)
+
+def Z : AFact := ⟨zeroFact, false⟩
+/-- The source fact `(x,.f,$,T)`, in the normal layer. -/
+def X : AFact := ⟨⟨1, [1], .exact, .conc 1⟩, false⟩
+/-- The caller fact bound into `id`: `(arg0,.f,$,T)`. -/
+def A : AFact := ⟨⟨3, [1], .exact, .conc 1⟩, false⟩
+/-- The run-1 record of `id`: the premise `(arg0,.,*,{},*)` and the conclusion `(ret,.,*,{},*)`. -/
+def J : PFact := ⟨3, [], st, .star⟩
+def G : AFact := ⟨⟨4, [], st, .star⟩, false⟩
+/-- The record application `(ret,.f,$,T)` and the binding back `(r,.f,$,T)`, both normal. -/
+def Rr : AFact := ⟨⟨4, [1], .exact, .conc 1⟩, false⟩
+def Rr' : AFact := ⟨⟨2, [1], .exact, .conc 1⟩, false⟩
+
+theorem hE00 : (0, 0, Instr.stmt src3, 1) ∈ P3.edges := List.Mem.head _
+theorem hE01 : (0, 1, Instr.call callId, 2) ∈ P3.edges := List.Mem.tail _ (List.Mem.head _)
+theorem hE10 : (1, 0, Instr.stmt cp3, 1) ∈ P3.edges :=
+  List.Mem.tail _ (List.Mem.tail _ (List.Mem.head _))
+
+end Prog3
+
+/-- The persisted records of the later run: the one exit record of `id` from run 1. -/
+def recs3 : MethodId → PFact × AFact → Prop := fun m jg => m = 1 ∧ jg = (Prog3.J, Prog3.G)
+
+namespace Prog3
+
+/-! ### The trace, step by step (each step is checked by `decide`) -/
+
+-- the source `(x,.f,$,T)` and the binding into `id`: the caller fact `(arg0,.f,$,T)`
+example : X ∈ (transfer cnt 3 src3 Z).facts := by decide
+example : A ∈ (applyEdge X bx.1 bx.2).facts := by decide
+-- run 1: `policy1` serves it with the most abstract fact, the record premise `J`
+example : policy1 1 A.fact = J := by decide
+example : startFact J = ⟨J, false⟩ := by decide
+example : G ∈ (transfer cnt 3 cp3 ⟨J, false⟩).facts := by decide
+-- THE POINT: the record premise does not lie inside the caller fact (`satI` fails), but it
+-- covers the caller fact (`applicable`, the run-1 direction)
+example : satI J A.fact = false := by decide
+example : applicable J A.fact = true := by decide
+-- the application is EXACT and stays concrete and in the normal layer: `(ret,.f,$,T)`, then
+-- `(r,.f,$,T)` (no `*` tail, no abstract mark)
+example : (applySummary A J G).facts = [Rr] ∧ (applySummary A J G).reqs = [] := by decide
+example : (applyEdge Rr br.1 br.2).facts = [Rr'] ∧ (applyEdge Rr br.1 br.2).reqs = [] := by decide
+example : limitF cnt 3 Rr' = Rr' := by decide
+example : check zeroFact Rr' sink3 = .triggered := by decide
+-- an `[any]` caller fact in the demand layer: the record applies by `applicable` too, and the
+-- result stays `[any]` in the demand layer (no `*` tail with a concrete mark)
+example : satI J ⟨3, [1], .any, .conc 1⟩ = false := by decide
+example : applicable J ⟨3, [1], .any, .conc 1⟩ = true := by decide
+example : (applySummary ⟨⟨3, [1], .any, .conc 1⟩, true⟩ J G).facts =
+    [⟨⟨4, [1], .any, .conc 1⟩, true⟩] := by decide
+
+end Prog3
+
+open Prog3 in
+/-- Run 1 of program 3 has the record `(arg0,.,*,{},*) → (ret,.,*,{},*)` of `id` as an exit edge
+    (in the normal layer), so it is a persisted record of run 1. -/
+theorem p3_run1_record : D P3 cnt 3 policy1 sinks3 [0] (.edge 1 J (P3.exit 1) G) := by
+  have r0 : D P3 cnt 3 policy1 sinks3 [0] (.init 0 zeroFact) := D.root (List.Mem.head _)
+  have e0 : D P3 cnt 3 policy1 sinks3 [0] (.edge 0 zeroFact 0 Z) := D.start r0
+  have e1 : D P3 cnt 3 policy1 sinks3 [0] (.edge 0 zeroFact 1 X) :=
+    D.step e0 (s := src3) hE00 (by decide)
+  have ad : D P3 cnt 3 policy1 sinks3 [0] (.added 1 A.fact) :=
+    D.added (c := callId) (e := bx) (a := A) e1 hE01 (List.Mem.head _) (by decide)
+  have i1 : D P3 cnt 3 policy1 sinks3 [0] (.init 1 J) := by
+    have h := D.initA (α := policy1) ad
+    have e : policy1 1 A.fact = J := by decide
+    rw [e] at h
+    exact h
+  have s1 : D P3 cnt 3 policy1 sinks3 [0] (.edge 1 J 0 ⟨J, false⟩) := D.start i1
+  exact D.step s1 (s := cp3) hE10 (by decide)
+
+#print axioms p3_run1_record
+
+/-- Every record of `recs3` is an exit edge of run 1 (the hypothesis of `RExact.recs_of_D` with
+    `RExact.recs_mono`). -/
+theorem recs3_run1 : ∀ m jg, recs3 m jg → D P3 cnt 3 policy1 sinks3 [0] (.edge m jg.1 (P3.exit m) jg.2) := by
+  intro m jg h
+  obtain ⟨rfl, rfl⟩ := h
+  exact p3_run1_record
+
+#print axioms recs3_run1
+
+/-- The restricted run of program 3: the spec rules, no demand, and the run-1 record. -/
+abbrev R3 := DR P3 cnt 3 noDem emitM satI restrictU recs3 sinks3 [0]
+
+open Prog3 in
+/-- THE POINT OF THE CHANGE. In a restricted run, the run-1 record `(arg0,.,*,{},*) →
+    (ret,.,*,{},*)` applies to the caller fact `(arg0,.f,$,T)` (by `applicable`; `satI` is false)
+    and gives `(r,.f,$,T)` in the NORMAL layer. -/
+theorem p3_reuse : R3 (.edge 0 zeroFact 2 Rr') := by
+  have r0 : R3 (.init 0 zeroFact) := DR.root (List.Mem.head _)
+  have e0 : R3 (.edge 0 zeroFact 0 Z) := DR.start r0
+  have e1 : R3 (.edge 0 zeroFact 1 X) := DR.step e0 (s := src3) hE00 (by decide)
+  have h := DR.retRec (c := callId) (e1 := bx) (a := A) (j := J) (g := G) (r := Rr) (e2 := br)
+    (r' := Rr') e1 hE01 (List.Mem.head _) (by decide) ⟨rfl, rfl⟩
+    (Or.inr (by decide : applicable J A.fact = true)) (by decide) (List.Mem.head _) (by decide)
+  exact h
+
+#print axioms p3_reuse
+
+open Prog3 in
+/-- The reused record finds the vulnerability of program 3 in the normal layer (a complete sink
+    edge), with no demand and no initial fact of `id`. -/
+theorem p3_found_reuse : R3 (.vuln 0 2 sink3 false) :=
+  DR.vuln p3_reuse (s := sink3) (List.Mem.head _) (by decide)
+
+#print axioms p3_found_reuse
 
 end ApSpec.RCases

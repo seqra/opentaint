@@ -16,10 +16,14 @@
                             the records of an initial fact cover every demanded flow from it and
                             denote only real flows;
     * `confirmed_real_S`    a confirmed vulnerability of a restricted run is real.
+  Record reuse (the rule `retRec` applies a persisted record by `sat` OR `applicable`): on program 3
+  of `RestrictedCases` the run-1 record is exact (`p3_recs_exact`) and the edge that its reuse
+  gives by `applicable` denotes only real flows (`p3_reuse_exact`).
 -/
 import ApSpec.RestrictedCore
 import ApSpec.RestrictedCoverage
 import ApSpec.RestrictedExact
+import ApSpec.RestrictedCases
 
 namespace ApSpec.RMain
 open ApSpec
@@ -344,5 +348,78 @@ theorem everyWitness_contract_fails :
   cases this
 
 #print axioms everyWitness_contract_fails
+
+/-! ## Record reuse by `applicable` stays exact (program 3 of `RestrictedCases`)
+
+  The rule `retRec` applies a persisted record when the caller fact satisfies its premise OR when
+  its premise covers the caller fact (`applicable`, the user's decision). Program 3
+  (`RCases.p3_reuse`): the run-1 record `(arg0,.,*,{},*) → (ret,.,*,{},*)` applies to the caller
+  fact `(arg0,.f,$,T)` and gives `(r,.f,$,T)` in the normal layer. The record is an exit edge of
+  run 1 (`RCases.recs3_run1`), so it is exact (`RExact.recs_of_D`), and the edge that the reuse
+  gives denotes only real flows (`RExact.edge_exactR`, unchanged statement). -/
+
+/-- Program 3 has the mark condition of `Exact.MarkWF`. -/
+theorem p3_markWF : Exact.MarkWF RCases.P3 where
+  stmt := by
+    intro M n s n' hE e he
+    cases hE with
+    | head => cases he with
+      | head => rfl
+      | tail _ he => cases he with
+        | head => rfl
+        | tail _ he => cases he
+    | tail _ hE => cases hE with
+      | tail _ hE => cases hE with
+        | head => cases he with
+          | head => rfl
+          | tail _ he => cases he with
+            | head => rfl
+            | tail _ he => cases he
+        | tail _ hE => cases hE
+  toC := by
+    intro M n c n' hE e he
+    cases hE with
+    | tail _ hE => cases hE with
+      | head => cases he with
+        | head => rfl
+        | tail _ he => cases he
+      | tail _ hE => cases hE with
+        | tail _ hE => cases hE
+  fromC := by
+    intro M n c n' hE e he
+    cases hE with
+    | tail _ hE => cases hE with
+      | head => cases he with
+        | head => rfl
+        | tail _ he => cases he
+      | tail _ hE => cases hE with
+        | tail _ hE => cases hE
+
+#print axioms p3_markWF
+
+/-- Program 3 has no type filter. -/
+theorem p3_filtUp : Exact.FiltUp RCases.P3 := by
+  intro M n b may n' hE
+  cases hE with
+  | tail _ hE => cases hE with
+    | tail _ hE => cases hE with
+      | tail _ hE => cases hE
+
+#print axioms p3_filtUp
+
+/-- The record set of program 3 (the run-1 record of `id`) is exact. -/
+theorem p3_recs_exact : RExact.RecsExact RCases.P3 RCases.recs3 :=
+  RExact.recs_mono RCases.recs3_run1 (RExact.recs_of_D p3_markWF p3_filtUp)
+
+#print axioms p3_recs_exact
+
+/-- The edge that the record reuse gives (`RCases.p3_reuse`, applied by `applicable`) denotes only
+    real flows: every pair of `zero → (r,.f,$,T)` at the node after the call is a real flow. -/
+theorem p3_reuse_exact {l0 l : Loc} (hd : den zeroFact RCases.Prog3.Rr'.fact l0 l) :
+    Flow RCases.P3 0 l0 2 l :=
+  RExact.edge_exactR p3_markWF p3_filtUp RExact.satI_mark RExact.restrictU_sub p3_recs_exact
+    RCases.p3_reuse rfl hd
+
+#print axioms p3_reuse_exact
 
 end ApSpec.RMain
