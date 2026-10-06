@@ -26,8 +26,10 @@ javaProjects:
         moduleClasses:
           - /path/to/module2.jar
     dependencies:  # optional
-      - /path/to/dependency1.jar
-      - /path/to/dependency2.jar
+      - path: /path/to/opensearch-rest-client-2.18.0.jar
+        purl: pkg:maven/org.opensearch.client/opensearch-rest-client@2.18.0
+      - path: /path/to/dependency-without-coordinates.jar   # no purl
+      - /path/to/legacy-bare-string.jar                     # legacy: loaded path-only
 goProjects:  # optional
   - projectDir: /path/to/go/module
 ```
@@ -50,7 +52,11 @@ List of Java projects. Each entry describes one Java project (a multi-module bui
   - **moduleSourceRoot** (required): Path to the module's source code directory
   - **packages** (required): List of Java packages contained in this module
   - **moduleClasses** (required): List of paths to compiled classes or JAR files for this module
-- **dependencies** (optional): Array of paths to JAR files the project depends on (typically third-party libraries).
+- **dependencies** (optional): The project's dependency JARs (typically third-party libraries). Each entry is an object:
+  - **path** (required): Path to the JAR file.
+  - **purl** (optional): The dependency's package-URL (`pkg:<type>/<namespace>/<name>@<version>`, e.g. `pkg:maven/org.opensearch.client/opensearch-rest-client@2.18.0` for JVM, `pkg:golang/...` for Go). Omitted for coordinate-less dependencies (e.g. a JAR supplied via `--dependency`).
+
+  For backward compatibility a dependency may also be written as a bare path string (`- /path/to/lib.jar`); it is loaded as a path-only dependency (no purl). New models are generated in the object form above.
 
 ### goProjects (optional)
 List of Go projects. Each entry has a single field, **projectDir**, pointing at the Go module directory.
