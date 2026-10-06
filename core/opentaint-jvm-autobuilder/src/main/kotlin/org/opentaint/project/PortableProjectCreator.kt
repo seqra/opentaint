@@ -139,7 +139,7 @@ class PortableProjectCreator(
         sourceRoot = project.sourceRoot?.let { copySources(ctx, project, it) },
         javaToolchain = project.javaToolchain?.let { copyToolchain(ctx, it) },
         modules = project.modules.map { create(ctx, project, it) },
-        dependencies = project.dependencies.map { copyDependency(ctx, it) },
+        dependencies = project.dependencies.map { it.copy(path = copyDependency(ctx, it.path)) },
         subProjects = project.subProjects.map { create(ctx, it) }
     )
 
