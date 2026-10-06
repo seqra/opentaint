@@ -20,3 +20,6 @@ import ApSpec.RestrictedMain
 import ApSpec.RestrictedStore
 import ApSpec.ND
 import ApSpec.NDExact
+import ApSpec.Backward
+import ApSpec.Statics
+import ApSpec.StaticsIter

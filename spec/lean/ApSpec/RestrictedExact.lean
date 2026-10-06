@@ -17,6 +17,11 @@
       (used in the case `ret`);
     * `RecsExact P recs`: a normal-layer persisted record denotes only real flows
       (used in the case `retRec`). The valid form is `RecsExactV P ok recs`.
+  The rule `retRec` applies a record when the caller fact satisfies its premise (`sat`) OR when
+  the premise covers the caller fact (`applicable`; the user's decision: a persisted record can
+  always be reused). Both give the sub-mark `markSubB j.mark a.mark` (`recApp_markSub`: `SatMark`
+  or `Exact.applicable_markSub`), which is all that the case needs (`summary_ok`), so no theorem
+  statement changes.
   The motive is `EdgeOKR` (the motive `Exact.EdgeOK` for normal-layer edges only): an abstract
   initial mark gives an abstract final mark, and the pairs are real flows. At a summary the
   mark part needs an abstract summary conclusion for an abstract caller fact. For `restrict` it
@@ -152,6 +157,14 @@ theorem satS_mark : SatMark satS := by
 
 #print axioms satU_mark
 #print axioms satS_mark
+
+/-- The application condition of a persisted record (rule `retRec`: `sat` OR `applicable`) gives
+    the sub-mark of the premise mark to the caller fact mark, for every `sat` with `SatMark`. -/
+theorem recApp_markSub {sat : PFact → PFact → Bool} (hsat : SatMark sat) {j a : PFact}
+    (h : sat j a = true ∨ applicable j a = true) : markSubB j.mark a.mark = true :=
+  h.elim (hsat j a) Exact.applicable_markSub
+
+#print axioms recApp_markSub
 
 /-! ## 0''. Fresh marks
 
@@ -500,8 +513,11 @@ theorem DR_edgeOK {ok : Loc → Prop} (hmw : Exact.MarkWF P) (hfo : Exact.FiltOK
         fun l1 l2 hd hok => h2 l1 l2 (hgsub l1 l2 hd) hok⟩
     exact summary_ok hmw hbo hE he1 ha (hsat j a.fact hs) hr he2 hr' ihD ihG'
   | @retRec M i n f n' c e1 a j g r e2 r' _ hE he1 ha hrec hs hr he2 hr' ihD =>
-    -- `RecsExactV`: the motive holds on the record
-    exact summary_ok hmw hbo hE he1 ha (hsat j a.fact hs) hr he2 hr' ihD (hrecs c.callee j g hrec)
+    -- `RecsExactV`: the motive holds on the record. The record applies by `sat` (`SatMark`) or
+    -- by `applicable` (the premise covers the caller fact): both give the sub-mark
+    -- `markSubB j.mark a.fact.mark` that `summary_ok` needs (as in the rule `ret` of `D`)
+    exact summary_ok hmw hbo hE he1 ha (recApp_markSub hsat hs) hr he2 hr' ihD
+      (hrecs c.callee j g hrec)
   | reqSink => trivial
   | answer => trivial
   | reqUp => trivial
@@ -1902,7 +1918,7 @@ theorem dr_edge : DR P cnt 3 demand emit sat restrictU recs [] [0] (.edge 0 zero
   have h1 := DR.start h0
   have hlim : limitF cnt 3 r' = r' := rfl
   have h2 := DR.retRec (a := a) (j := j) (g := g) (r := r) (r' := r') (e1 := bnd) (e2 := back)
-    h1 (List.Mem.head _) (List.Mem.head _) (by decide) ⟨rfl, rfl⟩ rfl (by decide)
+    h1 (List.Mem.head _) (List.Mem.head _) (by decide) ⟨rfl, rfl⟩ (Or.inl rfl) (by decide)
     (List.Mem.head _) (by decide)
   rw [hlim] at h2
   exact h2
