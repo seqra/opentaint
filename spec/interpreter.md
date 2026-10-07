@@ -587,6 +587,10 @@ Go has no exit rules. The summary edge is the fact after each `return`, for a ba
 ### 4.9 Backward run
 
 The backward run applies the AP rules of ap.md §9.2 to the reversed program. This section gives the interpreter part.
+The interpreter gives only the forward forms; the analyzer core makes the backward forms by a reversal: the reversed
+statement summary, the reversed entry and exit rules, and the reversed call plan (analyzer-core.md §4.5, §4.9). The
+call order below is the reversal of the forward call order of §4.5, stage by stage; the reversal drops every type
+filter and every forward-only guard (the alias selection AC3, AC4; the sink trigger of the end facts).
 The backward run is a restricted run (ap.md §6.1). Every fact is concrete and there is no request, because the seeds
 have concrete marks (ap.md §9.2; Lean `BExact.DB_concrete`, `DB_no_request`).
 The implementation asserts both (§5.4).
