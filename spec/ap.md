@@ -9,6 +9,9 @@ are in [`ap-history.md`](ap-history.md). The spec has two parts:
 * [`interpreter.md`](interpreter.md) defines how the analyzer interprets the IR with the AP: the micro edges of the
   statements and of the calls, the aliases, and the order of the rules.
 
+[`analyzer-core.md`](analyzer-core.md) uses both: it defines the analyzer entities, the communication pipeline between
+the methods, the end of a run and the iteration driver with the hand-offs.
+
 The formal model is in [`spec/lean`](lean). Every theorem named here is machine-checked and constructive (§10 defines
 the term, §12 gives the audit). The claims that are argued and not proved are listed in §11.2. This spec states every
 rule in words. A Lean name is only a reference to the model.
@@ -783,8 +786,8 @@ summary (§5.3 events E2 and E4); `applySummary` does not test it again.
   inside its added fact (`RCore.emitM_satI`), and it can be smaller than `a` at the same path. The application is the
   case `below` if `a` is at or below `j`. It is the case `above` if `a` is above `j` (for example `a = (x, ., [any], T)`
   and `j = (x, .f, [any], T)`); then the result is in the demand layer (§4.1 step 3).
-* A RECORD `j → g` (§8.7) applies in the direction in which it was derived when `applicable(j, a)`, in every run
-  after the run that made it (R4). In the other direction it applies through its reversal (R3, §9.1). A record is
+* A RECORD `j → g` (§8.7) applies in the direction in which it was derived when `applicable(j, a)`, or when `a`
+  satisfies `j` by `inside` (restricted runs), in every run after the run that made it (R4). In the other direction it applies through its reversal (R3, §9.1). A record is
   exact (S14), so the result adds no false pair. A record is not restricted.
 
 The mark condition makes the mark gate pass: a summary application never raises a request (`Coverage.summary_step`,
@@ -1227,7 +1230,7 @@ bindings of each call kind (`interpreter.md` §3).
 
 | Side | Owns | Does |
 |---|---|---|
-| CALLER (the method that contains the call) | the subscriptions: (caller edge, call statement, added fact) | binds each caller fact into the callee (micro edges); applies every published summary edge of the callee whose premise its added fact satisfies, and every record whose premise covers it (§4.3); binds back; applies the field limit |
+| CALLER (the method that contains the call) | the subscriptions: (caller edge, call statement, added fact) | binds each caller fact into the callee (micro edges); applies every published summary edge of the callee whose premise its added fact satisfies, and every record that applies to it (§8.7 R4); binds back; applies the field limit |
 | CALLEE (the called method) | the added facts (with the caller edges that made each added fact), the demand patterns of the method, the emission, its initial facts, its edges and summaries, its requests (run 1) | emits the initial facts for each added fact (§6); analyses them; restricts each new summary edge by its demand patterns (restricted runs, §6.4) and then PUBLISHES it to the subscribers; answers and propagates its mark requests (§4.5) and its position requests (§4.10) |
 
 ### 5.3 Call processing
@@ -1236,9 +1239,9 @@ The interpreter gives the order of the steps at a call (`interpreter.md` §4.5).
 at the call statement:
 
 1. RELEVANCE. If `c.base` is not a touched base of the call, the edge passes over the call (call-to-return). The
-   touched bases are those of §3.5 (`interpreter.md` §3.1 lists them for each call kind), with two special cases:
-   in a restricted run the interpreter leaves `S` untouched when the callee, transitively, touches no static
-   (`interpreter.md` §3.3, D15); and the zero base is never touched (THE ZERO FACT below).
+   touched bases are those of §3.5 (`interpreter.md` §3.1 lists them for each call kind), with one special case: the
+   zero base is never touched (THE ZERO FACT below). `S` is touched at every call, in every run (`interpreter.md`
+   §3.3).
 2. BIND. Apply the caller-side type filter of each binding into the callee (`interpreter.md` §3.1, §5.1). For each
    binding edge `e` into the callee: the bound fact `b = concat(c, e)` (a micro edge, §4.2).
 3. SINKS AND SOURCES. The sinks of the call check `b` (§4.9); a triggered sink can add end facts (`interpreter.md`
@@ -1283,7 +1286,7 @@ The order of the events does not change the fixed point (S6). An implementation 
 | # | Event | Actions |
 |---|---|---|
 | E1 | A new added fact `a` of the callee | The callee adds `a` to its added fact store (§8.3). It EMITS the initial facts for `a` (§6): in run 1 the policy fact (§6.2), in a restricted run the emission `a ∩ D-c` for each demand pattern of the callee (§6.3). Each new initial fact is event E3. |
-| E2 | A new link (added fact `a`, caller edge), also a new caller edge of an existing added fact | The callee stores the caller edge with `a` (§8.3). It checks every standing mark request and position request that overlaps `a`, and answers it or propagates it through THIS caller edge (§4.5; §4.10 items 2 and 3). The caller SUBSCRIBES `(caller edge, call statement, a)` (§8.4). It applies every published summary edge with one premise whose premise `a` satisfies (§4.3), and every record whose premise covers `a` (§8.7), then step 5. For a summary with several premises the new link is event E6. |
+| E2 | A new link (added fact `a`, caller edge), also a new caller edge of an existing added fact | The callee stores the caller edge with `a` (§8.3). It checks every standing mark request and position request that overlaps `a`, and answers it or propagates it through THIS caller edge (§4.5; §4.10 items 2 and 3). The caller SUBSCRIBES `(caller edge, call statement, a)` (§8.4). It applies every published summary edge with one premise whose premise `a` satisfies (§4.3), and every record that applies to `a` (§8.7 R4), then step 5. For a summary with several premises the new link is event E6. |
 | E3 | A new initial fact `j` of the callee (an emission, an answer or a position answer) | The callee analyses `j` from its start fact (§6.5). (The interpreter filters the start fact by the context type, `interpreter.md` §4.3.) Each summary edge of `j` is event E4. |
 | E4 | A new summary delta `j → g` of the callee: an exit fact after the exit order of `interpreter.md` §4.7 (exit sources, exit sinks, the removals of that section; no summary for a local base) | In a restricted run the callee restricts it by each demand pattern of the callee (§6.4); a zero-premise summary of the backward run is not restricted (§9.2, the balanced return). It PUBLISHES each result. For a summary with one premise: for each subscription whose added fact satisfies `j`, the caller applies the result (§4.3), then step 5. A summary with several premises goes to event E6. |
 | E5 | A new mark request `(m, i, T)` in the callee `m` (run 1) | The callee stores it (§8.8). For each added fact `a` of `m` that overlaps `i`, and each caller edge of `a`: answer or propagate, as in E2 (§4.5). |
@@ -1321,7 +1324,7 @@ with the rules `initR`, `ret`, `retRec`; for the backward run `Backward.DB`, §9
 2. A callee summary edge applies only after the restriction by a demand pattern of the callee (§6.4), and only to an
    added fact that satisfies its premise by `inside` (§4.3). (The backward run has one exception: the balanced return
    of §9.2.)
-3. A record applies when its premise covers the added fact (`applicable`, §8.7 R4).
+3. A record applies when its premise covers the added fact (`applicable`) or lies inside it (`inside`) (§8.7 R4).
 4. There is no mark request, no position request and no static rule (§4.5, §4.10). The run is concrete (§6.3), so no
    rule needs them. The implementation asserts it. The same holds for the backward run (`BExact.DB_concrete`,
    `DB_no_request`).
@@ -1814,9 +1817,9 @@ candidates; the store then applies the exact test that the section names (`overl
 * On a published summary edge of an initial fact `j`: find the subscribed `a` that satisfy `j` (§4.3), and apply. The
   index is a path trie keyed by `base :: a.path`. In run 1 (`applicable`: `a` at or below `j`) the query is
   `lookupExtensions(j.path)`. In a restricted run (`satI`: `j` inside `a`) the query is `lookupPrefixes(j.path)`.
-  Then the store applies the exact test of §4.3.
+  Then the store applies the exact test of §4.3 (`PipelineStore.deliver_run1`, `deliver_restricted`).
 * On a new subscription: apply every published summary edge of every initial fact that `a` satisfies, and every record
-  whose premise covers `a` (§8.7).
+  that applies to `a` (§8.7 R4).
 * Only this store answers the "satisfies" query.
 
 ### 8.5 Run summary store (HAND-OFF, per method; callee)
@@ -1881,21 +1884,24 @@ Rules:
     never reversed.
 
   An edge whose premise set has two or more members (§4.6) is never added.
-* R2. `byEntry` is a path trie keyed by `base :: premise path`. The lookup is `lookupPrefixes(base :: q)` for the
-  added fact at `q`, and then the `applicable` filter, in every run (`forward_equiv_prefixes`,
-  `applicable_mem_candidatesB`, `extension_half_redundant`). `byExit` is a path trie keyed by `base :: leaf path` for
-  EACH leaf path of the conclusion tree. Its lookup is `lookupPrefixes(base :: q)` for the fact at `q`: a leaf whose
-  reversal covers the fact is at or above it.
-* R3. A reader in the other direction reverses the record by §9.1 and then applies it as R4 says: when the new premise
-  covers the fact (`applicable`). Only a mark-reversible record has a reversal (§1); a record that is not
+* R2. `byEntry` is a path trie keyed by `base :: premise path`. For the added fact at `q`, the lookup is
+  `lookupPrefixes(base :: q)` for `applicable` (`forward_equiv_prefixes`, `applicable_mem_candidatesB`) and
+  `lookupExtensions(base :: q)` for `inside`, then the exact test. The union `around(base :: q)` returns every record
+  that one of the two tests accepts (`PipelineStore.record_lookup`). `byExit` is a path trie keyed by
+  `base :: leaf path` for EACH leaf path of the conclusion tree. Its lookup is `around(base :: q)` for the fact at
+  `q`: a leaf whose reversal covers the fact is at or above it, and a leaf whose reversal lies inside the fact is at or
+  below it (`PipelineStore.record_lookup`, with the reversed premise as the key).
+* R3. A reader in the other direction reverses the record by §9.1 and then applies it as R4 says (the reversed
+  premise is looked up in `byExit`, then tested as in R4). Only a mark-reversible record has a reversal (§1); a record that is not
   mark-reversible is not read in the other direction. Every record whose premise has the Empty exclusion and that is
   mark-reversible reverses exactly (`Reverse.rev_exact_of_empty_premise`), so every mark-reversible forward record
   reverses exactly (§9.1). A reversed backward record has no type filter (the backward run does not type-filter): an
   expected false-positive source (§11.1). A normal backward summary with a non-zero premise reverses into an exact
   forward record (`BExact.rev_record_exact`, `revRecs_exact`, `revRecs_exactM`; under S11 (c): without it a backward
   summary is not a reversed flow, `BExact.CexZeroBack.cex_rec`).
-* R4. A record applies to an added fact when its premise covers the fact (`applicable`, §4.3), in every run after the
-  run that made it, IN THE SAME DIRECTION (run 1 is the first run, so it reads no record). A record is exact (S14), so
+* R4. A record applies to an added fact when its premise covers the fact (`applicable`, §4.3) or lies inside it
+  (`inside`, §4.3), in every run after the run that made it, IN THE SAME DIRECTION (run 1 is the first run, so it
+  reads no record). Lean: rule `retRec` (`sat ∨ applicable`). A record is exact (S14), so
   it adds no false pair. For the records of a forward run this is proved run by run: a normal edge of run 1 or of a
   forward restricted run is exact when the records that the run reads are exact (`RExact.recs_of_D_valid`,
   `recs_of_DR_valid`; for programs without type filters `recs_of_D`, `recs_of_DR`; the union of two record sets,
@@ -2272,7 +2278,7 @@ analysis keeps their results in the normal layer and does not refine them.
 | conclusion subsumption (§8.1) | the dropped pairs are pairs of the kept fact (`subsumes_sound`) | the local step is proved; the composition is argued |
 | merge rules 1 and 2, also for marks (§3.3, T1, T2, T2') | exact (`rule1_mem`, `rule2_den`, `rule2_mark`, `merge_inter`, `merge_mark_inter`) | proved |
 | the T5 fold | the denotation does not change | argued |
-| persisted records (R4) | a normal edge has no false pair; adding edges keeps coverage (rule `retRec`, with `applicable`) | proved for one forward run under S14 (`RExact.recApp_markSub`, `RMain.p3_reuse_exact`); the composition over the run sequence and the backward records are argued (the list below) |
+| persisted records (R4) | a normal edge has no false pair; adding edges keeps coverage (rule `retRec`, with `applicable` or `satI`) | proved for one forward run under S14 (`RExact.recApp_markSub`, `RMain.p3_reuse_exact`); the composition over the run sequence and the backward records are argued (the list below) |
 | W6 (`[any]` always in the demand layer) | a layer refinement: the W6 run has the same facts, with the same or a raised layer (`W6.D_le_D6`, `D6_le_D`, `DR_le_DR6`, `DR6_le_DR`) | proved for `D` (under `W6.SummaryStar`, which `W6.summaryStar_policy` gives for the run-1 policy) and for `DR` (under `W6.RestrictLE` and `W6.ExactInitConc`, which `W6.restrictU_LE` and `W6.DR_eic` give): soundness, exactness, confirmation and the iteration (§10.3). Argued for `Statics.DS`, `ND.DN` and the backward run |
 
 * The backward run is modelled as the closure `Backward.DB` (the rules of `DR` on the reversed program, with the zero
@@ -2342,14 +2348,8 @@ analysis keeps their results in the normal layer and does not refine them.
   * The effective mark of the sink check (§4.9). The model `check` reads the effective mark (§1), so it also triggers
     for an abstract `f.mark` under a concrete `i.mark`. This case does not occur (`Coverage.edge_conc`); the
     implementation asserts it.
-  * The record application (§8.7 R4). The model rule `retRec` applies a record when the run's satisfaction OR
-    `applicable` holds. The implementation uses `applicable` only. A record only adds edges, so fewer applications keep
-    the coverage, and each application is exact.
   * The type filters of the backward run (§9.2). The model keeps the type filters in the backward run; the
     implementation drops them. This only adds backward flows, so it only enlarges the demand.
-  * The static base at a call in a restricted run (§5.3 step 1). The model call always touches `S`; the interpreter
-    leaves it untouched when the callee touches no static (`interpreter.md` D15). This keeps the theorems only over
-    the final call graph (gap G5).
 * The interpreter (`interpreter.md`) is outside the model, except through S1, S2, S5 and S7 to S13. Its known gaps are
   listed in `interpreter.md` §0.1. The reading of a negated mark literal as true (S1) is not modelled: the model has no
   rule conditions.
@@ -2382,6 +2382,7 @@ analysis keeps their results in the normal layer and does not refine them.
 | `Exact.lean`, `Invariant.lean`, `Closed.lean`, `Confirmed.lean`, `RestrictedExact.lean` | Exactness, invariants, the records of a request-free initial fact, confirmed vulnerabilities. |
 | `Tree.lean`, `Store.lean`, `Subsume.lean`, `RestrictedStore.lean` | Concept against optimization. |
 | `Reverse.lean` | Reversal. |
+| `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`, `PipelineStore.lean`, `PipelineDriver.lean` | The analyzer pipeline of `analyzer-core.md` (its §12): the no-loss theorem, the encodings of the closures, the index lookups, the driver. |
 
 Lean names. A qualified name `F.x` in this spec names the declaration `x` in the namespace `ApSpec.F`, or in the file
 `F.lean`. The short namespaces: `RCore` is `RestrictedCore.lean`, `RCov` is `RestrictedCoverage.lean`, `RExact` is

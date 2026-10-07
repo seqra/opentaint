@@ -27,3 +27,8 @@ import ApSpec.NDConfirmed
 import ApSpec.W6
 import ApSpec.StaticsConfirmed
 import ApSpec.BackwardExact
+import ApSpec.Pipeline
+import ApSpec.PipelineProofs
+import ApSpec.PipelineAP
+import ApSpec.PipelineDriver
+import ApSpec.PipelineStore

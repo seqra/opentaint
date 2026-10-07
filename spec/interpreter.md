@@ -77,7 +77,6 @@ the expected false-positive sources (G7, G8, and the type filter on a `*` fact).
 | G2 | The `S` facts that an exit sink read are dropped (the global-state rule), and the entry marks on zero-premise `this`/`arg` facts are removed. | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive |
 | G3 | The cleaners run before the callee body. | §4.5 step 5.1 | a sink inside the body of the cleaner method sees the cleaned fact |
 | G4 | The rules come from the method that the call names, not from the resolved override. | §3.6 | a sink or source on an override is missed |
-| G5 | The static base is not touched at a call in a restricted run when the callee touches no static (D15). | §3.3 | sound only over the final call graph, also the lambdas and closures that §3.9 resolves later |
 | G6 | The mark policy and the policy cases of the type filter. | §5.1 | they can drop a real flow (outside ap.md S5) |
 | G7 | The write at an alias is weak (A3, AC2). | §2.5, §3.8 | precision: the old content of the alias path survives (sound if an alias does not hold); an expected false-positive source (ap.md §11.1) |
 | G8 | A constructor call keeps the caller facts that it overwrites. | §3.5 | precision: a weak update of the receiver and the arguments; an expected false-positive source (ap.md §11.1) |
@@ -324,11 +323,10 @@ is also an argument (`r = m(r)`), its argument binding carries the fact. The lhs
 
 ### 3.3 Statics and the zero fact
 
-* `S.* → S.*` in both directions, with no filter. In run 1 `S` is touched at every call: the static fact comes back
-  only through the callee summaries (the identity summary of a callee that does not touch statics). In a restricted
-  run `S` is NOT touched when the callee, transitively, touches no static; the static fact then passes over the call.
-  This is the deviation D15: in the model call (ap.md §3.5), `S` is always touched. It needs the final call graph: a
-  callee that is resolved later (§3.9) can touch a static (G5).
+* `S.* → S.*` in both directions, with no filter. `S` is touched at every call, in every run, as in the model call
+  (ap.md §3.5): the static fact comes back only through the callee summaries. A callee that touches no static gives
+  its identity summary. In run 1 it is a normal summary edge, so it is a record in every later run (ap.md §8.7), and
+  it gives the static fact back with no special rule at the call.
 * The zero fact. No call binding touches the zero base, so the zero fact passes over every call. It is also bound into
   every resolved callee by `zero.* → zero.*` (the zero fact `(zero, [], $, {}, zeroMark)` is below this premise), as
   today. A binding is a `*`-to-`*` edge (I4), so the zero binding is `zero.* → zero.*`. The form
@@ -851,7 +849,6 @@ The columns "Today" use today's notation (§0).
 | D12 | `[any]` fact with a primitive-tracking mark on a primitive base | kept as `$` | kept as `[any]` | the filter never changes a tail (precision only) |
 | D13 | filter of the caller content under `*` in the summary application | `AccessTree.concat` filters by the path type | none | the filter acts on bases at fixed points; precision only (Q3) |
 | D14 | exit compatibility filter (`JIRMethodSummaryEdgeProcessor`) | removes `*` at incompatible fields | none | the same (Q3) |
-| D15 | static base at a call in a restricted run | always touched (as in the model call of ap.md §3.5) | not touched when the callee touches no static (§3.3) | the static fact does not enter a callee that touches no static; needs the final call graph (G5) |
 | D16 | depth gate, `[any]` depth charge in the step | `INITIAL_ALLOWED_FACT_DEPTH`, `+10,000` | the field limit only | ap.md §4.4 |
 | D17 | rules on a static position (JVM) | applied as written | the mapping of §1.4: an `[any]` target on a class position, a pass rule from or to a class position, a `ContainsMarkOnAnyField` literal in a rule with a class target, and `RemoveAllMarks(P.AnyField)` on `S` are rule errors; `RemoveAllMarks` on `S`, at any depth, is the kill of a strong write | a static access always names a field, a pass rule is a handcrafted summary, and the construction rules of I12 must hold |
 | D18 | pass rule with an `AnyField` position | the content below the any-field node of `P` is copied below `Q` | an `[any]` premise or target (§4.1): an uncorrelated result in the demand layer (W6) | the field that the rule skips is not known, so a correlated edge does not cover the flow; precision only |
