@@ -94,16 +94,16 @@
       `restrictTreeU_mx`, `restrictTreeW_mx`, `restrictTreeE_mx`: the result tree has the
       mark exclusion of the input tree (and its exclusion and layer). `rC_markX`: the walk
       does not read the marks, so it commutes with the read `markX mx` of the stored flag
-      `*`; the exactness theorems above keep their statements (§4.2a, checked).
-    * Version 4 (`emitM`, §2.5): `emitM_local`, `emit_complete_M`, `emit_completeK_M`,
+      `*`; the exactness theorems above keep their statements (checked).
+    * The spec emission (`emitM`, spec §6.3): `emitM_local`, `emit_complete_M`, `emit_completeK_M`,
       `emit_lookup_equiv_M`, `emit_lookup_equivK_M`, `initR_premise_equiv_M`: as for
       `emitS`/`emitU`. The cost note `emitM_exact_prefix`: an exact added fact is emitted only
       from a chain at or above its path, so the prefix walk alone is complete for it
       (`emit_complete_M_exact`, `emit_lookup_equiv_M_exact`, `initR_premise_equiv_M_exact`,
       `emitM_exact_cost`). The version-3 tables have the same property
       (`emitS_exact_prefix`, `emitU_exact_prefix`). A `*` or an `[any]` added fact needs the
-      subtree half (§4.4, checked). The lookup equivalences are on membership: the index
-      gives the facts in another order than the scan (§4.4, checked).
+      subtree half (checked). The lookup equivalences are on membership: the index
+      gives the facts in another order than the scan (checked).
 
   All proofs are constructive (only `propext` and `Quot.sound`).
 -/

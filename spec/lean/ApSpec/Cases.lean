@@ -198,7 +198,7 @@ example : (applyEdge (cf b [] (star E1) .star) (pf b [] .exact .star) (pf a [] .
 example : (applySummary (cf b [] (star .univ) .star) (pf b [] .exact .star) ⟨pf a [] .exact .star, true⟩).facts
     = [⟨pf a [] .exact .star, true⟩] := by decide
 
-/-! ### the abstraction choices satisfy (A1) -/
+/-! ### the abstraction choices satisfy the contract C1 -/
 
 -- a fact is applicable to itself (also an [any] fact)
 example : applicable (pf x [f] .any (.conc T)) (pf x [f] .any (.conc T)) = true := by decide
@@ -281,7 +281,7 @@ example : (⟨pf r0 [] .exact (.conc T2), true⟩ : AFact).complete = false := b
 example : (⟨pf a [] .any (.conc T), false⟩ : AFact).complete = false := by decide
 example : (cf a [] (star E1) .star).complete = true := by decide
 
-/-! ### the abstraction policy (spec §6.1, §6.2) satisfies (A1) -/
+/-! ### the abstraction policy (spec §6.1, §6.2) satisfies the contract C1 -/
 
 def dem : MethodId → List PFact := fun _ => [pf x [f] .any .star]
 -- zero serves zero

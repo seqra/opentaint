@@ -148,3 +148,77 @@ The resolved questions of `interpreter.md` §8. The open questions stay there.
 | Q7 | The constructor rule (`interpreter.md` §3.5) keeps the caller facts that the constructor overwrites. Keep this ad-hoc weak update? | RESOLVED (user decision of 2026-10-06): kept as on the main branch. It is an expected false-positive source (gap G8, ap.md §11.1). |
 | Q8 | The zero fact at a call. | RESOLVED: the zero fact passes over every call (the zero base is never touched) and enters the callee by `zero.* → zero.*`; there is no binding back (ap.md §5.1, `interpreter.md` §3.3). |
 | Q9 | Precision of the alias edges. | RESOLVED: every micro edge, also an alias edge, is precise and complete (I9, A6, F50); the alias analysis must give exactly the aliases that hold. |
+| Q11 | Rules on a static position (`interpreter.md` §1.4). | RESOLVED (2026-10-06): an `[any]` target on a bare class position is a rule error; a pass rule from or to a bare class position is a rule error (a pass rule is a handcrafted summary; no data flows from or to a bare class); a pass rule between static fields is allowed; `RemoveAllMarks` on a static field is the kill of a strong write (no mark enumeration); a rule position deeper than a static field needs no rule (a sink raises the ordinary mark request; below the static field the ordinary rules apply). The backward run needs no liveness drop (an optimization for later). |
+
+## Removed from interpreter.md in the self-containedness pass
+
+The items below were removed from `interpreter.md` or rewritten there. The right column gives the place of the rule now.
+
+| Item | Removed text | Now |
+|---|---|---|
+| Q6 | "The summary rewriter can raise a request on the caller premise (§5.2). The alternative is no request and a result in the demand layer. Confirm." | RESOLVED (already decided): the rewriter raises the request on the CALLER premise (`interpreter.md` §5.2, §5.4). |
+| Status line | "(version 5)" | Removed: history wording. Section 1 of this file lists the versions. |
+| §3.3 | "The `$` form `zero.$ → zero.$` is not well formed: a binding into the callee is a `*`-to-`*` edge." | The remark applies to bindings only (`interpreter.md` §3.3, I4). `zero.$ → zero.$` is the keep edge of a statement that touches the zero base (I11, the rule statement of a call in §4.1). |
+| §4.1, source at a call | The keep edges `zero.$ → zero.$` and `Q.* → Q.*` as a part of the source edges. | `interpreter.md` §4.1, THE RULE STATEMENT OF A CALL: it keeps the zero fact and has no other keep edge, so a read fact does not pass over the call through it (as today: a source rule gives only its targets). |
+| §4.5 | The Kotlin form `callStep` (its helpers `CallStmt`, `Premise`, `filter(..)(c)`, `callerBase`, `may`, `enter`, `applyEdge` were not defined). | The numbered steps of `interpreter.md` §4.5. |
+| §2.1 | The Kotlin forms `strongKeep`, `weakKeep` over the undefined types `MicroEdge`, `star()`, `Base`. | Rewritten over the types of ap.md §3.4 and `PathEdge` of ap.md §4.1. |
+| §0 | The notation table. | ap.md §1 (NOTATION); `interpreter.md` §0 keeps `#i`, `<G>` and the notation of the "Today" columns. |
+| D7 | "decision: the same placement in both languages" | D7 keeps the reason without the word "decision". |
+| §8 | "The resolved questions (Q4, Q5, Q7, Q8, Q9) are in ap-history.md §5." | A pointer to this file; Q6 is in this section. |
+
+## Removed from ap.md in the self-containedness pass
+
+The items below were removed from `ap.md` or rewritten there. The right column gives the place of the rule now.
+
+| Item | Removed text | Now |
+|---|---|---|
+| Status line | "design spec for phase 1 of bidirectional-task.md ("New AP with all required storages"), version 5" | History wording. Section 1 of this file lists the versions. |
+| §0 | "The contract of the backward run is in §10.7." | Contract B is stated in words in `ap.md` §6.6. |
+| §1, layer | "The demand layer of premise `i` is written `i~`; of the zero fact, `Zero~`." (and "demand (`~`)" in §4.2, "the `~` premise" in §6.5) | The notation was not used elsewhere. Removed. |
+| §1, normal edge | "(Lean: `AFact.complete`, which also excludes `[any]`; with W6 the two agree)" | `ap.md` §11.2 (the implementation against the model). |
+| §2.2 | "Only a field write (a kill) makes it larger." | "Only a strong field write makes it larger." The word KILL keeps one meaning: `ap.md` §4.2 step 4. |
+| §2.3, W6 | "W6 is a rule of the implementation. The model keeps an `[any]` conclusion possible in the normal layer. ... In the model a normal-layer `[any]` needs an `[any]`-target micro edge on an exact derivation." | `ap.md` §11.2. §2.3 keeps the normative consequences. |
+| §2.3, Universe | "In the model, `Excl.univ` still exists: it encodes a `$` premise in the operation tables (`tailExcl`)." | The term Universe: `ap.md` §1; the model note: `ap.md` §11.2. |
+| §4.1 | "a `$` premise has no `*` target (`interpreter.md` I7)" | The rule is part of S8 (`ap.md` §0.1). |
+| §4.2 | "The cases of bidirectional-task.md §1 (checked by `decide` in `Cases.lean`)" | A task-file reference used as a definition. The table is in `ap.md` §4.2. |
+| §4.3 | "The overlap test (`satO`) is sound too, but then a precise fact reads the demand-layer summaries of a coarser sibling premise, and a false demand vulnerability can survive every run (not modelled)." | A rejected alternative (version 4, review M2). The rule is `inside` (`ap.md` §4.3). |
+| §4.4 | "There is no `[any]` depth charge and no fact-depth gate" | `ap.md` §7.6 (the `MethodAnalyzer` row). §4.4 keeps "the field limit is the only depth bound". |
+| §4.5 | "ANSWER (bidirectional-task.md §4)." | A task-file reference; the answer rule is in `ap.md` §4.5. |
+| §4.5 | "In run 1 only the policy (§6.2) makes such premises. So every request premise of run 1 is a policy fact `(x, [], *, {}, *)`." | False with statics: a position answer `(S, p, *, {}, *)` is a request premise too (`ap.md` §4.5, §4.10). The same correction in §13 item 9. |
+| §4.7 | "The model `cleanRes` also raises the request `T` in the first row when `T ∈ X`. The implementation does not raise it: ..." | `ap.md` §11.2. |
+| §4.7 | "(Today's `DeepAccessorExclusion` is tied to an abstraction point at a depth; it is lost when the field limit cuts the path.)" | `ap.md` §7.6 (the `DeepAccessorExclusion` row). |
+| §4.8 | "as today (an Accept keeps the whole subtree)"; "(today: the caller content under a callee `*`, and the exit compatibility filter)" | Comparisons with today's code: `interpreter.md` D13, D14. |
+| §4.9 | "(The model `check` reads the effective mark (§1), so it also triggers for an abstract `f.mark` under a concrete `i.mark`; this case does not occur.)" | `ap.md` §11.2. |
+| §4.9 | "This covers bidirectional-task.md §2:" | "Examples:". |
+| §4.10 | "The root keep edge `S.* →_{<C>} S.*` is at the root: it updates the exclusion, as on the main branch;" | History wording ("as on the main branch") removed. |
+| §4.10 | The closed list of the fire points (a read, the class keep edge of a write, a sink). | The general rule of the model (`Statics.genFireB`): every statement micro edge with its premise on `S` strictly below an identity static `*` edge, and every sink pattern on `S` strictly below it (`ap.md` §4.10 item 1). |
+| §4.10 | "Construction rules (`Statics.SWF`), all true for the interpreter: ..." | `ap.md` S12 (an assumption) and `interpreter.md` I12. The interpreter rules on a `ClassStatic` position do not all satisfy it today (`interpreter.md` Q11). |
+| §4.10 | The proof paragraph of "AFTER RUN 1 NO STATIC RULE IS NEEDED" with the list of `StaticsIter` theorems and the worked programs. | `ap.md` §10.8. §4.10 keeps the rule and a pointer. |
+| §5.1 | "(The form `zero.$ → zero.$` is not a `*`-to-`*` binding, so it is not well formed.)" | `ap.md` §3.5: a call binding has the premise mark `*` (S10), so the zero binding is `zero.* → zero.*`. A statement that touches the zero base keeps the zero fact by the micro edge from the zero fact to itself (S11 (d)). |
+| §5.1 | The concrete call semantics. | `ap.md` §3.5 (CALL STEP); §5.1 is a pointer. |
+| §5.3 step 5 | "The caller binds each summary result back (micro edges), applies the summary rewriter and the aliases" | Wrong order. The rewriter comes first, in callee coordinates (`ap.md` §5.3 step 5, `interpreter.md` §4.5 step 6). |
+| §6.1 | The contracts (E1), (E2), (E3), and the references "the satisfaction contract (§4.3)" and "the restriction contract (§6.4)", which those sections did not state. | `ap.md` §6.1: C1 to C5, all stated in words. The events of §5.3 keep the names E1 to E7. |
+| §6.3 | "Programs 1 and 2 (`RestrictedCases.lean`) are two programs where an emission that ignores the marks loses a real flow." | Not what the model shows. Program 1 is the example of the emission (`ap.md` §6.3), program 2 the example of the restriction (`ap.md` §6.4). |
+| §6.3 | "The mark `M` of the entry pattern is `*` or `T`, never `*∖X`." | A backward entry pattern can have `*∖X` (a run-1 summary conclusion); it counts as `*` (`ap.md` §6.3, Lean `markMatchB`). |
+| §6.4 | "In a concrete run this restriction gives the same run as the restriction `restrictS`, which keeps a `*` conclusion above `D-p`, and the contract of `restrictS` holds (...). So the restriction contract of §10.7 holds for the run." | The restriction contract C5 (`ap.md` §6.1). `restrictS` is only an auxiliary rule of the proof (`ap.md` §10.7). |
+| §6.4 | The names `S = (S-p → S-c)` and `R = (R-p → R-c)`. | `j → g` and `j → g'`. The letter `S` names only the static base now (§7.3 uses `U` for a subtree). |
+| §8.6 | "the edges of run `n + 1` on the paths from its seeds (the vulnerabilities of forward run `n`): demand-layer edges, reversed records and the zero edges (§9.2, contract B)" | Inconsistent with `Backward.demOf`. The hand-off is defined once, in `ap.md` §9.2. |
+| §8.10 | "The vulnerabilities of a backward run only make the demand of the next run; they are not in the report." | A backward run reports no vulnerability (`ap.md` §9.2, the backward sink role). |
+| §9.2 | "The backward run applies no type filter (as on the main branch; the model keeps the filters, which only makes its demand smaller, §11.2)." | `ap.md` §9.2 states the rule; `ap.md` §11.2 the model difference. |
+| §10.3 | "(not used by the analysis)" for `Closed.closed_records_exact`. | Removed. |
+| §10.7 | "`B_rep_fails_general` ... in general its mark-blind exit is too weak (counter-example), so the mark-aware form is used." | The reason for the mark-aware form of contract B. `ap.md` §6.6 states the form that is used. |
+| §12 | "the location-only rules of earlier versions (`ap-history.md`)" | "auxiliary rules that some proofs use". |
+| §7.6, §8.1, §13 | "The phase-3 prescan", "(phase 5)", "(phase 2 gate)" | The term prescan is in `ap.md` §1; the phases have names. |
+| §8.9 | "(today's `TaintSinkTracker` assumptions)" | `ap.md` §7.6 (the `TaintSinkTracker` row). |
+
+## Removed in the final review pass (self-containedness and proof consistency)
+
+| Item | Removed text | Now |
+|---|---|---|
+| `interpreter.md` D17 | "(user decision)" as the reason for the static rule errors | The reason is the construction rules of `interpreter.md` I12 (`ap.md` S12). The decision is a design decision of the static rule. |
+| `interpreter.md` G1, `ap.md` §11.2 | "Out of scope for now", "Exceptions are out of scope for now" | "Out of scope". |
+| `interpreter.md` §1.4 | "'The marks that the rules use' is the finite set of the concrete marks that occur in the loaded rule set." | The term was not used. Removed. |
+| `ap.md` §4.9 | The second copy of "The weaker condition 'the premise is exact' is not enough (`Confirmed.weak_support_gap`, a proved counter-example)." | One copy, with the name `Confirmed.Weak.weak_support_gap`. |
+| `ap.md` §8.2 | "`initials: Map<InitialAp, Flags>`, with `class Flags(var supported: Boolean)`" | Support is a property of a premise SET (`ap.md` §4.9 condition 3): `supported: Set<PremiseKey>`. |
+| `ap.md` §7.1, §4.6, §11.2 | "Empty: the zero fact"; "`{}` for the zero premise"; "this spec keeps SETS and drops the zero premise" | The zero fact is a premise like every other initial fact; the edge is named by its premises that are not the zero fact (`ap.md` §4.6). |
+| `ap.md` §0.1, §4.9, §11.2 | The run-1 confirmation with the static rule, the backward records and the backward concreteness written as proved | Argued, listed in `ap.md` §11.2 (ARGUED, NOT PROVED). |
