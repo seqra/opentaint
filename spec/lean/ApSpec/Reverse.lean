@@ -47,9 +47,9 @@
     6. `Program.rev` (statements, calls and bindings reversed; cleaners and type
        filters kept as they are):
        `flow_iff_segC`, `flow_rev_iff_calls`, `segC_rev_iff`, `flow_iff_backSegC`,
-       `rev_WF`, `backward_of_forward_calls`: the backward run is the closure `D`
-       on `Program.rev P`, and the forward soundness theorem applied to it covers
-       every converse flow.
+       `rev_WF`, `backward_of_forward_calls`: the closure `D` on `Program.rev P`
+       covers every converse flow (the forward soundness theorem applied to it).
+       The backward run of the spec is `Backward.DB` (spec §9.2).
     7. `backward_reuse`, `backward_reuse_rev`, `backward_reuse_precise`:
        reversed forward records cover the converse flows of the covered entry set
        (the closed-method condition), and exact records stay exact.

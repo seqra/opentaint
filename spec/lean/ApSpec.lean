@@ -23,3 +23,7 @@ import ApSpec.NDExact
 import ApSpec.Backward
 import ApSpec.Statics
 import ApSpec.StaticsIter
+import ApSpec.NDConfirmed
+import ApSpec.W6
+import ApSpec.StaticsConfirmed
+import ApSpec.BackwardExact

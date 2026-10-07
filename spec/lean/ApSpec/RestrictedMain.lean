@@ -12,7 +12,7 @@
     * `vuln_found_S`        a restricted run with the version-3 rules reports every demanded vulnerability;
     * `iteration_sound_S`   with the backward contract B, every run reports every real vulnerability;
     * `iteration_sound_S_identity`  the same with the identity backward step (no hypothesis B);
-    * `closed_records_exactR`  R5 for a restricted run: with no request and only normal exits,
+    * `closed_records_exactR`  the records of a request-free initial fact of a restricted run: with no request and only normal exits,
                             the records of an initial fact cover every demanded flow from it and
                             denote only real flows;
     * `confirmed_real_S`    a confirmed vulnerability of a restricted run is real.
@@ -76,7 +76,7 @@ theorem iteration_sound_S_identity {P : Program} {counted : Acc → Bool} {Ls : 
 
 #print axioms iteration_sound_S_identity
 
-/-- R5 for a restricted run (the analogue of `Closed.closed_records_exact`). If the run raised
+/-- The records of a request-free initial fact of a restricted run (the analogue of `Closed.closed_records_exact`). If the run raised
     no request on the initial fact `i` and every exit edge of `i` is in the normal layer, then
     every DEMANDED flow from the location set of `i` to the exit has a record, and every record
     pair is a real flow. -/
@@ -224,7 +224,7 @@ theorem iteration_sound_M_identity {P : Program} {counted : Acc → Bool} {Ls : 
 
 #print axioms iteration_sound_M_identity
 
-/-- R5 for a restricted run of the spec rules: if every exit edge of the initial fact `i` is in the normal layer, every
+/-- The records of a request-free initial fact of a restricted run of the spec rules: if every exit edge of the initial fact `i` is in the normal layer, every
     DEMANDED flow from the location set of `i` to the exit has a record, and every record pair is a
     real flow. No hypothesis on requests: such a run has none. -/
 theorem closed_records_exactM {P : Program} {counted : Acc → Bool} {L : Nat}

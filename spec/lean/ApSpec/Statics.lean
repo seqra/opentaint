@@ -4,48 +4,56 @@
   theorems, examples, and the counterexamples that fix its exact conditions.
 
   `S` is the static base (`ClassStatic`, the context field `sB`). A static field is the two-accessor
-  path `[<C>, s]`; the class accessor `<C>` is not counted by the field limit. A static POSITION
-  (`PosIn`) is the premise path of a statement micro edge on `S` (a read `S.<C>.s.* → x.*` has the
-  positions `[]` and `<C>.s`, a write `C.s = v` has `[]` and `<C>` from its keep edges
-  `S.* →_{<C>} S.*` and `S.<C>.* →_{s} S.<C>.*`) or the path of a sink pattern on `S`. A path
-  strictly above a position is ABOVE it (`AbovePos`).
+  path `[<C>, f]`; the class accessor `<C>` is not counted by the field limit. A static POSITION
+  (`PosIn`) is the premise path of a statement micro edge on `S`, or the path of a sink pattern on
+  `S`, TRUNCATED TO THE STATIC FIELD (`take 2`): a read `x = C.f` has the positions `[]` and
+  `[<C>, f]`, a deeper read `x = C.f.g` too; a write `C.f = v` has `[]` and `[<C>]` (its keep edges
+  `S.* →_{<C>} S.*` and `S.<C>.* →_{f} S.<C>.*`). A path strictly above a position is ABOVE it
+  (`AbovePos`); it is the root `[]` or a class `[<C>]` (`abovePos_len`).
 
-  THE FINAL RULE (the second design; run 1 only; restricted runs and the backward run are unchanged;
-  `SCtx` with `gen = deepAns = wide = ansBelow = true`, `fb = off`, the predicate `Design`):
-    1. FIRE (`sreqStmt` with `genFireB`; `sreqSink` with `sinkFireB`). The propagation edge `i → f`
-       is an IDENTITY static `*` edge: `i = (S, q, */E0, *)`, `f = (S, q, */E, m)` with `m` abstract
-       (`*` or `*∖X`), normal layer. A statement micro edge whose premise is on `S` STRICTLY below
-       `q`, with `E` admitting the rest (a read OR a write's keep edge), gives no fact and no mark
-       request on this edge; the position request `(M, i, p)` is raised for its premise path `p`.
-       A sink pattern on `S` strictly below `q` raises the position request for its path instead of
-       the mark request (`sinkReqOK`). Every other micro edge keeps the ordinary semantics.
-    2. ANSWER (`sanswer`, `ansOK`). An added fact of `M` that overlaps `(S, p)` and is AT OR BELOW
+  THE FINAL RULE (run 1 only; restricted runs and the backward run are unchanged; `SCtx` with
+  `gen = deepAns = wide = ansBelow = true`, `fb = off`, the predicate `Design`):
+    1. FIRE (`sreqStmt` with `genFireB`). The propagation edge `i → f` is an IDENTITY static `*` edge
+       at the ROOT or at a CLASS position: `i = (S, q, */E0, *)`, `f = (S, q, */E, m)` with
+       `|q| ≤ 1` (`q = []` or `q = [<C>]`), `m` abstract (`*` or `*∖X`), normal layer. A statement
+       micro edge whose premise is on `S` STRICTLY below `q`, with `E` admitting the rest (a read, a
+       write's keep edge, a field-to-field copy), gives no fact and no mark request on this edge;
+       the position request `(M, i, p)` is raised for its premise path TRUNCATED to the static field
+       (`p = take 2`, `SCtx.reqP`: `[<C>, f]`, or `[<C>]` for a class keep edge). Below a static
+       field (an identity edge at `[<C>, f]` or deeper, or any non-identity static fact) nothing
+       fires: the ordinary rules of §4.1 apply, as for an instance field.
+    2. SINKS on `S` use the ordinary MARK request (`reqSink`, `check`): no sink position request.
+    3. ANSWER (`sanswer`, `ansOK`). An added fact of `M` that overlaps `(S, p)` and is AT OR BELOW
        `p` answers `(M, i, p)` with the initial fact `(S, p, *, {}, *)` (start: the identity,
        normal layer). No answer from an added fact above `p`.
-    3. CLIMB (`sreqUp`, `climbOK`). Through a caller edge `ic → f` at a call of `M` whose premise `ic`
+    4. CLIMB (`sreqUp`, `climbOK`). Through a caller edge `ic → f` at a call of `M` whose premise `ic`
        is on `S` and whose binding gives an added fact that overlaps `(S, p)` and lies ABOVE `p`,
        the request `(caller, ic, p)` is raised.
-    4. NO FALLBACK (`fb = off`: the overlap reading `sret` never applies).
-    5. THE AMENDMENT, DEEP MARK ANSWER (`ansInit`). A MARK request `(M, i, t)` whose premise `i` is
-       on `S`, answered by an added fact `a` at or below `i`, gives `a` itself with the mark `t`
-       (`a`'s own position and tail) instead of `answerInit` (the requested chain). Cleaners are
-       unchanged (spec §4.7); a cleaner on `S` must name its mark (construction hypothesis).
-  THE CONSTRUCTION HYPOTHESES (`SWF`): `S` is not the zero base; a statement micro edge from `S` to
-  `S` is an identity restriction `S.q.*/E1 → S.q.*/E2`; a statement micro edge from another base
-  into `S` writes at or below a position, and above one only an exact fact from an exact
-  concrete-mark premise (a rule on a synthetic class position `(S, <C>, $, T)`); calls bind `S` only
-  by `S.* → S.*`; the field limit never cuts a path to a path above a position (`<C>` not counted,
-  limit ≥ 1); a cleaner on `S` removes one mark; run 1 serves an added fact by its root (`policy1`).
+    5. NO FALLBACK (`fb = off`: the overlap reading `sret` never applies).
+    6. DEEP MARK ANSWER (`ansInit`, the amendment of `CexClean`). A MARK request `(M, i, t)` whose
+       premise `i` is on `S`, answered by an added fact `a` at or below `i`, gives `a` itself with the
+       mark `t` (`a`'s own position and tail) instead of `answerInit` (the requested chain).
+       Cleaners are unchanged (spec §4.7).
+  THE CONSTRUCTION HYPOTHESES (`SWF`; positions are the truncated ones, so no hypothesis concerns
+  the depth of rule positions): `S` is not the zero base; a statement micro edge from `S` to `S` is
+  an identity restriction `S.q.*/E1 → S.q.*/E2` or a FIELD-TO-FIELD edge whose premise and target
+  paths are not above a position (`CopyAllMarks(C.f → D.g)`: `S.<C>.f.* → S.<D>.g.*`; `CopyMark`:
+  `S.<C>.f.$(T) → S.<D>.g.$(T)`; a pass rule from or to a bare class is a rule error); a statement
+  micro edge from another base into `S` writes at or below a position, and above one (the root or
+  a bare class) only an exact fact from an exact concrete-mark premise; calls bind `S` only by
+  `S.* → S.*`; the field limit never cuts a path to the root or a class above a position (`<C>`
+  not counted, limit ≥ 1); a cleaner on `S` removes one mark (`RemoveAllMarks` on a static position
+  is the kill of a strong write, not a cleaner); run 1 serves an added fact by its root (`policy1`).
 
   The other switches of `SCtx` give the earlier variants. The first design (`gen = deepAns =
   false`: the fire on reads at the static root only, `ansBelow = false`: answers from above too,
   `fb = full`: the fallback) is proved sound in §5–6 without construction hypotheses.
 
   Contents:
-    1. Recognisers: `sRootB`, `sReadB`, `sFireB` (first fire), `idEdgeB`, `strictBelowB`, `genFireB`,
-       `sinkFireB` (generalised fire), `sKeepP`, `sAns`, `belowB`, `aboveB`, `climbB`, `sAboveB`.
+    1. Recognisers: `sRootB`, `sReadB`, `sFireB` (first fire), `idEdgeB`, `strictBelowB`, `genFireB`
+       (final fire), `sKeepP`, `sAns`, `belowB`, `aboveB`, `climbB`, `sAboveB`.
     2. `Fallback`, `SCtx` (switches `wide`, `ansBelow`, `fb`, `gen`, `deepAns`) with `climbOK`, `ansOK`,
-       `fbOK`, `fireB`, `sinkReqOK`, `ansInit`; `SObj`; the closure `DS`. `DS_mono`.
+       `fbOK`, `fireB`, `reqP`, `ansInit`; `SObj`; the closure `DS`. `DS_mono`.
     3. Local lemmas.
     4–6. The first design: `edge_concS`, `req_abstractS`, `coverageS`, `vuln_foundS`,
        `vuln_found_policy1S`.
@@ -61,30 +69,39 @@
        only from at or below lose the flow (record).
     12. `CexWide` (`caller: t = C.g; C.s = t; K(); r = m(); sink(r)`, `K: C.u = null`): with the
        FIRST fire, a fallback only for non-static premises loses the flow (record).
-    13. THE SECOND DESIGN: `PosIn`, `AbovePos`, `SWF`; the static invariant `cinv_all` and
-       `no_any_above` (no `(S, <C>, [any], ...)`); `Design`; `coverageD`; `reachD`; `vulnD` (THE
-       VULNERABILITY THEOREM of the final rule).
+    13. THE FINAL RULE: `PosIn`, `AbovePos`, `SWF`; `f2f_not_above`; the static invariant `cinv_all`
+       and `no_any_above` (no `(S, q, [any], ...)` with `q` the root or a class above a position);
+       `Design`; `coverageD`; `reachD`; `vulnD` (THE VULNERABILITY THEOREM of the final rule).
     14. `CexClean` (`caller: K(); r = m(); sink(r)`, `K: clean_7(C.u)`, `m: y = C.s; return y`): the
-       amendment is needed. With the shallow mark answer the static invariant fails
-       (`shallow_any`, `shallow_degrades`: `K` turns the precise `(S, <C>.s, $, 7)` into
-       `(S, [], [any], 7)`) and the flow is lost (`shallow_misses`), although `SWF` holds; with the
-       deep answer it is reported in the normal layer (`deep_vuln_normal`, `deep_finds`).
-    15. `CexAbove` and `CexWide` under the final rule: `above_swf`, `wide_swf`, and the vulnerabilities
-       in the NORMAL layer (`y_vuln_normal`, `w_vuln_normal`; also `above_design_finds`,
-       `wide_design_finds` from `vulnD`).
+       deep mark answer is needed. With the shallow mark answer the static invariant fails
+       (`shallow_any`, `shallow_degrades`) and the flow is lost (`shallow_misses`), although `SWF`
+       holds; with the deep answer it is reported in the normal layer (`deep_vuln_normal`).
+    15. `CexAbove` and `CexWide` under the final rule: `above_swf`, `wide_swf`, the vulnerabilities in
+       the NORMAL layer (`y_vuln_normal`, `w_vuln_normal`; `above_design_finds`, `wide_design_finds`).
+    16. `CopyF2F`: a field-to-field pass rule `CopyAllMarks(C.f → D.g)` at an unresolved call; the
+       copy on the static root raises `<C>.f`, the answer flows to `<D>.g`; NORMAL layer
+       (`c_vuln_normal`, `copy_design_finds`).
+    17. `DeepSink`, `DeepSinkParam`: the deep static sink `ContainsMark(C.f.g)` after `C.f = x` with an
+       abstract `x`; the ordinary mark request climbs; NORMAL layer with a static caller premise
+       (`e_vuln_normal`), demand layer with a parameter premise (`p_vuln`, as for an instance
+       field); both also from `vulnD`.
 
   Design choices:
-    * The static base is a context parameter `sB`; the fire is recognised syntactically.
+    * The static base is a context parameter `sB`; the fire is recognised syntactically. A static path
+      starts with its class accessor, so the static field is `take 2` and the root or a class is
+      `|q| ≤ 1`.
     * A micro edge on which the rule fires is removed from the statement for this edge (`sKeepP`):
-      it gives neither a fact nor a mark request. A mark it needs is asked later, on the answer.
+      it gives neither a fact nor a mark request. A mark it needs is asked later, on the answer;
+      a deeper premise meets the answer `(S, <C>.f, *)` by the ordinary rules.
     * The soundness proof of the final rule is a strong induction on `posBound X - |path|`: a
       position request is raised strictly below its premise, and every position is bounded by the
       program's statement and sink patterns (`posBound`). The static invariant (`cinv_all`) is what
-      makes the climb precise: a non-exact static fact above a position is an identity `*` edge, so
-      the climbed premise carries its own location.
-    * `CexAny` and `CexWide` refute variants of the FIRST fire, where `(S, <C>, [any], *)` exists. Under
-      the final rule that fact is impossible by construction, and both programs are found through
-      normal edges (§15).
+      makes the climb precise: a non-exact static fact at the root or a class above a position is an
+      identity `*` edge, so the climbed premise carries its own location.
+    * `CexAny` and `CexWide` refute variants of the FIRST fire, where `(S, <C>, [any], *)` exists.
+      `CexAny` needs an `[any]` source on a bare class, which the construction rules exclude
+      (`SWF.write`; spec S12 (b)). `CexWide` is found through a normal edge under the final rule
+      (§15).
 
   Only `propext` and `Quot.sound` are used (see the `#print axioms` lines).
 -/
@@ -133,16 +150,15 @@ def strictBelowB (k : Kind) (q p : List Acc) : Bool :=
   | some (x :: r) => admitsTailB k (x :: r)
   | _ => false
 
-/-- THE GENERALISED RULE FIRES (the second design): the propagation edge is an identity static `*`
-    edge at `q`, and the statement micro edge `e` has its premise on `S` strictly below `q` (a read
-    OR a keep edge of a write), the conclusion's exclusion admitting the rest. -/
+/-- THE FINAL RULE FIRES: the propagation edge is an identity static `*` edge at the ROOT or at a
+    CLASS position (`q = []` or `q = [<C>]`, i.e. `|q| ≤ 1`), and the statement micro edge `e` has
+    its premise on `S` strictly below `q` (a read OR a keep edge of a write OR a field-to-field
+    copy), the conclusion's exclusion admitting the rest. The request is for the premise path
+    truncated to the static field (`SCtx.reqP`). Below a static field nothing fires: the ordinary
+    rules apply, as for an instance field. -/
 def genFireB (sB : Base) (i : PFact) (f : AFact) (e : MicroEdge) : Bool :=
-  idEdgeB sB i f && Nat.beq e.1.base sB && strictBelowB f.fact.kind f.fact.path e.1.path
-
-/-- The sink pattern `s` on `S` lies strictly below an identity static `*` edge: the sink raises the
-    position request for its path instead of the mark request. -/
-def sinkFireB (sB : Base) (i : PFact) (f : AFact) (s : PFact) : Bool :=
-  idEdgeB sB i f && Nat.beq s.base sB && strictBelowB f.fact.kind f.fact.path s.path
+  idEdgeB sB i f && decide (i.path.length ≤ 1) && Nat.beq e.1.base sB &&
+    strictBelowB f.fact.kind f.fact.path e.1.path
 
 /-- A statement without the micro edges that `P` selects (the same touched bases). -/
 def sKeepP (P : MicroEdge → Bool) (s : Stmt) : Stmt := ⟨s.touched, s.edges.filter (fun e => !P e)⟩
@@ -206,8 +222,9 @@ structure SCtx where
   ansBelow : Bool
   /-- the overlap reading of a static answer -/
   fb       : Fallback
-  /-- the fire: `true` = the generalised fire (identity static `*` edges, reads and keep edges,
-      sink position requests), `false` = the first fire (the static root, reads only) -/
+  /-- the fire: `true` = the final fire (identity static `*` edges at the root or a class, any
+      static premise strictly below, the request truncated to the static field), `false` = the
+      first fire (the static root, reads only) -/
   gen      : Bool
   /-- the mark answer on a static premise: `true` = at the answering added fact's own position
       when it is at or below the premise, `false` = the requested chain (`answerInit`) -/
@@ -238,9 +255,10 @@ def SCtx.fbOK (X : SCtx) (i a j : PFact) : Bool :=
 def SCtx.fireB (X : SCtx) (i : PFact) (f : AFact) (e : MicroEdge) : Bool :=
   if X.gen then genFireB X.sB i f e else sFireB X.sB i f e
 
-/-- The sink check may raise a mark request (not when the sink raises a position request). -/
-def SCtx.sinkReqOK (X : SCtx) (i : PFact) (f : AFact) (s : PFact) : Bool :=
-  !(X.gen && sinkFireB X.sB i f s)
+/-- The requested position of a fired micro edge with the premise path `p`: under the final rule
+    `p` truncated to the static field `[<C>, f]` (or the class `[<C>]`); the first rule requests `p`. -/
+def SCtx.reqP (X : SCtx) (p : List Acc) : List Acc :=
+  if X.gen then p.take 2 else p
 
 /-- The answer of a MARK request `(m, i, t)` by the concrete added fact `a`. With `deepAns`, on a
     static premise and an added fact at or below it: the added fact itself with the mark `t`;
@@ -274,10 +292,10 @@ inductive DS (X : SCtx) : SObj → Prop where
   | reqStmt {M i n f n' s t} :
       DS X (.edge M i n f) → (M, n, Instr.stmt s, n') ∈ X.P.edges →
       t ∈ (transfer X.counted X.FL (sKeepP (X.fireB i f) s) f).reqs → DS X (.req M i t)
-  -- RAISE: the read on the abstract static root edge gives the position request `(M, i, p)`
+  -- RAISE: the fired micro edge gives the position request `(M, i, reqP p)` for its premise path `p`
   | sreqStmt {M i n f n' s e} :
       DS X (.edge M i n f) → (M, n, Instr.stmt s, n') ∈ X.P.edges →
-      e ∈ s.edges → X.fireB i f e = true → DS X (.sreq M i e.1.path)
+      e ∈ s.edges → X.fireB i f e = true → DS X (.sreq M i (X.reqP e.1.path))
   | pass {M i n f n' c} :
       DS X (.edge M i n f) → (M, n, Instr.call c, n') ∈ X.P.edges →
       memB f.fact.base c.touched = false → DS X (.edge M i n' f)
@@ -302,13 +320,10 @@ inductive DS (X : SCtx) : SObj → Prop where
       r ∈ (applySummary a j g).facts →
       e2 ∈ c.fromCallee → r' ∈ (applyEdge r e2.1 e2.2).facts →
       DS X (.edge M i n' (limitF X.counted X.FL r'))
+  -- a sink on `S` too raises the ordinary MARK request (`check`)
   | reqSink {M i n f s t} :
-      DS X (.edge M i n f) → (M, n, s) ∈ X.sinks → X.sinkReqOK i f s = true →
+      DS X (.edge M i n f) → (M, n, s) ∈ X.sinks →
       check i f s = .request t → DS X (.req M i t)
-  -- RAISE at a sink: a sink pattern on `S` strictly below an identity static `*` edge
-  | sreqSink {M i n f s} :
-      DS X (.edge M i n f) → (M, n, s) ∈ X.sinks → X.gen = true → sinkFireB X.sB i f s = true →
-      DS X (.sreq M i s.path)
   | answer {M i t a} :
       DS X (.req M i t) → DS X (.added M a) → a.mark = .conc t →
       overlapB a i = true → DS X (.init M (X.ansInit i a t))
@@ -390,8 +405,7 @@ theorem DS_mono {X : SCtx} {ab ab' : Bool} {fb fb' : Fallback} (hab : ab' = fals
     exact DS.ret ihf he he1 ha ihj hap ihg hr he2 hr'
   | sret _ he he1 ha _ hok _ hr he2 hr' ihf ihj ihg =>
     exact DS.sret ihf he he1 ha ihj (fbOK_mono hfb hok) ihg hr he2 hr'
-  | reqSink _ hs hok hc ih => exact DS.reqSink ih hs hok hc
-  | sreqSink _ hs hg hfire ih => exact DS.sreqSink ih hs hg hfire
+  | reqSink _ hs hc ih => exact DS.reqSink ih hs hc
   | answer _ _ hm hov ihr iha => exact DS.answer ihr iha hm hov
   | sanswer _ _ hok ihs iha => exact DS.sanswer ihs iha (ansOK_mono hab hok)
   | reqUp _ _ he hc he1 ha hcl hov ihr ihf => exact DS.reqUp ihr ihf he hc he1 ha hcl hov
@@ -508,9 +522,13 @@ theorem fireB_root {X : SCtx} (hg : X.gen = false) {i : PFact} {f : AFact} {e : 
   simp only [Bool.and_eq_true] at h
   exact h.1.1.1
 
-theorem sinkReqOK_old {X : SCtx} (hg : X.gen = false) {i : PFact} {f : AFact} {s : PFact} :
-    X.sinkReqOK i f s = true := by
-  unfold SCtx.sinkReqOK
+theorem reqP_old {X : SCtx} (hg : X.gen = false) {p : List Acc} : X.reqP p = p := by
+  unfold SCtx.reqP
+  rw [hg]
+  rfl
+
+theorem reqP_gen {X : SCtx} (hg : X.gen = true) {p : List Acc} : X.reqP p = p.take 2 := by
+  unfold SCtx.reqP
   rw [hg]
   rfl
 
@@ -733,8 +751,7 @@ theorem eInv_all {o : SObj} (h : DS X o) : EInv o := by
   | sreqStmt _ _ _ _ _ => trivial
   | added _ _ _ _ _ => trivial
   | initA _ _ => trivial
-  | reqSink _ _ _ _ _ => trivial
-  | sreqSink _ _ _ _ _ => trivial
+  | reqSink _ _ _ _ => trivial
   | answer _ _ _ _ _ _ => trivial
   | sanswer _ _ _ _ _ => trivial
   | reqUp _ _ _ _ _ _ _ _ _ _ => trivial
@@ -756,8 +773,7 @@ theorem rInv_all {o : SObj} (h : DS X o) : RInv o := by
       obtain ⟨t1, h1⟩ := edge_concS hf hm
       rw [transfer_reqs_of_conc h1] at hq
       cases hq
-  | reqSink _ _ _ hc _ => exact check_request_star hc
-  | sreqSink _ _ _ _ _ => trivial
+  | reqSink _ _ hc _ => exact check_request_star hc
   | @reqUp _ _ _ _ ic _ _ _ _ _ _ _ hf _ _ _ ha hcl _ _ _ =>
     rcases Coverage.mark_cases ic.mark with hm | ⟨t0, hm⟩
     · exact hm
@@ -941,8 +957,9 @@ theorem coverageS (hfb : X.fb = .full) (hab : X.ansBelow = false) (hgen : X.gen 
       · -- RAISE: the read on the abstract static root edge
         have hfire' : sFireB X.sB i f e = true := by rw [← fireB_old hgen]; exact hfire
         obtain ⟨hroot, -, -, hp, -, -⟩ := sFire_parts hfire'
-        exact .inr (.inr ⟨hroot, e.1.path, hp, DS.sreqStmt hf he hes hfire,
-          fire_covers hfire' hd hde⟩)
+        have hsr := DS.sreqStmt hf he hes hfire
+        rw [reqP_old hgen] at hsr
+        exact .inr (.inr ⟨hroot, e.1.path, hp, hsr, fire_covers hfire' hd hde⟩)
     · exact .inr (.inl hr)
     · exact .inr (.inr hsr)
   | @pass M l0 n l n' c _ he hm ih =>
@@ -1093,7 +1110,7 @@ theorem reach_strongS (hfb : X.fb = .full) (hab : X.ansBelow = false) (hgen : X.
 /-- THE VULNERABILITY THEOREM for `DS` (the analogue of `Coverage.vuln_found`). A concrete flow
     from the zero location of a root, through a chain of calls, to a location `l` at a sink node
     with a covering sink pattern gives a `vuln` object. Hypotheses: those of the base theorem
-    (`Program.WF` and (A1)); the overlap answer (`ansBelow = false`) and the full fallback
+    (`Program.WF` and the abstraction contract C1); the overlap answer (`ansBelow = false`) and the full fallback
     (`fb = full`); either climb. -/
 theorem vuln_foundS (hfb : X.fb = .full) (hab : X.ansBelow = false) (hgen : X.gen = false)
     (hdeep : X.deepAns = false) (hwf : X.P.WF)
@@ -1105,7 +1122,7 @@ theorem vuln_foundS (hfb : X.fb = .full) (hab : X.ansBelow = false) (hgen : X.ge
   obtain ⟨l0, i, f, hf, hd, hdisj⟩ := reach_strongS hfb hab hgen hdeep hwf hα hR
   rcases check_sound hT hd hsc with htr | ⟨hrq, hist⟩
   · exact ⟨_, DS.vuln hf hs htr⟩
-  · have hreq := DS.reqSink hf hs (sinkReqOK_old hgen) hrq
+  · have hreq := DS.reqSink hf hs hrq
     rcases hdisj with ⟨t, ht⟩ | ⟨_, himp⟩
     · exact absurd ht (hist t)
     · obtain ⟨i', f', hf', hd', t, ht⟩ := himp hreq
@@ -1241,7 +1258,6 @@ theorem DS_edgeOK {X : SCtx} {ok : Loc → Prop} (hmw : Exact.MarkWF X.P)
       obtain ⟨hflD, hok0⟩ := ihD.2 hfa l0 l1 hd1 hok1
       exact ⟨Flow.call hflD hE he1 hde1 hflG he2 hde2, hok0⟩
   | reqSink => trivial
-  | sreqSink => trivial
   | answer => trivial
   | sanswer => trivial
   | reqUp => trivial
@@ -1397,9 +1413,11 @@ theorem read_sreq {X : SCtx} {M : MethodId} {n n' : Node} {x : Base} {p : List A
     (hg : X.gen = false) (hx : x ≠ X.sB) (hp : p ≠ []) (hE : E.admits p = true)
     (hf : DS X (.edge M ⟨X.sB, [], .star E0, .star⟩ n ⟨⟨X.sB, [], .star E, .star⟩, false⟩))
     (he : (M, n, Instr.stmt (readStmt X.sB x p), n') ∈ X.P.edges) :
-    DS X (.sreq M ⟨X.sB, [], .star E0, .star⟩ p) :=
-  DS.sreqStmt (e := (pat X.sB p, pat x [])) hf he
+    DS X (.sreq M ⟨X.sB, [], .star E0, .star⟩ p) := by
+  have h := DS.sreqStmt (e := (pat X.sB p, pat x [])) hf he
     (List.mem_cons_of_mem _ List.mem_cons_self) (by rw [fireB_old hg]; exact read_fires hx hp hE)
+  rw [reqP_old hg] at h
+  exact h
 
 #print axioms read_D
 #print axioms read_DS
@@ -1545,7 +1563,7 @@ theorem eB_ans0 : DS X (.edge 2 Ans 0 ⟨Ans, false⟩) := DS.start jB_ans
 theorem eB_ans1 : DS X (.edge 2 Ans 1 ⟨pat xB [], false⟩) :=
   DS.step eB_ans0 m_rd (by decide)
 /-- The sink asks for the mark 7 on `B`'s answer. -/
-theorem rB_ans : DS X (.req 2 Ans T) := DS.reqSink eB_ans1 m_sink (by decide) (by decide)
+theorem rB_ans : DS X (.req 2 Ans T) := DS.reqSink eB_ans1 m_sink (by decide)
 /-- The mark request climbs to `A`'s answer (its added fact `(S, <C1>.f, *, {}, *)`). -/
 theorem rA_ans : DS X (.req 1 Ans T) :=
   DS.reqUp (a := ⟨Ans, false⟩) (e := bindS) rB_ans eA_ans m_cB rfl List.mem_cons_self
@@ -1834,7 +1852,7 @@ root, and no fallback). The added fact `(S, <C>, [any], *)` lies above `m`'s ans
 nothing climbs and nothing reads the answer; there is no vulnerability object
 (`cex_user_misses`). This refutes the NARROW climb (my first formalisation), not the design.
 
-THE DESIGN (`Xd`). The WIDE climb goes through the caller edge `Sroot → (S, <C>, [any], *)` (its
+THE FIRST DESIGN WITH THE WIDE CLIMB (`Xd`; the final rule is `Design`, §14). The WIDE climb goes through the caller edge `Sroot → (S, <C>, [any], *)` (its
 premise is on `S`); the caller's added fact `(S, <C>.f, $, 7)` answers at the requested position;
 the answer `(S, <C>.f, *, {}, *)` passes `C.s = null` precisely and `m` gets it as an added fact at
 the position. The vulnerability is reported in the NORMAL layer (`x_vuln_normal`). (The full
@@ -2046,7 +2064,7 @@ theorem x_eCA2 : DS Xd (.edge 1 Ans 2 ⟨pat rB [], false⟩) :=
   DS.ret (a := ⟨Ans, false⟩) (r := ⟨pat retB [], false⟩) (r' := ⟨pat rB [], false⟩) (e2 := retE)
     x_eCA1 m_cm List.mem_cons_self (by decide) x_jmA (by decide) x_emA2 (by decide)
     (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
-theorem x_rC : DS Xd (.req 1 Ans T) := DS.reqSink x_eCA2 m_sink (by decide) (by decide)
+theorem x_rC : DS Xd (.req 1 Ans T) := DS.reqSink x_eCA2 m_sink (by decide)
 /-- The root's fact answers the mark request exactly: `(S, <C>.f, $, 7)`. -/
 theorem x_jCw : DS Xd (.init 1 wS) := by
   have h : Xd.ansInit Ans wS T = wS := by decide
@@ -2058,7 +2076,7 @@ theorem x_eCw2 : DS Xd (.edge 1 wS 2 ⟨⟨rB, [], .exact, .conc T⟩, false⟩)
     (r' := ⟨⟨rB, [], .exact, .conc T⟩, false⟩) (e2 := retE) x_eCw1 m_cm List.mem_cons_self
     (by decide) x_jmA (by decide) x_emA2 (by decide) (List.mem_cons_of_mem _ List.mem_cons_self)
     (by decide)
-/-- THE DESIGN REPORTS THE VULNERABILITY IN THE NORMAL LAYER. -/
+/-- The first design with the wide climb reports the vulnerability in the normal layer. -/
 theorem x_vuln_normal : DS Xd (.vuln 1 2 sinkPat false) := DS.vuln x_eCw2 m_sink (by decide)
 
 #print axioms x_vuln_normal
@@ -2255,13 +2273,12 @@ theorem uInv_all {o : SObj} (h : DS Xu o) : UInv o := by
           rw [key a ha] at hap
           cases hap
   | sret _ _ _ _ _ hok => exact absurd hok Bool.false_ne_true
-  | @reqSink M i n f s t _ hs _ hc ih =>
+  | @reqSink M i n f s t _ hs hc ih =>
     have hs' : (M, n, s) = (1, 2, sinkPat) := List.mem_singleton.mp hs
     simp only [Prod.mk.injEq] at hs'
     obtain ⟨rfl, rfl, rfl⟩ := hs'
     rw [sink_off (ih : i = Sroot ∧ f.fact.base = S).2] at hc
     cases hc
-  | sreqSink _ _ hg => exact absurd hg Bool.false_ne_true
   | @answer M i t a _ _ _ _ ihr _ => exact ihr.elim
   | @sanswer M i p a _ _ _ ihs _ =>
     obtain ⟨rfl, -, rfl⟩ := (ihs : M = 2 ∧ i = Sroot ∧ p = [C, fA])
@@ -2323,7 +2340,7 @@ theorem counterexample :
 
 end CexAbove
 
-/-! ## 11. The answer must not wait for an added fact at the position: `CexAny`
+/-! ## 11. A first-design variant: `CexAny` (excluded by the construction rules of the final rule)
 
 `root: C.* = source(); m()`, `m: x = C.f; sink(x)`. The source rule taints every static field of
 `C` (`AnyField` on `ClassStatic(C)`): `(S, <C>, [any], 7)`. Methods `0` (root) and `1` (`m`).
@@ -2546,14 +2563,13 @@ theorem uInv_all {o : SObj} (h : DS Xb o) : UInv o := by
     have hj : j = Sroot := ihj
     subst hj
     exact absurd rfl (fbOK_path hok)
-  | @reqSink M i n f s t _ hs _ hc ih =>
+  | @reqSink M i n f s t _ hs hc ih =>
     have hs' : (M, n, s) = (1, 1, sinkPat) := List.mem_singleton.mp hs
     simp only [Prod.mk.injEq] at hs'
     obtain ⟨rfl, rfl, rfl⟩ := hs'
     obtain ⟨-, rfl⟩ := (ih : i = Sroot ∧ f = SrootF)
     rw [sink_off rfl] at hc
     cases hc
-  | sreqSink _ _ hg => exact absurd hg Bool.false_ne_true
   | @answer M i t a _ _ _ _ ihr _ => exact ihr.elim
   | @sanswer M i p a _ _ hok ihs iha =>
     obtain ⟨rfl, -, rfl⟩ := (ihs : M = 1 ∧ i = Sroot ∧ p = [C, fA])
@@ -3074,13 +3090,12 @@ theorem uInv_all {o : SObj} (h : DS Xn o) : UInv o := by
         ⟨rfl, -⟩ | ⟨rfl, -⟩ <;> rw [fbOK_S rfl] at hok <;> cases hok
     · rcases (ihf : (i = Sroot ∧ (f = a1F2 ∨ f = a2F)) ∨ (i = Ag ∧ (f = a2F ∨ f = tF))) with
         ⟨rfl, -⟩ | ⟨rfl, -⟩ <;> rw [fbOK_S rfl] at hok <;> cases hok
-  | @reqSink M i n f s t _ hs _ hc ih =>
+  | @reqSink M i n f s t _ hs hc ih =>
     have hs' : (M, n, s) = (1, 4, sinkPat) := List.mem_singleton.mp hs
     simp only [Prod.mk.injEq] at hs'
     obtain ⟨rfl, rfl, rfl⟩ := hs'
     rw [sink_off (ih : (i = Sroot ∨ i = Ag) ∧ f.fact.base ≠ rB).2] at hc
     cases hc
-  | sreqSink _ _ hg => exact absurd hg Bool.false_ne_true
   | @answer M i t a _ _ _ _ ihr _ => exact ihr.elim
   | @sanswer M i p a _ _ hok ihs iha =>
     rcases (ihs : (M = 1 ∧ (i = Sroot ∨ i = Ag) ∧ (p = [C, gA] ∨ p = [C, sA])) ∨
@@ -3161,24 +3176,29 @@ theorem counterexample :
 
 end CexWide
 
-/-! ## 13. The second design: construction hypotheses and the static invariant
+/-! ## 13. The final rule: construction hypotheses and the static invariant
 
-The rule of the second design (`gen = true`, `deepAns = true`, `wide = true`, `ansBelow = true`,
-`fb = off`): the generalised fire on identity static `*` edges (reads, keep edges of writes, sink
-patterns), answers only from added facts AT OR BELOW the requested position, the wide climb, no
-fallback; a MARK request on a static premise is answered at the answering added fact's own position.
+The final rule (`gen = true`, `deepAns = true`, `wide = true`, `ansBelow = true`, `fb = off`): the
+fire on identity static `*` edges at the root or a class (`|q| ≤ 1`), for statement micro edges
+strictly below (reads, keep edges of writes, field-to-field copies), with the request truncated to the
+static field; sinks raise the ordinary mark request; answers only from added facts AT OR BELOW the
+requested position; the wide climb; no fallback; a MARK request on a static premise is answered at the
+answering added fact's own position.
 
 A static POSITION is the premise path of a statement micro edge on `S` or the path of a sink pattern
-on `S` (`PosIn`). A path is ABOVE a position if it is a strict prefix of one (`AbovePos`). The
-construction hypotheses (`SWF`) say how the program touches `S`. Under them, every static fact that
-is not exact and lies above a position is an identity static `*` fact (`cinv_all`): the root or a
-class answer, carrying its own location. So `(S, <C>, [any], ...)` is impossible by construction. -/
+on `S`, truncated to the static field (`PosIn`). A path is ABOVE a position if it is a strict prefix
+of one (`AbovePos`): the root or a class. The construction hypotheses (`SWF`) say how the program
+touches `S`. Under them, every static fact that is not exact and lies above a position is an
+identity static `*` fact (`cinv_all`): the root or a class answer, carrying its own location. So
+`(S, <C>, [any], ...)` is impossible by construction when a field of `C` is a position. Below a
+static field the ordinary rules apply and no invariant is claimed. -/
 
-/-- `P` is a static position of the program. -/
+/-- `P` is a static position of the program: a static premise or sink path truncated to the static
+    field (`[<C>, f]`, `[<C>]` or the root). -/
 def PosIn (X : SCtx) (P : List Acc) : Prop :=
   (∃ M n s n' e, (M, n, Instr.stmt s, n') ∈ X.P.edges ∧ e ∈ s.edges ∧ e.1.base = X.sB ∧
-    e.1.path = P) ∨
-  (∃ M n s, (M, n, s) ∈ X.sinks ∧ s.base = X.sB ∧ s.path = P)
+    e.1.path.take 2 = P) ∨
+  (∃ M n s, (M, n, s) ∈ X.sinks ∧ s.base = X.sB ∧ s.path.take 2 = P)
 
 /-- `q` lies strictly above a static position. -/
 def AbovePos (X : SCtx) (q : List Acc) : Prop := ∃ P r, PosIn X P ∧ r ≠ [] ∧ P = q ++ r
@@ -3189,21 +3209,40 @@ theorem abovePos_prefix {X : SCtx} {q r : List Acc} (h : AbovePos X (q ++ r)) : 
   intro h
   exact hr' (List.append_eq_nil_iff.mp h).2
 
+/-- A position is at most a static field: `[<C>, f]` or `[<C>]` (or the root). -/
+theorem posIn_len {X : SCtx} {P : List Acc} (h : PosIn X P) : P.length ≤ 2 := by
+  rcases h with ⟨_, _, _, _, e, _, _, _, rfl⟩ | ⟨_, _, s, _, _, rfl⟩
+  · exact List.length_take_le 2 _
+  · exact List.length_take_le 2 _
+
+/-- A path above a position is the root or a class position. -/
+theorem abovePos_len {X : SCtx} {q : List Acc} (h : AbovePos X q) : q.length ≤ 1 := by
+  obtain ⟨P, r, hP, hne, rfl⟩ := h
+  have h2 := posIn_len hP
+  have h1 := List.length_pos_iff.mpr hne
+  rw [List.length_append] at h2
+  omega
+
 /-- A static fact, not exact, above a position. -/
 def AboveNE (X : SCtx) (f : PFact) : Prop := f.base = X.sB ∧ AbovePos X f.path ∧ f.kind ≠ .exact
 
-/-- THE CONSTRUCTION HYPOTHESES of the second design. -/
+/-- THE CONSTRUCTION HYPOTHESES of the final rule. -/
 structure SWF (X : SCtx) : Prop where
   /-- the static base is not the zero base -/
   base : X.sB ≠ zeroBase
-  /-- a statement micro edge from `S` to `S` is an identity restriction `S.q.* →_E S.q.*` (the read
-      keeps `S.* → S.*`, a write keeps `S.* →_{<C>} S.*` and `S.<C>.* →_{s} S.<C>.*`) -/
+  /-- a statement micro edge from `S` to `S` is an IDENTITY RESTRICTION `S.q.* →_E S.q.*` (the read
+      keeps `S.* → S.*`, a write keeps `S.* →_{<C>} S.*` and `S.<C>.* →_{s} S.<C>.*`) or a
+      FIELD-TO-FIELD edge: its premise path and its target path are not above a position (a pass
+      rule `CopyAllMarks(C.f → D.g)` gives `S.<C>.f.* → S.<D>.g.*`, `CopyMark` gives
+      `S.<C>.f.$(T) → S.<D>.g.$(T)`), with any tail and mark. A pass rule from or to a bare class
+      position is a rule error. The proofs use only the target half (`f2f_not_above`). -/
   ss : ∀ M n s n', (M, n, Instr.stmt s, n') ∈ X.P.edges → ∀ e, e ∈ s.edges →
     e.1.base = X.sB → e.2.base = X.sB →
-    ∃ q E1 E2, e.1 = ⟨X.sB, q, .star E1, .star⟩ ∧ e.2 = ⟨X.sB, q, .star E2, .star⟩
+    (∃ q E1 E2, e.1 = ⟨X.sB, q, .star E1, .star⟩ ∧ e.2 = ⟨X.sB, q, .star E2, .star⟩) ∨
+    (¬ AbovePos X e.1.path ∧ ¬ AbovePos X e.2.path)
   /-- a statement micro edge from another base into `S` writes at or below a position; above a
-      position only an exact fact from an exact concrete-mark premise (a rule on a synthetic class
-      position, `(S, <C>, $, T)`). No `[any]` source on a bare class. -/
+      position (the root or a bare class) only an exact fact from an exact concrete-mark premise (a
+      rule on a synthetic class position, `(S, <C>, $, T)`). No `[any]` source on a bare class. -/
   write : ∀ M n s n', (M, n, Instr.stmt s, n') ∈ X.P.edges → ∀ e, e ∈ s.edges →
     e.1.base ≠ X.sB → e.2.base = X.sB → AbovePos X e.2.path →
     e.2.kind = .exact ∧ e.1.kind = .exact ∧ ∃ t, e.1.mark = .conc t
@@ -3214,8 +3253,8 @@ structure SWF (X : SCtx) : Prop where
   fromC : ∀ M n c n', (M, n, Instr.call c, n') ∈ X.P.edges → ∀ e, e ∈ c.fromCallee →
     (e.1.base = X.sB ∨ e.2.base = X.sB) →
     ∃ E1 E2, e.1 = ⟨X.sB, [], .star E1, .star⟩ ∧ e.2 = ⟨X.sB, [], .star E2, .star⟩
-  /-- the field limit never cuts a path to a path above a position (the limit is at least 1 and the
-      class accessor is not counted) -/
+  /-- the field limit never cuts a path to a path above a position, i.e. to the root or a class (the
+      limit is at least 1 and the class accessor is not counted) -/
   cut : ∀ q r, cutPath X.counted X.FL q = some r → ¬ AbovePos X r
   /-- a cleaner on `S` removes one mark -/
   clean : ∀ M n cl n', (M, n, Instr.clean cl, n') ∈ X.P.edges → cl.base = X.sB →
@@ -3673,9 +3712,40 @@ theorem write_inv {X : SCtx} (hs : SWF X) {M : MethodId} {n n' : Node} {s : Stmt
     rw [hp] at hapos
     exact hab.2.2 (hyk (hex (hwr hapos).1))
 
+/-- A result of delta-concat lies at or below the target path of the micro edge. -/
+theorem apply_path_prefix {c r : AFact} {fr to : PFact} (hr : r ∈ (applyEdge c fr to).facts) :
+    ∃ rr, r.fact.path = to.path ++ rr := by
+  obtain ⟨p, k, ap, m, -, -, -, hrr, hgeo⟩ := apply_shape hr
+  have hrp : r.fact.path = p := by rw [hrr, norm_path]
+  rw [hrp]
+  rcases hgeo with ⟨rr, -, hb⟩ | ⟨rr, -, -, ha⟩
+  · cases htk : to.kind with
+    | star et =>
+      rw [htk] at hb
+      exact ⟨rr, (below_star_tk hb).1⟩
+    | any =>
+      rw [htk] at hb
+      exact ⟨[], by rw [(below_any_tk hb).1, List.append_nil]⟩
+    | exact =>
+      rw [htk] at hb
+      exact ⟨[], by rw [(below_exact_tk hb).1, List.append_nil]⟩
+  · exact ⟨[], by rw [(above_tk ha).1, List.append_nil]⟩
+
+/-- A FIELD-TO-FIELD micro edge (its target path is not above a position) gives no fact above a
+    position, whatever the fact, the tails and the marks. -/
+theorem f2f_not_above {X : SCtx} {c r : AFact} {fr to : PFact} (hn : ¬ AbovePos X to.path)
+    (hr : r ∈ (applyEdge c fr to).facts) : ¬ AbovePos X r.fact.path := by
+  intro h
+  obtain ⟨rr, hp⟩ := apply_path_prefix hr
+  rw [hp] at h
+  exact hn (abovePos_prefix h)
+
+#print axioms f2f_not_above
+
 /-- THE STEP keeps the invariant: an identity restriction keeps an identity static `*` edge; in the
-    case `above` the generalised rule fires (no fact); a read leaves `S`; a write lands at or below a
-    position; the field limit never cuts above a position. -/
+    case `above` the fact is at the root or a class, so the final rule fires (no fact); a
+    field-to-field edge lands at or below its target, which is not above a position; a read leaves
+    `S`; a write lands at or below a position; the field limit never cuts above a position. -/
 theorem step_inv {X : SCtx} (hs : SWF X) (hgen : X.gen = true) {M : MethodId} {i : PFact}
     {n n' : Node} {s : Stmt} {f f' : AFact} (hE : (M, n, Instr.stmt s, n') ∈ X.P.edges)
     (ih : CInv X (.edge M i n f))
@@ -3693,9 +3763,11 @@ theorem step_inv {X : SCtx} (hs : SWF X) (hgen : X.gen = true) {M : MethodId} {i
       rw [hrr, norm_base]
     by_cases h1 : e.1.base = X.sB
     · by_cases h2 : e.2.base = X.sB
-      · obtain ⟨q, E1, E2, he1, he2⟩ := hs.ss _ _ _ _ hE e he h1 h2
+      · rcases hs.ss _ _ _ _ hE e he h1 h2 with ⟨q, E1, E2, he1, he2⟩ | ⟨-, hn2⟩
+        rotate_left
+        · exact absurd hab.2.1 (f2f_not_above hn2 hy)
         rw [he1, he2] at hy
-        obtain ⟨-, hfb, ⟨rr, -, hyp, hex, hst⟩ | ⟨rr, hq, hne, -, hadm⟩⟩ := id_apply hy
+        obtain ⟨-, hfb, ⟨rr, -, hyp, hex, hst⟩ | ⟨rr, hq, hne, hyq, hadm⟩⟩ := id_apply hy
         · have hfne : f.fact.kind ≠ .exact := fun hk => hab.2.2 (hex hk)
           have hfab : AboveNE X f.fact := ⟨hfb, by rw [← hyp]; exact hab.2.1, hfne⟩
           obtain ⟨⟨E0, hi⟩, ⟨E, hk⟩, ha, hd⟩ := hid hfab
@@ -3704,14 +3776,16 @@ theorem step_inv {X : SCtx} (hs : SWF X) (hgen : X.gen = true) {M : MethodId} {i
         · exfalso
           have hfne : f.fact.kind ≠ .exact := fun hk => by
             rw [hk, admits_exact_nil hne] at hadm; cases hadm
-          have hpos : PosIn X q := .inl ⟨M, n, s, n', e, hE, he, h1, by rw [he1]⟩
-          have hfab : AboveNE X f.fact := ⟨hfb, ⟨q, rr, hpos, hne, hq⟩, hfne⟩
+          have hqa : AbovePos X q := by rw [← hyq]; exact hab.2.1
+          rw [hq] at hqa
+          have hfab : AboveNE X f.fact := ⟨hfb, abovePos_prefix hqa, hfne⟩
           obtain ⟨⟨E0, hi⟩, ⟨E, hk⟩, ha, hd⟩ := hid hfab
+          have hlen : i.path.length ≤ 1 := by rw [hi]; exact abovePos_len hfab.2.1
           have hfire : X.fireB i f e = true := by
             unfold SCtx.fireB
             rw [hgen, if_pos rfl]
             unfold genFireB
-            rw [idEdge_of hi hfb hk ha hd, h1, Nat.beq_refl, he1]
+            rw [idEdge_of hi hfb hk ha hd, decide_eq_true hlen, h1, Nat.beq_refl, he1]
             simp only [Bool.true_and]
             rw [hq]
             exact strictBelow_app hne hadm
@@ -3830,7 +3904,7 @@ theorem ret_inv {X : SCtx} (hs : SWF X) {M : MethodId} {i : PFact} {n n' : Node}
       rw [ham] at this
       cases this
 
-/-- THE STATIC INVARIANT HOLDS (the second design, under the construction hypotheses). In
+/-- THE STATIC INVARIANT HOLDS (the final rule, under the construction hypotheses). In
     particular no static fact `(S, <C>, [any], ...)` (nor any non-exact, non-identity static fact
     above a position) exists: `(S, <C>, [any], ...)` is impossible by construction. -/
 theorem cinv_all {X : SCtx} (hs : SWF X) (hgen : X.gen = true) (hdeep : X.deepAns = true)
@@ -3883,8 +3957,7 @@ theorem cinv_all {X : SCtx} (hs : SWF X) (hgen : X.gen = true) (hdeep : X.deepAn
     unfold SCtx.fbOK at hok
     rw [hfb] at hok
     cases hok
-  | reqSink _ _ _ _ _ => trivial
-  | sreqSink _ _ _ _ _ => trivial
+  | reqSink _ _ _ _ => trivial
   | @answer M i t a _ _ hm hov _ iha =>
     obtain ⟨-, haab⟩ := (iha : W2P a ∧ _)
     refine ⟨fun _ => ⟨t, ?_⟩, fun hab => ?_⟩
@@ -3968,7 +4041,7 @@ theorem cinv_all {X : SCtx} (hs : SWF X) (hgen : X.gen = true) (hdeep : X.deepAn
 
 /-! ### 13.3 Requests, answers and the bound on positions -/
 
-/-- The second design. -/
+/-- The final rule. -/
 structure Design (X : SCtx) : Prop where
   gen  : X.gen = true
   deep : X.deepAns = true
@@ -3976,10 +4049,12 @@ structure Design (X : SCtx) : Prop where
   below : X.ansBelow = true
   fb   : X.fb = .off
 
-/-- NO `[any]` ON THE STATIC BASE ABOVE A POSITION: under the construction hypotheses the second
-    design derives no edge `(S, q, [any], ...)` with `q` strictly above a static position, in
-    particular no `(S, <C>, [any], ...)`, and no fact of the static root edge of a read is `[any]`. A
-    non-exact static fact above a position is an identity static `*` edge in the normal layer. -/
+/-- NO `[any]` ON THE STATIC BASE ABOVE A POSITION: under the construction hypotheses the final rule
+    derives no edge `(S, q, [any], ...)` with `q` strictly above a (truncated) static position, i.e.
+    `q` the root or a class `[<C>]` of which a field is a position; in particular no
+    `(S, <C>, [any], ...)`. A non-exact static fact there is an identity static `*` edge in the
+    normal layer. (Below a static field the ordinary rules apply: `(S, <C>.f, [any], ...)` may
+    exist, as for an instance field.) -/
 theorem no_any_above {X : SCtx} (hs : SWF X) (hd : Design X) {M : MethodId} {i : PFact} {n : Node}
     {f : AFact} (h : DS X (.edge M i n f)) (hb : f.fact.base = X.sB)
     (hp : AbovePos X f.fact.path) :
@@ -3995,7 +4070,7 @@ theorem no_any_above {X : SCtx} (hs : SWF X) (hd : Design X) {M : MethodId} {i :
 
 #print axioms no_any_above
 
-/-- The generalised rule fires on the read of `readStmt` on the abstract static root edge. -/
+/-- The final rule fires on the read of `readStmt` on the abstract static root edge. -/
 theorem gen_read_fires {sB x : Base} {p : List Acc} {E E0 : Excl} (hp : p ≠ [])
     (hE : E.admits p = true) :
     genFireB sB ⟨sB, [], .star E0, .star⟩ ⟨⟨sB, [], .star E, .star⟩, false⟩ (pat sB p, pat x []) =
@@ -4030,15 +4105,19 @@ theorem gen_read_DS {counted : Acc → Bool} {L : Nat} {sB x : Base} {p : List A
     · rw [List.mem_singleton.mp he', gen_read_fires hp hE] at hf
       cases hf
 
-/-- Under the final rule the read raises the position request for `p` on the static root premise. -/
+/-- Under the final rule the read raises the position request for `p` truncated to the static field
+    (`[<C>, s]` for `x = C.s`; `[<C>, s]` also for a deeper read `x = C.s.g`) on the static root
+    premise. -/
 theorem gen_read_sreq {X : SCtx} {M : MethodId} {n n' : Node} {x : Base} {p : List Acc}
     {E E0 : Excl} (hg : X.gen = true) (hp : p ≠ []) (hE : E.admits p = true)
     (hf : DS X (.edge M ⟨X.sB, [], .star E0, .star⟩ n ⟨⟨X.sB, [], .star E, .star⟩, false⟩))
     (he : (M, n, Instr.stmt (readStmt X.sB x p), n') ∈ X.P.edges) :
-    DS X (.sreq M ⟨X.sB, [], .star E0, .star⟩ p) :=
-  DS.sreqStmt (e := (pat X.sB p, pat x [])) hf he
+    DS X (.sreq M ⟨X.sB, [], .star E0, .star⟩ (p.take 2)) := by
+  have h := DS.sreqStmt (e := (pat X.sB p, pat x [])) hf he
     (List.mem_cons_of_mem _ List.mem_cons_self)
     (by unfold SCtx.fireB; rw [hg, if_pos rfl]; exact gen_read_fires hp hE)
+  rw [reqP_gen hg] at h
+  exact h
 
 #print axioms gen_read_DS
 #print axioms gen_read_sreq
@@ -4100,8 +4179,10 @@ theorem sinkBound_le {sB : Base} {M n : Nat} {s : PFact} (hb : s.base = sB) :
 
 theorem posIn_le {X : SCtx} {p : List Acc} (h : PosIn X p) : p.length ≤ posBound X := by
   rcases h with ⟨M, n, s, n', e, hE, he, hb, rfl⟩ | ⟨M, n, s, hs, hb, rfl⟩
-  · exact Nat.le_trans (stmtBound_le he hb hE) (Nat.le_max_left _ _)
-  · exact Nat.le_trans (sinkBound_le hb hs) (Nat.le_max_right _ _)
+  · exact Nat.le_trans (List.length_take_le' 2 _)
+      (Nat.le_trans (stmtBound_le he hb hE) (Nat.le_max_left _ _))
+  · exact Nat.le_trans (List.length_take_le' 2 _)
+      (Nat.le_trans (sinkBound_le hb hs) (Nat.le_max_right _ _))
 
 /-- An added fact above the requested position: it overlaps it and its path is a strict prefix. -/
 theorem above_parts {sB : Base} {a : PFact} {p : List Acc} (h : aboveB sB a p = true) :
@@ -4210,38 +4291,44 @@ theorem strictBelow_parts {k : Kind} {q p : List Acc} (h : strictBelowB k q p = 
 
 theorem genFire_parts {sB : Base} {i : PFact} {f : AFact} {e : MicroEdge}
     (h : genFireB sB i f e = true) :
-    idEdgeB sB i f = true ∧ e.1.base = sB ∧ ∃ r, r ≠ [] ∧ e.1.path = f.fact.path ++ r ∧
-      admitsTailB f.fact.kind r = true := by
+    idEdgeB sB i f = true ∧ i.path.length ≤ 1 ∧ e.1.base = sB ∧ ∃ r, r ≠ [] ∧
+      e.1.path = f.fact.path ++ r ∧ admitsTailB f.fact.kind r = true := by
   unfold genFireB at h
-  simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨hid, hb⟩, hs⟩ := h
-  exact ⟨hid, CoreAux.beq_iff.mp hb, strictBelow_parts hs⟩
+  simp only [Bool.and_eq_true, decide_eq_true_eq] at h
+  obtain ⟨⟨⟨hid, hl⟩, hb⟩, hs⟩ := h
+  exact ⟨hid, hl, CoreAux.beq_iff.mp hb, strictBelow_parts hs⟩
 
-theorem sinkFire_parts {sB : Base} {i : PFact} {f : AFact} {s : PFact}
-    (h : sinkFireB sB i f s = true) :
-    idEdgeB sB i f = true ∧ s.base = sB ∧ ∃ r, r ≠ [] ∧ s.path = f.fact.path ++ r ∧
-      admitsTailB f.fact.kind r = true := by
-  unfold sinkFireB at h
-  simp only [Bool.and_eq_true] at h
-  obtain ⟨⟨hid, hb⟩, hs⟩ := h
-  exact ⟨hid, CoreAux.beq_iff.mp hb, strictBelow_parts hs⟩
+/-- A request truncated to the static field from an identity edge at the root or a class position
+    is strictly below it. -/
+theorem take2_split {q r : List Acc} (hq : q.length ≤ 1) (hne : r ≠ []) :
+    ∃ r', r' ≠ [] ∧ (q ++ r).take 2 = q ++ r' := by
+  cases r with
+  | nil => exact absurd rfl hne
+  | cons x rs =>
+    cases q with
+    | nil => exact ⟨x :: rs.take 1, List.cons_ne_nil _ _, rfl⟩
+    | cons c q' =>
+      cases q' with
+      | nil => exact ⟨[x], List.cons_ne_nil _ _, rfl⟩
+      | cons d q'' =>
+        exfalso
+        rw [List.length_cons, List.length_cons] at hq
+        omega
 
-/-- Every position request of the second design is on an identity static `*` premise, for a
+/-- Every position request of the final rule is on an identity static `*` premise, for a
     position strictly below it. -/
 theorem sreq_inv {X : SCtx} (hs : SWF X) (hd : Design X) {o : SObj} (h : DS X o) : SReqInv X o := by
   induction h with
   | @sreqStmt M i n f n' s e _ hE he hfire _ =>
     unfold SCtx.fireB at hfire
     rw [hd.gen, if_pos rfl] at hfire
-    obtain ⟨hid, heb, r, hne, hp, -⟩ := genFire_parts hfire
+    obtain ⟨hid, hl, heb, r, hne, hp, -⟩ := genFire_parts hfire
     obtain ⟨⟨E0, hi⟩, -, hfp, -⟩ := idEdge_parts hid
-    refine ⟨by rw [hi], by rw [hi], .inl ⟨M, n, s, n', e, hE, he, heb, rfl⟩, r, hne, ?_⟩
-    rw [hp, hfp]
-  | @sreqSink M i n f s _ hs' _ hfire _ =>
-    obtain ⟨hid, hsb, r, hne, hp, -⟩ := sinkFire_parts hfire
-    obtain ⟨⟨E0, hi⟩, -, hfp, -⟩ := idEdge_parts hid
-    refine ⟨by rw [hi], by rw [hi], .inr ⟨M, n, s, hs', hsb, rfl⟩, r, hne, ?_⟩
-    rw [hp, hfp]
+    have hp' : e.1.path = i.path ++ r := by rw [hp, hfp]
+    obtain ⟨r', hne', ht⟩ := take2_split hl hne
+    rw [reqP_gen hd.gen]
+    refine ⟨by rw [hi], by rw [hi], .inl ⟨M, n, s, n', e, hE, he, heb, rfl⟩, r', hne', ?_⟩
+    rw [hp', ht]
   | @sreqUp m j p M ic n f n' c e a _ hf hE _ he ha hcl ihs _ =>
     obtain ⟨-, -, hpos, -⟩ := (ihs : j.mark = .star ∧ j.base = X.sB ∧ PosIn X p ∧ _)
     unfold SCtx.climbOK at hcl
@@ -4262,7 +4349,7 @@ theorem sreq_inv {X : SCtx} (hs : SWF X) (hd : Design X) {o : SObj} (h : DS X o)
   | initA _ _ => trivial
   | ret _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial
   | sret _ _ _ _ _ _ _ _ _ _ _ _ _ => trivial
-  | reqSink _ _ _ _ _ => trivial
+  | reqSink _ _ _ _ => trivial
   | answer _ _ _ _ _ _ => trivial
   | sanswer _ _ _ _ _ => trivial
   | reqUp _ _ _ _ _ _ _ _ _ _ => trivial
@@ -4278,7 +4365,7 @@ theorem sreq_parts {X : SCtx} (hs : SWF X) (hd : Design X) {M : MethodId} {i : P
 
 #print axioms sreq_parts
 
-/-! The answer of a mark request in the second design. -/
+/-! The answer of a mark request in the final rule. -/
 
 theorem ansInit_mark {X : SCtx} {i a : PFact} {t : Mark} : (X.ansInit i a t).mark = .conc t := by
   unfold SCtx.ansInit
@@ -4335,7 +4422,7 @@ theorem sAns_applicable {sB : Base} {a : PFact} {p : List Acc} (hb : a.base = sB
       | exact => rfl
     | cons x rs => rfl
 
-/-! ### 13.4 The coverage theorem of the second design -/
+/-! ### 13.4 The coverage theorem of the final rule -/
 
 /-- Strong induction on a natural measure (constructive). -/
 theorem strong_ind {α : Type} (μ : α → Nat) {P : α → Prop}
@@ -4360,7 +4447,7 @@ theorem measure_lt {X : SCtx} {q p r : List Acc} (hpos : PosIn X p) (hne : r ≠
     exact Nat.lt_add_of_pos_right (List.length_pos_iff.mpr hne)
   exact Nat.sub_lt_sub_left (Nat.lt_of_lt_of_le h2 h1) h2
 
-/-- The coverage statement of the second design: an edge, a mark request, or a position request
+/-- The coverage statement of the final rule: an edge, a mark request, or a position request
     whose answer covers the entry location. -/
 abbrev CovD (X : SCtx) (M : MethodId) (i : PFact) (n : Node) (l0 l : Loc) : Prop :=
   (∃ f, DS X (.edge M i n f) ∧ den i f.fact l0 l) ∨ DS X (.req M i l0.mark) ∨
@@ -4380,7 +4467,7 @@ theorem covD_conc {X : SCtx} (hs : SWF X) (hd : Design X) {M : MethodId} {i : PF
     rw [ht] at this
     cases this
 
-/-- THE CALL STEP of the second design. A callee position request is answered by the added fact if
+/-- THE CALL STEP of the final rule. A callee position request is answered by the added fact if
     it is at or below the position (the answer is then read as usual, and its own requests are
     resolved in turn: they are strictly lower), or else it climbs: the added fact is an identity
     static `*` fact (`cinv_all`), so the caller premise is the identity at the same path, and the
@@ -4461,7 +4548,7 @@ theorem call_stepD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF)
 
 #print axioms call_stepD
 
-/-- THE COVERAGE THEOREM of the second design (no answer from above, no fallback), under the
+/-- THE COVERAGE THEOREM of the final rule (no answer from above, no fallback), under the
     construction hypotheses. -/
 theorem coverageD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF)
     {M : MethodId} {l0 : Loc} {n : Node} {l : Loc} (hfl : Flow X.P M l0 n l) :
@@ -4482,12 +4569,15 @@ theorem coverageD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF)
         have hfire' := hfire
         unfold SCtx.fireB at hfire'
         rw [hd.gen, if_pos rfl] at hfire'
-        obtain ⟨hid, -, -, -, -, -⟩ := genFire_parts hfire'
+        obtain ⟨hid, -, -, -, -, -, -⟩ := genFire_parts hfire'
         obtain ⟨⟨E0, hi'⟩, hfb, hfp, hfk, -, -⟩ := idEdge_parts hid
         rw [hi'] at hdn
         obtain ⟨h0b, h0p⟩ := id_den hfb hfp hfk hdn
         obtain ⟨-, -, -, -, -, σ', -, hlp, -, -, -⟩ := hde
-        exact .inr (.inr ⟨e.1.path, DS.sreqStmt hf he hes hfire, sAns_covers h0b (h0p.trans hlp)⟩)
+        refine .inr (.inr ⟨X.reqP e.1.path, DS.sreqStmt hf he hes hfire, ?_⟩)
+        rw [reqP_gen hd.gen]
+        exact sAns_covers h0b (h0p.trans (hlp.trans (by
+          rw [← List.append_assoc, List.take_append_drop])))
     · exact .inr (.inl hr)
     · exact .inr (.inr hsr)
   | @pass M l0 n l n' c _ he hm ih =>
@@ -4522,7 +4612,7 @@ theorem coverageD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF)
 
 #print axioms coverageD
 
-/-! ### 13.5 The vulnerability theorem of the second design -/
+/-! ### 13.5 The vulnerability theorem of the final rule -/
 
 mutual
 /-- A GOOD initial fact of `M` for the pair `(l0, l)` at `n`: it is in `DS` and covers `l0`; an edge
@@ -4554,7 +4644,7 @@ theorem good_conc {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF) {M : Me
       rw [ht] at h1
       cases h1)
 
-/-- THE REACH THEOREM of the second design: a real execution from a root to `(M, n, l)` has a good
+/-- THE REACH THEOREM of the final rule: a real execution from a root to `(M, n, l)` has a good
     initial fact. -/
 theorem reachD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF) {M : MethodId} {n : Node}
     {l : Loc} (hR : Reach X.P X.roots M n l) : ∃ l0 j, GoodD X M n l0 l j := by
@@ -4683,7 +4773,8 @@ theorem reachD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF) {M : Metho
 
 #print axioms reachD
 
-/-- THE VULNERABILITY THEOREM of the second design: the generalised fire, answers only from added
+/-- THE VULNERABILITY THEOREM of the final rule: the fire at the root or a class with the request
+    truncated to the static field, sinks by the ordinary mark request, answers only from added
     facts at or below the position, the wide climb, NO answer from above and NO fallback, deep
     mark answers on static premises. Under the construction hypotheses `SWF` and `Program.WF`, a
     concrete flow from a root to a covered sink gives a `vuln` object. -/
@@ -4699,42 +4790,14 @@ theorem vulnD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF) {M : Method
     obtain ⟨f, hf, hdn⟩ := hedge
     rcases check_sound hT hdn hsc with htr | ⟨hrq, hist⟩
     · exact ⟨_, DS.vuln hf hsk htr⟩
-    · cases hok : X.sinkReqOK j f s with
-      | true =>
-        cases hmark (DS.reqSink hf hsk hok hrq) with
-        | @mk j' t hg' ht =>
-        cases hg' with
-        | mk _ _ hedge' _ _ =>
-        obtain ⟨f', hf', hdn'⟩ := hedge'
-        rcases check_sound hT hdn' hsc with htr' | ⟨_, hist'⟩
-        · exact ⟨_, DS.vuln hf' hsk htr'⟩
-        · exact absurd ht (hist' t)
-      | false =>
-        -- the sink lies strictly below an identity static `*` edge: the position request
-        have hfire : sinkFireB X.sB j f s = true := by
-          unfold SCtx.sinkReqOK at hok
-          rw [hd.gen] at hok
-          cases h : sinkFireB X.sB j f s with
-          | false => rw [h] at hok; cases hok
-          | true => rfl
-        obtain ⟨hid, hsb, rs, hne, hsp, -⟩ := sinkFire_parts hfire
-        obtain ⟨⟨E0, hj'⟩, hfb, hfp, hfk, -, -⟩ := idEdge_parts hid
-        have hdn' := hdn
-        rw [hj'] at hdn'
-        obtain ⟨h0b, h0p⟩ := id_den hfb hfp hfk hdn'
-        have hpc0 : (sAns X.sB s.path).covers l0 := by
-          obtain ⟨hlb, ⟨σ, hlp, -⟩, -⟩ := hsc
-          exact sAns_covers h0b (h0p.trans hlp)
-        have hpos' : PosIn X s.path := .inr ⟨M, n, s, hsk, hsb, rfl⟩
-        cases hpos s.path (DS.sreqSink hf hsk hd.gen hfire) hpc0 with
-        | @mk j' pp r hg' hr =>
-        apply rec j' _ hg'
-        have hlt := measure_lt (q := j.path) hpos' hne (by rw [hsp, hfp])
-        have hle : posBound X - j'.path.length ≤ posBound X - s.path.length := by
-          apply Nat.sub_le_sub_left
-          rw [hr, List.length_append]
-          exact Nat.le_add_right _ _
-        exact Nat.lt_of_le_of_lt hle hlt)
+    · cases hmark (DS.reqSink hf hsk hrq) with
+      | @mk j' t hg' ht =>
+      cases hg' with
+      | mk _ _ hedge' _ _ =>
+      obtain ⟨f', hf', hdn'⟩ := hedge'
+      rcases check_sound hT hdn' hsc with htr' | ⟨_, hist'⟩
+      · exact ⟨_, DS.vuln hf' hsk htr'⟩
+      · exact absurd ht (hist' t))
   exact key j hg
 
 #print axioms vulnD
@@ -4916,7 +4979,7 @@ def sinkPat : PFact := ⟨rB, [], .exact, .conc T⟩
 def sinks : List (MethodId × Node × PFact) := [(1, 2, sinkPat)]
 def counted (a : Acc) : Bool := !Nat.beq a C
 def α1 : MethodId → PFact → PFact := policy (fun _ => [])
-/-- The second design. -/
+/-- The final rule. -/
 def Xd : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
 /-- The same with the mark answer on the requested chain. -/
 def Xs : SCtx := { Xd with deepAns := false }
@@ -5003,7 +5066,7 @@ theorem clean_swf : SWF Xd where
       · exact absurd h1 (by decide)
       · rw [List.mem_singleton.mp he'] at h1; exact absurd h1 (by decide)
     · rcases List.mem_cons.mp he with rfl | he'
-      · exact ⟨[], .set [], .set [], rfl, rfl⟩
+      · exact .inl ⟨[], .set [], .set [], rfl, rfl⟩
       · rw [List.mem_singleton.mp he'] at h2; exact absurd h2 (by decide)
     · rcases List.mem_cons.mp he with rfl | he'
       · exact absurd h1 (by decide)
@@ -5162,7 +5225,7 @@ theorem deep_vuln_normal : DS Xd (.vuln 1 2 sinkPat false) := DS.vuln x_eCw2 m_s
 
 #print axioms deep_vuln_normal
 
-/-- The same from the soundness theorem of the second design. -/
+/-- The same from the soundness theorem of the final rule. -/
 theorem deep_finds : ∃ b, DS Xd (.vuln 1 2 sinkPat b) :=
   vulnD clean_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf clean_reach m_sink rfl clean_covers
 
@@ -5384,7 +5447,9 @@ theorem uInv_all {o : SObj} (h : DS Xs o) : UInv o := by
         ⟨rfl, rfl⟩ | ⟨rfl, hf0⟩
       · have key : ∀ e, e ∈ rd.edges → Xs.fireB Sroot SrootF e = true → e.1.path = [C, sA] := by
           decide
-        exact .inl ⟨rfl, rfl, key e hes hfire⟩
+        refine .inl ⟨rfl, rfl, ?_⟩
+        rw [reqP_gen (X := Xs) rfl, key e hes hfire]
+        all_goals rfl
       · have key : ∀ g, g ∈ [AsF, yF, retF] → ∀ e, e ∈ rd.edges → Xs.fireB As g e = false := by
           decide
         rw [key f (by rcases hf0 with rfl | rfl | rfl <;> decide) e hes] at hfire
@@ -5488,17 +5553,12 @@ theorem uInv_all {o : SObj} (h : DS Xs o) : UInv o := by
     have hno : Xs.fbOK i a.fact j = false := rfl
     rw [hno] at hok
     cases hok
-  | @reqSink M i n f s t _ hs _ hc ih =>
+  | @reqSink M i n f s t _ hs hc ih =>
     have hs' : (M, n, s) = (1, 2, sinkPat) := List.mem_singleton.mp hs
     simp only [Prod.mk.injEq] at hs'
     obtain ⟨rfl, rfl, rfl⟩ := hs'
     rw [sink_none (ih : CallerOK i 2 f)] at hc
     cases hc
-  | @sreqSink M i n f s _ hs _ hfire _ =>
-    have hs' : (M, n, s) = (1, 2, sinkPat) := List.mem_singleton.mp hs
-    simp only [Prod.mk.injEq] at hs'
-    obtain ⟨rfl, rfl, rfl⟩ := hs'
-    exact absurd (sinkFire_parts hfire).2.1 (by decide)
   | @answer M i t a _ _ _ _ ihr iha =>
     rw [ansInit_shallow (X := Xs) rfl]
     rcases (ihr : (M = 2 ∧ i = Sroot ∧ t = T) ∨ (M = 1 ∧ (i = Sroot ∨ i = As) ∧ t = T)) with
@@ -5594,7 +5654,7 @@ theorem shallow_misses {M : MethodId} {n : Node} {s : PFact} {d : Bool} :
 
 #print axioms shallow_misses
 
-/-- THE COUNTEREXAMPLE to the second design with the mark answer on the requested chain (summary):
+/-- THE COUNTEREXAMPLE to the final rule with the mark answer on the requested chain (summary):
     the construction hypotheses hold, the flow is real, `D` and the design with the deep answer report
     it (the latter in the normal layer), the shallow variant does not, and it derives the non-exact
     static fact `(S, [], [any], 7)` above a position from the precise `(S, <C>.s, $, 7)`. -/
@@ -5611,7 +5671,7 @@ theorem counterexample :
 
 end CexClean
 
-/-! ## 15. The records under the second design: `CexAbove` and `CexWide` through NORMAL edges
+/-! ## 15. The records under the final rule: `CexAbove` and `CexWide` through NORMAL edges
 
 Both programs satisfy the construction hypotheses (`above_swf`, `wide_swf`), so `vulnD` reports their
 vulnerabilities. The explicit derivations show HOW, and that the reported edge is in the normal layer.
@@ -5627,7 +5687,7 @@ vulnerabilities. The explicit derivations show HOW, and that the reported edge i
 
 namespace CexAbove
 
-/-- The second design on the `CexAbove` program. -/
+/-- The final rule on the `CexAbove` program. -/
 def X2 : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
 def AC : PFact := sAns S [C]
 def ACs : AFact := ⟨⟨S, [C], .star (.set [sA]), .star⟩, false⟩
@@ -5655,7 +5715,7 @@ theorem above_swf : SWF X2 where
   base := by decide
   ss := by
     intro M n s n' hE e he h1 h2
-    refine ssB_sound ?_ h1 h2
+    refine .inl (ssB_sound ?_ h1 h2)
     rcases edgesU hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ |
       ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert h2 h1 <;> revert e <;> decide
   write := by
@@ -5734,7 +5794,7 @@ theorem y_eCA2 : DS X2 (.edge 1 Ans 2 ⟨pat rB [], false⟩) :=
   DS.ret (a := ⟨Ans, false⟩) (r := ⟨pat retB [], false⟩) (r' := ⟨pat rB [], false⟩) (e2 := retE)
     y_eCA1 m_cm List.mem_cons_self (by decide) y_jmA (by decide) y_emA2 (by decide)
     (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
-theorem y_rC : DS X2 (.req 1 Ans T) := DS.reqSink y_eCA2 m_sink (by decide) (by decide)
+theorem y_rC : DS X2 (.req 1 Ans T) := DS.reqSink y_eCA2 m_sink (by decide)
 /-- The deep answer of the mark request: `(S, <C>.f, $, 7)` itself. -/
 theorem y_jCw : DS X2 (.init 1 wS) := by
   have h : X2.ansInit Ans wS T = wS := by decide
@@ -5746,12 +5806,12 @@ theorem y_eCw2 : DS X2 (.edge 1 wS 2 ⟨⟨rB, [], .exact, .conc T⟩, false⟩)
     (r' := ⟨⟨rB, [], .exact, .conc T⟩, false⟩) (e2 := retE) y_eCw1 m_cm List.mem_cons_self
     (by decide) y_jmA (by decide) y_emA2 (by decide) (List.mem_cons_of_mem _ List.mem_cons_self)
     (by decide)
-/-- THE SECOND DESIGN REPORTS `CexAbove` IN THE NORMAL LAYER. -/
+/-- THE FINAL RULE (`Design`) REPORTS `CexAbove` IN THE NORMAL LAYER. -/
 theorem y_vuln_normal : DS X2 (.vuln 1 2 sinkPat false) := DS.vuln y_eCw2 m_sink (by decide)
 
 #print axioms y_vuln_normal
 
-/-- The same from the soundness theorem of the second design. -/
+/-- The same from the soundness theorem of the final rule. -/
 theorem above_design_finds : ∃ b, DS X2 (.vuln 1 2 sinkPat b) :=
   vulnD above_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf cex_reach m_sink rfl cex_covers
 
@@ -5761,7 +5821,7 @@ end CexAbove
 
 namespace CexWide
 
-/-- The second design on the `CexWide` program. -/
+/-- The final rule on the `CexWide` program. -/
 def X2 : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
 def AC : PFact := sAns S [C]
 def ACF : AFact := ⟨AC, false⟩
@@ -5797,7 +5857,7 @@ theorem wide_swf : SWF X2 where
   base := by decide
   ss := by
     intro M n s n' hE e he h1 h2
-    refine ssB_sound ?_ h1 h2
+    refine .inl (ssB_sound ?_ h1 h2)
     rcases edgesW hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ |
       ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert h2 h1 <;>
       revert e <;> decide
@@ -5883,7 +5943,7 @@ theorem w_eAg4 : DS X2 (.edge 1 Ag 4 ⟨pat rB [], false⟩) :=
   DS.ret (a := AsF) (r := ⟨pat retB [], false⟩) (r' := ⟨pat rB [], false⟩) (e2 := retE)
     w_eAg3 m_cm List.mem_cons_self (by decide) w_jmA (by decide) w_emA2 (by decide)
     (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
-theorem w_rC : DS X2 (.req 1 Ag T) := DS.reqSink w_eAg4 m_sink (by decide) (by decide)
+theorem w_rC : DS X2 (.req 1 Ag T) := DS.reqSink w_eAg4 m_sink (by decide)
 /-- The deep answer of the mark request: `(S, <C>.g, $, 7)` itself. -/
 theorem w_jCw : DS X2 (.init 1 wg) := by
   have h : X2.ansInit Ag wg T = wg := by decide
@@ -5897,17 +5957,665 @@ theorem w_eCw3 : DS X2 (.edge 1 wg 3 wsT) :=
 theorem w_eCw4 : DS X2 (.edge 1 wg 4 rT) :=
   DS.ret (a := wsT) (r := retT) (r' := rT) (e2 := retE) w_eCw3 m_cm List.mem_cons_self (by decide)
     w_jmA (by decide) w_emA2 (by decide) (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
-/-- THE SECOND DESIGN REPORTS `CexWide` IN THE NORMAL LAYER. -/
+/-- THE FINAL RULE (`Design`) REPORTS `CexWide` IN THE NORMAL LAYER. -/
 theorem w_vuln_normal : DS X2 (.vuln 1 4 sinkPat false) := DS.vuln w_eCw4 m_sink (by decide)
 
 #print axioms w_vuln_normal
 
-/-- The same from the soundness theorem of the second design. -/
+/-- The same from the soundness theorem of the final rule. -/
 theorem wide_design_finds : ∃ b, DS X2 (.vuln 1 4 sinkPat b) :=
   vulnD wide_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf wide_reach m_sink rfl wide_covers
 
 #print axioms wide_design_finds
 
 end CexWide
+
+/-! ## 16. A field-to-field pass rule at an unresolved call: `CopyF2F`
+
+`root: C.f = source(); A()`, `A: lib(); x = D.g; sink(x)`, where `lib()` is unresolved and has the
+pass rule `CopyAllMarks(ClassStatic(C).f → ClassStatic(D).g)`: its statement summary is the keep edge
+of the base `S.* → S.*` and the FIELD-TO-FIELD edge `S.<C>.f.* → S.<D>.g.*`. Methods `0` (root) and
+`1` (`A`). The program satisfies the (relaxed) construction hypotheses (`copy_swf`).
+
+In run 1, `A`'s static root `(S, [], *)` meets the copy edge strictly below it: the copy gives no
+fact and raises the position request for the SOURCE field `<C>.f` (`c_sreq`); the keep edge passes
+the static root. `A`'s added fact `(S, <C>.f, $, 7)` answers `(S, <C>.f, *, {}, *)`, and the answer
+flows through the copy to the TARGET field `(S, <D>.g, *, {}, *)` (`c_eAf1`) and through the read to
+`x`. The sink asks for the mark 7 on the answer, the deep mark answer gives `(S, <C>.f, $, 7)`, and
+the vulnerability is reported through a NORMAL edge (`c_vuln_normal`; also `copy_design_finds` from
+`vulnD`). -/
+
+namespace CopyF2F
+
+def S : Base := 1
+def xB : Base := 2
+def C : Acc := 10
+def fA : Acc := 11
+def D : Acc := 12
+def gA : Acc := 13
+def T : Mark := 7
+
+def Sroot : PFact := pat S []
+def SrootF : AFact := ⟨Sroot, false⟩
+def zfF : AFact := ⟨zeroFact, false⟩
+def bindS : MicroEdge := (pat S [], pat S [])
+/-- The tainted static field `(S, <C>.f, $, 7)`. -/
+def wC : PFact := ⟨S, [C, fA], .exact, .conc T⟩
+def wCF : AFact := ⟨wC, false⟩
+def wDF : AFact := ⟨⟨S, [D, gA], .exact, .conc T⟩, false⟩
+/-- The answer at the source field. -/
+def Af : PFact := sAns S [C, fA]
+def AfF : AFact := ⟨Af, false⟩
+/-- The answer copied to the target field. -/
+def AgF : AFact := ⟨pat S [D, gA], false⟩
+def xF : AFact := ⟨pat xB [], false⟩
+def xT : AFact := ⟨⟨xB, [], .exact, .conc T⟩, false⟩
+/-- root: `C.f = source()`. -/
+def src : Stmt := ⟨[zeroBase], [(zeroFact, zeroFact), (zeroFact, wC)]⟩
+/-- The field-to-field edge of `CopyAllMarks(ClassStatic(C).f → ClassStatic(D).g)`. -/
+def copyE : MicroEdge := (pat S [C, fA], pat S [D, gA])
+/-- The statement summary of the unresolved call `lib()`: the keep edge of `S` and the copy. -/
+def cp : Stmt := ⟨[S], [(pat S [], pat S []), copyE]⟩
+/-- A: `x = D.g`. -/
+def rd : Stmt := readStmt S xB [D, gA]
+def readE : MicroEdge := (pat S [D, gA], pat xB [])
+def cA : Call := ⟨1, [S], [bindS], [bindS]⟩
+def prog : Program :=
+  ⟨fun _ => 0, fun _ => 2,
+   [(0, 0, .stmt src, 1), (0, 1, .call cA, 2), (1, 0, .stmt cp, 1), (1, 1, .stmt rd, 2)]⟩
+def sinkPat : PFact := ⟨xB, [], .exact, .conc T⟩
+def sinks : List (MethodId × Node × PFact) := [(1, 2, sinkPat)]
+/-- The class accessors are not counted. -/
+def counted (a : Acc) : Bool := !(Nat.beq a C || Nat.beq a D)
+def α1 : MethodId → PFact → PFact := policy (fun _ => [])
+/-- The final rule. -/
+def X2 : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
+
+theorem m_src : (0, 0, Instr.stmt src, 1) ∈ prog.edges := by simp [prog]
+theorem m_cA : (0, 1, Instr.call cA, 2) ∈ prog.edges := by simp [prog]
+theorem m_cp : (1, 0, Instr.stmt cp, 1) ∈ prog.edges := by simp [prog]
+theorem m_rd : (1, 1, Instr.stmt rd, 2) ∈ prog.edges := by simp [prog]
+theorem m_sink : (1, 2, sinkPat) ∈ sinks := List.mem_cons_self
+
+theorem edgesF {M n n' : Nat} {ins : Instr} (h : (M, n, ins, n') ∈ prog.edges) :
+    (M = 0 ∧ n = 0 ∧ ins = .stmt src ∧ n' = 1) ∨ (M = 0 ∧ n = 1 ∧ ins = .call cA ∧ n' = 2) ∨
+    (M = 1 ∧ n = 0 ∧ ins = .stmt cp ∧ n' = 1) ∨ (M = 1 ∧ n = 1 ∧ ins = .stmt rd ∧ n' = 2) := by
+  simp only [prog, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at h
+  exact h
+
+theorem wf : prog.WF where
+  stmtTouched := by
+    intro M n s n' hE e he
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  toStar := by
+    intro M n c n' hE e he
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  fromStar := by
+    intro M n c n' hE e he
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  filtPrefix := by
+    intro M n b may n' hE
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+
+/-- THE CONCRETE FLOW: `S.<C>.f` → (the copy) `S.<D>.g` → `x` at the sink. -/
+theorem copy_reach : Reach prog [0] 1 2 ⟨xB, [], T⟩ := by
+  have h0 : Flow prog 0 zeroLoc 1 ⟨S, [C, fA], T⟩ :=
+    Flow.step (Flow.start 0 zeroLoc) m_src
+      (.inr ⟨(zeroFact, wC), List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩)
+  have a1 : Flow prog 1 ⟨S, [C, fA], T⟩ 1 ⟨S, [D, gA], T⟩ :=
+    Flow.step (Flow.start 1 ⟨S, [C, fA], T⟩) m_cp
+      (.inr ⟨copyE, List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, trivial, rfl, trivial, [], [], rfl, rfl, rfl, rfl, rfl⟩)
+  have a2 : Flow prog 1 ⟨S, [C, fA], T⟩ 2 ⟨xB, [], T⟩ :=
+    Flow.step a1 m_rd
+      (.inr ⟨readE, List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, trivial, rfl, trivial, [], [], rfl, rfl, rfl, rfl, rfl⟩)
+  exact Reach.down (Reach.root List.mem_cons_self h0) m_cA List.mem_cons_self
+    ⟨rfl, rfl, trivial, rfl, trivial, [C, fA], [C, fA], rfl, rfl, rfl, rfl, rfl⟩ a2
+
+theorem copy_covers : sinkPat.covers ⟨xB, [], T⟩ := ⟨rfl, ⟨[], rfl, rfl⟩, rfl⟩
+
+#print axioms copy_reach
+
+theorem posIn_cases {p : List Acc} (h : PosIn X2 p) : p = [] ∨ p = [C, fA] ∨ p = [D, gA] := by
+  rcases h with ⟨M, n, s, n', e, hE, he, heb, rfl⟩ | ⟨M, n, s, hs, hsb, rfl⟩
+  · rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert heb <;> revert e <;> decide
+  · have hs' : (M, n, s) = (1, 2, sinkPat) := List.mem_singleton.mp hs
+    simp only [Prod.mk.injEq] at hs'
+    obtain ⟨-, -, rfl⟩ := hs'
+    exact absurd hsb (by decide)
+
+theorem abovePos_cases {q : List Acc} (h : AbovePos X2 q) : q = [] ∨ q = [C] ∨ q = [D] := by
+  obtain ⟨P, r, hP, hne, hPr⟩ := h
+  rcases posIn_cases hP with rfl | rfl | rfl
+  · exact (prefix_nil hne hPr).elim
+  · rcases prefix_two hne hPr with h | h
+    · exact .inl h
+    · exact .inr (.inl h)
+  · rcases prefix_two hne hPr with h | h
+    · exact .inl h
+    · exact .inr (.inr h)
+
+/-- The program satisfies the construction hypotheses: the copy is a field-to-field edge. -/
+theorem copy_swf : SWF X2 where
+  base := by decide
+  ss := by
+    intro M n s n' hE e he h1 h2
+    have key : ssB e = true ∨ (e.1.path ≠ [] ∧ e.1.path ≠ [C] ∧ e.1.path ≠ [D] ∧
+        e.2.path ≠ [] ∧ e.2.path ≠ [C] ∧ e.2.path ≠ [D]) := by
+      rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+        revert h2 h1 <;> revert e <;> decide
+    rcases key with hk | ⟨a1, a2, a3, b1, b2, b3⟩
+    · exact .inl (ssB_sound hk h1 h2)
+    · refine .inr ⟨fun hab => ?_, fun hab => ?_⟩
+      · rcases abovePos_cases hab with h | h | h
+        · exact a1 h
+        · exact a2 h
+        · exact a3 h
+      · rcases abovePos_cases hab with h | h | h
+        · exact b1 h
+        · exact b2 h
+        · exact b3 h
+  write := by
+    intro M n s n' hE e he h1 h2 hab
+    have hq := abovePos_cases hab
+    clear hab
+    exfalso
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert hq h2 h1 <;> revert e <;> decide
+  toC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+        revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  fromC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+        revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  cut := by
+    intro q r hc hab
+    have h2 := cutPath_count hc
+    rcases abovePos_cases hab with rfl | rfl | rfl <;> exact absurd h2 (by decide)
+  clean := by
+    intro M n cl n' hE _
+    rcases edgesF hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+  alpha := rfl
+
+#print axioms copy_swf
+
+theorem c_start : DS X2 (.edge 0 zeroFact 0 zfF) := DS.start (DS.root List.mem_cons_self)
+theorem c_src : DS X2 (.edge 0 zeroFact 1 wCF) := DS.step c_start m_src (by decide)
+theorem c_aA : DS X2 (.added 1 wC) := DS.added (a := wCF) c_src m_cA List.mem_cons_self (by decide)
+theorem c_jA : DS X2 (.init 1 Sroot) := by
+  have h : X2.α 1 wC = Sroot := by decide
+  exact h ▸ DS.initA c_aA
+theorem c_eA0 : DS X2 (.edge 1 Sroot 0 SrootF) := DS.start c_jA
+/-- The static root passes the unresolved call by the keep edge only: the copy edge fires. -/
+theorem c_eA1 : DS X2 (.edge 1 Sroot 1 SrootF) := DS.step c_eA0 m_cp (by decide)
+/-- RAISE: the copy on the static root raises the position request for the SOURCE field. -/
+theorem c_sreq : DS X2 (.sreq 1 Sroot [C, fA]) :=
+  DS.sreqStmt (e := copyE) c_eA0 m_cp (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
+/-- ANSWER from `A`'s added fact `(S, <C>.f, $, 7)`, at the position. -/
+theorem c_jAf : DS X2 (.init 1 Af) := DS.sanswer c_sreq c_aA (by decide)
+theorem c_eAf0 : DS X2 (.edge 1 Af 0 AfF) := DS.start c_jAf
+/-- The answer flows through the copy to the TARGET field: `(S, <D>.g, *, {}, *)`, normal layer. -/
+theorem c_eAf1 : DS X2 (.edge 1 Af 1 AgF) := DS.step c_eAf0 m_cp (by decide)
+theorem c_eAf2 : DS X2 (.edge 1 Af 2 xF) := DS.step c_eAf1 m_rd (by decide)
+/-- The sink asks for the mark 7 on the answer premise. -/
+theorem c_req : DS X2 (.req 1 Af T) := DS.reqSink c_eAf2 m_sink (by decide)
+/-- The deep mark answer: `(S, <C>.f, $, 7)` itself. -/
+theorem c_jw : DS X2 (.init 1 wC) := by
+  have h : X2.ansInit Af wC T = wC := by decide
+  exact h ▸ DS.answer c_req c_aA rfl (by decide)
+theorem c_ew0 : DS X2 (.edge 1 wC 0 wCF) := DS.start c_jw
+/-- The copy moves the exact fact to the target field: `(S, <D>.g, $, 7)`. -/
+theorem c_ew1 : DS X2 (.edge 1 wC 1 wDF) := DS.step c_ew0 m_cp (by decide)
+theorem c_ew2 : DS X2 (.edge 1 wC 2 xT) := DS.step c_ew1 m_rd (by decide)
+/-- THE FINAL RULE REPORTS THE FIELD-TO-FIELD FLOW IN THE NORMAL LAYER. -/
+theorem c_vuln_normal : DS X2 (.vuln 1 2 sinkPat false) := DS.vuln c_ew2 m_sink (by decide)
+
+#print axioms c_vuln_normal
+
+/-- The same from the soundness theorem of the final rule (relaxed `SWF`). -/
+theorem copy_design_finds : ∃ b, DS X2 (.vuln 1 2 sinkPat b) :=
+  vulnD copy_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf copy_reach m_sink rfl copy_covers
+
+#print axioms copy_design_finds
+
+/-- No static `[any]` fact above a position in this program (`no_any_above`). -/
+theorem copy_no_any {M : MethodId} {i : PFact} {n : Node} {f : AFact} (h : DS X2 (.edge M i n f))
+    (hb : f.fact.base = S) (hp : AbovePos X2 f.fact.path) : f.fact.kind ≠ .any :=
+  (no_any_above copy_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ h hb hp).1
+
+end CopyF2F
+
+/-! ## 17. Deep static sinks: the ordinary mark request climbs
+
+Two programs with the deep static sink `ContainsMark(ClassStatic(C).f.g, T)` in a callee `m`, after a
+caller write `C.f = x` with an abstract `x`. The sink pattern `(S, <C>.f.g, $, 7)` lies below `m`'s
+static root: under the final rule it raises the ordinary MARK request on the premise (`check`), which
+climbs to the caller through the caller edge of `C.f = x`, whatever the caller premise. (A sink
+position request, as in the earlier draft of the rule, is raised instead of the mark request and
+climbs only through a STATIC caller premise for the same location: it lost both flows.)
+
+* `DeepSink`: `root: C.h.g = source(); caller()`, `caller: x = C.h; C.f = x; m()`,
+  `m: sink(C.f.g)`. The caller's abstract `x` comes from the answer `(S, <C>.h, *)` of the read; the
+  mark request climbs to that static premise, the deep mark answer gives `(S, <C>.h.g, $, 7)` itself,
+  and the vulnerability is reported through a NORMAL edge (`e_vuln_normal`).
+* `DeepSinkParam`: `root: x.g = source(); caller(x)`, `caller(p): C.f = p; m()`, `m: sink(C.f.g)`.
+  The caller premise is the parameter `(p, [], *)`; the mark request climbs to it and is answered as
+  for an instance field (`answerInit`: the requested chain, `[any]` in the demand layer), so the
+  vulnerability is reported in the DEMAND layer (`p_vuln`), as `D` reports it. -/
+
+namespace DeepSink
+
+def S : Base := 1
+def xB : Base := 2
+def C : Acc := 10
+def fA : Acc := 11
+def gA : Acc := 12
+def hA : Acc := 13
+def T : Mark := 7
+
+def Sroot : PFact := pat S []
+def SrootF : AFact := ⟨Sroot, false⟩
+def zfF : AFact := ⟨zeroFact, false⟩
+def bindS : MicroEdge := (pat S [], pat S [])
+/-- The source `(S, <C>.h.g, $, 7)`. -/
+def wHG : PFact := ⟨S, [C, hA, gA], .exact, .conc T⟩
+def wHGF : AFact := ⟨wHG, false⟩
+def Ah : PFact := sAns S [C, hA]
+def AhF : AFact := ⟨Ah, false⟩
+def xF : AFact := ⟨pat xB [], false⟩
+def WfF : AFact := ⟨pat S [C, fA], false⟩
+def xgT : AFact := ⟨⟨xB, [gA], .exact, .conc T⟩, false⟩
+def wFG : PFact := ⟨S, [C, fA, gA], .exact, .conc T⟩
+def wFGF : AFact := ⟨wFG, false⟩
+/-- root: `C.h.g = source()`. -/
+def src : Stmt := ⟨[zeroBase], [(zeroFact, zeroFact), (zeroFact, wHG)]⟩
+/-- caller: `x = C.h`. -/
+def rdh : Stmt := readStmt S xB [C, hA]
+def readH : MicroEdge := (pat S [C, hA], pat xB [])
+/-- caller: `C.f = x`. -/
+def wr : Stmt :=
+  ⟨[S, xB], [(⟨S, [], .star (.set [C]), .star⟩, pat S []),
+    (⟨S, [C], .star (.set [fA]), .star⟩, pat S [C]), (pat xB [], pat xB []), (pat xB [], pat S [C, fA])]⟩
+def cC : Call := ⟨1, [S], [bindS], [bindS]⟩
+def cm : Call := ⟨2, [S], [bindS], [bindS]⟩
+def exitOf : MethodId → Node
+  | 0 => 2
+  | 1 => 3
+  | _ => 0
+def prog : Program :=
+  ⟨fun _ => 0, exitOf,
+   [(0, 0, .stmt src, 1), (0, 1, .call cC, 2), (1, 0, .stmt rdh, 1), (1, 1, .stmt wr, 2),
+    (1, 2, .call cm, 3)]⟩
+/-- m: `ContainsMark(ClassStatic(C).f.g, 7)`. -/
+def sinkPat : PFact := ⟨S, [C, fA, gA], .exact, .conc T⟩
+def sinks : List (MethodId × Node × PFact) := [(2, 0, sinkPat)]
+def counted (a : Acc) : Bool := !Nat.beq a C
+def α1 : MethodId → PFact → PFact := policy (fun _ => [])
+def X2 : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
+
+theorem m_src : (0, 0, Instr.stmt src, 1) ∈ prog.edges := by simp [prog]
+theorem m_cC : (0, 1, Instr.call cC, 2) ∈ prog.edges := by simp [prog]
+theorem m_rdh : (1, 0, Instr.stmt rdh, 1) ∈ prog.edges := by simp [prog]
+theorem m_wr : (1, 1, Instr.stmt wr, 2) ∈ prog.edges := by simp [prog]
+theorem m_cm : (1, 2, Instr.call cm, 3) ∈ prog.edges := by simp [prog]
+theorem m_sink : (2, 0, sinkPat) ∈ sinks := List.mem_cons_self
+
+theorem edgesE {M n n' : Nat} {ins : Instr} (h : (M, n, ins, n') ∈ prog.edges) :
+    (M = 0 ∧ n = 0 ∧ ins = .stmt src ∧ n' = 1) ∨ (M = 0 ∧ n = 1 ∧ ins = .call cC ∧ n' = 2) ∨
+    (M = 1 ∧ n = 0 ∧ ins = .stmt rdh ∧ n' = 1) ∨ (M = 1 ∧ n = 1 ∧ ins = .stmt wr ∧ n' = 2) ∨
+    (M = 1 ∧ n = 2 ∧ ins = .call cm ∧ n' = 3) := by
+  simp only [prog, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at h
+  exact h
+
+theorem wf : prog.WF where
+  stmtTouched := by
+    intro M n s n' hE e he
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;>
+      cases h <;> revert e <;> decide
+  toStar := by
+    intro M n c n' hE e he
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;>
+      cases h <;> revert e <;> decide
+  fromStar := by
+    intro M n c n' hE e he
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;>
+      cases h <;> revert e <;> decide
+  filtPrefix := by
+    intro M n b may n' hE
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;>
+      cases h
+
+/-- THE CONCRETE FLOW: `S.<C>.h.g` → `x.g` → `S.<C>.f.g` → the sink in `m`. -/
+theorem deep_reach : Reach prog [0] 2 0 ⟨S, [C, fA, gA], T⟩ := by
+  have h0 : Flow prog 0 zeroLoc 1 ⟨S, [C, hA, gA], T⟩ :=
+    Flow.step (Flow.start 0 zeroLoc) m_src
+      (.inr ⟨(zeroFact, wHG), List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩)
+  have c1 : Flow prog 1 ⟨S, [C, hA, gA], T⟩ 1 ⟨xB, [gA], T⟩ :=
+    Flow.step (Flow.start 1 ⟨S, [C, hA, gA], T⟩) m_rdh
+      (.inr ⟨readH, List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, trivial, rfl, trivial, [gA], [gA], rfl, rfl, rfl, rfl, rfl⟩)
+  have c2 : Flow prog 1 ⟨S, [C, hA, gA], T⟩ 2 ⟨S, [C, fA, gA], T⟩ :=
+    Flow.step c1 m_wr
+      (.inr ⟨(pat xB [], pat S [C, fA]), by simp [wr],
+        rfl, rfl, trivial, rfl, trivial, [gA], [gA], rfl, rfl, rfl, rfl, rfl⟩)
+  exact Reach.down
+    (Reach.down (Reach.root List.mem_cons_self h0) m_cC List.mem_cons_self
+      ⟨rfl, rfl, trivial, rfl, trivial, [C, hA, gA], [C, hA, gA], rfl, rfl, rfl, rfl, rfl⟩ c2)
+    m_cm List.mem_cons_self
+    ⟨rfl, rfl, trivial, rfl, trivial, [C, fA, gA], [C, fA, gA], rfl, rfl, rfl, rfl, rfl⟩
+    (Flow.start 2 ⟨S, [C, fA, gA], T⟩)
+
+theorem deep_covers : sinkPat.covers ⟨S, [C, fA, gA], T⟩ := ⟨rfl, ⟨[], rfl, rfl⟩, rfl⟩
+
+#print axioms deep_reach
+
+theorem posIn_cases {p : List Acc} (h : PosIn X2 p) :
+    p = [] ∨ p = [C, hA] ∨ p = [C] ∨ p = [C, fA] := by
+  rcases h with ⟨M, n, s, n', e, hE, he, heb, rfl⟩ | ⟨M, n, s, hs, hsb, rfl⟩
+  · rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;>
+      cases h <;> revert heb <;> revert e <;> decide
+  · have hs' : (M, n, s) = (2, 0, sinkPat) := List.mem_singleton.mp hs
+    simp only [Prod.mk.injEq] at hs'
+    obtain ⟨-, -, rfl⟩ := hs'
+    decide
+
+theorem abovePos_cases {q : List Acc} (h : AbovePos X2 q) : q = [] ∨ q = [C] := by
+  obtain ⟨P, r, hP, hne, hPr⟩ := h
+  rcases posIn_cases hP with rfl | rfl | rfl | rfl
+  · exact (prefix_nil hne hPr).elim
+  · exact prefix_two hne hPr
+  · exact .inl (prefix_one hne hPr)
+  · exact prefix_two hne hPr
+
+/-- The program satisfies the construction hypotheses. -/
+theorem deep_swf : SWF X2 where
+  base := by decide
+  ss := by
+    intro M n s n' hE e he h1 h2
+    refine .inl (ssB_sound ?_ h1 h2)
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert h2 h1 <;> revert e <;> decide
+  write := by
+    intro M n s n' hE e he h1 h2 hab
+    have hq := abovePos_cases hab
+    clear hab
+    exfalso
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hq h2 h1 <;> revert e <;> decide
+  toC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  fromC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  cut := by
+    intro q r hc hab
+    have h2 := cutPath_count hc
+    rcases abovePos_cases hab with rfl | rfl <;> exact absurd h2 (by decide)
+  clean := by
+    intro M n cl n' hE _
+    rcases edgesE hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+  alpha := rfl
+
+#print axioms deep_swf
+
+theorem e_start : DS X2 (.edge 0 zeroFact 0 zfF) := DS.start (DS.root List.mem_cons_self)
+theorem e_src : DS X2 (.edge 0 zeroFact 1 wHGF) := DS.step e_start m_src (by decide)
+theorem e_aC : DS X2 (.added 1 wHG) := DS.added (a := wHGF) e_src m_cC List.mem_cons_self (by decide)
+theorem e_jC : DS X2 (.init 1 Sroot) := by
+  have h : X2.α 1 wHG = Sroot := by decide
+  exact h ▸ DS.initA e_aC
+theorem e_eC0 : DS X2 (.edge 1 Sroot 0 SrootF) := DS.start e_jC
+/-- RAISE at the read `x = C.h` on the static root. -/
+theorem e_sreqH : DS X2 (.sreq 1 Sroot [C, hA]) :=
+  DS.sreqStmt (e := readH) e_eC0 m_rdh (List.mem_cons_of_mem _ List.mem_cons_self) (by decide)
+/-- ANSWER from the added fact `(S, <C>.h.g, $, 7)`, below `<C>.h`. -/
+theorem e_jAh : DS X2 (.init 1 Ah) := DS.sanswer e_sreqH e_aC (by decide)
+theorem e_eAh0 : DS X2 (.edge 1 Ah 0 AhF) := DS.start e_jAh
+/-- The abstract value `x = (x, [], *)`. -/
+theorem e_eAh1 : DS X2 (.edge 1 Ah 1 xF) := DS.step e_eAh0 m_rdh (by decide)
+/-- `C.f = x`: `(S, <C>.f, *)`. -/
+theorem e_eAh2 : DS X2 (.edge 1 Ah 2 WfF) := DS.step e_eAh1 m_wr (by decide)
+theorem e_aM : DS X2 (.added 2 WfF.fact) := DS.added (a := WfF) e_eAh2 m_cm List.mem_cons_self (by decide)
+theorem e_jM : DS X2 (.init 2 Sroot) := by
+  have h : X2.α 2 WfF.fact = Sroot := by decide
+  exact h ▸ DS.initA e_aM
+theorem e_eM0 : DS X2 (.edge 2 Sroot 0 SrootF) := DS.start e_jM
+/-- THE DEEP STATIC SINK RAISES THE ORDINARY MARK REQUEST on `m`'s static root. -/
+theorem e_rM : DS X2 (.req 2 Sroot T) := DS.reqSink e_eM0 m_sink (by decide)
+/-- It CLIMBS to the caller premise `(S, <C>.h, *)` through the caller edge of `C.f = x`. -/
+theorem e_rC : DS X2 (.req 1 Ah T) :=
+  DS.reqUp (a := WfF) (e := bindS) e_rM e_eAh2 m_cm rfl List.mem_cons_self (by decide) (by decide)
+    (by decide)
+/-- The deep mark answer: `(S, <C>.h.g, $, 7)` itself. -/
+theorem e_jw : DS X2 (.init 1 wHG) := by
+  have h : X2.ansInit Ah wHG T = wHG := by decide
+  exact h ▸ DS.answer e_rC e_aC rfl (by decide)
+theorem e_ew0 : DS X2 (.edge 1 wHG 0 wHGF) := DS.start e_jw
+theorem e_ew1 : DS X2 (.edge 1 wHG 1 xgT) := DS.step e_ew0 m_rdh (by decide)
+theorem e_ew2 : DS X2 (.edge 1 wHG 2 wFGF) := DS.step e_ew1 m_wr (by decide)
+theorem e_aMw : DS X2 (.added 2 wFG) :=
+  DS.added (a := wFGF) e_ew2 m_cm List.mem_cons_self (by decide)
+/-- `m` answers its mark request by the deep answer `(S, <C>.f.g, $, 7)`. -/
+theorem e_jMw : DS X2 (.init 2 wFG) := by
+  have h : X2.ansInit Sroot wFG T = wFG := by decide
+  exact h ▸ DS.answer e_rM e_aMw rfl (by decide)
+theorem e_eMw0 : DS X2 (.edge 2 wFG 0 wFGF) := DS.start e_jMw
+/-- THE DEEP STATIC SINK IS REPORTED THROUGH A NORMAL EDGE. -/
+theorem e_vuln_normal : DS X2 (.vuln 2 0 sinkPat false) := DS.vuln e_eMw0 m_sink (by decide)
+
+#print axioms e_vuln_normal
+
+theorem deep_design_finds : ∃ b, DS X2 (.vuln 2 0 sinkPat b) :=
+  vulnD deep_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf deep_reach m_sink rfl deep_covers
+
+#print axioms deep_design_finds
+
+end DeepSink
+
+namespace DeepSinkParam
+
+def S : Base := 1
+def xB : Base := 2
+def pB : Base := 3
+def C : Acc := 10
+def fA : Acc := 11
+def gA : Acc := 12
+def T : Mark := 7
+
+def Sroot : PFact := pat S []
+def SrootF : AFact := ⟨Sroot, false⟩
+def zfF : AFact := ⟨zeroFact, false⟩
+def bindS : MicroEdge := (pat S [], pat S [])
+def bindX : MicroEdge := (pat xB [], pat pB [])
+def xg : PFact := ⟨xB, [gA], .exact, .conc T⟩
+def xgF : AFact := ⟨xg, false⟩
+def pg : PFact := ⟨pB, [gA], .exact, .conc T⟩
+def P0 : PFact := pat pB []
+def P0F : AFact := ⟨P0, false⟩
+def WfF : AFact := ⟨pat S [C, fA], false⟩
+/-- The caller's answer on its parameter premise (the requested chain). -/
+def PT : PFact := ⟨pB, [], .star Excl.empty, .conc T⟩
+def MT : PFact := ⟨S, [C, fA], .any, .conc T⟩
+/-- root: `x.g = source()`. -/
+def src : Stmt := ⟨[zeroBase], [(zeroFact, zeroFact), (zeroFact, xg)]⟩
+/-- caller(p): `C.f = p`. -/
+def wr : Stmt :=
+  ⟨[S, pB], [(⟨S, [], .star (.set [C]), .star⟩, pat S []),
+    (⟨S, [C], .star (.set [fA]), .star⟩, pat S [C]), (pat pB [], pat pB []), (pat pB [], pat S [C, fA])]⟩
+def cC : Call := ⟨1, [xB], [bindX], []⟩
+def cm : Call := ⟨2, [S], [bindS], [bindS]⟩
+def exitOf : MethodId → Node
+  | 0 => 2
+  | 1 => 2
+  | _ => 0
+def prog : Program :=
+  ⟨fun _ => 0, exitOf,
+   [(0, 0, .stmt src, 1), (0, 1, .call cC, 2), (1, 0, .stmt wr, 1), (1, 1, .call cm, 2)]⟩
+def sinkPat : PFact := ⟨S, [C, fA, gA], .exact, .conc T⟩
+def sinks : List (MethodId × Node × PFact) := [(2, 0, sinkPat)]
+def counted (a : Acc) : Bool := !Nat.beq a C
+def α1 : MethodId → PFact → PFact := policy (fun _ => [])
+def X2 : SCtx := ⟨prog, counted, 2, α1, sinks, [0], S, true, true, .off, true, true⟩
+
+theorem m_src : (0, 0, Instr.stmt src, 1) ∈ prog.edges := by simp [prog]
+theorem m_cC : (0, 1, Instr.call cC, 2) ∈ prog.edges := by simp [prog]
+theorem m_wr : (1, 0, Instr.stmt wr, 1) ∈ prog.edges := by simp [prog]
+theorem m_cm : (1, 1, Instr.call cm, 2) ∈ prog.edges := by simp [prog]
+theorem m_sink : (2, 0, sinkPat) ∈ sinks := List.mem_cons_self
+
+theorem edgesP {M n n' : Nat} {ins : Instr} (h : (M, n, ins, n') ∈ prog.edges) :
+    (M = 0 ∧ n = 0 ∧ ins = .stmt src ∧ n' = 1) ∨ (M = 0 ∧ n = 1 ∧ ins = .call cC ∧ n' = 2) ∨
+    (M = 1 ∧ n = 0 ∧ ins = .stmt wr ∧ n' = 1) ∨ (M = 1 ∧ n = 1 ∧ ins = .call cm ∧ n' = 2) := by
+  simp only [prog, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at h
+  exact h
+
+theorem wf : prog.WF where
+  stmtTouched := by
+    intro M n s n' hE e he
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  toStar := by
+    intro M n c n' hE e he
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  fromStar := by
+    intro M n c n' hE e he
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert e <;> decide
+  filtPrefix := by
+    intro M n b may n' hE
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+
+/-- THE CONCRETE FLOW: `x.g` → `p.g` → `S.<C>.f.g` → the sink in `m`. -/
+theorem param_reach : Reach prog [0] 2 0 ⟨S, [C, fA, gA], T⟩ := by
+  have h0 : Flow prog 0 zeroLoc 1 ⟨xB, [gA], T⟩ :=
+    Flow.step (Flow.start 0 zeroLoc) m_src
+      (.inr ⟨(zeroFact, xg), List.mem_cons_of_mem _ List.mem_cons_self,
+        rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩)
+  have c1 : Flow prog 1 ⟨pB, [gA], T⟩ 1 ⟨S, [C, fA, gA], T⟩ :=
+    Flow.step (Flow.start 1 ⟨pB, [gA], T⟩) m_wr
+      (.inr ⟨(pat pB [], pat S [C, fA]), by simp [wr],
+        rfl, rfl, trivial, rfl, trivial, [gA], [gA], rfl, rfl, rfl, rfl, rfl⟩)
+  exact Reach.down
+    (Reach.down (l1 := ⟨pB, [gA], T⟩) (Reach.root List.mem_cons_self h0) m_cC List.mem_cons_self
+      ⟨rfl, rfl, trivial, rfl, trivial, [gA], [gA], rfl, rfl, rfl, rfl, rfl⟩ c1)
+    m_cm List.mem_cons_self
+    ⟨rfl, rfl, trivial, rfl, trivial, [C, fA, gA], [C, fA, gA], rfl, rfl, rfl, rfl, rfl⟩
+    (Flow.start 2 ⟨S, [C, fA, gA], T⟩)
+
+theorem param_covers : sinkPat.covers ⟨S, [C, fA, gA], T⟩ := ⟨rfl, ⟨[], rfl, rfl⟩, rfl⟩
+
+#print axioms param_reach
+
+theorem posIn_cases {p : List Acc} (h : PosIn X2 p) : p = [] ∨ p = [C] ∨ p = [C, fA] := by
+  rcases h with ⟨M, n, s, n', e, hE, he, heb, rfl⟩ | ⟨M, n, s, hs, hsb, rfl⟩
+  · rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert heb <;> revert e <;> decide
+  · have hs' : (M, n, s) = (2, 0, sinkPat) := List.mem_singleton.mp hs
+    simp only [Prod.mk.injEq] at hs'
+    obtain ⟨-, -, rfl⟩ := hs'
+    decide
+
+theorem abovePos_cases {q : List Acc} (h : AbovePos X2 q) : q = [] ∨ q = [C] := by
+  obtain ⟨P, r, hP, hne, hPr⟩ := h
+  rcases posIn_cases hP with rfl | rfl | rfl
+  · exact (prefix_nil hne hPr).elim
+  · exact .inl (prefix_one hne hPr)
+  · exact prefix_two hne hPr
+
+/-- The program satisfies the construction hypotheses. -/
+theorem param_swf : SWF X2 where
+  base := by decide
+  ss := by
+    intro M n s n' hE e he h1 h2
+    refine .inl (ssB_sound ?_ h1 h2)
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert h2 h1 <;> revert e <;> decide
+  write := by
+    intro M n s n' hE e he h1 h2 hab
+    have hq := abovePos_cases hab
+    clear hab
+    exfalso
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hq h2 h1 <;> revert e <;> decide
+  toC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  fromC := by
+    intro M n c n' hE e he hb
+    have key : ssB e = true ∧ e.1.path = [] ∧ e.1.base = X2.sB ∧ e.2.base = X2.sB := by
+      rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;> revert hb <;> revert e <;> decide
+    exact bind_sound key.1 key.2.1 key.2.2.1 key.2.2.2
+  cut := by
+    intro q r hc hab
+    have h2 := cutPath_count hc
+    rcases abovePos_cases hab with rfl | rfl <;> exact absurd h2 (by decide)
+  clean := by
+    intro M n cl n' hE _
+    rcases edgesP hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+  alpha := rfl
+
+#print axioms param_swf
+
+theorem p_start : DS X2 (.edge 0 zeroFact 0 zfF) := DS.start (DS.root List.mem_cons_self)
+theorem p_src : DS X2 (.edge 0 zeroFact 1 xgF) := DS.step p_start m_src (by decide)
+theorem p_aC : DS X2 (.added 1 pg) :=
+  DS.added (e := bindX) (a := ⟨pg, false⟩) p_src m_cC List.mem_cons_self (by decide)
+theorem p_jC : DS X2 (.init 1 P0) := by
+  have h : X2.α 1 pg = P0 := by decide
+  exact h ▸ DS.initA p_aC
+theorem p_eC0 : DS X2 (.edge 1 P0 0 P0F) := DS.start p_jC
+/-- `C.f = p`: `(S, <C>.f, *)` on the parameter premise. -/
+theorem p_eC1 : DS X2 (.edge 1 P0 1 WfF) := DS.step p_eC0 m_wr (by decide)
+theorem p_aM : DS X2 (.added 2 WfF.fact) := DS.added (a := WfF) p_eC1 m_cm List.mem_cons_self (by decide)
+theorem p_jM : DS X2 (.init 2 Sroot) := by
+  have h : X2.α 2 WfF.fact = Sroot := by decide
+  exact h ▸ DS.initA p_aM
+theorem p_eM0 : DS X2 (.edge 2 Sroot 0 SrootF) := DS.start p_jM
+/-- THE DEEP STATIC SINK RAISES THE ORDINARY MARK REQUEST. -/
+theorem p_rM : DS X2 (.req 2 Sroot T) := DS.reqSink p_eM0 m_sink (by decide)
+/-- It CLIMBS to the caller's parameter premise. -/
+theorem p_rC : DS X2 (.req 1 P0 T) :=
+  DS.reqUp (a := WfF) (e := bindS) p_rM p_eC1 m_cm rfl List.mem_cons_self (by decide) (by decide)
+    (by decide)
+/-- The answer on a non-static premise is the requested chain, as for an instance field. -/
+theorem p_jCT : DS X2 (.init 1 PT) := by
+  have h : X2.ansInit P0 pg T = PT := by decide
+  exact h ▸ DS.answer p_rC p_aC rfl (by decide)
+theorem p_eCT0 : DS X2 (.edge 1 PT 0 ⟨⟨pB, [], .any, .conc T⟩, true⟩) := DS.start p_jCT
+theorem p_eCT1 : DS X2 (.edge 1 PT 1 ⟨MT, true⟩) := DS.step p_eCT0 m_wr (by decide)
+theorem p_aMT : DS X2 (.added 2 MT) :=
+  DS.added (a := ⟨MT, true⟩) p_eCT1 m_cm List.mem_cons_self (by decide)
+theorem p_jMT : DS X2 (.init 2 MT) := by
+  have h : X2.ansInit Sroot MT T = MT := by decide
+  exact h ▸ DS.answer p_rM p_aMT rfl (by decide)
+theorem p_eMT0 : DS X2 (.edge 2 MT 0 ⟨MT, true⟩) := DS.start p_jMT
+/-- THE DEEP STATIC SINK IS REPORTED (demand layer, as for an instance field). -/
+theorem p_vuln : DS X2 (.vuln 2 0 sinkPat true) := DS.vuln p_eMT0 m_sink (by decide)
+
+#print axioms p_vuln
+
+theorem param_design_finds : ∃ b, DS X2 (.vuln 2 0 sinkPat b) :=
+  vulnD param_swf ⟨rfl, rfl, rfl, rfl, rfl⟩ wf param_reach m_sink rfl param_covers
+
+#print axioms param_design_finds
+
+end DeepSinkParam
 
 end ApSpec.Statics

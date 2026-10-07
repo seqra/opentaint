@@ -443,7 +443,7 @@ theorem vuln_found (hwf : P.WF) (hα : ∀ m a, applicable (α m a) a = true)
 /-! ## 6. Each forward run is sound
 
 A run is the closure `D` with its own abstraction `policy demand`. The policy
-satisfies (A1) for every `demand` (`policy_applicable`), so the theorems above
+satisfies the abstraction contract C1 (spec §6.1) for every `demand` (`policy_applicable`), so the theorems above
 hold for every run. -/
 
 /-- Coverage for one run: the closure with the abstraction `policy demand`. -/

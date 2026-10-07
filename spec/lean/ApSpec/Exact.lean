@@ -8,8 +8,9 @@
   A COMPLETE edge (`AFact.complete`: normal layer and no `[any]` conclusion) is in
   the normal layer, so the same result applies to it (`complete_exact`).
 
-  This justifies to persist complete edges and to use them again across runs
-  and across directions.
+  This justifies to persist complete edges and to use them again across runs.
+  Across directions: a backward record with a non-zero premise reverses into an exact forward
+  record (`BExact.rev_record_exact`, under `NoZeroBack`).
 
   Main results:
     1. `applyEdge_exact`  (with the executable witness `wit`, `applyEdge_exact_wit`)

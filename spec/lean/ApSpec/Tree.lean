@@ -2,7 +2,7 @@
   ApSpec.Tree — the edge tree (storage design v2) as an optimization of the
   CONCEPT of a final fact (a list of path facts with one base).
 
-  Storage design (spec §7.2, design item 6): ONE TREE per (premise, layer,
+  Storage design (spec §7.2): ONE TREE per (premise, layer,
   exclusion E, mark exclusion X). A `*` leaf is a flag: the exclusion `E` belongs
   to the whole tree, and the layer (the demand bit) is part of the key. `[any]`
   and `$` leaves carry no exclusion (W1).

@@ -1247,7 +1247,7 @@ theorem answerInit_mark {i a : PFact} {t : Mark} :
   unfold answerInit
   split <;> rfl
 
-/-- The abstraction policy satisfies the contract (A1). -/
+/-- The abstraction policy satisfies the contract C1 (spec §6.1). -/
 theorem policy_applicable (demand : MethodId → List PFact) (m : MethodId) (a : PFact) :
     applicable (policy demand m a) a = true := by
   unfold policy

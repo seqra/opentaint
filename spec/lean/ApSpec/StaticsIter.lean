@@ -6,19 +6,23 @@
   request of any kind, no static rule), and every backward run is the unchanged `Backward.DB`.
 
   Part 1. THE STATIC INVARIANT OF A RESTRICTED RUN (`rinv_all`, `no_any_above_R`). Under the
-    construction rules of `Statics.SWF` that concern the program (`SWFR`: identity restrictions
-    on `S`, writes into `S` at or below a position or exact above one, `S.* → S.*` bindings, a
-    field limit that never cuts above a position), in `DR` with the spec rules (`emitM`, `satI`,
-    `restrictU`) no static fact with a `*` or `[any]` tail lies strictly above a static position
-    (initial facts, edges, added facts). NO HYPOTHESIS ON THE DEMAND is needed: `emitM` emits the
-    added fact, its meet at its own path, or the demand pattern BELOW it; `restrictU` moves a
-    conclusion only DOWN; and a fact strictly above a position is exact, so its tail admits no
-    longer path. Persisted records must keep the run-1 invariant (`RecOK`), which the exit edges of
-    `DS` (`recOK_of_DS`, from `Statics.cinv_all`) and of `DR` (`recOK_of_DR`) do.
-    Consequences: every static read or write keep edge that gives a fact in a restricted run is the
-    case at-or-below of delta-concat (`static_step_below`: the case `above`, the one that makes
-    `[any]` from a `*` target, gives nothing), every static sink that a fact triggers or requests
-    is at or above it (`static_sink_below`), and a restricted run has no request (`no_request`).
+    construction rules of `Statics.SWF` that concern the program (`SWFR`: identity restrictions or
+    field-to-field edges on `S`, writes into `S` at or below a position or exact above one,
+    `S.* → S.*` bindings, a field limit that never cuts above a position), in `DR` with the spec
+    rules (`emitM`, `satI`, `restrictU`) no static fact with a `*` or `[any]` tail lies strictly
+    above a static position (initial facts, edges, added facts). Positions are truncated to the
+    static field (`Statics.PosIn`), so "above a position" means the root or a class. NO HYPOTHESIS
+    ON THE DEMAND is needed: `emitM` emits the added fact, its meet at its own path, or the demand
+    pattern BELOW it; `restrictU` moves a conclusion only DOWN; and a fact strictly above a position
+    is exact, so its tail admits no longer path. Persisted records must keep the run-1 invariant
+    (`RecOK`), which the exit edges of `DS` (`recOK_of_DS`, from `Statics.cinv_all`) and of `DR`
+    (`recOK_of_DR`) do.
+    Consequences: every static read, write keep edge or copy whose premise is at most a static
+    field and that gives a fact in a restricted run is the case at-or-below of delta-concat
+    (`static_step_below`: the case `above`, the one that makes `[any]` from a `*` target, gives
+    nothing), every static sink at most a static field that a fact triggers or requests is at or
+    above it (`static_sink_below`), and a restricted run has no request (`no_request`). Below a
+    static field the ordinary rules apply, as for an instance field.
   Part 2. THE ITERATION FROM `DS`. Run 1 (`DS`, projected to `Obj` by `projS`) carries every real
     witness in the den-aware sense (`reach_strongDSD`: `Statics.coverageD`/`reachD` with the pair
     relation of the summaries kept), so `Backward.B_general` applies to it; with every later
@@ -49,10 +53,12 @@ open ApSpec ApSpec.Statics
     program (the context `X` gives the program, its sinks, the static base and the run's field
     limit and counted accessors). Not needed: `S ≠ zero`, the cleaner rule, the run-1 abstraction. -/
 structure SWFR (X : SCtx) : Prop where
-  /-- a statement micro edge from `S` to `S` is an identity restriction -/
+  /-- a statement micro edge from `S` to `S` is an identity restriction or a field-to-field edge
+      (premise and target paths not above a position; `Statics.SWF.ss`) -/
   ss : ∀ M n s n', (M, n, Instr.stmt s, n') ∈ X.P.edges → ∀ e, e ∈ s.edges →
     e.1.base = X.sB → e.2.base = X.sB →
-    ∃ q E1 E2, e.1 = ⟨X.sB, q, .star E1, .star⟩ ∧ e.2 = ⟨X.sB, q, .star E2, .star⟩
+    (∃ q E1 E2, e.1 = ⟨X.sB, q, .star E1, .star⟩ ∧ e.2 = ⟨X.sB, q, .star E2, .star⟩) ∨
+    (¬ AbovePos X e.1.path ∧ ¬ AbovePos X e.2.path)
   /-- a write into `S` from another base above a position is exact from an exact concrete premise -/
   write : ∀ M n s n', (M, n, Instr.stmt s, n') ∈ X.P.edges → ∀ e, e ∈ s.edges →
     e.1.base ≠ X.sB → e.2.base = X.sB → AbovePos X e.2.path →
@@ -190,12 +196,15 @@ theorem rinv_step {X : SCtx} (hs : SWFR X) {M : MethodId} {n n' : Node} {s : Stm
     have hxb : x.fact.base = e.2.base := apply_base hx
     by_cases h2 : e.2.base = X.sB
     · by_cases h1 : e.1.base = X.sB
-      · obtain ⟨q, E1, E2, he1, he2⟩ := hs.ss _ _ _ _ hE e he h1 h2
+      · rcases hs.ss _ _ _ _ hE e he h1 h2 with ⟨q, E1, E2, he1, he2⟩ | ⟨-, hn2⟩
+        rotate_left
+        · exact f2f_not_above hn2 hx hab.2.1
         rw [he1, he2] at hx
-        obtain ⟨-, hfb, ⟨rr, -, hxp, hex, -⟩ | ⟨rr, hq, hne, -, hadm⟩⟩ := id_apply hx
+        obtain ⟨-, hfb, ⟨rr, -, hxp, hex, -⟩ | ⟨rr, hq, hne, hxq, hadm⟩⟩ := id_apply hx
         · exact hn ⟨hfb, by rw [← hxp]; exact hab.2.1, fun hk => hab.2.2 (hex hk)⟩
-        · have hpos : PosIn X q := .inl ⟨M, n, s, n', e, hE, he, h1, by rw [he1]⟩
-          exact hn ⟨hfb, ⟨q, rr, hpos, hne, hq⟩, admits_ne_exact hne hadm⟩
+        · have hqa : AbovePos X q := by rw [← hxq]; exact hab.2.1
+          rw [hq] at hqa
+          exact hn ⟨hfb, abovePos_prefix hqa, admits_ne_exact hne hadm⟩
       · exact write_invR hs hE he h1 h2 hw hx hab
     · exact h2 (hxb.symm.trans hab.1)
 
@@ -424,34 +433,38 @@ theorem no_any_above_R {X : SCtx} (hs : SWFR X) {demand : MethodId → DemandEdg
 
 /-! ### Consequences: only the case at-or-below, no request -/
 
-/-- EVERY STATIC READ OR WRITE KEEP EDGE THAT GIVES A FACT IN A RESTRICTED RUN IS THE CASE AT OR
-    BELOW: the micro edge premise (a static position) is at or above the fact. The case `above`
-    of delta-concat (the one that makes `[any]` from a `*` target) never gives a fact. -/
+/-- EVERY STATIC READ, WRITE KEEP EDGE OR COPY WHOSE PREMISE IS AT MOST A STATIC FIELD AND THAT GIVES
+    A FACT IN A RESTRICTED RUN IS THE CASE AT OR BELOW: the micro edge premise is at or above the
+    fact. The case `above` of delta-concat (the one that makes `[any]` from a `*` target) never gives
+    a fact. A deeper premise may meet a field fact in the case `above`, as for an instance field
+    (`DeepReadIter.deep_read_above`). -/
 theorem static_step_below {X : SCtx} (hs : SWFR X) {demand : MethodId → DemandEdge → Prop}
     {recs : MethodId → PFact × AFact → Prop} (hrecs : ∀ m j g, recs m (j, g) → RecOK X j g)
     {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
     {M : MethodId} {i : PFact} {n n' : Node} {f : AFact} {s : Stmt} {e : MicroEdge} {y : AFact}
     (h : DR X.P X.counted X.FL demand emitM satI restrictU recs sinks roots (.edge M i n f))
     (hE : (M, n, Instr.stmt s, n') ∈ X.P.edges) (he : e ∈ s.edges) (heb : e.1.base = X.sB)
+    (hlen : e.1.path.length ≤ 2)
     (hy : y ∈ (applyEdge f e.1 e.2).facts) : ∃ rr, f.fact.path = e.1.path ++ rr := by
   obtain ⟨p, k, ap, m, hfb, -, -, -, hgeo⟩ := apply_shape hy
   rcases hgeo with ⟨rr, hrr, -⟩ | ⟨rr, hq, hne, ha⟩
   · exact ⟨rr, hrr⟩
   · exfalso
     obtain ⟨-, hadm, -, -⟩ := above_tk ha
-    have hpos : PosIn X e.1.path := .inl ⟨M, n, s, n', e, hE, he, heb, rfl⟩
+    have hpos : PosIn X e.1.path := .inl ⟨M, n, s, n', e, hE, he, heb, List.take_of_length_le hlen⟩
     exact (rinv_all hs hrecs h).2 ⟨hfb.trans heb, ⟨_, rr, hpos, hne, hq⟩, admits_ne_exact hne hadm⟩
 
 #print axioms static_step_below
 
-/-- EVERY STATIC SINK THAT A FACT OF A RESTRICTED RUN TRIGGERS OR REQUESTS IS AT OR ABOVE THE FACT
-    (the sink pattern's path is a prefix of the fact's path). -/
+/-- EVERY STATIC SINK AT MOST A STATIC FIELD THAT A FACT OF A RESTRICTED RUN TRIGGERS OR REQUESTS IS
+    AT OR ABOVE THE FACT (the sink pattern's path is a prefix of the fact's path). A deeper sink may
+    lie below a field fact (`DeepReadIter.deep_read_above`). -/
 theorem static_sink_below {X : SCtx} (hs : SWFR X) {demand : MethodId → DemandEdge → Prop}
     {recs : MethodId → PFact × AFact → Prop} (hrecs : ∀ m j g, recs m (j, g) → RecOK X j g)
     {roots : List MethodId} {M : MethodId} {i : PFact} {n : Node} {f : AFact} {s : PFact}
     {T : Mark}
     (h : DR X.P X.counted X.FL demand emitM satI restrictU recs X.sinks roots (.edge M i n f))
-    (hsk : (M, n, s) ∈ X.sinks) (hsb : s.base = X.sB) (hT : s.mark = .conc T)
+    (hsk : (M, n, s) ∈ X.sinks) (hsb : s.base = X.sB) (hlen : s.path.length ≤ 2) (hT : s.mark = .conc T)
     (hc : check i f s ≠ .none) : ∃ rr, f.fact.path = s.path ++ rr := by
   have hov := check_overlap_of hT hc
   unfold overlapB at hov
@@ -466,7 +479,7 @@ theorem static_sink_below {X : SCtx} (hs : SWFR X) {demand : MethodId → Demand
     | nil => exact ⟨[], by rw [hsp, List.append_nil, List.append_nil]⟩
     | cons x rs =>
       exfalso
-      have hpos : PosIn X s.path := .inr ⟨M, n, s, hsk, hsb, rfl⟩
+      have hpos : PosIn X s.path := .inr ⟨M, n, s, hsk, hsb, List.take_of_length_le hlen⟩
       exact (rinv_all hs hrecs h).2 ⟨hfb, ⟨s.path, x :: rs, hpos, List.cons_ne_nil _ _, hsp⟩,
         admits_ne_exact (List.cons_ne_nil _ _) hrel⟩
   | above r =>
@@ -477,6 +490,119 @@ theorem static_sink_below {X : SCtx} (hs : SWFR X) {demand : MethodId → Demand
     cases hrel
 
 #print axioms static_sink_below
+
+/-! Below a static field the ordinary rules apply, so the two consequences above need the premise
+    (sink) path to be at most a static field. The one-method program `x.[any] = source(); C.f = x;
+    y = C.f.g; sink(C.f.g)` satisfies `SWFR`; its restricted run has the edge `(S, <C>.f, [any], 7)`,
+    which the deep read `S.<C>.f.g.* → y.*` reads in the case `above` and which triggers the deep sink
+    `(S, <C>.f.g, $, 7)`, both strictly below it. -/
+namespace DeepReadIter
+
+def S : Base := 1
+def xB : Base := 2
+def yB : Base := 3
+def C : Acc := 10
+def fA : Acc := 11
+def gA : Acc := 12
+def T : Mark := 7
+
+def xA : PFact := ⟨xB, [], .any, .conc T⟩
+/-- `x.[any] = source()`. -/
+def src : Stmt := ⟨[zeroBase], [(zeroFact, zeroFact), (zeroFact, xA)]⟩
+/-- `C.f = x`. -/
+def wr : Stmt :=
+  ⟨[S, xB], [(⟨S, [], .star (.set [C]), .star⟩, pat S []),
+    (⟨S, [C], .star (.set [fA]), .star⟩, pat S [C]), (pat xB [], pat xB []), (pat xB [], pat S [C, fA])]⟩
+/-- `y = C.f.g`. -/
+def rd : Stmt := readStmt S yB [C, fA, gA]
+def readE : MicroEdge := (pat S [C, fA, gA], pat yB [])
+def prog : Program :=
+  ⟨fun _ => 0, fun _ => 3, [(0, 0, .stmt src, 1), (0, 1, .stmt wr, 2), (0, 2, .stmt rd, 3)]⟩
+def sinkPat : PFact := ⟨S, [C, fA, gA], .exact, .conc T⟩
+def sinks : List (MethodId × Node × PFact) := [(0, 2, sinkPat)]
+def counted (a : Acc) : Bool := !Nat.beq a C
+def X : SCtx := ⟨prog, counted, 2, policy (fun _ => []), sinks, [0], S, true, true, .off, true, true⟩
+/-- The field fact `(S, <C>.f, [any], 7)`. -/
+def fC : AFact := ⟨⟨S, [C, fA], .any, .conc T⟩, false⟩
+
+abbrev R : Obj → Prop :=
+  DR prog counted 2 (fun _ _ => False) emitM satI restrictU (fun _ _ => False) sinks [0]
+
+theorem m_src : (0, 0, Instr.stmt src, 1) ∈ prog.edges := by simp [prog]
+theorem m_wr : (0, 1, Instr.stmt wr, 2) ∈ prog.edges := by simp [prog]
+theorem m_rd : (0, 2, Instr.stmt rd, 3) ∈ prog.edges := by simp [prog]
+
+theorem edgesR {M n n' : Nat} {ins : Instr} (h : (M, n, ins, n') ∈ prog.edges) :
+    (M = 0 ∧ n = 0 ∧ ins = .stmt src ∧ n' = 1) ∨ (M = 0 ∧ n = 1 ∧ ins = .stmt wr ∧ n' = 2) ∨
+    (M = 0 ∧ n = 2 ∧ ins = .stmt rd ∧ n' = 3) := by
+  simp only [prog, List.mem_cons, Prod.mk.injEq, List.not_mem_nil, or_false] at h
+  exact h
+
+theorem posIn_cases {p : List Acc} (h : PosIn X p) : p = [] ∨ p = [C] ∨ p = [C, fA] := by
+  rcases h with ⟨M, n, s, n', e, hE, he, heb, rfl⟩ | ⟨M, n, s, hs, hsb, rfl⟩
+  · rcases edgesR hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert heb <;> revert e <;> decide
+  · have hs' : (M, n, s) = (0, 2, sinkPat) := List.mem_singleton.mp hs
+    simp only [Prod.mk.injEq] at hs'
+    obtain ⟨-, -, rfl⟩ := hs'
+    decide
+
+theorem abovePos_cases {q : List Acc} (h : AbovePos X q) : q = [] ∨ q = [C] := by
+  obtain ⟨P, r, hP, hne, hPr⟩ := h
+  rcases posIn_cases hP with rfl | rfl | rfl
+  · exact (prefix_nil hne hPr).elim
+  · exact .inl (prefix_one hne hPr)
+  · exact prefix_two hne hPr
+
+theorem swfr : SWFR X where
+  ss := by
+    intro M n s n' hE e he h1 h2
+    refine .inl (ssB_sound ?_ h1 h2)
+    rcases edgesR hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert h2 h1 <;> revert e <;> decide
+  write := by
+    intro M n s n' hE e he h1 h2 hab
+    have hq := abovePos_cases hab
+    clear hab
+    exfalso
+    rcases edgesR hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h <;>
+      revert hq h2 h1 <;> revert e <;> decide
+  toC := by
+    intro M n c n' hE
+    rcases edgesR hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+  fromC := by
+    intro M n c n' hE
+    rcases edgesR hE with ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ | ⟨-, -, h, -⟩ <;> cases h
+  cut := by
+    intro q r hc hab
+    have h2 := cutPath_count hc
+    rcases abovePos_cases hab with rfl | rfl <;> exact absurd h2 (by decide)
+
+theorem r_e0 : R (.edge 0 zeroFact 0 ⟨zeroFact, false⟩) := DR.start (DR.root List.mem_cons_self)
+theorem r_e1 : R (.edge 0 zeroFact 1 ⟨xA, false⟩) := DR.step r_e0 m_src (by decide)
+/-- The field fact `(S, <C>.f, [any], 7)` in the restricted run. -/
+theorem r_e2 : R (.edge 0 zeroFact 2 fC) := DR.step r_e1 m_wr (by decide)
+
+theorem not_below (h : ∃ rr, [C, fA] = [C, fA, gA] ++ rr) : False := by
+  obtain ⟨rr, h⟩ := h
+  have h2 := congrArg List.length h
+  simp only [List.length_append, List.length_cons, List.length_nil] at h2
+  omega
+
+/-- THE COUNTEREXAMPLE to the unrestricted forms of `static_step_below` and `static_sink_below`. -/
+theorem deep_read_above :
+    SWFR X ∧ R (.edge 0 zeroFact 2 fC) ∧ (0, 2, Instr.stmt rd, 3) ∈ X.P.edges ∧ readE ∈ rd.edges ∧
+    readE.1.base = X.sB ∧ (∃ y, y ∈ (applyEdge fC readE.1 readE.2).facts) ∧
+    ¬ (∃ rr, fC.fact.path = readE.1.path ++ rr) ∧
+    (0, 2, sinkPat) ∈ X.sinks ∧ sinkPat.base = X.sB ∧ check zeroFact fC sinkPat = .triggered ∧
+    ¬ (∃ rr, fC.fact.path = sinkPat.path ++ rr) :=
+  ⟨swfr, r_e2, m_rd, List.mem_cons_of_mem _ List.mem_cons_self, rfl,
+    ⟨_, List.mem_singleton.mpr rfl⟩, not_below, List.mem_cons_self, rfl, rfl,
+    not_below⟩
+
+#print axioms deep_read_above
+
+end DeepReadIter
 
 /-- A restricted run of the spec rules raises no request (mark or position): it has no request
     object at all, so it needs no answer rule. -/
@@ -633,12 +759,15 @@ theorem coverageDD {X : SCtx} (hs : SWF X) (hd : Design X) (hwf : X.P.WF)
       · have hfire' := hfire
         unfold SCtx.fireB at hfire'
         rw [hd.gen, if_pos rfl] at hfire'
-        obtain ⟨hid, -, -, -, -, -⟩ := genFire_parts hfire'
+        obtain ⟨hid, -, -, -, -, -, -⟩ := genFire_parts hfire'
         obtain ⟨⟨E0, hi'⟩, hfb, hfp, hfk, -, -⟩ := idEdge_parts hid
         rw [hi'] at hdn
         obtain ⟨h0b, h0p⟩ := id_den hfb hfp hfk hdn
         obtain ⟨-, -, -, -, -, σ', -, hlp, -, -, -⟩ := hde
-        exact .inr (.inr ⟨e.1.path, DS.sreqStmt hf he hes hfire, sAns_covers h0b (h0p.trans hlp)⟩)
+        refine .inr (.inr ⟨X.reqP e.1.path, DS.sreqStmt hf he hes hfire, ?_⟩)
+        rw [reqP_gen hd.gen]
+        exact sAns_covers h0b (h0p.trans (hlp.trans (by
+          rw [← List.append_assoc, List.take_append_drop])))
     · exact .inr (.inl hr)
     · exact .inr (.inr hsr)
   | @pass M l0 n l n' c _ he hm ih =>
@@ -977,7 +1106,7 @@ theorem aB_ans : DS X2 (.added 2 Ans) :=
 theorem jB_ans : DS X2 (.init 2 Ans) := DS.sanswer sB_req aB_ans (by decide)
 theorem eB_ans0 : DS X2 (.edge 2 Ans 0 AnsF) := DS.start jB_ans
 theorem eB_ans1 : DS X2 (.edge 2 Ans 1 ⟨pat xB [], false⟩) := DS.step eB_ans0 m_rd (by decide)
-theorem rB_ans : DS X2 (.req 2 Ans T) := DS.reqSink eB_ans1 m_sink (by decide) (by decide)
+theorem rB_ans : DS X2 (.req 2 Ans T) := DS.reqSink eB_ans1 m_sink (by decide)
 theorem rA_ans : DS X2 (.req 1 Ans T) :=
   DS.reqUp (a := AnsF) (e := bindS) rB_ans eA_ans m_cB rfl List.mem_cons_self
     (by decide) (by decide) (by decide)
