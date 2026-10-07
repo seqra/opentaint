@@ -11,8 +11,8 @@ PIPELINE between the methods, the scheduling and the end of a run, and the ITERA
 the runs. Appendix A gives the analysis of today's analyzer that the design starts from.
 
 The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`,
-`PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`). Every theorem named here is machine-checked and constructive (`ap.md` §10
-defines the term). §11 lists what is argued and not proved.
+`PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`). Every theorem named here
+is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
 Language: ASD-STE100 Simplified Technical English.
 
@@ -157,8 +157,8 @@ The mode decides these rules (`ap.md` §6.1):
 
 The method analyzer `RunMethodAnalyzer` replaces `NormalMethodAnalyzer`. It keeps the pattern of today: the
 intra-procedural edges stay inside the analyzer, the analyzer has a worklist, and its runner runs it in steps. One
-class serves every direction and every mode. The `RunConfig` and the interpreter of the direction give the
-differences.
+class serves every direction and every mode. The `RunConfig` gives the differences of the mode. The direction changes
+only the forms that the analyzer reads: the forward forms of the interpreter, or their reversals (§4.9).
 
 ### 4.1 State
 
@@ -189,8 +189,8 @@ The runner calls these handlers. Each handler is part of one event (§5.1).
 | `addLink(link)` | a caller binds a fact into this method | add the link (exact deduplication). A new added fact: emit its initial facts (§4.4). A new link: check the standing requests (§4.6). The zero added fact emits the zero fact. No request matches it. Its link serves the support (§7.5). | E1, E2 |
 | `addZeroEntry()` | backward: the zero fact of a caller reaches a call to this method | the zero fact is an initial fact (rule `zin`) | §9.2 |
 | `addRequest(premise, request)` | run 1: a callee climbs a request through a link of this method | store it (exact deduplication); check it against every link of this method (§4.6) | E5, E7 |
-| `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then POST (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
-| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then POST | §8.7 R3, R4 |
+| `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then the stages after the callees stage (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
+| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5) | §8.7 R3, R4 |
 | `step(quantum)` | a `Work` event | process at most `quantum` worklist items (§4.3) | §6.1 (S6: any order) |
 
 A new initial fact `j` (from any handler) is event E3: the analyzer adds the start edges of `j` to the worklist
@@ -235,35 +235,102 @@ Initial facts:
 * `initials.add` deduplicates. Each new initial fact starts with its start fact (`ap.md` §6.5) at every start node of
   its kind, then the start rules.
 
-Start nodes, end nodes and their rules (the interpreter gives them, §4.9):
+Start nodes, end nodes and their rules. The interpreter gives the forward ones; the backward ones are their reversal
+(§4.9):
 
 | Direction | Start nodes | Start rules | End nodes | End rules |
 |---|---|---|---|---|
-| forward | the entry statement of the method key | `interpreter.md` §4.3: the zero fact with the entry sinks and the entry-point sources; another fact with the filter by the context type | every normal exit | the exit order of `interpreter.md` §4.7; no summary at an exceptional exit |
-| backward | the zero fact: every forward exit, normal and exceptional (`ap.md` S4). Another initial fact: every normal exit (exceptions are out of scope, `interpreter.md` G1) | the seeds of the exit sinks of the method (§4.7); the reversed exit sources and the reversed end-fact edges of the exit sinks (`interpreter.md` §4.9, rule roles) | the forward entry statement | the reversed entry-point sources and the reversed end-fact edges of the entry sinks (`interpreter.md` §4.9); no context filter (the backward run has no type filter) |
+| forward | the entry statement of the method key | the ENTRY RULES (`interpreter.md` §4.3): the zero fact with the entry sinks and the entry-point sources; another fact with the filter by the context type | every normal exit | the EXIT RULES (`interpreter.md` §4.7); no summary at an exceptional exit |
+| backward | the zero fact: every forward exit, normal and exceptional (`ap.md` S4). Another initial fact: every normal exit (exceptions are out of scope, `interpreter.md` G1) | the reversed exit rules: the reversed exit sources and end-fact edges, and the sink seeds of the exit sinks (§4.7) | the forward entry statement | the reversed entry rules: the reversed entry-point sources and end-fact edges (no context filter: the backward run has no type filter) |
 
 The exits: the normal exit is `JMethodExitNormalInst`; the exceptional exit is `JMethodExitExceptionalInst`.
 
 The backward graph is the reversed graph (`ApplicationGraph.reversed`) with the EXIT WIRING. A node that reaches no
 forward exit gets an edge to an exceptional exit (`interpreter.md` I11 (e); today `JIRBackwardExitWiringGraph` on
-`saloed/backward-main`). Only the zero fact uses an exceptional exit. The `MethodContextCache` keeps the wired graph per method (today the code computes the wiring
-again on every call).
+`saloed/backward-main`). Only the zero fact uses an exceptional exit. The `MethodContextCache` keeps the wired graph per
+method (today the code computes the wiring again on every call).
 
 AN EMPTY METHOD (no instruction, or a graph with no node) is an ordinary method. Its start node and its end node are
 the entry statement of its method key, in both directions. So each initial fact gives its own identity summary
 (`interpreter.md` I8). An implementation may use a special class for it, with the same results.
 
-### 4.5 The call steps
+### 4.5 The call plan
 
-The interpreter gives the order of the steps at a call (`interpreter.md` §4.5, §4.6 forward; §4.9 backward). The
-analyzer runs the order in three parts: PRE, CALLEE and POST. The numbers are the step numbers of
-`interpreter.md`.
+A call is a small graph: six POINTS and the STAGES between them. This is the CALL PLAN. The interpreter gives the
+FORWARD plan (`interpreter.md` §4.5, §4.6). The backward plan is its REVERSAL (`CallPlan.reversed`, §4.9). It gives the
+backward call order of `interpreter.md` §4.9 step by step, so the analyzer runs one algorithm in both directions.
 
-| Part | Forward (`interpreter.md` §4.5) | Backward (`interpreter.md` §4.9) |
+| Point | Coordinates | Content in the forward plan |
 |---|---|---|
-| PRE: from the caller fact | 1 relevance; 2 binding in; 3 sinks (their end facts go to POST, with no rewriter); 4 sources and the ND conjunctions (their results go to POST, with no rewriter); 5.1 the cleaners and the `RemoveAllMarks` kill on `S`, in the rule order. The results are the ADDED FACTS. | 1 relevance; 2 reversed binding back and the alias edges; 3 reversed sources and reversed end-fact edges on the result of step 2 (their results enter POST at step 7); 4 reversed rewriter on the result of step 2. The results are the ADDED FACTS. |
-| CALLEE: for each added fact `a` | 5.2 resolved callees: SUBSCRIBE, then LINK (below); 5.3 the unresolved callee: its statement summary as local micro edges; the JVM constructor: `a` also passes over the call | 5.1 resolved callees: SUBSCRIBE, then LINK; 5.2 the unresolved callee: the reversed statement summary; 5.3 the JVM constructor: the result of step 2 (not an added fact) enters POST at step 6 |
-| POST: the results of the callee and the other inputs above | 6 the rewriter (not for the end facts, the source and conjunction results and the constructor pass-over), the binding back with its filters, the aliases, the field limit | the callee results and the constructor requirement enter at 6, the results of step 3 and the seeds at 7: 6 reversed cleaners and the keep edges of the `RemoveAllMarks` kill on `S`, in the rule order; 7 the seeds of the sinks of this call (from the `SeedIndex`, §4.7) and the read positions of step 3; 8 reversed binding in; 9 the field limit |
+| `BEFORE` | caller | the caller fact before the call |
+| `BOUND` | callee | the bound fact, before the cleaners; the RULE POINT of the call (its sinks) |
+| `ADDED` | callee | the added fact: the entry of the callee |
+| `RETURNED` | callee | a result of the callee: a summary result or an unresolved result |
+| `REWRITTEN` | callee | a result after the summary rewriter |
+| `AFTER` | caller | the result in the caller, before the field limit |
+
+The forward stages of a JVM call `r = m(o, a1, …, an)` (the step numbers of `interpreter.md` §4.5):
+
+| Stage | Forward | Content | Step |
+|---|---|---|---|
+| binding in | `BEFORE → BOUND` | the binding edges into the callee (with the zero binding), with the caller-side type filters (`interpreter.md` §3.1) | 2 |
+| end facts | `BOUND → REWRITTEN` | the end-fact edges of the sinks of the call; GUARD: the sink triggers | 3 |
+| sources | `BOUND → REWRITTEN` | the rule statement of the call: the sources and the conjunctions (`interpreter.md` §4.1) | 4 |
+| cleaners | `BOUND → ADDED` | the cleaners and the `RemoveAllMarks` kill on `S`, in the rule order | 5.1 |
+| callees | `ADDED → RETURNED` | the resolved callees (with the lambdas of the prescan): SUBSCRIBE and LINK (below) | 5.2 |
+| unresolved | `ADDED → RETURNED` | the statement summary of the unresolved callee (`interpreter.md` §3.7) | 5.3 |
+| constructor | `ADDED → REWRITTEN` | JVM `<init>`: the identity of the receiver and argument positions; it skips the callee and the rewriter (`interpreter.md` §3.5) | 5.2 |
+| rewriter | `RETURNED → REWRITTEN` | the summary rewriter (`interpreter.md` §5.2) | 6 |
+| binding back | `REWRITTEN → AFTER` | the binding edges back, with the result-side type filters | 6 |
+| aliases | `REWRITTEN → AFTER` | the alias edges `P.* → b.q.*` (`interpreter.md` §3.8 AC2); GUARD: the selection of AC3 and AC4 | 6 |
+
+The plan also has its TOUCHED caller bases (`S`, `o`, every `ai`, `r`; step 1) and the SINKS of the call at `BOUND`
+(step 3).
+
+HOW THE ANALYZER RUNS A PLAN (both directions):
+
+* A caller fact on a base that the plan does not touch passes over the call (step 1). The zero base is never touched.
+* A fact at a point goes through every stage that starts at that point. Each result arrives at the end point of its
+  stage. The stages that start at one point read the same facts, so their order does not matter. (So the sinks see
+  the uncleaned bound fact, as `interpreter.md` §4.5 asks.)
+* A fact at the exit point of the plan gets the field limit and goes to the return node of the call.
+* The callees stage is not local: SUBSCRIBE and LINK, and its results arrive later through `applySummary` and
+  `applyRecord`, at its end point.
+* At the rule point `BOUND`, the forward run checks the sinks of the call (§4.7). The backward run checks no sink: it
+  fires the sink seeds of these sinks there (§4.7).
+* The sources stage applies the source seeds (forward restricted run) and records the source hits (backward run) (§4.7).
+
+THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
+
+* The entry point and the exit point change places (backward: `AFTER` is the entry, `BEFORE` the exit). Each stage goes
+  from its forward end point to its forward start point.
+* A micro-edge stage gets the reversed summary (`StatementSummary.reversed`, §4.9).
+* A GUARD is a forward-only selection, so the reversal drops it: the reversed alias edges apply to every requirement
+  (`interpreter.md` AC5), and the reversed end-fact edges too. The reversal also drops every type filter.
+* The cleaners, the kill and the rewriter stay the same: a cleaner and a keep edge are their own reversal.
+* The callees stage stays the same: in the backward run it gives the backward summaries.
+* The sinks stay at `BOUND`.
+* The touched bases: the forward touched bases and every target base of a stage that ends at the forward exit (the
+  alias bases). An alias base keeps its requirement by the identity edge `b.* → b.*` (`interpreter.md` A5).
+
+The reversed plan is the backward call order of `interpreter.md` §4.9:
+
+| Backward step (`interpreter.md` §4.9) | Reversed stage |
+|---|---|
+| 1 relevance | the reversed touched bases |
+| 2 reversed binding back and alias edges | `AFTER → REWRITTEN` |
+| 3 reversed sources and end-fact edges; their results arrive at step 7 | `REWRITTEN → BOUND` |
+| 4 reversed rewriter | `REWRITTEN → RETURNED` |
+| 5.1 resolved callees | `RETURNED → ADDED` |
+| 5.2 unresolved callee | `RETURNED → ADDED` |
+| 5.3 JVM constructor: from step 2 to step 6 | `REWRITTEN → ADDED` |
+| 6 reversed cleaners and the keep edges of the kill | `ADDED → BOUND` |
+| 7 the seeds and the read positions | the rule point `BOUND` |
+| 8 reversed binding in | `BOUND → BEFORE` |
+| 9 the field limit | the exit point `BEFORE` |
+
+The core reverses only a forward plan. The reversal is not an involution: it drops the guards and the filters, and it
+adds identity edges.
 
 SUBSCRIBE: the analyzer gives the subscription `(caller edge, s, a)` for the callee `m` to the `SubscriptionManager`
 of its runner (§5.3). The replay applies the publications of `m` that `a` satisfies, and the records of `m` that apply
@@ -272,15 +339,16 @@ to `a`.
 LINK: the analyzer sends the link `(a, caller edge)` to `m`. For `m` in another unit, it sends the event `LinkIn`. For
 `m` in the same unit, it may call `m.addLink` directly (as today `submitMethodInitialFact`; §6.1 permits it).
 
-The zero fact at a call:
+The zero fact at a call. The zero base is not touched, so the zero fact passes over the call in both directions (rule
+`zpass` in the backward run). It also acts at the rule point:
 
-* forward: it passes over the call. The unconditional rules fire (`interpreter.md` §4.6); in a forward restricted
-  run, only the seeded sources (§4.7). It enters every resolved
-  callee as the added fact `zero`: a subscription and a link, as above.
-* backward: it passes over the call (rule `zpass`). The analyzer adds a ZERO SUBSCRIPTION for `m` (it matches the
-  zero-premise publications of `m`, §5.3) and sends `ZeroIn` to `m` (rule `zin`). A zero-premise publication applies
-  to the zero fact of the caller at this call with no test (rule `zret`). Its results go through POST. The seeds of
-  the sinks of this call enter at POST step 7, where the zero fact reaches the call (§4.7), then steps 8 and 9.
+* forward: the zero binding takes it to `BOUND`. There the unconditional sinks fire, and the sources stage fires on it
+  (in a forward restricted run, only the source seeds, §4.7). No cleaner acts on the zero base, so it goes on to
+  `ADDED` and enters every resolved callee: a subscription and a link;
+* backward: the zero fact at the call fires the sink seeds at `BOUND` (§4.7); they go on through the reversed binding
+  in. The analyzer adds a ZERO SUBSCRIPTION for each resolved callee `m` (it matches the zero-premise publications of
+  `m`, §5.3) and sends `ZeroIn` to `m` (rule `zin`). A zero-premise publication applies to the zero fact of the caller
+  with no test (rule `zret`). Its results arrive at `ADDED`, the end point of the reversed callees stage.
 
 ### 4.6 Summary edges, publications and requests
 
@@ -326,16 +394,16 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
   * a forward restricted run: the SOURCE SEEDS, the unconditional sources that the backward run before reached
     (`ap.md` §6.1 rule 6, §8.11).
 * A sink seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call
-  sink seeds at POST step 7 (§4.5). An exit sink seeds in the start rules (§4.4).
-* A source seed is a filter on the unconditional source edges (`StatementSummary.sources`). In a forward restricted
-  run, the analyzer applies such an edge only if `SeedIndex` has it for that (method key, statement). The edges are at
-  a statement (a read source, an exit source), at the zero fact of a call (§4.5) and in a start or end rule. The end
-  facts of a sink and every other micro edge apply as usual.
-* SOURCE HITS (backward run). When the analyzer applies a reversed unconditional source edge
-  (`StatementSummary.sources`) to a requirement and gets a result, it adds `(method key, statement, forward edge)` to
-  `sourceHits` (`ap.md` §8.11). This holds at each place of a reversed source: a statement, a call (backward PRE step
-  3), a start rule (the exit sources) and an end rule (the entry-point sources). The analyzer records the hit before
-  `edges.add`, also when the store drops the zero result as a duplicate.
+  sink seeds at the rule point `BOUND` of the reversed plan (§4.5). An exit sink seeds in the start rules (§4.4).
+* A source seed is a filter on the SOURCES: the micro edges whose forward form (`MicroEdge.forward`, §4.9) goes from
+  the zero fact to another base. In a forward restricted run, the analyzer applies a source only if `SeedIndex` has
+  its forward form for that (method key, statement). The sources are at a statement (a read source, an exit source),
+  in the sources stage of a call (§4.5) and in the entry and exit rules. The end facts of a sink and every other micro
+  edge apply as usual.
+* SOURCE HITS (backward run). When the analyzer applies a reversed source to a requirement and gets a result, it adds
+  `(method key, statement, forward form)` to `sourceHits` (`ap.md` §8.11). This holds at each place of a reversed
+  source: a statement, the reversed sources stage of a call (§4.5), and the reversed exit and entry rules (§4.4). The
+  analyzer records the hit before `edges.add`, also when the store drops the zero result as a duplicate.
 * The backward run has no sink check.
 
 ### 4.8 The method context
@@ -346,88 +414,113 @@ the flow-function caches and the taint rule context. The new core splits it:
 * the CACHED part, in `MethodContextCache`:
   * per method: the method graph, the alias analysis, the local-variable reachability and the lambda resolutions of
     the prescan. Every context of the method shares them (today the `EmptyMethodContext` twin analyzer does this);
-  * per (method, direction): the wired backward graph and the statement summaries of the interpreter;
+  * per (method, direction): the wired backward graph, and the forward forms of the interpreter (statement summaries,
+    rules, call plans) with their reversals (§4.9);
 * the RUN part, made by the run: the rule context bound to the run (the `VulnerabilityStore`, the conjunction store,
   the run mode).
 
 Runs are sequential, so in each run the runner of the method is the only user of its cache entry. This removes the
 double construction of the context that `saloed/backward-main` has.
 
-### 4.9 The interpreter interface
+### 4.9 The interpreter interface and the reversal
 
-The interpreter (`interpreter.md`) is language-specific and direction-specific. The core calls it only through this
-interface. The core owns the order of the actions. The interpreter gives the micro edges and the rules.
+The interpreter (`interpreter.md`) gives the FORWARD semantics only. The core calls it only through this interface,
+and the core makes every backward form by a reversal. The core owns the order of the actions; the interpreter gives
+the micro edges and the rules.
 
 ```kotlin
 interface Interpreter {
-    val direction: Direction
-    /** §4.4: the start nodes for the zero fact and for the other facts; the end nodes. For an empty method:
-     *  the entry statement of the method key, also when the graph has no node. */
-    fun startNodes(method: MethodKey, zero: Boolean): List<CommonInst>
-    fun endNodes(method: MethodKey): List<CommonInst>
-    /** §4.4: the start rules (with the context filter, forward) and the end rules. The core adds the sink seeds of
-     *  the backward run, and filters the unconditional sources of a forward restricted run by the source seeds (§4.7).
-     *  The interpreter does not get the seeds. */
-    fun startRules(method: MethodKey, node: CommonInst): RuleStatement
-    fun endRules(method: MethodKey, node: CommonInst): EndRules
+    /** §4.4: the forward entry statement, and the forward exits (normal and exceptional). For an empty method: the
+     *  entry statement of the method key is also its normal exit, also when the graph has no node. */
+    fun entryNode(method: MethodKey): CommonInst
+    fun exitNodes(method: MethodKey): List<ExitNode>
+    /** interpreter.md §4.3 and §4.7: the entry rules and the exit rules. */
+    fun entryRules(method: MethodKey): RuleStatement
+    fun exitRules(method: MethodKey, exit: CommonInst): ExitRules
     /** interpreter.md I1: the touched bases, the micro edges and the type filters of a non-call statement. */
     fun statementSummary(method: MethodKey, statement: CommonInst): StatementSummary
-    /** §4.5: the three parts of a call. */
+    /** §4.5: the forward plan of a call. */
     fun callPlan(caller: MethodKey, statement: CommonInst, call: CommonCallExpr): CallPlan
-    /** the sinks and the conjunctive rules of a statement (forward). */
-    fun sinks(method: MethodKey, statement: CommonInst): List<SinkRule>
-    /** forward only: the base is live at the statement (today isReachable). */
+    /** the forward liveness pruning (today isReachable). */
     fun isLive(method: MethodKey, base: AccessPathBase, statement: CommonInst): Boolean
     /** a summary edge exists only for these bases (not a local; today isValidMethodExitFact). */
     fun isSummaryBase(base: AccessPathBase): Boolean
 }
 
-/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). `sources`: the unconditional source edges
- *  of `microEdges`, each with its FORWARD form (forward: the edge itself; backward: the edge before the reversal). The
- *  core reads it for the source seeds and the source hits (§4.7). */
-class StatementSummary(val touched: Set<AccessPathBase>, val microEdges: List<PathEdge>,
-                       val typeFilters: Map<AccessPathBase, TypeFilter>,
-                       val sources: Map<PathEdge, PathEdge> = emptyMap())
+class ExitNode(val node: CommonInst, val exceptional: Boolean)
 
-/** The micro edges and the rules of one place: a rule statement (interpreter.md §4.1) and the sinks. */
-class RuleStatement(val summary: StatementSummary, val conjunctions: List<ConjunctiveEdge>, val sinks: List<SinkRule>)
+/** One micro edge with the forward form of the edge (the edge itself in a forward summary). A SOURCE is an edge
+ *  whose forward form goes from the zero fact to another base; the forward form identifies it in both runs (§4.7). */
+class MicroEdge(val edge: PathEdge, val forward: PathEdge)
 
-/** One step of the cleaner part of a call, in the rule order (interpreter.md §4.5 step 5.1, §4.9 step 6): a
- *  cleaner, or the `RemoveAllMarks` kill on `S`. The kill is a statement summary, not a cleaner (interpreter.md §1.4,
- *  I12 (e)). */
+/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). */
+class StatementSummary(val touched: Set<AccessPathBase>, val edges: List<MicroEdge>,
+                       val conjunctions: List<ConjunctiveEdge>, val typeFilters: Map<AccessPathBase, TypeFilter>) {
+    /** ap.md §9.1, §9.2: each edge reversed; a conjunctive edge gives one edge per literal; the identity edge
+     *  `b.* → b.*` for each target base that the summary does not touch (A5); the touched bases with the targets;
+     *  no type filter. */
+    fun reversed(): StatementSummary
+}
+
+/** The rules of one place: a statement summary (with the sources and the end-fact edges) and the sinks. The
+ *  reversal reverses the summary, keeps the sinks as the place of the sink seeds and drops the context filter. */
+class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummary, val sinks: List<SinkRule>) {
+    fun reversed(): RuleStatement
+}
+
+/** The exit rules (interpreter.md §4.7) and, forward only, the global-state drop (step 3) and the removal of the
+ *  entry marks of a zero-premise fact (step 4). The reversal drops the two removals (interpreter.md §4.9). */
+class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>) {
+    fun reversed(): RuleStatement
+}
+
+/** One step of the cleaners stage, in the rule order: a cleaner, or the `RemoveAllMarks` kill on `S` (a statement
+ *  summary of keep edges, not a cleaner; interpreter.md §1.4, I12 (e)). Each one is its own reversal. */
 sealed interface CleanStep {
     class Clean(val cleaner: Cleaner) : CleanStep
     class Kill(val keepEdges: StatementSummary) : CleanStep
 }
 
-/** The end rules (interpreter.md §4.7): the exit rules, and, forward only, the global-state drop (step 3) and the
- *  removal of the entry marks for a zero-premise fact (step 4). Both read the premise and the triggered sinks. */
-class EndRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>)
+enum class CallPoint { BEFORE, BOUND, ADDED, RETURNED, REWRITTEN, AFTER }
 
-/** §4.5: one call in the direction of the interpreter. A binding is a statement summary (interpreter.md I1, I4).
- *  `bindIn.touched` is the touched caller set: forward, `S`, the receiver, the arguments and the lhs `r`
- *  (interpreter.md §3.1; `r` has no edge, so its fact is killed); backward, the forward touched bases and the alias
- *  bases (interpreter.md §4.9 step 1). It gives the relevance (PRE step 1). The filters of `bindIn` act on the caller
- *  fact before its edges; the filters of `bindBack` act on its results (interpreter.md §3.1). */
-class CallPlan(
-    val bindIn: StatementSummary,                  // PRE step 1 (touched) and step 2 (backward: with the alias edges)
-    val preRules: RuleStatement,                   // forward steps 3, 4 / backward step 3 (sources and end facts)
-    val rewriter: List<Cleaner>,                   // forward step 6 (on the callee results) / backward step 4
-    val cleanSteps: List<CleanStep>,               // forward step 5.1 / backward step 6, in the rule order
-    val callees: List<MethodKey>,                  // the resolved callees, also the lambdas of the prescan
-    val unresolved: StatementSummary?,             // the summary of the unresolved callee (interpreter.md §3.7)
-    val constructorPassOver: Boolean,              // JVM constructor (interpreter.md §3.5)
-    val readPositions: List<PathEdge>,             // backward step 7: the read positions of the conditional sources
-    val bindBack: StatementSummary,                // forward step 6 / backward step 8
-    val aliases: StatementSummary,                 // forward step 6: on the results that interpreter.md §3.8 AC3, AC4 select
-)
+/** One stage of a call plan (§4.5): it takes the facts at `from` to `to`. */
+sealed interface CallStage {
+    val from: CallPoint
+    val to: CallPoint
+    fun reversed(): CallStage
+    /** A binding, the sources, the end facts, the unresolved summary, the constructor identity, the aliases. A guard
+     *  is a forward-only selection of the inputs (the sink trigger, AC3 and AC4); the reversal drops it. */
+    data class Edges(override val from: CallPoint, override val to: CallPoint, val summary: StatementSummary,
+                     val guard: Guard? = null) : CallStage
+    data class Clean(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage
+    data class Rewrite(override val from: CallPoint, override val to: CallPoint, val cleaners: List<Cleaner>) : CallStage
+    data class Callees(override val from: CallPoint, override val to: CallPoint, val callees: List<MethodKey>) : CallStage
+}
+
+/** §4.5: the plan of one call. The interpreter gives the forward plan: entry BEFORE, exit AFTER. */
+class CallPlan(val touched: Set<AccessPathBase>, val stages: List<CallStage>, val sinks: List<SinkRule>,
+               val entry: CallPoint, val exit: CallPoint) {
+    /** §4.5 THE REVERSAL. */
+    fun reversed(): CallPlan
+}
 ```
 
-The bindings (`bindIn`, `bindBack`, `aliases`) are statement summaries, so the same AP step applies each of them: the
-micro-edge step of `ap.md` §4.2 on a fact of a touched base. A fact on another base passes over the call (PRE step 1).
-The backward interpreter gives the reversed micro edges (`interpreter.md` §4.9; today `StatementSummaryBuilder.
-buildReversed`). The AP operations of `ap.md` §4 apply the micro edges. The interpreter never applies them. `PathEdge`,
-`Cleaner` and the conjunctive edge are the types of `ap.md` §4.
+What the core uses in each direction:
+
+| Place | Forward | Backward |
+|---|---|---|
+| start nodes | `entryNode` | `exitNodes` (the zero fact at every one; another fact at the normal ones) |
+| start rules | `entryRules` | `exitRules(…).reversed()` and the sink seeds of the exit sinks |
+| a non-call statement | `statementSummary` | `statementSummary(…).reversed()` |
+| a call | `callPlan` | `callPlan(…).reversed()` |
+| end nodes | the normal `exitNodes` | `entryNode` |
+| end rules | `exitRules` | `entryRules(…).reversed()` |
+| liveness | `isLive` | none |
+
+A reversal of a statement summary is `Reverse.Stmt.rev` of the Lean model; the reversal of the bindings is
+`Reverse.Call.rev`. The core caches the reversed forms per (method, statement) in the `MethodContextCache` (§4.8). The
+AP operations of `ap.md` §4 apply the micro edges; the interpreter never applies them. `PathEdge`, `Cleaner` and the
+conjunctive edge are the types of `ap.md` §4.
 
 ---
 
@@ -914,7 +1007,7 @@ proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. It
 | `MethodEntrypointResolver`, `UnitResolver`, `LanguageManager` | REUSE | |
 | `ApplicationGraph.reversed`, `MethodInstGraph` | REUSE | `JIRAnalysisManager` downcasts the graph to `JApplicationGraph`; ADAPT it to accept the reversed graph |
 | `JIRBackwardExitWiringGraph` (`saloed/backward-main`) | PORT | with a cache per method (§4.4) |
-| `StatementSummaryBuilder`, `buildReversed`, the JVM flow functions | ADAPT | the interpreter of §4.9 (`interpreter.md`) |
+| `StatementSummaryBuilder`, `buildReversed`, the JVM flow functions | ADAPT | the forward interpreter of §4.9 (`interpreter.md`); `buildReversed` becomes `StatementSummary.reversed` in the core |
 | `JIRMethodAnalysisContext` | SPLIT | the cached part and the run part (§4.8) |
 | `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state |
 | summary serialization (`storeSummaries`, `loadSummariesFromRunner`) | NOT USED | the records are the reuse between runs |
@@ -1078,6 +1171,9 @@ ARGUED, NOT PROVED:
 * COUNTER. The link from the counter model to the quiescence of the pipeline (W1 to W3), and the order of Q1 (an
   increment and its enqueue are one step in the model).
 * A2 (the shared actions are linearizable) for the lock of P3, and A3 for the Kotlin `Channel`.
+* THE CALL PLAN. The reversed plan gives the backward call order of `interpreter.md` §4.9 (the step table of §4.5).
+  The model reverses the statements and the bindings (`Reverse.Stmt.rev`, `Reverse.Call.rev`); it has no call plan
+  with the inner points of a call.
 * THE SOURCE SEEDS at a call, at the method start and at the method exit: the model restricts the statement sources
   (`FSeeds.keepSources`); the others are the same micro edges at another place (`ap.md` §11.2). The exactness of a
   seeded run for `P` (`ap.md` §11.2). The source seeds in a finite sequence: extend it after `K` with every source as
@@ -1123,8 +1219,9 @@ stop the run. They do not change the closure of a complete run.
 7. HAND-OFF. Programs 1 and 2 of `ap.md` §6.3, §6.4: the demand of run 3 equals `Backward.dem1_exact` (program 1) and
    `dem2_exact` (program 2); run 3 reports the vulnerability (`Backward.p1_found`, `p2_found`).
 8. MODES. A request in a restricted run fails the assert. A backward run has no sink check. The zero fact enters every
-   callee in the backward run. A backward call runs PRE, CALLEE and POST in the order of `interpreter.md` §4.9, with
-   the reversed source results and the seeds at POST step 7.
+   callee in the backward run. The reversed plan of a JVM call gives the steps of `interpreter.md` §4.9 in its order
+   (the table of §4.5), with the reversed source results and the seeds at the rule point `BOUND`. The reversed alias
+   edges apply to every requirement; the forward ones only to the results that AC3 and AC4 select.
 9. STOP RULE. A forward run whose vulnerabilities all have a confirmed sink edge stops the iteration, also when they
    have demand-layer sink edges too (§7.1).
 10. SOURCE SEEDS. In forward run 3, a source that backward run 2 did not reach does not fire; a source on the witness
