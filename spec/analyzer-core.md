@@ -213,6 +213,9 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
   node is a call (for example a backward end node whose forward entry statement is a call). An end node is a
   statement like every other: its transfer or its call steps come first. (Today: `handleStatementEdge`, the edge
   post-processor, then `tryEmmitSummaryEdge`; the new core has no post-processor.)
+* A forward result AT AN EXCEPTIONAL EXIT goes through the exit rules of that exit (`interpreter.md` §4.7 steps 1 and
+  2: the exit sources, the exit sinks and their end facts, with `Result` read as `exc`). Its results end there: an
+  exceptional exit is not an end node and makes no summary edge.
 * Each result goes to every successor node in the graph of the run, through `edges.add`.
 * THE UNCHANGED PATH stays as today (`ap.md` §8.1). If the statement does not touch the base of an edge, the
   analyzer puts the edge for each successor into the worklist with no `edges.add` (today `addSequentialUnchangedEdge`).
@@ -240,8 +243,8 @@ Start nodes, end nodes and their rules. The interpreter gives the forward ones; 
 
 | Direction | Start nodes | Start rules | End nodes | End rules |
 |---|---|---|---|---|
-| forward | the entry statement of the method key | the ENTRY RULES (`interpreter.md` §4.3): the zero fact with the entry sinks and the entry-point sources; another fact with the filter by the context type | every normal exit | the EXIT RULES (`interpreter.md` §4.7); no summary at an exceptional exit |
-| backward | the zero fact: every forward exit, normal and exceptional (`ap.md` S4). Another initial fact: every normal exit (exceptions are out of scope, `interpreter.md` G1) | the reversed exit rules: the reversed exit sources and end-fact edges, and the sink seeds of the exit sinks (§4.7) | the forward entry statement | the reversed entry rules: the reversed entry-point sources and end-fact edges (no context filter: the backward run has no type filter) |
+| forward | the entry statement of the method key | the ENTRY RULES (`interpreter.md` §4.3): the zero fact with the entry sinks and the entry-point sources; another fact with the filter by the context type | every normal exit | the EXIT RULES (`interpreter.md` §4.7). The exit rules also apply at an exceptional exit, with `Result` read as `exc`, but it is not an end node: no summary |
+| backward | the zero fact: every forward exit, normal and exceptional (`ap.md` S4). Another initial fact: every normal exit (exceptions are out of scope, `interpreter.md` G1) | the reversed exit rules of that exit (normal or exceptional): the reversed exit sources and end-fact edges; and the sink seeds of its exit sinks (§4.7), which then take the reversed exit sources of that exit too (`interpreter.md` §4.9 SEEDS) | the forward entry statement | the reversed entry rules: the reversed entry-point sources and end-fact edges (no context filter: the backward run has no type filter) |
 
 The exits: the normal exit is `JMethodExitNormalInst`; the exceptional exit is `JMethodExitExceptionalInst`.
 
