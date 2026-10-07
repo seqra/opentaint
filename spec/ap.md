@@ -1272,7 +1272,8 @@ THE ZERO FACT at a call (`interpreter.md` §4.6). The zero fact does not use ste
 2. The unconditional sinks and sources of the call fire on the zero fact, in the order of `interpreter.md` §4.6, and
    the stored facts of a conjunction can complete it (§4.6). The source rules form the rule statement of the call
    (`interpreter.md` §4.1): a statement summary that touches the zero base and keeps the zero fact by the micro edge
-   from the zero fact to itself (S11 (d)). Their results go back as in step 3.
+   from the zero fact to itself (S11 (d)). Their results go back as in step 3. In a forward restricted run, only the
+   source seeds fire (§6.1 rule 6).
 3. The zero fact enters every resolved callee through the binding `zero.* → zero.*` (§3.5), with no cleaner: it is an
    added fact of the callee, and the callee emits the zero fact for it (§6.2, §6.3). The results of the callee
    summaries that this added fact satisfies are summary results: they return by step 5.
@@ -1329,6 +1330,12 @@ with the rules `initR`, `ret`, `retRec`; for the backward run `Backward.DB`, §9
    rule needs them. The implementation asserts it. The same holds for the backward run (`BExact.DB_concrete`,
    `DB_no_request`).
 5. The run has its own field limit (§4.4) and its own demand (§9.2 gives the hand-off).
+6. A FORWARD restricted run fires an UNCONDITIONAL SOURCE only if it is a SOURCE SEED: a source that the backward run
+   before it reached (§9.2). An unconditional source is a micro edge from the zero fact to another base: at a statement
+   (a read source, an exit source), at a call, or at the method start (`interpreter.md` §4.1). Run 1 fires every
+   source. The zero keep edge, the conditional sources (a premise that is not the zero fact) and the end facts of a
+   sink are not restricted. Lean: the forward run on `FSeeds.keepSources P σ` (the statement sources; the others are
+   argued, §11.2).
 
 THE CONTRACTS. The abstraction selects the initial facts for an added fact `a` of the method `m`. It is a function of
 `m`, `a` and constants of the run (the field limit, the demand). It must not depend on the order of events. `α(m, a)`
@@ -1574,7 +1581,8 @@ of the zero fact (`interpreter.md` §4.3).
   iteration does not stop by itself.
 * Run 1 uses the rules of run 1 (§6.1). Each later run uses the rules of a restricted run (§6.1) with the demand that
   the run before it gives (§9.2), its own field limit and the persisted records (§8.7). Lean `RCov.runSeq` numbers only
-  the forward runs: `runSeq k` is run `2k + 1`, and the demand `dem k` comes from the backward run `2k + 2`.
+  the forward runs: `runSeq k` is run `2k + 1`, and the demand `dem k` comes from the backward run `2k + 2` (with the
+  source seeds: `FSeeds.runSeqSrc`, the same numbering).
 * CONTRACT B. The backward run `n + 1` between the forward runs `n` and `n + 2` must satisfy contract B. Let forward
   run `n` report a vulnerability at the sink pattern `s` (with the concrete mark `T`) at the node `x` of the method `M`.
   Let `W` be a witness of it (§3.5) that run `n` JUSTIFIES:
@@ -1588,16 +1596,18 @@ of the zero fact (`interpreter.md` §4.3).
   1. at each call down in `W`, a demand pattern of the callee has a `D-c` that covers the entry location of the
      callee, with its mark;
   2. at each call in `W` that returns, ONE demand pattern of the callee has both parts: a `D-c` that covers the entry
-     location of the callee, with its mark, and a `D-p` that covers the exit location (marks ignored).
+     location of the callee, with its mark, and a `D-p` that covers the exit location (marks ignored);
+  3. every unconditional source step of `W` is a source seed of forward run `n + 2` (§9.2), so `W` is a witness of
+     the program that forward run `n + 2` analyzes.
 
   Lean: `Backward.BackwardContractD` (with `Backward.ReachRD`, `FlowRD` for the justified witness and `ReachR`,
-  `FlowR` for the demanded witness).
+  `FlowR` for the demanded witness); item 3: `FSeeds.B_src`.
 * Every forward run justifies a witness of each real vulnerability that it reports (`Backward.reach_strongRD`,
-  `reach_strongDD`). The backward run of §9.2 satisfies contract B under S11 (`Backward.B_general`). The iteration
-  driver must give the backward run at least the demand and the seeds of §9.2, and give the next forward run at least
-  the hand-off of §9.2.
-* Then every forward run reports every real vulnerability (`Backward.iteration_general`; for any backward step that
-  satisfies contract B, `Backward.iteration_sound_M_D`). So the analysis can stop at any forward run. The report is in
+  `reach_strongDD`). The backward run of §9.2 satisfies contract B under S11 (`Backward.B_general`, with item 3
+  `FSeeds.B_src`). The iteration driver must give the backward run at least the demand and the sink seeds of §9.2,
+  and give the next forward run at least the demand and the source seeds of §9.2.
+* Then every forward run reports every real vulnerability (`FSeeds.iteration_src`; without the source seeds
+  `Backward.iteration_general`; for any backward step that satisfies contract B, `Backward.iteration_sound_M_D`). So the analysis can stop at any forward run. The report is in
   §8.10.
 
 ---
@@ -1763,8 +1773,8 @@ is the method that §5.2 names. Lifetimes:
 
 * RUN: one run (one direction, one field limit).
 * HAND-OFF: from the end of one run until the next run has read it. This is what one run passes to the next: the
-  summary edges (§8.5) and the reported vulnerabilities (§8.10). The next run reads them as its demand or as its seeds
-  (§9.2 defines the hand-off; §8.6 stores the demand).
+  summary edges (§8.5), the reported vulnerabilities (§8.10) and the source hits of a backward run (§8.11). The next
+  run reads them as its demand or as its seeds (§9.2 defines the hand-off; §8.6 stores the demand).
 * PERSISTENT: all runs of one analysis.
 
 The method key of a method is the same in every run (§1), so a key that contains it stays valid across runs.
@@ -1907,7 +1917,8 @@ Rules:
   `recs_of_DR_valid`; for programs without type filters `recs_of_D`, `recs_of_DR`; the union of two record sets,
   `recs_union`). Over the whole run sequence the persisted forward records stay exact (`BExact.recsSeq_exact`,
   `recsSeq_exactV`, `accRecs_exact`, `accRecs_exactM`), so every normal edge and every confirmed vulnerability of every
-  run is real with no hypothesis on the records (`BExact.seq_edge_exact`, `seq_confirmed_real`).
+  run is real with no hypothesis on the records (`BExact.seq_edge_exact`, `seq_confirmed_real`; with the source
+  seeds, argued, §11.2).
   A backward normal edge with a non-zero premise is exact for the reversed program (`BExact.edge_exactB`,
   `edge_exactB_valid`, `edge_exactB_rev`; under S11 (c)). A zero-premise backward edge is never persisted (R1).
   A conjunction result whose premise set has one member can be a record; its exactness is `NDExact.nd_edge_exact`
@@ -1961,8 +1972,18 @@ A reported vulnerability (Kotlin: `VulnerabilityRecord`) has these fields:
   `n + 2` does not report (no vulnerability with the same key) is REFUTED: under B it is not real.
 * The REPORT of the analysis is every vulnerability that a run confirmed, and every demand vulnerability of the last
   forward run. A vulnerability has the state CONFIRMED in the report if some run confirmed it.
-* The vulnerabilities of a forward run are also its HAND-OFF: the next backward run reads them as its seeds (§9.2). A
-  backward run reports no vulnerability (§9.2, the backward sink role).
+* The vulnerabilities of a forward run are also its HAND-OFF: the next backward run reads them as its sink seeds
+  (§9.2). A backward run reports no vulnerability (§9.2, the backward sink role).
+
+### 8.11 Source hit store (HAND-OFF; backward run)
+
+* Entries: `(method key, statement, source edge)`: the unconditional sources that the backward run reached (§9.2,
+  SOURCE HITS). The backward analyzer of the method adds an entry when it applies the reversed source edge of the
+  statement to a requirement and gets a result.
+* The next forward run reads the entries as its source seeds (§6.1 rule 6): per (method key, statement), the set of
+  the source edges that may fire.
+* A source edge has an identity that is the same in both runs: its method key, its statement and its forward micro
+  edge (Lean: `σ M n e`). The interpreter gives the same micro edges in every run (`interpreter.md` I5).
 
 ---
 
@@ -2043,8 +2064,8 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   a requirement inside a callee never reaches the callers (`Backward.lost_plain`, `Backward.B_fails_plain`). S11 (d)
   and (e) keep the zero fact alive on every path to a seed. With S11 (c), a requirement that enters a callee through a
   backward binding is never the zero fact, so its backward summary goes to the hand-off as case 3 below.
-* SEEDS (Lean: rule `seed`). The sink rule of each vulnerability that the previous forward run reported fires where the
-  zero fact reaches the sink statement, as a zero-to-fact edge `Zero → (sink statement, requirement)`. The requirement
+* SINK SEEDS (Lean: rule `seed`). The sink rule of each vulnerability that the previous forward run reported fires
+  where the zero fact reaches the sink statement, as a zero-to-fact edge `Zero → (sink statement, requirement)`. The requirement
   is the sink pattern, cut by the field limit of the backward run (§4.4). A conjunctive sink seeds one requirement per
   literal pattern. An unconditional sink seeds nothing: its pattern is the zero fact (§4.9), and the zero rules keep
   the zero fact already. `interpreter.md` §4.9 places the seed of a sink call after the reversed cleaners of that
@@ -2059,12 +2080,22 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   record: a seed is not a converse flow of the program.
 * THE BACKWARD SINK ROLE. The backward run has no sink check (Lean: `Backward.DB` is used with no sinks; its only sink
   rule is `seed`). A forward source is not a backward sink: its reversed micro edge carries a requirement to the zero
-  fact (THE ZERO DEMAND below). So a backward run reports no vulnerability. Its hand-off is the demand below.
-* THE ZERO DEMAND. A requirement that reaches a source continues to the zero fact through the reversed source edge.
-  The forward demand of every method contains `(zero, none)` (the hand-off below), so the next forward run emits the
-  zero fact in every method that it reaches. The work from the roots to the sources (forward) and from the sinks to the
-  roots (backward) repeats in every run. The work decreases because a backward run seeds only the sinks that the
-  previous forward run reported, and a later run never adds a sink. All other work follows the demand.
+  fact (THE ZERO DEMAND below). So a backward run reports no vulnerability. Its hand-off is the demand and the source
+  hits below.
+* SOURCE HITS (Lean: `FSeeds.srcHit`). A requirement that reaches a source continues to the zero fact through the
+  reversed source edge. The backward run records these sources as HITS. The hit of the source edge `e` at the forward
+  statement `s` of the method `M`: a backward edge after `s` (in the forward order) has a concrete fact that covers a
+  location that `e` gives. Then the reversed edge of `e` applies to that requirement (`FSeeds.srcHit_applies`). The
+  hits are the SOURCE SEEDS of the next forward run (§6.1 rule 6). Every source step of a justified witness of a
+  reported vulnerability is hit (`FSeeds.seg_src`, `demanded_src`, `B_src`). An implementation may record more: more
+  seeds keep the coverage, and every seed is a real edge of the program.
+* THE ZERO DEMAND. The forward demand of every method contains `(zero, none)` (the hand-off below), so the next forward
+  run emits the zero fact in every method that it reaches. The zero fact carries the support (§4.9) and the
+  unconditional sinks. It is also the place of the seeds: a source seed fires where the zero fact reaches its
+  statement, as a sink seed does in the backward run. So the work of the zero fact from the roots repeats in every
+  run. But after run 1 only the seeded sources fire, and the backward run seeds only the sinks that the forward run
+  before reported. All other work follows the demand. A persisted zero-premise forward record still applies (§8.7 R4):
+  it is exact, so it adds no false pair, also when its source is not a seed.
 * Every backward run is a restricted run with its own field limit (§6.1). It is concrete and raises no request
   (`BExact.DB_concrete`, `DB_no_request`; the seeds have concrete marks).
 * THE DEMAND OF THE BACKWARD RUN (hand-off, forward run `n` to backward run `n + 1`; Lean: `Backward.revSummaryDemand`,
@@ -2073,8 +2104,10 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   summary edge `j → g`, the backward demand pattern `(D-c = g, D-p = j)`. For a summary with several premises
   `{j1, …, jk} → g` (§4.6), one pattern `(D-c = g, D-p = jm)` per member `jm` (argued, §11.2). This swaps the two
   patterns of the summary; it is not the reversal of §9.1. A forward summary of run 1 can have the conclusion mark
-  `*∖X`; as an entry pattern it counts as `*` (§6.3). The seeds are the vulnerabilities that forward run `n` reported
+  `*∖X`; as an entry pattern it counts as `*` (§6.3). The sink seeds are the vulnerabilities that forward run `n` reported
   (§8.10).
+* THE SOURCE SEEDS OF THE NEXT FORWARD RUN (hand-off, backward run `n + 1` to forward run `n + 2`): the source hits
+  of backward run `n + 1` (above; the store of §8.11).
 * THE DEMAND OF THE NEXT FORWARD RUN (hand-off, backward run `n + 1` to forward run `n + 2`; Lean: `Backward.demOf`).
   This is the only definition of the forward demand. For every method `M`:
   1. the zero demand `(D-c = zero, D-p = none)`;
@@ -2082,13 +2115,15 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   3. for every backward summary `jb → gb` of `M` whose premise `jb` is NOT the zero fact, in every layer:
      `(D-c = gb, D-p = jb)`.
 
-The backward run satisfies contract B (§6.6) under S11 (`Backward.B_general`): for every forward run, if the demand of
-the backward run contains the patterns above and its seeds contain the sinks that the forward run reported.
-`Backward.iteration_general` joins the runs: every forward run reports every real vulnerability. For the worked
+The backward run satisfies contract B (§6.6) under S11 (`Backward.B_general`; item 3: `FSeeds.B_src`): for every
+forward run, if the demand of the backward run contains the patterns above and its sink seeds contain the sinks that
+the forward run reported. `FSeeds.iteration_src` joins the runs: every forward run reports every real vulnerability, if
+its source seeds contain the source hits of the backward run before it (`Backward.iteration_general` without the source
+seeds). For the worked
 programs 1 and 2 (§6.3, §6.4) the hand-off of the backward run is exactly three parts: the demand patterns of the
 callees that §6.3 and §6.4 give (`RCases.dem1M`, `dem2M`), the zero demand of every method (`Backward.zeroDem`), and
 the pattern `(D-c, none)` of the root where the requirement reaches the source (`Backward.dem1_exact`, `dem2_exact`).
-Forward run 3 reports the vulnerability (`Backward.p1_found`, `p2_found`).
+Forward run 3 reports the vulnerability (`Backward.p1_found`, `p2_found`; on the full program, with no source seeds).
 
 `Reverse.flow_rev_iff_calls` proves that the flow of the reversed program is the converse flow, with calls, cleaners and
 filters, if every micro edge and every call binding has an exact shape and is mark-reversible (`RevStmts`, `RevCalls`).
@@ -2243,9 +2278,21 @@ iteration theorems are generic over the rules, given the contracts C2 (`EmitCont
 | `StaticsIter.rinv_all`, `no_any_above_R`, `static_step_below`, `static_sink_below`, `no_request`, `DeepReadIter.deep_read_above` | AFTER RUN 1 NO STATIC RULE IS NEEDED: in a forward restricted run (`DR`), under S12 (a) to (d) (`StaticsIter.SWFR`) and persisted records that keep the static invariant (`StaticsIter.RecOK`), for every demand, no static `*` or `[any]` fact lies above a static position; every static operation at most two accessors deep is the case at or below; no request. A deeper static read or sink follows the ordinary rules of an instance field (`DeepReadIter.deep_read_above`: a restricted run can hold `(S, <C>.f, [any], T)` above a deep read). |
 | `StaticsIter.reach_strongDSD`, `iteration_general_DS`, `no_static_rule_after_run1` | The iteration from run 1 = `DS`, with plain forward restricted runs after it: every forward run reports every real vulnerability, and every later forward run satisfies the invariant (under `StaticsIter.RecOK` for the records). The backward run `Backward.DB` is not covered (§11.2). |
 | `StaticsIter.ExampleIter.run3_confirmed`, `WideIter.run3_confirmed`, `AboveIter.run3_confirmed`, `CleanIter.run3_confirmed`, `ExampleIter.demE_exact` | The worked static programs: forward run 3 confirms the vulnerability through a normal edge with no request; the exact demand for `Example`. |
-
 | `StaticsConfirmed.SupS`, `ConfirmedS`, `confirmed_realS`, `confirmed_realS_valid` | Run 1 with the static rule confirms only real vulnerabilities; the support accepts the mark answer on a static premise (§4.10 item 4). |
 | `StaticsConfirmed.confirmedS_iff`, `CexS.cexS_filt`, `CexS.cexS_mark`, `ExampleConf.confirmed`, `CleanConf.confirmed` | Without a static initial fact the static confirmation is the plain one; S7 and the validity are necessary; the worked programs are confirmed in run 1. |
+
+### 10.9 Source seeds — `ForwardSeeds.lean`, `PipelineSeeds.lean`
+
+| Theorem | Statement |
+|---|---|
+| `FSeeds.keepSources`, `mem_keepStmt`, `unseeded_dropped`, `cond_kept`, `zero_kept` | The program of a forward restricted run (§6.1 rule 6): every unseeded unconditional source edge is dropped; the conditional sources and the zero keep edge stay. |
+| `FSeeds.keep_WF`, `keep_bindStar`, `keep_markRev`, `keep_noZeroBack`, `keep_zeroKept`, `keep_exitReach` | The seeded program keeps every hypothesis of `Backward.iteration_general`. |
+| `FSeeds.flow_keep`, `reach_keep`, `reachRD_keep`, `flow_keep_mono`, `flow_keep_all_iff` | The seeded program has fewer flows than `P`; more seeds give more flows; seeding every source gives the flows of `P`. |
+| `FSeeds.srcHit`, `srcHit_applies` | The source hits of a backward run (§9.2); a hit is a reversed source edge that applies to a concrete requirement. |
+| `FSeeds.demanded_src`, `B_src` | Contract B with item 3 (§6.6): the demanded witness is a witness of the program seeded by every superset of the source hits. |
+| `FSeeds.iteration_src`, `runSeqSrc` | The iteration with source seeds: every forward run reports every real vulnerability of `P`. |
+| `PipelineSeeds.driver_iteration_src` | The same for the driver of `analyzer-core.md` (§7.7). |
+
 ---
 
 ## 11. What the proofs do not cover
@@ -2312,6 +2359,14 @@ analysis keeps their results in the normal layer and does not refine them.
   static rule and the conjunctions are in separate models: a conjunction literal on `S` uses the plain run-1 rules
   (§4.6).
 * ARGUED, NOT PROVED. These claims of the spec have no Lean proof. Each item gives the claim in one sentence:
+  * The source seeds (§6.1 rule 6) at a call, at the method start and at the method exit. The model has the
+    statement sources only (`FSeeds.keepSources`); the others are the same micro edges at another place. The model
+    keys a seed by the node before the statement; the implementation keys it by (method key, statement), which is the
+    same on the JVM graph.
+  * A seeded forward run is exact for `P`. `BExact.recsSeq_exact`, `seq_edge_exact` and `seq_confirmed_real` are
+    proved for the runs on `P`. A seeded run has fewer flows (`FSeeds.flow_keep`), and it reads records that are exact
+    for `P`, also a record of a source that is not a seed (§9.2).
+  * The source seeds with the static rule (`Statics.DS`) and with the conjunctions (`ND.DN`).
   * The backward run satisfies W2 (it is concrete, `BExact.DB_concrete`; no theorem states W2 for `Backward.DB`).
   * The backward run needs no static rule: proved if the reversed program satisfies S12 (a) to (d)
     (`BExact.no_static_rule_backward`); that the interpreter's reversed program satisfies them is argued (the static
@@ -2382,6 +2437,7 @@ analysis keeps their results in the normal layer and does not refine them.
 | `Exact.lean`, `Invariant.lean`, `Closed.lean`, `Confirmed.lean`, `RestrictedExact.lean` | Exactness, invariants, the records of a request-free initial fact, confirmed vulnerabilities. |
 | `Tree.lean`, `Store.lean`, `Subsume.lean`, `RestrictedStore.lean` | Concept against optimization. |
 | `Reverse.lean` | Reversal. |
+| `ForwardSeeds.lean`, `PipelineSeeds.lean` | The source seeds of the forward restricted runs (§6.1 rule 6, §9.2, §10.9). |
 | `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`, `PipelineStore.lean`, `PipelineDriver.lean` | The analyzer pipeline of `analyzer-core.md` (its §12): the no-loss theorem, the encodings of the closures, the index lookups, the driver. |
 
 Lean names. A qualified name `F.x` in this spec names the declaration `x` in the namespace `ApSpec.F`, or in the file

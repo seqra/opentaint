@@ -11,7 +11,7 @@ PIPELINE between the methods, the scheduling and the end of a run, and the ITERA
 the runs. Appendix A gives the analysis of today's analyzer that the design starts from.
 
 The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`,
-`PipelineStore.lean`, `PipelineDriver.lean`. Every theorem named here is machine-checked and constructive (`ap.md` §10
+`PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`). Every theorem named here is machine-checked and constructive (`ap.md` §10
 defines the term). §11 lists what is argued and not proved.
 
 Language: ASD-STE100 Simplified Technical English.
@@ -26,6 +26,8 @@ The analyzer core:
 2. exchanges the edges between the methods of a run with no loss (§5);
 3. detects the end of a run (§6);
 4. runs the sequence of runs and computes the hand-off from each run to the next (§7).
+
+The core is for the JVM. Go is out of scope.
 
 Out of scope:
 
@@ -127,7 +129,7 @@ class RunConfig(
     val fieldLimit: Int,                     // ap.md §4.4; run 1 needs fieldLimit >= 1 (ap.md S12 (d))
     val demand: DemandStore?,                // null only in run 1
     val records: RecordStore,                // a read-only view; run 1 reads no record
-    val seeds: SeedIndex,                    // the backward run only (§4.7)
+    val seeds: SeedIndex,                    // after run 1: sink seeds (backward), source seeds (forward) (§4.7)
     val roots: List<MethodKey>,              // the root methods; the same in every run
 ) {
     val direction: Direction get() = if (index % 2 == 1) Direction.FORWARD else Direction.BACKWARD
@@ -144,7 +146,8 @@ The mode decides these rules (`ap.md` §6.1):
 | a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`, after the restriction in the callee | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
 | records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` |
 | mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no (assert) | no (assert) |
-| sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the seeds (`ap.md` §9.2) |
+| sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
+| unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
 | liveness pruning (`isLive`) | yes, as today | yes, as today | no |
 
@@ -166,6 +169,7 @@ differences.
 | `links` | added fact store (`ap.md` §8.3) | each added fact with its links: the caller reference and the layer of the added fact on the link |
 | `summaries` | run summary store (`ap.md` §8.5) | the summary edges BEFORE the restriction, per premise key and layer |
 | `requests` | request store (`ap.md` §8.8) | run 1 only: the standing mark and position requests and their answers |
+| `sourceHits` | source hit store (`ap.md` §8.11) | backward run only: the unconditional sources of this method that a requirement reached |
 | `conjunctions` | conjunction store (`ap.md` §8.9) | the standing literal facts; the combinations of the callee summaries with several premises (§5.4) |
 | `worklist` | `EdgeCollection` (today) | the new edge deltas to process |
 | `pendingPublications` | | the publications that the analyzer has not yet given to its `SummaryStorage` (§4.6) |
@@ -208,11 +212,12 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
   for every handler that makes such a result: `step`, and also `applySummary`, `applyRecord` and `zret` when the end
   node is a call (for example a backward end node whose forward entry statement is a call). An end node is a
   statement like every other: its transfer or its call steps come first. (Today: `handleStatementEdge`, the edge
-  post-processor, then `tryEmmitSummaryEdge`.)
+  post-processor, then `tryEmmitSummaryEdge`; the new core has no post-processor.)
 * Each result goes to every successor node in the graph of the run, through `edges.add`.
-* "Unchanged" propagation may skip the store, as today (`ap.md` §8.1). The propagated item must be the processed item
-  (today `handleUnchangedStatementEdge` propagates the input edge instead). The set that deduplicates the unchanged
-  items lives for one `Work` event (§6.2).
+* THE UNCHANGED PATH stays as today (`ap.md` §8.1). If the statement does not touch the base of an edge, the
+  analyzer puts the edge for each successor into the worklist with no `edges.add` (today `addSequentialUnchangedEdge`).
+  A set that lives for one `Work` event deduplicates these items (today `enqueuedUnchangedEdges`). The new core has no
+  edge post-processor (`interpreter.md` D14), so an unchanged edge always goes on as it is.
 * The analyzer does not delay an edge by its depth. There is no fact-depth limit: the field limit of the run is the
   only depth bound (`ap.md` §4.4; `bidirectional-task.md` §5 item 1).
 
@@ -237,15 +242,11 @@ Start nodes, end nodes and their rules (the interpreter gives them, §4.9):
 | forward | the entry statement of the method key | `interpreter.md` §4.3: the zero fact with the entry sinks and the entry-point sources; another fact with the filter by the context type | every normal exit | the exit order of `interpreter.md` §4.7; no summary at an exceptional exit |
 | backward | the zero fact: every forward exit, normal and exceptional (`ap.md` S4). Another initial fact: every normal exit (exceptions are out of scope, `interpreter.md` G1) | the seeds of the exit sinks of the method (§4.7); the reversed exit sources and the reversed end-fact edges of the exit sinks (`interpreter.md` §4.9, rule roles) | the forward entry statement | the reversed entry-point sources and the reversed end-fact edges of the entry sinks (`interpreter.md` §4.9); no context filter (the backward run has no type filter) |
 
-Exits per language:
-
-* JVM: the normal exit is `JMethodExitNormalInst`; the exceptional exit is `JMethodExitExceptionalInst`.
-* Go: each `Return` instruction is a normal exit; each `Panic` instruction is an exceptional exit.
+The exits: the normal exit is `JMethodExitNormalInst`; the exceptional exit is `JMethodExitExceptionalInst`.
 
 The backward graph is the reversed graph (`ApplicationGraph.reversed`) with the EXIT WIRING. A node that reaches no
 forward exit gets an edge to an exceptional exit (`interpreter.md` I11 (e); today `JIRBackwardExitWiringGraph` on
-`saloed/backward-main`). A Go function with no `Panic` gets a synthetic exceptional exit for this. Only the zero fact
-uses an exceptional exit. The `MethodContextCache` keeps the wired graph per method (today the code computes the wiring
+`saloed/backward-main`). Only the zero fact uses an exceptional exit. The `MethodContextCache` keeps the wired graph per method (today the code computes the wiring
 again on every call).
 
 AN EMPTY METHOD (no instruction, or a graph with no node) is an ordinary method. Its start node and its end node are
@@ -273,7 +274,8 @@ LINK: the analyzer sends the link `(a, caller edge)` to `m`. For `m` in another 
 
 The zero fact at a call:
 
-* forward: it passes over the call. The unconditional rules fire (`interpreter.md` §4.6). It enters every resolved
+* forward: it passes over the call. The unconditional rules fire (`interpreter.md` §4.6); in a forward restricted
+  run, only the seeded sources (§4.7). It enters every resolved
   callee as the added fact `zero`: a subscription and a link, as above.
 * backward: it passes over the call (rule `zpass`). The analyzer adds a ZERO SUBSCRIPTION for `m` (it matches the
   zero-premise publications of `m`, §5.3) and sends `ZeroIn` to `m` (rule `zin`). A zero-premise publication applies
@@ -311,17 +313,29 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
 * Both sides of this join are in one analyzer, so one handler sees both. The join needs no protocol.
 * In a restricted run a request is an error (assert; `ap.md` §6.1 rule 4).
 
-### 4.7 Sinks, vulnerabilities and seeds
+### 4.7 Sinks, vulnerabilities, seeds and source hits
 
 * A triggered sink adds its WITNESS to the `VulnerabilityStore` under the key `(rule, method key, statement)`, with
   the index of the run (`ap.md` §8.10). A witness is one sink edge, or the sink edge set of a conjunctive sink. The
   store keeps every witness. It never merges two witnesses into one.
 * A conjunctive sink uses the conjunction store. Each sink edge set is one witness (`ap.md` §4.9).
-* SEEDS (backward run). The driver gives a `SeedIndex`: per (method key, statement), the requirements of the
-  vulnerabilities that the forward run before reported (`ap.md` §9.2 SEEDS). A sink pattern gives one requirement. A
-  conjunctive sink gives one requirement per positive literal. An unconditional sink gives none.
-* A seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call sink
-  seeds at POST step 7 (§4.5). An exit sink seeds in the start rules (§4.4).
+* SEEDS. After run 1, every run has seeds. The driver gives a `SeedIndex` per (method key, statement):
+  * a backward run: the SINK SEEDS, the requirements of the vulnerabilities that the forward run before reported
+    (`ap.md` §9.2). A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
+    literal. An unconditional sink gives none;
+  * a forward restricted run: the SOURCE SEEDS, the unconditional sources that the backward run before reached
+    (`ap.md` §6.1 rule 6, §8.11).
+* A sink seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call
+  sink seeds at POST step 7 (§4.5). An exit sink seeds in the start rules (§4.4).
+* A source seed is a filter on the unconditional source edges (`StatementSummary.sources`). In a forward restricted
+  run, the analyzer applies such an edge only if `SeedIndex` has it for that (method key, statement). The edges are at
+  a statement (a read source, an exit source), at the zero fact of a call (§4.5) and in a start or end rule. The end
+  facts of a sink and every other micro edge apply as usual.
+* SOURCE HITS (backward run). When the analyzer applies a reversed unconditional source edge
+  (`StatementSummary.sources`) to a requirement and gets a result, it adds `(method key, statement, forward edge)` to
+  `sourceHits` (`ap.md` §8.11). This holds at each place of a reversed source: a statement, a call (backward PRE step
+  3), a start rule (the exit sources) and an end rule (the entry-point sources). The analyzer records the hit before
+  `edges.add`, also when the store drops the zero result as a duplicate.
 * The backward run has no sink check.
 
 ### 4.8 The method context
@@ -351,8 +365,9 @@ interface Interpreter {
      *  the entry statement of the method key, also when the graph has no node. */
     fun startNodes(method: MethodKey, zero: Boolean): List<CommonInst>
     fun endNodes(method: MethodKey): List<CommonInst>
-    /** §4.4: the start rules (with the context filter, forward) and the end rules. The core adds the seeds of the
-     *  backward run from its `SeedIndex` (§4.7); the interpreter does not get them. */
+    /** §4.4: the start rules (with the context filter, forward) and the end rules. The core adds the sink seeds of
+     *  the backward run, and filters the unconditional sources of a forward restricted run by the source seeds (§4.7).
+     *  The interpreter does not get the seeds. */
     fun startRules(method: MethodKey, node: CommonInst): RuleStatement
     fun endRules(method: MethodKey, node: CommonInst): EndRules
     /** interpreter.md I1: the touched bases, the micro edges and the type filters of a non-call statement. */
@@ -367,9 +382,12 @@ interface Interpreter {
     fun isSummaryBase(base: AccessPathBase): Boolean
 }
 
-/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). */
+/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). `sources`: the unconditional source edges
+ *  of `microEdges`, each with its FORWARD form (forward: the edge itself; backward: the edge before the reversal). The
+ *  core reads it for the source seeds and the source hits (§4.7). */
 class StatementSummary(val touched: Set<AccessPathBase>, val microEdges: List<PathEdge>,
-                       val typeFilters: Map<AccessPathBase, TypeFilter>)
+                       val typeFilters: Map<AccessPathBase, TypeFilter>,
+                       val sources: Map<PathEdge, PathEdge> = emptyMap())
 
 /** The micro edges and the rules of one place: a rule statement (interpreter.md §4.1) and the sinks. */
 class RuleStatement(val summary: StatementSummary, val conjunctions: List<ConjunctiveEdge>, val sinks: List<SinkRule>)
@@ -386,11 +404,13 @@ sealed interface CleanStep {
  *  removal of the entry marks for a zero-premise fact (step 4). Both read the premise and the triggered sinks. */
 class EndRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>)
 
-/** §4.5: one call in the direction of the interpreter. */
+/** §4.5: one call in the direction of the interpreter. A binding is a statement summary (interpreter.md I1, I4).
+ *  `bindIn.touched` is the touched caller set: forward, `S`, the receiver, the arguments and the lhs `r`
+ *  (interpreter.md §3.1; `r` has no edge, so its fact is killed); backward, the forward touched bases and the alias
+ *  bases (interpreter.md §4.9 step 1). It gives the relevance (PRE step 1). The filters of `bindIn` act on the caller
+ *  fact before its edges; the filters of `bindBack` act on its results (interpreter.md §3.1). */
 class CallPlan(
-    val touched: Set<AccessPathBase>,              // relevance (PRE step 1)
-    val bindIn: List<PathEdge>,                    // forward step 2 / backward step 2 (with the alias edges)
-    val bindInFilters: Map<AccessPathBase, TypeFilter>,
+    val bindIn: StatementSummary,                  // PRE step 1 (touched) and step 2 (backward: with the alias edges)
     val preRules: RuleStatement,                   // forward steps 3, 4 / backward step 3 (sources and end facts)
     val rewriter: List<Cleaner>,                   // forward step 6 (on the callee results) / backward step 4
     val cleanSteps: List<CleanStep>,               // forward step 5.1 / backward step 6, in the rule order
@@ -398,12 +418,13 @@ class CallPlan(
     val unresolved: StatementSummary?,             // the summary of the unresolved callee (interpreter.md §3.7)
     val constructorPassOver: Boolean,              // JVM constructor (interpreter.md §3.5)
     val readPositions: List<PathEdge>,             // backward step 7: the read positions of the conditional sources
-    val bindBack: List<PathEdge>,                  // forward step 6 / backward step 8
-    val bindBackFilters: Map<AccessPathBase, TypeFilter>,
-    val aliases: List<AliasEdge>,                  // forward: interpreter.md §3.8, AC3 and AC4 select the results
+    val bindBack: StatementSummary,                // forward step 6 / backward step 8
+    val aliases: StatementSummary,                 // forward step 6: on the results that interpreter.md §3.8 AC3, AC4 select
 )
 ```
 
+The bindings (`bindIn`, `bindBack`, `aliases`) are statement summaries, so the same AP step applies each of them: the
+micro-edge step of `ap.md` §4.2 on a fact of a touched base. A fact on another base passes over the call (PRE step 1).
 The backward interpreter gives the reversed micro edges (`interpreter.md` §4.9; today `StatementSummaryBuilder.
 buildReversed`). The AP operations of `ap.md` §4 apply the micro edges. The interpreter never applies them. `PathEdge`,
 `Cleaner` and the conjunctive edge are the types of `ap.md` §4.
@@ -769,7 +790,7 @@ From the `summaries` (run summary store) of every method analyzer and the sink e
   pattern `(D-c = g, D-p = j)` per leaf of `g` (Lean `Backward.revSummaryDemand`). For a summary with several premises:
   one pattern per member (`ap.md` §9.2; argued, `ap.md` §11.2). The driver builds the `DemandStore` of run `n + 1`
   from them.
-* SEEDS. The `SeedIndex` of the vulnerabilities that run `n` reported (§4.7; `ap.md` §9.2 SEEDS).
+* SINK SEEDS. The `SeedIndex` of the vulnerabilities that run `n` reported (§4.7; `ap.md` §9.2).
 * RECORDS. The `RecordStore` persists the normal summary edges with one premise (`ap.md` §8.7 R1, forward).
 
 ### 7.4 Backward run `n + 1` to forward run `n + 2`
@@ -780,6 +801,9 @@ From the `summaries` of every backward method analyzer, for every method `M` (`a
 2. for every zero-premise backward edge at the forward entry of `M`, with the conclusion `gb`: `(D-c = gb, none)`;
 3. for every backward summary `jb → gb` of `M` whose premise `jb` is not the zero fact, in every layer:
    `(D-c = gb, D-p = jb)`.
+
+SOURCE SEEDS: the `SeedIndex` of the `sourceHits` of every backward method analyzer (§4.7; `ap.md` §8.11, §9.2;
+Lean `FSeeds.srcHit`).
 
 RECORDS: the `RecordStore` persists the normal backward summary edges with one premise that is not the zero fact
 (`ap.md` §8.7 R1, backward).
@@ -823,7 +847,7 @@ One key can come from several runs. The state CONFIRMED wins (`ap.md` §8.10); e
 
 | Data | Stays until | Read by |
 |---|---|---|
-| the run summary stores of a run | its hand-off is computed | §7.3, §7.4 |
+| the run summary stores of a run, and the `sourceHits` of a backward run | its hand-off is computed | §7.3, §7.4 |
 | the links of a forward run | its confirmation is computed | §7.5 |
 | the edge stores, the links and the run summary stores of the LATEST forward run whose vulnerabilities are in the report (complete or incomplete) | the next forward run ends, or the trace resolution ends (phase 5) | the trace resolver |
 | `SummaryStorage`, `SubscriptionManager`, the runners, the backward analyzers | the end of the run, or its hand-off | — |
@@ -855,8 +879,15 @@ every forward run holds the vulnerability, in some layer.
 `2K + 1`, and only the runs up to it must be complete. The proof extends the sequence after `K` with the full demand
 and with every sink as a seed.
 
-The records are not hypotheses: the record sets are free. For the runs with the static rule, `ap.md` proves the iteration (`StaticsIter.iteration_general_DS`), and
-`clDS_iff` gives the closure equality; the pipeline form of that theorem is argued (§11).
+The records are not hypotheses: the record sets are free. For the runs with the static rule, `ap.md` proves the
+iteration (`StaticsIter.iteration_general_DS`), and `clDS_iff` gives the closure equality; the pipeline form of that
+theorem is argued (§11).
+
+THEOREM (`PipelineSeeds.driver_iteration_src`). The same, with the source seeds (§4.7). Forward run `2k + 3` analyzes
+the program `FSeeds.keepSources P σ_k`; `σ_k` contains the source hits of backward run `2k + 2`, computed from its
+final state (`FSeeds.srcHit`). The conclusion is the same: every forward run holds every real vulnerability of `P`. The
+proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. Its finite form (as
+`driver_iteration_upto`) is argued (§11).
 
 ---
 
@@ -879,18 +910,18 @@ The records are not hypotheses: the record sets are free. For the runs with the 
 | `MethodSummaryEdgeApplicationUtils`, `MethodCallSummaryHandler` | REPLACE | `applySummary` (`ap.md` §4.3); the rewriter moves to the interpreter |
 | `TaintSinkTracker`, the vulnerability buckets of `TaintAnalysisUnitStorage` | REPLACE | the `VulnerabilityStore` (§4.7) and the conjunction store (`ap.md` §8.9); no lossy merge |
 | `MethodCallResolver`, `JIRMethodCallResolver` | ADAPT | today it is typed to `TaintAnalysisUnitRunner` and calls back with a `MethodCallHandler` per edge kind; the new one gives the resolved callees to `callPlan` |
-| `TrackerWithSubscriber`, `LambdaTracker`, `GoClosureTracker` | REUSE as the source of the prescan values | no lambda event in the new core (§5.1) |
+| `TrackerWithSubscriber`, `LambdaTracker` | REUSE as the source of the prescan values | no lambda event in the new core (§5.1) |
 | `MethodEntrypointResolver`, `UnitResolver`, `LanguageManager` | REUSE | |
 | `ApplicationGraph.reversed`, `MethodInstGraph` | REUSE | `JIRAnalysisManager` downcasts the graph to `JApplicationGraph`; ADAPT it to accept the reversed graph |
-| `JIRBackwardExitWiringGraph` (`saloed/backward-main`) | PORT | with a cache per method; the Go exits (§4.4) |
-| `StatementSummaryBuilder`, `buildReversed`, the JVM and Go flow functions | ADAPT | the interpreter of §4.9 (`interpreter.md`) |
+| `JIRBackwardExitWiringGraph` (`saloed/backward-main`) | PORT | with a cache per method (§4.4) |
+| `StatementSummaryBuilder`, `buildReversed`, the JVM flow functions | ADAPT | the interpreter of §4.9 (`interpreter.md`) |
 | `JIRMethodAnalysisContext` | SPLIT | the cached part and the run part (§4.8) |
 | `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state |
 | summary serialization (`storeSummaries`, `loadSummariesFromRunner`) | NOT USED | the records are the reuse between runs |
 | `trace/*` | OUT OF SCOPE | phase 5; §7.6 |
 
 Do not copy the defects of today that Appendix A lists. Each one has its rule in this document: P3 and P4 (§5.3),
-the processed item (§4.3), the new engine per run (§2, §7.6), the per-run scope (§6.3), the fixed priority keys
+no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run scope (§6.3), the fixed priority keys
 (§6.1), and the correct interners of the `ApManager` (O4).
 
 ---
@@ -899,7 +930,7 @@ the processed item (§4.3), the new engine per run (§2, §7.6), the per-run sco
 
 * PRESCAN (phase 3). The prescan runs the current core. It gives the new core:
   * the reduced rule set (`relevantRuleIds`);
-  * the lambda and closure resolutions per call site (the values of the `TrackerWithSubscriber` of each call site);
+  * the lambda resolutions per call site (the values of the `TrackerWithSubscriber` of each call site);
   * the root methods.
 
   The core copies the resolutions into the `MethodContextCache` once, before run 1. It keeps no reference to a context
@@ -950,8 +981,17 @@ sealed interface RequestKind {
     data class Position(val path: List<Accessor>) : RequestKind
 }
 
-/** A seed of the backward run (§4.7): one requirement of a reported sink. */
-data class Seed(val rule: RuleId, val method: MethodKey, val statement: CommonInst, val requirement: Pattern)
+/** A seed (§4.7). A sink seed (backward run): one requirement of a reported sink. A source seed (forward restricted
+ *  run): one unconditional source edge that the backward run reached, in its forward form; the method key, the
+ *  statement and the edge identify it in both runs (ap.md §8.11). */
+sealed interface Seed {
+    val method: MethodKey
+    val statement: CommonInst
+    data class Sink(val rule: RuleId, override val method: MethodKey, override val statement: CommonInst,
+                    val requirement: Pattern) : Seed
+    data class Source(override val method: MethodKey, override val statement: CommonInst,
+                      val edge: PathEdge) : Seed
+}
 
 /** The seeds per (method key, statement). */
 class SeedIndex(private val byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>>) {
@@ -1038,6 +1078,10 @@ ARGUED, NOT PROVED:
 * COUNTER. The link from the counter model to the quiescence of the pipeline (W1 to W3), and the order of Q1 (an
   increment and its enqueue are one step in the model).
 * A2 (the shared actions are linearizable) for the lock of P3, and A3 for the Kotlin `Channel`.
+* THE SOURCE SEEDS at a call, at the method start and at the method exit: the model restricts the statement sources
+  (`FSeeds.keepSources`); the others are the same micro edges at another place (`ap.md` §11.2). The exactness of a
+  seeded run for `P` (`ap.md` §11.2). The source seeds in a finite sequence: extend it after `K` with every source as
+  a seed (`FSeeds.flow_keep_all_iff`), as `driver_iteration_upto` does with the sinks.
 * THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`clDS_iff`, `clDN_iff`). The
   pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md` §11.2), are argued.
 
@@ -1055,6 +1099,7 @@ stop the run. They do not change the closure of a complete run.
 | `PipelineAP.lean` | the encodings of `D`, `DR`, `DB`, `DS`, `DN`; the `*_wf` theorems; `clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff`; the object theorems (`clD_link`, `clD_sub`, `clD_pub` and the other forms) |
 | `PipelineStore.lean` | the completeness of the index lookups of §5.3 (`replay_run1`, `deliver_run1`, `replay_restricted`, `deliver_restricted`, `record_lookup`) |
 | `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB`, `driver_iteration`, `driver_iteration_upto` |
+| `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
 
 ---
 
@@ -1082,7 +1127,12 @@ stop the run. They do not change the closure of a complete run.
    the reversed source results and the seeds at POST step 7.
 9. STOP RULE. A forward run whose vulnerabilities all have a confirmed sink edge stops the iteration, also when they
    have demand-layer sink edges too (§7.1).
-10. REGRESSION. The existing analysis tests, through phase 3 (`bidirectional-task.md` phase 4).
+10. SOURCE SEEDS. In forward run 3, a source that backward run 2 did not reach does not fire; a source on the witness
+    of a reported vulnerability fires, and run 3 reports the vulnerability. A requirement that reaches a source records
+    exactly one hit for that (method key, statement, source edge) (§4.7). A source at a call, at a method entry, at a
+    method exit and at a read each records its hit. Two sources of one statement that give the same zero result both
+    record a hit.
+11. REGRESSION. The existing analysis tests, through phase 3 (`bidirectional-task.md` phase 4).
 
 ---
 
@@ -1136,8 +1186,11 @@ DEFECTS FOUND (none of them is in the design above).
   children on the replay) also use different filters on the two paths.
 * The tree summary storage does not notify when only the exclusion of a summary grows; today the requirement channel
   covers it. The new core has no such channel, so every growth must be a delta.
-* `handleUnchangedStatementEdge` propagates the input edge, not the processed edge: the exit filter is lost for the
-  unchanged facts.
+* `handleUnchangedStatementEdge`: the unchanged edge normally goes through `addSequentialUnchangedEdge`, which is
+  correct. When the edge post-processor returns a NEW edge object, the code propagates the input edge (as a changed
+  edge) and drops the processed one. `JIRMethodSummaryEdgeProcessor` returns a new object for every fact-to-fact edge
+  at an exit. So a PARTIAL exit compatibility filter is lost for a fact that is unchanged at the exit; a full
+  rejection (an empty list) works. Precision only. The new core has no post-processor (`interpreter.md` D14).
 * Across runs: `analyzerEnqueued`, the runner `factLimit`, the sticky `status` and the counters survive. A failed
   runner cancels the shared scope. A runner that does not stop can run into the next run.
 * `EventComparator` reads mutable keys. `ConcurrentReadSafeObject2IntMap` can hang the interner (non-volatile reads in
