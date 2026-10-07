@@ -744,7 +744,7 @@ A micro edge has NO LAYER. The layer belongs to the propagation edge, and only t
 interpreter sets no layer. A negated mark literal counts as true for a source, a sink and a pass rule (the reference
 semantics, §3.5). This is the expected over-approximation of a path-insensitive engine, as the conjunction is (§4.6).
 Positive literals on different facts make a conjunction for a source or a pass rule (§4.6), and a conjunctive sink
-(§4.9). A cleaner applies only its decided part (§4.7, `interpreter.md` §4.2).
+(§4.9). Only an unconditional cleaner applies (§4.7, `interpreter.md` §4.2).
 
 The cases below are checked by `decide` in `Cases.lean`. The two static rows follow §4.10. The model checks the read
 row (`Statics.gen_read_DS`, `gen_read_sreq`); the write row follows from §4.10 item 1 and is not checked separately:
@@ -825,8 +825,8 @@ longer. It never applies it to a micro edge or a summary edge before the applica
 * the source results and the end facts of a sink at a call, after their binding back and the aliases (§5.3 step 3);
 * the results of the entry rules at the method start: the entry-point sources and the end facts of an entry sink
   (`interpreter.md` §4.3);
-* the results of the exit rules at the normal exit, before the summary edge: the exit sources and the end facts of an
-  exit sink (`interpreter.md` §4.7);
+* the results of the exit rules at an exit (normal or exceptional), before the summary edge of the normal exit: the
+  exit sources and the end facts of an exit sink (`interpreter.md` §4.7);
 * the conjunction result (§4.6) and the application of a summary with several premises (§4.6, event E6);
 * the backward seed (§9.2).
 
@@ -1010,10 +1010,8 @@ exactly (except on `[any]`, which is in the demand layer already). The union of 
   the call cleaners are argued (§11.2).
 * THE BACKWARD RUN. A cleaner is its own reversal (§9.2). `interpreter.md` §4.9 places it on the requirement at the
   callee start.
-* `clean` is unconditional. Of a cleaner with a condition, the interpreter applies only the part that the cleaned fact
-  decides: `ContainsMark(P, T)` with an action that removes `T` at `P` is the unconditional `(P, exact, T)`
-  (`interpreter.md` §4.2). Where the fact does not decide the condition, the cleaner does not act. Cleaning there is
-  unsound.
+* `clean` is unconditional. A cleaner rule whose condition keeps a mark literal after the static evaluation does not
+  act (`interpreter.md` §4.2): the fact does not decide such a condition, and cleaning there is unsound.
 
 ### 4.8 The type filter
 
