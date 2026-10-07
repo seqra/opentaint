@@ -17,9 +17,12 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 
-Our current task is to obtain a complete, concise and self-contained spec for the AP and storages.
-The AP operations must be proven to be sound: if the fact exists, and the data flow exists (intra and inter proc), the fact will reach the destination
-Design the AP representation and operations. Design the storages. Provide relevant code snippets.
-Put the spec into `/spec/ap.md` wrt the repo root.
+Now we have a complete spec for the AP (see `spec/ap.md`).
+Our current task is to obtain a complete, concise and self-contained spec for analyzer (phase 2).
+Analyze current analyzer entities (like NormalMethodAnalyzer) and communication pipelines (subscribers, storages with subscription).
+Design the new analyzer. Reuse the entity layout and responsibility pattern (intra-proc edges stored insider the method analyzer, etc.).
+Maximize code sharing, so we can reuse as much as possible from the current analyzer implementation. 
+Prove the communication pipeline (we should never lose the summary edge).
+Put the spec into `spec/analyzer-core.md` wrt the repo root.
 
 Use subagents.
