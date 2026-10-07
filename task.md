@@ -17,12 +17,12 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 
-Now we have a complete spec for the AP (see `spec/ap.md`).
-Our current task is to obtain a complete, concise and self-contained spec for analyzer (phase 2).
-Analyze current analyzer entities (like NormalMethodAnalyzer) and communication pipelines (subscribers, storages with subscription).
-Design the new analyzer. Reuse the entity layout and responsibility pattern (intra-proc edges stored insider the method analyzer, etc.).
-Maximize code sharing, so we can reuse as much as possible from the current analyzer implementation. 
-Prove the communication pipeline (we should never lose the summary edge).
-Put the spec into `spec/analyzer-core.md` wrt the repo root.
+Now we have a complete spec for the AP (see `spec/ap.md`) and spec for the analyzer (see `spec/analyzer-core.md`) which covers phases 1 and 2.
+Now we need to create an implementation proposal documents: for the ap and for the analyzer.
+Focus on the implementation details: packages, entities and their interaction.
+Provide code snippets. Generally, we should have more code snippets and less text. 
+If you need to explain some concept: write a code snippet.
+Maximize code sharing, so we can reuse as much as possible from the current analyzer implementation.
+Put the specs into `spec/ap-impl.md` and `spec/analyzer-impl.md` wrt the repo root.
 
 Use subagents.
