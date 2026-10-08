@@ -26,7 +26,8 @@ The analyzer core:
 1. runs one run (`ap.md` §6): one direction, one field limit, one mode (run 1 or restricted), to a fixed point;
 2. exchanges the edges between the methods of a run with no loss (§5);
 3. detects the end of a run (§6);
-4. runs the sequence of runs and computes the hand-off from each run to the next (§7).
+4. runs the sequence of runs and computes the hand-off from each run to the next (§7);
+5. gives the report: the vulnerabilities and the end of the analysis (§7.5, §9).
 
 The core is for the JVM. Go is out of scope.
 
@@ -34,7 +35,8 @@ Out of scope:
 
 * the IR interpreter (`interpreter.md`); §4.9 gives only its interface to the core;
 * the prescan, the rule reduction and the `TaintAnalyzer` wiring (phase 3); §9 gives the interface;
-* the trace resolution (phase 5); §7.6 lists the data that the core keeps for it;
+* the trace resolution. The core keeps no store of a run for a trace resolver (§7.6). The phase-3 output gives each
+  CONFIRMED vulnerability a simple trace (§9);
 * the iteration policy: the field limit of each run, the budget and the stop rule for a budget (`ap.md` §6.6). The
   driver takes the policy as a parameter (§7.1).
 
@@ -57,7 +59,10 @@ and others). This document adds:
 
 | Term | Meaning |
 |---|---|
-| method key | `ap.md` §1: the `MethodEntryPoint` of the method (context and FORWARD entry statement). The backward run uses the same key. Its start nodes are the forward exits (§4.4). |
+| method key | `ap.md` §1: the `MethodEntryPoint` of the method (context and FORWARD entry statement). The backward run uses the same key. Its start nodes are the forward exits (§4.4). An empty method has no method key (§4.4). |
+| vulnerability key | `(rule, method, statement)`: the sink rule, the METHOD of the method key (without the context) and the sink statement (§4.7). One sink statement that the analysis reaches in several contexts is ONE vulnerability. |
+| sink alternative | One DNF cube of a sink rule at one place, with one array choice (`interpreter.md` §4.1, §4.2). Its index (`SinkRule.alternative`) is the same in every run and in every context (`interpreter.md` I5). |
+| sink witness | One sink edge, or one sink edge set of a conjunctive sink, of one sink alternative in one method key and one run (§4.7). |
 | unit | A group of methods that one runner owns (today a package; `UnitResolver`). |
 | runner | The single coroutine of one unit in one run. It runs one event at a time. |
 | actor | The owner of a set of objects. Each method analyzer is an actor. Its runner runs it. |
@@ -72,7 +77,7 @@ and others). This document adds:
 | quiescence | The state of a run with no event in a channel or a local queue, no running handler, no worklist item and no pending publication (§6.2). |
 | barrier | The point between two runs: the first run is quiescent, and the next run has not started (§7.2). |
 | hand-off | What one run gives to the next run: the demand and the seeds (`ap.md` §8, §9.2). The records are PERSISTENT, not a hand-off (`ap.md` §8.7). |
-| complete run | A run that ended at quiescence. A run that ended by a timeout, the memory guard, a cancellation or an exception is INCOMPLETE. |
+| complete run | A run that ended at quiescence. A run that ended by a timeout, the memory guard or an exception is INCOMPLETE. An incomplete run adds nothing to the report and refutes nothing (§7.5). |
 
 ---
 
@@ -98,10 +103,10 @@ IterationDriver                                   lifetime: the analysis
 | `ApManager` | analysis | any (thread-safe) | the interners of the AP (`ap.md` §7.5) | the new AP (`ap.md` §7) |
 | `MethodContextCache` | analysis | the runner of the method during a run | the parts of the method context that do not depend on the run (§4.8) | split of `JIRMethodAnalysisContext` |
 | `RecordStore` | analysis (PERSISTENT) | the driver writes it at a barrier; read-only during a run | the records (`ap.md` §8.7) | new |
-| `VulnerabilityStore` | analysis (PERSISTENT) | any runner adds (concurrent); the driver reads it at a barrier | the vulnerability records, with the run of each sink edge (§4.7) | replaces the buckets of `TaintAnalysisUnitStorage` |
+| `VulnerabilityStore` | analysis (PERSISTENT) | any runner adds (concurrent); the driver reads it at a barrier | the sink witnesses per vulnerability key, each with its alternative, its method key and its run (§4.7) | replaces the buckets of `TaintAnalysisUnitStorage` |
 | `RunManager` | one run | the caller thread and the runners | unit routing, runner spawn, the map of the `SummaryStorage`s, the in-flight counter, the run status (§6) | `TaintAnalysisUnitRunnerManager` |
 | `UnitRunner` | one run | its coroutine | the event loop, its analyzers, its `SubscriptionManager` | `TaintAnalysisUnitRunner` |
-| `RunMethodAnalyzer` | one run | the runner of its unit | the RUN stores of its method (§4.1) | replaces `NormalMethodAnalyzer`, `EmptyMethodAnalyzer` |
+| `RunMethodAnalyzer` | one run | the runner of its unit | the RUN stores of its method (§4.1) | replaces `NormalMethodAnalyzer`; `EmptyMethodAnalyzer` goes (an empty method is never analysed, §4.4) |
 | `SummaryStorage` | one run | the runner of its method inserts; each subscribing runner registers and reads | the publications of one method key and the subscribed runners (§5.2) | `SummaryEdgeStorageWithSubscribers` |
 | `SubscriptionManager` | one run | the runner of its unit | the subscriptions of the unit, per callee (§5.3) | `SummaryEdgeSubscriptionManager` (today two per runner, internal and external; one is enough) |
 | `DemandStore` | one run, read-only | any | the demand patterns of the run (`ap.md` §8.6) | new |
@@ -117,7 +122,8 @@ Ownership rules:
   the manager.
 * O4. During a run, the other shared objects are read-only (A4), write-only (`VulnerabilityStore`), or thread-safe by
   their own contract (`ApManager`).
-* O5. After a complete run, the driver reads every store of the run. No runner runs then (§7.2).
+* O5. After a complete run, the driver reads every store of the run. No runner runs then (§7.2). After an incomplete
+  run, the driver reads no store of the run (§7.5).
 
 ---
 
@@ -150,7 +156,8 @@ The mode decides these rules (`ap.md` §6.1):
 | sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
-| liveness pruning (`isLive`) | yes, as today | yes, as today | no |
+
+No run has a liveness check (§4.3).
 
 ---
 
@@ -165,14 +172,14 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 
 | Field | Store | Content |
 |---|---|---|
-| `edges` | method edge store (`ap.md` §8.1) | the edges per (statement, premise key, layer, base, exclusion, mark exclusion) |
+| `edges` | method edge store (`ap.md` §8.1) | the edges, keyed per kind (`ap.md` §7.2): REACH per (statement, premise key, layer); FLOW per (statement, premise key, layer, base, exclusion, mark exclusion); TAINT per (statement, premise key, layer, base) |
 | `initials` | initial fact store (`ap.md` §8.2) | the initial facts of the run: zero, emissions, answers |
 | `links` | added fact store (`ap.md` §8.3) | each added fact with its links: the caller reference and the layer of the added fact on the link |
 | `summaries` | run summary store (`ap.md` §8.5) | the summary edges BEFORE the restriction, per premise key and layer |
 | `requests` | request store (`ap.md` §8.8) | run 1 only: the standing mark and position requests and their answers |
 | `sourceHits` | source hit store (`ap.md` §8.11) | backward run only: the unconditional sources of this method that a requirement reached |
-| `conjunctions` | conjunction store (`ap.md` §8.9) | the standing literal facts; the combinations of the callee summaries with several premises (§5.4) |
-| `worklist` | `EdgeCollection` (today) | the new edge deltas to process |
+| `conjunctions` | conjunction store (`ap.md` §8.9) | the standing literal inputs per (conjunctive micro edge or sink alternative, statement, literal index), with the evaluated `S` parts of the exit sinks (§4.7); the combinations of the callee summaries with several premises (§5.4) |
+| `worklist` | `DeltaWorklist` (§4.3, §10) | the edge deltas to process: the `unchanged` queue with its set, and the `normal` queue |
 | `pendingPublications` | | the publications that the analyzer has not yet given to its `SummaryStorage` (§4.6) |
 | `queued` | | true while the analyzer has a `Work` event in its runner (§6.2) |
 | `context` | `MethodContextCache` entry and run part | the method graph, the alias analysis, the lambda resolutions, the rule context of the run (§4.8) |
@@ -199,16 +206,18 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
 
 ### 4.3 The worklist and the step
 
-* An item of the worklist is an edge delta: (premise key, layer, node, conclusions). The conclusions are one of the
-  kinds of `ap.md` §7.2: REACH, a FLOW tree or a TAINT tree. The edge is the fact BEFORE the
-  statement of the node, as today.
+* An item of the worklist is an edge delta (`EdgeDelta`, §10): (premise key, layer, node, conclusions). The
+  conclusions are one of the kinds of `ap.md` §7.2: REACH, a FLOW tree or a TAINT tree. The edge is the fact BEFORE
+  the statement of the node, as today.
 * `edges.add` returns the delta of the merge (`ap.md` §7.2 T4). A null delta adds nothing, and the analyzer drops it.
-  Else the analyzer adds the delta to the worklist.
-* The forward runs prune an edge whose base is not live at the node (`isLive`, today `isReachable`). The backward run
-  does not prune.
+  Else the analyzer adds the delta to the `normal` queue of the worklist.
+* NO LIVENESS CHECK. No run drops a fact because its local is not live at the node. (Today the forward runs prune by
+  `isReachable` of `JIRLocalVariableReachability`.) The alias analysis does not change: it keeps its own inputs, as
+  today (§4.8). This is a decision (`ap-history.md` F67).
 * The step takes one item and applies its node:
-  * a non-call statement: the statement transfer (`ap.md` §4.2; `interpreter.md` §2, §4.4) with the primitives that
-    the interpreter puts at the statement (`interpreter.md` §5); then the field limit at the cut points (`ap.md` §4.4);
+  * a non-call statement: the statement transfer (`ap.md` §4.2; `interpreter.md` §2, §4.4; the STATEMENT mode of
+    §4.9) with the primitives that the interpreter puts at the statement (`interpreter.md` §5); then the field limit
+    at the cut points (`ap.md` §4.4);
   * a call statement: the call steps (§4.5).
 * A result AT AN END NODE of the run (§4.4) goes through the end rules and makes the summary edges (§4.6). This holds
   for every handler that makes such a result: `step`, and also `applySummary`, `applyRecord` and `zret` when the end
@@ -216,13 +225,25 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
   statement like every other: its transfer or its call steps come first. (Today: `handleStatementEdge`, the edge
   post-processor, then `tryEmmitSummaryEdge`; the new core has no post-processor.)
 * A forward result AT AN EXCEPTIONAL EXIT goes through the exit rules of that exit (`interpreter.md` §4.7 steps 1 and
-  2: the exit sources, the exit sinks and their end facts, with `Result` read as `exc`). Its results end there: an
-  exceptional exit is not an end node and makes no summary edge.
+  2: the exit sources, the exit sinks and their end facts, with `Result` read as `exc`; the unconditional exit rules
+  fire there on the zero fact, `interpreter.md` D26). Its results end there: an exceptional exit is not an end node
+  and makes no summary edge.
 * Each result goes to every successor node in the graph of the run, through `edges.add`.
 * THE UNCHANGED PATH stays as today (`ap.md` §8.1). If the statement does not touch the base of an edge, the
-  analyzer puts the edge for each successor into the worklist with no `edges.add` (today `addSequentialUnchangedEdge`).
-  A set that lives for one `Work` event deduplicates these items (today `enqueuedUnchangedEdges`). The new core has no
-  edge post-processor (`interpreter.md` D14), so an unchanged edge always goes on as it is.
+  analyzer puts the edge for each successor into the `unchanged` queue with no `edges.add` (today
+  `addSequentialUnchangedEdge`). The new core has no edge post-processor (`interpreter.md` D14), so an unchanged edge
+  always goes on as it is.
+* THE TWO QUEUES. The worklist (`DeltaWorklist`, §10) has two queues:
+  * `unchanged`: the items of the unchanged path. A SET discards the repetitions: an item that the set holds does not
+    go into the queue again (today `enqueuedUnchangedEdges`);
+  * `normal`: the deltas of `edges.add`. The zero-to-zero items (REACH on `{zero}`) come first, then the other items
+    in LIFO order, as today.
+
+  The step always takes an `unchanged` item while that queue is not empty. The step takes a `normal` item only when
+  the `unchanged` queue is empty. When the step finds the `unchanged` queue empty (after the last `unchanged` item
+  put its successors into the queues), the analyzer drops the set (it starts a new empty set). The set stays at the
+  end of a `Work` event (today the event end resets it). So a loop of statements that do not touch a base ends: the
+  set holds the items of the loop until the `unchanged` queue is empty.
 * The analyzer does not delay an edge by its depth. There is no fact-depth limit: the field limit of the run is the
   only depth bound (`ap.md` §4.4; `bidirectional-task.md` §5 item 1).
 
@@ -255,9 +276,12 @@ forward exit gets an edge to an exceptional exit (`interpreter.md` I11 (e); toda
 `saloed/backward-main`). Only the zero fact uses an exceptional exit. The `MethodContextCache` keeps the wired graph per
 method (today the code computes the wiring again on every call).
 
-AN EMPTY METHOD (no instruction, or a graph with no node) is an ordinary method. Its start node and its end node are
-the entry statement of its method key, in both directions. So each initial fact gives its own identity summary
-(`interpreter.md` I8). An implementation may use a special class for it, with the same results.
+AN EMPTY METHOD (no instruction: a native method, an abstract method, a method with no body) cannot be analysed. The
+core never analyses it: it has no method key, no method analyzer and no `SummaryStorage`, and it is never a root. The
+call resolver never resolves a call to an empty method: it drops the empty method from the callees of the call (§4.5).
+If every resolution result of a call is an empty method, the call is an UNRESOLVED call (`interpreter.md` §3.7: the
+pass rules and the default identity). This is a decision (`ap-history.md` F67). Today `EmptyMethodAnalyzer`
+publishes the identity summaries of the most abstract facts.
 
 ### 4.5 The call plan
 
@@ -279,15 +303,15 @@ The forward stages of a JVM call `r = m(o, a1, …, an)` (the step numbers of `i
 | Stage | Forward | Content | Step |
 |---|---|---|---|
 | binding in | `BEFORE → BOUND` | the binding edges into the callee (with the zero binding), with the caller-side type filters (`interpreter.md` §3.1) | 2 |
-| end facts | `BOUND → REWRITTEN` | the end-fact edges of the sinks of the call; GUARD: the sink triggers | 3 |
+| end facts | `BOUND → REWRITTEN` | the end-fact edges of the sinks of the call; GUARD: the sink triggers. It takes no input fact (THE END-FACT STAGE, below) | 3 |
 | sources | `BOUND → REWRITTEN` | the rule statement of the call: the sources and the conjunctions (`interpreter.md` §4.1) | 4 |
 | cleaners | `BOUND → ADDED` | the cleaners and the `RemoveAllMarks` kill on `S`, in the rule order | 5.1 |
-| callees | `ADDED → RETURNED` | the resolved callees (with the lambdas of the prescan): SUBSCRIBE and LINK (below) | 5.2 |
-| unresolved | `ADDED → RETURNED` | the statement summary of the unresolved callee (`interpreter.md` §3.7) | 5.3 |
+| callees | `ADDED → RETURNED` | the resolved callees (with the lambdas of the prescan), never an empty method (§4.4): SUBSCRIBE and LINK (below) | 5.2 |
+| unresolved | `ADDED → RETURNED` | the statement summary of the unresolved callee (`interpreter.md` §3.7); also of a call whose every resolution result is an empty method (§4.4) | 5.3 |
 | constructor | `ADDED → REWRITTEN` | JVM `<init>`: the identity of the receiver and argument positions; it skips the callee and the rewriter (`interpreter.md` §3.5) | 5.2 |
 | rewriter | `RETURNED → REWRITTEN` | the summary rewriter (`interpreter.md` §5.2) | 6 |
 | binding back | `REWRITTEN → AFTER` | the binding edges back, with the result-side type filters | 6 |
-| aliases | `REWRITTEN → AFTER` | the alias edges `P.* → b.q.*` (`interpreter.md` §3.8 AC2); GUARD: the selection of AC3 and AC4 | 6 |
+| aliases | `REWRITTEN → AFTER` | the alias edges `P.* → b.q.*` (`interpreter.md` §3.8 AC2); GUARD: the selection of AC3 and AC4 (THE ALIAS GUARD, below) | 6 |
 
 The plan also has its TOUCHED caller bases (`S`, `o`, every `ai`, `r`; step 1) and the SINKS of the call at `BOUND`
 (step 3).
@@ -298,12 +322,31 @@ HOW THE ANALYZER RUNS A PLAN (both directions):
 * A fact at a point goes through every stage that starts at that point. Each result arrives at the end point of its
   stage. The stages that start at one point read the same facts, so their order does not matter. (So the sinks see
   the uncleaned bound fact, as `interpreter.md` §4.5 asks.)
+* An `Edges` stage applies its summary in the STAGE mode (§4.9 THE APPLICATION MODES): only its edges give results.
+  The touched bases of the plan do the pass-over (step 1). The kill on `S` in the cleaners stage applies in the
+  STATEMENT mode.
 * A fact at the exit point of the plan gets the field limit and goes to the return node of the call.
 * The callees stage is not local: SUBSCRIBE and LINK, and its results arrive later through `applySummary` and
   `applyRecord`, at its end point.
 * At the rule point `BOUND`, the forward run checks the sinks of the call (§4.7). The backward run checks no sink: it
   fires the sink seeds of these sinks there (§4.7).
 * The sources stage applies the source seeds (forward restricted run) and records the source hits (backward run) (§4.7).
+
+THE END-FACT STAGE (`BOUND → REWRITTEN`) takes no input fact. Its trigger is a sink of the call at `BOUND`: a sink edge
+of a plain sink, or a new full combination of a conjunctive sink (§4.7). On a trigger, the analyzer applies the
+end-fact edges of that sink to the zero fact, in the layer of the sink edge or of the combination (`ap.md` §2.2,
+§4.9). Each result is a zero-to-fact edge (premise set `{zero}`), and it arrives at `REWRITTEN`. The same rule holds
+for the end facts of the entry sinks and of the exit sinks (§4.4). The backward run has no trigger: the reversed
+end-fact edges apply to every requirement (THE REVERSAL, below).
+
+THE ALIAS GUARD (`Guard.MemoryEffect`; `interpreter.md` §3.8 AC3, AC4). Each forward result at `REWRITTEN` has an
+ORIGIN (`Origin`, §4.9): the stage that made it. The sources stage gives SOURCE, the end-fact stage END_FACT, a pass
+rule of the unresolved stage PASS. The default identity of the unresolved stage and the constructor stage give
+IDENTITY. A summary result or a record result (the callees stage) is an IDENTITY only in one case: it is in the NORMAL
+layer, and it is equal to the start fact of its premise (`ap.md` §6.5). Every other summary result has a memory effect
+(SUMMARY_EFFECT): a DEMAND-layer result always goes to the aliases, and so does every result of a zero-premise
+summary (`ap-history.md` F67). The cleaners and the rewriter keep the origin of their input. The alias stage takes
+every result whose origin is not IDENTITY.
 
 THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
 
@@ -388,14 +431,31 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
 
 ### 4.7 Sinks, vulnerabilities, seeds and source hits
 
-* A triggered sink adds its WITNESS to the `VulnerabilityStore` under the key `(rule, method key, statement)`, with
-  the index of the run (`ap.md` §8.10). A witness is one sink edge, or the sink edge set of a conjunctive sink. The
-  store keeps every witness. It never merges two witnesses into one.
-* A conjunctive sink uses the conjunction store. Each sink edge set is one witness (`ap.md` §4.9).
+* A triggered sink adds its WITNESS to the `VulnerabilityStore` under the VULNERABILITY KEY `(rule, method,
+  statement)` (`ap.md` §8.10). `method` is the method of the method key, WITHOUT the context. So one sink statement
+  that the analysis reaches in several contexts is ONE vulnerability (`ap-history.md` F67). A witness is one sink edge,
+  or the sink edge set of a conjunctive sink. Each witness names its sink ALTERNATIVE (`SinkRule.alternative`, §4.9),
+  its METHOD KEY and its RUN. The confirmation of a witness reads the support of its premise set in its own method key
+  (§7.5).
+* The store keeps several witnesses for one vulnerability key: one entry per (vulnerability key, alternative, method
+  key, run, shape). The SHAPE of a witness is the list of the premise set, the layer and the group key of the facts
+  (`ap.md` §8.1: the base, the kind and the layer) of each of its sink edges. Two witnesses of one entry merge their
+  sink facts. The confirmation reads only the method key, the premise sets and the layers, so this merge changes no
+  confirmation. Witnesses of different alternatives or of different method keys never merge, so a merge never joins
+  two group keys at one literal.
+* A conjunctive sink uses the conjunction store, per (sink alternative, statement, literal index). Each sink edge set
+  is one witness (`ap.md` §4.9).
+* THE GLOBAL-STATE RULE (exit sinks; `interpreter.md` §4.7 step 3). At a normal exit, the analyzer drops the
+  EVALUATED statics: if a part of an item on the static base `S` satisfies a mark literal (`ContainsMark`,
+  `ContainsMarkOnAnyField`) of an exit sink, plain or conjunctive, the analyzer drops that part from the summary edge.
+  The rest of the item stays. For a conjunctive exit sink, the
+  analyzer also stores the evaluated part as the input of that literal in the conjunction store. A stored input is an
+  assumption for the later evaluations of the sink: a later item can complete the combination with it. The analyzer
+  drops the part also when the combination is not complete (`ap-history.md` F67).
 * SEEDS. After run 1, every run has seeds. The driver gives a `SeedIndex` per (method key, statement):
   * a backward run: the SINK SEEDS, the requirements of the vulnerabilities that the forward run before reported
     (`ap.md` §9.2). A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
-    literal. An unconditional sink gives none;
+    literal. An unconditional sink gives none. The seeds of a witness are at its method key and its statement;
   * a forward restricted run: the SOURCE SEEDS, the unconditional sources that the backward run before reached
     (`ap.md` §6.1 rule 6, §8.11).
 * A sink seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call
@@ -417,8 +477,9 @@ Today `JIRMethodAnalysisContext` holds the alias analysis, the local-variable re
 the flow-function caches and the taint rule context. The new core splits it:
 
 * the CACHED part, in `MethodContextCache`:
-  * per method: the method graph, the alias analysis, the local-variable reachability and the lambda resolutions of
-    the prescan. Every context of the method shares them (today the `EmptyMethodContext` twin analyzer does this);
+  * per method: the method graph, the alias analysis (with its own inputs, as today: the local-variable reachability is
+    one of them; the core does not read it, §4.3) and the lambda resolutions of the prescan. Every context of the
+    method shares them (today the `EmptyMethodContext` twin analyzer does this);
   * per (method, direction): the wired backward graph, and the forward forms of the interpreter (statement summaries,
     rules, call plans) with their reversals (§4.9);
 * the RUN part, made by the run: the rule context bound to the run (the `VulnerabilityStore`, the conjunction store,
@@ -435,8 +496,8 @@ the micro edges and the rules.
 
 ```kotlin
 interface Interpreter {
-    /** §4.4: the forward entry statement, and the forward exits (normal and exceptional). For an empty method: the
-     *  entry statement of the method key is also its normal exit, also when the graph has no node. */
+    /** §4.4: the forward entry statement, and the forward exits (normal and exceptional). A method key is never an
+     *  empty method (§4.4), so a method key always has its entry statement. */
     fun entryNode(method: MethodKey): CommonInst
     fun exitNodes(method: MethodKey): List<ExitNode>
     /** interpreter.md §4.3 and §4.7: the entry rules and the exit rules. */
@@ -444,10 +505,9 @@ interface Interpreter {
     fun exitRules(method: MethodKey, exit: CommonInst): ExitRules
     /** interpreter.md I1: the touched bases, the micro edges and the type filters of a non-call statement. */
     fun statementSummary(method: MethodKey, statement: CommonInst): StatementSummary
-    /** §4.5: the forward plan of a call. */
+    /** §4.5: the forward plan of a call. Its callees stage has no empty method; a call whose every resolution result
+     *  is an empty method has the unresolved stage (§4.4). */
     fun callPlan(caller: MethodKey, statement: CommonInst, call: CommonCallExpr): CallPlan
-    /** the forward liveness pruning (today isReachable). */
-    fun isLive(method: MethodKey, base: AccessPathBase, statement: CommonInst): Boolean
     /** a summary edge exists only for these bases (not a local; today isValidMethodExitFact). */
     fun isSummaryBase(base: AccessPathBase): Boolean
 }
@@ -467,17 +527,44 @@ class StatementSummary(val touched: Set<AccessPathBase>, val edges: List<MicroEd
     fun reversed(): StatementSummary
 }
 
-/** The rules of one place: a statement summary (with the sources and the end-fact edges) and the sinks. The
- *  reversal reverses the summary, keeps the sinks as the place of the sink seeds and drops the context filter. */
+/** The rules of one place: a statement summary with the sources (STATEMENT mode), the end-fact edges of its sinks
+ *  (GEN mode) and the sinks. The reversal reverses the summary, keeps the sinks as the place of the sink seeds and
+ *  drops the context filter. */
 class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummary, val sinks: List<SinkRule>) {
     fun reversed(): RuleStatement
 }
 
-/** The exit rules (interpreter.md §4.7) and, forward only, the global-state drop (step 3) and the removal of the
- *  entry marks of a zero-premise fact (step 4). The reversal drops the two removals (interpreter.md §4.9). */
+/** The exit rules (interpreter.md §4.7) and, forward only, the global-state drop (step 3: the analyzer drops the part
+ *  of an `S` item that satisfies a mark literal of an exit sink, and stores it as the input of that literal of a
+ *  conjunctive exit sink, §4.7) and the removal of the entry marks of a zero-premise fact (step 4). The reversal drops
+ *  the two removals (interpreter.md §4.9). */
 class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>) {
     fun reversed(): RuleStatement
 }
+
+/** ap.md §4.9: one ALTERNATIVE of one sink rule at one place (one DNF cube with one array choice; interpreter.md
+ *  §4.1, §4.2). `alternative`: its index among the alternatives of the rule at the place; the same in every run and
+ *  every context (interpreter.md I5). `patterns`: one per positive literal; two or more make a conjunctive sink; the
+ *  zero pattern makes an unconditional sink. `endFacts`: its end-fact edges `zero.$ → P.$ (T)` (GEN mode, §4.5). */
+class SinkRule(val rule: RuleId, val alternative: Int, val patterns: List<Pattern>, val endFacts: List<MicroEdge>)
+
+/** ap.md §4.6: a conjunctive micro edge `x1.ρ1.t1(T1) ∧ … ∧ xk.ρk.tk(Tk) → z.π.t(T)`, k >= 2: an ND source
+ *  (interpreter.md §5.3). Each literal and the target have a concrete mark and no `*` tail (S9, W7). */
+class ConjunctiveEdge(val literals: List<Pattern>, val target: PathFact)
+
+/** ap.md §4.8: the type filter `filter(b, may)` of one base; `may` is prefix-closed (S5; today a
+ *  `FactTypeChecker.FactApFilter`). `markPolicy`: the primitive mark policy of interpreter.md §5.1, or null (no level
+ *  of the static type is primitive or boxed). */
+class TypeFilter(val may: FactApFilter, val markPolicy: MarkPolicy? = null)
+
+/** interpreter.md §5.1 `markPolicyKeeps`: keeps `mark` on the value at `[e]^elements` below the base (`elements = 0`:
+ *  the base itself; `elements = k`: the k-th element type). A leaf below a field or a class accessor has no policy. */
+fun interface MarkPolicy { fun keeps(mark: TaintMark, elements: Int): Boolean }
+
+/** ap.md §4.7: the cleaner `clean(position, reach, mark)` (interpreter.md §5.2); `mark == null`: every mark. Never on
+ *  the zero base. */
+class Cleaner(val base: AccessPathBase, val path: PathNode?, val reach: CleanReach, val mark: TaintMark?)
+enum class CleanReach { EXACT, BELOW, AT_AND_BELOW }
 
 /** One step of the cleaners stage, in the rule order: a cleaner, or the `RemoveAllMarks` kill on `S` (a statement
  *  summary of keep edges, not a cleaner; interpreter.md §1.4, I12 (e)). Each one is its own reversal. */
@@ -488,13 +575,25 @@ sealed interface CleanStep {
 
 enum class CallPoint { BEFORE, BOUND, ADDED, RETURNED, REWRITTEN, AFTER }
 
+/** interpreter.md §3.8 AC3, AC4: where a forward result at REWRITTEN comes from (§4.5 THE ALIAS GUARD). */
+enum class Origin { SOURCE, END_FACT, PASS, SUMMARY_EFFECT, IDENTITY }
+
+/** A forward-only selection of the inputs of a stage (§4.5). The reversal drops it. */
+sealed interface Guard {
+    /** The end-fact stage: it applies on a trigger of `sink`, to the zero fact (§4.5 THE END-FACT STAGE). */
+    class SinkTriggered(val sink: SinkRule) : Guard
+    /** The alias stage: every result whose origin is not IDENTITY (§4.5 THE ALIAS GUARD). */
+    data object MemoryEffect : Guard { fun admits(o: Origin): Boolean = o != Origin.IDENTITY }
+}
+
 /** One stage of a call plan (§4.5): it takes the facts at `from` to `to`. */
 sealed interface CallStage {
     val from: CallPoint
     val to: CallPoint
     fun reversed(): CallStage
-    /** A binding, the sources, the end facts, the unresolved summary, the constructor identity, the aliases. A guard
-     *  is a forward-only selection of the inputs (the sink trigger, AC3 and AC4); the reversal drops it. */
+    /** A binding, the sources, the end facts, the unresolved summary, the constructor identity, the aliases (STAGE
+     *  mode). A guard is a forward-only selection of the inputs (the sink trigger, AC3 and AC4); the reversal drops
+     *  it. */
     data class Edges(override val from: CallPoint, override val to: CallPoint, val summary: StatementSummary,
                      val guard: Guard? = null) : CallStage
     data class Clean(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage
@@ -520,12 +619,22 @@ What the core uses in each direction:
 | a call | `callPlan` | `callPlan(…).reversed()` |
 | end nodes | the normal `exitNodes` | `entryNode` |
 | end rules | `exitRules` | `entryRules(…).reversed()` |
-| liveness | `isLive` | none |
 
 A reversal of a statement summary is `Reverse.Stmt.rev` of the Lean model; the reversal of the bindings is
 `Reverse.Call.rev`. The core caches the reversed forms per (method, statement) in the `MethodContextCache` (§4.8). The
-AP operations of `ap.md` §4 apply the micro edges; the interpreter never applies them. `PathEdge`, `Cleaner` and the
-conjunctive edge are the types of `ap.md` §4.
+AP operations of `ap.md` §4 apply the micro edges; the interpreter never applies them. `PathFact`, `Pattern` and
+`PathEdge` are the types of `ap.md` §3.4 and §4.1. `SinkRule`, `ConjunctiveEdge`, `TypeFilter` and `Cleaner` (above)
+are the short forms of the sink of `ap.md` §4.9, the conjunctive edge of §4.6, the type filter of §4.8 and the cleaner
+of §4.7.
+
+THE APPLICATION MODES. The core applies a `StatementSummary` in one of three modes. The place of the form gives the
+mode, not a field of the form:
+
+| Mode | Forms | Rule |
+|---|---|---|
+| STATEMENT | a statement summary (`statementSummary`), the rule summary of a place (`RuleStatement.summary`), the kill on `S` (`CleanStep.Kill.keepEdges`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
+| STAGE | the summary of a call stage (`CallStage.Edges.summary`) | only the edges give results. The touched bases of the plan (`CallPlan.touched`) do the pass-over (§4.5). A stage summary has every base of its edges in its touched set, so its reversal adds no identity edge |
+| GEN | the end-fact edges (`RuleStatement.endFacts`, `SinkRule.endFacts`) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE) |
 
 ---
 
@@ -632,10 +741,13 @@ class SubscriptionManager(private val runner: UnitRunner, private val config: Ru
 }
 
 /** P4: the ONE match function of the replay and of the delivery (ap.md §4.3). */
-fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean =
-    if (sub.zeroOnly) pub.premise.isZero                                     // backward rule zret: no test
-    else pub.premise.initials.any { satisfies(it.toPattern(), sub.addedFact, config.restricted) }
-                                                                             // ap.md §6.3 `satisfies`; several members: §5.4
+fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean {
+    val premise = pub.premise                                                // PremiseKey, ap.md §7.1
+    if (sub.zeroOnly) return premise.isZero                                  // backward rule zret: no test
+    return (0 until premise.size).any { k ->                                 // one member; several members: §5.4
+        satisfies(premise.member(k).toPattern(), sub.addedFact, config.restricted)   // ap.md §6.3 `satisfies`
+    }
+}
 
 /** ap.md §8.7 R4, Lean `retRec`: a record applies by `applicable` or by `inside`. */
 fun recordApplies(p: Pattern, a: Pattern): Boolean = applicable(p, a) || inside(p, a)
@@ -828,16 +940,26 @@ zero means quiescence (argued, §11).
 
 ### 6.3 Abnormal end
 
-* A timeout, the memory guard (`MemoryManager`), a cancellation or an exception makes the run INCOMPLETE. The
-  `RunManager` returns the status: `COMPLETE`, `TIMEOUT`, `OOM`, `CANCELLED` or `FAILED`.
+* A timeout, the memory guard (`MemoryManager`) or an exception makes the run INCOMPLETE. The `RunManager` returns
+  the status: `COMPLETE`, `TIMEOUT`, `OOM` or `FAILED`.
+* THE FIRST END WINS. The status of a run is set once, by a compare-and-set. The quiescence sets `COMPLETE` in the
+  same way. So a late end (the memory guard or the timeout while the `RunManager` joins the runners) does not turn a
+  complete run into an incomplete one.
+* EVERY CANCELLATION HAS A KNOWN CAUSE. Only the timeout of the run and the memory guard cancel the analysis. Each one
+  first ends the run with its own status (`TIMEOUT` or `OOM`), then cancels the `Cancellation`. A handler can then
+  throw `Cancellation.Cancelled` (a checkpoint of the `ApManager` or of the alias analysis). The runner loop catches
+  it and only stops: the run keeps the status of its cause. So the status always gives the real reason, and there is
+  no `CANCELLED` status and no external cancel. The `RunManager` activates its `Cancellation` when it is made (in its
+  constructor), before a runner starts, so a cancel is never undone by a later activation.
 * The hand-off of an incomplete run is not complete. The theorems of `ap.md` §6.6 do not apply to the runs after it,
-  so the driver does not start a run after an incomplete run (§7.1).
+  so the driver does not start a run after an incomplete run (§7.1). The incomplete run adds nothing to the report
+  (§7.5).
 * Each run has its own coroutine scope with a `SupervisorJob`. The exception of one runner does not cancel the scope
   of a later run. (Today one failed runner cancels `analyzerScope` for every later run.)
-* The `RunManager` joins every runner coroutine before it returns. If a runner does not stop, the analysis stops, and
-  no later run starts. (Today a runner that does not stop in `cancellationTimeout` stays and can change the next run.)
-* A cancellation must also complete the run. Today every `cancel()` of the analysis comes with
-  `analysisCompletion.complete`; keep the two calls together.
+* The `RunManager` joins every runner coroutine before it returns. If a runner does not stop, the run ends as
+  `FAILED` (the driver reads none of its stores), the analysis stops, and no later run starts. (Today a runner that does not stop in `cancellationTimeout` stays and can change the next run.)
+* A cancellation must also complete the run. Today every `cancel()` of the analysis comes with its status
+  (`updateFailureStatus(TIMEOUT)` or `(OOM)`) and with `analysisCompletion.complete`; keep the three calls together.
 
 ---
 
@@ -848,24 +970,42 @@ zero means quiescence (argued, §11).
 ```kotlin
 interface IterationPolicy {
     fun fieldLimit(runIndex: Int): Int                               // not decreasing (ap.md W3); run 1 needs >= 1
-    fun continueAfter(run: RunConfig, result: RunResult): Boolean    // the budget; out of scope (ap.md §6.6)
+    /** Asked only after a complete FORWARD run (the budget; out of scope, ap.md §6.6). */
+    fun continueAfter(run: RunConfig, result: RunResult): Boolean
 }
 
 class IterationDriver(private val policy: IterationPolicy, private val shared: SharedObjects) {
     fun analyze(roots: List<MethodKey>): Report {
         var config = RunConfig(1, policy.fieldLimit(1), demand = null, records = shared.records.view(),
             seeds = SeedIndex.EMPTY, roots = roots)
-        val report = Report()
+        val report = ReportBuilder()                                  // §7.5
+        fun end(status: RunStatus, reason: EndReason) =
+            report.build(AnalysisEnd(status, config.index, config.direction, reason))
         while (true) {
             val result = RunManager(config, shared).run()             // a new engine (§2)
-            if (result.status != RunStatus.COMPLETE) return report.addIncomplete(config, result)   // §7.5
-            // the barrier (§7.2): no runner runs now
-            report.add(config, result)                                // the confirmation, §7.5
-            shared.records.persist(config, result)                    // ap.md §8.7 R1
-            if (config.direction == Direction.FORWARD && !result.hasDemandVulnerability()) return report
-            if (!policy.continueAfter(config, result)) return report
-            config = handOff(config, result)                          // §7.3, §7.4
+            if (result.status != RunStatus.COMPLETE)                  // §7.5: adds nothing, refutes nothing
+                return end(result.status, EndReason.ABNORMAL)
+            try {
+                // the barrier (§7.2): no runner runs now
+                val forward = config.direction == Direction.FORWARD
+                if (forward) {
+                    confirm(result)                                   // §7.5 steps 1, 2: the support, the witnesses
+                    report.add(config, result)                        // §7.5 step 3
+                }
+                shared.records.persist(config, result)                // ap.md §8.7 R1
+                if (forward && !result.hasDemandVulnerability()) return end(RunStatus.COMPLETE, EndReason.STOP_RULE)
+                if (forward && !policy.continueAfter(config, result)) return end(RunStatus.COMPLETE, EndReason.POLICY)
+                config = handOff(config, result)                      // §7.3, §7.4
+            } catch (e: Exception) {                                  // an exception at the barrier
+                return end(RunStatus.FAILED, EndReason.ABNORMAL)      // the report so far
+            }
         }
+    }
+
+    private fun handOff(config: RunConfig, result: RunResult): RunConfig {
+        val limit = policy.fieldLimit(config.index + 1)
+        require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
+        return RunConfig(config.index + 1, limit, demandOf(result), shared.records.view(), seedsOf(result), config.roots)
     }
 }
 ```
@@ -873,7 +1013,20 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
 * The run sequence is `ap.md` §6.6: run 1 (forward), run 2 (backward), run 3 (forward), and so on.
 * A forward run stops the iteration if every vulnerability that it reports has a confirmed witness (a sink edge or a
   sink edge set) of this run (`ap.md` §6.6). `hasDemandVulnerability` reads the witnesses of the run in the
-  `VulnerabilityStore` (§4.7, §10). The policy can stop earlier.
+  `VulnerabilityStore`, grouped by the vulnerability key (§4.7, §10). The policy can stop earlier.
+* The driver asks `continueAfter` only after a complete FORWARD run. A complete backward run always goes on to the next
+  forward run: its only output is the hand-off of that run (§7.4). So the iteration always ends after a forward run
+  (as `driver_iteration_upto`, §7.7), or at an abnormal end.
+* The driver checks the field limit of each run: it does not decrease (`ap.md` W3). A policy that lowers it is an
+  error: the `require` in `handOff` fails, and the iteration ends as at an exception at the barrier.
+* THE END OF THE ANALYSIS is an output: `Report.end = AnalysisEnd(status, run, direction, reason)` (§10). `run` and
+  `direction` are those of the last run. The reasons:
+  * `STOP_RULE`: a complete forward run with no demand vulnerability; `status` is `COMPLETE`;
+  * `POLICY`: `continueAfter` gave false after a complete forward run; `status` is `COMPLETE`;
+  * `ABNORMAL`: an incomplete run (`status` is its status: `TIMEOUT`, `OOM` or `FAILED`), or an exception
+    at the barrier (`status` is `FAILED`).
+* AN EXCEPTION AT THE BARRIER (the confirmation, `persist`, the hand-off) ends the iteration. The driver returns the
+  report so far: the results of the earlier runs stay (`ap-history.md` F67).
 
 ### 7.2 The barrier
 
@@ -924,26 +1077,31 @@ After a complete forward run, at the barrier:
      link at that call statement whose added fact is normal on the link and equal to the member. The caller edge of
      the link must be normal, and its premise set must be supported.
 
-   The links carry the data (E-2).
+   The support is a property of a premise set in one method key. The links carry the data (E-2).
 2. Mark each sink witness of the run (a sink edge, or a sink edge set) confirmed or not (`ap.md` §4.9 conditions 1 to
-   3). A sink edge set is confirmed only as a whole: the union of its premise sets must be supported jointly.
-3. Update the `VulnerabilityStore` and the report (`ap.md` §8.10).
+   3). A witness reads the support in its own method key (§4.7). A sink edge set is confirmed only as a whole: the
+   union of its premise sets WITHOUT the zero fact (`{zero}` if every edge has `{zero}`; `ap.md` §4.6) must be
+   supported jointly.
+3. Update the `VulnerabilityStore` and the report (`ap.md` §8.10). The report takes the entries of the run in one
+   step, after step 2.
 
 The support is a fixed point over the whole run, so it can change until the run ends (`ap.md` §4.9). The barrier is
-the first point where it is final.
+the first point where it is final. The driver computes the support at the barrier; no store of a run keeps it.
 
-AN INCOMPLETE RUN (forward or backward) refutes nothing: the refutation of `ap.md` §8.10 needs the coverage theorem of
-run `n + 2`, which needs complete runs. The report keeps every vulnerability that a complete run confirmed, and every
-demand vulnerability of the last COMPLETE forward run, with the state DEMAND. An incomplete forward run adds its own
-vulnerabilities:
+THE REPORT uses only COMPLETE forward runs (`ap-history.md` F67). It has two states (`ReportState`, §10):
 
-* if every runner of the run was joined (§6.3), the driver computes steps 1 and 2 on its stores. The support grows
-  with the links, so a witness that is confirmed in the incomplete run is confirmed in the complete run too. These go
-  to the report as CONFIRMED;
-* every other vulnerability of the run, and every vulnerability of a run whose runners were not all joined, goes with
-  the state INCOMPLETE. No coverage theorem applies to them.
+* CONFIRMED: every vulnerability that a complete forward run confirmed. This state is final;
+* DEMAND: every other vulnerability of the LATEST complete forward run.
 
-One key can come from several runs. The state CONFIRMED wins (`ap.md` §8.10); else DEMAND wins over INCOMPLETE.
+A vulnerability is confirmed in a run if one of its witnesses of that run is confirmed: any alternative, any method
+key. One key can come from several runs; the state CONFIRMED wins (`ap.md` §8.10). A demand vulnerability of an
+earlier forward run that the latest complete forward run does not report is REFUTED, so it leaves the report.
+
+AN INCOMPLETE RUN (forward or backward) adds nothing to the report and refutes nothing. The refutation of `ap.md`
+§8.10 needs the coverage theorem of run `n + 2`, which needs complete runs. The confirmation needs the support at the
+fixed point of the run, which an incomplete run does not reach. So the driver computes no confirmation for an
+incomplete run, and the report has no state for its vulnerabilities. The report stays that of the earlier complete
+forward runs, and `Report.end` tells how the analysis ended (§7.1).
 
 ### 7.6 What stays after a run
 
@@ -951,12 +1109,13 @@ One key can come from several runs. The state CONFIRMED wins (`ap.md` §8.10); e
 |---|---|---|
 | the run summary stores of a run, and the `sourceHits` of a backward run | its hand-off is computed | §7.3, §7.4 |
 | the links of a forward run | its confirmation is computed | §7.5 |
-| the edge stores, the links and the run summary stores of the LATEST forward run whose vulnerabilities are in the report (complete or incomplete) | the next forward run ends, or the trace resolution ends (phase 5) | the trace resolver |
 | `SummaryStorage`, `SubscriptionManager`, the runners, the backward analyzers | the end of the run, or its hand-off | — |
 | `RecordStore`, `VulnerabilityStore`, `MethodContextCache`, `ApManager` | the end of the analysis | every run |
 
-Every other object of a run is garbage after the run. The engine of a run is never used again (§2), so no state of
-one run can leak into the next run. This removes the leaks of today's reuse (Appendix A).
+Every other object of a run is garbage after the run: the edge stores too. No store of a run stays for a trace
+resolver (the trace resolution is out of scope, §9). An incomplete run keeps no store after it ends (§7.5). The engine
+of a run is never used again (§2), so no state of one run can leak into the next run. This removes the leaks of
+today's reuse (Appendix A).
 
 ### 7.7 The driver theorems
 
@@ -978,7 +1137,8 @@ Conclusion: for every real flow to a sink (a reachable location that a sink patt
 every forward run holds the vulnerability, in some layer.
 
 `PipelineDriver.driver_iteration_upto` is the same theorem for a FINITE sequence: the driver stops after forward run
-`2K + 1`, and only the runs up to it must be complete. The proof extends the sequence after `K` with the full demand
+`2K + 1`, and only the runs up to it must be complete. This is the driver of §7.1: it stops only after a complete
+forward run (the stop rule or `continueAfter`), or at an abnormal end, which adds nothing to the report (§7.5). The proof extends the sequence after `K` with the full demand
 and with every sink as a seed.
 
 The records are not hypotheses: the record sets are free. For the runs with the static rule, `ap.md` proves the
@@ -1001,8 +1161,10 @@ proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. It
 | `TaintAnalysisUnitRunner` | REFACTOR into `UnitRunner` | keep the channel, the priority queue, the quantum and `MethodAnalyzerStorage`; the events of §5.1 |
 | `AnalysisRunner` | REPLACE by `RunnerPort` (§6.1) | |
 | `MethodAnalyzerStorage` | REUSE with a factory | the `EmptyMethodContext` twin goes; the context cache shares the per-method parts (§4.8) |
-| `MethodAnalyzer`, `NormalMethodAnalyzer`, `EmptyMethodAnalyzer` | REPLACE by `RunMethodAnalyzer` | §4; `TimedMethodAnalyzer` becomes a decorator of the new interface |
-| `MethodAnalyzerEdges`, `EdgeCollection`, `AccessPathBaseStorage` | REUSE the structure | the new keys of `ap.md` §8.1 |
+| `MethodAnalyzer`, `NormalMethodAnalyzer` | REPLACE by `RunMethodAnalyzer` | §4; `TimedMethodAnalyzer` becomes a decorator of the new interface |
+| `EmptyMethodAnalyzer` | REMOVE | an empty method is never analysed and never a callee (§4.4) |
+| `MethodAnalyzerEdges`, `EdgeCollection`, `AccessPathBaseStorage` | REUSE the structure | the new keys of `ap.md` §8.1; the list of `EdgeCollection` becomes the `normal` queue of `DeltaWorklist` (§4.3) |
+| `JIRLocalVariableReachability` (`isReachable`) | NOT USED by the core | no liveness check (§4.3); the alias analysis keeps it as its own input (§4.8) |
 | `Edge` (`ZeroToZero`, `ZeroToFact`, `FactToFact`, `NDFactToFact`) | REPLACE | `ap.md` §7.6 |
 | `SummaryEdgeStorageWithSubscribers`, `MethodSummariesUnitStorage` | REUSE the pattern | publications per premise key and layer; the lock of P3 (§5.2); one storage per method key in the `RunManager` |
 | `SummaryEdgeSubscriptionManager`, `CommonAPSub`, the tree sub-storages | REUSE the pattern | the registration on the first `getOrPut`, the delta insert, the replay, the match at delivery; P4 with one `matches`; one manager per runner |
@@ -1011,16 +1173,16 @@ proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. It
 | `InitialFactAbstraction` (tree, automata, cactus) | REMOVE | the policy and the emission (§4.4) |
 | `MethodSummaryEdgeApplicationUtils`, `MethodCallSummaryHandler` | REPLACE | `applySummary` (`ap.md` §4.3); the rewriter moves to the interpreter |
 | `TaintSinkTracker`, the vulnerability buckets of `TaintAnalysisUnitStorage` | REPLACE | the `VulnerabilityStore` (§4.7) and the conjunction store (`ap.md` §8.9); no lossy merge |
-| `MethodCallResolver`, `JIRMethodCallResolver` | ADAPT | today it is typed to `TaintAnalysisUnitRunner` and calls back with a `MethodCallHandler` per edge kind; the new one gives the resolved callees to `callPlan` |
+| `MethodCallResolver`, `JIRMethodCallResolver` | ADAPT | today it is typed to `TaintAnalysisUnitRunner` and calls back with a `MethodCallHandler` per edge kind; the new one gives the resolved callees to `callPlan`, with no empty method (§4.4) |
 | `TrackerWithSubscriber`, `LambdaTracker` | REUSE as the source of the prescan values | no lambda event in the new core (§5.1) |
 | `MethodEntrypointResolver`, `UnitResolver`, `LanguageManager` | REUSE | |
 | `ApplicationGraph.reversed`, `MethodInstGraph` | REUSE | `JIRAnalysisManager` downcasts the graph to `JApplicationGraph`; ADAPT it to accept the reversed graph |
 | `JIRBackwardExitWiringGraph` (`saloed/backward-main`) | PORT | with a cache per method (§4.4) |
 | `StatementSummaryBuilder`, `buildReversed`, the JVM flow functions | ADAPT | the forward interpreter of §4.9 (`interpreter.md`); `buildReversed` becomes `StatementSummary.reversed` in the core |
 | `JIRMethodAnalysisContext` | SPLIT | the cached part and the run part (§4.8) |
-| `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state |
+| `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state; the `RunManager` activates the `Cancellation` in its constructor (§6.3) |
 | summary serialization (`storeSummaries`, `loadSummariesFromRunner`) | NOT USED | the records are the reuse between runs |
-| `trace/*` | OUT OF SCOPE | phase 5; §7.6 |
+| `trace/*` | OUT OF SCOPE | no store of a run stays for it (§7.6); phase 3 gives each CONFIRMED vulnerability the simple trace `TracePathGenerationResult.Simple` (§9) |
 
 Do not copy the defects of today that Appendix A lists. Each one has its rule in this document: P3 and P4 (§5.3),
 no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run scope (§6.3), the fixed priority keys
@@ -1028,28 +1190,41 @@ no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run
 
 ---
 
-## 9. Interface to the prescan and to the trace resolution
+## 9. Interface to the prescan and the output
 
 * PRESCAN (phase 3). The prescan runs the current core. It gives the new core:
-  * the reduced rule set (`relevantRuleIds`);
-  * the lambda resolutions per call site (the values of the `TrackerWithSubscriber` of each call site);
+  * the reduced rule set (`relevantRuleIds`, the prescan rule ids);
+  * the lambda resolutions per call site (the prescan lambdas: the values of the `TrackerWithSubscriber` of each call
+    site);
+  * the fact type checker and the external method tracker;
   * the root methods.
 
   The core copies the resolutions into the `MethodContextCache` once, before run 1. It keeps no reference to a context
   of the prescan.
-* TRACE (phase 5). The trace resolution reads the data that §7.6 keeps:
-  * the edge stores (`ap.md` §8.1 `edgesAt`);
-  * the links: the callers of a method and the caller edges;
-  * the run summary stores;
-  * the sink edges of the `VulnerabilityStore`.
+* PRESCAN MEMORY. The caller gathers the prescan info above. Then, before run 1, it releases the WHOLE prescan state:
+  the prescan runners, the unit storage, the analyzers, the AP manager of the prescan and `JIRAnalysisManager.contexts`.
+  No prescan edge, summary or alias analysis stays alive during the runs (`ap-history.md` F67).
+* OUTPUT (phase 3). The core gives the `Report` (§10): the entries, each with its state CONFIRMED or DEMAND (§7.5) and
+  the witnesses of its key in the run of that state (the fields of `ap.md` §8.10; phase 3 reads the method key of a
+  confirmed witness), and `end`, the end of the analysis (`AnalysisEnd`, §7.1). Phase 3 maps `end` to today's
+  `TaintAnalyzer.Status`.
+* TRACE. The trace resolution is out of scope. The core keeps no store of a run for a trace resolver (§7.6). The
+  phase-3 output gives each CONFIRMED vulnerability a SIMPLE trace: the trace with only the sink statement (today
+  `TracePathGenerationResult.Simple`,
+  `core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/ap/ifds/trace/path/TracePath.kt:48-51`).
+  The DEMAND vulnerabilities stay in the report with the state DEMAND. Phase 3 logs their count and does not put them
+  in its output.
+* NO EXTERNAL CANCEL (phase 3). The phase-3 entry has no `cancel()`: the timeout of a run and the memory guard are the
+  only causes of a cancellation (§6.3). So phase 3 maps the status one to one: `COMPLETE` → `OK`, `TIMEOUT` →
+  `TIMEOUT`, `OOM` → `OOM`, `FAILED` → `EXCEPTION`.
 
 ---
 
 ## 10. Reference code
 
-The types of the messages and the stores. `Pattern`, `InitialAp`, `PremiseKey`, `Facts` (`Reach`, `FlowTree`, `TaintTree`), `PathEdge`, `Direction`, `Record`,
-`RecordStore` and the tests are those of `ap.md` §3.4, §4, §7 and §8.7. The premise key is the premise set of
-`ap.md` §4.6 and §8.1.
+The types of the messages and the stores. `PathFact`, `Pattern`, `InitialAp`, `PremiseKey` (`size`, `member(k)`,
+`isZero`), `PathNode`, `Facts` (`Reach`, `FlowTree`, `TaintTree`), `PathEdge`, `Direction`, `Record`, `RecordStore`
+and the tests are those of `ap.md` §3.4, §4, §7 and §8.7. The premise key is the premise set of `ap.md` §4.6 and §8.1.
 
 ```kotlin
 typealias MethodKey = MethodEntryPoint            // ap.md §1: context and forward entry statement
@@ -1071,13 +1246,13 @@ data class Subscription(val callee: MethodKey, val addedFact: Pattern, val linkL
 }
 
 /** A publication: a summary edge of the callee, after the restriction in a restricted run. Its layer is
- *  `conclusion.demand`. */
+ *  `conclusion.layer`. */
 data class Publication(val premise: PremiseKey, val conclusion: Facts)
 
-/** A request of run 1 (ap.md §4.5, §4.10). */
+/** A request of run 1 (ap.md §4.5, §4.10). A position is an interned path of the new AP (ap.md §7.1). */
 sealed interface RequestKind {
     data class Mark(val mark: TaintMark) : RequestKind
-    data class Position(val path: List<Accessor>) : RequestKind
+    data class Position(val path: PathNode) : RequestKind
 }
 
 /** A seed (§4.7). A sink seed (backward run): one requirement of a reported sink. A source seed (forward restricted
@@ -1107,35 +1282,110 @@ sealed interface RunEvent {
     data class Work(val analyzer: RunMethodAnalyzer) : RunEvent
 }
 
-/** ap.md §8.10: the key of a vulnerability record. */
-data class VulnerabilityKey(val rule: RuleId, val method: MethodKey, val statement: CommonInst)
+/** ap.md §8.10, §4.7: the key of a vulnerability record. `method` is the method of the method key, WITHOUT the
+ *  context: one sink statement in several contexts is one vulnerability. */
+data class VulnerabilityKey(val rule: RuleId, val method: CommonMethod, val statement: CommonInst)
 
 /** ap.md §4.9: a sink edge (premise set, layer, sink fact). */
 data class SinkEdge(val premise: PremiseKey, val layer: Layer, val fact: Pattern)
 
-/** A sink witness: one sink edge, or the sink edge set of a conjunctive sink (one edge per literal). It is confirmed
- *  as a whole (§7.5 step 2). */
-class SinkWitness(val edges: List<SinkEdge>, val run: Int) {
+/** A sink witness (§4.7): one sink edge, or the sink edge set of a conjunctive sink (one edge per literal), of one sink
+ *  alternative (`SinkRule.alternative`, §4.9) in one method key. It is confirmed as a whole (§7.5 step 2), with the
+ *  support in `methodKey`. `endFacts`: the end facts of the sink (ap.md §8.10). */
+class SinkWitness(val alternative: Int, val methodKey: MethodKey, val edges: List<SinkEdge>, val run: Int,
+                  val endFacts: List<PathFact> = emptyList()) {
     var confirmed: Boolean = false                                             // set only at a barrier (§7.5)
 }
 
-/** ap.md §8.10: the vulnerability records; each witness has the index of its run. */
+/** ap.md §8.10: the vulnerability records. One entry per (key, alternative, method key, run, shape); the shape is the
+ *  (premise, layer, group key of the facts) list of the edges. Two witnesses of one entry merge their sink facts;
+ *  witnesses of different alternatives or method keys never merge (§4.7). */
 interface VulnerabilityStore {
     fun add(key: VulnerabilityKey, witness: SinkWitness)                         // concurrent (O4)
     fun witnessesOf(run: Int): Sequence<Pair<VulnerabilityKey, SinkWitness>>
 }
 
-enum class RunStatus { COMPLETE, TIMEOUT, OOM, CANCELLED, FAILED }
+enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }    // no CANCELLED: every cancel has a known cause (§6.3)
 
+/** The result of one run. The driver reads its stores only if `status == COMPLETE` (§7.5). */
 class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer>, val runIndex: Int,
                 val vulnerabilities: VulnerabilityStore) {
-    /** §7.1: a vulnerability of THIS run with no confirmed witness of this run. */
+    /** §7.1: a vulnerability key of THIS run with no confirmed witness of this run (any alternative, any method key). */
     fun hasDemandVulnerability(): Boolean =
         vulnerabilities.witnessesOf(runIndex).groupBy({ it.first }, { it.second }).values
             .any { witnesses -> witnesses.none { it.confirmed } }
 }
 
-/** The counter of one run (§6.2). */
+/** §7.1: why the iteration ended. */
+enum class EndReason { STOP_RULE, POLICY, ABNORMAL }
+
+/** §7.1: the end of the analysis. `run`, `direction`: the last run. */
+data class AnalysisEnd(val status: RunStatus, val run: Int, val direction: Direction, val reason: EndReason)
+
+enum class ReportState { CONFIRMED, DEMAND }
+
+/** §7.5, ap.md §8.10: the report of the analysis. `Entry.run`: the run of the state (the run that confirmed it, or the
+ *  latest complete forward run). `Entry.witnesses`: the witnesses of the key in that run, of every alternative and
+ *  method key (the fields of ap.md §8.10: the alternative, the method key, the sink edges, `confirmed`, the end facts;
+ *  §9 OUTPUT). */
+class Report(val entries: List<Entry>, val end: AnalysisEnd) {
+    class Entry(val key: VulnerabilityKey, val state: ReportState, val run: Int, val witnesses: List<SinkWitness>)
+}
+
+/** §7.5: built from the COMPLETE forward runs only. */
+class ReportBuilder {
+    private val confirmed = LinkedHashMap<VulnerabilityKey, Report.Entry>()
+    private var demand = LinkedHashMap<VulnerabilityKey, Report.Entry>()          // of the latest complete forward run
+
+    /** A complete forward run, after its confirmation. Its demand set replaces the old one: refutation. */
+    fun add(config: RunConfig, result: RunResult) {
+        val byKey = result.vulnerabilities.witnessesOf(result.runIndex).groupBy({ it.first }, { it.second })
+        val next = LinkedHashMap<VulnerabilityKey, Report.Entry>()
+        for ((key, ws) in byKey)
+            if (ws.any { it.confirmed }) confirmed.putIfAbsent(key, Report.Entry(key, ReportState.CONFIRMED, config.index, ws))
+            else next[key] = Report.Entry(key, ReportState.DEMAND, config.index, ws)
+        demand = next                                                               // one step (§7.5 step 3)
+    }
+
+    fun build(end: AnalysisEnd): Report =
+        Report(confirmed.values + demand.values.filter { it.key !in confirmed }, end)
+}
+
+/** §4.3: an item of the worklist. The layer is `facts.layer`. */
+data class EdgeDelta(val premise: PremiseKey, val node: CommonInst, val facts: Facts) {
+    val zeroToZero: Boolean get() = premise.isZero && facts is Reach
+}
+
+/** §4.3: the worklist of one method analyzer: two queues. */
+class DeltaWorklist {
+    private val unchanged = ArrayDeque<EdgeDelta>()
+    private var seen = HashSet<EdgeDelta>()                     // the set of `unchanged`: it discards the repetitions
+    private var zeroUnchanged = 0                               // the zero-to-zero items in `unchanged`
+    private val zero = ArrayDeque<EdgeDelta>()                  // `normal`: the zero-to-zero items first
+    private val other = ArrayDeque<EdgeDelta>()                 // `normal`: then LIFO
+
+    /** A delta of `edges.add`. */
+    fun add(d: EdgeDelta) { if (d.zeroToZero) zero.addLast(d) else other.addLast(d) }
+
+    /** An item of the unchanged path; false for a repeat. */
+    fun addUnchanged(d: EdgeDelta): Boolean =
+        seen.add(d).also { if (it) { unchanged.addLast(d); if (d.zeroToZero) zeroUnchanged++ } }
+
+    /** `unchanged` first. When the step finds `unchanged` empty, the set goes, and a `normal` item comes next. */
+    fun removeNext(): EdgeDelta {
+        if (unchanged.isNotEmpty()) return unchanged.removeLast().also { if (it.zeroToZero) zeroUnchanged-- }
+        if (seen.isNotEmpty()) seen = HashSet()
+        return if (zero.isNotEmpty()) zero.removeLast() else other.removeLast()
+    }
+
+    val isEmpty: Boolean get() = unchanged.isEmpty() && zero.isEmpty() && other.isEmpty()
+    /** A zero-to-zero item in either queue: the priority of the runner (§6.1). */
+    val hasZeroWork: Boolean get() = zero.isNotEmpty() || zeroUnchanged > 0
+    val size: Int get() = unchanged.size + zero.size + other.size
+}
+
+/** The counter of one run (§6.2). `onZero` is the quiescence: it sets the status by `compareAndSet(null, COMPLETE)`,
+ *  so the first end of the run wins (§6.3). */
 class InFlight(private val onZero: () -> Unit) {
     private val count = AtomicLong(0)
     fun beforeSend() { count.incrementAndGet() }                       // Q1
@@ -1143,11 +1393,12 @@ class InFlight(private val onZero: () -> Unit) {
 }
 ```
 
-Other names: `SharedObjects` holds the shared objects of §2. `Report` holds the vulnerabilities of `ap.md` §8.10 and
-the state of each. `handOff` makes the `RunConfig` of the next run by §7.3 and §7.4. `RecordStore.view` gives the
-read-only view of a run; `RecordStore.persist` adds the records of `ap.md` §8.7 R1 at a barrier. `CalleeSubscriptions`
-and `PublicationIndex` are the path tries of §5.3 and §5.2. `MethodContextCache.get(method, direction)` gives the
-cached part of §4.8.
+Other names: `SharedObjects` holds the shared objects of §2. `confirm` computes steps 1 and 2 of §7.5 on the links of
+a complete forward run and sets `SinkWitness.confirmed`. `handOff` makes the `RunConfig` of the next run by §7.3 and
+§7.4: `demandOf` builds the `DemandStore` and `seedsOf` the `SeedIndex` from the stores of the run.
+`RecordStore.view` gives the read-only view of a run; `RecordStore.persist` adds the records of `ap.md` §8.7 R1 at a
+barrier. `CalleeSubscriptions` and `PublicationIndex` are the path tries of §5.3 and §5.2.
+`MethodContextCache.get(method, direction)` gives the cached part of §4.8.
 
 ---
 
@@ -1187,8 +1438,13 @@ ARGUED, NOT PROVED:
 * THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`clDS_iff`, `clDN_iff`). The
   pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md` §11.2), are argued.
 
-NOT IN THE MODEL: the priorities, the quantum, the memory guard and the timeout. They change the order of the steps or
-stop the run. They do not change the closure of a complete run.
+* THE UNCHANGED PATH (§4.3). Its items skip `edges.add`. Its set discards only an item equal to an item that the
+  `unchanged` queue already took, so a discarded item gives no new result. The model stores every edge.
+* THE VULNERABILITY KEY (§4.7). The model has no contexts. The key drops the context; each witness keeps its method key,
+  and its confirmation reads the support in that method key, as in the model.
+
+NOT IN THE MODEL: the priorities, the quantum, the order of the worklist (the two queues of §4.3), the memory guard and
+the timeout. They change the order of the steps or stop the run. They do not change the closure of a complete run.
 
 ---
 
@@ -1237,6 +1493,26 @@ stop the run. They do not change the closure of a complete run.
     method exit and at a read each records its hit. Two sources of one statement that give the same zero result both
     record a hit.
 11. REGRESSION. The existing analysis tests, through phase 3 (`bidirectional-task.md` phase 4).
+12. END OF A RUN AND OF THE ANALYSIS. After the memory guard ends a run (`OOM`), a handler that throws
+    `Cancellation.Cancelled` stops its runner, and the run ends `OOM` before its timeout. A `fail()` after the quiescence leaves the run COMPLETE (the first end wins). An exception at the
+    barrier returns the report of the earlier runs with `AnalysisEnd.reason == ABNORMAL` and the status FAILED. A stop
+    by the stop rule and by the policy gives `STOP_RULE` and `POLICY` (§6.3, §7.1).
+13. REPORT. Run 1 complete (one CONFIRMED and one DEMAND vulnerability), run 2 complete, run 3 incomplete: the report
+    is that of run 1, and run 3 refutes nothing. `continueAfter` is never asked after a backward run (§7.1, §7.5).
+14. VULNERABILITY KEY AND WITNESSES. One sink statement that two contexts reach is one vulnerability; a confirmed
+    witness in one context makes it CONFIRMED. Two alternatives of one sink rule that trigger on two bases with the
+    same premise set give two witnesses, and the store does not fail (§4.7).
+15. WORKLIST. The `unchanged` items come before the `normal` items; a loop of statements that do not touch a base
+    ends; the set stays across two `Work` events. A fact on a dead local still reaches a later sink (no liveness check,
+    §4.3).
+16. EMPTY METHODS. A call whose only callee is a native method is an unresolved call: the pass rules and the default
+    identity apply. A call with a native callee and a callee with a body links only to the second one (§4.4).
+17. END FACTS AND ALIASES. A sink with an end-fact action that triggers on a demand-layer sink edge gives a
+    demand-layer end fact on `{zero}`. A demand-layer summary result that is equal to its start fact goes to the
+    aliases; a normal one does not (§4.5).
+18. GLOBAL-STATE RULE. A conjunctive exit sink `ContainsMark(S.<C>, STATE) ∧ ContainsMark(Result, T)`: at an exit
+    where only the `S` literal holds, the `S` part leaves the summary edge and is stored as the literal input; a later
+    item with `Result` tainted completes the combination with it (§4.7).
 
 ---
 
