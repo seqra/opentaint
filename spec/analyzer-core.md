@@ -198,7 +198,8 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
 
 ### 4.3 The worklist and the step
 
-* An item of the worklist is an edge delta: (premise key, layer, node, `EdgeTree`). The edge is the fact BEFORE the
+* An item of the worklist is an edge delta: (premise key, layer, node, conclusions). The conclusions are one of the
+  kinds of `ap.md` §7.2: REACH, a FLOW tree or a TAINT tree. The edge is the fact BEFORE the
   statement of the node, as today.
 * `edges.add` returns the delta of the merge (`ap.md` §7.2 T4). A null delta adds nothing, and the analyzer drops it.
   Else the analyzer adds the delta to the worklist.
@@ -677,9 +678,9 @@ publication. The caller combines it in its conjunction store (`ap.md` §8.9):
 
 * Key: (callee, premise key, layer of the publication, call statement). Value: the merged conclusion that has arrived
   so far, and per premise index `m` the subscriptions at that call statement whose added fact satisfies `jm`.
-* A subscription goes under EVERY index that it satisfies. The subscription of the zero added fact supplies the member
-  `zero` (forward; the backward run has no summary with several premises, because it reverses a conjunction into one
-  micro edge per literal, `ap.md` §9.2).
+* A subscription goes under EVERY index that it satisfies. No member is the zero fact (`ap.md` §4.6: a conjunction
+  drops the zero fact), so the zero subscription never takes part. The backward run has no summary with several
+  premises: it reverses a conjunction into one micro edge per literal (`ap.md` §9.2).
 * A new subscription under an index: combine it with the stored subscriptions of the other indexes (one per index,
   every combination), and apply the stored conclusion to each full combination.
 * A new conclusion delta: apply it to every full combination.
@@ -1041,7 +1042,7 @@ no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run
 
 ## 10. Reference code
 
-The types of the messages and the stores. `Pattern`, `InitialAp`, `EdgeTree`, `PathEdge`, `Direction`, `Record`,
+The types of the messages and the stores. `Pattern`, `InitialAp`, `PremiseKey`, `Facts` (`Reach`, `FlowTree`, `TaintTree`), `PathEdge`, `Direction`, `Record`,
 `RecordStore` and the tests are those of `ap.md` §3.4, §4, §7 and §8.7. The premise key is the premise set of
 `ap.md` §4.6 and §8.1.
 
@@ -1050,10 +1051,7 @@ typealias MethodKey = MethodEntryPoint            // ap.md §1: context and forw
 
 enum class Layer { NORMAL, DEMAND }
 
-/** A premise set (ap.md §4.6, §8.1): {zero}, {i} or {i1, ..., ik}; interned, so equal sets are equal values. */
-data class PremiseKey(val initials: List<InitialAp>) {
-    val isZero: Boolean get() = initials.size == 1 && initials[0].isZero
-}
+/* PremiseKey (ap.md §7.1): the InitialAp itself for one member; a PremiseSet for two or more. Interned. */
 
 /** The caller side of a link (E-2). */
 data class CallerRef(val caller: MethodKey, val premise: PremiseKey, val callerLayer: Layer, val call: CommonInst)
@@ -1069,7 +1067,7 @@ data class Subscription(val callee: MethodKey, val addedFact: Pattern, val linkL
 
 /** A publication: a summary edge of the callee, after the restriction in a restricted run. Its layer is
  *  `conclusion.demand`. */
-data class Publication(val premise: PremiseKey, val conclusion: EdgeTree)
+data class Publication(val premise: PremiseKey, val conclusion: Facts)
 
 /** A request of run 1 (ap.md §4.5, §4.10). */
 sealed interface RequestKind {
