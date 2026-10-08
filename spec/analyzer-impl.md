@@ -7,7 +7,7 @@ again. JVM only.
 
 Scope: the packages `org.opentaint.dataflow.bidi.engine`, `org.opentaint.dataflow.bidi.driver` and
 `org.opentaint.dataflow.jvm.bidi`; the entities, the method analyzer, the pipeline, the scheduling, the driver, the
-hand-offs, the confirmation; the interface of phase 3 and phase 5; the test plan.
+hand-offs, the confirmation; the interface of phase 3 (the trace resolution of phase 5 is out of scope, §8.2); the test plan.
 
 Language: ASD-STE100 Simplified Technical English. Code first.
 
@@ -20,7 +20,7 @@ Language: ASD-STE100 Simplified Technical English. Code first.
 | # | Convention |
 |---|---|
 | C1 | A bare `§n`, in the text and in the code, is a section of this document. A section of another document has the name of that document: `analyzer-core.md` §4.7, `ap-impl.md` §7.3. Exception: in a table column whose header names a document, `§n` is a section of that document. `ap-impl.md` has Part I in §0 to §8 and Part II in §20 to §34. |
-| C2 | The rule ids O1–O5, E-1–E-3, P1–P6, Q1–Q4, W1–W3 and B1–B3 are those of `analyzer-core.md`. E1–E7 are the events of `ap.md` §5.3. An id of another document has the name of that document: `ap.md` W6, `interpreter.md` AC4. |
+| C2 | The rule ids O1–O5, E-1–E-3, P1–P6, Q1–Q4, W1–W3 and B1–B3 are those of `analyzer-core.md`. So a bare W1, W2 or W3 is a rule of the `Work` event (`analyzer-core.md` §6.2). E1–E7 are the events of `ap.md` §5.3. An id of another document has the name of that document: `ap.md` W3 (the field-limit invariant), `ap.md` W6, `interpreter.md` AC4. The ids DD1–DD12 (§0.2) and C1–C3 are local to this document: `ap-impl.md` has its own DD ids, and `ap.md` has its own C ids. |
 | C3 | A path of today's code is relative to the repository root, with the abbreviations below. `path:n` is line `n` of that file. A bare `:n` is line `n` of the file that the table row or the enclosing code names. |
 
 | Name | Path |
@@ -39,12 +39,12 @@ Language: ASD-STE100 Simplified Technical English. Code first.
 | DD3 | The added facts of one link key (`CallerRef`, link layer, kind, base, and for FLOW the exclusion and the mark exclusion) are ONE `Facts` group in callee coordinates. Its leaves are the added facts. `add` returns the delta: the new links. `LinkIn`, `RunnerPort.link` and `Subscription` carry such a group. The replay and the delivery take the part of the group that satisfies a premise with ONE function, `ApOps.satisfying`. | The tree form of `ap.md` §7. Today `MethodTreeAccessPathSubscription` keeps caller fact trees too. One function for the two paths is P4. | §4.2, §5.3; `ap-impl.md` §5.4, §7.5 |
 | DD4 | The engine compares `Facts` by value (`equals` is structural for each kind). TERMINATION needs this in two places: the repeat test of `RuleWorklist` and the inputs of a conjunctive sink. The engine also uses it for the unchanged set, the parts of `NdSummaryJoin`, the AC4 split, the layers of a conjunction input and the record deduplication of the replay. | Each operation makes new objects, and each store has its own node interner (`ap-impl.md` §4.1, §4.5). | §4.3, §4.4, §4.6, §4.9, §5.3 |
 | DD5 | A summary with several premises (E6) joins in the `ConjunctionStore` of the caller (`ndJoin`, `NdSummaryJoin`). The analyzer is a thin adapter. The pipeline encoding of this closure is `PipelineNDZ.sysDNz` (`clDNz_iff`; no zero subscription in a join: `clDNz_ndpub_zero_sub`). | `analyzer-core.md` §5.4: both sides of the join are in the caller. `ap-impl.md` §7.10 has the join. | §4.11 |
-| DD6 | `MethodContextCache` holds the forms per METHOD KEY (`MethodForms`) and makes one `DirectedForms` per run. The engine has no forms cache of its own. | The call plans and the entry rules read the context of the key (§10 row 3). `ap-impl.md` §23.7, §31.2 cache each form and its reversal. | §3.4 |
+| DD6 | `MethodContextCache` holds the forms per METHOD KEY (`MethodForms`) and makes one `DirectedForms` per run. The engine has no forms cache of its own. | The call plans and the entry rules read the context of the key (§10 row 2). `ap-impl.md` §23.7, §31.2 cache each form and its reversal. | §3.4 |
 | DD7 | The zero rules `zin`, `seed` and `zret` act only on the edge `{zero} → zero` (a REACH on `{zero}`). A backward edge `jb → zero` (a REACH on `{jb}`) only passes over a call. | Lean `Backward.lean:158-180`: these rules read only `{zero} → zero`. A zero rule on `jb → zero` makes a false backward summary, and `persist` makes it a record. | §4.10 |
 | DD8 | The source-seed filter and the source hits act only at the source-seed places: a statement summary, `RuleStatement.summary` and a `SOURCES` stage. They never act on an end fact. | `analyzer-core.md` §4.7; `ap-impl.md` §23.1. An end fact has the shape of a source, but it applies as usual. | §4.3, §4.9 |
-| DD9 | `JIRBidiAnalysis` uses the `JIRFactTypeChecker` of the prescan (`JIRAnalysisManager.factTypeChecker`). | Its filters do not depend on its state (`ap-impl.md` §25). One instance keeps one set of statistics for the progress log. | §8.1 |
+| DD9 | `JIRBidiAnalysis` uses the `JIRFactTypeChecker` of the prescan (`JIRAnalysisManager.factTypeChecker`). The bidi entry copies the reference before it releases the prescan state. | Its filters do not depend on its state (`ap-impl.md` §25). One instance keeps one set of statistics. | §8.1 |
 | DD10 | The test oracle is `NaiveClosure`: the closure of one run, per path, with the guards of the engine. It applies the forms with `FormApplier` over the per-path `ReferenceAlgebra`, and a call plan with the per-path walk `FormsReference.run` and the guards of the engine (`ap-impl.md` §23.3, §23.8; DD12). The schedule fuzzer compares the engine with it. | `analyzer-core.md` §13 item 1: "the naive fixed point of the closure". | §9.2 |
-| DD11 | THE KINDS ARE TYPES. The engine reads the kind of a `Facts` only where a rule of `ap.md` §7.2 depends on it: the zero rules on REACH, the requests from FLOW, no FLOW in a restricted run, entry marks on TAINT. Every other place passes `Facts` to an operation of `ap-impl.md` §5, which dispatches on the kind. | `ap.md` §7.2: the kind follows from the premise, and the types enforce W1, W2 and W6. | §4.1 (the table), §4.2, §4.3, §4.10, §7.3 |
+| DD11 | THE KINDS ARE TYPES. The engine reads the kind of a `Facts` only where a rule of `ap.md` §7.2 depends on it: the zero rules on REACH, the requests from FLOW, no FLOW in a restricted run, entry marks on TAINT. Every other place passes `Facts` to an operation of `ap-impl.md` §5, which dispatches on the kind. | `ap.md` §7.2: the kind follows from the premise, and the types enforce `ap.md` W1, W2 and W6. | §4.1 (the table), §4.2, §4.3, §4.10, §7.3 |
 | DD12 | ONE IMPLEMENTATION PER RULE PATTERN. From the other parts: `FormApplier` (the three application modes, generic over the fact algebra; `ap-impl.md` §23.3), which the engine runs over `EngineAlgebra` and `NaiveClosure` over `ReferenceAlgebra` (`ap-impl.md` §23.8); `StageKind.originOf` (the `Origin` rule, `ap-impl.md` §23.5); the per-path plan walk `FormsReference.run` of `NaiveClosure` (`ap-impl.md` §23.8); `StandingJoin` (requests × links; `ap-impl.md` §7.10). Here: `RuleWorklist` (the rule order of a boundary, start and end, both directions), `cut` (every field-limit cut, named by its `ap.md` §4.4 row), `forEachSummaryLeaf` (both hand-offs), `fromCallees`, `applyMatch`. | No rule is written twice, so a fix applies everywhere, and the test oracle shares the mode logic with the engine. | §4.3, §4.4, §4.6, §4.8, §5.3, §7.2, §9.2 |
 
 ---
@@ -66,7 +66,7 @@ CORE/bidi/engine/                                     (opentaint-dataflow, langu
   RunMethodAnalyzer.kt    RunMethodAnalyzer (one class, private members): state, handlers, the engine algebra
                           (EngineAlgebra), the field-limit cut (`Cut`), the rule worklist of a boundary, the call
                           plan runner, summaries, requests, sinks, seeds, E6
-  DeltaWorklist.kt        the worklist of edge deltas
+  DeltaWorklist.kt        the worklist of edge deltas: the `unchanged` queue with its set, the `normal` queue
   SummaryStorage.kt       SummaryStorage, PublicationIndex, Publication
   SubscriptionManager.kt  SubscriptionManager, CalleeSubscriptions, Subscription, matches
   MethodContextCache.kt   MethodContextCache, MethodContextSource, RunMethodContext
@@ -76,12 +76,14 @@ CORE/bidi/driver/
   HandOff.kt              HandOff: forward → backward, backward → forward
   Seeds.kt                Seed, SeedIndex
   Support.kt              Support: the supported premise sets, the confirmation
-  Report.kt               Report, ReportState, TraceData (phase 5)
-CORE/ap/ifds/MethodAnalyzerStorage.kt                 GENERALIZE: EntryPointTable<A> (both cores)
+  Report.kt               Report, ReportState, ReportBuilder, AnalysisEnd, EndReason
+  BidiEntry.kt            BidiEntry: the phase-3 hook (§8.1)
+CORE/ap/ifds/TaintAnalysisManager.kt                  GENERALIZE: releasePrescan() (§8.1)
+CORE/ap/ifds/TaintAnalysisUnitRunnerManager.kt        GENERALIZE: releasePrescan() (§8.1)
 JVM/bidi/                                             (opentaint-jvm-dataflow)
-  JIRBidiAnalysis.kt      the phase-3 entry: PrescanResult in, Report out
+  JIRBidiAnalysis.kt      the phase-3 entry (a BidiEntry): the prescan values in, Report out
   JIRMethodContextCache.kt MethodContextSource over JIRMethodEntries (ap-impl.md §31.2)
-JVM/ap/ifds/analysis/JIRAnalysisManager.kt            GENERALIZE: prescanRuleIds() (here), prescanLambdas() (ap-impl.md §31.1)
+JVM/ap/ifds/analysis/JIRAnalysisManager.kt            GENERALIZE: prescanRuleIds(), releasePrescan() (here), prescanLambdas() (ap-impl.md §31.1)
 ```
 
 ---
@@ -102,16 +104,19 @@ JVM/ap/ifds/analysis/JIRAnalysisManager.kt            GENERALIZE: prescanRuleIds
 
 | Today (`path:line`) | Kind | New | What changes |
 |---|---|---|---|
-| `TaintAnalysisUnitRunnerManager` (`CORE/ap/ifds/TaintAnalysisUnitRunnerManager.kt:56`) | ADAPT | `RunManager` (§3.2, §6.4) | Keep: unit routing `getOrSpawnUnitRunner` (:435-440), runner spawn (:458-494), the counter protocol (:496-514 → `InFlight`), the phantom event (:147, :162), the timeout (:174-184), the memory guard (:113-118), the progress log (:562-583). Remove: `resetApManager` (:127-136), delayed units (:516-529), the sticky `status` (:69), `methodDependencies` (:81), the trace and confirmation calls (:216-425). Add: `RunConfig`, one `SupervisorJob` scope per run, the join, the map of `SummaryStorage`s. |
+| `TaintAnalysisUnitRunnerManager` (`CORE/ap/ifds/TaintAnalysisUnitRunnerManager.kt:56`) | ADAPT | `RunManager` (§3.2, §6.4) | Keep: unit routing `getOrSpawnUnitRunner` (:435-440), runner spawn (:458-494), the counter protocol (:496-514 → `InFlight`), the phantom event (:147, :162), the timeout (:174-184), the memory guard (:113-118), the progress log (:166-171, :562-570: the event counts and the memory usage; `RunManager.logProgress`). Remove: `resetApManager` (:127-136), delayed units (:516-529), the sticky `status` (:69), `methodDependencies` (:81), the trace and confirmation calls (:216-425), the language and per-method statistics of the progress log (:572-624). Add: `RunConfig`, one `SupervisorJob` scope per run, the join, the map of `SummaryStorage`s, the first end wins (`status.compareAndSet`). |
+| `TaintAnalysisUnitRunnerManager` as the prescan engine (`CORE/ap/ifds/TaintAnalysisUnitRunnerManager.kt:71`, `:79-81`) | GENERALIZE | `releasePrescan()` (§8.1) | one new member: it drops the runners, the unit storages, `methodDependencies` and the AP manager of the prescan. The old core never calls it, so its behaviour does not change. |
 | `AnalysisUnitRunnerManager` (`CORE/ap/ifds/AnalysisUnitRunnerManager.kt:10`) | REPLACE | `RunManager.route` | the unknown-unit drop (:41-42) stays |
 | `TaintAnalysisUnitRunner` (`CORE/ap/ifds/TaintAnalysisUnitRunner.kt:29`) | ADAPT | `UnitRunner` (§6.1) | Keep: the channel (:75), the priority queue (:74), the loop (:193-263), the quantum `RUNNER_STEPS_QUANT` (:517), `yield`. Change: the events of §5.1; fixed priority keys (`EventComparator` :47-72 reads mutable keys); one `SubscriptionManager` (not :82-83). |
 | `AnalysisRunner` (`CORE/ap/ifds/AnalysisRunner.kt:12`) | REPLACE | `RunnerPort` (§3.3) | |
-| `MethodAnalyzerStorage` (`CORE/ap/ifds/MethodAnalyzerStorage.kt:8`) | GENERALIZE | `EntryPointTable<A>` (§3.3) | extract :12-13, :49-59 into a generic base; the old `add` (:15-36) with the `EmptyMethodContext` twin (:38-47) stays in the old subclass |
-| `NormalMethodAnalyzer`, `EmptyMethodAnalyzer` (`CORE/ap/ifds/MethodAnalyzer.kt:161`, `:1395`) | REPLACE | `RunMethodAnalyzer` (§4) | the patterns stay: `analyzerEnqueued` (:186) → `queued`; drain then flush (:307-317); the unchanged set (:188, :603-607); liveness (:296); summary at an end node (:674-689) |
+| `MethodAnalyzerStorage` (`CORE/ap/ifds/MethodAnalyzerStorage.kt:8`) | REUSE the pattern | `UnitRunner.analyzers` (§3.3) | the pattern stays: one analyzer per method key, made on demand (:12-13, :15-36, :49-59). The table has one thread (its runner; the driver reads it after the join), so it is a plain `LinkedHashMap`: no `ConcurrentReadSafeObject2IntMap` (`ap-impl.md` §2: the new core does not use it). No `EmptyMethodContext` twin (:38-47) and no empty-method branch (:23-31). The old class stays unchanged for the prescan. |
+| `NormalMethodAnalyzer` (`CORE/ap/ifds/MethodAnalyzer.kt:161`) | REPLACE | `RunMethodAnalyzer` (§4) | the patterns stay: `analyzerEnqueued` (:186) → `queued`; drain then flush (:307-317); the unchanged set (:188, :603-607) → the `unchanged` queue of `DeltaWorklist`; summary at an end node (:674-689) |
+| `EmptyMethodAnalyzer` (`CORE/ap/ifds/MethodAnalyzer.kt:1395`) | REMOVE | — | an empty method is never analysed and never a callee (`analyzer-core.md` §4.4; `interpreter.md` D28): the call resolver drops it, and a call with no other callee is an unresolved call |
+| the liveness check `isReachable` (`CORE/ap/ifds/MethodAnalyzer.kt:296`; `JIRLocalVariableReachability`) | REMOVE | — | the new core drops no fact on a dead local (`analyzer-core.md` §4.3; `ap-history.md` F67). The alias analysis keeps its own inputs, as today. |
 | `TimedMethodAnalyzer` (`CORE/ap/ifds/MethodAnalyzer.kt:1581`) | ADAPT | — | not in phase 2: debug only (`DEBUG_ANALYSIS_TIME = false`, :1391) |
 | `MethodAnalyzerEdges`, `AccessPathBaseStorage` (`CORE/ap/ifds/MethodAnalyzerEdges.kt:13`, `AccessPathBaseStorage.kt:5`) | REUSE | `MethodEdgeStore` | the structure, in `ap-impl.md` §7.3 |
-| `EdgeCollection.UnprocessedEdgeList` (`CORE/ap/ifds/EdgeCollection.kt:10-33`) | ADAPT | `DeltaWorklist` (§4.1) | two stacks, the zero-to-zero items first (a REACH on `{zero}`: today's `Edge.ZeroToZero` class, :24), then LIFO; the item is `EdgeDelta`; no list compression (trees are interned) |
-| `EdgeCollection.EdgeSet` (`CORE/ap/ifds/EdgeCollection.kt:177-181`) | ADAPT | the unchanged set | `ObjectOpenHashSet<EdgeDelta>` for one `Work` event |
+| `EdgeCollection.UnprocessedEdgeList` (`CORE/ap/ifds/EdgeCollection.kt:10-33`) | ADAPT | the `normal` queue of `DeltaWorklist` (§4.1) | two stacks, the zero-to-zero items first (a REACH on `{zero}`: today the `is Edge.ZeroToZero` test, :24), then LIFO; the item is `EdgeDelta`; no list compression (trees are interned) |
+| `EdgeCollection.EdgeSet` (`CORE/ap/ifds/EdgeCollection.kt:177-181`) | ADAPT | the set of the `unchanged` queue of `DeltaWorklist` (§4.1) | `ObjectOpenHashSet<EdgeDelta>`; it lives until the `unchanged` queue is empty, not for one `Work` event (today :312-313 resets it at the event end) |
 | `Edge` (`CORE/ap/ifds/Edge.kt`) | REPLACE | `PremiseKey` + `EdgeDelta` with the kinds `Reach`, `FlowTree`, `TaintTree` | DD2: `ZeroToZero` is REACH; `ZeroToFact` and a concrete `FactToFact` are TAINT; an abstract `FactToFact` is FLOW; `NDFactToFact` is TAINT on a `PremiseSet` (`ap.md` §7.2, §7.6) |
 | `SummaryEdgeStorageWithSubscribers` (`CORE/ap/ifds/SummaryEdgeSubscription.kt:742`) | ADAPT | `SummaryStorage` (§5.2) | Keep: the `ConcurrentLinkedQueue` of subscribers (:752), insert then notify (:771-796), `subscribeOnEdges` (:910-912). Change: a lock on the read (P3; today the reads :914-992 take no lock); one index by premise member. |
 | `MethodSummariesUnitStorage` (`CORE/ap/ifds/MethodSummariesUnitStorage.kt:10`) | ADAPT | `RunManager.summaryStorage` | the `computeIfAbsent` (:112-115) per method key, with no unit indirection |
@@ -122,16 +127,17 @@ JVM/ap/ifds/analysis/JIRAnalysisManager.kt            GENERALIZE: prescanRuleIds
 | fact-depth delay (`MethodAnalyzer.kt:204-206`, `:560-595`, `:1390`; `TaintAnalysisUnitRunner.kt:343-362`) | REMOVE | the field limit | |
 | `InitialFactAbstraction` (`MethodAnalyzer.kt:173`) | REMOVE | `ApOps.policy`, `ApOps.emit` (§4.2) | |
 | `MethodSummaryEdgeApplicationUtils`, `MethodCallSummaryHandler` | REPLACE | `ApOps.applySummary` + the plan runner | |
-| `TaintSinkTracker`, the buckets of `TaintAnalysisUnitStorage` (`CORE/ap/ifds/taint/TaintAnalysisUnitStorage.kt:17-31`) | REPLACE | `ConcurrentVulnerabilityStore`, `ConjunctionStore` (`ap-impl.md` §7.12, §7.10) | no lossy merge: the store merges only the witnesses of one shape (`ap-impl.md` §7.12) |
+| `TaintSinkTracker`, the buckets of `TaintAnalysisUnitStorage` (`CORE/ap/ifds/taint/TaintAnalysisUnitStorage.kt:17-31`) | REPLACE | `ConcurrentVulnerabilityStore`, `ConjunctionStore` (`ap-impl.md` §7.12, §7.10) | no lossy merge: the store merges only the witnesses of one (key, alternative, method key, run, shape) (`ap-impl.md` §7.12) |
 | `MethodCallResolver`, `JIRMethodCallResolver` (`JVM/ap/ifds/analysis/JIRMethodCallResolver.kt:36`) | ADAPT | the `Callees` stage of `CallPlan` | in `ap-impl.md` §28.4 |
 | `TrackerWithSubscriber`, `JIRLambdaTracker` (`CORE/util/TrackerWithSubscriber.kt:5`, `JVM/ap/ifds/JIRLambdaTracker.kt:8`) | REUSE | `JIRAnalysisManager.prescanLambdas()` (`ap-impl.md` §31.1) | `forEachRegisteredValue` (:23-25) reads the prescan values |
 | `MethodEntrypointResolver`, `UnitResolver`, `LanguageManager` (`CORE/ap/ifds/analysis/MethodEntrypointResolver.kt:7`, `CORE/ifds/UnitResolver.kt:21`, `CORE/ap/ifds/LanguageManager.kt:8`) | REUSE | `SharedObjects`, `RunMethodContext` | `getCallExpr` (:13) finds the call statements |
 | `ApplicationGraph.reversed` (`CORE/graph/BackwardGraphs.kt:40-45`), `MethodInstGraph` (`CORE/graph/MethodInstGraph.kt:10`) | REUSE | `RunMethodContext.graph` | through `JIRMethodEntry.graph(direction)` (`ap-impl.md` §31.2) |
 | `JIRMethodAnalysisContext` (`JVM/ap/ifds/analysis/JIRMethodAnalysisContext.kt:19`) | ADAPT | `MethodContextCache` + `RunMethodContext` (§3.4) | split into the cached part and the run part; the JIR content is in `ap-impl.md` §31 |
-| `JIRAnalysisManager` (`JVM/ap/ifds/analysis/JIRAnalysisManager.kt:59`) | GENERALIZE | `prescanRuleIds()` (§8.1) | `relevantRuleIds` (:75) is private today; `prescanLambdas()` over `contexts` (:76) is in `ap-impl.md` §31.1 |
-| `MemoryManager`, `Cancellation`, `RefManager`, `UnitRunnerStats`, `MethodStats` (`CORE/util/MemoryManager.kt:17`, `CORE/util/Cancellation.kt:5`, `CORE/util/RefManager.kt:6`, `CORE/ap/ifds/UnitRunnerStats.kt:7`, `:9`) | REUSE | `RunManager`, `UnitRunner` | one `MemoryManager` per run |
+| `JIRAnalysisManager` (`JVM/ap/ifds/analysis/JIRAnalysisManager.kt:59`) | GENERALIZE | `prescanRuleIds()`, `releasePrescan()` (§8.1) | `relevantRuleIds` (:75) is private today; `prescanLambdas()` over `contexts` (:76) is in `ap-impl.md` §31.1; `releasePrescan()` clears `contexts` |
+| `MemoryManager`, `Cancellation`, `RefManager` (`CORE/util/MemoryManager.kt:17`, `CORE/util/Cancellation.kt:5`, `CORE/util/RefManager.kt:6`) | REUSE | `RunManager`, `UnitRunner`, `ApManager` | one `MemoryManager` per run; each `RunManager` activates the `Cancellation` in its constructor (§3.2); `ApManager` takes the same `RefManager` for its soft trie tables (`ap-impl.md` DD5; §8.1) |
+| `UnitRunnerStats`, `MethodStats`, `collectMethodStats` (`CORE/ap/ifds/UnitRunnerStats.kt:7`, `:9`) | REMOVE | `InFlight.handled` (§6.3) | today the progress job reads runner-local state from another thread; the new progress log reads only atomic counters |
 | summary serialization (`storeSummaries`, `loadSummariesFromRunner`) | REMOVE | the records | |
-| `trace/*` | — | §8.2 | out of scope: phase 5 |
+| `trace/*` | REMOVE | the SIMPLE trace (§8.1) | the trace resolution is out of scope (`analyzer-core.md` §9): no store of a run stays for a trace resolver (§7.7, §8.2) |
 | `TaintAnalyzer.analyzeStaged` (`SAST/common/sast/dataflow/TaintAnalyzer.kt:118-131`) | ADAPT | §8.1 | phase 3; a sketch only |
 
 ### 2.2 Names from `ap-impl.md`
@@ -145,7 +151,7 @@ This document calls these names. Each one has the signature of the `ap-impl.md` 
 | `Direction`, `Layer`, `Tail`, `ApMode`, `MarkSlot` | §3.2 |
 | `PremiseKey` (`size`, `member(k)`, `isZero`, `nonZeroCount`, `members`, `forEachMember`); `InitialAp` (`base`, `path`, `pathArray`, `tail`, `mark`, `isZero`, `toPattern()`), the key of a premise set with one member; `PremiseSet` (two or more members) | §3.4 (`ap.md` §7.1) |
 | `Facts` (`base`, `layer`; structural `equals`; `groupKey`: the store key of `ap.md` §8.1 without the statement and the premise), `Reach` (`Reach.of(layer)`), `FlowTree` (`exclusion`, `markExclusion`), `TaintTree` | §4, §7 (`ap.md` §7.2) |
-| `ApManager` (`zero`, `premiseOf(members)`, `union(a, b)`: it drops the zero fact (`ap.md` §4.6), `initial(Pattern)`, `path(List<AccessorIdx>)`, `path(IntArray)`) | §5.1 |
+| `ApManager(cancellation, refManager)` (`zero`, `premiseOf(members)`, `union(a, b)`: it drops the zero fact (`ap.md` §4.6), `initial(Pattern)`, `path(List<AccessorIdx>)`, `path(IntArray)`) | §5.1 |
 | `ApOut` (`result(f: Facts)`, `markRequest`, `positionRequest`) | §5.2 |
 | `ApOps` (`manager`; `applyEdge`: the public application of one micro edge; the internal `applyCompiledEdge` is the tree form of the delta-concat `concat` of `ap.md` §4.1) | §5.3 |
 | `ApOps.satisfying`, `applySummary`, `applyCombination` | §5.4 |
@@ -156,10 +162,10 @@ This document calls these names. Each one has the signature of the `ap-impl.md` 
 | `ApOps.startFact`, `policy`, `emit`, `restrict` | §5.9 |
 | `RequestAction`, `ApOps.requestAction` | §5.10 |
 | `ApOps.leaves` (every kind; a REACH gives the zero fact) | §5.11 |
-| `Reference.kt`: `PathFact`, `Pattern`, `PathEdge`, `Conclusion`, `DemandPattern`, `concat`, `applicable`, `inside`, `overlap`, `emit`, `restrict`, `startFact`, `limit`, `cleanRes` (`CleanOut`), `markCheck` (`CheckResult`), `conjDemand`, `normalize`, `answer`, `subsumes`, `revEdge`; `Cleaner`, `CleanReach` | §6 |
+| `Reference.kt`: `PathFact`, `Pattern`, `PathEdge`, `Conclusion`, `DemandPattern`, `concat` (`EdgeOutcome`), `applicable`, `inside`, `satisfies`, `overlap`, `policy`, `emit`, `restrict`, `startFact`, `limit`, `cleanRes` (`CleanOut`), `markCheck` (`CheckResult`), `conjDemand`, `normalize`, `answer`, `subsumes`, `revEdge`; `Cleaner`, `CleanReach` | §6 |
 | `PathTrie` (`add`, `lookupPrefixes`, `lookupExtensions`) | §7.2 |
 | `MethodEdgeStore` (`add`, `edgesAt`; REACH bits, FLOW and TAINT trees per the keys of `ap.md` §8.1) | §7.3 |
-| `InitialFactStore` (`add`, `supported`) | §7.4 |
+| `InitialFactStore` (`add`) | §7.4 |
 | `CallerRef`, `Link`, `AddedFactStore` (`add`, `overlapping`, `links`) | §7.5 |
 | `RunSummaryStore` (`add`, `all`) | §7.6 |
 | `DemandStore` (`near`), `DemandStore.Builder` | §7.7 |
@@ -167,12 +173,12 @@ This document calls these names. Each one has the signature of the `ap-impl.md` 
 | `RequestKind`, `RequestStore` (`add`, `overlapping`) | §7.9 |
 | `ConjunctionStore` (`add`, `Input`, `Combination`, `NdKey`, `ndJoin`), `NdSummaryJoin` (`addSubscription`, `addConclusion`), `KaryJoin`, `StandingJoin` (`newA`, `newB`) | §7.10 |
 | `SourceHitStore` (`add`, `entries`) | §7.11 |
-| `RuleId`, `VulnerabilityKey`, `SinkEdge`, `SinkWitness`, `VulnerabilityStore`, `ConcurrentVulnerabilityStore` | §7.12 |
-| `Interpreter`, `ExitNode`, `MicroEdge` (`isSource`, `isIdentity`), THE SOURCE-SEED PLACES | §23.1 |
+| `RuleId`, `VulnerabilityKey(rule, method: CommonMethod, statement)` (no context), `SinkEdge`, `SinkWitness(alternative, methodKey, edges, run, endFacts)`, `VulnerabilityStore`, `ConcurrentVulnerabilityStore` | §7.12 |
+| `Interpreter`, `ExitNode`, `MicroEdge` (`isSource`, `isIdentity`), `ZERO_FACT`, `ZERO_PATTERN`, THE SOURCE-SEED PLACES | §23.1 |
 | `StatementSummary` (`touched`, `edges`, `conjunctions`, `typeFilters`, `resultFilters`, `edgesOf`) | §23.2 |
 | the three application modes STATEMENT, STAGE, GEN; `FormApplier` (`statement(.., sink, untouched)`, `stage`, `gen`), `FactAlgebra`, `Place` | §23.3 |
-| `ReferenceAlgebra` (the per-path `FactAlgebra` of the test oracle), `ReferenceSink`, `FormsReference` (`applier`, `run`), `PlanItem`, `PlanHooks` | §23.8 |
-| `SinkRule` (`rule`, `patterns`, `endFacts`, `conjunctive`, `seedPatterns()`), `RuleStatement`, `ExitRules` (`globalStateDrop`, `entryMarkParts`), `CleanStep` | §23.4 |
+| `ReferenceAlgebra` (the per-path `FactAlgebra` of the test oracle), `ReferenceSink`, `FormsReference` (`applier`, `run`, `conclusions`), `PlanItem`, `PlanHooks` | §23.8 |
+| `SinkRule` (`rule`, `alternative`, `patterns`, `endFacts`, `conjunctive`, `seedPatterns()`), `RuleStatement`, `ExitRules` (`globalStateDrop`, `entryMarkParts`), `CleanStep` | §23.4 |
 | `CallPoint`, `StageKind` (`statementEdges`, `originOf(me, prev)`), `Origin`, `Guard` (`SinkTriggered`, `MemoryEffect.admits`), `CallStage` | §23.5 |
 | `CallPlan` (`touched`, `stages`, `sinks`, `entry`, `exit`, `stagesFrom`, `reversed`) | §23.6 |
 | `FormsCache`, `MethodForms`, `DirectedForms` | §23.7 |
@@ -196,9 +202,11 @@ The engine types of this document are those of `analyzer-core.md` §10, with the
 | `SinkEdge(premise, layer, facts: Facts)` (`ap-impl.md` §7.12) | `SinkEdge(premise, layer, fact: Pattern)` | the triggered part (`MarkCheck.Holds.facts`) of one input: several sink facts in one edge; the leaves are the facts of the spec |
 | `SummaryApplier.applySummary(part, pub, member)` | `applySummary(sub, pub)` | E6: the index of the member that the part satisfies (§4.11). |
 | `SummaryStorage.candidates(part, mode): List<Pair<Publication, Int>>` | `candidates(a: Pattern, config)` | DD3: the input is a tree part; each candidate has its member index. |
-| `RunResult.direction`, `RunResult.allJoined`; `RunResult.analyzers: List` | no such fields; `Sequence` | `analyzer-core.md` §7.5 reads "every runner was joined" for an incomplete forward run (§10 row 1). The driver reads `analyzers` more than once. |
-| `IterationPolicy.timeout(run, remaining)`, default `remaining` | none | the budget of one run (§10 row 4) |
-| `IterationDriver(policy, shared, budget)`, `IterationDriver.cancel()` | `IterationDriver(policy, shared)` | the budget of the analysis; an external cancel ends the run with `CANCELLED` (`analyzer-core.md` §6.3) |
+| `RunResult.direction`; `RunResult.analyzers: List` | no such field; `Sequence` | the hand-off and `persist` read the direction. The driver reads `analyzers` more than once. |
+| `InFlight.handled`, `InFlight.pending` | none | the progress log reads only these atomic counters (§3.2, §6.3) |
+| `IterationPolicy.timeout(run, remaining)`, default `remaining` | none | the budget of one run (§10 row 3) |
+| `IterationDriver(policy, shared, budget)` | `IterationDriver(policy, shared)` | the budget of the analysis |
+| `BidiEntry` (`gather`, `run`, `toVulnerabilities`, `status`) | none (`analyzer-core.md` §9 names the inputs and the output) | the phase-3 hook of `TaintAnalyzer` (§8.1) |
 | `RunnerPort.onProcess`, `RunnerPort.onCut` | none | test hooks: the fuzzer records the processed items (§9.2); `CutPointTest` records each cut with its point (§9.1). They are null in production. |
 | `Cut`, `EngineAlgebra` | none | DD12 |
 | `SubscriptionPort`, `SummaryApplier`, `ProtocolSteps` | parts of `RunnerPort` | `SubscriptionManager` reads only `SubscriptionPort`. The fuzzer defers the replay and the notification through `ProtocolSteps` (§9.2). |
@@ -227,8 +235,8 @@ class SharedObjects(
     val records: RecordStore,                           // PERSISTENT: PersistentRecordStore (ap-impl.md §7.8)
     val vulnerabilities: VulnerabilityStore,            // PERSISTENT: ConcurrentVulnerabilityStore (ap-impl.md §7.12)
     val unitResolver: UnitResolver<CommonMethod>,       // REUSE
-    val refManager: RefManager,                         // REUSE: the input of MemoryManager
-    val cancellation: Cancellation,                     // REUSE: ApManager checkpoints read it; activated per run
+    val refManager: RefManager,                         // REUSE: the input of MemoryManager; ApManager holds its soft trie tables in it
+    val cancellation: Cancellation,                     // REUSE: ApManager checkpoints read it; each RunManager activates it
     threads: Int = (Runtime.getRuntime().availableProcessors() / 2).coerceAtLeast(1),   // TaintAnalysisUnitRunnerManager.kt:91-94
     val cancellationTimeout: Duration = 30.seconds,
 ) : AutoCloseable {
@@ -265,13 +273,20 @@ class RunConfig(
 ```kotlin
 /** analyzer-core.md §2, §6. One per run. ADAPT of TaintAnalysisUnitRunnerManager. */
 class RunManager(val config: RunConfig, val shared: SharedObjects, val steps: ProtocolSteps = ProtocolSteps.Inline) {
+    // analyzer-core.md §6.3: activate the Cancellation when the run is made, before a runner starts and before the
+    // driver publishes this manager (§7.1). So no later activation undoes a cancel.
+    init { shared.cancellation.activate() }
+
     private val job = SupervisorJob()                                          // analyzer-core.md §6.3: a scope per run
     private val scope = CoroutineScope(shared.dispatcher + job)
     private val runners = ConcurrentHashMap<UnitType, UnitRunner>()           // today runnerForUnit (:79)
     private val storages = ConcurrentHashMap<MethodKey, SummaryStorage>()    // O2
     private val completion = CompletableDeferred<RunStatus>()
-    private val status = AtomicReference<RunStatus?>(null)
-    val inFlight = InFlight { completion.complete(RunStatus.COMPLETE) }        // Q4: one counter per run
+    private val status = AtomicReference<RunStatus?>(null)                    // THE FIRST END WINS (analyzer-core.md §6.3)
+    val ended: Boolean get() = status.get() != null                           // runLoop: a cancel comes only after an end (§6.1)
+    val inFlight = InFlight {                                                  // Q4: one counter per run
+        if (status.compareAndSet(null, RunStatus.COMPLETE)) completion.complete(RunStatus.COMPLETE)   // the quiescence
+    }
     val forms: DirectedForms = shared.contexts.directed(config.direction)      // ap-impl.md §23.7: one per run (DD6)
     private val memory = MemoryManager(shared.refManager, OOM_THRESHOLD) { fail(RunStatus.OOM) }   // today :113-118
 
@@ -289,26 +304,43 @@ class RunManager(val config: RunConfig, val shared: SharedObjects, val steps: Pr
     fun route(event: RunEvent) { runnerOf(event.target())?.post(event) }     // Q1 is in post
 
     fun run(timeout: Duration): RunResult = memory.runWithMemoryManager {
-        if (status.get() == null) shared.cancellation.activate()               // a cancel before the start stays (§6.4)
         inFlight.beforeSend()                                                   // Q3: the phantom event (today :147)
-        for (root in config.roots) route(RunEvent.Start(root))
+        if (status.get() == null) for (root in config.roots) route(RunEvent.Start(root))   // a run that ended before its start starts nothing
         inFlight.afterHandler()                                                 // Q3 ends (today :162)
-        val (end, joined) = runBlocking {
-            val s = withTimeoutOrNull(timeout) { completion.await() } ?: RunStatus.TIMEOUT.also(::fail)
-            s to stopAndJoin()
+        val joined = runBlocking {
+            val progress = launch {                                             // today :166-171
+                var last = 0L
+                while (isActive) { delay(PROGRESS_PERIOD); last = logProgress(last) }
+            }
+            withTimeoutOrNull(timeout) { completion.await() } ?: fail(RunStatus.TIMEOUT)
+            progress.cancel()
+            stopAndJoin()
         }
-        // analyzer-core.md §7.6. A runner that did not stop can still touch its analyzers, so such a run gives none
-        // (analyzer-core.md §7.5 reads only its VulnerabilityStore).
-        val analyzers = if (joined) runners.values.flatMap { it.analyzers() }.onEach { it.freeze() } else emptyList()
+        // The status is the first end of the run (`status`). A runner that did not stop can still touch its analyzers:
+        // the run is FAILED, its stores are not read, and the analysis stops (analyzer-core.md §6.3). The driver reads
+        // the stores of a COMPLETE run only (analyzer-core.md §7.5), so only such a run gives its analyzers.
+        val end = if (joined) status.get()!! else RunStatus.FAILED.also { logger.error { "Run ${config.index}: a runner did not stop" } }
+        val analyzers = if (end == RunStatus.COMPLETE) runners.values.flatMap { it.analyzers() }.onEach { it.freeze() } else emptyList()
         runners.clear(); storages.clear()                                       // analyzer-core.md §7.6: these end here
-        RunResult(status.get() ?: end, analyzers, config.index, config.direction, shared.vulnerabilities, joined)
+        RunResult(end, analyzers, config.index, config.direction, shared.vulnerabilities)
     }
 
-    /** analyzer-core.md §6.3: every abnormal end cancels AND completes the run, together. */
+    /** analyzer-core.md §6.3: every abnormal end cancels AND completes the run, together. THE FIRST END WINS: after the
+     *  quiescence (COMPLETE) or an earlier end, `fail` does nothing. So a late memory guard or a late timeout while the
+     *  runners join does not turn a complete run into an incomplete one. */
     fun fail(s: RunStatus) {
         if (!status.compareAndSet(null, s)) return
         shared.cancellation.cancel()
         completion.complete(s)
+    }
+
+    /** The progress log of today (:562-570). It reads only the atomic counters of InFlight and the memory usage, never a
+     *  runner-local state (today's per-method statistics, :572-624, are not kept). */
+    private fun logProgress(last: Long): Long {
+        val handled = inFlight.handled
+        logger.info { "Run ${config.index}: $handled events (+${handled - last}), ${inFlight.pending} in flight" }
+        logger.info { "Memory usage: ${MemoryManager.currentMemoryUsage()}/${Runtime.getRuntime().maxMemory()}" }
+        return handled
     }
 
     private fun start(r: UnitRunner) {
@@ -316,7 +348,7 @@ class RunManager(val config: RunConfig, val shared: SharedObjects, val steps: Pr
             logger.error(e) { "Runner ${r.unit} failed, run ${config.index} stops" }
             fail(RunStatus.FAILED)
         }
-        scope.launch(handler) { r.runLoop() }
+        scope.launch(handler) { r.runLoop() }                                  // runLoop catches Cancellation.Cancelled (§6.1)
     }
 
     /** analyzer-core.md §6.3: join every runner before `run` returns. False: a runner did not stop; the analysis stops. */
@@ -326,7 +358,10 @@ class RunManager(val config: RunConfig, val shared: SharedObjects, val steps: Pr
         return withTimeoutOrNull(shared.cancellationTimeout) { job.children.toList().joinAll(); true } ?: false
     }
 
-    companion object { const val OOM_THRESHOLD = 0.90 }                          // today OOM_DETECTION_THRESHOLD (:644)
+    companion object {
+        const val OOM_THRESHOLD = 0.90                                          // today OOM_DETECTION_THRESHOLD (:644)
+        val PROGRESS_PERIOD = 10.seconds                                        // today :168
+    }
 }
 
 fun RunEvent.target(): MethodKey = when (this) {
@@ -341,20 +376,22 @@ fun RunEvent.target(): MethodKey = when (this) {
 `RunStatus` and `RunResult` (`analyzer-core.md` §10, with the additions of §2.3):
 
 ```kotlin
-enum class RunStatus { COMPLETE, TIMEOUT, OOM, CANCELLED, FAILED }
+/** No CANCELLED: every cancel has a known cause, the timeout or the memory guard (analyzer-core.md §6.3). */
+enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }
 
+/** `analyzers` is empty unless the run is COMPLETE (RunManager.run). */
 class RunResult(
     val status: RunStatus,
     val analyzers: List<RunMethodAnalyzer>,
     val runIndex: Int,
     val direction: Direction,
     val vulnerabilities: VulnerabilityStore,
-    val allJoined: Boolean,                     // analyzer-core.md §6.3, §7.5: read for an incomplete forward run
 ) {
+    /** The witnesses of THIS run per vulnerability key (rule, method, statement): every alternative, every method key. */
     fun witnessesByKey(): Map<VulnerabilityKey, List<SinkWitness>> =
         vulnerabilities.witnessesOf(runIndex).groupBy({ it.first }, { it.second })
 
-    /** analyzer-core.md §7.1: a vulnerability of THIS run with no confirmed witness of this run. */
+    /** analyzer-core.md §7.1, the stop rule: a vulnerability key of THIS run with no confirmed witness of this run. */
     fun hasDemandVulnerability(): Boolean = witnessesByKey().values.any { ws -> ws.none { it.confirmed } }
 }
 ```
@@ -372,7 +409,7 @@ interface RunnerPort : SubscriptionPort {
     fun analyzer(key: MethodKey): RunMethodAnalyzer                 // this unit only; made on demand
     fun subscribe(sub: Subscription)                                // the SubscriptionManager of this runner
     fun link(callee: MethodKey, ref: CallerRef, linkLayer: Layer, added: Facts)      // same unit: a direct addLink
-    /** Test hook (§9.2): every PROCESSED item, before the liveness test. Production: null. */
+    /** Test hook (§9.2): every PROCESSED item (both queues of DeltaWorklist). Production: null. */
     val onProcess: ((MethodKey, EdgeDelta) -> Unit)? get() = null
     /** Test hook (§9.1 CutPointTest): every cut, with its point and the facts before the cut. Production: null. */
     val onCut: ((Cut, Facts) -> Unit)? get() = null
@@ -410,7 +447,7 @@ interface ProtocolSteps {
 class UnitRunner(val unit: UnitType, private val run: RunManager) : RunnerPort {
     private val channel = Channel<RunEvent>(Channel.UNLIMITED)                 // today :75
     private val queue = EventQueue()                                           // today :74, with fixed keys (§6.2)
-    private val analyzers = EntryPointTable<RunMethodAnalyzer>()               // GENERALIZE of MethodAnalyzerStorage
+    private val analyzers = LinkedHashMap<MethodKey, RunMethodAnalyzer>()      // the pattern of MethodAnalyzerStorage (below)
     override val subscriptions = SubscriptionManager(this)
     override val config get() = run.config
     override val shared get() = run.shared
@@ -425,7 +462,7 @@ class UnitRunner(val unit: UnitType, private val run: RunManager) : RunnerPort {
         run.inFlight.beforeSend()
         queue.add(RunEvent.Work(analyzer))
     }
-    override fun analyzer(key: MethodKey): RunMethodAnalyzer = analyzers.getOrCreate(key) {
+    override fun analyzer(key: MethodKey): RunMethodAnalyzer = analyzers.getOrPut(key) {
         check(shared.unitResolver.resolve(key.method) == unit) { "$key is not in $unit" }
         RunMethodAnalyzer(key, this)
     }
@@ -437,35 +474,16 @@ class UnitRunner(val unit: UnitType, private val run: RunManager) : RunnerPort {
         else send(RunEvent.LinkIn(callee, ref, linkLayer, added))
     }
     fun close() = channel.cancel()
-    fun analyzers(): List<RunMethodAnalyzer> = buildList { analyzers.forEach { add(it) } }
+    fun analyzers(): List<RunMethodAnalyzer> = analyzers.values.toList()       // RunManager.run, after the join
     suspend fun runLoop() { /* §6.1 */ }
 }
 ```
 
-GENERALIZE of `MethodAnalyzerStorage` (`CORE/ap/ifds/MethodAnalyzerStorage.kt`). The old class extends the new base.
-It keeps `add` (:15-36) and the twin (:38-47); `add` writes the protected `values` (today's `analyzers` list).
-It keeps `getAnalyzer` and `forEachAnalyzer` as one-line aliases, so the prescan does not change.
-
-```kotlin
-/** The entry-point table of MethodAnalyzerStorage.kt:12-13, :49-59, made generic. Runner-local. */
-open class EntryPointTable<A : Any> {
-    protected val entryPoints = object2IntMap<MethodEntryPoint>()
-    protected val values = arrayListOf<A?>()
-
-    fun getOrCreate(ep: MethodEntryPoint, create: () -> A): A {
-        entryPoints.getOrCreateIndex(ep) { idx -> values.add(null); values[idx] = create(); return values[idx]!! }
-        return get(ep)
-    }
-    fun get(ep: MethodEntryPoint): A = values.getOrNull(entryPoints.getValue(ep)) ?: error("No value for $ep")
-    fun forEach(body: (A) -> Unit) = values.concurrentReadSafeForEach { _, v -> v?.let(body) }
-}
-
-class MethodAnalyzerStorage(...) : EntryPointTable<MethodAnalyzer>() {
-    fun add(runner: TaintAnalysisUnitRunner, ep: MethodEntryPoint): Boolean { /* :15-36, `analyzers` -> `values` */ }
-    fun getAnalyzer(ep: MethodEntryPoint): MethodAnalyzer = get(ep)                    // :49-53
-    fun forEachAnalyzer(body: (MethodAnalyzer) -> Unit) = forEach(body)                 // :55-59
-}
-```
+THE ANALYZER TABLE is the pattern of `MethodAnalyzerStorage` (`CORE/ap/ifds/MethodAnalyzerStorage.kt:12-13`, `:15-36`,
+`:49-59`): one analyzer per method key, made on demand. It has ONE thread: its runner writes and reads it, and the
+driver reads it only after the join (`RunManager.run`). So it is a plain `LinkedHashMap`, not the
+`ConcurrentReadSafeObject2IntMap` of today (`ap-impl.md` §2: the new core does not use that map). The old class stays
+unchanged for the prescan. No method key is an empty method (§3.4), so the table has no empty-method branch.
 
 ### 3.4 `MethodContextCache` (`analyzer-core.md` §4.8)
 
@@ -490,11 +508,9 @@ class MethodContextCache(val interpreter: Interpreter, private val source: Metho
 
 /** analyzer-core.md §4.8, the RUN part: made by the run, bound to it. RunMethodAnalyzer holds one until freeze (§4.11). */
 class RunMethodContext(val key: MethodKey, val forms: DirectedForms, val config: RunConfig, val shared: SharedObjects) {
-    /** analyzer-core.md §4.4 AN EMPTY METHOD: no instruction. It has no graph and no edge store (getMaxInstIndex of an
-     *  empty instList throws, JIRLanguageManager.kt:23-26). Its start node is its end node (ap-impl.md §30), so startAt
-     *  goes straight to endAt (§4.4). ap-impl.md §31.2 gives EMPTY forms for it. Same results as a graph with one node. */
-    val empty: Boolean = shared.language.isEmpty(key.method)                            // LanguageManager.kt:12
-    private val graph: MethodInstGraph? = if (empty) null else shared.contexts.graph(key, config.direction)  // wired backward (analyzer-core.md §4.4)
+    /** analyzer-core.md §4.4: an empty method (no instruction) has no method key. The call resolver drops it from the
+     *  callees (interpreter.md D28), and it is never a root. So every method here has a graph and an edge store. */
+    private val graph: MethodInstGraph = shared.contexts.graph(key, config.direction)  // wired backward (analyzer-core.md §4.4)
     private val ends: Set<CommonInst> = forms.endNodes(key).toHashSet()
     /** analyzer-core.md §4.3: forward, the exit rules of an exceptional exit apply there, but it is not an end node (no
      *  summary). Backward, an exceptional exit is a start node of the zero fact only (analyzer-core.md §4.4), so none. */
@@ -507,15 +523,15 @@ class RunMethodContext(val key: MethodKey, val forms: DirectedForms, val config:
     val vulnerabilities: VulnerabilityStore get() = shared.vulnerabilities
     fun isEnd(n: CommonInst): Boolean = n in ends
     fun isExceptionalExit(n: CommonInst): Boolean = n in exceptionalExits
-    fun forEachSuccessor(n: CommonInst, body: (CommonInst) -> Unit) { graph?.forEachSuccessor(shared.language, n, body) }
-    fun callAt(n: CommonInst): CommonCallExpr? = if (empty) null else shared.language.getCallExpr(n)   // today MethodAnalyzer.kt:299
+    fun forEachSuccessor(n: CommonInst, body: (CommonInst) -> Unit) { graph.forEachSuccessor(shared.language, n, body) }
+    fun callAt(n: CommonInst): CommonCallExpr? = shared.language.getCallExpr(n)       // today MethodAnalyzer.kt:299
 }
 ```
 
 ```kotlin
 package org.opentaint.dataflow.jvm.bidi
 
-/** The JIR source of the cache. The content (graphs, alias analysis, liveness, prescan lambdas, forms) is ap-impl.md §31. */
+/** The JIR source of the cache. The content (graphs, alias analysis, prescan lambdas, forms) is ap-impl.md §31. */
 class JIRMethodContextCache(private val interp: JIRInterpreter, private val entries: JIRMethodEntries) : MethodContextSource {
     override fun forms(key: MethodKey): MethodForms = entries.forms(interp, key)
     override fun graph(key: MethodKey, direction: Direction): MethodInstGraph = entries[key].graph(direction)
@@ -583,9 +599,9 @@ class RunMethodAnalyzer(val key: MethodKey, port: RunnerPort) : SummaryApplier {
     private val forward = port.config.direction == Direction.FORWARD
 
     // The RUN stores (ap.md §8; ap-impl.md §7). O1: this analyzer is their only writer.
-    val edges: MethodEdgeStore? =                                 // ap.md §8.1: REACH bits, FLOW and TAINT trees; none for
-        if (r.empty) null else MethodEdgeStore(ap, key, port.shared.language, limit)   // an empty method (§3.4); W3 assert (ap-impl.md §5.7)
-    val initials = InitialFactStore()                             // ap.md §8.2 (+ `supported`, filled at the barrier, §7.5)
+    val edges = MethodEdgeStore(ap, key, port.shared.language, limit)   // ap.md §8.1: REACH bits, FLOW and TAINT trees; the
+                                                                  // assert of ap.md W3 (ap-impl.md §5.7)
+    val initials = InitialFactStore()                             // ap.md §8.2; the confirmation reads Support, not a store (§7.5)
     val links = AddedFactStore(ap)                                // ap.md §8.3: per (CallerRef, link layer, ...), EXACT
     val summaries = RunSummaryStore(ap)                           // ap.md §8.5: BEFORE the restriction
     val sourceHits: SourceHitStore? = if (forward) null else SourceHitStore()            // ap.md §8.11
@@ -593,49 +609,77 @@ class RunMethodAnalyzer(val key: MethodKey, port: RunnerPort) : SummaryApplier {
     private var conjunctions: ConjunctionStore? = ConjunctionStore(ap)                    // ap.md §8.9: literals, sink literals, E6 (DD5)
     private val applier = FormApplier(EngineAlgebra())             // the three application modes (ap-impl.md §23.3)
 
-    private var worklist = DeltaWorklist()
-    private var unchanged = ObjectOpenHashSet<EdgeDelta>()        // one Work event (today MethodAnalyzer.kt:188)
+    private var worklist = DeltaWorklist()                        // the two queues and the set of the unchanged path (below)
     private var pending = ArrayList<Publication>()                 // analyzer-core.md §4.6 item 3
     var queued = false; private set                               // analyzer-core.md §6.2 (MethodAnalyzer.kt:186)
-    var steps = 0L; private set
+    var steps = 0L; private set                                   // the priority key (§6.2); only this runner reads it
     val hasZeroWork: Boolean get() = worklist.hasZeroWork          // the priority key (§6.2)
-
-    fun collectStats(stats: MethodStats) = stats.stats(key.method).apply {          // REUSE MethodStats
-        steps += this@RunMethodAnalyzer.steps
-        unprocessedEdges += worklist.size
-    }
 ```
 
-The worklist item and the worklist (DD2; ADAPT of `EdgeCollection.UnprocessedEdgeList`):
+The worklist item and the worklist (DD2; `analyzer-core.md` §4.3, §10; ADAPT of `EdgeCollection.UnprocessedEdgeList`
+and of the unchanged set, `MethodAnalyzer.kt:188`, `:603-607`):
 
 ```kotlin
 /** DD2: the facts BEFORE the statement of `node`. `facts` holds the kind and the layer (ap.md §7.2). Value equality (DD4). */
-data class EdgeDelta(val premise: PremiseKey, val node: CommonInst, val facts: Facts)
+data class EdgeDelta(val premise: PremiseKey, val node: CommonInst, val facts: Facts) {
+    val zeroToZero: Boolean get() = premise.isZero && facts is Reach          // today the `is Edge.ZeroToZero` test (EdgeCollection.kt:24)
+}
 
-/** The zero-to-zero items first (today's Edge.ZeroToZero class, EdgeCollection.kt:23-29: REACH on {zero}), then LIFO. */
+/** analyzer-core.md §4.3 THE TWO QUEUES. `unchanged`: the items of the unchanged path (ap.md §8.1), which do not go
+ *  through edges.add; its SET drops a repeat. `normal`: the deltas of edges.add, the zero-to-zero items first, then LIFO
+ *  (as today). The step takes an `unchanged` item while that queue is not empty, and a `normal` item only when it is
+ *  empty. The set goes when the step finds `unchanged` empty: after the last `unchanged` item put its successors into the
+ *  queues. So a loop of statements that do not touch a base ends (the set holds the items of the loop), and the set stays
+ *  across the end of a Work event. */
 class DeltaWorklist {
-    private val zero = ArrayList<EdgeDelta>()
-    private val other = ArrayList<EdgeDelta>()
-    val isEmpty: Boolean get() = zero.isEmpty() && other.isEmpty()
-    val hasZeroWork: Boolean get() = zero.isNotEmpty()
-    val size: Int get() = zero.size + other.size
-    fun add(d: EdgeDelta) { if (d.premise.isZero && d.facts is Reach) zero += d else other += d }
-    fun removeLast(): EdgeDelta = zero.removeLastOrNull() ?: other.removeLast()
+    private val unchanged = ArrayList<EdgeDelta>()
+    private var seen = ObjectOpenHashSet<EdgeDelta>()            // the set of `unchanged` (DD4: by value)
+    private var zeroUnchanged = 0                                // the zero-to-zero items in `unchanged`
+    private val zero = ArrayList<EdgeDelta>()                    // `normal`: the zero-to-zero items
+    private val other = ArrayList<EdgeDelta>()                   // `normal`: the other items
+
+    val isEmpty: Boolean get() = unchanged.isEmpty() && zero.isEmpty() && other.isEmpty()
+    /** A zero-to-zero item in either queue: the priority of the runner (§6.2) and the W2 test of `work` (§4.3). */
+    val hasZeroWork: Boolean get() = zero.isNotEmpty() || zeroUnchanged > 0
+    val size: Int get() = unchanged.size + zero.size + other.size
+
+    /** A delta of edges.add (the `normal` queue). */
+    fun add(d: EdgeDelta) { if (d.zeroToZero) zero += d else other += d }
+
+    /** An item of the unchanged path. False: a repeat that the set holds; the item does not go into the queue again. */
+    fun addUnchanged(d: EdgeDelta): Boolean {
+        if (!seen.add(d)) return false
+        unchanged += d
+        if (d.zeroToZero) zeroUnchanged++
+        return true
+    }
+
+    /** `unchanged` first. When the step finds `unchanged` empty, the set goes (a new empty set), and a `normal` item
+     *  comes next. */
+    fun removeNext(): EdgeDelta {
+        unchanged.removeLastOrNull()?.let { if (it.zeroToZero) zeroUnchanged--; return it }
+        if (seen.isNotEmpty()) seen = ObjectOpenHashSet()
+        return zero.removeLastOrNull() ?: other.removeLast()
+    }
 }
 ```
+
+A repeat that comes after the worklist became empty, while the set still holds the items of the last drain, gives
+nothing new: its application gives only repeats (`edges.add`, the conjunction inputs, the witnesses and the source hits
+deduplicate). So the set is exact.
 
 THE KINDS IN THE ENGINE (DD11). The kind follows from the premise (`ap.md` §7.2), so the engine reads it where a rule
 depends on it, and nowhere else. Every other place passes `Facts` to an operation of `ap-impl.md` §5:
 
 | Rule of the kinds (`ap.md` §7.2) | Code |
 |---|---|
-| the zero-to-zero items go first | `DeltaWorklist.add`: `premise.isZero && facts is Reach` |
+| the zero-to-zero items go first (in the `normal` queue) | `DeltaWorklist`: `EdgeDelta.zeroToZero` (`premise.isZero && facts is Reach`) |
 | the zero rules `zpass`, `zin`, `seed`, `zret` read REACH; a backward `{jb} → zero` only passes | `runCall`: `c is Reach` → `zeroAtCall` (§4.10) |
 | every request comes from a FLOW fact (a premise with the mark `*`) | `raise` (§4.3): `check(input is FlowTree && premise is InitialAp)` |
 | a restricted run has REACH and TAINT only | `emit` (§4.2): a `FlowTree` added fact is an error; `checkKinds` (in `push`, `summaryDelta`) asserts it |
 | an ND edge (a `PremiseSet` premise) is always TAINT; no member is the zero fact (`ap.md` §4.6) | `checkKinds` (§4.3); `ndMatch` (§4.11); `ApManager.union` drops the zero fact |
 | a FLOW part never meets a TAINT summary, and the application raises no request | `matches` → `satisfying` (§5.3); `applyParts` (§4.6) |
-| E6 conclusions are TAINT (`ap.md` §4.6, W7); E6 never takes the zero subscription | `ndMatch`, `applyCombination` (§4.11) |
+| E6 conclusions are TAINT (`ap.md` §4.6, `ap.md` W7); E6 never takes the zero subscription | `ndMatch`, `applyCombination(g: TaintTree)` (§4.11) |
 | a zero-premise conclusion is REACH or a TAINT source result; only a TAINT one carries entry marks | `endAt` step 4 (§4.7) |
 | the demand of each kind in the hand-offs | the table of §7.3 |
 
@@ -788,24 +832,24 @@ The conjunction of a statement or of a stage (`ap.md` §4.6, §8.9). The literal
 The step:
 
 ```kotlin
-    /** The Work handler. True: the event ends (Q2). W2: false keeps it counted and in the local queue. */
+    /** The Work handler. True: the event ends (Q2). W2: false keeps it counted and in the local queue. The set of the
+     *  unchanged queue is not reset here: it lives until the unchanged queue is empty (DeltaWorklist). */
     fun work(quantum: Int): Boolean {
         val zeroAtStart = worklist.hasZeroWork
         var n = 0
         while (!worklist.isEmpty) {
             if (n++ >= quantum || worklist.hasZeroWork != zeroAtStart) return false   // W2 (TaintAnalysisUnitRunner.kt:217-221)
-            process(worklist.removeLast())
+            process(worklist.removeNext())                                   // the unchanged queue first
         }
         flushPublications()                                                  // W3: before the event ends
-        unchanged = ObjectOpenHashSet()                                      // today MethodAnalyzer.kt:312-313
         queued = false
         return true
     }
 
+    /** NO LIVENESS CHECK (analyzer-core.md §4.3): an item on a dead local goes on (today MethodAnalyzer.kt:296 drops it). */
     private fun process(item: EdgeDelta) {
         steps++
         p.onProcess?.invoke(key, item)                                       // test hook (§9.2)
-        if (!forms.isLive(key, item.facts.base, item.node)) return          // forward only (today MethodAnalyzer.kt:296)
         if (r.callAt(item.node) != null) runCall(item) else runStatement(item)
     }
 
@@ -819,17 +863,15 @@ The step:
     /** A result after `node`: the exit rules at an exit (§4.7), then each successor through edges.add. */
     private fun emitAfter(premise: PremiseKey, node: CommonInst, t: Facts) {
         exitRulesAt(premise, node, t)
-        r.forEachSuccessor(node) { s -> edges!!.add(s, premise, t)?.let { push(EdgeDelta(premise, s, it)) } }
+        r.forEachSuccessor(node) { s -> edges.add(s, premise, t)?.let { push(EdgeDelta(premise, s, it)) } }
     }
 
-    /** THE UNCHANGED PATH (ap.md §8.1): no edges.add; the set of one Work event drops a repeat. No post-processor, so
-     *  the input edge goes on as it is (today MethodAnalyzer.kt:643-656 propagates the wrong variable; interpreter.md D14). */
+    /** THE UNCHANGED PATH (ap.md §8.1): no edges.add; the `unchanged` queue, whose set drops a repeat (DeltaWorklist).
+     *  No post-processor, so the input edge goes on as it is (today MethodAnalyzer.kt:643-656 propagates the wrong
+     *  variable; interpreter.md D14). The facts are those of a pushed item, so checkKinds holds already. */
     private fun emitUnchanged(item: EdgeDelta) {
         exitRulesAt(item.premise, item.node, item.facts)
-        r.forEachSuccessor(item.node) { s ->
-            val next = EdgeDelta(item.premise, s, item.facts)
-            if (unchanged.add(next)) push(next)
-        }
+        r.forEachSuccessor(item.node) { s -> if (worklist.addUnchanged(EdgeDelta(item.premise, s, item.facts))) requestWork() }
     }
 
     /** analyzer-core.md §4.3: the end rules at an end node. Forward, also the exit rules of an exceptional exit, with no
@@ -839,7 +881,7 @@ The step:
         else if (r.isExceptionalExit(node)) endAt(premise, node, t, summary = false)
     }
 
-    private fun push(d: EdgeDelta) { checkKinds(d.premise, d.facts); worklist.add(d); requestWork() }
+    private fun push(d: EdgeDelta) { checkKinds(d.premise, d.facts); worklist.add(d); requestWork() }   // the normal queue
 
     /** ap.md §7.2, §4.6 (DD11): a restricted run is concrete; an edge whose premise set has two or more members (an ND
      *  edge) is ALWAYS a TaintTree. Users: push (every stored edge goes to the worklist), summaryDelta (a summary edge and
@@ -870,8 +912,10 @@ exits; backward the reversed entry rules).
         private val seen = HashSet<Pair<PremiseKey, Facts>>()
         private val add: ResultSink = { pr, x -> cut(point, pr, x) { p2, t -> if (seen.add(p2 to t)) items += p2 to t } }
 
+        /** Step 1. The Place: in run 1 the static exception of ap.md §4.10 item 1 acts at the entry and exit rule
+         *  statements; a source here is at a source-seed place. NaiveClosure.boundary uses the same Place (§9.2). */
         fun input(premise: PremiseKey, f: Facts) =
-            applier.statement(rules.summary, premise, f, Place(node, config.run1, sources = true), sink = add)   // step 1
+            applier.statement(rules.summary, premise, f, Place(node, config.run1, sources = true), sink = add)
 
         fun drain(after: (PremiseKey, Facts, Triggers) -> Unit = { _, _, _ -> }) {
             var k = 0
@@ -895,8 +939,7 @@ exits; backward the reversed entry rules).
         w.input(premise, start)
         if (!forward && premise.isZero) fireSinkSeeds(n) { seed -> w.input(ap.zero, seed) }   // rule seed
         w.drain()
-        if (r.empty) { for ((pr, t) in w.items) endAt(pr, n, t, summary = true); return }   // §3.4: the start node is the end node
-        for ((pr, t) in w.items) edges!!.add(n, pr, t)?.let { push(EdgeDelta(pr, n, it)) }
+        for ((pr, t) in w.items) edges.add(n, pr, t)?.let { push(EdgeDelta(pr, n, it)) }
     }
 ```
 
@@ -1037,22 +1080,30 @@ per-path walk `FormsReference.run` (§9.2) call the same code.
      *  Split it, so the alias guard sees the identity part as IDENTITY. The split needs the group key of `startFact(j)`
      *  (`summaryParts`).
      *  THE KINDS (ap.md §7.2; ap-impl.md §5.4): FLOW a × FLOW g → FLOW; TAINT a × FLOW g → TAINT (a run-1 record is a
-     *  transfer function); TAINT a × TAINT g → TAINT; REACH a × (REACH or TAINT) g → the same kind. A FLOW part never
-     *  comes here with a TAINT summary: its premise mark is concrete, so `satisfying` rejects the part (§5.3, P4), and no
-     *  request is raised (Coverage.summary_step). The callee raised the standing request when its rule met its policy
-     *  fact; the link of this caller makes it climb (§4.8). */
+     *  transfer function); TAINT a × TAINT g → TAINT; TAINT a × REACH g → REACH (backward: the requirement `a` reached a
+     *  source in the callee, `jb -> zero`; the case-3 chain below); REACH a × (REACH or TAINT) g → the same kind. A FLOW
+     *  part never comes here with a TAINT summary: its premise mark is concrete, so `satisfying` rejects the part (§5.3,
+     *  P4), and no request is raised (Coverage.summary_step). The callee raised the standing request when its rule met its
+     *  policy fact; the link of this caller makes it climb (§4.8).
+     *  THE CASE-3 CHAIN (a source in a callee, reached through a return value: `h(){ t = g(); sink(t); }`,
+     *  `g(){ return src(); }`). Backward run 2: the requirement on `t` enters `g` as `ret.$ (T)`, meets the reversed
+     *  source and gives the publication `{ret.$ (T)} -> zero` (REACH); `h` applies it to its TAINT subscription (TAINT ×
+     *  REACH → REACH). The hand-off gives `g` the demand `(zero, ret.$ (T))` (§7.3, case 3), and forward run 3 keeps the
+     *  source summary `{zero} -> ret.$ (T)` of `g` by it (HandOffTest, §9.1). */
     private fun applyParts(part: Subscription, j: InitialAp, g: Facts, results: MutableList<PlanFact>) {
         for ((gp, origin) in summaryParts(j, g))
             ops.applySummary(part.added, j, gp, mode, collect(part.ref.premise, part.added) { pr, t -> results += PlanFact(pr, t, origin) })
     }
 
-    /** ap-impl.md §23.5 Origin: SUMMARY_EFFECT for the leaves that are not the start fact of j (a zero premise is always an
-     *  effect); IDENTITY for the start-fact leaf itself (today JIRMethodCallSummaryHandler.hasMemoryEffect). The identity
-     *  needs the same group key (ap.md §8.1: kind, base, layer; FLOW also exclusion and mark exclusion): `x.*/E` with
-     *  E ≠ {} is an effect. */
+    /** ap-impl.md §23.5 Origin; analyzer-core.md §4.5 THE ALIAS GUARD. A result is IDENTITY only if it is in the NORMAL
+     *  layer AND it equals the start fact of j (today JIRMethodCallSummaryHandler.hasMemoryEffect). Every other leaf is
+     *  SUMMARY_EFFECT: every DEMAND-layer result (an incomplete result always goes to the aliases; the `ap.md` W2 start
+     *  `(x, p, [any], T)` of a `*`-T premise is coarser than the premise, so its leaf is no identity), and every result
+     *  of a zero premise. The identity needs the same group key (ap.md §8.1: kind, base, layer; FLOW also exclusion and
+     *  mark exclusion): `x.*/E` with E ≠ {} is an effect. */
     private fun summaryParts(j: InitialAp, g: Facts): List<Pair<Facts, Origin>> {
         val id = ops.startFact(j)
-        if (j.isZero || g.groupKey != id.groupKey) return listOf(g to Origin.SUMMARY_EFFECT)
+        if (j.isZero || g.layer != Layer.NORMAL || g.groupKey != id.groupKey) return listOf(g to Origin.SUMMARY_EFFECT)
         val effect = ops.without(g, id)                                              // ap-impl.md §5.8: the leaves not in id
         val identity = if (effect == null) g else ops.without(g, effect)
         return listOfNotNull(effect?.let { it to Origin.SUMMARY_EFFECT }, identity?.let { it to Origin.IDENTITY })
@@ -1086,8 +1137,8 @@ rule, no entry marks; `ap-impl.md` §23.7). Forward, it gives the exit rules of 
         w.drain { pr, t, tr ->                                                          // 2 ran on (pr, t)
             if (!summary) return@drain                                                    // exceptional exit: the item ends
             var g: Facts? = t
-            if (er.globalStateDrop && t.base == AccessPathBase.ClassStatic)             // 3: the global-state rule
-                for (part in tr.parts) g = g?.let { ops.without(it, part) }
+            if (er.globalStateDrop && t.base == AccessPathBase.ClassStatic)             // 3: the global-state rule drops the
+                for (part in tr.parts) g = g?.let { ops.without(it, part) }             //    EVALUATED statics (checkSinks, §4.9)
             if (pr.isZero && t is TaintTree)                                            // 4: a source result (ap.md §7.2);
                 for (part in er.entryMarkParts(t.base))                                 //    only the root `$` leaf goes
                     g = g?.let { ops.without(it, ops.targetTree(part, it.layer)) }      //    (ap-impl.md §23.4)
@@ -1155,14 +1206,20 @@ are the sides: they deduplicate (E-3) and they are the indexes. `ap-impl.md` §5
 ### 4.9 Sinks, witnesses, seeds, source hits (`analyzer-core.md` §4.7)
 
 ```kotlin
-    /** The result of the sink check of one place: the triggered (sink, layer) pairs and the triggered parts. */
+    /** The result of the sink check of one place: the triggered (sink, layer) pairs, and the EVALUATED parts: every part on
+     *  which a pattern of a sink holds, also when a conjunctive sink has no full combination yet (endAt step 3). */
     private class Triggers(val fired: List<Pair<SinkRule, Layer>>, val parts: List<Facts>) {
         operator fun plus(o: Triggers) = Triggers((fired + o.fired).distinct(), parts + o.parts)
         companion object { val NONE = Triggers(emptyList(), emptyList()) }
     }
 
     /** ap.md §4.9, §8.9, §8.10. Forward only: the backward run has no sink check. The check of one literal is checkMark
-     *  (ap-impl.md §5.8), the same check as a conjunction literal (§4.3). */
+     *  (ap-impl.md §5.8), the same check as a conjunction literal (§4.3).
+     *  THE GLOBAL-STATE RULE (analyzer-core.md §4.7; interpreter.md §4.7 step 3): `parts` gets the part of EVERY literal
+     *  that holds, plain or conjunctive, so endAt drops each evaluated static from the summary edge, also when the
+     *  conjunctive sink has no full combination yet. The conjunctive branch stores the same evaluated part `m.facts` as
+     *  the input of literal k (ConjunctionStore.Input.facts): it is the assumption of the later evaluations of the sink,
+     *  so a later item can complete the combination with it (ap-history.md F67). */
     private fun checkSinks(premise: PremiseKey, node: CommonInst, c: Facts, sinks: List<SinkRule>): Triggers {
         if (!forward || sinks.isEmpty()) return Triggers.NONE
         val fired = ArrayList<Pair<SinkRule, Layer>>()
@@ -1171,14 +1228,15 @@ are the sides: they deduplicate (E-3) and they are the indexes. `ap-impl.md` §5
             MarkCheck.None -> Unit
             is MarkCheck.Request -> raise(premise, c, RequestKind.Mark(m.mark))     // a FLOW fact (run 1, ap.md §4.5)
             is MarkCheck.Holds -> {                                               // REACH, or the TAINT leaves with the mark
-                parts += m.facts
+                parts += m.facts                                                  // EVALUATED: dropped at a normal exit
                 if (!s.conjunctive) {
                     witness(s, node, listOf(SinkEdge(premise, m.facts.layer, m.facts)))
                     fired += s to m.facts.layer
-                } else for (comb in conjunctions!!.add(s, node, s.patterns.size, k,      // one witness per sink edge set;
-                        ConjunctionStore.Input(premise, m.facts.layer, m.facts))) {     // TERMINATION: Input is compared by
+                } else for (comb in conjunctions!!.add(s, node, s.patterns.size, k,      // per alternative (s), statement, literal;
+                        ConjunctionStore.Input(premise, m.facts.layer, m.facts))) {     // the evaluated part is the input.
+                                                                                        // TERMINATION: Input is compared by
                                                                                         // VALUE (DD4; ap-impl.md §7.10)
-                    witness(s, node, comb.inputs.map { SinkEdge(it.premise, it.layer, it.facts!!) })
+                    witness(s, node, comb.inputs.map { SinkEdge(it.premise, it.layer, it.facts!!) })   // one witness per sink edge set
                     fired += s to comb.layer
                 }
             }
@@ -1186,10 +1244,14 @@ are the sides: they deduplicate (E-3) and they are the indexes. `ap-impl.md` §5
         return Triggers(fired.distinct(), parts)
     }
 
-    /** ap.md §8.10. The store keeps every witness. It can keep one entry per (key, run, shape) whose facts are the
-     *  union (ap-impl.md §7.12): a representation of several witnesses, not a lossy merge. */
+    /** ap.md §8.10; analyzer-core.md §4.7. THE KEY is (rule, method, statement) with the METHOD of the method key, without
+     *  the context: one sink statement in several contexts is one vulnerability (ap-history.md F67). The WITNESS names its
+     *  alternative and its method key: the confirmation reads the support of its premise set in that method key (§7.5).
+     *  The store keeps one entry per (key, alternative, method key, run, shape) whose facts are the union (ap-impl.md
+     *  §7.12): witnesses of two alternatives or two method keys never merge, so no merge sees two group keys. */
     private fun witness(s: SinkRule, node: CommonInst, edges: List<SinkEdge>) =
-        r.vulnerabilities.add(VulnerabilityKey(s.rule, key, node), SinkWitness(edges, config.index, s.endFacts.map { it.edge.to }))
+        r.vulnerabilities.add(VulnerabilityKey(s.rule, key.method, node),
+            SinkWitness(s.alternative, key, edges, config.index, s.endFacts.map { it.edge.to }))
 
     /** ap.md §9.2 rule seed: where the zero fact reaches `node`, Zero → requirement (a TAINT fact: the seed has a
      *  concrete mark), cut by the field limit. */
@@ -1204,7 +1266,8 @@ this code:
 
 | Rule | Code |
 |---|---|
-| a witness per sink edge or per sink edge set | `checkSinks` → `witness` |
+| a witness per sink edge or per sink edge set; the key without the context; the witness names its alternative and its method key | `checkSinks` → `witness` |
+| the global-state rule: every evaluated static goes; a conjunctive sink stores it as the literal input | `checkSinks` (`parts`, `ConjunctionStore.Input.facts`) → `endAt` step 3 (§4.7) |
 | exit sinks at both exits; no summary at an exceptional exit (`analyzer-core.md` §4.3) | `exitRulesAt` → `endAt(summary = false)` (§4.3, §4.7) |
 | sink seed at a call | `zeroAtCall` (§4.10) → `fireSinkSeeds` → `flow(BOUND)` |
 | sink seed of an exit sink, at a normal or an exceptional exit | `startAt` (backward, zero premise): then the reversed exit rules of that exit (§4.4) |
@@ -1253,17 +1316,17 @@ The join is `ConjunctionStore.ndJoin` of `ap-impl.md` §7.10 (DD5): one `NdSumma
      *  of a PremiseSet is the zero fact (ap.md §4.6), so a zero subscription never satisfies one and never comes here. */
     private fun ndMatch(part: Subscription, pub: Publication, premise: PremiseSet, m: Int) {
         check(!part.zeroOnly && part.added !is Reach && !premise.member(m).isZero)    // E6 never takes the zero subscription
-        check(pub.conclusion is TaintTree)                                            // an ND edge is TAINT (ap.md §4.6)
+        val conclusion = checkNotNull(pub.conclusion as? TaintTree) { "an ND edge is TAINT (ap.md §4.6)" }
         val join = conjunctions!!.ndJoin<Subscription>(ConjunctionStore.NdKey(part.callee, premise, pub.layer, part.ref.call))
         for ((combo, g) in join.addSubscription(m, part)) applyCombination(combo, premise, g)
-        for ((combo, g) in join.addConclusion(pub.conclusion)) applyCombination(combo, premise, g)
+        for ((combo, g) in join.addConclusion(conclusion)) applyCombination(combo, premise, g)
     }
 
     /** One full combination and one conclusion. The result premise is the union of the caller premise sets, ApManager.union:
      *  it drops the zero fact, so it is `{zero}` only if every caller premise is `{zero}` (ap.md §4.6). The conclusion of an
-     *  ND summary is TAINT (ap.md §4.6, W7), so no request comes from it. The results are cut at the plan exit (Cut.CALL,
-     *  ap.md §4.4 row 6). */
-    private fun applyCombination(parts: List<Subscription>, premise: PremiseSet, g: Facts) {
+     *  ND summary is a TaintTree (ap.md §4.6, ap.md W7; NdSummaryJoin gives TaintTree values, ap-impl.md §7.10), so no
+     *  request comes from it. The results are cut at the plan exit (Cut.CALL, ap.md §4.4 row 6). */
+    private fun applyCombination(parts: List<Subscription>, premise: PremiseSet, g: TaintTree) {
         val union = parts.map { it.ref.premise }.reduce(ap::union)
         fromCallees(parts[0].ref) { results ->                          // one call statement (the key)
             ops.applyCombination(parts.mapIndexed { k, s -> s.added to premise.member(k) }, g, mode,
@@ -1271,10 +1334,11 @@ The join is `ConjunctionStore.ndJoin` of `ap-impl.md` §7.10 (DD5): one `NdSumma
         }
     }
 
-    /** analyzer-core.md §7.6: the run ended. Edges, links, summaries, initials and source hits stay; the run machinery and the run
-     *  context (its RunConfig: the demand, the seeds, the record view) go. No handler runs after it. */
+    /** analyzer-core.md §7.6: the run ended. The stores stay until the driver drops the RunResult after the barrier (§7.7):
+     *  the links (the confirmation), the summaries (`persist`, the hand-off), the source hits (backward). The run machinery
+     *  and the run context (its RunConfig: the demand, the seeds, the record view) go now. No handler runs after it. */
     fun freeze() {
-        port = null; rctx = null; worklist = DeltaWorklist(); unchanged = ObjectOpenHashSet(); pending = ArrayList()
+        port = null; rctx = null; worklist = DeltaWorklist(); pending = ArrayList()
         requests = null; requestJoin = null; conjunctions = null
     }
 }   // end of RunMethodAnalyzer
@@ -1528,7 +1592,7 @@ class CalleeSubscriptions(private val ops: ApOps) {
 ### 6.1 The runner loop
 
 The loop of today (`TaintAnalysisUnitRunner.kt:193-263`). The changes: the events of §5.1, the shared `handle`, fixed
-priority keys, `Work` into the local queue (W1).
+priority keys, `Work` into the local queue (W1), and the catch of `Cancellation.Cancelled`.
 
 ```kotlin
     // UnitRunner
@@ -1538,13 +1602,24 @@ priority keys, `Work` into the local queue (W1).
             if (queue.isEmpty()) queue.add(channel.receive())                     // today :196-198
             while (true) queue.add(channel.tryReceive().getOrNull() ?: break)     // today :200-203
             val event = queue.poll()!!
-            val ended = handle(event)                                             // EventDispatch.kt
+            val ended = try { handle(event) }                                     // EventDispatch.kt
+                catch (e: Cancellation.Cancelled) {                               // a checkpoint of the ApManager or the alias
+                    check(run.ended) { "a cancel with no end" }                   // analysis: RunManager.fail set the status
+                    return@coroutineScope                                         // first; the run keeps the status of its cause
+                }
             if (ended) run.inFlight.afterHandler()                                // Q2: after the handler and its sends
             else queue.add(event)                                                 // W2: still counted; a new fixed key
             if (event is RunEvent.Work || ++events >= RUNNER_STEPS_QUANT) { events = 0; yield() }   // today :205-208
         }
     }
 ```
+
+`Cancellation.Cancelled` is a `CancellationException` (`CORE/util/Cancellation.kt:6`), so the
+`CoroutineExceptionHandler` of `RunManager.start` never sees it. EVERY CANCEL HAS A KNOWN CAUSE (`analyzer-core.md`
+§6.3): the timeout of the run (`fail(TIMEOUT)` in `RunManager.run`) or the memory guard (`fail(OOM)`, the
+`MemoryManager` callback). `RunManager.fail` sets the status first, then cancels and completes the run together. So
+the runner only stops: the run keeps the status of its cause, and `run.ended` is true (the `check`). There is no
+external cancel.
 
 A `Work` event runs at most `RUNNER_STEPS_QUANT` steps. It also stops when the zero-work state of the analyzer changes.
 Then the analyzer goes back into the queue with a new key. Both rules are as today (`TaintAnalysisUnitRunner.kt:217-221`).
@@ -1575,21 +1650,25 @@ class EventQueue {
 ### 6.3 `InFlight` and local work
 
 ```kotlin
-/** analyzer-core.md §6.2, §10. One per run (Q4). */
+/** analyzer-core.md §6.2, §10. One per run (Q4). `onZero` is the quiescence: RunManager sets the status there by
+ *  `compareAndSet(null, COMPLETE)`, so the first end of the run wins (§3.2). */
 class InFlight(private val onZero: () -> Unit) {
     private val count = AtomicLong(0)
+    private val handledCount = AtomicLong(0)                              // the progress log only
+    val pending: Long get() = count.get()
+    val handled: Long get() = handledCount.get()
     fun beforeSend() { count.incrementAndGet() }                          // Q1
-    fun afterHandler() { if (count.decrementAndGet() == 0L) onZero() }    // Q2
+    fun afterHandler() { handledCount.incrementAndGet(); if (count.decrementAndGet() == 0L) onZero() }   // Q2
 }
 ```
 
 | Rule | Code |
 |---|---|
 | Q1 increment before send | `UnitRunner.post`, `UnitRunner.enqueue`; `RunManager.route` counts only when a runner exists |
-| Q2 decrement after the handler | `runLoop`: `afterHandler()` after `handle` returns true |
+| Q2 decrement after the handler | `runLoop`: `afterHandler()` after `handle` returns true; `InFlight.handled` counts it for the progress log |
 | Q3 guard during the start | `RunManager.run`: `beforeSend()` before the `Start` events, `afterHandler()` after |
 | Q4 one counter per run | `RunManager.inFlight`; a new `RunManager` per run; the join (§6.4) stops old runners |
-| W1 `queued`, then `Work` | `RunMethodAnalyzer.requestWork`, called by `push` (every worklist add) and by `summaryDelta` (a pending publication), also from `addLink`, the replay and a request answer |
+| W1 `queued`, then `Work` | `RunMethodAnalyzer.requestWork`, called by `push` (every `normal` add), by `emitUnchanged` (every new `unchanged` item) and by `summaryDelta` (a pending publication), also from `addLink`, the replay and a request answer |
 | W2 back to the local queue, still counted | `work` returns false; `runLoop` re-adds it with no `afterHandler` |
 | W3 end only when empty and flushed | `work`: `flushPublications()`, then `queued = false`, then true |
 
@@ -1597,15 +1676,19 @@ class InFlight(private val onZero: () -> Unit) {
 
 | `analyzer-core.md` §6.3 rule | Code |
 |---|---|
-| status `COMPLETE`, `TIMEOUT`, `OOM`, `CANCELLED`, `FAILED` | `RunStatus`; `RunManager.fail` |
-| no run after an incomplete run | `IterationDriver.analyze` returns (§7.1) |
+| status `COMPLETE`, `TIMEOUT`, `OOM`, `FAILED` | `RunStatus`; `RunManager.fail` |
+| the first end wins | `RunManager.status`: the quiescence (`InFlight` zero) does `compareAndSet(null, COMPLETE)`; `fail` does `compareAndSet(null, s)`; `run` reports `status.get()` |
+| every cancel has a known cause: the timeout or the memory guard | `RunManager.run`: `fail(TIMEOUT)`; the `MemoryManager` callback: `fail(OOM)`; `runLoop` catches `Cancellation.Cancelled` and only stops (§6.1) |
+| the `Cancellation` is activated when the run is made | `RunManager.init` (§3.2), before the driver publishes the manager |
+| no run after an incomplete run; the incomplete run adds nothing | `IterationDriver.analyze` returns the report of the earlier complete runs (§7.1) |
 | a `SupervisorJob` scope per run | `RunManager.job`, `scope`; a failed runner calls `fail(FAILED)`; it cannot cancel a later run |
-| join every runner | `RunManager.stopAndJoin`; `RunResult.allJoined = false` stops the analysis |
+| join every runner; a runner that does not stop stops the analysis | `RunManager.stopAndJoin`; false: `run` reports `FAILED` and gives no analyzers (§3.2) |
 | cancel and complete together | `RunManager.fail`: `cancellation.cancel()` and `completion.complete(s)` |
 
-The caller of the analysis cancels it with `IterationDriver.cancel()` (§7.1). The cancel reaches the current run through
-`RunManager.fail(RunStatus.CANCELLED)`, and no later run starts. `RunManager.run` does not activate the `Cancellation`
-of a run that already failed, so a cancel before the start stays.
+No external cancel exists: the timeout of a run and the memory guard are the only causes of a cancel, and both end
+the run through `RunManager.fail` with their own status. The driver starts no run after an incomplete run (§7.1). A
+run that the memory guard ends before its start routes no `Start` event (§3.2). The constructor of `RunManager` activates the
+`Cancellation` before the driver publishes the manager, so no activation undoes a cancel.
 
 ---
 
@@ -1618,58 +1701,65 @@ package org.opentaint.dataflow.bidi.driver
 
 /** analyzer-core.md §7.1. `timeout` is the budget of one run (analyzer-core.md §0 puts the budget in the policy). */
 interface IterationPolicy {
-    fun fieldLimit(runIndex: Int): Int                                    // not decreasing (ap.md W3); run 1 >= 1
+    fun fieldLimit(runIndex: Int): Int                                    // not decreasing (ap.md W3); run 1 >= 1: checked (below)
+    /** Asked only after a complete FORWARD run: a complete backward run always goes on to the next forward run. */
     fun continueAfter(run: RunConfig, result: RunResult): Boolean
     fun timeout(run: RunConfig, remaining: Duration): Duration = remaining
 }
 
-/** For the tests: the limits of the runs in order; stop after the last one. */
+/** For the tests: the limits of the runs in order. It stops after the last forward run that the list covers. */
 class FixedLimits(private val limits: List<Int>) : IterationPolicy {
     override fun fieldLimit(runIndex: Int) = limits[runIndex - 1]
-    override fun continueAfter(run: RunConfig, result: RunResult) = run.index < limits.size
+    override fun continueAfter(run: RunConfig, result: RunResult) = run.index + 2 <= limits.size   // the next forward run
 }
 
 class IterationDriver(private val policy: IterationPolicy, private val shared: SharedObjects, private val budget: Duration) {
-    @Volatile private var cancelled = false
-    @Volatile private var current: RunManager? = null
-
-    /** analyzer-core.md §6.3: an external cancel. It ends the current run (CANCELLED) and starts no later run. Any thread. */
-    fun cancel() { cancelled = true; current?.fail(RunStatus.CANCELLED) }
-
     fun analyze(roots: List<MethodKey>): Report {
+        require(policy.fieldLimit(1) >= 1) { "ap.md S12 (d): run 1 needs a field limit of at least 1" }
         val start = TimeSource.Monotonic.markNow()
         var config = RunConfig(1, policy.fieldLimit(1), demand = null, records = shared.records.view(),
             seeds = SeedIndex.EMPTY, roots = roots)
-        val report = Report()
+        val report = ReportBuilder()                                            // §7.6
+        fun end(status: RunStatus, reason: EndReason) =                         // Report.end at each return (analyzer-core.md §7.1)
+            report.build(AnalysisEnd(status, config.index, config.direction, reason))
         while (true) {
-            val manager = RunManager(config, shared).also { current = it }
-            if (cancelled) manager.fail(RunStatus.CANCELLED)                    // after `current`: no cancel is lost
+            val manager = RunManager(config, shared)                            // its constructor activates the Cancellation
             val result = manager.run(policy.timeout(config, budget - start.elapsedNow()))
-            current = null
-            val forward = config.direction == Direction.FORWARD
-            if (result.status != RunStatus.COMPLETE || !result.allJoined) {      // analyzer-core.md §6.3, §7.5
+            if (result.status != RunStatus.COMPLETE)                            // analyzer-core.md §6.3, §7.5: an incomplete run
+                return end(result.status, EndReason.ABNORMAL)                   // adds nothing and refutes nothing
+            try {
+                // THE BARRIER (analyzer-core.md §7.2): the run is complete and every runner is joined (B1).
+                val forward = config.direction == Direction.FORWARD
                 if (forward) {
-                    if (result.allJoined) Support(result, roots, shared).confirm()   // confirmed here ⇒ confirmed later
-                    report.addIncomplete(result)
-                    if (result.allJoined) report.retained = result              // else it has no stores: keep the old ones
+                    Support(result, roots, shared).confirm()                    // analyzer-core.md §7.5 steps 1, 2
+                    report.add(config, result)                                  // analyzer-core.md §7.5 step 3
                 }
-                return report
+                shared.records.persist(config.direction,                        // ap.md §8.7 R1 (ap-impl.md §7.8 filters R1)
+                    result.analyzers.asSequence().map { it.key to it.summaries })
+                if (forward && !result.hasDemandVulnerability()) return end(RunStatus.COMPLETE, EndReason.STOP_RULE)   // ap.md §6.6
+                if (forward && !policy.continueAfter(config, result)) return end(RunStatus.COMPLETE, EndReason.POLICY)
+                config = HandOff.next(config, result, policy, shared)           // analyzer-core.md §7.3, §7.4; B2
+            } catch (e: Exception) {                                            // the confirmation, persist, the hand-off
+                logger.error(e) { "Run ${config.index}: the barrier failed; the analysis ends with the report so far" }
+                return end(RunStatus.FAILED, EndReason.ABNORMAL)                // the earlier runs stay (analyzer-core.md §7.1)
             }
-            // THE BARRIER (analyzer-core.md §7.2): the run is complete and every runner is joined (B1).
-            if (forward) {
-                Support(result, roots, shared).confirm()                       // analyzer-core.md §7.5 steps 1, 2
-                report.add(result)                                              // analyzer-core.md §7.5 step 3
-                report.retained = result                                        // §7.7: the previous forward run is garbage
-            }
-            shared.records.persist(config.direction,                            // ap.md §8.7 R1 (ap-impl.md §7.8 filters R1)
-                result.analyzers.asSequence().map { it.key to it.summaries })
-            if (forward && !result.hasDemandVulnerability()) return report      // ap.md §6.6 stop rule
-            if (!policy.continueAfter(config, result)) return report
-            config = HandOff.next(config, result, policy, shared)               // analyzer-core.md §7.3, §7.4; B2
-        }                                                                       // a backward `result` is garbage here
+        }                                                                       // `result` is garbage here (§7.7)
     }
 }
 ```
+
+THE END OF THE ANALYSIS (`analyzer-core.md` §7.1). Each `return` of `analyze` sets `Report.end`:
+
+| Return | `AnalysisEnd.status` | `reason` |
+|---|---|---|
+| the stop rule after a complete forward run | `COMPLETE` | `STOP_RULE` |
+| `continueAfter` is false after a complete forward run | `COMPLETE` | `POLICY` |
+| an incomplete run, forward or backward | its status: `TIMEOUT`, `OOM`, `FAILED` | `ABNORMAL` |
+| an exception at the barrier, also a failed `require` of `HandOff.next` (`ap.md` W3) | `FAILED` | `ABNORMAL` |
+
+`run` and `direction` are those of the last run. In every case the report holds the results of the complete forward
+runs before the end (§7.6). So the iteration ends only after a forward run, as `PipelineDriver.driver_iteration_upto`
+asks, or at an abnormal end.
 
 ### 7.2 Forward run `n` → backward run `n + 1` (`analyzer-core.md` §7.3)
 
@@ -1677,9 +1767,11 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
 object HandOff {
     fun next(config: RunConfig, result: RunResult, policy: IterationPolicy, shared: SharedObjects): RunConfig {
         val n = config.index + 1
+        val limit = policy.fieldLimit(n)
+        require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease ($limit < ${config.fieldLimit})" }
         val (demand, seeds) =
             if (config.direction == Direction.FORWARD) toBackward(result, shared) else toForward(result, shared)
-        return RunConfig(n, policy.fieldLimit(n), demand, shared.records.view(), seeds, config.roots)
+        return RunConfig(n, limit, demand, shared.records.view(), seeds, config.roots)
     }
 
     /** THE ONE SUMMARY ITERATION of both hand-offs (DD12): every summary edge of the run, every layer, BEFORE the
@@ -1695,12 +1787,14 @@ object HandOff {
             premise.forEachMember { j -> demand.add(m, DemandPattern(entry = leaf, exit = j.toPattern())) }   // one per member
         }
         val seeds = ArrayList<Seed>()
-        // The vulnerabilities of run n. A key is (rule, method, statement); its sink patterns are those of every cube of the
-        // rule there (ap.md §8.10 "pattern"). PipelineDriver.driver_iteration needs only `hseeds` (containment).
-        for (key in result.witnessesByKey().keys)
-            for (sink in sinksAt(shared, key.method, key.statement)) if (sink.rule == key.rule)
-                for (lit in sink.seedPatterns())                                    // one per positive literal; none if unconditional
-                    seeds += Seed.Sink(key.rule, key.method, key.statement, lit)
+        // The vulnerabilities of run n. A key is (rule, method, statement) with no context; the seeds of a witness are at its
+        // METHOD KEY and its statement (analyzer-core.md §4.7). The sink patterns are those of every alternative of the rule
+        // there (ap.md §8.10 "pattern"). PipelineDriver.driver_iteration needs only `hseeds` (containment).
+        for ((key, ws) in result.witnessesByKey())
+            for (mk in ws.mapTo(LinkedHashSet()) { it.methodKey })
+                for (sink in sinksAt(shared, mk, key.statement)) if (sink.rule == key.rule)
+                    for (lit in sink.seedPatterns())                                // one per positive literal; none if unconditional
+                        seeds += Seed.Sink(key.rule, mk, key.statement, lit)
         return demand.build() to SeedIndex.of(seeds.distinct())
     }
 
@@ -1715,7 +1809,7 @@ object HandOff {
     }
 ```
 
-The driver persists the records of the forward run at the barrier (§7.1). The records are not a hand-off
+The driver persists the records of each complete run at the barrier (§7.1). The records are not a hand-off
 (`analyzer-core.md` §1).
 
 ### 7.3 Backward run `n + 1` → forward run `n + 2` (`analyzer-core.md` §7.4)
@@ -1779,8 +1873,10 @@ class SeedIndex(private val byPlace: Map<Pair<MethodKey, CommonInst>, List<Seed>
 
 ### 7.5 `Support` and the confirmation (`analyzer-core.md` §7.5)
 
-The support is a property of a premise SET. It is the least fixed point over the links of the run. The links carry the
-data (E-2): `Link(addedFact, linkLayer, CallerRef(caller, premise, callerLayer, call))`.
+The support is a property of a premise SET in one METHOD KEY. It is the least fixed point over the links of the run.
+The links carry the data (E-2): `Link(addedFact, linkLayer, CallerRef(caller, premise, callerLayer, call))`. The driver
+computes it at the barrier; no store of a run keeps it (`analyzer-core.md` §7.5). So `InitialFactStore` (`ap.md` §8.2)
+has no field for the supported premise sets: the confirmation reads `Support`.
 
 ```kotlin
 /** ap.md §4.9 condition 3 (Lean Confirmed.Sup, RExact.SupM, NDConfirmed.SupN). */
@@ -1814,8 +1910,6 @@ class Support(private val result: RunResult, roots: List<MethodKey>, shared: Sha
                     sup += site.callee to p; work += site.callee to p
                 }
         }
-        val byKey = result.analyzers.associateBy { it.key }
-        for ((m, p) in sup) byKey[m]?.initials?.supported?.add(p)                           // ap.md §8.2 (ap-impl.md §7.4)
     }
 
     /** 3.2: ONE call statement supplies every member: the member is zero or exact concrete, a normal link has an added
@@ -1833,15 +1927,15 @@ class Support(private val result: RunResult, roots: List<MethodKey>, shared: Sha
         (m in roots && members.all { it.isZero }) || sitesOf[m].orEmpty().any { suppliedAt(it, members) }
 
     /** analyzer-core.md §7.5 step 2. A sink edge set is confirmed as a whole: the union of its premise sets (without the
-     *  zero fact, ap.md §4.6), jointly. A
-     *  merged entry of ap-impl.md §7.12 has one premise set and one layer per literal, so it is confirmed exactly when
-     *  each of its witnesses is. */
+     *  zero fact, ap.md §4.6), jointly. A witness reads the support IN ITS OWN METHOD KEY (`w.methodKey`): the
+     *  vulnerability key has no context. A merged entry of ap-impl.md §7.12 has one premise set and one layer per
+     *  literal, so it is confirmed exactly when each of its witnesses is. */
     fun confirm() {
-        for ((key, w) in result.vulnerabilities.witnessesOf(result.runIndex)) {
+        for ((_, w) in result.vulnerabilities.witnessesOf(result.runIndex)) {
             val members = w.supportPremise(ap).members                         // ap.md §4.6: the union drops the zero fact (ap-impl.md §7.12)
             w.confirmed = w.edges.all { it.layer == Layer.NORMAL } &&                                   // condition 1
                 members.all(::exactOrZero) &&                                                              // condition 2
-                isSupported(key.method, members)                                                         // condition 3
+                isSupported(w.methodKey, members)                                                        // condition 3
         }
     }
 }
@@ -1853,36 +1947,39 @@ enters `sup` only after its callers: so `sup` is the least fixed point. Each pai
 ### 7.6 `Report`
 
 ```kotlin
-enum class ReportState { CONFIRMED, DEMAND, INCOMPLETE }
+enum class ReportState { CONFIRMED, DEMAND }
+enum class EndReason { STOP_RULE, POLICY, ABNORMAL }
 
-/** analyzer-core.md §7.5, ap.md §8.10. The driver builds the report at the barrier (ap-impl.md §7.12). */
-class Report {
-    class Entry(val key: VulnerabilityKey, val state: ReportState, val run: Int)
-    private val confirmed = LinkedHashMap<VulnerabilityKey, Entry>()
-    private var demand = LinkedHashMap<VulnerabilityKey, Entry>()          // of the LAST complete forward run
-    private val incomplete = LinkedHashMap<VulnerabilityKey, Entry>()
-    var retained: RunResult? = null                                        // §7.7: the stores of the latest forward run
+/** analyzer-core.md §7.1: the end of the analysis. `run`, `direction`: the last run (the table of §7.1). */
+data class AnalysisEnd(val status: RunStatus, val run: Int, val direction: Direction, val reason: EndReason)
 
-    /** A complete forward run. Its demand set replaces the old one: a key that it does not report is refuted. */
-    fun add(result: RunResult) {
-        val next = LinkedHashMap<VulnerabilityKey, Entry>()
+/** analyzer-core.md §7.5, §10; ap.md §8.10. The result of the analysis. `Entry.run`: the run of the state (the run that
+ *  confirmed the key, or the latest complete forward run). `Entry.witnesses` (analyzer-core.md §9 OUTPUT, §10): the
+ *  witnesses of the key in that run, of every alternative and method key, with the fields of ap.md §8.10 (the
+ *  alternative, the method key, the sink edges, the `confirmed` flag, the end facts). */
+class Report(val entries: List<Entry>, val end: AnalysisEnd) {
+    class Entry(val key: VulnerabilityKey, val state: ReportState, val run: Int, val witnesses: List<SinkWitness>)
+}
+
+/** analyzer-core.md §7.5: built from the COMPLETE forward runs only. An incomplete run (forward or backward) adds
+ *  nothing and refutes nothing: the driver never calls `add` for it (§7.1). */
+class ReportBuilder {
+    private val confirmed = LinkedHashMap<VulnerabilityKey, Report.Entry>()     // final
+    private var demand = LinkedHashMap<VulnerabilityKey, Report.Entry>()        // of the LATEST complete forward run
+
+    /** A complete forward run, after its confirmation. A key is CONFIRMED if one witness of this run is confirmed (any
+     *  alternative, any method key); the first run that confirms it stays. The demand set replaces the old one: a demand
+     *  key of an earlier run that this run does not report is refuted (ap.md §8.10). */
+    fun add(config: RunConfig, result: RunResult) {
+        val next = LinkedHashMap<VulnerabilityKey, Report.Entry>()
         for ((key, ws) in result.witnessesByKey())
-            if (ws.any { it.confirmed }) confirmed.putIfAbsent(key, Entry(key, ReportState.CONFIRMED, result.runIndex))
-            else next[key] = Entry(key, ReportState.DEMAND, result.runIndex)
-        demand = next
+            if (ws.any { it.confirmed }) confirmed.putIfAbsent(key, Report.Entry(key, ReportState.CONFIRMED, config.index, ws))
+            else next[key] = Report.Entry(key, ReportState.DEMAND, config.index, ws)
+        demand = next                                                             // one step (analyzer-core.md §7.5 step 3)
     }
 
-    /** An incomplete forward run refutes nothing. Its confirmed witnesses count only if every runner was joined. */
-    fun addIncomplete(result: RunResult) {
-        for ((key, ws) in result.witnessesByKey())
-            if (result.allJoined && ws.any { it.confirmed }) confirmed.putIfAbsent(key, Entry(key, ReportState.CONFIRMED, result.runIndex))
-            else incomplete.putIfAbsent(key, Entry(key, ReportState.INCOMPLETE, result.runIndex))
-    }
-
-    /** One key from several runs: CONFIRMED wins; else DEMAND wins over INCOMPLETE. */
-    fun entries(): List<Entry> =
-        confirmed.values + demand.values.filter { it.key !in confirmed } +
-            incomplete.values.filter { it.key !in confirmed && it.key !in demand }
+    /** One key from several runs: CONFIRMED wins (ap.md §8.10). */
+    fun build(end: AnalysisEnd): Report = Report(confirmed.values + demand.values.filter { it.key !in confirmed }, end)
 }
 ```
 
@@ -1890,13 +1987,14 @@ class Report {
 
 | Data | Stays until | The reference that holds it | Where it is dropped |
 |---|---|---|---|
-| run summary stores; `sourceHits` of a backward run | its hand-off | `RunResult.analyzers[*].summaries`, `.sourceHits` | backward: the local `result` after `HandOff.next`; forward: kept with `retained` |
-| links of a forward run | its confirmation | `RunResult.analyzers[*].links` | kept with `retained` (row below) |
-| edges, links, summaries of the latest forward run in the report | the next forward run ends, or phase 5 ends | `Report.retained` | the next `report.retained = result` |
+| run summary stores; `sourceHits` of a backward run | its hand-off | `RunResult.analyzers[*].summaries`, `.sourceHits` | the local `result`, at the next loop iteration of `IterationDriver.analyze` |
+| links of a forward run | its confirmation | `RunResult.analyzers[*].links` | the same |
+| edges and initials of a run | the end of its barrier | `RunResult.analyzers[*]` | the same: no store of a run stays for a trace resolver (§8.2) |
+| the stores of an incomplete run | the end of `RunManager.run` | — | `RunManager.run` gives no analyzers for it (§3.2) |
 | `SummaryStorage`, `SubscriptionManager`, runners | the end of the run | `RunManager.storages`, `.runners` | `RunManager.run`: `runners.clear(); storages.clear()` |
 | worklist, pending, requests and the request join, conjunctions (with the E6 joins), the port | the end of the run | `RunMethodAnalyzer` fields | `RunMethodAnalyzer.freeze()` |
-| backward analyzers | the hand-off | the local `result` | the next loop iteration |
-| `RecordStore`, `VulnerabilityStore`, `MethodContextCache` (the entries and forms of `ap-impl.md` §31.2), `ApManager` | the analysis | `SharedObjects` | `SharedObjects.close()` |
+| the witnesses of the reported keys | the end of phase 3 | `Report.Entry.witnesses` | the caller drops the `Report` |
+| `RecordStore`, `VulnerabilityStore`, `MethodContextCache` (the entries and forms of `ap-impl.md` §31.2), `ApManager` | the analysis | `SharedObjects` | `JIRBidiAnalysis.run` returns (`SharedObjects.close()` closes the pool) |
 
 ---
 
@@ -1904,52 +2002,130 @@ class Report {
 
 ### 8.1 The phase-3 entry: `JIRBidiAnalysis`
 
-GENERALIZE of `JIRAnalysisManager` (`JVM/ap/ifds/analysis/JIRAnalysisManager.kt`): one read-only member here.
-`ap-impl.md` §31.1 adds `prescanLambdas()`. The old core does not call them, so its behaviour does not change.
+THE PRESCAN STATE (`analyzer-core.md` §9 PRESCAN MEMORY). The bidi entry first gathers the prescan values: the prescan
+rule ids, the prescan lambdas, the fact type checker (DD9) and the external method tracker. Then the caller releases
+the WHOLE prescan state before run 1: the prescan runners, the unit storages, the analyzers, the AP manager of the
+prescan and `JIRAnalysisManager.contexts`. Today `fullScan` only resets them (`resetApManager`, `TaintAnalyzer.kt:154`)
+and keeps the runners, and the bidi path does not call `fullScan`. The GENERALIZE members below do it. The old core
+never calls them, so its behaviour does not change:
 
 ```kotlin
+// CORE/ap/ifds/TaintAnalysisManager.kt: one new member, a no-op by default.
+    /** Phase 3: drop the method contexts of the prescan, after the bidi entry copied the prescan values. */
+    fun releasePrescan() {}
+
+// JVM/ap/ifds/analysis/JIRAnalysisManager.kt: two new members. ap-impl.md §31.1 adds prescanLambdas().
     /** The reduced rule set of the prescan (relevantRuleIds :75). */
     fun prescanRuleIds(): Set<String> = relevantRuleIds.toSet()
+
+    /** The contexts of the prescan (:76): their alias analyses, liveness and lambda trackers. Call it only after
+     *  prescanLambdas(). factTypeChecker (DD9) and externalMethodTracker stay. */
+    override fun releasePrescan() = contexts.clear()
+
+// CORE/ap/ifds/TaintAnalysisUnitRunnerManager.kt: one new member. `activeApManager` (:71) becomes nullable, and
+// `apManager` (:72) reads `activeApManager!!` (the old core always sets it first, :128).
+    /** Phase 3: the whole prescan engine state goes. resetApManager (:127-136) resets the runners and keeps them; this
+     *  drops them. A runner that did not stop in the prescan keeps only its own state, until it ends. */
+    fun releasePrescan() {
+        runnerForUnit.clear()                       // the runners: queues, subscriptions, method analyzers (:79)
+        unitStorage.clear()                         // the summaries and the vulnerabilities of the prescan (:80)
+        methodDependencies.clear()                  // :81
+        activeApManager = null                      // the AP manager of the prescan and its interners (:71)
+    }
+```
+
+The hook of `TaintAnalyzer` (`CORE/bidi/driver/BidiEntry.kt`):
+
+```kotlin
+package org.opentaint.dataflow.bidi.driver
+
+/** analyzer-core.md §9: the phase-3 hook of TaintAnalyzer. JIRBidiAnalysis implements it. */
+interface BidiEntry {
+    /** Copies the prescan values: the rule ids, the lambdas, the roots, the fact type checker, the external method
+     *  tracker. After it, the bidi analysis reads no prescan state, so the caller releases it. */
+    fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>)
+    fun run(budget: Duration): Report
+    fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace>
+    fun status(report: Report): TaintAnalysisUnitRunnerManager.Status
+}
 ```
 
 ```kotlin
 package org.opentaint.dataflow.jvm.bidi
 
-/** analyzer-core.md §9. It copies the prescan values once, then runs the driver. It keeps no prescan context. */
+/** analyzer-core.md §9. It copies the prescan values once (`gather`), then runs the driver (`run`). It keeps no prescan
+ *  context. It has no cancel: only the timeout of a run and the memory guard cancel (analyzer-core.md §6.3). */
 class JIRBidiAnalysis(
     private val cp: JIRClasspath,
     private val graph: JApplicationGraph,                        // TaintAnalyzer.ifdsAnalysisGraph (TaintAnalyzer.kt:60-62)
     private val unitResolver: JIRUnitResolver,                   // the same units as the old core (JIRTaintAnalyzer.kt:95)
     private val taintConfig: TaintRulesProvider,
     private val params: JIRAnalysisManager.Params,               // alias params, default get model (JIRTaintAnalyzer.kt:52-57)
-    /** DD9: the PRESCAN instance, JIRAnalysisManager.factTypeChecker (JIRAnalysisManager.kt:68). Its filters do not
-     *  depend on its state (ap-impl.md §25). One instance keeps one set of statistics for the progress log (:321-338). */
-    private val checker: JIRFactTypeChecker,
-    private val externalMethodTracker: ExternalMethodTracker?,
+    private val policy: IterationPolicy,
     private val refManager: RefManager,
     private val cancellation: Cancellation,
-) {
+) : BidiEntry {
+    /** The prescan values. None of them refers to a context or a store of the prescan. */
     class PrescanResult(
         val ruleIds: Set<String>,                                // JIRAnalysisManager.prescanRuleIds()
         val lambdas: PrescanLambdas,                             // JIRAnalysisManager.prescanLambdas() (ap-impl.md §31.1)
         val roots: List<MethodEntryPoint>,                       // the entry points of the start methods
+        val checker: JIRFactTypeChecker,                         // DD9: JIRAnalysisManager.factTypeChecker (JIRAnalysisManager.kt:68)
+        val externalMethodTracker: ExternalMethodTracker?,       // JIRAnalysisManager.externalMethodTracker (:63)
     )
 
-    fun analyze(prescan: PrescanResult, policy: IterationPolicy, budget: Duration): Report {
-        taintConfig.selectRules(prescan.ruleIds)                 // the reduced rules (today JVM/ap/ifds/analysis/JIRAnalysisManager.kt:86)
-        val ap = ApManager(cancellation)                         // ap-impl.md §5.1
+    private var prescan: PrescanResult? = null
+
+    override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>) {
+        val m = manager as JIRAnalysisManager
+        val resolver = JIRMethodEntrypointResolver(graph)
+        val roots = startMethods.flatMap { s ->                  // as today (TaintAnalysisUnitRunner.kt:284-293)
+            resolver.resolveEntryPoints(s.method, s.ctx).map { MethodEntryPoint(s.ctx, it) }
+        }
+        prescan = PrescanResult(m.prescanRuleIds(), m.prescanLambdas(), roots, m.factTypeChecker, m.externalMethodTracker)
+    }
+
+    override fun run(budget: Duration): Report {
+        val pre = checkNotNull(prescan) { "gather() comes first" }.also { prescan = null }
+        taintConfig.selectRules(pre.ruleIds)                     // the reduced rules (today JVM/ap/ifds/analysis/JIRAnalysisManager.kt:86)
+        val ap = ApManager(cancellation, refManager)             // ap-impl.md §5.1; the memory guard clears its soft trie tables (ap-impl.md DD5)
         val language = JIRLanguageManager(cp)                    // REUSE
         val callResolver = JIRCallResolver(cp, unitResolver)     // REUSE (today JIRAnalysisManager.kt:98)
         val entries = JIRMethodEntries(graph, language, callResolver, taintConfig, params.aliasAnalysisParams,
-            cancellation, prescan.lambdas)                       // ap-impl.md §31.2: the lambdas, copied once
-        val interpreter = JIRInterpreter(ap, taintConfig, checker, callResolver,
-            JIRMethodEntrypointResolver(graph), entries, params.defaultGetModel, externalMethodTracker)   // ap-impl.md §25
+            cancellation, pre.lambdas)                           // ap-impl.md §31.2: the lambdas, copied once
+        val interpreter = JIRInterpreter(ap, taintConfig, pre.checker, callResolver,
+            JIRMethodEntrypointResolver(graph), entries, params.defaultGetModel, pre.externalMethodTracker)   // ap-impl.md §25
         val contexts = MethodContextCache(interpreter, JIRMethodContextCache(interpreter, entries))
         @Suppress("UNCHECKED_CAST")
         SharedObjects(ap, ApOps(ap), interpreter, language, contexts, PersistentRecordStore(ap),
             ConcurrentVulnerabilityStore(ap), unitResolver as UnitResolver<CommonMethod>, refManager, cancellation).use { shared ->
-            return IterationDriver(policy, shared, budget).analyze(prescan.roots)
+            return IterationDriver(policy, shared, budget).analyze(pre.roots)
         }
+    }
+
+    /** analyzer-core.md §9 OUTPUT, TRACE. Every CONFIRMED vulnerability, with the SIMPLE trace of today: the trace with
+     *  only the sink statement (TracePathGenerationResult.Simple, CORE/ap/ifds/trace/path/TracePath.kt:48-51). The
+     *  vulnerability has the form of today's unconditional vulnerability (TaintSinkTracker.kt:114), on the method key of a
+     *  confirmed witness. The DEMAND vulnerabilities stay in the report: the log gives their count, the output has none.
+     *  KNOWN GAP (ap.md §11.1): no end-fact check of today's VulnerabilityChecker, so a confirmed vulnerability of a sink
+     *  rule with end-fact actions is in the output also when no end fact reaches the end of the analysis. */
+    override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> {
+        val (confirmed, demand) = report.entries.partition { it.state == ReportState.CONFIRMED }
+        logger.info { "Bidi analysis: ${confirmed.size} confirmed vulnerabilities, ${demand.size} demand vulnerabilities (not reported)" }
+        return confirmed.map { e ->
+            val rule = e.key.rule
+            val node = TaintSinkTracker.TaintVulnerabilityRuleNode.Unconditional(e.witnesses.first { it.confirmed }.methodKey)
+            VulnerabilityWithTrace(TaintSinkTracker.TaintVulnerability(e.key.statement, rule.id, hashMapOf(rule to node)),
+                TracePathGenerationResult.Simple)
+        }
+    }
+
+    /** analyzer-core.md §9: Report.end to today's status (TaintAnalysisUnitRunnerManager.Status, :65-67). */
+    override fun status(report: Report): TaintAnalysisUnitRunnerManager.Status = when (report.end.status) {
+        RunStatus.COMPLETE -> Status.OK                          // STOP_RULE or POLICY
+        RunStatus.TIMEOUT -> Status.TIMEOUT
+        RunStatus.OOM -> Status.OOM
+        RunStatus.FAILED -> Status.EXCEPTION                     // a runner exception, a runner that did not stop, an exception at the barrier
     }
 }
 ```
@@ -1957,38 +2133,38 @@ class JIRBidiAnalysis(
 How `TaintAnalyzer` calls it in phase 3 (a sketch; `SAST/common/sast/dataflow/TaintAnalyzer.kt:118-131`):
 
 ```kotlin
-    open fun bidiAnalysis(): BidiEntry? = null               // JIRTaintAnalyzer overrides it
+    /** Phase 3. JIRTaintAnalyzer gives its JIRBidiAnalysis; null: the old full scan. */
+    open fun bidiEntry(): BidiEntry? = null
 
     private fun analyzeStaged(entryPoints: List<Method>): Pair<List<VulnerabilityWithTrace>, Status> {
         val analysisStart = TimeSource.Monotonic.markNow()
         val startMethods = entryPoints.map { MethodWithContext(it, EmptyMethodContext) }
-        prescan(startMethods)                                // the old core, unchanged (:133-146)
-        bidiAnalysis()?.let { bidi ->
-            val report = bidi.run(startMethods, options.ifdsTimeout - analysisStart.elapsedNow())
-            return bidi.toVulnerabilities(report) to bidi.status(report)   // traces: phase 5
-        }
-        return fullScan(analysisStart, entryPoints, startMethods)         // today (:148-224)
+        prescan(startMethods)                                        // the old core, unchanged (:133-146)
+        val bidi = bidiEntry() ?: return fullScan(analysisStart, entryPoints, startMethods)   // today (:148-224)
+        bidi.gather(analysisManager, startMethods)                   // 1: the prescan values (analyzer-core.md §9)
+        analysisManager.releasePrescan()                             // 2: then the WHOLE prescan state goes: the contexts,
+        ifdsEngine.releasePrescan()                                  //    the runners, the unit storages, the AP manager
+        val report = bidi.run(options.ifdsTimeout - analysisStart.elapsedNow())
+        return bidi.toVulnerabilities(report) to Status(bidi.status(report), TaintAnalysisUnitRunnerManager.Status.OK)
+    }
+
+    // JIRTaintAnalyzer. `ifdsAnalysisGraph` (TaintAnalyzer.kt:60-62) becomes protected. `bidiPolicy` is a new constructor
+    // parameter (null: the old full scan); the production policy is a phase-3 option (analyzer-core.md §0).
+    override fun bidiEntry(): BidiEntry? = bidiPolicy?.let { policy ->
+        JIRBidiAnalysis(cp, ifdsAnalysisGraph as JApplicationGraph, analysisUnit, taintConfig, analysisParams, policy,
+            refManager, cancellation)
     }
 ```
 
-`BidiEntry.run` resolves the roots as today (`TaintAnalysisUnitRunner.kt:284-293`:
-`MethodEntrypointResolver.resolveEntryPoints` per start method) and reads `JIRAnalysisManager.prescanRuleIds()` and
-`prescanLambdas()`.
+The trace resolution status is `OK`: phase 3 resolves no trace. The CWE filter of today (`TaintAnalyzer.kt:191-198`)
+applies to the output, as in `fullScan`.
 
-### 8.2 The phase-5 read API
+### 8.2 The phase-5 read API: out of scope
 
-```kotlin
-/** analyzer-core.md §9 TRACE. Valid while `Report.retained` holds the run (§7.7). */
-class TraceData(private val run: RunResult) {
-    private val byKey = run.analyzers.associateBy { it.key }
-    fun edgesAt(m: MethodKey, statement: CommonInst, premise: PremiseKey?): Sequence<Pair<PremiseKey, Facts>> =
-        byKey[m]?.edges?.edgesAt(statement, premise).orEmpty()                     // ap-impl.md §7.3
-    fun callers(m: MethodKey): Sequence<Link> = byKey[m]?.links?.links().orEmpty() // the caller edges (E-2)
-    fun summaries(m: MethodKey): Sequence<Pair<PremiseKey, Facts>> = byKey[m]?.summaries?.all().orEmpty()
-    fun sinkEdges(key: VulnerabilityKey): List<SinkWitness> =
-        run.vulnerabilities.witnessesOf(run.runIndex).filter { it.first == key }.map { it.second }.toList()
-}
-```
+The trace resolution is out of scope (`analyzer-core.md` §9 TRACE). The core keeps no store of a run for a trace
+resolver: the driver drops the stores of each run after its barrier (§7.7), and the report holds only the witnesses of
+its keys (`Report.Entry.witnesses`, §7.6). The phase-3 output gives each CONFIRMED vulnerability the SIMPLE trace of
+today (§8.1). This document gives no read API for a trace resolver.
 
 ---
 
@@ -2001,35 +2177,37 @@ the JVM tests in `opentaint-jvm-dataflow/src/test/.../jvm/bidi/`. Test fixtures 
 
 * `ApFixtures`: patterns to `InitialAp` (`ApManager.initial`), `Facts` of each kind (`Reach.of`; `ApOps.startFact` of
   a `*` premise for FLOW; `ApOps.targetTree` for TAINT), `CallerRef`s and fake call statements;
-* `ToyInterpreter`: a test `Interpreter` and `MethodContextSource` that build the forward forms of `ap-impl.md` §23
-  (`StatementSummary`, `CallPlan` with `StageKind`s, `RuleStatement`, `ExitRules`) from a small program DSL (bindings,
-  field read and write, a source, a sink, a cleaner, a `throw` to an exceptional exit, exit rules at each exit);
-  `ToyPrograms` holds the programs of `ap.md` §6.3, §6.4, the backward cases and a method that throws.
+* `ToyInterpreter`, `ToyProgram` (§9.2): a test `Interpreter` and `MethodContextSource` that build the forward forms of
+  `ap-impl.md` §23 (`StatementSummary`, `CallPlan` with `StageKind`s, `RuleStatement`, `ExitRules`) from a small program
+  DSL (bindings, field read and write, a source, a sink, a cleaner, a `throw` to an exceptional exit, exit rules at each
+  exit, a native callee); `ToyPrograms` holds the programs of `ap.md` §6.3, §6.4, program 3 (a source two levels below a
+  return value: `h(){ t = g(); sink(t); }`, `g(){ return f(); }`, `f(){ return src(); }`), the backward cases and a
+  method that throws.
 
 | Order | Class | What it checks (item n: `analyzer-core.md` §13) | Mirrors |
 |---|---|---|---|
 | 1 | `InFlightTest` | Q1–Q3: zero exactly at quiescence; a decrement at handler start ends early | `Quiesce.creach_inv`, `cnt_zero_iff`, `bad_early_done` |
-| 2 | `EventQueueTest` | the order of today; a key does not change in the queue | `analyzer-core.md` §6.1 |
+| 2 | `EventQueueTest`, `DeltaWorklistTest` | the order of today; a key does not change in the queue. Item 15: the `unchanged` items come before the `normal` items; a repeat in `unchanged` is dropped; a loop of statements that do not touch a base ends; the set stays across two `Work` events and goes when the step finds `unchanged` empty; `hasZeroWork` sees a zero-to-zero item in either queue; through a `RunMethodAnalyzer` over a `ToyInterpreter`, a fact on a dead local still reaches a later sink (no liveness check) | `analyzer-core.md` §4.3, §6.1 |
 | 3 | `EngineAlgebraTest` | DD12, through a `RunMethodAnalyzer` over a `ToyInterpreter` (`EngineAlgebra` is private; `RunnerPort.onProcess` records the items and `onCut` the results): the three modes of `FormApplier` (`ap-impl.md` §23.3) over `EngineAlgebra` and over `ReferenceAlgebra` (`ap-impl.md` §23.8) give the same per-path results (`ops.leaves`) on random statement summaries and inputs; the source-seed filter and the source hit only at a source-seed place, never in GEN; a request only from a FLOW input; the `BIND_IN` stage of a call (`zero.* -> zero.*`) on `Reach.NORMAL` gives `Reach.NORMAL` | `ap-impl.md` §23.3; `Reverse.Stmt.rev` |
 | 4 | `SummaryStorageProtocolTest` | mock storages that break P1, P2, P3, P4 lose a summary in the fixed schedule; the real one does not | `PCex.cex_P1` … `cex_P4`, `step_finds_edge` |
 | 5 | `IndexCompletenessTest` | `PublicationIndex.candidates` and `CalleeSubscriptions.candidates` return every part that `matches` accepts (random trees) | `PipelineStore.replay_run1`, `deliver_run1`, `replay_restricted`, `deliver_restricted` |
-| 6 | `AnyDeliveryTest` (§9.4) | item 3, in a restricted run (§10 row 2) | `PCex.cex_P4`, `deliver_restricted` |
+| 6 | `AnyDeliveryTest` (§9.4) | item 3, in a restricted run (§10 row 1) | `PCex.cex_P4`, `deliver_restricted` |
 | 7 | `RecordReplayTest` | item 5: direction, reversal, `inside` | `PipelineStore.record_lookup`, rule `retRec` |
 | 8 | `NdJoinAdapterTest` | item 4: member 1 by delivery, member 2 by replay, the conclusion in two deltas, through `ndMatch`; the zero fact reaches the same call, and the ND summary never takes the zero subscription (the assert of `ndMatch` holds, and no combination has a zero member); the result premise is the union of the caller premise sets without the zero fact | `PipelineAP.clDN_npart` |
-| 9 | `CallPlanRunnerTest` | item 8: the reversed plan of a JVM call runs the steps of `interpreter.md` §4.9 in order (the table of `ap-impl.md` §23.6); seeds at `BOUND`; `PASS_OVER`; the alias guard forward only: the identity part of a delta of `x.$ (T) -> {x.$ (T), x.f.$ (T)}` (TAINT) or of `x.* -> {x.*, x.f.*}` (FLOW) is not aliased, its effect part is (`interpreter.md` AC4 per summary edge); the two `UNRESOLVED` stages; `UnresolvedCallObserver` once per added fact in run 1, never in a later run. THE ZERO BINDING (§4.10): forward, the zero fact (a REACH on `{zero}`) at a call passes over it AND goes through `BIND_IN` to `BOUND` (an unconditional call sink fires), the sources stage and `ADDED` (one `Subscription` and one `LinkIn` per callee, with a REACH added fact; the callee starts the zero fact); backward, a reversed source at a call gives a REACH on `{jb}` at `BOUND` that reaches `BEFORE` through the reversed zero binding, and a REACH on `{jb}` before a call only passes over it | `Reverse.Call.rev` (argued); `Backward.DB` rules `zpass`, `zin` |
-| 10 | `ModesTest` | item 8: a request in a restricted run fails; no sink check backward; the zero fact enters every callee backward. DD7: a requirement reaches a source above a seeded sink call; no backward summary `jb → requirement-of-the-seed` exists, and `persist` writes no such record. An empty callee gives its identity summary in both directions (§3.4) | `RExact.DR_no_request`; the premises of `Backward.DB` rules `zin`, `seed`, `zret` |
+| 9 | `CallPlanRunnerTest` | item 8: the reversed plan of a JVM call runs the steps of `interpreter.md` §4.9 in order (the table of `ap-impl.md` §23.6); seeds at `BOUND`; `PASS_OVER`; the alias guard forward only: the identity part of a delta of `x.$ (T) -> {x.$ (T), x.f.$ (T)}` (TAINT) or of `x.* -> {x.*, x.f.*}` (FLOW) is not aliased, its effect part is (`interpreter.md` AC4 per summary edge); the two `UNRESOLVED` stages; `UnresolvedCallObserver` once per added fact in run 1, never in a later run. Item 17: a demand-layer summary result equal to its start fact goes to the aliases, a normal one does not (`summaryParts`, §4.6); a sink with an end-fact action that triggers on a demand-layer sink edge gives a demand-layer end fact on `{zero}`. THE ZERO BINDING (§4.10): forward, the zero fact (a REACH on `{zero}`) at a call passes over it AND goes through `BIND_IN` to `BOUND` (an unconditional call sink fires), the sources stage and `ADDED` (one `Subscription` and one `LinkIn` per callee, with a REACH added fact; the callee starts the zero fact); backward, a reversed source at a call gives a REACH on `{jb}` at `BOUND` that reaches `BEFORE` through the reversed zero binding, and a REACH on `{jb}` before a call only passes over it | `Reverse.Call.rev` (argued); `Backward.DB` rules `zpass`, `zin` |
+| 10 | `ModesTest` | item 8: a request in a restricted run fails; no sink check backward; the zero fact enters every callee backward. DD7: a requirement reaches a source above a seeded sink call; no backward summary `jb → requirement-of-the-seed` exists, and `persist` writes no such record. Item 16: a call whose only callee is a native method is an unresolved call (the pass rules and the default identity act; no analyzer, no link); a call with a native callee and a callee with a body links only to the second one | `RExact.DR_no_request`; the premises of `Backward.DB` rules `zin`, `seed`, `zret` |
 | 11 | `FactKindsTest` | DD11 (`ap.md` §7.2): a restricted run never pushes a FLOW item (forward and backward); `raise` rejects a request from a TAINT or a REACH input; run 1: a FLOW added fact and a TAINT summary (a concrete premise mark) give no application and no request, and the standing request of the callee climbs through the link of that caller; a FLOW record applies to a TAINT added fact as a transfer function (TAINT result); an edge with a `PremiseSet` premise is TAINT (`checkKinds`); a conjunction of a `{zero}` input and an `{i}` input gives an `{i}` edge, and of two `{zero}` inputs a `{zero}` edge (`ap.md` §4.6) | `Coverage.summary_step`, `Coverage.req_initial_star`, `climbsB` |
-| 12 | `ExitRulesTest` | `analyzer-core.md` §4.3, §4.4; `interpreter.md` §4.7 and §7.2 items 13, 15. Forward: an exit sink on `Result` at the exceptional exit triggers on the thrown tainted value (a witness at that exit); an end fact of it triggers a second exit sink there, and the end order stops (DD4); an exit source at the exceptional exit and a fact that reaches it give no summary edge, and no global-state drop or entry-mark removal acts there, while the same facts at the normal exit give their summaries. Backward: `HandOff` seeds that exit sink; the seed enters at the exceptional exit with the premise `{zero}` and goes through the reversed exit rules of that exit (an exit source of the same exit records its source hit; `interpreter.md` §4.9 SEEDS, `analyzer-core.md` §4.4); a fact that is not zero does not start at the exceptional exit | `Backward.DB` rule `seed`; `FSeeds.srcHit` |
-| 13 | `CutPointTest` | the field limit (`ap.md` §4.4; the table of `ap-impl.md` §5.7): a toy program reaches every value of `Cut` (`RunnerPort.onCut`) with a fact deeper than `L`; after each cut no stored fact has more than `L` counted accessors (the W3 assert at `MethodEdgeStore.add` does not fire); a REACH passes every cut | `limitF_sound` |
+| 12 | `ExitRulesTest` | `analyzer-core.md` §4.3, §4.4; `interpreter.md` §4.7 and §7.2 items 13, 15. Forward: an exit sink on `Result` at the exceptional exit triggers on the thrown tainted value (a witness at that exit); an end fact of it triggers a second exit sink there, and the end order stops (DD4); an exit source at the exceptional exit and a fact that reaches it give no summary edge, and no global-state drop or entry-mark removal acts there, while the same facts at the normal exit give their summaries. Backward: `HandOff` seeds that exit sink; the seed enters at the exceptional exit with the premise `{zero}` and goes through the reversed exit rules of that exit (an exit source of the same exit records its source hit; `interpreter.md` §4.9 SEEDS, `analyzer-core.md` §4.4); a fact that is not zero does not start at the exceptional exit. Item 18, THE GLOBAL-STATE RULE: a conjunctive exit sink `ContainsMark(S.<C>, STATE) ∧ ContainsMark(Result, T)`: at an exit where only the `S` literal holds, the `S` part leaves the summary edge and is the stored input of that literal; a later item with `Result` tainted completes the combination with it (a witness) | `Backward.DB` rule `seed`; `FSeeds.srcHit` |
+| 13 | `CutPointTest` | the field limit (`ap.md` §4.4; the table of `ap-impl.md` §5.7): a toy program reaches every value of `Cut` (`RunnerPort.onCut`) with a fact deeper than `L`; after each cut no stored fact has more than `L` counted accessors (the `ap.md` W3 assert at `MethodEdgeStore.add` does not fire); a REACH passes every cut | `limitF_sound` |
 | 14 | `RequestJoinTest` | `addLink`/`addRequest` through `StandingJoin` with `ApOps.requestAction` on the `main1`/`main2` example of `ap.md` §4.5 (a new caller edge of an old added fact climbs); request first or link first: each pair meets once | `answerInit_covers`, `climbsB`, Store `standing_complete` |
 | 15 | `NaiveClosureTest` | the reference itself on programs 1 and 2: it reports the vulnerabilities of `RCases.p1_found_M`, `p2_found_M`; its demand after run 2 is `dem1_exact`, `dem2_exact` | `Backward.p1_found`, `p2_found`, `dem1_exact`, `dem2_exact` |
 | 16 | `ScheduleFuzzTest` (§9.2) | item 1 | `Pipeline.quiescent_exact`, `quiescent_dominates` |
-| 17 | `RunManagerLifecycleTest` | item 6: a late send keeps the run open; a new `RunManager` after an aborted one analyses every method; a failed runner does not cancel the next run | `analyzer-core.md` §6.3 |
-| 18 | `SupportTest` | the support tree; two premises at two calls are not supported; a set is confirmed as a whole; a merged witness (`ap-impl.md` §7.12) | `Confirmed.Sup`, `NDConfirmed.SupN`, `NDConfirmed.CexSites.cex_sites`, `Confirmed.Weak.weak_support_gap` |
-| 19 | `HandOffTest` | item 7: programs 1 and 2 | `Backward.dem1_exact`, `dem2_exact`, `p1_found`, `p2_found` |
+| 17 | `RunManagerLifecycleTest` | item 6: a late send keeps the run open; a new `RunManager` after an aborted one analyses every method; a failed runner does not cancel the next run. Item 12: after `fail(OOM)` a handler that throws `Cancellation.Cancelled` stops its runner, and the run ends `OOM` before its timeout; a `fail()` after the quiescence leaves the run `COMPLETE` (the first end wins); a `fail()` before `run` starts no root; a runner that does not stop gives `FAILED` and no analyzers | `analyzer-core.md` §6.3 |
+| 18 | `SupportTest` | the support tree; two premises at two calls are not supported; a set is confirmed as a whole; a merged witness (`ap-impl.md` §7.12). Item 14: one sink statement that two contexts reach is one vulnerability key; a confirmed witness in one context makes it CONFIRMED, and each witness reads the support in its own method key; two alternatives of one sink rule that trigger on two bases with the same premise set give two witnesses, and the store does not fail | `Confirmed.Sup`, `NDConfirmed.SupN`, `NDConfirmed.CexSites.cex_sites`, `Confirmed.Weak.weak_support_gap` |
+| 19 | `HandOffTest` | item 7: programs 1 and 2. Program 3 (the case-3 chain, §4.6; the test makes runs 2 and 3 with `HandOff.next` itself, with no stop rule): run 2 gives `{ret.$ (T)} → zero` in `f` and `g` (TAINT × REACH → REACH at each return), the hand-off gives `(zero, ret.$ (T))` per method (case 3), and run 3 keeps the `{zero} → ret.$ (T)` summaries of `f` and `g` and reports the sink of `h` with a confirmed witness. The seeds of a witness are at its method key. `HandOff.next` rejects a decreasing field limit | `Backward.dem1_exact`, `dem2_exact`, `p1_found`, `p2_found` |
 | 20 | `SourceSeedsTest` | item 10 (a source at a call, an entry, an exit, a read; end facts never filtered) | `FSeeds.srcHit`, `srcHit_applies`, `PipelineSeeds.driver_iteration_src` |
-| 21 | `StopRuleTest` | item 9 | `PipelineDriver.driver_iteration_upto` |
-| 22 | JVM regression | item 11: the existing analysis tests through phase 3 | — |
+| 21 | `StopRuleTest`, `ReportTest` | item 9; item 12: the stop rule gives `STOP_RULE`, the policy `POLICY`, an exception at the barrier `ABNORMAL` with the status `FAILED` and the report of the earlier runs. Item 13: run 1 complete (one CONFIRMED and one DEMAND vulnerability), run 2 complete, run 3 incomplete: the report is that of run 1 and run 3 refutes nothing; `continueAfter` is never asked after a backward run | `PipelineDriver.driver_iteration_upto` |
+| 22 | JVM regression | item 11: the existing analysis tests through phase 3; the output has every CONFIRMED vulnerability with the SIMPLE trace, and no DEMAND one (§8.1) | — |
 
 ### 9.2 The schedule fuzzer
 
@@ -2096,20 +2274,93 @@ class FuzzRun(private val config: RunConfig, private val shared: SharedObjects, 
 The reference is `NaiveClosure` (DD10). It is the closure that the engine computes in one run: Lean `D` with `DS`
 and `DN` (run 1), `DR` (a restricted forward run), `Backward.DB` (a backward run). It works per path, on the reference
 forms (`ap-impl.md` §6). It applies the forms with `FormApplier` over `ReferenceAlgebra` (`ap-impl.md` §23.3, §23.8), so the oracle
-and the engine share the mode logic and differ only in the fact algebra (DD12). It has no tree, no index, no store, no
-thread and no subsumption.
+and the engine share the mode logic and differ only in the fact algebra (DD12). It has no tree, no edge store, no
+subscription index, no thread and no subsumption. It reads the demand and the records of its `RunConfig` through their
+lookups (`DemandStore.near`, `RecordStore.byEntry`, `byExit`; their completeness is a test of `ap-impl.md` §8) and
+tests each candidate itself.
 
 At a call it runs the one per-path plan walk `FormsReference.run` (`ap-impl.md` §23.8) with the guards of the engine
 (`PlanHooks`): the closure writes no plan walk and no `Origin` rule of its own. It is test-only
-(`TEST/bidi/engine/NaiveClosure.kt`). The skeleton names every rule; each body has one line per spec row.
+(`TEST/bidi/engine/NaiveClosure.kt`). Each rule body follows the rule of the engine that its comment names. Every form
+applies at the `Place` of the engine: a statement and the rule statements of a boundary at
+`Place(node, run1, sources = true)` (so in run 1 the static exception of `ap.md` §4.10 item 1 acts at the entry and exit
+rule statements, as in `RuleWorklist.input`, §4.4), a stage by its kind (`FormsReference.run`).
+
+The program, the results and the comparison (test-only):
 
 ```kotlin
+/** TEST/bidi/engine/ToyPrograms.kt. One test program. Its ToyInterpreter gives the SAME forms to the engine (as
+ *  Interpreter and MethodContextSource, through `shared()`) and to NaiveClosure (`directedForms`). */
+interface ToyProgram {
+    val ap: ApManager
+    val interpreter: ToyInterpreter
+    fun directedForms(direction: Direction): DirectedForms = DirectedForms(interpreter, direction, interpreter::forms)
+    fun callAt(node: CommonInst): CommonCallExpr?                                          // as LanguageManager.getCallExpr
+    fun successors(m: MethodKey, node: CommonInst, direction: Direction): List<CommonInst> // the graph of the run (wired backward)
+    /** Run 1, a restricted forward run, a backward run. The demand, the seeds and the records of runs 2 and 3 are written
+     *  by hand from the Lean `dem1_exact`, `dem2_exact` (not by HandOff), so the oracle does not depend on the hand-off;
+     *  HandOffTest checks HandOff against the same values. */
+    fun runs(): List<RunConfig>
+    /** New stores on each call (a ConcurrentVulnerabilityStore, a PersistentRecordStore); the engine reads the records of
+     *  a run from its RunConfig. */
+    fun shared(): SharedObjects
+}
+
+/** The forms of the toy programs (ap-impl.md §23) from the DSL of §9.1. */
+interface ToyInterpreter : Interpreter, MethodContextSource
+
+/** THE ONE PER-PATH KEY of the comparison: (method, node, premise set as patterns). A summary has no node. */
+data class PathKey(val method: MethodKey, val node: CommonInst?, val premise: Set<Pattern>)
+typealias PerPath = Map<PathKey, List<Conclusion>>
+
+/** `this` dominates `b`: every conclusion of `b` at a key has a conclusion of `this` at the same key that subsumes it
+ *  (`subsumes`, Reference.kt; ap.md §8.1). edges.add drops a dominated conclusion, so two schedules can process
+ *  different but equivalent items (Pipeline.quiescent_dominates). */
+fun PerPath.dominates(b: PerPath): Boolean =
+    b.all { (k, ns) -> val ss = this[k].orEmpty(); ns.all { n -> ss.any { s -> subsumes(s, n) } } }
+
+class ClosureResult(val facts: PerPath, val summaries: PerPath, val vulnerabilityKeys: Set<VulnerabilityKey>,
+                    val confirmed: Set<VulnerabilityKey>, val hits: Set<Triple<MethodKey, CommonInst, PathEdge>>)
+
+class FuzzResult(val processed: PerPath, val summaries: PerPath, val vulnerabilityKeys: Set<VulnerabilityKey>,
+                 val confirmed: Set<VulnerabilityKey>, val hits: Set<Triple<MethodKey, CommonInst, PathEdge>>) {
+    companion object {
+        /** The conversions of the engine state: a premise key → its members as patterns; a Facts → its leaves
+         *  (FormsReference.conclusions, per layer); the run summary stores → `summaries`; SourceHitStore → the hits.
+         *  Support (§7.5) on a COMPLETE RunResult of the analyzers marks the witnesses (forward). */
+        fun of(processed: Collection<Pair<MethodKey, EdgeDelta>>, analyzers: List<RunMethodAnalyzer>, shared: SharedObjects,
+               config: RunConfig): FuzzResult {
+            val view = FormsReference(shared.ops)
+            fun premise(k: PremiseKey) = k.members.mapTo(LinkedHashSet()) { it.toPattern() }
+            fun perPath(xs: List<Pair<PathKey, Facts>>): PerPath =
+                xs.groupBy({ it.first }, { view.conclusions(it.second) }).mapValues { (_, cs) -> cs.flatten().distinct() }
+            val facts = perPath(processed.map { (m, d) -> PathKey(m, d.node, premise(d.premise)) to d.facts })
+            val summaries = perPath(analyzers.flatMap { a ->
+                a.summaries.all().map { (p, g) -> PathKey(a.key, null, premise(p)) to g }.toList() })
+            val result = RunResult(RunStatus.COMPLETE, analyzers, config.index, config.direction, shared.vulnerabilities)
+            if (config.direction == Direction.FORWARD) Support(result, config.roots, shared).confirm()
+            val byKey = result.witnessesByKey()
+            val hits = analyzers.flatMapTo(HashSet()) { it.sourceHits?.entries().orEmpty().asIterable() }
+            return FuzzResult(facts, summaries, byKey.keys, byKey.filterValues { ws -> ws.any { it.confirmed } }.keys, hits)
+        }
+    }
+}
+```
+
+The closure:
+
+```kotlin
+/** One input of a literal in the naive join: (premise set, demand bit). */
+private typealias JoinInput = Pair<Set<Pattern>, Boolean>
+
 class NaiveClosure(private val program: ToyProgram, private val config: RunConfig, private val ap: ApManager) {
     data class PFact(val method: MethodKey, val premise: Set<Pattern>, val node: CommonInst, val c: Conclusion)   // BEFORE node
     data class PLink(val callee: MethodKey, val added: Conclusion, val caller: PFact)     // caller: the caller edge at the call
     data class PSummary(val method: MethodKey, val premise: Set<Pattern>, val g: Conclusion)
     data class PRequest(val method: MethodKey, val premise: Pattern, val kind: RequestKind)
-    data class PVuln(val key: VulnerabilityKey, val premise: Set<Pattern>, val demand: Boolean)
+    /** A witness: the key with no context, the alternative and the method key of the witness (§4.9). */
+    data class PVuln(val key: VulnerabilityKey, val alternative: Int, val methodKey: MethodKey, val premise: Set<Pattern>,
+                     val demand: Boolean)
 
     val facts = LinkedHashSet<PFact>(); val links = LinkedHashSet<PLink>(); val summaries = LinkedHashSet<PSummary>()
     val zeroSubs = LinkedHashSet<Pair<MethodKey, PFact>>()          // DB: (callee, the caller edge {zero} -> zero at the call)
@@ -2132,24 +2383,36 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
             conjunction = { cj, premise, c, node, out -> conj(m, cj, premise, c, node, out) }))       // conj, reqConj
     }
     private fun applier(m: MethodKey) = ref(m).applier
+    private fun Conclusion.p() = Pattern(fact, exclusion)
+    private fun zeroIn(layer: Layer) = Conclusion(zero.fact, ExclusionSet.Empty, demand = layer == Layer.DEMAND)
 
     /** ap.md §4.6: the union of premise sets WITHOUT the zero fact; `{zero}` only if every input is `{zero}`. Users: conj,
-     *  fireSinks, ndRet (publish), naiveSupport. */
+     *  fireSinks, ndRet (publish). */
     private fun union(sets: List<Set<Pattern>>): Set<Pattern> =
         sets.flatMapTo(LinkedHashSet()) { it }.apply { remove(zero) }.ifEmpty { setOf(zero) }
 
-    /** The stored inputs of each literal: per (method, conjunctive edge, node), one set per literal of (premise set,
-     *  demand bit). */
-    private val conjInputs = HashMap<Triple<MethodKey, ConjunctiveEdge, CommonInst>, Array<LinkedHashSet<Pair<Set<Pattern>, Boolean>>>>()
+    /** The stored inputs of each literal (ap.md §8.9): of a conjunctive edge per (method, edge, node); of a conjunctive
+     *  sink per (alternative, node). */
+    private val conjInputs = HashMap<Triple<MethodKey, ConjunctiveEdge, CommonInst>, Array<LinkedHashSet<JoinInput>>>()
+    private val sinkInputs = HashMap<Pair<SinkRule, CommonInst>, Array<LinkedHashSet<JoinInput>>>()
 
-    /** conj (ap.md §4.6; Lean ND.conj): the naive per-path k-ary join. A fact on which `markCheck` (Reference.kt) gives
-     *  Holds is one input of the literal, with the demand bit `conjDemand`; a NEW input meets every stored combination of
-     *  the other literals; the result is the target with the `union` of the premise sets (no zero member), demand if one
-     *  input is demand, normalized (W6). On Request: reqConj (run 1), on the one premise of the `*` fact. Without this hook
-     *  the closure has no ND result. */
+    /** The naive k-ary join (Lean ND.conj; Store standing_complete): `input` goes into slot k of `key`; a NEW input gives
+     *  every combination with the stored inputs of the other slots. Users: conj, fireSinks. */
+    private fun <K> join(store: HashMap<K, Array<LinkedHashSet<JoinInput>>>, key: K, arity: Int, k: Int,
+                         input: JoinInput): List<List<JoinInput>> {
+        val slots = store.getOrPut(key) { Array(arity) { LinkedHashSet() } }
+        if (!slots[k].add(input)) return emptyList()
+        return product(List(arity) { j -> if (j == k) listOf(input) else slots[j].toList() })
+    }
+    private fun <T> product(xs: List<List<T>>): List<List<T>> =
+        xs.fold(listOf(emptyList())) { acc, x -> acc.flatMap { p -> x.map { p + it } } }
+
+    /** conj (ap.md §4.6; Lean ND.conj): a fact on which `markCheck` (Reference.kt) gives Holds is one input of the literal,
+     *  with the demand bit `conjDemand`; a NEW input meets every stored combination of the other literals (`join`); the
+     *  result is the target with the `union` of the premise sets (no zero member), demand if one input is demand,
+     *  normalized (ap.md W6). On Request: reqConj (run 1), on the one premise of the `*` fact. */
     private fun conj(m: MethodKey, cj: ConjunctiveEdge, premise: Set<Pattern>, c: Conclusion, node: CommonInst,
                      out: ReferenceSink) {
-        val slots = conjInputs.getOrPut(Triple(m, cj, node)) { Array(cj.literals.size) { LinkedHashSet() } }
         for ((k, lit) in cj.literals.withIndex()) {
             if (lit.fact.base != c.fact.base) continue
             when (val r = markCheck(premise.first(), c, lit)) {             // the premise is read only on a request
@@ -2157,16 +2420,8 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
                 is CheckResult.Request -> { requests += PRequest(m, premise.single(), RequestKind.Mark(r.mark)); continue }
                 CheckResult.Holds -> Unit
             }
-            val input = premise to conjDemand(c, lit)
-            if (!slots[k].add(input)) continue
-            fun product(j: Int, acc: List<Pair<Set<Pattern>, Boolean>>) {
-                if (j == slots.size) {
-                    out(union(acc.map { it.first }), normalize(cj.target, ExclusionSet.Empty, demand = acc.any { it.second }))
-                    return
-                }
-                if (j == k) product(j + 1, acc + input) else for (x in slots[j]) product(j + 1, acc + x)
-            }
-            product(0, emptyList())
+            for (comb in join(conjInputs, Triple(m, cj, node), cj.literals.size, k, premise to conjDemand(c, lit)))
+                out(union(comb.map { it.first }), normalize(cj.target, ExclusionSet.Empty, demand = comb.any { it.second }))
         }
     }
 
@@ -2175,17 +2430,21 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
         do {
             val before = size()
             for (f in facts.toList()) step(f)
-            for (l in links.toList()) linkRules(l)
-            for (q in requests.toList()) for (l in links.toList()) if (l.callee == q.method) requestRule(q, l)
+            for (l in links.toList()) { linkRules(l); retRec(l) }
+            for (q in requests.toList()) for (l in links.toList()) if (l.callee == q.method) requestRule(q, l)   // E2, E5
             for (s in summaries.toList()) publish(s)
             for (z in zeroSubs.toList()) zret(z)
         } while (size() != before)
-        return ClosureResult(facts, summaries, vulnerabilities, hits, confirmed = naiveSupport())
+        return ClosureResult(
+            facts = facts.groupBy({ PathKey(it.method, it.node, it.premise) }, { it.c }),
+            summaries = summaries.groupBy({ PathKey(it.method, null, it.premise) }, { it.g }),
+            vulnerabilityKeys = vulnerabilities.mapTo(HashSet()) { it.key },
+            confirmed = naiveSupport(), hits = hits)
     }
 
-    /** The fact before its node. Liveness (forward). A call: zeroAtCall or the plan walk. Else statement. */
+    /** The step of one fact before its node (§4.3; no liveness check): a call goes to zeroAtCall (the zero fact) or to the
+     *  plan walk; another statement to `statement`. */
     private fun step(f: PFact) {
-        if (forward && !program.isLive(f.method, f.c.fact.base, f.node)) return
         val call = program.callAt(f.node)
         when {
             call == null -> statement(f)
@@ -2194,31 +2453,51 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
         }
     }
 
-    /** step, pass: `applier(m).statement` (the STATEMENT mode of FormApplier: conj, reqStmt, sreqStmt, srcHit and the
-     *  source-seed filter come from ReferenceAlgebra and its hooks), then `limit` (Reference.kt), then `after`. */
-    private fun statement(f: PFact) { /* ... */ }
+    /** step, pass (runStatement, §4.3): the STATEMENT mode of FormApplier at the Place of the engine (conj, reqStmt,
+     *  sreqStmt, srcHit and the source-seed filter come from ReferenceAlgebra and its hooks); each result is cut by
+     *  `limit` (Cut.STATEMENT); an untouched input goes on as it is (the unchanged path). */
+    private fun statement(f: PFact) =
+        applier(f.method).statement(forms.statement(f.method, f.node), f.premise, f.c, Place(f.node, config.run1, sources = true),
+            sink = { pr, x -> after(f.method, f.node, pr, limit(x, config.fieldLimit)) },
+            untouched = { pr, x -> after(f.method, f.node, pr, x) })
 
-    /** A fact after `node`: end(..) at an end node or, forward, at an exceptional exit; a PFact at each successor. */
-    private fun after(m: MethodKey, node: CommonInst, premise: Set<Pattern>, c: Conclusion) { /* ... */ }
+    /** A fact after `node` (emitAfter, exitRulesAt, §4.3): the end rules at an end node, or, forward, the exit rules of an
+     *  exceptional exit with no summary; then a PFact at each successor. */
+    private fun after(m: MethodKey, node: CommonInst, premise: Set<Pattern>, c: Conclusion) {
+        if (node in forms.endNodes(m)) end(m, node, premise, c, summary = true)
+        else if (forward && forms.interp.exitNodes(m).any { it.node == node && it.exceptional }) end(m, node, premise, c, summary = false)
+        for (s in program.successors(m, node, config.direction)) facts += PFact(m, premise, s, c)
+    }
 
-    /** zpass for every premise. For the premise {zero} ONLY (Backward.lean:158-180): forward, `walk` from the entry (the
-     *  walk gives zpass too: the zero fact passes over AND enters, through the zero binding, the unconditional sinks, the
-     *  sources and the callees); backward, zpass (`after`), seed (the sink seeds, premise {zero}, cut by `limit`, `walk`
-     *  from BOUND), zin (addInitial(callee, zero)) and a zeroSubs entry per resolved callee. Another premise: zpass only. */
-    private fun zeroAtCall(f: PFact, call: CommonCallExpr) { /* ... */ }
+    /** The zero fact at a call (zeroAtCall, §4.10; DD7, Backward.lean:158-180). Forward (premise {zero} only): the walk from
+     *  the entry gives zpass and the zero binding (the unconditional sinks, the sources, the callees). Backward: zpass for
+     *  every premise; for {zero} ONLY also seed (the sink seeds, a walk from BOUND), zin (the zero fact of each resolved
+     *  callee) and a zeroSubs entry per resolved callee (zret). */
+    private fun zeroAtCall(f: PFact, call: CommonCallExpr) {
+        val isZero = f.premise == setOf(zero)
+        if (forward) { check(isZero); walk(f, call, listOf(PlanItem(f.premise, f.c, null))); return }
+        after(f.method, f.node, f.premise, f.c)                                                 // zpass
+        if (!isZero) return                                                                     // `jb -> zero` only passes
+        val seeds = sinkSeeds(f.method, f.node).map { PlanItem(f.premise, it, null) }           // seed
+        if (seeds.isNotEmpty()) walk(f, call, seeds, from = CallPoint.BOUND)
+        for (m in forms.call(f.method, f.node, call).stages.filterIsInstance<CallStage.Callees>().flatMap { it.callees }) {
+            addInitial(m, zero)                                                                 // zin
+            zeroSubs += m to f                                                                  // zret
+        }
+    }
 
     /** ap.md §5.3 per path, with the guards of the engine: `FormsReference.run` (ap-impl.md §23.8) does the walk (the
      *  relevance, the zero fact passes over and enters, every stage in STAGE mode, `StageKind.originOf`, the END_FACTS
      *  and MemoryEffect guards, PASS_OVER backward). The closure gives its rules as hooks. `from`: the entry; BOUND for a
-     *  seed; the end point of the callees stage (RETURNED forward, ADDED backward) for a summary result (`publish`, `zret`).
+     *  seed; the end point of the callees stage (RETURNED forward, ADDED backward) for a summary result (`resume`).
      *  Every item at the exit point is a fact after the call. */
     private fun walk(f: PFact, call: CommonCallExpr, items: List<PlanItem>, from: CallPoint? = null) {
         val plan = forms.call(f.method, f.node, call)
         val hooks = PlanHooks(
             guards = forward,                                                        // a reversed plan has no guard
-            atBound = { xs -> fireSinks(f.method, f.node, plan.sinks, xs) },         // vuln, reqSink; the fired sinks
+            atBound = { xs -> fireSinks(f.method, f.node, plan.sinks, xs).sinks },   // vuln, reqSink; the fired sinks
             callees = { st, i ->                                                     // a PLink per callee; the results come
-                for (m in st.callees) links += PLink(m, i.c, f.copy(premise = i.premise))   // by `publish` (from = callees.to)
+                for (m in st.callees) links += PLink(m, i.c, f.copy(premise = i.premise))   // by `publish`, `retRec` (resume)
                 emptyList() },
             clean = { cl, i ->                                                       // cleanRes (Reference.kt); reqClean
                 val o = cleanRes(cl, i.c)
@@ -2230,47 +2509,217 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
             if (p == plan.exit) after(f.method, f.node, i.premise, i.c)
     }
 
-    /** At BOUND (forward): vuln and reqSink by `markCheck` (Reference.kt) of each pattern of each sink of the plan on each
-     *  item; a conjunctive sink joins its literals as `conj` does (a witness per new combination, the `union` of the premise
-     *  sets, demand if one input is demand). Gives each sink that triggered with the layer of its sink edge. */
-    private fun fireSinks(m: MethodKey, node: CommonInst, sinks: List<SinkRule>, items: List<PlanItem>): List<Pair<SinkRule, Layer>> { /* ... */ }
+    /** The sinks that triggered (with the layer of the sink edge or of the combination), and the EVALUATED facts. */
+    private class Fired(val sinks: List<Pair<SinkRule, Layer>>, val evaluated: Set<Conclusion>) {
+        companion object { val NONE = Fired(emptyList(), emptySet()) }
+    }
 
-    /** The end rules (DirectedForms.endRules, both directions): the exit sources (`applier(m).statement`), the exit sinks
-     *  and the end facts of each sink that triggered (`applier(m).gen`), the global-state rule, the entry-mark parts; then a PSummary if
-     *  isSummaryBase. At a forward exceptional exit: only the exit sources and the exit sinks with their end facts; no
-     *  PSummary. Backward: the reversed entry rules and their GEN end facts. */
-    private fun end(f: PFact) { /* ... */ }
+    /** vuln, reqSink (checkSinks, §4.9; forward only): `markCheck` (Reference.kt) of each pattern of each sink on each
+     *  item. A plain sink: a witness per item that a pattern holds on, in the layer of the item. A conjunctive sink: the
+     *  item is the input of that literal (`join`, per alternative and node); a witness per new combination, with the
+     *  `union` of the premise sets, demand if one input is demand. Every item that a pattern holds on is EVALUATED, also
+     *  with no full combination (the global-state rule, `end` step 3). */
+    private fun fireSinks(m: MethodKey, node: CommonInst, sinks: List<SinkRule>, items: List<PlanItem>): Fired {
+        val fired = LinkedHashSet<Pair<SinkRule, Layer>>()
+        val evaluated = HashSet<Conclusion>()
+        for (i in items) for (s in sinks) for ((k, lit) in s.patterns.withIndex()) when (val r = markCheck(i.premise.first(), i.c, lit)) {
+            CheckResult.None -> Unit
+            is CheckResult.Request -> requests += PRequest(m, i.premise.single(), RequestKind.Mark(r.mark))     // reqSink
+            CheckResult.Holds -> {
+                evaluated += i.c
+                val input: JoinInput = i.premise to i.c.demand
+                for (comb in if (s.conjunctive) join(sinkInputs, s to node, s.patterns.size, k, input) else listOf(listOf(input))) {
+                    val demand = comb.any { it.second }
+                    vulnerabilities += PVuln(VulnerabilityKey(s.rule, m.method, node), s.alternative, m, union(comb.map { it.first }), demand)
+                    fired += s to if (demand) Layer.DEMAND else Layer.NORMAL
+                }
+            }
+        }
+        return Fired(fired.toList(), evaluated)
+    }
 
-    /** initA (run 1: the policy fact; the zero fact for zero); initR (restricted: `emit` (Reference.kt) for every demand
-     *  pattern of the callee; the zero demand for zero). E2: requestRule for every standing request of the callee. */
-    private fun linkRules(l: PLink) { /* ... */ }
+    /** THE RULE ORDER OF A BOUNDARY (RuleWorklist, §4.4), at the SAME Place: step 1 the rule summary in STATEMENT mode at
+     *  Place(node, run1, sources = true); step 2 forward the sinks (`fireSinks`) and the end facts of each fired sink (GEN
+     *  on the zero fact, in the layer of the trigger), backward the reversed end facts (GEN). Every result is cut by
+     *  `limit` and kept once (by value, DD4). Gives each item with its flag: a sink pattern held on it. */
+    private fun boundary(m: MethodKey, rules: RuleStatement, node: CommonInst,
+                         inputs: List<Pair<Set<Pattern>, Conclusion>>): List<Triple<Set<Pattern>, Conclusion, Boolean>> {
+        val items = ArrayList<Pair<Set<Pattern>, Conclusion>>()
+        val seen = HashSet<Pair<Set<Pattern>, Conclusion>>()
+        val add: ReferenceSink = { pr, x -> val t = limit(x, config.fieldLimit); if (seen.add(pr to t)) items += pr to t }
+        for ((pr, c) in inputs) applier(m).statement(rules.summary, pr, c, Place(node, config.run1, sources = true), add)   // 1
+        val out = ArrayList<Triple<Set<Pattern>, Conclusion, Boolean>>()
+        var k = 0
+        while (k < items.size) {
+            val (pr, c) = items[k++]
+            val fired = if (forward) fireSinks(m, node, rules.sinks, listOf(PlanItem(pr, c, null))) else Fired.NONE   // 2
+            for ((sink, layer) in fired.sinks) applier(m).gen(sink.endFacts, setOf(zero), zeroIn(layer), add)
+            if (!forward) applier(m).gen(rules.endFacts.edges, pr, c, add)                       // the reversed end facts
+            out += Triple(pr, c, c in fired.evaluated)
+        }
+        return out
+    }
 
-    /** Run 1 only. answer, sanswer (a new initial fact), reqUp, sreqUp (a PRequest in the caller, on the caller premise):
-     *  the rows of ap.md §4.5 and §4.10 items 2 to 4, with `answer` (Reference.kt). */
-    private fun requestRule(q: PRequest, l: PLink) { /* ... */ }
+    /** The end rules (endAt, §4.7; DirectedForms.endRules, both directions): steps 1 and 2 by `boundary`; at a normal
+     *  exit also 3 (an EVALUATED static goes), 4 (the root `$` leaf of an entry mark goes from a {zero} result) and 5 (a
+     *  PSummary if isSummaryBase). `summary = false`: a forward exceptional exit, steps 1 and 2 only. Backward: the
+     *  reversed entry rules (their ExitRules have no step 3 or 4). */
+    private fun end(m: MethodKey, node: CommonInst, premise: Set<Pattern>, c: Conclusion, summary: Boolean) {
+        val er = forms.endRules(m, node)
+        for ((pr, x, evaluated) in boundary(m, er.rules, node, listOf(premise to c))) {
+            if (!summary) continue                                                              // the facts end there
+            if (er.globalStateDrop && x.fact.base == AccessPathBase.ClassStatic && evaluated) continue   // 3
+            if (pr == setOf(zero) && x.fact in er.entryMarkParts(x.fact.base)) continue          // 4
+            if (forms.interp.isSummaryBase(x.fact.base)) summaries += PSummary(m, pr, x)         // 5
+        }
+    }
 
-    /** ret: run 1 `applicable(j, a)`; a restricted run: `restrict` (Reference.kt) by every demand pattern of the callee,
-     *  then `inside(j, a)`; a backward {zero} summary goes to zret only. ndRet: one link per member at one call statement
-     *  (no member is the zero fact, so no zero link), the result premise the `union` of the caller premise sets.
-     *  retRec: every record of the view, `applicable || inside`; the other direction through `revEdge`. Each result goes
-     *  on with `walk(caller, call, results, from = callees.to)`, its Origin SUMMARY_EFFECT or IDENTITY (AC4 per summary edge). */
-    private fun publish(s: PSummary) { /* ... */ }
+    /** initA (run 1: the policy fact, `policy`, ap.md §6.2), initR (restricted: `emit` for each demand pattern of the
+     *  callee near the added fact, ap.md §6.3); the zero fact for the zero added fact (the zero demand). E2 is the
+     *  request loop of `run`. */
+    private fun linkRules(l: PLink) {
+        val a = l.added.p()
+        when {
+            a.fact.base == AccessPathBase.Zero -> addInitial(l.callee, zero)
+            config.run1 -> addInitial(l.callee, policy(a))
+            else -> for (d in config.demand!!.near(l.callee, a.fact.base, ap.path(a.fact.path)))
+                emit(d.entry, a)?.let { addInitial(l.callee, it) }
+        }
+    }
 
-    /** zret: a {zero} -> g summary of the callee applies to the caller edge {zero} -> zero with no test, no restriction;
-     *  `walk` from the end point of the callees stage. */
-    private fun zret(z: Pair<MethodKey, PFact>) { /* ... */ }
+    /** Run 1 only (a restricted run has no request). The rows of ap.md §4.5 and §4.10 items 2 to 4 for one (request,
+     *  link): answer and sanswer give a new initial fact (`answer`, Reference.kt); reqUp and sreqUp give a PRequest in the
+     *  caller, on the one premise of the caller edge. */
+    private fun requestRule(q: PRequest, l: PLink) {
+        val a = l.added.p()
+        val up = l.caller.premise.singleOrNull()
+        when (val k = q.kind) {
+            is RequestKind.Mark -> if (overlap(a, q.premise)) when (val am = a.fact.mark) {
+                is MarkSlot.Concrete -> if (am.mark == k.mark) addInitial(q.method, answer(q.premise, a, k.mark))   // answer
+                is MarkSlot.Star -> if (k.mark !in am.excluded) requests += PRequest(l.caller.method, up!!, k)        // reqUp
+            }
+            is RequestKind.Position -> {
+                val p = k.path.toList()
+                if (a.fact.base != AccessPathBase.ClassStatic) return
+                if (a.fact.path.startsWith(p))                                                    // sanswer (item 2)
+                    addInitial(q.method, Pattern(PathFact(AccessPathBase.ClassStatic, p, Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty))
+                else if (p.startsWith(a.fact.path) && up?.fact?.base == AccessPathBase.ClassStatic)
+                    requests += PRequest(l.caller.method, up, k)                                  // sreqUp (item 3)
+            }
+        }
+    }
 
-    /** start and the start rules (§4.4): the entry rules; backward, the reversed exit rules of that exit (normal or
-     *  exceptional) on the start fact and on each exit sink seed of that exit (premise {zero}, cut by `limit`). */
+    /** ret (applySummary, §4.6): a summary of the callee applies to each link whose added fact satisfies its premise
+     *  (`satisfies`: run 1 `applicable`, restricted `inside`); a restricted run first restricts it (`restricted`). ndRet
+     *  (ndMatch, §4.11; ND.DN.ndBind): a premise set of k members needs one link per member at ONE call statement; the
+     *  result premise is the `union` of the caller premise sets (no member is zero, so no zero link), demand if one
+     *  application is demand. A backward {zero} summary goes to zret only. Each result goes on from the end point of the
+     *  callees stage (`resume`) with its Origin (`origin`). */
+    private fun publish(s: PSummary) {
+        if (!forward && s.premise == setOf(zero)) return                                        // zret only
+        val members = s.premise.toList()
+        val gs = if (config.run1) listOf(s.g) else restricted(s)
+        for (calls in links.filter { it.callee == s.method }.groupBy { it.caller.method to it.caller.node }.values) for (g in gs) {
+            val choices = members.map { j -> calls.mapNotNull { l ->
+                if (!satisfies(j, l.added.p(), config.restricted)) null else applyS(l.added, j, g)?.let { l to it } } }
+            if (members.size == 1)
+                for ((l, x) in choices[0]) resume(l.caller, PlanItem(l.caller.premise, x, origin(members[0], g)))      // ret
+            else for (combo in product(choices))                                                                    // ndRet
+                resume(combo[0].first.caller, PlanItem(union(combo.map { it.first.caller.premise }),
+                    combo[0].second.copy(demand = combo.any { it.second.demand }), Origin.SUMMARY_EFFECT))
+        }
+    }
+
+    /** ap.md §6.4 (restrict, §4.7): the conclusion restricted by every demand pattern near each member; each result once. */
+    private fun restricted(s: PSummary): List<Conclusion> = s.premise.flatMap { j ->
+        config.demand!!.near(s.method, j.fact.base, ap.path(j.fact.path)).mapNotNull { d -> restrict(j, s.g, d) }.toList()
+    }.distinct()
+
+    /** ap.md §4.3 per path: applySummary(a, j, g) = concat(a, j -> g, edgeDemand = the layer of g). A satisfied premise
+     *  raises no request (Coverage.summary_step). */
+    private fun applyS(a: Conclusion, j: Pattern, g: Conclusion): Conclusion? =
+        (concat(a, PathEdge(j.fact, g.fact, j.exclusion.union(g.exclusion)), edgeDemand = g.demand,
+            restricted = config.restricted) as? EdgeOutcome.Fact)?.conclusion
+
+    /** THE ALIAS GUARD per path (summaryParts, §4.6): IDENTITY only for a NORMAL conclusion equal to the start fact of j;
+     *  every other one, every DEMAND one and every one of a zero premise is SUMMARY_EFFECT. */
+    private fun origin(j: Pattern, g: Conclusion) =
+        if (j != zero && !g.demand && g == startFact(j)) Origin.IDENTITY else Origin.SUMMARY_EFFECT
+
+    /** retRec (replayRecords, §5.3; ap.md §8.7 R2–R4): restricted runs only. A record of this direction applies when
+     *  `applicable || inside`; a record of the other direction applies through `revEdge` of each conclusion leaf (R3; the
+     *  new premise has the empty exclusion, ap.md §9.1). A record is not restricted. */
+    private fun retRec(l: PLink) {
+        if (config.run1) return                                                                 // run 1 reads no record
+        val a = l.added.p()
+        val edges = LinkedHashSet<Pair<Pattern, Conclusion>>()                                  // (premise, conclusion), by value
+        for (r in config.records.byEntry(l.callee, a)) if (r.direction == config.direction)
+            for (g in ops.leaves(r.conclusion)) edges += r.premise.toPattern() to Conclusion(g.fact, g.exclusion, demand = false)
+        for (r in config.records.byExit(l.callee, a)) if (r.direction != config.direction) {
+            val p = r.premise.toPattern()
+            for (g in ops.leaves(r.conclusion)) revEdge(PathEdge(p.fact, g.fact, p.exclusion.union(g.exclusion)))
+                ?.let { e -> edges += Pattern(e.from, ExclusionSet.Empty) to Conclusion(e.to, e.exclusion, demand = false) }
+        }
+        for ((j, g) in edges) if (applicable(j, a) || inside(j, a))
+            applyS(l.added, j, g)?.let { resume(l.caller, PlanItem(l.caller.premise, it, origin(j, g))) }
+    }
+
+    /** zret (Backward.DB; the zeroOnly branch of applySummary, §4.6): a {zero} -> g summary of the callee applies to the
+     *  caller edge {zero} -> zero with no test and no restriction; the result has the zero premise of the caller. */
+    private fun zret(z: Pair<MethodKey, PFact>) {
+        val (callee, caller) = z
+        for (s in summaries.toList()) if (s.method == callee && s.premise == setOf(zero))
+            resume(caller, PlanItem(caller.premise, s.g, Origin.SUMMARY_EFFECT))
+    }
+
+    /** A result of the callees stage goes on from its end point (RETURNED forward, ADDED backward), as fromCallees (§4.6). */
+    private fun resume(caller: PFact, item: PlanItem) {
+        val call = program.callAt(caller.node)!!
+        val callees = forms.call(caller.method, caller.node, call).stages.first { it is CallStage.Callees }
+        walk(caller, call, listOf(item), from = callees.to)
+    }
+
+    /** rule seed (ap.md §9.2; fireSinkSeeds, §4.9): each sink seed at (m, n): the requirement in the normal layer (an
+     *  `[any]` requirement is demand, ap.md W6), cut by `limit`. */
+    private fun sinkSeeds(m: MethodKey, n: CommonInst): List<Conclusion> =
+        config.seeds.at(m, n).filterIsInstance<Seed.Sink>()
+            .map { limit(normalize(it.requirement.fact, ExclusionSet.Empty, demand = false), config.fieldLimit) }
+
+    /** start (addInitial, §4.2): each new initial fact starts with its start fact (`startFact`, ap.md §6.5) at every start
+     *  node of its kind. */
     private fun addInitial(m: MethodKey, j: Pattern) {
         if (initials.add(m to j)) for (n in forms.startNodes(m, j.fact.base == AccessPathBase.Zero))
-            startRules(m, setOf(j), n, startFact(j))                                // startFact: ap.md §6.5 (Reference.kt)
+            startRules(m, setOf(j), n, startFact(j))
     }
-    private fun startRules(m: MethodKey, premise: Set<Pattern>, n: CommonInst, c: Conclusion) { /* ... */ }
 
-    /** The confirmation of the reference: Confirmed.Sup / NDConfirmed.SupN as a naive least fixed point over `links`; a
-     *  sink edge set is confirmed on the `union` of its premise sets. */
-    private fun naiveSupport(): Set<VulnerabilityKey> { /* ... */ }
+    /** The start rules (startAt, §4.4), by `boundary`: forward the entry rules; backward the reversed exit rules of that
+     *  exit (normal or exceptional) on the start fact and, for the premise {zero}, on each sink seed of that exit. */
+    private fun startRules(m: MethodKey, premise: Set<Pattern>, n: CommonInst, c: Conclusion) {
+        val seeds = if (!forward && premise == setOf(zero)) sinkSeeds(m, n).map { setOf(zero) to it } else emptyList()
+        for ((pr, x, _) in boundary(m, forms.startRules(m, n), n, listOf(premise to c) + seeds)) facts += PFact(m, pr, n, x)
+    }
+
+    /** The confirmation of the reference (Support, §7.5; Lean Confirmed.Sup, NDConfirmed.SupN): a naive least fixed point
+     *  over `links`. (m, P) is supported if m is a root and P = {zero}, or if every member of P is zero or exact concrete
+     *  and ONE call statement has, per member, a normal link (normal added fact, normal caller edge) with an EQUAL added
+     *  fact whose caller premise set is supported. A witness is confirmed if it is normal, its premise set (the `union`)
+     *  has only zero or exact concrete members, and the set is supported in the method key of the witness. */
+    private fun naiveSupport(): Set<VulnerabilityKey> {
+        fun exactOrZero(j: Pattern) = j == zero || (j.fact.tail == Tail.EXACT && j.fact.mark is MarkSlot.Concrete)
+        val normal = links.filter { !it.added.demand && !it.caller.c.demand }
+        val sup = config.roots.mapTo(HashSet()) { it to setOf(zero) }
+        fun supplied(m: MethodKey, p: Set<Pattern>) = p.all(::exactOrZero) &&
+            normal.filter { it.callee == m && (it.caller.method to it.caller.premise) in sup }
+                .groupBy { it.caller.method to it.caller.node }.values
+                .any { site -> p.all { j -> site.any { it.added.p() == j } } }
+        val candidates = facts.mapTo(LinkedHashSet()) { it.method to it.premise } + vulnerabilities.map { it.methodKey to it.premise }
+        do {
+            val before = sup.size
+            for ((m, p) in candidates) if ((m to p) !in sup && supplied(m, p)) sup += m to p
+        } while (sup.size != before)
+        return vulnerabilities.filter { !it.demand && it.premise.all(::exactOrZero) && (it.methodKey to it.premise) in sup }
+            .mapTo(HashSet()) { it.key }
+    }
 
     private fun size() = facts.size + links.size + summaries.size + zeroSubs.size + initials.size + requests.size +
         vulnerabilities.size + hits.size
@@ -2281,13 +2730,13 @@ class NaiveClosure(private val program: ToyProgram, private val config: RunConfi
 class ScheduleFuzzTest {
     @Test
     fun `every schedule reaches the same closure`() {
-        for (program in ToyPrograms.all) {                    // program 1 (ap.md §6.3), program 2 (ap.md §6.4), the backward cases
+        for (program in ToyPrograms.all) {                    // programs 1 (ap.md §6.3), 2 (ap.md §6.4), 3 (§9.1), the backward cases
             for (config in program.runs()) {                  // run 1, a restricted forward run, a backward run
                 val reference = NaiveClosure(program, config, program.ap).run()
                 repeat(200) { seed ->
                     val got = FuzzRun(config, program.shared(), seed.toLong()).run()
                     assertEquals(reference.vulnerabilityKeys, got.vulnerabilityKeys, "seed $seed")
-                    assertEquals(reference.confirmed, got.confirmedKeys, "seed $seed")
+                    assertEquals(reference.confirmed, got.confirmed, "seed $seed")
                     assertEquals(reference.hits, got.hits, "seed $seed")                    // backward: the source hits
                     assertTrue(got.processed.dominates(reference.facts) && reference.facts.dominates(got.processed), "seed $seed")
                     assertTrue(got.summaries.dominates(reference.summaries) && reference.summaries.dominates(got.summaries), "seed $seed")
@@ -2298,9 +2747,8 @@ class ScheduleFuzzTest {
 }
 ```
 
-`FuzzResult.processed` holds, per method, node and premise set, the leaves (`ops.leaves`, as `Conclusion`s) of every
-processed item. `dominates` reads `subsumes` of `Reference.kt` (`ap.md` §8.1): `edges.add` drops a dominated
-conclusion, so two schedules can process different but equivalent items (`Pipeline.quiescent_dominates`).
+`FuzzResult.processed` holds, per `PathKey`, the leaves (`FormsReference.conclusions`) of every processed item, from
+both queues of `DeltaWorklist`. The two results compare per `PathKey` with `dominates` in both directions.
 `program.shared()` makes new stores per seed (a new `ConcurrentVulnerabilityStore`, `PersistentRecordStore`).
 
 ### 9.3 Proof-first map
@@ -2371,11 +2819,12 @@ second test publishes first and subscribes after; it asserts the same `hit.first
 
 ## 10. Spec issues
 
-This document implements `analyzer-core.md` as it is. These points of the spec need a decision:
+This document implements `analyzer-core.md` as it is. These points of the spec need a decision; the right column says
+what this document does:
 
 | # | `analyzer-core.md` | Problem | What this document does |
 |---|---|---|---|
-| 1 | §10, §7.5 | `RunResult` has no flag for "every runner was joined". `analyzer-core.md` §7.5 reads it for an incomplete forward run. | `RunResult.allJoined` (§3.2, §7.1). |
-| 2 | §13 item 3 | The `[any]` delivery case exists only in a restricted run (`inside`). In run 1, `applicable` rejects a fact above the premise. | `AnyDeliveryTest` runs in run 3 (§9.4). |
-| 3 | §4.8, §4.9 | The cache keeps the forms per method, or per (method, statement). But the call plans and the entry rules read the context of the method key (the callees, the start filter). | The forms are per method key (DD6; `ap-impl.md` §31.2). |
-| 4 | §0, §6.3, §7.1 | `analyzer-core.md` §0 puts the budget in the iteration policy, and `analyzer-core.md` §6.3 ends a run by a timeout. But `IterationPolicy` and `RunManager.run()` take no budget. | `IterationPolicy.timeout`, `IterationDriver(policy, shared, budget)`, `RunManager.run(timeout)` (§3.2, §7.1). |
+| 1 | §13 item 3 | The `[any]` delivery case exists only in a restricted run (`inside`). In run 1, `applicable` rejects a fact above the premise. | `AnyDeliveryTest` runs in run 3 (§9.4). |
+| 2 | §4.8, §4.9 | The cache keeps the forms per method, or per (method, direction). But the call plans and the entry rules read the context of the method key (the callees, the start filter). | The forms are per method key (DD6; `ap-impl.md` §31.2). |
+| 3 | §0, §6.3, §7.1 | `analyzer-core.md` §0 puts the budget in the iteration policy, and `analyzer-core.md` §6.3 ends a run by a timeout. But `IterationPolicy` and `RunManager.run()` take no budget. | `IterationPolicy.timeout`, `IterationDriver(policy, shared, budget)`, `RunManager.run(timeout)` (§3.2, §7.1). |
+| 4 | §8 | The spec keeps the progress log. Today's progress job reads runner-local statistics from another thread. | The progress log reads only the atomic counters of `InFlight` and the memory usage (§3.2); today's per-method statistics are not kept (§2.1). |
