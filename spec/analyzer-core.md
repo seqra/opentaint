@@ -11,7 +11,8 @@ PIPELINE between the methods, the scheduling and the end of a run, and the ITERA
 the runs. Appendix A gives the analysis of today's analyzer that the design starts from.
 
 The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`,
-`PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`). Every theorem named here
+`PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`), `PipelineNDZ.lean` (with
+`NDZ.lean`, `NDZeroBase.lean`). Every theorem named here
 is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
 Language: ASD-STE100 Simplified Technical English.
@@ -679,7 +680,8 @@ publication. The caller combines it in its conjunction store (`ap.md` §8.9):
 * Key: (callee, premise key, layer of the publication, call statement). Value: the merged conclusion that has arrived
   so far, and per premise index `m` the subscriptions at that call statement whose added fact satisfies `jm`.
 * A subscription goes under EVERY index that it satisfies. No member is the zero fact (`ap.md` §4.6: a conjunction
-  drops the zero fact), so the zero subscription never takes part. The backward run has no summary with several
+  drops the zero fact), so the zero subscription never takes part (`PipelineNDZ.clDNz_ndpub_no_zero`,
+  `clDNz_ndpub_zero_sub`). The backward run has no summary with several
   premises: it reverses a conjunction into one micro edge per literal (`ap.md` §9.2).
 * A new subscription under an index: combine it with the stored subscriptions of the other indexes (one per index,
   every combination), and apply the stored conclusion to each full combination.
@@ -720,6 +722,8 @@ theorems hold for every real schedule.
 | `PipelineAP.clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff` | On the objects of the AP closure, the closure of the encoded system is exactly the AP closure. The closures: run 1 (`D`), a restricted run (`DR`), the backward run (`DB`), run 1 with the static rule (`DS`), run 1 with the conjunctions (`DN`). The partial matches of `DN` are internal to the k-ary join (`clDN_npart`). |
 | `PipelineAP.clD_link`, `clD_sub`, `clD_pub` and their `DR`, `DB`, `DS`, `DN` forms | the link, the subscription and the publication objects are exactly the data that the closure rules read |
 | `PipelineAP.sysD_wf` and the other `*_wf` | each encoded system is well-formed (`Sys.WF`): every local rule has at least one premise, all of one actor; every join has subscriptions of one actor and one topic and a publication |
+| `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, the object theorems (`clDNz_link`, `clDNz_sub`, `clDNz_pub`, `clDNz_ndpub`, `clDNz_npart`) | the encoding of the ND closure of the spec, `NDZ.DNz` (the union of the premise sets without the zero fact, `ap.md` §4.6, §10.10): it is well formed, and at a reachable quiescent state the processed objects are exactly `DNz` (no partial match) |
+| `PipelineNDZ.clDNz_ndpub_no_zero`, `clDNz_ndpub_zero_sub`, `joinNz_nd_no_zero_sub` | no index of a k-ary join is the zero fact, and (under `NDZeroBase.NoZeroGen`) the zero subscription satisfies no index (§5.4) |
 
 The encoding (`PipelineAP.lean`): actor = method, topic = callee.
 
@@ -741,7 +745,8 @@ and the unrestricted `zpub` (for `zret`). §4.6 publishes only the unrestricted 
 subscription satisfies the zero premise: no call binds the zero base (`ap.md` S11 (c), Lean `NoZeroBack`).
 
 So at quiescence the analyzer computes exactly the closure that `ap.md` proves sound and exact, in each mode
-(`quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`).
+(`quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`). With
+conjunctions the closure is `NDZ.DNz`, the ND closure with the zero-drop of `ap.md` §4.6 (`PipelineNDZ.result_DNz`).
 
 THE MODEL AND THE CODE. Actor: a `RunMethodAnalyzer`. `known`: the RUN stores of the analyzers, the
 `SubscriptionManager` tries and the `SummaryStorage` tries. `inbox`: the channels, the local queues, the worklists,
@@ -1196,6 +1201,7 @@ stop the run. They do not change the closure of a complete run.
 | `PipelineAP.lean` | the encodings of `D`, `DR`, `DB`, `DS`, `DN`; the `*_wf` theorems; `clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff`; the object theorems (`clD_link`, `clD_sub`, `clD_pub` and the other forms) |
 | `PipelineStore.lean` | the completeness of the index lookups of §5.3 (`replay_run1`, `deliver_run1`, `replay_restricted`, `deliver_restricted`, `record_lookup`) |
 | `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB`, `driver_iteration`, `driver_iteration_upto` |
+| `PipelineNDZ.lean` (with `NDZ.lean`, `NDZeroBase.lean`) | the encoding of `NDZ.DNz`: `sysDNz_wf`, `clDNz_iff`, `result_DNz`, `clDNz_ndpub_zero_sub` (§5.4, §5.5) |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
 
 ---
