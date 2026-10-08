@@ -90,7 +90,7 @@ Inside this scope:
 |---|---|
 | base | A local, an argument, `this`, the return value (`ret`), the exception, a constant, the static base `S` (`ClassStatic`), or the zero base. |
 | static base `S` | The base that holds every static field (JVM) and every global (Go) at a static path (§4.10). |
-| accessor | A field, an array element, a class accessor `<C>`, or another structural step (type info, value). Not a mark, not `[any]`, not `$`. The set of accessors is unbounded: for each finite set of accessors there is an accessor outside it. So a `*/E` tail always admits a continuation other than `[]`, and `*/E` is never `$`. |
+| accessor | A field, an array element, or a class accessor `<C>`. Not a mark, not `[any]`, not `$`, not a type-info or value accessor (the prescan only, W5). The set of accessors is unbounded: for each finite set of accessors there is an accessor outside it. So a `*/E` tail always admits a continuation other than `[]`, and `*/E` is never `$`. |
 | counted accessor | A field or an element accessor. The field limit counts only these. |
 | path | A finite list of accessors. |
 | chain | The base and the concrete path of a fact or of a pattern, without its tail and its mark. |
@@ -106,7 +106,7 @@ Inside this scope:
 | fact | A tuple (base, path, tail, exclusion, mark). §2. |
 | premise | An initial fact of an edge: a fact that the edge depends on, at the method entry (forward run) or at the method exit (backward run). Every edge has a PREMISE SET. The zero fact is a premise like every other initial fact: a zero-to-fact edge has the premise set `{zero}` (§2.4). |
 | conclusion | The final fact of an edge: the fact at a statement. |
-| edge | (premise set, layer, statement, conclusion), with one exclusion. §4.6 names the edge by the number of its premises that are not the zero fact: none, a ZERO-TO-FACT edge (the premise set `{zero}`); one, a FACT-TO-FACT edge (the premise set `{i}`, or `{zero, i}` for a conjunction result); two or more, an ND edge. |
+| edge | (premise set, layer, statement, conclusion), with one exclusion. §4.6 names the edge by the number of its premises that are not the zero fact: none, a ZERO-TO-FACT edge (the premise set `{zero}`); one, a FACT-TO-FACT edge (the premise set `{i}`); two or more, an ND edge. A premise set with two or more members never contains the zero fact (§4.6). |
 | propagation edge | An edge that the analysis derives and propagates inside a method. Not a micro edge. |
 | caller edge | The propagation edge `(i, layer) → c` of the caller at a call statement (`i` is its premise set). The call binds its conclusion `c` into the callee (§5.3). |
 | caller fact | The conclusion `c` of a caller edge, in caller coordinates. After a binding edge it is a bound fact, and after the cleaners an added fact. A summary edge of the callee applies to the added fact, not to the caller fact (§4.3). |
@@ -235,9 +235,9 @@ with `star`, `conc t`, `starEx x`) and `AFact` (a conclusion plus `demand : Bool
 | W2 | A conclusion with the `*` tail has the mark `*` or `*∖X` and is in the normal layer. A premise may have the `*` tail with a concrete mark (a request answer in run 1; in a restricted run, the meet of an added fact with a `*/E` entry pattern). |
 | W3 | In a run with the field limit `L`, every result of an operation has at most `L` counted accessors (§4.4). This holds if the field limit does not decrease from run to run (§6.6): then a premise emitted from a demand chain (§6.3) and a fact that passes an untouched base are also in the bound. A micro edge (§4.2) has no bound. W3 is argued, not proved (§11.2). |
 | W4 | `[any]` is a tail only. A path has no inner `[any]`. |
-| W5 | Marks are not accessors. `TaintMarkAccessor`, `FinalAccessor` and `AnyAccessor` do not occur in a path. |
+| W5 | Marks are not accessors. `TaintMarkAccessor`, `FinalAccessor` and `AnyAccessor` do not occur in a path. `TypeInfoAccessor`, `TypeInfoGroupAccessor` and `ValueAccessor` do not occur either: the type-info accessors serve only the lambda analysis of the prescan, and no statement and no rule makes a value accessor. |
 | W6 | A conclusion with the `[any]` tail is in the demand layer. |
-| W7 | Only a conclusion has a mark exclusion. An edge whose premise set has two or more members (an ND edge, or a conjunction result `{zero, i}`, §4.6) has no `*` tail. |
+| W7 | Only a conclusion has a mark exclusion. An edge whose premise set has two or more members (an ND edge, §4.6) has no `*` tail. |
 
 W2 holds for every derived fact, in run 1 and in every forward restricted run (`Invariant.final_star_legal`,
 `RExact.final_star_legalR`). The backward run is concrete (`BExact.DB_concrete`); that it satisfies W2 is argued (§11.2).
@@ -258,11 +258,11 @@ fact has the mark `*` or `*∖X` (W2). So the mark gate never lets such a fact t
 The zero fact is `(zero, [], $, {}, zeroMark)`. Its one location is the zero location. An unconditional source rule
 is a micro edge from the zero fact (a conditional source reads another fact, `interpreter.md` §4.1). The zero fact is
 a premise like every other initial fact: a zero-to-fact edge is an edge with the premise set `{zero}`, in the normal or
-the demand layer, and a conjunction result can have the zero fact in its premise set (§4.6). The cases where an
+the demand layer. A conjunction drops the zero fact from the union of its premise sets (§4.6). The cases where an
 operation treats the zero fact in a special way:
 
 * the statement transfer (§4.2) and the call (§3.5, §5.3): the zero fact passes, and it enters every resolved callee;
-* the conjunction (§4.6): the zero fact does not count for the name of the edge;
+* the conjunction (§4.6): the union of the premise sets drops the zero fact;
 * the cleaner (§4.7) and the type filter (§4.8): no cleaner is on the zero base, and a type filter on the zero base
   accepts the empty path (S11 (d));
 * the sink check (§4.9): an unconditional sink triggers on the zero fact; the premise set `{zero}` is supported at a
@@ -743,7 +743,8 @@ results, and `Program.WF` puts no bound on a micro edge).
 A micro edge has NO LAYER. The layer belongs to the propagation edge, and only the AP operations of §2.2 change it. The
 interpreter sets no layer. A negated mark literal counts as true for a source, a sink and a pass rule (the reference
 semantics, §3.5). This is the expected over-approximation of a path-insensitive engine, as the conjunction is (§4.6).
-Positive literals on different facts make a conjunction for a source or a pass rule (§4.6), and a conjunctive sink
+Positive literals on different facts make a conjunction for a source (§4.6; a pass rule has no mark-dependent
+condition, `interpreter.md` §4.2), and a conjunctive sink
 (§4.9). Only an unconditional cleaner applies (§4.7, `interpreter.md` §4.2).
 
 The cases below are checked by `decide` in `Cases.lean`. The two static rows follow §4.10. The model checks the read
@@ -798,8 +799,8 @@ The mark condition makes the mark gate pass: a summary application never raises 
 The special cases of the summary application:
 
 * SEVERAL PREMISES. A summary with one premise, applied to a caller edge with a premise set, keeps the premise set of
-  the caller edge. A summary whose premise set has two or more members (an ND summary `{j1, …, jk} → g`, or a
-  conjunction result `{zero, j} → g`) applies through event E6: one added fact per member (§4.6, §5.3).
+  the caller edge. A summary whose premise set has two or more members (an ND summary `{j1, …, jk} → g`) applies
+  through event E6: one added fact per member (§4.6, §5.3).
 * THE BACKWARD RUN. The zero-premise summary of a callee applies to the zero fact of each caller with no restriction
   and no satisfaction test (§9.2, the balanced return).
 * STATICS. A static initial fact is an ordinary premise: run 1 applies its summaries by `applicable`. An added fact
@@ -919,10 +920,11 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   never occurs (assert). A literal has no static exception: on the static base it uses the mark request (§4.10 covers
   only the statement micro edges and the sinks).
 * When a fact arrives, the store combines it with the stored facts of the other literals: one fact per literal, every
-  combination. The result `z.π.t(T)` has the UNION of the premise sets. The zero fact is a member of the union if one
-  input has it. The number of the members that are NOT the zero fact names the edge: 0 gives a zero-to-fact edge (the
-  premise set `{zero}`), 1 a fact-to-fact edge (`{i}` or `{zero, i}`), 2 or more an ND edge. Then the field limit
-  applies to the result (§4.4).
+  combination. The result `z.π.t(T)` has the UNION of the premise sets WITHOUT THE ZERO FACT; if every input has the
+  premise set `{zero}`, the result has `{zero}`. The zero fact adds no condition: it is at every node that an edge
+  reaches (it passes every statement and enters every callee with every other added fact, §5.3), so `{zero, i}` and
+  `{i}` hold at the same points. The number of the members names the edge: `{zero}` a zero-to-fact edge, one member a
+  fact-to-fact edge, two or more an ND edge. Then the field limit applies to the result (§4.4).
 * The result is in the demand layer if one input is in the demand layer, or if its literal does not COVER it
   (`!coversB lit c`: the input has a location that is not a location of the literal, for example an `[any]` input for a
   `$` literal, or an input above the literal). An `[any]` target puts the result in the demand layer too (W6). Lean:
@@ -934,12 +936,18 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   (`ND.TaintN`, below) is path-insensitive in the same way.
 * An ND edge propagates through micro edges with its premise set unchanged. Its conclusion is uncorrelated (`$` or
   `[any]`; W7): a `*` tail is the correlation with ONE premise.
+* An edge whose premise set has two or more members (an ND edge) is ALWAYS a TAINT edge (§7.2), never REACH or FLOW.
+  No member is the zero fact (above), and every member has a concrete mark: an input of a conjunction
+  passes the mark gate of its literal (a concrete mark, S9), and a fact with a concrete mark has a premise with a
+  concrete mark or the zero premise (`Coverage.edge_conc`, S7). The members of a summary with several premises applied
+  at a call (event E6) are concrete for the same reason (§4.3: a concrete premise is satisfied only by a concrete added
+  fact). The conclusion has a concrete mark and no `*` tail (W7).
 * At a call, the callee sees an ordinary added fact. A callee summary `j → g` with one premise, applied to a caller
   edge with a larger premise set, keeps the premise set of the caller edge. A callee SUMMARY WITH SEVERAL PREMISES (its
-  premise set has two or more members: an ND summary `{j1, …, jk} → g`, or `{zero, j} → g`) needs one link at the
-  call statement per member `jm`: an added fact that satisfies `jm` (§4.3), with its caller edge. The caller zero fact
-  supplies the member `zero`. The rule is standing: the link that arrives last completes it (event E6 of §5.3; the
-  store of §8.9). The result has the union of the premise sets of the caller edges. It is in the demand layer if the
+  premise set has two or more members: an ND summary `{j1, …, jk} → g`) needs one link at the call statement per
+  member `jm`: an added fact that satisfies `jm` (§4.3), with its caller edge. The rule is standing: the link that
+  arrives last completes it (event E6 of §5.3; the store of §8.9). The result has the union of the premise sets of the
+  caller edges, without the zero fact. It is in the demand layer if the
   summary is, or if one added fact of the combination is in the demand layer on its link (§8.3; Lean: `ND.DN.ndBind`).
   Then the caller binds it back and applies the field limit (§5.3 step 5). In a restricted run the callee restricts
   such a summary before it publishes it (§6.4).
@@ -1111,7 +1119,8 @@ A triggered vulnerability is CONFIRMED only if all three conditions hold:
    (`NDConfirmed.CexSites.cex_sites`).
 
 A conjunctive sink is a conjunction to a fresh target with a sink on it: it is confirmed if every sink edge of its set
-is normal and the UNION of their premise sets is supported jointly (condition 3). A conjunction is the expected
+is normal and the UNION of their premise sets (without the zero fact, §4.6; `{zero}` if every edge has `{zero}`)
+is supported jointly (condition 3). A conjunction is the expected
 over-approximation of a path-insensitive engine (§4.6), so a vulnerability through a normal conjunction result can be
 confirmed: it is real for the path-insensitive support semantics `ND.TaintN` (`NDConfirmed.confirmed_real_N`,
 `confirmed_real_N_valid`; for a program without conjunctions the rule is the one of `Confirmed.confirmed_real`,
@@ -1614,81 +1623,101 @@ of the zero fact (`interpreter.md` §4.3).
 
 The concept of a conclusion is a set of path facts. The representation groups path edges into TREES.
 
-### 7.1 Initial fact
+### 7.1 Initial fact and premise key
 
 ```kotlin
-/** The initial fact (premise): one linear path. Its mark is * or a concrete mark (never *∖X). */
+/** The initial fact (premise): one linear path. Its mark is * or a concrete mark (never *∖X). It is also the premise
+ *  key of a premise set with one member (below). */
 class InitialAp(
     val base: AccessPathBase,
     val path: PathNode?,           // interned, linked from the root node; no [any], $ or mark accessors (W4, W5)
     val tail: Tail,
     val exclusion: ExclusionSet,   // Empty in run 1; a restricted run can emit the exclusion of a `*/E` demand
     val mark: MarkSlot,
-) {
+) : PremiseKey {
     fun toPattern(): Pattern       // the list form of §3.4, for the reference forms
 }
 
-/** The premise SET of an edge: a CANONICAL set of initial facts (sorted by the intern id, no duplicates), never
- *  empty. The zero fact is an InitialAp like every other. One element: a zero-to-fact edge (the zero fact) or a
- *  fact-to-fact edge. Two or more: a conjunction result (§4.6); it is an ND edge if two or more elements are not the
- *  zero fact. The layer is not part of the premise key; every store key that needs the layer has it as a separate
- *  part. */
-data class PremiseKey(val initials: List<InitialAp>)
+/** The premise SET of an edge (§4.6): never empty. ONE member is the common case (the zero fact, a policy fact, an
+ *  answer, an emission): the InitialAp itself is the key, with no wrapper. Two or more members: a PremiseSet, a
+ *  canonical array (sorted by the intern id, no duplicates): an ND edge. No member is the zero fact (§4.6), every
+ *  member has a concrete mark, and its edges are TAINT (§7.2). Both are interned, so equal keys are the same object. The layer is not part of the premise key; every store
+ *  key that needs the layer has it as a separate part. */
+sealed interface PremiseKey {
+    val size: Int
+    fun member(k: Int): InitialAp
+}
+class PremiseSet(val members: Array<InitialAp>) : PremiseKey      // size >= 2
 ```
 
 `PathNode` is the current `AccessPath.AccessNode` without the `[any]`, `$` and mark accessors.
 
-### 7.2 Conclusion trees
+### 7.2 Conclusions: three kinds
 
-One tree per (statement, premise key, layer, base, exclusion, mark exclusion): the key of the method edge store
-(§8.1). The exclusion and the mark exclusion belong to the tree; a `*` leaf is a flag.
+The conclusions of one edge group have ONE MARK KIND, and the premise set gives it:
+
+| Kind | Premise set | Conclusions | Normal layer | Demand layer |
+|---|---|---|---|---|
+| REACH | `{zero}` (a zero-to-zero edge); in the backward run also a concrete requirement `{jb}` that reached an unconditional source (§9.2) | the zero fact | one bit | one bit |
+| FLOW | one initial fact with the mark `*`: a policy fact or a position answer (run 1 only) | abstract marks only: `*∖X`, with `X` the mark exclusion of the tree | `*` leaves, with the exclusion of the tree | `[any]` leaves, no exclusion |
+| TAINT | `{zero}` (a source), concrete initial facts, or a set of them: EVERY premise set with two or more members (an ND edge, §4.6) | concrete marks only | `$` leaves | `$` and `[any]` leaves |
+
+The reasons: a `*` premise has only abstract conclusions (S7: a micro edge with a concrete target mark has a concrete
+premise mark; a summary with a concrete premise does not apply to an abstract fact, §4.3). A concrete premise has only
+concrete conclusions (`Coverage.edge_conc`). A `$` leaf has a concrete mark (S8: a `$`-target edge has a concrete
+premise mark). A `*` leaf has an abstract mark and is normal (W2), and an `[any]` leaf is demand (W6). So the
+representation ENFORCES W1, W2 and W6 by its types: a FLOW tree has no `$` leaf and no concrete mark; a TAINT tree has
+no `*` leaf, no exclusion and no mark exclusion; a normal tree has no `[any]` leaf. The restricted runs (forward and
+backward) are concrete (§6.3): they have REACH and TAINT conclusions only. A FLOW tree occurs in run 1, and as the
+conclusion of a run-1 record with a `*` premise (§8.7), which applies to a TAINT fact as a transfer function.
 
 ```kotlin
-/** The marks of the leaves of one kind at one node: the abstract mark flag plus concrete marks. */
-class LeafMarks(val star: Boolean, val concrete: MarkSet)
+/** The conclusions of one edge group at a node. */
+sealed interface Facts { val base: AccessPathBase; val layer: Layer }
 
-/** Payload of one trie node at path p. */
-class Payload(
-    val star: Boolean,        // the leaf p.* with the tree exclusion and the tree mark *∖X (W2)
-    val any: LeafMarks,       // the leaves p.[any] with these marks (the star flag is *∖X of the tree)
-    val exact: LeafMarks,     // the leaves p.$ with these marks
-)
+/** REACH: the zero fact (§2.4) is at the node. */
+class Reach(override val layer: Layer) : Facts { override val base get() = AccessPathBase.Zero }
 
-class FactNode(
-    val payload: Payload,
-    val accessors: IntArray?,       // sorted AccessorIdx, as today
-    val children: Array<FactNode>?,
-) {
-    @JvmField val boundedDepth: Short = ...   // max counted accessors on a path below; O(1) limit check
-}
+/** FLOW: a trie of paths; a leaf flag at a node is the leaf `p.*` (normal) or `p.[any]` (demand), with the mark `*∖X`. */
+class FlowTree(
+    override val base: AccessPathBase,
+    override val layer: Layer,
+    val exclusion: ExclusionSet,   // the exclusion of the `*` leaves (W1); always Empty in the demand layer
+    val markExclusion: MarkSet,    // X of `*∖X`; empty for most trees
+    val root: FlowNode,            // FlowNode(leaf: Boolean, accessors, children)
+) : Facts
 
-/** One edge group: the conclusions of one premise key, one layer, one exclusion and one mark exclusion. */
-class EdgeTree(
-    val base: AccessPathBase,
-    val exclusion: ExclusionSet,   // the exclusion of the * leaves; Empty if the tree has no * leaf (W1)
-    val markExclusion: MarkSet,    // X of the abstract marks of the tree (*∖X); empty for most trees
-    val demand: Boolean,           // the layer; a demand-layer tree has no * leaf (W2)
-    val root: FactNode,
-)
+/** TAINT: a trie of paths; at a node, the marks of the `$` leaves and of the `[any]` leaves (no `[any]` mark in the
+ *  normal layer). */
+class TaintTree(
+    override val base: AccessPathBase,
+    override val layer: Layer,
+    val root: TaintNode,           // TaintNode(exact: MarkSet, any: MarkSet, accessors, children)
+) : Facts
+
+// Both node kinds keep `boundedDepth`: the max number of counted accessors on a path below; the O(1) limit check.
 ```
 
 Rules:
 
 * T1. Merge rule 1: two trees with the same key merge by union.
-* T2. Merge rule 2: two trees with the same premise key, layer, mark exclusion and EQUAL content merge into one tree with
-  the intersection of the exclusions (`Tree.rule2_den`). Not valid for different contents.
-* T2'. Merge rule 2 for marks: the same with the mark exclusions (`Tree.rule2_mark`).
-* T3. No union of exclusions or mark exclusions across trees. No merge across layers.
+* T2. Merge rule 2 (normal FLOW trees): two trees with the same premise, layer, mark exclusion and EQUAL content merge
+  into one tree with the intersection of the exclusions (`Tree.rule2_den`). Not valid for different contents.
+* T2'. Merge rule 2 for marks (FLOW trees): the same with the mark exclusions (`Tree.rule2_mark`).
+* T3. No union of exclusions or mark exclusions across trees. No merge across layers. No merge across kinds.
 * T4. `add` returns the new part only (the delta), as `mergeAddDelta` does today. Exception: when merge rule 2 shrinks an
   exclusion or a mark exclusion of a stored tree, the delta is the WHOLE merged tree with the new exclusion.
-* T5. Inside one demand-layer tree, an `[any]` leaf with the mark `m` at `p` may absorb every leaf with the mark `m`
-  below `p`. The denotation does not change. A normal tree has no `[any]` leaf (W6).
-* T6. Share one empty payload; intern payloads, mark sets and exclusion sets.
+* T5. Inside one demand-layer tree, an `[any]` leaf at `p` may absorb every leaf below `p` with the same mark (FLOW: every
+  leaf; TAINT: the leaves with the mark `m` of the `[any]` leaf). The denotation does not change.
+* T6. Intern the nodes, the mark sets and the exclusion sets.
 
 ### 7.3 Delta-concat on a tree
 
 The computation of §4.1 on all paths of one tree at once. `Ec` is the tree exclusion. The results are grouped by their
-new (layer, exclusion, mark exclusion):
+new kind, layer, exclusion and mark exclusion (§7.2). The kinds make the mark gate simple (§4.1 step 4): on a FLOW tree
+an edge with a concrete premise mark `T` gives no fact, only the request `T` (run 1) if `T ∉ X`; on a TAINT tree it keeps
+the leaves with the mark `T`. A micro edge from the zero fact applies only to REACH (the zero keep edge gives REACH, a
+source gives TAINT).
 
 1. Walk `from.path` from the root node of the tree. On each proper prefix node, read its payload as the case `above`
    (`r` is the rest of `from.path` after the node):
@@ -1750,9 +1779,9 @@ The prescan (§1) still runs the current core. So the new AP lives beside the cu
 | `AccessBasedStorage` trie | Reuse for the path indexes of §8. |
 | `EdgeStorage`, `AccessPathBaseStorage`, exact-key subscription maps | Reuse with the new fact types. |
 | `StatementSummaryBuilder`, `buildReversed` | Adapt (`interpreter.md`). |
-| `InitialFactAp`, `FinalFactAp`, `ApManager` | New types `InitialAp`, `EdgeTree`. They do not implement the old interfaces. |
-| `Edge` (`ZeroToFact` requires Universe) | New edge classes with the layer: `Zero → (layer, statement, fact)`, `(premise key, layer) → (statement, fact)`. |
-| `NDFactToFact` | An edge whose premise key has two or more premises that are not the zero fact (§4.6). |
+| `InitialFactAp`, `FinalFactAp`, `ApManager` | New types `InitialAp`, `PremiseKey` and the conclusion kinds `Reach`, `FlowTree`, `TaintTree` (§7.2). They do not implement the old interfaces. |
+| `Edge` (`ZeroToZero`, `ZeroToFact` requires Universe, `FactToFact`) | The premise key and the conclusion kind (§7.2): `ZeroToZero` is REACH; `ZeroToFact` and a concrete `FactToFact` are TAINT; an abstract `FactToFact` is FLOW. Each has its layer. |
+| `NDFactToFact` | A TAINT edge whose premise key has two or more premises that are not the zero fact (§4.6). |
 | `DeepAccessorExclusion` | Replaced by the mark exclusion `*∖X` of the edge (§4.7). The old exclusion is tied to an abstraction point at a depth, so it is lost when the field limit cuts the path; the mark exclusion is not tied to a position. |
 | `FactReader` (mark as accessor suffix) | New reader over `(path, tail, mark)`: `check` (§4.9). |
 | `FactTypeChecker` | The type filter primitive (§4.8). |
@@ -1785,12 +1814,14 @@ candidates; the store then applies the exact test that the section names (`overl
 
 ### 8.1 Method edge store (RUN, per method)
 
-* Key: `(statement, premise key, layer, base, exclusion, mark exclusion)`. Value: an `EdgeTree`.
-* `add(...)` merges by rule 1, 2 or 2' (T1, T2, T2') and returns the delta (T4), or null if the fact adds nothing.
-* Subsumption inside one layer: the store drops a conclusion if a stored conclusion of the same premise key and layer
-  subsumes it (`Subsume.subsumesB`): the same base; the same mark, or the stored mark `*∖Xs` and the dropped mark
-  `*∖Xn` with `Xs ⊆ Xn`; `[any]` at `p` subsumes every fact at or below `p`; `*/Es` subsumes `*/En` at the same path if
-  `Es ⊆ En`. `subsumes_sound` proves
+* Key and value per kind (§7.2): REACH: `(statement, premise key, layer)`, one bit. FLOW: `(statement, premise, layer,
+  base, exclusion, mark exclusion)`, a `FlowTree`. TAINT: `(statement, premise key, layer, base)`, a `TaintTree`.
+* `add(...)` merges by rule 1, 2 or 2' (T1; T2 and T2' for FLOW) and returns the delta (T4), or null if the fact adds
+  nothing.
+* Subsumption inside one layer: the store drops a conclusion if a stored conclusion of the same premise key, layer and
+  kind subsumes it (`Subsume.subsumesB`): the same base; the same mark (TAINT), or the stored mark `*∖Xs` and the dropped
+  mark `*∖Xn` with `Xs ⊆ Xn` (FLOW); `[any]` at `p` subsumes every fact at or below `p` with its mark; `*/Es` subsumes
+  `*/En` at the same path if `Es ⊆ En`. `subsumes_sound` proves
   that every pair of the dropped fact is a pair of the stored fact.
 * A demand-layer conclusion never subsumes a normal one (`Subsume.recordSubsumesLB_layer` for records).
 * Unchanged propagation (`Sequent.Unchanged`) may skip the store, as today.
@@ -1832,7 +1863,7 @@ candidates; the store then applies the exact test that the section names (`overl
 
 ### 8.5 Run summary store (HAND-OFF, per method; callee)
 
-* Key: `(premise key, layer)`. Value: the exit `EdgeTree`s. A summary edge is an exit fact after the exit order of
+* Key: `(premise key, layer)`. Value: the exit conclusions (§7.2: REACH, FLOW trees or a TAINT tree). A summary edge is an exit fact after the exit order of
   `interpreter.md` §4.7 (event E4 of §5.3). Only the normal exit makes a summary edge (`interpreter.md` §3.4).
 * In a restricted run the callee restricts each new summary edge by every demand pattern of the method (§6.4). It
   PUBLISHES the results to the subscription store.
@@ -1869,7 +1900,7 @@ class Record(
     val method: MethodKey,
     val direction: Direction,          // FORWARD: premise = entry fact; BACKWARD: premise = exit fact
     val premise: InitialAp,            // the one member of the premise set; the zero fact only for FORWARD (R1)
-    val conclusion: EdgeTree,          // normal layer; may carry a mark exclusion
+    val conclusion: Facts,             // normal layer (§7.2): a FLOW tree (a `*` premise, may carry a mark exclusion) or a TAINT tree
 )
 
 interface RecordStore {
@@ -2189,7 +2220,7 @@ filter case uses `Core.filt_keeps`.
 
 | Theorem | Statement |
 |---|---|
-| `Tree.insert_mem`, `fromList_mem` | The `EdgeTree` (one premise, layer, exclusion and mark exclusion; `*` leaves are flags) holds exactly its path edges. |
+| `Tree.insert_mem`, `fromList_mem` | The Lean `EdgeTree` (a FLOW tree of §7.2: one premise, layer, exclusion and mark exclusion; `*` leaves are flags) holds exactly its path edges. |
 | `Tree.rule1_mem`, `rule1_den`, `rule2_den`, `rule2_mark` | Merge rule 1 is exact; merge rule 2 (exclusions, and mark exclusions) is exact for EQUAL trees; counter-examples for different trees and for a union. |
 | `Tree.applyTreeE_mem`, `applyTreeE_den`, `applyTreeE_grouped_key`, `applyTreeE_mx`, `applyTreeE_inv`, `applyTreeE_star_normal` | For a `*`-to-`*` micro edge with the mark `*` on both sides (not the mark gate or the cut of §7.3): the tree form of delta-concat equals the per-path form, fact and layer; output trees have distinct keys and keep the mark exclusion. |
 | `Tree.fromList_size`, `fan_list`, `fan_tree`, `prepend_shares`, `walkSteps_le`, `applyListC_spec` | Cost of the tree representation. |
@@ -2345,10 +2376,11 @@ analysis keeps their results in the normal layer and does not refine them.
   `D_sub_DN` embeds the distributive part, so the iteration theorem holds unchanged for a program without conjunctions.
 * PREMISE SETS AND LISTS. The zero fact is a premise in the spec and in the model (§1). `ND.lean` keeps premise LISTS
   (with `[zeroFact]` for a zero-to-fact edge); this spec keeps SETS. A list and its set name the same entry locations,
-  so every ND theorem carries over (argued). The spec names an edge by the premises that are not the zero fact (§4.6):
-  `{zero, i}` is a fact-to-fact edge here and an edge with two premises in the model. It applies at a call like the
-  model edge, with one link per member (§4.6, event E6), and it is never a record (§8.7 R1). A conjunction result whose
-  premise set has one member is an ordinary edge; it can be a record if it is normal, and it is exact
+  so every ND theorem carries over (argued). A conjunction drops the zero fact from the union of its premise sets
+  (§4.6): the model edge with the premises `[zeroFact, i]` is the spec edge with the premise set `{i}`. This is argued:
+  the zero location is at every node that an edge of the method reaches, and it enters every callee with every other
+  added fact, so the two edges hold at the same points and have the same support. A conjunction result whose premise
+  set has one member is an ordinary edge; it can be a record if it is normal, and it is exact
   (`NDExact.nd_edge_exact`, for every premise list).
 * The static rule of §4.10 is modelled as a separate run-1 closure `Statics.DS`. Soundness, exactness and the
   iteration that starts from it are proved (`StaticsIter.iteration_general_DS`). The run-1 proof needs that a cleaner
@@ -2495,8 +2527,8 @@ Write the tests first. Each test names the spec item that it checks. The interpr
    link per premise; ND conclusions have no `*` tail; a vulnerability through a conjunction is confirmed only if every
    premise of its sink edge is exact and the premise set is supported jointly at one call statement (§4.9 condition 3);
    the negative test `NDConfirmed.CexSites`: two premises supplied at two different calls are not confirmed. A
-   conjunction of a zero-premise fact and a fact of the premise `i` gives the premise set `{zero, i}`, a fact-to-fact
-   edge that is never a record. Today's `ExampleTest.test nd rule` as an analysis test.
+   conjunction of a zero-premise fact and a fact of the premise `i` gives the premise set `{i}` (the zero fact is
+   dropped), and two zero-premise facts give `{zero}`. Today's `ExampleTest.test nd rule` as an analysis test.
 8. Merge tests: rules 1, 2 and 2'; a union of exclusions or mark exclusions is never made.
 9. Request tests (run 1): the mark gate raises a request; a standing request is answered by a later added fact and by a
    second added fact; a standing request reaches a second caller edge of an EXISTING added fact (the program of §4.5);

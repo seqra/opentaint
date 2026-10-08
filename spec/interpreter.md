@@ -108,8 +108,7 @@ the expected false-positive sources (G7, G8, and the type filter on a `*` fact).
 | `#i` | none | `FieldAccessor("tuple", "$i")` | yes |
 | `fv_i` | none | `FieldAccessor(fn, "freeVar$i")`: free variable `i` of closure `fn` | yes |
 | `<string-bytes>` | the content of a `String` (a virtual field) | none | yes |
-| `[value]` | `ValueAccessor`: the value of a primitive. No statement and no rule of this document makes it; the type filter keeps today's case for it (§5.1). | none | no |
-| type info | the prescan only (ap.md §1) | the prescan only | no |
+| `[value]`, type info | not an accessor of the new analysis (ap.md W5): `ValueAccessor` is made by no statement and no rule; the type-info accessors serve only the lambda analysis of the prescan (ap.md §1) | the same | — |
 
 ### 1.3 Rule positions
 
@@ -470,7 +469,7 @@ resolution is outside this specification.
 * Non-mark atoms (`IsConstant`, `IsNull`, `ConstantEq/Lt/Gt/Matches`, `TypeMatches`, `IsStaticField`, ...) are
   evaluated statically per statement. The constant atoms use the alias information. A false condition removes the rule.
 * A mark atom is a LITERAL. For a sink, `ContainsMark(P, T)` is the pattern `(P, $, T)` and
-  `ContainsMarkOnAnyField(P, T)` is the pattern `(P, [any], T)`. For a source or a pass rule, a literal is the premise
+  `ContainsMarkOnAnyField(P, T)` is the pattern `(P, [any], T)`. For a source, a literal is the premise
   of a micro edge: `ContainsMark(Q, T')` gives the premise `Q.$ (T')`, and `ContainsMarkOnAnyField(Q, T')` gives the
   premise `Q.[any] (T')`. An `[any]` premise covers every fact at or below `Q`; a fact above `Q` also applies, with a
   demand-layer result (I2, ap.md §4.1). Both premises have a concrete mark, so S8 and I7 hold. A literal of a
@@ -482,17 +481,20 @@ resolution is outside this specification.
   `JIRMethodCallTaintUtil.kt:186-203`). `Or` gives one alternative per pattern, so a conjunctive sink gets one
   alternative per choice. This holds only for the argument positions of a sink at a call: not for the receiver, not for
   `Result`, not for the entry and exit sinks. The sink seeds of the backward run follow the alternatives (§4.9).
-* For a source, a sink or a pass rule, an over-approximation makes the rule fire MORE: a negated literal counts as
-  true. `Or` gives one alternative per literal. A conjunction of literals that different facts satisfy (a positive
-  literal on another position): a source or a pass rule makes an ND edge (§5.3); a sink is a CONJUNCTIVE SINK (ap.md
+* For a source or a sink, an over-approximation makes the rule fire MORE: a negated literal counts as true. `Or` gives
+  one alternative per literal. A conjunction of literals that different facts satisfy (a positive literal on another
+  position): a source makes an ND edge (§5.3); a sink is a CONJUNCTIVE SINK (ap.md
   §4.9, §5.3). The interpreter sets no layer. The layer of a result belongs to the propagation edge, and only
   the AP operations change it (ap.md §2.2): a fact that only overlaps a literal gives a demand-layer result (ap.md
   §4.1, §4.6). A negated literal that counts as true is the expected over-approximation of a path-insensitive engine,
   as the conjunction is (the reference semantics of rules, ap.md §3.5; ap.md §4.6, §11.1).
-* A `CopyAllMarks` pass rule has no mark literal in its condition (the JVM rule sets have none). Its target has the
-  mark `*`, so a mark literal has no exact form: a micro edge with a concrete premise mark and a `*` target mark is not
-  mark-reversible (I11 (b)), and an ND edge needs a concrete target mark (ap.md W7). The interpreter reports such a
-  rule as a rule error and applies it without its mark literals (it fires more; this is sound).
+* A PASS RULE (`CopyAllMarks`, `CopyMark`) has no mark-dependent condition: after the static evaluation of the non-mark
+  atoms, its condition has no mark literal. The copied mark of `CopyMark(T, P → Q)` is not a condition: it is the
+  premise `P.t (T)` of the pass edge (§4.1). A pass rule is a handcrafted summary of an unresolved callee, and a mark
+  literal has no exact form for it: `CopyAllMarks` has the target mark `*`, so a concrete premise mark would make an
+  edge that is not mark-reversible (I11 (b)), and an ND edge needs a concrete target mark (ap.md W7). The interpreter
+  reports a pass rule with a mark literal as a rule error and applies it without its mark literals (it fires more; this
+  is sound). So a pass rule never makes an ND edge.
 * For a CLEANER the safe direction is the opposite: a cleaner that fires removes real taint. So the interpreter applies
   only the UNCONDITIONAL cleaners:
   * a non-mark atom is decided statically: a false atom removes the rule, a true atom drops out of the condition;
@@ -705,8 +707,7 @@ fun may(t: JIRType?, p: List<Accessor>): Boolean {
             (a.declaringClass == null || typeMayHaveSubtypeOf(t, a.declaringClass))   // deeper accessors: not checked
         ElementAccessor -> t is JIRRefType && typeMayBeArray(t) &&
             (t.elementTypeOrNull()?.let { may(it, p.drop(1)) } ?: true)
-        ValueAccessor -> t is JIRPrimitiveType                                           // policy
-        else -> true                                                                     // <C>, type info
+        else -> true                                                                     // <C> (ap.md W5: no other accessor)
     }
 }
 
@@ -730,7 +731,7 @@ Rules:
   propagate it (ap.md §4.8). So a `*` or `[any]` fact keeps the locations below its path that `t` cannot have: an
   expected false-positive source (ap.md §11.1).
 * Policy cases are outside ap.md S5 (they can drop a real flow), as today: the mark policy above; `[e]` on a class type
-  other than `Object` (for example `Cloneable`, `Serializable`); `[value]` on a reference type. The mark policy is not a
+  other than `Object` (for example `Cloneable`, `Serializable`). The mark policy is not a
   type filter: it reads the mark, not only the path, and the model has no mark filter. It is gap G6.
 * THE APPLICATION POINT OF THE MARK POLICY: at every point of the table below where the analyzer applies a type filter
   to a base with the static type `t`, it also applies `markPolicyKeeps(t, ·)` to the same facts, after the filter (as
@@ -797,8 +798,9 @@ question Q1).
 ### 5.3 ND conjunction
 
 * The interpreter evaluates the conjunctive SOURCE rules at step 4 of the call order (§4.5): on every bound fact
-  before the cleaners, and on the zero fact (§4.6). It evaluates the conjunctive PASS rules (JVM, with a condition)
-  at step 5.3, on the cleaned fact.
+  before the cleaners, and on the zero fact (§4.6). A pass rule makes no conjunction (§4.2).
+* An edge whose premise set has two or more members is an ND edge and a TAINT edge (ap.md §4.6, §7.2): no member is
+  the zero fact, every member has a concrete mark, and the conclusion has a concrete mark.
 * Every literal names its mark, so it has a concrete mark (ap.md S9). Its tail is `$` (`ContainsMark`) or `[any]`
   (`ContainsMarkOnAnyField`) (§4.2). ap.md §4.6 sets the layer of the result: normal if every input is normal and
   covered by its literal. A normal result is exact against the path-insensitive support semantics, under ap.md S7,
@@ -807,15 +809,15 @@ question Q1).
 * A fact that overlaps a literal and passes its mark gate (ap.md §4.6) is an assumption for (rule, statement, literal),
   as today. The interpreter stores it in the conjunction store (ap.md §8.9). The last fact that arrives sees all
   earlier ones, so the result does not depend on the order.
-* The result has the union of the premise sets of the inputs; the zero fact is a member like every other premise.
-  The number of the members that are not the zero fact names the edge: 0 a zero-to-fact edge, 1 a fact-to-fact edge,
-  2 or more an ND edge (ap.md §4.6). The field limit applies to the result.
+* The result has the union of the premise sets of the inputs without the zero fact, or `{zero}` if every input has
+  `{zero}` (ap.md §4.6). The number of the members names the edge: `{zero}` a zero-to-fact edge, one member a
+  fact-to-fact edge, two or more an ND edge. The field limit applies to the result.
 * A literal on a `*`-mark fact raises a request (run 1), not an assumption.
 * A sink whose condition has positive literals on several positions is a CONJUNCTIVE SINK. Each literal is a sink
   pattern; the same conjunction store combines the sink edges of the literals (ap.md §4.9, §8.9). The interpreter
   evaluates it at the same points as the other sinks (§4.5 step 3, §4.6, §4.7). Each literal raises its own request in
   run 1 (§5.4).
-* A callee summary with several premises (an ND summary, or `{zero, j} → g`) applies at step 5 of the call order.
+* A callee summary with several premises (an ND summary) applies at step 5 of the call order.
   ap.md §4.6 and §8.9 define how the caller finds the links for the other premises (event E6 of ap.md §5.3).
 * Sinks, exit sources and the zero-to-zero step never make an ND edge (a conjunctive sink makes a vulnerability, not
   an edge).
@@ -836,7 +838,7 @@ of §2.1 step 4 raises a POSITION REQUEST instead (ap.md §4.10).
 | pass rule | the premise mark of `CopyMark(T)` | the mark gate |
 | cleaner action | one mark, a `*`-mark fact, a partly cleaned position (no request if the fact mark excludes `T`) | `clean` (ap.md §4.7) |
 | summary rewriter | as the cleaner action | `clean`, on the caller premise |
-| ND source, ND pass rule | a literal on a `*`-mark fact | the mark gate of the literal |
+| ND source | a literal on a `*`-mark fact | the mark gate of the literal |
 | a statement micro edge on `S` | its premise path lies strictly below an identity static `*` edge at the root `[]` or at a class `[<C>]` (a static read `[<C>, s]`, Go `[<G>]`; the class keep edge `[<C>]` of a static write or of a `RemoveAllMarks` kill; a conditional source or a pass rule on a static field) | the position request for the path cut to at most two accessors (§2.1 step 4; ap.md §4.10) |
 | a sink or a conjunction literal on `S` | the ordinary sink check or literal (ap.md §4.9, §4.6) | the mark request; on a static premise it is answered by the added fact itself (ap.md §4.10 item 4) |
 | entry rules, read sources | none (unconditional) | none |
@@ -874,7 +876,7 @@ The columns "Today" use today's notation (§0).
 | D21 | exit sinks (§4.7) | the production rule provider applies them only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`) | every fact at the exit | the sink check of ap.md §4.9 on every fact; more findings are possible (user decision, 2026-10-07) |
 | D22 | an unconditional exit sink | no effect (`applyUnconditionalSinks` is a stub, `JIRMethodSequentFlowFunction.kt:191-200`) | it fires on the zero fact at the exit (ap.md §4.9) | the same rule as every unconditional sink; more findings are possible (user decision, 2026-10-07) |
 | D23 | the summary rewriter on a zero-premise summary result and on the default identity of an unresolved callee (§3.7, §5.2) | not applied (`JIRMethodCallSummaryHandler.kt:29-38, 71-90`) | applied, as on every summary result and unresolved result | one rule for every result of the call; fewer findings are possible (user decision, 2026-10-07) |
-| D24 | a `CopyAllMarks` pass rule with a mark literal (§4.2) | the condition is evaluated on the fact | a rule error; the rule applies without its mark literals | no exact form; the JVM rule sets have no such rule |
+| D24 | a pass rule (`CopyAllMarks`, `CopyMark`) with a mark literal in its condition (§4.2) | the condition is evaluated on the fact | a rule error; the rule applies without its mark literals; a pass rule makes no ND edge | a pass rule has no mark-dependent condition (user decision, 2026-10-08); no exact form |
 
 Kept as today (no deviation): the rule order at entry, call and exit; the lhs kill; liveness; the alias analyses and
 their use; the constructor rule; the exception rule; the exit rules at both exits, with `Result` read as `exc` at the
