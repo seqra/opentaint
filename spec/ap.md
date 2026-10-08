@@ -47,10 +47,10 @@ The theorems hold for this model. Each item is an assumption of the proof, not a
 | S5 | A type filter accepts every path that a real value of the static type can have, and it is prefix-closed (§4.8). | The type checker. |
 | S6 | The result of run 1 is the least fixed point of the rules of run 1 (§6.1; Lean: `D`). The result of a later run is the least fixed point of the rules of a restricted run (§6.1; Lean: `DR`, and `Backward.DB` for a backward run). The worklist may compute it in any order. | The analyzer. |
 | S7 | Mark well-formedness: no micro edge or call binding has a `*∖X` premise, and a micro edge with a concrete target mark has a concrete premise mark (`Exact.MarkWF`). Without it a normal edge can claim a cleaned mark (`Exact.CexMark`). | The interpreter (sources have the premise mark `zeroMark`, conditional sources `T`). |
-| S8 | No `*/Universe` edge (§1, Universe): a micro edge with a `$` premise has a concrete premise mark, and no micro edge, binding or initial fact has the kind `*/Universe` (`Invariant.no_univ_star`; each hypothesis is necessary: `no_univ_needs_*`). Also (an interpreter duty that no theorem uses; §4.1 asserts it): no micro edge has a `$` premise and a `*` target, and every micro edge with a `$` target has a concrete premise mark. | The interpreter (`interpreter.md` I7). |
+| S8 | No `*/Universe` edge (§1, Universe): a micro edge with a `$` premise has a concrete premise mark, and no micro edge, binding or initial fact has the kind `*/Universe` (`Invariant.no_univ_star`; each hypothesis is necessary: `no_univ_needs_*`). Also (an interpreter duty; §4.1 asserts it): no micro edge has a `$` premise and a `*` target, and every micro edge with a `$` target has a concrete premise mark (`Kinds.ExactTargetConc`; the kinds of §7.2 use it). | The interpreter (`interpreter.md` I7). |
 | S9 | A conjunction literal has a concrete mark (`NDExact.LitConc`). Without it the ND exactness is false (`NDExact.CexLit.cex_lit`). | The interpreter (a mark literal names its mark). |
 | S10 | Program well-formedness: every micro edge of a statement reads from a base that the statement touches, and every call binding has the premise mark `*` (it passes every mark). With conjunctions, also: the target of a conjunctive micro edge has a concrete mark and no `*` tail (W7). (Lean: `Program.WF`, its type-filter part is S5; with conjunctions `ND.NProg.WF`, its part `target`.) | The interpreter (`interpreter.md` §2, §3.1, §5.3). |
-| S11 | The backward contracts (only the backward run and contract B, §6.6, need them): (a) every call binding has the target mark `*` (`Reverse.BindTargetsStar`); (b) every statement micro edge is mark-reversible (§1; `Backward.StmtsMarkRev`); (c) no call binds the zero base back (`Backward.NoZeroBack`); (d) every instruction that is not a call keeps the zero fact: a statement that touches the zero base has the micro edge from the zero fact to the zero fact, no cleaner is on the zero base, and a type filter on the zero base accepts the empty path (`Backward.ZeroKept`); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit (`Backward.ExitReach`); (f) every sink pattern has the tail `$` or `[any]` (§4.9). | The interpreter (`interpreter.md` I11); for (e) the CFG normalisation (it wires the code that never returns to the exit). |
+| S11 | The backward contracts (only the backward run and contract B, §6.6, need them): (a) every call binding has the target mark `*` (`Reverse.BindTargetsStar`); (b) every statement micro edge is mark-reversible (§1; `Backward.StmtsMarkRev`); (c) no call binds the zero base back (`Backward.NoZeroBack`); (d) every instruction that is not a call keeps the zero fact: a statement that touches the zero base has the micro edge from the zero fact to the zero fact, no cleaner is on the zero base, and a type filter on the zero base accepts the empty path (`Backward.ZeroKept`); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit (`Backward.ExitReach`); (f) every sink pattern has the tail `$` or `[any]` (§4.9; for the seeds: `Kinds.SeedTails`). | The interpreter (`interpreter.md` I11); for (e) the CFG normalisation (it wires the code that never returns to the exit). |
 | S12 | The static construction rules (run 1, §4.10). A STATIC POSITION is the premise path of a statement micro edge on the static base `S`, or the path of a sink pattern on `S`, CUT to at most two accessors (the class and the field: `[<C>, f]`, `[<C>]`, Go `[<G>]`). So a path above a static position is the root path `[]` or a class `[<C>]`. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_{E} S.q.*` (the keep edges of a write), or a FIELD-TO-FIELD edge: its premise path and its target path are both at or below a static field (a pass rule between static fields). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)`. So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*`, in both directions. (d) The class accessor is not counted, and `L ≥ 1`, so the field limit never cuts a path to a path above a static position. (e) A cleaner on `S` names its mark. (`RemoveAllMarks` on `S`, at any depth, is not a cleaner: it is the kill of a strong write, `interpreter.md` §1.4.) (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of §6.2. A rule position can be deeper than a static field: below the static field the ordinary rules apply. (Lean: `Statics.SWF`, its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`; `PosIn`, `AbovePos`, `abovePos_len`.) A restricted run needs only (a) to (d), with its own field limit in (d) (`StaticsIter.SWFR`), and persisted records that keep the static invariant (§4.10). | The interpreter (`interpreter.md` I12). |
 | S13 | Validity. The exactness and confirmation theorems read a VALIDITY predicate on locations (§4.8). Every type filter accepts every valid location of its base (`Exact.FiltValid`). The validity goes back along every statement micro edge and along every call binding, into the callee and back: a valid end location of the edge comes only from a valid start location (`Exact.BackOK`). With conjunctions, the validity also goes back from the target of a conjunctive micro edge to each literal: every location of a literal is valid if a location of the target is valid (`NDExact.ConjOK`). Without these conditions the valid forms are false (`Exact.CexFilt`, `NDExact.CexConjOK.cex_conjOK`). | The type-filter placement (`interpreter.md` §5.1). |
 | S14 | Persisted records are exact: every pair of a persisted record whose end location is valid (S13) is a concrete flow (`RExact.RecsExact`; the valid form `RExact.RecsExactV`). The records of one forward run are exact if the records that the run reads are exact (run 1 reads none): run 1 (`RExact.recs_of_D`, `recs_of_D_valid`), a forward restricted run (`recs_of_DR`, `recs_of_DR_valid`); the union of two exact record sets is exact (`recs_union`). Over the whole run sequence the persisted forward records stay exact (`BExact.recsSeq_exact`, `recsSeq_exactV`), and a normal backward summary with a non-zero premise reverses into an exact forward record under S11 (c) (`BExact.rev_record_exact`). So S14 is a theorem for the records of §8.7 R1, not an extra assumption. | The record store (§8.7). It persists only the normal summary edges of the forward runs and the normal backward summary edges whose premise is not the zero fact (§8.7 R1). |
@@ -923,8 +923,12 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   combination. The result `z.π.t(T)` has the UNION of the premise sets WITHOUT THE ZERO FACT; if every input has the
   premise set `{zero}`, the result has `{zero}`. The zero fact adds no condition: it is at every node that an edge
   reaches (it passes every statement and enters every callee with every other added fact, §5.3), so `{zero, i}` and
-  `{i}` hold at the same points. The number of the members names the edge: `{zero}` a zero-to-fact edge, one member a
-  fact-to-fact edge, two or more an ND edge. Then the field limit applies to the result (§4.4).
+  `{i}` hold at the same points (`NDZero.zero_everywhere`). The number of the members names the edge: `{zero}` a
+  zero-to-fact edge, one member a fact-to-fact edge, two or more an ND edge. Then the field limit applies to the result
+  (§4.4). Lean: the closure `NDZ.DNz` (`ND.DN` with the zero-drop) corresponds to the list model `ND.DN` edge by edge
+  (`NDZero.dnz_to_dn`, `dn_to_dnz`), so its coverage, exactness and confirmation are the theorems of §10.10.
+* The target of a conjunctive micro edge is not on the zero base (`NDZeroBase.NoZeroGen` item (d); `interpreter.md`
+  §5.3).
 * The result is in the demand layer if one input is in the demand layer, or if its literal does not COVER it
   (`!coversB lit c`: the input has a location that is not a location of the literal, for example an `[any]` input for a
   `$` literal, or an input above the literal). An `[any]` target puts the result in the demand layer too (W6). Lean:
@@ -941,7 +945,8 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   passes the mark gate of its literal (a concrete mark, S9), and a fact with a concrete mark has a premise with a
   concrete mark or the zero premise (`Coverage.edge_conc`, S7). The members of a summary with several premises applied
   at a call (event E6) are concrete for the same reason (§4.3: a concrete premise is satisfied only by a concrete added
-  fact). The conclusion has a concrete mark and no `*` tail (W7).
+  fact). The conclusion has a concrete mark and no `*` tail (W7). Lean: `Kinds.nd_taint` (`ND.DN`), `Kinds.ndz_taint`
+  (`NDZ.DNz`: also no zero member).
 * At a call, the callee sees an ordinary added fact. A callee summary `j → g` with one premise, applied to a caller
   edge with a larger premise set, keeps the premise set of the caller edge. A callee SUMMARY WITH SEVERAL PREMISES (its
   premise set has two or more members: an ND summary `{j1, …, jk} → g`) needs one link at the call statement per
@@ -1665,7 +1670,10 @@ The conclusions of one edge group have ONE MARK KIND, and the premise set gives 
 The reasons: a `*` premise has only abstract conclusions (S7: a micro edge with a concrete target mark has a concrete
 premise mark; a summary with a concrete premise does not apply to an abstract fact, §4.3). A concrete premise has only
 concrete conclusions (`Coverage.edge_conc`). A `$` leaf has a concrete mark (S8: a `$`-target edge has a concrete
-premise mark). A `*` leaf has an abstract mark and is normal (W2), and an `[any]` leaf is demand (W6). So the
+premise mark). A `*` leaf has an abstract mark and is normal (W2), and an `[any]` leaf is demand (W6). Lean (§10.10):
+`Kinds.kinds_D` packs the partition of run 1 (`flow_abstract`, `flow_no_exact`, `taint_concrete`, with W2
+`Invariant.final_star_legal`); `kinds_DR` and `kinds_DB_taint` give REACH and TAINT only for the restricted runs; W6 is
+not in the model (§11.2). So the
 representation ENFORCES W1, W2 and W6 by its types: a FLOW tree has no `$` leaf and no concrete mark; a TAINT tree has
 no `*` leaf, no exclusion and no mark exclusion; a normal tree has no `[any]` leaf. The restricted runs (forward and
 backward) are concrete (§6.3): they have REACH and TAINT conclusions only. A FLOW tree occurs in run 1, and as the
@@ -2322,6 +2330,23 @@ iteration theorems are generic over the rules, given the contracts C2 (`EmitCont
 | `FSeeds.iteration_src`, `runSeqSrc` | The iteration with source seeds: every forward run reports every real vulnerability of `P`. |
 | `PipelineSeeds.driver_iteration_src` | The same for the driver of `analyzer-core.md` (§7.7). |
 
+### 10.10 Conclusion kinds and the zero-drop — `Kinds.lean`, `NDZ.lean`, `NDZero.lean`, `NDZeroThms.lean`, `NDZeroBase.lean`
+
+| Theorem | Statement |
+|---|---|
+| `Kinds.flow_abstract`, `flow_no_exact`, `flow_no_exact_gen`, `taint_concrete`, `kinds_D` | §7.2 for run 1: a `*` premise gives an abstract conclusion mark and no `$` tail (FLOW); a concrete or zero premise gives a concrete mark and no `*` tail (TAINT); a `*` tail is abstract and normal (W2). Hypotheses: S7 (`Exact.MarkWF`), S8 (`Invariant.no_univ_star` conditions), `ExactTargetConc` (S8 duty), the run-1 policy (`InitK`). |
+| `Kinds.CexK.cex_etc`, `cex_premConc`, `cex_noUniv`, `cex_markWF`, `cex_alpha` | Each hypothesis is necessary: without it a FLOW edge gets a `$` tail or a concrete mark. |
+| `Kinds.nd_taint`, `ndz_taint`, `CexND.*`, `ZeroMembers.*` | §4.6: an edge with two or more premises is TAINT: every member concrete, a concrete conclusion with no `*` tail; in `DNz` also no zero member. |
+| `Kinds.kinds_DR`, `kinds_DR_emitM`, `kinds_DB`, `kinds_DB_taint`, `CexSeedTail.cex_seed_tail` | The restricted runs have REACH and TAINT only; the backward tails need `SeedTails` (S11 (f)). |
+| `NDZ.DNz`, `dropZ`, `zStar` | The closure of the spec (§4.6): `ND.DN` with the union of the premise sets WITHOUT the zero fact at a conjunction and at an ND summary application. |
+| `NDZero.zero_everywhere`, `zero_everywhere_z` | The zero fact is at every node that an edge reaches, in `DN` and in `DNz`. Hypotheses: `Backward.ZeroKept` (S11 (d)), `NDZero.ZeroCalls` (§3.5: no call touches the zero base; the zero binding), `ConjAdj` (a conjunction beside an instruction edge), the policy serves the zero fact by itself. |
+| `NDZero.dnz_to_dn`, `dn_to_dnz`, `edge_iff`, `ninit_iff`, `nadded_iff`, `nreq_iff` | THE CORRESPONDENCE: a `DNz` edge with the premise set `P'` is a `DN` edge with a list `P` with `dropZ P = P'` and the same fact; a NORMAL `DNz` edge comes from a NORMAL `DN` edge. The converse (`dn_to_dnz`) needs `NDZero.ZeroLinks`, which `zeroLinks_of_noZeroGen` gives from `NDZeroBase.NoZeroGen` (§4.6; `interpreter.md` I11 (c), (d), §3.1, §5.3). |
+| `NDZero.summary_nd_fact`, `summary_nd_exists` | An ND conclusion applied by the single-premise `ret` (a `{zero, i}` summary of the model is the summary `{i}` of the spec) gives the same fact, in a layer that is not lower. |
+| `NDZeroThms.nd_coverage_z`, `nd_coverage_zg`, `nd_vuln_found_z`, `nd_vuln_found_zg`, `nd_vuln_reach_z` | Coverage and the vulnerability theorem for `DNz`. |
+| `NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z` | Exactness of a normal `DNz` edge: a support derivation with the support of `P'` plus zero locations. |
+| `NDZeroThms.ConfirmedNz`, `confirmedNz_N`, `confirmed_real_Nz`, `confirmed_real_Nz_valid` | The confirmation of §4.9 on the `DNz` premise set: it gives the confirmation of the `DN` vulnerability (a zero member is supplied by the caller zero edge at the same call, `supN_zero`), so a confirmed vulnerability is real (`ND.ReachN`). |
+| `NDZeroBase.zero_base_inv`, `dnz_applicable_zero` | Under `NoZeroGen`, every `DNz` fact on the zero base is the zero fact, so only the zero premise is satisfied by the zero added fact. |
+
 ---
 
 ## 11. What the proofs do not cover
@@ -2377,9 +2402,10 @@ analysis keeps their results in the normal layer and does not refine them.
 * PREMISE SETS AND LISTS. The zero fact is a premise in the spec and in the model (§1). `ND.lean` keeps premise LISTS
   (with `[zeroFact]` for a zero-to-fact edge); this spec keeps SETS. A list and its set name the same entry locations,
   so every ND theorem carries over (argued). A conjunction drops the zero fact from the union of its premise sets
-  (§4.6): the model edge with the premises `[zeroFact, i]` is the spec edge with the premise set `{i}`. This is argued:
-  the zero location is at every node that an edge of the method reaches, and it enters every callee with every other
-  added fact, so the two edges hold at the same points and have the same support. A conjunction result whose premise
+  (§4.6): the model edge with the premises `[zeroFact, i]` is the spec edge with the premise set `{i}`. This is PROVED
+  (§10.10): the closure `NDZ.DNz` corresponds to `ND.DN` edge by edge (`NDZero.dnz_to_dn`, `dn_to_dnz`), because the
+  zero fact is at every node that an edge reaches (`NDZero.zero_everywhere`); coverage, exactness and confirmation
+  carry over (`NDZeroThms`). A conjunction result whose premise
   set has one member is an ordinary edge; it can be a record if it is normal, and it is exact
   (`NDExact.nd_edge_exact`, for every premise list).
 * The static rule of §4.10 is modelled as a separate run-1 closure `Statics.DS`. Soundness, exactness and the
@@ -2468,6 +2494,9 @@ analysis keeps their results in the normal layer and does not refine them.
 | `Tree.lean`, `Store.lean`, `Subsume.lean`, `RestrictedStore.lean` | Concept against optimization. |
 | `Reverse.lean` | Reversal. |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | The source seeds of the forward restricted runs (§6.1 rule 6, §9.2, §10.9). |
+| `Kinds.lean` | The conclusion kinds of §7.2: FLOW, TAINT, REACH; ND edges are TAINT (§10.10). |
+| `NDZ.lean`, `NDZero.lean`, `NDZeroThms.lean`, `NDZeroBase.lean` | The ND closure of the spec with the zero-drop (`DNz`), its correspondence with `ND.DN`, its theorems, and the zero-base invariant (§4.6, §10.10). |
+| `PipelineNDZ.lean` | The pipeline encoding of `DNz` (`analyzer-core.md` §5.5). |
 | `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`, `PipelineStore.lean`, `PipelineDriver.lean` | The analyzer pipeline of `analyzer-core.md` (its §12): the no-loss theorem, the encodings of the closures, the index lookups, the driver. |
 
 Lean names. A qualified name `F.x` in this spec names the declaration `x` in the namespace `ApSpec.F`, or in the file
