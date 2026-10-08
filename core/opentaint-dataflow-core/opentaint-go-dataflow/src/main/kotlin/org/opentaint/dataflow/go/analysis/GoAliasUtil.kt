@@ -33,6 +33,19 @@ fun GoLocalAliasAnalysis.forEachHeapAliasAtStatement(
     statement, fact, Accessor::goAliasAccessor, GoAliasInfoNoRef::relevantApInfo, GoAliasAccessor.NoRef::apAccessor, body
 )
 
+fun GoLocalAliasAnalysis.forEachAliasPathAtStatement(
+    statement: GoIRInst,
+    base: AccessPathBase,
+    body: (AccessPathBase, List<Accessor>) -> Unit
+) {
+    val local = base as? AccessPathBase.LocalVar ?: return
+    val aliases = findAlias(local, statement) ?: return
+    aliases.forEach { alias ->
+        val info = alias.relevantApInfo() ?: return@forEach
+        body(info.base, info.accessors.map { it.apAccessor() })
+    }
+}
+
 fun GoLocalAliasAnalysis.forEachPossibleAliasAtStatement(
     statement: GoIRInst,
     fact: InitialFactAp,

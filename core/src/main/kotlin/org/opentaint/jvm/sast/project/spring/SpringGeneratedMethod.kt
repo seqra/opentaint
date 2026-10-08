@@ -6,6 +6,7 @@ import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstList
 import org.opentaint.ir.impl.features.classpaths.virtual.JIRVirtualMethodImpl
 import org.opentaint.ir.impl.features.classpaths.virtual.JIRVirtualParameter
+import org.opentaint.jvm.graph.JMethodBoundaryInstFeature
 import java.util.Objects
 
 class SpringGeneratedMethod(
@@ -21,7 +22,9 @@ class SpringGeneratedMethod(
     parameters = parameters,
     description = description
 ) {
-    override val instList: JIRInstList<JIRInst> get() = instructions
+    override val instList: JIRInstList<JIRInst> by lazy {
+        JMethodBoundaryInstFeature.transformInstList(this, instructions)
+    }
 
     override fun hashCode(): Int = Objects.hash(name, enclosingClass)
 

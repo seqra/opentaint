@@ -35,6 +35,10 @@ import org.opentaint.ir.api.jvm.cfg.JIRThis
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
 import org.opentaint.ir.api.jvm.cfg.JIRValue
 import org.opentaint.ir.approximation.JIREnrichedVirtualMethod
+import org.opentaint.jvm.graph.JMethodBoundaryInst
+import org.opentaint.jvm.graph.JMethodEnterInst
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.jvm.sast.project.spring.GeneratedSpringRegistry
 import org.opentaint.jvm.sast.project.spring.SpringGeneratedMethod
 import org.opentaint.semgrep.pattern.Mark
@@ -277,7 +281,12 @@ class TraceMessageBuilder(
                 return false
         }
 
-        val entry = node.entry as? TracePathNodeEntry.Action ?: return true
+        val entry = when (val e = node.entry) {
+            is TracePathNodeEntry.NonAction -> return e.entry !is TraceEntry.Unchanged
+            is TracePathNodeEntry.Action -> e
+            null -> return true
+        }
+
         val primaryAction = entry.variant.primaryAction
 
         // filtering generated assigns
@@ -901,7 +910,10 @@ class TraceMessageBuilder(
     }
 
     private fun createReturnAssignMessage(valueNode: TracePathNode, retNode: TracePathNode): String {
-        check(valueNode.statement is JIRAssignInst && retNode.statement is JIRReturnInst)
+        check(valueNode.statement is JIRAssignInst && retNode.statement is JIRReturnInst) {
+            "createReturnAssignMessage expects an assign/return pair, got " +
+                "${valueNode.statement} and ${retNode.statement}"
+        }
         val value = valueNode.statement.rhv
         val retMark = printMarks(retNode.entry.collectFollows())
         val assignedFrom = if (value is JIRCallExpr) {
@@ -1116,6 +1128,7 @@ class TraceMessageBuilder(
         }
 
         fun isGeneratedLocation(stmt: CommonInst): Boolean {
+            if (stmt is JMethodBoundaryInst) return true
             val locationMethod = stmt.location.method
             if (locationMethod is SpringGeneratedMethod) return true
             if (locationMethod is JIRLambdaMethod) return true
@@ -1123,7 +1136,18 @@ class TraceMessageBuilder(
             return false
         }
 
-        fun tryResolveNormalGeneratedLocation(stmt: CommonInst): CommonInst? {
+        fun tryResolveNormalGeneratedLocation(
+            stmt: CommonInst,
+            relevantLocations: List<List<IntermediateLocation>>?
+        ): CommonInst? {
+            if (stmt is JMethodEnterInst) return stmt.location.method.instList.first()
+            if (stmt is JMethodExitNormalInst) {
+                return tryResolveExitLocation(stmt, relevantLocations) { it is JIRReturnInst }
+            }
+            if (stmt is JMethodExitExceptionalInst) {
+                return tryResolveExitLocation(stmt, relevantLocations) { it is JIRThrowInst }
+            }
+            if (stmt is JMethodBoundaryInst) return null
             val locationMethod = stmt.location.method
             if (locationMethod is JIRLambdaMethod) {
                 val lambdaCreationLocation = (locationMethod.enclosingClass as JIRLambdaClass).lambdaLocation
@@ -1132,6 +1156,14 @@ class TraceMessageBuilder(
             }
             return null
         }
+
+        private inline fun tryResolveExitLocation(
+            stmt: JMethodBoundaryInst,
+            relevantLocations: List<List<IntermediateLocation>>?,
+            isExit: (CommonInst) -> Boolean
+        ): CommonInst? =
+            relevantLocations?.firstOrNull()?.lastOrNull { isExit(it.inst) }?.inst
+                ?: stmt.location.method.instList.instructions.lastOrNull { isExit(it) }
 
         fun isAbnormalLocation(stmt: CommonInst): Boolean =
             stmt is JIRInst && stmt.lineNumber == 0

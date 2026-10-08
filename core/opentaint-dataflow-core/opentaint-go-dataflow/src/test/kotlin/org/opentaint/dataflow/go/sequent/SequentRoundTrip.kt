@@ -82,17 +82,19 @@ class SequentFixture(program: GoIRProgram, val fn: GoIRFunction) {
         val produced = ff(s.inst).propagateFactToFact(s.before.initial(), s.before.final()).producedFacts()
         val expected = s.afters.mapTo(hashSetOf()) { it.final() }
         if (s.exact) {
-            require(produced == expected) { "F2F ${s.label}: produced $produced, expected $expected" }
+            val exactExpected = expected + s.before.final()
+            require(produced == exactExpected) { "F2F ${s.label}: produced $produced, expected $exactExpected" }
         } else {
             require(produced.containsAll(expected)) { "F2F ${s.label}: produced $produced, missing from $expected" }
         }
     }
 
     fun checkForwardZ2F(s: Scenario) {
-        val produced = ff(s.inst).propagateZeroToFact(s.before.final()).producedFacts()
-        val expected = s.afters.mapTo(hashSetOf()) { it.final() }
+        val produced = ff(s.inst).propagateZeroToFact(s.before.final(ExclusionSet.Universe)).producedFacts()
+        val expected = s.afters.mapTo(hashSetOf()) { it.final(ExclusionSet.Universe) }
         if (s.exact) {
-            require(produced == expected) { "Z2F ${s.label}: produced $produced, expected $expected" }
+            val exactExpected = expected + s.before.final(ExclusionSet.Universe)
+            require(produced == exactExpected) { "Z2F ${s.label}: produced $produced, expected $exactExpected" }
         } else {
             require(produced.containsAll(expected)) { "Z2F ${s.label}: produced $produced, missing from $expected" }
         }

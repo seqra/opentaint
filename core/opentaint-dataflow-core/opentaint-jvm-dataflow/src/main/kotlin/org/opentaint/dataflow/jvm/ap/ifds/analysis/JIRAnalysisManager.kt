@@ -48,7 +48,10 @@ import org.opentaint.ir.api.jvm.JIRClasspath
 import org.opentaint.ir.api.jvm.cfg.JIRCallExpr
 import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
+import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.jvm.graph.JApplicationGraph
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.analysis.ApplicationGraph
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
@@ -113,6 +116,11 @@ class JIRAnalysisManager(
         val jirContextForEmptyMethod = contextForEmptyMethod as? JIRMethodAnalysisContext
 
         val method = entryPointStatement.location.method
+        val instructions = method.instList.instructions
+        check(instructions.isEmpty() || instructions.last() is JMethodExitExceptionalInst) {
+            "Method $method is analysed without method boundary instructions"
+        }
+
         val localVariableReachability = jirContextForEmptyMethod?.localVariableReachability
             ?: JIRLocalVariableReachability(method, graph, this)
 
@@ -197,7 +205,9 @@ class JIRAnalysisManager(
         jIRDowncast<JIRInst>(currentInst)
         jIRDowncast<JIRMethodAnalysisContext>(analysisContext)
 
-        return JIRMethodSequentFlowFunction(apManager, analysisContext, currentInst, generateTrace)
+        return analysisContext.cachedSequentFF(currentInst.location.index, generateTrace) {
+            JIRMethodSequentFlowFunction(apManager, analysisContext, currentInst, generateTrace)
+        }
     }
 
     override fun getMethodCallFlowFunction(
@@ -311,6 +321,9 @@ class JIRAnalysisManager(
     }
 
     override val methodContextSerializer = JIRMethodContextSerializer(cp)
+
+    override fun isTraceRequiredInstruction(inst: CommonInst): Boolean =
+        inst is JIRReturnInst || inst is JMethodExitNormalInst
 
     override fun onInstructionReached(inst: CommonInst) {
 

@@ -126,10 +126,11 @@ class GoAnalysisManager(
         currentInst: CommonInst,
         generateTrace: Boolean,
     ): MethodSequentFlowFunction {
-        return GoMethodSequentFlowFunction(
-            apManager, analysisContext as GoMethodAnalysisContext,
-            currentInst as GoIRInst, generateTrace
-        )
+        val ctx = analysisContext as GoMethodAnalysisContext
+        val inst = currentInst as GoIRInst
+        return ctx.cachedSequentFF(inst.location.index, generateTrace) {
+            GoMethodSequentFlowFunction(apManager, ctx, inst, generateTrace)
+        }
     }
 
     override fun getMethodCallFlowFunction(

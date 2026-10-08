@@ -11,6 +11,7 @@ import org.opentaint.ir.impl.features.InMemoryHierarchy
 import org.opentaint.ir.impl.features.Usages
 import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.opentaintIrDb
+import org.opentaint.jvm.graph.JMethodBoundaryInstFeature
 import java.nio.file.Path
 import kotlin.io.path.Path
 
@@ -44,7 +45,7 @@ abstract class BasicTestUtils {
 
         db.awaitBackgroundJobs()
 
-        cp = db.classpath(listOf(samplesJar.toFile()), listOf(UnknownClasses))
+        cp = db.classpath(listOf(samplesJar.toFile()), listOf(UnknownClasses, JMethodBoundaryInstFeature))
     }
 
     @AfterAll

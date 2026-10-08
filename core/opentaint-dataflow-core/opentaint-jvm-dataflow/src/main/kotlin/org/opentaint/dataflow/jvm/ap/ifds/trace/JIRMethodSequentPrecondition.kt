@@ -2,36 +2,30 @@ package org.opentaint.dataflow.jvm.ap.ifds.trace
 
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
-import org.opentaint.dataflow.ap.ifds.Accessor
-import org.opentaint.dataflow.ap.ifds.ElementAccessor
 import org.opentaint.dataflow.ap.ifds.TaintMarkAccessor
 import org.opentaint.dataflow.ap.ifds.access.ApManager
 import org.opentaint.dataflow.ap.ifds.access.InitialFactAp
+import org.opentaint.dataflow.ap.ifds.summary.StatementSummary
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.PreconditionFactsForInitialFact
 import org.opentaint.dataflow.ap.ifds.trace.MethodSequentPrecondition.SequentPrecondition
 import org.opentaint.dataflow.ap.ifds.trace.TaintRulePrecondition
-import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils
 import org.opentaint.dataflow.jvm.ap.ifds.MethodFlowFunctionUtils.accessPathBase
 import org.opentaint.dataflow.jvm.ap.ifds.TaintConfigUtils.accept
 import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRMethodAnalysisContext
-import org.opentaint.dataflow.jvm.ap.ifds.analysis.forEachPossibleAliasAtStatement
+import org.opentaint.dataflow.jvm.ap.ifds.analysis.JIRStatementSummary
 import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveAp
 import org.opentaint.dataflow.taint.InitialFactReader
 import org.opentaint.dataflow.taint.TaintSourceActionPreconditionEvaluator
 import org.opentaint.dataflow.taint.evaluateSourceRulePrecondition
 import org.opentaint.dataflow.taint.preconditionDnf
-import org.opentaint.ir.api.jvm.cfg.JIRArrayAccess
 import org.opentaint.ir.api.jvm.cfg.JIRAssignInst
-import org.opentaint.ir.api.jvm.cfg.JIRBinaryExpr
-import org.opentaint.ir.api.jvm.cfg.JIRCastExpr
-import org.opentaint.ir.api.jvm.cfg.JIRExpr
 import org.opentaint.ir.api.jvm.cfg.JIRFieldRef
-import org.opentaint.ir.api.jvm.cfg.JIRImmediate
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRReturnInst
 import org.opentaint.ir.api.jvm.cfg.JIRThrowInst
-import org.opentaint.ir.api.jvm.cfg.JIRValue
+import org.opentaint.jvm.graph.JMethodExitExceptionalInst
+import org.opentaint.jvm.graph.JMethodExitNormalInst
 import org.opentaint.util.maybeFlatMap
 
 class JIRMethodSequentPrecondition(
@@ -39,238 +33,47 @@ class JIRMethodSequentPrecondition(
     private val currentInst: JIRInst,
     private val analysisContext: JIRMethodAnalysisContext,
 ) : MethodSequentPrecondition {
+    private val forwardSummary: StatementSummary by lazy {
+        JIRStatementSummary.build(apManager, currentInst, analysisContext.aliasAnalysis)
+    }
+
+    private val reversedSummary: StatementSummary by lazy {
+        JIRStatementSummary.buildReversed(apManager, currentInst, analysisContext.aliasAnalysis)
+    }
 
     override fun factPrecondition(
         fact: InitialFactAp,
-    ): Set<SequentPrecondition> {
-        if (currentInst !is JIRAssignInst && currentInst !is JIRReturnInst && currentInst !is JIRThrowInst) {
-            return setOf(SequentPrecondition.Unchanged)
+    ): Set<SequentPrecondition> = when (currentInst) {
+        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> methodExitPrecondition(fact)
+
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> {
+            val results = mutableSetOf<SequentPrecondition>()
+            results.computeFactPrecondition(fact)
+            results
         }
 
-        val results = mutableSetOf<SequentPrecondition>()
-        results.computeFactPrecondition(fact, applyExitSourceRules = true)
+        else -> setOf(SequentPrecondition.Unchanged)
+    }
+
+    private fun methodExitPrecondition(fact: InitialFactAp): Set<SequentPrecondition> {
+        val results = mutableSetOf<SequentPrecondition>(SequentPrecondition.Unchanged)
+        results.methodExitSourcePrecondition(fact)
         return results
     }
 
-    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(
-        fact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ) {
-        val factPrecondition = computePrecondition(fact, applyExitSourceRules)
-        this += factPrecondition.ifEmpty { setOf(SequentPrecondition.Unchanged) }
+    private fun MutableSet<SequentPrecondition>.computeFactPrecondition(fact: InitialFactAp) {
+        val precondition = preconditionForFact(fact).toMutableSet()
 
-        analysisContext.aliasAnalysis?.forEachPossibleAliasAtStatement(currentInst, fact) { aliasedFact ->
-            this += computePrecondition(aliasedFact, applyExitSourceRules)
-        }
+        precondition.unconditionalSourcesPrecondition(fact)
+        this += precondition.ifEmpty { setOf(SequentPrecondition.Unchanged) }
     }
 
-    private fun computePrecondition(
-        aliasedFact: InitialFactAp,
-        applyExitSourceRules: Boolean
-    ): Set<SequentPrecondition> {
-        val precondition = mutableSetOf<SequentPrecondition>()
-        preconditionForFact(aliasedFact)?.let {
-            precondition += PreconditionFactsForInitialFact(aliasedFact, it)
-        }
+    private fun preconditionForFact(fact: InitialFactAp): Set<SequentPrecondition> = when (currentInst) {
+        is JMethodExitNormalInst, is JMethodExitExceptionalInst -> setOf(PreconditionFactsForInitialFact(fact, listOf(fact)))
 
-        precondition.unconditionalSourcesPrecondition(aliasedFact)
+        is JIRAssignInst, is JIRReturnInst, is JIRThrowInst -> sequentPreconditions(forwardSummary, reversedSummary, fact)
 
-        if (applyExitSourceRules) {
-            precondition.methodExitSourcePrecondition(aliasedFact)
-        }
-
-        return precondition
-    }
-
-    private fun preconditionForFact(fact: InitialFactAp): List<InitialFactAp>? {
-        when (currentInst) {
-            is JIRAssignInst -> {
-                return sequentAssignPrecondition(currentInst.rhv, currentInst.lhv, fact)
-            }
-
-            is JIRReturnInst -> {
-                if (fact.base !is AccessPathBase.Return) {
-                    return null
-                }
-
-                val base = currentInst.returnValue
-                    ?.let { accessPathBase(it) }
-                    ?: return null
-
-                return listOf(fact.rebase(base))
-            }
-
-            is JIRThrowInst -> {
-                if (fact.base !is AccessPathBase.Exception) {
-                    return null
-                }
-
-                val base = currentInst.throwable
-                    .let { accessPathBase(it) }
-                    ?: return null
-
-                return listOf(fact.rebase(base))
-            }
-
-            else -> return null
-        }
-    }
-
-    private fun sequentAssignPrecondition(
-        assignFrom: JIRExpr,
-        assignTo: JIRValue,
-        fact: InitialFactAp,
-    ): List<InitialFactAp>? {
-        val assignFromAccess = when (assignFrom) {
-            is JIRCastExpr -> MethodFlowFunctionUtils.mkAccess(assignFrom.operand)
-            is JIRImmediate -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-            is JIRArrayAccess -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-            is JIRFieldRef -> MethodFlowFunctionUtils.mkAccess(assignFrom)
-            is JIRBinaryExpr -> {
-                val lhv = sequentAssignPrecondition(assignFrom.lhv, assignTo, fact)
-                val rhv = sequentAssignPrecondition(assignFrom.rhv, assignTo, fact)
-                return if (lhv == null && rhv == null) null else lhv.orEmpty() + rhv.orEmpty()
-            }
-            else -> null
-        }
-
-        val assignToAccess = when (assignTo) {
-            is JIRImmediate -> MethodFlowFunctionUtils.mkAccess(assignTo)
-            is JIRArrayAccess -> MethodFlowFunctionUtils.mkAccess(assignTo)
-            is JIRFieldRef -> MethodFlowFunctionUtils.mkAccess(assignTo)
-            else -> null
-        }
-
-        return when {
-            assignFromAccess is MethodFlowFunctionUtils.MemoryAccess -> {
-                check(assignToAccess !is MethodFlowFunctionUtils.MemoryAccess) { "Complex assignment: $assignTo = $assignFrom" }
-                fieldRead(assignToAccess?.base, assignFromAccess, fact)
-            }
-
-            assignToAccess is MethodFlowFunctionUtils.MemoryAccess -> {
-                fieldWrite(assignToAccess, assignFromAccess?.base, fact)
-            }
-
-            else -> simpleAssign(assignToAccess?.base, assignFromAccess?.base, fact)
-        }
-    }
-
-    private fun simpleAssign(
-        assignTo: AccessPathBase?,
-        assignFrom: AccessPathBase?,
-        fact: InitialFactAp,
-    ): List<InitialFactAp>? {
-        if (assignTo == assignFrom || assignTo != fact.base) {
-            return null
-        }
-
-        if (assignFrom != null) {
-            return listOf(fact.rebase(assignFrom))
-        }
-
-        // kill fact
-        return emptyList()
-    }
-
-    private fun fieldRead(
-        assignTo: AccessPathBase?,
-        access: MethodFlowFunctionUtils.MemoryAccess,
-        fact: InitialFactAp,
-    ): List<InitialFactAp>? {
-        if (fact.base != assignTo && fact.base == access.base &&
-            access is MethodFlowFunctionUtils.RefAccess && access.accessor is ElementAccessor
-        ) {
-            return listOf(fact)
-        }
-
-        if (fact.base != assignTo) {
-            return null
-        }
-
-        val resultFact = when (access) {
-            is MethodFlowFunctionUtils.RefAccess -> fact
-                .prependAccessor(access.accessor)
-                .rebase(access.base)
-
-            is MethodFlowFunctionUtils.StaticRefAccess -> fact
-                .prependAccessor(access.accessor)
-                .prependAccessor(access.classStaticAccessor)
-                .rebase(access.base)
-        }
-        return listOf(resultFact)
-    }
-
-    private fun fieldWrite(
-        access: MethodFlowFunctionUtils.MemoryAccess,
-        assignFrom: AccessPathBase?,
-        fact: InitialFactAp,
-    ): List<InitialFactAp>? {
-        if (fact.base != access.base) return null
-
-        when (access) {
-            is MethodFlowFunctionUtils.RefAccess -> {
-                val (accessorFacts, otherFacts) = handleAccessorWrite(fact, access.accessor)
-                    ?: return null
-
-                val facts = otherFacts.toMutableList()
-                if (assignFrom != null) {
-                    accessorFacts.mapTo(facts) { it.rebase(assignFrom) }
-                }
-
-                return facts
-            }
-
-            is MethodFlowFunctionUtils.StaticRefAccess -> {
-                val facts = mutableListOf<InitialFactAp>()
-                val (accessorStaticFacts, otherStaticFacts) = handleAccessorWrite(fact, access.classStaticAccessor)
-                    ?: return null
-
-                facts += otherStaticFacts
-
-                val relevantFacts = mutableListOf<InitialFactAp>()
-                accessorStaticFacts.forEach { f ->
-                    val (af, other) = handleAccessorWrite(f, access.accessor)
-                        ?: return@forEach
-
-                    relevantFacts += af
-                    other.mapTo(facts) { it.prependAccessor(access.classStaticAccessor) }
-                }
-
-                if (relevantFacts.isEmpty()) return null
-
-                if (assignFrom != null) {
-                    relevantFacts.mapTo(facts) { it.rebase(assignFrom) }
-                }
-
-                return facts
-            }
-        }
-    }
-
-    private fun handleAccessorWrite(
-        fact: InitialFactAp,
-        accessor: Accessor
-    ): Pair<List<InitialFactAp>, List<InitialFactAp>>? {
-        if (!fact.startsWithAccessor(accessor)) {
-            return null
-        }
-
-        val accessorFacts = mutableListOf<InitialFactAp>()
-        val otherFacts = mutableListOf<InitialFactAp>()
-
-        val factAtAccessor = fact.readAccessor(accessor) ?: error("No fact")
-        accessorFacts += factAtAccessor
-
-        val otherFact = fact.clearAccessor(accessor)
-        if (otherFact != null) {
-            otherFacts += otherFact
-        }
-
-        if (accessor is ElementAccessor) {
-            otherFacts += factAtAccessor.prependAccessor(ElementAccessor)
-        }
-
-        return accessorFacts to otherFacts
+        else -> emptySet()
     }
 
     private fun MutableSet<SequentPrecondition>.unconditionalSourcesPrecondition(fact: InitialFactAp) {
@@ -335,7 +138,7 @@ class JIRMethodSequentPrecondition(
                         }
 
                         val preFact = factCube.facts.single()
-                        computeFactPrecondition(preFact, applyExitSourceRules = false)
+                        computeFactPrecondition(preFact)
                     }
                 }
             )

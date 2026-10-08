@@ -16,6 +16,7 @@ import org.opentaint.ir.impl.features.Usages
 import org.opentaint.ir.impl.features.classpaths.JIRUnknownClass
 import org.opentaint.ir.impl.features.classpaths.UnknownClasses
 import org.opentaint.ir.impl.opentaintIrDb
+import org.opentaint.jvm.graph.JMethodBoundaryInstFeature
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.createCpWithApproximations
 import org.opentaint.jvm.sast.dataflow.DataFlowApproximationLoader.installApproximations
 import org.opentaint.jvm.sast.project.spring.SpringComponentsResolveTransformer
@@ -124,14 +125,15 @@ private fun AnalysisContextBuilder.createAnalysisContextWithCp(
 
     val springComponentsResolver = SpringComponentsResolveTransformer()
 
-    //        val methodNormalizer = MethodReturnInstNormalizerFeature
     val features = mutableListOf(
         KotlinInlineFunctionScopeTransformer,
-        UnknownClasses, lambdaAnonymousClass, lambdaTransformer, /*methodNormalizer,*/
+        UnknownClasses, lambdaAnonymousClass, lambdaTransformer,
         JStringConcatTransformer, JMultiDimArrayAllocationTransformer,
         classPathExtensionFeature,
         JavaPropertiesResolveTransformer(projectClasses),
         springComponentsResolver,
+        // must stay last: it appends instructions whose indices have to be final
+        JMethodBoundaryInstFeature,
     )
 
     //        note: reactor operators special handling has no reasons for now

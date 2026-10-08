@@ -2,6 +2,7 @@ package example;
 
 import base.RuleSample;
 import base.RuleSet;
+import base.TaintRuleFalsePositive;
 
 @RuleSet("example/RuleReturn6.yaml")
 public abstract class RuleReturn6 implements RuleSample {
@@ -17,6 +18,7 @@ public abstract class RuleReturn6 implements RuleSample {
         }
     }
 
+    @TaintRuleFalsePositive("Method exit cleaner required")
     static class Negative extends RuleReturn6 {
         @Override
         public void entrypoint() {

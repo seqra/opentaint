@@ -668,7 +668,7 @@ class MethodTraceResolver(
             val entryPredecessorIds = predecessors.get(entryId) ?: continue
 
             val entry = entryManager.entryById(entryId)
-            if (entry is TraceEntry.Unchanged) {
+            if (entry is TraceEntry.Unchanged && !analysisManager.isTraceRequiredInstruction(entry.statement)) {
                 predecessors.remove(entryId)
                 entryPredecessorIds.remove(entryId)
 

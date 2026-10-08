@@ -95,6 +95,18 @@ data class AccessGraphInitialFactAp(
         return AccessGraphInitialFactAp(base, concatenatedGraph, exclusions)
     }
 
+    override fun delta(other: InitialFactAp): List<InitialFactAp.Delta> {
+        other as AccessGraphInitialFactAp
+        if (base != other.base) return emptyList()
+
+        return access.delta(other.access).mapNotNull { delta ->
+            delta.filter(other.exclusions)?.let { Delta(it) }
+        }
+    }
+
+    override fun concat(typeChecker: FactTypeChecker, delta: FinalFactAp.Delta): FinalFactAp? =
+        AccessGraphFinalFactAp(base, access, exclusions).concat(typeChecker, delta)
+
     override fun contains(factAp: InitialFactAp): Boolean {
         factAp as AccessGraphInitialFactAp
 

@@ -29,8 +29,16 @@ class GoMethodAnalysisContext(
 
     val closureCallResolution = int2ObjectMap<ClosureTracker>()
 
+    private val sequentFFCache = int2ObjectMap<GoMethodSequentFlowFunction>()
+
+    fun cachedSequentFF(stmtIdx: Int, generateTrace: Boolean, body: () -> GoMethodSequentFlowFunction): GoMethodSequentFlowFunction {
+        val key = stmtIdx * 2 + if (generateTrace) 1 else 0
+        return synchronized(sequentFFCache) { sequentFFCache.computeIfAbsent(key) { body() } }
+    }
+
     fun resetAnalysisCache() {
         taint.reset()
         closureCallResolution.values.forEach { it.resetSubscribers() }
+        synchronized(sequentFFCache) { sequentFFCache.clear() }
     }
 }
