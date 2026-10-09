@@ -3,7 +3,6 @@ package org.opentaint.dataflow.configuration.python.serialized
 import com.charleskorn.kaml.Yaml
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
-import org.opentaint.python.config.PythonDefaultConfigLoader
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -76,31 +75,5 @@ class SerializedPythonTaintConfigTest {
         val negated = yaml.decodeFromString<SerializedPythonCondition>(yaml.encodeToString(SerializedPythonCondition.Not(cmp)))
         assertTrue(negated is SerializedPythonCondition.Not)
         assertTrue(negated.not is SerializedPythonCondition.ConstantCmp)
-    }
-
-    @Test
-    fun `parses the shipped python config yaml end to end`() {
-        val config = PythonDefaultConfigLoader.loadConfig() ?: error("Couldn't load config")
-
-        assertTrue(config.entryPoint.isEmpty())
-        assertTrue(config.source.isEmpty())
-        assertTrue(config.sink.isEmpty())
-        assertTrue(config.cleaner.isEmpty())
-        assertTrue(config.passThrough.isNotEmpty())
-
-        val parseaddr = config.passThrough.single {
-            (it.target as? PythonTarget.Function)?.function == "email.utils.parseaddr"
-        }
-        assertTrue(parseaddr.copy.any { it.to is PythonPosition.WithModifiers })
-
-        val zipFileCtor = config.passThrough.single {
-            (it.target as? PythonTarget.Function)?.function == "zipfile.ZipFile"
-        }
-        val hasFieldModifier = zipFileCtor.copy.any { action ->
-            (action.to as? PythonPosition.WithModifiers)
-                ?.modifiers
-                ?.any { it is PythonPositionModifier.Field && it.name == "filelist" } == true
-        }
-        assertTrue(hasFieldModifier, "expected `.filelist` field modifier on zipfile.ZipFile copy")
     }
 }

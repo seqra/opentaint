@@ -16,5 +16,4 @@ dependencies {
 
     testImplementation(platform(JunitDependencies.Libs.junit_bom))
     testImplementation(JunitDependencies.Libs.junit_jupiter)
-    testImplementation("org.opentaint.config:python-config")
 }

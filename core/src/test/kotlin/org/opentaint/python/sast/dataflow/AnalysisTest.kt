@@ -28,7 +28,6 @@ import org.opentaint.dataflow.ifds.SingletonUnit
 import org.opentaint.dataflow.ifds.UnitResolver
 import org.opentaint.dataflow.python.rules.PIRCombinedTaintRulesProvider
 import org.opentaint.dataflow.python.rules.PIRTaintRulesProvider
-import org.opentaint.dataflow.python.rules.loadDefaultConfig
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRSettings

@@ -1,4 +1,4 @@
-package org.opentaint.dataflow.python.rules
+package org.opentaint.python.sast.dataflow
 
 import org.opentaint.dataflow.configuration.python.Argument
 import org.opentaint.dataflow.configuration.python.serialized.PythonPosition
@@ -7,6 +7,7 @@ import org.opentaint.dataflow.configuration.python.serialized.PythonTarget
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonEntryPointSource
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintAssignAction
 import org.opentaint.dataflow.configuration.python.serialized.SerializedPythonTaintConfig
+import org.opentaint.dataflow.python.rules.PIRTaintConfiguration
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.common.cfg.ControlFlowGraph
 import org.opentaint.ir.api.python.PIRAnyType

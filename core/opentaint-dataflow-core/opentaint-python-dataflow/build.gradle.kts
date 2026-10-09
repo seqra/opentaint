@@ -17,7 +17,6 @@ dependencies {
     implementation(opentaintUtilCommon)
 
     api("org.opentaint.opentaint-configuration-rules:configuration-rules-python")
-    implementation("org.opentaint.config:python-config")
 
     implementation(opentaint_ir_api_python)
     implementation(opentaint_ir_core_python)
