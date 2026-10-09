@@ -3,9 +3,7 @@ package org.opentaint.dataflow.go.analysis
 import org.opentaint.dataflow.ap.ifds.MethodEntryPoint
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.analysis.MethodAnalysisContext
-import org.opentaint.dataflow.ap.ifds.analysis.MethodCallFactMapper
 import org.opentaint.dataflow.go.GoClosureTracker.ClosureTracker
-import org.opentaint.dataflow.go.GoMethodCallFactMapper
 import org.opentaint.dataflow.go.analysis.alias.GoLocalAliasAnalysis
 import org.opentaint.dataflow.go.rules.GoTaintAnalysisContext
 import org.opentaint.dataflow.util.int2ObjectMap
@@ -25,9 +23,6 @@ class GoMethodAnalysisContext(
     }
 
     val phase: TaintAnalysisManager.Phase get() = analysisManager.phase
-
-    override val methodCallFactMapper: MethodCallFactMapper
-        get() = GoMethodCallFactMapper
 
     val method: GoIRFunction
         get() = methodEntryPoint.method as GoIRFunction

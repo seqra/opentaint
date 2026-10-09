@@ -21,7 +21,6 @@ import org.opentaint.dataflow.ap.ifds.analysis.MethodCallSummaryHandler.SummaryE
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction
 import org.opentaint.dataflow.ap.ifds.analysis.MethodSequentFlowFunction.Sequent
 import org.opentaint.dataflow.graph.MethodInstGraph
-import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonAssignInst
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
@@ -180,12 +179,13 @@ class MethodForwardTraceResolver(
 
         val callFacts = flowFunction.propagateZeroToFact(edge.factAp)
         callFacts.forEach {
-            propagateZeroCallFact(callExpr, edge, it)
+            propagateZeroCallFact(callExpr, flowFunction, edge, it)
         }
     }
 
     private fun TraceBuilder.propagateZeroCallFact(
         callExpr: CommonCallExpr,
+        flowFunction: MethodCallFlowFunction,
         edge: ZeroToFact,
         fact: ZeroCallFact,
     ) {
@@ -194,35 +194,71 @@ class MethodForwardTraceResolver(
                 handleUnchangedStatementEdge(edge, edge)
             }
 
+            is MethodCallFlowFunction.CallToStartZFact -> {
+                resolveMethodCall(callExpr, flowFunction, edge, fact.callerFactAp, fact.startFactBase)
+            }
+
+            is MethodCallFlowFunction.Call2ReturnFact -> {
+                propagateCall2ReturnFact(edge, fact)
+            }
+
+            is MethodCallFlowFunction.CallToStartZeroFact,
+            is MethodCallFlowFunction.ZeroSideEffect -> {
+                // ignore
+            }
+        }
+    }
+
+    private fun TraceBuilder.propagateZeroCallSuccessFact(
+        edge: ZeroToFact,
+        fact: MethodCallFlowFunction.ZeroCallSuccessFact,
+        method: MethodWithContext,
+    ) {
+        when (fact) {
+            is MethodCallFlowFunction.CallToStartZFact -> {
+                for (ep in methodEntryPoints(method)) {
+                    handleMethodCall(ep, edge, fact.callerFactAp, fact.startFactBase)
+                }
+            }
+
+            is MethodCallFlowFunction.Call2ReturnFact -> {
+                propagateCall2ReturnFact(edge, fact)
+            }
+
+            is MethodCallFlowFunction.CallToStartZeroFact -> {
+                // ignore
+            }
+        }
+    }
+
+    private fun TraceBuilder.propagateCall2ReturnFact(
+        edge: ZeroToFact,
+        fact: MethodCallFlowFunction.Call2ReturnFact,
+    ) {
+        when (fact) {
             is MethodCallFlowFunction.Drop -> {
-                val trace = fact.traceInfo?.let { EdgeReason.Call(EdgeReason.CallInfo.CallTraceInfo(it)) }
-                    ?: EdgeReason.Unknown
-                addSuccessor(edge, TraceEdge.Drop(trace))
+                addSuccessor(edge, TraceEdge.Drop(callEdgeReason(fact.traceInfo)))
             }
 
             is MethodCallFlowFunction.CallToReturnZFact -> {
-                val trace = fact.traceInfo?.let { EdgeReason.Call(EdgeReason.CallInfo.CallTraceInfo(it)) }
-                    ?: EdgeReason.Unknown
                 val nextEdge = ZeroToFact(methodEntryPoint, edge.statement, fact.factAp)
-                handleStatementEdge(edge, nextEdge, trace)
-            }
-
-            is MethodCallFlowFunction.CallToStartZFact -> {
-                resolveMethodCall(callExpr, edge, fact.callerFactAp, fact.startFactBase)
+                handleStatementEdge(edge, nextEdge, callEdgeReason(fact.traceInfo))
             }
 
             is MethodCallFlowFunction.CallToReturnZeroFact,
-            is MethodCallFlowFunction.CallToStartZeroFact,
             is MethodCallFlowFunction.CallToReturnFFact,
-            is MethodCallFlowFunction.ZeroSideEffect,
             is MethodCallFlowFunction.CallToReturnNonDistributiveFact -> {
                 // ignore
             }
         }
     }
 
+    private fun callEdgeReason(traceInfo: MethodCallFlowFunction.TraceInfo?): EdgeReason =
+        traceInfo?.let { EdgeReason.Call(EdgeReason.CallInfo.CallTraceInfo(it)) } ?: EdgeReason.Unknown
+
     private fun TraceBuilder.resolveMethodCall(
         callExpr: CommonCallExpr,
+        flowFunction: MethodCallFlowFunction,
         callerEdge: ZeroToFact,
         callerFact: FinalFactAp,
         startFactBase: AccessPathBase,
@@ -234,24 +270,30 @@ class MethodForwardTraceResolver(
         for (method in methodCalls) {
             when (method) {
                 is MethodCallResolutionResult.ResolvedMethod -> {
-                    for (ep in methodEntryPoints(method.method)) {
-                        handleMethodCall(ep, callerEdge, callerFact, startFactBase)
+                    flowFunction.propagateZeroToFactResolutionSuccess(
+                        callerFact, startFactBase, method.method
+                    ).forEach {
+                        propagateZeroCallSuccessFact(callerEdge, it, method.method)
                     }
                 }
 
                 MethodCallResolutionResult.ResolutionFailure -> {
-                    val stubFact = MethodCallFlowFunction.CallToReturnZFact(callerFact, traceInfo = null)
-                    propagateZeroCallFact(callExpr, callerEdge, stubFact)
+                    flowFunction.propagateZeroToFactResolutionFailure(
+                        callerFact, startFactBase
+                    ).forEach {
+                        propagateZeroCallFact(callExpr, flowFunction, callerEdge, it)
+                    }
                 }
             }
         }
     }
 
-    private val methodEntryPointsCache = hashMapOf<CommonMethod, Array<CommonInst>>()
+    private val methodEntryPointsCache = hashMapOf<MethodWithContext, Array<CommonInst>>()
 
     private fun methodEntryPoints(method: MethodWithContext): List<MethodEntryPoint> {
-        val methodEntryPoints = methodEntryPointsCache.getOrPut(method.method) {
-            runner.graph.methodGraph(method.method).entryPoints().toList().toTypedArray()
+        val methodEntryPoints = methodEntryPointsCache.getOrPut(method) {
+            val epResolver = analysisManager.getMethodEntrypointResolver(runner.graph)
+            epResolver.resolveEntryPoints(method.method, method.ctx).toTypedArray()
         }
         return methodEntryPoints.map { MethodEntryPoint(method.ctx, it) }
     }
@@ -262,19 +304,20 @@ class MethodForwardTraceResolver(
         callerFact: FinalFactAp,
         startFactBase: AccessPathBase,
     ) {
-        val calleeInitialFactAp = callerEdge.factAp.rebase(startFactBase)
+        val calleeInitialFactAp = callerFact.rebase(startFactBase)
         val summaries = manager.findFactSummaryEdges(ep, calleeInitialFactAp)
-
-        val applicableSummaries = summaries.filter { isApplicableExitToReturnEdge(it) }
 
         val handler = analysisManager.getMethodCallSummaryHandler(
             apManager, analysisContext, callerEdge.statement
         )
 
+        val applicableSummaries = summaries
+            .filter { isApplicableExitToReturnEdge(it) }
+            .flatMap { handler.prepareFactToFactSummary(it) }
+
         val summaryApplied = applyMethodSummaries(
             currentEdge = callerEdge,
             callerFact = callerFact,
-            methodInitialFactBase = startFactBase,
             methodSummaries = applicableSummaries,
             handleSummaryEdge = handler::handleZeroToFact
         )
@@ -293,22 +336,22 @@ class MethodForwardTraceResolver(
     private fun TraceBuilder.applyMethodSummaries(
         currentEdge: ZeroToFact,
         callerFact: FinalFactAp,
-        methodInitialFactBase: AccessPathBase,
         methodSummaries: List<FactToFact>,
         handleSummaryEdge: (currentFactAp: FinalFactAp, summaryEffect: SummaryEdgeApplication, summaryEdge: SummaryEdge) -> Set<Sequent>,
     ): Boolean {
         var summaryApplied = false
-        val methodInitialFact = callerFact.rebase(methodInitialFactBase)
 
         val summaries = methodSummaries.groupByTo(hashMapOf()) { it.initialFactAp }
         for ((summaryInitialFact, summaryEdges) in summaries) {
             val summaryEdgeEffects = MethodSummaryEdgeApplicationUtils.tryApplySummaryEdge(
-                methodInitialFact, summaryInitialFact
+                callerFact, summaryInitialFact
             )
 
             for (summaryEdgeEffect in summaryEdgeEffects) {
                 for (methodSummary in summaryEdges) {
-                    val summaryEdge = SummaryEdge.F2F(methodSummary.initialFactAp, methodSummary.factAp)
+                    val summaryEdge = SummaryEdge.F2F(
+                        methodSummary.methodEntryPoint, methodSummary.initialFactAp, methodSummary.factAp
+                    )
                     val sf = handleSummaryEdge(callerFact, summaryEdgeEffect, summaryEdge)
                     handleSequentFact(currentEdge, sf)
                     summaryApplied = true
