@@ -31,7 +31,7 @@ fun Project.findOpentaintGoEnvInitializer(): Task? {
     return irProject.resolveIncludedProjectTask(":go:setupGoEnvironment")
 }
 
-private fun Gradle.findIrProject(): IncludedBuild? {
+internal fun Gradle.findIrProject(): IncludedBuild? {
     val currentInclude = includedBuilds.find { it.name == "opentaint-ir" }
     if (currentInclude != null) return currentInclude
     return parent?.findIrProject()

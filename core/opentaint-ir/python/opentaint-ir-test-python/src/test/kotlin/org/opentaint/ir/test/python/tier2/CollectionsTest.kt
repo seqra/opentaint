@@ -1,0 +1,168 @@
+package org.opentaint.ir.test.python.tier2
+
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Tag
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRClasspath
+import org.opentaint.ir.api.python.PIRDeleteAttr
+import org.opentaint.ir.api.python.PIRDeleteLocal
+import org.opentaint.ir.api.python.PIRDeleteSubscript
+import org.opentaint.ir.api.python.PIRDictExpr
+import org.opentaint.ir.api.python.PIRListExpr
+import org.opentaint.ir.api.python.PIRLoadAttr
+import org.opentaint.ir.api.python.PIRSetExpr
+import org.opentaint.ir.api.python.PIRSliceExpr
+import org.opentaint.ir.api.python.PIRStoreAttr
+import org.opentaint.ir.api.python.PIRStoreSubscript
+import org.opentaint.ir.api.python.PIRSubscriptExpr
+import org.opentaint.ir.api.python.PIRTupleExpr
+import org.opentaint.ir.api.python.PIRUnpack
+import org.opentaint.ir.api.python.dictExpr
+import org.opentaint.ir.api.python.filterAssignOf
+import org.opentaint.ir.api.python.isAssignOf
+import org.opentaint.ir.api.python.listExpr
+import org.opentaint.ir.test.python.PIRTestBase
+
+@Tag("tier2")
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
+class CollectionsTest : PIRTestBase() {
+
+    private lateinit var cp: PIRClasspath
+
+    companion object {
+        val SOURCE = """
+def col_list() -> list:
+    return [1, 2, 3]
+
+def col_tuple() -> tuple:
+    return (1, 2, 3)
+
+def col_set() -> set:
+    return {1, 2, 3}
+
+def col_dict() -> dict:
+    return {"a": 1, "b": 2}
+
+def col_empty_list() -> list:
+    return []
+
+def col_empty_dict() -> dict:
+    return {}
+
+def col_subscript_load(items: list) -> int:
+    return items[0]
+
+def col_subscript_store(items: list) -> None:
+    items[0] = 99
+
+def col_slice(items: list) -> list:
+    return items[1:3]
+
+def col_unpack(pair: tuple) -> int:
+    a, b = pair
+    return a
+
+def col_extended_unpack(items: list) -> list:
+    first, *rest = items
+    return rest
+
+def col_delete_local() -> None:
+    x = 1
+    del x
+
+def col_delete_attr(obj: object) -> None:
+    del obj.attr  # type: ignore
+
+def col_delete_subscript(d: dict) -> None:
+    del d["key"]
+
+def col_attr_load(obj: object) -> object:
+    return obj.__class__  # type: ignore
+
+def col_attr_store(obj: object) -> None:
+    obj.x = 42  # type: ignore
+        """.trimIndent()
+    }
+
+    @BeforeAll fun setup() { cp = buildFromSource(SOURCE) }
+    private fun insts(name: String) = cp.findFunctionOrNull("__test__.$name")!!
+        .instList
+
+    @Test fun `list literal`() {
+        val builds = insts("col_list").filterAssignOf<PIRListExpr>()
+        assertTrue(builds.isNotEmpty())
+        assertTrue(builds.any { it.listExpr.elements.size == 3 })
+    }
+
+    @Test fun `tuple literal`() {
+        val builds = insts("col_tuple").filterAssignOf<PIRTupleExpr>()
+        assertTrue(builds.isNotEmpty())
+    }
+
+    @Test fun `set literal`() {
+        val builds = insts("col_set").filterAssignOf<PIRSetExpr>()
+        assertTrue(builds.isNotEmpty())
+    }
+
+    @Test fun `dict literal`() {
+        val builds = insts("col_dict").filterAssignOf<PIRDictExpr>()
+        assertTrue(builds.isNotEmpty())
+        assertTrue(builds.any { it.dictExpr.keys.size == 2 })
+    }
+
+    @Test fun `empty list`() {
+        val builds = insts("col_empty_list").filterAssignOf<PIRListExpr>()
+        assertTrue(builds.any { it.listExpr.elements.isEmpty() })
+    }
+
+    @Test fun `empty dict`() {
+        val builds = insts("col_empty_dict").filterAssignOf<PIRDictExpr>()
+        assertTrue(builds.any { it.dictExpr.keys.isEmpty() })
+    }
+
+    @Test fun `subscript load`() {
+        assertTrue(insts("col_subscript_load").any { it.isAssignOf<PIRSubscriptExpr>() })
+    }
+
+    @Test fun `subscript store`() {
+        assertTrue(insts("col_subscript_store").any { it is PIRStoreSubscript })
+    }
+
+    @Test fun `slice produces BuildSlice`() {
+        assertTrue(insts("col_slice").any { it.isAssignOf<PIRSliceExpr>() })
+    }
+
+    @Test fun `tuple unpack`() {
+        val unpacks = insts("col_unpack").filterIsInstance<PIRUnpack>()
+        assertTrue(unpacks.isNotEmpty())
+        assertTrue(unpacks.any { it.targets.size == 2 })
+    }
+
+    @Test fun `extended unpack with star`() {
+        val unpacks = insts("col_extended_unpack").filterIsInstance<PIRUnpack>()
+        assertTrue(unpacks.isNotEmpty())
+        assertTrue(unpacks.any { it.starIndex >= 0 })
+    }
+
+    @Test fun `delete local`() {
+        assertTrue(insts("col_delete_local").any { it is PIRDeleteLocal })
+    }
+
+    @Test fun `delete attr`() {
+        assertTrue(insts("col_delete_attr").any { it is PIRDeleteAttr })
+    }
+
+    @Test fun `delete subscript`() {
+        assertTrue(insts("col_delete_subscript").any { it is PIRDeleteSubscript })
+    }
+
+    @Test fun `load attr`() {
+        assertTrue(insts("col_attr_load").any { it is PIRLoadAttr })
+    }
+
+    @Test fun `store attr`() {
+        assertTrue(insts("col_attr_store").any { it is PIRStoreAttr })
+    }
+}

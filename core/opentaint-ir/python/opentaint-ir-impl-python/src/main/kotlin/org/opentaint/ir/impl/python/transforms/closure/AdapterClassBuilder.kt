@@ -1,0 +1,172 @@
+package org.opentaint.ir.impl.python.transforms.closure
+
+import org.opentaint.ir.api.python.PythonNames
+import org.opentaint.ir.impl.python.flat.FlatAnyType
+import org.opentaint.ir.impl.python.flat.FlatArgKind
+import org.opentaint.ir.impl.python.flat.FlatBlock
+import org.opentaint.ir.impl.python.flat.FlatCFG
+import org.opentaint.ir.impl.python.flat.FlatCall
+import org.opentaint.ir.impl.python.flat.FlatCallArg
+import org.opentaint.ir.impl.python.flat.FlatClass
+import org.opentaint.ir.impl.python.flat.FlatFunctionIR
+import org.opentaint.ir.impl.python.flat.FlatFunctionKind
+import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
+import org.opentaint.ir.impl.python.flat.FlatReadName
+import org.opentaint.ir.impl.python.flat.FlatLocal
+import org.opentaint.ir.impl.python.flat.FlatParamKind
+import org.opentaint.ir.impl.python.flat.FlatParameter
+import org.opentaint.ir.impl.python.flat.FlatParameterRef
+import org.opentaint.ir.impl.python.flat.FlatReturn
+import org.opentaint.ir.impl.python.flat.FlatStoreAttr
+
+/**
+ * Build the adapter class for a capturing impl function.
+ *
+ * Shape:
+ * ```
+ * class <closure_$base>:
+ *     def __init__(<self>, x, y):
+ *         <self>.x = x
+ *         <self>.y = y
+ *         <self>.$PIR_SELF = <self>
+ *     def __call__(self, ...impl-user-params...):
+ *         return _impl(self, ...impl-user-params...)
+ * ```
+ */
+internal fun buildAdapterClass(originalImpl: FlatFunctionIR, capturedNames: List<String>, moduleName: String): FlatClass {
+    val adapterQn = ClosureRuntime.adapterClassQn(moduleName, originalImpl.name)
+    val implQn = ClosureRuntime.implFunctionQn(moduleName, originalImpl.name)
+    val adapterName = adapterQn.substringAfterLast('.')
+
+    return FlatClass(
+        name = adapterName,
+        qualifiedName = adapterQn,
+        baseClasses = emptyList(),
+        mro = emptyList(),
+        methods = listOf(
+            buildInitMethod(adapterQn, capturedNames),
+            buildCallMethod(adapterQn, implQn, originalImpl),
+        ),
+        fields = emptyList(),
+        nestedClasses = emptyList(),
+        decorators = emptyList(),
+        isAbstract = false,
+        isDataclass = false,
+        isEnum = false,
+    )
+}
+
+private fun buildInitMethod(adapterQn: String, capturedNames: List<String>): FlatFunctionIR {
+    val selfParam = FlatParameterRef(ClosureRuntime.SELF_PARAM_NAME)
+    val captureStores = capturedNames.map { name ->
+        FlatStoreAttr(obj = selfParam, attribute = name, value = FlatParameterRef(name))
+    }
+    val cfg = FlatCFG(
+        blocks = listOf(
+            FlatBlock(
+                label = 0,
+                instructions = captureStores + listOf(
+                    FlatStoreAttr(
+                        obj = selfParam,
+                        attribute = PythonNames.BOUND_SELF_ATTR,
+                        value = selfParam,
+                    ),
+                    // Constructors return their instance (see CfgSession.constructorSelf).
+                    FlatReturn(selfParam),
+                ),
+                exceptionHandlers = emptyList(),
+            ),
+        ),
+        entryBlock = 0,
+        exitBlocks = listOf(0),
+    )
+    return FlatFunctionIR(
+        name = PythonNames.INIT_METHOD,
+        qualifiedName = "$adapterQn.${PythonNames.INIT_METHOD}",
+        parentQualifiedName = null,
+        kind = FlatFunctionKind.METHOD,
+        cfg = cfg,
+        parameters = listOf(plainParameter(ClosureRuntime.SELF_PARAM_NAME)) + capturedNames.map(::plainParameter),
+        returnType = FlatAnyType,
+        isAsync = false,
+        isGenerator = false,
+        decorators = emptyList(),
+        closureVars = emptySet(),
+        nonlocalNames = emptySet(),
+        globalNames = emptySet(),
+    )
+}
+
+private fun buildCallMethod(
+    adapterQn: String,
+    implQn: String,
+    originalImpl: FlatFunctionIR,
+): FlatFunctionIR {
+    val implUserParams = originalImpl.parameters
+    val callParams = listOf(plainParameter("self")) + implUserParams
+
+    val tmpReturn = FlatLocal("\$ret")
+    val forwardArgs = listOf(FlatCallArg(FlatParameterRef("self"), FlatArgKind.POSITIONAL)) +
+        implUserParams.map { p -> forwardArgFor(p) }
+
+    val calleeLocal = FlatLocal("\$callee")
+    val cfg = FlatCFG(
+        blocks = listOf(
+            FlatBlock(
+                label = 0,
+                instructions = listOf(
+                    FlatReadName(
+                        target = calleeLocal,
+                        ref = FlatGlobalNameRef(implQn),
+                    ),
+                    FlatCall(
+                        target = tmpReturn,
+                        callee = calleeLocal,
+                        args = forwardArgs,
+                    ),
+                    FlatReturn(tmpReturn),
+                ),
+                exceptionHandlers = emptyList(),
+            ),
+        ),
+        entryBlock = 0,
+        exitBlocks = listOf(0),
+    )
+    return FlatFunctionIR(
+        name = "__call__",
+        qualifiedName = "$adapterQn.__call__",
+        parentQualifiedName = null,
+        kind = FlatFunctionKind.METHOD,
+        cfg = cfg,
+        parameters = callParams,
+        returnType = originalImpl.returnType,
+        isAsync = originalImpl.isAsync,
+        isGenerator = originalImpl.isGenerator,
+        decorators = emptyList(),
+        closureVars = emptySet(),
+        nonlocalNames = emptySet(),
+        globalNames = emptySet(),
+    )
+}
+
+private fun forwardArgFor(p: FlatParameter): FlatCallArg {
+    val v = FlatParameterRef(p.name, p.type)
+    return when (p.kind) {
+        FlatParamKind.POSITIONAL_OR_KEYWORD ->
+            FlatCallArg(v, FlatArgKind.POSITIONAL)
+        FlatParamKind.KEYWORD_ONLY ->
+            FlatCallArg(v, FlatArgKind.KEYWORD, keyword = p.name)
+        FlatParamKind.VAR_POSITIONAL ->
+            FlatCallArg(v, FlatArgKind.STAR)
+        FlatParamKind.VAR_KEYWORD ->
+            FlatCallArg(v, FlatArgKind.DOUBLE_STAR)
+    }
+}
+
+private fun plainParameter(name: String): FlatParameter = FlatParameter(
+    name = name,
+    type = FlatAnyType,
+    kind = FlatParamKind.POSITIONAL_OR_KEYWORD,
+    hasDefault = false,
+    defaultValue = null,
+)
