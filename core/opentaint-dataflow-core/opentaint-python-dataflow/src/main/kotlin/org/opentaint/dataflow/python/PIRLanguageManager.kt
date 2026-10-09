@@ -3,11 +3,11 @@ package org.opentaint.dataflow.python
 import org.opentaint.dataflow.ap.ifds.LanguageManager
 import org.opentaint.dataflow.ap.ifds.serialization.MethodContextSerializer
 import org.opentaint.dataflow.python.adapter.PIRCallExprAdapter
+import org.opentaint.dataflow.python.adapter.callExpr
 import org.opentaint.dataflow.python.serialization.PIRMethodContextSerializer
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonCallExpr
 import org.opentaint.ir.api.common.cfg.CommonInst
-import org.opentaint.ir.api.python.PIRCall
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
 import org.opentaint.ir.api.python.PIRInstruction
@@ -31,10 +31,8 @@ open class PIRLanguageManager(
     override fun isEmpty(method: CommonMethod): Boolean =
         (method as PIRFunction).instList.isEmpty()
 
-    override fun getCallExpr(inst: CommonInst): CommonCallExpr? {
-        val pirInst = inst as PIRInstruction
-        return if (pirInst is PIRCall) PIRCallExprAdapter(pirInst) else null
-    }
+    override fun getCallExpr(inst: CommonInst): CommonCallExpr? =
+        (inst as PIRInstruction).callExpr
 
     override fun producesExceptionalControlFlow(inst: CommonInst): Boolean =
         inst is PIRRaise
@@ -49,7 +47,7 @@ open class PIRLanguageManager(
 
         if ("." !in qualifiedName) {
             // hack: for nested function calls, mypy may set resolvedCallee to just simple name
-            val enclosingMethod = (call as PIRInstruction).location.method
+            val enclosingMethod = call.location.method
             val candidate = "${enclosingMethod.qualifiedName}.$qualifiedName"
             cp.findFunctionOrNull(candidate)?.let { return it }
         }
