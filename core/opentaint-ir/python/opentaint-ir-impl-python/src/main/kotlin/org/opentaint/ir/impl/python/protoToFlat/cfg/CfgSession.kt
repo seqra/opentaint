@@ -18,7 +18,7 @@ import org.opentaint.ir.impl.python.protoToFlat.Scope
 
 internal class CfgSession(
     val module: ModuleContext,
-    val scope: Scope = Scope(),
+    val scope: Scope,
     val currentFunctionQualifiedName: String? = null,
     val currentFunctionName: String? = null,
     val imports: ImportManager = module.imports,

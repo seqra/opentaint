@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.api.python.PIRFunction
-import org.opentaint.ir.api.python.PIRLocal
+import org.opentaint.ir.api.python.PIRParameterRef
 import org.opentaint.ir.api.python.PIRReturn
 import org.opentaint.ir.test.python.PIRTestBase
 
@@ -55,7 +55,7 @@ class Regular:
         returns.forEach { ret ->
             val value = ret.value
             Assertions.assertTrue(
-                value is PIRLocal && value.name == self,
+                value is PIRParameterRef && value.index == 0,
                 "Expected `return $self` in ${fn.qualifiedName}, got `return $value`",
             )
         }

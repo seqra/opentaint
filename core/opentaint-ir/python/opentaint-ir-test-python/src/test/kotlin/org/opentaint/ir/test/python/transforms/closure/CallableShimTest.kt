@@ -3,6 +3,7 @@ package org.opentaint.ir.test.python.transforms.closure
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.opentaint.ir.api.python.PIRDiagnostic
+import org.opentaint.ir.api.python.PythonNames
 import org.opentaint.ir.impl.python.flat.FlatAnyType
 import org.opentaint.ir.impl.python.flat.FlatArgKind
 import org.opentaint.ir.impl.python.flat.FlatAssign
@@ -19,6 +20,7 @@ import org.opentaint.ir.impl.python.flat.FlatReadName
 import org.opentaint.ir.impl.python.flat.FlatInst
 import org.opentaint.ir.impl.python.flat.FlatIntConst
 import org.opentaint.ir.impl.python.flat.FlatLocal
+import org.opentaint.ir.impl.python.flat.FlatParameterRef
 import org.opentaint.ir.impl.python.flat.FlatModuleIR
 import org.opentaint.ir.impl.python.flat.FlatParamKind
 import org.opentaint.ir.impl.python.flat.FlatParameter
@@ -151,15 +153,26 @@ class CallableShimTest {
     }
 
     @Test
-    fun `init method stores the closure env attr on self`() {
+    fun `init method stores each captured cell as an attr on self`() {
         val out = simpleCapturingModule()
         val cls = adapterFor(out, "inner")
         val initMethod = cls.methods[0]
-        assertEquals(listOf("self", ClosureRuntime.ENV_ATTR_NAME), initMethod.parameters.map { it.name })
-        val store = initMethod.cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>().single()
-        assertEquals("self", (store.obj as FlatLocal).name)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, store.attribute)
-        assertEquals(ClosureRuntime.ENV_ATTR_NAME, (store.value as FlatLocal).name)
+        assertEquals(listOf(ClosureRuntime.SELF_PARAM_NAME, "x"), initMethod.parameters.map { it.name })
+        val store = initMethod.cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>()
+            .single { it.attribute == "x" }
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (store.obj as FlatParameterRef).name)
+        assertEquals("x", (store.value as FlatParameterRef).name)
+    }
+
+    @Test
+    fun `init method binds self as its own receiver`() {
+        val out = simpleCapturingModule()
+        val cls = adapterFor(out, "inner")
+        val stores = cls.methods[0].cfg.blocks.single().instructions.filterIsInstance<FlatStoreAttr>()
+        assertEquals(listOf("x", PythonNames.BOUND_SELF_ATTR), stores.map { it.attribute })
+        val selfStore = stores.last()
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (selfStore.obj as FlatParameterRef).name)
+        assertEquals(ClosureRuntime.SELF_PARAM_NAME, (selfStore.value as FlatParameterRef).name)
     }
 
     @Test
@@ -172,9 +185,9 @@ class CallableShimTest {
         val implCall = callInsts.filterIsInstance<FlatCall>().single()
         assertEquals("$moduleName.<closure_inner_impl>", calleeQnHelper(implCall, callInsts))
         assertEquals(2, implCall.args.size)
-        assertEquals("self", (implCall.args[0].value as FlatLocal).name)
+        assertEquals("self", (implCall.args[0].value as FlatParameterRef).name)
         assertEquals(FlatArgKind.POSITIONAL, implCall.args[0].kind)
-        assertEquals("p", (implCall.args[1].value as FlatLocal).name)
+        assertEquals("p", (implCall.args[1].value as FlatParameterRef).name)
         assertEquals(FlatArgKind.POSITIONAL, implCall.args[1].kind)
     }
 
@@ -347,7 +360,7 @@ class CallableShimTest {
         val implCall = callMethod.cfg.blocks.single().instructions.filterIsInstance<FlatCall>().single()
         val starArg = implCall.args[1]
         assertEquals(FlatArgKind.STAR, starArg.kind)
-        assertEquals("args", (starArg.value as FlatLocal).name)
+        assertEquals("args", (starArg.value as FlatParameterRef).name)
     }
 
     @Test
@@ -382,7 +395,7 @@ class CallableShimTest {
         val implCall = callMethod.cfg.blocks.single().instructions.filterIsInstance<FlatCall>().single()
         val ddArg = implCall.args[1]
         assertEquals(FlatArgKind.DOUBLE_STAR, ddArg.kind)
-        assertEquals("kwargs", (ddArg.value as FlatLocal).name)
+        assertEquals("kwargs", (ddArg.value as FlatParameterRef).name)
     }
 
     @Test
@@ -418,7 +431,7 @@ class CallableShimTest {
         val kArg = implCall.args[1]
         assertEquals(FlatArgKind.KEYWORD, kArg.kind)
         assertEquals("k", kArg.keyword)
-        assertEquals("k", (kArg.value as FlatLocal).name)
+        assertEquals("k", (kArg.value as FlatParameterRef).name)
     }
 
     @Test

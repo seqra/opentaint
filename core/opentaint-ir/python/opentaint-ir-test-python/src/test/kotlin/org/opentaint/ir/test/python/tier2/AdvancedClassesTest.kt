@@ -7,6 +7,8 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Tag
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.opentaint.ir.api.python.PIRAnyType
+import org.opentaint.ir.api.python.PIRClassType
 import org.opentaint.ir.api.python.PIRClasspath
 import org.opentaint.ir.test.python.PIRTestBase
 
@@ -40,6 +42,8 @@ class WithFields:
     class_var: int = 42
     def __init__(self) -> None:
         self.instance_var: str = "hello"
+        self.untyped_var = 1
+        self.class_var = 7
 
 class Abstract(ABC):
     @abstractmethod
@@ -94,6 +98,18 @@ class WithProperty:
         val c = cls("WithFields")
         assertTrue(c.fields.isNotEmpty(), "WithFields should have fields")
         assertTrue(c.fields.any { it.name == "class_var" }, "Should have class_var field")
+    }
+
+    @Test fun `instance attributes assigned through self are fields`() {
+        val fields = cls("WithFields").fields.associateBy { it.name }
+        assertEquals(PIRClassType("builtins.str"), fields["instance_var"]?.type)
+        assertEquals(PIRAnyType, fields["untyped_var"]?.type)
+    }
+
+    @Test fun `class body field wins over instance attribute`() {
+        val fields = cls("WithFields").fields.filter { it.name == "class_var" }
+        assertEquals(1, fields.size)
+        assertEquals(PIRClassType("builtins.int"), fields.single().type)
     }
 
     @Test fun `abstract class`() {

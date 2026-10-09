@@ -26,7 +26,6 @@ import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
 import org.opentaint.ir.impl.python.flat.FlatIntConst
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
 import org.opentaint.ir.impl.python.flat.FlatLoadSubscript
-import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatModuleNameRef
 import org.opentaint.ir.impl.python.flat.FlatNextIter
 import org.opentaint.ir.impl.python.flat.FlatNoneConst
@@ -169,7 +168,7 @@ private fun CfgSession.lowerName(expr: MypyNameExprProto, location: PIRPhysicalL
             // A function-scope suppressed import is LDEF with a single-segment fullname,
             // indistinguishable from a local. The import scope has the real target.
             imports.resolve(name)?.let { return materializeImport(it, location) }
-            FlatLocal(scope.resolveLocal(name))
+            scope.variable(name)
         }
     }
 }
@@ -302,19 +301,11 @@ private fun CfgSession.lowerCall(expr: MypyCallExprProto, location: PIRPhysicalL
         FlatCallArg(argVal, kind, arg.name.ifEmpty { null })
     }
 
-    val resolvedCallee = resolveCallee(expr)
+    val resolvedCallee = expr.resolvedCallee.ifEmpty { null }
 
     val target = newTempValue()
     emit(FlatCall(target, callee, args, resolvedCallee, physicalLocation = location))
     return target
-}
-
-private fun resolveCallee(expr: MypyCallExprProto): String? {
-    expr.resolvedCallee.ifEmpty { null }?.let { return it }
-
-    if (!expr.callee.hasMemberExpr()) return null
-    val member = expr.callee.memberExpr
-    return member.fullname.ifEmpty { null }
 }
 
 private fun CfgSession.lowerIndex(expr: MypyIndexExprProto, location: PIRPhysicalLocation?): FlatValue {
@@ -416,12 +407,11 @@ private fun CfgSession.lowerAwait(expr: MypyAwaitExprProto, location: PIRPhysica
 
 private fun CfgSession.lowerWalrus(expr: MypyAssignmentExprProto, location: PIRPhysicalLocation?): FlatValue {
     val value = lowerExpr(expr.value)
-    val targetName = if (expr.target.hasNameExpr()) {
-        scope.resolveLocal(expr.target.nameExpr.name)
+    val target = if (expr.target.hasNameExpr()) {
+        scope.variable(expr.target.nameExpr.name)
     } else {
-        scope.newTemp()
+        newTempValue()
     }
-    val target = FlatLocal(targetName)
     emit(FlatAssign(target, value, physicalLocation = location))
     return target
 }
@@ -523,7 +513,7 @@ private fun CfgSession.emitComprehensionLoops(
 
     val idxExpr = indices[loopIdx]
     val targetVal = if (idxExpr.hasNameExpr()) {
-        FlatLocal(scope.resolveLocal(idxExpr.nameExpr.name))
+        scope.variable(idxExpr.nameExpr.name)
     } else {
         newTempValue()
     }

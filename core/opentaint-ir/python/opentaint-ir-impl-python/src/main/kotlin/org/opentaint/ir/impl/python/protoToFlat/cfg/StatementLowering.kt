@@ -19,7 +19,6 @@ import org.opentaint.ir.impl.python.flat.FlatExceptHandler
 import org.opentaint.ir.impl.python.flat.FlatGetIter
 import org.opentaint.ir.impl.python.flat.FlatGlobalNameRef
 import org.opentaint.ir.impl.python.flat.FlatLoadAttr
-import org.opentaint.ir.impl.python.flat.FlatLocal
 import org.opentaint.ir.impl.python.flat.FlatNextIter
 import org.opentaint.ir.impl.python.flat.FlatNoneConst
 import org.opentaint.ir.impl.python.flat.FlatRaise
@@ -103,8 +102,7 @@ internal fun CfgSession.visitAssignment(stmt: MypyAssignmentStmtProto, location:
 internal fun CfgSession.assignTo(lvalue: MypyExprProto, rhs: FlatValue, location: PIRPhysicalLocation?) {
     when {
         lvalue.hasNameExpr() -> {
-            val targetName = scope.resolveLocal(lvalue.nameExpr.name)
-            emit(FlatAssign(FlatLocal(targetName), rhs, physicalLocation = location))
+            emit(FlatAssign(scope.variable(lvalue.nameExpr.name), rhs, physicalLocation = location))
         }
         lvalue.hasMemberExpr() -> {
             val obj = lowerExpr(lvalue.memberExpr.expr)
@@ -120,9 +118,9 @@ internal fun CfgSession.assignTo(lvalue: MypyExprProto, rhs: FlatValue, location
             var starIndex = -1
             for ((i, item) in lvalue.tupleExpr.itemsList.withIndex()) {
                 when {
-                    item.hasNameExpr() -> targets.add(FlatLocal(scope.resolveLocal(item.nameExpr.name)))
+                    item.hasNameExpr() -> targets.add(scope.variable(item.nameExpr.name))
                     item.hasStarExpr() && item.starExpr.expr.hasNameExpr() -> {
-                        targets.add(FlatLocal(scope.resolveLocal(item.starExpr.expr.nameExpr.name)))
+                        targets.add(scope.variable(item.starExpr.expr.nameExpr.name))
                         starIndex = i
                     }
                     else -> targets.add(newTempValue())
@@ -228,7 +226,7 @@ private fun CfgSession.emitPatternTest(
             else emitGoto(bindBlock)
             if (bindBlock != matchBlock) {
                 activate(bindBlock)
-                emit(FlatAssign(FlatLocal(scope.resolveLocal(asPattern.name)), subject, physicalLocation = location))
+                emit(FlatAssign(scope.variable(asPattern.name), subject, physicalLocation = location))
                 emitGoto(matchBlock)
             }
         }
@@ -391,8 +389,8 @@ private fun CfgSession.visitFor(stmt: MypyForStmtProto, location: PIRPhysicalLoc
     }
 }
 
-private fun CfgSession.lowerForTarget(target: MypyExprProto): FlatLocal = when {
-    target.hasNameExpr() -> FlatLocal(scope.resolveLocal(target.nameExpr.name))
+private fun CfgSession.lowerForTarget(target: MypyExprProto): FlatValue = when {
+    target.hasNameExpr() -> scope.variable(target.nameExpr.name)
     else -> newTempValue()
 }
 
@@ -422,7 +420,7 @@ private fun CfgSession.visitTry(stmt: MypyTryStmtProto, location: PIRPhysicalLoc
         } else emptyList()
 
         val excTarget = if (i < stmt.varsCount && stmt.getVars(i).hasNameExpr()) {
-            FlatLocal(scope.resolveLocal(stmt.getVars(i).nameExpr.name))
+            scope.variable(stmt.getVars(i).nameExpr.name)
         } else null
 
         emit(FlatExceptHandler(excTarget, excTypes, physicalLocation = location))
@@ -511,7 +509,7 @@ private fun CfgSession.visitDel(stmt: MypyDelStmtProto, location: PIRPhysicalLoc
 private fun CfgSession.visitDelExpr(expr: MypyExprProto, location: PIRPhysicalLocation?) {
     when {
         expr.hasNameExpr() ->
-            emit(FlatDeleteLocal(FlatLocal(scope.resolveLocal(expr.nameExpr.name)), physicalLocation = location))
+            emit(FlatDeleteLocal(scope.variable(expr.nameExpr.name), physicalLocation = location))
         expr.hasMemberExpr() -> {
             val obj = lowerExpr(expr.memberExpr.expr)
             emit(FlatDeleteAttr(obj, expr.memberExpr.name, physicalLocation = location))
@@ -570,6 +568,5 @@ private fun CfgSession.visitNestedFuncDef(
     module.register(nested)
 
     val ref = FlatGlobalNameRef(nested.qualifiedName)
-    val targetName = scope.resolveLocal(funcDef.name)
-    emit(FlatBindFunction(FlatLocal(targetName), ref, physicalLocation = location))
+    emit(FlatBindFunction(scope.variable(funcDef.name), ref, physicalLocation = location))
 }
