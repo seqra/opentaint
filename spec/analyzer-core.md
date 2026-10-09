@@ -12,7 +12,9 @@ the runs. Appendix A gives the analysis of today's analyzer that the design star
 
 The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`,
 `PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`), `PipelineNDZ.lean` (with
-`NDZ.lean`, `NDZeroBase.lean`). Every theorem named here
+`NDZ.lean`, `NDZeroBase.lean`), `PipelineAnyTaintEx.lean` and `PipelineAnyTaintExDriver.lean` (with the
+`AnyTaintEx*.lean` files of the tail `[any-taint]` and its exclusion, and the `AnyTaint*.lean` files that they reuse,
+`ap.md` §10.11). Every theorem named here
 is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
 Language: ASD-STE100 Simplified Technical English.
@@ -44,7 +46,7 @@ Out of scope:
 
 | # | Assumption |
 |---|---|
-| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I13. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). |
+| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `AnyTaintEx.DRXs`). The backward run has no `[any-taint]`: it stays `Backward.DB`. |
 | A2 | LINEARIZABLE SHARED ACTIONS. Each shared action of §5.2 and §5.3 is atomic: register a handler, insert a publication, read the storage, read the handler list. All of them have one total order. This order agrees with the program order of each thread. The Lean model is an interleaving model with these actions as steps. P3 (§5.3) is the implementation rule. |
 | A3 | RELIABLE EVENTS. An event that a thread sends to the channel of a runner arrives exactly once, unless the run is cancelled. The send happens before the receive (Kotlin `Channel`). |
 | A4 | READ-ONLY INPUTS. These inputs do not change during a run: the program, the rules, the lambda resolutions, the demand store, the record store and the seeds. The driver makes them before the run starts. The start of the run publishes them to every runner. |
@@ -69,7 +71,7 @@ and others). This document adds:
 | method analyzer | The actor of one method key in one run (§4). It owns the intra-procedural edges and every RUN store of its method. |
 | event | One message in the channel of a runner (§5.1). Its HANDLER is the code that the runner runs for it. |
 | subscription | A caller-side record `(caller edge, call statement, added fact)` (`ap.md` §8.4). |
-| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4). |
+| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4). It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). |
 | storage with subscription | The callee-side store of the publications, with the list of the subscribed runners (§5.2). |
 | replay | The read of the storage when a subscription is new (§5.3). |
 | notification | The send of a new publication to every subscribed runner (§5.2). |
@@ -151,11 +153,12 @@ The mode decides these rules (`ap.md` §6.1):
 |---|---|---|---|
 | initial facts of an added fact | the policy fact (`ap.md` §6.2) and the request answers | the emission `a ∩ D-c` (`ap.md` §6.3); the zero fact for the zero added fact | the emission; the zero fact enters every callee (rule `zin`) |
 | a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`, after the restriction in the callee | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
-| records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` |
+| records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3) |
 | mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no (assert) | no (assert) |
 | sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
+| the tail `[any-taint]` (`ap.md` W8, S15) | a source rule with an `[any]` target gives `[any-taint]` on a normal input: a complete edge (on a demand input `[any]`, W8). A pass rule with an `[any]` target keeps `[any]`: a may, in the demand layer (`ap.md` W6). A normal `[any-taint]` conclusion can carry an EXCLUSION `E` of first accessors, `(x, p, [any-taint], E, T)`: an exclusion edge (the keep edge of a strong write, a `*/E'` summary) gives `E ∪ E'` and the result stays normal (§4.3). Only the demotions of §4.3 make `[any]` of it (demand, no exclusion): the field-limit cut, a cleaner `part` row other than `atAndBelow` and `below` one accessor below it, a may target, a demand-layer input and (in a restricted run) the must-record demotion. No premise has the `[any-taint]` tail | as run 1. Also the `[any-taint]` premise (a MUST-PREMISE) of the emission (§4.4), with the exclusion that the emission gives it: it starts as itself in the normal layer, and its normal edges are complete | no `[any-taint]` (a forward-only tail, `ap.md` W8). The seed of an `[any]` sink pattern and the reversal of an `[any]` condition literal give `[any]`, in the demand layer (`ap.md` W6). Every result of the reversal of a micro edge whose forward target is `[any]` (a pass rule with an `AnyField` target) is in the demand layer, also a `$` result (§4.3). A complete edge is a normal edge, as before F69 (`ap.md` §8.7 R1) |
 
 No run has a liveness check (§4.3).
 
@@ -172,7 +175,7 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 
 | Field | Store | Content |
 |---|---|---|
-| `edges` | method edge store (`ap.md` §8.1) | the edges, keyed per kind (`ap.md` §7.2): REACH per (statement, premise key, layer); FLOW per (statement, premise key, layer, base, exclusion, mark exclusion); TAINT per (statement, premise key, layer, base) |
+| `edges` | method edge store (`ap.md` §8.1) | the edges, keyed per kind (`ap.md` §7.2): REACH per (statement, premise key, layer); FLOW per (statement, premise key, layer, base, exclusion, mark exclusion); TAINT per (statement, premise key, layer, base), and a normal TAINT tree also per the one exclusion of its `[any-taint]` leaves (`ap.md` §7.2) |
 | `initials` | initial fact store (`ap.md` §8.2) | the initial facts of the run: zero, emissions, answers |
 | `links` | added fact store (`ap.md` §8.3) | each added fact with its links: the caller reference and the layer of the added fact on the link |
 | `summaries` | run summary store (`ap.md` §8.5) | the summary edges BEFORE the restriction, per premise key and layer |
@@ -187,6 +190,14 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 The subscriptions are not in the analyzer. They are in the `SubscriptionManager` of the runner of the caller
 (`ap.md` §8.4; §5.3).
 
+THE PREMISE KEY HOLDS THE TAIL AND THE EXCLUSION. An `[any-taint]` premise (a MUST-PREMISE) with its exclusion `E` and
+an `[any]` premise with the same base, path and mark are two different premise keys (`InitialAp` with the tail
+`ANY_TAINT` and the exclusion `E`, or with the tail `ANY`, `ap.md` §7.1). Two must-premises of one path with different
+exclusions are two premise keys too. Two added facts of one method (an `[any-taint]` one and an `[any]` one) can give
+them at one path. So `initials` holds both, and every store of the table that has the premise key in its key
+(`edges`, `summaries`, `conjunctions`) keeps them apart. A forward run only: the backward run has no `[any-taint]`.
+Lean: the must flag and the exclusion of the objects `AnyTaintEx.XObj` (`init M j must jex`, `edge M j must jex n f`).
+
 ### 4.2 Handlers
 
 The runner calls these handlers. Each handler is part of one event (§5.1).
@@ -198,7 +209,7 @@ The runner calls these handlers. Each handler is part of one event (§5.1).
 | `addZeroEntry()` | backward: the zero fact of a caller reaches a call to this method | the zero fact is an initial fact (rule `zin`) | §9.2 |
 | `addRequest(premise, request)` | run 1: a callee climbs a request through a link of this method | store it (exact deduplication); check it against every link of this method (§4.6) | E5, E7 |
 | `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then the stages after the callees stage (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
-| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5) | §8.7 R3, R4 |
+| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5). A record with an `[any-taint]` premise whose premise covers the added fact (`applicable`) but does not lie inside it with the exclusions (not `inside`) gives each result in the demand layer: the result keeps its base, path and mark, and its layer goes up (an `[any-taint]` result becomes `[any]` and loses its exclusion, `ap.md` W8; the must-premise needs every location; Lean `AnyTaintEx.recLayerX`, necessary by `AnyTaintExact.CexApp.cex_app`) | §4.3, §8.7 R3, R4 |
 | `step(quantum)` | a `Work` event | process at most `quantum` worklist items (§4.3) | §6.1 (S6: any order) |
 
 A new initial fact `j` (from any handler) is event E3: the analyzer adds the start edges of `j` to the worklist
@@ -219,6 +230,35 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
     §4.9) with the primitives that the interpreter puts at the statement (`interpreter.md` §5); then the field limit
     at the cut points (`ap.md` §4.4);
   * a call statement: the call steps (§4.5).
+* THE LAYER OF AN ANY-TAIL RESULT (`ap.md` W6, W8). The AP sets it on each application of a micro edge, in every mode
+  of §4.9.
+  * FORWARD. The result of a micro edge with an `[any]` target (a may: a pass rule with an `AnyField` target) goes to
+    the demand layer; the result of a micro edge with an `[any-taint]` target (a source rule, `ap.md` S15) keeps its
+    layer. A demand-layer result with the `[any-taint]` tail becomes `[any]` and loses its exclusion. An exclusion does
+    not demote a normal `[any-taint]/E` fact: the result carries the exclusion and keeps its layer (`ap.md` §4.1, §4.2,
+    §4.7): an exclusion edge at the path of the fact gives `E ∪ E'`; the case below keeps `E`; the case above applies
+    only if `E` admits the step down and gives the exclusion of the edge; a read through an accessor in `E` gives
+    nothing, a read through another accessor gives the empty exclusion; a copy of the object keeps `E`; the cleaners
+    `atAndBelow` and `below` at `P.f` add `f` to `E` (`below` also keeps `(x, P.f, $, T)`). These rows are not
+    demotions. THE DEMOTIONS: only these operations make `[any]` of an `[any-taint]` fact, in the demand layer and
+    with no exclusion (`ap.md` §2.2 THE DEMOTIONS):
+    * the field-limit cut (`ap.md` §4.4);
+    * a cleaner `part` row of `ap.md` §4.7 other than the `atAndBelow` and `below` rows one accessor below the fact: so
+      the `exact` cleaner at the path of the fact or one accessor below it, and every cleaner two or more accessors
+      below it;
+    * a may target: the `[any]` target of a pass rule (W6);
+    * a demand-layer input: a demand fact (also another input of a conjunction), a demand-layer summary edge or
+      record, a demand link (an `[any]` added fact);
+    * the must-record demotion (a restricted run; §4.2 `applyRecord`).
+
+    Lean: `AnyTaintEx.w6tX`, `transferX`, `limitFX`, `cleanResX` (`partX`), `recLayerX`; the rows `AnyTaintEx.annX`.
+  * BACKWARD. The run has no `[any-taint]` (`ap.md` W8). Every result of a reversed micro edge whose FORWARD target is
+    `[any]` goes to the demand layer, whatever its tail, also a `$` result (`ap.md` §9.1): the may belongs to the
+    forward rule. W6 puts every `[any]` result in the demand layer. The reversal of a source edge (forward target
+    `[any-taint]`, a must) follows the ordinary rows of `ap.md` §4.1. This rule is argued, as the backward W6 (§11).
+
+  The core reads the target tail of the FORWARD form of the micro edge (`MicroEdge.forward`, §4.9): `[any]` is a may
+  (a pass rule), `[any-taint]` a must (a source). So the core needs no rule-kind flag, in either direction.
 * A result AT AN END NODE of the run (§4.4) goes through the end rules and makes the summary edges (§4.6). This holds
   for every handler that makes such a result: `step`, and also `applySummary`, `applyRecord` and `zret` when the end
   node is a call (for example a backward end node whose forward entry statement is a call). An end node is a
@@ -255,11 +295,22 @@ Initial facts:
   (`ap.md` §6.2). The request answers are initial facts too (`ap.md` §4.5, §4.10).
 * RESTRICTED RUN. For an added fact `a`, the emission query `near(a.base :: a.path)` returns demand patterns of the
   method (`ap.md` §8.6). Each one whose emission is not empty gives one initial fact `a ∩ D-c` (`ap.md` §6.3).
+  The tail of `a ∩ D-c` follows the emission table of `ap.md` §6.3: for an added fact and a pattern that both have an
+  any tail, it is the tail of the ADDED FACT. So an `[any-taint]` added fact (it is normal on its link, `ap.md` W8)
+  gives an `[any-taint]` initial fact, a MUST-PREMISE, and an `[any]` added fact gives an `[any]` initial fact. The
+  emission reads the exclusion `E` of an `[any-taint]/E` added fact as part of its location set: a premise at the path
+  of the added fact keeps `E` (a `$` premise has none); the pattern chain below the added fact, at `a.path ++ r`,
+  gives a premise with no exclusion, and only if `E` admits `r` (else the emission is empty: no common location). The
+  backward run gives patterns with the tails `$`, `*/E` and `[any]` only (§7.3): the must flag comes from the added
+  fact, not from the pattern (Lean: `AnyTaintEx.emitX`, `emitTX`; the vectors `AnyTaintEx.Vec.emit_at`,
+  `emit_above_excluded`, `emit_above_exact`, and the table without exclusions `AnyTaint.EmitVec`).
 * THE ZERO DEMAND. `(zero, none)` is part of the demand of EVERY method key, also when the demand store has no entry
   for it. So the zero added fact always emits the zero fact. The zero fact of a root is an initial fact.
 * BACKWARD RUN. As a restricted run. Also, `addZeroEntry` makes the zero fact an initial fact (rule `zin`).
 * `initials.add` deduplicates. Each new initial fact starts with its start fact (`ap.md` §6.5) at every start node of
-  its kind, then the start rules.
+  its kind, then the start rules. The start fact of a must-premise `(x, p, [any-taint], E, T)` is the premise itself,
+  `(x, p, [any-taint], E, T)`, in the normal layer (a forward restricted run only: the backward run has no
+  must-premise). Its edges are END-EXACT (`ap.md` §1; Lean: `AnyTaintEx.startX`; `AnyTaintExExact.startX_must_end`).
 
 Start nodes, end nodes and their rules. The interpreter gives the forward ones; the backward ones are their reversal
 (§4.9):
@@ -433,6 +484,13 @@ At an end node of the run, after the end rules, each new delta `j → g` (a summ
      once. The query is `near(j.base :: j.path)`. For a premise set with several members, it is the union of `near`
      over the members;
    * a backward summary with the premise set `{zero}`: `j → g` itself, with no restriction (`ap.md` §6.4);
+
+   A publication carries the premise key of `j` with the tail of each member and the exclusion of an `[any-taint]`
+   member, so the summaries of an `[any-taint]` premise and of an `[any]` premise of one path are different
+   publications (§4.1). The restriction does not change the premise. It reads the exclusion of an `[any-taint]/E`
+   conclusion as part of its location set: a conclusion above `D-p` gives the chain `D-p` with no exclusion only if
+   `E` admits the step down (`ap.md` §6.4). Lean: the object `pub m j mj jex g` of `PipelineAnyTaintEx.sysDRX`
+   carries the must flag `mj` and the exclusion `jex`; `AnyTaintEx.restrictX`;
 3. goes to `pendingPublications`.
 
 The analyzer gives `pendingPublications` to its `SummaryStorage` (§5.2) before its `Work` event ends (§6.2, W3), as
@@ -486,7 +544,9 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
 * SEEDS. After run 1, every run has seeds. The driver gives a `SeedIndex` per (method key, statement):
   * a backward run: the SINK SEEDS, the requirements of the vulnerabilities that the forward run before reported
     (`ap.md` §9.2). A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
-    literal. An unconditional sink gives none. The seeds of a witness are at its method key and its statement;
+    literal. An unconditional sink gives none. The requirement of an `[any]` sink pattern (`ContainsMarkOnAnyField`)
+    has the tail `[any]`: the backward run has no `[any-taint]` (`ap.md` W8, §9.2), so its seed is in the demand
+    layer (`ap.md` W6), as before F69. The seeds of a witness are at its method key and its statement;
   * a forward restricted run: the SOURCE SEEDS, the unconditional sources that the backward run before reached
     (`ap.md` §6.1 rule 6, §8.11).
 * A sink seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call
@@ -553,7 +613,12 @@ interface Interpreter {
 class ExitNode(val node: CommonInst, val exceptional: Boolean)
 
 /** One micro edge with the forward form of the edge (the edge itself in a forward summary). A SOURCE is an edge
- *  whose forward form goes from the zero fact to another base; the forward form identifies it in both runs (§4.7). */
+ *  whose forward form goes from the zero fact to another base; the forward form identifies it in both runs (§4.7).
+ *  The interpreter gives the target tail `[any-taint]` to a source rule with an `[any]` target (unconditional,
+ *  conditional or conjunctive, and an end-fact action; a must); a pass rule with an `[any]` target keeps `[any]` (a
+ *  may); a pass rule with an `AnyField` position on its premise side is a rule error (ap.md S15, W6; interpreter.md
+ *  I14, D33). A reversed edge keeps its forward form: the backward AP reads its forward target tail, and every result
+ *  of an edge whose forward target is `[any]` is in the demand layer (§4.3). No other flag tells the rule kind. */
 class MicroEdge(val edge: PathEdge, val forward: PathEdge)
 
 /** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). `typeFilters`: the operand filters, on the
@@ -564,7 +629,9 @@ class StatementSummary(val touched: Set<AccessPathBase>, val edges: List<MicroEd
                        val resultFilters: Map<AccessPathBase, TypeFilter> = emptyMap()) {
     /** ap.md §9.1, §9.2: each edge reversed; a conjunctive edge gives one edge per literal; the identity edge
      *  `b.* → b.*` for each target base that the summary does not touch (A5); the touched bases with the targets;
-     *  no type filter. */
+     *  no type filter. The reversal gives no `[any-taint]` (ap.md W8, §9.1): the reversal of an `[any]` condition
+     *  literal (`ContainsMarkOnAnyField`, also of a conjunctive edge) has the target tail `[any]`, and a forward target
+     *  `[any-taint]` becomes the premise `[any]`. Each reversed edge keeps its `forward` form (§4.3). */
     fun reversed(): StatementSummary
 }
 
@@ -580,7 +647,9 @@ class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummar
 /** The exit rules (interpreter.md §4.7) and, forward only, the global-state drop (step 3: the analyzer drops the part
  *  of a zero-premise `S` item that satisfies a mark literal of an exit sink, and stores it as the input of that literal
  *  of a conjunctive exit sink; a caller-set `S` item is evaluated, not dropped, §4.7) and the removal of the entry marks
- *  of a zero-premise fact (step 4). The reversal drops the two removals (interpreter.md §4.9). */
+ *  of a zero-premise fact (step 4: every leaf with an entry mark, at any depth, of a zero-premise fact on `this` or
+ *  `arg(i)`, also an `[any-taint]` leaf with its exclusion; a deviation from today, which removes only the root leaf:
+ *  interpreter.md D35). The reversal drops the two removals (interpreter.md §4.9). */
 class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>) {
     fun reversed(): RuleStatement
 }
@@ -588,12 +657,18 @@ class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entr
 /** ap.md §4.9: one ALTERNATIVE of one sink rule at one place (one DNF cube with one array choice; interpreter.md
  *  §4.1, §4.2). `alternative`: its index among the alternatives of the rule at the place; the same in every run and
  *  every context (interpreter.md I5). `patterns`: one per positive literal; two or more make a conjunctive sink; the
- *  zero pattern makes an unconditional sink. `endFacts`: its end-fact edges `zero.$ → P.$ (T)` (GEN mode, §4.5). */
+ *  zero pattern makes an unconditional sink. A `ContainsMarkOnAnyField` literal is a pattern with the `[any]` tail,
+ *  and its sink seed has the tail `[any]` (§4.7). A fact with the `[any-taint]` tail triggers a pattern as an `[any]`
+ *  fact does, if the pattern meets a location that its exclusion admits (ap.md §4.9; Lean `AnyTaintEx.checkX`).
+ *  `endFacts`: its end-fact edges `zero.$ → P.$ (T)`, or `zero.$ → P.[any-taint] (T)` for an `AnyField` position
+ *  (interpreter.md I14) (GEN mode, §4.5). */
 class SinkRule(val rule: RuleId, val alternative: Int, val patterns: List<Pattern>, val endFacts: List<MicroEdge>)
 
 /** ap.md §4.6: a conjunctive micro edge `x1.ρ1.t1(T1) ∧ … ∧ xk.ρk.tk(Tk) → z.π.t(T)`, k >= 2: an ND source
  *  (interpreter.md §5.3): in the sources stage of a call (§4.5), or at an exit (§4.4). Each literal and the
- *  target have a concrete mark and no `*` tail (S9, W7). */
+ *  target have a concrete mark and no `*` tail (S9, W7). The `[any]` target of a conjunctive source is
+ *  `[any-taint]` (ap.md §4.6, S15). A literal reads the exclusion of an `[any-taint]/E` input as part of its location
+ *  set (ap.md §4.6). */
 class ConjunctiveEdge(val literals: List<Pattern>, val target: PathFact)
 
 /** ap.md §4.8: the type filter `filter(b, may)` of one base; `may` is prefix-closed (S5; today a
@@ -727,7 +802,9 @@ Rules:
 ### 5.2 The storage with subscription (callee side)
 
 One `SummaryStorage` per method key of the run (O2). It keeps the publications in a path trie keyed by
-`base :: premise path`, one entry per member of a premise set, and the list of the subscribed runners.
+`base :: premise path`, one entry per member of a premise set, and the list of the subscribed runners. An entry keeps
+the tail of its member and the exclusion of an `[any-taint]` member: an `[any-taint]` premise and an `[any]` premise at
+one path are two entries (§4.1).
 
 ```kotlin
 class SummaryStorage(val method: MethodKey) {
@@ -804,12 +881,39 @@ fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean {
     }
 }
 
-/** ap.md §8.7 R4, Lean `DR.retRec`: a record applies by `applicable` or by `inside`. */
+/** ap.md §8.7 R4, Lean `DR.retRec`: a record applies by `applicable` or by `inside`. A record with an `[any-taint]`
+ *  premise that only `applicable` accepts gives its results in the demand layer (§4.2 `applyRecord`; Lean
+ *  `AnyTaintEx.DRX.retRec` with `recLayerX`). In a restricted run `inside` reads the exclusions of both sides
+ *  (ap.md §4.3; Lean `AnyTaintEx.satX`). */
 fun recordApplies(p: Pattern, a: Pattern): Boolean = applicable(p, a) || inside(p, a)
 ```
 
 `byEntry` and `byExit` use the lookup `around` (`ap.md` §8.7 R2). `rec.reversedAt(a)` gives the reversal (`ap.md`
-§9.1) of each conclusion leaf of `rec` that `byExit` returns for `a`, if that leaf is mark-reversible.
+§9.1) of each mark-reversible conclusion leaf of `rec` that `byExit` returns for `a`: R3 reverses a record LEAF BY
+LEAF (`ap.md` §8.7 R3; the `byExit` index keys each leaf path). Two kinds of leaf have no reversal, and `reversedAt`
+gives nothing for them:
+
+* every leaf of a record with an `[any-taint]` premise (a must record): it is END-EXACT only, so its reversal has a
+  pair that is not a converse flow, and it is not an exact backward record (Lean `AnyTaintExact.CexRev.cex_rev`);
+* an `[any-taint]/E` leaf with `E ≠ {}`: its reversal would need an `[any]` premise with an exclusion, and the
+  backward run has none (`ap.md` W8).
+
+The other leaves of the same record reverse as usual (a `$` leaf, a `*/E` leaf, an `[any-taint]` leaf with the empty
+exclusion): the premise of such a record has the Empty exclusion (in run 1 the policy premise `*` with `{}`; in a
+restricted run a `$` premise, since a normal edge has a `$` premise or a must-premise:
+`AnyTaintExKinds.DRXs_normal_premise`), so each leaf that R3 reverses reverses exactly
+(`Reverse.rev_exact_of_empty_premise`; `ap.md` §8.7 R3).
+
+The reversal of an `[any-taint]` leaf with the empty exclusion (a leaf `$ → [any-taint]`) has the premise `[any]` in
+the backward run (`ap.md` §9.1). It applies only to an `[any]` requirement, which is in the demand layer (W6), so its
+results are in the demand layer. It gives no normal backward edge: a reuse limit (§11).
+
+A must-premise needs every location of it, so a summary of an `[any-taint]` premise applies only to an added fact that
+the premise lies INSIDE, with the exclusions of both (`ap.md` §4.3; Lean `AnyTaintEx.SatInsideX`: the exactness needs
+it, `satX` has it, `AnyTaintEx.satX_inside`). An `[any-taint]` premise occurs only in a forward restricted run, and
+there `matches` is `inside`; so `matches` needs no other test. A normal edge of a must-premise is END-EXACT: every
+admitted location of its conclusion gets its value from some admitted location of the premise. It is not exact pair
+by pair (`AnyTaintEx.EndExactX`; `AnyTaintExact.CexApp.record_not_pair_exact`).
 
 The index queries (`ap.md` §8; keys `base :: path`):
 
@@ -892,6 +996,8 @@ theorems hold for every real schedule.
 | `PipelineAP.sysD_wf` and the other `*_wf` | each encoded system is well-formed (`Pipeline.Sys.WF`): every local rule has at least one premise, all of one actor; every join has subscriptions of one actor and one topic and a publication |
 | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, the object theorems (`clDNz_link`, `clDNz_sub`, `clDNz_pub`, `clDNz_ndpub`, `clDNz_npart`) | the encoding of the ND closure of the spec, `NDZ.DNz` (the union of the premise sets without the zero fact, `ap.md` §4.6, §10.10): it is well formed, and at a reachable quiescent state the processed objects are exactly `DNz` (no partial match) |
 | `PipelineNDZ.clDNz_ndpub_no_zero`, `clDNz_ndpub_zero_sub`, `joinNz_nd_no_zero_sub` | no index of a k-ary join is the zero fact, and (under `NDZeroBase.NoZeroGen` and `AlphaZero`, which the run-1 policy satisfies, `NDZeroBase.policy1_alphaZero`; run 1) the zero subscription satisfies no index (§5.4) |
+| `PipelineAnyTaintEx.sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, `result_D6X`, `result_DRX`, `result_DRXs`, the object theorems (`clD6X_link`, `clD6X_sub`, `clD6X_pub`, `clDRX_link`, `clDRX_sub`, `clDRX_pub`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (`ap.md` §10.11): run 1 with the layer rules W6 and W8 and the exclusion (`AnyTaintEx.D6X`) and a restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; the spec instance `AnyTaintEx.DRXs`). They are well formed, and at a reachable quiescent state the processed objects are exactly the closure, with the must flags and the exclusions (THE ENCODING WITH `[any-taint]`, below). `PipelineAnyTaintEx.SanityX.d6x_ann`, `drx_ann`: a normal `[any-taint]/{name}` edge is in both closures, so the encodings are not vacuous on the exclusion |
+| `PipelineAnyTaintEx.known_D6X`, `known_DRX`, `no_lost_summary_D6X`, `no_lost_summary_DRX` | every processed object of a reachable state is in the closure (`Pipeline.reach_sound`), and the summary edge is never lost (`Pipeline.no_lost_join`): in `PipelineAnyTaintEx.sysDRX` a subscription of the caller premise and a publication of the callee premise, each with its must flag and its exclusion, whose join condition holds have their caller edge processed |
 
 The encoding (`PipelineAP.lean`): actor = method, topic = callee.
 
@@ -908,6 +1014,21 @@ The encoding (`PipelineAP.lean`): actor = method, topic = callee.
 | `zret` | the zero subscription of the caller and the zero-premise publication of the callee; their JOIN | join |
 | `ND.DN.ndOpen`, `ndBind`, `ndRet` | a k-ary JOIN: one subscription per premise, all at one call statement, with the publication of the summary | join |
 
+THE ENCODING WITH `[any-taint]` (`PipelineAnyTaintEx.lean`). An edge of `AnyTaintEx.D6X` and of `AnyTaintEx.DRX` has an
+annotated conclusion (`AnyTaintEx.XFact`: a fact with its exclusion), so `PipelineAnyTaintEx.sysD6X` and `sysDRX`
+have their own objects (`PipelineAnyTaintEx.XPObj6`, `XPObj`) and rules. In `sysD6X` a link carries the added fact
+and the exclusion of the bound fact (the request climb reads it; the policy reads only the fact), a subscription
+carries the bound fact with its exclusion (the application reads it), and a publication carries the exit fact with
+its exclusion. In `sysDRX` the
+objects carry the must flags and the exclusions (the must flag is the tail `[any-taint]` of a premise, §4.1). A link
+carries the added fact with its flag (`[any-taint]`: an any tail, normal on the link) and its exclusion. A
+subscription carries the caller premise with its flag and its exclusion, and the result of its join is an edge of
+that premise. A publication carries the callee premise with its flag and its exclusion (two premise keys, §4.6). The
+join reads the exclusions (`inside`, `AnyTaintEx.satX`), not the flag of the publication, and the layer of its result
+is as in `DR`. The record rule with its demotion (`AnyTaintEx.recLayerX`, §4.2 `applyRecord`) is a local rule of the
+caller: the records are read-only (A4). Both are forward runs, so they have no zero subscription and no zero
+publication.
+
 THE ZERO PUBLICATION (argued, §11). `PipelineAP.sysDB` has two publications of a zero-premise backward summary: the
 restricted one (for `ret`) and the unrestricted `PipelineAP.PObj.zpub` (for `zret`). §4.6 publishes only the
 unrestricted one. The two agree because no ordinary subscription satisfies the zero premise: no call binds the zero base
@@ -918,8 +1039,11 @@ results, never lose them.
 So at quiescence the analyzer computes exactly the closure that `ap.md` proves sound and exact, in each mode
 (`Pipeline.quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`). With
 conjunctions the closure is `NDZ.DNz`, the ND closure with the zero-drop of `ap.md` §4.6 (`PipelineNDZ.result_DNz`).
+With the tail `[any-taint]` the closure of run 1 is `AnyTaintEx.D6X` and the closure of a restricted forward run is
+`AnyTaintEx.DRXs` (`PipelineAnyTaintEx.result_D6X`, `result_DRXs`); the backward run is `Backward.DB` as before
+(`PipelineAP.sysDB`).
 This holds for the rules that the closures have. The end facts (`ap.md` §11.1), the aliases and their guard (`ap.md`
-§11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2) are outside them (§11 THE
+§11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2, D35) are outside them (§11 THE
 ANALYZER ACTIONS OUTSIDE THE CLOSURES).
 
 THE MODEL AND THE CODE. Actor: a `RunMethodAnalyzer`. `known`: the RUN stores of the analyzers, the
@@ -1177,9 +1301,22 @@ From the `summaries` (run summary store) of every method analyzer and the sink e
 * DEMAND. For every summary edge `j → g` of the method, in every layer, BEFORE the restriction: one backward demand
   pattern `(D-c = g, D-p = j)` per leaf of `g` (Lean `Backward.revSummaryDemand`). For a summary with several premises:
   one pattern per member (`ap.md` §9.2; argued, `ap.md` §11.2). The driver builds the `DemandStore` of run `n + 1`
-  from them.
+  from them. The backward run has no `[any-taint]` (`ap.md` W8), so the driver reads a forward summary as a location
+  set: a leaf or a premise with the `[any-taint]` tail gives a pattern with the tail `[any]`, and the hand-off drops
+  the exclusion `E` of an `[any-taint]/E` leaf or premise (a larger backward demand: sound; `ap.md` §9.2). Lean: the
+  driver reads each forward run with its exclusions and must flags dropped (`AnyTaintExCov.forget6`, `forgetX`;
+  `PipelineAnyTaintExDriver.resultSeqX`). The hand-off of a run with the exclusion can be SMALLER than that of the
+  same run without it: the exclusion removes summaries (`AnyTaintExCov.CexRoute.route_a_false`); the driver theorem
+  reads each refined run directly (§7.7).
 * SINK SEEDS. The `SeedIndex` of the vulnerabilities that run `n` reported (§4.7; `ap.md` §9.2).
 * RECORDS. The `RecordStore` persists the normal summary edges with one premise (`ap.md` §8.7 R1, forward).
+  COMPLETE is one notion: a normal edge. A normal forward edge is complete also with an `[any-taint]` leaf (with its
+  exclusion) or an `[any-taint]` premise, so `persist` keeps it with the tails and the exclusions. (The premise of a
+  normal edge of a restricted forward run is a `$` premise or a must-premise `[any-taint]` with a concrete mark:
+  `AnyTaintExKinds.DRXs_normal_premise`, `DRXs_must_premise`.) A record with an `[any-taint]` premise keeps that tail
+  and its exclusion: it applies by `inside`, or by `applicable` with demand results (§3), and no leaf of it is ever
+  reversed (§5.3). Of any other record, an `[any-taint]/E` leaf with `E ≠ {}` is not reversed; the other leaves of
+  its record are (R3 is leaf by leaf, §5.3).
 
 ### 7.4 Backward run `n + 1` to forward run `n + 2`
 
@@ -1194,7 +1331,13 @@ SOURCE SEEDS: the `SeedIndex` of the `sourceHits` of every backward method analy
 Lean `FSeeds.srcHit`).
 
 RECORDS: the `RecordStore` persists the normal backward summary edges with one premise that is not the zero fact
-(`ap.md` §8.7 R1, backward).
+(`ap.md` §8.7 R1, backward). The backward run has no `[any-taint]`, so a backward edge is complete when it is normal,
+as before F69. The may stays out of the records: an `[any]` requirement is in the demand layer (W6), and so is every
+result of a reversed micro edge whose forward target is `[any]` (§4.3).
+
+THE DEMAND PATTERNS of the backward run have the tails `$`, `*/E` and `[any]`. The emission of the next forward run
+gives the tail of the ADDED fact for two any tails (`ap.md` §6.3), so an `[any-taint]` added fact still gives a
+must-premise from an `[any]` pattern (§4.4; Lean `AnyTaintEx.emitTX`).
 
 THE STATIC BASE. `S` is touched at every call, in every run (`interpreter.md` §3.3), so the driver gives no static
 input. A callee that touches no static gives the static fact back through its run-1 identity summary, which is a
@@ -1209,12 +1352,30 @@ After a complete forward run, at the barrier:
    * a premise set of a callee is supported if one call statement supplies each member. A member is supplied by a
      link at that call statement whose added fact is normal on the link and equal to the member. The caller edge of
      the link must be normal, and its premise set must be supported.
+   * in a restricted forward run, a member is also supplied by a link whose added fact has the `[any-taint]` tail
+     (normal on the link; the caller edge as above) if the member has the SAME concrete mark, lies inside the added
+     fact with the exclusions of both (`inside`: a member below an `[any-taint]/E` added fact at `a.path ++ r` needs
+     `E` to admit `r`), and is an exact fact `$` or an `[any-taint]` must-premise (`ap.md` §4.9 condition 3; Lean
+     `AnyTaintEx.SupLinkX`, `SupX`). For a concrete member `inside` already gives the same mark
+     (`AnyTaintExact.markSub_conc`); the explicit condition rejects a member with the mark `*`
+     (`AnyTaintExact.CexSupMark.cex_sup_mark`). The link carries the tail and the exclusion of its added fact, so the
+     support needs no other data.
 
    The support is a property of a premise set in one method key. The links carry the data (E-2).
 2. Mark each sink witness of the run (a sink edge, or a sink edge set) confirmed or not (`ap.md` §4.9 conditions 1 to
    3). A witness reads the support in its own method key (§4.7). A sink edge set is confirmed only as a whole: the
    union of its premise sets WITHOUT the zero fact (`{zero}` if every edge has `{zero}`; `ap.md` §4.6) must be
-   supported jointly.
+   supported jointly. A sink edge with the `[any-taint]` tail in the normal layer is a normal sink edge, so it can be
+   confirmed (condition 1). With an exclusion `E` its sink pattern meets a location that `E` admits: the sink check
+   reads `E` (`ap.md` §4.9), so the confirmation needs no other test. In a restricted forward run a member of its
+   premise set can be an `[any-taint]` must-premise (condition 2). Lean: `AnyTaintEx.Confirmed6X` (run 1),
+   `ConfirmedX` (a restricted forward run); a confirmed vulnerability is real (`AnyTaintExExact.confirmed_real_valid6X`,
+   `confirmed_realX_valid`; under S7 and S13, and in a restricted run with the spec rules, which have the rule
+   hypotheses, `AnyTaintExExact.specX_rules`, and with exact records in normal form, `AnyTaintEx.RecsExactX`,
+   `AnyTaintExExact.RecsConcX`, `RecsWFX`; `ap.md` §10.11). Over the run sequence
+   (`AnyTaintExExact.seq_confirmed_realX_valid`) this holds when every record is an exit edge of an earlier forward
+   run of the same program (`AnyTaintExExact.RecsFromRunsX`), with no exactness hypothesis on the records; with the
+   reversed backward records and with the source seeds it is argued (`ap.md` §8.7 R4, §11.2).
 3. Update the `VulnerabilityStore` and the report (`ap.md` §8.10). The report takes the entries of the run in one
    step, after step 2.
 
@@ -1233,10 +1394,34 @@ earlier forward run that the latest complete forward run does not report is REFU
 THE OUTPUT holds EVERY entry of the report: the CONFIRMED and the DEMAND vulnerabilities, each with the simple trace
 (§9; `ap-history.md` F68). So the output holds every vulnerability of the latest complete forward run, and the claim
 of `ap.md` §0.1 and §6.6 (the analysis can stop at any complete forward run) holds for the output too: a complete
-forward run holds every real vulnerability in some layer (`PipelineDriver.driver_iteration_upto`, §7.7), and the
-report keeps every vulnerability of the latest complete forward run, in one of its two states. A vulnerability that
-stays DEMAND in every run (for example one whose taint comes only from an `[any]`-target source, `ap.md` W6) is output
-with the state DEMAND.
+forward run holds every real vulnerability in some layer (`PipelineDriver.driver_iteration_upto`, with the tail
+`[any-taint]` `PipelineAnyTaintExDriver.driver_iteration_uptoX`, §7.7), and the report keeps every vulnerability of the
+latest complete forward run, in one of its two states. A vulnerability that stays DEMAND in every run (for example one
+whose taint passes only through a pass rule with an `AnyField` target, a may `[any]`: `ap.md` W6 forward, and the
+demand layer of its reversal backward, §4.3) is output with the state DEMAND.
+
+AN `[any]`-TARGET SOURCE. Its result has the tail `[any-taint]`: a normal edge (`ap.md` W8). So a vulnerability whose
+taint comes from such a source CAN BE CONFIRMED (`ap-history.md` F69). Run 1 can confirm it if a normal sink edge
+under a supported premise set reaches the sink (`ap.md` §4.9 conditions 1 to 3; Lean
+`AnyTaintExCases2.PassRule.source_confirmed`; through an identity callee `id(p): return p`,
+`AnyTaintExCases2.I.run1_confirmed`). This holds also through a SETTER: the run-1 summary
+`(this, ., *, {}, *) → (this, ., */{name}, *)` of `setName(n): this.name = n` on the added fact
+`(this, ., [any-taint], T)` gives `(this, ., [any-taint], {name}, T)` in the normal layer, so after
+`dto.setName(c)` run 1 CONFIRMS `sink(dto.email)` and does not report `sink(dto.name)`, which is not real (Lean
+program `AnyTaintExCases.S`: `run1_dto_ann`, `run1_email_confirmed`, `run1_name_not_reported`, `name_not_real`; the
+first F69 form demoted at the exclusion and gave two DEMAND entries, `S.run1T_not_confirmed`). A flow through a callee
+that reads a field of the object (a getter) is in the demand layer in run 1: the run-1 summary of the getter is the
+case `above` of `ap.md` §4.1, and in run 1 an edge whose premise has the mark `*` (a FLOW edge, as the run-1
+summary of the getter from the policy fact) has no normal `[any-taint]` conclusion
+(`AnyTaintExCases2.G.run1_flow_above`, `G.run1_not_confirmed`; `AnyTaintExKinds.D6X_flow_no_any_taint`, under S7,
+S10 and S15). Run 3 emits the must-premise in the getter, and the sink edge is normal: run 3 confirms the vulnerability
+(`AnyTaintExCases2.G.run3_must`, `G.run3_sink_normal`, `G.run3_confirmed_handoff`, a program with no exclusion; with
+an exclusion and a must-premise, `AnyTaintExCases.B.run3_anyE_confirmed`). With the sink in the callee, the
+must-premise is supported through its link (the `[any-taint]` added fact, `AnyTaintEx.SupLinkX`) and run 3 confirms
+the vulnerability too (`AnyTaintExCases2.C.run3_supported`, `C.run3_confirmed_handoff`). Only the demotions of §4.3
+(the field-limit cut, a cleaner `part` row other than `atAndBelow` and `below` one accessor below the fact, a may
+target, a demand-layer input, the must-record demotion) make `[any]` of an `[any-taint]` fact, and they can keep a
+vulnerability DEMAND; a weak update can give a CONFIRMED false positive (§11 PRECISION WITH `[any-taint]`).
 
 AN INCOMPLETE RUN (forward or backward) adds nothing to the report and refutes nothing. The refutation of `ap.md`
 §8.10 needs the coverage theorem of run `n + 2`, which needs complete runs. The confirmation needs the support at the
@@ -1305,6 +1490,21 @@ the program `FSeeds.keepSources P σ_k`; `σ_k` contains the source hits of back
 final state (`FSeeds.srcHit`). The conclusion is the same: every forward run holds every real vulnerability of `P`. The
 proof joins `PipelineDriver.result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. Its finite form (as
 `PipelineDriver.driver_iteration_upto`) is argued (§11).
+
+THEOREM (`PipelineAnyTaintExDriver.driver_iterationX`; the tail `[any-taint]` with its exclusion, `ap.md` §10.11). The
+same, with run 1 a run of `PipelineAnyTaintEx.sysD6X` and every forward restricted run a run of `sysDRX` with the spec
+rules `emitX`, `satX`, `restrictX` (the closure `AnyTaintEx.DRXs`); every backward run is a run of
+`PipelineAP.sysDB`, as before (the backward run has no `[any-taint]`). The driver reads each forward run with its
+exclusions and must flags dropped (`PipelineAnyTaintExDriver.resultSeqX`; `AnyTaintExCov.forget6`, `forgetX`): the
+hand-offs of §7.3 and §7.4 have no exclusion and no must flag. This hand-off can be smaller than that of the same run
+without the exclusion (`AnyTaintExCov.CexRoute.route_a_false`), so the proof reads each refined run directly: every
+refined run justifies its own witnesses (`AnyTaintExCov.iteration_reportsX`). The hypotheses are those of
+`PipelineDriver.driver_iteration` (every sink pattern has the tail `$` or `[any]`); there is no hypothesis on the taint
+edges and on the records. The conclusion is the same: every forward run holds every real vulnerability, in some layer.
+The proof joins `PipelineAnyTaintEx.result_D6X`, `result_DRXs` and `PipelineDriver.result_DB` with
+`AnyTaintExCov.iteration_reportsX` (through `PipelineAnyTaintExDriver.resultSeqX_runSeqX`).
+`PipelineAnyTaintExDriver.driver_iteration_uptoX` is the finite form, and `driver_iteration_srcX` the form with the
+source seeds (as `PipelineSeeds.driver_iteration_src`; `AnyTaintExCov.iteration_srcX`; its finite form argued, §11).
 
 ---
 
@@ -1399,7 +1599,9 @@ enum class Layer { NORMAL, DEMAND }
 /** The caller side of a link (E-2). */
 data class CallerRef(val caller: MethodKey, val premise: PremiseKey, val callerLayer: Layer, val call: CommonInst)
 
-/** A link (ap.md §8.3): the added fact, its layer on the link, the caller edge. */
+/** A link (ap.md §8.3): the added fact, its layer on the link, the caller edge. An added fact with the `[any-taint]`
+ *  tail is normal on its link (ap.md W8) and holds its exclusion: the emission and the support read its tail and its
+ *  exclusion (§4.4, §7.5). */
 data class Link(val addedFact: Pattern, val linkLayer: Layer, val caller: CallerRef)
 
 /** A subscription (ap.md §8.4). `zeroOnly`: the backward zero subscription (rule zret). Equality by value (E-3). */
@@ -1409,7 +1611,9 @@ data class Subscription(val callee: MethodKey, val addedFact: Pattern, val linkL
 }
 
 /** A publication: a summary edge of the callee, after the restriction in a restricted run. Its layer is
- *  `conclusion.layer`. */
+ *  `conclusion.layer`. `premise` holds the tail of each member and the exclusion of an `[any-taint]` member: an
+ *  `[any-taint]` premise and an `[any]` premise of one path are two premise keys, so two publications (§4.6; Lean:
+ *  the must flag and the exclusion of `pub` in `PipelineAnyTaintEx.sysDRX`). */
 data class Publication(val premise: PremiseKey, val conclusion: Facts)
 
 /** A request of run 1 (ap.md §4.5, §4.10). A position is an interned path of the new AP (ap.md §7.1). */
@@ -1418,9 +1622,10 @@ sealed interface RequestKind {
     data class Position(val path: PathNode) : RequestKind
 }
 
-/** A seed (§4.7). A sink seed (backward run): one requirement of a reported sink. A source seed (forward restricted
- *  run): one unconditional source edge that the backward run reached, in its forward form; the method key, the
- *  statement and the edge identify it in both runs (ap.md §8.11). */
+/** A seed (§4.7). A sink seed (backward run): one requirement of a reported sink; the requirement of an `[any]` sink
+ *  pattern has the tail `[any]`, in the demand layer (the backward run has no `[any-taint]`, ap.md W8, §9.2). A
+ *  source seed (forward restricted run): one unconditional source edge that the backward run reached, in its forward
+ *  form; the method key, the statement and the edge identify it in both runs (ap.md §8.11). */
 sealed interface Seed {
     val method: MethodKey
     val statement: CommonInst
@@ -1450,7 +1655,9 @@ sealed interface RunEvent {
 data class VulnerabilityKey(val rule: RuleId, val method: CommonMethod, val statement: CommonInst)
 
 /** ap.md §4.9: a sink edge (premise set, layer, sink facts). `facts`: REACH (the zero fact) for an unconditional sink,
- *  else a TAINT tree, so the sink facts of two witnesses of one entry merge (§4.7); as `ap-impl.md` §7.12. */
+ *  else a TAINT tree, so the sink facts of two witnesses of one entry merge (§4.7); as `ap-impl.md` §7.12. A normal
+ *  TAINT tree can have `[any-taint]` leaves, with one exclusion for them in the tree key (ap.md §7.2): such a sink
+ *  edge is normal and can be confirmed (§7.5). */
 class SinkEdge(val premise: PremiseKey, val layer: Layer, val facts: Facts)
 
 /** A sink witness (§4.7): one sink edge, or the sink edge set of a conjunctive sink (one edge per literal), of one sink
@@ -1624,11 +1831,40 @@ ARGUED, NOT PROVED:
 * THE ZERO PUBLICATION (§5.5). The one unrestricted zero-premise publication of §4.6 gives the closure of
   `PipelineAP.sysDB`, because under `Backward.NoZeroBack` no ordinary subscription satisfies the zero premise. The code
   publishes a superset, so it can add results, never lose them.
-* THE ANALYZER ACTIONS OUTSIDE THE CLOSURES (§5.5). `D`, `DR`, `Backward.DB`, `Statics.DS` and `NDZ.DNz` have no end
-  facts, no aliases and no exit-rule removal. So the summary store at quiescence is the closure of §5.5 only for the
-  rules that the closures have. The end facts with their trigger and layer (§4.5; `ap.md` §11.1), the aliases with
-  their guard (§4.5; `ap.md` §11.2, S2), and the global-state rule with the removal of the entry marks (§4.7;
-  `interpreter.md` G2) are outside them.
+* THE ANALYZER ACTIONS OUTSIDE THE CLOSURES (§5.5). `D`, `DR`, `Backward.DB`, `Statics.DS` and `NDZ.DNz` (and
+  `AnyTaintEx.D6X`, `AnyTaintEx.DRX`) have no end facts, no aliases and no exit-rule removal. So the summary store at
+  quiescence is the closure of §5.5 only for the rules that the closures have. The end facts with their trigger and
+  layer (§4.5; `ap.md` §11.1), the aliases with their guard (§4.5; `ap.md` §11.2, S2), and the global-state rule with
+  the removal of the entry marks (§4.7; `interpreter.md` G2, D35) are outside them.
+* THE TAIL `[any-taint]` AND ITS EXCLUSION (`ap.md` W8, §10.11). The pipeline encodes only run 1 (`AnyTaintEx.D6X`)
+  and the restricted forward run (`AnyTaintEx.DRX`) with the tail and its exclusion; these are argued:
+  * the dominance: `Pipeline.quiescent_dominates` has no instance for `PipelineAnyTaintEx.sysD6X` and `sysDRX`, as
+    for `PipelineAP` (SUBSUMPTION, above). Merge rule 2, the subsumption, T5 and the tree key with the exclusion
+    (`ap.md` §7.2, §8.1) are not in the model: an `[any-taint]/E` leaf subsumes in its own layer only, as a `*/E` leaf
+    does, and in a normal TAINT tree it absorbs no `$` leaf at or below it (a later demotion of the `[any-taint]`
+    leaf, for example by an `exact` cleaner, must leave that `$` leaf normal; `ap.md` §7.2 T5, §8.1);
+  * the driver with the static rule and with the conjunctions: W6T and the exclusion on `Statics.DS` and on `NDZ.DNz`
+    are argued (`ap.md` §11.2), as the driver item above. `AnyTaintND.DNzT` has the conjunction rule of `ap.md` §4.6
+    for an `[any-taint]` input, with no exclusion and no W6T;
+  * the backward run: the pipeline and the driver use `Backward.DB` with no layer rule. W6 in the backward run and the
+    demand layer of every result of a reversed micro edge whose forward target is `[any]` (§4.3) are argued, as the
+    backward W6 before F69. They are not a pure layer raise in `Backward.DB`: a demoted requirement can reach the zero
+    fact as a demand zero fact, and `Backward.DB` reads the normal zero fact. But wherever such a zero-premise
+    requirement reaches the zero fact, the normal zero edge of the zero premise is already at that node (the rules
+    `start` and `zpass` from the seed node, with `Backward.ZeroKept`), and `Backward.demOf` and `FSeeds.srcHit` read
+    every layer. So the rule only removes normal backward edges, so only records (`ap.md` §11.2);
+  * `[any-taint]` in a restricted forward run with ND edges (§5.4): `AnyTaintEx.DRX` has no ND edge, and
+    `AnyTaintND.DNzT` has no must-premise and no exclusion (`ap.md` §11.2);
+  * the cleaners stage and the rewriter of a call (§4.5) on an `[any-taint]/E` fact: the cleaner rows of `ap.md` §4.7
+    with the exclusion (Lean `AnyTaintEx.cleanResX` on a statement cleaner), argued for the call as the other call
+    cleaners. The rewriter cleans an `AnyField` action position of a selected SOURCE with `(P, atAndBelow, T)`
+    (`interpreter.md` D34), an `AnyField` action position of a selected CLEANER with the cleaner of its row of
+    `interpreter.md` §5.2, `(P, below, T)`, as today (`JIRMethodCallRuleBasedSummaryRewriter.kt:105`), and every other
+    action position with `(P, exact, T)` (`ap.md` §4.7, §11.2);
+  * the confirmation in the seeded forward runs with exclusions, and the backward reuse of the reversed `[any-taint]`
+    records: `AnyTaintExExact` does not cover them. R3 reverses a record leaf by leaf: no leaf of a must record and no
+    `[any-taint]/E` leaf with `E ≠ {}`; the other leaves reverse (§5.3). The reversal `[any] → $` of a leaf
+    `$ → [any-taint]` gives only demand results (§5.3), a reuse limit.
 
 NOT IN THE MODEL: the priorities, the quantum, the order of the worklist (the two queues of §4.3), the memory guards (of
 a run and of the barrier), the timeout and the failures (a `Throwable` gives `FAILED`, §6.3). They change the order of
@@ -1639,6 +1875,33 @@ later than its budget by the time of that barrier.
 DEVIATION FROM TODAY: AN INCOMPLETE RUN 1 gives an empty report and an empty output; the status gives the cause. Today a
 timed-out scan outputs the vulnerabilities that it found so far (`TaintAnalyzer.kt:157-223`). A report holds only the
 results of complete forward runs (§7.5; `ap-history.md` F67 (4), F68).
+
+PRECISION WITH `[any-taint]`. An exclusion does not demote an `[any-taint]` fact (`ap.md` W8): a strong write into a
+field of an `[any-taint]` object, a setter, a two-level write and the cleaners `atAndBelow` and `below` at `P.f` give an
+`[any-taint]/E` fact in its layer (Lean `AnyTaintExCases.S.record_app`, `X.two_results`, `CL.atAndBelow_result`,
+`CL.below_result`). These are not demotions. Only the demotions of §4.3 (`ap.md` §2.2 THE DEMOTIONS) make `[any]` of
+it, in the demand layer and with no exclusion:
+
+* the field-limit cut: the cut path is above the fact, so it drops the exclusion (`ap.md` §4.4;
+  `AnyTaintExCases.CUT.run1_cut`, `cut_reports`: `sink(x.f.h)`, confirmed with a larger limit, is a DEMAND entry);
+* a cleaner `part` row of `ap.md` §4.7 other than the `atAndBelow` and `below` rows one accessor below the fact: the
+  `exact` cleaner at the path of the fact or one accessor below it, and every cleaner two or more accessors below it.
+  There is no shape for "every location but one" (`AnyTaintExCases.CL.exact_result`; the demotion is necessary,
+  `AnyTaintExExact.CexExactCleaner.cex_exact_cleaner`: `[any-taint]/{f}` would miss the real `x.f.g`, and a normal
+  `[any-taint]/{}` would claim the cleaned `x.f`);
+* a may target: the `[any]` target of a pass rule (`ap.md` W6);
+* a demand-layer input: a demand fact (also another input of a conjunction), a demand-layer summary edge or record, a
+  demand link (an `[any]` added fact);
+* the must-record demotion (§4.2 `applyRecord`; `AnyTaintEx.recLayerX`).
+
+This is a precision loss, not a soundness loss: the vulnerability stays in the report as a DEMAND entry.
+
+THE ALIAS GAP (an expected false-positive source, `ap.md` §11.1). A WEAK UPDATE keeps an `[any-taint]` object whole: a
+deep write through a local (`a = dto.address; a.city = clean`: the alias edge is gen-only, `interpreter.md` G7) or
+through a call-result alias such as a getter (`interpreter.md` §3.8 AC2), the constructor pass-over (`interpreter.md`
+G8), and the default identity of an unresolved callee (`interpreter.md` §3.7: a library setter `dto.setName(clean)`).
+The object keeps `(dto, ., [any-taint], E, T)` in the normal layer, so a sink on the cleaned field is a CONFIRMED
+false positive. Before F69 the same finding was a DEMAND entry. A `$` fact has the same gap today.
 
 ---
 
@@ -1653,6 +1916,31 @@ results of complete forward runs (§7.5; `ap-history.md` F67 (4), F68).
 | `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB`, `driver_iteration`, `driver_iteration_upto` |
 | `PipelineNDZ.lean` (with `NDZ.lean`, `NDZeroBase.lean`) | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, `clDNz_ndpub_zero_sub`: the encoding of `NDZ.DNz` (§5.4, §5.5) |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
+| `PipelineAnyTaintEx.lean` (with `AnyTaintExDefs.lean`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (§5.5): `sysD6X`, `sysDRX`, `XPObj6`, `XPObj`, `sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, the object theorems, `known_D6X`, `known_DRX`, `result_D6X`, `result_DRX`, `result_DRXs`, `no_lost_summary_D6X`, `no_lost_summary_DRX`, `SanityX` |
+| `PipelineAnyTaintExDriver.lean` (with `AnyTaintExCov.lean`) | the driver with the tail `[any-taint]` and its exclusion (§7.7): `resultSeqX`, `resultSeqX_runSeqX`, `driver_iterationX`, `driver_iteration_uptoX`, `driver_iteration_srcX` |
+| `AnyTaintExDefs.lean`, `AnyTaintExCov.lean`, `AnyTaintExExact.lean`, `AnyTaintExKinds.lean`, `AnyTaintExCases.lean`, `AnyTaintExCases2.lean` | the AP model of the tail `[any-taint]` with its exclusion: THE SPEC CLOSURES (`ap.md` §10.11). This document cites: the closures `AnyTaintEx.D6X`, `DRX`, `DRXs`, the objects `XObj`, `XFact`, the operations `w6tX`, `transferX`, `limitFX`, `cleanResX`, `partX`, `annX`, `checkX`, `emitX`, `emitTX`, `satX`, `restrictX`, `startX`, `recLayerX` (with `DRX.retRec`), the predicates `SatInsideX` (`satX_inside`), `EndExactX`, `RecsExactX`, `SupLinkX`, `SupX`, `Confirmed6X`, `ConfirmedX`, the vectors `Vec`; `AnyTaintExCov.forget6`, `forgetX`, `iteration_reportsX`, `iteration_srcX`, `CexRoute.route_a_false`; `AnyTaintExExact.startX_must_end`, `confirmed_real_valid6X`, `confirmed_realX_valid`, `seq_confirmed_realX_valid`, `RecsFromRunsX`, `specX_rules`, `RecsConcX`, `RecsWFX`, `recs_of_DRX`, `CexExactCleaner.cex_exact_cleaner`; `AnyTaintExKinds.D6X_flow_no_any_taint` (run 1, under S7, S10 and S15: an edge whose premise has the mark `*`, a FLOW edge, has no normal `[any-taint]` conclusion), `D6X_any_conc`, `DRXs_normal_premise`, `DRXs_must_premise` (a normal edge of a restricted run has a `$` premise or a must-premise `[any-taint]` with a concrete mark); the worked programs of `AnyTaintExCases` (§13) and of `AnyTaintExCases2` (the round-1 programs G, C, I and PassRule re-derived in `D6X` and `DRXs`; §7.5, §13) |
+| `AnyTaintDefs.lean`, `AnyTaintSim.lean`, `AnyTaintExact.lean`, `AnyTaintND.lean`, `AnyTaintCases.lean`, `PipelineAnyTaint.lean`, `PipelineAnyTaintDriver.lean` | the model of the first F69 form (the demotion at an exclusion, `AnyTaint.D6T`, `DRT`), not the spec closures. This document cites from it only what still states a rule of the spec: the taint edges `AnyTaint.TaintEdges`; the counterexamples `AnyTaintExact.CexApp.cex_app`, `CexApp.record_not_pair_exact`, `CexRev.cex_rev`, `CexSupMark.cex_sup_mark` and the lemma `markSub_conc`; the conjunction `AnyTaintND.DNzT`, `Example`; the transfer with no exclusion `AnyTaintCases.Cut.cut_transfer` (§13 item 31); the vectors `AnyTaint.EmitVec`, `Sanity`. The round-1 programs G, C, I and PassRule of `AnyTaintCases.lean` are only the program terms that `AnyTaintExCases2.lean` imports: their results in the spec closures are those of `AnyTaintExCases2` |
+
+THE TAIL `[any-taint]` AGAINST THE MODEL. The base model has three tail kinds (`.star e`, `.any`, `.exact`). The spec
+has four, and the forward `[any-taint]` can carry an exclusion (`ap.md` W8). The spec closures are the refined ones,
+`AnyTaintEx.D6X` and `DRXs` (an annotated fact `AnyTaintEx.XFact` is a base fact with its exclusion):
+
+| Spec | Model |
+|---|---|
+| `*/E` | `.star e` |
+| `$` | `.exact` |
+| `[any]` (a may) | a `.any` fact in the demand layer, with no exclusion (`AnyTaintEx.normX`) |
+| `[any-taint]/E` conclusion (a must) | a `.any` fact in the normal layer with a concrete mark and the exclusion `E` (`AnyTaintEx.XFact`, `carriesB`; in run 1 every normal `.any` conclusion has a concrete mark, `AnyTaintExKinds.D6X_any_conc`) |
+| `[any-taint]/E` premise (a must-premise) | a premise with the must flag and the exclusion of `AnyTaintEx.XObj` (`init M j true jex`, `edge M j true jex n f`); it has the tail `.any` and a concrete mark (`AnyTaintExKinds.DRXs_must_premise`) |
+| `[any-taint]/E` added fact | `added M a true aex`: `.any`, normal on its link, with the exclusion `aex` |
+| the sources with an `[any]` target (`ap.md` S15) | the taint edges `AnyTaint.TaintEdges` (`AnyTaintEx.w6tX` reads them) |
+| the backward run (no `[any-taint]`) | `Backward.DB`: no must flag, no exclusion; the driver reads each forward run with them dropped (`AnyTaintExCov.forget6`, `forgetX`) |
+
+In the model `AFact.complete` is false on every `.any` fact: it is the backward reading of COMPLETE only. With the tail
+`[any-taint]` the forward records and the confirmation read only the layer: the normal exit edges of a run, `.any`
+included, are exact records, or END-EXACT records for a must-premise, on the locations that their exclusions admit
+(`AnyTaintEx.RecsExactX`; `AnyTaintExExact.recs_of_DRX`), and a confirmed vulnerability has a normal sink edge
+(`AnyTaintEx.Confirmed6X`, `ConfirmedX`). The backward records keep the base reading.
 
 ---
 
@@ -1665,7 +1953,9 @@ results of complete forward runs (§7.5; `ap-history.md` F67 (4), F68).
 2. PROTOCOL TESTS. A mock storage that breaks P1, P2, P3 or P4 loses a summary in the fixed schedule of the
    counterexample. The real storage does not.
 3. THE `[any]` DELIVERY. In a restricted run (`inside`), a caller fact with `[any]` above the premise of a summary that
-   the callee publishes AFTER the subscription, with 10 or more subscriptions: the caller gets the summary (P4).
+   the callee publishes AFTER the subscription, with 10 or more subscriptions: the caller gets the summary (P4). The
+   same with an `[any-taint]` caller fact and the summary of its must-premise. With an `[any-taint]/E` caller fact, a
+   premise below it through an accessor in `E` gets no summary, and a premise through another accessor gets it.
 4. SEVERAL PREMISES. A summary `{j1, j2} → g`: premise 1 matched by a delivery, premise 2 by a replay, with the
    conclusion in two deltas: the caller applies both deltas (§5.4).
 5. RECORDS. A forward record does not apply in its forward form in a backward run; its reversal applies. A backward
@@ -1723,14 +2013,96 @@ results of complete forward runs (§7.5; `ap-history.md` F67 (4), F68).
     references to the prescan AP manager, to one prescan runner and to one prescan method context are cleared after a
     GC (poll a few times).
 20. PHASE-3 OUTPUT AND STATUS. The output holds every entry of the report, CONFIRMED and DEMAND (a vulnerability whose
-    only source has an `[any]` target, `ap.md` W6, is output with the state DEMAND), each with the simple trace; the
-    method key is that of a confirmed witness, else of the first witness; the log has the count per state. The status
+    taint passes only through a pass rule with an `AnyField` target, a may `[any]`, `ap.md` W6, is output with the
+    state DEMAND; a vulnerability from a source with an `[any]` target can be CONFIRMED, items 22, 23), each with the
+    simple trace; the method key is that of a confirmed witness, else of the first witness; the log has the count per
+    state. The status
     maps `COMPLETE` to `OK`, `TIMEOUT` to `TIMEOUT`, `OOM` to `OOM` and `FAILED` to `EXCEPTION` (one `Report` per
     status). A throw in the setup of the analysis gives an empty output and `EXCEPTION` (§9).
 21. CONJUNCTIVE EXIT SOURCE. An exit source `AssignMark(U, Result) if ContainsMark(Argument(0), A) ∧
     ContainsMark(Argument(1), B)`, with the exit items `(arg(0), $, A)` under the premise `i0` and `(arg(1), $, B)` under
     `i1`: the full combination gives the ND summary `{i0, i1} → ret.$ (U)`, and the caller applies it by E6; each
     literal input stays in the conjunction store; the exit items stay in the summary (§4.4).
+22. THE `[any]`-TARGET SOURCE IS CONFIRMED (analysis test; program G, a Spring DTO through a getter; the results in the
+    spec closures `AnyTaintEx.D6X`, `DRXs` are those of `AnyTaintExCases2`). `root(): dto = srcAny(); x = get(dto);
+    sinkAny(x)`, `get(p): return p.f`, where `srcAny` is a source with an `[any]` target and `sinkAny` a
+    `ContainsMarkOnAnyField` sink. Run 1 reports the vulnerability as DEMAND (the getter summary is the case `above`;
+    `AnyTaintExCases2.G.run1_flow_above`, `G.run1_not_confirmed`). Backward run 2 hands off the demand
+    `(D-c = (p, .f, [any], T), D-p = (ret, ., [any], T))` of `get` (the backward run has no `[any-taint]`, §7.4; it
+    reads the refined run 1 with the exclusions dropped: `G.HX_exact`, `G.handoffX_get`). In run 3 the added fact
+    `(p, ., [any-taint], {}, T)` of `get` emits the must-premise `(p, .f, [any-taint], {}, T)` (`G.run3_must`,
+    `G.run3_must_supported`), the sink edge in `root` is normal (`G.run3_sink_normal`), and run 3 CONFIRMS the
+    vulnerability (`G.run3_confirmed_handoff`); the report has it as CONFIRMED and the iteration stops (§7.1).
+    Program C (the sink in the callee: `use(o): sinkAny(o.f)`) is CONFIRMED in run 3 too, with the must-premise
+    supported through its link (`AnyTaintExCases2.C.run3_supported`, `C.run3_confirmed_handoff`). Program I (`get`
+    with `return p`) is CONFIRMED in run 1, with no DEMAND entry, so the iteration stops after run 1
+    (`AnyTaintExCases2.I.run1_flow`, `I.run1_confirmed`, `I.run1_no_demand`).
+23. THE SETTER KEEPS `[any-taint]` WITH AN EXCLUSION (analysis test; program S of `AnyTaintExCases`, a Spring DTO
+    through a setter). `root(): dto = srcAny(); dto.setName(c); sink(dto.name); sink(dto.email)`,
+    `setName(n): this.name = n`, `c` clean. The run-1 summary `(this, ., *, {}, *) → (this, ., */{name}, *)` of
+    `setName` on the added fact `(this, ., [any-taint], T)` gives `(this, ., [any-taint], {name}, T)` in the normal
+    layer, and `dto` is `(dto, ., [any-taint], {name}, T)`, normal (`AnyTaintExCases.S.record_app`, `run1_dto_ann`).
+    Run 1 reports no vulnerability for `sink(dto.name)`, in no layer (`S.run1_name_not_reported`; it is not real,
+    `S.name_not_real`), CONFIRMS `sink(dto.email)` (`S.run1_email_confirmed`) and has no DEMAND entry
+    (`S.run1_no_demand`), so the driver stops after run 1 (`STOP_RULE`). The same through a deeper setter
+    (`AnyTaintExCases.SD.run1_email_confirmed`, `SD.same_result`). Program B also has no DEMAND entry in run 1
+    (`AnyTaintExCases.B.inv1`), so the driver never starts its run 3: its run-3 results are a test of one restricted
+    run with the broad demand `(D-c = (this, ., [any], T), D-p = (this, ., [any], T))` of `setName` given by hand and
+    the records of run 1 (`AnyTaintExCases.B.run3_must`, `B.run3_anyE_confirmed`, `B.run3_name_not_reported`).
+24. SOURCE AGAINST PASS RULE (program PassRule; the results in the spec closure `AnyTaintEx.D6X` are those of
+    `AnyTaintExCases2.PassRule`). The same micro edge `P.$ (T) → Q.[any] (T)` as a source (target `[any-taint]`)
+    gives a normal edge, and run 1 confirms the vulnerability; as a pass rule (target `[any]`) it gives a demand edge,
+    and the vulnerability stays DEMAND (`AnyTaintExCases2.PassRule.source_vs_pass`, `source_confirmed`,
+    `pass_demand`, `pass_not_confirmed`). In the backward run the reversal `Q.[any] (T) → P.$ (T)` of the pass rule
+    gives the requirement `(P, ., $, T)` in the demand layer (its forward target is `[any]`, §4.3), so the backward
+    summary through it is not a record, and no later forward run confirms the vulnerability through the pass rule. The
+    core reads only `MicroEdge.forward` for this (no rule-kind flag).
+25. TWO PREMISE KEYS AND THE MUST RECORD. In a restricted run, an `[any-taint]` added fact and an `[any]` added fact at
+    one path give two initial facts, two premise keys and two publications (§4.1, §4.6); two must-premises of one path
+    with different exclusions give two premise keys. A forward record with an `[any-taint]` premise applied to an
+    added fact that lies inside its premise (`applicable`, not `inside`) gives a demand-layer result with no exclusion
+    (§4.2; the program of `AnyTaintExact.CexApp.cex_app`). `rec.reversedAt` gives no reversal of any leaf of it in a
+    backward run (§5.3; `AnyTaintExact.CexRev.cex_rev`). R3 is LEAF BY LEAF: the zero-premise summary of
+    `mk(): d = srcAny(); d.setName(c); d.k = srcU(); return d` (`srcU` a source with the target `$` and the mark `U`)
+    has the two leaves `(ret, ., [any-taint], {name, k}, T)` and `(ret, .k, $, U)`, both normal; `rec.reversedAt`
+    gives the reversal of the `$` leaf only, and that reversal applies in the backward run. In run 1 the caller
+    `root(): r = mk(); sink(r.name); sink(r.email)` applies this summary to its zero fact with the exclusion of the
+    leaf (`ap.md` §4.1, the case below: the target exclusion of the edge): `(r, ., [any-taint], {name, k}, T)`, normal,
+    so `sink(r.name)` is not reported and `sink(r.email)` is CONFIRMED. The reversal `[any] → $` of a leaf
+    `$ → [any-taint]` applies to an `[any]` requirement with a demand-layer result, and not to a `$` requirement
+    (§5.3). No backward edge has the `[any-taint]` tail.
+26. THE SUPPORT NEEDS THE SAME MARK. A must-premise with the mark `*` inside an `[any-taint]` added fact is not
+    supported (§7.5; `AnyTaintExact.CexSupMark.cex_sup_mark`). A `$` member below an `[any-taint]/E` added fact through
+    an accessor in `E` is not supported; through another accessor it is.
+27. VECTORS. The emission table (§4.4; `AnyTaint.EmitVec`; with the exclusion `AnyTaintEx.Vec.emit_at`,
+    `emit_above_excluded`, `emit_above_exact`), the A2 rows (`AnyTaintEx.Vec.setter_keep`, `read_excluded`,
+    `read_admitted`, `above_star_excl`, `below_keeps`, `below_new_fact`, `cut_drops`), the source result as a normal
+    `[any-taint]` edge in run 1 and in a restricted run and the pass-rule result as a demand edge (`AnyTaint.Sanity`),
+    the encodings with the exclusion (`PipelineAnyTaintEx.SanityX.d6x_ann`, `drx_ann`), and the conjunction of an
+    `[any-taint]` input that its literal does not cover: a normal result, confirmed (`AnyTaintND.Example`).
+28. THE TWO-LEVEL WRITE (program X of `AnyTaintExCases`; an AP-level test: the write `x.f.g = c` is ONE statement, a
+    synthetic statement summary on the AP with the keep edges `x.* →_{f} x.*` and `x.f.* →_{g} x.f.*`).
+    `x = srcAny(); x.f.g = c; sink(x.f.g); sink(x.f.h); sink(x.k)`: the write gives exactly
+    `(x, ., [any-taint], {f}, T)` and `(x, .f, [any-taint], {g}, T)`, both normal (`AnyTaintExCases.X.two_results`).
+    `sink(x.f.g)` is not reported (`X.fg_not_reported`); run 1 CONFIRMS `sink(x.f.h)` and `sink(x.k)`
+    (`X.fh_confirmed`, `X.k_confirmed`). On the JVM a two-level write goes through a local (`t = x.f; t.g = c`): the
+    write into `x` is the weak alias write (`interpreter.md` G7), so `x` keeps `(x, ., [any-taint], {}, T)`. A JVM
+    analysis test of this program expects `sink(x.f.g)` CONFIRMED, the documented false positive of the alias gap
+    (§11 THE ALIAS GAP), and `sink(x.f.h)` and `sink(x.k)` CONFIRMED.
+29. THE READS (program R of `AnyTaintExCases`). After the setter of item 23, `y = dto.name` gives nothing and
+    `z = dto.email` gives `(z, ., [any-taint], {}, T)`, normal (`AnyTaintExCases.R.reads`). `sinkAny(y)` is not
+    reported (`R.y_not_reported`); run 1 CONFIRMS `sinkAny(z)` (`R.z_confirmed`).
+30. THE CLEANERS (program CL of `AnyTaintExCases`). `x = srcAny(); clean(x.f, reach); sink(x.f); sink(x.f.g);
+    sink(x.k)`: `atAndBelow` gives `(x, ., [any-taint], {f}, T)`, normal, so only `sink(x.k)` is reported, and it is
+    CONFIRMED (`AnyTaintExCases.CL.atAndBelow_result`); `below` gives it and
+    `(x, .f, $, T)`, both normal, so `sink(x.f)` is CONFIRMED (`CL.below_result`); `exact` gives `(x, ., [any], T)` in
+    the demand layer, so every sink is a DEMAND entry (`CL.exact_result`).
+31. THE CUT (program CUT of `AnyTaintExCases`; an AP-level test: the AP field limit with `L = 0` on the results of
+    item 28; no run has `L = 0`, since run 1 needs `L >= 1`, §7.1). Program X with the field limit 0: the cut gives
+    `(x, ., [any], T)` in the demand layer with no exclusion (`AnyTaintExCases.CUT.run1_cut`), and `sink(x.f.h)` is a
+    DEMAND entry (`CUT.cut_reports`). A JVM analysis test of the cut runs with `L = 1` and a fact deeper than the
+    limit: the source `dto.f.g = srcAny()` gives `(dto, .f, [any], T)` in the demand layer with no exclusion
+    (`AnyTaintCases.Cut.cut_transfer`, a transfer with no exclusion), so a sink below `dto.f` is a DEMAND entry.
 
 ---
 
