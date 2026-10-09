@@ -17,12 +17,14 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 
-Now we have a complete spec for the AP (see `spec/ap.md`) and spec for the analyzer (see `spec/analyzer-core.md`) which covers phases 1 and 2.
-Now we need to create an implementation proposal documents: for the ap and for the analyzer.
-Focus on the implementation details: packages, entities and their interaction.
-Provide code snippets. Generally, we should have more code snippets and less text. 
-If you need to explain some concept: write a code snippet.
-Maximize code sharing, so we can reuse as much as possible from the current analyzer implementation.
-Put the specs into `spec/ap-impl.md` and `spec/analyzer-impl.md` wrt the repo root.
+We need to extend the AP spec. Currently, we have 3 possible fact tail kinds: *, $ and [any].
+This is not enough, since we can't distinguish the demand edges and the [any] sources.
+The proposed soultion: add one more tail kind -- [any-taint].
+It works as [any] on read, but without promoting the edge layer. Therefore, we have a new complete edge kind: normal layer with [any-taint] tail.
+The [any-taint] can be promoted to [any], if the field write exceeed the limit.
+The [any-taint] shouldn't be used in the premise. Also, the [any-taint] shouldn't be used with the * at mark position. 
+We may assume that the [any-taint] tail can be used for the concrete taint edge conlcusion (a source rule application result). 
+
+Extend the spec. Write all required proofs. Specify all required parts: the demand, the abstraction and summary edge application.
 
 Use subagents.
