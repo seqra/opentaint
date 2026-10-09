@@ -33,13 +33,13 @@ The sections below cite these decisions by their id.
 | DD2 | REFERENCE FORMS AND TRIES. The spec forms are per path (`Pattern`, `PathEdge`, `Conclusion`). The code keeps the conclusions of one edge group in ONE `Facts` value of one kind (DD12): `Reach`, `FlowTree` or `TaintTree` (`ap.md` §7.2). The per-path forms stay in `Reference.kt` as the reference forms. | The tests compare each operation on `Facts` with its reference form. | §6, §8 |
 | DD3 | THE EDGE DELTA. A propagated item is `(premise: PremiseKey, node: CommonInst, facts: Facts)`. The layer is `facts.layer` (`analyzer-core.md` §4.3). There is no `Edge` class: the kind replaces it. REACH is today's `ZeroToZero`; TAINT is `ZeroToFact`, a concrete `FactToFact` and `NDFactToFact`; FLOW is an abstract `FactToFact` (`ap.md` §7.6). | The premise key and the base give the kind (`ap.md` §7.2): `nonZeroCount` names the edge (§4.6), the mark of the premise separates FLOW from the rest, and a conclusion on the zero base is REACH (`{zero}` and a backward `{jb}` have REACH and TAINT conclusions). | §3.4, §4.1 |
 | DD4 | ADDED FACTS ARE `Facts` PER LINK KEY. After the binding and the cleaners, a caller fact is one `Facts` value in callee coordinates. Its leaves are the added facts. `AddedFactStore` keeps one merged value per (caller reference, link layer, kind key): REACH (no more), FLOW (base, exclusion, mark exclusion), TAINT (base). `add` returns the delta: the new leaves are the new links. A `Link` (the spec form) is one leaf with its `CallerRef`. The same value is the added-fact part of a subscription. | Today a subscription keeps caller fact trees too (`MethodTreeAccessPathSubscription`). The replay and the delivery read the satisfying part with one function, `ApOps.satisfying` (P4 of `analyzer-core.md` §5.3). | §5.4, §7.5 |
-| DD5 | INTERNING. `ApManager` interns `PathNode`, `InitialAp`, `PremiseSet`, `MarkSet`, `ExclusionSet` and `TaintLeaves`, so equality is identity where a store key needs it. Each store hash-conses its trie nodes with its own `TrieInterner`. Its table is a cache behind a managed soft reference (the `SoftReferenceManager` of the `RefManager`), as today: the memory guard clears it, and the next intern makes a new one. The intern policy is per trie: a deliberate difference to today's store-wide pass (§4.5). `TrieNode` and `Facts` equality is structural, with an identity fast path. | A shared node table needs a lock and holds the tries of every store in one table. A cleared table loses only sharing: an interned node stays valid, and equality is structural. A callee publication meets a caller subscription of another store, so equality must not use identity alone. | §4.5, §5.1 |
+| DD5 | INTERNING. `ApManager` interns `PathNode`, `InitialAp`, `PremiseSet`, `MarkSet`, `ExclusionSet` and `TaintLeaves`, so equality is identity where a store key needs it. Each store hash-conses its trie nodes with its own `TrieInterner`. Its table is a cache behind a managed soft reference (the `SoftReferenceManager` of the `RefManager`), as today: the memory guard clears it, and the next intern makes a new one. A table lives inside one guarded region: a run, or a barrier, whose own memory guard keeps the managers enabled during `persist` (§4.5, `ap-history.md` F68 (5)). The stores with tries: `MethodEdgeStore`, `RunSummaryStore`, `PersistentRecordStore`, `NdSummaryJoin` and `AddedFactStore` (§7), and the `PublicationIndex` of `analyzer-impl.md` §5.2. The intern policy is per trie: a deliberate difference to today's store-wide pass (§4.5). `TrieNode` and `Facts` equality is structural, with an identity fast path. | A shared node table needs a lock and holds the tries of every store in one table. A cleared table loses only sharing: an interned node stays valid, and equality is structural. A callee publication meets a caller subscription of another store, so equality must not use identity alone. | §4.5, §5.1 |
 | DD6 | A PATH ELEMENT IS `AccessorIdx` (an `Int`, `ap/ifds/access/util/AccessorInterner.kt:17`): a field, an element or a class accessor (`ap.md` §1, W5). A path is `List<AccessorIdx>` in the reference forms and `IntArray` or `PathNode` in the tries. `isClass` is `AccessorIdx.isStaticAccessor()`. Part II converts a JIR `Accessor` with `manager.accessors.index(a)`. | `ap.md` §3.4 says that the sets hold `AccessorIdx`. The type-info and value accessors serve the prescan only (W5). | §3.1, §6 |
 | DD7 | `TaintMark` is `@JvmInline value class TaintMark(val id: Int)` in `bidi.ap`, with `MarkTable` (`manager.marks.mark(name)`, `manager.marks.name(m)`). The zero mark is `TaintMark.ZERO`. The JVM glue maps a rule mark to it by its name. | The JVM `TaintMark` is in `configuration-rules-jvm`. `opentaint-dataflow` does not see it: its `build.gradle.kts` has `configuration-rules-common` only. | §3.1 |
 | DD8 | THE ZERO BASE is `AccessPathBase.Zero` (GENERALIZE of `ap/ifds/Accessors.kt:5`). | `ap.md` §1, §2.4. The old core never makes it, so its behaviour does not change. | §2, §3.4 |
 | DD9 | `TypeFilter(may, markPolicy)` is a class in `bidi.ap`. `ApOps.filter` applies `may` to the path, then the mark policy to the concrete marks of a TAINT tree at the root path and at each node of the `[e]` chain below the root, with the type of that level (`MarkPolicy.keeps(mark, elements)`), as today. `TypeFilter.and` is the conjunction of two filters on one base. The backward run applies no filter and no policy. | `interpreter.md` §5.1 applies the mark policy "after the filter", to the same facts. Part II builds `may` with today's `JIRFactTypeChecker`. Today the filter of the element type (`FilterNext` of `[e]`) also reads the marks below `[e]` (§5.5). Only a TAINT leaf has a concrete mark. | §5.5, §26.2 |
-| DD10 | THE VULNERABILITY KEY AND THE WITNESSES. The key is `(rule, method, statement)`: the method of the method key WITHOUT the context, so one sink statement reached in several contexts is one vulnerability (`ap-history.md` F67). `VulnerabilityStore` keeps SEVERAL witnesses per key: one entry per (key, alternative, method key, run, witness shape). A `SinkWitness` names its `alternative` (the index of the sink alternative of the rule at the statement) and its `methodKey`. The facts of an entry are the union of the triggering parts of every witness of that entry. | The confirmation reads only the method key and the shape (the premise set and the layer of each sink edge), and each sink edge stays a leaf. So the merge loses nothing. With the alternative and the method key in the entry, the union never joins two group keys at one literal and never mixes two alternatives (§7.12). | §7.12 |
-| DD11 | FORMS PER METHOD KEY. `JIRMethodForms` caches the call plans and the entry rules per method key. `JIRMethodEntry` caches the statement summaries and the exit rules per method. | The callees of a call and the start filter read the context of the key. `analyzer-core.md` §4.8 caches per method (spec issue SI16). | §31.2 |
+| DD10 | THE VULNERABILITY KEY AND THE WITNESSES. The key is `(rule, method, statement)`: the method of the method key WITHOUT the context, so one sink statement reached in several contexts is one vulnerability (`ap-history.md` F67). `VulnerabilityStore` keeps SEVERAL witnesses per key: one entry per (key, alternative, method key, run, witness shape). A `SinkWitness` names its `alternative` (the index of the sink alternative of the rule at the statement) and its `methodKey`; its pattern (`ap.md` §8.10) is derived from them: `SinkRule.patterns` of that alternative in the forms (§7.12). The facts of an entry are the union of the triggering parts of every witness of that entry. | The confirmation reads only the method key and the shape (the premise set and the layer of each sink edge), and each sink edge stays a leaf. So the merge loses nothing. With the alternative and the method key in the entry, the union never joins two group keys at one literal and never mixes two alternatives (§7.12). | §7.12 |
+| DD11 | FORMS PER METHOD KEY. `JIRMethodForms` caches the call plans and the entry rules per method key. `JIRMethodEntry` caches the statement summaries and the exit rules per method. | The callees of a call and the start filter read the context of the key. `analyzer-core.md` §4.8 now caches these forms per method key too (SI16, RESOLVED (F68)). | §31.2 |
 | DD12 | THREE CONCLUSION KINDS (`ap.md` §7.2). `Reach` (the zero fact: one bit per layer), `FlowTree` (abstract marks: a `*` leaf with the tree exclusion in the normal layer, an `[any]` leaf in the demand layer, the tree mark `*∖X`), `TaintTree` (concrete marks: `$` leaves; `$` and `[any]` leaves in the demand layer). FLOW follows from the premise (`PremiseKey.isFlow`), REACH from the zero base of the conclusion; a `PremiseSet` (an ND edge) is ALWAYS TAINT. The TYPES enforce W2 and the `$`/`*` split: a `FlowTree` has one flag per node and no concrete mark; a `TaintTree` has no `*` leaf, no exclusion and no mark exclusion. The constructors check W1 for the demand layer (a demand `FlowTree` has the Empty exclusion) and W6 (a normal `TaintTree` has no `[any]` mark), so no constructor path, `withRoot` included, makes a bad value. The restricted runs have REACH and TAINT only. Proved: `Kinds.kinds_D`, `kinds_DR`, `kinds_DB_taint`, `nd_taint`, `ndz_taint` (`ap.md` §10.10). For run 1 with the static rule (`Statics.DS`: the position answer and the static mark answer) the partition is argued (`ap.md` §11.2). | `ap.md` §7.2 gives the reasons (S7, S8, W2, W6, `Coverage.edge_conc`). The mark gate becomes simple (§5.3): every request comes from a FLOW fact. | §4.1, §5 |
 | DD13 | THE PREMISE KEY is the `InitialAp` itself for one member, and a `PremiseSet` (a sorted array) for two or more. The union of premise sets (`ApManager.union`, `premiseOf`) DROPS the zero fact: `{zero}` only if every input is `{zero}`, so `{zero, i}` is `{i}`. So a `PremiseSet` is exactly an ND edge: no zero member, every member with a concrete mark, TAINT conclusions only (its `init` checks the members; `MethodEdgeStore` and `RunSummaryStore` check the kind). Proved equivalent to the list model of the Lean `ND.DN`: `NDZero.dnz_to_dn`, `dn_to_dnz` (`ap.md` §10.10). | `ap.md` §7.1, §4.6; `ap-history.md` F65. One member is the common case: no wrapper, no list. The zero fact adds no condition: it is at every node that an edge reaches. | §3.4, §5.1 |
 | DD14 | ONE TRIE. `TrieNode<P>` is the one hash-consed node; the payload `P` is the leaf of the node (`FlowLeaf` or `TaintLeaves`), with its algebra `LeafAlgebra<P>`. ONE set of generic algorithms (`TrieOps.kt`; the code is in §4 and §5.5 to §5.7): merge and delta (T1, T4), maps, prepend and chain, `minusNode`, `graft`, the fold (T5), the subsumption, the cut (`ap.md` §4.4), the path filter, interning, `boundedDepth`; and one path walk (`walkPath`). No other depth bound: today's `limitFieldAccess`, `limitElementAccess` and `containsStatic` are not ported (§2, §4.2). Per kind only: the edge application, the gate, `clean`, `checkMark`, `satisfying`/`applySummary`, `restrict`, `emit`. The other shared utilities: `MarkGate` (one mark gate), `Results` (one result collector per kind), `Facts.groupKey` (one store key), and the two standing joins `KaryJoin` (k slots of one type) and `StandingJoin` (two sides with index lookups). | No non-trivial logic is written twice. Today's `AccessTree.AccessNode` algorithms are adapted once (§2). The two joins differ in what they own (§7.10). | §4, §5, §7.10 |
@@ -62,7 +62,7 @@ Scope: the AP with all its stores (`ap.md` §2 to §9) and the test plan of `ap.
 | K1 | A path element is `AccessorIdx` (DD6): a field, an element or a class accessor. `isClass` is `AccessorIdx.isStaticAccessor()`. A counted accessor is a field or an element accessor (`isCounted`, §3.1). | `ap.md` §1, §3.4, W5. |
 | K2 | A mark is the value class `TaintMark` of `bidi.ap` (DD7). | The JVM `TaintMark` is not visible in `opentaint-dataflow`. |
 | K3 | The zero base is `AccessPathBase.Zero` (DD8). Each exhaustive `when` over `AccessPathBase` gets a `Zero` branch (§2). | `ap.md` §1, §2.4. |
-| K4 | `MethodKey` is `typealias MethodKey = MethodEntryPoint` (REUSE, `ap/ifds/MethodWithContext.kt:24`). | `ap.md` §1 and `analyzer-core.md` §1 define the method key as the `MethodEntryPoint` of the method (context and forward entry statement). |
+| K4 | `MethodKey` is `typealias MethodKey = MethodEntryPoint` (REUSE, `ap/ifds/MethodWithContext.kt:24`), declared in `bidi/ap/Premise.kt` (§1). `bidi.ap`, `bidi.store`, `bidi.interp` and the `bidi.engine` of `analyzer-impl.md` import it from there. | `ap.md` §1 and `analyzer-core.md` §1 define the method key as the `MethodEntryPoint` of the method (context and forward entry statement). |
 | K5 | A RUN store has one writer (the runner of its method, `analyzer-core.md` O1). It has no lock. `ApManager`, `ApOps` and `VulnerabilityStore` are thread-safe. §7.1 gives the table. | `analyzer-core.md` §2. |
 | K6 | A FLOW premise is one `InitialAp` with the mark `*` (`PremiseKey.isFlow`). Every other `InitialAp` gives REACH (a conclusion on the zero base) or TAINT conclusions; a `PremiseSet` gives TAINT only. | `ap.md` §7.2, §4.6. |
 
@@ -112,7 +112,7 @@ core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/da
   │ ├ Facts.kt             Direction, Layer, Tail, ApMode, TaintMark, MarkSet, MarkSlot, ExclusionSet (§3.2)
   │ ├ AccessorTable.kt     AccessorTable, MarkTable: id <-> value, no ConcurrentReadSafe map (§3.1)
   │ ├ PathNode.kt          PathNode: the interned accessor chain of a premise (§3.3)
-  │ ├ Premise.kt           PremiseKey, InitialAp, PremiseSet, the zero fact (§3.4)
+  │ ├ Premise.kt           PremiseKey, InitialAp, PremiseSet, the zero fact (§3.4); typealias MethodKey (K4)
   │ ├ Trie.kt              TrieLeaf, FlowLeaf, TaintLeaves, TrieNode<P>, LeafAlgebra<P>, FlowAlgebra, TaintAlgebra (§4.1)
   │ ├ TrieOps.kt           the generic trie algorithms: merge, delta, maps, prepend, chain, minus, graft, fold, subtract, cut, filter (§4.2–§4.4)
   │ ├ TrieInterner.kt      T6 hash-consing, one per store and kind, its table behind a soft reference (§4.5)
@@ -189,8 +189,8 @@ The kinds of reuse (both parts):
 | `TreeApManager` (`ap/ifds/access/tree/TreeApManager.kt:34`), `ap/ifds/access/ApManager.kt` | REPLACE | `bidi.ap.ApManager` (§5.1) |
 | `AnyAccessorUnrollStrategy`, `AccessTreeAnySuffixMatcher`, `DeepAccessorExclusion` (`ap/ifds/access/DeepAccessorExclusion.kt:6`), `TreeInitialFactAbstraction`, mark/`$`/`[any]` accessors in paths | REPLACE | the `[any]` tail, the mark exclusion `*∖X` of a FLOW tree, the policy and the emission (§5.9; `ap.md` §6.2, §6.3, §7.6) |
 | `AccessBasedStorage` (`ap/ifds/access/tree/AccessBasedStorage.kt:12`) | ADAPT | `PathTrie` (§7.2): keyed by `IntArray`, plain fastutil maps, `walkPath`, `lookupPrefixes`/`lookupExtensions`/`around` |
-| `MethodAnalyzerEdges` (`ap/ifds/MethodAnalyzerEdges.kt:13`): `SameInitialZeroFactEdges` (`:150`), `instructionStorageIdx` (`:272`) | REUSE the structure | `MethodEdgeStore` (§7.3): the REACH bit sets per statement (now per premise key and layer), the statement index |
-| `MethodAnalyzerEdges.EdgeStorage`, `CommonF2FSet` (`ap/ifds/MethodAnalyzerEdges.kt:240`, `ap/ifds/access/common/CommonF2FSet.kt:131`) | REPLACE | `ConclusionGroup` (§4.3): one premise key, every base and kind |
+| `MethodAnalyzerEdges` (`ap/ifds/MethodAnalyzerEdges.kt:13`): `SameInitialZeroFactEdges` (`:150`), `instructionStorageIdx` (`:272`) | REUSE the structure | `MethodEdgeStore` (§7.3): the REACH bit sets per statement (now per premise key and layer), the statement index. The premise maps are `Reference2ObjectOpenHashMap`s, and the bases are keys inside `ConclusionGroup` (§4.3): `AccessPathBaseStorage` is NOT USED by the new core, because it rejects `Zero` (the row above) |
+| `MethodAnalyzerEdges.EdgeStorage`, `CommonF2FSet` (`ap/ifds/MethodAnalyzerEdges.kt:240`, `ap/ifds/access/common/CommonF2FSet.kt:12`) | REPLACE | `ConclusionGroup` (§4.3): one premise key, every base and kind |
 | `EdgeNonUniverseExclusionMergingStorage` (`ap/ifds/access/tree/MethodEdgesInitialToFinalTreeApSet.kt:75`) | REPLACE | `FlowGroup`, `TaintGroup` (§4.3): the union of `:95` is forbidden by T3 |
 | `MethodInitialToFinalApSummaries` (`ap/ifds/access/tree/MethodInitialToFinalApSummaries.kt:13`) | REPLACE | `RunSummaryStore` (§7.6): the union of `:271` is forbidden by T3 |
 | `MethodTreeAccessPathSubscription`, `AccessTreeIndex` (`ap/ifds/access/tree/MethodTreeAccessPathSubscription.kt:22`, `:199`) | REPLACE | `PathTrie` (the delivery-side miss of `analyzer-core.md` Appendix A P4 goes) |
@@ -480,7 +480,7 @@ class TrieNode<P : TrieLeaf> internal constructor(
     @JvmField val interned: Boolean,
 ) {
     @JvmField val hash: Long                     // structural (AccessTree.kt:281), with the child accessor
-    @JvmField val boundedDepth: Short            // max counted accessors on a path below (§4.5); not in the hash
+    @JvmField val boundedDepth: Short            // max counted accessors on a path below (Part I §4.5); not in the hash
     @JvmField val hasAny: Boolean                // an `[any]` mark at or below (TAINT): the W6 split
     @JvmField val size: Long                     // nodes, shared subtrees counted again (AccessTree.kt:316-322): the intern policy
     @JvmField internal var allLeaves: P? = null  // the lazy foldAll: the leaf of this node and every leaf below it; a benign race
@@ -507,7 +507,7 @@ class TrieNode<P : TrieLeaf> internal constructor(
     fun child(a: AccessorIdx): TrieNode<P>? =                          // getNodeByAccessor (AccessTree.kt:385)
         accessors?.binarySearch(a)?.let { if (it >= 0) children!![it] else null }
     override fun hashCode() = hash.toInt()
-    override fun equals(other: Any?): Boolean =                        // AccessNode.equals (:326); see §4.5
+    override fun equals(other: Any?): Boolean =                        // AccessNode.equals (:326); see Part I §4.5
         this === other || (other is TrieNode<*> && hash == other.hash && leaf == other.leaf &&
             accessors.contentEquals(other.accessors) && children.contentEquals(other.children))
 }
@@ -743,7 +743,7 @@ node and shares every child that it does not change; a map over a whole subtree 
 | `foldAll(n)`, `foldLeaves(n, pred)` | `foldAll(n)`: the union of the leaf of `n` and of every leaf in the subtree of `n` (AT OR BELOW `n`; cached in `TrieNode.allLeaves`). `foldLeaves(n, pred)`: the leaf of `n` and `foldAll(c)` of each child `c` whose accessor `pred` accepts | the fold to one `[any]` or `$` leaf (`applyCompiledEdge`), the cut (`foldAll` of the cut child: its own leaf is beyond `L` too), the leaf kinds of a summary (`foldAll(g.root)`: a root leaf `ret.$ (T)` is a kind) | below |
 | `prepend(m, path, n)`, `chain(m, path, leaves, tip = null)` | `path ++ n` (`Tree.prependPath`); one leaf per depth on one path and the node `tip` at its end, no other child | every operation that makes a result at a path | below |
 | `minusNode(n, k)` | the leaves of `n` not in `k`, walked along `k` (a subtree of `n` off `k` is shared) | `without` (§5.8), `checkMark` | below |
-| `subtract(n, s, above, at, below)`, `foldUnder(n, above, below)` | the subsumption of `ap.md` §8.1 and the fold T5 | the groups | §4.3, §4.4 |
+| `subtract(n, s, above, at, below)`, `foldUnder(n, above, below)`, `foldUnderDelta(n, d, below)` | the subsumption of `ap.md` §8.1 and the fold T5 | the groups | §4.3, §4.4 |
 | `splitAny(n)` (TAINT) | (the `$` leaves, the `[any]` leaves) | the W6 split of `Results` | below |
 | `forEachLeaf(n, prefix, f)`, `forEachLeafPosition(n, f)` | `f(path, leaf)` per node with a leaf; `f(path)` | `leaves`, `emit`, the indexes of the stores | below |
 | `graft(g, occurs, r)` | `r` at every node of `g` whose leaf `occurs` holds, MERGED with the grafts below it | `applySummary` (§5.4) | below |
@@ -940,7 +940,7 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
             val rest = subtractSubsumed(t, list) ?: return null
             val (merged, d) = FlowAlgebra.mergeAddDelta(list[i].root, rest.root)
             if (d == null) return null
-            val kept = if (t.layer == Layer.DEMAND) FlowAlgebra.foldUnder(merged, FlowLeaf.NONE, FlowAlgebra::below) ?: merged else merged
+            val kept = if (t.layer == Layer.DEMAND) FlowAlgebra.foldUnderDelta(merged, d, FlowAlgebra::below) ?: merged else merged
             list[i] = list[i].withRoot(interner.internIfRequired(kept))                   // T5 on the stored tree (Part I §4.4)
             return m.flowTree(t.base, t.layer, t.exclusion, t.markExclusion, d)
         }
@@ -954,7 +954,8 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
             return add(merged)                         // T4 exception: the WHOLE merged tree (or its delta to a tree with that key)
         }
         val fresh = subtractSubsumed(t, list) ?: return null                               // §8.1
-        list += fresh.withRoot(interner.internIfRequired(fresh.root))
+        val folded = if (t.layer == Layer.DEMAND) FlowAlgebra.foldUnder(fresh.root, FlowLeaf.NONE, FlowAlgebra::below) ?: fresh.root else fresh.root
+        list += fresh.withRoot(interner.internIfRequired(folded))                          // T5 on the first tree of the key
         return fresh
     }
 
@@ -982,12 +983,15 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
 
     fun add(t: TaintTree): TaintTree? {
         val alg = m.taintAlg
-        val s = trees[t.layer.ordinal] ?: return t.also { trees[t.layer.ordinal] = it.withRoot(interner.internIfRequired(it.root)) }
+        val s = trees[t.layer.ordinal] ?: return t.also {                                // T5 on the first tree of the layer
+            val folded = if (t.layer == Layer.DEMAND && t.root.hasAny) alg.foldUnder(t.root, TaintLeaves.EMPTY, alg::below) ?: t.root else t.root
+            trees[t.layer.ordinal] = it.withRoot(interner.internIfRequired(folded))
+        }
         val rest = alg.subtract(t.root, s.root, TaintLeaves.EMPTY,
             at = { alg.leaves(it.exact + it.any, it.any) }, below = alg::below) ?: return null      // `[any]` T covers `$` T at its node
         val (merged, d) = alg.mergeAddDelta(s.root, rest)
         if (d == null) return null
-        val kept = if (t.layer == Layer.DEMAND && d.hasAny) alg.foldUnder(merged, TaintLeaves.EMPTY, alg::below) ?: merged else merged
+        val kept = if (t.layer == Layer.DEMAND && d.hasAny) alg.foldUnderDelta(merged, d, alg::below) ?: merged else merged
         trees[t.layer.ordinal] = s.withRoot(interner.internIfRequired(kept))
         return m.taintTree(t.base, t.layer, d)
     }
@@ -1015,6 +1019,13 @@ class ConclusionGroup(private val m: ApManager, private val interners: StoreInte
 class StoreInterners(refs: SoftReferenceManager, cancellation: Cancellation) {
     val flow = TrieInterner<FlowLeaf>(refs, cancellation)
     val taint = TrieInterner<TaintLeaves>(refs, cancellation)
+
+    /** The policy of Part I §4.5 on the trie of one stored value; REACH has no trie. User: AddedFactStore (Part I §7.5). */
+    fun internIfRequired(f: Facts): Facts = when (f) {
+        is Reach -> f
+        is FlowTree -> flow.internIfRequired(f.root).let { if (it === f.root) f else f.withRoot(it) }
+        is TaintTree -> taint.internIfRequired(f.root).let { if (it === f.root) f else f.withRoot(it) }
+    }
 }
 ```
 
@@ -1032,11 +1043,23 @@ internal fun <P : TrieLeaf> LeafAlgebra<P>.foldUnder(n: TrieNode<P>, above: P, b
     val next = union(above, below(n.leaf))
     return mapChildren(n, minus(n.leaf, above)) { _, c -> foldUnder(c, next, below) }
 }
+
+/** T5 after an add: `n` is the merged stored trie, `d` the delta of the add (`n` contains `d`). The walk follows `d` only:
+ *  at a node where a leaf of `d` absorbs (`below` is not empty) it folds the stored subtree there; a child that `d` does
+ *  not have is shared as it is. The same result as `foldUnder(n, empty, below)`: the stored trie was folded before the add
+ *  (the groups fold the first tree of a key too), and the subsumption of `ap.md` §8.1 dropped every new leaf at or below an
+ *  old absorbing leaf, so a new absorption is only below a leaf of `d`. */
+internal fun <P : TrieLeaf> LeafAlgebra<P>.foldUnderDelta(n: TrieNode<P>, d: TrieNode<P>, below: (P) -> P): TrieNode<P>? {
+    if (!below(d.leaf).isEmpty) return foldUnder(n, empty, below)                  // a leaf of `d` absorbs: fold here
+    if (d.accessors == null) return n
+    return mapChildren(n, n.leaf) { a, c -> d.child(a)?.let { foldUnderDelta(c, it, below) } ?: c }
+}
 ```
 
-T5 is optional ("may", `ap.md` §7.2). Its cost is one walk of the stored trie, so a group applies it only when the delta
-has an absorbing leaf: every FLOW demand delta (each flag is an `[any]` leaf), a TAINT demand delta with an `[any]` mark
-(`hasAny`).
+T5 is optional ("may", `ap.md` §7.2). A group applies it only when the delta has an absorbing leaf: every FLOW demand
+delta (each flag is an `[any]` leaf), a TAINT demand delta with an `[any]` mark (`hasAny`). The cost of one add is the
+nodes of the delta and the stored subtrees below its absorbing leaves (`foldUnderDelta`), not a walk of the whole stored
+trie. The first tree of a key takes `foldUnder` once (its own size).
 
 ### 4.5 T6 interning, `boundedDepth`, equality across interners
 
@@ -1047,8 +1070,8 @@ has an absorbing leaf: every FLOW demand delta (each flag is an `[any]` leaf), a
  *  `refs` is the SoftReferenceManager of the analysis (ApManager.softRefs, Part I §5.1). The first stage of the memory
  *  guard clears it (util/MemoryManager.kt:62-76), and the next intern makes a new table. This is exact: an interned node
  *  stays valid and equality is structural (DD5); only the sharing with later equal nodes is lost. While the guard keeps
- *  the manager disabled (`createRef` gives null), the table lives for one intern call, as today. Not thread-safe: one per
- *  store and kind (owner-local, Part I §7.1; DD5). */
+ *  the manager disabled (`createRef` gives null), the table lives for one intern call, as today. The lifetime of a table:
+ *  below the code. Not thread-safe: one per store and kind (owner-local, Part I §7.1; DD5). */
 class TrieInterner<P : TrieLeaf>(private val refs: SoftReferenceManager, private val cancellation: Cancellation) {
     private class Table<P : TrieLeaf> {
         private val buckets = Long2ObjectOpenHashMap<Object2ObjectOpenCustomHashMap<TrieNode<P>, TrieNode<P>>>()
@@ -1088,7 +1111,7 @@ class TrieInterner<P : TrieLeaf>(private val refs: SoftReferenceManager, private
      *  group stores its trie at the place of its add (a FLOW list, a TAINT array, a map value of NdSummaryJoin or
      *  AddedFactStore), so the policy acts on the trie that the add stores, with no enumeration of the store. A later
      *  intern of the same trie walks only its new nodes (an interned subtree keeps its flag). The cost: a trie of a store
-     *  with few adds is shared only by the operations (they share every unchanged subtree, §4.2), not by the table. The
+     *  with few adds is shared only by the operations (they share every unchanged subtree, Part I §4.2), not by the table. The
      *  groups call it on every stored trie. */
     fun internIfRequired(n: TrieNode<P>): TrieNode<P> = when {
         n.size >= SIZE_TO_FORCE_INTERN -> intern(n)
@@ -1114,6 +1137,22 @@ private object InternStrategy : Hash.Strategy<TrieNode<*>> {
     }
 }
 ```
+
+THE LIFETIME OF A TABLE. A table lives inside one guarded region: a run (the memory guard of `RunManager.run`) or a
+barrier (the memory guard of the barrier, `analyzer-core.md` §7.2 B4, `analyzer-impl.md` §7.1; `ap-history.md`
+F68 (5)). Today's `MemoryManager.runWithMemoryManager` (`util/MemoryManager.kt:107-117`) enables every soft-reference
+manager at the start of the region and calls `cleanup()` in its `finally`: every table of the region is cleared, and the
+manager stays disabled (`util/SoftReferenceManager.kt:12-14`) until the next region enables it. So:
+
+| Where | The table |
+|---|---|
+| inside a run | lives until the first stage of the guard clears it (the manager is disabled until a GC below the threshold enables it again, `MemoryManager.kt:50-51`); the next intern makes a new one |
+| at a barrier | the managers are enabled during the whole barrier, `persist` too: `PersistentRecordStore` interns with a live table, so the records of one barrier share nodes (§7.8). The first stage of the guard clears the table (sharing only), as in a run; a hit of the guard cancels the `Cancellation` and ends the iteration with `OOM` (`analyzer-core.md` §7.2 B4) |
+| between two regions (the driver code outside `RunManager.run` and outside a barrier; the join of a run is inside `RunManager.run`, `analyzer-impl.md` §3.2) | the manager is disabled: `createRef` gives null, and a table lives for one intern call |
+
+A table never outlives its region. A node that it interned stays valid after the table goes (DD5). A later table does
+not unify a new node with an equal node of an earlier table; only the operations share them (they share every unchanged
+subtree, §4.2). No store keeps a strong table: the guard could not clear it.
 
 `TrieNode.size` (§4.1) is the node count with shared subtrees counted again, as `AccessNode.size`
 (`AccessTree.kt:316-322`). `boundedDepth` is the number of counted accessors on the longest path below a node. It is
@@ -1171,9 +1210,11 @@ inline fun <P : TrieLeaf> TrieNode<P>.walk(path: IntArray, onPrefix: (Int, TrieN
  *  a ConcurrentHashMap (lock-free reads that are correct under the JMM) or the copy-on-write arrays of Part I §3.1. No
  *  ConcurrentReadSafe map. Trie hash-consing is owner-local (Part I §4.5, DD5), so no node table is shared, and no run leaks
  *  its tries into the next run. The trie tables of the stores are soft: `softRefs` is a SoftReferenceManager of the
- *  RefManager that the memory guard of every run reads (REUSE, util/RefManager.kt:10-11), so the guard clears them, as
- *  today's "Tree" manager (TreeApManager.kt:39). The analysis passes the RefManager of its memory guard
- *  (`SharedObjects.refManager`, analyzer-impl.md §3.1, made in `JIRBidiAnalysis`, §8.1); the default serves the tests.
+ *  RefManager that the memory guard of every run and of every barrier reads (REUSE, util/RefManager.kt:10-11), so the
+ *  guard clears them, as today's "Tree" manager (TreeApManager.kt:39); the lifetime of a table: Part I §4.5. The
+ *  analysis passes the RefManager of its memory guard
+ *  (`SharedObjects.refManager`, analyzer-impl.md §3.1: the RefManager of `TaintAnalyzer`, which `JIRBidiAnalysis` takes,
+ *  analyzer-impl.md §8.1); the default serves the tests.
  *  The tables of ApManager itself stay strong: a store key compares their objects by identity (DD5). */
 class ApManager(val cancellation: Cancellation, refManager: RefManager = RefManager()) {
     val softRefs: SoftReferenceManager = refManager.softRefManager("bidi")
@@ -1323,7 +1364,7 @@ class CollectingOut : ApOut {
 /** The facade of the AP operations. Stateless: every memo is local to one call, so one instance serves every thread. */
 class ApOps(val manager: ApManager) {
     fun applyEdge(c: Facts, premise: PremiseKey, e: PathEdge, statementEdge: Boolean, mode: ApMode, out: ApOut) {
-        val ce = e.compiled ?: manager.compile(e).also { e.compiled = it }        // §7.5: the identity cache of the edge
+        val ce = e.compiled ?: manager.compile(e).also { e.compiled = it }        // the compile cache of the edge; `ap.md` §7.5 has no walk memo (Part II §34 SI18)
         applyCompiledEdge(c, ce, edgeDemand = false, staticAt = staticIdentityDepth(c, premise, ce, statementEdge, mode), mode, out)
     }
     // Part I §5.4: satisfying, applySummary, applyCombination.   Part I §5.5: filter.   Part I §5.6: clean.
@@ -2031,12 +2072,15 @@ private fun ApOps.coveredPart(hit: TaintNode, p: Pattern): TaintNode? {
     return at?.let { manager.taintAlg.prepend(manager, manager.path(p.fact.path), it) }
 }
 
-/** The leaves of `c` that are not in `part` (same path, tail and mark); the same kind. The global-state rule
- *  (interpreter.md §4.7 step 3) drops from the summary edge the part of an item on S that satisfies a mark literal of an
- *  exit sink, plain or conjunctive (`MarkCheck.Holds.facts`). For a conjunctive sink the same part is the stored input of
- *  that literal (ConjunctionStore.Input.facts, Part I §7.10), so a later item can complete the combination with it. */
+/** The leaves of `c` that are not in `part` (same path, tail and mark); the same kind. A `part` of another group key (another
+ *  base, layer, kind, exclusion or mark exclusion: another tail) removes nothing, so no leaf of another tail goes. The
+ *  global-state rule (interpreter.md §4.7 step 3) drops from the summary edge the part of a zero-premise item on S that
+ *  satisfies a mark literal of an exit sink, plain or conjunctive (`MarkCheck.Holds.facts`). For a conjunctive sink the
+ *  same part is the stored input of that literal (ConjunctionStore.Input.facts, Part I §7.10), so a later item can complete
+ *  the combination with it. */
 fun ApOps.without(c: Facts, part: Facts): Facts? = when {
     c.base != part.base -> c
+    c.groupKey != part.groupKey -> c                                       // the contract: only the same tail and mark
     c is Reach -> if (part is Reach && part.layer == c.layer) null else c
     c is FlowTree && part is FlowTree -> FlowAlgebra.minusNode(c.root, part.root)?.let { if (it === c.root) c else c.withRoot(it) }
     c is TaintTree && part is TaintTree -> manager.taintAlg.minusNode(c.root, part.root)?.let { if (it === c.root) c else c.withRoot(it) }
@@ -2294,7 +2338,7 @@ class Cleaner(val base: AccessPathBase, val path: PathNode?, val reach: CleanRea
 
 enum class Pos { INSIDE, DISJOINT, PART }
 
-/** ap.md §4.7 (Lean cleanPos). The tree form is cleanPosAt (§5.6). */
+/** ap.md §4.7 (Lean cleanPos). The tree form is cleanPosAt (Part I §5.6). */
 fun cleanPos(cl: Cleaner, c: PathFact, exclusion: ExclusionSet): Pos {
     if (c.base != cl.base) return Pos.DISJOINT
     val p = cl.path?.toList().orEmpty()
@@ -2342,8 +2386,8 @@ fun concPart(cl: Cleaner, c: Conclusion): Conclusion =
 
 sealed interface CheckResult { data object None : CheckResult; data object Holds : CheckResult; data class Request(val mark: TaintMark) : CheckResult }
 
-/** ap.md §4.9 and §4.6 (Lean `check`, `conj`; renamed: `check` is the Kotlin assert): the check of one mark literal `s`
- *  on one fact. The tree form is ApOps.checkMark (§5.8). The §11.2 difference: the effective-mark case is asserted away. */
+/** ap.md §4.9 and §4.6 (Lean `check`, `ND.DN.conj`; renamed: `check` is the Kotlin assert): the check of one mark literal `s`
+ *  on one fact. The tree form is ApOps.checkMark (Part I §5.8). The §11.2 difference: the effective-mark case is asserted away. */
 fun markCheck(i: Pattern, f: Conclusion, s: Pattern): CheckResult {
     val t = (s.fact.mark as MarkSlot.Concrete).mark
     if (!overlap(Pattern(f.fact, f.exclusion), s)) return CheckResult.None
@@ -2416,12 +2460,13 @@ tests, and `asConclusions(f: Facts)`: the leaves of `f` (§5.11) with the layer 
 
 | Store | Lifetime | Writer | Readers | Concurrency |
 |---|---|---|---|---|
-| `MethodEdgeStore`, `InitialFactStore`, `AddedFactStore`, `RequestStore`, `ConjunctionStore` (with its `KaryJoin`s), the `StandingJoin` of the requests and links | RUN | the runner of the method (O1) | the same runner; the driver at the barrier (O5) | none: single writer; the join of the runners (`analyzer-core.md` §6.3) orders the barrier reads |
+| `MethodEdgeStore`, `InitialFactStore`, `RequestStore`, `ConjunctionStore` (with its `KaryJoin`s), the `StandingJoin` of the requests and links | RUN: garbage at the end of the run (`analyzer-core.md` §7.6; `freeze`, `analyzer-impl.md` §7.7) | the runner of the method (O1) | the same runner | none: single writer |
+| `AddedFactStore` (the links) | RUN; the links of a FORWARD run stay until the confirmation at its barrier (`analyzer-core.md` §7.6) | the runner of the method (O1) | the same runner; the driver at the barrier of a forward run (the support, O5) | none: single writer; the join of the runners (`analyzer-core.md` §6.3) orders the barrier reads |
 | `RunSummaryStore`, `SourceHitStore` | HAND-OFF | the runner of the method (O1) | the driver at the barrier | as above |
 | `DemandStore` | RUN, read-only | the driver, before the run (`Builder.build`) | any runner (`analyzer-core.md` A4) | immutable after `build`; the start of the run publishes it |
-| `RecordStore` | PERSISTENT | the driver, at a barrier (`persist`) | any runner, through `view()` (`analyzer-core.md` A4) | written only when no runner is alive; `view()` rejects writes |
+| `RecordStore` | PERSISTENT | the driver, at a barrier (`persist`, inside the memory guard of the barrier, §7.8) | any runner, through `view()` (`analyzer-core.md` A4) | written only when no runner is alive; `view()` rejects writes |
 | `VulnerabilityStore` | PERSISTENT | any runner (O4) | the driver at the barrier | nested `ConcurrentHashMap`s; `merge` is atomic per (key, shape) (§7.12) |
-| `PathTrie`, `TrieInterner`, the groups of §4.3 | inside a store | the owner of the store | the owner | none; `SummaryStorage` (`analyzer-impl.md` §5.2) guards its trie with its lock (P3). The memory guard clears the soft table of a `TrieInterner` from its own thread; `Reference.clear` and `get` are thread-safe, and the owner then makes a new table (§4.5) |
+| `PathTrie`, `TrieInterner`, the groups of §4.3 | inside a store | the owner of the store | the owner | none; `SummaryStorage` (`analyzer-impl.md` §5.2) guards its trie with its lock (P3). The memory guard (of a run or of the barrier) clears the soft table of a `TrieInterner` from its own thread; `Reference.clear` and `get` are thread-safe, and the owner then makes a new table (§4.5 THE LIFETIME OF A TABLE) |
 | `ApManager`, `ApOps`, `FlowAlgebra`, `TaintAlgebra` | analysis | any | any | `ConcurrentHashMap`; `ApOps` is stateless (§5.3); a `TrieNode` is immutable |
 
 ### 7.2 `PathTrie` (`ap.md` §8 PATH TRIES)
@@ -2431,8 +2476,9 @@ package org.opentaint.dataflow.bidi.store
 
 /** Entries keyed by `base :: path`. ADAPT of AccessBasedStorage (ap/ifds/access/tree/AccessBasedStorage.kt:12): the same child walk
  *  (`getOrCreateNode` :19, `find` :34, `allNodes` :76), keyed by IntArray instead of the old AccessPath.AccessNode, and plain
- *  fastutil maps instead of ConcurrentReadSafeInt2ObjectMap. The lookups use walkPath (§4.6). Single writer. Store.lean
- *  proves each lookup equals its list filter (`lookupPrefixes_equiv`, `lookupExtensions_equiv`, `mem_around_indexBy`).
+ *  fastutil maps instead of ConcurrentReadSafeInt2ObjectMap. The lookups use walkPath (Part I §4.6). Single writer. Store.lean
+ *  proves each lookup equals its list filter (`Store.PathMap.lookupPrefixes_equiv`, `Store.PathMap.lookupExtensions_equiv`,
+ *  `Store.mem_around_indexBy`).
  *  A node holds a SET of values: a value is at most once per position, and `add` costs O(1). A hot callee has one
  *  AddedFactStore key per (call site, caller premise) at `arg0 :: []`, so a list with a linear test is O(n²) there. The
  *  linked set keeps the insertion order, so every lookup is deterministic. */
@@ -2578,7 +2624,7 @@ data class Link(val addedFact: Pattern, val linkLayer: Layer, val caller: Caller
 /** ap.md §8.3. The added facts of one caller reference are ONE value per (link layer, kind key): REACH (no more), FLOW
  *  (base, exclusion, mark exclusion), TAINT (base). The leaves of the value are the added facts (DD4). Two values with
  *  different keys never merge (T3).
- *  EXACT DEDUPLICATION (analyzer-core.md §5.3, E-3): the only merge is the T1 union of leaves (mergeAddDelta, Part I §4.2,
+ *  EXACT DEDUPLICATION (analyzer-core.md §5.1 E-3, §5.3): the only merge is the T1 union of leaves (mergeAddDelta, Part I §4.2,
  *  with no fold). A leaf that the value of its key has (same path, tail, mark) is dropped, nothing else: no T5, no
  *  subsumption (no FlowGroup, TaintGroup, foldUnder, subtract). Reason: `applicable` is not monotone in the added fact
  *  (a fact above j does not satisfy j), so a subsumed leaf can satisfy a premise that the subsuming leaf does not; dropping
@@ -2589,15 +2635,16 @@ class AddedFactStore(private val m: ApManager) {
     private data class Key(val ref: CallerRef, val group: GroupKey)                     // the layer of the group is the link layer
     private val values = Object2ObjectOpenHashMap<Key, Facts>()
     private val index = PathTrie<Key>()                                   // one entry per new leaf position (§8.8 overlap queries)
+    private val interners = m.newInterners()                              // DD5: the stored values, as every store (Part I §4.5)
 
     /** Event E1/E2: returns the delta (the new links) or null. */
     fun add(ref: CallerRef, linkLayer: Layer, added: Facts): Facts? {
         check(linkLayer == added.layer)                                    // the layer of the added fact on the link (§8.3)
         val key = Key(ref, added.groupKey)
         val old = values[key]
-        val delta: Facts = if (old == null) added.also { values[key] = it } else {
+        val delta: Facts = if (old == null) added.also { values[key] = interners.internIfRequired(it) } else {
             val (merged, d) = m.mergeAddDelta(old, added)                   // T1, T4 (Part I §4.2); no subsumption
-            values[key] = merged
+            values[key] = interners.internIfRequired(merged)                // equal content: exact (DD5)
             d ?: return null
         }
         m.forEachLeafPosition(delta) { base, path -> index.add(base, path, key) }   // a key once per position (a set, §7.2)
@@ -2740,14 +2787,22 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
         override fun view(): RecordStore = this
     }
 
-    /** A delta per premise: ConclusionGroup (Part I §4.3) merges the same record of several runs, so a record never repeats. */
+    /** A delta per premise: ConclusionGroup (Part I §4.3) merges the same record of several runs, so a record never repeats.
+     *  The driver calls it at the barrier, inside the memory guard of the barrier (analyzer-impl.md §7.1; ap-history.md
+     *  F68 (5)). So the soft-reference managers are enabled, the interners of this store intern with a live table, and the
+     *  records of one barrier share nodes (Part I §4.5 THE LIFETIME OF A TABLE). The guard can clear the table during the
+     *  call: only sharing is lost (DD5). A guard hit cancels the `Cancellation`, so the checkpoint below throws and the
+     *  driver ends the iteration with OOM and the report so far (analyzer-core.md §7.2 B4). */
     override fun persist(direction: Direction, summaries: Sequence<Pair<MethodKey, RunSummaryStore>>) {
-        for ((method, store) in summaries) for ((premise, g) in store.all()) {
-            if (g.layer == Layer.DEMAND) continue                        // normal only
-            val j = premise as? InitialAp ?: continue                    // ONE member; a PremiseSet is never a record (R1)
-            if (direction == Direction.BACKWARD && j.isZero) continue    // a zero-premise backward edge is never persisted
-            val delta = merged.getOrPut(Triple(method, direction, j)) { ConclusionGroup(m, interners) }.add(g) ?: continue
-            add(Record(method, direction, j, delta))
+        for ((method, store) in summaries) {
+            m.cancellation.checkpoint()                                  // once per analyzer: the barrier guard (analyzer-core.md B4)
+            for ((premise, g) in store.all()) {
+                if (g.layer == Layer.DEMAND) continue                    // normal only
+                val j = premise as? InitialAp ?: continue                // ONE member; a PremiseSet is never a record (R1)
+                if (direction == Direction.BACKWARD && j.isZero) continue   // a zero-premise backward edge is never persisted
+                val delta = merged.getOrPut(Triple(method, direction, j)) { ConclusionGroup(m, interners) }.add(g) ?: continue
+                add(Record(method, direction, j, delta))
+            }
         }
     }
 }
@@ -2778,7 +2833,7 @@ class RequestStore {
         return true
     }
 
-    /** Event E2: every standing request that overlaps the added fact `a` (Store `standing_complete`). */
+    /** Event E2: every standing request that overlaps the added fact `a` (`Store.standing_complete`). */
     fun overlapping(a: Pattern): Sequence<Pair<InitialAp, RequestKind>> =
         index.around(a.fact.base, a.fact.path.toIntArray()).asSequence().filter { (i, k) ->
             overlap(a, when (k) {
@@ -2846,7 +2901,7 @@ class StandingJoin<A, B>(private val nearB: (A) -> Sequence<B>, private val near
 | the request × link join (`analyzer-impl.md` §4.8, events E2, E5, E7) | `StandingJoin`: the requests (`RequestStore`) and the links (`AddedFactStore`) | a request, a link |
 
 WHY TWO FORMS. Both keep the invariant "the input that arrives last completes the combination, so each combination
-comes out once" (Store `standing_complete`). They differ in what they own and in what a combination is:
+comes out once" (`Store.standing_complete`). They differ in what they own and in what a combination is:
 
 | | `KaryJoin<T>` | `StandingJoin<A, B>` |
 |---|---|---|
@@ -2949,7 +3004,10 @@ class SinkEdge(val premise: PremiseKey, val layer: Layer, val facts: Facts) {
  *  (analyzer-core.md §7.5). `alternative`: the index of the sink alternative of the rule at the statement (its cube and
  *  its array choice, as Part II numbers them: `SinkRule.alternative`); the same index in every run and every context
  *  (interpreter.md I5). `methodKey`: the method key of the sink edges; the confirmation reads the support of the premise
- *  set in this method key. */
+ *  set in this method key.
+ *  THE PATTERN of a witness (ap.md §8.10) is DERIVED, not stored: the patterns of `alternative` of the rule at the
+ *  statement in the method key, `SinkRule.patterns` of that `SinkRule` in the forms of `methodKey` (the same in every run,
+ *  interpreter.md I5). The hand-off reads them there (analyzer-impl.md §7.2). */
 class SinkWitness(val alternative: Int, val methodKey: MethodKey, val edges: List<SinkEdge>, val run: Int,
                   val endFacts: List<PathFact> = emptyList()) {
     @Volatile var confirmed: Boolean = false                           // set only at the barrier of a complete forward run
@@ -3000,9 +3058,10 @@ class ConcurrentVulnerabilityStore(private val m: ApManager) : VulnerabilityStor
 }
 ```
 
-`analyzer-core.md` §4.7 says "it never merges two witnesses into one". This merge (DD10) is not that merge:
+`analyzer-core.md` §4.7 allows this merge and no other: the witnesses of one (key, alternative, method key, run, shape)
+merge (DD10). It is not today's merge:
 
-* The forbidden merge is LOSSY. Today `TaintVulnerability.mergeAdd` (`ap/ifds/taint/TaintSinkTracker.kt:27`) can drop a
+* Today's merge is LOSSY. Today `TaintVulnerability.mergeAdd` (`ap/ifds/taint/TaintSinkTracker.kt:27`) can drop a
   witness: an `Unconditional` node replaces a `Fact` node (`:50`), a `Fact` node with another trigger position is ignored
   (`:62`), and a `Fact` node replaces a `WithRequirement` node (`:79`). The premise sets of the dropped witness are lost.
 * This merge joins only witnesses of the SAME shape: the same alternative, the same method key, the same run and, per
@@ -3015,7 +3074,7 @@ class ConcurrentVulnerabilityStore(private val m: ApManager) : VulnerabilityStor
   has one pattern, one base and one group key (the `check` in `union`).
 * The method key is part of the shape. So one statement reached in two contexts is one vulnerability key with a witness
   per method key, and each witness is confirmed in its own method key.
-* Each sink fact stays a leaf of the union value. So a later trace resolution can find each sink edge again.
+* Each sink fact stays a leaf of the union value (T1 keeps every leaf), so the merge loses no sink fact.
 * A conjunctive sink: the union of `(a1, b1)` and `(a2, b2)` of one alternative also denotes `(a1, b2)`. That
   combination is a witness too: `a1` and `b2` are stored inputs of the literals of that alternative at that statement,
   and `ConjunctionStore.add` (§7.10, one join per alternative) gives every combination of the stored inputs.
@@ -3026,10 +3085,14 @@ class ConcurrentVulnerabilityStore(private val m: ApManager) : VulnerabilityStor
 
 The driver builds the report at the barrier from `witnessesOf(run)` (`analyzer-impl.md` §7.6, `Report`): the
 vulnerabilities that a complete forward run confirmed, and the DEMAND vulnerabilities of the latest complete forward
-run; an incomplete run adds nothing and refutes nothing (`ap-history.md` F67). The fields of an entry are those of
-`Report.Entry`; the witnesses of its key (one or more per alternative and method key) give the patterns, the sink edges
-and the end facts of `ap.md` §8.10. Trace resolution is out of scope: no run keeps its stores for it, and phase 3
-gives each CONFIRMED vulnerability a trace with only the sink statement.
+run; an incomplete run adds nothing and refutes nothing (`ap-history.md` F67). If no forward run is complete (an
+incomplete run 1), the report has no entry, and the status gives the cause (`ap-history.md` F68 (2)). The fields of an
+entry are those of `Report.Entry`; the witnesses of its key (one or more per alternative and method key) give, with the
+forms (`SinkRule.patterns`), the patterns, the sink edges and the end facts of `ap.md` §8.10. Trace resolution is out of
+scope: no run keeps its stores for it. Phase 3 outputs EVERY entry of the report, CONFIRMED and DEMAND, each with a
+trace with only the sink statement: REUSE `VulnerabilityWithTrace` (`ap/ifds/trace/VulnerabilityWithTrace.kt:11`) and
+`TracePathGenerationResult.Simple` (`ap/ifds/trace/path/TracePath.kt:23`); the trace resolver of `trace/` is not used
+(`ap-history.md` F68 (1); `analyzer-impl.md` §8.1).
 
 ---
 
@@ -3045,25 +3108,25 @@ runs once per leaf algebra (`FlowAlgebra`, `TaintAlgebra`): the trie code is sha
 | 1 | `FactModelTest` | `MarkSet`/`ExclusionSet` canonical form, no empty `Concrete`; `PathNode`, `InitialAp`, `PremiseSet`, `TaintLeaves` interning gives identity; `premiseOf` of one member is the `InitialAp` itself, of two or more a `PremiseSet` sorted by id; `union` is the set union WITHOUT the zero fact: `{zero} ∪ {i} = {i}`, `{zero} ∪ {zero} = {zero}`, `{i} ∪ {k} = {i, k}`, `{zero} ∪ {i, k} = {i, k}`; a `PremiseSet` with a zero member or with a `*` member is rejected; `nonZeroCount` names the edge (§4.6); `AccessorTable` decodes field, element and class accessors as `AccessorInternerTest` and REJECTS a type-info or a value accessor (W5); `TrieNode` and `Facts` equality across two interners (DD5) | — |
 | 2 | `ApManagerConcurrencyTest` | 8 threads intern the same accessors, marks, paths, premises and leaves: one object each, no hang (a timeout fails the test) | — |
 | 3 | `ReferenceDenotationTest` | `covers`, `overlap`, `applicable`, `inside`, `cleanPos` against `den` (`ap.md` §3.2) on a bounded universe with a fresh accessor and a fresh mark (item 2) | `coversB_sound`, `overlapB_of_common`, `cleanPos_inside_sound`, `cleanPos_disjoint_sound` |
-| 4 | `TrieOpsTest`, `TrieInternerTest` | each generic function of §4.2 and §4.6 on both algebras against a list-of-leaves model: `mergeAdd`/`mergeAddDelta` (the delta unions to the merge; a shared subtree pair is merged once; a deep trie needs no deep stack), `mapChildren` (an unchanged child list returns the node itself), `replaceChild` (insert, replace, and remove with a null child), `withLeaf`, `mapLeaves`, `retainChildren`, `prepend`/`chain` (also a spine shorter than the path, and a tip with its own leaf), `minusNode`, `splitAny`, `forEachLeaf`, `foldUnder`, `subtract`, `filterPath`, `FieldLimitCut`, `walk`; `graft` MERGES at nested occurrences (`g = {ret.*, ret.f.*}` with `r` at `[]` and `[f]` keeps both `ret.f` leaves), drops a node of `g` with no occurrence, keeps a shared subtree of `g` shared; no operation collapses a repeated field, a chain of three `[e]` or a path below a class accessor (only `L` bounds a path); `foldAll` and `foldLeaves` include the leaf of the node itself (a trie with only a root leaf; a cut child with a leaf); `boundedDepth` and `hasAny` equal a recount. `TrieInterner`: two equal tries give one object, with `interned = true`; after `SoftReferenceManager.cleanup()` the next intern makes a new table, and the earlier interned nodes stay valid and equal (only sharing is lost); with a disabled manager (`createRef` gives null) interning still works within one call; `internIfRequired` interns a trie of `SIZE_TO_FORCE_INTERN` nodes at once and one add in `INTERN_RATE` otherwise | `Tree.rule1_mem`, `Tree.prependPath` |
+| 4 | `TrieOpsTest`, `TrieInternerTest` | each generic function of §4.2 and §4.6 on both algebras against a list-of-leaves model: `mergeAdd`/`mergeAddDelta` (the delta unions to the merge; a shared subtree pair is merged once; a deep trie needs no deep stack), `mapChildren` (an unchanged child list returns the node itself), `replaceChild` (insert, replace, and remove with a null child), `withLeaf`, `mapLeaves`, `retainChildren`, `prepend`/`chain` (also a spine shorter than the path, and a tip with its own leaf), `minusNode`, `splitAny`, `forEachLeaf`, `foldUnder`, `foldUnderDelta` (after a group add to a folded trie, it equals `foldUnder` of the whole merged trie), `subtract`, `filterPath`, `FieldLimitCut`, `walk`; `graft` MERGES at nested occurrences (`g = {ret.*, ret.f.*}` with `r` at `[]` and `[f]` keeps both `ret.f` leaves), drops a node of `g` with no occurrence, keeps a shared subtree of `g` shared; no operation collapses a repeated field, a chain of three `[e]` or a path below a class accessor (only `L` bounds a path); `foldAll` and `foldLeaves` include the leaf of the node itself (a trie with only a root leaf; a cut child with a leaf); `boundedDepth` and `hasAny` equal a recount. `TrieInterner`: two equal tries give one object, with `interned = true`; after `SoftReferenceManager.cleanup()` the next intern makes a new table, and the earlier interned nodes stay valid and equal (only sharing is lost); with a disabled manager (`createRef` gives null) interning still works within one call; `internIfRequired` interns a trie of `SIZE_TO_FORCE_INTERN` nodes at once and one add in `INTERN_RATE` otherwise | `Tree.rule1_mem`, `Tree.prependPath` |
 | 5 | `KindTest` | the types enforce W1, W2, W6: `taintTree` rejects an `[any]` mark in the normal layer; `flowTree` gives the Empty exclusion in the demand layer; `Results` routes each result to its kind and canonical key (a source on REACH gives TAINT, the zero keep edge and the zero binding `zero.* -> zero.*` on `Reach.NORMAL` and `Reach.DEMAND` give the same `Reach`, a `*` edge on FLOW gives FLOW); the W6 split of a normal TAINT result; the `init` checks of `FlowTree` and `TaintTree` (W1 demand, W6) fail on a bad `withRoot` (item 1) | `Invariant.final_star_legal`, `Coverage.edge_conc` |
 | 6 | `ApplyEdgeVectorsTest` | every `example` of `Cases.lean` and `RestrictedCases.lean`, on the reference forms AND on `ApOps`; W6 vectors assert the demand layer; the zero binding on the zero fact (item 1) | `Cases.lean`, `RestrictedCases.lean` |
 | 7 | `FactsEquivalenceTest` | random `Facts` of each kind and random edges (every tail and mark row, the static exception, `*∖X`, the bindings of Part II §28.2 with the zero binding): the results of `applyCompiledEdge`, read by `leaves`, equal the per-leaf `concat`, layer, exclusion, mark exclusion and requests included; the same for `clean`, `filter`, `limit`, `restrict`, `checkMark` and `satisfying` against their reference forms (item 2) | `Tree.applyTreeE_mem`, `applyTreeE_den`, `applyTreeE_grouped_key`, `RStore.restrictTreeE_mem_U` |
-| 8 | `MarkGateTest` | every row of `ap.md` §4.1 steps 4 and 5 per kind: FLOW + `T` gives no fact and the request `T` if `T ∉ X`, nothing if `T ∈ X`; TAINT + `T` keeps the leaves with `T`; `*` passes every mark; a `*∖Y` target drops the marks in `Y`; the `check` preconditions of `CompiledEdge` fail: S7 (a `*∖X` premise; a concrete target under a `*` premise), S8 (a `$` premise with `*`; a `$` premise with a `*` target; a `$` target under a `*` premise) and W1 (`x.[any] (T) →_{f} y.$ (T)`: a non-empty exclusion with no `*` side); the request comes after the position test (an apart fact gives none) (items 3, 4) | `markComp_sound`, `Core.applyEdge_sound` |
+| 8 | `MarkGateTest` | every row of `ap.md` §4.1 steps 4 and 5 per kind: FLOW + `T` gives no fact and the request `T` if `T ∉ X`, nothing if `T ∈ X`; TAINT + `T` keeps the leaves with `T`; `*` passes every mark; a `*∖Y` target drops the marks in `Y`; the `check` preconditions of `CompiledEdge` fail: S7 (a `*∖X` premise; a concrete target under a `*` premise), S8 (a `$` premise with `*`; a `$` premise with a `*` target; a `$` target under a `*` premise) and W1 (`x.[any] (T) →_{f} y.$ (T)`: a non-empty exclusion with no `*` side); the request comes after the position test (an apart fact gives none) (items 3, 4) | `CoreAux.markComp_sound`, `Core.applyEdge_sound` |
 | 9 | `MergeRulesTest` | per kind: T1; FLOW: T2 and T2' only for equal content, the delta of T2 is the whole merged tree minus what the §8.1 subsumption drops (one case with a subsuming tree, one without), no union across trees; TAINT: one tree per layer; T4 deltas union to the value; a leaf below a stored `[any]` of the same mark gives null, also on its second arrival (the termination guard of T5) (item 8) | `Tree.rule1_mem`, `rule2_den`, `rule2_mark`, `Subsume.merge_inter`, `union_loses_pairs` |
 | 10 | `SubsumptionTest` | `FlowGroup.add` and `TaintGroup.add` drop exactly what `subsumes` (§6) drops; never across layers or kinds | `Subsume.subsumes_sound`, `recordSubsumesLB_layer` |
-| 11 | `LayerRulesTest` | items 3 and 4: the cut, W6, W2, demand in -> demand out | `applyEdge_demand_monotone` |
+| 11 | `LayerRulesTest` | items 3 and 4: the cut, W6, W2, demand in -> demand out | `Invariant.applyEdge_demand_monotone` |
 | 12 | `FieldLimitTest` | `limit` equals the per-leaf `limit` (§6) for both kinds; `L = 0`; an uncounted class accessor stays; the `MethodEdgeStore.add` assert fires on a value deeper than `L` (W3, §5.7) | `limitF_sound` |
 | 13 | `CleanerTest` | every row of the two tables of `ap.md` §4.7, per kind; the split; no request for T ∈ X; the all-marks cleaner; a cleaned fact `*∖{T}` through a field write past the field limit keeps its mark exclusion in the cut demand tree (`limit` of the FLOW tree keeps `c.markExclusion`, §5.7) (item 5) | `CleanCases` in `Cases.lean`, `Core.cleanRes_sound`, `Exact.cleanRes_exact` |
 | 14 | `TypeFilterTest` | accepted path passes with its tail; rejected path drops; `FilterNext`; `and` is the conjunction (of the paths and of the policies); the mark policy drops a rejected concrete mark of a TAINT leaf, both tails, at the root path (level 0) and at each node of the `[e]` chain (`b.[e].$ (T)` with level 1, `b.[e].[e].[any] (T)` with level 2, as today on `byte[]`, `int[][]`, `Integer[]`), after the path filter; a leaf below a field or off the `[e]` chain stays; an `[e]` child whose marks all go is removed; an unchanged tree is returned as it is; a FLOW tree has no policy (item 6; `interpreter.md` §5.1) | `Core.filt_keeps` (path part; the policy is gap G6, no theorem) |
 | 15 | `MarkCheckTest` | the `check` vectors of `ap.md` §4.9 on `checkMark` and `markCheck`; `*∖X` with T ∈ X; the static premise; REACH holds for the zero pattern; `Holds.normalPart`/`demandPart` equal `conjDemand` per leaf (a fully covered input is normal only); `without(c, Holds.facts)` has no leaf of the part and keeps every other leaf | `check_sound`, `check_request_star`, `ND.conjLayer`, `ND.Example.c3_normal` |
 | 16 | `SummaryKindsTest` | `applySummary` for every kind pair of §5.4 equals the per-leaf `concat` with the summary edge, also for a summary with a root leaf (`ret.$ (T)`, `arg0.[any] (T)`); `satisfying(FLOW a, concrete j)` is null and no request comes (item 9); `applyCombination` gives the layer of `ND.DN.ndBind` | `Coverage.summary_step`, `applicable_mark`, `ND.DN.ndBind` |
 | 17 | `EmissionTest`, `RestrictionTest` | every row of `ap.md` §6.3 and §6.4; two insertion orders; programs 1 and 2 (items 11, 12) | `RCore.emitM_inter`, `emitM_complete`, `RCases.p1_found_M`, `p2_found_M` |
-| 18 | `RequestActionTest` | answer, climb, nothing; the chain answer; `ap.md` §4.10 items 2–4; the run-1 case of §5.10: a FLOW link under a concrete callee request climbs; `requestAction` rejects a premise that is not a policy fact `(x, [], *, {}, *)` or a static position answer `(S, p, *, {}, *)`; a request in a restricted run fails its assert (`EdgeApplication.flowHit`, `checkMark`, `FlowClean`) (item 9) | `answerInit_covers`, `Statics.CexClean.shallow_misses` |
+| 18 | `RequestActionTest` | answer, climb, nothing; the chain answer; `ap.md` §4.10 items 2–4; the run-1 case of §5.10: a FLOW link under a concrete callee request climbs; `requestAction` rejects a premise that is not a policy fact `(x, [], *, {}, *)` or a static position answer `(S, p, *, {}, *)`; a request in a restricted run fails its assert (`EdgeApplication.flowHit`, `checkMark`, `FlowClean`); THE POSITION-REQUEST VECTORS of item 9 (`ap.md` §4.10), on `ApOps.applyEdge` with `statementEdge = true` in run 1: an identity static `*` edge at the root `[]` and at a class `[<C>]`, a static read `x = C.s`, the class keep edge of a write `C.s = x` and a pass rule between static fields each raise the position request cut to the static field and give no fact; a sink on `S.<C>.f` raises the ordinary mark request; a deep read below a static field is the ordinary case `above`; the root keep edge adds `<C>` to the exclusion; an added fact at or below the position answers it, an added fact above it does not; the climb through a caller edge on `S`; the mark answer on a static premise (the added fact itself at or below, the chain answer above) (item 9) | `answerInit_covers`, `Statics.CexClean.shallow_misses` |
 | 19 | `ReversalTest` | every row of `ap.md` §9.1 that occurs for a record, with `*∖X`; converse results on one concrete pair; a backward REACH record reverses into a forward source (item 15) | `Reverse.revEdge_exact`, `rev_starEx_exact` |
 | 20 | `PathTrieTest` | `lookupPrefixes`, `lookupExtensions`, `around` equal their list filters on random keys; `add` of a value that is at the position already returns false and stores nothing; the lookups give the values in insertion order (item 14) | `Store.lookupPrefixes_equiv`, `lookupExtensions_equiv`, `mem_around_indexBy` |
 | 21 | `KaryJoinTest` | `KaryJoin`: every combination comes out exactly once, in every arrival order (all permutations of a few inputs, arity 2 to 4); an input in two slots; a repeated input gives nothing. `StandingJoin`: with two `PathTrie`-backed sides and an overlap `near`, every overlapping pair meets exactly once in every arrival order, and no other pair meets | `standing_complete` |
-| 22 | `AddedFactStoreTest`, `RequestStoreTest`, `DemandStoreTest`, `RecordStoreTest`, `ConjunctionStoreTest`, `VulnerabilityStoreTest`, `MethodEdgeStoreTest` | each index against its list filter; a new caller edge of an existing added fact is a new link (the example of `ap.md` §4.5); each leaf has one key; `AddedFactStore.overlapping` equals `links().filter { overlap(it.addedFact, q) }` for queries above, at and below the leaves, and for a `*/E` leaf above the query whose `E` excludes the next accessor (no link); `ApOps.leavesNear` equals `leaves(f).filter { overlap }` per kind; 100 000 caller keys at one position are added and queried in linear time (a timeout fails the test); `RequestStore.add` rejects a premise that is not `(x, [], *, {}, *)` (item 9); a backward edge `{jb} → zero` is stored as REACH and its repeat gives null; the kind assert of `add` (K6), and a `PremiseSet` key with a REACH or FLOW value is rejected (`MethodEdgeStore`, `RunSummaryStore`); `MethodEdgeStore.edgesAt` (both overloads) against a list of every added edge: the REACH bits as `Reach` per layer, one premise or all, the pattern overload returns the whole stored value; a combination of a `{zero}` input and an `{i}` input has the premise `{i}`, and of two `{zero}` inputs `{zero}` (`ConjunctionStore`); `SinkWitness.supportPremise` drops the zero fact; E6 in two orders. `VulnerabilityStoreTest`: two alternatives of one `Argument(*)` sink on `arg0` and on `arg1`, both with `{zero}` and normal, give two entries of one key and no exception; two method keys (two contexts) of one method at one statement give ONE `VulnerabilityKey` and two entries, each with its own method key; a witness whose method key is not of the key's method is rejected; the merge of one entry keeps every sink leaf and its end facts, never crosses group keys (also a demand input on normal facts), and the confirmation of a merged entry equals that of its witnesses (DD10) (items 7, 14) | `standing_complete`, `RStore.near_equiv`, `PipelineStore.record_lookup`, `NDConfirmed.CexSites.cex_sites` |
+| 22 | `AddedFactStoreTest`, `RequestStoreTest`, `DemandStoreTest`, `RecordStoreTest`, `ConjunctionStoreTest`, `VulnerabilityStoreTest`, `MethodEdgeStoreTest` | each index against its list filter; a new caller edge of an existing added fact is a new link (the example of `ap.md` §4.5); each leaf has one key; `AddedFactStore.overlapping` equals `links().filter { overlap(it.addedFact, q) }` for queries above, at and below the leaves, and for a `*/E` leaf above the query whose `E` excludes the next accessor (no link); `ApOps.leavesNear` equals `leaves(f).filter { overlap }` per kind; 100 000 caller keys at one position are added and queried in linear time (a timeout fails the test); `RequestStore.add` rejects a premise that is not `(x, [], *, {}, *)` (item 9); a backward edge `{jb} → zero` is stored as REACH and its repeat gives null; the kind assert of `add` (K6), and a `PremiseSet` key with a REACH or FLOW value is rejected (`MethodEdgeStore`, `RunSummaryStore`); `MethodEdgeStore.edgesAt` (both overloads) against a list of every added edge: the REACH bits as `Reach` per layer, one premise or all, the pattern overload returns the whole stored value; a combination of a `{zero}` input and an `{i}` input has the premise `{i}`, and of two `{zero}` inputs `{zero}` (`ConjunctionStore`); `ConjunctionStoreTest`: two alternatives of one rule (two `SinkRule`s of one `rule`, each with the literal `(arg0, [], $, T)`) stay apart: an input of the first never completes a combination of the second (`ap.md` §8.9; item 14); `RecordStoreTest`: `persist` (R1) skips a DEMAND summary, a `PremiseSet` summary and a backward zero-premise summary, keeps a forward `{zero}` summary and a normal one-premise summary, and gives a repeat of a record as no new record; inside a `runWithMemoryManager` region (the barrier guard, B4) two equal conclusions of `SIZE_TO_FORCE_INTERN` nodes of two method keys persist to one interned node (§4.5 THE LIFETIME OF A TABLE), and a cancelled `Cancellation` stops `persist` at its next method key; `SinkWitness.supportPremise` drops the zero fact; E6 in two orders. `VulnerabilityStoreTest`: two alternatives of one `Argument(*)` sink on `arg0` and on `arg1`, both with `{zero}` and normal, give two entries of one key and no exception; two method keys (two contexts) of one method at one statement give ONE `VulnerabilityKey` and two entries, each with its own method key; a witness whose method key is not of the key's method is rejected; the merge of one entry keeps every sink leaf and its end facts, never crosses group keys (also a demand input on normal facts), and the confirmation of a merged entry equals that of its witnesses (DD10) (items 7, 14; the report and output parts of item 14 are `analyzer-impl.md` §9.1 rows 21 and 22) | `standing_complete`, `RStore.near_equiv`, `PipelineStore.record_lookup`, `NDConfirmed.CexSites.cex_sites` |
 
 Example 1 — `ApplyEdgeVectorsTest`, the vector `a = b.f` on `(b, ., */{h}, *)` (`Cases.lean:64`, `ap.md` §4.2 table row 2):
 
@@ -3081,7 +3144,7 @@ class ApplyEdgeVectorsTest {
 
     private fun pf(base: AccessPathBase, path: List<Int>, tail: Tail, mark: MarkSlot = MarkSlot.STAR) = PathFact(base, path, tail, mark)
 
-    /** `a = b.f` with the keep edge of the read base (Cases.lean `loadF'`). */
+    /** `a = b.f` with the keep edge of the read base (Lean `Cases.loadF'`). */
     private val loadF = listOf(
         PathEdge(pf(b, emptyList(), Tail.STAR), pf(b, emptyList(), Tail.STAR), ExclusionSet.Empty),
         PathEdge(pf(b, listOf(f), Tail.STAR), pf(a, emptyList(), Tail.STAR), ExclusionSet.Empty))
@@ -3125,13 +3188,57 @@ class FactsEquivalenceTest {
         val treeOut = CollectingOut()
         gen.ops.applyEdge(facts, premise, edge, statementEdge = true, mode, treeOut)
 
-        val refOut = gen.asConclusions(facts).map { concat(it, edge, staticIdentity = gen.isStaticIdentity(facts, premise, it), restricted = mode.restricted) }
+        val refOut = gen.asConclusions(facts).map { concat(it, edge, staticIdentity = gen.isStaticIdentity(facts, premise, it, mode), restricted = mode.restricted) }
         assertEquals(refOut.facts().toSet(), treeOut.results.flatMap { gen.asConclusions(it) }.toSet())     // fact, layer, exclusion
         assertEquals(refOut.markRequests().toSet(), treeOut.markRequests.toSet())
         assertEquals(refOut.positionRequests().toSet(), treeOut.positionRequests.map { it.toList() }.toSet())
         treeOut.results.forEach { gen.assertKind(it) }            // FLOW <=> abstract mark; REACH <=> zero base; W1, W2, W6
     }
 }
+```
+
+The oracle helpers (test sources). The generator keeps one invariant per line; a generator that breaks one makes the
+test compare two wrong answers, and an `isStaticIdentity` that is false too often makes the static rows vacuous.
+
+```kotlin
+/** The generator of FactsEquivalenceTest, over its own ApManager. */
+class RandomFacts(seed: Long, accessors: Int, marks: Int, maxDepth: Int) {
+    val ops: ApOps
+    /** A canonical Facts of a random kind and its premise.
+     *  K6: a FlowTree only under a `*` premise (one InitialAp); REACH or TAINT under the zero or a concrete premise; TAINT
+     *      only under a PremiseSet (no zero member, every member concrete).
+     *  W1: a demand FlowTree has the Empty exclusion; a `*/E` leaf only in the normal layer.
+     *  W2, W6: a FLOW leaf has the tail `*` (normal) or `[any]` (demand), never `$`; a normal TaintTree has no `[any]` mark.
+     *  The static base is drawn as often as a local, with the premise paths `[]` and `[<C>]` (the static rows). */
+    fun facts(): Pair<Facts, PremiseKey>
+    /** A micro edge of every tail and mark row of ap.md §4.1.
+     *  S7: no `*∖X` premise mark; no concrete target mark under the premise mark `*`.
+     *  S8: a `$` premise has a concrete mark and no `*` target; a `$` target has a concrete premise mark.
+     *  W1: a non-empty exclusion only with a `*` side. */
+    fun pathEdge(): PathEdge
+    /** Run 1 (then any kind), or a restricted run (then `facts()` gives REACH and TAINT only, ap.md §6.1). */
+    fun mode(): ApMode
+    /** The per-path view: one Conclusion per leaf and mark, with its layer (FormsReference.conclusions, Part II §23.8). */
+    fun asConclusions(f: Facts): List<Conclusion>
+    /** THE REFERENCE FORM OF staticIdentityDepth (Part I §5.3), for one leaf `c` of `facts`: ap.md §4.1 static exception,
+     *  conditions 1 and 2, as ReferenceAlgebra.isStaticIdentity (Part II §23.8). The test passes `statementEdge = true`;
+     *  the reference `concat` itself tests the case `above` (a read strictly below `q`) and condition 4 (`Ec admits r`). */
+    fun isStaticIdentity(facts: Facts, premise: PremiseKey, c: Conclusion, mode: ApMode): Boolean {
+        val i = (premise as? InitialAp)?.toPattern()?.fact ?: return false      // a FLOW premise is one InitialAp (K6)
+        return mode.run1 && facts is FlowTree && !c.demand &&                     // run 1, a normal FLOW leaf
+            i.base == AccessPathBase.ClassStatic && c.fact.base == AccessPathBase.ClassStatic &&
+            i.tail == Tail.STAR && i.mark == MarkSlot.STAR && c.fact.tail == Tail.STAR && c.fact.mark is MarkSlot.Star &&
+            c.fact.path == i.path && rootOrClass(i.path)                          // the leaf is at the premise path q
+    }
+    /** K6, W1, W2, W6 on one result: FLOW <=> an abstract mark; REACH <=> the zero base; the layer rules of DD12. */
+    fun assertKind(f: Facts)
+}
+
+/** The outcomes of the reference concat, in the groups of CollectingOut. */
+fun List<EdgeOutcome>.facts(): List<Conclusion> = filterIsInstance<EdgeOutcome.Fact>().map { it.conclusion }
+fun List<EdgeOutcome>.markRequests(): List<TaintMark> = filterIsInstance<EdgeOutcome.Request>().map { it.mark }
+fun List<EdgeOutcome>.positionRequests(): List<List<AccessorIdx>> =
+    filterIsInstance<EdgeOutcome.PositionRequest>().map { it.path }
 ```
 
 Example 3 — `SummaryKindsTest`, run 1 with a concrete summary premise and a `*` caller fact (§5.4, §5.10; item 9):
@@ -3152,6 +3259,10 @@ fun `a FLOW added fact does not satisfy a concrete premise and climbs`() {
 ```
 
 After the unit tests pass, the analysis tests of `ap.md` §13 item 16 run through phase 3 (`analyzer-impl.md` §8.1).
+The six static programs of item 9 are analysis tests too, as Java samples of the Lean programs: `Statics.CexAbove`,
+`CexWide`, `CexClean`, `CopyF2F` and `DeepSink` give their vulnerability through a normal sink edge, and
+`DeepSinkParam` through a demand sink edge. Phase 3 outputs the CONFIRMED and the DEMAND entries (`ap-history.md`
+F68 (1)), so the test reads the layer of the sink edges of the witnesses in the `Report`, not only the output.
 
 ---
 
@@ -3186,7 +3297,7 @@ opentaint-jvm-dataflow
     JIRInterpreter.kt         JIRInterpreter : Interpreter
     JIRStatementForms.kt      statement summaries of non-call statements (ADAPT of JIRStatementSummary)
     JIRTypeFilters.kt         Part I's TypeFilter made from JIRFactTypeChecker (interpreter.md §5.1)
-    JIRRuleForms.kt           rules -> micro edges, conjunctions, sink rules, cleaners; RulePos; RuleErrors
+    JIRRuleForms.kt           rules -> micro edges, conjunctions, sink rules, cleaners; RulePos; valid (a rule error rejects the rule); RuleErrors
     JIRCallPlanBuilder.kt     the forward call plan (interpreter.md §3, §4.5, §4.6)
     JIRBoundaryForms.kt       entry rules, exit rules, exit nodes (interpreter.md §4.3, §4.7)
     JIRExitWiredGraph.kt      the exit wiring (PORT of BWD/JIRBackwardExitWiringGraph.kt)
@@ -3203,7 +3314,7 @@ opentaint-jvm-dataflow
 |---|---|---|
 | `DF/ap/ifds/summary/StatementSummaryBuilder.kt:12-143` | ADAPT | `MicroEdgeBuilder`: `PathEdge`s; a read keeps the whole base (`interpreter.md` D1, D2); no `to == null` edge; no `keepAliasPropagationEdges`; operand and result filters apart; `buildReversed` (:30-46) becomes `StatementSummary.reversed` |
 | `DF/ap/ifds/summary/StatementSummary.kt` | REPLACE | `bidi.interp.StatementSummary` (the old class stays for the prescan) |
-| `DF/ap/ifds/analysis/MethodSequentFlowFunction.kt:41-78` (`transfer`) | REPLACE | `ApOps.applyEdge` in the core; `FormsReference.statement` is its reference |
+| `DF/ap/ifds/analysis/MethodSequentFlowFunction.kt:41-78` (`transfer`) | REPLACE | `ApOps.applyEdge` in the core; `FormsReference.apply` (STATEMENT mode, §23.8) is its reference |
 | `DF/graph/BackwardGraphs.kt:40-45` (`reversed`) | REUSE | the backward method graph |
 | `DF/graph/MethodInstGraph.kt:25-46` (`build`) | REUSE | the compact graphs of `JIRMethodEntry` |
 | `BWD/JIRBackwardExitWiringGraph.kt:10-63` | PORT | `JIRExitWiredGraph`; the wired node list is made once (today: on each `predecessors` call, :46-50) |
@@ -3240,8 +3351,8 @@ opentaint-jvm-dataflow
 | `JVM/analysis/JIRMethodEntrypointResolver.kt:11-16` | REUSE | the callee method keys |
 | `DF/ap/ifds/taint/ExternalMethodTracker` | REUSE | through `UnresolvedCallObserver` (§28.5): the core calls it when an added fact reaches an unresolved callee, as today per fact (`JIRMethodCallFlowFunction.kt:285-295`) |
 | `DF/util/SoftReferenceManager.kt` | NOT USED by Part II | the forms stay strongly held: their objects are keys of the run stores (§31.2). Part I holds the trie tables of the stores through it (DD5, Part I §4.5) |
-| `core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringWebProject.kt:244-334` (`ndMethodDispatch`) | ADAPT | the dispatcher saves and restores the registry fields around `__cleanup__()` (§31.3) |
-| `core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringRuleProvider.kt:104-128` (`cleanerRulesForMethod`) | ADAPT | with no fact: the whole-base cleaner `RemoveAllMarks(AnyClassStatic)`; with a fact: today's code (§31.3) |
+| `core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringWebProject.kt:244-334` (`ndMethodDispatch`) | GENERALIZE (changed in place, shared with the old core) | the dispatcher saves and restores the registry fields around `__cleanup__()`; the results of the old core do not change (§31.3 item 1) |
+| `core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringRuleProvider.kt:104-128` (`cleanerRulesForMethod`) | GENERALIZE (changed in place) | with no fact: the whole-base cleaner `RemoveAllMarks(AnyClassStatic)`; with a fact: today's code (§31.3) |
 | `core/opentaint-configuration-rules/configuration-rules-jvm/src/main/kotlin/org/opentaint/dataflow/configuration/jvm/Position.kt:7-19` | GENERALIZE | the rule position `AnyClassStatic` (§31.3) |
 
 ## 22. Names from Part I and additions to `analyzer-core.md` §4.9
@@ -3271,16 +3382,17 @@ Part II uses these names of Part I with the signatures of the Part I section.
 ### 22.2 Additions to the interface of `analyzer-core.md` §4.9
 
 `analyzer-core.md` §4.9 gives the interpreter interface. Part II adds these members. `analyzer-impl.md` calls them.
+Three rows are now in the spec (RESOLVED (F68)); they stay here as a record.
 
 | What | Why | Code |
 |---|---|---|
-| `StatementSummary.resultFilters` (default empty) | `interpreter.md` §2.1 step 5 and the binding-back filters of `interpreter.md` §3.1 act on the results. One map per base cannot hold the operand filter and the result filter of one base (`x = x.f`; `o.m(this)`). | §23.2 |
-| `CallStage.Edges.kind: StageKind`, with the member `StageKind.statementEdges` | The core must find the sources stage (the source seeds and the source hits), the statement micro edges (the static exception of `ap.md` §4.10 item 1) and the `Origin` of a fact. | §23.5 |
+| `StatementSummary.resultFilters` (default empty) | `interpreter.md` §2.1 step 5 and the binding-back filters of `interpreter.md` §3.1 act on the results. One map per base cannot hold the operand filter and the result filter of one base (`x = x.f`; `o.m(this)`). RESOLVED (F68): `analyzer-core.md` §4.9 `StatementSummary` has the two maps (SI8). | §23.2 |
+| `CallStage.Edges.kind: StageKind`, with the member `StageKind.statementEdges` | The core must find the sources stage (the source seeds and the source hits), the statement micro edges (the static exception of `ap.md` §4.10 item 1) and the `Origin` of a fact. RESOLVED (F68): `analyzer-core.md` §4.9 has `StageKind` and `CallStage.Edges.kind`; `statementEdges` stays an addition (the spec names the two kinds, SOURCES and UNRESOLVED, in its comment). | §23.5 |
 | `Origin`; the `Guard` members `SinkTriggered(sink)` and `MemoryEffect` (`admits(origin)`) | Not an addition: `analyzer-core.md` §4.9 defines them with these members (and §4.5 THE ALIAS GUARD gives the rule). Part II gives the code and the `Origin` of each stage kind (`StageKind.originOf`, below). The alias guard needs the origin of a fact (`interpreter.md` §3.8 AC3, AC4). | §23.5 |
 | `SinkRule.unconditional`, `conjunctive`, `seedPatterns()` | `analyzer-core.md` §4.9 defines `SinkRule(rule, alternative, patterns, endFacts)`; Part II adds these three derived members. `alternative` names the sink alternative of a witness (`ap.md` §8.10: the witnesses of two alternatives never merge). | §23.4 |
 | `ExitRules.entryMarkParts(base)` | The core removes the entry marks of `interpreter.md` §4.7 step 4 exactly, with `ApOps.without`. | §23.4 |
 | `MicroEdge.isSource`, `MicroEdge.isIdentity`, `StatementSummary.edgesOf`, `StatementSummary.targets`, `CallPlan.stagesFrom`, `identityEdge(b)` | The source-seed places (`analyzer-core.md` §4.7), the alias guard (AC4), the edges of one base, the target bases (A5), the stages from one point, the identity edge of `interpreter.md` A5, §3.5 and §3.7. | §23.1, §23.2, §23.6 |
-| the stage `AFTER → BEFORE` of kind `PASS_OVER` in `CallPlan.reversed()` | The identity edge `b.* → b.*` of an alias base (`analyzer-core.md` §4.5, `interpreter.md` A5). The step table of `analyzer-core.md` §4.5 has no such stage (spec issue SI9). | §23.6 |
+| the stage `AFTER → BEFORE` of kind `PASS_OVER` in `CallPlan.reversed()` | The identity edge `b.* → b.*` of an alias base (`analyzer-core.md` §4.5, `interpreter.md` A5). RESOLVED (F68): `analyzer-core.md` §4.5 THE REVERSAL and the PASS_OVER row (step 1) of its step table now have this stage, and §4.9 the kind `PASS_OVER` (SI9). | §23.6 |
 | `FormsCache`, `MethodForms`, `DirectedForms` | The forms cache of `analyzer-core.md` §4.8 and the direction table of `analyzer-core.md` §4.9. `analyzer-impl.md` §3.4 uses them. | §23.7 |
 | `UnresolvedCallObserver` (`reached(call, position, plan)`); `JIRInterpreter` implements it; `CallPlan.passReads` | The external method tracker records the taint that reaches an unresolved callee, as today. `passReads`: the positions that a pass rule of the rule set reads (not a default model), for its `ruleApplied`. | §28.5, §23.6 |
 | `FormApplier<P, F>` (`statement`, `stage`, `gen`), `FactAlgebra<P, F>`, `Place(node, statementEdge, sources)` | The three application modes belong to the forms; one implementation for the engine (`EngineAlgebra`, `analyzer-impl.md` §4.3) and both oracles. | §23.3 |
@@ -3354,7 +3466,7 @@ class StatementSummary(
     val edges: List<MicroEdge>,
     val conjunctions: List<ConjunctiveEdge>,                                 // the ND sources only (interpreter.md §5.3)
     val typeFilters: Map<AccessPathBase, TypeFilter>,
-    val resultFilters: Map<AccessPathBase, TypeFilter> = emptyMap(),          // an addition (Part II §22.2)
+    val resultFilters: Map<AccessPathBase, TypeFilter> = emptyMap(),          // analyzer-core.md §4.9 (Part II §22.2, SI8)
 ) {
     private val byBase: Map<AccessPathBase, List<MicroEdge>> = edges.groupBy { it.edge.from.base }
     fun edgesOf(b: AccessPathBase): List<MicroEdge> = byBase[b].orEmpty()
@@ -3414,7 +3526,7 @@ field.
 |---|---|---|
 | STATEMENT | `statementSummary`, `RuleStatement.summary`, `CleanStep.Kill.keepEdges` | `interpreter.md` §2.1 steps 2–5: an untouched base passes; a touched base keeps only what an edge gives |
 | STAGE | `CallStage.Edges.summary` | only the edges give results; the plan relevance (`CallPlan.touched`) does the pass-over (`analyzer-core.md` §4.5). A stage summary has every base of its edges in `touched`, so `reversed()` adds no identity edge |
-| GEN | `RuleStatement.endFacts`, `SinkRule.endFacts` | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2) |
+| GEN | `RuleStatement.endFacts`, `SinkRule.endFacts` at the method boundaries | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). At a call the end facts are the `END_FACTS` `Edges` stage (STAGE mode, on the zero fact, on a trigger; §28.1), whose reversal adds no identity |
 
 ONE FORM APPLIER. `FormApplier` writes the three modes once, generic over the fact algebra `FactAlgebra<P, F>` (`P`:
 the premise set; `F`: the facts of one input). Users, each with its own algebra:
@@ -3482,13 +3594,16 @@ class FormApplier<P, F>(private val alg: FactAlgebra<P, F>) {
     }
 
     /** One micro edge. At a source-seed place, the source-seed filter acts before it (a forward restricted run), and the
-     *  source hit is recorded after a result (a backward run), BEFORE any edges.add (analyzer-core.md §4.7). */
+     *  source hit is recorded when the first result exists (a backward run), BEFORE that result goes to `sink` (where the
+     *  engine calls edges.add; analyzer-core.md §4.7). So the hit does not depend on what edges.add gives. */
     private fun micro(me: MicroEdge, c: F, premise: P, at: Place, sink: (P, F) -> Unit) {
         val source = at.sources && me.isSource
         if (source && !alg.allowsSource(at.node, me)) return
-        var produced = false
-        alg.applyEdge(me, c, premise, at.statementEdge) { pr, x -> produced = true; sink(pr, x) }
-        if (source && produced) alg.sourceHit(at.node, me)
+        var hit = !source
+        alg.applyEdge(me, c, premise, at.statementEdge) { pr, x ->
+            if (!hit) { hit = true; alg.sourceHit(at.node, me) }                 // once, before the first result goes on
+            sink(pr, x)
+        }
     }
 }
 ```
@@ -3547,7 +3662,8 @@ class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummar
 }
 
 /** interpreter.md §4.7, at an exit (normal or exceptional). `globalStateDrop`: step 3 applies (the exit has an exit sink):
- *  the part of an `S` item on which a mark literal of an exit sink holds is dropped (Part II §29). `entryMarks`: step 4.
+ *  the part of a zero-premise `S` item on which a mark literal of an exit sink holds is dropped; a caller-set `S` item is
+ *  not (D30, Part II §29). `entryMarks`: step 4.
  *  Steps 3 to 5 apply only at the normal exit, so at the exceptional exit `globalStateDrop` is false and `entryMarks` is
  *  empty. */
 class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>) {
@@ -3578,7 +3694,8 @@ sealed interface CleanStep {
 
 ### 23.5 Call points, stages, guards
 
-`StageKind` is an addition to `analyzer-core.md` §4.9 (§22.2). The core needs it for three things: the static
+`StageKind` is in `analyzer-core.md` §4.9 (it was an addition of §22.2; RESOLVED (F68)); `statementEdges` is the one
+addition. The core needs it for three things: the static
 exception (the statement micro edges at a call, `ap.md` §4.10 item 1), the source seeds and the source hits of the
 sources stage (`analyzer-core.md` §4.7), and the `Origin` of a fact for the alias guard.
 
@@ -3637,7 +3754,7 @@ sealed interface CallStage {
     val to: CallPoint
     fun reversed(): CallStage
 
-    /** `kind` is an addition to analyzer-core.md §4.9 (Part II §22.2). The summary is STAGE mode. */
+    /** `kind`: analyzer-core.md §4.9 (Part II §22.2). The summary is STAGE mode. */
     data class Edges(override val from: CallPoint, override val to: CallPoint, val kind: StageKind,
                      val summary: StatementSummary, val guard: Guard? = null) : CallStage {
         override fun reversed() = Edges(to, from, kind, summary.reversed(), guard = null)     // no guard, no filter
@@ -3686,7 +3803,8 @@ The reversed plan of a JVM call against the backward call order (`interpreter.md
 | Backward step | Forward stage (§28) | Reversed stage |
 |---|---|---|
 | 1 relevance | `touched` = `{S, o, ai, r}` | `touched + aliasBases` |
-| 2 reversed binding back, alias edges, alias identity | `REWRITTEN→AFTER BIND_BACK`, `REWRITTEN→AFTER ALIASES (MemoryEffect)` | `AFTER→REWRITTEN BIND_BACK`, `AFTER→REWRITTEN ALIASES` (no guard), `AFTER→BEFORE PASS_OVER` |
+| 1 the pass-over of the alias bases (alias identity) | none: forward, an alias base is untouched and passes over the call | `AFTER→BEFORE PASS_OVER` |
+| 2 reversed binding back, alias edges | `REWRITTEN→AFTER BIND_BACK`, `REWRITTEN→AFTER ALIASES (MemoryEffect)` | `AFTER→REWRITTEN BIND_BACK`, `AFTER→REWRITTEN ALIASES` (no guard) |
 | 3 reversed sources, end facts | `BOUND→REWRITTEN SOURCES`, `BOUND→REWRITTEN END_FACTS (SinkTriggered)` | `REWRITTEN→BOUND SOURCES`, `REWRITTEN→BOUND END_FACTS` (no guard) |
 | 4 reversed rewriter | `RETURNED→REWRITTEN Rewrite` | `REWRITTEN→RETURNED Rewrite` |
 | 5.1 resolved callees | `ADDED→RETURNED Callees` | `RETURNED→ADDED Callees` |
@@ -3704,8 +3822,11 @@ each direction" of `analyzer-core.md` §4.9. `MethodContextCache.directed()` mak
 `RunManager.forms` keeps it (`analyzer-impl.md` §3.2, §3.4).
 
 ```kotlin
-/** A forward form and its reversal per slot (a statement index), each made once. Runs are sequential and one runner
- *  uses a method (analyzer-core.md O1), so a plain array is enough; a race only makes an equal form twice. */
+/** A forward form and its reversal per slot (a statement index), each made once. No race: one runner uses a method
+ *  (analyzer-core.md O1), and the join of a run orders the runs (analyzer-core.md B1), so a plain array is enough. A second build would
+ *  break the identity keys of the run state (a `ConjunctiveEdge` or a conjunctive `SinkRule` is the key of
+ *  `ConjunctionStore.add`, `Guard.SinkTriggered` names its `SinkRule`: Part II §31.2 MEMORY), so this cache must never
+ *  rebuild a form. */
 class FormsCache<F : Any>(size: Int, private val reverse: (F) -> F) {
     private val slots = arrayOfNulls<Any>(2 * size)
     @Suppress("UNCHECKED_CAST")
@@ -4260,10 +4381,11 @@ internal class JIRRuleForms(
     /** §1.3: the position of a rule element, or null after a rule error. It NEVER throws.
      *  THE TWO INVARIANTS OF A RULE POSITION: (1) at most one `AnyField` accessor; (2) an `AnyField` is the LAST accessor
      *  (no concrete accessor after it). A position that breaks one (`[arg0, ".*", ".f"]`, `.*.*`) is a rule error: the
-     *  rule element is rejected and logged once (`RuleErrors`), as every other rule error (§1.4, D29).
+     *  WHOLE RULE is rejected and logged once (`RuleErrors`, `valid` below), as every other rule error (§1.3, §1.4, D29).
      *  `AnyClassStatic` (Part II §31.3) is the whole static base `S` with the empty path. It is allowed only as the whole
-     *  position of a `RemoveAllMarks` action (`kill = true`); in every other rule element, and with an accessor after
-     *  it, it is a rule error. */
+     *  position of a `RemoveAllMarks` action (`kill = true`); in every other rule element (a mark literal of a condition
+     *  too: `valid` reads the `Position` of each literal with this overload), and with an accessor after it, it is a rule
+     *  error. */
     fun pos(rule: Any, p: Position, kill: Boolean = false): RulePos? {
         if (p.root() == AnyClassStatic) {
             if (kill && p == AnyClassStatic) return RulePos(AccessPathBase.ClassStatic, emptyList(), any = false)
@@ -4299,18 +4421,91 @@ internal class JIRRuleForms(
         is ContainsMarkOnAnyAccessorLiteral -> pos(rule, l.position)?.copy(any = true)?.fact(mark(l.mark.mark))
     }
 
-    /** §4.2 for a source and a sink: a negated literal counts as true; `Or` gives one cube per alternative. A cube with a
-     *  rejected literal goes (a rule error, logged once). A pass rule takes no cube: it has no mark literal (§4.2, D24;
-     *  Part II §28.5). REUSE removeTrueLiterals (TaintMarkAwareConditionExpr.kt:48-50) and explodeToDNF (:110-123). */
+    /** §4.2 for a source and a sink: a negated literal counts as true; `Or` gives one cube per alternative. The caller
+     *  passes only a `valid` rule (below), so every literal has a position: a rule error rejects the whole rule, never one
+     *  cube (§1.3, D29). A pass rule takes no cube: it has no mark literal (§4.2, D24; Part II §28.5). REUSE
+     *  removeTrueLiterals (TaintMarkAwareConditionExpr.kt:48-50) and explodeToDNF (:110-123). */
     fun cubes(rule: Any, cond: ExprOrConstant): List<List<PathFact>> = when {
         cond.isFalse -> emptyList()
         cond.isTrue -> listOf(emptyList())
         else -> {
             val positive = cond.expr.removeTrueLiterals { it.negated } ?: return listOf(emptyList())
-            positive.explodeToDNF().mapNotNull { cube ->
-                cube.literals.map { literal(rule, it) ?: return@mapNotNull null }.distinct()
+            positive.explodeToDNF().map { cube ->
+                cube.literals.map { checkNotNull(literal(rule, it)) { "a rejected rule reaches the forms (§1.3): $rule" } }.distinct()
             }.distinct()
         }
+    }
+
+    /** §1.3, D29: A RULE ERROR REJECTS THE WHOLE RULE. The check reads the RAW rule once, before the static evaluation:
+     *  every action position (`pos`; `kill` for a `RemoveAllMarks`), every mark literal of the condition, a negated one too
+     *  (the `Position` overload of `pos`, so `AnyClassStatic` in a literal is a rule error), and the kind checks of §1.4 and
+     *  §4.4. A rejected rule has no form at any place: every rule query of Part II keeps only the valid rules (`sinks` of a
+     *  call, `sources`, `cleanSteps`, both loops of `rewriterCleaners`, `passRules`, `readSources`, the entry and exit
+     *  rules: Part II §27.2, §28.1, §28.3, §28.5, §29), so the summary rewriter never selects a rejected rule (§5.2). After the
+     *  filter, `cubes`, `markTarget`, `pass` and `unconditional` never meet a bad position (their checks are asserts).
+     *  One rule error does not reject: a pass rule with a mark literal (D24: `RuleErrors.applied`, Part II §28.5).
+     *  Memoised per rule: a rule object is the same at every statement and in every run. */
+    fun valid(rule: TaintConfigurationItem): Boolean = validity.computeIfAbsent(rule, ::validate)
+    private val validity = ConcurrentHashMap<TaintConfigurationItem, Boolean>()
+
+    private fun validate(rule: TaintConfigurationItem): Boolean {
+        var ok = true
+        fun reject(reason: String) { errors.reject(rule, reason); ok = false }
+        fun at(p: Position, kill: Boolean = false): RulePos? = pos(rule, p, kill).also { if (it == null) ok = false }
+        val literals = markLiterals(rule.rawCondition)                                // (position, ContainsMarkOnAnyField)
+        val anyLiteral = literals.map { (p, onAny) -> at(p)?.any == true || onAny }.any { it }   // every literal is read
+        /** markTarget (Part II §27.2): a class position takes no `[any]` target, and with a class target no `[any]` literal. */
+        fun target(a: AssignMark, premises: Boolean) {
+            val to = at(a.position) ?: return
+            if (to.isClass && to.any) reject("[any] target on a class position (§1.4)")
+            if (to.isClass && premises && anyLiteral) reject("ContainsMarkOnAnyField with a class target (§1.4, I12 (b))")
+        }
+        when (rule) {
+            is TaintConfigurationSource -> rule.actionsAfter.forEach { target(it, premises = true) }
+            is TaintConfigurationSink -> rule.trackFactsReachAnalysisEnd.forEach { target(it, premises = false) }  // end facts: from zero
+            is TaintPassThrough -> for (a in rule.actionsAfter) {
+                val (from, to) = when (a) { is CopyAllMarks -> a.from to a.to; is CopyMark -> a.from to a.to; else -> continue }
+                val f = at(from); val t = at(to)
+                if (f != null && t != null && (f.isClass || t.isClass)) reject("pass rule from or to a class position (§1.4)")
+            }
+            is TaintCleaner -> for (a in rule.actionsAfter) when (a) {
+                is RemoveMark -> at(a.position)
+                is RemoveAllMarks -> at(a.position, kill = true)?.let {
+                    if (it.base == AccessPathBase.ClassStatic && it.any) reject("RemoveAllMarks(P.AnyField) on S (§1.4)")
+                }
+                else -> Unit
+            }
+        }
+        if (rule is TaintStaticFieldSource) {                                          // §4.4: the read source at `x = C.s`
+            if (!rule.condition.isTrue()) reject("read source with a condition (§4.1)")
+            if (rule.actionsAfter.any { a -> pos(rule, a.position)?.let { it.base != resultBase } == true })
+                reject("read source target is not the read value (§4.4)")
+        }
+        return ok
+    }
+
+    /** The mark literals of a raw condition, negated ones too: (the position, `ContainsMarkOnAnyField`). */
+    private fun markLiterals(c: Condition): List<Pair<Position, Boolean>> = buildList {
+        fun walk(x: Condition) {
+            when (x) {
+                is CommonCondition.Atom -> when (val a = x.atom) {
+                    is ContainsMark -> add(a.position to false)
+                    is ContainsMarkOnAnyField -> add(a.position to true)               // JVM/taint/ContainsMarkOnAnyField.kt
+                    else -> Unit                                                       // a non-mark atom
+                }
+                is CommonCondition.Not -> walk(x.arg)
+                is CommonCondition.And -> x.args.forEach(::walk)
+                is CommonCondition.Or -> x.args.forEach(::walk)
+                else -> Unit                                                           // True
+            }
+        }
+        walk(c)
+    }
+    private val TaintConfigurationItem.rawCondition: Condition get() = when (this) {
+        is TaintConfigurationSource -> condition
+        is TaintConfigurationSink -> condition
+        is TaintPassThrough -> condition
+        is TaintCleaner -> condition
     }
 ```
 
@@ -4318,8 +4513,8 @@ internal class JIRRuleForms(
 
 Every rule element that makes a mark is `premises -> target`: a source and an end fact (`AssignMark`, from the zero fact
 or from the literals of the condition) and a `CopyMark` pass rule (from its own premise, the copied mark). One
-function makes the edge for all of them (`ruleEdge`), and one function checks the target of an `AssignMark`
-(`markTarget`, `interpreter.md` §1.4). Users: `source` (the sources stage of a call, §28.3; the entry rules and the exit rules, §29),
+function makes the edge for all of them (`ruleEdge`), and one function makes the target of an `AssignMark`
+(`markTarget`; `valid`, §27.1, checked it by `interpreter.md` §1.4). Users: `source` (the sources stage of a call, §28.3; the entry rules and the exit rules, §29),
 `endFacts` (§27.3), `pass` (§27.4), `readSources` (below).
 
 ```kotlin
@@ -4333,37 +4528,28 @@ function makes the edge for all of them (`ruleEdge`), and one function checks th
         else -> b.conjunction(ConjunctiveEdge(premises.map { Pattern(it, ExclusionSet.Empty) }, target))
     }
 
-    /** §1.4: the target `P.t (T)` of an `AssignMark` (a source, an end fact), or null after a rule error. A class position
-     *  takes no `[any]` target, and with a class target no `[any]` premise (I12 (b)). */
-    fun markTarget(rule: Any, a: AssignMark, premises: List<PathFact>): PathFact? {
-        val to = pos(rule, a.position) ?: return null
-        if (to.isClass && to.any) { errors.reject(rule, "[any] target on a class position (§1.4)"); return null }
-        if (to.isClass && premises.any { it.tail == Tail.ANY }) {
-            errors.reject(rule, "ContainsMarkOnAnyField with a class target (§1.4, I12 (b))"); return null
-        }
-        return to.fact(mark(a.mark))
-    }
+    /** §1.4: the target `P.t (T)` of an `AssignMark` (a source, an end fact). `valid` (Part II §27.1) checked the class rules: a
+     *  class position takes no `[any]` target, and with a class target no `[any]` literal (I12 (b)). */
+    fun markTarget(rule: Any, a: AssignMark): PathFact =
+        checkNotNull(pos(rule, a.position)) { "a rejected rule reaches the forms (§1.3): $rule" }.fact(mark(a.mark))
 
-    /** §4.1: `zero.$ (zeroMark) -> P.t (T)`, `Q.t' (T') -> P.t (T)`, or a conjunction (§5.3). */
+    /** §4.1: `zero.$ (zeroMark) -> P.t (T)`, `Q.t' (T') -> P.t (T)`, or a conjunction (§5.3). A `valid` rule only. */
     fun source(b: MicroEdgeBuilder, rule: TaintConfigurationItem, cube: List<PathFact>, a: AssignMark) {
-        markTarget(rule, a, cube)?.let { ruleEdge(b, cube, it) }
+        ruleEdge(b, cube, markTarget(rule, a))
     }
 
-    /** §4.4: the read source at `x = C.s` (`TaintStaticFieldSource`); the condition must be true. Today
-     *  JIRMethodSequentFlowFunction.kt:235-268 (a non-true condition was a TODO; here it is a rule error). */
+    /** §4.4: the read source at `x = C.s` (`TaintStaticFieldSource`). Today JIRMethodSequentFlowFunction.kt:235-268 (a
+     *  non-true condition was a TODO). A condition, or a target that is not the read value, is a rule error: `valid`
+     *  rejects the whole rule (Part II §27.1). */
     fun readSources(b: MicroEdgeBuilder, s: JIRAssignInst) {
         val field = (s.rhv as? JIRFieldRef)?.field?.field?.takeIf { it.isStatic } ?: return
         val x = accessPathBase(s.lhv) ?: return
-        val found = rules.sourceRulesForStaticField(field, s, fact = null)
-        if (found.none()) return
+        val found = rules.sourceRulesForStaticField(field, s, fact = null).filter(::valid)
+        if (found.isEmpty()) return
         b.keepZero()                                                               // I11 (d)
-        for (rule in found) {
-            if (!rule.condition.isTrue()) { errors.reject(rule, "read source with a condition (§4.1)"); continue }
-            for (a in rule.actionsAfter) {
-                val p = pos(rule, a.position) ?: continue
-                if (p.base != AccessPathBase.Return) { errors.reject(rule, "read source target is not the read value (§4.4)"); continue }
-                ruleEdge(b, emptyList(), p.copy(base = x).fact(mark(a.mark)))     // `x` is a local: no class target
-            }
+        for (rule in found) for (a in rule.actionsAfter) {
+            val p = checkNotNull(pos(rule, a.position))                            // valid: the base is `Result`
+            ruleEdge(b, emptyList(), p.copy(base = x).fact(mark(a.mark)))         // `x` is a local: no class target
         }
     }
 ```
@@ -4406,7 +4592,7 @@ input of the k-ary join of its literals), `MarkCheck.Request` raises the request
     /** §4.1 END FACTS: `trackFactsReachAnalysisEnd` as the targets of a source from the zero fact (the rule-to-edge path,
      *  GEN mode). */
     fun endFacts(rule: TaintConfigurationSink): List<MicroEdge> = MicroEdgeBuilder().apply {
-        for (a in rule.trackFactsReachAnalysisEnd) markTarget(rule, a, emptyList())?.let { ruleEdge(this, emptyList(), it) }
+        for (a in rule.trackFactsReachAnalysisEnd) ruleEdge(this, emptyList(), markTarget(rule, a))
     }.buildGen().edges
 ```
 
@@ -4414,23 +4600,24 @@ input of the k-ary join of its literals), `MarkCheck.Request` raises the request
 
 `CopyMark(T, P → Q)` copies one mark. The copied mark is not a condition: it is the premise `P.t (T)` of the pass edge
 (`t` = `$`, or `[any]` for `P.AnyField`; `interpreter.md` §4.1, §4.2), so a fact at `P` with `T` gives `Q.t (T)`. A
-pass rule has no mark-dependent condition (`interpreter.md` §4.2, D24): a pass rule with a mark literal is a rule error,
-and it applies without its mark literals. One check in the caller does this for `CopyAllMarks` and `CopyMark`
+pass rule has no mark-dependent condition (`interpreter.md` §4.2, D24): a pass rule with a mark literal is the one rule
+error that does not reject (`interpreter.md` §1.3): it is logged once and applies without its mark literals. One check
+in the caller does this for `CopyAllMarks` and `CopyMark`
 (`passRules`, §28.5). So `pass` takes no cube, and a pass rule never makes a conjunctive edge.
 
 ```kotlin
-    /** §4.1 pass-rule rows and the AnyField table; §1.4 rule errors. The caller removed the mark literals (§4.2, D24;
-     *  Part II §28.5), so a pass rule gives plain micro edges only. Gives the from base and the to base of the edges that
-     *  it made, or null (not a pass action, or a rule error). */
+    /** §4.1 pass-rule rows and the AnyField table. The caller removed the mark literals (§4.2, D24; Part II §28.5), so a
+     *  pass rule gives plain micro edges only. A `valid` rule only (Part II §27.1: the positions and the class rule of §1.4 were
+     *  checked). Gives the from base and the to base of the edges that it made, or null (not a pass action). */
     fun pass(b: MicroEdgeBuilder, rule: TaintConfigurationItem, action: Action): Pair<AccessPathBase, AccessPathBase>? {
         val (fromPos, toPos) = when (action) {
             is CopyAllMarks -> action.from to action.to
             is CopyMark -> action.from to action.to
             else -> return null
         }
-        val from = pos(rule, fromPos) ?: return null
-        val to = pos(rule, toPos) ?: return null
-        if (from.isClass || to.isClass) { errors.reject(rule, "pass rule from or to a class position (§1.4)"); return null }
+        val from = checkNotNull(pos(rule, fromPos)) { "a rejected rule reaches the forms (§1.3): $rule" }
+        val to = checkNotNull(pos(rule, toPos)) { "a rejected rule reaches the forms (§1.3): $rule" }
+        check(!from.isClass && !to.isClass)                                                // valid: §1.4
         b.edge(keepEdge(from.base))                                                        // b.* -> b.*
         when (action) {
             // P.* -> Q.* ; P.* -> Q.[any] ; P.[any] -> Q.[any]
@@ -4454,10 +4641,11 @@ and it applies without its mark literals. One check in the caller does this for 
         if (cond.isTrue) rule.actionsAfter.flatMap { unconditional(rule, it, types) } else emptyList()
 
     /** §5.2 mapping; `RemoveAllMarks` on S is the kill of §1.4; `RemoveAllMarks(AnyClassStatic)` is the whole-base
-     *  cleaner (Part II §31.3). A rule error of a position gives no step. */
+     *  cleaner (Part II §31.3). A `valid` rule only: a rule error rejects the whole rule (§1.3, Part II §27.1), so every position
+     *  here has a form. The rewriter passes the action positions of a valid user rule (Part II §28.3). */
     fun unconditional(rule: TaintConfigurationItem, a: Action, types: PositionTypeResolver): List<CleanStep> = when (a) {
         is RemoveMark -> {
-            val p = pos(rule, a.position) ?: return emptyList()
+            val p = checkNotNull(pos(rule, a.position)) { "a rejected rule reaches the forms (§1.3): $rule" }
             val t = mark(a.mark)
             val reach = when {                                             // CleanReach: Part I §6
                 p.any -> CleanReach.BELOW                                   // P.AnyField, Exact or ExactAndAnyField
@@ -4469,13 +4657,13 @@ and it applies without its mark literals. One check in the caller does this for 
                 .map { CleanStep.Clean(it) }
         }
         is RemoveAllMarks -> {
-            val p = pos(rule, a.position, kill = true) ?: return emptyList()
+            val p = checkNotNull(pos(rule, a.position, kill = true)) { "a rejected rule reaches the forms (§1.3): $rule" }
             when {
                 // AnyClassStatic: the WHOLE-BASE CLEANER (S, atAndBelow, all), the empty path (interpreter.md §1.4, I12 (e)).
                 // Every fact on S lies inside it, so it drops the fact whole and raises no request.
                 p.base == AccessPathBase.ClassStatic && p.path.isEmpty() ->
                     listOf(CleanStep.Clean(Cleaner(AccessPathBase.ClassStatic, path = null, CleanReach.AT_AND_BELOW, mark = null)))
-                p.base == AccessPathBase.ClassStatic && p.any -> { errors.reject(rule, "RemoveAllMarks(P.AnyField) on S (§1.4)"); emptyList() }
+                p.base == AccessPathBase.ClassStatic && p.any -> error("a rejected rule reaches the forms (§1.4): $rule")   // valid
                 p.base == AccessPathBase.ClassStatic -> listOf(CleanStep.Kill(MicroEdgeBuilder().apply {
                     touch(AccessPathBase.ClassStatic); strongKeep(AccessPathBase.ClassStatic, p.path).forEach { edge(it) }
                 }.build()))
@@ -4491,12 +4679,17 @@ and it applies without its mark literals. One check in the caller does this for 
         else manager.accessors.index(FieldAccessor("java.lang.String", "<string-bytes>", "byte[]"))
 }
 
-/** §1.4: the interpreter rejects a rule element and logs it once per (rule, reason). */
+/** §1.3, D29: a RULE ERROR rejects the WHOLE rule (`JIRRuleForms.valid`) and is logged once per (rule, reason). The one
+ *  rule error that does not reject (D24: a pass rule with a mark literal applies without its mark literals) is logged
+ *  once by `applied`. So "rule error" has one meaning: `reject`. */
 class RuleErrors {
     private val seen = ConcurrentHashMap.newKeySet<Pair<Any, String>>()
     fun reject(rule: Any, reason: String): Boolean {
-        if (seen.add(rule to reason)) logger.warn { "Rule element rejected ($reason): $rule" }
+        if (seen.add(rule to reason)) logger.warn { "Rule rejected ($reason): $rule" }
         return false
+    }
+    fun applied(rule: Any, reason: String) {
+        if (seen.add(rule to reason)) logger.warn { "Rule applied in part ($reason): $rule" }
     }
     private companion object { val logger = KotlinLogging.logger {} }
 }
@@ -4537,7 +4730,7 @@ internal class JIRCallPlanBuilder(
         // §4.2 ARRAY ELEMENTS OF A CALL SINK: REUSE JIRFactTypeChecker.callArgumentMayBeArray (JIRFactTypeChecker.kt:195-199),
         // the static type of the argument value at this call.
         val mayBeArray = { i: Int -> interp.checker.callArgumentMayBeArray(call, AccessPathBase.Argument(i)) }
-        val sinks = interp.rules.sinkRulesForMethod(callee, s, fact = null)
+        val sinks = interp.rules.sinkRulesForMethod(callee, s, fact = null).filter(forms::valid)   // §1.3: a rule error rejects the rule
             .flatMap { forms.sinks(it, rewriter.rewrite(it.condition), mayBeArray) }               // SinkRule.alternative: per rule (§27.3)
         val (callees, unresolved) = resolve()
         val back = bindBack()
@@ -4591,8 +4784,8 @@ ADAPT of `JIRMethodCallFactMapper.mapMethodCallToStartFlowFact` (:210-242) and `
         }
     }.buildStage()
 
-    /** REWRITTEN -> AFTER. RESULT filters at the caller. No `exc`, no local, no zero (I11 (c)). The constant back
-     *  edge `const.* -> const.*` has no edge here: no form makes a fact on a constant base (spec issue SI6). */
+    /** REWRITTEN -> AFTER. RESULT filters at the caller. No `exc`, no local, no zero (I11 (c)). No constant edge: no form
+     *  makes a fact on a constant base (§3.1; SI6). */
     private fun bindBack(): StatementSummary = MicroEdgeBuilder().apply {
         edge(keepEdge(AccessPathBase.ClassStatic))
         if (o != null && o !is AccessPathBase.Constant) {
@@ -4610,10 +4803,11 @@ ADAPT of `JIRMethodCallFactMapper.mapMethodCallToStartFlowFact` (:210-242) and `
 ### 28.3 Sources, cleaners, rewriter
 
 ```kotlin
-    /** §4.1 THE RULE STATEMENT OF A CALL: the zero keep edge and the sources (no other keep edge). */
+    /** §4.1 THE RULE STATEMENT OF A CALL: the zero keep edge and the sources (no other keep edge). Only the `valid` rules
+     *  (§1.3, Part II §27.1), here and in every rule query below. */
     private fun sources(): StatementSummary = MicroEdgeBuilder().apply {
         keepZero()
-        for (rule in interp.rules.sourceRulesForMethod(callee, s, fact = null)) {
+        for (rule in interp.rules.sourceRulesForMethod(callee, s, fact = null).filter(forms::valid)) {
             val cubes = forms.cubes(rule, rewriter.rewrite(rule.condition))
             for (a in rule.actionsAfter) for (cube in cubes) forms.source(this, rule, cube, a)
         }
@@ -4621,7 +4815,7 @@ ADAPT of `JIRMethodCallFactMapper.mapMethodCallToStartFlowFact` (:210-242) and `
 
     /** §4.5 step 5.1, §4.8: the cleaner rules of the named method, in rule order. */
     private fun cleanSteps(): List<CleanStep> = interp.rules.cleanerRulesForMethod(callee, s, fact = null)
-        .flatMap { forms.cleanSteps(it, rewriter.rewrite(it.condition), types) }
+        .filter(forms::valid).flatMap { forms.cleanSteps(it, rewriter.rewrite(it.condition), types) }
 
     /** §5.2 THE SUMMARY REWRITER: RULE-GUIDED FLOW. It acts for the methods that user-defined rules cover. Its purpose:
      *  the rule overrides the real data flow of the callee. At the action positions of a selected rule, the rewriter
@@ -4633,6 +4827,8 @@ ADAPT of `JIRMethodCallFactMapper.mapMethodCallToStartFlowFact` (:210-242) and `
      *  * every user-defined CLEANER rule only if it is UNCONDITIONAL (`isTrue`). A conditional user cleaner does not act
      *    through the rewriter, as it does not act in step 5.1 (D20). Today it acts here when its condition is not
      *    statically false (:77-85; `interpreter.md` D23).
+     *  * NEVER a rule that a rule error rejected (`valid`, §1.3, §5.2): a rejected source rule gives no source edge, so it
+     *    must not clean its marks from the callee results either.
      *  ADAPT of JIRMethodCallRuleBasedSummaryRewriter.userRuleDefinedActions (:54-88): the same rule queries
      *  (`allRelevant = true`), `clean(P, exact, T)` for each relevant mark and action position. A rule with no
      *  `UserDefinedRuleInfo` is not selected (the Spring `__cleanup__` cleaner, §31.3, too). */
@@ -4645,9 +4841,9 @@ ADAPT of `JIRMethodCallFactMapper.mapMethodCallToStartFlowFact` (:210-242) and `
                 steps.filterIsInstance<CleanStep.Clean>().mapTo(out) { it.cleaner }
             }
         }
-        for (rule in interp.rules.sourceRulesForMethod(callee, s, fact = null, allRelevant = true))
+        for (rule in interp.rules.sourceRulesForMethod(callee, s, fact = null, allRelevant = true).filter(forms::valid))
             if (!rewriter.rewrite(rule.condition).isFalse) add(rule, rule.actionsAfter.map { it.position })       // sources: !isFalse
-        for (rule in interp.rules.cleanerRulesForMethod(callee, s, fact = null, allRelevant = true))
+        for (rule in interp.rules.cleanerRulesForMethod(callee, s, fact = null, allRelevant = true).filter(forms::valid))
             if (rewriter.rewrite(rule.condition).isTrue) add(rule, rule.actionsAfter.filterIsInstance<RemoveMark>().map { it.position })   // cleaners: isTrue only
         return out.toList()
     }
@@ -4688,7 +4884,11 @@ class JIRMethodAnalysisContext(
      *  §3.6, I8 (D28): an EMPTY METHOD (no instruction: a native or an abstract method, a method with no body) is not
      *  analysable, so it is never a callee: the resolver drops it. If every resolution result is an empty method, the
      *  call is an UNRESOLVED call (§3.7: the default identity and the pass rules). An abstract method never comes here
-     *  (`isValidConcreteMethod`, JIRCallResolver.kt:183-184); a native method of a project class does. */
+     *  (`isValidConcreteMethod`, JIRCallResolver.kt:183-184); a native method of a project class does. A call with an
+     *  empty and a non-empty result enters only the non-empty callee (gap G12).
+     *  §3.7: AN EMPTY RESOLUTION RESULT (no callee and no failure) is a resolution failure: the unresolved path, as in Go.
+     *  On the JVM only a raw `JIRLambdaExpr` gives it (JIRCallResolver.kt:98-101); the required lambda features remove
+     *  every raw lambda, and `JIRMethodEntries` asserts them (Part II §31.2). */
     private fun resolve(): Pair<List<MethodKey>, Boolean> {
         val ctx = object : JIRCallResolutionContext {
             override val methodEntryPoint = caller
@@ -4697,6 +4897,7 @@ class JIRMethodAnalysisContext(
         val callees = LinkedHashSet<MethodKey>()
         var unresolved = false
         val results = interp.callResolver.resolve(call, s, ctx)
+        if (results.isEmpty()) return emptyList<MethodKey>() to true                                // §3.7: as a failure
         for (res in results) when (res) {
             JIRCallResolver.MethodResolutionResult.MethodResolutionFailed -> unresolved = true
             is JIRCallResolver.MethodResolutionResult.ConcreteMethod ->
@@ -4707,8 +4908,8 @@ class JIRMethodAnalysisContext(
                 else impls.forEach { callees += keys(MethodWithContext(it, EmptyMethodContext)) }
             }
         }
-        if (results.isNotEmpty() && results.all { it is JIRCallResolver.MethodResolutionResult.ConcreteMethod && isEmptyMethod(it.method.method) })
-            unresolved = true                                                                        // every result is empty: §3.7
+        if (results.all { it is JIRCallResolver.MethodResolutionResult.ConcreteMethod && isEmptyMethod(it.method.method) })
+            unresolved = true                                                                        // every result is an empty method: §3.7
         return callees.toList() to unresolved
     }
 
@@ -4738,18 +4939,20 @@ every edge). The two stages start at one point, so the core gives each added fac
 
     /** §3.7 items 2 and 3: the pass rules of the named method and the default getter rules (JIRMethodGetDefault.kt:37-51). */
     private fun passRules(): StatementSummary = MicroEdgeBuilder().apply {
-        val rules = interp.rules.passTroughRulesForMethod(callee, s, fact = null).map { Triple(it, rewriter.rewrite(it.condition), true) } +
-            interp.defaultGetModel?.defaultPropagationRules(callee).orEmpty().map { Triple(it.rule, it.condition, false) }
+        val rules = interp.rules.passTroughRulesForMethod(callee, s, fact = null).filter(forms::valid)   // §1.3: rejected rules go
+            .map { Triple(it, rewriter.rewrite(it.condition), true) } +
+            interp.defaultGetModel?.defaultPropagationRules(callee).orEmpty().filter { forms.valid(it.rule) }
+                .map { Triple(it.rule, it.condition, false) }
         val read = HashSet<AccessPathBase>()
         val written = HashSet<AccessPathBase>()
         for ((rule, cond, ofRuleSet) in rules) {
             if (cond.isFalse) continue                                                  // §4.2: a false static atom removes the rule
             // §4.2, D24: a pass rule has no mark-dependent condition. A mark literal is left after the static atoms when
-            // the rewritten condition is an expression: ONE check for CopyAllMarks and CopyMark, one rule error, and the
-            // rule applies without its mark literals.
-            if (!cond.isTrue) forms.errors.reject(rule, "pass rule with a mark literal (interpreter.md §4.2, D24): applied without it")
+            // the rewritten condition is an expression: ONE check for CopyAllMarks and CopyMark, the one rule error that
+            // does not reject (§1.3): it is logged once, and the rule applies without its mark literals.
+            if (!cond.isTrue) forms.errors.applied(rule, "pass rule with a mark literal (interpreter.md §4.2, D24): applied without it")
             for (a in rule.actionsAfter) {
-                val (from, to) = forms.pass(this, rule, a) ?: continue                // null: not a pass action, or a rule error
+                val (from, to) = forms.pass(this, rule, a) ?: continue                // null: not a pass action
                 read += from; written += to
                 if (ofRuleSet) passReads += from
             }
@@ -4857,9 +5060,9 @@ internal object JIRBoundaryForms {
             val cls = key.context.locationClass(key, base) ?: continue                // copy of :64-84
             b.keep(base); b.operandFilter(base, interp.typeFilters.of(cls.toType()))
         }
-        for (rule in interp.rules.entryPointRulesForMethod(method, s, fact = null))
+        for (rule in interp.rules.entryPointRulesForMethod(method, s, fact = null).filter(interp.ruleForms::valid))   // §1.3
             if (rw.rewrite(rule.condition).isTrue) rule.actionsAfter.forEach { interp.ruleForms.source(b, rule, emptyList(), it) }
-        val sinks = interp.rules.sinkRulesForMethodEntry(method, s, fact = null).flatMap { rule ->
+        val sinks = interp.rules.sinkRulesForMethodEntry(method, s, fact = null).filter(interp.ruleForms::valid).flatMap { rule ->
             val cond = rw.rewrite(rule.condition)
             if (cond.isTrue) interp.ruleForms.sinks(rule, cond) else emptyList()       // unconditional only, as today (:99-101)
         }
@@ -4874,7 +5077,13 @@ internal object JIRBoundaryForms {
      *  JIRMethodSequentFlowFunction.propagateExitFact (:120-226; today it runs at both exits, :120-126). At the exceptional
      *  exit the rule position `Result` reads `exc` (`ruleFormsAtThrow`, Part II §25; today JIRSequentTaintUtil rebases the
      *  fact on `exc` to `Result`, :67, and back, :82). Steps 1 and 2 apply at both exits; steps 3 to 5 only at the normal
-     *  exit. STATEMENT mode: the zero fact and the read bases keep themselves; every other fact passes (step 1). */
+     *  exit. STATEMENT mode: the zero fact and the read bases keep themselves; every other fact passes (step 1).
+     *  A CONJUNCTIVE EXIT SOURCE (an alternative with two or more positive literals) is an ND edge at the exit, as at a call
+     *  (interpreter.md §4.7 step 1, §5.3, D31; ap-history.md F68 (4)): `ruleEdge` makes the `ConjunctiveEdge` in
+     *  `summary.conjunctions`, and the core stores the input of each literal in the conjunction store of the method key
+     *  (per edge, exit statement and literal index; ap.md §8.9). A full combination is an exit item with the union of the
+     *  premise sets, after the field limit; it goes through steps 2 to 5 and becomes a summary at the normal exit, an ND
+     *  summary if its premise set has two or more members (E6). */
     fun exitRules(interp: JIRInterpreter, entry: JIRMethodEntry, key: MethodKey, exit: CommonInst, entryRules: RuleStatement): ExitRules {
         val normal = when (exit) {
             is JMethodExitNormalInst -> true
@@ -4885,14 +5094,14 @@ internal object JIRBoundaryForms {
         val method = key.method as JIRMethod
         val rw = calleeRewriter(interp, entry, method, exit)
         val b = MicroEdgeBuilder().apply { keepZero() }                              // I11 (d): both exits
-        for (rule in interp.rules.exitSourceRulesForMethod(method, exit, fact = null)) {
+        for (rule in interp.rules.exitSourceRulesForMethod(method, exit, fact = null).filter(forms::valid)) {   // §1.3
             for (cube in forms.cubes(rule, rw.rewrite(rule.condition))) {             // the empty cube too: both exits (D26)
-                if (cube.size >= 2) { interp.errors.reject(rule, "exit source with a conjunction (§5.3)"); continue }   // SI4
-                cube.singleOrNull()?.let { b.keep(it.base) }                                       // f stays in the worklist
-                rule.actionsAfter.forEach { forms.source(b, rule, cube, it) }
+                cube.forEach { b.keep(it.base) }                                       // every read base: f stays in the worklist
+                rule.actionsAfter.forEach { forms.source(b, rule, cube, it) }          // two or more literals: a ConjunctiveEdge (D31)
             }
         }
         val sinks = interp.rules.sinkRulesForMethodExit(method, exit, fact = null, initialFacts = null)   // every fact (D21)
+            .filter(forms::valid)
             .flatMap { forms.sinks(it, rw.rewrite(it.condition)) }   // no array alternative (§4.2); ZERO_PATTERN at both exits (D22, D26)
         return ExitRules(RuleStatement(b.build(), genSummary(sinks), sinks),
             globalStateDrop = normal && sinks.isNotEmpty(),                           // §4.7 step 3 (G2): normal exit only
@@ -4909,21 +5118,35 @@ internal object JIRBoundaryForms {
 }
 ```
 
+The touched bases and the keep edges of the two boundary rule statements are the spec rows of `interpreter.md` §4.3
+(THE RULE STATEMENT OF THE METHOD START) and §4.7 (the exit rule statement), `analyzer-core.md` §4.9 (STATEMENT mode):
+the zero base with `ZERO_KEEP`; at the start each base with a context filter, with `b.keep(base)` and its operand filter;
+at an exit the base of every literal of an exit source, with `b.keep(it.base)`; a source target is a gen-only target. The
+code above is that form.
+
 The core uses `ExitRules` as `interpreter.md` §4.7 says:
 
-* step 1: `rules.summary` (STATEMENT) on each fact; the results keep the premise;
+* step 1: `rules.summary` (STATEMENT) on each fact; the results keep the premise; a conjunctive exit source
+  (`summary.conjunctions`, D31) stores the input of each literal in the conjunction store of the method key, and a full
+  combination joins the worklist with the union of the premise sets, after the field limit (`interpreter.md` §5.3);
 * step 2: `checkMark` of each pattern of each `SinkRule` on each item; on `MarkCheck.Holds` (for a conjunctive sink, a
   new full combination of the k-ary join), `sk.endFacts` (GEN) on the zero fact, with the layer of the sink edge; the
   field limit; the results join the worklist;
 * step 2, a conjunctive exit sink: each `MarkCheck.Holds` of a literal is stored as the input of that literal in the
   conjunction store (`ConjunctionStore`, Part I §7.10), also when it completes no combination;
-* step 3 (THE GLOBAL-STATE RULE): if `globalStateDrop`, the EVALUATED STATICS go. For an item on `S`, each part on which
-  a mark literal (`ContainsMark`, `ContainsMarkOnAnyField`) of an exit sink holds (`MarkCheck.Holds.facts`) is dropped
-  from the item before the summary edge (`ops.without`). This holds for a plain and for a conjunctive exit sink. The rest
-  of the item stays. For a conjunctive sink the dropped part stays the stored input of its literal (step 2): the
-  evaluated facts are an assumption for the next evaluation attempts of that sink, so a later item can complete the
-  combination with them. Today drops only the evaluated `S` facts of a sink that was reached
-  (`JIRSequentTaintUtil.kt:76-85`, `dropFinalFacts`, `JIRMethodSequentFlowFunction.kt:186-188, 271-278`; §34 SI17);
+* step 3 (THE GLOBAL-STATE RULE): if `globalStateDrop`, the EVALUATED STATICS go, ONLY for an item on `S` whose premise
+  is the zero fact (`premise.isZero`: a state that the method or its callees set; such an item is a TAINT tree, so the
+  FLOW/concrete split never arises). For such an item, each part on which a mark literal (`ContainsMark`,
+  `ContainsMarkOnAnyField`) of an exit sink holds (`MarkCheck.Holds.facts`) is dropped from the item before the summary
+  edge (`ops.without`). This holds for a plain and for a conjunctive exit sink. The rest of the item stays. For a
+  conjunctive sink the dropped part stays the stored input of its literal (step 2): the evaluated facts are an
+  assumption for the next evaluation attempts of that sink, so a later item can complete the combination with them. A
+  caller-set `S` fact (an item whose premise is not the zero fact) is evaluated in step 2 (it can report, D21; a
+  conjunctive literal stores it) but NOT dropped: it returns to the caller through the callee summary, also the run-1
+  FLOW summary and its record (`interpreter.md` §4.7 step 3, D30; `ap-history.md` F68 (3)). As today: today the exit
+  sinks run only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`), and only a reached sink drops
+  (`JIRSequentTaintUtil.kt:76-85`, `dropFinalFacts`, `JIRMethodSequentFlowFunction.kt:186-188, 271-278`; §34 SI17). The
+  code: `analyzer-impl.md` `endAt` step 3 tests `pr.isZero`, and `NaiveClosure.end` tests `pr == setOf(zero)`;
 * step 4: for a zero premise (`premise.isZero`; the item is a TAINT tree), `ops.without(item, ops.targetTree(p,
   item.layer))` for each `p` of `entryMarkParts(item.base)` (only the root `$` leaf, as today);
 * step 5: the summary edge, only if `isSummaryBase`.
@@ -5053,19 +5276,23 @@ Two levels (DD11):
 * PER METHOD KEY (`JIRMethodForms : MethodForms`): the forms that read the context of the key: the call plans (the
   callee resolution, `JVM/JIRCallResolver.kt:193-246`) and the entry rules (the start filter by the context type, §29).
 
-`analyzer-core.md` §4.8 caches per method (spec issue SI16). The `Interpreter` calls take a `MethodKey`, so
-`MethodForms` has the same key. `MethodContextCache` (`analyzer-impl.md` §3.4) gives these `MethodForms` and makes the
-`DirectedForms` of each run. It has no forms cache of its own.
+`analyzer-core.md` §4.8 gives the same split (per method; per METHOD KEY: the call plans and the entry rules; SI16,
+RESOLVED (F68)). The `Interpreter` calls take a `MethodKey`, so `MethodForms` has the same key. `MethodContextCache`
+(`analyzer-impl.md` §3.4) gives these `MethodForms` and makes the `DirectedForms` of each run. It has no forms cache of
+its own.
 
 THE REQUIRED CLASSPATH FEATURES. Part II reads the JIR that these features make. Production installs all of them
-(`core/src/main/kotlin/org/opentaint/jvm/sast/project/ProjectAnalysisContext.kt:122-136`). The test kit installs the
-first one (`core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/BasicTestUtils.kt:48`);
-a test that needs another one installs it.
+(`core/src/main/kotlin/org/opentaint/jvm/sast/project/ProjectAnalysisContext.kt:122-136`). Part II asserts the first two
+rows: `JIRMethodEntry` asserts the boundary feature per method, and `JIRMethodEntries` asserts the two lambda features
+once (`interpreter.md` §3.7: they must be installed). `BasicTestUtils` installs only the boundary feature
+(`core/opentaint-dataflow-core/opentaint-jvm-dataflow/src/test/kotlin/org/opentaint/dataflow/jvm/BasicTestUtils.kt:48`),
+so `JIRInterpreterTestKit` (§33.2) adds the two lambda features to its classpath; a test that needs
+`JStringConcatTransformer` installs it.
 
 | Feature | Why Part II needs it | Without it |
 |---|---|---|
 | `JMethodBoundaryInstFeature` (`core/opentaint-utils/opentaint-jvm-util/src/main/kotlin/org/opentaint/jvm/graph/JMethodBoundaryInstFeature.kt:10-22`; the last feature) | The method key is the entry statement `JMethodEnterInst`; the exit nodes and the exit rules are the boundary exits `JMethodExitNormalInst` and `JMethodExitExceptionalInst` (§29, §30); `JIRExitWiredGraph` wires to the exceptional exit (I11 (e)) | the method key, the exit nodes and the exit rules have no statement, and no wiring is made. `JIRMethodEntry` asserts the feature (below), as today (`JIRAnalysisManager.kt:118-120`), and `exitRules` fails on an exit that is not a boundary exit (§29) |
-| `LambdaAnonymousClassFeature` + `LambdaExpressionToAnonymousClassTransformerFeature` (`JVM/LambdaAnonymousClassFeature.kt:60`, `JVM/LambdaExpressionToAnonymousClassTransformerFeature.kt:28`) | A lambda value is an allocation of a `JIRLambdaClass`, so the prescan finds the lambda methods of a call (§31.1) and a lambda call has its callees (§3.9, D19) | a raw `JIRLambdaExpr` stays: the resolver gives no result for it (`JIRCallResolver.kt:98-101`), so the call has no callee stage, and the prescan knows no lambda |
+| `LambdaAnonymousClassFeature` + `LambdaExpressionToAnonymousClassTransformerFeature` (`JVM/LambdaAnonymousClassFeature.kt:60`, `JVM/LambdaExpressionToAnonymousClassTransformerFeature.kt:28`) | A lambda value is an allocation of a `JIRLambdaClass`, so the prescan finds the lambda methods of a call (§31.1) and a lambda call has its callees (§3.9, D19) | a raw `JIRLambdaExpr` stays: the resolver gives no result for it (`JIRCallResolver.kt:98-101`), so the call has no callee stage and takes the unresolved path (§28.4; `interpreter.md` §3.7: an empty result is a failure), and the prescan knows no lambda. `JIRMethodEntries` asserts both features (below), so this does not occur |
 | `JStringConcatTransformer` (`core/opentaint-utils/opentaint-jvm-util/src/main/kotlin/org/opentaint/jvm/transformer/JStringConcatTransformer.kt:32`) | `makeConcatWithConstants` becomes calls of `String.concat`, so each operand flows by the rules of `String.concat` (§3.7) | the `invokedynamic` call is an unresolved call with the coarse pass rule of `StringConcatRuleProvider` (`core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/StringConcatRuleProvider.kt:20-30`) |
 
 ```kotlin
@@ -5079,6 +5306,13 @@ class JIRMethodEntries(
     val cancellation: Cancellation,
     val prescanLambdas: PrescanLambdas,
 ) {
+    init {                                                       // THE REQUIRED CLASSPATH FEATURES (above); interpreter.md §3.7
+        val installed = graph.cp.features.orEmpty()
+        check(installed.any { it is LambdaAnonymousClassFeature } &&
+            installed.any { it is LambdaExpressionToAnonymousClassTransformerFeature }) {
+            "the lambda features are not installed: a raw lambda would be an unresolved call (Part II §31.2)"
+        }
+    }
     private val byMethod = ConcurrentHashMap<JIRMethod, JIRMethodEntry>()
     private val byKey = ConcurrentHashMap<MethodKey, JIRMethodForms>()
 
@@ -5129,8 +5363,8 @@ class JIRMethodEntry internal constructor(val method: JIRMethod, internal val sh
     // fun exitNodes(key: MethodKey): List<ExitNode>: the code is in Part II §30
 }
 
-/** analyzer-core.md §4.8 "per (method, direction)", keyed by the METHOD KEY (DD11, SI16): the forms that read the context,
- *  and the per-method forms of `e`. */
+/** analyzer-core.md §4.8 "per METHOD KEY" (DD11, SI16): the forms that read the context, and the per-method forms of
+ *  `e`. */
 class JIRMethodForms internal constructor(
     private val interp: JIRInterpreter,
     private val e: JIRMethodEntry,
@@ -5177,7 +5411,11 @@ fact-free. The effect stays the same: the static content outside the registry go
 
 1. THE GENERATOR saves and restores the registry around each `__cleanup__()` call. The registry class has one static
    field per component (`SpringWebProject.kt:160-200`); the components are registered before the dispatcher is generated
-   (`createSpringProjectContext`, :97-127).
+   (`createSpringProjectContext`, :97-127). The generator is shared with the old core (the prescan and the old full scan,
+   `analyzer-impl.md` §8.1, run the new dispatcher too). Their results do not change: the fact-based cleaner of the old
+   core keeps the registry facts across `__cleanup__` (`SpringRuleProvider.kt:110-125`), and the restore is a strong
+   write of the same facts back. The new statements are generated locations, so no trace shows them
+   (`core/src/main/kotlin/org/opentaint/jvm/sast/sarif/TraceMessageBuilder.kt:1130-1137`).
 
 ```kotlin
 // core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringWebProject.kt, ndMethodDispatch: replaces the cleanup
@@ -5269,19 +5507,21 @@ registry facts back: `%reg_f.* -> S.<__spring_registry__>.f.*`. A mark on the ba
 | D13 | `AccessTree.concat` filter | the caller delta filtered at `*` | none (Part I) |
 | D14 | `JIRMethodSummaryEdgeProcessor.process` (:15-25) | compatibility filter at the exit | removed |
 | D16 | `MethodAnalyzer` depth gate | `INITIAL_ALLOWED_FACT_DEPTH` | none (`analyzer-impl.md` §2.1) |
-| D17 | rules on `S` | applied as written | the mapping of `interpreter.md` §1.4 and the rule errors (`JIRRuleForms.source`, `pass`, `unconditional`, `endFacts`) |
+| D17 | rules on `S` | applied as written | the mapping of `interpreter.md` §1.4 (`JIRRuleForms.source`, `pass`, `unconditional`, `endFacts`) and its rule errors, each of which rejects the whole rule (`JIRRuleForms.valid`, §27.1) |
 | D18 | `TaintPassActionEvaluator.copyAllFacts` (`DF/taint/Propagator.kt:55-87`) | `readPosition` + `mkAccessPath` copy the subtree below the any-field node | `P.[any] -> Q.[any]` (§27.4); results in the demand layer (W6) |
 | D19 | `JIRMethodCallResolver.resolvedJirMethodCalls` (:184-209) | a `Lambda` result adds `ResolutionFailure` beside the lambda methods | the prescan lambda methods only; a resolution failure only with no known lambda (`JIRCallPlanBuilder.resolve`, §28.4) |
 | D20 | `TaintConfigUtils.applyCleaner` (`JVM/TaintConfigUtils.kt:62-92`) | the condition is evaluated on the bound fact (`TaintFactAwareConditionEvaluator`) | only a cleaner with no mark literal left acts (`JIRRuleForms.cleanSteps`, §27.5) |
 | D21 | `JIRMethodExitRuleProvider.sinkRulesForMethodExit` (`core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/JIRMethodExitRuleProvider.kt:18-19`) | exit sinks only on zero-premise edges | the rules are read with `initialFacts = null`: every fact (§29) |
 | D22 | `JIRMethodSequentFlowFunction.applyUnconditionalSinks` (:191-200) | a stub | `ZERO_PATTERN` (§27.3): it fires on the zero fact at each exit |
 | D23 | `JIRMethodCallSummaryHandler.prepareFactToFactSummary` (:71-79), `handleZeroToZero` (:29-38); `JIRMethodCallFlowFunction.unresolvedCallDefaultFactPropagation` (:330-339); `JIRMethodCallRuleBasedSummaryRewriter.userRuleDefinedActions` (:67-85) | the rewriter on fact-to-fact and ND summaries; the default identity in caller coordinates; a user cleaner rule is selected when its condition is not statically false (:80-81) | the stage `Rewrite(RETURNED -> REWRITTEN)` on every result at `RETURNED` (§28.1, §28.3); a user source rule with `!isFalse`, a user cleaner rule only with `isTrue` (`rewriterCleaners`, §28.3) |
-| D24 | `TaintConfigUtils.applyPassThrough` (`JVM/TaintConfigUtils.kt:48-60`) | the condition of a pass rule (`CopyAllMarks`, `CopyMark`) is evaluated on the fact | a pass rule with a mark literal is a rule error; it applies without its mark literals (one check, `passRules`, §28.5) and makes no conjunctive edge (`pass`, §27.4) |
+| D24 | `TaintConfigUtils.applyPassThrough` (`JVM/TaintConfigUtils.kt:48-60`) | the condition of a pass rule (`CopyAllMarks`, `CopyMark`) is evaluated on the fact | a pass rule with a mark literal is the one rule error that does not reject (`interpreter.md` §1.3): it is logged once (`RuleErrors.applied`) and applies without its mark literals (one check, `passRules`, §28.5); it makes no conjunctive edge (`pass`, §27.4) |
 | D25 | `JIRAnalysisManager.isReachable` (`JVM/analysis/JIRAnalysisManager.kt:293-301`), called by the method analyzer (`DF/ap/ifds/MethodAnalyzer.kt:296`); `JIRLocalVariableReachability` (`JVM/JIRLocalVariableReachability.kt:27-41`) | a fact on a local that is dead at the statement is dropped; in code that reaches no exit every local is dead (the liveness goes backward from `exitPoints()` of the unwired graph) | no liveness member in `Interpreter`, `DirectedForms` or `JIRMethodEntry` (§23.1, §23.7, §31.2): the statement step keeps a fact on a dead local. The alias analysis keeps its own `JIRLocalVariableReachability` input, as today (§31.2) |
 | D26 | `JIRMethodSequentFlowFunction.applyUnconditionalSources` (:228-233), `applyUnconditionalSinks` (:191-200) | the unconditional exit sources fire only at `JMethodExitNormalInst`; the unconditional exit sink is a stub | `exitRules` builds every cube, the empty cube too, and every sink (`ZERO_PATTERN`) at both exits (§29) |
 | D27 | `SpringRuleProvider.cleanerRulesForMethod` (`core/src/main/kotlin/org/opentaint/jvm/sast/project/spring/SpringRuleProvider.kt:104-143`); `ndMethodDispatch` (`SpringWebProject.kt:308-313`) | the `__cleanup__` cleaner is built from the fact (`fact ?: return emptyList()`) | the dispatcher saves and restores the registry around `__cleanup__()`; with no fact the provider gives `RemoveAllMarks(AnyClassStatic)`, the whole-base cleaner `(S, atAndBelow, all)` (§31.3, §27.1, §27.5) |
-| D28 | `EmptyMethodAnalyzer` (`DF/ap/ifds/MethodAnalyzerStorage.kt:19-31`) | a resolved empty callee, whose analyzer publishes the identity summary; for JIR an empty method has no entry statement (`JMethodBoundaryInstFeature.kt:13`), so it gets no method key and the call drops the bound facts | `resolve()` drops an empty method; every result empty: the unresolved path (§28.4). The empty-method branches go: `JIRMethodEntry` asserts that its method has instructions (§31.2) |
-| D29 | `readPositionWithAnyAccessorSplit` (`DF/taint/FactReaderUtils.kt:54-138`) | a rule position with an inner or a repeated `AnyField` is read | `JIRRuleForms.pos` checks the two invariants and rejects the rule element (`RuleErrors`, logged once); it never throws (§27.1) |
+| D28 | `EmptyMethodAnalyzer` (`DF/ap/ifds/MethodAnalyzerStorage.kt:19-31`) | JVM: an empty method has no instruction, so no entry statement (`JMethodBoundaryInstFeature.kt:13`) and no method key; the call enters nothing for it, and its bound facts are lost. Go: a resolved empty callee, whose analyzer publishes the identity summary (as `interpreter.md` D28) | `resolve()` drops an empty method; every result empty: the unresolved path (§28.4); a mixed call enters only the non-empty callee (`interpreter.md` G12). The empty-method branches go: `JIRMethodEntry` asserts that its method has instructions (§31.2) |
+| D29 | `readPositionWithAnyAccessorSplit` (`DF/taint/FactReaderUtils.kt:54-138`) | a rule position with an inner or a repeated `AnyField` is read | `JIRRuleForms.pos` checks the two invariants; a rule error REJECTS THE WHOLE RULE (`JIRRuleForms.valid`: every action and every mark literal, negated too, before the static evaluation; logged once by `RuleErrors`): no form at any place, and the rewriter does not select it. It never throws (§27.1, §28.3) |
+| D30 | `JIRMethodExitRuleProvider.sinkRulesForMethodExit` (`core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/JIRMethodExitRuleProvider.kt:18-19`); `JIRSequentTaintUtil.handleReachedSink` (`JVM/taint/JIRSequentTaintUtil.kt:76-85`), `dropFinalFacts` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:186-188, 271-278`) | the exit sinks run only on zero-premise edges; the evaluated `S` facts of a REACHED exit sink are dropped | step 3 of §29: for a zero-premise item the evaluated `S` part goes also when a conjunctive exit sink is not complete, and stays the stored input of its literal; a caller-set `S` item is evaluated (D21) but not dropped (`ExitRules.globalStateDrop`; `analyzer-impl.md` `endAt` step 3, `pr.isZero`) |
+| D31 | `JIRMethodSequentFlowFunction.applySourceRules` at the exit (`JVM/analysis/JIRMethodSequentFlowFunction.kt:211-219`), `TaintUtil.applySourceRules` (`DF/taint/TaintUtil.kt:97-104, 203-207`: the `createFinalFact` branch) | an exit source with two or more positive literals fires fact-locally from stored assumptions with the precondition `emptySet()`, under the premise of the fact that completes the combination | an ND edge at the exit: `exitRules` keeps every read base and `ruleEdge` makes the `ConjunctiveEdge` (§29); each literal stores its input in the conjunction store of the method key; a full combination is an exit item with the union of the premise sets, and at the normal exit a summary, an ND summary (E6) if its premise set has two or more members. Not a rule error (§34 SI4) |
 
 D1 and D2 as code (the old builder stays for the prescan):
 
@@ -5314,8 +5554,9 @@ if (edgeFactBase == null || analysisManager.isReachable(apManager, analysisConte
 
 // Today, a JIR native method of a project class is a ConcreteMethod callee with no entry statement: no key, no stage
 // New, JIRCallPlanBuilder.resolve (§28.4)
+if (results.isEmpty()) return emptyList<MethodKey>() to true          // §3.7: an empty result is a failure
 is ConcreteMethod -> if (!isEmptyMethod(res.method.method)) callees += keys(res.method)
-if (results.isNotEmpty() && results.all { it is ConcreteMethod && isEmptyMethod(it.method.method) }) unresolved = true
+if (results.all { it is ConcreteMethod && isEmptyMethod(it.method.method) }) unresolved = true
 ```
 
 KEPT AS TODAY IN CODE (no row above). The gaps G9 and G10 of `interpreter.md` stay as today: a catch handler reads the
@@ -5345,26 +5586,35 @@ In the column "Pins (`interpreter.md`)", a bare § number names a section of `in
 | 2 | `RuleStatementReversalTest` (same) | `Reference.kt` | §4.9 RULE ROLES; end-fact targets pass; `ExitRules.reversed` drops G2; clean steps unchanged | `Reverse.revInstr` |
 | 3 | `MicroEdgeBuilderTest` (same) | `Reference.kt`, `ExclusionSet.of` | the write rule: `C.s = x` gives two keep edges with one exclusion each; a weak write keeps the base; A2/A3 alias edges; STAGE and GEN modes; `TypeFilter.and` on one base | `Cases.lean` `storeF` |
 | 4 | `CallPlanReversalTest` (same) | `Reference.kt` (`revEdge`, `concat`), `ApManager` | the step table of Part II §23.6; guards and filters go; `PASS_OVER` for alias bases; entry/exit swap; a non-forward plan fails; the zero fact passes over and enters (`FormsReference.run`); forward, `FormsReference.run` with `PlanHooks(guards = true)` on a hand-built plan: `END_FACTS` acts only on the zero fact and gives the layer of the sink that fired at `BOUND`, `ALIASES` skips an `IDENTITY` origin, each result gets `StageKind.originOf`, a run from `RETURNED` starts at that point | `Reverse.Call.rev`, `bindRev_of_star` |
-| 4a | `FormApplierTest` (same) | `Reference.kt`, `ApManager` | the three modes of `FormApplier` over `ReferenceAlgebra` and over a recording algebra: STATEMENT passes an untouched base and kills a touched one; the operand filter acts on the input before every edge, the result filter on each result; STAGE passes nothing by itself and gives the micro edge of each result; GEN adds results, applies no filter and is never a source-seed place; at a source-seed place the seed filter acts before a source edge and the hit is recorded only after a result; the static exception only with `Place.statementEdge` in run 1; `ReferenceAlgebra.passes` against `ApOps.filter` (Part I §5.5) | `Reverse.Stmt.rev` (the modes), `Statics.genFireB` (the static exception), `Core.filt_keeps` |
+| 4a | `FormApplierTest` (same) | `Reference.kt`, `ApManager` | the three modes of `FormApplier` over `ReferenceAlgebra` and over a recording algebra: STATEMENT passes an untouched base and kills a touched one; the operand filter acts on the input before every edge, the result filter on each result; STAGE passes nothing by itself and gives the micro edge of each result; GEN adds results, applies no filter and is never a source-seed place; at a source-seed place the seed filter acts before a source edge and the hit is recorded only when a result exists (once per micro edge, before the result goes on); the static exception only with `Place.statementEdge` in run 1; `ReferenceAlgebra.passes` against `ApOps.filter` (Part I §5.5) | `Reverse.Stmt.rev` (the modes), `Statics.genFireB` (the static exception), `Core.filt_keeps` |
 | 5 | `JIRStatementFormsTest` (opentaint-jvm-dataflow, `jvm.bidi.interp`; replaces the edge asserts of `JIRStatementSummaryTest`) | `ApManager` | one test per row of §2.2; §2.4 pinned rows; operand vs result filters; read source at `x = C.s` with `ZERO_KEEP`; a read source with a non-`Result` target is a rule error | `Cases.lean` `loadF`, `loadF'`, `storeF` |
-| 6 | `JIRRuleFormsTest` (same) | `ApManager` | §4.1 rows, AnyField table; §4.2 negated literal, `Or`, cubes; §5.3 conjunctions (ND sources only); `pass`: a `CopyMark(T, P → Q)` gives the one edge `P.t (T) -> Q.t (T)`; §5.2 one test per mapping row with `<string-bytes>`; D20: a cleaner with a mark literal left gives no step and no request; §4.2 array elements: the alternatives of a call sink, with `SinkRule.alternative` = 0, 1, ... in the cube and array-choice order, the same for two builds; §1.3 the two invariants of a rule position: `[arg0, ".*", ".f"]` and `.*.*` in a source, a sink, a pass rule and a cleaner are each one rule error, logged once, and `pos` does not throw (D29); `AnyClassStatic` in `RemoveAllMarks` gives `CleanStep.Clean(Cleaner(S, [], AT_AND_BELOW, all))`, in any other rule element a rule error; §1.4 rows and rule errors (§33.5 items 14, 16) | `Statics.SWF`, `Statics.CexAny`, `NDExact.LitConc` |
-| 7 | `JIRCallPlanTest` (same) | `ApManager` | §3.1 bindings with filters; §3.3 S and zero; §3.5 constructor (no alias: SI15); §3.7 two `UNRESOLVED` stages, the identity has no filter, pass rules, default getter; D24: a pass rule (`CopyAllMarks` or `CopyMark`) with a mark literal is one rule error and gives its plain pass edge without the literal (a `CopyMark(T, P → Q)` with a literal on another position gives `P.$ (T) -> Q.$ (T)`), and the `UNRESOLVED` stages have no conjunctive edge; `UnresolvedCallObserver` calls the tracker with `ruleApplied`; §3.8 aliases + `MemoryEffect`; §3.9 prescan lambdas (D19: no `UNRESOLVED` stage when the prescan knows a lambda); the forward stage table (§33.5 items 10, 14, 17); `passReads` holds the from-bases of the rule-set pass rules and not the `this` of a default getter rule (the tracker gets `ruleApplied = false` for a library getter with no model); §3.6, D28: a call to a native method of a project class has no `Callees` stage and has the `UNRESOLVED` stages, and a call with an empty and a non-empty callee has only the non-empty one; §28.1 a non-immediate call lhs fails (`error`), as today; D27: the Spring `__cleanup__()` call (`SpringRuleProvider` over the rule set, `fact = null`) has the one step `Cleaner(S, [], AT_AND_BELOW, all)`, and the dispatcher restores the registry fields after it | `Reverse.BindTargetsStar`, `Backward.NoZeroBack` |
-| 8 | `JIRBoundaryFormsTest` (same) | `ApManager` | §4.3 context filter; §4.7 `globalStateDrop`, `entryMarks`, `entryMarkParts` gives only `(b, [], $, T)`; §4.7 at `JMethodExitExceptionalInst`: the exit sources and sinks with `Result` read as `exc`, `globalStateDrop = false`, no `entryMarks`; D22, D26: an unconditional exit sink has `ZERO_PATTERN` and an unconditional exit source has its zero edge at both exits; §4.7 step 3: `globalStateDrop` is true at a normal exit with a plain or a conjunctive exit sink; exit nodes (the two boundary exits); a method with no boundary instructions fails the `JIRMethodEntry` assert; exit wiring of a loop that never returns | `Backward.ExitReach`, `Backward.ZeroKept` |
-| 9 | `JIRFormsContractTest` (same) | `ApManager` | every method of the samples jar: I6, I7 (both `$` clauses), I11 (a)–(d), (f), I12 (a), (b), (c), (e) over `allForwardForms` (§33.4; I11 (e) is test 8, I12 (d) a check of the run config) | `Backward.StmtsMarkRev`, `Reverse.BindTargetsStar`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Statics.SWF`, `Invariant.no_univ_star` |
+| 6 | `JIRRuleFormsTest` (same) | `ApManager` | §4.1 rows, AnyField table; §4.2 negated literal, `Or`, cubes; §5.3 conjunctions (ND sources only); `pass`: a `CopyMark(T, P → Q)` gives the one edge `P.t (T) -> Q.t (T)`; §5.2 one test per mapping row with `<string-bytes>`; D20: a cleaner with a mark literal left gives no step and no request; §4.2 array elements: the alternatives of a call sink, with `SinkRule.alternative` = 0, 1, ... in the cube and array-choice order, the same for two builds; §1.3 the two invariants of a rule position: `[arg0, ".*", ".f"]` and `.*.*` in a source, a sink, a pass rule and a cleaner are each one rule error, logged once, and `pos` does not throw (D29); A RULE ERROR REJECTS THE WHOLE RULE (`valid`, Part II §27.1): the sink `Or(ContainsMark(Argument(0).AnyField.f, T), ContainsMark(Argument(1), T))` gives no `SinkRule` (not a sink on `arg1`), the cleaner `RemoveMark(T, Argument(0)), RemoveAllMarks(ClassStatic(C).AnyField)` gives no step (no clean of `arg0`), a bad position in a NEGATED literal rejects the rule too, and the other rules of the method get their forms; `AnyClassStatic` in `RemoveAllMarks` gives `CleanStep.Clean(Cleaner(S, [], AT_AND_BELOW, all))`, in any other rule element a rule error, also in a condition literal (`ContainsMark(AnyClassStatic, T)`, `ContainsMark(PositionWithAccess(AnyClassStatic, f), T)`); a pass rule with a mark literal is not rejected (`RuleErrors.applied`, D24); §1.4 rows and rule errors (`interpreter.md` §7.2 items 11, 19, 20; Part II §33.5 items 14, 16) | `Statics.SWF`, `Statics.CexAny`, `NDExact.LitConc` |
+| 7 | `JIRCallPlanTest` (same) | `ApManager` | §3.1 bindings with filters; §3.3 S and zero; §3.5 constructor (no alias: SI15); §3.7 two `UNRESOLVED` stages, the identity has no filter, pass rules, default getter; D24: a pass rule (`CopyAllMarks` or `CopyMark`) with a mark literal is logged once (`RuleErrors.applied`, not rejected) and gives its plain pass edge without the literal (a `CopyMark(T, P → Q)` with a literal on another position gives `P.$ (T) -> Q.$ (T)`), and the `UNRESOLVED` stages have no conjunctive edge; `UnresolvedCallObserver` calls the tracker with `ruleApplied`; §3.8 aliases + `MemoryEffect`; §3.9 prescan lambdas (D19: no `UNRESOLVED` stage when the prescan knows a lambda); the forward stage table (Part II §33.5 items 10, 14, 17); `passReads` holds the from-bases of the rule-set pass rules and not the `this` of a default getter rule (the tracker gets `ruleApplied = false` for a library getter with no model); §3.6, D28: a call to a native method of a project class has no `Callees` stage and has the `UNRESOLVED` stages, and a call with an empty and a non-empty callee has only the non-empty one (G12); §3.7: an empty resolution result (a stub `JIRCallResolver` that gives `emptyList()`) gives the `UNRESOLVED` stages and no `Callees` stage; Part II §28.1 a non-immediate call lhs fails (`error`), as today; §5.2, D23 THE REWRITER SELECTION (`rewriterCleaners`; `interpreter.md` §7.2 item 26): at a call with a user source `if IsConstant(...) && ContainsMark(...)` (selected), a user cleaner `if ContainsMark(...)` (not selected) and an unconditional user cleaner (selected), the `Rewrite` stage has exactly the cleaners of the two selected rules; a rule with no `UserDefinedRuleInfo` is not selected; a user source `AssignMark(T, Result) if ContainsMark(Argument(0).AnyField.f, U)` (a rule error) gives no source edge AND no `Rewrite` cleaner (`valid`, §1.3). The Spring checks of D27 are test 13 | `Reverse.BindTargetsStar`, `Backward.NoZeroBack` |
+| 8 | `JIRBoundaryFormsTest` (same) | `ApManager` | §4.3 context filter; §4.7 `globalStateDrop`, `entryMarks`, `entryMarkParts` gives only `(b, [], $, T)`; §4.7 at `JMethodExitExceptionalInst`: the exit sources and sinks with `Result` read as `exc`, `globalStateDrop = false`, no `entryMarks`; D22, D26: an unconditional exit sink has `ZERO_PATTERN` and an unconditional exit source has its zero edge at both exits; §4.7 step 3: `globalStateDrop` is true at a normal exit with a plain or a conjunctive exit sink (the zero-premise scope of D30 is a rule of the core: `ExitRulesTest`, `analyzer-impl.md` §9.1); §4.7 step 1, D31 (`interpreter.md` §7.2 item 28): the exit source `AssignMark(S2, ClassStatic(C)) if ContainsMark(ClassStatic(C), S1) && ContainsMark(Result, T)` gives one `ConjunctiveEdge` in `rules.summary.conjunctions` with the target `S.<C>.$ (S2)`, the keep edges `S.* → S.*` and `ret.* → ret.*`, and no rule error; THE BOUNDARY RULE STATEMENTS (`interpreter.md` §4.3, §4.7): the entry rules touch the zero base and each base with a context filter (its identity edge and filter), the exit rules the zero base and each literal base (its identity edge); a source target is not touched; `FormsReference.apply` in STATEMENT mode on the exit fact `arg(0).$ (T)` under `AssignMark(U, Result) if ContainsMark(Argument(0), T)` gives `arg(0).$ (T)` and `ret.$ (U)`; exit nodes (the two boundary exits); a method with no boundary instructions fails the `JIRMethodEntry` assert, and a classpath without the two lambda features fails the `JIRMethodEntries` assert (Part II §31.2); exit wiring of a loop that never returns | `Backward.ExitReach`, `Backward.ZeroKept` |
+| 9 | `JIRFormsContractTest` (same) | `ApManager` | every method of the samples jar: I6, I7 (both `$` clauses), I11 (a)–(d), (f), I12 (a), (b), (c), (e) over `allForwardForms` (Part II §33.4; I11 (e) is test 8, I12 (d) a check of the run config) | `Backward.StmtsMarkRev`, `Reverse.BindTargetsStar`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Statics.SWF`, `Invariant.no_univ_star` |
 | 10 | `JIRTypeFiltersTest` (same) | `ApOps.filter` | §5.1 rows; `*`/`[any]` tails kept; the mark policy on `int` and `Integer`, a `%%primitive%%` mark kept; below `[e]`: on `int[]` and `Integer[]` the policy drops `a.[e].$ (T)` and keeps `a.[e].$ (T%%primitive%%)`, on `int[][]` level 2, on `Object[]` and `String[]` no policy; a leaf off the `[e]` chain stays; prefix-closed | `Exact.FiltValid`, `Core.filt_keeps` |
-| 11 | `JIRStatementEffectTest` (same) | `ApOps` | the effect table of §2.4 and the table of `ap.md` §4.2; for each statement form and each mode, the core result (`Facts`) `agrees` with `FormsReference` (§23.8) on FLOW, TAINT and `Reach` inputs, with the premise of each input (so the static exception agrees: `x = C.s` on `S.*` with the premise `S.*` in run 1 gives the position request `[<C>, s]` and no fact on `x` in both); a synthetic `a.f = b.g` (as the synthetic statement of §33.2) fails the `to !is MemoryAccess` check (§26.1), as today; `ops.without` with `entryMarkParts` keeps `b.f.$ (T)` and `b.[any] (T)`; the zero binding: the `BIND_IN` stage of a `JIRCallPlanBuilder` plan, applied by `ops.applyEdge` (STAGE mode), gives `Reach.NORMAL` from `Reach.NORMAL` and `Reach.DEMAND` from `Reach.DEMAND`, and `FormsReference.run` agrees per path (the zero fact reaches `BOUND` and the entry of the callee) | `Cases.lean` examples at lines 61–89 |
+| 11 | `JIRStatementEffectTest` (same) | `ApOps` | the effect table of §2.4 and the table of `ap.md` §4.2; for each statement form and each mode, the core result (`Facts`) `agrees` with `FormsReference` (Part II §23.8) on FLOW, TAINT and `Reach` inputs, with the premise of each input (so the static exception agrees: `x = C.s` on `S.*` with the premise `S.*` in run 1 gives the position request `[<C>, s]` and no fact on `x` in both); a synthetic `a.f = b.g` (as the synthetic statement of Part II §33.2) fails the `to !is MemoryAccess` check (Part II §26.1), as today; `ops.without` with `entryMarkParts` keeps `b.f.$ (T)` and `b.[any] (T)`; the zero binding: the `BIND_IN` stage of a `JIRCallPlanBuilder` plan, applied by `ops.applyEdge` (STAGE mode), gives `Reach.NORMAL` from `Reach.NORMAL` and `Reach.DEMAND` from `Reach.DEMAND`, and `FormsReference.run` agrees per path (the zero fact reaches `BOUND` and the entry of the callee) | `Cases.lean` examples at lines 61–89 |
 | 12 | the analysis tests of `interpreter.md` §7.1 | Part I and `analyzer-impl.md` | end to end, through phase 3 (`analyzer-impl.md` §8.1) | — |
+| 13 | `SpringDispatcherFormsTest` (module `core`, `core/src/test/kotlin/org/opentaint/jvm/sast/project/`, beside the Spring tests: `opentaint-jvm-dataflow` cannot see `SpringWebProject` and `SpringRuleProvider`) | `ApManager`, `JIRInterpreter` over a Spring project context | D27, Part II §31.3 (`interpreter.md` §7.2 item 20): the generated `__dispatch__` has the saves of the registry fields, the call `__cleanup__()` and the restores, and `loopEnd` is the first save; the plan of `__cleanup__()` (`SpringRuleProvider` over the rule set, `fact = null`) has the one step `Cleaner(S, [], AT_AND_BELOW, all)`; END TO END (through phase 3) with two dispatched controllers: a static field that the first one taints is clean in the second one, and a registry field keeps its fact across `__cleanup__()` | `Statics.SWF` (part `clean`) |
 
 Order: by the "Needs" column. 1 → 2 → 3 → 4 → 4a (`Reference.kt` and `ApManager` only, no JIR) → 5 → 6 → 7 → 8 → 9
-(JIR and `ApManager`) → 10 → 11 (Part I `ApOps`) → 12.
+(JIR and `ApManager`) → 10 → 11 (Part I `ApOps`) → 12 → 13.
+
+`FormsFixtures` (test sources of `opentaint-dataflow`, `bidi.interp`): tests 1 to 4a have no JIR, because
+`opentaint-dataflow/build.gradle.kts` has only `opentaint_ir_api_common`. `testCall()` gives a fake `CommonInst` call
+statement with a location and a method, and `testMethodKey(name)` the key `MethodEntryPoint(EmptyMethodContext, entry)`
+of a fake `CommonMethod` with a fake entry statement, as the fake call statements of `ApFixtures` (`analyzer-impl.md`
+§9.1). The JIR test kit (`JIRInterpreterTestKit`, §33.2) is a fixture of `opentaint-jvm-dataflow` and serves tests 5
+to 11 only.
 
 ### 33.2 Example: the pinned rows of `interpreter.md` §2.4
 
 `testInterpreter`, `testKey` and `TestRules` are helpers of `JIRInterpreterTestKit` (test sources): a `JIRMethodEntries`
 over `cp` with `JApplicationSingleExitGraph`, a `TaintRulesProvider` made from lists, and the key
 `MethodEntryPoint(EmptyMethodContext, entry statement)` of the method of a statement. `cp` is the classpath of
-`BasicTestUtils` (`UnknownClasses`, `JMethodBoundaryInstFeature`: the boundary feature of §31.2); test 17 also installs
-the two lambda features.
+`BasicTestUtils` (`UnknownClasses`, `JMethodBoundaryInstFeature`: the boundary feature of §31.2) with the two lambda
+features added (`JIRMethodEntries` asserts them, §31.2; the lambda tests of `interpreter.md` §7.2 item 17, §33.5, read
+them).
 
 ```kotlin
 class JIRStatementFormsTest : BasicTestUtils() {
@@ -5457,7 +5707,7 @@ class CallPlanReversalTest {
         assertEquals(setOf(S, a, r, b), rev.touched)                                     // step 1: + the alias base
         assertEquals(setOf(
             Triple(AFTER, REWRITTEN, BIND_BACK), Triple(AFTER, REWRITTEN, ALIASES),       // step 2
-            Triple(AFTER, BEFORE, PASS_OVER),                                             // step 2, A5
+            Triple(AFTER, BEFORE, PASS_OVER),                                             // step 1, A5
             Triple(REWRITTEN, BOUND, SOURCES),                                            // step 3
             Triple(REWRITTEN, RETURNED, null),                                            // step 4 (Rewrite)
             Triple(RETURNED, ADDED, null),                                                // step 5.1 (Callees)
@@ -5477,7 +5727,7 @@ class CallPlanReversalTest {
         fun item(c: Conclusion) = listOf(PlanItem(emptySet(), c, origin = null))
         val req = Conclusion(PathFact(r, emptyList(), Tail.EXACT, MarkSlot.Concrete(T)), ExclusionSet.Empty, demand = false)
         val ref = FormsReference(ApOps(manager))
-        val at = Place(testCall(), statementEdge = false, sources = false)            // a JIR call statement of the test kit
+        val at = Place(testCall(), statementEdge = false, sources = false)            // a fake call statement (FormsFixtures)
         val trace = ref.run(rev, item(req), at, hooks)
         assertTrue(trace.any { (p, i) -> p == BOUND && i.c.fact.base == Z })             // step 3: the zero demand
         assertTrue(trace.any { (p, i) -> p == BEFORE && i.c.fact.base == a })             // steps 5.1, 6, 8
@@ -5595,14 +5845,19 @@ fun ForwardForms.staticWellFormed(): Boolean {
 
 Items 1 to 7 and 11 to 13 are rows of §33.1 (tests 1 to 11). Part of items 8 and 9 is also in `analyzer-impl.md`
 (`ModesTest`: a request in a restricted run fails; `FactKindsTest`: no request from a TAINT or a `Reach` input).
-Items 18 to 25 are rows of §33.1 or of `analyzer-impl.md` §9.1: 18 (no liveness) `DeltaWorklistTest`; 19 (rule
-positions) test 6; 20 (the whole-base cleaner) tests 6 and 7; 21 (empty methods) test 7 and `ModesTest`; 22 (aliases on
-call results) and 25 (end facts) `CallPlanRunnerTest`; 23 (the global-state rule) test 8 and `ExitRulesTest`; 24 (the
-mark policy below `[e]`) test 10.
+Items 18 to 28 are rows of §33.1 or of `analyzer-impl.md` §9.1: 18 (no liveness) `DeltaWorklistTest`; 19 (rule
+positions; a rule error rejects the whole rule) tests 6 and 7; 20 (the whole-base cleaner, the Spring dispatcher) tests
+6 and 13; 21 (empty methods) test 7 and `ModesTest`; 22 (aliases on call results) and 25 (end facts)
+`CallPlanRunnerTest`; 23 (the global-state rule, D30: the drop only on a zero-premise item, a caller-set state passes)
+test 8 and `ExitRulesTest`; 24 (the mark policy below `[e]`) test 10; 26 (the summary rewriter) test 7 (the
+selection) and `CallPlanRunnerTest` (the rewriter on a zero-premise summary result and on the default identity); 27
+(the static exception at the exit rule statement) test 11 and the item 8 row below; 28 (a conjunctive exit source, D31)
+test 8 (the form) and `ExitRulesTest` (the stored inputs, the union premise set in either order, the summary, with two
+non-zero premises an ND summary and E6 at a caller).
 
 | Item | Test (class) | Form check (Part II) | End to end (`analyzer-impl.md`, phase 3) |
 |---|---|---|---|
-| 8 requests (§5.4) | `JIRStatementEffectTest` (the forms of a JIR sample with `ApOps` in run 1), `JIRCallPlanTest` | one case per row of §5.4, each on a FLOW input with the mark `*`: a sink at a call and an exit sink: `checkMark` gives `MarkCheck.Request(T)`; a conjunctive sink: one request per literal; a conditional source at a call and an exit source, a `CopyMark(T)` pass rule, an ND source literal: the mark gate of `applyEdge` gives the mark request; a cleaner action and the rewriter on a partly cleaned position: the `clean` request, and none if the mark excludes `T`; the static rows: `x = C.s` on `S.*` (premise `S.*`) gives the position request `[<C>, s]`, `C.s = x` the request `[<C>]` of the class keep edge, a sink on `S.<C>.f` the mark request; the entry rules and a read source: no request. The same forms in a restricted forward run and in the backward run: the request assert fails (ap.md §13 item 9) | the run-1 request reaches the caller premise (`interpreter.md` §5.4) |
+| 8 requests (§5.4) | `JIRStatementEffectTest` (the forms of a JIR sample with `ApOps` in run 1), `JIRCallPlanTest` | one case per row of §5.4, each on a FLOW input with the mark `*`: a sink at a call and an exit sink: `checkMark` gives `MarkCheck.Request(T)`; a conjunctive sink: one request per literal; a conditional source at a call and an exit source, a `CopyMark(T)` pass rule, an ND source literal: the mark gate of `applyEdge` gives the mark request; a cleaner action and the rewriter on a partly cleaned position: the `clean` request, and none if the mark excludes `T`; the static rows: `x = C.s` on `S.*` (premise `S.*`) gives the position request `[<C>, s]`, `C.s = x` the request `[<C>]` of the class keep edge, a sink on `S.<C>.f` the mark request, and an exit source with the literal on `S.<C>.f` (the rule statement of the exit, STATEMENT mode, `statementEdge = true`) on `S.*` with the premise `S.*` the position request `[<C>, f]` and no fact, while `S.*` stays by its keep edge (`interpreter.md` §7.2 item 27; ap.md §4.10 item 1); the entry rules and a read source: no request. The same forms in a restricted forward run and in the backward run: the request assert fails (ap.md §13 item 9) | the run-1 request reaches the caller premise (`interpreter.md` §5.4) |
 | 9 ND (§5.3) | `JIRRuleFormsTest`, `JIRStatementEffectTest` | `AssignMark(T, Result) if ContainsMark(Argument(0), A) && ContainsMark(Argument(1), B)` gives one `ConjunctiveEdge` with two literals in the `SOURCES` stage; the two inputs in both orders give the same result (`ConjunctionStore`, Part I §7.10), with the union of the premise sets without the zero fact; a sink with the same condition is one `SinkRule` with two patterns: one `Holds` stores an input and gives no witness, the second gives one | the conjunctive source and the conjunctive sink act only when both arguments are tainted, in either order of arrival |
 | 10 the rule statement of a call (§4.1) | `JIRCallPlanTest` | the `SOURCES` stage has `ZERO_KEEP` and the source edges only (no keep edge of another base); `FormsReference.run` on the plan: the zero fact reaches `REWRITTEN` by `ZERO_KEEP` and gives the target of an unconditional source; with `AssignMark(T, Result) if ContainsMark(Argument(0), T)`, a fact on `arg0` with `T` gives only `ret.$ (T)` through `SOURCES`, and `arg0` reaches `REWRITTEN` only through the callees or the `UNRESOLVED` stages | the read argument comes back only through the callee summary or the unresolved path |
 | 14 array elements of a call sink (§4.2) | `JIRRuleFormsTest`, `JIRCallPlanTest` | a sink `ContainsMark(Argument(0), T)` on an `Object[]` argument gives two `SinkRule`s with the patterns `(arg0, [], $, T)` and `(arg0, [e], $, T)`, one `rule`; on a `String` argument one `SinkRule`; a conjunctive sink on two array arguments gives four alternatives; the receiver, `Result`, the entry and the exit sinks get none | `arg(0).[e].$ (T)` triggers the sink; the backward run seeds `seedPatterns()` of both alternatives |
@@ -5674,10 +5929,11 @@ class FormApplierTest {
 
 This document implements the specs as they are. Each row below is a point where a spec was not clear, or where the spec
 (and so this proposal) differed from today's code and `interpreter.md` §6 did not list the difference. The user decided
-the rows on 2026-10-07 (`ap-history.md` F63), SI3 again on 2026-10-08 (F65), and SI11, SI12 and SI17 on 2026-10-08
-(F67); the specs now say the decisions. The column "Decision" gives the decision
+the rows on 2026-10-07 (`ap-history.md` F63), SI3 again on 2026-10-08 (F65), SI11, SI12 and SI17 on 2026-10-08
+(F67), and SI4 and SI17 again in F68; the specs now say the decisions. A row that the spec now resolves says "RESOLVED
+(F68)" and the place of the spec text. The column "Decision" gives the decision
 and the place in the spec; "as proposed" means that the proposal stands. The columns "This proposal" and "Effect" give
-the code of this document after the decision. Every row stays as a record. The ids `SI1` to `SI17` are ids of this
+the code of this document after the decision. Every row stays as a record. The ids `SI1` to `SI18` are ids of this
 document; they are not the rules `S1` to `S14` of `ap.md`.
 
 | Id | Spec | Today (`path:line`) | This proposal | Effect on the findings | Decision (2026-10-07 unless the row says another date) |
@@ -5685,17 +5941,18 @@ document; they are not the rules `S1` to `S14` of `ap.md`.
 | SI1 | `interpreter.md` §4.1, §4.5 step 3 | A call sink on `Argument(i)` that can be an array also reads `arg(i).[e]` (`JVM/taint/JIRMethodCallTaintUtil.kt:186-203`). The spec has no such pattern. | A sink at a call has one alternative per array choice: the literal on `arg(i)·ρ`, and `(arg(i), [e]·ρ, t, T)` when `callArgumentMayBeArray` holds (§27.3, §28.1). (Was: no `[e]` pattern.) | None: as today. | As on main: `interpreter.md` §4.2 ARRAY ELEMENTS OF A CALL SINK; §6 "kept as today". |
 | SI2 | `interpreter.md` §4.7 | The production rule provider fires the exit sinks only on zero-premise edges (`core/opentaint-jvm-sast-dataflow/src/main/kotlin/org/opentaint/jvm/sast/dataflow/JIRMethodExitRuleProvider.kt:18-19`, installed at `core/src/main/kotlin/org/opentaint/jvm/sast/project/rules/Provider.kt:52`). The spec checks every fact. | The exit sinks check every fact (`sinkRulesForMethodExit(..., initialFacts = null)`, §29). | More: exit-sink reports also for taint that enters the method through a parameter. | As proposed: `interpreter.md` D21. |
 | SI3 | `interpreter.md` §4.1, §4.2, §5.3; `ap.md` S9 | A pass rule applies only when its condition holds on the fact (`applyPassThrough`, `JVM/TaintConfigUtils.kt:48-60`; `applicableRules`, `:77-92`). The spec has no exact form for a `CopyAllMarks` rule with a mark condition: its `*` premise cannot be a conjunction literal (`ap.md` S9). | Every pass rule (`CopyAllMarks`, `CopyMark`) with a mark literal is a rule error (`RuleErrors`), and it applies without its mark literals (one check, §28.5); a pass rule makes no conjunctive edge (§27.4). (Was: only `CopyAllMarks`; a `CopyMark` with another literal made a conjunctive edge.) | More, only for such a rule; the JVM rule sets probably have none. | Every pass rule (user decision, 2026-10-08; `ap-history.md` F65): `interpreter.md` §4.2 (the pass-rule bullet), §5.3, D24. |
-| SI4 | `interpreter.md` §5.3 | The spec says that exit sources never make an ND edge, but an exit source can have two positive literals. Today such a rule can reach `createNDEdge`, which calls `error("Unused operation")` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:217-218`), and the analysis stops. | A rule error (§29): the interpreter rejects the cube and logs it once. | Fewer than the rule asks for: such an exit source gives no fact. Today the analysis can fail. | Not in F63: the proposal stands; the spec is unchanged. |
-| SI5 | `analyzer-core.md` §4.5 (the stage table) and `interpreter.md` §3.5 | The constructor pass-over takes every added fact, also a fact on `S` (`JVM/analysis/JIRMethodCallFlowFunction.kt:213-216`). The stage table says "the receiver and argument positions"; `interpreter.md` §3.5 says "every added fact". | The `CONSTRUCTOR` stage has the identity of every bound position, `S` included (§28.1). | None: as today. | Not in F63: the proposal stands (`interpreter.md` §3.5); the spec is unchanged. |
-| SI6 | `interpreter.md` §3.1 | The binding back keeps a fact on a constant base as it is (`JVM/JIRMethodCallFactMapper.kt:157-160`). The spec lists `const.* → const.*`, but no finite edge form exists for it, and no form makes a fact on a constant base. | No edge for a constant base (§28.2). | None: no fact has a constant base at a callee exit. | Not in F63: the proposal stands; the spec is unchanged. |
+| SI4 | `interpreter.md` §5.3 | The spec said that exit sources never make an ND edge, but an exit source can have two positive literals. Today such a rule FIRES fact-locally: the exit calls `applySourceRules` with `initialFacts = emptySet()` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:211-219`), so a completed combination has no non-zero precondition and goes to `createFinalFact` (`DF/taint/TaintUtil.kt:97-104, 203-207`), under the premise of the fact that completes it. `createNDEdge` (`error("Unused operation")`, :217-218) is never reached at an exit. (Was: "the analysis stops", which is wrong.) | An ND edge at the exit, as at a call (§29): every read base keeps itself, `ruleEdge` makes the `ConjunctiveEdge`, each literal stores its input in the conjunction store of the method key, and a full combination is an exit item with the union of the premise sets; at the normal exit a summary, an ND summary (E6) if its premise set has two or more members. (Was: a rule error that rejected the cube.) | None against today: the findings of today stay, with the correct premise set (today the result belongs to one fact). | RESOLVED (F68): an ND edge at the exit, not a rule error (`ap-history.md` F68 (4)): `interpreter.md` §4.1 (the exit-source row), §4.7 step 1, §5.3, D31; `analyzer-core.md` §4.4. |
+| SI5 | `analyzer-core.md` §4.5 (the stage table) and `interpreter.md` §3.5 | The constructor pass-over takes every added fact, also a fact on `S` (`JVM/analysis/JIRMethodCallFlowFunction.kt:213-216`). The stage table says "the receiver and argument positions"; `interpreter.md` §3.5 says "every added fact". | The `CONSTRUCTOR` stage has the identity of every bound position, `S` included (§28.1). | None: as today. | RESOLVED (F68): `interpreter.md` §3.5 ("every added fact ..., `S` included"); `analyzer-core.md` §4.5 stage table ("the identity of every bound position (`S`, the receiver, the arguments)"). |
+| SI6 | `interpreter.md` §3.1 | The binding back keeps a fact on a constant base as it is (`JVM/JIRMethodCallFactMapper.kt:157-160`). The spec listed `const.* → const.*`, but no finite edge form exists for it, and no form makes a fact on a constant base. | No edge for a constant base (§28.2). | None: no fact has a constant base at a callee exit. | RESOLVED (F68): `interpreter.md` §3.1 (static back: `S.* → S.*`; no form makes a fact on a constant base, so the binding back has no constant edge). |
 | SI7 | `interpreter.md` §3.9 | A lambda call is also an unresolved call: the resolver adds `ResolutionFailure` beside the lambda methods (`JVM/analysis/JIRMethodCallResolver.kt:191`). The spec says that the call "becomes a resolved call". It does not say if the unresolved path stays. | A `Lambda` result is the prescan lambda methods only; with none it is a resolution failure (§28.4). | Fewer: a flow that only the pass rules or the default identity of the lambda call give is lost. | As proposed: `interpreter.md` §3.9, D19. |
-| SI8 | `analyzer-core.md` §4.9 | One list of filters per base (`StatementSummary.BaseTransfer.typeFilters`, `DF/ap/ifds/summary/StatementSummary.kt:10-14`) holds the operand filters and the lhs filter (`JVM/analysis/JIRStatementSummary.kt:71`). `transfer` applies all of them to the input fact (`DF/ap/ifds/analysis/MethodSequentFlowFunction.kt:50-53`). The spec has one `typeFilters` map per base, but `interpreter.md` §2.1 step 5 and `interpreter.md` §3.1 filter the results. | `StatementSummary.resultFilters` beside `typeFilters` (§23.2, §22.2). | Precision only: a result filter drops only paths that the static type cannot have (`ap.md` S5). The mark policy keeps its gap (`interpreter.md` G6). It can remove a false positive. | As proposed: an addition to `analyzer-core.md` §4.9 (§22.2); the spec is unchanged. |
-| SI9 | `analyzer-core.md` §4.5 | On `origin/saloed/backward-main`, a requirement on a base that the call does not touch passes over the call (`skipCall`, `BWD/JIRBackwardMethodCallFlowFunction.kt:67-72`), and each alias adds its unaliased demand (`callSiteAliasDemands`, `:116-138`). The spec: `StatementSummary.reversed` adds the identity of `interpreter.md` A5 for an untouched target. Inside a call stage the two points have other coordinates, so that identity is wrong there. The alias-base identity must go from `AFTER` to `BEFORE`, and the step table has no such stage. | STAGE mode touches every base of its edges, so `reversed()` adds no identity. `CallPlan.reversed()` adds the stage `AFTER → BEFORE` of kind `PASS_OVER` (§23.6). | None: the requirement on an alias base passes over the call, as on the backward branch. | As proposed: an addition to `analyzer-core.md` §4.9 (§22.2); the spec is unchanged. |
+| SI8 | `analyzer-core.md` §4.9 | One list of filters per base (`StatementSummary.BaseTransfer.typeFilters`, `DF/ap/ifds/summary/StatementSummary.kt:10-14`) holds the operand filters and the lhs filter (`JVM/analysis/JIRStatementSummary.kt:71`). `transfer` applies all of them to the input fact (`DF/ap/ifds/analysis/MethodSequentFlowFunction.kt:50-53`). The spec has one `typeFilters` map per base, but `interpreter.md` §2.1 step 5 and `interpreter.md` §3.1 filter the results. | `StatementSummary.resultFilters` beside `typeFilters` (§23.2, §22.2). | Precision only: a result filter drops only paths that the static type cannot have (`ap.md` S5). The mark policy keeps its gap (`interpreter.md` G6). It can remove a false positive. | RESOLVED (F68): `analyzer-core.md` §4.9 `StatementSummary` has `typeFilters` (the operand filters) and `resultFilters` (the lhs and binding-back filters, `interpreter.md` §2.1 step 5, §3.1). |
+| SI9 | `analyzer-core.md` §4.5 | On `origin/saloed/backward-main`, a requirement on a base that the call does not touch passes over the call (`skipCall`, `BWD/JIRBackwardMethodCallFlowFunction.kt:67-72`), and each alias adds its unaliased demand (`callSiteAliasDemands`, `:116-138`). The spec: `StatementSummary.reversed` adds the identity of `interpreter.md` A5 for an untouched target. Inside a call stage the two points have other coordinates, so that identity is wrong there. The alias-base identity must go from `AFTER` to `BEFORE`, and the step table has no such stage. | STAGE mode touches every base of its edges, so `reversed()` adds no identity. `CallPlan.reversed()` adds the stage `AFTER → BEFORE` of kind `PASS_OVER` (§23.6). | None: the requirement on an alias base passes over the call, as on the backward branch. | RESOLVED (F68): `analyzer-core.md` §4.5 THE REVERSAL (the PASS-OVER stage `AFTER → BEFORE`) and the PASS_OVER row (step 1) of its step table, §4.9 (`StageKind.PASS_OVER`); `interpreter.md` §4.9 step 1; `ap.md` §9.2. |
 | SI10 | `interpreter.md` §4.2, §5.2 | Every `RemoveMark` on a `String` position also cleans `P.<string-bytes>`, also for a cleaner with a condition (`JVM/taint/TaintEvaluator.kt:43-61`, after `applyCleaner`, `JVM/TaintConfigUtils.kt:62-75`). The spec gives the `<string-bytes>` row of `interpreter.md` §5.2 for every cleaner, but for a conditional cleaner the literal at `P` does not decide `P.<string-bytes>`. | Every acting cleaner is unconditional (SI13), so the `<string-bytes>` row of `interpreter.md` §5.2 applies to every acting cleaner and to the rewriter (§27.5). (Was: only for an unconditional cleaner.) | None beyond SI13: a conditional cleaner does not act at all. | Resolved by SI13: `interpreter.md` §4.2, §5.2 (only an unconditional cleaner acts), D20. |
 | SI11 | `interpreter.md` §4.7, §6 ("as today") | The conditional exit sources and the exit sinks also run at `JMethodExitExceptionalInst` on a non-zero fact, with `Result` read as the thrown value (`JVM/analysis/JIRMethodSequentFlowFunction.kt:124-126`, `JVM/taint/JIRSequentTaintUtil.kt:67, 82`). The UNCONDITIONAL exit sources fire only at the normal exit: the zero fact runs them only at `JMethodExitNormalInst` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:228-233`), and the fact path skips a rule with a true condition (`DF/taint/TaintUtil.kt:82-83`). The unconditional exit sink is a stub at the normal exit only (`:191-200`). | The exit rules run at both exits; at the exceptional exit `Result` reads `exc`, and steps 3 to 5 do not apply (`ruleFormsAtThrow`, §29). The unconditional exit sources (the empty cube) and the unconditional exit sinks (`ZERO_PATTERN`) fire on the zero fact at BOTH exits (§29). (Was: `ExitRules.EMPTY` at the exceptional exit.) | The conditional exit rules: none, as today. More: an unconditional exit source also fires at the exceptional exit (its facts end there, but an exit sink of that exit can read them, and the backward run records its source hit there); an unconditional exit sink can report at both exits (two statements, so two vulnerabilities). | Both exits: expected and approved (2026-10-08, `ap-history.md` F67): `interpreter.md` §4.7, D26 (the conditional exit rules stay "kept as today", §6); `analyzer-core.md` §4.3, §4.4. |
 | SI12 | `interpreter.md` §4.1, §4.7; `ap.md` §4.9 | An unconditional exit sink never fires on the zero fact (`JVM/analysis/JIRMethodSequentFlowFunction.kt:191-200`, a TODO, at the normal exit only). It fires once per non-zero fact at the exit (`DF/taint/TaintUtil.kt:183-186`). | Its pattern is `ZERO_PATTERN` (§27.3): it fires where the zero fact reaches an exit, at both exits (§29), as D22 says. | More: also in a method with no taint at the exit, and at both exits. | As proposed: `interpreter.md` D22; both exits: D26 (2026-10-08, `ap-history.md` F67). |
 | SI13 | `interpreter.md` §4.2, §6 | A conditional cleaner fires when its condition holds on the bound fact. A negated literal counts as true (`DF/taint/TaintFactAwareConditionEvaluator.kt:37`, `JVM/TaintConfigUtils.kt:77-92`), and a literal with another mark at the same position reads the same fact. | Only an unconditional cleaner acts: a cleaner with a mark literal left after the static evaluation gives no step and no request (§27.5). (Was: the decided part `(P, exact, T)`.) | More: a conditional cleaner never cleans (possible false positives). | `interpreter.md` §4.2 (rewritten), D20; `ap.md` §4.2, §4.7. |
 | SI14 | `interpreter.md` §3.7 item 1, §5.2 ("the same") | The summary rewriter acts only on fact-to-fact and ND summaries (`JVM/analysis/JIRMethodCallSummaryHandler.kt:71-90`, called at `DF/ap/ifds/MethodAnalyzer.kt:995, 1032, 1071, 1180`), not on a zero-premise summary (`handleZeroToZero`, `:29-38`). It rewrites the default identity in caller coordinates (`JVM/analysis/JIRMethodCallFlowFunction.kt:330-338`), so there it acts only by chance. | The `Rewrite` stage acts on every result at `RETURNED`: the zero-premise summaries and the default identity too (§28.3). | Fewer: on a method with a user-defined rule, a source of the same mark in the method body loses that mark at the rule positions. | As proposed: `interpreter.md` D23. |
-| SI15 | `interpreter.md` §3.5 and §3.8 AC3, AC4 | The constructor pass-over takes no alias (`JVM/analysis/JIRMethodCallFlowFunction.kt:213-216`). `interpreter.md` §3.5 sends the pass-over "through the aliases", but AC3 does not list it, and AC4 drops an identity result. | The pass-over has `Origin.IDENTITY`, so `Guard.MemoryEffect` drops it (§28.1), as today. | None: the alias holds the same fact (AC4). | Not in F63: the proposal stands (as today); the spec is unchanged. |
-| SI16 | `analyzer-core.md` §4.8, §4.9 ("per (method, statement)") | The flow-function caches are per context (`JVM/analysis/JIRMethodAnalysisContext.kt:41-76`). | The call plans and the entry rules read the context (the callees, the start filter), so they are cached per method key. The statement summaries and the exit rules are cached per method (§31.2, DD11). | None: a cache per method would give the callees of one context to another. | As proposed: DD11; the spec is unchanged. |
-| SI17 | `interpreter.md` §4.7 step 3, G2, §5.3 | The global-state rule drops the evaluated `S` facts of an exit sink that was REACHED: `allEvaluatedFacts` is filled only in `handleReachedSink` (`JVM/taint/JIRSequentTaintUtil.kt:76-85`) and dropped by `dropFinalFacts` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:186-188, 271-278`). A literal of a conjunctive exit sink that does not complete it stores an assumption (`JIRSequentTaintUtil.kt:47-59`), and its `S` fact stays in the summary. | THE EVALUATED STATICS GO: the part of an `S` item on which a mark literal of an exit sink holds is dropped from the summary edge, for a plain and for a conjunctive exit sink; the conjunctive branch stores that part as the input of its literal, so it stays an assumption for the next evaluation attempts of the sink (§29 steps 2 and 3). | Fewer facts in the callers: an `S` part that a literal of an incomplete conjunctive exit sink read no longer reaches them. The combination is not lost: a later item completes it with the stored input. The shape exists: the rule generator joins the state check to the condition of an exit sink (`addStateCheck`); it is rare. | Drop the evaluated statics, keep them as the stored literal input (2026-10-08, `ap-history.md` F67): `interpreter.md` §4.7 step 3, G2, §5.3. |
+| SI15 | `interpreter.md` §3.5 and §3.8 AC3, AC4 | The constructor pass-over takes no alias (`JVM/analysis/JIRMethodCallFlowFunction.kt:213-216`). `interpreter.md` §3.5 sends the pass-over "through the aliases", but AC3 does not list it, and AC4 drops an identity result. | The pass-over has `Origin.IDENTITY`, so `Guard.MemoryEffect` drops it (§28.1), as today. | None: the alias holds the same fact (AC4). | RESOLVED (F68): `interpreter.md` §3.5 (the pass-over is an IDENTITY result, so it takes no alias) and AC4 (the default identity and the constructor pass-over are IDENTITY results). |
+| SI16 | `analyzer-core.md` §4.8, §4.9 ("per (method, statement)") | The flow-function caches are per context (`JVM/analysis/JIRMethodAnalysisContext.kt:41-76`). | The call plans and the entry rules read the context (the callees, the start filter), so they are cached per method key. The statement summaries and the exit rules are cached per method (§31.2, DD11). | None: a cache per method would give the callees of one context to another. | RESOLVED (F68): `analyzer-core.md` §4.8 (per method: the statement summaries and the exit rules; per METHOD KEY: the call plans and the entry rules), as DD11; `interpreter.md` §3.6 (the resolver reads the context of the caller's method key). |
+| SI17 | `interpreter.md` §4.7 step 3, G2, §5.3 | The global-state rule drops the evaluated `S` facts of an exit sink that was REACHED: `allEvaluatedFacts` is filled only in `handleReachedSink` (`JVM/taint/JIRSequentTaintUtil.kt:76-85`) and dropped by `dropFinalFacts` (`JVM/analysis/JIRMethodSequentFlowFunction.kt:186-188, 271-278`). A literal of a conjunctive exit sink that does not complete it stores an assumption (`JIRSequentTaintUtil.kt:47-59`), and its `S` fact stays in the summary. The exit sinks run only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`), so a callee never drops a caller-set state. | THE EVALUATED STATICS GO, ONLY ON A ZERO-PREMISE ITEM (a state that the method or its callees set): the part of such an `S` item on which a mark literal of an exit sink holds is dropped from the summary edge, for a plain and for a conjunctive exit sink; the conjunctive branch stores that part as the input of its literal, so it stays an assumption for the next evaluation attempts of the sink (§29 steps 2 and 3). A caller-set `S` item is evaluated (D21) but not dropped. | Fewer facts in the callers of the method that sets the state: an `S` part that a literal of an incomplete conjunctive exit sink read no longer reaches them. The combination is not lost: a later item completes it with the stored input. A caller-set state is not consumed, as today: it returns through the callee summary (the FP shapes are gap G2). The shape exists: the rule generator joins the state check to the condition of an exit sink (`addStateCheck`); it is rare. | Drop the evaluated statics, keep them as the stored literal input (2026-10-08, `ap-history.md` F67); only on a zero-premise item (option C, `ap-history.md` F68 (3)). RESOLVED (F68): `interpreter.md` §4.7 step 3, G2, D30; `analyzer-core.md` §4.7 THE GLOBAL-STATE RULE. |
+| SI18 | `ap.md` §7.5, §7.6; `analyzer-core.md` §8 (`AccessPathBaseStorage`: "REUSE the structure") | Today an identity cache memoises the walk of a fact tree (`annotateAbstractNodes(cache)`, `AccessTree.kt:735`), and `AccessorInterner.AccessorStorage`, `MethodAnalyzerEdges.EdgeStorage` and `AccessPathBaseStorage` hold the accessors and the edges. `ap.md` §7.5 says "an identity cache memoises the walk of §7.3", and §7.6 says "Reuse" for accessor interning and "Reuse with the new fact types" for `EdgeStorage` and `AccessPathBaseStorage`. | No walk memo: `PathEdge.compiled` (§5.3) is a compile cache of the edge, not a walk memo; a walk of `applyCompiledEdge` shares every unchanged subtree (§4.2). The accessor tables are ADAPTed (`AccessorTable`, `MarkTable`, §3.1: no `ConcurrentReadSafe` map, only the field and the class storages); `EdgeStorage` is REPLACEd by `ConclusionGroup` (§4.3: one premise key, every base and kind); `AccessPathBaseStorage` is NOT USED (it rejects `Zero`, §2). | None on the findings: the three are representation choices; the walk memo is a cost only. | RESOLVED (F68): the spec follows the proposal: `ap.md` §7.5 has no walk memo (a later optimization), `ap.md` §7.6 and `analyzer-core.md` §8 adapt, replace or do not use the three storages. Perf only; the reasons are in §2 (the rows of `AccessorInterner.AccessorStorage`, `EdgeStorage`, `MethodAnalyzerEdges`); `analyzer-impl.md` §10 row 6. |
