@@ -17,14 +17,16 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 
-We need to extend the AP spec. Currently, we have 3 possible fact tail kinds: *, $ and [any].
-This is not enough, since we can't distinguish the demand edges and the [any] sources.
-The proposed soultion: add one more tail kind -- [any-taint].
-It works as [any] on read, but without promoting the edge layer. Therefore, we have a new complete edge kind: normal layer with [any-taint] tail.
-The [any-taint] can be promoted to [any], if the field write exceeed the limit.
-The [any-taint] shouldn't be used in the premise. Also, the [any-taint] shouldn't be used with the * at mark position. 
-We may assume that the [any-taint] tail can be used for the concrete taint edge conlcusion (a source rule application result). 
+We need to extend the analyzer-core spec. Currently, we have no clear termination criteria.
+We should focus on complete edges. 
+The obvious approach: the forward run has no demand edges -> terminate. 
+The deeper approach: we should try to exclude methods without demand edges after forward from the analysis. 
+So, we reduce the search space on each iteration.
+The reason is: if the vuln was confirmed on the iteration i, then it will be confirmed on the all iterations j > i.
+Another key observation: if the method has no forward demand edges at iteration i, then it will have no demanand edges on all iterations j > i, so the method is complete
 
-Extend the spec. Write all required proofs. Specify all required parts: the demand, the abstraction and summary edge application.
+Finally, we will have a simple time budget, for the entire process.
+But we should design an approach, to efficiently localize the remaining need-to-analzye code.
+If we have a good localization on practice, it will be easer to design a practical stop strategies later.
 
 Use subagents.
