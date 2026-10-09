@@ -35,16 +35,16 @@ Out of scope:
 
 * the IR interpreter (`interpreter.md`); §4.9 gives only its interface to the core;
 * the prescan, the rule reduction and the `TaintAnalyzer` wiring (phase 3); §9 gives the interface;
-* the trace resolution. The core keeps no store of a run for a trace resolver (§7.6). The phase-3 output gives each
-  CONFIRMED vulnerability a simple trace (§9);
+* the trace resolution. The core keeps no store of a run for a trace resolver (§7.6). The phase-3 output holds every
+  entry of the report, CONFIRMED and DEMAND, and gives each one a simple trace (§9; `ap-history.md` F68);
 * the iteration policy: the field limit of each run, the budget and the stop rule for a budget (`ap.md` §6.6). The
-  driver takes the policy as a parameter (§7.1).
+  driver takes the policy and the budget as parameters (§7.1).
 
 ### 0.1 Assumptions
 
 | # | Assumption |
 |---|---|
-| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I13. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, `Backward.DB`, `Statics.DS`, `ND.DN`). |
+| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I13. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). |
 | A2 | LINEARIZABLE SHARED ACTIONS. Each shared action of §5.2 and §5.3 is atomic: register a handler, insert a publication, read the storage, read the handler list. All of them have one total order. This order agrees with the program order of each thread. The Lean model is an interleaving model with these actions as steps. P3 (§5.3) is the implementation rule. |
 | A3 | RELIABLE EVENTS. An event that a thread sends to the channel of a runner arrives exactly once, unless the run is cancelled. The send happens before the receive (Kotlin `Channel`). |
 | A4 | READ-ONLY INPUTS. These inputs do not change during a run: the program, the rules, the lambda resolutions, the demand store, the record store and the seeds. The driver makes them before the run starts. The start of the run publishes them to every runner. |
@@ -77,7 +77,7 @@ and others). This document adds:
 | quiescence | The state of a run with no event in a channel or a local queue, no running handler, no worklist item and no pending publication (§6.2). |
 | barrier | The point between two runs: the first run is quiescent, and the next run has not started (§7.2). |
 | hand-off | What one run gives to the next run: the demand and the seeds (`ap.md` §8, §9.2). The records are PERSISTENT, not a hand-off (`ap.md` §8.7). |
-| complete run | A run that ended at quiescence. A run that ended by a timeout, the memory guard or an exception is INCOMPLETE. An incomplete run adds nothing to the report and refutes nothing (§7.5). |
+| complete run | A run that ended at quiescence. A run that ended by a timeout, its memory guard or an exception (every `Throwable`, §6.3) is INCOMPLETE. An incomplete run adds nothing to the report and refutes nothing (§7.5). |
 
 ---
 
@@ -122,8 +122,8 @@ Ownership rules:
   the manager.
 * O4. During a run, the other shared objects are read-only (A4), write-only (`VulnerabilityStore`), or thread-safe by
   their own contract (`ApManager`).
-* O5. After a complete run, the driver reads every store of the run. No runner runs then (§7.2). After an incomplete
-  run, the driver reads no store of the run (§7.5).
+* O5. After a complete run, the driver reads the stores of the run that §7.6 keeps. No runner runs then (§7.2). After
+  an incomplete run, the driver reads no store of the run (§7.5).
 
 ---
 
@@ -154,7 +154,7 @@ The mode decides these rules (`ap.md` §6.1):
 | records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)` |
 | mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no (assert) | no (assert) |
 | sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
-| unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Program.rev P`); it records the source hits (`ap.md` §8.11) |
+| unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
 
 No run has a liveness check (§4.3).
@@ -271,6 +271,24 @@ Start nodes, end nodes and their rules. The interpreter gives the forward ones; 
 
 The exits: the normal exit is `JMethodExitNormalInst`; the exceptional exit is `JMethodExitExceptionalInst`.
 
+THE BOUNDARY RULE STATEMENTS. The entry rules and the exit rules are rule statements in the STATEMENT mode (§4.9). Their
+touched bases and keep edges are those of `interpreter.md` §4.3 and §4.7 (`ap-impl.md` §29, `keep`): the zero base with
+its keep edge; at the exit, each base that a literal of an exit source reads, with the identity edge `b.* → b.*`; at the
+start, each base with a context filter, with the identity edge and that filter as its operand filter. A source target
+is a gen-only target (not touched). So a fact on a read base stays in the worklist (`interpreter.md` §4.7 step 1), an
+initial fact passes unchanged or passes its context filter, and in the backward run a requirement on a read base or on a
+target passes.
+
+A CONJUNCTIVE EXIT SOURCE (an exit source with two or more positive literals in one alternative of its condition) is an
+ND edge at the exit, as at a call (`interpreter.md` §4.7 step 1, D31; `ap-history.md` F68). It is a `ConjunctiveEdge`
+of the exit rules (`RuleStatement.summary.conjunctions`, §4.9). Each literal stores its input in the conjunction store of
+the method key, per (edge, exit statement, literal index) (`ap.md` §8.9). A full combination is an exit item with the
+union of the premise sets (without the zero fact, `ap.md` §4.6), after the field limit. It goes through the exit steps 2
+to 5 (`interpreter.md` §4.7) and becomes a summary at the normal exit, an ND summary if its premise set has two or more
+members; the callers apply it by E6 (§5.4). At the exceptional exit it goes through step 2 only and ends there (§4.3).
+It is not a rule error. The backward run reverses it into one micro edge per literal (`StatementSummary.reversed`,
+§4.9).
+
 The backward graph is the reversed graph (`ApplicationGraph.reversed`) with the EXIT WIRING. A node that reaches no
 forward exit gets an edge to an exceptional exit (`interpreter.md` I11 (e); today `JIRBackwardExitWiringGraph` on
 `saloed/backward-main`). Only the zero fact uses an exceptional exit. The `MethodContextCache` keeps the wired graph per
@@ -279,9 +297,10 @@ method (today the code computes the wiring again on every call).
 AN EMPTY METHOD (no instruction: a native method, an abstract method, a method with no body) cannot be analysed. The
 core never analyses it: it has no method key, no method analyzer and no `SummaryStorage`, and it is never a root. The
 call resolver never resolves a call to an empty method: it drops the empty method from the callees of the call (§4.5).
-If every resolution result of a call is an empty method, the call is an UNRESOLVED call (`interpreter.md` §3.7: the
-pass rules and the default identity). This is a decision (`ap-history.md` F67). Today `EmptyMethodAnalyzer`
-publishes the identity summaries of the most abstract facts.
+So a call with an empty and a non-empty resolution result enters only the non-empty callee, and a flow through the empty
+target is lost (`interpreter.md` G12). If every resolution result of a call is an empty method, the call is an
+UNRESOLVED call (`interpreter.md` §3.7: the pass rules and the default identity). This is a decision (`ap-history.md`
+F67). Today `EmptyMethodAnalyzer` publishes the identity summaries of the most abstract facts.
 
 ### 4.5 The call plan
 
@@ -308,7 +327,7 @@ The forward stages of a JVM call `r = m(o, a1, …, an)` (the step numbers of `i
 | cleaners | `BOUND → ADDED` | the cleaners and the `RemoveAllMarks` kill on `S`, in the rule order | 5.1 |
 | callees | `ADDED → RETURNED` | the resolved callees (with the lambdas of the prescan), never an empty method (§4.4): SUBSCRIBE and LINK (below) | 5.2 |
 | unresolved | `ADDED → RETURNED` | the statement summary of the unresolved callee (`interpreter.md` §3.7); also of a call whose every resolution result is an empty method (§4.4) | 5.3 |
-| constructor | `ADDED → REWRITTEN` | JVM `<init>`: the identity of the receiver and argument positions; it skips the callee and the rewriter (`interpreter.md` §3.5) | 5.2 |
+| constructor | `ADDED → REWRITTEN` | JVM `<init>`: the identity of every bound position (`S`, the receiver, the arguments); it skips the callee and the rewriter (`interpreter.md` §3.5) | 5.2 |
 | rewriter | `RETURNED → REWRITTEN` | the summary rewriter (`interpreter.md` §5.2) | 6 |
 | binding back | `REWRITTEN → AFTER` | the binding edges back, with the result-side type filters | 6 |
 | aliases | `REWRITTEN → AFTER` | the alias edges `P.* → b.q.*` (`interpreter.md` §3.8 AC2); GUARD: the selection of AC3 and AC4 (THE ALIAS GUARD, below) | 6 |
@@ -358,14 +377,18 @@ THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
 * The cleaners, the kill and the rewriter stay the same: a cleaner and a keep edge are their own reversal.
 * The callees stage stays the same: in the backward run it gives the backward summaries.
 * The sinks stay at `BOUND`.
-* The touched bases: the forward touched bases and every target base of a stage that ends at the forward exit (the
-  alias bases). An alias base keeps its requirement by the identity edge `b.* → b.*` (`interpreter.md` A5).
+* The touched bases: the forward touched bases and the alias bases (the target bases of a stage that ends at the
+  forward exit and that the forward plan does not touch). Forward, an alias base passes over the call. Backward, its
+  requirement passes over by the PASS-OVER stage `AFTER → BEFORE` (kind `PASS_OVER`, §4.9), with the identity edge
+  `b.* → b.*` of each alias base (`interpreter.md` A5). This stage is the exact reversal of the forward pass-over. A
+  target base that the forward plan touches (an argument, `S`) gets no pass-over.
 
 The reversed plan is the backward call order of `interpreter.md` §4.9:
 
 | Backward step (`interpreter.md` §4.9) | Reversed stage |
 |---|---|
 | 1 relevance | the reversed touched bases |
+| 1 the pass-over of the alias bases that the forward plan does not touch | `AFTER → BEFORE` |
 | 2 reversed binding back and alias edges | `AFTER → REWRITTEN` |
 | 3 reversed sources and end-fact edges; their results arrive at step 7 | `REWRITTEN → BOUND` |
 | 4 reversed rewriter | `REWRITTEN → RETURNED` |
@@ -445,13 +468,21 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
   two group keys at one literal.
 * A conjunctive sink uses the conjunction store, per (sink alternative, statement, literal index). Each sink edge set
   is one witness (`ap.md` §4.9).
-* THE GLOBAL-STATE RULE (exit sinks; `interpreter.md` §4.7 step 3). At a normal exit, the analyzer drops the
-  EVALUATED statics: if a part of an item on the static base `S` satisfies a mark literal (`ContainsMark`,
-  `ContainsMarkOnAnyField`) of an exit sink, plain or conjunctive, the analyzer drops that part from the summary edge.
-  The rest of the item stays. For a conjunctive exit sink, the
-  analyzer also stores the evaluated part as the input of that literal in the conjunction store. A stored input is an
-  assumption for the later evaluations of the sink: a later item can complete the combination with it. The analyzer
-  drops the part also when the combination is not complete (`ap-history.md` F67).
+* THE GLOBAL-STATE RULE (exit sinks; `interpreter.md` §4.7 step 3, D30). At a normal exit, the analyzer drops the
+  EVALUATED statics of a ZERO-PREMISE item: if a part of an item on the static base `S` whose premise is the zero fact
+  (a state that the method or its callees set) satisfies a mark literal (`ContainsMark`, `ContainsMarkOnAnyField`) of
+  an exit sink, plain or conjunctive, the analyzer drops that part from the summary edge. The rest of the item stays.
+  For a conjunctive exit sink, the analyzer also stores the evaluated part as the input of that literal in the
+  conjunction store. A stored input is an assumption for the later evaluations of the sink: a later item can complete
+  the combination with it. The analyzer drops the part also when the combination is not complete (`ap-history.md`
+  F67).
+* A CALLER-SET `S` FACT (an item on `S` whose premise is not the zero fact) is evaluated: it can report
+  (`interpreter.md` D21), and a conjunctive literal stores it as an input. The analyzer does not drop it: it returns to
+  the caller through the callee summary, in run 1 also through the FLOW summary and its record (§7.4 THE STATIC BASE)
+  (`ap-history.md` F68). As today: today's exit sinks run only on zero-premise edges
+  (`JIRMethodExitRuleProvider.kt:18-19`), and only a reached sink drops (`JIRSequentTaintUtil.kt:76-85`). The false
+  positives that this keeps (a later sink in the caller sees the state; the exit sink of the caller evaluates it again)
+  are expected (`interpreter.md` G2, `ap.md` §11.1).
 * SEEDS. After run 1, every run has seeds. The driver gives a `SeedIndex` per (method key, statement):
   * a backward run: the SINK SEEDS, the requirements of the vulnerabilities that the forward run before reported
     (`ap.md` §9.2). A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
@@ -468,7 +499,7 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
 * SOURCE HITS (backward run). When the analyzer applies a reversed source to a requirement and gets a result, it adds
   `(method key, statement, forward form)` to `sourceHits` (`ap.md` §8.11). This holds at each place of a reversed
   source: a statement, the reversed sources stage of a call (§4.5), and the reversed exit and entry rules (§4.4). The
-  analyzer records the hit before `edges.add`, also when the store drops the zero result as a duplicate.
+  analyzer records the hit whatever `edges.add` gives: also when the store drops the zero result as a duplicate.
 * The backward run has no sink check.
 
 ### 4.8 The method context
@@ -478,10 +509,15 @@ the flow-function caches and the taint rule context. The new core splits it:
 
 * the CACHED part, in `MethodContextCache`:
   * per method: the method graph, the alias analysis (with its own inputs, as today: the local-variable reachability is
-    one of them; the core does not read it, §4.3) and the lambda resolutions of the prescan. Every context of the
-    method shares them (today the `EmptyMethodContext` twin analyzer does this);
-  * per (method, direction): the wired backward graph, and the forward forms of the interpreter (statement summaries,
-    rules, call plans) with their reversals (§4.9);
+    one of them; the core does not read it, §4.3), the lambda resolutions of the prescan and the wired backward graph.
+    Every context of the method shares them (today the `EmptyMethodContext` twin analyzer does this);
+  * per method: the forward forms of the interpreter that do not read the context of a method key, with their
+    reversals (§4.9): the statement summaries and the exit rules (the entry marks of the exit rules come from the
+    entry-point sources, which read no context);
+  * per METHOD KEY (with its context): the forward forms that read the context, with their reversals: the call plans
+    (the callees: the resolver reads the type constraints of the context, `interpreter.md` §3.6) and the entry rules
+    (the start filter by the context type, `interpreter.md` §4.3). So a second context of a method never takes the
+    callees or the start filter of the first one (`ap-impl.md` DD11);
 * the RUN part, made by the run: the rule context bound to the run (the `VulnerabilityStore`, the conjunction store,
   the run mode).
 
@@ -500,13 +536,15 @@ interface Interpreter {
      *  empty method (§4.4), so a method key always has its entry statement. */
     fun entryNode(method: MethodKey): CommonInst
     fun exitNodes(method: MethodKey): List<ExitNode>
-    /** interpreter.md §4.3 and §4.7: the entry rules and the exit rules. */
+    /** interpreter.md §4.3 and §4.7: the entry rules (they read the context: cached per method key, §4.8) and the exit
+     *  rules (cached per method). */
     fun entryRules(method: MethodKey): RuleStatement
     fun exitRules(method: MethodKey, exit: CommonInst): ExitRules
     /** interpreter.md I1: the touched bases, the micro edges and the type filters of a non-call statement. */
     fun statementSummary(method: MethodKey, statement: CommonInst): StatementSummary
     /** §4.5: the forward plan of a call. Its callees stage has no empty method; a call whose every resolution result
-     *  is an empty method has the unresolved stage (§4.4). */
+     *  is an empty method has the unresolved stage (§4.4). The callees read the context of `caller`: cached per method
+     *  key (§4.8). */
     fun callPlan(caller: MethodKey, statement: CommonInst, call: CommonCallExpr): CallPlan
     /** a summary edge exists only for these bases (not a local; today isValidMethodExitFact). */
     fun isSummaryBase(base: AccessPathBase): Boolean
@@ -518,26 +556,31 @@ class ExitNode(val node: CommonInst, val exceptional: Boolean)
  *  whose forward form goes from the zero fact to another base; the forward form identifies it in both runs (§4.7). */
 class MicroEdge(val edge: PathEdge, val forward: PathEdge)
 
-/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). */
+/** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). `typeFilters`: the operand filters, on the
+ *  input (interpreter.md §2.1 step 3). `resultFilters`: the lhs and binding-back filters, on the results
+ *  (interpreter.md §2.1 step 5, §3.1). One base can have both (`x = x.f`), so they are two maps. */
 class StatementSummary(val touched: Set<AccessPathBase>, val edges: List<MicroEdge>,
-                       val conjunctions: List<ConjunctiveEdge>, val typeFilters: Map<AccessPathBase, TypeFilter>) {
+                       val conjunctions: List<ConjunctiveEdge>, val typeFilters: Map<AccessPathBase, TypeFilter>,
+                       val resultFilters: Map<AccessPathBase, TypeFilter> = emptyMap()) {
     /** ap.md §9.1, §9.2: each edge reversed; a conjunctive edge gives one edge per literal; the identity edge
      *  `b.* → b.*` for each target base that the summary does not touch (A5); the touched bases with the targets;
      *  no type filter. */
     fun reversed(): StatementSummary
 }
 
-/** The rules of one place: a statement summary with the sources (STATEMENT mode), the end-fact edges of its sinks
- *  (GEN mode) and the sinks. The reversal reverses the summary, keeps the sinks as the place of the sink seeds and
+/** The rules of a method boundary (the entry rules, the exit rules): a statement summary with the sources (STATEMENT
+ *  mode; its touched bases and keep edges: §4.4 THE BOUNDARY RULE STATEMENTS, interpreter.md §4.3, §4.7), the end-fact
+ *  edges of its sinks (GEN mode) and the sinks. At an exit, `summary.conjunctions` holds the conjunctive exit sources,
+ *  an ND edge at the exit (§4.4). The reversal reverses the summary, keeps the sinks as the place of the sink seeds and
  *  drops the context filter. */
 class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummary, val sinks: List<SinkRule>) {
     fun reversed(): RuleStatement
 }
 
 /** The exit rules (interpreter.md §4.7) and, forward only, the global-state drop (step 3: the analyzer drops the part
- *  of an `S` item that satisfies a mark literal of an exit sink, and stores it as the input of that literal of a
- *  conjunctive exit sink, §4.7) and the removal of the entry marks of a zero-premise fact (step 4). The reversal drops
- *  the two removals (interpreter.md §4.9). */
+ *  of a zero-premise `S` item that satisfies a mark literal of an exit sink, and stores it as the input of that literal
+ *  of a conjunctive exit sink; a caller-set `S` item is evaluated, not dropped, §4.7) and the removal of the entry marks
+ *  of a zero-premise fact (step 4). The reversal drops the two removals (interpreter.md §4.9). */
 class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entryMarks: Set<TaintMark>) {
     fun reversed(): RuleStatement
 }
@@ -549,7 +592,8 @@ class ExitRules(val rules: RuleStatement, val globalStateDrop: Boolean, val entr
 class SinkRule(val rule: RuleId, val alternative: Int, val patterns: List<Pattern>, val endFacts: List<MicroEdge>)
 
 /** ap.md §4.6: a conjunctive micro edge `x1.ρ1.t1(T1) ∧ … ∧ xk.ρk.tk(Tk) → z.π.t(T)`, k >= 2: an ND source
- *  (interpreter.md §5.3). Each literal and the target have a concrete mark and no `*` tail (S9, W7). */
+ *  (interpreter.md §5.3): in the sources stage of a call (§4.5), or at an exit (§4.4). Each literal and the
+ *  target have a concrete mark and no `*` tail (S9, W7). */
 class ConjunctiveEdge(val literals: List<Pattern>, val target: PathFact)
 
 /** ap.md §4.8: the type filter `filter(b, may)` of one base; `may` is prefix-closed (S5; today a
@@ -586,16 +630,21 @@ sealed interface Guard {
     data object MemoryEffect : Guard { fun admits(o: Origin): Boolean = o != Origin.IDENTITY }
 }
 
+/** The kind of an `Edges` stage (ap-impl.md §23.5). SOURCES and UNRESOLVED hold statement micro edges: the static
+ *  exception of run 1 acts on them (THE APPLICATION MODES, below). The source seeds and the source hits act on SOURCES
+ *  (§4.7). PASS_OVER: reversed plans only, the identity of the alias bases (§4.5 THE REVERSAL). */
+enum class StageKind { BIND_IN, END_FACTS, SOURCES, UNRESOLVED, CONSTRUCTOR, BIND_BACK, ALIASES, PASS_OVER }
+
 /** One stage of a call plan (§4.5): it takes the facts at `from` to `to`. */
 sealed interface CallStage {
     val from: CallPoint
     val to: CallPoint
     fun reversed(): CallStage
-    /** A binding, the sources, the end facts, the unresolved summary, the constructor identity, the aliases (STAGE
-     *  mode). A guard is a forward-only selection of the inputs (the sink trigger, AC3 and AC4); the reversal drops
-     *  it. */
-    data class Edges(override val from: CallPoint, override val to: CallPoint, val summary: StatementSummary,
-                     val guard: Guard? = null) : CallStage
+    /** A binding, the sources, the end facts, the unresolved summary, the constructor identity, the aliases, and (in a
+     *  reversed plan only) the pass-over of the alias bases (STAGE mode; `kind`). A guard is a forward-only selection
+     *  of the inputs (the sink trigger, AC3 and AC4); the reversal drops it. */
+    data class Edges(override val from: CallPoint, override val to: CallPoint, val kind: StageKind,
+                     val summary: StatementSummary, val guard: Guard? = null) : CallStage
     data class Clean(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage
     data class Rewrite(override val from: CallPoint, override val to: CallPoint, val cleaners: List<Cleaner>) : CallStage
     data class Callees(override val from: CallPoint, override val to: CallPoint, val callees: List<MethodKey>) : CallStage
@@ -604,7 +653,7 @@ sealed interface CallStage {
 /** §4.5: the plan of one call. The interpreter gives the forward plan: entry BEFORE, exit AFTER. */
 class CallPlan(val touched: Set<AccessPathBase>, val stages: List<CallStage>, val sinks: List<SinkRule>,
                val entry: CallPoint, val exit: CallPoint) {
-    /** §4.5 THE REVERSAL. */
+    /** §4.5 THE REVERSAL: also the PASS_OVER stage `AFTER → BEFORE` of the alias bases. */
     fun reversed(): CallPlan
 }
 ```
@@ -621,7 +670,9 @@ What the core uses in each direction:
 | end rules | `exitRules` | `entryRules(…).reversed()` |
 
 A reversal of a statement summary is `Reverse.Stmt.rev` of the Lean model; the reversal of the bindings is
-`Reverse.Call.rev`. The core caches the reversed forms per (method, statement) in the `MethodContextCache` (§4.8). The
+`Reverse.Call.rev`. The core caches the forward forms and their reversals in the `MethodContextCache` (§4.8): per
+(method, statement) for a statement summary and the exit rules; per (method key, statement) for a call plan; per method
+key for the entry rules. The
 AP operations of `ap.md` §4 apply the micro edges; the interpreter never applies them. `PathFact`, `Pattern` and
 `PathEdge` are the types of `ap.md` §3.4 and §4.1. `SinkRule`, `ConjunctiveEdge`, `TypeFilter` and `Cleaner` (above)
 are the short forms of the sink of `ap.md` §4.9, the conjunctive edge of §4.6, the type filter of §4.8 and the cleaner
@@ -632,9 +683,13 @@ mode, not a field of the form:
 
 | Mode | Forms | Rule |
 |---|---|---|
-| STATEMENT | a statement summary (`statementSummary`), the rule summary of a place (`RuleStatement.summary`), the kill on `S` (`CleanStep.Kill.keepEdges`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
-| STAGE | the summary of a call stage (`CallStage.Edges.summary`) | only the edges give results. The touched bases of the plan (`CallPlan.touched`) do the pass-over (§4.5). A stage summary has every base of its edges in its touched set, so its reversal adds no identity edge |
-| GEN | the end-fact edges (`RuleStatement.endFacts`, `SinkRule.endFacts`) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE) |
+| STATEMENT | a statement summary (`statementSummary`), the rule summary of a method boundary (`RuleStatement.summary`, with the touched bases and keep edges of §4.4 THE BOUNDARY RULE STATEMENTS), the kill on `S` (`CleanStep.Kill.keepEdges`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
+| STAGE | the summary of a call stage (`CallStage.Edges.summary`) | only the edges give results. The touched bases of the plan (`CallPlan.touched`) do the pass-over (§4.5). A stage summary has every base of its edges in its touched set, so its reversal adds no identity edge (the reversed plan has the PASS_OVER stage of the alias bases instead, §4.5) |
+| GEN | the end-fact edges at the method boundaries (`RuleStatement.endFacts`, the `SinkRule.endFacts` of an entry or exit sink) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE). At a call the end facts are the end-fact `Edges` stage (`END_FACTS`, STAGE mode, on the zero fact, on a trigger, §4.5), whose reversal adds no identity |
+
+THE STATIC EXCEPTION. In run 1 the static exception of `ap.md` §4.10 item 1 acts on the statement micro edges: the
+statement summaries, the edges of the sources and the unresolved stages of a call (`StageKind.SOURCES`, `UNRESOLVED`),
+the kill on `S` and the boundary rule statements. At a call it is tested on the caller edge. It acts on no other stage.
 
 ---
 
@@ -749,7 +804,7 @@ fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean {
     }
 }
 
-/** ap.md §8.7 R4, Lean `retRec`: a record applies by `applicable` or by `inside`. */
+/** ap.md §8.7 R4, Lean `DR.retRec`: a record applies by `applicable` or by `inside`. */
 fun recordApplies(p: Pattern, a: Pattern): Boolean = applicable(p, a) || inside(p, a)
 ```
 
@@ -772,8 +827,8 @@ Reason: the run-1 test is not monotone in the added fact (a fact above `j` does 
 subscription can match a publication that the stored one does not match. The same holds for the links.
 
 THE PROTOCOL CONDITIONS. The model step `Step` (§5.5) builds in P1 to P6, A3 and the exact part of E-3 (the
-subsumption part is `StepD`, §5.5). P1 to P4 are necessary: each has a counterexample in `PipelineProofs.lean`, a
-reachable quiescent state that misses an object of the closure.
+subsumption part is `Pipeline.StepD`, §5.5). P1 to P4 are necessary: each has a counterexample in
+`PipelineProofs.lean`, a reachable quiescent state that misses an object of the closure.
 
 | # | Condition | Today | In the model |
 |---|---|---|---|
@@ -793,7 +848,7 @@ publication. The caller combines it in its conjunction store (`ap.md` §8.9):
   so far, and per premise index `m` the subscriptions at that call statement whose added fact satisfies `jm`.
 * A subscription goes under EVERY index that it satisfies. No member is the zero fact (`ap.md` §4.6: a conjunction
   drops the zero fact), so the zero subscription never takes part (`PipelineNDZ.clDNz_ndpub_no_zero`,
-  `clDNz_ndpub_zero_sub`). The backward run has no summary with several
+  `clDNz_ndpub_zero_sub`; run 1; a restricted run is argued, `ap.md` §11.2). The backward run has no summary with several
   premises: it reverses a conjunction into one micro edge per literal (`ap.md` §9.2).
 * A new subscription under an index: combine it with the stored subscriptions of the other indexes (one per index,
   every combination), and apply the stored conclusion to each full combination.
@@ -806,9 +861,10 @@ replays and the deliveries. Both sides of this join are in the caller.
 
 THEOREM (never lose a summary edge). Let a reachable state of a well-formed encoded system be quiescent (§6.2). Then:
 
-* every join of processed subscriptions with a processed publication has its result processed (`no_lost_join`): the
-  caller has the application of every publication to every subscription that satisfies it;
-* every object of the closure is processed (`quiescent_complete`): every link reaches its callee, and every
+* every join of processed subscriptions with a processed publication has its result processed
+  (`Pipeline.no_lost_join`): the caller has the application of every publication to every subscription that satisfies
+  it;
+* every object of the closure is processed (`Pipeline.quiescent_complete`): every link reaches its callee, and every
   (request, link) pair for which §4.6 gives an ANSWER or a CLIMB has it.
 
 The model (`Pipeline.lean`) is a rule system with owners (`Sys`). It has LOCAL rules, whose premises all belong to one
@@ -833,9 +889,9 @@ theorems hold for every real schedule.
 | `Pipeline.PCex.cex_P1` to `cex_P4` | without P1, P2, P3 or P4: a reachable quiescent state that misses an object of `Cl`. In the variants of P1 and P2, the read and the write are two steps. `PCex.step_finds_edge`: the correct protocol finds the object in the same system |
 | `PipelineAP.clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff` | On the objects of the AP closure, the closure of the encoded system is exactly the AP closure. The closures: run 1 (`D`), a restricted run (`DR`), the backward run (`DB`), run 1 with the static rule (`DS`), run 1 with the conjunctions (`DN`). The partial matches of `DN` are internal to the k-ary join (`clDN_npart`). |
 | `PipelineAP.clD_link`, `clD_sub`, `clD_pub` and their `DR`, `DB`, `DS`, `DN` forms | the link, the subscription and the publication objects are exactly the data that the closure rules read |
-| `PipelineAP.sysD_wf` and the other `*_wf` | each encoded system is well-formed (`Sys.WF`): every local rule has at least one premise, all of one actor; every join has subscriptions of one actor and one topic and a publication |
+| `PipelineAP.sysD_wf` and the other `*_wf` | each encoded system is well-formed (`Pipeline.Sys.WF`): every local rule has at least one premise, all of one actor; every join has subscriptions of one actor and one topic and a publication |
 | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, the object theorems (`clDNz_link`, `clDNz_sub`, `clDNz_pub`, `clDNz_ndpub`, `clDNz_npart`) | the encoding of the ND closure of the spec, `NDZ.DNz` (the union of the premise sets without the zero fact, `ap.md` §4.6, §10.10): it is well formed, and at a reachable quiescent state the processed objects are exactly `DNz` (no partial match) |
-| `PipelineNDZ.clDNz_ndpub_no_zero`, `clDNz_ndpub_zero_sub`, `joinNz_nd_no_zero_sub` | no index of a k-ary join is the zero fact, and (under `NDZeroBase.NoZeroGen`) the zero subscription satisfies no index (§5.4) |
+| `PipelineNDZ.clDNz_ndpub_no_zero`, `clDNz_ndpub_zero_sub`, `joinNz_nd_no_zero_sub` | no index of a k-ary join is the zero fact, and (under `NDZeroBase.NoZeroGen` and `AlphaZero`, which the run-1 policy satisfies, `NDZeroBase.policy1_alphaZero`; run 1) the zero subscription satisfies no index (§5.4) |
 
 The encoding (`PipelineAP.lean`): actor = method, topic = callee.
 
@@ -847,24 +903,30 @@ The encoding (`PipelineAP.lean`): actor = method, topic = callee.
 | `initA`, `initR`, `answer`, `sanswer`, `sreqStmt` | local rule | the method → the method |
 | `reqUp`, `sreqUp` | local rule on `[request, link]` in the callee; the result goes to the caller | callee → caller |
 | `ret` | the caller makes the SUBSCRIPTION, the callee makes the PUBLICATION (after the restriction); their JOIN gives the caller edge | join |
-| `sret` | a second join of the same subscription and publication (the overlap reading `fbOK` of `Statics`). The final static rule `Statics.Design` has `fb = off`, so it gives nothing, and `matches` has no test for it | join |
+| `sret` | a second join of the same subscription and publication (the overlap reading `Statics.SCtx.fbOK`). The final static rule `Statics.Design` has `fb = off`, so it gives nothing, and `matches` has no test for it | join |
 | `zin` | local rule of the caller; the result goes to the callee | caller → callee |
 | `zret` | the zero subscription of the caller and the zero-premise publication of the callee; their JOIN | join |
-| `ndOpen`, `ndBind`, `ndRet` | a k-ary JOIN: one subscription per premise, all at one call statement, with the publication of the summary | join |
+| `ND.DN.ndOpen`, `ndBind`, `ndRet` | a k-ary JOIN: one subscription per premise, all at one call statement, with the publication of the summary | join |
 
-THE ZERO PUBLICATION. `sysDB` has two publications of a zero-premise backward summary: the restricted one (for `ret`)
-and the unrestricted `zpub` (for `zret`). §4.6 publishes only the unrestricted one. The two agree because no ordinary
-subscription satisfies the zero premise: no call binds the zero base (`ap.md` S11 (c), Lean `NoZeroBack`).
+THE ZERO PUBLICATION (argued, §11). `PipelineAP.sysDB` has two publications of a zero-premise backward summary: the
+restricted one (for `ret`) and the unrestricted `PipelineAP.PObj.zpub` (for `zret`). §4.6 publishes only the
+unrestricted one. The two agree because no ordinary subscription satisfies the zero premise: no call binds the zero base
+(`ap.md` S11 (c), Lean `Backward.NoZeroBack`). No Lean statement says this, and `Backward.NoZeroBack` is not a
+hypothesis of `PipelineDriver.result_DB`. The publication of the code is a superset, so a mismatch could only add
+results, never lose them.
 
 So at quiescence the analyzer computes exactly the closure that `ap.md` proves sound and exact, in each mode
-(`quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`). With
+(`Pipeline.quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`). With
 conjunctions the closure is `NDZ.DNz`, the ND closure with the zero-drop of `ap.md` §4.6 (`PipelineNDZ.result_DNz`).
+This holds for the rules that the closures have. The end facts (`ap.md` §11.1), the aliases and their guard (`ap.md`
+§11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2) are outside them (§11 THE
+ANALYZER ACTIONS OUTSIDE THE CLOSURES).
 
 THE MODEL AND THE CODE. Actor: a `RunMethodAnalyzer`. `known`: the RUN stores of the analyzers, the
 `SubscriptionManager` tries and the `SummaryStorage` tries. `inbox`: the channels, the local queues, the worklists,
 the `pendingPublications` and a direct call in progress. `store`: the `published` index of each `SummaryStorage`.
-`replays`: the replay inside `subscribe`. `notifies`: a publication between the insert and the end of the loop over
-`subscribers`. `deliv`: the `Delivery` events. `handlers`: the `subscribers` lists.
+`Pipeline.St.replays`: the replay inside `subscribe`. `notifies`: a publication between the insert and the end of the
+loop over `subscribers`. `deliv`: the `Delivery` events. `handlers`: the `subscribers` lists.
 
 SUBSUMPTION (`Pipeline.quiescent_dominates`). Let `dom` be a preorder on the objects. Let the rules and the joins
 SIMULATE it. That is: take a rule (or a join) and, for each premise, an object that dominates it. Then the same rule (or
@@ -942,24 +1004,39 @@ zero means quiescence (argued, §11).
 
 * A timeout, the memory guard (`MemoryManager`) or an exception makes the run INCOMPLETE. The `RunManager` returns
   the status: `COMPLETE`, `TIMEOUT`, `OOM` or `FAILED`.
+* AN EXCEPTION IS EVERY `Throwable`, an `Error` too (for example a JVM `OutOfMemoryError` or a `StackOverflowError`).
+  In a runner, in the code of a run on the caller thread, or at the barrier (§7.1), it gives `FAILED` (phase 3:
+  `EXCEPTION`, §9), and the driver returns the report so far. A JVM `OutOfMemoryError` does not give `OOM`: the status
+  `OOM` comes only from a memory guard, the guard of a run or the guard of the barrier (§7.2 B4) (`ap-history.md` F68).
 * THE FIRST END WINS. The status of a run is set once, by a compare-and-set. The quiescence sets `COMPLETE` in the
   same way. So a late end (the memory guard or the timeout while the `RunManager` joins the runners) does not turn a
-  complete run into an incomplete one.
-* EVERY CANCELLATION HAS A KNOWN CAUSE. Only the timeout of the run and the memory guard cancel the analysis. Each one
-  first ends the run with its own status (`TIMEOUT` or `OOM`), then cancels the `Cancellation`. A handler can then
-  throw `Cancellation.Cancelled` (a checkpoint of the `ApManager` or of the alias analysis). The runner loop catches
-  it and only stops: the run keeps the status of its cause. So the status always gives the real reason, and there is
-  no `CANCELLED` status and no external cancel. The `RunManager` activates its `Cancellation` when it is made (in its
-  constructor), before a runner starts, so a cancel is never undone by a later activation.
+  complete run into an incomplete one. One exception: the join overrides the first end. A runner that does not stop
+  makes the run `FAILED`, also after the quiescence, because its stores can still change.
+* EVERY CANCELLATION HAS A KNOWN CAUSE. The status is set before every cancel, so every cancel has a known cause: the
+  timeout, a memory guard (of a run or of the barrier), or a runner failure. Three ends of a run cancel the analysis:
+  the timeout of the run (`TIMEOUT`), the memory guard of the run (`OOM`) and a runner exception (`FAILED`). Each one
+  is `RunManager.fail(status)`: it first sets the status of the run by the compare-and-set, then cancels the
+  `Cancellation` and completes the run. After the quiescence or an earlier end, `fail` does nothing (the first end
+  wins). So a runner exception ends the run at once, with no wait for the timeout, and the other runners stop at their
+  next checkpoint. After a cancel, a handler can throw `Cancellation.Cancelled` (a checkpoint of the `ApManager` or of
+  the alias analysis). The runner loop catches it and only stops: the run keeps the status of its cause. So the status
+  always gives the real reason, and there is no `CANCELLED` status and no external cancel. The `RunManager` activates
+  its `Cancellation` when it is made (in its constructor), before a runner starts, so a cancel is never undone by a
+  later activation. The guard of the barrier also cancels, with the status `OOM` of the iteration; no runner is alive
+  then (§7.2 B4).
+* A throw in the code of a run on the caller thread (for example the routing of the `Start` events or the wait for the
+  end) is `fail(FAILED)`: the `RunManager` still joins its runners and returns `FAILED`.
 * The hand-off of an incomplete run is not complete. The theorems of `ap.md` §6.6 do not apply to the runs after it,
   so the driver does not start a run after an incomplete run (§7.1). The incomplete run adds nothing to the report
   (§7.5).
 * Each run has its own coroutine scope with a `SupervisorJob`. The exception of one runner does not cancel the scope
   of a later run. (Today one failed runner cancels `analyzerScope` for every later run.)
-* The `RunManager` joins every runner coroutine before it returns. If a runner does not stop, the run ends as
-  `FAILED` (the driver reads none of its stores), the analysis stops, and no later run starts. (Today a runner that does not stop in `cancellationTimeout` stays and can change the next run.)
+* The `RunManager` joins every runner coroutine before it returns, on every exit, also when its own code throws. If a
+  runner does not stop, the run ends as `FAILED` (the driver reads none of its stores), the analysis stops, and no
+  later run starts. (Today a runner that does not stop in `cancellationTimeout` stays and can change the next run.)
 * A cancellation must also complete the run. Today every `cancel()` of the analysis comes with its status
-  (`updateFailureStatus(TIMEOUT)` or `(OOM)`) and with `analysisCompletion.complete`; keep the three calls together.
+  (`updateFailureStatus(TIMEOUT)` or `(OOM)`) and with `analysisCompletion.complete`; keep the three calls together
+  (`RunManager.fail`).
 
 ---
 
@@ -969,43 +1046,83 @@ zero means quiescence (argued, §11).
 
 ```kotlin
 interface IterationPolicy {
-    fun fieldLimit(runIndex: Int): Int                               // not decreasing (ap.md W3); run 1 needs >= 1
+    fun fieldLimit(runIndex: Int): Int                               // not decreasing (ap.md W3); run 1: >= 1, checked
     /** Asked only after a complete FORWARD run (the budget; out of scope, ap.md §6.6). */
     fun continueAfter(run: RunConfig, result: RunResult): Boolean
+    /** The timeout of one run. `remaining`: the budget minus the time so far (§0: the budget is in the policy). */
+    fun timeout(run: RunConfig, remaining: Duration): Duration = remaining
 }
 
-class IterationDriver(private val policy: IterationPolicy, private val shared: SharedObjects) {
+/** What one run and its barrier give: the next run, or the end of the analysis. */
+sealed interface Next {
+    class Run(val config: RunConfig) : Next
+    class End(val status: RunStatus, val reason: EndReason = EndReason.ABNORMAL) : Next
+}
+
+class IterationDriver(private val policy: IterationPolicy, private val shared: SharedObjects,
+                      private val budget: Duration) {
     fun analyze(roots: List<MethodKey>): Report {
-        var config = RunConfig(1, policy.fieldLimit(1), demand = null, records = shared.records.view(),
-            seeds = SeedIndex.EMPTY, roots = roots)
+        val start = TimeSource.Monotonic.markNow()
         val report = ReportBuilder()                                  // §7.5
-        fun end(status: RunStatus, reason: EndReason) =
-            report.build(AnalysisEnd(status, config.index, config.direction, reason))
-        while (true) {
-            val result = RunManager(config, shared).run()             // a new engine (§2)
-            if (result.status != RunStatus.COMPLETE)                  // §7.5: adds nothing, refutes nothing
-                return end(result.status, EndReason.ABNORMAL)
-            try {
-                // the barrier (§7.2): no runner runs now
-                val forward = config.direction == Direction.FORWARD
-                if (forward) {
-                    confirm(result)                                   // §7.5 steps 1, 2: the support, the witnesses
-                    report.add(config, result)                        // §7.5 step 3
+        var index = 1                                                 // the current run: AnalysisEnd names it
+        fun end(status: RunStatus, reason: EndReason) = report.build(AnalysisEnd(status, index,
+            if (index % 2 == 1) Direction.FORWARD else Direction.BACKWARD, reason))
+        try {                                                         // ONE GUARDED REGION: the whole loop body (§6.3)
+            require(policy.fieldLimit(1) >= 1) { "ap.md S12 (d): run 1 needs a field limit of at least 1" }
+            var config = RunConfig(1, policy.fieldLimit(1), demand = null, records = shared.records.view(),
+                seeds = SeedIndex.EMPTY, roots = roots)
+            while (true) {
+                index = config.index
+                when (val next = runOnce(config, report, policy.timeout(config, budget - start.elapsedNow()))) {
+                    is Next.Run -> config = next.config               // the result of the run is garbage now (§7.6)
+                    is Next.End -> return end(next.status, next.reason)
                 }
-                shared.records.persist(config, result)                // ap.md §8.7 R1
-                if (forward && !result.hasDemandVulnerability()) return end(RunStatus.COMPLETE, EndReason.STOP_RULE)
-                if (forward && !policy.continueAfter(config, result)) return end(RunStatus.COMPLETE, EndReason.POLICY)
-                config = handOff(config, result)                      // §7.3, §7.4
-            } catch (e: Exception) {                                  // an exception at the barrier
-                return end(RunStatus.FAILED, EndReason.ABNORMAL)      // the report so far
             }
+        } catch (e: Throwable) {                                      // an Error too: FAILED, never OOM (§6.3)
+            logger.error(e) { "Run $index failed; the analysis ends with the report so far" }
+            return end(RunStatus.FAILED, EndReason.ABNORMAL)          // the report so far: the earlier runs stay
         }
+    }
+
+    /** One run and its barrier. The `RunResult` is a local of this frame, so no live slot keeps it during the next run
+     *  (§7.6). */
+    private fun runOnce(config: RunConfig, report: ReportBuilder, timeout: Duration): Next {
+        val result = RunManager(config, shared).run(timeout)          // a new engine (§2); it joins its runners (§6.3)
+        if (result.status != RunStatus.COMPLETE)                      // §7.5: adds nothing, refutes nothing
+            return Next.End(result.status)
+        // THE BARRIER (§7.2): no runner runs now. Its own memory guard (B4): a hit cancels the Cancellation, and the
+        // barrier stops at its next checkpoint.
+        val guard = MemoryManager(shared.refManager, BARRIER_MEMORY_THRESHOLD) { shared.cancellation.cancel() }
+        val next = try {
+            guard.runWithMemoryManager { barrier(config, result, report) }   // the soft references stay enabled
+        } catch (e: Cancellation.Cancelled) {
+            Next.End(RunStatus.OOM)                                   // the barrier guard is the only canceller here
+        }
+        return if (shared.cancellation.isActive()) next else Next.End(RunStatus.OOM)   // a hit after the last checkpoint
+    }
+
+    private fun barrier(config: RunConfig, result: RunResult, report: ReportBuilder): Next {
+        val forward = config.direction == Direction.FORWARD
+        if (forward) {
+            confirm(result)                                           // §7.5 steps 1, 2: the support, the witnesses
+            report.add(config, result)                                // §7.5 step 3
+        }
+        shared.records.persist(config, result)                        // ap.md §8.7 R1
+        if (forward && !result.hasDemandVulnerability()) return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
+        if (forward && !policy.continueAfter(config, result)) return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
+        return Next.Run(handOff(config, result))                      // §7.3, §7.4
     }
 
     private fun handOff(config: RunConfig, result: RunResult): RunConfig {
         val limit = policy.fieldLimit(config.index + 1)
         require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
         return RunConfig(config.index + 1, limit, demandOf(result), shared.records.view(), seedsOf(result), config.roots)
+    }
+
+    companion object {
+        /** Today's threshold of the confirmation: `TRACE_GENERATION_MEMORY_THRESHOLD`
+         *  (TaintAnalysisUnitRunnerManager.kt:645). */
+        const val BARRIER_MEMORY_THRESHOLD = 0.99
     }
 }
 ```
@@ -1016,23 +1133,39 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
   `VulnerabilityStore`, grouped by the vulnerability key (§4.7, §10). The policy can stop earlier.
 * The driver asks `continueAfter` only after a complete FORWARD run. A complete backward run always goes on to the next
   forward run: its only output is the hand-off of that run (§7.4). So the iteration always ends after a forward run
-  (as `driver_iteration_upto`, §7.7), or at an abnormal end.
-* The driver checks the field limit of each run: it does not decrease (`ap.md` W3). A policy that lowers it is an
-  error: the `require` in `handOff` fails, and the iteration ends as at an exception at the barrier.
+  (as `PipelineDriver.driver_iteration_upto`, §7.7), or at an abnormal end.
+* The driver checks the field limit of each run: run 1 has at least 1 (`ap.md` S12 (d)), and the limit does not
+  decrease (`ap.md` W3). A policy that breaks either is an error: the `require` fails, and the iteration ends as at a
+  throw in the guarded region (`FAILED`; for run 1 the report has no entry).
+* THE TIMEOUT OF A RUN is `policy.timeout(config, remaining)`, where `remaining` is the budget minus the time so far
+  (by default the whole rest of the budget). The `RunManager` gets it in `run(timeout)`.
 * THE END OF THE ANALYSIS is an output: `Report.end = AnalysisEnd(status, run, direction, reason)` (§10). `run` and
   `direction` are those of the last run. The reasons:
   * `STOP_RULE`: a complete forward run with no demand vulnerability; `status` is `COMPLETE`;
   * `POLICY`: `continueAfter` gave false after a complete forward run; `status` is `COMPLETE`;
-  * `ABNORMAL`: an incomplete run (`status` is its status: `TIMEOUT`, `OOM` or `FAILED`), or an exception
-    at the barrier (`status` is `FAILED`).
-* AN EXCEPTION AT THE BARRIER (the confirmation, `persist`, the hand-off) ends the iteration. The driver returns the
-  report so far: the results of the earlier runs stay (`ap-history.md` F67).
+  * `ABNORMAL`: an incomplete run (`status` is its status: `TIMEOUT`, `OOM` or `FAILED`), a throw in the guarded
+    region of the driver (`status` is `FAILED`), or a hit of the memory guard of the barrier (`status` is `OOM`).
+* ONE GUARDED REGION. The whole loop body of the driver is one guarded region (`catch (e: Throwable)`): the
+  `RunConfig` of run 1 and its check, `RunManager(...)`, `run(...)` and the barrier (the confirmation, `persist`, the
+  hand-off). A throw there, an `Error` too (§6.3), ends the iteration with `FAILED`. The driver returns the report so
+  far: the results of the earlier runs stay (`ap-history.md` F67, F68). The `RunManager` joins its runners on every exit
+  (§6.3), so no runner of the run runs when the driver returns.
+* THE MEMORY GUARD OF THE BARRIER (§7.2 B4). A hit at the barrier ends the iteration with `AnalysisEnd(OOM, run,
+  direction, ABNORMAL)` and the report so far. The barrier has no deadline (§11).
 
 ### 7.2 The barrier
 
 * B1. The driver computes the hand-off only after the run is complete and no runner of the run is alive (§6.3).
 * B2. The next run starts only after the hand-off is complete.
 * B3. The driver may read the stores of the finished run in parallel, read-only.
+* B4. The barrier runs under its own memory guard (`MemoryManager`), as today's confirmation: the threshold of today
+  (`TRACE_GENERATION_MEMORY_THRESHOLD = 0.99`) and the same mechanism (`TaintAnalysisUnitRunnerManager.kt:374-384`,
+  `:645`). The soft-reference managers stay enabled during the barrier, so `persist` interns with live tables and the
+  persisted records share nodes. A hit cancels the `Cancellation`; the loops of the barrier (the support, `persist`,
+  the hand-off) call `Cancellation.checkpoint` once per analyzer, so the barrier stops at its next checkpoint. The
+  iteration then ends with `AnalysisEnd(OOM, run, direction, ABNORMAL)` and the report so far (§7.1). The driver also
+  checks the `Cancellation` after the barrier, so a hit after the last checkpoint is not lost (the next `RunManager`
+  would activate the `Cancellation` again). The barrier has no deadline (§11).
 
 With B1, the hand-off reads the closure of the run (`PipelineDriver.result_D`, `result_DR`, `result_DB`). So the
 hand-off is exactly the hand-off of `ap.md` §9.2.
@@ -1097,34 +1230,54 @@ A vulnerability is confirmed in a run if one of its witnesses of that run is con
 key. One key can come from several runs; the state CONFIRMED wins (`ap.md` §8.10). A demand vulnerability of an
 earlier forward run that the latest complete forward run does not report is REFUTED, so it leaves the report.
 
+THE OUTPUT holds EVERY entry of the report: the CONFIRMED and the DEMAND vulnerabilities, each with the simple trace
+(§9; `ap-history.md` F68). So the output holds every vulnerability of the latest complete forward run, and the claim
+of `ap.md` §0.1 and §6.6 (the analysis can stop at any complete forward run) holds for the output too: a complete
+forward run holds every real vulnerability in some layer (`PipelineDriver.driver_iteration_upto`, §7.7), and the
+report keeps every vulnerability of the latest complete forward run, in one of its two states. A vulnerability that
+stays DEMAND in every run (for example one whose taint comes only from an `[any]`-target source, `ap.md` W6) is output
+with the state DEMAND.
+
 AN INCOMPLETE RUN (forward or backward) adds nothing to the report and refutes nothing. The refutation of `ap.md`
 §8.10 needs the coverage theorem of run `n + 2`, which needs complete runs. The confirmation needs the support at the
 fixed point of the run, which an incomplete run does not reach. So the driver computes no confirmation for an
 incomplete run, and the report has no state for its vulnerabilities. The report stays that of the earlier complete
 forward runs, and `Report.end` tells how the analysis ended (§7.1).
 
+AN INCOMPLETE RUN 1. If run 1 is incomplete, no forward run is complete: the report has no entry and the output has no
+vulnerability; `Report.end` gives the cause (the status). Today a full scan that times out outputs the vulnerabilities
+that it found before the timeout (`TaintAnalyzer.kt:157-223`). This is a deviation from today (`ap-history.md` F67
+(4), F68; §11).
+
 ### 7.6 What stays after a run
 
 | Data | Stays until | Read by |
 |---|---|---|
-| the run summary stores of a run, and the `sourceHits` of a backward run | its hand-off is computed | §7.3, §7.4 |
+| the run summary stores of a run, and the `sourceHits` of a backward run | its hand-off is computed (the end of its barrier) | §7.3, §7.4; `persist` (`ap.md` §8.7 R1) |
 | the links of a forward run | its confirmation is computed | §7.5 |
+| the edge stores, the initial fact stores, and the links of a backward run | the end of the run | — (the barrier never reads them) |
 | `SummaryStorage`, `SubscriptionManager`, the runners, the backward analyzers | the end of the run, or its hand-off | — |
 | `RecordStore`, `VulnerabilityStore`, `MethodContextCache`, `ApManager` | the end of the analysis | every run |
 
-Every other object of a run is garbage after the run: the edge stores too. No store of a run stays for a trace
-resolver (the trace resolution is out of scope, §9). An incomplete run keeps no store after it ends (§7.5). The engine
-of a run is never used again (§2), so no state of one run can leak into the next run. This removes the leaks of
-today's reuse (Appendix A).
+THE BARRIER READS ONLY: the links of a forward run (the support), the summaries (`persist`, the hand-off), the
+`sourceHits` of a backward run (the hand-off), the `VulnerabilityStore` (the confirmation, the report, the stop rule,
+the sink seeds) and the forms of the `MethodContextCache` (the seed patterns). So the `RunManager` keeps of a complete
+run only what the barrier reads: at the end of the run it drops the edge stores, the initial fact stores and the links
+of a backward run. The barrier holds the stores that it reads under its own memory guard (§7.2 B4). The driver keeps
+the result of a run only in the frame of its barrier (`runOnce`, §7.1), so no live slot keeps it during the next run.
+Every other object of a run is garbage after the run: the edge stores too. No store of a run stays for a trace resolver
+(the trace resolution is out of scope, §9). An incomplete run keeps no store after it ends (§7.5). The engine of a run
+is never used again (§2), so no state of one run can leak into the next run. This removes the leaks of today's reuse
+(Appendix A).
 
 ### 7.7 The driver theorems
 
 THEOREM (`PipelineDriver.driver_iteration`). Hypotheses:
 
-* the program satisfies the hypotheses of `Backward.iteration_general` (`ap.md` §6.6): `P.WF`, `BindTargetsStar`,
-  `StmtsMarkRev`, `NoZeroBack`, `ZeroKept`, `ExitReach`, and every sink pattern has the tail `$` or `[any]`;
+* the program satisfies the hypotheses of `Backward.iteration_general` (`ap.md` §6.6): `P.WF`, `Reverse.BindTargetsStar`,
+  `Backward.StmtsMarkRev`, `NoZeroBack`, `ZeroKept`, `ExitReach`, and every sink pattern has the tail `$` or `[any]`;
 * run 1 uses `policy1`. The forward restricted runs use `emitM`, `satI` and `restrictU`. The backward runs use the
-  same three on `Program.rev P`, with no sinks and with the zero rules (`zbind = true`). The field limits and the
+  same three on `Reverse.Program.rev P`, with no sinks and with the zero rules (`zbind = true`). The field limits and the
   record sets are free;
 * every run is complete: `stF k` (forward run `2k + 1`) and `stB k` (backward run `2k + 2`) are reachable quiescent
   states of their encoded systems;
@@ -1137,19 +1290,21 @@ Conclusion: for every real flow to a sink (a reachable location that a sink patt
 every forward run holds the vulnerability, in some layer.
 
 `PipelineDriver.driver_iteration_upto` is the same theorem for a FINITE sequence: the driver stops after forward run
-`2K + 1`, and only the runs up to it must be complete. This is the driver of §7.1: it stops only after a complete
-forward run (the stop rule or `continueAfter`), or at an abnormal end, which adds nothing to the report (§7.5). The proof extends the sequence after `K` with the full demand
-and with every sink as a seed.
+`2K + 1`, and only the runs up to it must be complete. This is the stop structure of the driver of §7.1, for the
+forward runs without source seeds: the driver stops only after a complete forward run (the stop rule or
+`continueAfter`), or at an abnormal end, which adds nothing to the report (§7.5). With the source seeds:
+`PipelineSeeds.driver_iteration_src` (below), its finite form argued (§11); the static rule and the conjunctions: §11.
+The proof extends the sequence after `K` with the full demand and with every sink as a seed.
 
 The records are not hypotheses: the record sets are free. For the runs with the static rule, `ap.md` proves the
-iteration (`StaticsIter.iteration_general_DS`), and `clDS_iff` gives the closure equality; the pipeline form of that
-theorem is argued (§11).
+iteration (`StaticsIter.iteration_general_DS`), and `PipelineAP.clDS_iff` gives the closure equality; the pipeline form
+of that theorem is argued (§11).
 
 THEOREM (`PipelineSeeds.driver_iteration_src`). The same, with the source seeds (§4.7). Forward run `2k + 3` analyzes
 the program `FSeeds.keepSources P σ_k`; `σ_k` contains the source hits of backward run `2k + 2`, computed from its
 final state (`FSeeds.srcHit`). The conclusion is the same: every forward run holds every real vulnerability of `P`. The
-proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. Its finite form (as
-`driver_iteration_upto`) is argued (§11).
+proof joins `PipelineDriver.result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. Its finite form (as
+`PipelineDriver.driver_iteration_upto`) is argued (§11).
 
 ---
 
@@ -1163,7 +1318,8 @@ proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. It
 | `MethodAnalyzerStorage` | REUSE with a factory | the `EmptyMethodContext` twin goes; the context cache shares the per-method parts (§4.8) |
 | `MethodAnalyzer`, `NormalMethodAnalyzer` | REPLACE by `RunMethodAnalyzer` | §4; `TimedMethodAnalyzer` becomes a decorator of the new interface |
 | `EmptyMethodAnalyzer` | REMOVE | an empty method is never analysed and never a callee (§4.4) |
-| `MethodAnalyzerEdges`, `EdgeCollection`, `AccessPathBaseStorage` | REUSE the structure | the new keys of `ap.md` §8.1; the list of `EdgeCollection` becomes the `normal` queue of `DeltaWorklist` (§4.3) |
+| `MethodAnalyzerEdges`, `EdgeCollection` | REUSE the structure | the new keys of `ap.md` §8.1; the list of `EdgeCollection` becomes the `normal` queue of `DeltaWorklist` (§4.3) |
+| `AccessPathBaseStorage`, `MethodAnalyzerEdges.EdgeStorage` | NOT USED, REPLACE | `AccessPathBaseStorage` rejects the zero base; the conclusion group of `ap-impl.md` §4.3 (one premise key, every base and kind) replaces `EdgeStorage` (`ap.md` §7.6) |
 | `JIRLocalVariableReachability` (`isReachable`) | NOT USED by the core | no liveness check (§4.3); the alias analysis keeps it as its own input (§4.8) |
 | `Edge` (`ZeroToZero`, `ZeroToFact`, `FactToFact`, `NDFactToFact`) | REPLACE | `ap.md` §7.6 |
 | `SummaryEdgeStorageWithSubscribers`, `MethodSummariesUnitStorage` | REUSE the pattern | publications per premise key and layer; the lock of P3 (§5.2); one storage per method key in the `RunManager` |
@@ -1180,9 +1336,9 @@ proof joins `result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. It
 | `JIRBackwardExitWiringGraph` (`saloed/backward-main`) | PORT | with a cache per method (§4.4) |
 | `StatementSummaryBuilder`, `buildReversed`, the JVM flow functions | ADAPT | the forward interpreter of §4.9 (`interpreter.md`); `buildReversed` becomes `StatementSummary.reversed` in the core |
 | `JIRMethodAnalysisContext` | SPLIT | the cached part and the run part (§4.8) |
-| `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state; the `RunManager` activates the `Cancellation` in its constructor (§6.3) |
+| `MemoryManager`, `Cancellation`, `UnitRunnerStats`, `MethodStats` | REUSE | one instance per run where it has run state; the `RunManager` activates the `Cancellation` in its constructor (§6.3); one more `MemoryManager` for each barrier, with the threshold of today's confirmation (§7.2 B4) |
 | summary serialization (`storeSummaries`, `loadSummariesFromRunner`) | NOT USED | the records are the reuse between runs |
-| `trace/*` | OUT OF SCOPE | no store of a run stays for it (§7.6); phase 3 gives each CONFIRMED vulnerability the simple trace `TracePathGenerationResult.Simple` (§9) |
+| `trace/*` | OUT OF SCOPE | no store of a run stays for it (§7.6); phase 3 gives every report entry, CONFIRMED and DEMAND, the simple trace `TracePathGenerationResult.Simple` (§9) |
 
 Do not copy the defects of today that Appendix A lists. Each one has its rule in this document: P3 and P4 (§5.3),
 no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run scope (§6.3), the fixed priority keys
@@ -1205,18 +1361,25 @@ no edge post-processor (§4.3), the new engine per run (§2, §7.6), the per-run
   the prescan runners, the unit storage, the analyzers, the AP manager of the prescan and `JIRAnalysisManager.contexts`.
   No prescan edge, summary or alias analysis stays alive during the runs (`ap-history.md` F67).
 * OUTPUT (phase 3). The core gives the `Report` (§10): the entries, each with its state CONFIRMED or DEMAND (§7.5) and
-  the witnesses of its key in the run of that state (the fields of `ap.md` §8.10; phase 3 reads the method key of a
-  confirmed witness), and `end`, the end of the analysis (`AnalysisEnd`, §7.1). Phase 3 maps `end` to today's
-  `TaintAnalyzer.Status`.
+  the witnesses of its key in the run of that state (the fields of `ap.md` §8.10), and `end`, the end of the analysis
+  (`AnalysisEnd`, §7.1). The phase-3 output holds EVERY entry of the report: the CONFIRMED vulnerabilities and the
+  DEMAND vulnerabilities of the latest complete forward run, each with the simple trace (TRACE, below; `ap-history.md`
+  F68). The method key of an output vulnerability is the method key of a confirmed witness if the entry has one, else
+  of the first witness. Phase 3 maps `end` to today's `TaintAnalyzer.Status`. If run 1 is incomplete, the report has no
+  entry and the output is empty; the status gives the cause. Today a full scan that times out outputs the
+  vulnerabilities that it found before the timeout (`TaintAnalyzer.kt:157-223`): this is a deviation from today (§7.5,
+  §11).
 * TRACE. The trace resolution is out of scope. The core keeps no store of a run for a trace resolver (§7.6). The
-  phase-3 output gives each CONFIRMED vulnerability a SIMPLE trace: the trace with only the sink statement (today
+  phase-3 output gives every entry, CONFIRMED and DEMAND, a SIMPLE trace: the trace with only the sink statement (today
   `TracePathGenerationResult.Simple`,
   `core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/ap/ifds/trace/path/TracePath.kt:48-51`).
-  The DEMAND vulnerabilities stay in the report with the state DEMAND. Phase 3 logs their count and does not put them
-  in its output.
-* NO EXTERNAL CANCEL (phase 3). The phase-3 entry has no `cancel()`: the timeout of a run and the memory guard are the
-  only causes of a cancellation (§6.3). So phase 3 maps the status one to one: `COMPLETE` → `OK`, `TIMEOUT` →
-  `TIMEOUT`, `OOM` → `OOM`, `FAILED` → `EXCEPTION`.
+  Phase 3 logs the count of the entries per state (CONFIRMED, DEMAND).
+* NO EXTERNAL CANCEL (phase 3). The phase-3 entry has no `cancel()`: the timeout of a run, a memory guard (of a run or
+  of the barrier) and a runner exception are the only causes of a cancellation (§6.3). So phase 3 maps the status one
+  to one: `COMPLETE` → `OK`, `TIMEOUT` → `TIMEOUT`, `OOM` → `OOM`, `FAILED` → `EXCEPTION`.
+* THE PHASE-3 GUARD. Phase 3 calls the analysis inside `runCatching`, as today (`TaintAnalyzer.kt:157-158`). A throw
+  outside the driver (the setup of the analysis) gives an empty output and the status `EXCEPTION`. A throw inside the
+  driver never reaches phase 3: the driver returns the report so far (§7.1).
 
 ---
 
@@ -1286,12 +1449,15 @@ sealed interface RunEvent {
  *  context: one sink statement in several contexts is one vulnerability. */
 data class VulnerabilityKey(val rule: RuleId, val method: CommonMethod, val statement: CommonInst)
 
-/** ap.md §4.9: a sink edge (premise set, layer, sink fact). */
-data class SinkEdge(val premise: PremiseKey, val layer: Layer, val fact: Pattern)
+/** ap.md §4.9: a sink edge (premise set, layer, sink facts). `facts`: REACH (the zero fact) for an unconditional sink,
+ *  else a TAINT tree, so the sink facts of two witnesses of one entry merge (§4.7); as `ap-impl.md` §7.12. */
+class SinkEdge(val premise: PremiseKey, val layer: Layer, val facts: Facts)
 
 /** A sink witness (§4.7): one sink edge, or the sink edge set of a conjunctive sink (one edge per literal), of one sink
  *  alternative (`SinkRule.alternative`, §4.9) in one method key. It is confirmed as a whole (§7.5 step 2), with the
- *  support in `methodKey`. `endFacts`: the end facts of the sink (ap.md §8.10). */
+ *  support in `methodKey`. `endFacts`: the end facts of the sink (ap.md §8.10). The sink patterns of a witness are not
+ *  stored: they are `SinkRule.patterns` of `alternative` of the rule at the statement in `methodKey` (the same in every
+ *  run, interpreter.md I5). */
 class SinkWitness(val alternative: Int, val methodKey: MethodKey, val edges: List<SinkEdge>, val run: Int,
                   val endFacts: List<PathFact> = emptyList()) {
     var confirmed: Boolean = false                                             // set only at a barrier (§7.5)
@@ -1305,7 +1471,10 @@ interface VulnerabilityStore {
     fun witnessesOf(run: Int): Sequence<Pair<VulnerabilityKey, SinkWitness>>
 }
 
-enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }    // no CANCELLED: every cancel has a known cause (§6.3)
+/** §6.3. TIMEOUT: the timeout of the run. OOM: a memory guard (of the run, or of the barrier, §7.2 B4), never a JVM
+ *  `OutOfMemoryError`. FAILED: a `Throwable` (an `Error` too) in a runner, in the code of the run or at the barrier, or a
+ *  runner that does not stop at the join. No CANCELLED: every cancel has a known cause (§6.3). */
+enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }
 
 /** The result of one run. The driver reads its stores only if `status == COMPLETE` (§7.5). */
 class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer>, val runIndex: Int,
@@ -1316,7 +1485,8 @@ class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer
             .any { witnesses -> witnesses.none { it.confirmed } }
 }
 
-/** §7.1: why the iteration ended. */
+/** §7.1: why the iteration ended. ABNORMAL: an incomplete run (its status), a throw in the guarded region of the driver
+ *  (FAILED), or a hit of the memory guard of the barrier (OOM). */
 enum class EndReason { STOP_RULE, POLICY, ABNORMAL }
 
 /** §7.1: the end of the analysis. `run`, `direction`: the last run. */
@@ -1327,7 +1497,7 @@ enum class ReportState { CONFIRMED, DEMAND }
 /** §7.5, ap.md §8.10: the report of the analysis. `Entry.run`: the run of the state (the run that confirmed it, or the
  *  latest complete forward run). `Entry.witnesses`: the witnesses of the key in that run, of every alternative and
  *  method key (the fields of ap.md §8.10: the alternative, the method key, the sink edges, `confirmed`, the end facts;
- *  §9 OUTPUT). */
+ *  §9 OUTPUT). The phase-3 output holds every entry, CONFIRMED and DEMAND (§9; ap-history.md F68). */
 class Report(val entries: List<Entry>, val end: AnalysisEnd) {
     class Entry(val key: VulnerabilityKey, val state: ReportState, val run: Int, val witnesses: List<SinkWitness>)
 }
@@ -1398,7 +1568,12 @@ a complete forward run and sets `SinkWitness.confirmed`. `handOff` makes the `Ru
 §7.4: `demandOf` builds the `DemandStore` and `seedsOf` the `SeedIndex` from the stores of the run.
 `RecordStore.view` gives the read-only view of a run; `RecordStore.persist` adds the records of `ap.md` §8.7 R1 at a
 barrier. `CalleeSubscriptions` and `PublicationIndex` are the path tries of §5.3 and §5.2.
-`MethodContextCache.get(method, direction)` gives the cached part of §4.8.
+`MethodContextCache.forms(key: MethodKey)` gives the cached forms of §4.8 for a method key, in both directions: the
+per-method forms that every context shares and the per-key forms of that context. `RunManager.fail(status)` is the
+abnormal end of §6.3: if the compare-and-set of the run status from "no end" to `status` succeeds, it cancels the
+`Cancellation` and completes the run; else (after the quiescence or an earlier end) it does nothing. The timeout of the
+run (`TIMEOUT`), the memory guard of the run (`OOM`), a runner exception and a throw in the code of the run on the
+caller thread (`FAILED`) call it. `RunManager.run(timeout)` joins the runners on every exit (§6.3).
 
 ---
 
@@ -1406,9 +1581,10 @@ barrier. `CalleeSubscriptions` and `PublicationIndex` are the path tries of §5.
 
 ARGUED, NOT PROVED:
 
-* SUBSUMPTION. The AP operations simulate the subsumption of the edge stores (`subsumesB`, the tree merges T1 to T5).
-  `quiescent_dominates` needs this as a hypothesis. For a join it needs: if a stored added fact dominates the added
-  fact of a subscription, the join with the stored one gives a dominating result. `inside` has this property.
+* SUBSUMPTION. The AP operations simulate the subsumption of the edge stores (`Subsume.subsumesB`, the tree merges T1
+  to T5). `Pipeline.quiescent_dominates` needs this as a hypothesis. For a join it needs: if a stored added fact
+  dominates the added fact of a subscription, the join with the stored one gives a dominating result. `inside` has
+  this property.
   `applicable` has it only through the invariants of run 1 (the policy premises are at the root path,
   `Statics.no_any_above`). So the subscriptions and the links deduplicate exactly (§5.3).
 * TREES. The model publishes path facts. The code publishes the deltas of trees: a subscriber gets every delta, and
@@ -1434,17 +1610,35 @@ ARGUED, NOT PROVED:
 * THE SOURCE SEEDS at a call, at the method start and at the method exit: the model restricts the statement sources
   (`FSeeds.keepSources`); the others are the same micro edges at another place (`ap.md` §11.2). The exactness of a
   seeded run for `P` (`ap.md` §11.2). The source seeds in a finite sequence: extend it after `K` with every source as
-  a seed (`FSeeds.flow_keep_all_iff`), as `driver_iteration_upto` does with the sinks.
-* THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`clDS_iff`, `clDN_iff`). The
-  pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md` §11.2), are argued.
+  a seed (`FSeeds.flow_keep_all_iff`), as `PipelineDriver.driver_iteration_upto` does with the sinks.
+* THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`PipelineAP.clDS_iff`,
+  `clDN_iff`). The pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md`
+  §11.2), are argued.
 
 * THE UNCHANGED PATH (§4.3). Its items skip `edges.add`. Its set discards only an item equal to an item that the
-  `unchanged` queue already took, so a discarded item gives no new result. The model stores every edge.
+  `unchanged` queue already took, so a discarded item gives no new result. The model stores every edge. Not storing
+  the item loses no rule: every rule with two premises reads a stored subscription, link, request or publication, or
+  the conjunction store, which keeps the literal input of the item when the item is processed.
 * THE VULNERABILITY KEY (§4.7). The model has no contexts. The key drops the context; each witness keeps its method key,
   and its confirmation reads the support in that method key, as in the model.
+* THE ZERO PUBLICATION (§5.5). The one unrestricted zero-premise publication of §4.6 gives the closure of
+  `PipelineAP.sysDB`, because under `Backward.NoZeroBack` no ordinary subscription satisfies the zero premise. The code
+  publishes a superset, so it can add results, never lose them.
+* THE ANALYZER ACTIONS OUTSIDE THE CLOSURES (§5.5). `D`, `DR`, `Backward.DB`, `Statics.DS` and `NDZ.DNz` have no end
+  facts, no aliases and no exit-rule removal. So the summary store at quiescence is the closure of §5.5 only for the
+  rules that the closures have. The end facts with their trigger and layer (§4.5; `ap.md` §11.1), the aliases with
+  their guard (§4.5; `ap.md` §11.2, S2), and the global-state rule with the removal of the entry marks (§4.7;
+  `interpreter.md` G2) are outside them.
 
-NOT IN THE MODEL: the priorities, the quantum, the order of the worklist (the two queues of §4.3), the memory guard and
-the timeout. They change the order of the steps or stop the run. They do not change the closure of a complete run.
+NOT IN THE MODEL: the priorities, the quantum, the order of the worklist (the two queues of §4.3), the memory guards (of
+a run and of the barrier), the timeout and the failures (a `Throwable` gives `FAILED`, §6.3). They change the order of
+the steps or stop the run. They do not change the closure of a complete run. The barrier has no deadline: it is one
+pass over the stores that §7.6 keeps. A slow barrier shortens the next run. After the last run, the analysis can end
+later than its budget by the time of that barrier.
+
+DEVIATION FROM TODAY: AN INCOMPLETE RUN 1 gives an empty report and an empty output; the status gives the cause. Today a
+timed-out scan outputs the vulnerabilities that it found so far (`TaintAnalyzer.kt:157-223`). A report holds only the
+results of complete forward runs (§7.5; `ap-history.md` F67 (4), F68).
 
 ---
 
@@ -1457,7 +1651,7 @@ the timeout. They change the order of the steps or stop the run. They do not cha
 | `PipelineAP.lean` | the encodings of `D`, `DR`, `DB`, `DS`, `DN`; the `*_wf` theorems; `clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff`; the object theorems (`clD_link`, `clD_sub`, `clD_pub` and the other forms) |
 | `PipelineStore.lean` | the completeness of the index lookups of §5.3 (`replay_run1`, `deliver_run1`, `replay_restricted`, `deliver_restricted`, `record_lookup`) |
 | `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB`, `driver_iteration`, `driver_iteration_upto` |
-| `PipelineNDZ.lean` (with `NDZ.lean`, `NDZeroBase.lean`) | the encoding of `NDZ.DNz`: `sysDNz_wf`, `clDNz_iff`, `result_DNz`, `clDNz_ndpub_zero_sub` (§5.4, §5.5) |
+| `PipelineNDZ.lean` (with `NDZ.lean`, `NDZeroBase.lean`) | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, `clDNz_ndpub_zero_sub`: the encoding of `NDZ.DNz` (§5.4, §5.5) |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
 
 ---
@@ -1470,8 +1664,8 @@ the timeout. They change the order of the steps or stop the run. They do not cha
    edges, summaries and vulnerabilities.
 2. PROTOCOL TESTS. A mock storage that breaks P1, P2, P3 or P4 loses a summary in the fixed schedule of the
    counterexample. The real storage does not.
-3. THE `[any]` DELIVERY. A caller fact with `[any]` above the premise of a summary that the callee publishes AFTER the
-   subscription, with 10 or more subscriptions: the caller gets the summary (P4).
+3. THE `[any]` DELIVERY. In a restricted run (`inside`), a caller fact with `[any]` above the premise of a summary that
+   the callee publishes AFTER the subscription, with 10 or more subscriptions: the caller gets the summary (P4).
 4. SEVERAL PREMISES. A summary `{j1, j2} → g`: premise 1 matched by a delivery, premise 2 by a replay, with the
    conclusion in two deltas: the caller applies both deltas (§5.4).
 5. RECORDS. A forward record does not apply in its forward form in a backward run; its reversal applies. A backward
@@ -1494,11 +1688,20 @@ the timeout. They change the order of the steps or stop the run. They do not cha
     record a hit.
 11. REGRESSION. The existing analysis tests, through phase 3 (`bidirectional-task.md` phase 4).
 12. END OF A RUN AND OF THE ANALYSIS. After the memory guard ends a run (`OOM`), a handler that throws
-    `Cancellation.Cancelled` stops its runner, and the run ends `OOM` before its timeout. A `fail()` after the quiescence leaves the run COMPLETE (the first end wins). An exception at the
-    barrier returns the report of the earlier runs with `AnalysisEnd.reason == ABNORMAL` and the status FAILED. A stop
-    by the stop rule and by the policy gives `STOP_RULE` and `POLICY` (§6.3, §7.1).
+    `Cancellation.Cancelled` stops its runner, and the run ends `OOM` before its timeout. A `RunManager.fail` after the
+    quiescence leaves the run COMPLETE (the first end wins). A handler that throws ends the run `FAILED` before its
+    timeout, and the other runners stop. A runner that does not stop at the join makes the run `FAILED`. An exception at
+    the barrier returns the report of the earlier runs with `AnalysisEnd.reason == ABNORMAL` and the status FAILED; so
+    does an `Error` at the barrier (a stub `RecordStore` whose `persist` throws `OutOfMemoryError`): the report so far,
+    `ABNORMAL`, the status `FAILED` (not `OOM`). A hit of the barrier memory guard (a `Cancellation.Cancelled` at a
+    barrier checkpoint, or a cancel after the last one) gives the report so far, `ABNORMAL` and `OOM`. A throw in
+    `RunManager(...)`, in `run(...)` on the caller thread, or a policy with `fieldLimit(1) < 1` gives `FAILED` and the
+    report so far (empty for run 1), and no runner is alive after the return. A stop by the stop rule and by the policy
+    gives `STOP_RULE` and `POLICY` (§6.3, §7.1).
 13. REPORT. Run 1 complete (one CONFIRMED and one DEMAND vulnerability), run 2 complete, run 3 incomplete: the report
     is that of run 1, and run 3 refutes nothing. `continueAfter` is never asked after a backward run (§7.1, §7.5).
+    Run 1 incomplete (TIMEOUT): the report has no entry, `end = (TIMEOUT, 1, FORWARD, ABNORMAL)`, and the output is
+    empty (§7.5 AN INCOMPLETE RUN 1).
 14. VULNERABILITY KEY AND WITNESSES. One sink statement that two contexts reach is one vulnerability; a confirmed
     witness in one context makes it CONFIRMED. Two alternatives of one sink rule that trigger on two bases with the
     same premise set give two witnesses, and the store does not fail (§4.7).
@@ -1511,8 +1714,23 @@ the timeout. They change the order of the steps or stop the run. They do not cha
     demand-layer end fact on `{zero}`. A demand-layer summary result that is equal to its start fact goes to the
     aliases; a normal one does not (§4.5).
 18. GLOBAL-STATE RULE. A conjunctive exit sink `ContainsMark(S.<C>, STATE) ∧ ContainsMark(Result, T)`: at an exit
-    where only the `S` literal holds, the `S` part leaves the summary edge and is stored as the literal input; a later
-    item with `Result` tainted completes the combination with it (§4.7).
+    where only the `S` literal holds on a zero-premise item, the `S` part leaves the summary edge and is stored as the
+    literal input; a later item with `Result` tainted completes the combination with it (§4.7). A CALLER-SET state
+    (`root(){ acquire(); release(); after(); }`, where `acquire` sets the state, `release` has the exit sink and `after`
+    a sink on the same position): the exit sink of `release` evaluates the state, the state is not dropped, and the
+    caller still sees it after the call (the sink of `after` reports) (§4.7; `ap-history.md` F68).
+19. PRESCAN RELEASE. After the prescan info is gathered and the prescan state is released (§9 PRESCAN MEMORY), weak
+    references to the prescan AP manager, to one prescan runner and to one prescan method context are cleared after a
+    GC (poll a few times).
+20. PHASE-3 OUTPUT AND STATUS. The output holds every entry of the report, CONFIRMED and DEMAND (a vulnerability whose
+    only source has an `[any]` target, `ap.md` W6, is output with the state DEMAND), each with the simple trace; the
+    method key is that of a confirmed witness, else of the first witness; the log has the count per state. The status
+    maps `COMPLETE` to `OK`, `TIMEOUT` to `TIMEOUT`, `OOM` to `OOM` and `FAILED` to `EXCEPTION` (one `Report` per
+    status). A throw in the setup of the analysis gives an empty output and `EXCEPTION` (§9).
+21. CONJUNCTIVE EXIT SOURCE. An exit source `AssignMark(U, Result) if ContainsMark(Argument(0), A) ∧
+    ContainsMark(Argument(1), B)`, with the exit items `(arg(0), $, A)` under the premise `i0` and `(arg(1), $, B)` under
+    `i1`: the full combination gives the ND summary `{i0, i1} → ret.$ (U)`, and the caller applies it by E6; each
+    literal input stays in the conjunction store; the exit items stay in the summary (§4.4).
 
 ---
 

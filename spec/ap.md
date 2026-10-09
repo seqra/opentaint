@@ -40,20 +40,20 @@ The theorems hold for this model. Each item is an assumption of the proof, not a
 
 | # | Assumption | Who must make it true |
 |---|---|---|
-| S1 | The interpreter describes a statement by its statement summary: the bases that it touches and its micro edges (`interpreter.md` §2). Every micro edge (a statement edge or a call binding edge) is PRECISE AND COMPLETE: the micro edges of a statement give exactly its flows. The flows of a rule are read in the reference semantics (§3.5): every negated mark literal is true. With this reading a source or a sink edge is precise. A pass rule has no mark literal, so its edge is precise too. (A pass rule with a mark literal is a rule error; its edge without the literals is an over-approximation, §11.1.) | The interpreter. |
+| S1 | The interpreter describes a statement by its statement summary: the bases that it touches and its micro edges (`interpreter.md` §2). Every micro edge (a statement edge or a call binding edge) is PRECISE AND COMPLETE: the micro edges of a statement give exactly its flows. The flows of a rule are read in the reference semantics (§3.5): every negated mark literal is true. With this reading a source or a sink edge is precise. A pass rule has no mark literal, so its edge is precise too. (A pass rule with a mark literal is a rule error that is not rejected (`interpreter.md` §1.3); its edge without the literals is an over-approximation, §11.1. Every other rule error rejects the whole rule: it gives no edge.) | The interpreter. |
 | S2 | Extra micro edges describe the aliasing: gen edges to the alias paths of the aliases that hold. Each alias edge is precise. The write at an alias is WEAK: the alias base is not touched, so it keeps its old content (`interpreter.md` A3, gap G7). This keeps soundness when an alias does not hold. It is an expected false-positive source (§11.1). The model itself is alias-free. | The alias analysis. |
 | S3 | A method does not reassign its formal parameters. | The IR (JIR keeps arguments immutable). |
 | S4 | A method has one exit node per exit kind. The model has one exit node. A JVM method has two exits, the normal exit and the exceptional exit. They are one VIRTUAL EXIT of the model: the exit rules act at both exits, the backward run starts at both exits, and only the normal exit makes a summary edge (argued, §11.2). | The CFG normalisation. |
 | S5 | A type filter accepts every path that a real value of the static type can have, and it is prefix-closed (§4.8). | The type checker. |
 | S6 | The result of run 1 is the least fixed point of the rules of run 1 (§6.1; Lean: `D`). The result of a later run is the least fixed point of the rules of a restricted run (§6.1; Lean: `DR`, and `Backward.DB` for a backward run). The worklist may compute it in any order. | The analyzer. |
-| S7 | Mark well-formedness: no micro edge or call binding has a `*∖X` premise, and a micro edge with a concrete target mark has a concrete premise mark (`Exact.MarkWF`; §4.1 asserts both). Without it a normal edge can claim a cleaned mark (`Exact.CexMark`). | The interpreter (sources have the premise mark `zeroMark`, conditional sources `T`). |
+| S7 | Mark well-formedness: no micro edge or call binding has a `*∖X` premise, and a micro edge with a concrete target mark has a concrete premise mark (`Exact.MarkWF`; §4.1 asserts both). Without it a normal edge can claim a cleaned mark (`Exact.CexMark`; necessary in the model: the counterexample program breaks S8). | The interpreter (sources have the premise mark `zeroMark`, conditional sources `T`). |
 | S8 | No `*/Universe` edge (§1, Universe): a micro edge with a `$` premise has a concrete premise mark, and no micro edge, binding or initial fact has the tail kind `*/Universe` (`Invariant.no_univ_star`; each hypothesis is necessary: `no_univ_needs_*`). Also (an interpreter duty; §4.1 asserts it): no micro edge has a `$` premise and a `*` target, and every micro edge with a `$` target has a concrete premise mark (`Kinds.ExactTargetConc`; the conclusion kinds of §7.2 use it). | The interpreter (`interpreter.md` I7). |
 | S9 | A conjunction literal has a concrete mark (`NDExact.LitConc`). Without it the ND exactness is false (`NDExact.CexLit.cex_lit`). | The interpreter (a mark literal names its mark). |
 | S10 | Program well-formedness: every micro edge of a statement reads from a base that the statement touches, and every call binding has the premise mark `*` (it passes every mark). With conjunctions, also: the target of a conjunctive micro edge has a concrete mark and no `*` tail (W7). (Lean: `Program.WF`, its type-filter part is S5; with conjunctions `ND.NProg.WF`, its part `target`.) | The interpreter (`interpreter.md` §2, §3.1, §5.3). |
-| S11 | The backward contracts (only the backward run and contract B, §6.6, need them): (a) every call binding has the target mark `*` (`Reverse.BindTargetsStar`); (b) every statement micro edge is mark-reversible (§1; `Backward.StmtsMarkRev`); (c) no call binds the zero base back (`Backward.NoZeroBack`); (d) every instruction that is not a call keeps the zero fact: a statement that touches the zero base has the micro edge from the zero fact to the zero fact, no cleaner is on the zero base, and a type filter on the zero base accepts the empty path (`Backward.ZeroKept`); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit (the virtual exit of S4; `Backward.ExitReach`); (f) every sink pattern has the tail `$` or `[any]` (§4.9; for the seeds: `Kinds.SeedTails`). | The interpreter (`interpreter.md` I11); for (e) the CFG normalisation (it wires the code that never returns to the exit). |
-| S12 | The static construction rules (run 1, §4.10). A STATIC POSITION is the premise path of a statement micro edge on the static base `S`, or the path of a sink pattern on `S`, CUT to at most two accessors (the class and the field: `[<C>, f]`, `[<C>]`, Go `[<G>]`). So a path above a static position is the root path `[]` or a class `[<C>]`. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_{E} S.q.*` (the keep edges of a write), or a FIELD-TO-FIELD edge: its premise path and its target path are both at or below a static field (a pass rule between static fields). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)`. So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*`, in both directions. (d) The class accessor is not counted, and `L ≥ 1`, so the field limit never cuts a path to a path above a static position. (e) A cleaner on `S` names its mark. (`RemoveAllMarks` on a position of `S`, at any depth, is not a cleaner: it is the kill of a strong write, `interpreter.md` §1.4.) One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the JVM rule position `AnyClassStatic`, `interpreter.md` §1.4, I12 (e)). Every fact on `S` lies inside it, so it drops each fact whole and never cleans a fact in part (no `part` row and no request, §4.7). Its effect is that of a statement that touches `S` and has no micro edge on `S` (argued, §11.2). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of §6.2. A rule position can be deeper than a static field: below the static field the ordinary rules apply. (Lean: `Statics.SWF`, its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`; `PosIn`, `AbovePos`, `abovePos_len`.) A restricted run needs only (a) to (d), with its own field limit in (d) (`StaticsIter.SWFR`), and persisted records that keep the static invariant (§4.10). | The interpreter (`interpreter.md` I12). |
-| S13 | Validity. The exactness and confirmation theorems read a VALIDITY predicate on locations (§4.8). Every type filter accepts every valid location of its base (`Exact.FiltValid`). The validity goes back along every statement micro edge and along every call binding, into the callee and back: a valid end location of the edge comes only from a valid start location (`Exact.BackOK`). With conjunctions, the validity also goes back from the target of a conjunctive micro edge to each literal: every location of a literal is valid if a location of the target is valid (`NDExact.ConjOK`). Without these conditions the valid forms are false (`Exact.CexFilt`, `NDExact.CexConjOK.cex_conjOK`). | The type-filter placement (`interpreter.md` §5.1). |
-| S14 | Persisted records are exact: every pair of a persisted record whose end location is valid (S13) is a concrete flow (`RExact.RecsExact`; the valid form `RExact.RecsExactV`). The records of one forward run are exact if the records that the run reads are exact (run 1 reads none): run 1 (`RExact.recs_of_D`, `recs_of_D_valid`), a forward restricted run (`recs_of_DR`, `recs_of_DR_valid`); the union of two exact record sets is exact (`recs_union`). Over the whole run sequence the persisted forward records stay exact (`BExact.recsSeq_exact`, `recsSeq_exactV`), and a normal backward summary with a non-zero premise reverses into an exact forward record under S11 (c) (`BExact.rev_record_exact`). So S14 is a theorem for the records of §8.7 R1, not an extra assumption. The model has no end facts: a record through an end fact is not exact (§11.1). | The record store (§8.7). It persists only the normal summary edges of the forward runs and the normal backward summary edges whose premise is not the zero fact (§8.7 R1). |
+| S11 | The backward contracts (the backward run and contract B, §6.6, need them; (d) is also a hypothesis of the zero-drop theorems of `NDZeroThms` (§4.6, §10.10), with `NDZero.ZeroCalls` (§3.5: the zero binding), `NDZero.ConjAdj` and the policy condition `NDZeroBase.AlphaZero` (`policy1_alphaZero`); (g) only for §8.7 R3): (a) every call binding has the target mark `*` (`Reverse.BindTargetsStar`); (b) every statement micro edge is mark-reversible (§1; `Backward.StmtsMarkRev`); (c) no FORWARD call binds the zero base back (`Backward.NoZeroBack`); the backward binding back has the reversed zero binding `zero.* → zero.*` (§9.2); (d) every instruction that is not a call keeps the zero fact: a statement that touches the zero base has the micro edge from the zero fact to the zero fact, no cleaner is on the zero base, and a type filter on the zero base accepts the empty path (`Backward.ZeroKept`); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit (the virtual exit of S4; `Backward.ExitReach`); (f) every sink pattern has the tail `$` or `[any]` (§4.9; for the seeds: `Kinds.SeedTails`); (g) every statement micro edge and every call binding has an EXACT SHAPE (§1; `Reverse.RevStmts`, `RevCalls`): a micro edge with a `*` premise and a `$` or `[any]` target has the Empty premise exclusion. Only the exactness of the reversed records (§8.7 R3) needs (g). | The interpreter (`interpreter.md` I11); for (e) the CFG normalisation (it wires the code that never returns to the exit). |
+| S12 | The static construction rules (run 1, §4.10). A STATIC POSITION is the premise path of a statement micro edge on the static base `S`, or the path of a sink pattern on `S`, CUT to at most two accessors (the class and the field: `[<C>, f]`, `[<C>]`, Go `[<G>]`). So a path above a static position is the root path `[]` or a class `[<C>]`. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_{E} S.q.*` (the keep edges of a write), or a FIELD-TO-FIELD edge: its premise path and its target path are both at or below a static field (a pass rule between static fields). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)`. A conjunctive micro edge into such a target has a `$` premise with a concrete mark for each literal (`interpreter.md` §1.4, §5.3; the Lean `Statics.SWF.write` has single-premise edges only, so this clause is argued, §11.2). So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*`, in both directions. (d) The class accessor is not counted, and `L ≥ 1`, so the field limit never cuts a path to a path above a static position. (e) A cleaner on `S` names its mark. (`RemoveAllMarks` on a position of `S`, at any depth, is not a cleaner: it is the kill of a strong write, `interpreter.md` §1.4.) One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the JVM rule position `AnyClassStatic`, `interpreter.md` §1.4, I12 (e)). Every fact on `S` lies inside it, so it drops each fact whole and never cleans a fact in part (no `part` row and no request, §4.7). Its effect is that of a statement that touches `S` and has no micro edge on `S` (argued, §11.2). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of §6.2. A rule position can be deeper than a static field: below the static field the ordinary rules apply. (Lean: `Statics.SWF`, its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`; `PosIn`, `AbovePos`, `abovePos_len`.) A restricted run needs only (a) to (d), with its own field limit in (d) (`StaticsIter.SWFR`), and persisted records that keep the static invariant (§4.10). | The interpreter (`interpreter.md` I12). |
+| S13 | Validity. The exactness and confirmation theorems read a VALIDITY predicate on locations (§4.8). Every type filter accepts every valid location of its base (`Exact.FiltValid`). The validity goes back along every statement micro edge and along every call binding, into the callee and back: a valid end location of the edge comes only from a valid start location (`Exact.BackOK`). With conjunctions, the validity also goes back from the target of a conjunctive micro edge to each literal: every location of a literal is valid if a location of the target is valid (`NDExact.ConjOK`). Without these conditions the valid forms are false (`Exact.CexFilt`, in the model: its program breaks W6; `NDExact.CexConjOK.cex_conjOK`). | The type-filter placement (`interpreter.md` §5.1). |
+| S14 | Persisted records are exact: every pair of a persisted record whose end location is valid (S13) is a concrete flow (`RExact.RecsExact`; the valid form `RExact.RecsExactV`). The records of one forward run are exact if the records that the run reads are exact (run 1 reads none): run 1 (`RExact.recs_of_D`, `recs_of_D_valid`), a forward restricted run (`recs_of_DR`, `recs_of_DR_valid`); the union of two exact record sets is exact (`recs_union`). Over a run sequence in which every record is an exit edge of an earlier FORWARD run, the records stay exact (`BExact.recsSeq_exact`, `recsSeq_exactV`; `BExact.RecsFromRuns`). The reversed records of §8.7 R3 are proved only for a program without type filters (`Exact.FiltUp`) under S11 (c) and (g): a normal backward summary with a non-zero premise reverses into an exact forward record if the records that its backward run reads are exact (`BExact.rev_record_exact`, `revRecs_exact`), and an exact forward record reverses into an exact record of the reversed program (`Reverse.backward_reuse_precise`). The sequence in which each direction reads the reversed records of the other is argued (§11.2). So S14 is a theorem for the forward records of a program without conjunctions. It is not a theorem for a reversed backward record on a program with type filters, or for a record through an end fact (expected false-positive sources, §11.1), or for a one-member conjunction record (exact for the support semantics, `NDZeroThms.nd_edge_exact_z`; its reuse is argued, §11.2). The soundness does not use S14: the record sets are free (`Backward.iteration_general`). | The record store (§8.7). It persists only the normal summary edges of the forward runs and the normal backward summary edges whose premise is not the zero fact (§8.7 R1). |
 
 Inside this scope:
 
@@ -62,8 +62,9 @@ Inside this scope:
   and it passes the same witness on as the demand of the next run (§10.7).
 * The backward run of §9.2 satisfies contract B (§6.6; `Backward.B_general`), so EVERY COMPLETE FORWARD run reports
   every real vulnerability (`Backward.iteration_general`; `Backward.iteration_sound_M_D` for any backward step that
-  satisfies contract B). So the analysis can stop at any complete forward run (§6.6), and a vulnerability that a
-  complete forward run does not report is not real.
+  satisfies contract B). It reports it in some layer: CONFIRMED or DEMAND (§4.9). The output holds both: every entry
+  of the report (§8.10; `ap-history.md` F68). So the analysis can stop at any complete forward run (§6.6), also for
+  the output, and a vulnerability that a complete forward run does not report is not real.
 * Inside the smaller scope of NORMAL edges the analysis is also EXACT. An end location is VALID if every type filter
   accepts it (S13); real values have only valid locations. Every pair of a normal edge whose end location is valid is a
   concrete flow: in run 1 under S7 and S13 (`Exact.edge_exact_valid`), in a restricted run also under S14
@@ -71,14 +72,17 @@ Inside this scope:
 * Exactness is against the path-insensitive reference semantics (§3.5). A conjunction (§4.6) and a rule condition that
   one fact does not decide (§4.2) are expected over-approximations. They do not move an edge to the demand layer. A
   normal edge with conjunctions is exact against the support semantics `ND.TaintN`, under S7, S9, S10 and S13
-  (`NDExact.nd_edge_exact`; the valid form `nd_edge_exact_valid`).
+  (`NDExact.nd_edge_exact`; the valid form `nd_edge_exact_valid`; for the spec closure `NDZ.DNz`:
+  `NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z`, also under S11 (d), `NDZero.ZeroCalls` and `ConjAdj`).
 * A CONFIRMED vulnerability (§4.9) whose sink pattern covers only valid locations is real for the reference semantics
   (§3.5), modulo the expected false-positive sources of §11.1. In run 1 this holds under S7, S10 and S13
   (`Confirmed.confirmed_real_valid`), in a restricted run also under S14 (`RMain.confirmed_real_M_valid`). For a
   program without type filters the same holds with no validity condition (`Confirmed.confirmed_real`,
   `RMain.confirmed_real_M`). These theorems are for programs without conjunctions and without the static rule.
 * With conjunctions, a vulnerability that run 1 confirms with the joint support of §4.9 is real for the support
-  semantics, under S7, S9, S10 and S13 (`NDConfirmed.confirmed_real_N`; the valid form `confirmed_real_N_valid`).
+  semantics, under S7, S9, S10 and S13 (`NDConfirmed.confirmed_real_N`; the valid form `confirmed_real_N_valid`;
+  for `NDZ.DNz`: `NDZeroThms.confirmed_real_Nz`, `confirmed_real_Nz_valid`, also under S11 (d), `NDZero.ZeroCalls` and
+  `ConjAdj`).
 * With the static rule of §4.10, a vulnerability that run 1 confirms is real, under S7 and S13 (`StaticsConfirmed.confirmed_realS`;
   the valid form `confirmed_realS_valid`).
 
@@ -134,12 +138,13 @@ Inside this scope:
 | standing | A standing request, subscription or conjunction fact stays active until the end of its run: it also acts on every matching event that comes later. |
 | root | An entry method of the analysis (a ROOT METHOD). Every run starts with the zero fact as an initial fact of each root (Lean: `roots`). Not the same as the ROOT PATH: the empty path `[]` of a base. "At the root `[]`" and "the static root" (the position `(S, [])`) name the root path. |
 | run | One analysis pass in one direction with one field limit `L`. The runs are numbered in order: run 1 (forward), run 2 (backward), run 3 (forward), and so on (§6.6). |
-| complete run, incomplete run | A run is COMPLETE if it reached the fixed point of its rules (S6): it ended at quiescence. A run that a timeout, the memory guard, a cancellation or an exception ends is INCOMPLETE (`analyzer-core.md` §6.3). |
+| complete run, incomplete run | A run is COMPLETE if it reached the fixed point of its rules (S6): it ended at quiescence. A run that a timeout, its memory guard or an exception ends is INCOMPLETE. An exception is every `Throwable` of the run, a JVM `Error` too (the status FAILED; the status OOM comes only from a memory guard). The status is set before every cancel, so every cancel has a known cause: the timeout, a memory guard (of a run or of the barrier), or a runner failure (`analyzer-core.md` §6.3). |
 | restricted run | Every run after run 1, forward or backward. It strictly follows its demand (§6.1). |
 | demand pattern | A pair of patterns that a restricted run gets from the run before it, in the orientation of the restricted run: the entry pattern `D-c` and the exit pattern `D-p` (or none, if the demand does not reach the method exit). Lean: `DemandEdge` (`din`, `dout`). The letters come from the run that made the pattern: `D-c` is a CONCLUSION of that run, and `D-p` is a PREMISE of that run (§9.2). |
 | demand (of a run) | The set of demand patterns that a restricted run gets (§9.2 states the hand-off; §8.6 stores it). Not the same as the demand layer. |
 | demanded flow, demanded witness | A concrete flow is DEMANDED if at every call in it that returns, one demand pattern of the callee has a `D-c` that covers the entry location of the callee with its mark, and a `D-p` that covers the exit location (marks ignored). A witness is DEMANDED if its flows are demanded and, at every call down, one demand pattern of the callee has a `D-c` that covers the entry location with its mark (Lean: `FlowR`, `ReachR`; §6.6). |
-| demand vulnerability | A triggered vulnerability that is not confirmed (§4.9). Not the same as a demand-layer edge. |
+| vulnerability | A vulnerability key `(rule, method, statement)` with its sink witnesses (§8.10). |
+| demand vulnerability | A vulnerability with no confirmed sink witness in the run (§4.9, §8.10). Not the same as a demand-layer edge. |
 | concrete flow | A chain of concrete steps (§3.5; Lean: `Flow`). |
 | witness | The concrete flow of a vulnerability: from the zero location of a root, through a chain of calls down, to a location that the sink pattern covers (§3.5; Lean: `Reach`). |
 | sink alternative | One alternative of the sink condition of a rule at a statement: one disjunct of the condition (a conjunction of literals), with one choice of the array-element patterns (`interpreter.md` §4.2). The interpreter numbers the alternatives of a rule at a statement. The number is the same in every run and in every context (`interpreter.md` I5). |
@@ -167,7 +172,7 @@ NOTATION. `ap.md` and `interpreter.md` use these forms. The interpreter-only for
 | `x.p.$ (T)`, `x.p.[any] (T)` | The tail `$` or `[any]` with the concrete mark `T`. Without `(T)` the mark is `*`. |
 | `i → f` | An edge with the premise `i` and the conclusion `f`. `j → g` is a summary edge. `{j1, …, jk} → g` is an ND edge. |
 | `a →_{f} b`, `i →_{E} f` | A micro edge or an edge with the exclusion `{f}` or `E`. With no subscript the exclusion is Empty. |
-| `Zero → (layer, statement, fact)` | A zero-to-fact edge: an edge with the premise set `{zero}`. |
+| `Zero → (layer, statement, fact)`, `Zero → (statement, fact)` | A zero-to-fact edge: an edge with the premise set `{zero}`. In the second form the text names the layer. |
 | `[e]`, `<C>`, `<G>` | The element accessor; the class accessor of the class `C`; the accessor of the Go global `G`. |
 | `S`, `zero`, `ret`, `this`, `argi` or `arg(i)` | The static base, the zero base, the return value, the receiver, the argument `i`. |
 | `{x, y}` | The touched bases of a statement. |
@@ -246,14 +251,17 @@ with `star`, `conc t`, `starEx x`) and `AFact` (a conclusion plus `demand : Bool
 | W6 | A conclusion with the `[any]` tail is in the demand layer. |
 | W7 | Only a conclusion has a mark exclusion. An edge whose premise set has two or more members (an ND edge, §4.6) has no `*` tail. |
 
-W2 holds for every derived fact, in run 1 and in every forward restricted run (`Invariant.final_star_legal`,
-`RExact.final_star_legalR`). The backward run is concrete (`BExact.DB_concrete`); that it satisfies W2 is argued (§11.2).
+W2 holds for every derived fact, in run 1 without the static rule and the conjunctions (the closure `D`:
+`Invariant.final_star_legal`) and in every forward restricted run (`RExact.final_star_legalR`). For run 1 with the
+static rule (`Statics.DS`) it is argued (§11.2); with the conjunctions (`ND.DN`) it holds by W7 (a conjunction target
+has no `*` tail). The backward run is concrete (`BExact.DB_concrete`); that it satisfies W2 is argued (§11.2).
 
 W6 only moves edges from the normal layer to the demand layer (§11.2 gives the difference to the model). The
 interpreter has one type of `[any]`-target micro edge: the any-field rules, a source or a pass rule with an `[any]`
 target (`AssignMarkOnAnyAccessor`, Go `AnyAccessor`; `interpreter.md` §4.1). Under W6 every result of these rules is in
 the demand layer. So an `[any]` result never makes a record, and a vulnerability whose taint comes only from an
-`[any]`-target source is never confirmed: it stays a demand vulnerability.
+`[any]`-target source is never confirmed: it stays a demand vulnerability. The output holds it as a DEMAND entry
+(§8.10).
 
 No exclusion is Universe (§1). A `*/Universe` conclusion needs a `$`-premise edge that acts on a `*`-tail fact. Every
 `$`-premise micro edge has a concrete premise mark (S8: `zeroMark` for sources, `T` for conditional sources). A `*`-tail
@@ -425,7 +433,8 @@ fun overlap(a: Pattern, b: Pattern): Boolean {
     }
 }
 
-/** §4.3, run 1 and every record: the premise j covers the added fact a (Lean: applicable). */
+/** §4.3, run 1; a record also in every later run (with inside, R4): the premise j covers the added fact a
+ *  (Lean: applicable). */
 fun applicable(j: Pattern, a: Pattern): Boolean =
     covers(j, a) && (j.fact.tail != Tail.ANY || a.fact.tail == Tail.ANY)
 
@@ -444,7 +453,8 @@ must be equal values. Because the sets of accessors and marks are unbounded (§1
 ### 3.5 Concrete semantics
 
 The theorems compare the analysis with this semantics. It is the program that the micro edges describe (S1). It is
-alias-free and location-level. Lean: `Basic.lean` (`Stmt.step`, `Flow`, `Reach`).
+alias-free and location-level. Lean: `Basic.lean` (`Stmt.step`, `Flow`, `Reach`). `Flow` is this semantics without
+the override of the summary rewriter (REFERENCE SEMANTICS OF RULES, below).
 
 * STATEMENT STEP. A statement with the touched bases `B` and the micro edges `M` moves the location `l` to `l'` if
   `l.base` is not in `B` and `l' = l`, or if a micro edge `e` of `M` relates them: `den(e)(l, l')` (§3.2). So an
@@ -473,9 +483,13 @@ alias-free and location-level. Lean: `Basic.lean` (`Stmt.step`, `Flow`, `Reach`)
   WITNESS of the vulnerability. A vulnerability is REAL if it has a witness.
 * REFERENCE SEMANTICS OF RULES. The interpreter rules are read in this semantics as follows (S1). A source or a sink
   fires with every negated mark literal true. A pass rule has no mark literal (a pass rule with a mark literal is a
-  rule error: it fires without its mark literals, §11.1). A user-defined rule that the summary rewriter selects
-  REPLACES the callee flow for its marks at its positions (§4.7). A conjunction of literals on different facts is
-  path-insensitive: each literal can hold on its own path. Its semantics is the SUPPORT semantics: a location is tainted
+  rule error that is not rejected, `interpreter.md` §1.3: it fires without its mark literals, §11.1). A user-defined
+  rule that the summary rewriter selects REPLACES the callee flow for its marks at its positions (§4.7). The override
+  is not in `Flow`. The theorems read the program in which each call with selected rules is wrapped: the callee flow,
+  then the cleaner `(P, exact, T)` for each selected rule, mark and position, on the callee results; the source
+  results and the end facts of the call bypass the wrapper (argued, §11.2). An end-fact action is a source at its
+  sink statement that fires when its sink fires (§4.9). The model has none (§11.2). A conjunction of literals on
+  different facts is path-insensitive: each literal can hold on its own path. Its semantics is the SUPPORT semantics: a location is tainted
   at a node together with the list of entry locations that its derivation needs, and a vulnerability witness is a tree
   (§4.6; Lean: `ND.TaintN`, `ND.ReachAll`). "Real" in this spec always means real in this reference semantics.
 
@@ -770,15 +784,17 @@ row (`Statics.gen_read_DS`, `gen_read_sreq`); the write row follows from §4.10 
 | `a = b.f` | `(b, .f, *, E, *)` | `(a, ., *, E, *)` | normal |
 | `a = b.f` | `(b, ., *, E, *)`, `f ∉ E` | `(a, ., [any], {}, *)` | demand |
 | `a = b.f` | `(b, ., *, {f}, *)` | nothing for `a` | |
-| `a = b.f` | `(b, ., [any], {}, *)` | `(a, ., [any], {}, *)` | demand |
-| `a = b.f` | `(b, ., $, {}, *)` | nothing for `a` | |
+| `a = b.f` | `(b, ., [any], {}, *)` | `(a, ., [any], {}, *)` | demand (the input is demand by W6; the model copies the layer) |
+| `a = b.f` | `(b, ., $, {}, T)` | nothing for `a` | |
 | `a.f = b` | `(b, .g, *, E, *)` | `(a, .f.g, *, E, *)`; under `L = 1`: `(a, .f, [any], {}, *)` | normal; under the cut: demand |
 | `a.f = b` | `(a, .f, *, E, *)` | nothing (strong update) | |
 | `a.f = b` | `(a, ., *, E, *)` | `(a, ., *, E ∪ {f}, *)`, no request | normal |
 | `x = C.s` (run 1) | the identity static `*` edge to `(S, ., *, E, *)`, `<C> ∉ E` | `(S, ., *, E, *)`; nothing for `x`; the position request `[<C>, s]` | normal |
 | `C.s = x` (run 1) | the identity static `*` edge to `(S, ., *, E, *)`, `<C> ∉ E` | `(S, ., *, E ∪ {<C>}, *)`; the class keep edge gives the position request `[<C>]` | normal |
 
-The premise of the edge does not change in any case. Only its layer can change, from normal to demand.
+The premise of the edge does not change in any case. Only its layer can change, from normal to demand. (`Cases.lean`
+checks the fifth row with the mark `*`, which no `$` fact of the AP has, §7.2; with a concrete mark the result is the
+same: no overlap.)
 
 ### 4.3 Apply a summary edge
 
@@ -804,7 +820,8 @@ summary (§5.3 events E2 and E4); `applySummary` does not test it again.
   and `j = (x, .f, [any], T)`); then the result is in the demand layer (§4.1 step 3).
 * A RECORD `j → g` (§8.7) applies in the direction in which it was derived when `applicable(j, a)`, or when `a`
   satisfies `j` by `inside` (restricted runs), in every run after the run that made it (R4). In the other direction it applies through its reversal (R3, §9.1). A record is
-  exact (S14), so the result adds no false pair. A record is not restricted.
+  exact (S14), so the result adds no false pair, modulo the expected false-positive sources of §11.1 (a record
+  through an end fact; a reversed backward record on a program with type filters). A record is not restricted.
 
 The mark condition makes the mark gate pass: a summary application never raises a request (`Coverage.summary_step`,
 `RCov.sat_step`, `RCore.summary_stepR`). A summary conclusion `*∖X` stops an added fact whose concrete mark is in `X`
@@ -842,7 +859,8 @@ longer. It never applies it to a micro edge or a summary edge before the applica
 * the results of the entry rules at the method start: the entry-point sources and the end facts of an entry sink
   (`interpreter.md` §4.3);
 * the results of the exit rules at an exit (normal or exceptional), before the summary edge of the normal exit: the
-  exit sources and the end facts of an exit sink (`interpreter.md` §4.7);
+  exit sources (also the conjunction result of a conjunctive exit source, §4.6) and the end facts of an exit sink
+  (`interpreter.md` §4.7);
 * the conjunction result (§4.6) and the application of a summary with several premises (§4.6, event E6);
 * the backward seed (§9.2).
 
@@ -910,7 +928,7 @@ vulnerability `main2 → A → m → sink`.
 Requests exist ONLY in run 1. A forward restricted run is concrete (§6.3): it raises no request and makes no answer
 (`RCov.no_reqR`, `RExact.DR_no_request`, `RMain.no_request_M`). The demand pattern already has the mark that a rule
 needs. The backward run raises no request either, because its seeds have concrete marks (`BExact.DB_no_request`;
-`CexSeed.cex_seed`: a seed with the mark `*` would raise one).
+`BExact.CexSeed.cex_seed`: a seed with the mark `*` would raise one).
 The implementation asserts it in every restricted run.
 
 A position request (§4.10) works in the same way: it stands, it uses the request store (§8.8), and the events E2 and
@@ -921,10 +939,12 @@ E7 of §5.3 check it per link. Its answer and its climb are §4.10 items 2 and 3
 A CONJUNCTIVE micro edge `x1.ρ1.t1(T1) ∧ … ∧ xk.ρk.tk(Tk) → z.π.t(T)` gives the mark `T` at `z.π` if every literal holds
 at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`). The target tail
 `t` is `$` or `[any]` (W7). The interpreter makes the edge for a rule with several mark literals (`interpreter.md` §4.2,
-§5.3).
+§5.3): at a call (its rule statement) and at an exit (the exit rule statement). An exit source whose condition
+alternative has two or more positive literals is a conjunctive micro edge of the exit rule statement (`interpreter.md`
+§4.7, D31), not a rule error.
 
 * The CONJUNCTION STORE (§8.9) keeps, STANDING for the run, per (conjunctive micro edge, statement, literal index),
-  each fact `c` at the statement that:
+  each fact `c` at the statement (for a conjunctive exit source: at the exit) that:
   * OVERLAPS the literal pattern `xj.ρj.tj` (§3.2, marks ignored), and
   * passes the mark gate of the literal mark `Tj` (§4.1 step 4, so `c.mark = Tj`).
 
@@ -950,7 +970,8 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   (`!coversB lit c`: the input has a location that is not a location of the literal, for example an `[any]` input for a
   `$` literal, or an input above the literal). An `[any]` target puts the result in the demand layer too (W6). Lean:
   `ND.conjLayer`, `ND.Example.c3_normal`. A normal result is exact against the support semantics, under S7, S9, S10
-  and S13 (`NDExact.nd_edge_exact`; the valid form `nd_edge_exact_valid`).
+  and S13 (`NDExact.nd_edge_exact`; the valid form `nd_edge_exact_valid`; for the spec closure `NDZ.DNz`:
+  `NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z`).
 * The engine is path-insensitive: the stored facts are per statement, not per execution path, so the literals can hold
   on paths that exclude each other (`if c then a := srcA else b := srcB; r := f(a, b)`). This is the EXPECTED
   over-approximation; it does not move the result to the demand layer. The reference semantics of a conjunction
@@ -960,8 +981,8 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
 * An edge whose premise set has two or more members (an ND edge) is ALWAYS a TAINT edge (§7.2), never REACH or FLOW.
   No member is the zero fact (above), and every member has a concrete mark: an input of a conjunction
   passes the mark gate of its literal (a concrete mark, S9), and a fact with a concrete mark has a premise with a
-  concrete mark or the zero premise (`Coverage.edge_conc`, S7). The members of a summary with several premises applied
-  at a call (event E6) are concrete for the same reason (§4.3: a concrete premise is satisfied only by a concrete added
+  concrete mark or the zero premise (`Kinds.flow_abstract`, S7; directly `Kinds.nd_taint`, `ndz_taint`). The members
+  of a summary with several premises applied at a call (event E6) are concrete for the same reason (§4.3: a concrete premise is satisfied only by a concrete added
   fact). The conclusion has a concrete mark and no `*` tail (W7). Lean: `Kinds.nd_taint` (`ND.DN`), `Kinds.ndz_taint`
   (`NDZ.DNz`: also no zero member).
 * At a call, the callee sees an ordinary added fact. A callee summary `j → g` with one premise, applied to a caller
@@ -972,7 +993,10 @@ at the statement. A literal tail `tj` is `$` (`ContainsMark`) or `[any]` (`Conta
   caller edges, without the zero fact. It is in the demand layer if the
   summary is, or if one added fact of the combination is in the demand layer on its link (§8.3; Lean: `ND.DN.ndBind`).
   Then the caller binds it back and applies the field limit (§5.3 step 5). In a restricted run the callee restricts
-  such a summary before it publishes it (§6.4).
+  such a summary before it publishes it (§6.4). A conjunctive exit source (above) makes such a summary too: a full
+  combination at the exit is an exit item with the union of the premise sets, after the field limit; it takes the
+  rest of the exit order and becomes a summary at the normal exit (`interpreter.md` §4.7, D31); with two or more
+  members it is an ND summary, which the callers apply by event E6.
 * An edge whose premise set has two or more members is never a record: the analysis never persists it and never
   reverses it (§8.7 R1). The backward run reverses a conjunctive micro edge into one micro edge per literal (§9.2).
 * The model has binary conjunctions (`ND.Conj`: two literals). A conjunction of `k` literals is argued by chaining
@@ -989,7 +1013,7 @@ Lean: `ND.lean` (§10.6).
 A cleaner `clean(position, reach, mark)` at a statement removes the mark `T` (or every mark) from the locations of its
 position `x.p`. The reach is `exact` (`x.p` only), `below` (everything strictly below `x.p`, the position `x.p.*`) or
 `atAndBelow`. (The reach `below` excludes `x.p` itself; the case `below r` of §4.1 includes `r = []`.) In the
-concrete semantics (§3.5) a location keeps its value unless the cleaner cleans it (Lean: `Cleaner`, `cleansB`,
+concrete semantics (§3.5) a location keeps its value unless the cleaner cleans it (Lean: `Cleaner`, `Cleaner.cleansB`,
 `Flow.clean`).
 
 The cleaner compares the location set of a fact `c` with the cleaned locations, marks ignored: `inside` (every location
@@ -1045,6 +1069,7 @@ exactly (except on `[any]`, which is in the demand layer already). The union of 
   * every user-defined SOURCE rule of the call whose condition is not statically false;
   * every user-defined CLEANER rule of the call only if it is UNCONDITIONAL: its condition is statically true.
 
+  It never selects a rule that a rule error rejected (`interpreter.md` §1.3, §5.2): such a rule has no form at all.
   For each selected rule, each relevant mark `T` of the rule and each action position `P` of the rule, it applies
   `clean(P, exact, T)` to the summary results and to the unresolved results of the call, before the binding back
   (§5.3 step 5). The override is by design: it is part of the reference semantics of the rule (§3.5). So the cleaner
@@ -1087,7 +1112,7 @@ assumption S13 (§0.1), with three parts:
 
 The type-filter placement of the interpreter makes S13 true (`interpreter.md` §5.1). A confirmation (§4.9) needs a
 sink pattern whose locations are valid (`Confirmed.confirmed_real_valid`; `Confirmed.CexConfFilt` shows that the
-condition is necessary).
+condition is necessary in the model: its program breaks W6 and S8).
 
 The interpreter places the filters (`interpreter.md` §5.1 gives the table). The mark policy (a concrete mark on a
 primitive value) is NOT a type filter: it reads the mark, the model has no mark filter, and it can drop a real flow, so
@@ -1135,9 +1160,9 @@ context-insensitive (§11.1).
 
 THE BACKWARD RUN has no sink check. Its sink rule is the seed (§9.2).
 
-A triggered vulnerability is CONFIRMED only if all three conditions hold:
+A sink witness (§1) is CONFIRMED only if all three conditions hold:
 
-1. The sink edge is a normal edge.
+1. Each sink edge of the witness is a normal edge.
 2. Each member of the premise set of the sink edge (§4.6; the zero fact is a member like every other) is the zero fact
    or an EXACT concrete fact `(x, p, $, T)`: a request answer in run 1, an emitted fact in a restricted run.
 3. The premise set is SUPPORTED JOINTLY (Lean: `Confirmed.Sup` in run 1, `RExact.SupM` in a restricted run,
@@ -1173,9 +1198,10 @@ The analyzer computes the support and the confirmation only for a COMPLETE run (
 the last event: condition 3 is a least fixed point over the caller edges, and it can change until the run ends. An
 incomplete run confirms nothing (§8.10).
 
-Every other triggered vulnerability is a DEMAND vulnerability. In particular, every result of an `[any]`-target source
-is in the demand layer (W6). So a vulnerability whose taint comes only from such a source is never confirmed: it stays
-a demand vulnerability in every run.
+A vulnerability (§1) is confirmed in a run if one of its sink witnesses of that run is confirmed; otherwise it is a
+DEMAND vulnerability of that run (§8.10). In particular, every result of an `[any]`-target source is in the demand
+layer (W6). So a vulnerability whose taint comes only from such a source is never confirmed: it stays a demand
+vulnerability in every run, and the output holds it as a DEMAND entry (§8.10).
 
 `Confirmed.confirmed_real_valid` (run 1, under S7, S10 and S13) and `RMain.confirmed_real_M_valid` (every forward
 restricted run, also under S14; the support `RExact.SupM`; the satisfaction `satI`) prove that a confirmed
@@ -1219,7 +1245,9 @@ test `Statics.genFireB` reads "at most one accessor"; for these programs it give
    * The RULE STATEMENTS OF THE METHOD BOUNDARIES are statement micro edges too: the entry rules at the method start
      (`interpreter.md` §4.3) and the exit rules at an exit (`interpreter.md` §4.7). They act on a fact `c` of an edge
      `(i → c)` of `m`, so a conditional exit source whose premise is on `S` strictly below an identity static `*` edge
-     raises the position request `(m, i, p')`. (The entry rules are unconditional: they read only the zero fact.)
+     raises the position request `(m, i, p')`. (The entry-point sources are unconditional: they read only the zero
+     fact. The touched bases and the keep edges of these rule statements: `interpreter.md` §4.3, §4.7. A conjunctive exit
+     source is a conjunctive micro edge: its literals use the conjunction store and, on `S`, the mark request, §4.6.)
    * The other micro edges of the statement apply as usual, so the kill stays (§4.2). The root keep edge
      `S.* →_{<C>} S.*` of a write (Go: `S.* →_{<G>} S.*`) is at `q = []`, not strictly below it: it applies and adds the
      class accessor to the exclusion (§4.2, the static rows of the table).
@@ -1265,8 +1293,9 @@ record conclusion with a `*` or `[any]` tail above a static position is an ident
 
 §10.8 lists the theorems (`StaticsIter.rinv_all`, `static_step_below`, `no_request`, `no_static_rule_after_run1`,
 `iteration_general_DS`). The backward run satisfies the same invariant and raises no request
-(`BExact.binv_all`, `no_static_rule_backward`) if the reversed program satisfies the construction rules S12 (a) to (d);
-that the interpreter's reversed program satisfies them is argued (§11.2).
+(`BExact.binv_all`, `no_static_rule_backward`) if the reversed program satisfies the construction rules S12 (a) to (d)
+and its seeds and records keep the invariant (`BExact.SeedsOK`, `StaticsIter.RecOK`); an `[any]` sink on a class
+position is outside it (precision only). That the interpreter's reversed program satisfies them is argued (§11.2).
 That the persisted records keep the static invariant over the run sequence is argued (§11.2).
 
 Lean: `Statics.lean`, the run-1 closure `DS` with the rules `sreqStmt`, `sanswer`, `sreqUp` and the answer
@@ -1317,12 +1346,16 @@ at the call statement:
    * for an unresolved callee or a resolution failure: the statement summary of the unresolved callee applies to `a`
      (`interpreter.md` §3.7), as statement micro edges (§4.2 step 4), with the static exception as in step 3. It is
      never restricted. A method with no instruction (native, abstract, no body) is never a resolved callee: the call
-     resolver drops it, and a call with no other callee is unresolved (`interpreter.md` §3.7).
+     resolver drops it, and a call with no other callee is unresolved (`interpreter.md` §3.7). A call with an empty
+     and a non-empty target enters only the non-empty one, so a flow through the empty target is lost, as today on
+     the JVM (`interpreter.md` G12).
 5. RETURN. For each result of step 4 (a summary result or an unresolved result), in callee coordinates: apply the
    summary rewriter (§4.7; `interpreter.md` §5.2). Then bind the result back, with the binding-back type filters
    (`interpreter.md` §3.1). Then apply the aliases (`interpreter.md` §3.8: they apply to the results that its alias
-   rule AC3 names). Only a COMPLETE identity summary result does not go to the aliases: a normal-layer result that
-   equals the start fact of its premise (§6.5; `interpreter.md` AC4). A demand-layer result always goes to the aliases.
+   rule AC3 names). Among the summary results, only a COMPLETE identity result does not go to the aliases: a
+   normal-layer result that equals the start fact of its premise (§6.5; `interpreter.md` AC4). A demand-layer summary
+   result always goes to the aliases. The default identity and the constructor pass-over never go to the aliases
+   (`interpreter.md` AC3, AC4).
    Then apply the field limit (§4.4). A constructor pass-over result skips the rewriter. This order is the order of
    `interpreter.md` §4.5 step 6.
 
@@ -1330,10 +1363,9 @@ THE ZERO FACT at a call (`interpreter.md` §4.6). The zero fact does not use ste
 
 1. The call does not touch the zero base, so the zero fact passes over the call.
 2. The unconditional sinks and sources of the call fire on the zero fact, in the order of `interpreter.md` §4.6, and
-   the stored facts of a conjunction can complete it (§4.6). The source rules form the rule statement of the call
-   (`interpreter.md` §4.1): a statement summary that touches the zero base and keeps the zero fact by the micro edge
-   from the zero fact to itself (S11 (d)). Their results go back as in step 3. In a forward restricted run, only the
-   source seeds fire (§6.1 rule 6).
+   the stored facts of a conjunction can complete it (§4.6). The source rules form the rule statement of the call: a
+   call stage (`interpreter.md` §4.1) with the micro edge from the zero fact to itself (S11 (d)). Their results go
+   back as in step 3. In a forward restricted run, only the source seeds fire (§6.1 rule 6).
 3. The zero fact enters every resolved callee through the binding `zero.* → zero.*` (§3.5), with no cleaner: it is an
    added fact of the callee, and the callee emits the zero fact for it (§6.2, §6.3). The results of the callee
    summaries that this added fact satisfies are summary results: they return by step 5.
@@ -1364,7 +1396,7 @@ The result of a summary application is in the demand layer if the added fact is 
 ### 6.1 Rules of a run and their contracts
 
 RUN 1. The result of run 1 is the least fixed point (S6) of these rules (Lean: `D`; with the static rule `Statics.DS`;
-with the conjunctions `ND.DN`):
+with the conjunctions `NDZ.DNz`, which corresponds to the list model `ND.DN`, §10.10):
 
 * the zero fact is an initial fact of every root;
 * each initial fact starts with its start fact (§6.5);
@@ -1443,9 +1475,9 @@ are the other initial facts of run 1.
 ### 6.3 Restricted run: the emission
 
 For the added fact `a` of method `m`, for each demand pattern of `m` with the entry pattern `D-c = (b, p, t, M)`, emit
-`a ∩ D-c`: the part of `a` that `D-c` covers, with the mark of `a`. The mark `M` of the entry pattern is `*` or `T`. A
-concrete `M` is a demand for that mark. The entry pattern of a backward demand pattern can have the mark `*∖X` (a
-run-1 summary conclusion, §9.2); it counts as `*` (Lean: `markMatchB`). Every added fact of a restricted run has a
+`a ∩ D-c`: the part of `a` that `D-c` covers, with the mark of `a`. The mark `M` of the entry pattern is `*`, `T`, or
+(backward only) `*∖X`, which counts as `*`. A concrete `M` is a demand for that mark. The entry pattern of a backward
+demand pattern can have the mark `*∖X` (a run-1 summary conclusion, §9.2); it counts as `*` (Lean: `markMatchB`). Every added fact of a restricted run has a
 concrete mark (C3), so the table has only concrete marks for `a`. An abstract added fact never occurs (assert).
 
 | `D-c` mark | `a` mark | result |
@@ -1534,7 +1566,8 @@ fun emit(d: Pattern, a: Pattern): Pattern? {
     }
 }
 
-/** §4.3. The added fact `a` satisfies the premise `j` of a summary edge (a record: `applicable` in every run). */
+/** §4.3. The added fact `a` satisfies the premise `j` of a summary edge (a record: applicable or inside in every
+ *  later run, R4). */
 fun satisfies(j: Pattern, a: Pattern, restricted: Boolean): Boolean =
     if (!restricted) applicable(j, a)       // run 1: a inside j
     else inside(j, a)                       // restricted run: j inside a
@@ -1636,12 +1669,13 @@ of the zero fact (`interpreter.md` §4.3).
 
 * The analysis ALTERNATES forward and backward runs: run 1 (forward), run 2 (backward), run 3 (forward), and so on. The
   field limit INCREASES from run to run (W3 needs at least that it does not decrease). A COMPLETE forward run (§1) with
-  no demand vulnerability (§4.9) stops the iteration: every vulnerability that it reports is confirmed. The iteration
-  driver, its termination and its budget are out of scope of this spec: the fact domain grows with the field limit, so
+  no demand vulnerability (§4.9, §8.10) stops the iteration: every vulnerability that it reports is confirmed. The
+  iteration driver, its termination and its budget are out of scope of this spec: the fact domain grows with the field limit, so
   the iteration does not stop by itself.
 * The theorems of this section are about complete runs: a complete run reached the fixed point of its rules (S6). An
   INCOMPLETE run is not that fixed point, so no theorem applies to it or to a run after it. An incomplete run (forward
-  or backward) adds nothing to the report and refutes nothing (§8.10).
+  or backward) adds nothing to the report and refutes nothing (§8.10). So if run 1 is incomplete, the report has no
+  entry and the output is empty (§8.10).
 * Run 1 uses the rules of run 1 (§6.1). Each later run uses the rules of a restricted run (§6.1) with the demand that
   the run before it gives (§9.2), its own field limit and the persisted records (§8.7). Lean `RCov.runSeq` numbers only
   the forward runs: `runSeq k` is run `2k + 1`, and the demand `dem k` comes from the backward run `2k + 2` (with the
@@ -1670,8 +1704,10 @@ of the zero fact (`interpreter.md` §4.3).
   `FSeeds.B_src`). The iteration driver must give the backward run at least the demand and the sink seeds of §9.2,
   and give the next forward run at least the demand and the source seeds of §9.2.
 * Then every complete forward run reports every real vulnerability (`FSeeds.iteration_src`; without the source seeds
-  `Backward.iteration_general`; for any backward step that satisfies contract B, `Backward.iteration_sound_M_D`). So
-  the analysis can stop at any complete forward run. The report reads the complete forward runs only (§8.10).
+  `Backward.iteration_general`; for any backward step that satisfies contract B, `Backward.iteration_sound_M_D`), in
+  some layer (CONFIRMED or DEMAND). So the analysis can stop at any complete forward run. The report reads the
+  complete forward runs only, and the output holds every entry of the report (§8.10; `ap-history.md` F68), so this
+  holds for the output too.
 
 ---
 
@@ -1729,9 +1765,11 @@ premise mark; a summary with a concrete premise does not apply to an abstract fa
 concrete conclusions (`Coverage.edge_conc`). A `$` leaf has a concrete mark (S8: a `$`-target edge has a concrete
 premise mark). A `*` leaf has an abstract mark and is normal (W2), and an `[any]` leaf is demand (W6). Lean (§10.10):
 `Kinds.kinds_D` packs the partition of run 1 (`flow_abstract`, `flow_no_exact`, `taint_concrete`, with W2
-`Invariant.final_star_legal`); `kinds_DR` and `kinds_DB_taint` give REACH and TAINT only for the restricted runs; W6 is
-not in the model (§11.2). `kinds_D` is the run without the static rule; the partition for run 1 with the static rule
-(`Statics.DS`) is argued (§11.2). So the
+`Invariant.final_star_legal`); `Kinds.kinds_DR` and `Kinds.kinds_DB_taint` give REACH and TAINT only for the
+restricted runs. The kinds theorems do not include W6; W6 is modelled for `D` and `DR` in `W6.lean` (§10.3).
+`Kinds.kinds_D` is the run without the static rule and the conjunctions; the partition for run 1 with the static rule
+(`Statics.DS`) or with the conjunctions (`NDZ.DNz`: its single-premise edges; its ND edges are `Kinds.ndz_taint`) is
+argued (§11.2). So the
 representation ENFORCES W1, W2 and W6 by its types: a FLOW tree has no `$` leaf and no concrete mark; a TAINT tree has
 no `*` leaf, no exclusion and no mark exclusion; a normal tree has no `[any]` leaf. The restricted runs (forward and
 backward) are concrete (§6.3): they have REACH and TAINT conclusions only. A FLOW tree occurs in run 1, and as the
@@ -1832,8 +1870,9 @@ The result is one well-formed tree (`RStore.restrictTreeE_inv`); the tree form e
 
 ### 7.5 Interning
 
-Tries are hash-consed bottom-up as today; an identity cache memoises the walk of §7.3. `boundedDepth` is part of the
-node, not of the hash.
+Tries are hash-consed bottom-up as today. The walk of §7.3 has no memo: it shares every unchanged subtree, and a leaf
+map keeps an identity memo of the nodes that it maps (F68). A memo of the walk is a later optimization, if a profile
+asks for it. `boundedDepth` is part of the node, not of the hash.
 
 ### 7.6 Relation to the current code
 
@@ -1841,19 +1880,22 @@ The prescan (§1) still runs the current core. So the new AP lives beside the cu
 
 | Part | Decision |
 |---|---|
-| `AccessPath.AccessNode`, accessor interning, `AccessorIdx` | Reuse. |
-| `AccessTree` merge, `mergeAddDelta`, interners, identity caches | Reuse the algorithms for `FactNode`. |
-| `AccessBasedStorage` trie | Reuse for the path indexes of §8. |
-| `EdgeStorage`, `AccessPathBaseStorage`, exact-key subscription maps | Reuse with the new fact types. |
+| `AccessorIdx` | Reuse. |
+| `AccessPath.AccessNode`, accessor interning (`AccessorInterner.AccessorStorage`) | Adapt: an interned path node; the accessor and mark tables keep only the field and the class storages (`ap-impl.md` §2, §3.1). |
+| `AccessTree` merge, `mergeAddDelta`, interners, identity caches | Reuse the algorithms for `FlowNode` and `TaintNode` (§7.2). |
+| `AccessBasedStorage` trie | Adapt for the path indexes of §8 (`PathTrie`, `ap-impl.md` §7.2). |
+| `EdgeStorage` | Replace by the conclusion group: one premise key, every base and kind (`ap-impl.md` §4.3). |
+| `AccessPathBaseStorage` | Not used: it rejects the zero base; the conclusion group keys its trees by base (`ap-impl.md` §7.3). |
+| Exact-key subscription maps | Reuse with the new fact types. |
 | `StatementSummaryBuilder`, `buildReversed` | Adapt (`interpreter.md`). |
 | `InitialFactAp`, `FinalFactAp`, `ApManager` | New types `InitialAp`, `PremiseKey` and the conclusion kinds `Reach`, `FlowTree`, `TaintTree` (§7.2). They do not implement the old interfaces. |
-| `Edge` (`ZeroToZero`, `ZeroToFact` requires Universe, `FactToFact`) | The premise key and the conclusion kind (§7.2): `ZeroToZero` is REACH; `ZeroToFact` and a concrete `FactToFact` are TAINT; an abstract `FactToFact` is FLOW. Each has its layer. |
+| `Edge` (`ZeroToZero`, `ZeroToFact` requires Universe, `FactToFact`) | The premise key and the conclusion kind (§7.2): `ZeroToZero` is REACH; `ZeroToFact` and a concrete `FactToFact` are TAINT, or REACH if the conclusion is the zero fact (backward `{jb} → zero`); an abstract `FactToFact` is FLOW. Each has its layer. |
 | `NDFactToFact` | A TAINT edge whose premise key has two or more premises that are not the zero fact (§4.6). |
 | `DeepAccessorExclusion` | Replaced by the mark exclusion `*∖X` of the edge (§4.7). The old exclusion is tied to an abstraction point at a depth, so it is lost when the field limit cuts the path; the mark exclusion is not tied to a position. |
 | `FactReader` (mark as accessor suffix) | New reader over `(path, tail, mark)`: `check` (§4.9). |
 | `FactTypeChecker` | The type filter primitive (§4.8). |
 | `EdgeNonUniverseExclusionMergingStorage` (union merge) | Replace by merge rules 1 and 2. |
-| `TaintSinkTracker` (rule assumptions), vulnerability records | The standing conjunction store (§8.9); the vulnerability record of §8.10. |
+| `TaintSinkTracker` (rule assumptions), vulnerability records | The standing conjunction store (§8.9); the vulnerability store of §8.10. |
 | `TreeInitialFactAbstraction` | Replace by §6.2 (run 1) and §6.3 (restricted runs). |
 | `MethodAnalyzer` depth gate, `[any]` depth charge | Not used: the field limit is the only depth bound (§4.4). |
 
@@ -1861,9 +1903,12 @@ The prescan (§1) still runs the current core. So the new AP lives beside the cu
 
 ## 8. Storages
 
-Every store has a CONCEPT (a list of entries with a filter) and an INDEX. `Store.lean` and `RestrictedStore.lean` prove
-that each index returns every entry that the filter returns, and give the cost of the lookup. The OWNER of each store
-is the method that §5.2 names. Lifetimes:
+Every store has a CONCEPT (a list of entries with a filter) and an INDEX. `Store.lean`, `RestrictedStore.lean` and
+`PipelineStore.lean` prove that the index returns every entry that the filter returns (the first two also give the
+cost of the lookup), for these stores: the subscription store (§8.4), the demand store (§8.6), the record store
+(§8.7) and the mark requests of the request store (§8.8). The position requests, the conjunction store, the
+vulnerability store and the source hit store have no index theorem. The OWNER of each store is the method that §5.2
+names. Lifetimes:
 
 * RUN: one run (one direction, one field limit).
 * HAND-OFF: from the end of one run until the next run has read it. This is what one run passes to the next: the
@@ -1992,12 +2037,12 @@ Rules:
   whose premise set has ONE member:
   * of a forward run: every such edge, also a zero-premise edge (the premise set `{zero}`);
   * of a backward run: only an edge whose premise is NOT the zero fact. A zero-premise backward edge can come from a
-    seed (§9.2), which is not a converse flow of the program (Lean: `Backward.seed_den`), so it is never persisted and
-    never reversed.
+    seed (§9.2): the seed relates the zero location to every location of its sink pattern (Lean: `Backward.seed_den`),
+    which is not a flow of the reversed program, so it is never persisted and never reversed.
 
   An edge whose premise set has two or more members (§4.6) is never added.
 * R2. `byEntry` is a path trie keyed by `base :: premise path`. For the added fact at `q`, the lookup is
-  `lookupPrefixes(base :: q)` for `applicable` (`forward_equiv_prefixes`, `applicable_mem_candidatesB`) and
+  `lookupPrefixes(base :: q)` for `applicable` (`Store.forward_equiv_prefixes`, `applicable_mem_candidatesB`) and
   `lookupExtensions(base :: q)` for `inside`, then the exact test. The union `around(base :: q)` returns every record
   that one of the two tests accepts (`PipelineStore.record_lookup`). `byExit` is a path trie keyed by
   `base :: leaf path` for EACH leaf path of the conclusion tree. Its lookup is `around(base :: q)` for the fact at
@@ -2009,25 +2054,31 @@ Rules:
   mark-reversible is not read in the other direction. Every record whose premise has the Empty exclusion and that is
   mark-reversible reverses exactly (`Reverse.rev_exact_of_empty_premise`), so every mark-reversible forward record
   reverses exactly (§9.1). A reversed backward record has no type filter (the backward run does not type-filter): an
-  expected false-positive source (§11.1). A normal backward summary with a non-zero premise reverses into an exact
-  forward record (`BExact.rev_record_exact`, `revRecs_exact`, `revRecs_exactM`; under S11 (c): without it a backward
-  summary is not a reversed flow, `BExact.CexZeroBack.cex_rec`). The model has no end facts: a record through an end
-  fact, in either direction, is not exact (§11.1).
+  expected false-positive source (§11.1). On a program without type filters (`Exact.FiltUp`), a normal backward
+  summary with a non-zero premise reverses into an exact forward record under S11 (c) and (g), when the records that
+  its backward run reads are exact (`BExact.rev_record_exact`, `revRecs_exact`, `revRecs_exactM`; without S11 (c) it
+  is false, `BExact.CexZeroBack.cex_rec`). An exact forward record reverses into an exact backward record under
+  S11 (g) (`Reverse.backward_reuse_precise`). The two directions together are argued (§11.2). The model has no end
+  facts: a record through an end fact, in either direction, is not exact (§11.1).
 * R4. A record applies to an added fact when its premise covers the fact (`applicable`, §4.3) or lies inside it
   (`inside`, §4.3), in every run after the run that made it, IN THE SAME DIRECTION (run 1 is the first run, so it
   reads no record). Lean: rule `retRec` (`sat ∨ applicable`). A record is exact (S14), so
   it adds no false pair. For the records of a forward run this is proved run by run: a normal edge of run 1 or of a
   forward restricted run is exact when the records that the run reads are exact (`RExact.recs_of_D_valid`,
   `recs_of_DR_valid`; for programs without type filters `recs_of_D`, `recs_of_DR`; the union of two record sets,
-  `recs_union`). Over the whole run sequence the persisted forward records stay exact (`BExact.recsSeq_exact`,
-  `recsSeq_exactV`, `accRecs_exact`, `accRecs_exactM`), so every normal edge and every confirmed vulnerability of every
-  run is real with no hypothesis on the records (`BExact.seq_edge_exact`, `seq_confirmed_real`; with the source
-  seeds, argued, §11.2).
+  `recs_union`). If every record is an exit edge of an earlier forward run (`BExact.RecsFromRuns`), the forward
+  records stay exact over the run sequence (`BExact.recsSeq_exact`, `recsSeq_exactV`, `accRecs_exact`,
+  `accRecs_exactM`). So every normal edge and every confirmed vulnerability of every forward run is real with no
+  EXACTNESS hypothesis on the records (`BExact.seq_edge_exact`, `seq_confirmed_real` for `Exact.FiltUp`; with S13,
+  compose `BExact.recsSeq_exactV` with `RExact.edge_exactR_valid` and `RMain.confirmed_real_M_valid`). With the
+  reversed backward records of R3, and with the source seeds, this is argued (§11.2).
   A backward normal edge with a non-zero premise is exact for the reversed program (`BExact.edge_exactB`,
   `edge_exactB_valid`, `edge_exactB_rev`; under S11 (c)). A zero-premise backward edge is never persisted (R1).
-  A conjunction result whose premise set has one member can be a record; its exactness is `NDExact.nd_edge_exact`
-  (the valid form `nd_edge_exact_valid`). The exactness holds for the reference semantics (§3.5), modulo the expected
-  false-positive sources (§11.1). Lean: rule `retRec` (§11.2), `RCases.p3_reuse`, `RMain.p3_reuse_exact`.
+  A conjunction result whose premise set has one member can be a record. It is exact for the support semantics of
+  §3.5 (`NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z`), not in the sense of `RExact.RecsExact`. Its reuse
+  (R4) and its reversal (R3) are argued with the restricted runs with ND edges (§11.2). The exactness holds for the
+  reference semantics (§3.5), modulo the expected false-positive sources (§11.1). Lean: rule `retRec` (§11.2),
+  `RCases.p3_reuse`, `RMain.p3_reuse_exact`.
 * R5. Strict demand: after run 1 the abstraction reads only the demand (§6.3). It emits the demanded facts and
   checks nothing else; a record never causes an emission and never replaces one. The records only add edges (R4).
 
@@ -2038,8 +2089,9 @@ Rules:
 * Index: per method, a path trie (§8). A mark request is keyed by `base :: path` of its premise `i`. A position
   request is keyed by `S :: p`, the requested position, because the match reads `(S, p)` and not the premise.
 * On every new link (added fact, caller edge) of the method (§8.3), find ALL standing requests that overlap the added
-  fact (`standing_complete`): for a mark request the premise `i`, for a position request the position `(S, p)`. Answer
-  each one, or propagate it through THIS caller edge (§4.5; §4.10 items 2 and 3; §5.3 event E2).
+  fact (`Store.standing_complete`, for the mark requests): for a mark request the premise `i`, for a position request
+  the position `(S, p)`. Answer each one, or propagate it through THIS caller edge (§4.5; §4.10 items 2 and 3; §5.3
+  event E2).
 * On a new request, read every existing link of the added fact store whose added fact overlaps it (§5.3 events E5 and
   E7).
 
@@ -2047,10 +2099,13 @@ Rules:
 
 * Entries: `(conjunctive micro edge or sink alternative, statement, literal index) → set of (fact, premise key,
   layer)`: the facts that overlap a literal of a conjunctive micro edge and pass its mark gate (§4.6), standing for the
-  run. The literal index is the place of the literal in its conjunctive micro edge or sink alternative (§1).
+  run. The literal index is the place of the literal in its conjunctive micro edge or sink alternative (§1). A
+  conjunctive exit source keys its entries by its exit statement (§4.6; `interpreter.md` §4.7, D31).
 * The same entries for a conjunctive sink: the sink edges that trigger a literal of a sink alternative (§4.9). An
   entry stays for the run, also when the global-state rule drops the evaluated part from the summary edge
-  (`interpreter.md` §4.7): a later item can complete the combination with it.
+  (`interpreter.md` §4.7, D30; only on a zero-premise item on `S`: a state that the method or its callees set): a
+  later item can complete the combination with it. A caller-set `S` fact is stored as the input of its literal, and
+  it is not dropped (§11.1).
 * On a new fact for a literal: combine it with the stored facts of the other literals of the same conjunctive micro
   edge or sink alternative (one per literal, every combination). A result has the union of the premise sets WITHOUT
   THE ZERO FACT, and `{zero}` if every input has `{zero}` (§4.6). For a conjunctive sink, each combination is a sink
@@ -2060,12 +2115,13 @@ Rules:
 
 ### 8.10 Vulnerability store and the report (PERSISTENT)
 
-A reported vulnerability (Kotlin: `VulnerabilityRecord`) has these fields:
+A reported vulnerability (Kotlin: `Report.Entry`, `analyzer-core.md` §10; the store keeps the `SinkWitness`es) has
+these fields:
 
 | Field | Content |
 |---|---|
 | key | `(rule, method, statement)` (Kotlin: `VulnerabilityKey`): the sink rule, the METHOD of the method key WITHOUT its context, and the sink statement. |
-| sink witnesses | Every sink witness of the key (§1), from every complete forward run. |
+| sink witnesses | The sink witnesses (§1) of the key in the run of its state: the first complete forward run that confirmed it, or the latest complete forward run. The store keeps the witnesses of every run, each with its run. |
 | state | CONFIRMED if a complete forward run confirmed one of its sink witnesses (§4.9); else DEMAND. |
 
 A sink witness (Kotlin: `SinkWitness`) has these fields:
@@ -2074,16 +2130,16 @@ A sink witness (Kotlin: `SinkWitness`) has these fields:
 |---|---|
 | alternative | The sink alternative of the rule at the statement that the witness triggered (§1). |
 | method key | The method key of its sink edges, with the context. The confirmation reads the support of the premise sets in this method key (§4.9 condition 3). |
-| pattern | The sink patterns of its alternative: the sink pattern `s` (§4.9); for an unconditional sink, the zero fact (§4.9); for a conjunctive sink, the literal patterns. |
+| pattern | DERIVED, not stored: the sink patterns of `alternative` of the rule at the statement in the method key (`SinkRule.patterns`; the same in every run, `interpreter.md` I5): the sink pattern `s` (§4.9); for an unconditional sink, the zero fact (§4.9); for a conjunctive sink, the literal patterns. |
 | sink edges | One sink edge (its premise key, its layer and its sink fact), or, for a conjunctive sink, one sink edge set (one edge per literal, §4.9) with the set of the sink facts. |
 | confirmed | Whether the witness is confirmed (§4.9). Only a complete forward run confirms a witness. |
 | end facts | The end facts of the witness, if the sink rule has end-fact actions (§4.9; `interpreter.md` §4.1, END FACTS). |
 | run | The run that reported the witness. |
 
 * The key has no context. One sink statement that is reached in several contexts is ONE vulnerability. The same key in
-  two runs is the same vulnerability. One record holds every sink witness of its key.
+  two runs is the same vulnerability. One entry of the report holds the sink witnesses of its key (the table above).
 * Each sink witness keeps its own alternative and its own method key. Two sink witnesses with different alternatives
-  or different method keys are different entries: they never merge.
+  or different method keys are different sink witnesses: they never merge.
 * A CONFIRMED vulnerability persists. It is real for the reference semantics (§3.5), modulo the expected
   false-positive sources of §11.1.
 * Every complete FORWARD run reports every real vulnerability (§6.6). A demand vulnerability of complete forward run
@@ -2095,12 +2151,18 @@ A sink witness (Kotlin: `SinkWitness`) has these fields:
 
   A key that is in both groups has the state CONFIRMED. An INCOMPLETE run (forward or backward) adds nothing to the
   report and refutes nothing: it is not the fixed point of its rules (S6), so no theorem applies to it, and it
-  confirms nothing (§4.9).
-* THE TRACES. The trace resolution is out of scope (§0). No store of a run stays for it (§8.1). The output of the
-  analysis gives every CONFIRMED vulnerability a SIMPLE trace: the trace with only the sink statement (Kotlin:
-  `TracePathGenerationResult.Simple`). The DEMAND vulnerabilities stay in the report with the state DEMAND, and the
-  analysis logs their number. They are not in the output. The end-fact check of today's trace step is out of scope
-  too: a known gap (§11.1).
+  confirms nothing (§4.9). If run 1 is incomplete, no forward run is complete: the report has no entry and the output
+  is empty, and the status of the analysis (`AnalysisEnd`, `analyzer-core.md` §7.1) gives the cause. This is a
+  deviation from today: a full scan that times out outputs the vulnerabilities that it found before the timeout
+  (`TaintAnalyzer.kt:157-223`; `ap-history.md` F68).
+* THE TRACES. The trace resolution is out of scope (§0). No store of a run stays for it (§8.1). THE OUTPUT of the
+  analysis holds EVERY entry of the report: the CONFIRMED vulnerabilities and the DEMAND vulnerabilities of the
+  latest complete forward run (`ap-history.md` F68, which amends F67 (4)). Each one gets a SIMPLE trace: the trace
+  with only the sink statement (Kotlin: `TracePathGenerationResult.Simple`). Its method key is the method key of a
+  confirmed sink witness if the entry has one, else of its first sink witness. The analysis logs the number of the
+  entries per state (CONFIRMED, DEMAND). So the output holds every real vulnerability that the report holds (§0.1,
+  §6.6). A DEMAND entry can be false (§11.1). The end-fact check of today's trace step is out of scope too: a known
+  gap (§11.1).
 * The vulnerabilities of a complete forward run are also its HAND-OFF: the next backward run reads them as its sink
   seeds (§9.2). A backward run reports no vulnerability (§9.2, the backward sink role).
 
@@ -2123,7 +2185,8 @@ A sink witness (Kotlin: `SinkWitness`) has these fields:
 The reversal `rev(i, f)` (Lean: `revEdge`, `revKinds`) reads an edge `i → f` from the other side. It reverses a record
 for a reader in the other direction (§8.7 R3), and every micro edge of the reversed program (§9.2). The new premise is
 the old conclusion; the exclusion goes to the NEW CONCLUSION, so the new premise has the Empty exclusion. A micro edge
-can have every row of the table except the row `$ → */E`, which S8 forbids. The last column says whether a record can
+can have every row of the table except the row `$ → */E`, which S8 forbids; a row `*/E → $` or `*/E → [any]` has
+`E = {}` (S11 (g), `interpreter.md` I3). The last column says whether a record can
 have the row. Only two rows occur for a record, because:
 
 * an `[any]` premise starts in the demand layer (§6.5), so it has no record;
@@ -2157,7 +2220,7 @@ The new premise mark is `i.mark` if `f.mark` is abstract (`*` or `*∖X`), else 
   (`rev_exact_of_empty_premise`). A normal edge of a forward restricted run has a premise with the `$` tail
   (`RExact.complete_premise_exact`), and a record of run 1 has a premise with the Empty exclusion (§2.2). So every
   mark-reversible forward record reverses exactly. A normal backward summary with a non-zero premise reverses into an
-  exact forward record (`BExact.summary_rev_flow`, `rev_record_exact`).
+  exact forward record (`BExact.summary_rev_flow`, `rev_record_exact`; under `Exact.FiltUp`, S11 (c) and (g)).
 
 ### 9.2 The backward run
 
@@ -2182,7 +2245,8 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
 * THE REVERSED CALL (Lean: `Reverse.Call.rev`). The touched bases are those of the forward call and the alias bases
   of its call results (`interpreter.md` §3.8 AC2). The backward binding into the callee is the reversal of the forward
   binding back (`r.* → ret.*`, `ai.* → argi.*`, `S.* → S.*`) and of each call alias edge (`b.q.* → P.*`). An alias base
-  also gets the identity edge `b.* → b.*`, as a gen-only target of a statement does. The backward binding back is the
+  also gets the identity edge `b.* → b.*` from after the call to before it, in caller coordinates (it passes over the
+  callee), as a gen-only target of a statement does. The backward binding back is the
   reversal of the forward binding into the callee (`argi.* → ai.*`, `S.* → S.*`, `zero.* → zero.*`). A REACH
   conclusion `{jb} → zero` of the callee (a requirement that reached an unconditional source or an end-fact action,
   §7.2) returns to the caller through the reversed zero binding. The alias part is argued, not modelled (§11.2).
@@ -2195,8 +2259,10 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   a requirement inside a callee never reaches the callers (`Backward.lost_plain`, `Backward.B_fails_plain`). S11 (d)
   and (e) keep the zero fact alive on every path to a seed. With S11 (c), a requirement that enters a callee through a
   backward binding is never the zero fact, so its backward summary goes to the hand-off as case 3 below.
-* SINK SEEDS (Lean: rule `seed`). The sink rule of each vulnerability that the previous forward run reported fires
-  where the zero fact reaches the sink statement, as a zero-to-fact edge `Zero → (sink statement, requirement)`. The requirement
+* SINK SEEDS (Lean: rule `seed`). For each sink witness of a vulnerability that the previous forward run reported, the
+  sink rule fires at the method key and the statement of the witness, with the patterns of every alternative of the
+  rule there (`analyzer-core.md` §4.7; `interpreter.md` §7.2 item 14), where the zero fact reaches the sink statement,
+  as a zero-to-fact edge `Zero → (sink statement, requirement)`. The requirement
   is the sink pattern, cut by the field limit of the backward run (§4.4). A conjunctive sink seeds one requirement per
   literal pattern. An unconditional sink seeds nothing: its pattern is the zero fact (§4.9), and the zero rules keep
   the zero fact already. `interpreter.md` §4.9 places the seed of a sink call after the reversed cleaners of that
@@ -2226,7 +2292,8 @@ of a mark and the roles of the rules change (`interpreter.md` §4.9 gives the ru
   statement, as a sink seed does in the backward run. So the work of the zero fact from the roots repeats in every
   run. But after run 1 only the seeded sources fire, and the backward run seeds only the sinks that the forward run
   before reported. All other work follows the demand. A persisted zero-premise forward record still applies (§8.7 R4):
-  it is exact, so it adds no false pair, also when its source is not a seed.
+  it is exact (S14; not a record through an end fact, §11.1), so it adds no false pair, also when its source is not
+  a seed.
 * Every backward run is a restricted run with its own field limit (§6.1). It is concrete and raises no request
   (`BExact.DB_concrete`, `DB_no_request`; the seeds have concrete marks).
 * THE DEMAND OF THE BACKWARD RUN (hand-off, forward run `n` to backward run `n + 1`; Lean: `Backward.revSummaryDemand`,
@@ -2298,13 +2365,13 @@ filter case uses `Core.filt_keeps`.
 | `answerInit_covers`, `answerInit_applicable`, `policy_applicable` | The answer covers the requested location and is applicable; the run-1 policy satisfies C1. |
 | `SharedExcl.applyEdge_shared_excl`, `den_shared_excl` | ONE exclusion per edge. |
 
-### 10.3 Exactness and invariants — `Exact.lean`, `Invariant.lean`, `Closed.lean`, `Confirmed.lean`
+### 10.3 Exactness and invariants — `Exact.lean`, `Invariant.lean`, `Closed.lean`, `Confirmed.lean`, `W6.lean`
 
 | Theorem | Statement |
 |---|---|
 | `Exact.edge_exact_valid`, `closed_exact_valid` | Under S7 (`MarkWF`) and S13 (a validity predicate that every filter accepts, `FiltValid`, and that goes back along every statement micro edge and both call bindings, `BackOK`): every pair of a normal-layer edge whose end location is valid is a concrete flow. |
 | `Exact.edge_exact`, `complete_exact`, `closed_exact` | The same for filters that keep every extension of an accepted path (`FiltUp`; with prefix-closure this makes a filter constant, so this form is for programs without type filters). |
-| `Exact.CexFilt`, `CexMark` | The two hypotheses are necessary: a filter lets a fact pass whose lower locations do not exist; a `*`-premise edge with a concrete target forgets a cleaned mark. |
+| `Exact.CexFilt`, `CexMark` | The two hypotheses are necessary in the model (the two programs break W6 and S8): a filter lets a fact pass whose lower locations do not exist; a `*`-premise edge with a concrete target forgets a cleaned mark. |
 | `Exact.cleanRes_exact` | A normal-layer result of the cleaner denotes only pairs of the input whose end location the cleaner keeps. |
 | `Closed.closed_records_exact`, `closed_records_exact_valid` | A property of records: no request on the initial fact and only normal exit edges ⇒ the records are exactly the concrete flow from its location set. |
 | `Invariant.final_star_legal`, `final_star_abstract` | W2: a `*` conclusion has the mark `*` or `*∖X` and is in the normal layer. |
@@ -2314,8 +2381,8 @@ filter case uses `Core.filt_keeps`.
 | `W6.DR_le_DR6`, `DR6_le_DR`, `DR6_w6`, `DR6_normal` | The same for a forward restricted run (`DR`), under `W6.RestrictLE` (the restriction copies the layer; for the restriction of §6.4: `W6.restrictU_LE`) and `W6.ExactInitConc` (every `$` initial fact has a concrete mark; the mark-copying emission gives it: `W6.DR_eic`). No S8 hypothesis. W6 is proved for `D` and `DR` only, not for `Statics.DS`, `ND.DN` or `Backward.DB`. |
 | `W6.vuln_found6`, `edge_exact6`, `edge_exact_valid6`, `edge_exactR6`, `edge_exactR_valid6`, `confirmed_real6`, `confirmed_real_valid6`, `confirmed_real_M6`, `confirmed_real_M6_valid`, `iteration_sound_M6`, `iteration_general6` | With W6 in every forward run: soundness, exactness and confirmation (also the valid forms, under S13; in a restricted run under S14) and the iteration (`iteration_general6` has no S8 hypothesis). |
 | `W6.Cex.cex_w6_changes_fact` | Without `SummaryStar`, W6 changes a fact, not only its layer. The program uses an abstraction outside the spec: it emits a `$` initial fact with an abstract mark, so `Invariant.PremConc` and `W6.ExactInitConc` are false for it. |
-| `star_final_keeps_initial_excl`, `star_initial_complete`, the demand-monotone lemmas | A final `*/Ec` under an initial `*/Ei` keeps `Ei ⊆ Ec`; under `*/Ei` a normal-layer final fact has the `*` tail or `Ei = {}`; the demand layer never goes back. |
-| `Confirmed.confirmed_real_valid`, `confirmed_real` | A CONFIRMED vulnerability (§4.9) is a real concrete vulnerability for the reference semantics (§3.5) (valid form; `MarkWF ∧ FiltUp` form; §11.1 lists the expected false-positive sources). `CexConfFilt`, `CexConfMark`: both hypotheses are necessary. |
+| `Invariant.star_final_keeps_initial_excl`, `star_initial_complete`, the demand-monotone lemmas | A final `*/Ec` under an initial `*/Ei` keeps `Ei ⊆ Ec`; under `*/Ei` a normal-layer final fact has the `*` tail or `Ei = {}`; the demand layer never goes back. |
+| `Confirmed.confirmed_real_valid`, `confirmed_real` | A CONFIRMED vulnerability (§4.9) is a real concrete vulnerability for the reference semantics (§3.5) (valid form; `MarkWF ∧ FiltUp` form; §11.1 lists the expected false-positive sources). `CexConfFilt`, `CexConfMark`: both hypotheses are necessary in the model (the programs break W6 or S8). |
 | `Confirmed.Weak.weak_support_gap`, `Confirmed.Rev2.rev2_not_confirmed` | The weaker support condition admits a false positive; the counter-example program `Confirmed.Rev2` is not confirmed. |
 
 ### 10.4 Concept against optimization — `Tree.lean`, `Store.lean`, `Subsume.lean`, `RestrictedStore.lean`
@@ -2326,7 +2393,7 @@ filter case uses `Core.filt_keeps`.
 | `Tree.rule1_mem`, `rule1_den`, `rule2_den`, `rule2_mark` | Merge rule 1 is exact; merge rule 2 (exclusions, and mark exclusions) is exact for EQUAL trees; counter-examples for different trees and for a union. |
 | `Tree.applyTreeE_mem`, `applyTreeE_den`, `applyTreeE_grouped_key`, `applyTreeE_mx`, `applyTreeE_inv`, `applyTreeE_star_normal` | For a `*`-to-`*` micro edge with the mark `*` on both sides (not the mark gate or the cut of §7.3): the tree form of delta-concat equals the per-path form, fact and layer; output trees have distinct keys and keep the mark exclusion. |
 | `Tree.fromList_size`, `fan_list`, `fan_tree`, `prepend_shares`, `walkSteps_le`, `applyListC_spec` | Cost of the tree representation. |
-| `Store.*` | The record, request and demand indexes return every entry that the concept filter returns; lookup cost. |
+| `Store.*` | The record index (`byEntry`, `byExit`) and the mark-request index return every entry that the concept filter returns; lookup cost. The demand store of `Store.lean` (its part 4) and its subscription store (part 5) model the superseded version-2 designs; the demand store of the spec is the `RStore` index below, and its subscription index is `PipelineStore.deliver_run1`, `deliver_restricted` (§8.4). |
 | `Subsume.subsumes_sound`, `markSubsB_sound` | The conclusion subsumption test is sound, with mark exclusions (`*∖Xs` subsumes `*∖Xn` if `Xs ⊆ Xn`). |
 | `Subsume.merge_inter`, `merge_mark_inter`, `union_loses_pairs`, `union_marks_loses_pairs` | Merge rule 2 is exact for exclusions and for mark exclusions; a union loses a real pair. |
 | `Subsume.record_subsumes`, `recordSubsumesB_sound`, `recordSubsumesLB_*` | Record subsumption. |
@@ -2340,8 +2407,8 @@ filter case uses `Core.filt_keeps`.
 | `revEdge_sound`, `revEdge_exact`, `rev_exact_of_empty_premise`, `rev_starEx_exact` | §9.1: sound for every mark-reversible record; exact with the Empty premise exclusion, also for a `*∖X` record. |
 | `policy_premEmpty`, `answerInit_premEmpty`, `answerInit_markRev`, `revEdge_premise_mark` | Run-1 initial facts have the Empty premise exclusion; a reversed premise never has a mark exclusion. |
 | `star_exact_no_exact_rev`, `no_rev_of_star_conc`, `no_rev_of_two_marks` | The limits of the reversal. |
-| `Stmt.rev_step_iff`, `flow_rev_iff_calls`, `rev_WF`, `backward_of_forward_calls` | The reversed program has the converse flow, with calls, cleaners and filters; it is well-formed; the forward closure `D` on the reversed program (`Program.rev`) is covered by the forward theorem. This is not a theorem about the backward run `Backward.DB`, which adds the zero rules and the seeds. |
-| `backward_reuse`, `backward_reuse_needs_cover`, `backward_reuse_precise` | Reversed records cover the converse flows; the cover condition is necessary. |
+| `Reverse.Stmt.rev_step_iff`, `flow_rev_iff_calls`, `rev_WF`, `backward_of_forward_calls` | The reversed program has the converse flow, with calls, cleaners and filters (under `RevStmts`, `RevCalls`: S11 (b), (g)); it is well-formed; the forward closure `D` on the reversed program (`Reverse.Program.rev`) is covered by the forward theorem. This is not a theorem about the backward run `Backward.DB`, which adds the zero rules and the seeds. |
+| `backward_reuse`, `backward_reuse_needs_cover`, `backward_reuse_precise` | Reversed records cover the converse flows; the cover condition is necessary; `backward_reuse_precise`: an exact forward record with the Empty premise exclusion reverses into an exact record of the reversed program (under `RevStmts`, `RevCalls`). |
 
 ### 10.6 ND edges — `ND.lean`, `NDExact.lean`
 
@@ -2353,15 +2420,15 @@ filter case uses `Core.filt_keeps`.
 | `ND.answer_loop` | A request at one support position is answered or climbs; the loop over positions ends. |
 | `ND.flow_taintN`, `D_sub_DN` | Every ordinary flow is a support derivation with one location; every object of `D` is in the ND closure. |
 | `ND.Example.vuln3`, `c3_normal` | Today's `NDRule` sample (`$A = src(); $B = src(); $C = pass($A, $B); sink($C)`) gives the vulnerability, from a normal-layer conjunction. |
-| `NDExact.nd_edge_exact`, `nd_edge_exact_valid`, `nd_edge_exact_gen`, `nd_edgeOK` | THE ND EXACTNESS THEOREM. Under S7 and S9, and either `Exact.FiltUp` (`nd_edge_exact`) or S13 for valid end locations (`nd_edge_exact_valid`: `Exact.FiltValid`, `Exact.BackOK` and `NDExact.ConjOK`): a normal-layer edge with the premise list `P` gives a support derivation `TaintN M n l L0` for EVERY support `L0` that `P` covers and every end location `l` of the edge (with `den` for one premise). The converse of `nd_coverage`. |
+| `NDExact.nd_edge_exact`, `nd_edge_exact_valid`, `nd_edge_exact_gen`, `nd_edgeOK` | THE ND EXACTNESS THEOREM. Under S7 and S9, and either `Exact.FiltUp` (`NDExact.nd_edge_exact`) or S13 for valid end locations (`NDExact.nd_edge_exact_valid`: `Exact.FiltValid`, `Exact.BackOK` and `NDExact.ConjOK`): a normal-layer edge with the premise list `P` gives a support derivation `ND.TaintN M n l L0` for EVERY support `L0` that `P` covers and every end location `l` of the edge (with `den` for one premise). The converse of `ND.nd_coverage`. |
 | `NDExact.nd_edge_exact_single`, `nd_edge_exact_nd` | The single-premise form (`den i f l0 l ⇒ TaintN … [l0]`) and the form for two or more premises (every covered support, every covered location). |
 | `NDExact.CexLit.cex_lit`, `CexConjOK.cex_conjOK` | Both hypotheses are necessary: an abstract literal lets a correlated input with a mark exclusion through (the excluded locations reach nothing); without `ConjOK` a valid end location has an invalid support. |
 | `NDExact.covers_nonempty` | Every fact covers some location (also `*/Universe` and `*∖X`), so a support can always be built. |
-| `NDConfirmed.SupN`, `ConfirmedN`, `confirmed_real_N`, `confirmed_real_N_valid` | THE ND CONFIRMATION THEOREM. Under S7, S9 and S10 (`ND.NProg.WF`), and either `Exact.FiltUp` or S13 (`confirmed_real_N_valid`: `Exact.FiltValid`, `Exact.BackOK`, `NDExact.ConjOK`): a vulnerability whose sink edge is normal, whose premises are exact concrete facts, and whose premise set is supported JOINTLY (§4.9 condition 3: one call supplies every premise) is real for the support semantics (a tree witness `ND.ReachN`). |
+| `NDConfirmed.SupN`, `ConfirmedN`, `confirmed_real_N`, `confirmed_real_N_valid` | THE ND CONFIRMATION THEOREM. Under S7, S9 and S10 (`ND.NProg.WF`), and either `Exact.FiltUp` or S13 (`NDConfirmed.confirmed_real_N_valid`: `Exact.FiltValid`, `Exact.BackOK`, `NDExact.ConjOK`): a vulnerability whose sink edge is normal, whose premises are exact concrete facts, and whose premise set is supported JOINTLY (§4.9 condition 3: one call supplies every premise) is real for the support semantics (a tree witness `ND.ReachN`). |
 | `NDConfirmed.CexSites.cex_sites` | Support of each premise on its own is not enough: two premises supplied at two different calls confirm a vulnerability that has no witness. |
 | `NDConfirmed.confirmed_lift`, `confirmedN_iff`, `DN_lower`, `reachN_reach` | Without conjunctions the ND confirmation is the confirmation of §4.9 for one premise. |
 
-### 10.7 Restricted runs and the iteration — `Restricted*.lean`
+### 10.7 Restricted runs and the iteration — `Restricted*.lean`, `Backward.lean`, `BackwardExact.lean`
 
 The restricted closure `DR` (`Restricted.lean`) is the rule list of a restricted run (§6.1), with the rules `initR`,
 `ret` and `retRec`. A demanded flow and a demanded witness (`FlowR`, `ReachR`) are defined in §1. The coverage and
@@ -2387,27 +2454,27 @@ iteration theorems are generic over the rules, given the contracts C2 (`EmitCont
 | `Backward.dem1_exact`, `dem2_exact`, `p1_found`, `p2_found` | For programs 1 and 2 the hand-off of the backward run is exactly the callee demand of `RCases.dem1M` (`dem2M`), the zero demand `Backward.zeroDem`, and one pattern `(D-c, none)` of the root; forward run 3 reports the vulnerability. |
 | `Backward.lost_plain`, `B_fails_plain` | With the plain converse of the forward bindings (no zero binding into the callee) program 1 is lost. |
 | `BExact.DB_concrete`, `DB_no_request`, `DB_no_requestM`, `CexSeed.cex_seed` | The backward run is concrete and raises no request when its seeds have concrete marks (a seed with the mark `*` would raise one). |
-| `BExact.edge_exactB`, `edge_exactB_valid`, `edge_exactB_rev`, `summary_rev_flow`, `rev_record_exact`, `revRecs_exact`, `CexZeroBack.cex_rec` | A normal backward edge with a non-zero premise is exact for the reversed program and reverses into an exact forward record, under S11 (c); without S11 (c) it is false. |
-| `BExact.recsSeq_exact`, `recsSeq_exactV`, `accRecs_exact`, `accRecs_exactM`, `seq_edge_exact`, `seq_confirmed_real` | The persisted forward records stay exact over the whole run sequence (S14 is a theorem); every normal edge and every confirmed vulnerability of every run is real. |
-| `BExact.binv_all`, `no_static_rule_backward` | The backward run needs no static rule, if the reversed program satisfies S12 (a) to (d). |
+| `BExact.edge_exactB`, `edge_exactB_valid`, `edge_exactB_rev`, `summary_rev_flow`, `rev_record_exact`, `revRecs_exact`, `CexZeroBack.cex_rec` | A normal backward edge with a non-zero premise is exact for the reversed program and reverses into an exact forward record, under S11 (c); the reversal also under S11 (g) (`Reverse.RevStmts`, `RevCalls`) and with the records of the backward run exact off the zero base (`BExact.RecsExactNZ`); all for `Exact.FiltUp`, with no form for type filters; without S11 (c) it is false. |
+| `BExact.recsSeq_exact`, `recsSeq_exactV`, `accRecs_exact`, `accRecs_exactM`, `seq_edge_exact`, `seq_confirmed_real` | The persisted forward records stay exact over the whole run sequence (S14 for the forward records: every record is an exit edge of an earlier forward run, `BExact.RecsFromRuns`); every normal edge and every confirmed vulnerability of every forward run is real. |
+| `BExact.binv_all`, `no_static_rule_backward` | The backward run needs no static rule, if the reversed program satisfies S12 (a) to (d) and its seeds and records keep the invariant (`BExact.SeedsOK`, `StaticsIter.RecOK`); an `[any]` sink on a class position is outside it (precision only). |
 | `RExact.edge_exactR_valid`, `closed_exactR_valid`, `recs_of_DR_valid`, `recs_of_D_valid` (valid locations, S13 and `RExact.RecsExactV`); `edge_exactR`, `complete_exactR`, `recs_of_DR`, `recs_of_D`, `closed_exactR`, `RMain.closed_records_exactM` (`Exact.FiltUp` and `RExact.RecsExact`); `RExact.recs_union` | Exactness and record reuse in forward restricted runs. Hypotheses: S7, the records that the run reads are exact (S14), every satisfaction reads the marks (`RExact.SatMark`), and the restriction only removes pairs (`RestrictSub`). The exit records of the run are exact again, and the union of exact record sets is exact. |
 | `RExact.SupM`, `ConfirmedM`, `confirmed_realM_gen`, `confirmed_realM_gen_valid` (every satisfaction with `SatMark`, every restriction with `RestrictSub`); `RMain.confirmed_real_M`, `confirmed_real_M_valid` (the spec rules) | A confirmed vulnerability of a forward restricted run is real for the reference semantics (§3.5), under S7, S14 and `Exact.FiltUp` or S13 (`Exact.FiltValid`, `Exact.BackOK`); the support accepts the emitted exact fact. |
 
-### 10.8 Statics — `Statics.lean`, `StaticsIter.lean`
+### 10.8 Statics — `Statics.lean`, `StaticsIter.lean`, `StaticsConfirmed.lean`
 
 | Theorem | Statement |
 |---|---|
 | `Statics.coverageD`, `vulnD` | Under the construction rules (`SWF`), run 1 with the position request of §4.10 (`Design`) reports every real vulnerability. |
 | `Statics.DS_edgeOK`, `edge_exactS`, `edge_exact_validS`, `complete_exactS` | Its normal edges denote only real flows. |
-| `Statics.cinv_all`, `no_any_above` | No static fact with the `[any]` tail occurs above a static position; a static fact above a position is an abstract static `*` fact. |
+| `Statics.cinv_all`, `no_any_above` | No static fact with the `[any]` tail occurs above a static position; a static fact above a position that is not exact is an identity static `*` edge (the premise at the same path, the normal layer). |
 | `Statics.gen_read_DS`, `gen_read_sreq` | A static read on the abstract static root gives no fact and raises the position request. |
 | `Statics.CexAbove.y_vuln_normal`, `CexWide.w_vuln_normal`, `CexClean.deep_vuln_normal` | A write in the caller, a write in a callee and a cleaner in a callee: the vulnerability is found through a normal edge. |
 | `Statics.CopyF2F.c_vuln_normal`, `DeepSink.e_vuln_normal`, `DeepSinkParam.p_vuln` | A pass rule between static fields; a sink below a static field (the ordinary mark request climbs to a static caller premise: a normal edge; to a parameter premise: the request chain, a demand edge, as for an instance field). |
 | `Statics.abovePos_len`, `f2f_not_above` | A path above a static position has at most one accessor; a field-to-field edge never lands above a static position. |
 | `Statics.CexClean.shallow_misses`, `CexAbove.cex_user_misses`, `CexWide.counterexample` | The rule variants that fail: the chain answer of a static mark request; the narrow climb without a fallback; the first fire (the static root, reads only) with the fallback only for caller premises off the static base (`CexWide.Xn`, also with the at-or-below answer, `CexWide.Xc`). |
-| `Statics.CexAny.counterexample` | Not a failing variant: the at-or-below answer, which the final rule uses (§4.10 item 2; `Statics.Design`, part `below`; in the program `CexAny.Xb`, `CexAny.Xc`), loses a flow WHEN a source puts an `[any]` fact on a bare class (`(S, <C>, [any], T)`). This is the reason for S12 (b): the interpreter rejects such a source (`interpreter.md` §1.4). |
+| `Statics.CexAny.counterexample` | Not a failing variant: the at-or-below answer, which the final rule uses (§4.10 item 2; `Statics.Design`, part `below`; in the program `CexAny.Xb`, `CexAny.Xc`, with the first fire, `gen = false`), loses a flow WHEN a source puts an `[any]` fact on a bare class (`(S, <C>, [any], T)`). This is the reason for S12 (b): the interpreter rejects such a source (`interpreter.md` §1.4). |
 | `StaticsIter.rinv_all`, `no_any_above_R`, `static_step_below`, `static_sink_below`, `no_request`, `DeepReadIter.deep_read_above` | AFTER RUN 1 NO STATIC RULE IS NEEDED: in a forward restricted run (`DR`), under S12 (a) to (d) (`StaticsIter.SWFR`) and persisted records that keep the static invariant (`StaticsIter.RecOK`), for every demand, no static `*` or `[any]` fact lies above a static position; every static operation at most two accessors deep is the case at or below; no request. A deeper static read or sink follows the ordinary rules of an instance field (`DeepReadIter.deep_read_above`: a restricted run can hold `(S, <C>.f, [any], T)` above a deep read). |
-| `StaticsIter.reach_strongDSD`, `iteration_general_DS`, `no_static_rule_after_run1` | The iteration from run 1 = `DS`, with plain forward restricted runs after it: every forward run reports every real vulnerability, and every later forward run satisfies the invariant (under `StaticsIter.RecOK` for the records). The backward run `Backward.DB` is not covered (§11.2). |
+| `StaticsIter.reach_strongDSD`, `iteration_general_DS`, `no_static_rule_after_run1` | The iteration from run 1 = `DS`, with plain forward restricted runs after it: every forward run reports every real vulnerability, and every later forward run satisfies the invariant (under `StaticsIter.RecOK` for the records). The static invariant of the backward run `Backward.DB`: `BExact.no_static_rule_backward` (§10.7, with its hypotheses). |
 | `StaticsIter.ExampleIter.run3_confirmed`, `WideIter.run3_confirmed`, `AboveIter.run3_confirmed`, `CleanIter.run3_confirmed`, `ExampleIter.demE_exact` | The worked static programs: forward run 3 confirms the vulnerability through a normal edge with no request; the exact demand for `Example`. |
 | `StaticsConfirmed.SupS`, `ConfirmedS`, `confirmed_realS`, `confirmed_realS_valid` | Run 1 with the static rule confirms only real vulnerabilities; the support accepts the mark answer on a static premise (§4.10 item 4). |
 | `StaticsConfirmed.confirmedS_iff`, `CexS.cexS_filt`, `CexS.cexS_mark`, `ExampleConf.confirmed`, `CleanConf.confirmed` | Without a static initial fact the static confirmation is the plain one; S7 and the validity are necessary; the worked programs are confirmed in run 1. |
@@ -2428,18 +2495,18 @@ iteration theorems are generic over the rules, given the contracts C2 (`EmitCont
 
 | Theorem | Statement |
 |---|---|
-| `Kinds.flow_abstract`, `flow_no_exact`, `flow_no_exact_gen`, `taint_concrete`, `kinds_D` | §7.2 for run 1 without the static rule (the closure `D`): a `*` premise gives an abstract conclusion mark and no `$` tail (FLOW); a concrete or zero premise gives a concrete mark and no `*` tail (TAINT); a `*` tail is abstract and normal (W2). Hypotheses: S7 (`Exact.MarkWF`), S8 (`Invariant.no_univ_star` conditions), `ExactTargetConc` (S8 duty), the run-1 policy (`InitK`). |
+| `Kinds.flow_abstract`, `flow_no_exact`, `flow_no_exact_gen`, `taint_concrete`, `kinds_D` | §7.2 for run 1 without the static rule (the closure `D`): a `*` premise gives an abstract conclusion mark and no `$` tail (FLOW); a concrete or zero premise gives a concrete mark and no `*` tail (TAINT); a `*` tail is abstract and normal (W2). Hypotheses: S7 (`Exact.MarkWF`), S8 (`Invariant.no_univ_star` conditions), `Kinds.ExactTargetConc` (S8 duty), the run-1 policy (`Kinds.InitK`). |
 | `Kinds.CexK.cex_etc`, `cex_premConc`, `cex_noUniv`, `cex_markWF`, `cex_alpha` | Each hypothesis is necessary: without it a FLOW edge gets a `$` tail or a concrete mark. |
-| `Kinds.nd_taint`, `ndz_taint`, `CexND.*`, `ZeroMembers.*` | §4.6: an edge with two or more premises is TAINT: every member concrete, a concrete conclusion with no `*` tail; in `DNz` also no zero member. |
+| `Kinds.nd_taint`, `ndz_taint`, `CexND.*`, `ZeroMembers.*` | §4.6: an edge with two or more premises is TAINT: every member concrete, a concrete conclusion with no `*` tail; in `NDZ.DNz` also no zero member. |
 | `Kinds.kinds_DR`, `kinds_DR_emitM`, `kinds_DB`, `kinds_DB_taint`, `CexSeedTail.cex_seed_tail` | The restricted runs have REACH and TAINT only; the backward tails need `SeedTails` (S11 (f)). |
 | `NDZ.DNz`, `dropZ`, `zStar` | The closure of the spec (§4.6): `ND.DN` with the union of the premise sets WITHOUT the zero fact at a conjunction and at an ND summary application. |
-| `NDZero.zero_everywhere`, `zero_everywhere_z` | The zero fact is at every node that an edge reaches, in `DN` and in `DNz`. Hypotheses: `Backward.ZeroKept` (S11 (d)), `NDZero.ZeroCalls` (§3.5: no call touches the zero base; the zero binding), `ConjAdj` (a conjunction beside an instruction edge), the policy serves the zero fact by itself. |
-| `NDZero.dnz_to_dn`, `dn_to_dnz`, `edge_iff`, `ninit_iff`, `nadded_iff`, `nreq_iff` | THE CORRESPONDENCE: a `DNz` edge with the premise set `P'` is a `DN` edge with a list `P` with `dropZ P = P'` and the same fact; a NORMAL `DNz` edge comes from a NORMAL `DN` edge. The converse (`dn_to_dnz`) needs `NDZero.ZeroLinks`, which `zeroLinks_of_noZeroGen` gives from `NDZeroBase.NoZeroGen` (§4.6; `interpreter.md` I11 (c), (d), §3.1, §5.3). |
+| `NDZero.zero_everywhere`, `zero_everywhere_z` | The zero fact is at every node that an edge reaches, in `ND.DN` and in `NDZ.DNz`. Hypotheses: `Backward.ZeroKept` (S11 (d)), `NDZero.ZeroCalls` (§3.5: no call touches the zero base; the zero binding), `ConjAdj` (a conjunction beside an instruction edge), the policy serves the zero fact by itself. |
+| `NDZero.dnz_to_dn`, `dn_to_dnz`, `edge_iff`, `ninit_iff`, `nadded_iff`, `nreq_iff` | THE CORRESPONDENCE: a `NDZ.DNz` edge with the premise set `P'` is a `ND.DN` edge with a list `P` with `NDZ.dropZ P = P'` and the same fact; a NORMAL `NDZ.DNz` edge comes from a NORMAL `ND.DN` edge. The converse (`dn_to_dnz`) needs `NDZero.ZeroLinks`, which `zeroLinks_of_noZeroGen` gives from `NDZeroBase.NoZeroGen` (§4.6; `interpreter.md` I11 (c), (d), §3.1, §5.3). |
 | `NDZero.summary_nd_fact`, `summary_nd_exists` | An ND conclusion applied by the single-premise `ret` (a `{zero, i}` summary of the model is the summary `{i}` of the spec) gives the same fact, in a layer that is not lower. |
-| `NDZeroThms.nd_coverage_z`, `nd_coverage_zg`, `nd_vuln_found_z`, `nd_vuln_found_zg`, `nd_vuln_reach_z` | Coverage and the vulnerability theorem for `DNz`. |
-| `NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z` | Exactness of a normal `DNz` edge: a support derivation with the support of `P'` plus zero locations. |
-| `NDZeroThms.ConfirmedNz`, `confirmedNz_N`, `confirmed_real_Nz`, `confirmed_real_Nz_valid` | The confirmation of §4.9 on the `DNz` premise set: it gives the confirmation of the `DN` vulnerability (a zero member is supplied by the caller zero edge at the same call, `supN_zero`), so a confirmed vulnerability is real (`ND.ReachN`). |
-| `NDZeroBase.zero_base_inv`, `dnz_applicable_zero` | Under `NoZeroGen`, every `DNz` fact on the zero base is the zero fact, so only the zero premise is satisfied by the zero added fact. |
+| `NDZeroThms.nd_coverage_z`, `nd_coverage_zg`, `nd_vuln_found_z`, `nd_vuln_found_zg`, `nd_vuln_reach_z` | Coverage and the vulnerability theorem for `NDZ.DNz`. |
+| `NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z` | Exactness of a normal `NDZ.DNz` edge: a support derivation with the support of `P'` plus zero locations. |
+| `NDZeroThms.ConfirmedNz`, `confirmedNz_N`, `confirmed_real_Nz`, `confirmed_real_Nz_valid` | The confirmation of §4.9 on the `NDZ.DNz` premise set: it gives the confirmation of the `ND.DN` vulnerability (a zero member is supplied by the caller zero edge at the same call, `supN_zero`), so a confirmed vulnerability is real (`ND.ReachN`). |
+| `NDZeroBase.zero_base_inv`, `dnz_applicable_zero` | Under `NoZeroGen` and `AlphaZero` (the run-1 policy satisfies it, `NDZeroBase.policy1_alphaZero`), every `NDZ.DNz` fact on the zero base is the zero fact, so only the zero premise is satisfied by the zero added fact. |
 
 ---
 
@@ -2454,14 +2521,24 @@ analysis keeps their results in the normal layer and does not refine them.
 
 * A type filter on a `*` or `[any]` fact. The filter checks the concrete path only, so the fact keeps the locations below
   its path that a real value cannot have (§4.8).
-* A reversed backward record. The backward run does not type-filter, so the record has no type filter (§8.7 R3).
+* A reversed backward record. The backward run does not type-filter, so the record has no type filter (§8.7 R3; the
+  reversal theorems `BExact.rev_record_exact` and `revRecs_exact` assume `Exact.FiltUp`).
 * The weak alias write. The alias base keeps its old content (S2, `interpreter.md` A3, gap G7).
 * The constructor pass-over. An added fact also passes over a constructor call, so the constructor does not
   overwrite the caller facts (`interpreter.md` §3.5, gap G8).
+* The catch local. A catch statement does not kill its local, so an old fact on it stays (`interpreter.md` G9).
 * The path-insensitive reading. A conjunction can combine literals that hold on paths that exclude each other (§4.6),
   and a negated mark literal counts as true (§3.5).
-* A pass rule with a mark literal. It is a rule error, and the interpreter applies it without its mark literals
-  (`interpreter.md` §4.2, D24), so it also fires where a literal is false.
+* A pass rule with a mark literal. It is a rule error that is not rejected (`interpreter.md` §1.3), and the
+  interpreter applies it without its mark literals (`interpreter.md` §4.2, D24), so it also fires where a literal is
+  false.
+* The global-state rule (`interpreter.md` §4.7 step 3, G2, D30). An exit sink drops an evaluated part on `S` only
+  from a zero-premise item: a state that the method or its callees set. A caller-set `S` fact is evaluated (it can
+  report, and a conjunctive literal stores it as its input, §8.9), but it is not dropped: it returns to the caller
+  through the callee summary, also through the run-1 FLOW summary and its record. As today: today's exit sinks run
+  only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`), and only a reached sink drops
+  (`JIRSequentTaintUtil.kt:76-85`). So a later sink in the caller can see the state, and the exit sink of the caller
+  can evaluate it again. The model has no global-state rule (a gap of the interpreter, `interpreter.md` §0.1 G2).
 * The end facts of a sink (§4.9; `interpreter.md` §4.1). An end fact is a context-insensitive zero-to-fact edge, as
   today: its premise set is `{zero}`, whatever the premise set of its sink edge. So its summaries reach every caller,
   also a caller that does not supply the premise of the sink edge, and its records are not exact. The backward run
@@ -2469,31 +2546,41 @@ analysis keeps their results in the normal layer and does not refine them.
   into a forward zero-premise record that is not exact either (§8.7 R3). The model has no end facts.
 * A sink rule with end-fact actions: a KNOWN GAP for now. Today the vulnerability check of the trace step reports such
   a vulnerability only if one of its end facts reaches the end of the analysis (`VulnerabilityChecker`). That check is
-  out of scope with the trace resolution (§8.10 THE TRACES). So every confirmed vulnerability of such a rule is
-  reported, also one whose end facts never reach the end of the analysis (`ap-history.md` F67).
+  out of scope with the trace resolution (§8.10 THE TRACES). So every vulnerability of such a rule that the report
+  holds is in the output, also one whose end facts never reach the end of the analysis (`ap-history.md` F67, F68).
+
+THE DEMAND ENTRIES OF THE OUTPUT. The output holds the DEMAND vulnerabilities of the latest complete forward run too
+(§8.10; `ap-history.md` F68). They are not confirmed: a DEMAND entry rests on a demand-layer edge, an
+over-approximation of §2.2 (the case `above`, a lost correlation, the field limit cut, W2, W6), so it can be false
+also for the reference semantics. Only a later complete forward run that does not report it refutes it (§8.10). The
+soundness theorems cover the output: a complete forward run reports every real vulnerability in some
+layer (`Backward.iteration_general`, `W6.iteration_general6`).
 
 ### 11.2 Other limits
 
-* The concrete semantics is alias-free and location-level (§3.5).
-* The theorems are about the closures `D` (run 1), `DR` (a forward restricted run), `DN` (run 1 with conjunctions),
-  `Statics.DS` (run 1 with the static rule) and `Backward.DB` (the backward run). A real run differs from them by
+* The concrete semantics is alias-free and location-level (§3.5), and per root: every root starts with the zero fact
+  only, so no static state crosses roots (as today; D27 clears it between Spring controllers on purpose;
+  `interpreter.md` G13).
+* The theorems are about the closures `D` (run 1), `DR` (a forward restricted run), `NDZ.DNz` (run 1 with
+  conjunctions; the list model `ND.DN`), `Statics.DS` (run 1 with the static rule) and `Backward.DB` (the backward
+  run). A real run differs from them by
   optimizations. Each one keeps the soundness:
 
 | Optimization | Why it keeps the soundness | Status |
 |---|---|---|
-| conclusion subsumption (§8.1) | the dropped pairs are pairs of the kept fact (`subsumes_sound`) | the local step is proved; the composition is argued |
-| merge rules 1 and 2, also for marks (§3.3, T1, T2, T2') | exact (`rule1_mem`, `rule2_den`, `rule2_mark`, `merge_inter`, `merge_mark_inter`) | proved |
+| conclusion subsumption (§8.1) | the dropped pairs are pairs of the kept fact (`Subsume.subsumes_sound`) | the local step is proved; the composition is argued |
+| merge rules 1 and 2, also for marks (§3.3, T1, T2, T2') | exact (`Tree.rule1_mem`, `rule2_den`, `rule2_mark`, `Subsume.merge_inter`, `merge_mark_inter`) | proved |
 | the T5 fold | the denotation does not change | argued |
-| persisted records (R4) | a normal edge has no false pair; adding edges keeps coverage (rule `retRec`, with `applicable` or `satI`) | proved for one forward run under S14 (`RExact.recApp_markSub`, `RMain.p3_reuse_exact`); the composition over the run sequence and the backward records are argued (the list below) |
+| persisted records (R4) | a normal edge has no false pair; adding edges keeps coverage (rule `retRec`, with `applicable` or `satI`) | proved for one forward run under S14 (`RExact.recApp_markSub`, `RMain.p3_reuse_exact`); over the forward runs (`BExact.recsSeq_exact`, `recsSeq_exactV`, `seq_edge_exact`, `seq_confirmed_real`; `RecsFromRuns`); over the backward runs (`BExact.recsBSeq_exact`); and for the reversed summaries of one backward run (`BExact.revRecs_exact`, `Exact.FiltUp`). Argued: the two directions together, and the conjunction records (the list below) |
 | W6 (`[any]` always in the demand layer) | a layer refinement: the W6 run has the same facts, with the same or a raised layer (`W6.D_le_D6`, `D6_le_D`, `DR_le_DR6`, `DR6_le_DR`) | proved for `D` (under `W6.SummaryStar`, which `W6.summaryStar_policy` gives for the run-1 policy) and for `DR` (under `W6.RestrictLE` and `W6.ExactInitConc`, which `W6.restrictU_LE` and `W6.DR_eic` give): soundness, exactness, confirmation and the iteration (§10.3). Argued for `Statics.DS`, `ND.DN` and the backward run |
 
 * The backward run is modelled as the closure `Backward.DB` (the rules of `DR` on the reversed program, with the zero
   rules of §9.2), and it satisfies the contract B (`Backward.B_general`). The reversal of a conjunctive micro edge into
   one edge per literal (§9.2), the alias edges of the reversed call (§9.2; the model is alias-free, S2) and the
   interpreter's call-site rules of the backward run (`interpreter.md` §4.9) are argued, not modelled.
-* ND edges are modelled for run 1 (`DN`): coverage, the vulnerability theorems (§10.6) and the exactness of the normal
-  layer against the support semantics `TaintN` (`NDExact`, under S7, S9, S10 and S13) are proved. The CONFIRMATION of
-  a vulnerability through a conjunction is proved too, with the joint support of §4.9 condition 3
+* ND edges are modelled for run 1 (`ND.DN`): coverage, the vulnerability theorems (§10.6) and the exactness of the
+  normal layer against the support semantics `ND.TaintN` (`NDExact`, under S7, S9, S10 and S13) are proved. The
+  CONFIRMATION of a vulnerability through a conjunction is proved too, with the joint support of §4.9 condition 3
   (`NDConfirmed.confirmed_real_N`), in run 1. No edge with two or more premises is a record (§8.7 R1). A restricted
   run with ND edges is ARGUED, not modelled:
   1. its facts are concrete, so a literal never raises a request (§4.5);
@@ -2502,8 +2589,12 @@ analysis keeps their results in the normal layer and does not refine them.
   3. the contract B for a TREE witness (`ND.ReachAll`) needs a demand pattern on every node of the tree. The backward
      run reverses a conjunctive edge into one edge per literal (§9.2), so a requirement at the conclusion reaches every
      branch.
+  4. a one-member conjunction record (§8.7 R4) applies in a later run as an ordinary record, and it is reversed
+     (R3). It is real for the support semantics in every caller context, because the zero binding supplies the zero
+     premise that the zero-drop removed.
 
-  `D_sub_DN` embeds the distributive part, so the iteration theorem holds unchanged for a program without conjunctions.
+  `ND.D_sub_DN` embeds the distributive part, so the iteration theorem holds unchanged for a program without
+  conjunctions.
 * PREMISE SETS AND LISTS. The zero fact is a premise in the spec and in the model (§1). `ND.lean` keeps premise LISTS
   (with `[zeroFact]` for a zero-to-fact edge); this spec keeps SETS. A list and its set name the same entry locations,
   so every ND theorem carries over (argued). A conjunction drops the zero fact from the union of its premise sets
@@ -2511,8 +2602,9 @@ analysis keeps their results in the normal layer and does not refine them.
   (§10.10): the closure `NDZ.DNz` corresponds to `ND.DN` edge by edge (`NDZero.dnz_to_dn`, `dn_to_dnz`), because the
   zero fact is at every node that an edge reaches (`NDZero.zero_everywhere`); coverage, exactness and confirmation
   carry over (`NDZeroThms`). A conjunction result whose premise
-  set has one member is an ordinary edge; it can be a record if it is normal, and it is exact
-  (`NDExact.nd_edge_exact`, for every premise list).
+  set has one member is an ordinary edge; it can be a record if it is normal, and it is exact for the support
+  semantics (`NDZeroThms.nd_edge_exact_z`; through `NDZero.dnz_to_dn` it is the `ND.DN` edge `[zero, i]` of
+  `NDExact.nd_edge_exact`).
 * The static rule of §4.10 is modelled as a separate run-1 closure `Statics.DS`. Soundness, exactness and the
   iteration that starts from it are proved (`StaticsIter.iteration_general_DS`). The run-1 proof needs that a cleaner
   on `S` names its mark (S12 (e)). The interpreter makes it true: `RemoveAllMarks` on a position of `S`, at any depth,
@@ -2532,29 +2624,56 @@ analysis keeps their results in the normal layer and does not refine them.
     for `P`, also a record of a source that is not a seed (§9.2).
   * The source seeds with the static rule (`Statics.DS`) and with the conjunctions (`ND.DN`).
   * The backward run satisfies W2 (it is concrete, `BExact.DB_concrete`; no theorem states W2 for `Backward.DB`).
-  * The backward run needs no static rule: proved if the reversed program satisfies S12 (a) to (d)
-    (`BExact.no_static_rule_backward`); that the interpreter's reversed program satisfies them is argued (the static
-    positions of the reversed program are the forward write targets).
+  * The backward run needs no static rule: proved if the reversed program satisfies S12 (a) to (d) and its seeds keep
+    the invariant (`BExact.no_static_rule_backward`, `BExact.SeedsOK`); that the interpreter's reversed program
+    satisfies them is argued (the static positions of the reversed program are the forward write targets).
   * Every persisted record keeps the static invariant `StaticsIter.RecOK` that the static theorems of the restricted
-    runs assume: argued from the run-1 invariant (`Statics.cinv_all`) and the restricted-run invariant
-    (`StaticsIter.rinv_all`), run by run.
+    runs assume: argued from the run-1 invariant (`Statics.cinv_all`), the restricted-run invariant
+    (`StaticsIter.rinv_all`) and the backward-run invariant (`BExact.recOK_of_DB`), run by run.
   * W3 (every result of a run has at most `L` counted accessors when the field limit does not decrease) is argued.
   * A conjunction of `k > 2` literals is argued by chaining binary conjunctions; the model `ND.Conj` has two literals.
   * A conjunctive sink (§4.9) is argued as a conjunction to a fresh target with a sink on it; `ND.DN` has no
     conjunctive sink rule.
   * The cleaners of a call act on the bound fact before the callee (§5.3 step 4), and they give the added fact its own
-    layer on the link (§8.3); the summary rewriter acts on the results of the call before the binding back (§4.7,
-    §5.3 step 5): argued, because the model `Call` has no cleaners (a cleaner is an instruction of the CFG,
-    `Instr.clean`).
+    layer on the link (§8.3): argued, because the model `Call` has no cleaners (a cleaner is an instruction of the
+    CFG, `Instr.clean`).
+  * The summary rewriter (§4.7, §5.3 step 5) overrides the callee flow, so the analysis with it does not cover `Flow`
+    (§3.5). The theorems read each call with selected rules as a WRAPPED call: the callee flow, then the cleaner
+    `(P, exact, T)` of each selected rule, mark and position, on the callee results, before the binding back; the
+    source results and the end facts of the call bypass the wrapper. Soundness and exactness with the override are
+    argued against this overridden semantics, as for the call cleaners above.
   * The backward demand of a summary with several premises, one pattern per member (§9.2), is argued.
-  * The conclusion kinds of §7.2 for run 1 with the static rule (`Statics.DS`). `Kinds.kinds_D` is proved for `D`;
-    `DS` adds the position answer `(S, p, *, {}, *)`, a premise with the mark `*`, and the mark answer on a static
-    premise, an added fact with a concrete mark (§4.10 items 2 and 4). Each one has the premise mark of its kind, so
-    the reasons of §7.2 hold for it.
+  * The conclusion kinds of §7.2, and W2 (§2.3), for run 1 with the static rule (`Statics.DS`). `Kinds.kinds_D` is
+    proved for `D`; `DS` adds the position answer `(S, p, *, {}, *)`, a premise with the mark `*`, and the mark answer
+    on a static premise, an added fact with a concrete mark (§4.10 items 2 and 4). Each one has the premise mark of its
+    kind, so the reasons of §7.2 hold for it. For run 1 with the conjunctions (`NDZ.DNz`): the ND edges are
+    `Kinds.ndz_taint`; the single-premise edges are the item THE ZERO-BASE AND KIND INVARIANTS below.
   * The two exits of a JVM method (the normal exit and the exceptional exit) are one virtual exit of the one-exit model
     (S4): the exit rules act at both exits (so an unconditional exit sink can report at both), the backward zero fact
     and the seeds of the exit sinks start at both (S11 (e) reads the virtual exit), and only the normal exit makes a
     summary edge, because no exception flow crosses a call (below).
+  * RECORDS ACROSS THE DIRECTIONS (§8.7 R3). A forward run reads the reversed backward records, and a backward run
+    reads the reversed forward records. Each step is proved for `Exact.FiltUp` (`BExact.revRecs_exact`,
+    `Reverse.backward_reuse_precise`, `RExact.recs_union`, `recs_of_DR`, `BExact.recsB_step`); the induction over the
+    alternating sequence is argued. With type filters, a reversed backward record is not exact (§11.1). The soundness
+    does not use records (`Backward.iteration_general`: the record sets are free).
+  * END FACTS in the restricted and backward runs. A real flow from an end fact is found in run n + 2: its sink is a
+    reported vulnerability, so contract B keeps its witness demanded and it triggers again, and the end-fact action is
+    not restricted (§6.1 rule 6). The reversed end-fact edge, applied with no trigger, is read as a reversed
+    unconditional source (§9.2); it only adds requirements.
+  * THE ZERO-BASE AND KIND INVARIANTS OUTSIDE `NDZ.DNz`. (a) In `DR` and `Backward.DB`, every conclusion on the zero
+    base is the zero fact (proved for `NDZ.DNz`: `NDZeroBase.zero_base_inv`). The only edges onto the zero base are
+    the zero keep edge, the zero binding and, in the backward run, the reversed sources and end-fact actions, whose
+    target is the zero fact (`interpreter.md` I11 (d)). (b) The §7.2 partition for a one-member `NDZ.DNz` edge: a
+    conjunction target (W7) over a concrete premise (S9). (c) The zero fact is at every node of a restricted run (the
+    zero demand, §9.2), as the zero-drop needs.
+  * The static exception at a call and at the method boundaries (§4.10 item 1): the rule statement of a call, the
+    unresolved callee (also a call whose every callee is an empty method), the `RemoveAllMarks` kill on `S`, and the
+    rule statements of the entry and the exits are read as `Instr.stmt` of the model's CFG, in the caller or before
+    the exit; the binding `S.* → S.*` keeps the path.
+  * A conjunctive micro edge whose target is a class position (`interpreter.md` §1.4; S12 (b)) has a `$` target and
+    concrete `$` literals. Its result is a concrete `$` fact of the S12 (b) shape, so it keeps the static invariant.
+    (`Statics.DS` has no conjunctions, and `ND.DN` has no static rule.)
 * THE IMPLEMENTATION AGAINST THE MODEL. This is the only list of these differences. Each one keeps the theorems,
   except where the item says otherwise:
   * W6 (§2.3). The Lean `applyEdge` can give an `[any]` result in the normal layer: on an `[any]` input in the normal
@@ -2577,7 +2696,11 @@ analysis keeps their results in the normal layer and does not refine them.
     for an abstract `f.mark` under a concrete `i.mark`. This case does not occur (`Coverage.edge_conc`); the
     implementation asserts it.
   * The type filters of the backward run (§9.2). The model keeps the type filters in the backward run; the
-    implementation drops them. This only adds backward flows, so it only enlarges the demand.
+    implementation drops them. This only adds backward flows, so it only enlarges the demand, and its reversed records
+    are not exact (§11.1).
+  * End facts (§4.9). The model has none. Their exactness: §11.1. Their coverage: argued (above).
+  * The field limit on a conjunction result (§4.6). The model rules `ND.DN.conj` and `NDZ.DNz.conj` apply no field
+    limit to their result. The implementation applies it: it only enlarges (`limitF_sound`) and raises the layer.
 * The interpreter (`interpreter.md`) is outside the model, except through S1, S2, S5 and S7 to S13. Its known gaps are
   listed in `interpreter.md` §0.1. The reading of a negated mark literal as true (S1) is not modelled: the model has no
   rule conditions.
@@ -2593,17 +2716,17 @@ analysis keeps their results in the normal layer and does not refine them.
 
 | File | Content |
 |---|---|
-| `Basic.lean` | All definitions of run 1: locations, facts (marks `*`, `T`, `*∖X`), `den`, `applyEdge` with `markComp`, the normal form, the field limit, statements, calls, cleaners (`Cleaner`, `cleanPos`, `cleanRes`), type filters, `Flow`, the closure `D`, `Reach`, `answerInit`, `policy`, `revEdge`. |
+| `Basic.lean` | The definitions of the run-1 closure `D` (no static rule, no conjunctions; `policy1` is in `Restricted.lean`): locations, facts (marks `*`, `T`, `*∖X`), `den`, `applyEdge` with `markComp`, the normal form, the field limit, statements, calls, cleaners (`Cleaner`, `cleanPos`, `cleanRes`), type filters, `Flow`, the closure `D`, `Reach`, `answerInit`, `policy`, `revEdge`. |
 | `Backward.lean` | The backward run (`DB`), the hand-offs, the contract B for it (general and for programs 1 and 2). |
 | `Statics.lean` | The static rule of §4.10 as the run-1 closure `DS`: soundness, exactness, the invariant, the worked programs, the failing variants. |
 | `StaticsIter.lean` | No static rule after run 1: the invariant of forward restricted runs, the iteration from `DS`, the worked programs through forward run 3. |
 | `NDConfirmed.lean` | The confirmation through a conjunction (joint support), with its counter-examples. |
 | `StaticsConfirmed.lean` | The confirmation of run 1 with the static rule. |
-| `BackwardExact.lean` | The backward run: concreteness, no request, exactness of its edges, exact reversed records; record exactness over the run sequence. |
+| `BackwardExact.lean` | The backward run: concreteness, no request, exactness of its edges, exact reversed records; record exactness over the run sequence; the static invariant of the backward run. |
 | `W6.lean` | W6 for the whole run: the simulation, soundness, exactness, confirmation, the iteration. |
-| `Restricted.lean` | The restricted runs: demand patterns (`DemandEdge`), the emission `emitM`, the satisfaction `satI`, the restriction `restrictU`, the closure `DR`, `FlowR`, `ReachR`, the contracts, `summaryDemand`, `BackwardContract`, and auxiliary rules that some proofs use (for example `restrictS`, §10.7). |
+| `Restricted.lean` | The restricted runs: demand patterns (`DemandEdge`), the emission `emitM`, the satisfaction `satI`, the restriction `restrictU`, the closure `DR`, `FlowR`, `ReachR`, the contracts, `summaryDemand`, `BackwardContract`, and auxiliary rules that some proofs use (for example `restrictS`, §10.7). The version-3/4 rules `emitU`, `emitS`, `satU`, `satS`, `satO` and their theorems (`RMain.*_S`, `RMain.closed_records_exactR`) are a record of the review; no spec claim uses them. |
 | `ND.lean` | ND edges: conjunctive micro edges, the support semantics `TaintN`, the closure `DN`, the ND coverage and vulnerability theorems. |
-| `NDExact.lean` | The exactness of normal-layer ND edges against `TaintN` (`LitConc` = S9, `ConjOK`), with the two counterexamples. |
+| `NDExact.lean` | The exactness of normal-layer ND edges against `ND.TaintN` (`NDExact.LitConc` = S9, `ConjOK`), with the two counterexamples. |
 | `Cases.lean`, `RestrictedCases.lean` | Test vectors (`decide`), programs 1 and 2. |
 | `Core.lean`, `SharedExcl.lean`, `RestrictedCore.lean` | The local lemmas. |
 | `Coverage.lean`, `RestrictedCoverage.lean`, `RestrictedMain.lean` | Soundness of run 1 and of the iteration; the instantiation with the spec rules. |
@@ -2612,18 +2735,28 @@ analysis keeps their results in the normal layer and does not refine them.
 | `Reverse.lean` | Reversal. |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | The source seeds of the forward restricted runs (§6.1 rule 6, §9.2, §10.9). |
 | `Kinds.lean` | The conclusion kinds of §7.2: FLOW, TAINT, REACH; ND edges are TAINT (§10.10). |
-| `NDZ.lean`, `NDZero.lean`, `NDZeroThms.lean`, `NDZeroBase.lean` | The ND closure of the spec with the zero-drop (`DNz`), its correspondence with `ND.DN`, its theorems, and the zero-base invariant (§4.6, §10.10). |
-| `PipelineNDZ.lean` | The pipeline encoding of `DNz` (`analyzer-core.md` §5.5). |
+| `NDZ.lean`, `NDZero.lean`, `NDZeroThms.lean`, `NDZeroBase.lean` | The ND closure of the spec with the zero-drop (`NDZ.DNz`), its correspondence with `ND.DN`, its theorems, and the zero-base invariant (§4.6, §10.10). |
+| `PipelineNDZ.lean` | The pipeline encoding of `NDZ.DNz` (`analyzer-core.md` §5.5). |
 | `Pipeline.lean`, `PipelineProofs.lean`, `PipelineAP.lean`, `PipelineStore.lean`, `PipelineDriver.lean` | The analyzer pipeline of `analyzer-core.md` (its §12): the no-loss theorem, the encodings of the closures, the index lookups, the driver. |
 
 Lean names. A qualified name `F.x` in this spec names the declaration `x` in the namespace `ApSpec.F`, or in the file
 `F.lean`. The short namespaces: `RCore` is `RestrictedCore.lean`, `RCov` is `RestrictedCoverage.lean`, `RExact` is
 `RestrictedExact.lean`, `RMain` is `RestrictedMain.lean`, `RCases` is `RestrictedCases.lean`, `RStore` is
-`RestrictedStore.lean`, and `CoreAux` is in `Core.lean`. The declarations of `Basic.lean`, `Core.lean` and
-`Restricted.lean` are in the namespace `ApSpec` itself (for example `applyEdge`, `satI`, `emitM`, `restrictU`,
-`markMatchB`); `Core.x` names a declaration of `Core.lean`. Every other file has the namespace of its name (`Statics`,
-`StaticsIter`, `Backward`, `Reverse`, `ND`, `NDExact`, and so on). A name with no qualifier belongs to the file or the
-namespace of the last qualified name before it.
+`RestrictedStore.lean`, `BExact` is `BackwardExact.lean`, `FSeeds` is `ForwardSeeds.lean`, and `CoreAux` is in
+`Core.lean`. The declarations of `Basic.lean`, `Core.lean` and `Restricted.lean` are in the namespace `ApSpec` itself
+(for example `applyEdge`, `satI`, `emitM`, `restrictU`, `markMatchB`); `Core.x` names a declaration of `Core.lean`.
+Two files share the namespace of another file: `NDZeroThms.lean` is in the namespace `NDZero` (so `NDZeroThms.x` is the
+declaration `NDZero.x` of the file `NDZeroThms.lean`), and `PipelineProofs.lean` is in the namespace `Pipeline` (with
+the sub-namespaces `Pipeline.PCex` and `Pipeline.Quiesce`). `Cases.lean` has the namespaces `Cases` and `CleanCases`.
+Every other file has the namespace of its name (`Statics`, `StaticsIter`, `StaticsConfirmed`, `Backward`, `Reverse`,
+`ND`, `NDExact`, `NDConfirmed`, `NDZ`, `NDZero`, `NDZeroBase`, `Kinds`, `W6`, `Store`, `Subsume`, `Tree`, `Pipeline`,
+`PipelineAP`, `PipelineStore`, `PipelineDriver`, `PipelineSeeds`, `PipelineNDZ`, and so on). If neither `ApSpec.G` nor
+the file `G.lean` has the declaration `x`, the name `G.x` is in the sub-namespace `G` of the namespace of the file of
+the last qualified name before it: `CexWide.w_vuln_normal` after `Statics.CexAbove.y_vuln_normal` is
+`Statics.CexWide.w_vuln_normal`, and `CexSeed.cex_seed` after `BExact.DB_no_requestM` is `BExact.CexSeed.cex_seed`.
+A name with no qualifier belongs to the namespace or the file of the last qualified name before it, or to `ApSpec`
+itself (for example `den`, `DR`, `applicable`). In the tables of §10, a name with no qualifier can also belong to a
+file that the heading of its section names.
 
 Build and audit:
 
@@ -2665,7 +2798,9 @@ Write the tests first. Each test names the spec item that it checks. The interpr
    premise mark `*`.
 5. Cleaner tests: every row of the two tables of §4.7; the split (`*∖{T}` plus the request, then the concrete answer
    cleaned exactly); no request for `T ∈ X`; the all-marks cleaner; a cleaned fact through a field write past the field
-   limit keeps its mark exclusion.
+   limit keeps its mark exclusion. The summary rewriter (§4.7): at a call it selects a conditional user-defined source
+   and an unconditional user-defined cleaner, but not a conditional user-defined cleaner and not a rule that a rule
+   error rejected; it acts on a zero-premise summary result and on the default identity of an unresolved callee.
 6. Type filter tests: a fact on an accepted path passes, also with a `*` tail; a fact on a rejected path is dropped; the
    predicate is prefix-closed.
 7. ND tests: a conjunction from two facts of different premises gives the union premise set; the last arriving fact
@@ -2683,13 +2818,13 @@ Write the tests first. Each test names the spec item that it checks. The interpr
    premise is a policy fact `(x, [], *, {}, *)` or a static position answer `(S, p, *, {}, *)`. In a restricted run, a
    request is a bug (assert it).
    Position request tests (§4.10): on an identity static `*` edge at the root `[]` or a class, a static read, a Go global
-   read, the class keep edge of a write and a pass rule between static fields raise the position request (cut to the
-   static field) and give no fact; a sink on `S` raises the ordinary mark request; a deep read below a static field is
+   read, the class keep edge of a write, a pass rule between static fields and a conditional exit source whose literal
+   is on a static field raise the position request (cut to the static field) and give no fact; a sink on `S` raises the ordinary mark request; a deep read below a static field is
    the ordinary case `above`; the root keep edge adds
    `<C>` to the exclusion; an added fact at or below the position answers it, an added fact above it does not; the
    climb through a caller edge on `S`; the mark answer on a static premise (item 4: the added fact itself at or below,
-   the chain answer above); the programs `Statics.CexAbove`, `CexWide`, `CexClean`, `CopyF2F`, `DeepSink` find their
-   vulnerability in the normal layer, and `DeepSinkParam` in the demand layer.
+   the chain answer above); the programs `Statics.CexAbove`, `CexWide`, `CexClean`, `CopyF2F`, `DeepSink`, as
+   analysis tests, find their vulnerability in the normal layer, and `DeepSinkParam` in the demand layer.
 10. Call and ownership tests: every event of the table of §5.3, in two orders; the callee restricts before it publishes;
     a caller reads the summaries of every premise its fact satisfies; a record applies when its premise covers the added
     fact, in every run after the run that made it; the return order of §5.3 step 5; the zero fact passes over a call and
@@ -2704,12 +2839,16 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     backward summary returns to every caller without a restriction; the hand-off of §9.2 in both directions, also a
     `*∖X` entry pattern.
 14. Store tests: index completeness against a list filter (records, demand patterns, requests, conjunctions,
-    subscriptions). The conjunction store keeps two alternatives of one rule apart (§8.9). The vulnerability store
-    (§8.10): one sink statement in two contexts is one key; two sink witnesses of two alternatives or of two method
-    keys stay apart; after an incomplete forward run the report has the DEMAND entries of the latest complete forward
-    run.
+    subscriptions). The conjunction store keeps two alternatives of one rule apart (§8.9), also with an equal literal
+    pattern. The record store adds no demand-layer summary, no summary with two or more premises and no zero-premise
+    backward summary (§8.7 R1). The vulnerability store (§8.10): one sink statement in two contexts is one key; two
+    sink witnesses of two alternatives or of two method keys stay apart; after an incomplete forward run the report has
+    the DEMAND entries of the latest complete forward run; after an incomplete run 1 the report has no entry and the
+    output is empty. The output holds every entry of the report, the DEMAND entries too, each with a simple trace and
+    the method key of a confirmed sink witness, else of the first sink witness (§8.10).
 15. Reversal tests: every row of §9.1 that occurs for a record, also with `*∖X`; the forward record and its reversed
     reading give converse results on the same concrete pair.
 16. Analysis tests (the gate of the new analyzer): the existing `*AnalysisTest` suites, run with `cleanTest`;
-    `DeepCleanSummaryAnalysisTest` and the cleaner suites for §4.7. A lost finding is a test whose message says that no
-    vulnerability reached the sink; read the message, do not count failures.
+    `DeepCleanSummaryAnalysisTest` and the cleaner suites for §4.7. A finding whose taint comes only from an
+    `[any]`-target source (W6) is in the output as a DEMAND entry (§8.10). A lost finding is a test whose message says
+    that no vulnerability reached the sink; read the message, do not count failures.

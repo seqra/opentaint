@@ -49,7 +49,7 @@ Common rules:
 
 | # | Rule |
 |---|---|
-| I1 | The interpreter gives each statement a STATEMENT SUMMARY: the touched bases, the micro edges, and the type filters of each touched base. The AP applies it (ap.md §4.2, the statement transfer). Every micro edge reads from a touched base (ap.md S10). |
+| I1 | The interpreter gives each statement a STATEMENT SUMMARY: the touched bases, the micro edges, and the type filters of each touched base: the OPERAND filters, on the input (§2.1 step 3), and the RESULT filters, on the results (the lhs filter, §2.1 step 5; the binding-back filters, §3.1). One base can have both (`x = x.f`, §2.2; analyzer-core.md §4.9 `StatementSummary`). The AP applies it (ap.md §4.2, the statement transfer). Every micro edge reads from a touched base (ap.md S10). |
 | I2 | Micro edge application is UNGUARDED. The AP applies every micro edge to every fact on its base that overlaps its premise, in both cases of ap.md §4.1: at or below the premise, and above it. A fact above the premise of a micro edge gives an uncorrelated result in the demand layer. There is no refinement. Two exceptions: (1) STATICS IN RUN 1 (§2.1 step 4; the rule is ap.md §4.10 item 1), for a fact `c`: Run 1 only, statement micro edges only: when the edge of `c` is an identity static `*` edge at the root `[]` or at a class `[<C>]`, a micro edge whose premise path `p` lies strictly below `c` (the exclusion of `c` admits the rest) gives no fact and no mark request; it raises the position request for `p` cut to at most two accessors. Below a static field the ordinary rules apply. (2) THE ALIAS EDGES AT A CALL apply only to the results that §3.8 AC3 and AC4 select. |
 | I3 | A read never changes an exclusion. Only a STRONG WRITE adds the written accessor to the exclusion of the identity edge of the written base: `a.* →_{f} a.*`. |
 | I4 | A call binding is a micro edge (I2 applies). Its premise and its target have the `*` tail and the mark `*` (ap.md S10, S11). A callee summary edge is not a micro edge: it applies only if the added fact satisfies its premise (ap.md §4.3). |
@@ -58,9 +58,9 @@ Common rules:
 | I7 | NO UNIVERSE (ap.md S8): a micro edge with a `$` premise has a concrete premise mark; a micro edge with a `$` target has a concrete premise mark; no micro edge has a `$` premise and a `*` target; no micro edge, binding or initial fact has the kind `*/Universe`. Every exclusion that the interpreter makes is a finite set of accessors. |
 | I8 | NO `*`-PREMISE CALLEE SUMMARY in a restricted run (ap.md §6.3). The interpreter precomputes no callee summary. An EMPTY METHOD is a method with no instruction (JVM: an empty instruction list, for example a native or an abstract method; Go: a function with no body). It is not analysable, and the analysis never analyses it. The call resolver drops an empty method from the callees of a call (§3.6). A call whose every resolution result is an empty method is an UNRESOLVED call (§3.7: the default identity and the pass rules). No summary exists for an empty method, also no identity summary (D28). An unresolved callee is a statement summary (§3.7), not a callee summary. |
 | I9 | PRECISE AND COMPLETE MICRO EDGES (ap.md S1, S2, §4.2): every micro edge (a statement edge with its alias edges, or a call binding edge; not a callee summary edge) gives exactly the concrete flows of its statement (ap.md §3.5). A micro edge has NO LAYER: the layer belongs to the propagation edge, and only the AP operations change it (ap.md §2.2). |
-| I10 | NO FIELD LIMIT ON A MICRO EDGE: a micro edge keeps its full paths (also an alias path `c.q.p` of any length). The field limit applies to the results of an application (ap.md §4.4 lists the cut points): the statement step, also the read sources (§2.1 step 6, §4.4); the return of a call, also the source results, the end facts of a sink at a call and the pass-rule results (§4.5 steps 4 and 6); the results of the entry rules (§4.3); the results of the exit rules (§4.7); the conjunction result (§5.3); and the backward seed (§4.9). |
-| I11 | BACKWARD CONTRACTS (ap.md S11, items (a) to (f)). The interpreter makes these true: (a) every binding has the `*` tail and the mark `*` on both sides (§3.1); (b) every statement micro edge is MARK-REVERSIBLE (ap.md §9.1): its target mark is abstract (`*` or `*∖X`), or its premise mark is concrete. Every row of §2, §1.4 and §4.1 has this form; (c) no call binds the zero base back (§3.3); (d) every statement that touches the zero base has the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)`, and no other micro edge, no binding back and no conjunction has its target on the zero base (the only binding into the zero base is `zero.* → zero.*`, §3.1; Lean `NDZeroBase.NoZeroGen`): the read statement with a read source (§4.4), the rule statement of a call (§4.1), and the method start and the exits with their sources (§4.3, §4.7); no cleaner acts on the zero base; and no type filter is on the zero base (so a type filter on the zero base accepts the empty path, as ap.md S11 (d) asks); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit: the implementation wires code that never returns to an exit node (§4.9); (f) every sink pattern has the tail `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`) (§4.2). Lean: `Reverse.BindTargetsStar`, `Backward.StmtsMarkRev`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Backward.ExitReach`. |
-| I12 | STATIC CONSTRUCTION RULES (ap.md S12, items (a) to (g); ap.md §4.10). A STATIC POSITION is the premise path of a statement micro edge on `S`, or the path of a sink pattern on `S`, cut to at most two accessors (`[<C>, f]`, `[<C>]`, Go `[<G>]`). The interpreter makes these true. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_E S.q.*` (the keep edges of a static read, of a static write and of the kill of `RemoveAllMarks`, §1.4, §2.2, §2.3) or a field-to-field edge (a pass rule between static fields, §1.4). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)` (§1.4). A conjunctive micro edge into such a target has a `$` premise with a concrete mark for each literal (§1.4, §5.3). So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*` (§3.1). (d) The field limit of run 1 is at least 1 and the class accessor is not counted, so a cut never stops strictly above a static position. (e) A cleaner on `S` names its mark (§1.4); `RemoveAllMarks` on a position of `S` is not a cleaner. One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the rule position `AnyClassStatic`, §1.4, §5.2). Every fact on `S` lies inside it, so it drops the fact and never cleans a fact in part; it has the effect of the kill of a strong write of the whole base `S` (no keep edge, §2.1). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of ap.md §6.2: run 1 serves an added fact by its root. A rule position can be deeper than a static field: below the static field the ordinary rules apply. Lean: `Statics.SWF` (its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`), `Statics.PosIn`. |
+| I10 | NO FIELD LIMIT ON A MICRO EDGE: a micro edge keeps its full paths (also an alias path `c.q.p` of any length). The field limit applies to the results of an application (ap.md §4.4 lists the cut points): the statement step, also the read sources (§2.1 step 6, §4.4); the return of a call, also the source results, the end facts of a sink at a call and the pass-rule results (§4.5 steps 4 and 6); the results of the entry rules (§4.3); the results of the exit rules (§4.7); the conjunction result (§5.3; the Lean model has no cut there, ap.md §11.2); and the backward seed (§4.9). |
+| I11 | BACKWARD CONTRACTS (ap.md S11, items (a) to (g)). The interpreter makes these true: (a) every binding has the `*` tail and the mark `*` on both sides (§3.1); (b) every statement micro edge is MARK-REVERSIBLE (ap.md §9.1): its target mark is abstract (`*` or `*∖X`), or its premise mark is concrete. Every row of §2, §1.4 and §4.1 has this form; (c) no FORWARD call binds the zero base back (§3.3); the backward binding back has the reversed zero binding `zero.* → zero.*` (ap.md §9.2); (d) every statement that touches the zero base has the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)`, and no other micro edge, no binding back and no conjunction has its target on the zero base (the only binding into the zero base is `zero.* → zero.*`, §3.1; Lean `NDZeroBase.NoZeroGen`): the read statement with a read source (§4.4), the rule statement of a call (§4.1), and the method start and the exits with their sources (§4.3, §4.7); no cleaner acts on the zero base; and no type filter is on the zero base (so a type filter on the zero base accepts the empty path, as ap.md S11 (d) asks); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit: the implementation wires code that never returns to an exit node (§4.9); (f) every sink pattern has the tail `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`) (§4.2); (g) every statement micro edge and every call binding has an EXACT SHAPE (ap.md S11 (g)): by I3 only an identity keep edge carries an exclusion, so a micro edge with a `*` premise and a `$` or `[any]` target has the Empty premise exclusion, and by (a) every binding is `* → *` (`Reverse.bindRev_of_star`). Only the exactness of the reversed records (ap.md §8.7 R3) needs (g). Lean: `Reverse.BindTargetsStar`, `Backward.StmtsMarkRev`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Backward.ExitReach`, `Reverse.RevStmts`, `RevCalls`. |
+| I12 | STATIC CONSTRUCTION RULES (ap.md S12, items (a) to (g); ap.md §4.10). A STATIC POSITION is the premise path of a statement micro edge on `S`, or the path of a sink pattern on `S`, cut to at most two accessors (`[<C>, f]`, `[<C>]`, Go `[<G>]`). The interpreter makes these true. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_E S.q.*` (the keep edges of a static read, of a static write and of the kill of `RemoveAllMarks`, §1.4, §2.2, §2.3) or a field-to-field edge (a pass rule between static fields, §1.4). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)` (§1.4). A conjunctive micro edge into such a target has a `$` premise with a concrete mark for each literal (§1.4, §5.3); its result is a concrete `$` fact of this shape. This clause is argued (ap.md §11.2): `Statics.SWF` (part `write`) constrains the plain micro edges only, and the static model has no conjunction. So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*` (§3.1). (d) The field limit of run 1 is at least 1 and the class accessor is not counted, so a cut never stops strictly above a static position. (e) A cleaner on `S` names its mark (§1.4); `RemoveAllMarks` on a position of `S` is not a cleaner. One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the rule position `AnyClassStatic`, §1.4, §5.2). Every fact on `S` lies inside it, so it drops the fact and never cleans a fact in part; it has the effect of the kill of a strong write of the whole base `S` (no keep edge, §2.1). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of ap.md §6.2: run 1 serves an added fact by its root. A rule position can be deeper than a static field: below the static field the ordinary rules apply. Lean: `Statics.SWF` (its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`), `Statics.PosIn`. |
 | I13 | VALIDITY (ap.md S13, §4.8). The placement of the type filters (§5.1) makes a validity predicate on locations exist with three properties: every type filter accepts every valid location of its base; the validity goes back along every statement micro edge and along every call binding, into the callee and back (a valid end location comes only from a valid start location); and it goes back from the target of a conjunctive micro edge to each literal (§5.3). A valid location is a location that every type filter accepts (ap.md §4.8). The exactness and confirmation theorems of ap.md hold only for valid end locations. Lean: `Exact.FiltValid`, `Exact.BackOK`, `NDExact.ConjOK`. |
 
 ### 0.1 Known gaps against ap.md S1, S2 and S5
@@ -69,13 +69,13 @@ ap.md S1 asks that the micro edges of a statement give exactly its real flows (S
 type filters). The interpreter does not do this at the points below (as today, except where a row names a deviation of
 §6). The soundness theorems of ap.md do not cover a flow that a soundness gap loses. A precision gap adds a flow that
 does not exist in the real program. The analysis keeps this flow in the normal layer, so the exactness theorems hold
-only relative to the gap. ap.md §11.1 lists the expected false-positive sources (G7, G8, and the type filter on a `*`
-fact).
+only relative to the gap. ap.md §11.1 lists the expected false-positive sources (among them G2 for a caller-set state,
+G7, G8, G9 for the catch local, G11, and the type filter on a `*` fact).
 
 | # | Gap | Where | Effect |
 |---|---|---|---|
 | G1 | No exception flow crosses a call, and a catch block does not read `exc`. Out of scope (ap.md §11.2). | §3.4 | a thrown tainted value is lost |
-| G2 | THE GLOBAL-STATE RULE: at the normal exit, the part of an `S` item on which a mark literal of an exit sink (plain or conjunctive) holds is dropped from the summary edge. A conjunctive exit sink keeps that part as the stored input of the literal (§5.3). Also the entry marks on zero-premise `this`/`arg` facts are removed. | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive |
+| G2 | THE GLOBAL-STATE RULE: at the normal exit, for an `S` item whose premise is the zero fact (a state that the method or its callees set), the part on which a mark literal of an exit sink (plain or conjunctive) holds is dropped from the summary edge. A conjunctive exit sink keeps that part as the stored input of the literal (§5.3). A caller-set `S` fact is evaluated (it can report, D21) but not dropped: it returns to the caller through the callee summary, also the run-1 FLOW summary and its record (§3.3). Also the entry marks on zero-premise `this`/`arg` facts are removed. | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive; precision: a caller-set state passes the exit sink of a callee, so a later sink in the caller sees it, and the exit sink of the caller evaluates it again (expected false-positive sources, ap.md §11.1) |
 | G3 | The cleaners run before the callee body. | §4.5 step 5.1 | a sink inside the body of the cleaner method sees the cleaned fact |
 | G4 | The rules come from the method that the call names, not from the resolved override. | §3.6 | a sink or source on an override is missed |
 | G6 | The mark policy and the policy cases of the type filter. | §5.1 | they can drop a real flow (outside ap.md S5) |
@@ -84,6 +84,8 @@ fact).
 | G9 | A catch handler reads the facts AFTER each statement of the try range: a statement that throws counts as completed (its kill, its writes and the cleaners of a call apply). The catch statement does not kill its local. As today. | §2.2 (catch), §3.4 | a flow on the state before the throwing statement is lost (`try { s = clean(s); } catch (E e) { sink(s); }`); precision: an old fact on the catch local stays |
 | G10 | No class initializer (`<clinit>`) is analysed: it has no call site, and it is not a root. As today. | §3.3 | a value that a static initializer writes to a static field is lost (for example a source in `static final String K = System.getenv("K")`) |
 | G11 | A pass rule with a mark literal in its condition applies without its mark literals (D24). | §4.2 | precision: the pass edge also fires where the literal is false |
+| G12 | A call with an empty and a non-empty resolution result enters only the non-empty callee: the resolver drops the empty target (I8; `ap-history.md` F67 (13)). As today on the JVM (D28). | §3.6 | a flow through the empty target is lost (for example the identity of a native override) |
+| G13 | No static state crosses roots: the REACHED locations are per root, and every root starts with the zero fact only (ap.md §6.1). As today. D27 clears the statics between the Spring controllers on purpose. | §3.3 | a flow from one entry point to another through a static field is lost |
 
 THE ALIAS ANALYSIS is outside the scope of this specification. The analysis uses it as it is and does not change it.
 Its settings (the interprocedural depth 0 of A1, the analysis on or off, its time limit) are as configured, and A6
@@ -130,7 +132,7 @@ coordinates of the method itself.
 | `This` | `this` | Go: also the target of a dynamic call |
 | `Result` | `ret` | at a call: the lhs after the binding back |
 | `ClassStatic(C)` (JVM) | `S.<C>` | a CLASS POSITION: the rules on it follow §1.4 |
-| `AnyClassStatic` (JVM) | `S`, the empty path | the WHOLE STATIC BASE: only in a `RemoveAllMarks` action (§1.4, §5.2); in every other rule element it is a rule error |
+| `AnyClassStatic` (JVM) | `S`, the empty path | the WHOLE STATIC BASE: only in a `RemoveAllMarks` action (§1.4, §5.2); in every other rule element (also a mark literal of a condition, negated or not, and the base of a `PositionWithAccess`) it is a rule error |
 | `PositionWithAccess(P, Field f)` | the path of `P` and `f` | |
 | `PositionWithAccess(P, Element)` | the path of `P` and `[e]` | |
 | `PositionWithAccess(P, AnyField)` | the path of `P` | sink and condition: the `[any]` pattern; source target and pass-rule target: the `[any]` tail; pass-rule source: the `[any]` premise (§4.1); cleaner: the reach (§5.2). Go: `AnyAccessor`, the same. |
@@ -141,8 +143,12 @@ Two invariants hold for every rule position:
 2. if it has an `AnyField` accessor, this accessor is the LAST accessor: no concrete accessor comes after it.
 
 A rule with a position that breaks an invariant (for example `Argument(0).AnyField.f` or
-`Argument(0).AnyField.AnyField`) is a RULE ERROR: the interpreter rejects the rule and logs it once (D29). The builder
-of the forms never fails on such a rule.
+`Argument(0).AnyField.AnyField`) is a RULE ERROR (D29). A rule error REJECTS THE WHOLE RULE: the interpreter logs it
+once and gives the rule no form at any place (no sink, source, end fact, pass rule, cleaner, entry or exit rule), and
+the summary rewriter does not select it (§5.2). The check reads every position of the rule before the static
+evaluation: every action and every mark literal of the condition, a negated one too. The builder of the forms never
+fails on such a rule. One rule error does not reject: a pass rule with a mark literal is logged once and applies
+without its mark literals (§4.2, D24).
 
 ### 1.4 Rules on a static position (JVM)
 
@@ -156,13 +162,13 @@ interpreter maps a rule element on a static position as follows, so that the con
 |---|---|---|
 | a source or pass-rule target `[any]` on a class position: `AssignMarkOnAnyAccessor` on `ClassStatic(C)`, or the target `PositionWithAccess(ClassStatic(C), AnyField)` | rule error: the interpreter rejects the rule | a static access always names a field; an `[any]` fact on a bare class lies above every static field of `C` (I12 (b); Lean `Statics.CexAny`) |
 | `AssignMark(T)` on `ClassStatic(C)`, with no condition | `zero.$ (zeroMark) → S.<C>.$ (T)` | a concrete mark on a class position (§4.1) |
-| a conditional rule whose target is a class position (`AssignMark(T)` on `ClassStatic(C)` with a mark condition) | for each alternative of the condition (§4.2): the premise `Q.$ (T')` for each positive literal `ContainsMark(Q, T')`. An alternative with one positive literal gives the edge `Q.$ (T') → S.<C>.$ (T)` (§4.1); an alternative with two or more positive literals gives a conjunctive micro edge with the target `S.<C>.$ (T)` (an ND edge, §5.3). A `ContainsMarkOnAnyField` literal in such a rule is a rule error: the interpreter rejects the rule | a write above a static position needs a `$` premise with a concrete mark (I12 (b); Lean `Statics.SWF`, part `write`); `ContainsMarkOnAnyField` gives an `[any]` premise |
+| a conditional rule whose target is a class position (`AssignMark(T)` on `ClassStatic(C)` with a mark condition) | for each alternative of the condition (§4.2): the premise `Q.$ (T')` for each positive literal `ContainsMark(Q, T')`. An alternative with one positive literal gives the edge `Q.$ (T') → S.<C>.$ (T)` (§4.1); an alternative with two or more positive literals gives a conjunctive micro edge with the target `S.<C>.$ (T)` (an ND edge, §5.3), at a call (§4.1) and at an exit (§4.7 step 1, D31). A `ContainsMarkOnAnyField` literal in such a rule is a rule error: the interpreter rejects the rule | a write above a static position needs a `$` premise with a concrete mark (I12 (b); Lean `Statics.SWF`, part `write`); `ContainsMarkOnAnyField` gives an `[any]` premise |
 | `CopyAllMarks` or `CopyMark` FROM or TO a class position `ClassStatic(C)` (no field) | rule error: the interpreter rejects the rule | a pass rule is a handcrafted summary, and no data flows from or to a bare class |
 | `CopyAllMarks` or `CopyMark` from a static field to a static field (or between a static field and another base) | the rows of §4.1: `b.* → b.*` (`b` = the base of `P`), `P.* → Q.*` (or `P.$ (T) → Q.$ (T)`) | a field-to-field edge (I12 (a)) |
-| `RemoveAllMarks(P)`, `P` on `S` at any depth: a class `ClassStatic(C)`, a static field `S.<C>.f`, or deeper (reach `atAndBelow`) | the KILL of a strong write with no value at `P`: a statement summary that touches `S`, with the keep edges `strongKeep(S, path of P)` of §2.1 and no other micro edge. For a class: `S.* →_{<C>} S.*`. For a static field: `S.* →_{<C>} S.*` and `S.<C>.* →_{f} S.<C>.*` (the row of `C.s = x` in §2.2 without the value edges). Deeper: one identity keep edge per proper prefix of the path, each with the next accessor as its exclusion. In run 1 a keep edge whose premise lies strictly below an identity static `*` edge at the root or at a class raises the position request (§2.1 step 4). At a call the kill applies at the place of the cleaner, in the rule order (§4.5 step 5.1). The backward run applies the same keep edges (their reversal is the same edge) at the place of the reversed cleaners (§4.9 step 6) | a strong update removes every mark at and below `P`; the kill is not a cleaner on `S`, and no mark is enumerated |
+| `RemoveAllMarks(P)`, `P` on `S` at any depth: a class `ClassStatic(C)`, a static field `S.<C>.f`, or deeper (reach `atAndBelow`) | the KILL of a strong write with no value at `P`: a statement summary that touches `S`, with the keep edges `strongKeep(S, path of P)` of §2.1 and no other micro edge. For a class: `S.* →_{<C>} S.*`. For a static field: `S.* →_{<C>} S.*` and `S.<C>.* →_{f} S.<C>.*` (the row of `C.s = x` in §2.2 without the value edges). Deeper: one identity keep edge per proper prefix of the path, each with the next accessor as its exclusion. In run 1 a keep edge whose premise lies strictly below an identity static `*` edge at the root or at a class raises the position request (§2.1 step 4). At a call the kill applies at the place of the cleaner, in the rule order (§4.5 step 5.1). The backward run applies the same keep edges (their reversal is the same edge) at the place of the reversed cleaners (§4.9 step 6) | a strong update removes every mark at and below `P`; the kill is not a cleaner on `S`, and no mark is enumerated. It acts only if its rule is unconditional (§4.2), as every cleaner rule; a conditional `RemoveAllMarks` on `S` does not act |
 | `RemoveAllMarks(P.AnyField)`, `P` on `S`, also a class (reach `below`) | rule error: the interpreter rejects the rule | the kill of a write also removes `P` itself, and a cleaner of every mark on `S` is not allowed (I12 (e)) |
 | `RemoveAllMarks(AnyClassStatic)`: the whole static base | the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (§5.2): it drops every fact on `S`. As every cleaner, it acts only if its rule is unconditional (§4.2). It raises no request (every fact on `S` lies inside it, ap.md §4.7) | every fact on `S` lies inside the cleaner, so no fact is cleaned in part (I12 (e)); the Spring dispatcher uses it (D27) |
-| `AnyClassStatic` in every other rule element (a sink, a condition, a source, a pass rule, `RemoveMark`) | rule error: the interpreter rejects the rule | only the whole-base cleaner has a form on the empty path of `S` |
+| `AnyClassStatic` in every other rule element (a sink, a mark literal of a condition, a source, a pass rule, `RemoveMark`) | rule error: the interpreter rejects the rule (§1.3) | only the whole-base cleaner has a form on the empty path of `S` |
 | `RemoveMark(T, P, reach)`, `P` on `S` | the cleaner `(P, reach, T)` of §5.2 | a cleaner on `S` names its mark (I12 (e)) |
 | a sink or a conjunction literal on a static position (`ContainsMark`, `ContainsMarkOnAnyField`) | the rows of §4.1, §4.2 and §5.3: the sink check of ap.md §4.9, or the literal of ap.md §4.6 (a condition of a rule with a class target: the row above) | the ordinary mark request of run 1 (ap.md §4.5); on a static premise its answer is the added fact itself (ap.md §4.10 item 4) |
 | the one literal of a conditional source on a static position (at a call, §4.1; at an exit, §4.7) | the premise `Q.t' (T')` of a statement micro edge (§4.1, §4.2) | in run 1 the static exception of §2.1 step 4 applies: below an identity static `*` edge at the root or at a class it raises the position request (ap.md §4.10 item 1), not a mark request |
@@ -226,7 +232,7 @@ A strong write with an empty path (Go `*p = v`) gives no identity edge: the base
 | `x = (T) y` | as `x = y` | {x, y} | y: `T` (narrows y); x |
 | `x = c` (a constant or `null`) | `c.* → c.*`, `c.* → x.*` | {x, c} | c; x |
 | `x = y.f`, x ≠ y | `y.* → y.*`, `y.f.* → x.*` | {x, y} | y: static type of y AND declaring class of f; x |
-| `x = x.f` | `x.f.* → x.*` | {x} | x: static type of x AND declaring class of f |
+| `x = x.f` | `x.f.* → x.*` | {x} | x, operand (on the input): static type of x AND declaring class of f; x, lhs (on the results): static type of x (I1) |
 | `x = y[i]` | `y.* → y.*`, `y.[e].* → x.*` | {x, y} | y: the array type; x |
 | `x = C.s` | `S.* → S.*`, `S.<C>.s.* → x.*`. Run 1: on an identity static `*` edge at the root `[]` or at the class `[<C>]`, the read edge raises the position request `[<C>, s]` instead (§2.1 step 4) | {S, x} | x |
 | `y.f = x`, y ≠ x | `y.* →_{f} y.*`, `x.* → x.*`, `x.* → y.f.*` | {y, x} | y: static type of y AND declaring class of f; x |
@@ -329,7 +335,7 @@ follows the call order of §4.5:
 | receiver back | `this.* → o.*` | `this.* → o.*` and `this.* → v.*` | o: static type of `o` |
 | argument back | `arg(i).* → ai.*`; none if `ai` is a constant | `arg(i).* → ai.*` | ai: static type of `ai` |
 | result back | `ret.* → r.*`; none without an lhs | `ret.* → r.*` (several results: `r` is the tuple; `extract` reads `#i`) | r: static type of `r` |
-| static and constant back | `S.* → S.*`, `const.* → const.*` | the same | none |
+| static back | `S.* → S.*` (no form makes a fact on a constant base, so the binding back has no constant edge) | the same | none |
 | exception back | none (dropped) | none | none |
 | local back | none: a `local` fact is not a valid exit fact | none | none |
 
@@ -356,6 +362,8 @@ is also an argument (`r = m(r)`), its argument binding carries the fact. The lhs
   base (I11). There is no binding back for the zero fact (I11): the fact that passed over is the same (ap.md §3.5). An
   unresolved call only passes the zero fact over. The sink and source rules of the call read the zero fact through
   the rule statement of the call (§4.1, §4.6).
+* The roots. No class initializer (`<clinit>`) is analysed: it has no call site, and it is not a root (gap G10). Every
+  root starts with the zero fact only (ap.md §6.1), so no static state crosses roots (gap G13).
 
 ### 3.4 Exceptions
 
@@ -367,17 +375,19 @@ is today's behaviour (the exception tests of `DataFlowBenchFalseNegativeTest` ar
 
 ### 3.5 Constructors (JVM)
 
-At a call to `<init>`, every added fact (the bound fact after the cleaners) also PASSES OVER the call: it keeps its
-caller base, and it also enters the callee. This is the ad-hoc rule of today (`isConstructor` in
+At a call to `<init>`, every added fact (the bound fact after the cleaners, `S` included) also PASSES OVER the call:
+it keeps its caller base, and it also enters the callee. This is the ad-hoc rule of today (`isConstructor` in
 `JIRMethodCallFlowFunction`). So a constructor call is a weak update of its receiver and its arguments. It is an
 expected false-positive source (gap G8, ap.md §11.1). The pass-over result does not take the summary rewriter; it takes
-the binding back, the aliases and the field limit (§4.5 step 6).
+the binding back and the field limit (§4.5 step 6). It is an IDENTITY result, so it takes no alias (AC4).
 
 ### 3.6 Virtual calls and several callees
 
 * JVM: the call resolver gives a set of callees, each with a context (`JIRInstanceTypeMethodContext`: the receiver type;
   `JIRArgumentTypeMethodContext`: the type of one argument), and possibly a resolution failure. Go: the resolved
-  callees with `EmptyMethodContext`; an empty set is a failure.
+  callees with `EmptyMethodContext`; an empty set is a failure. The resolver reads the context of the caller's method
+  key (the type constraints of `this` and of an argument), so the callees of a call depend on that context: the call
+  plan is per method key (analyzer-core.md §4.8).
 * The resolver drops every empty method (I8) from the callees. If every resolution result is an empty method, the call
   is unresolved (§3.7).
 * The relevance check, the sinks, the sources and the cleaners run ONCE per caller fact. They use the rules of the
@@ -392,9 +402,15 @@ the binding back, the aliases and the field limit (§4.5 step 6).
 A callee is UNRESOLVED if the resolver gives a failure (JVM: the called method, or an override, is outside the analysed
 units, `MethodResolutionFailed`; Go: an empty set of callees), or if the call targets a lambda or a closure that is not
 yet known (§3.9), or if every resolution result is an empty method (I8: the resolver drops an empty method from the
-callees, §3.6). An unresolved callee has a STATEMENT summary (ap.md §4.2: the micro edges of a statement). The AP
-applies it to each added fact `a` (the bound fact after the cleaners) at the callee base `P`, in every run, as
-statement micro edges (§2.1 step 4), and never restricts it. The fact `a` has the premise set and the layer of its
+callees, §3.6). AN EMPTY RESOLUTION RESULT (the resolver gives no callee and no failure) is handled as a resolution
+failure: the call is unresolved, as in Go. On the JVM it occurs only for a raw lambda expression
+(`JIRCallResolver.kt:98-101`). The required lambda features of the classpath (`LambdaAnonymousClassFeature`,
+`LambdaExpressionToAnonymousClassTransformerFeature`; ap-impl.md §31.2) make every lambda value an allocation of a
+lambda class, so with them this case does not occur. They must be installed.
+
+An unresolved callee has a STATEMENT summary (ap.md §4.2: the micro edges of a statement). The AP applies it to each
+added fact `a` (the bound fact after the cleaners) at the callee base `P`, in every run, as statement micro edges
+(§2.1 step 4), and never restricts it. The fact `a` has the premise set and the layer of its
 caller edge `(i → c)`: in run 1 the static exception of §2.1 step 4 tests that caller edge, and a position request goes
 to the caller, on `i`:
 
@@ -418,7 +434,7 @@ facts).
 | AC1 | JVM: for each caller local `x` that a binding back writes (`r`, `o`, `ai`), the alias paths `(b, q)` of `x` that hold BOTH before and after the call (`forEachAliasAfterCallStatement`; constant bases skipped). Go: the heap aliases at the statement (`forEachHeapAliasAtStatement`). |
 | AC2 | For each alias: the binding-back edge `P.* → b.q.*` beside `P.* → x.*`. The alias base is a gen-only target (weak, gap G7). |
 | AC3 | The alias edges apply to: every summary result that is not an identity result (AC4), so every demand-layer result and every zero-premise summary result; the source results at the call; the end facts of a sink (§4.1); the pass-rule results. |
-| AC4 | An IDENTITY result is a summary result in the NORMAL layer that is equal to the start fact of its premise (ap.md §6.5). It is not copied to the aliases (as today): the alias already holds the same facts, because the writes keep the aliases (§2.5). A demand-layer result is never an identity result: it always goes to the aliases, also when it is equal to its start fact (a demand start fact can be coarser than the premise, so the alias does not hold it). |
+| AC4 | An IDENTITY result is a summary result in the NORMAL layer that is equal to the start fact of its premise (ap.md §6.5). The default identity of an unresolved callee (§3.7) and the constructor pass-over (§3.5) are IDENTITY results too. An identity result is not copied to the aliases (as today): the alias already holds the same facts, because the writes keep the aliases (§2.5). A demand-layer result is never an identity result: it always goes to the aliases, also when it is equal to its start fact (a demand start fact can be coarser than the premise, so the alias does not hold it). |
 | AC5 | AC3 and AC4 are an exception to I2: they select the results to which the alias edges apply. The selection leaves out only the normal-layer identity results, which the alias base already holds. The backward run applies the reversed alias edges to every requirement (§4.9). |
 
 ### 3.9 Lambdas and closures
@@ -435,7 +451,7 @@ facts).
   a JDK functional interface (for example `java.util.function.Function.apply`) keeps the unresolved path.
 * Go: a call through a function value is DYNAMIC. The value binds to `this` (§3.1). `makeClosure` writes the free
   variables to `x.fv_i` (§2.3), and the closure body reads `this.fv_i`. If the resolver gives no callee, the call takes
-  the unresolved path, and the closure tracker resolves it later from the type info of the prescan.
+  the unresolved path; Go keeps today's closure tracker (Go is outside analyzer-core.md, its §0).
 * Go `go` and `defer`: the interpreter handles them as calls at their statement, with no result.
 
 ---
@@ -448,7 +464,7 @@ facts).
 |---|---|---|---|---|
 | source at a call | `TaintMethodSource` | `Source` | call statement (the rule statement, below) | unconditional: `zero.$ (zeroMark) → P.$ (T)` (`AssignMark`) or `zero.$ (zeroMark) → P.[any] (T)` (`AssignMarkOnAnyAccessor`, Go `AnyAccessor`), premise mark `zeroMark`; conditional: `Q.t' (T') → P.t (T)`, with `t' = $` for `ContainsMark(Q, T')` and `t' = [any]` for `ContainsMarkOnAnyField(Q, T')` (§4.2), and the target tail `t` (`$` or `[any]`) as above; a conjunction over several facts: §5.3 |
 | entry-point source | `TaintEntryPointSource` | none | method start, zero | `zero.$ (zeroMark) → P.$ (T)`; the condition must be true |
-| exit source | `TaintMethodExitSource` | none | every exit (normal and exceptional, §4.7) | as a source at a call, in the coordinates of the method |
+| exit source | `TaintMethodExitSource` | none | every exit (normal and exceptional, §4.7) | as a source at a call, in the coordinates of the method; a conjunction over several facts is an ND edge at the exit (§4.7 step 1, §5.3; D31), not a rule error |
 | read source | `TaintStaticFieldSource` at `x = C.s` | `FieldReadSource` at `x = y.f`, `GlobalReadSource` at `x = G` | the read statement, zero | `zero.$ (zeroMark) → x.$ (T)`; the condition must be true (§4.4) |
 | sink at a call | `TaintMethodSink` | `Sink` | call statement | the sink check (ap.md §4.9); its end facts (below) |
 | entry sink | `TaintMethodEntrySink` | none | method start, zero | unconditional only (as today); its end facts |
@@ -474,8 +490,9 @@ in the demand layer (ap.md §2.3), as for an `[any]`-target source.
 THE RULE STATEMENT OF A CALL. The source rules of a call statement form a CALL STAGE of their own, beside the bindings
 (the sources stage, analyzer-core.md §4.5). A call stage gives only the results of its edges: a fact on a base that no
 edge of the stage reads gives no result (it does not pass through the stage). The rule statement reads the bound,
-uncleaned facts (callee coordinates) and the zero fact. It touches the zero base and the base of every position that a
-source literal reads. Its edges are the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)` (I11) and the source edges
+uncleaned facts (callee coordinates) and the zero fact. Its touched set is every base of its edges (a call stage: the
+zero base, the base of every position that a source literal reads, and the source targets), so its reversal adds no
+identity edge. Its edges are the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)` (I11) and the source edges
 of the table above. It has no other keep edge: the bound facts go on through the call, not through the rule statement,
 so its only results are the zero fact and the source targets. The source targets go to the caller through the binding
 back and the aliases (§3.8 AC3), with the field limit, and join the results of the call (union). The zero fact has no
@@ -501,8 +518,8 @@ The interpreter gives the end facts of the vulnerability to the vulnerability st
 (ap.md §8.10; today the end-fact requirement of `TaintSinkTracker`). Today the trace resolution reports such a
 vulnerability only if one end fact reaches the end of the analysis (`VulnerabilityChecker`). The trace resolution is
 outside this specification (ap.md §8.10 THE TRACES): no part of the analysis checks whether an end fact reaches the
-end of the analysis. This is a KNOWN GAP for now: every confirmed vulnerability of a sink rule with end-fact actions is
-reported (ap.md §11.1).
+end of the analysis. This is a KNOWN GAP for now: every vulnerability of a sink rule with end-fact actions that the
+report holds is in the output, also one whose end facts never reach the end of the analysis (ap.md §11.1).
 
 ### 4.2 Conditions
 
@@ -525,8 +542,8 @@ reported (ap.md §11.1).
   `Result`, not for the entry and exit sinks. The sink seeds of the backward run follow the alternatives (§4.9).
 * For a source or a sink, an over-approximation makes the rule fire MORE: a negated literal counts as true. `Or` gives
   one alternative per literal. A conjunction of literals that different facts satisfy (a positive literal on another
-  position): a source makes an ND edge (§5.3); a sink is a CONJUNCTIVE SINK (ap.md
-  §4.9, §5.3). The interpreter sets no layer. The layer of a result belongs to the propagation edge, and only
+  position): a source, at a call or at an exit, makes an ND edge (§5.3, §4.7 step 1); a sink is a CONJUNCTIVE SINK
+  (ap.md §4.9, §5.3). The interpreter sets no layer. The layer of a result belongs to the propagation edge, and only
   the AP operations change it (ap.md §2.2): a fact that only overlaps a literal gives a demand-layer result (ap.md
   §4.1, §4.6). A negated literal that counts as true is the expected over-approximation of a path-insensitive engine,
   as the conjunction is (the reference semantics of rules, ap.md §3.5; ap.md §4.6, §11.1).
@@ -539,8 +556,8 @@ reported (ap.md §11.1).
   premise `P.t (T)` of the pass edge (§4.1). A pass rule is a handcrafted summary of an unresolved callee, and a mark
   literal has no exact form for it: `CopyAllMarks` has the target mark `*`, so a concrete premise mark would make an
   edge that is not mark-reversible (I11 (b)), and an ND edge needs a concrete target mark (ap.md W7). The interpreter
-  reports a pass rule with a mark literal as a rule error and applies it without its mark literals (it fires more; this
-  is sound, but not precise: gap G11). So a pass rule never makes an ND edge.
+  reports a pass rule with a mark literal as a rule error, logged once and not rejected (§1.3), and applies it without
+  its mark literals (it fires more; this is sound, but not precise: gap G11). So a pass rule never makes an ND edge.
 * For a CLEANER the safe direction is the opposite: a cleaner that fires removes real taint. So the interpreter applies
   only the UNCONDITIONAL cleaners:
   * a non-mark atom is decided statically: a false atom removes the rule, a true atom drops out of the condition;
@@ -566,6 +583,13 @@ reported (ap.md §11.1).
 | JVM | initial fact | 1. the start fact (ap.md §6.5); 2. the filter by the context type (§5.1). |
 | Go | zero | the zero fact only (no entry rules). |
 | Go | initial fact | the start fact, with no filter. |
+
+THE RULE STATEMENT OF THE METHOD START (JVM; STATEMENT mode, analyzer-core.md §4.9). It touches the zero base, with the
+keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)` (I11 (d)), and each base `b` with a context filter (§5.1, row
+"method start"), with the identity edge `b.* → b.*` and that filter as its operand filter. Its other edges are the
+entry-point sources `zero.$ (zeroMark) → P.$ (T)`. A source target is a gen-only target (not touched, as in A3). So an
+initial fact passes unchanged, or passes its context filter. The filter reads the context of the method key, so the
+entry rules are per method key (analyzer-core.md §4.8).
 
 ### 4.4 Statement order (non-call)
 
@@ -595,8 +619,8 @@ This order is for a caller fact that is not the zero fact. The zero fact uses §
       of `AnyClassStatic` is a cleaner (§1.4, §5.2);
    2. RESOLVED callees: the callee processing of ap.md §5.3 for each callee, with the cleaned fact as the added fact
       (events E1 and E2: add, emit, check the standing requests, subscribe, apply the summaries that it satisfies and
-      the records that cover it); each new initial fact starts with the context filter (§4.3); JVM constructor: the
-      cleaned fact also passes over the call (§3.5);
+      the records that apply to it, ap.md §8.7 R4: their premise covers it or lies inside it); each new initial fact
+      starts with the context filter (§4.3); JVM constructor: the cleaned fact also passes over the call (§3.5);
    3. UNRESOLVED callee: the default identity and the pass rules (§3.7), as statement micro edges on the added fact
       (§2.1 step 4, with the static exception on the caller edge).
 6. RETURN. For every result of step 5 (a summary result, an unresolved result): the summary rewriter in callee
@@ -633,7 +657,10 @@ the exception base `exc` (the thrown value), as today (`JIRMethodSequentFlowFunc
 at both exits; steps 3 to 5 apply only at the normal exit, because only the normal exit makes a summary edge (§3.4).
 The order of the steps is as today. The exit sources of an exit form the RULE STATEMENT OF THE EXIT: its edges are
 statement micro edges for §2.1 step 4, so in run 1 a conditional exit source whose premise is on `S` takes the static
-exception on the edge of `f` (§1.4).
+exception on the edge of `f` (§1.4). It touches the zero base, with its keep edge (I11 (d)), and the base of every
+position that a literal of an exit source reads, with the identity edge `b.* → b.*`. A source target is a gen-only
+target. It has no type filter. So `f` stays in the worklist (step 1), and in the backward run a requirement on a read
+base or on a target passes (§4.9).
 
 THE UNCONDITIONAL EXIT RULES (the unconditional exit sources and the unconditional exit sinks) fire on the zero fact at
 BOTH exits (§4.4; D22). This is a deviation from today (D26): today they fire only at the normal exit
@@ -641,16 +668,28 @@ BOTH exits (§4.4; D22). This is a deviation from today (D26): today they fire o
 this double report is accepted.
 
 1. The worklist is `f` and the results of the exit sources whose condition `f` satisfies, after the field limit (ap.md
-   §4.4). The results keep the premise of `f`.
+   §4.4). The results of a plain exit source keep the premise of `f`. A CONJUNCTIVE EXIT SOURCE (an alternative of its
+   condition with two or more positive literals) is an ND edge at the exit, as at a call (§5.3; D31): each literal
+   stores its input in the conjunction store of the method key (per conjunctive micro edge, exit statement and literal
+   index; ap.md §8.9). A full combination joins the worklist as an item with the union of the premise sets (§5.3),
+   after the field limit. It goes through steps 2 to 5 as every item, so at the normal exit it becomes a summary, an
+   ND summary if its premise set has two or more members; the callers apply it by event E6 (ap.md §4.6, §5.3). It is
+   not a rule error.
 2. For each item: check the exit sinks. Their end facts (§4.1), after the field limit, join the worklist. A literal of
    a conjunctive exit sink stores its input in the conjunction store (§5.3).
-3. THE GLOBAL-STATE RULE: if a mark literal (`ContainsMark`, `ContainsMarkOnAnyField`) of an exit sink holds on a part
-   of an item on `S`, drop that part from the summary edge. This applies to a plain and to a conjunctive exit sink. The
-   rest of the item stays. The dropped part is not lost for the sink: for a conjunctive exit sink, step 2 stored it as
-   the input of that literal. So it stays an assumption for the next evaluation attempts of the sink, and a later item
-   can complete the combination with it. Today the `ClassStatic` facts that the exit sink condition read are dropped
-   (`JIRMethodSequentFlowFunction.kt:186-188`). The rule generator keeps the state of a rule as a mark on a synthetic
-   class position (§1.4); the exit sink consumes it. This is gap G2.
+3. THE GLOBAL-STATE RULE: for an item on `S` whose premise is the zero fact (a state that the method or its callees
+   set), if a mark literal (`ContainsMark`, `ContainsMarkOnAnyField`) of an exit sink holds on a part of it, drop that
+   part from the summary edge. This applies to a plain and to a conjunctive exit sink. The rest of the item stays. The
+   dropped part is not lost for the sink: for a conjunctive exit sink, step 2 stored it as the input of that literal.
+   So it stays an assumption for the next evaluation attempts of the sink, and a later item can complete the
+   combination with it. A caller-set `S` fact (an item whose premise is not the zero fact) is evaluated (step 2: it can
+   report, D21; a conjunctive literal stores it) but not dropped: it returns to the caller through the callee summary,
+   also the run-1 FLOW summary and its record (§3.3). The scope is as today: today the exit sinks run only on
+   zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`), and only a reached sink drops the `ClassStatic` facts
+   that its condition read (`JIRSequentTaintUtil.kt:76-85`, `JIRMethodSequentFlowFunction.kt:186-188`). The drop also
+   for a conjunctive exit sink that is not complete is deviation D30. The rule generator keeps the state of a rule as a
+   mark on a synthetic class position (§1.4); the exit sink of the method that sets it, or of a caller of that method,
+   consumes it. This is gap G2.
 4. For a zero-premise fact on `this` or `arg(i)`: remove the entry marks (§4.3), so that an entry-point source does not
    leak into the callers (gap G2).
 5. Emit the summary edge. Not at the exceptional exit (its facts end there); not for a `local` base.
@@ -704,9 +743,11 @@ RULE ROLES (ap.md §9.2 gives the AP rules):
 CALL ORDER (the mirror of §4.5). For a requirement `c` after the call statement `s`:
 
 1. RELEVANCE. The reversed call touches the forward touched bases of `s` and the alias bases of §3.8. If it does not
-   touch `c.base`, `c` passes over the call.
+   touch `c.base`, `c` passes over the call. An alias base that the forward call does not touch also keeps the
+   requirement over the call: `b.* → b.*` from after the call to before it, in caller coordinates (A5; the reversal of
+   its forward pass-over; the pass-over stage `AFTER → BEFORE` of the reversed plan, analyzer-core.md §4.5).
 2. REVERSED BINDING BACK. The converse of each forward binding back and of each call alias edge (`b.q.* → P.*`, §3.8),
-   into callee coordinates at the forward exit. An alias base also keeps the requirement (`b.* → b.*`, A5). No filter.
+   into callee coordinates at the forward exit. No filter.
 3. REVERSED SOURCES. The reversed source edges of the rule statement of `s` (§4.1) and the reversed end-fact edges, on
    the result of step 2. A requirement that reaches an unconditional source continues to the zero fact. A conditional
    source gives a requirement at its read position; it enters at step 7.
@@ -716,8 +757,8 @@ CALL ORDER (the mirror of §4.5). For a requirement `c` after the call statement
       the backward orientation); the backward summaries of the callee bring it to the forward entry of the callee;
    2. UNRESOLVED callee: the reversal of the statement summary of §3.7 (the default identity, the reversed pass rules
       and default getter rules);
-   3. JVM CONSTRUCTOR (§3.5): a requirement on the receiver or on an argument also goes from step 2 directly to
-      step 6 (the reversal of the pass-over; it skips the rewriter and the callee).
+   3. JVM CONSTRUCTOR (§3.5): a requirement on a bound position (the receiver, an argument, `S`) also goes from step 2
+      directly to step 6 (the reversal of the pass-over; it skips the rewriter and the callee).
 6. REVERSED CLEANERS. The cleaners of `s` on the requirement at the callee start (callee coordinates): the
    unconditional cleaners (§4.2), and the keep edges of a
    `RemoveAllMarks` kill on `S` (§1.4), in the rule order.
@@ -870,6 +911,8 @@ the rule positions. RULE SELECTION (the non-mark atoms are evaluated statically,
 * every user-defined SOURCE rule of the call whose condition is not statically false;
 * every user-defined CLEANER rule of the call whose condition is statically true (an unconditional cleaner).
 
+A rule that a rule error rejected (§1.3) is never selected.
+
 For each selected rule, each relevant mark `T` of the rule and each action position `P` of the rule (a source: the
 positions of its `AssignMark` actions; a cleaner: the positions of its `RemoveMark` actions), the rewriter applies
 `clean(P, exact, T)`, chained (§4.8). The rewriter is an override by design, not a cleaner placement: D20 does not
@@ -881,7 +924,8 @@ CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (op
 ### 5.3 ND conjunction
 
 * The interpreter evaluates the conjunctive SOURCE rules at step 4 of the call order (§4.5): on every bound fact
-  before the cleaners, and on the zero fact (§4.6). A pass rule makes no conjunction (§4.2).
+  before the cleaners, and on the zero fact (§4.6); and at step 1 of the exit order (§4.7), on every fact at the exit
+  (a conjunctive exit source, D31). A pass rule makes no conjunction (§4.2).
 * An edge whose premise set has two or more members is an ND edge and a TAINT edge (ap.md §4.6, §7.2): no member is
   the zero fact, every member has a concrete mark, and the conclusion has a concrete mark.
 * Every literal names its mark, so it has a concrete mark (ap.md S9). Its tail is `$` (`ContainsMark`) or `[any]`
@@ -901,11 +945,12 @@ CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (op
   pattern; the same conjunction store combines the sink edges of the literals (ap.md §4.9, §8.9). The interpreter
   evaluates it at the same points as the other sinks (§4.5 step 3, §4.6, §4.7). Each literal raises its own request in
   run 1 (§5.4). At the normal exit, the part of an `S` item on which a literal holds is the stored input of that
-  literal, and the global-state rule drops it from the summary edge (§4.7 step 3).
+  literal, and the global-state rule drops it from the summary edge if the premise of the item is the zero fact
+  (§4.7 step 3).
 * A callee summary with several premises (an ND summary) applies at step 5 of the call order.
   ap.md §4.6 and §8.9 define how the caller finds the links for the other premises (event E6 of ap.md §5.3).
-* Sinks, exit sources and the zero-to-zero step never make an ND edge (a conjunctive sink makes a vulnerability, not
-  an edge).
+* Sinks and the zero-to-zero step never make an ND edge (a conjunctive sink makes a vulnerability, not an edge). A
+  conjunctive exit source makes one, as a conjunctive source at a call does (§4.7 step 1, D31).
 * The backward run reverses a conjunctive edge into one plain edge per literal (§4.9).
 
 ### 5.4 Requests
@@ -954,26 +999,28 @@ The columns "Today" use today's notation (§0).
 | D13 | filter of the caller content under `*` in the summary application | `AccessTree.concat` filters by the path type | none | the filter acts on bases at fixed points; precision only (Q3) |
 | D14 | exit compatibility filter (`JIRMethodSummaryEdgeProcessor`) | removes `*` at incompatible fields | none | the same (Q3) |
 | D16 | depth gate, `[any]` depth charge in the step | `INITIAL_ALLOWED_FACT_DEPTH`, `+10,000` | the field limit only | ap.md §4.4 |
-| D17 | rules on a static position (JVM) | applied as written | the mapping of §1.4: an `[any]` target on a class position, a pass rule from or to a class position, a `ContainsMarkOnAnyField` literal in a rule with a class target, and `RemoveAllMarks(P.AnyField)` on `S` are rule errors; `RemoveAllMarks` on `S`, at any depth, is the kill of a strong write | a static access always names a field, a pass rule is a handcrafted summary, and the construction rules of I12 must hold |
+| D17 | rules on a static position (JVM) | applied as written | the mapping of §1.4: an `[any]` target on a class position, a pass rule from or to a class position, a `ContainsMarkOnAnyField` literal in a rule with a class target, and `RemoveAllMarks(P.AnyField)` on `S` are rule errors; `RemoveAllMarks` on a class, a static field or deeper is the kill of a strong write; `RemoveAllMarks(AnyClassStatic)` is the whole-base cleaner (D27); `AnyClassStatic` in another rule element is a rule error | a static access always names a field, a pass rule is a handcrafted summary, and the construction rules of I12 must hold |
 | D18 | pass rule with an `AnyField` position | the content below the any-field node of `P` is copied below `Q` | an `[any]` premise or target (§4.1): an uncorrelated result in the demand layer (W6) | the field that the rule skips is not known, so a correlated edge does not cover the flow; precision only |
 | D19 | a `Lambda` result of the call resolver (§3.9) | a resolution failure (the unresolved path) beside the lambda methods (`JIRMethodCallResolver.kt:184-209`) | the lambda methods of the prescan only; a resolution failure only if the prescan knows no lambda | the prescan resolves every lambda before run 1 (analyzer-core.md §9); fewer findings are possible (user decision, 2026-10-07) |
 | D20 | a cleaner with a mark literal in its condition (§4.2) | the condition is evaluated on the fact (`TaintFactAwareConditionEvaluator`): a negated literal counts as true, and a literal can hold on the cleaned fact | the cleaner does not act | only an unconditional cleaner is sound for a fact-local engine; more findings are possible (user decision, 2026-10-07) |
 | D21 | exit sinks (§4.7) | the production rule provider applies them only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`) | every fact at the exit | the sink check of ap.md §4.9 on every fact; more findings are possible (user decision, 2026-10-07) |
 | D22 | an unconditional exit sink | no effect (`applyUnconditionalSinks` is a stub, `JIRMethodSequentFlowFunction.kt:191-200`) | it fires on the zero fact at both exits (ap.md §4.9; D26) | the same rule as every unconditional sink; more findings are possible (user decision, 2026-10-07) |
 | D23 | the summary rewriter (§3.7, §5.2) | the rule selection: every user-defined source rule and every user-defined cleaner rule whose condition is not statically false (`JIRMethodCallRuleBasedSummaryRewriter.kt:67-85`); not applied on a zero-premise summary result and on the default identity of an unresolved callee (`JIRMethodCallSummaryHandler.kt:29-38, 71-90`) | the rule selection: every user-defined source rule whose condition is not statically false, and every user-defined cleaner rule whose condition is statically true; applied on every summary result and unresolved result | rule-guided flow: the rule overrides the callee for its marks; one rule for every result of the call; a conditional cleaner does not act (as D20). Fewer findings are possible (the results), more are possible (the cleaner selection) (user decisions, 2026-10-07 and `ap-history.md` F67) |
-| D24 | a pass rule (`CopyAllMarks`, `CopyMark`) with a mark literal in its condition (§4.2) | the condition is evaluated on the fact | a rule error; the rule applies without its mark literals; a pass rule makes no ND edge | a pass rule has no mark-dependent condition (user decision, 2026-10-08); no exact form (gap G11) |
+| D24 | a pass rule (`CopyAllMarks`, `CopyMark`) with a mark literal in its condition (§4.2) | the condition is evaluated on the fact | a rule error, logged once and not rejected (§1.3); the rule applies without its mark literals; a pass rule makes no ND edge | a pass rule has no mark-dependent condition (user decision, 2026-10-08); no exact form (gap G11) |
 | D25 | liveness (§2.1 step 1) | the method analyzer drops an edge whose fact is on a local that is dead at the statement, also at a call (`MethodAnalyzer.kt:296`; JVM `JIRLocalVariableReachability`; Go: no drop) | no liveness step: the statement step keeps a fact on a dead local; the alias analysis keeps its own inputs | today's liveness goes backward from the exits of the forward graph, so in code that reaches no exit (a worker loop that never returns) every local is dead and its facts go. A dead local is not read again, so elsewhere the effect is more facts only; more findings are possible (`ap-history.md` F67) |
 | D26 | the unconditional exit rules at the exceptional exit (§4.7) | the unconditional exit sources fire only at the normal exit (`JIRMethodSequentFlowFunction.kt:228-233`) | the unconditional exit sources and the unconditional exit sinks fire on the zero fact at both exits; an unconditional exit sink can report at both exits (accepted) | the exit rules act at both exits: the two exits are the one virtual exit of the model (ap.md S4); expected, more findings are possible (user decision, `ap-history.md` F67) |
 | D27 | the Spring dispatcher cleanup (`__cleanup__`, §1.4, §5.2) | a fact-dependent cleaner: the rule provider builds it from the fact, for a fact on `S` the action `RemoveAllMarks(ClassStatic(C))` for each class of the fact except the registry class `__spring_registry__` (`SpringRuleProvider.kt:104-143`) | the generated dispatcher saves and restores the registry around each `__cleanup__()` call: for each static field `f` of `__spring_registry__` (one field per component, `SpringWebProject.kt:160-200`), `%reg_f = __spring_registry__.f` before the call and `__spring_registry__.f = %reg_f` after it (`ndMethodDispatch`, `SpringWebProject.kt:311`). The rule of `__cleanup__` is the fact-free unconditional whole-base cleaner `RemoveAllMarks(AnyClassStatic)`, that is `(S, atAndBelow, all)`: the rule provider gives it for a query with no fact; a query with a fact (the current core of the prescan) keeps today's cleaner | no rule of the new analysis needs the fact; the effect is the same: the static content outside the registry goes, and the registry stays (`ap-history.md` F67) |
-| D28 | an empty method (I8) | a resolved callee; its analyzer publishes the identity summary of the most abstract premise `(b, [], *, {}, *)` (`EmptyMethodAnalyzer`, `MethodAnalyzerStorage.kt:19-31`) | never a callee: the resolver drops it; a call whose every resolution result is an empty method is unresolved (§3.7: the default identity and the pass rules) | an empty method is not analysable; the unresolved path is the summary of a callee with no body; more findings are possible (the pass rules apply) (`ap-history.md` F67) |
-| D29 | a rule position with an inner or a repeated `AnyField` (§1.3) | handled by the fact readers (`FactReaderUtils.kt:54-138`) | a rule error: the interpreter rejects the rule and logs it once | `[any]` is a tail only (ap.md W4); fewer findings are possible (`ap-history.md` F67) |
+| D28 | an empty method (I8) | JVM: an empty method has no instruction, so no entry statement and no method key; the call enters nothing for it, and its bound facts are lost (`JMethodBoundaryInstFeature.kt:13`). Go: a resolved callee; `EmptyMethodAnalyzer` publishes the identity summary of the most abstract premise `(b, [], *, {}, *)` (`MethodAnalyzerStorage.kt:19-31`) | never a callee: the resolver drops it; a call whose every resolution result is an empty method is unresolved (§3.7: the default identity and the pass rules) | an empty method is not analysable; the unresolved path is the summary of a callee with no body; more findings are possible (an all-empty call takes the unresolved path, and the pass rules apply); a mixed call: G12 (`ap-history.md` F67) |
+| D29 | a rule position with an inner or a repeated `AnyField` (§1.3) | handled by the fact readers (`FactReaderUtils.kt:54-138`) | a rule error: the interpreter rejects the whole rule (no form at any place, and the rewriter does not select it, §1.3, §5.2) and logs it once | `[any]` is a tail only (ap.md W4); fewer findings are possible (`ap-history.md` F67) |
+| D30 | the global-state rule (§4.7 step 3, G2) | the exit sinks run only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`); the evaluated `S` facts of a REACHED exit sink are dropped (`JIRSequentTaintUtil.kt:76-85`, `JIRMethodSequentFlowFunction.kt:186-188`) | for an item whose premise is the zero fact, the evaluated `S` part goes also when a conjunctive exit sink is not complete, and stays the stored input of its literal; a caller-set `S` fact is evaluated (D21) but not dropped: it returns to the caller through the callee summary | `ap-history.md` F67 (5), F68 (3); fewer facts in the callers of the method that sets the state; the FP shapes of a caller-set state: G2 |
+| D31 | an exit source with two or more positive literals in one alternative of its condition (§4.7 step 1, §5.3) | evaluated fact-locally from stored assumptions with an empty precondition (`JIRMethodSequentFlowFunction.kt:211-219`, `TaintUtil.kt:97-104, 203-207`): it fires under the premise of the fact that completes the combination | an ND edge at the exit, as at a call: each literal stores its input; a full combination is an exit item with the union of the premise sets, and at the normal exit an ND summary (E6); not a rule error | the correct premise set (today the result belongs to one fact); the findings of today stay (`ap-history.md` F68 (4)) |
 
 Kept as today (no deviation): the rule order at entry, call and exit; the lhs kill; the alias analyses and their use;
 the constructor rule; the exception rule; the conditional exit rules at both exits, with `Result` read as `exc` at the
-exceptional exit (§4.7; the unconditional exit rules: D26); the exit rules for `S` and the entry marks; the array
-elements of a call sink argument (§4.2); the primitive mark policy at the root and below each `[e]` (§5.1); the Go
-pointer model; no Go type filter; unconditional Go pass rules; the summary rewriter (except D23); the
-`<string-bytes>` rule; the default getter rules; no type filter in the backward run.
+exceptional exit (§4.7; the unconditional exit rules: D26); the entry marks; the array elements of a call sink
+argument (§4.2); the primitive mark policy at the root and below each `[e]` (§5.1); the Go pointer model; no Go type
+filter; unconditional Go pass rules; the summary rewriter (except D23); the `<string-bytes>` rule; the default getter
+rules; no type filter in the backward run.
 
 ---
 
@@ -1034,7 +1081,8 @@ pointer model; no Go type filter; unconditional Go pass rules; the summary rewri
     premise mark). The builder of a statement summary asserts the same.
 13. Backward run: the reversed touched set and the identity edge of an alias target (§4.9); the call order of §4.9,
     with a reversed source, a rewriter, an unresolved callee and a constructor; a seed after the reversed cleaners is
-    not killed; a seed is cut by the field limit; the seed of an exit sink at the exceptional exit.
+    not killed; a seed is cut by the field limit; the seed of an exit sink at the exceptional exit; at `x = m(a)`, where
+    `b.q` is an alias of `x`, a requirement on `b.g` passes over the call to before it (step 1).
 14. Array elements of a call sink (§4.2): a sink `ContainsMark(Argument(0), T)` on an `Object[]` argument triggers on
     `arg(0).[e].$ (T)`, and on a `String` argument it does not; its backward run seeds both alternatives.
 15. Exit rules at the exceptional exit (§4.7): an exit sink on `Result` triggers on the thrown tainted value; an exit
@@ -1049,9 +1097,12 @@ pointer model; no Go type filter; unconditional Go pass rules; the summary rewri
 18. No liveness (§2.1 step 1, D25): in `void serve() { while (true) { String req = in.readLine(); exec(req); } }` the
     fact on `req` reaches the sink `exec`; a fact on a dead local is not dropped.
 19. Rule positions (§1.3, D29): `Argument(0).AnyField.f` and `Argument(0).AnyField.AnyField` are rule errors, logged
-    once, and the forms of the other rules of the method are built; `Argument(0).AnyField` is accepted.
+    once, and the forms of the other rules of the method are built; `Argument(0).AnyField` is accepted. A source rule
+    whose condition has such a position gives no source and no rewriter cleaner; an `Or` with one bad disjunct gives no
+    form.
 20. The whole-base cleaner (§1.4, §5.2, D27): `RemoveAllMarks(AnyClassStatic)` drops every fact on `S`, also `S.*` in
-    run 1, with no request; `AnyClassStatic` in another rule element is a rule error. The Spring dispatcher: a static
+    run 1, with no request; `AnyClassStatic` in another rule element is a rule error, also in a condition literal
+    (`ContainsMark(AnyClassStatic, T)`). The Spring dispatcher: a static
     value that one dispatched controller taints does not reach the next one, and the registry fields keep their facts
     across `__cleanup__()`.
 21. Empty methods (I8, D28): a call to a native method of the project takes the unresolved path (the pass rules and
@@ -1060,15 +1111,31 @@ pointer model; no Go type filter; unconditional Go pass rules; the summary rewri
 22. Aliases on call results (§3.8 AC3 to AC5): a normal-layer result equal to its start fact is not copied to the
     aliases; a demand-layer result equal to its start fact is copied (a run-1 answer for the premise
     `(x, [], *, {}, T)` with the demand start fact `(x, [], [any], {}, T)`).
-23. The global-state rule (§4.7 step 3, G2): a plain exit sink on `S.<C>.$ (ST)` drops that part from the summary
-    edge. For the conjunctive exit sink `ContainsMark(ClassStatic(C), ST) and ContainsMark(Result, T)` with an
-    untainted `Result`, the `S` part is dropped and stored; a later item with a tainted `Result` completes the
-    combination with the stored part.
+23. The global-state rule (§4.7 step 3, G2, D30): a plain exit sink on `S.<C>.$ (ST)` drops that part of a
+    zero-premise item (a state that the method sets) from the summary edge. For the conjunctive exit sink
+    `ContainsMark(ClassStatic(C), ST) and ContainsMark(Result, T)` with an untainted `Result`, the `S` part is dropped
+    and stored; a later item with a tainted `Result` completes the combination with the stored part. A caller-set state
+    passes the exit sink of a callee and is still seen by the caller after the call: in
+    `root(){ acquire(); release(); after(); }`, where `acquire` sets `ST` on `ClassStatic(L)`, `release` has the exit
+    sink `ContainsMark(ClassStatic(L), ST)` and `after` a sink on the same position, both sinks report, in run 1 and in
+    the restricted runs.
 24. The mark policy below `[e]` (§5.1): a mark that is not primitive-tracking on `b.[e]` of a `byte[]` and of an
     `Integer[]` value is dropped; on `b.[e]` of a `String[]` value it stays; below a field no type is read.
 25. End facts (§4.1): a sink with an end-fact action that triggers on a demand-layer bound fact gives a demand-layer
     zero-to-fact edge; a conjunctive sink gives its end facts when an item completes the combination, in the layer of
     the combination.
+26. The summary rewriter (§5.2, D23): at a call with a user source `if IsConstant(...) and ContainsMark(...)`, a user
+    cleaner `if ContainsMark(...)` and an unconditional user cleaner, the rewriter selects the source and the
+    unconditional cleaner, and not the conditional cleaner; a rule that a rule error rejected is not selected (§1.3).
+    The rewriter removes `T` from a zero-premise summary result and from the default identity of an unresolved callee.
+27. The static exception at the rule statement of an exit (§4.7, §2.1 step 4; ap.md §4.10 item 1): in run 1 an exit
+    source with the literal on `S.<C>.f`, on the fact `S.*` with the premise `S.*`, gives the position request
+    `[<C>, f]` and no fact, and the fact `S.*` stays in the worklist.
+28. A conjunctive exit source (§4.7 step 1, §5.3, D31): `AssignMark(S2, ClassStatic(C)) if
+    ContainsMark(ClassStatic(C), S1) and ContainsMark(Result, T)` at the normal exit stores the input of each literal,
+    and the item that completes the combination gives `S.<C>.$ (S2)` with the union of the premise sets of its inputs,
+    in either order of arrival. With two non-zero premises the summary is an ND summary, and a caller applies it by
+    E6. The rule is not a rule error.
 
 ---
 
@@ -1082,4 +1149,4 @@ states the current rule; the implementation follows it until the user decides.
 | Q1 | A cleaner action on `Result` that is not user-defined has no effect today: no bound fact has the base `ret`. Proposal: apply `clean` to the results on `ret` before the binding back, for every cleaner rule. A decision is necessary. | As today: it has no effect. The rewriter applies an unconditional user-defined cleaner on `Result` (§5.2). |
 | Q2 | Go has no type filter. The placement points of §5.1 fit Go too. Add a Go type checker? | No Go type filter (§2.3). |
 | Q3 | D13 and D14 drop two precision filters of the summary application. Restore them as a filter on the summary conclusion, or make `may` recurse through the declared field types (prefix-closed too, and it covers most of D13)? | No summary-side filter (D13, D14). |
-| Q10 | The gaps G1–G4, G6, G9 and G10 (§0.1) lose real flows. Keep them as today, or close some of them (G3: check the sinks of the cleaner method on the uncleaned fact; G4: read the rules of the resolved override too)? | All gaps stay as today. |
+| Q10 | The gaps G1–G4, G6, G9, G10, G12 and G13 (§0.1) lose real flows. Keep them as today, or close some of them (G3: check the sinks of the cleaner method on the uncleaned fact; G4: read the rules of the resolved override too)? | All gaps stay as today. |
