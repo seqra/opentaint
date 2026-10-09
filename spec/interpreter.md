@@ -35,9 +35,11 @@ It does not define the AP operations. It uses them by name:
 | reversal (ap.md §9.1, §9.2) | the backward form of a micro edge | §4.9 |
 | emission, storages (ap.md §6, §8) | abstraction and stores | not used directly |
 
-Notation. ap.md §1 defines the common notation: the micro-edge sides `x.p.*`, `x.p.$ (T)` and `x.p.[any] (T)`, the
-exclusion subscript `a →_{f} b`, the accessors `[e]` and `<C>`, the fact tuple, the touched-base set `{x, y}` and the
-bound fact. This document adds only:
+Notation. ap.md §1 defines the common notation: the micro-edge sides `x.p.*`, `x.p.$ (T)`, `x.p.[any] (T)` and
+`x.p.[any-taint] (T)` (the `[any-taint]` tail always has a concrete mark, and only a forward run has it, ap.md W8),
+the exclusion subscript `a →_{f} b`, the exclusion `E` of a forward `[any-taint]` fact (`(x, p, [any-taint], E, T)`,
+also written `[any-taint]/E`, ap.md W8), the accessors `[e]` and `<C>`, the fact tuple, the touched-base set `{x, y}`
+and the bound fact. This document adds only:
 
 | Form | Meaning |
 |---|---|
@@ -50,7 +52,7 @@ Common rules:
 | # | Rule |
 |---|---|
 | I1 | The interpreter gives each statement a STATEMENT SUMMARY: the touched bases, the micro edges, and the type filters of each touched base: the OPERAND filters, on the input (§2.1 step 3), and the RESULT filters, on the results (the lhs filter, §2.1 step 5; the binding-back filters, §3.1). One base can have both (`x = x.f`, §2.2; analyzer-core.md §4.9 `StatementSummary`). The AP applies it (ap.md §4.2, the statement transfer). Every micro edge reads from a touched base (ap.md S10). |
-| I2 | Micro edge application is UNGUARDED. The AP applies every micro edge to every fact on its base that overlaps its premise, in both cases of ap.md §4.1: at or below the premise, and above it. A fact above the premise of a micro edge gives an uncorrelated result in the demand layer. There is no refinement. Two exceptions: (1) STATICS IN RUN 1 (§2.1 step 4; the rule is ap.md §4.10 item 1), for a fact `c`: Run 1 only, statement micro edges only: when the edge of `c` is an identity static `*` edge at the root `[]` or at a class `[<C>]`, a micro edge whose premise path `p` lies strictly below `c` (the exclusion of `c` admits the rest) gives no fact and no mark request; it raises the position request for `p` cut to at most two accessors. Below a static field the ordinary rules apply. (2) THE ALIAS EDGES AT A CALL apply only to the results that §3.8 AC3 and AC4 select. |
+| I2 | Micro edge application is UNGUARDED. The AP applies every micro edge to every fact on its base that overlaps its premise, in both cases of ap.md §4.1: at or below the premise, and above it. A fact above the premise of a micro edge gives an uncorrelated result in the demand layer. A forward `[any-taint]` fact (ap.md W8) above the premise gives a result in the layer of the fact: every location at or below the fact carries its mark. Its exclusion `E` must admit the step down to the premise, else the edge gives nothing. An exclusion of the edge goes to the result (ap.md §4.1); only an `[any]` target (a may, W6) demotes the result. There is no refinement. Two exceptions: (1) STATICS IN RUN 1 (§2.1 step 4; the rule is ap.md §4.10 item 1), for a fact `c`: Run 1 only, statement micro edges only: when the edge of `c` is an identity static `*` edge at the root `[]` or at a class `[<C>]`, a micro edge whose premise path `p` lies strictly below `c` (the exclusion of `c` admits the rest) gives no fact and no mark request; it raises the position request for `p` cut to at most two accessors. Below a static field the ordinary rules apply. (2) THE ALIAS EDGES AT A CALL apply only to the results that §3.8 AC3 and AC4 select. |
 | I3 | A read never changes an exclusion. Only a STRONG WRITE adds the written accessor to the exclusion of the identity edge of the written base: `a.* →_{f} a.*`. |
 | I4 | A call binding is a micro edge (I2 applies). Its premise and its target have the `*` tail and the mark `*` (ap.md S10, S11). A callee summary edge is not a micro edge: it applies only if the added fact satisfies its premise (ap.md §4.3). |
 | I5 | The interpreter is the same in every run. The differences: requests exist only in forward run 1 (§5.4). In a forward restricted run, the core fires an unconditional source (a micro edge from the zero fact to another base) only if it is a source seed (ap.md §6.1 rule 6; analyzer-core.md §4.7). The backward run reverses the micro edges and applies no type filter; the core records the sources that it reaches (§4.9). |
@@ -59,9 +61,10 @@ Common rules:
 | I8 | NO `*`-PREMISE CALLEE SUMMARY in a restricted run (ap.md §6.3). The interpreter precomputes no callee summary. An EMPTY METHOD is a method with no instruction (JVM: an empty instruction list, for example a native or an abstract method; Go: a function with no body). It is not analysable, and the analysis never analyses it. The call resolver drops an empty method from the callees of a call (§3.6). A call whose every resolution result is an empty method is an UNRESOLVED call (§3.7: the default identity and the pass rules). No summary exists for an empty method, also no identity summary (D28). An unresolved callee is a statement summary (§3.7), not a callee summary. |
 | I9 | PRECISE AND COMPLETE MICRO EDGES (ap.md S1, S2, §4.2): every micro edge (a statement edge with its alias edges, or a call binding edge; not a callee summary edge) gives exactly the concrete flows of its statement (ap.md §3.5). A micro edge has NO LAYER: the layer belongs to the propagation edge, and only the AP operations change it (ap.md §2.2). |
 | I10 | NO FIELD LIMIT ON A MICRO EDGE: a micro edge keeps its full paths (also an alias path `c.q.p` of any length). The field limit applies to the results of an application (ap.md §4.4 lists the cut points): the statement step, also the read sources (§2.1 step 6, §4.4); the return of a call, also the source results, the end facts of a sink at a call and the pass-rule results (§4.5 steps 4 and 6); the results of the entry rules (§4.3); the results of the exit rules (§4.7); the conjunction result (§5.3; the Lean model has no cut there, ap.md §11.2); and the backward seed (§4.9). |
-| I11 | BACKWARD CONTRACTS (ap.md S11, items (a) to (g)). The interpreter makes these true: (a) every binding has the `*` tail and the mark `*` on both sides (§3.1); (b) every statement micro edge is MARK-REVERSIBLE (ap.md §9.1): its target mark is abstract (`*` or `*∖X`), or its premise mark is concrete. Every row of §2, §1.4 and §4.1 has this form; (c) no FORWARD call binds the zero base back (§3.3); the backward binding back has the reversed zero binding `zero.* → zero.*` (ap.md §9.2); (d) every statement that touches the zero base has the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)`, and no other micro edge, no binding back and no conjunction has its target on the zero base (the only binding into the zero base is `zero.* → zero.*`, §3.1; Lean `NDZeroBase.NoZeroGen`): the read statement with a read source (§4.4), the rule statement of a call (§4.1), and the method start and the exits with their sources (§4.3, §4.7); no cleaner acts on the zero base; and no type filter is on the zero base (so a type filter on the zero base accepts the empty path, as ap.md S11 (d) asks); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit: the implementation wires code that never returns to an exit node (§4.9); (f) every sink pattern has the tail `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`) (§4.2); (g) every statement micro edge and every call binding has an EXACT SHAPE (ap.md S11 (g)): by I3 only an identity keep edge carries an exclusion, so a micro edge with a `*` premise and a `$` or `[any]` target has the Empty premise exclusion, and by (a) every binding is `* → *` (`Reverse.bindRev_of_star`). Only the exactness of the reversed records (ap.md §8.7 R3) needs (g). Lean: `Reverse.BindTargetsStar`, `Backward.StmtsMarkRev`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Backward.ExitReach`, `Reverse.RevStmts`, `RevCalls`. |
-| I12 | STATIC CONSTRUCTION RULES (ap.md S12, items (a) to (g); ap.md §4.10). A STATIC POSITION is the premise path of a statement micro edge on `S`, or the path of a sink pattern on `S`, cut to at most two accessors (`[<C>, f]`, `[<C>]`, Go `[<G>]`). The interpreter makes these true. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_E S.q.*` (the keep edges of a static read, of a static write and of the kill of `RemoveAllMarks`, §1.4, §2.2, §2.3) or a field-to-field edge (a pass rule between static fields, §1.4). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)` (§1.4). A conjunctive micro edge into such a target has a `$` premise with a concrete mark for each literal (§1.4, §5.3); its result is a concrete `$` fact of this shape. This clause is argued (ap.md §11.2): `Statics.SWF` (part `write`) constrains the plain micro edges only, and the static model has no conjunction. So no rule makes a `*` or an `[any]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*` (§3.1). (d) The field limit of run 1 is at least 1 and the class accessor is not counted, so a cut never stops strictly above a static position. (e) A cleaner on `S` names its mark (§1.4); `RemoveAllMarks` on a position of `S` is not a cleaner. One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the rule position `AnyClassStatic`, §1.4, §5.2). Every fact on `S` lies inside it, so it drops the fact and never cleans a fact in part; it has the effect of the kill of a strong write of the whole base `S` (no keep edge, §2.1). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of ap.md §6.2: run 1 serves an added fact by its root. A rule position can be deeper than a static field: below the static field the ordinary rules apply. Lean: `Statics.SWF` (its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`), `Statics.PosIn`. |
+| I11 | BACKWARD CONTRACTS (ap.md S11, items (a) to (g)). The interpreter makes these true: (a) every binding has the `*` tail and the mark `*` on both sides (§3.1), so no binding has an `[any]` or an `[any-taint]` target (ap.md S10; Lean `AnyTaint.BindNoAny`, a hypothesis of the kinds invariant of run 1 `AnyTaintExKinds.D6X_any_conc` (round 1: `AnyTaintSim.D6T_any_conc`; necessary there: `AnyTaintSim.CexKinds.cex_bindNoAny`)); (b) every statement micro edge is MARK-REVERSIBLE (ap.md §9.1): its target mark is abstract (`*` or `*∖X`), or its premise mark is concrete. Every row of §2, §1.4 and §4.1 has this form; (c) no FORWARD call binds the zero base back (§3.3); the backward binding back has the reversed zero binding `zero.* → zero.*` (ap.md §9.2); (d) every statement that touches the zero base has the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)`, and no other micro edge, no binding back and no conjunction has its target on the zero base (the only binding into the zero base is `zero.* → zero.*`, §3.1; Lean `NDZeroBase.NoZeroGen`): the read statement with a read source (§4.4), the rule statement of a call (§4.1), and the method start and the exits with their sources (§4.3, §4.7); no cleaner acts on the zero base; and no type filter is on the zero base (so a type filter on the zero base accepts the empty path, as ap.md S11 (d) asks); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit: the implementation wires code that never returns to an exit node (§4.9); (f) every sink pattern has the tail `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`) (§4.2); the backward seed of an `[any]` pattern has the tail `[any]` and is in the demand layer (W6; the backward run has no `[any-taint]`, I14, §4.9); (g) every statement micro edge and every call binding has an EXACT SHAPE (ap.md S11 (g)): by I3 only an identity keep edge carries an exclusion, so a micro edge with a `*` premise and a `$` or `[any]` target has the Empty premise exclusion, and by (a) every binding is `* → *` (`Reverse.bindRev_of_star`). Only the exactness of the reversed records (ap.md §8.7 R3) needs (g). Lean: `Reverse.BindTargetsStar`, `Backward.StmtsMarkRev`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Backward.ExitReach`, `Reverse.RevStmts`, `RevCalls`. |
+| I12 | STATIC CONSTRUCTION RULES (ap.md S12, items (a) to (g); ap.md §4.10). A STATIC POSITION is the premise path of a statement micro edge on `S`, or the path of a sink pattern on `S`, cut to at most two accessors (`[<C>, f]`, `[<C>]`, Go `[<G>]`). The interpreter makes these true. (a) A statement micro edge from `S` to `S` is an identity restriction `S.q.* →_E S.q.*` (the keep edges of a static read, of a static write and of the kill of `RemoveAllMarks`, §1.4, §2.2, §2.3) or a field-to-field edge (a pass rule between static fields, §1.4). (b) A statement micro edge from another base into `S` whose target path lies strictly above a static position has a `$` target and a `$` premise with a concrete mark: a mark on a class position, `zero.$ (zeroMark) → S.<C>.$ (T)` or `Q.$ (T') → S.<C>.$ (T)` (§1.4). A conjunctive micro edge into such a target has a `$` premise with a concrete mark for each literal (§1.4, §5.3); its result is a concrete `$` fact of this shape. This clause is argued (ap.md §11.2): `Statics.SWF` (part `write`) constrains the plain micro edges only, and the static model has no conjunction. So no rule makes a `*`, an `[any]` or an `[any-taint]` fact on a bare class position, and no pass rule reads or writes a bare class position. (c) A call binds `S` only by `S.* → S.*` (§3.1). (d) The field limit of run 1 is at least 1 and the class accessor is not counted, so a cut never stops strictly above a static position. (e) A cleaner on `S` names its mark (§1.4); `RemoveAllMarks` on a position of `S` is not a cleaner. One exception: the WHOLE-BASE CLEANER `(S, atAndBelow, all)` with the empty path (the rule position `AnyClassStatic`, §1.4, §5.2). Every fact on `S` lies inside it, so it drops the fact and never cleans a fact in part; it has the effect of the kill of a strong write of the whole base `S` (no keep edge, §2.1). (f) `S` is not the zero base. (g) The abstraction of run 1 is the policy of ap.md §6.2: run 1 serves an added fact by its root. A rule position can be deeper than a static field: below the static field the ordinary rules apply. Lean: `Statics.SWF` (its parts `ss`, `write`, `toC`, `fromC`, `cut`, `clean`, `base`, `alpha`), `Statics.PosIn`. |
 | I13 | VALIDITY (ap.md S13, §4.8). The placement of the type filters (§5.1) makes a validity predicate on locations exist with three properties: every type filter accepts every valid location of its base; the validity goes back along every statement micro edge and along every call binding, into the callee and back (a valid end location comes only from a valid start location); and it goes back from the target of a conjunctive micro edge to each literal (§5.3). A valid location is a location that every type filter accepts (ap.md §4.8). The exactness and confirmation theorems of ap.md hold only for valid end locations. Lean: `Exact.FiltValid`, `Exact.BackOK`, `NDExact.ConjOK`. |
+| I14 | THE TAINT ANNOTATION (ap.md S15, W8). The `[any]` target of a SOURCE is a MUST: every location at or below its position gets the mark. The `[any]` target of a pass rule is a MAY: the rule does not know the field (§4.1, D18). The interpreter keeps the two apart in the forward forms: a source rule whose target is `AssignMarkOnAnyAccessor` on `P` (Go `AnyAccessor`) or an `AssignMark` on `PositionWithAccess(P, AnyField)` gives the target tail `[any-taint]`: `zero.$ (zeroMark) → P.[any-taint] (T)` (unconditional), `Q.t' (T') → P.[any-taint] (T)` (conditional, `t'` of §4.2), or a conjunctive micro edge with the target `P.[any-taint] (T)` (§5.3). This holds for every source kind: at a call, at the method start, at an exit and at a read (§4.1, §4.3, §4.4, §4.7). An end-fact action applies as the target of a source (§4.1, END FACTS): an `AssignMark` gives `$`, and an `AssignMark` on `PositionWithAccess(P, AnyField)` gives `[any-taint]`, as for a source. Its target mark is concrete (the rule names it), and its premise mark is concrete (`zeroMark`, or the literal mark `T'`; I6). Its result has the Empty exclusion: only the AP rules give an exclusion to an `[any-taint]` fact (ap.md W8, §4.1). No other micro edge has the target tail `[any-taint]`: a pass rule with an `AnyField` target keeps `[any]`, and no binding has an `[any]` or an `[any-taint]` target (I11 (a)). No micro edge has the premise tail `[any-taint]`: a `ContainsMarkOnAnyField` literal gives the premise `Q.[any] (T')` (§4.2), and a pass rule with an `AnyField` premise is a rule error (§1.3, D33). The BACKWARD run has no `[any-taint]` (ap.md W8): the seed of an `[any]` sink pattern and the reversal of an `[any]` literal give the tail `[any]` (§4.9). The forward target tail tells the reversal the rule kind, so the forms need no other flag: the reversal of an edge whose forward target is `[any]` (a pass rule with an `AnyField` target, a may) gives every result in the demand layer, also a `$` result; the reversal of a source edge (the forward target `[any-taint]`, a must) follows the ordinary rows of ap.md §4.1 (§4.9). Lean: `AnyTaint.TaintEdges` (the source edges with an `[any]` target, a parameter of the runs), `AnyTaint.TaintConc` (a hypothesis of the kinds invariant of run 1 `AnyTaintExKinds.D6X_any_conc` (round 1: `AnyTaintSim.D6T_any_conc`; necessary there: `AnyTaintSim.CexKinds.cex_taintConc`)), `AnyTaint.w6t` and its form with exclusions `AnyTaintEx.w6tX` (W6 for every other `[any]` target), the vectors `AnyTaint.Sanity` and `AnyTaintEx.Vec.source_any_target`; the theorems are in ap.md §10.11. |
 
 ### 0.1 Known gaps against ap.md S1, S2 and S5
 
@@ -70,12 +73,15 @@ type filters). The interpreter does not do this at the points below (as today, e
 §6). The soundness theorems of ap.md do not cover a flow that a soundness gap loses. A precision gap adds a flow that
 does not exist in the real program. The analysis keeps this flow in the normal layer, so the exactness theorems hold
 only relative to the gap. ap.md §11.1 lists the expected false-positive sources (among them G2 for a caller-set state,
-G7, G8, G9 for the catch local, G11, and the type filter on a `*` fact).
+G7, G8, G9 for the catch local, G11, the default identity of an unresolved callee (§3.7), and the type filter on a `*`
+fact). A WEAK UPDATE (G7, G8, the default identity) keeps the old content of a forward `[any-taint]` object whole, so
+the object keeps its must claim on the overwritten location: such a false positive is a CONFIRMED entry, as for a `$`
+fact (before F69 it was a DEMAND entry; D32).
 
 | # | Gap | Where | Effect |
 |---|---|---|---|
 | G1 | No exception flow crosses a call, and a catch block does not read `exc`. Out of scope (ap.md §11.2). | §3.4 | a thrown tainted value is lost |
-| G2 | THE GLOBAL-STATE RULE: at the normal exit, for an `S` item whose premise is the zero fact (a state that the method or its callees set), the part on which a mark literal of an exit sink (plain or conjunctive) holds is dropped from the summary edge. A conjunctive exit sink keeps that part as the stored input of the literal (§5.3). A caller-set `S` fact is evaluated (it can report, D21) but not dropped: it returns to the caller through the callee summary, also the run-1 FLOW summary and its record (§3.3). Also the entry marks on zero-premise `this`/`arg` facts are removed. | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive; precision: a caller-set state passes the exit sink of a callee, so a later sink in the caller sees it, and the exit sink of the caller evaluates it again (expected false-positive sources, ap.md §11.1) |
+| G2 | THE GLOBAL-STATE RULE: at the normal exit, for an `S` item whose premise is the zero fact (a state that the method or its callees set), the part on which a mark literal of an exit sink (plain or conjunctive) holds is dropped from the summary edge. A conjunctive exit sink keeps that part as the stored input of the literal (§5.3). A caller-set `S` fact is evaluated (it can report, D21) but not dropped: it returns to the caller through the callee summary, also the run-1 FLOW summary and its record (§3.3). Also the entry marks on zero-premise `this`/`arg` facts are removed (every leaf with an entry mark, at any depth; D35). | §4.7 steps 3, 4 | premise-dependent removals, not an AP primitive; precision: a caller-set state passes the exit sink of a callee, so a later sink in the caller sees it, and the exit sink of the caller evaluates it again (expected false-positive sources, ap.md §11.1) |
 | G3 | The cleaners run before the callee body. | §4.5 step 5.1 | a sink inside the body of the cleaner method sees the cleaned fact |
 | G4 | The rules come from the method that the call names, not from the resolved override. | §3.6 | a sink or source on an override is missed |
 | G6 | The mark policy and the policy cases of the type filter. | §5.1 | they can drop a real flow (outside ap.md S5) |
@@ -135,7 +141,7 @@ coordinates of the method itself.
 | `AnyClassStatic` (JVM) | `S`, the empty path | the WHOLE STATIC BASE: only in a `RemoveAllMarks` action (§1.4, §5.2); in every other rule element (also a mark literal of a condition, negated or not, and the base of a `PositionWithAccess`) it is a rule error |
 | `PositionWithAccess(P, Field f)` | the path of `P` and `f` | |
 | `PositionWithAccess(P, Element)` | the path of `P` and `[e]` | |
-| `PositionWithAccess(P, AnyField)` | the path of `P` | sink and condition: the `[any]` pattern; source target and pass-rule target: the `[any]` tail; pass-rule source: the `[any]` premise (§4.1); cleaner: the reach (§5.2). Go: `AnyAccessor`, the same. |
+| `PositionWithAccess(P, AnyField)` | the path of `P` | sink and condition: the `[any]` pattern (also in the backward run, I14); source target: the `[any-taint]` tail (a must, forward only, I14); pass-rule target: the `[any]` tail (a may, §4.1); pass-rule source (the premise side): a rule error (below, D33); cleaner: the reach (§5.2); an action position in the summary rewriter: `atAndBelow` for a source (§5.2, D34), `below` (the row of the cleaner, as today) for a cleaner (§5.2). Go: `AnyAccessor`, the same. `AssignMarkOnAnyAccessor` on `P` is the same source target. |
 
 Two invariants hold for every rule position:
 
@@ -147,7 +153,12 @@ A rule with a position that breaks an invariant (for example `Argument(0).AnyFie
 once and gives the rule no form at any place (no sink, source, end fact, pass rule, cleaner, entry or exit rule), and
 the summary rewriter does not select it (§5.2). The check reads every position of the rule before the static
 evaluation: every action and every mark literal of the condition, a negated one too. The builder of the forms never
-fails on such a rule. One rule error does not reject: a pass rule with a mark literal is logged once and applies
+fails on such a rule. A PASS RULE WITH AN `AnyField` PREMISE (`CopyAllMarks(P.AnyField → Q)`,
+`CopyMark(T, P.AnyField → Q)`, also with an `AnyField` target; Go `CopyData`, `CopyTaintMark` with `AnyAccessor` on
+the from position) is a rule error too, with the same effect (D33). The rule reads one field that it does not know, so its result is a may,
+but a `$` result of an `[any]` premise keeps its layer (ap.md §4.1), and W6 cannot keep it out of the normal layer.
+Today's rule base has no such rule: the only `AnyField` in a pass rule is a target (Go `json.Unmarshal`,
+`arg(0) → arg(1).*`). One rule error does not reject: a pass rule with a mark literal is logged once and applies
 without its mark literals (§4.2, D24).
 
 ### 1.4 Rules on a static position (JVM)
@@ -160,7 +171,7 @@ interpreter maps a rule element on a static position as follows, so that the con
 
 | Rule element on a static position | Interpreter form | Reason |
 |---|---|---|
-| a source or pass-rule target `[any]` on a class position: `AssignMarkOnAnyAccessor` on `ClassStatic(C)`, or the target `PositionWithAccess(ClassStatic(C), AnyField)` | rule error: the interpreter rejects the rule | a static access always names a field; an `[any]` fact on a bare class lies above every static field of `C` (I12 (b); Lean `Statics.CexAny`) |
+| a source target (`[any-taint]`, I14) or a pass-rule target (`[any]`) on a class position: `AssignMarkOnAnyAccessor` on `ClassStatic(C)`, or the target `PositionWithAccess(ClassStatic(C), AnyField)` | rule error: the interpreter rejects the rule | a static access always names a field; an `[any]` or an `[any-taint]` fact on a bare class lies above every static field of `C` (I12 (b); Lean `Statics.CexAny`) |
 | `AssignMark(T)` on `ClassStatic(C)`, with no condition | `zero.$ (zeroMark) → S.<C>.$ (T)` | a concrete mark on a class position (§4.1) |
 | a conditional rule whose target is a class position (`AssignMark(T)` on `ClassStatic(C)` with a mark condition) | for each alternative of the condition (§4.2): the premise `Q.$ (T')` for each positive literal `ContainsMark(Q, T')`. An alternative with one positive literal gives the edge `Q.$ (T') → S.<C>.$ (T)` (§4.1); an alternative with two or more positive literals gives a conjunctive micro edge with the target `S.<C>.$ (T)` (an ND edge, §5.3), at a call (§4.1) and at an exit (§4.7 step 1, D31). A `ContainsMarkOnAnyField` literal in such a rule is a rule error: the interpreter rejects the rule | a write above a static position needs a `$` premise with a concrete mark (I12 (b); Lean `Statics.SWF`, part `write`); `ContainsMarkOnAnyField` gives an `[any]` premise |
 | `CopyAllMarks` or `CopyMark` FROM or TO a class position `ClassStatic(C)` (no field) | rule error: the interpreter rejects the rule | a pass rule is a handcrafted summary, and no data flows from or to a bare class |
@@ -298,6 +309,9 @@ The effect on facts (the cases of ap.md §4.2):
 | `x = y.f` | `(y, ., *, E, *)`, f ∉ E | the premise is refined by `{f}`; the abstraction emits `y.f.*` | `(y, ., *, E, *)` normal; `(x, ., [any], {}, *)` demand |
 | `x = y.f` | `(y, .f, *, E, *)` | `(x, ., *, E, *)` | the same |
 | `y.f = x` | `(y, ., *, E, *)` | `(y, ., *, E ∪ {f}, *)` and a refinement | `(y, ., *, E ∪ {f}, *)`, normal, no request |
+| `x = y.f` | `(y, ., [any-taint], E, T)`, normal, `f ∉ E` | not pinned: no `[any-taint]` today (D32) | `(y, ., [any-taint], E, T)` and `(x, ., [any-taint], {}, T)`, both normal: every location at or below `y.f` carries `T` (I2; Lean `AnyTaintEx.Vec.read_admitted`) |
+| `x = y.f` | `(y, ., [any-taint], E, T)`, normal, `f ∈ E` | not pinned (D32) | `(y, ., [any-taint], E, T)` only: no location of the fact is at or below `y.f`, so the read edge gives nothing (ap.md §4.1; `AnyTaintEx.Vec.read_excluded`) |
+| `y.f = x` | `(y, ., [any-taint], E, T)`, normal | not pinned (D32) | `(y, ., [any-taint], E ∪ {f}, T)`, normal: the keep edge `y.* →_{f} y.*` adds `f` to the exclusion (ap.md W8, §4.1; `AnyTaintEx.Vec.setter_keep`; the first F69 text demoted it to `[any]` demand, `setter_keep_base`). The exclusion is necessary: a normal `[any-taint]` result with no exclusion would claim `y.f`, which the write overwrites (`AnyTaintCases.W.keep_normal_confirms_unreal`). The value edge `x.* → y.f.*` gives the facts of `x` below `y.f` |
 
 ### 2.5 Aliases on writes
 
@@ -414,7 +428,9 @@ added fact `a` (the bound fact after the cleaners) at the callee base `P`, in ev
 caller edge `(i → c)`: in run 1 the static exception of §2.1 step 4 tests that caller edge, and a position request goes
 to the caller, on `i`:
 
-1. Default identity: `P.* → P.*`. The fact passes over the call. The summary rewriter (§5.2) applies to it (D23).
+1. Default identity: `P.* → P.*`. The fact passes over the call. The summary rewriter (§5.2) applies to it (D23). It
+   is a weak update of every callee base: an expected false-positive source (ap.md §11.1; on a forward `[any-taint]`
+   object, §0.1).
 2. Pass rules of the method that the call names (§4.1). JVM: with conditions; Go: unconditional. JVM type filters by
    the declared signature (§5.1).
 3. JVM DEFAULT GETTER RULES (the analysis option `defaultGetModel`; it is on unless the option `disableDefaultGetModel`
@@ -462,30 +478,30 @@ facts).
 
 | Kind | JVM | Go | Where | AP form |
 |---|---|---|---|---|
-| source at a call | `TaintMethodSource` | `Source` | call statement (the rule statement, below) | unconditional: `zero.$ (zeroMark) → P.$ (T)` (`AssignMark`) or `zero.$ (zeroMark) → P.[any] (T)` (`AssignMarkOnAnyAccessor`, Go `AnyAccessor`), premise mark `zeroMark`; conditional: `Q.t' (T') → P.t (T)`, with `t' = $` for `ContainsMark(Q, T')` and `t' = [any]` for `ContainsMarkOnAnyField(Q, T')` (§4.2), and the target tail `t` (`$` or `[any]`) as above; a conjunction over several facts: §5.3 |
-| entry-point source | `TaintEntryPointSource` | none | method start, zero | `zero.$ (zeroMark) → P.$ (T)`; the condition must be true |
+| source at a call | `TaintMethodSource` | `Source` | call statement (the rule statement, below) | unconditional: `zero.$ (zeroMark) → P.$ (T)` (`AssignMark`) or `zero.$ (zeroMark) → P.[any-taint] (T)` (`AssignMarkOnAnyAccessor`, Go `AnyAccessor`, or `AssignMark` on `PositionWithAccess(P, AnyField)`: a must, I14), premise mark `zeroMark`; conditional: `Q.t' (T') → P.t (T)`, with `t' = $` for `ContainsMark(Q, T')` and `t' = [any]` for `ContainsMarkOnAnyField(Q, T')` (§4.2), and the target tail `t` (`$` or `[any-taint]`) as above; a conjunction over several facts: §5.3 |
+| entry-point source | `TaintEntryPointSource` | none | method start, zero | `zero.$ (zeroMark) → P.$ (T)`, or `zero.$ (zeroMark) → P.[any-taint] (T)` for an `AnyField` target (I14; for example the field taint that the Spring rule provider adds to a DTO argument, `SpringRuleProvider.kt:61-76`); the condition must be true |
 | exit source | `TaintMethodExitSource` | none | every exit (normal and exceptional, §4.7) | as a source at a call, in the coordinates of the method; a conjunction over several facts is an ND edge at the exit (§4.7 step 1, §5.3; D31), not a rule error |
-| read source | `TaintStaticFieldSource` at `x = C.s` | `FieldReadSource` at `x = y.f`, `GlobalReadSource` at `x = G` | the read statement, zero | `zero.$ (zeroMark) → x.$ (T)`; the condition must be true (§4.4) |
+| read source | `TaintStaticFieldSource` at `x = C.s` | `FieldReadSource` at `x = y.f`, `GlobalReadSource` at `x = G` | the read statement, zero | `zero.$ (zeroMark) → x.$ (T)`, or `zero.$ (zeroMark) → x.[any-taint] (T)` for an `AnyField` target (I14); the condition must be true (§4.4) |
 | sink at a call | `TaintMethodSink` | `Sink` | call statement | the sink check (ap.md §4.9); its end facts (below) |
 | entry sink | `TaintMethodEntrySink` | none | method start, zero | unconditional only (as today); its end facts |
 | exit sink | `TaintMethodExitSink` | none | every exit (normal and exceptional, §4.7) | the sink check (ap.md §4.9); its end facts |
 | pass rule | `CopyAllMarks`, `CopyMark` | `CopyData`, `CopyTaintMark` | unresolved call | `CopyAllMarks(P → Q)`: `b.* → b.*` (`b` = the base of `P`), `P.* → Q.*`; `CopyMark(T, P → Q)`: `b.* → b.*`, `P.$ (T) → Q.$ (T)`; with `AnyField` positions: the next table |
 | cleaner | `RemoveMark(T, P, reach)`, `RemoveAllMarks(P)` | `RemoveMark`, `RemoveAllMarks` | call statement | `clean` (§5.2) |
-| summary rewriter | user-defined source rules whose condition is not statically false, and unconditional user-defined cleaner rules (§5.2) | the same | call statement | `clean(P, exact, T)` on the summary results (§5.2) |
+| summary rewriter | user-defined source rules whose condition is not statically false, and unconditional user-defined cleaner rules (§5.2) | the same | call statement | `clean(P, exact, T)` on the summary results; an `AnyField` action position: `(P, atAndBelow, T)` for a source (D34), `(P, below, T)` for a cleaner (§5.2) |
 
 A rule position on `S` follows §1.4 first.
 
-Pass rules with an `AnyField` position (`PositionWithAccess(P, AnyField)`, Go `AnyAccessor`). The field that the rule
-skips is not known, so the result is uncorrelated: the target tail is `[any]`. Under W6 every result of such an edge is
-in the demand layer (ap.md §2.3), as for an `[any]`-target source.
+Pass rules with an `AnyField` TARGET (`PositionWithAccess(Q, AnyField)`, Go `AnyAccessor`). The field that the rule
+writes is not known, so the result is uncorrelated: the target tail is `[any]`. This target is a MAY (D18). Under W6
+every result of such an edge is in the demand layer (ap.md §2.3; Lean `AnyTaint.w6t`), and in the backward run every
+result of its reversal is in the demand layer, also a `$` result (§4.9). A source is different: its `AnyField` target
+is a MUST with the tail `[any-taint]`, and its results keep their layer (ap.md W8; I14, D32). A pass rule with an
+`AnyField` position on its premise side is a rule error (§1.3, D33), so it has no row here.
 
 | Pass rule | AP form (with `b.* → b.*`, `b` = the base of `P`) |
 |---|---|
-| `CopyAllMarks(P.AnyField → Q)`, `CopyAllMarks(P.AnyField → Q.AnyField)` | `P.[any] → Q.[any]` |
 | `CopyAllMarks(P → Q.AnyField)` | `P.* → Q.[any]` |
-| `CopyMark(T, P.AnyField → Q)` | `P.[any] (T) → Q.$ (T)` |
 | `CopyMark(T, P → Q.AnyField)` | `P.$ (T) → Q.[any] (T)` |
-| `CopyMark(T, P.AnyField → Q.AnyField)` | `P.[any] (T) → Q.[any] (T)` |
 
 THE RULE STATEMENT OF A CALL. The source rules of a call statement form a CALL STAGE of their own, beside the bindings
 (the sources stage, analyzer-core.md §4.5). A call stage gives only the results of its edges: a fact on a base that no
@@ -504,7 +520,7 @@ the position request goes to the caller, on `i`.
 
 END FACTS. A sink rule can have end-fact actions (`trackFactsReachAnalysisEnd`: a list of `AssignMark(T, P)`). When the
 sink triggers, the interpreter applies these actions as the targets of a source: each action gives the zero-to-fact edge
-`Zero → (sink statement, P.$ (T))`, in the layer of the sink edge (or of the combination, below). At a call it goes to
+`Zero → (sink statement, P.$ (T))`, or `P.[any-taint] (T)` for an `AnyField` position (I14), in the layer of the sink edge (or of the combination, below). At a call it goes to
 the caller through the binding
 back and the aliases (AC3); at a method start or at the exit it joins the facts there (§4.3, §4.7). The field limit
 applies to it in each case (I10).
@@ -531,8 +547,12 @@ report holds is in the output, also one whose end facts never reach the end of t
   `ContainsMarkOnAnyField(P, T)` is the pattern `(P, [any], T)`. For a source, a literal is the premise
   of a micro edge: `ContainsMark(Q, T')` gives the premise `Q.$ (T')`, and `ContainsMarkOnAnyField(Q, T')` gives the
   premise `Q.[any] (T')`. An `[any]` premise covers every fact at or below `Q`; a fact above `Q` also applies, with a
-  demand-layer result (I2, ap.md §4.1). Both premises have a concrete mark, so S8 and I7 hold. A literal of a
-  conjunction has the same two forms (ap.md §4.6).
+  demand-layer result (I2, ap.md §4.1; a forward `[any-taint]` fact keeps its layer if its exclusion admits the step
+  down to `Q`, I2). Both premises have a concrete mark, so S8 and I7 hold. A literal of a conjunction has the same two
+  forms (ap.md §4.6). The reversal of an `[any]` literal (§4.9) gives the requirement `Q.[any] (T')` in the demand
+  layer (W6), and the seed of an `[any]` sink pattern has the tail `[any]` too: the backward run has no `[any-taint]`
+  (I14). The sink check reads a forward `[any-taint]` fact as an `[any]` fact with no location in its excluded part
+  (ap.md §4.9; Lean `AnyTaintEx.checkX`, the vectors `AnyTaintEx.Vec.check_vectors`).
 * ARRAY ELEMENTS OF A CALL SINK (JVM, as today). For a sink at a call, a positive literal on an argument position
   `arg(i)·ρ` whose argument may be an array is the disjunction of the patterns `(arg(i), ρ, t, T)` and
   `(arg(i), [e]·ρ, t, T)`. The argument may be an array if `typeMayBeArray` (§5.1) holds for the static type of the
@@ -544,18 +564,21 @@ report holds is in the output, also one whose end facts never reach the end of t
   one alternative per literal. A conjunction of literals that different facts satisfy (a positive literal on another
   position): a source, at a call or at an exit, makes an ND edge (§5.3, §4.7 step 1); a sink is a CONJUNCTIVE SINK
   (ap.md §4.9, §5.3). The interpreter sets no layer. The layer of a result belongs to the propagation edge, and only
-  the AP operations change it (ap.md §2.2): a fact that only overlaps a literal gives a demand-layer result (ap.md
-  §4.1, §4.6). A negated literal that counts as true is the expected over-approximation of a path-insensitive engine,
-  as the conjunction is (the reference semantics of rules, ap.md §3.5; ap.md §4.6, §11.1).
+  the AP operations change it (ap.md §2.2): a fact that only overlaps a literal gives a demand-layer result, but a
+  normal `[any-taint]` fact keeps its layer (ap.md §4.1, §4.6; I2). An `[any-taint]` fact overlaps a literal only in
+  the locations that its exclusion admits (ap.md §4.6). A negated literal that counts as true is the expected
+  over-approximation of a path-insensitive engine, as the conjunction is (the reference semantics of rules, ap.md
+  §3.5; ap.md §4.6, §11.1).
 * THE SINK ALTERNATIVES. The interpreter numbers the alternatives of one sink rule at one place (each one disjunct of
   the condition with one choice of the array patterns) in a fixed order. The number is the SINK ALTERNATIVE of ap.md
   §1. It is the same in every run and in every context (I5). The vulnerability store keeps the witnesses of two
   alternatives apart, and the conjunction store keeps their literals apart (ap.md §8.9, §8.10).
 * A PASS RULE (`CopyAllMarks`, `CopyMark`) has no mark-dependent condition: after the static evaluation of the non-mark
   atoms, its condition has no mark literal. The copied mark of `CopyMark(T, P → Q)` is not a condition: it is the
-  premise `P.t (T)` of the pass edge (§4.1). A pass rule is a handcrafted summary of an unresolved callee, and a mark
-  literal has no exact form for it: `CopyAllMarks` has the target mark `*`, so a concrete premise mark would make an
-  edge that is not mark-reversible (I11 (b)), and an ND edge needs a concrete target mark (ap.md W7). The interpreter
+  premise `P.$ (T)` of the pass edge (§4.1; an `AnyField` premise is a rule error, D33). A pass rule is a handcrafted
+  summary of an unresolved callee, and a mark literal has no exact form for it: `CopyAllMarks` has the target mark
+  `*`, so a concrete premise mark would make an edge that is not mark-reversible (I11 (b)), and an ND edge needs a
+  concrete target mark (ap.md W7). The interpreter
   reports a pass rule with a mark literal as a rule error, logged once and not rejected (§1.3), and applies it without
   its mark literals (it fires more; this is sound, but not precise: gap G11). So a pass rule never makes an ND edge.
 * For a CLEANER the safe direction is the opposite: a cleaner that fires removes real taint. So the interpreter applies
@@ -587,7 +610,8 @@ report holds is in the output, also one whose end facts never reach the end of t
 THE RULE STATEMENT OF THE METHOD START (JVM; STATEMENT mode, analyzer-core.md §4.9). It touches the zero base, with the
 keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)` (I11 (d)), and each base `b` with a context filter (§5.1, row
 "method start"), with the identity edge `b.* → b.*` and that filter as its operand filter. Its other edges are the
-entry-point sources `zero.$ (zeroMark) → P.$ (T)`. A source target is a gen-only target (not touched, as in A3). So an
+entry-point sources `zero.$ (zeroMark) → P.$ (T)`, and `zero.$ (zeroMark) → P.[any-taint] (T)` for an `AnyField`
+target (I14). A source target is a gen-only target (not touched, as in A3). So an
 initial fact passes unchanged, or passes its context filter. The filter reads the context of the method key, so the
 entry rules are per method key (analyzer-core.md §4.8).
 
@@ -669,7 +693,8 @@ this double report is accepted.
 
 1. The worklist is `f` and the results of the exit sources whose condition `f` satisfies, after the field limit (ap.md
    §4.4). The results of a plain exit source keep the premise of `f`. A CONJUNCTIVE EXIT SOURCE (an alternative of its
-   condition with two or more positive literals) is an ND edge at the exit, as at a call (§5.3; D31): each literal
+   condition with two or more positive literals) is an ND edge at the exit, as at a call (§5.3; D31). Its target tail is
+   `$`, or `[any-taint]` for an `AnyField` target (I14). Each literal
    stores its input in the conjunction store of the method key (per conjunctive micro edge, exit statement and literal
    index; ap.md §8.9). A full combination joins the worklist as an item with the union of the premise sets (§5.3),
    after the field limit. It goes through steps 2 to 5 as every item, so at the normal exit it becomes a summary, an
@@ -691,7 +716,12 @@ this double report is accepted.
    mark on a synthetic class position (§1.4); the exit sink of the method that sets it, or of a caller of that method,
    consumes it. This is gap G2.
 4. For a zero-premise fact on `this` or `arg(i)`: remove the entry marks (§4.3), so that an entry-point source does not
-   leak into the callers (gap G2).
+   leak into the callers (gap G2). The removal reads the MARK: it removes EVERY LEAF WITH AN ENTRY MARK, AT ANY
+   DEPTH, with both tails: a `$` leaf `(b, p, $, m)` for every path `p`, and an `[any-taint]` leaf
+   `(b, p, [any-taint], E, m)` with its exclusion (for example the leaf that the `AnyField` entry-point source of a
+   Spring DTO argument made, §4.1). The other leaves of the fact stay. Today `TaintMarkRemover`
+   (`JIRMethodSequentFlowFunction.kt:301-314`) removes only the `$` leaf `(b, [], $, m)` at the root path: deviation
+   D35.
 5. Emit the summary edge. Not at the exceptional exit (its facts end there); not for a `local` base.
 
 Go has no exit rules. The summary edge is the fact after each `return`, for a base that is not a `local`.
@@ -731,14 +761,20 @@ RULE ROLES (ap.md §9.2 gives the AP rules):
 
 | Forward rule | Backward role |
 |---|---|
-| source (at a call, entry-point, exit, read), end-fact action | its reversed edge: a requirement on its target continues to the zero fact (unconditional source: the zero demand of ap.md §9.2) or to its read position (conditional source). When the reversed edge of an unconditional source applies, the backward run records a SOURCE HIT: a source seed of the next forward run (ap.md §8.11, §9.2). The backward run has no sink check, so a forward source is not a backward sink (ap.md §9.2). |
-| sink (at a call, entry, exit) of a vulnerability that the previous forward run reported | a SEED (below). A sink with several positive literals seeds one requirement per literal. A sink with no positive literal seeds no requirement: the zero demand covers its witness. |
+| source (at a call, entry-point, exit, read), end-fact action | its reversed edge: a requirement on its target continues to the zero fact (unconditional source: the zero demand of ap.md §9.2) or to its read position (conditional source). The reversed `[any]` literal of a conditional source (also of a conjunctive source, §5.3) gives the requirement `Q.[any] (T')` in the demand layer (W6): `Q.[any] (T') → P.t (T)` reverses to `P.t (T) → Q.[any] (T')`. A source target `P.[any-taint] (T)` is the reversed premise `P.[any] (T)` (the backward run has no `[any-taint]`, I14). The source is a must, so the results of its reversed edge follow the ordinary rows of ap.md §4.1: a requirement at or below `P` continues in its layer. When the reversed edge of an unconditional source applies, the backward run records a SOURCE HIT: a source seed of the next forward run (ap.md §8.11, §9.2). The backward run has no sink check, so a forward source is not a backward sink (ap.md §9.2). |
+| sink (at a call, entry, exit) of a vulnerability that the previous forward run reported | a SEED (below). A sink with several positive literals seeds one requirement per literal. A sink with no positive literal seeds no requirement: the zero demand covers its witness. The seed of an `[any]` pattern (`ContainsMarkOnAnyField`) has the tail `[any]` and is in the demand layer (W6; I14). |
 | other sinks | none |
-| pass rule, default getter rule | its reversed edges (from and to swapped) |
+| pass rule, default getter rule | its reversed edges (from and to swapped). The `AnyField` target of a pass rule (a may, D18) is the reversed premise `Q.[any]`. EVERY result of such a reversed edge is in the demand layer, also a `$` result: the forward target `[any]` tells it (I14; the backward W6, argued, ap.md §11.2). So no backward summary through it is a record. (An `AnyField` premise is a rule error, D33.) |
 | cleaner (an unconditional cleaner, §4.2, also the whole-base cleaner of `AnyClassStatic`, §1.4), summary rewriter | the same cleaner: a cleaner is its own reversal (ap.md §9.2) |
 | the `RemoveAllMarks` kill on `S` (§1.4) | the same keep edges: the reversal of a keep edge is the same edge (ap.md §9.2); at the place of the reversed cleaners (step 6 below) |
 | the global-state rule and the removal of the entry marks (G2) | none |
 | type filter, mark policy | none |
+
+THE ANY TAILS IN THE BACKWARD RUN (ap.md W8, §9.2). The backward run has no `[any-taint]`: every backward premise,
+requirement and pattern with an any tail has the tail `[any]`, and W6 puts every `[any]` result in the demand layer, as
+before F69 (argued, ap.md §11.2). The interpreter gives only the forward forms (I14). The reversal reads the forward
+target tail of each edge (the rule roles above): a forward `[any]` target (a may) gives demand results, a forward
+`[any-taint]` target (a must) gives the results of the ordinary rows.
 
 CALL ORDER (the mirror of §4.5). For a requirement `c` after the call statement `s`:
 
@@ -778,9 +814,11 @@ the zero fact reaches every node on a CFG path from the method entry (the backwa
 
 SEEDS. The seed of a reported vulnerability is the zero-to-fact edge `Zero → (sink statement, requirement)` where the
 zero fact reaches the sink statement (ap.md §9.2). The requirement is the sink pattern, cut by the field limit of the
-backward run (ap.md §4.4; Lean `Backward.DB`, rule `seed`). At a sink call the seed enters AFTER the reversed cleaners
-of that call (step 7), at the bound positions, and goes on through the reversed binding in. This mirrors §4.5, where
-the sink check (step 3) comes before the cleaners (step 5.1). So a method that is both a sink and a cleaner of the same
+backward run (ap.md §4.4; Lean `Backward.DB`, rule `seed`). For an `[any]` pattern the requirement has the tail
+`[any]` and is in the demand layer (W6; the backward run has no `[any-taint]`, I14). At a sink call the seed enters
+AFTER the reversed cleaners of that call (step 7), at the bound positions, and goes on through the reversed binding
+in. This mirrors §4.5, where the sink check (step 3) comes before the cleaners (step 5.1). So a method that is both a
+sink and a cleaner of the same
 mark does not kill its own seed. The seed of an exit sink enters at the forward exit (normal or exceptional) where the sink is (§4.7). There it takes
 the reversed exit sources of that exit, as the start fact does: forward, the exit sources (§4.7 step 1) come before the
 exit sinks (step 2), so an exit sink can read the result of an exit source. A source hit there is recorded (§4.9 RULE
@@ -842,10 +880,12 @@ fun isPrimitiveTracking(mark: TaintMark): Boolean = mark.name.endsWith("%%primit
 
 Rules:
 
-* The filter tests only the concrete path: a fact passes if `may(t, f.path)`. The `*` and `[any]` tails are always
-  kept; the filter never changes a tail. The analysis does not store a filter in a fact or an edge, and it does not
-  propagate it (ap.md §4.8). So a `*` or `[any]` fact keeps the locations below its path that `t` cannot have: an
-  expected false-positive source (ap.md §11.1).
+* The filter tests only the concrete path: a fact passes if `may(t, f.path)`. The `*`, `[any]` and `[any-taint]` tails
+  are always kept; the filter never changes a tail or the exclusion of an `[any-taint]` fact. The analysis does not
+  store a filter in a fact or an edge, and it
+  does not propagate it (ap.md §4.8). So a `*`, `[any]` or `[any-taint]` fact keeps the locations below its path that
+  `t` cannot have: an expected false-positive source (ap.md §11.1). Such a location is not valid (I13), so the
+  exactness and the confirmation of an `[any-taint]` edge do not read it.
 * Policy cases are outside ap.md S5 (they can drop a real flow), as today: the mark policy above; `[e]` on a class type
   other than `Object` (for example `Cloneable`, `Serializable`). The mark policy is not a
   type filter: it reads the mark, not only the path, and the model has no mark filter. It is gap G6.
@@ -890,6 +930,25 @@ a static position follows §1.4 first.
 | Go `RemoveMark(T, P)`, `RemoveAllMarks(P)` | as the JVM `Exact` rows | P with `AnyAccessor` maps to `below` |
 | JVM position of type `String` | also `(P.<string-bytes>, same reach, same mark)` | as today |
 
+ON AN `[any-taint]` FACT the cleaner compares the locations as for an `[any]` fact, with no location in the excluded
+part (ap.md §4.7, `cleanPos`). For the forward fact `(x, p, [any-taint], E, T)` and a cleaner of `T` (or of all marks),
+with `P = x.p`:
+
+* at `P` itself: `(P, below, ·)` (the `AnyField` rows) keeps `(x, p, $, T)` in the layer of the fact;
+  `(P, atAndBelow, ·)` drops the fact; `(P, exact, ·)` gives a `part` result;
+* one accessor below, at `P.f` with `f ∉ E`: `(P.f, atAndBelow, ·)` gives `(x, p, [any-taint], E ∪ {f}, T)` in the
+  layer of the fact; `(P.f, below, ·)` gives the same fact and also `(x, p.f, $, T)`, in the layer of the fact;
+  `(P.f, exact, ·)` gives a `part` result;
+* a cleaner whose path goes through an excluded accessor (`P.f` or deeper, with `f ∈ E`) cleans no location of the
+  fact: the fact passes;
+* every other cleaner strictly below `x.p` gives a `part` result.
+
+Each `part` result of this list goes to the demand layer with the tail `[any]` and no exclusion (ap.md §4.7, W8): this
+loses precision (no fact shape has "every location except one", ap.md §11.1). Lean: `AnyTaintEx.cleanResX`, the vectors
+`AnyTaintEx.Vec.clean_atAndBelow`, `clean_below`, `clean_exact`, `clean_excluded`, `below_new_fact` (the `below` row
+gives the fact `(x, p.f, $, T)`, which the cleaner without exclusions does not give), and the program
+`AnyTaintExCases.CL` (`CL.atAndBelow_result`, `CL.below_result`, `CL.exact_result`).
+
 The non-mark atoms of a cleaner condition are evaluated statically (§4.2). Only an unconditional cleaner acts. A
 cleaner with a mark literal in its condition does not act and raises no request.
 
@@ -915,9 +974,13 @@ A rule that a rule error rejected (§1.3) is never selected.
 
 For each selected rule, each relevant mark `T` of the rule and each action position `P` of the rule (a source: the
 positions of its `AssignMark` actions; a cleaner: the positions of its `RemoveMark` actions), the rewriter applies
-`clean(P, exact, T)`, chained (§4.8). The rewriter is an override by design, not a cleaner placement: D20 does not
-govern it. A conditional user-defined cleaner does not act through the rewriter, as it does not act at the call (§4.2,
-D20). The rewriter applies to every summary result and to every unresolved result, also to a zero-premise summary
+`clean(P, exact, T)`, chained (§4.8). An `AnyField` ACTION POSITION OF A SOURCE (`AssignMarkOnAnyAccessor` on `P`, or
+`AssignMark` on `PositionWithAccess(P, AnyField)`; Go `AnyAccessor`) gives `clean(P, atAndBelow, T)` instead (D34):
+the source marks every location at or below `P` (a must, I14), so these locations are its rule positions. An
+`AnyField` action position of a CLEANER (`RemoveMark(T, P.AnyField, …)`) takes the cleaner of its row in the table above,
+`(P, below, T)`, as today (`JIRMethodCallRuleBasedSummaryRewriter.kt:105`). The
+rewriter is an override by design, not a cleaner placement: D20 does not govern it. A conditional user-defined
+cleaner does not act through the rewriter, as it does not act at the call (§4.2, D20). The rewriter applies to every summary result and to every unresolved result, also to a zero-premise summary
 result and to the default identity (D23). A summary result is a caller edge, so a request of the rewriter goes to the
 CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (open question Q1).
 
@@ -930,9 +993,15 @@ CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (op
   the zero fact, every member has a concrete mark, and the conclusion has a concrete mark.
 * Every literal names its mark, so it has a concrete mark (ap.md S9). Its tail is `$` (`ContainsMark`) or `[any]`
   (`ContainsMarkOnAnyField`) (§4.2). ap.md §4.6 sets the layer of the result: normal if every input is normal and
-  covered by its literal. A normal result is exact against the path-insensitive support semantics, under ap.md S7,
-  S9, S10 and S13 (ap.md §4.6; `NDExact.nd_edge_exact`, the valid form `nd_edge_exact_valid`). The target of a
-  conjunctive micro edge has a concrete mark and no `*` tail (ap.md S10, W7), and it is not on the zero base (I11 (d)).
+  covered by its literal. A normal `[any-taint]` input that only overlaps its literal also gives a normal result:
+  every location of it carries the mark, so the literal holds (ap.md §4.6; Lean `AnyTaintND.conjLayerT`, `lit_loc`).
+  The overlap reads the exclusion of the input: an input whose exclusion removes every common location does not
+  overlap the literal, so it stores nothing (ap.md §4.6). A normal result is exact against the path-insensitive
+  support semantics, under ap.md S7, S9, S10 and S13 (ap.md §4.6; `NDExact.nd_edge_exact`, the valid form
+  `nd_edge_exact_valid`; with `[any-taint]` inputs: ap.md §10.11. The conjunction model `AnyTaintND.DNzT` has no W6T
+  and no exclusion: these two parts are argued, ap.md §11.2). The target of a conjunctive micro edge has a concrete
+  mark and no `*` tail (ap.md S10, W7), and it is not on the zero base (I11 (d)). Its tail is `$`, or `[any-taint]` for
+  an `AnyField` source target (I14); it is never `[any]`, because a pass rule makes no conjunction (§4.2).
 * A fact that overlaps a literal and passes its mark gate (ap.md §4.6) is an assumption for (conjunctive micro edge
   or sink alternative, statement, literal index), as today. The key names one alternative of the condition (§4.2), so
   the literals of two alternatives of one rule never combine. The interpreter stores the assumption in the conjunction
@@ -951,7 +1020,8 @@ CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (op
   ap.md §4.6 and §8.9 define how the caller finds the links for the other premises (event E6 of ap.md §5.3).
 * Sinks and the zero-to-zero step never make an ND edge (a conjunctive sink makes a vulnerability, not an edge). A
   conjunctive exit source makes one, as a conjunctive source at a call does (§4.7 step 1, D31).
-* The backward run reverses a conjunctive edge into one plain edge per literal (§4.9).
+* The backward run reverses a conjunctive edge into one plain edge per literal (§4.9). An `[any]` literal gives a
+  requirement with the tail `[any]`, in the demand layer (W6; the backward run has no `[any-taint]`, I14).
 
 ### 5.4 Requests
 
@@ -986,7 +1056,7 @@ The columns "Today" use today's notation (§0).
 |---|---|---|---|---|
 | D1 | read `x = y.f` | `y\{f} → y`, `y.f → y.f`, `y.f → x` (keep-except) | `y.* → y.*`, `y.f.* → x.*` | a read never changes an exclusion (I3) |
 | D2 | self read `x = x.f` | `x\{f} → null` (refine only), `x.f → x` | `x.f.* → x.*` | no refinement |
-| D3 | a fact above a micro-edge premise | the premise is refined (`SideEffectRequirement`, `refineInitial`) | unguarded `concat`: an `[any]` result in the demand layer | no refinement (I2) |
+| D3 | a fact above a micro-edge premise | the premise is refined (`SideEffectRequirement`, `refineInitial`) | unguarded `concat`: an `[any]` result in the demand layer (an `[any-taint]` fact keeps its layer, I2) | no refinement (I2) |
 | D4 | mark readers at sinks, sources, cleaners, exits | `FactReader` refinement, any-field unfold requests | the request, run 1 only (§5.4) | ap.md §4.5 |
 | D5 | summary application | delta with refinement (`tryApplySummaryEdge`) | guarded by satisfaction | ap.md §4.3 |
 | D6 | call bindings | rebase functions (`mapMethodCallToStartFlowFact`, `mapMethodExitToReturnFlowFact`) | binding micro edges (§3.1) | one operation for every flow (I4); same mapping |
@@ -995,12 +1065,12 @@ The columns "Today" use today's notation (§0).
 | D9 | reach `ExactAndAnyField` | cleans only through an `[any]` at the position | `atAndBelow` | `[any]` means "any continuation" in the new AP. The cleaner removes a mark only from a fact that lies inside the cleaned locations (ap.md §4.7), so it over-approximates |
 | D10 | `RemoveAllMarks(P.AnyField)` | removes only an `[any]` child | `(P, below, all)` | the same meaning of `[any]` |
 | D11 | type filter form | `FactTypeChecker` over the tree (Accept, Reject, FilterNext) | `filter(base, may)`, prefix-closed, tails kept, a separate mark policy | the ap.md §4.8 primitive; same predicate |
-| D12 | `[any]` fact with a primitive-tracking mark on a primitive base | kept as `$` | kept as `[any]` | the filter never changes a tail (precision only) |
+| D12 | `[any]` or `[any-taint]` fact with a primitive-tracking mark on a primitive base | kept as `$` | kept with its tail (`[any]` or `[any-taint]`) | the filter never changes a tail (precision only: the locations below a primitive value are not valid, I13) |
 | D13 | filter of the caller content under `*` in the summary application | `AccessTree.concat` filters by the path type | none | the filter acts on bases at fixed points; precision only (Q3) |
 | D14 | exit compatibility filter (`JIRMethodSummaryEdgeProcessor`) | removes `*` at incompatible fields | none | the same (Q3) |
 | D16 | depth gate, `[any]` depth charge in the step | `INITIAL_ALLOWED_FACT_DEPTH`, `+10,000` | the field limit only | ap.md §4.4 |
-| D17 | rules on a static position (JVM) | applied as written | the mapping of §1.4: an `[any]` target on a class position, a pass rule from or to a class position, a `ContainsMarkOnAnyField` literal in a rule with a class target, and `RemoveAllMarks(P.AnyField)` on `S` are rule errors; `RemoveAllMarks` on a class, a static field or deeper is the kill of a strong write; `RemoveAllMarks(AnyClassStatic)` is the whole-base cleaner (D27); `AnyClassStatic` in another rule element is a rule error | a static access always names a field, a pass rule is a handcrafted summary, and the construction rules of I12 must hold |
-| D18 | pass rule with an `AnyField` position | the content below the any-field node of `P` is copied below `Q` | an `[any]` premise or target (§4.1): an uncorrelated result in the demand layer (W6) | the field that the rule skips is not known, so a correlated edge does not cover the flow; precision only |
+| D17 | rules on a static position (JVM) | applied as written | the mapping of §1.4: an `[any]` or `[any-taint]` target on a class position, a pass rule from or to a class position, a `ContainsMarkOnAnyField` literal in a rule with a class target, and `RemoveAllMarks(P.AnyField)` on `S` are rule errors; `RemoveAllMarks` on a class, a static field or deeper is the kill of a strong write; `RemoveAllMarks(AnyClassStatic)` is the whole-base cleaner (D27); `AnyClassStatic` in another rule element is a rule error | a static access always names a field, a pass rule is a handcrafted summary, and the construction rules of I12 must hold |
+| D18 | pass rule with an `AnyField` position | the content below the any-field node of `P` is copied below `Q` | an `AnyField` target (`CopyAllMarks(P → Q.AnyField)`, `CopyMark(T, P → Q.AnyField)`): the `[any]` target (§4.1), a MAY: an uncorrelated result in the demand layer (W6); in the backward run every result of its reversal is in the demand layer, also a `$` result (§4.9). It is not the `[any-taint]` target of a source (I14, D32). An `AnyField` position on the premise side: a rule error (D33) | the field that the rule writes is not known, so a correlated edge does not cover the flow; precision only |
 | D19 | a `Lambda` result of the call resolver (§3.9) | a resolution failure (the unresolved path) beside the lambda methods (`JIRMethodCallResolver.kt:184-209`) | the lambda methods of the prescan only; a resolution failure only if the prescan knows no lambda | the prescan resolves every lambda before run 1 (analyzer-core.md §9); fewer findings are possible (user decision, 2026-10-07) |
 | D20 | a cleaner with a mark literal in its condition (§4.2) | the condition is evaluated on the fact (`TaintFactAwareConditionEvaluator`): a negated literal counts as true, and a literal can hold on the cleaned fact | the cleaner does not act | only an unconditional cleaner is sound for a fact-local engine; more findings are possible (user decision, 2026-10-07) |
 | D21 | exit sinks (§4.7) | the production rule provider applies them only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`) | every fact at the exit | the sink check of ap.md §4.9 on every fact; more findings are possible (user decision, 2026-10-07) |
@@ -1014,13 +1084,18 @@ The columns "Today" use today's notation (§0).
 | D29 | a rule position with an inner or a repeated `AnyField` (§1.3) | handled by the fact readers (`FactReaderUtils.kt:54-138`) | a rule error: the interpreter rejects the whole rule (no form at any place, and the rewriter does not select it, §1.3, §5.2) and logs it once | `[any]` is a tail only (ap.md W4); fewer findings are possible (`ap-history.md` F67) |
 | D30 | the global-state rule (§4.7 step 3, G2) | the exit sinks run only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`); the evaluated `S` facts of a REACHED exit sink are dropped (`JIRSequentTaintUtil.kt:76-85`, `JIRMethodSequentFlowFunction.kt:186-188`) | for an item whose premise is the zero fact, the evaluated `S` part goes also when a conjunctive exit sink is not complete, and stays the stored input of its literal; a caller-set `S` fact is evaluated (D21) but not dropped: it returns to the caller through the callee summary | `ap-history.md` F67 (5), F68 (3); fewer facts in the callers of the method that sets the state; the FP shapes of a caller-set state: G2 |
 | D31 | an exit source with two or more positive literals in one alternative of its condition (§4.7 step 1, §5.3) | evaluated fact-locally from stored assumptions with an empty precondition (`JIRMethodSequentFlowFunction.kt:211-219`, `TaintUtil.kt:97-104, 203-207`): it fires under the premise of the fact that completes the combination | an ND edge at the exit, as at a call: each literal stores its input; a full combination is an exit item with the union of the premise sets, and at the normal exit an ND summary (E6); not a rule error | the correct premise set (today the result belongs to one fact); the findings of today stay (`ap-history.md` F68 (4)) |
+| D32 | a source with an `AnyField` target (§4.1, I14): `AssignMarkOnAnyAccessor` (Go `AnyAccessor`), or `AssignMark` on `PositionWithAccess(P, AnyField)` (for example the DTO argument of a Spring entry point, `SpringRuleProvider.kt:61-76`); at a call, at the method start, at an exit or at a read, plain or conjunctive | the source makes a fact with an `[any]` accessor below `P` (`Source.kt:26`). In the new AP before F69 this fact had the `[any]` tail, so W6 put every result of it in the demand layer: a vulnerability whose taint came only from it was never confirmed (a DEMAND entry) | the target tail `[any-taint]`, a MUST, in the forward runs only (ap.md W8). Its results keep their layer, so a normal edge with it is complete, and such a vulnerability can be CONFIRMED: in run 1 when the sink reads the tainted object in the method of the source (`AnyTaintExCases2.PassRule.source_confirmed`), or after a callee whose FLOW summary keeps the whole object (program I, ap.md §6.2; `AnyTaintExCases2.I.run1_confirmed`); in a restricted run through a getter (program G, `AnyTaintExCases2.G.run3_confirmed`) and with the sink in the callee (program C, `AnyTaintExCases2.C.run3_confirmed`). These results are of the spec closures `AnyTaintEx.D6X` and `DRXs` (the round-1 results of the same programs, in `AnyTaintCases`, are of `AnyTaint.D6T` and `DRT`). A strong write into the object keeps it exact with an EXCLUSION: after the setter `dto.setName(c)` the object is `(dto, ., [any-taint], {name}, T)`, normal, so `sink(dto.name)` is not reported and `sink(dto.email)` is CONFIRMED in run 1 (§2.4; program S, `AnyTaintExCases.S.run1_dto_ann`, `S.run1_name_not_reported`, `S.run1_email_confirmed`). A read through an excluded accessor gives nothing (program R), and the cleaners `atAndBelow` and `below` one accessor below the object add the accessor to the exclusion (§5.2; program CL). Only these operations make it `[any]` in the demand layer, with no exclusion (ap.md §2.2): the field-limit cut (`AnyTaintExCases.CUT.cut_reports`); a cleaner `part` row other than the `atAndBelow` and `below` rows one accessor below the object, that is the `exact` cleaner at the path of the object or below it, and every cleaner two or more accessors below it (a cleaner whose path goes through an excluded accessor cleans nothing; §5.2; `CL.exact_result`); a may target (the `[any]` target of a pass rule, D18); a demand input (a demand fact, summary or record); and the must-record demotion (ap.md §4.3; `AnyTaintEx.recLayerX`). A weak update keeps the object whole (§0.1). A pass rule with an `AnyField` target keeps `[any]` (D18). The backward run has no `[any-taint]` (§4.9) | the `[any]` target of a source is a must, so W6 lost precision on it; the demotion at an exclusion (the first F69 text) lost it again at every setter (`AnyTaintExCases.S.run1T_not_confirmed`). The normal edges of run 1 are exact; in a restricted run a normal edge of a must-premise is END-EXACT; a confirmed vulnerability is real (ap.md §10.11). Every complete forward run reports every real vulnerability, in some layer (`AnyTaintExCov.iteration_reportsX`). The exclusion removes the reports of the excluded locations, and these are not real (`AnyTaintExCases.S.name_not_real`, `X.locations_exact`). More confirmed entries, fewer demand entries (`ap-history.md` F69) |
+| D33 | a pass rule with an `AnyField` position on its premise side (§1.3, §4.1): `CopyAllMarks(P.AnyField → Q)`, `CopyMark(T, P.AnyField → Q)`, also with an `AnyField` target; Go `CopyData`, `CopyTaintMark` with `AnyAccessor` on the from position | the content below the any-field node of `P` is copied below `Q` (D18) | a rule error: the interpreter rejects the whole rule and logs it once (§1.3, as D29) | the rule reads one field that it does not know, so its result is a may; but a `$` result of an `[any]` premise keeps its layer (ap.md §4.1), so W6 cannot keep the may out of the normal layer, and a finding that rests on it could be CONFIRMED. Today's rule base has no such rule: the only `AnyField` in a pass rule is a target (Go `json.Unmarshal`, `arg(0) → arg(1).*`) (`ap-history.md` F69) |
+| D34 | the summary rewriter on an `AnyField` action position of a selected source (§5.2): `AssignMarkOnAnyAccessor` on `P`, `AssignMark` on `PositionWithAccess(P, AnyField)` (Go `AnyAccessor`) | the rewriter cleans every action position with `RemoveMark(T, position, Exact)` (`JIRMethodCallRuleBasedSummaryRewriter.kt:105`); on `PositionWithAccess(P, AnyField)` that is the `below` row of §5.2. The text of §5.2 before F69 gave `clean(P, exact, T)` | `clean(P, atAndBelow, T)` | the source marks every location at or below `P` (a must, I14), so these are the rule positions that the rewriter overrides. The `exact` cleaner at `P` keeps the marks of the callee below `P`, and on an `[any-taint]` result at `P` it gives a `part` result in the demand layer (§5.2); today's `below` row keeps the mark of the callee at `P` itself (`ap-history.md` F69) |
+| D35 | the removal of the entry marks at the normal exit (§4.7 step 4, G2), on a zero-premise fact on `this` or `arg(i)` | `TaintMarkRemover` (`JIRMethodSequentFlowFunction.kt:301-314`, applied at `:156`) rejects every mark accessor of the entry-mark set that it reads, but the filter reads only the children of the root node: a non-mark accessor gets `Accept`, and `Accept` keeps the whole subtree below it (`AccessTree.kt:1031-1056`, the tree form of the default `ApMode.Tree`); the mark is the last accessor of a fact path (`AccessPathCreationUtils.kt:12-21`). So only `b.$ (m)` goes; `b.f.$ (m)` and the any child `b.[any] (m)` (the `AnyField` part of the Spring DTO source) stay | every leaf with an entry mark goes, at any depth, with both tails: `(b, p, $, m)` for every path `p`, and `(b, p, [any-taint], E, m)` with its exclusion | an entry-point source must not leak into the callers in any part (G2). Since F69 the `AnyField` part of the source is a normal `[any-taint]` fact (D32), so a leak of it gives CONFIRMED false positives in the callers. Fewer findings are possible in the callers of an entry point (`ap-history.md` F69) |
 
 Kept as today (no deviation): the rule order at entry, call and exit; the lhs kill; the alias analyses and their use;
 the constructor rule; the exception rule; the conditional exit rules at both exits, with `Result` read as `exc` at the
-exceptional exit (§4.7; the unconditional exit rules: D26); the entry marks; the array elements of a call sink
+exceptional exit (§4.7; the unconditional exit rules: D26); the set of the entry marks (§4.3; their removal at the
+exit: D35); the array elements of a call sink
 argument (§4.2); the primitive mark policy at the root and below each `[e]` (§5.1); the Go pointer model; no Go type
-filter; unconditional Go pass rules; the summary rewriter (except D23); the `<string-bytes>` rule; the default getter
-rules; no type filter in the backward run.
+filter; unconditional Go pass rules; the summary rewriter (except D23 and D34); the `<string-bytes>` rule; the default
+getter rules; no type filter in the backward run.
 
 ---
 
@@ -1042,7 +1117,7 @@ rules; no type filter in the backward run.
 | `AliasSampleTest`, `DSUAliasAnalysisStateTest`, `DSUAliasAnalysisInvalidateOuterHeapAliasesTest`, `GoDSUAliasAnalysisTest`, `GoAliasSampleTest`, `GoAliasFactsTest`, `AliasDirectiveTest` | the alias input of §2.5 and §3.8 | keep |
 | `FactCleanerContractTest`, `AnyFieldMarkExclusionTest`, `DeepAccessorExclusionTest` | the old cleaner representation | REPLACE by the vectors of `clean` (ap.md §4.7) and the mapping table of §5.2 |
 | `CleanerFieldSensitivityAnalysisTest`, `DeepCleanSummaryAnalysisTest`, `CleanerDslAnalysisTest`, `CleanerDslControlFlowAnalysisTest` | §4.5 order (sinks before cleaners), §5.2 mapping (plain = `exact`, AnyField = `below`), the `Result` cleaner tests | keep (a gate of the new analyzer) |
-| `AnyFieldPrimitiveAnalysisTest` | §5.1 mark policy, `[any]` tails, D12 | keep |
+| `AnyFieldPrimitiveAnalysisTest` | §5.1 mark policy, `[any]` and `[any-taint]` tails, D12, I14, D32 | keep. In the whole-object test the `AnyField` part of the entry-point source is an `[any-taint]` fact (§4.1); the element read keeps it `[any-taint]` on the `byte` position (the mark is primitive-tracking), so the finding is a CONFIRMED entry of run 1 (D32) |
 | `ExampleTest` `test nd rule` (`PositiveNdRule`, `PositiveNdRule2`) | §5.3 | keep |
 | `MultiReturnDataFlowTest` | §4.7, §3.4 (no leak over the exceptional exit) | keep |
 | `JavaDataFlowReachabilityTest`, `KotlinDataFlowReachabilityTest` (lambda, stream, collection samples) | §3.6, §3.7, §3.9 | keep |
@@ -1064,9 +1139,14 @@ rules; no type filter in the backward run.
    result goes through the aliases; a constructor fact passes over the call.
 5. Go cleaner at the call site (D7): a non-user-defined `RemoveMark` rule cleans the argument; the same rule with a
    resolved callee and with an unresolved callee.
-6. Cleaner mapping: one test per row of §5.2, including `<string-bytes>`.
-7. Type filter placement: one test per row of §5.1; a `*` and an `[any]` fact always pass; the policy drops a mark on
-   an `int` base.
+6. Cleaner mapping: one test per row of §5.2, including `<string-bytes>`. Also on the fact `(x, p, [any-taint], E, T)`
+   (§5.2, program `AnyTaintExCases.CL`): at `x.p` the `below` row keeps `(x, p, $, T)` in the layer of the fact; at
+   `x.p.f` with `f ∉ E` the `atAndBelow` row gives `(x, p, [any-taint], E ∪ {f}, T)`, and the `below` row gives it and
+   `(x, p.f, $, T)`, in the layer of the fact; a cleaner at `x.p.f` with `f ∈ E` cleans nothing; the `exact` row and
+   every other `part` result are `[any]` in the demand layer, with no exclusion (`AnyTaintEx.Vec.clean_atAndBelow`,
+   `clean_below`, `clean_excluded`, `clean_exact`).
+7. Type filter placement: one test per row of §5.1; a `*`, an `[any]` and an `[any-taint]` fact always pass, with
+   their tails and exclusions; the policy drops a mark on an `int` base.
 8. Requests: one test per row of §5.4 in run 1, also the static rows (JVM `x = C.s`, `C.s = x`, Go `x = G`, a sink on
    `S`); no request in a restricted run and in the backward run (assert).
 9. ND: the result does not depend on the order in which the two premise facts arrive; a conjunctive sink reports only
@@ -1078,7 +1158,10 @@ rules; no type filter in the backward run.
     I11 and I12, and for the interpreter duties of ap.md S9 and S10: every literal has a concrete mark (S9); the
     premise base of every micro edge is a touched base (I1, S10); the target of a conjunctive micro edge has a concrete
     mark and no `*` tail (S10, W7). Also I6 and I7 (also the clause: a micro edge with a `$` target has a concrete
-    premise mark). The builder of a statement summary asserts the same.
+    premise mark), and I14 (only a source edge has the target tail `[any-taint]`, with a concrete target mark and a
+    concrete premise mark; no micro edge has the premise tail `[any-taint]`; no binding has an `[any]` or an
+    `[any-taint]` target; no pass rule has an `[any]` premise, D33). The builder of a statement summary asserts the
+    same.
 13. Backward run: the reversed touched set and the identity edge of an alias target (§4.9); the call order of §4.9,
     with a reversed source, a rewriter, an unresolved callee and a constructor; a seed after the reversed cleaners is
     not killed; a seed is cut by the field limit; the seed of an exit sink at the exceptional exit; at `x = m(a)`, where
@@ -1099,7 +1182,10 @@ rules; no type filter in the backward run.
 19. Rule positions (§1.3, D29): `Argument(0).AnyField.f` and `Argument(0).AnyField.AnyField` are rule errors, logged
     once, and the forms of the other rules of the method are built; `Argument(0).AnyField` is accepted. A source rule
     whose condition has such a position gives no source and no rewriter cleaner; an `Or` with one bad disjunct gives no
-    form.
+    form. A pass rule with an `AnyField` premise (`CopyMark(T, Argument(0).AnyField → Result)`,
+    `CopyAllMarks(Argument(0).AnyField → Result.AnyField)`, Go `CopyTaintMark` with `AnyAccessor` on the from
+    position) is a rule error, logged once and rejected (D33); `CopyMark(T, Argument(0) → Result.AnyField)` is
+    accepted.
 20. The whole-base cleaner (§1.4, §5.2, D27): `RemoveAllMarks(AnyClassStatic)` drops every fact on `S`, also `S.*` in
     run 1, with no request; `AnyClassStatic` in another rule element is a rule error, also in a condition literal
     (`ContainsMark(AnyClassStatic, T)`). The Spring dispatcher: a static
@@ -1123,11 +1209,18 @@ rules; no type filter in the backward run.
     `Integer[]` value is dropped; on `b.[e]` of a `String[]` value it stays; below a field no type is read.
 25. End facts (§4.1): a sink with an end-fact action that triggers on a demand-layer bound fact gives a demand-layer
     zero-to-fact edge; a conjunctive sink gives its end facts when an item completes the combination, in the layer of
-    the combination.
+    the combination. An end-fact action `AssignMark(T, PositionWithAccess(P, AnyField))` gives
+    `Zero → (sink statement, P.[any-taint] (T))` with the Empty exclusion, in the layer of the sink edge (I14).
 26. The summary rewriter (§5.2, D23): at a call with a user source `if IsConstant(...) and ContainsMark(...)`, a user
     cleaner `if ContainsMark(...)` and an unconditional user cleaner, the rewriter selects the source and the
     unconditional cleaner, and not the conditional cleaner; a rule that a rule error rejected is not selected (§1.3).
     The rewriter removes `T` from a zero-premise summary result and from the default identity of an unresolved callee.
+    For a selected source with the target `PositionWithAccess(Result, AnyField)`, the rewriter cleans `ret` with
+    `(ret, atAndBelow, T)` (D34): a callee result `(ret, [f], $, T)` and a callee result `(ret, [], [any-taint], T)`
+    are both dropped, and only the source result of the call stays. For a selected unconditional user cleaner
+    `RemoveMark(T, PositionWithAccess(Result, AnyField))`, the rewriter cleans `ret` with `(ret, below, T)` (the row of
+    the cleaner in §5.2, as today): a callee result `(ret, [f], $, T)` is dropped, a callee result `(ret, [], $, T)`
+    stays, and a callee result `(ret, [], [any-taint], T)` gives `(ret, [], $, T)` in its layer.
 27. The static exception at the rule statement of an exit (§4.7, §2.1 step 4; ap.md §4.10 item 1): in run 1 an exit
     source with the literal on `S.<C>.f`, on the fact `S.*` with the premise `S.*`, gives the position request
     `[<C>, f]` and no fact, and the fact `S.*` stays in the worklist.
@@ -1136,6 +1229,109 @@ rules; no type filter in the backward run.
     and the item that completes the combination gives `S.<C>.$ (S2)` with the union of the premise sets of its inputs,
     in either order of arrival. With two non-zero premises the summary is an ND summary, and a caller applies it by
     E6. The rule is not a rule error.
+29. The taint annotation (I14, §4.1, D32): `AssignMarkOnAnyAccessor` on `Argument(0)` (a source at a call), an
+    entry-point source with `AssignMark` on `PositionWithAccess(Argument(0), AnyField)`, an exit source and a
+    conjunctive source with an `AnyField` target give the target tail `[any-taint]` with a concrete mark; a conditional
+    source with `ContainsMarkOnAnyField(Q, T')` gives the premise `Q.[any] (T')`; a pass rule
+    `CopyMark(T, P → Q.AnyField)` gives the target `Q.[any] (T)` and a result in the demand layer. The source
+    `AssignMark(T, PositionWithAccess(Q, AnyField)) if ContainsMark(P, T)` and the pass rule
+    `CopyMark(T, P → Q.AnyField)` differ only in the target tail (`P.$ (T) → Q.[any-taint] (T)` and
+    `P.$ (T) → Q.[any] (T)`; in Lean one micro edge with two taint flags): the source gives a normal `[any-taint]`
+    result, and run 1 confirms the sink `ContainsMarkOnAnyField(Q, T)`; the pass rule gives a demand `[any]` result,
+    and run 1 does not confirm it (Lean, in the spec closure `AnyTaintEx.D6X`:
+    `AnyTaintExCases2.PassRule.source_vs_pass`, `source_normal`, `source_confirmed`, `pass_demand`,
+    `pass_not_confirmed`; round 1: the vectors `AnyTaint.Sanity` and `AnyTaintCases.PassRule.source_vs_pass`). A
+    source result has the Empty exclusion,
+    also when its premise fact has one (`AnyTaintEx.Vec.source_any_target`).
+30. The strong write, the reads and the cut (§2.4; the programs of `AnyTaintExCases`):
+    * the setter, program S: `root(){ dto = srcAny(); dto.setName(c); sink(dto.name); sink(dto.email); }`,
+      `setName(n){ this.name = n; }`. The run-1 record `(this, [], *, *) → (this, [], */{name}, *)` of `setName`
+      applies to the added fact `(this, [], [any-taint], {}, T)` and gives `(this, [], [any-taint], {name}, T)`,
+      normal; in `root` the object is `(dto, [], [any-taint], {name}, T)`, normal. `sink(dto.name)` is not reported, in
+      no layer, and it is not real; `sink(dto.email)` is CONFIRMED in run 1 (`AnyTaintExCases.S.record_app`,
+      `S.run1_dto_ann`, `S.run1_name_not_reported`, `S.name_not_real`, `S.run1_email_confirmed`). Under the first F69 text (the demotion)
+      both sinks are DEMAND entries (`AnyTaintExCases.S.run1T_vulns`, `S.run1T_not_confirmed`);
+    * the deep setter, program SD (`root` calls `setNameDeep(c){ this.setName(c); }`): the same result in `root`
+      (`AnyTaintExCases.SD.run1_name_not_reported`, `SD.run1_email_confirmed`, `SD.same_result`);
+    * the broad demand, program B: run 3 with the demand `(D-c = (this, [], [any], T), D-p = (this, [], [any], T))` of
+      `setName` emits the must-premise `(this, [], [any-taint], {}, T)` and gives the summary to
+      `(this, [], [any-taint], {name}, T)`, normal; `sink(d.name)` stays not reported, and `sinkAny(e)` is CONFIRMED in
+      run 1 and in run 3 (`AnyTaintExCases.B.run1_name_not_reported`, `B.run1_anyE_confirmed`, `B.run3_must`,
+      `B.run3_summary`, `B.run3_name_not_reported` with the records of run 1, `B.run3_anyE_confirmed`). Run 3 with
+      this demand made by hand is a test of the restricted run; the JVM analysis test checks the results of run 1
+      (run 1 of B has no DEMAND entry, `B.inv1`, so the iteration stops after it);
+    * the two-level write, program X: `x = srcAny(); x.f.g = c` as ONE statement (the micro edges
+      `strongKeep(x, [f, g])` and `c.* → x.f.g.*`) gives `(x, [], [any-taint], {f}, T)` and
+      `(x, [f], [any-taint], {g}, T)`, both normal, which cover exactly the locations not below `x.f.g`;
+      `sink(x.f.g)` is not reported, and `sink(x.f.h)` and `sink(x.k)` are CONFIRMED (`AnyTaintExCases.X.two_results`,
+      `X.locations_exact`, `X.fg_not_reported`, `X.fh_confirmed`, `X.k_confirmed`). This is an AP-LEVEL test: a
+      synthetic statement summary on the AP (ap.md §13 item 1, `ApplyEdgeVectorsTest`, and item 3, the layer tests;
+      on the tree form `AnyTaintProgramsTest` of `ap-impl.md`), not a JVM analysis test. No JVM statement writes two levels: the builder of §2.2 gives `t = x.f; t.g = c`, and
+      the write `t.g = c` is strong on `t` only; at the alias path `(x, [f])` of `t` it is the gen-only edge
+      `c.* → x.f.g.*`, and `x` is not touched (§2.5 A2, A3: the weak alias write, gap G7). So the JVM ANALYSIS TEST
+      of this program expects the documented false positive of the alias gap: `x` keeps
+      `(x, [], [any-taint], {}, T)`, normal, and `sink(x.f.g)` is a CONFIRMED entry (§0.1, ap.md §11.1), as are
+      `sink(x.f.h)` and `sink(x.k)`; `t` is `(t, [], [any-taint], {g}, T)`, normal, so `sink(t.g)` is not reported;
+    * the reads, program R (S, then `y = dto.name; z = dto.email; sinkAny(y); sinkAny(z)`): the read through the
+      excluded `name` gives nothing, the read of `email` gives `(z, [], [any-taint], {}, T)`, normal; `sinkAny(y)` is
+      not reported, `sinkAny(z)` is CONFIRMED (`AnyTaintExCases.R.reads`, `R.y_not_reported`, `R.z_confirmed`);
+    * the cut, program CUT (X with the field limit 0), also an AP-LEVEL test: the AP `limit` with `L = 0` on the
+      results of the synthetic statement summary of X (no run has `L = 0`: the field limit of run 1 is at least 1,
+      I12 (d)). The cut makes `(x, [f], [any-taint], {g}, T)` the fact `(x, [], [any], T)` in the demand layer with no
+      exclusion, so `sink(x.f.g)` and `sink(x.f.h)` are DEMAND entries (`AnyTaintExCases.CUT.cut_ops`, `CUT.run1_cut`,
+      `CUT.cut_reports`; the vector `AnyTaintEx.Vec.cut_drops`). The JVM ANALYSIS TEST of the cut uses the field limit
+      1 and a deeper write: the source `dto.f.g = srcAny()` (JIR `s = srcAny(); t = dto.f; t.g = s`) gives, through
+      the alias path `(dto, [f])` of `t`, the result `(dto, [f, g], [any-taint], {}, T)`, which the cut makes
+      `(dto, [f], [any], T)` in the demand layer with no exclusion (the same cut on one model statement:
+      `AnyTaintCases.Cut.cut_transfer`), so `sink(dto.f.g)` is a DEMAND entry;
+    * the necessity of the exclusion: a normal `[any-taint]` result of a strong write with no exclusion would confirm a
+      vulnerability that is not real (`AnyTaintCases.W.keep_normal_confirms_unreal`).
+31. The getter, program G (the Spring DTO shape): `root(){ dto = srcAny(); x = get(dto); sinkAny(x); }`,
+    `get(p){ return p.f; }`. Run 1 reports the vulnerability, not confirmed: the run-1 FLOW summary of `return p.f` is
+    the case `above`, `(p, [], *, {}, *) → (ret, [], [any], *)` in the demand layer
+    (`AnyTaintExCases2.G.run1_flow_above`, `run1_vuln`, `run1_not_confirmed`). The backward run 2 hands off the
+    demand `(D-c = (p, [f], [any], T), D-p = (ret, [], [any], T))` of `get` and the zero demand
+    (`AnyTaintExCases2.G.HX_exact`, `handoffX_get`); both tails are `[any]`, because the backward run has no
+    `[any-taint]` (I14, §4.9). Run 3 emits the must-premise `(p, [f], [any-taint], {}, T)`
+    (`AnyTaintExCases2.G.run3_must`, `run3_must_supported`), the sink edge in `root` is normal (`run3_sink_normal`),
+    and the vulnerability is CONFIRMED (`run3_confirmed`; with the hand-off of run 2: `run3_confirmed_handoff`) and
+    real (`AnyTaintCases.G.vuln_real`). Under the old rule W6 it is a demand entry in run 1 and in run 3 (round 1:
+    `AnyTaintCases.G.run1W6_no_normal`, `run3W6_no_normal`). The ANALYSIS TEST: a Spring controller method with a
+    DTO argument (the Spring rule provider adds the `AnyField` source, §4.1) passes a getter value of the DTO to a sink;
+    the output has the vulnerability as a CONFIRMED entry after run 3. (The Lean results of programs G and C are of
+    the spec closures `AnyTaintEx.D6X` and `DRXs`, in `AnyTaintExCases2`; run 3 is derived there directly. These
+    programs have no exclusion edge and no cleaner, so the refined run 1 is the round-1 run 1 of `AnyTaint.D6T` with
+    the Empty exclusion: `AnyTaintExCases2.G.run1_forgets`, `G.run1_carry`, `Carry.d6x_iff_d6t`.)
+32. The sink in the callee, program C: in `root(){ dto = srcAny(); use(dto); }`, `use(o){ sinkAny(o.f); }` run 3
+    confirms the vulnerability through the must-premise `(o, [f], [any-taint], {}, T)`, whose start fact is the normal
+    sink edge in `use`; the premise is supported through the must-premise link (`AnyTaintEx.SupLinkX`: it lies inside
+    the normal added fact `(o, [], [any-taint], {}, T)`, with the same mark) (`AnyTaintExCases2.C.run3_must`,
+    `run3_sink_normal`, `run3_supported`, `run3_confirmed`, `run3_confirmed_handoff`). With a setter call
+    `dto.setName(c)` before `use(dto)`, the added fact of `use` is `(o, [], [any-taint], {name}, T)`: against the pattern `(o, [f], [any], T)`
+    the emission gives the same must-premise, and against a pattern `(o, [name], [any], T)` it gives nothing (ap.md
+    §6.3; Lean `AnyTaintEx.emitX`, the vector `AnyTaintEx.Vec.emit_above_excluded`).
+33. The conjunction with an `[any-taint]` input (§5.3): at `z = combine(x, y)`, with `x` an `[any-taint]` fact
+    `(x, [], [any-taint], T)`, `y` the fact `(y, [], $, U)` and the source rule
+    `AssignMark(V, Result) if ContainsMark(Argument(0).f, T) and ContainsMark(Argument(1), U)`, the result
+    `(z, [], $, V)` is in the normal layer, and a sink on `z` is confirmed; under the old layer rule the result is in
+    the demand layer (Lean `AnyTaintND.Example.layer_new`, `layer_old`, `confirmed`, `old_not_confirmed`). With the
+    input `(x, [], [any-taint], {f}, T)` the literal `ContainsMark(Argument(0).f, T)` does not overlap the input, so it
+    stores nothing and the rule does not fire (§5.3; argued: the conjunction model has no exclusion, ap.md §11.2).
+34. Backward (§4.9): no backward edge has an `[any-taint]` tail. The seed of `sinkAny(x)` is `(x, [], [any], T)` in the
+    demand layer; the reversed `[any]` literal of a conditional source gives an `[any]` requirement in the demand layer.
+    The reversed pass rule `CopyMark(T, P → Q.AnyField)` (forward `P.$ (T) → Q.[any] (T)`) applied to the normal
+    requirement `(Q, [], $, T)` gives the requirement `(P, [], $, T)` in the DEMAND layer, and the backward summary
+    through it is not a record: in `root(){ v = src(); l = mk(v); sink(l); }`, `mk(p){ l = new L(); l.add(p); return
+    l; }`, with `add` unresolved and that pass rule, the vulnerability stays a DEMAND entry in run 3. The reversed
+    unconditional source `zero.$ (zeroMark) → P.[any-taint] (T)` takes the requirement `(P, [f], $, T)` to the zero
+    fact in the normal layer and records the source hit.
+35. The removal of the entry marks (§4.7 step 4, G2, D35): an entry point whose entry-point sources put the entry
+    mark `m` on `Argument(0)` and on `PositionWithAccess(Argument(0), AnyField)` (the Spring DTO shape). At its normal
+    exit the zero-premise fact with the leaves `(arg(0), [], $, m)`, `(arg(0), [], [any-taint], {name}, m)`,
+    `(arg(0), [f], $, m)` and `(arg(0), [g], $, U)` gives a summary edge with the leaf `(arg(0), [g], $, U)` only:
+    every leaf with the entry mark goes, at any depth and with both tails (the `[any-taint]` leaf with its exclusion),
+    and a leaf with another mark stays. A fact on `arg(0)` whose premise is not the zero fact keeps its leaves with
+    `m`.
 
 ---
 
