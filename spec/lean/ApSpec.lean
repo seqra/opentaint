@@ -98,3 +98,5 @@ import ApSpec.CurrentDefs
 import ApSpec.CurrentExact
 import ApSpec.CurrentHandoff
 import ApSpec.CurrentKinds
+import ApSpec.CurrentMustHandoff
+import ApSpec.CurrentMustReverse

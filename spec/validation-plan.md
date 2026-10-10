@@ -3,7 +3,7 @@
 This plan contains test data and implementation checks. It does not add analysis
 rules. The normative rules are in [ap.md](ap.md), [interpreter.md](interpreter.md),
 and [analyzer-core.md](analyzer-core.md). Historical tests must be run against the
-closure version they name; current demand tests use F72/F75. The build and axiom
+closure version they name; current demand tests use F72/F75; current record-view tests use F76. The build and axiom
 audit are in [proof-status.md](proof-status.md).
 
 ## AP tests
@@ -152,7 +152,7 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     `D-p` in its layer, with `E2` under a `*/E2` exit pattern and the Empty exclusion under `[any]`, if `E` admits the
     step down, and no result if not; below `D-p` it keeps `E`; at a `*/E2` exit pattern it gets `E ∪ E2`; the premise
     test reads the exclusion of a must-premise; a FLOW premise (F72) lies inside its own `*` pattern and inside no
-    concrete pattern, and its `*` conclusion stays whole under its `*` exit pattern (§6.4); the two exceptions of the
+    concrete pattern, and its `*` conclusion stays whole under its `*` exit pattern (§6.4); the two field-tail exceptions of the
     intersection (`Handoff.RVec.inter_exc_any`, `inter_exc_star`) give a pair outside `D-p`; the earlier rule above a `*/E2` exit pattern is not the intersection
     (`HandoffX.XVec.v_old_above_not_inter`). The vectors `AnyTaintEx.Vec.restrict_vectors` are for the earlier
     restriction: the test asserts the cells of `HandoffX.XVec` where they differ.
@@ -161,13 +161,15 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     sink that never returns (§9.2). The backward zero rules of §9.2: the zero fact enters every callee, a zero-premise
     backward summary returns to every caller without a restriction. THE HAND-OFF OF THE DEMAND EDGES (§9.2): it reads
     the publications; a crossable leaf gives no demand pattern and a leaf that is not crossable gives one per
-    publication, in both directions; a normal leaf with an `[any]` or `[any-taint]` conclusion, a leaf of a must-premise,
-    a demand-layer leaf (also a backward one with a crossable shape) and every leaf of a summary with several premises
-    are demand edges; THE HAND-OFF NORMALIZATION (F72, §9.2): a summary conclusion with the mark `*∖X` gives a pattern
+    publication, in both directions. Must-premise, demand-layer, and multi-premise
+    leaves remain demand edges, including a backward demand leaf with a crossable
+    shape. A raw normal singleton exact-concrete premise → must/E concrete
+    conclusion with empty premise annotation gives no backward demand (F76).
+    THE HAND-OFF NORMALIZATION (F72, §9.2): a summary conclusion with the mark `*∖X` gives a pattern
     with the mark `*`, in `D-c` and in `D-p`, in both hand-offs, and the summary keeps `*∖X` (it still stops an added
     fact with a mark in `X`); (F71, before: a `*∖X` entry pattern kept its mark and gave no premise to a requirement
-    with a mark in `X`); a forward `[any-taint]/E` summary conclusion or must-premise, which the
-    hand-off gives as the pattern `[any]` with no exclusion. Program WRAP (§6.6, `HandoffCases.Wrap`): forward run 3
+    with a mark in `X`). In selected forward demand pieces, a must conclusion or
+    premise becomes the pattern `[any]` with no exclusion. Program WRAP (§6.6, `HandoffCases.Wrap`): forward run 3
     analyses `wrap` only from the zero fact, backward run 2 never enters `wrap` with a non-zero fact (it crosses `wrap`
     by the reversed record), and forward run 3 still reports the vulnerability. The CEGAR programs ANYW and ANYM
     (`HandoffCases.AnyW`, `AnyM`) and the getter (`HandoffCases.Getter`) report their vulnerability. THE SEEDS: the
@@ -198,17 +200,27 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     the DEMAND entries of the latest complete forward run; after an incomplete run 1 the report has no entry and the
     output is empty. The output holds every entry of the report, the DEMAND entries too, each with a simple trace and
     the method key of a confirmed sink witness, else of the first sink witness (§8.10).
-15. Reversal tests: every row of §9.1 that occurs for a record, also with `*∖X`; the forward record and its reversed
-    reading give converse results on the same concrete pair. R3 reverses a record leaf by leaf: no leaf of a must
-    record is reversed (`AnyTaintExact.CexRev`), and no `[any-taint]/E` leaf with `E ≠ {}`; the other leaves of the
-    same record are. A leaf `$ → [any-taint]` reverses into `[any] → $`, which applies only to an `[any]` requirement,
-    with a demand result. The reversed `[any]` literal of a source has the target `[any]` (demand); the reversed source
-    edge has the premise `[any]` and gives a normal source hit. Every result of the reversal of a pass rule with an
-    `AnyField` target is in the demand layer, also a `$` result: the reversed `CopyMark(T, P → Q.AnyField)` gives
-    `(P, ., $, T)` in the demand layer, and the backward summary through it is not a record. Every result of the
-    reversal of a conjunctive micro edge (also of a conjunctive exit source) is in the demand layer, one per literal,
-    and the backward summary through it is not a record and not crossable (§9.1). The backward run makes no
-    `[any-taint]` fact, and the record store adds no backward edge with an any tail (§8.7 R1).
+15. Reversal tests: keep generic micro-edge vectors separate from native record
+    read views (R3, §9.1). F76's `P.$(U)→x.f.[any-taint]/E(T)` gives
+    `x.f.*/E(T)→P.$(U)`. An admitted exact field chain matches by `applicable`,
+    even when `inside` is false, and returns exact `P` in the input layer; an
+    excluded chain gives nothing. Test distinct `U/T`, several paths, empty and
+    nonempty E, and no copied input suffix. A must forward premise becomes
+    may `[any]` with empty old exclusion; both must→must and must→exact views
+    produce DEMAND, never normal backward records. Reject malformed native
+    concrete-star/demand inputs. Never start, emit, or persist a view. The computed
+    certificates and negative pair witnesses are in `CurrentMustReverse`.
+    Generic reversed may and conjunction micro edges still give every result
+    in the demand layer, including exact results. Generic reversed source edges
+    keep the requirement layer and use `[any]` premises. No backward fact has
+    `[any-taint]`. Forward selection adds the normal exact-to-must branch: it gives
+    no backward demand and retains its raw native record/E. Must-premise leaves
+    still give demand. Select before restriction; a narrowed publication cannot
+    reclassify its raw leaf (`CurrentMustReverse.omitMustDemand`). Test the
+    normal exact requirement and may-any demand requirement gates separately.
+    A zero-premise cached source view gives zero without a synthetic source hit;
+    the native forward record still replays with empty source seeds. A nonzero
+    view returns the exact caller premise and can reach an actual caller source.
 16. Analysis tests (the gate of the new analyzer): the existing `*AnalysisTest` suites, run with `cleanTest`;
     `DeepCleanSummaryAnalysisTest` and the cleaner suites for §4.7. A finding whose taint comes from an `[any]`-target
     source (a Spring DTO entry-point argument) is CONFIRMED: in run 1 when the sink reads the object in the method of
@@ -236,9 +248,10 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     confirmed in run 3 (`AnyTaintExCases2.G.run1_not_confirmed`, `run3_confirmed`); the program C is confirmed in run 3
     through the must branch of `AnyTaintEx.SupLinkX` (`AnyTaintExCases2.C.run3_supported`); the program
     `AnyTaintExCases.B` confirms `sinkAny(e)` in run 1 and in run 3 and never reports `sink(d.name)`.
-18. Tests of F72, ABSTRACT MARKS IN THE RESTRICTED RUNS (PENDING the Lean model, §11.2; write them first, and keep
-    them red where the model shows a rule change). As analysis tests with the field limits 1, 2 and 3: (i) THE GETTER
-    with two marks (§6.3, THE GETTER): `get(p) { ret = p.name; }`, called with a fact of the mark `T` (the DTO fact)
+18. F72 abstract-mark tests. Local operation certificates are checked; full mode
+    coverage remains open (§11.2). Keep tests red where a model counterexample
+    requires a behavior decision. As analysis tests with the field limits 1, 2 and 3: (i) THE GETTER
+    with two marks (historical trace in [proof-history.md](proof-history.md)): `get(p) { ret = p.name; }`, called with a fact of the mark `T` (the DTO fact)
     and a fact of the mark `U`; backward run 2 has ONE `*` requirement `(ret, ., *, {}, *)` in `get`; forward run 3
     has one record (or one FLOW premise `(p, .name, *, {}, *)`) for both marks, and both vulnerabilities are reported,
     the DTO one CONFIRMED; (ii) A MARK-CHANGING PASS RULE `T → U` inside a callee that a `*` pattern reaches: the `*`
@@ -248,8 +261,10 @@ Write the tests first. Each test names the spec item that it checks. The interpr
     (iv) the search for a counterexample to R6 (§6.6): a flow that needs a concrete mark in a callee that only `*`
     patterns reach after run 1. The AP-level tests: the hand-off normalization (§9.2); the emission rows of item 11;
     the FLOW form of an `[any]` pattern (`*/{}`) and of a `*/E` pattern (`*/E`); a check on the hand-off of every run
-    that no `*` pattern has the tail `*/E` (§4.3, the open point (a) of §11.2: the FLOW premise `(x, ., */{f}, *)`
-    and the added fact `(x, ., */{g}, *)` satisfy neither test).
+    that no abstract entry pattern has nonempty star exclusion (current §6.1
+    construction guard): `(x, [], */{f}, *)` and `(x, [], */{g}, *)` satisfy
+    neither test. Canonical abstract entries have `[any]`; local entry-tail
+    preservation does not establish full mode coverage.
 
 ## Analyzer tests
 
@@ -259,7 +274,8 @@ and §13 refer to this part.
 ## 13. Test plan (TDD)
 
 1. SCHEDULE FUZZING. A test runner picks the next event at random (seeded) from all channels and queues. It runs the
-   direct calls as events too. For small programs (the programs of `ap.md` §6.3, §6.4 and the backward cases), compare
+   direct calls as events too. For small programs (this plan's AP vectors and
+   historical programs in [proof-history.md](proof-history.md)), compare
    the result of many seeds with a reference: the naive fixed point of the closure. Every seed must give the same
    edges, summaries and vulnerabilities.
 2. PROTOCOL TESTS. A mock storage that breaks P1, P2, P3 or P4 loses a summary in the fixed schedule of the
@@ -406,20 +422,17 @@ and §13 refer to this part.
     gives the requirement `(P, ., $, T)` in the demand layer (its forward target is `[any]`, §4.3), so the backward
     summary through it is not a record, and no later forward run confirms the vulnerability through the pass rule. The
     core reads only `MicroEdge.forward` for this (no rule-kind flag).
-25. TWO PREMISE KEYS AND THE MUST RECORD. In a restricted run, an `[any-taint]` added fact and an `[any]` added fact at
-    one path give two initial facts, two premise keys and two publications (§4.1, §4.6); two must-premises of one path
-    with different exclusions give two premise keys. A forward record with an `[any-taint]` premise applied to an
-    added fact that lies inside its premise (`applicable`, not `inside`) gives a demand-layer result with no exclusion
-    (§4.2; the program of `AnyTaintExact.CexApp.cex_app`). `rec.reversedAt` gives no reversal of any leaf of it in a
-    backward run (§5.3; `AnyTaintExact.CexRev.cex_rev`). R3 is LEAF BY LEAF: the zero-premise summary of
-    `mk(): d = srcAny(); d.setName(c); d.k = srcU(); return d` (`srcU` a source with the target `$` and the mark `U`)
-    has the two leaves `(ret, ., [any-taint], {name, k}, T)` and `(ret, .k, $, U)`, both normal; `rec.reversedAt`
-    gives the reversal of the `$` leaf only, and that reversal applies in the backward run. In run 1 the caller
-    `root(): r = mk(); sink(r.name); sink(r.email)` applies this summary to its zero fact with the exclusion of the
-    leaf (`ap.md` §4.1, the case below: the target exclusion of the edge): `(r, ., [any-taint], {name, k}, T)`, normal,
-    so `sink(r.name)` is not reported and `sink(r.email)` is CONFIRMED. The reversal `[any] → $` of a leaf
-    `$ → [any-taint]` applies to an `[any]` requirement with a demand-layer result, and not to a `$` requirement
-    (§5.3). No backward edge has the `[any-taint]` tail.
+25. TWO PREMISE KEYS AND THE MUST RECORD. Keep separate keys for must and may
+    premises at one path, and for must-premises with different exclusions.
+    Same-direction must-record application still demotes the `applicable`-only
+    part. Backward reads now use F76 transient views: a must-premise record gives
+    a may-any DEMAND result. For the zero-premise factory summary with leaves
+    `(ret, [], [any-taint], {name,k}, T)` and `(ret, [k], $, U)`, both leaves
+    have views. The must leaf accepts `ret.email.$(T)` and rejects
+    `ret.name.$(T)`; its result is zero in the requirement's layer. The exact leaf
+    uses generic reversal. The original forward summary and its exclusion stay
+    unchanged. No view is persisted; no backward fact has `[any-taint]`.
+
 26. THE SUPPORT NEEDS THE SAME MARK. A must-premise with the mark `*` inside an `[any-taint]` added fact is not
     supported (§7.5; `AnyTaintExact.CexSupMark.cex_sup_mark`). A `$` member below an `[any-taint]/E` added fact through
     an accessor in `E` is not supported; through another accessor it is.
@@ -485,14 +498,15 @@ not change (argued).
     the backward summary is `(ret, ., *, {}, *) → (arg, .f, *, {}, *)`; it is normal and its reversal is crossable, so
     `get` still gets only the zero demand. Forward run 3 crosses the call by the reversed record by `applicable`, and
     the result is the same: the vulnerability in the NORMAL layer, CONFIRMED, `STOP_RULE`.
-35. THE CONDITION ON THE REVERSAL IN `Cross` (CEGAR regression tests, `HandoffCases.AnyW`, `AnyM`; AP-level). A callee
-    `anyw` whose summary has a NORMAL leaf with an any tail (in the model `(arg, ., *) → (ret, ., [any])`, the
-    `[any-taint]` of F69): the hand-off of §7.3 gives the leaf as a demand edge, the backward run enters `anyw`,
-    reaches the source and the next forward run reports the vulnerability. A test hand-off with the looser test
-    (`HandoffCases.CrossL`: the forward conditions only, `handFL`) drops the leaf; the `$` requirement cannot cross the
-    reversed premise `[any]` (`dollar_blocked`), and the next forward run reports nothing: with the source seeds
-    (ANYW, `AnyW.cegar_cross_anyw`; the source in the root) and without them (ANYM, `AnyM.cegar_cross_anym`; the
-    source in a callee `mk`, whose summary is in the demand layer).
+35. GENERIC CROSSING AND F76 READ VIEWS. Retain `HandoffCases.AnyW` and `AnyM` as
+    historical regressions for the generic reader: omitting an any conclusion
+    loses the finding when its reversed `[any]` premise cannot match an exact
+    requirement. These models do not test the new native reader. For current
+    native normal singleton records, omit backward demand for exact-concrete
+    premise → must/E concrete conclusion. Check its STAR/E view on admitted and
+    excluded fields, distinct marks, and the next forward replay of the stored
+    raw record. Must-premise views stay demand-layer and keep demand selection.
+    Compare engine and reference selection before publication restriction.
 36. THE RESTRICTION VECTORS (`ap.md` §6.4; §4.6). The intersection against the earlier restriction: `[any]` against
     `D-p = $` gives `$` (`Handoff.RVec.v64_restrictI`; `restrictU` keeps `[any]`, `v64_restrictU`); a premise that only
     overlaps `D-c` gives no result (`vOverlap_restrictI`; `restrictU` gives one, `vOverlap_restrictU`); no `D-p` gives

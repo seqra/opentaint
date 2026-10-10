@@ -173,3 +173,84 @@ run_elab do
   if record != expected || !(ApSpec.applySummary added record.1 record.2).facts.isEmpty then
     throw (IO.userError "Executable current record-shape certificate failed.")
   IO.println "Executable current record-shape certificate passed."
+
+-- F76 reads cached must conclusions through a transient concrete-star premise.
+#eval do
+  let v := ApSpec.CurrentMustReverse.Certificate.exact.view
+  let applied := ApSpec.CurrentMustReverse.Certificate.applied
+  let excluded := ApSpec.CurrentMustReverse.Certificate.excluded
+  let expectedPremise : ApSpec.PFact := ⟨5, [2], .star (.set [4]), .conc 1⟩
+  let expectedOutput : ApSpec.AFact := ⟨⟨3, [], .exact, .conc 1⟩, false⟩
+  let expectedDemand : ApSpec.AFact := ⟨⟨3, [], .any, .conc 1⟩, true⟩
+  let incoming := ApSpec.CurrentMustReverse.Certificate.incoming
+  let mustAny := ApSpec.CurrentMustReverse.Certificate.anyMust.view
+  let mustExact := ApSpec.CurrentMustReverse.Certificate.exactMust.view
+  if v.1 != expectedPremise || v.2 != expectedOutput ||
+      applied.facts != [expectedOutput] || !applied.reqs.isEmpty ||
+      ApSpec.applicable v.1 incoming.fact != true ||
+      ApSpec.Abs.satW v.1 incoming.fact != false ||
+      !(ApSpec.applySummary excluded v.1 v.2).facts.isEmpty ||
+      (ApSpec.applySummary incoming mustAny.1 mustAny.2).facts != [expectedDemand] ||
+      (ApSpec.applySummary incoming mustExact.1 mustExact.2).facts != [expectedDemand] ||
+      ApSpec.CurrentMustReverse.Certificate.differentMarkTransfer.result.facts !=
+        ([⟨⟨3, [], .exact, .conc 9⟩, false⟩] : List ApSpec.AFact) ||
+      ApSpec.CurrentMustReverse.Certificate.mustAnyEndpoints.val !=
+        ((⟨3, [9], 1⟩, ⟨5, [2, 7], 1⟩) : ApSpec.Loc × ApSpec.Loc) ||
+      ApSpec.CurrentMustReverse.Certificate.mustExactEndpoints.val !=
+        ((⟨3, [9], 1⟩, ⟨5, [2, 7], 1⟩) : ApSpec.Loc × ApSpec.Loc) then
+    throw (IO.userError "Executable must-summary read-view certificate failed.")
+  IO.println "Executable must-summary read-view certificates passed."
+
+-- The original generic-Cross diagnostic and selected must-to-may copying.
+#eval do
+  let copied := ApSpec.CurrentMustHandoff.Certificate.copy.copied
+  let expected : ApSpec.AnyTaintEx.XFact :=
+    ⟨⟨⟨5, [], .any, .conc 1⟩, true⟩, ApSpec.Excl.empty⟩
+  let expectedHandoff : ApSpec.DemandEdge :=
+    ⟨ApSpec.CurrentMustHandoff.Certificate.incoming,
+      some ApSpec.CurrentMustHandoff.Certificate.j⟩
+  if copied != expected ||
+      ApSpec.CurrentMustHandoff.Certificate.exactHandoff.val != expectedHandoff ||
+      ApSpec.CurrentMustHandoff.Certificate.xExactHandoff.val != expectedHandoff ||
+      ApSpec.CurrentMustHandoff.selectAny ApSpec.CurrentMustHandoff.Certificate.rawLeaves !=
+        [(ApSpec.CurrentMustHandoff.Certificate.j, ApSpec.CurrentMustHandoff.Certificate.must.af)] then
+    throw (IO.userError "Executable generic-Cross and must-copy certificate failed.")
+  IO.println "Executable generic-Cross and must-copy certificates passed."
+
+-- F76 omits only the new normal exact-to-must branch, decided on the raw leaf.
+#eval do
+  let raw := ApSpec.CurrentMustReverse.Certificate.omittedNative
+  let view := ApSpec.CurrentMustReverse.Certificate.selectedRead.view
+  let piece := ApSpec.CurrentMustReverse.Certificate.exactPiece
+  let mustAny := ApSpec.CurrentMustReverse.mustAnyNative 3 5 [] [2] 1 1 (.set [8]) (.set [4])
+  let mustExact := ApSpec.CurrentMustReverse.mustExactNative 3 5 [] [2, 7] 1 1 (.set [8])
+  let malformed := { raw with premiseEx := ApSpec.Excl.set [4] }
+  let demand := { raw with conclusion := { raw.conclusion with af := { raw.conclusion.af with demand := true } } }
+  let narrowed : ApSpec.CurrentMustReverse.NativeRecord := ⟨raw.premise, false, ApSpec.Excl.empty, piece⟩
+  if !ApSpec.CurrentMustReverse.omitMustDemand raw || view.2.demand ||
+      view.2.fact != raw.premise ||
+      ApSpec.CurrentMustReverse.omitMustDemand mustAny ||
+      ApSpec.CurrentMustReverse.omitMustDemand mustExact ||
+      ApSpec.CurrentMustReverse.omitMustDemand malformed ||
+      ApSpec.CurrentMustReverse.omitMustDemand demand ||
+      ApSpec.HandoffX.restrictIX raw.premise raw.premiseEx raw.conclusion
+        ApSpec.CurrentMustReverse.Certificate.previousDemand != some piece ||
+      ApSpec.CurrentMustReverse.publicationPlan raw piece != (true, piece) ||
+      ApSpec.CurrentMustReverse.omitMustDemand narrowed ||
+      ApSpec.CurrentMustReverse.Certificate.upstreamSourceWitness.val !=
+        ([⟨ApSpec.zeroFact, false⟩] : List ApSpec.AFact) then
+    throw (IO.userError "Executable raw must-selection and source-chain certificate failed.")
+  IO.println "Executable raw must-selection and source-chain certificates passed."
+
+-- Concrete may requirements match above/at the view by inside, below by applicable.
+#eval do
+  let p := ApSpec.CurrentMustReverse.Certificate.exact.view.1
+  let above : ApSpec.PFact := ⟨5, [], .any, .conc 1⟩
+  let atFact : ApSpec.PFact := ⟨5, [2], .any, .conc 1⟩
+  let below : ApSpec.PFact := ⟨5, [2, 7], .any, .conc 1⟩
+  let blocked : ApSpec.PFact := ⟨5, [2, 4], .any, .conc 1⟩
+  if !ApSpec.Abs.satW p above || !ApSpec.Abs.satW p atFact ||
+      ApSpec.applicable p atFact || !ApSpec.applicable p below ||
+      (ApSpec.Abs.satW p blocked || ApSpec.applicable p blocked) then
+    throw (IO.userError "Executable concrete must-view matching certificate failed.")
+  IO.println "Executable concrete must-view matching certificates passed."
