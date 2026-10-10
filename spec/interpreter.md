@@ -58,7 +58,7 @@ Common rules:
 | I5 | The interpreter is the same in every run. The differences: requests exist only in forward run 1 (§5.4). In a forward restricted run, the core fires an unconditional source (a micro edge from the zero fact to another base) only if it is a source seed (ap.md §6.1 rule 6; analyzer-core.md §4.7). The backward run reverses the micro edges and applies no type filter; the core records the sources that it reaches (§4.9). |
 | I6 | MARK WELL-FORMEDNESS (ap.md S7): no micro edge or binding has a premise mark `*∖X`, and a micro edge with a concrete target mark has a concrete premise mark (a source: `zeroMark`; a conditional source: `T`). Without it a normal-layer edge can claim a cleaned mark. |
 | I7 | NO UNIVERSE (ap.md S8): a micro edge with a `$` premise has a concrete premise mark; a micro edge with a `$` target has a concrete premise mark; no micro edge has a `$` premise and a `*` target; no micro edge, binding or initial fact has the kind `*/Universe`. Every exclusion that the interpreter makes is a finite set of accessors. |
-| I8 | NO `*`-PREMISE CALLEE SUMMARY in a restricted run (ap.md §6.3). The interpreter precomputes no callee summary. An EMPTY METHOD is a method with no instruction (JVM: an empty instruction list, for example a native or an abstract method; Go: a function with no body). It is not analysable, and the analysis never analyses it. The call resolver drops an empty method from the callees of a call (§3.6). A call whose every resolution result is an empty method is an UNRESOLVED call (§3.7: the default identity and the pass rules). No summary exists for an empty method, also no identity summary (D28). An unresolved callee is a statement summary (§3.7), not a callee summary. |
+| I8 | NO PRECOMPUTED CALLEE SUMMARY (ap.md §6.3). The interpreter precomputes no callee summary. So a callee summary with a `*` premise in a restricted run comes only from the AP: a persisted run-1 record, its reversal in a backward run (ap.md §9.1), or, since F72, a summary of a FLOW premise that the restricted run emits itself for a `*` demand pattern (ap.md §6.3; `ap-history.md` F72). Before F72 a restricted run had only the first two. An EMPTY METHOD is a method with no instruction (JVM: an empty instruction list, for example a native or an abstract method; Go: a function with no body). It is not analysable, and the analysis never analyses it. The call resolver drops an empty method from the callees of a call (§3.6). A call whose every resolution result is an empty method is an UNRESOLVED call (§3.7: the default identity and the pass rules). No summary exists for an empty method, also no identity summary (D28). An unresolved callee is a statement summary (§3.7), not a callee summary. |
 | I9 | PRECISE AND COMPLETE MICRO EDGES (ap.md S1, S2, §4.2): every micro edge (a statement edge with its alias edges, or a call binding edge; not a callee summary edge) gives exactly the concrete flows of its statement (ap.md §3.5). A micro edge has NO LAYER: the layer belongs to the propagation edge, and only the AP operations change it (ap.md §2.2). |
 | I10 | NO FIELD LIMIT ON A MICRO EDGE: a micro edge keeps its full paths (also an alias path `c.q.p` of any length). The field limit applies to the results of an application (ap.md §4.4 lists the cut points): the statement step, also the read sources (§2.1 step 6, §4.4); the return of a call, also the source results, the end facts of a sink at a call and the pass-rule results (§4.5 steps 4 and 6); the results of the entry rules (§4.3); the results of the exit rules (§4.7); the conjunction result (§5.3; the Lean model has no cut there, ap.md §11.2); and the backward seed (§4.9). |
 | I11 | BACKWARD CONTRACTS (ap.md S11, items (a) to (g)). The interpreter makes these true: (a) every binding has the `*` tail and the mark `*` on both sides (§3.1), so no binding has an `[any]` or an `[any-taint]` target (ap.md S10; Lean `AnyTaint.BindNoAny`, a hypothesis of the kinds invariant of run 1 `AnyTaintExKinds.D6X_any_conc` (round 1: `AnyTaintSim.D6T_any_conc`; necessary there: `AnyTaintSim.CexKinds.cex_bindNoAny`)); (b) every statement micro edge is MARK-REVERSIBLE (ap.md §9.1): its target mark is abstract (`*` or `*∖X`), or its premise mark is concrete. Every row of §2, §1.4 and §4.1 has this form; (c) no FORWARD call binds the zero base back (§3.3); the backward binding back has the reversed zero binding `zero.* → zero.*` (ap.md §9.2); (d) every statement that touches the zero base has the keep edge `zero.$ (zeroMark) → zero.$ (zeroMark)`, and no other micro edge, no binding back and no conjunction has its target on the zero base (the only binding into the zero base is `zero.* → zero.*`, §3.1; Lean `NDZeroBase.NoZeroGen`): the read statement with a read source (§4.4), the rule statement of a call (§4.1), and the method start and the exits with their sources (§4.3, §4.7); no cleaner acts on the zero base; and no type filter is on the zero base (so a type filter on the zero base accepts the empty path, as ap.md S11 (d) asks); (e) for every method that is a root or the callee of a call, every node on a CFG path from the method entry has a CFG path to the method exit: the implementation wires code that never returns to an exit node (§4.9); (f) every sink pattern has the tail `$` (`ContainsMark`) or `[any]` (`ContainsMarkOnAnyField`) (§4.2); the backward seed of an `[any]` pattern has the tail `[any]` and is in the demand layer (W6; the backward run has no `[any-taint]`, I14, §4.9); (g) every statement micro edge and every call binding has an EXACT SHAPE (ap.md S11 (g)): by I3 only an identity keep edge carries an exclusion, so a micro edge with a `*` premise and a `$` or `[any]` target has the Empty premise exclusion, and by (a) every binding is `* → *` (`Reverse.bindRev_of_star`). Only the exactness of the reversed records (ap.md §8.7 R3) needs (g). Lean: `Reverse.BindTargetsStar`, `Backward.StmtsMarkRev`, `Backward.NoZeroBack`, `Backward.ZeroKept`, `Backward.ExitReach`, `Reverse.RevStmts`, `RevCalls`. |
@@ -744,9 +744,14 @@ statement summary, the reversed entry and exit rules, and the reversed call plan
 call order below is the reversal of the forward call order of §4.5, stage by stage; the reversal drops every type
 filter and every forward-only guard (the alias selection AC3, AC4; the sink trigger of the end facts: in its place the
 reversed end-fact edge fires the sink seeds of its alternative, RULE ROLES below).
-The backward run is a restricted run (ap.md §6.1). Every fact is concrete and there is no request, because the seeds
-have concrete marks (ap.md §9.2; Lean `BExact.DB_concrete`, `DB_no_request`).
-The implementation asserts both (§5.4).
+The backward run is a restricted run (ap.md §6.1). It has no request (§5.4). Since F72 it is not concrete: a demand
+pattern with the mark `*` weakens the requirement to a FLOW requirement with the mark `*` (ap.md §6.3, §9.2;
+`ap-history.md` F72), and the requirements that it gives have the marks `*` and `*∖X`. On such a requirement a
+reversed micro edge whose premise has a concrete mark gives nothing, with no request (the reversal of a conditional
+source or of a mark-changing pass rule, for example). A concrete requirement (from a seed, through the concrete
+patterns) stays concrete. The interpreter forms do not change: the AP operations read the mode. (Before F72 every
+backward fact was concrete, because the seeds have concrete marks and the emission copied the mark: Lean
+`BExact.DB_concrete`, `DB_no_request`, for the concrete design.)
 
 STATEMENTS. The reversed statement summary of a non-call statement (ap.md §9.1, §9.2; Lean `Reverse.Stmt.rev`):
 
@@ -1062,8 +1067,13 @@ of §2.1 step 4 raises a POSITION REQUEST instead (ap.md §4.10).
 | a sink or a conjunction literal on `S` | the ordinary sink check or literal (ap.md §4.9, §4.6) | the mark request; on a static premise it is answered by the added fact itself (ap.md §4.10 item 4) |
 | entry rules, read sources | none (unconditional) | none |
 
-In a restricted run (forward or backward) no fact has the mark `*`, so no request can occur (ap.md §6.1).
-The interpreter asserts this in every restricted run (ap.md §13 item 9).
+A restricted run (forward or backward) has NO REQUEST (ap.md §4.5, §6.1; `ap-history.md` F72 R4). Since F72 it can
+have facts with the mark `*` or `*∖X` (the facts of a FLOW premise, ap.md §6.3). At each mark row of the table such a
+fact gives NOTHING and raises no request: the sink check reports nothing, the mark gate gives no result (a conditional
+source, a pass rule, an ND literal), and a cleaner action or the summary rewriter that cleans a part of the fact keeps
+the fact as `*∖{T}` (ap.md §4.7). The static rows do not apply (no static rule after run 1). The interpreter gives the
+same forms in every run; only the AP operations read the mode. (Before F72 no fact of a restricted run had the mark
+`*`, and the interpreter asserted that no request occurred.)
 
 ---
 
@@ -1167,7 +1177,8 @@ getter rules; no type filter in the backward run.
 7. Type filter placement: one test per row of §5.1; a `*`, an `[any]` and an `[any-taint]` fact always pass, with
    their tails and exclusions; the policy drops a mark on an `int` base.
 8. Requests: one test per row of §5.4 in run 1, also the static rows (JVM `x = C.s`, `C.s = x`, Go `x = G`, a sink on
-   `S`); no request in a restricted run and in the backward run (assert).
+   `S`); no request in a restricted run and in the backward run: on a fact with the mark `*` (F72) each mark row of
+   §5.4 gives nothing (no sink report, no gate result; a cleaner gives `*∖{T}`), and no request occurs.
 9. ND: the result does not depend on the order in which the two premise facts arrive; a conjunctive sink reports only
    a full combination.
 10. The rule statement of a call (§4.1): the zero fact keeps itself; a conditional source gives only its target, and

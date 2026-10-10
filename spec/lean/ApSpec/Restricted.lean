@@ -112,13 +112,17 @@ def meetK : Kind → Kind → Kind
 
 /-- The demand entry pattern `d` asks for the mark of `a`: a `*` demand mark admits every mark;
     a concrete demand mark `T` needs the concrete mark `T` (a `*` fact mark never meets it in a
-    restricted run: every added fact there has a concrete mark). -/
+    restricted run: every added fact there has a concrete mark). A demand mark `*∖x` (the entry
+    pattern of a backward run that a run-1 summary with a cleaner gives) admits a concrete mark only
+    if it is not in `x` (decision F71, the mark-aware restriction: the exact test of `*∖x`; before,
+    `*∖x` counted as `*`). -/
 def markMatchB : MarkA → MarkA → Bool
   | .star,     _         => true
   | .conc t,   .conc t'  => Nat.beq t t'
   | .conc _,   .star     => false
   | .conc _,   .starEx _ => false
-  | .starEx _, _         => true     -- a demand pattern never has `starEx`
+  | .starEx x, .conc t   => !(memB t x)
+  | .starEx _, _         => true
 
 /-- The spec emission (since version 4): the part of the added fact `a` that the demand entry pattern `d`
     covers (`a ∩ D-c`), with the mark of `a`. -/

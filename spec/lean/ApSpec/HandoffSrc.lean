@@ -232,9 +232,10 @@ theorem seg_genN_src (hW : P.WF) (hT : BindTargetsStar P) (hmr : StmtsMarkRev P)
       obtain ⟨⟨gb, hgb, hdgb, _, _⟩, hfrc⟩ := ihc jb (startFact jb) l2 (DB.start hjb)
         (startFact_sound hjbc) ⟨ta, by rw [startFact_mark]; exact hjbm⟩
         (fun _ hk => Invariant.startFact_legal hk)
-      -- the intersection restriction by the demand edge keeps the pair
+      -- the mark-aware intersection restriction by the demand edge keeps the pair (F71: the
+      -- emitted premise lies inside `g'` with its mark; `j` covers the exit location `l1`)
       obtain ⟨gb', hres, hdgb', _⟩ := restrictI_contract_B (d := ⟨g'.fact, some j⟩)
-        (emitM_inside_B hemit) hdgb rfl (RCov.covers_loc hjc)
+        (emitM_insideB_B hemit hta) hdgb rfl hjc
       -- the backward summary piece applied, and the reversed binding into the callee
       obtain ⟨r, hr, hdr⟩ := RCov.sat_step RCore.satI_contract hsat hda hdgb'
       have her1 : revEdge e1.1 e1.2 ∈ (Call.rev c).fromCallee := List.mem_map.mpr ⟨e1, he1, rfl⟩
@@ -262,7 +263,7 @@ theorem seg_genN_src (hW : P.WF) (hT : BindTargetsStar P) (hmr : StmtsMarkRev P)
         have hdem : demOfN (Program.rev P) DBr (pubR demB) c.callee ⟨gb'.fact, some jb⟩ :=
           Or.inr (Or.inr ⟨jb, gb, gb', hjb, hne, hgb, hncb, ⟨_, hdB, hres⟩, rfl⟩)
         exact ⟨res, FlowRR.call hfr (FSeeds.mem_keep_call he) he1 hd1 hfrc hdem
-          (den_covers_final hdgb') rfl (RCov.covers_loc hjbc) he2 hd2⟩
+          (den_covers_final hdgb') rfl hjbc he2 hd2⟩
   | @rcall M l0 n l n' c e1 e2 l1 l2 l3 j g _ he he1 hd1 hrcj hcr hjc hdg he2 hd2 ih =>
     intro i f lX h hd hc hl
     -- a crossable record of `rc`: the backward run crosses it by its reversal (no seed is read)

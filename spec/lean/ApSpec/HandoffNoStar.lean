@@ -473,6 +473,81 @@ theorem narrowing_canon_loc_exact (hsd : ∀ k, BExact.SeedsConc (seeds k))
 
 #print axioms narrowing_canon_loc_exact
 
+/-! ### The exact narrowing with the marks (F71, the mark-aware restriction) -/
+
+/-- THE FORWARD NARROWING IS EXACT, MARK-AWARE: as `narrowing_canon_fwd_exact`, in the locations
+    AND the marks (`insideB`). -/
+theorem narrowing_canon_fwd_exactM (hsd : ∀ k, BExact.SeedsConc (seeds k))
+    (hsk : ∀ k M n s, (M, n, s) ∈ seeds k → NoStarK s.kind) (k : Nat) {m : MethodId}
+    {d' : DemandEdge} (h : handF P (CS (k + 1)).R (CS (k + 1)).pub m d') :
+    ∃ (j : PFact) (g' : AFact) (d : DemandEdge) (p : PFact), (DEMk k) m d ∧ d.dout = some p ∧
+      d' = ⟨g'.fact, some j⟩ ∧ insideB j d.din = true ∧ insideB g'.fact p = true :=
+  handF_narrow_DR_exactM (P := P) (counted := counted) (L := Ls (k + 1)) (demand := DEMk k)
+    (dem := DEMk k) (sat := satI) (restrict := restrictI) (recs := (CS (k + 1)).rc)
+    (sinks := sinks) (roots := roots)
+    (fun m1 d1 p1 h1 hp1 => (canon_dem_nonstar hsd hsk k m1 d1 h1).2 p1 hp1) h
+
+#print axioms narrowing_canon_fwd_exactM
+
+/-- THE BACKWARD NARROWING IS EXACT, MARK-AWARE: as `narrowing_canon_back_exact`, in the locations
+    AND the marks (`insideB`; the backward run is concrete, `BExact.DB_edge_concrete`). -/
+theorem narrowing_canon_back_exactM (hsd : ∀ k, BExact.SeedsConc (seeds k))
+    (hsk : ∀ k M n s, (M, n, s) ∈ seeds k → NoStarK s.kind) (k : Nat) {M : MethodId}
+    {d' : DemandEdge} (h : (DEMk (k + 1)) M d') :
+    d' = ⟨zeroFact, none⟩ ∨
+    (∃ g, (DBk (k + 1)) (.edge M zeroFact ((Program.rev P).exit M) g) ∧ d' = ⟨g.fact, none⟩) ∨
+    ∃ jb gb gb' d p, (DBk (k + 1)) (.init M jb) ∧ jb ≠ zeroFact ∧
+      (DBk (k + 1)) (.edge M jb ((Program.rev P).exit M) gb) ∧ ¬ CrossB jb gb ∧
+      handF P (CS (k + 1)).R (CS (k + 1)).pub M d ∧ d.dout = some p ∧
+      restrictI jb gb d = some gb' ∧ d' = ⟨gb'.fact, some jb⟩ ∧ insideB jb d.din = true ∧
+      insideB gb'.fact p = true := by
+  rcases narrowing_canon_backM (k + 1) (hsd (k + 1)) h with h1 | h2 | ⟨jb, gb, gb', d, p, hjb, hne,
+    hgb, hncb, hdB, hdo, hres, hd', hin, hcon⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · refine Or.inr (Or.inr ⟨jb, gb, gb', d, p, hjb, hne, hgb, hncb, hdB, hdo, hres, hd', hin, ?_⟩)
+    rcases hcon with hc | ⟨⟨_, ⟨E, hE⟩, _, _⟩ | ⟨⟨e, he⟩, _⟩, _⟩
+    · exact hc
+    · rcases (canon_handF_nonstar hsd hsk (k + 1) hdB).2 p hdo with hp | hp
+      · exact absurd hE (hp E)
+      · -- after a restricted run the exit pattern is not `*/{}`
+        obtain ⟨_, h2'⟩ := handF_DR_nonstar (P := P) (counted := counted) (L := Ls (k + 1))
+          (dem := DEMk k) (sat := satI) (restrict := restrictI) (recs := (CS (k + 1)).rc)
+          (sinks := sinks) (roots := roots)
+          (fun m1 d1 h1 => (canon_dem_nonstar hsd hsk k m1 d1 h1).1) hdB
+        exact absurd hE (h2' p hdo E)
+    · exact absurd he (DB_edge_nonstar (hsd (k + 1)) (hsk (k + 1)) hgb e)
+
+#print axioms narrowing_canon_back_exactM
+
+/-- THE NARROWING OVER ONE ROUND IS EXACT, MARK-AWARE (the user's rule with no exception, in the
+    locations AND the marks). With concrete seeds with no `*` tail, every demand edge `d''` of
+    forward run `k + 2` is the zero demand, a zero-premise backward edge (a seed path; not
+    narrowed), or lies inside a demand edge `d` of forward run `k + 1` of the same method: every
+    exit location of `d''` with its mark is an exit location of `d` with its mark, and every entry
+    location of `d''` with its mark is an entry location of `d` with its mark. -/
+theorem narrowing_canon_loc_exactM (hsd : ∀ k, BExact.SeedsConc (seeds k))
+    (hsk : ∀ k M n s, (M, n, s) ∈ seeds k → NoStarK s.kind) (k : Nat) {M : MethodId}
+    {d'' : DemandEdge} (h : (DEMk (k + 1)) M d'') :
+    d'' = ⟨zeroFact, none⟩ ∨
+    (∃ g, (DBk (k + 1)) (.edge M zeroFact ((Program.rev P).exit M) g) ∧ d'' = ⟨g.fact, none⟩) ∨
+    ∃ (jb : PFact) (gb' : AFact) (d : DemandEdge) (p : PFact), (DEMk k) M d ∧ d.dout = some p ∧
+      d'' = ⟨gb'.fact, some jb⟩ ∧ (∀ l, jb.covers l → p.covers l) ∧
+      (∀ l, gb'.fact.covers l → d.din.covers l) := by
+  rcases narrowing_canon_back_exactM hsd hsk k h with h1 | h2 | ⟨jb, gb, gb', dB, pB, _, _, _, _,
+    hdB, hdo, _, hd'', hin, hcon⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · obtain ⟨j, g', d, p, hdem, hdop, hdB', hinF, hconF⟩ := narrowing_canon_fwd_exactM hsd hsk k hdB
+    subst hdB'
+    have hpB : pB = j := (Option.some.inj hdo).symm
+    subst hpB
+    exact Or.inr (Or.inr ⟨jb, gb', d, p, hdem, hdop, hd'',
+      fun l hl => insideB_covers hconF (insideB_covers hin hl),
+      fun l hl => insideB_covers hinF (insideB_covers hcon hl)⟩)
+
+#print axioms narrowing_canon_loc_exactM
+
 end Canon
 
 /-! ## 4. The X sequence (`HandoffXIter.canonStateX`) -/

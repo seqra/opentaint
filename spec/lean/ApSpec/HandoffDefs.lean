@@ -36,8 +36,9 @@ open ApSpec ApSpec.Reverse
 
 /-! ## 1. The restriction as an intersection (`ap.md` §6.4, revised) -/
 
-/-- The location set of `j` lies inside the location set of `d`; the marks are ignored (the
-    restriction reads `D-c` and `D-p` as locations). -/
+/-- The location set of `j` lies inside the location set of `d`; the marks are ignored. It is the
+    location part of `insideB` (the restriction tests the marks separately, F71) and the form of the
+    narrowing theorems on locations. -/
 def insideLocB (j d : PFact) : Bool :=
   coversB ⟨d.base, d.path, d.kind, .star⟩ ⟨j.base, j.path, j.kind, .star⟩
 
@@ -70,13 +71,36 @@ def restrictConcI (sc : AFact) (dout : PFact) : Option AFact :=
     | .apart => none
   else none
 
-/-- THE RESTRICTION OF `ap.md` §6.4 AS AN INTERSECTION. No `D-p`: no result. The premise `j` must
-    lie INSIDE `D-c` (so `j ∩ D-c = j`; an emitted premise lies inside the entry pattern that
-    emitted it). The conclusion is `restrictConcI`. The layer stays. -/
+/-- The premise `j` lies INSIDE the entry pattern `d`, in its locations AND in its marks: the
+    marks of `j` are a subset of the marks of `d` (`markSubB`: a `*` pattern admits every mark, a
+    concrete `T` only `T`, a `*∖x` pattern every mark that is not in `x`). An emitted premise has
+    the mark of its concrete added fact, which the entry pattern admits, so it passes (F71, the
+    mark-aware restriction). -/
+def insideB (j d : PFact) : Bool :=
+  insideLocB j d && markSubB d.mark j.mark
+
+/-- The marks of the conclusion meet the marks of the exit pattern (`p` is `D-p`, `m` the
+    conclusion mark): two concrete marks must be the same; a `*∖x` side does not admit a concrete
+    mark in `x`; a `*` side meets every mark. A `*` or `*∖x` conclusion (it never occurs in a
+    restricted run) is kept when it can pass a mark of `D-p`: the intersection of a pass-through
+    mark with `T` has no form, so the edge stays as it is (an over-approximation, no lost pair). -/
+def concMarkB : MarkA → MarkA → Bool
+  | .conc t,   .conc u   => Nat.beq t u
+  | .conc t,   .starEx x => !(memB t x)
+  | .conc _,   .star     => true
+  | .star,     _         => true
+  | .starEx x, .conc u   => !(memB u x)
+  | .starEx _, _         => true
+
+/-- THE RESTRICTION OF `ap.md` §6.4 AS AN INTERSECTION, MARK-AWARE (F71). No `D-p`: no result. The
+    premise `j` must lie INSIDE `D-c`, in its locations and in its marks (`insideB`; so
+    `j ∩ D-c = j`; an emitted premise lies inside the entry pattern that emitted it). The marks of
+    the conclusion must meet the marks of `D-p` (`concMarkB`; in a restricted run both are concrete,
+    so the test is "the same mark"). The conclusion is `restrictConcI`. The layer stays. -/
 def restrictI (j : PFact) (g : AFact) (d : DemandEdge) : Option AFact :=
   match d.dout with
   | none   => none
-  | some p => if insideLocB j d.din then restrictConcI g p else none
+  | some p => if insideB j d.din && concMarkB p.mark g.fact.mark then restrictConcI g p else none
 
 /-! ## 2. Crossable records -/
 
@@ -148,7 +172,8 @@ def demOfN (Pb : Program) (R : Obj → Prop) (pub : Pub) (M : MethodId) (d : Dem
 abbrev Recs := MethodId → PFact × AFact → Prop
 
 /-- A concrete flow whose every call that returns is DEMANDED (one demand edge covers the entry
-    location with its mark and the exit location) or crossed by a crossable RECORD of `rc` whose
+    location and the exit location, each with its mark: the restriction is mark-aware, F71) or
+    crossed by a crossable RECORD of `rc` whose
     premise covers the entry location and whose pair relation has the pair. A recorded call has no
     inner flow: the record replaces the analysis of the callee. -/
 inductive FlowRR (P : Program) (demand : MethodId → DemandEdge → Prop) (rc : Recs) :
@@ -164,7 +189,7 @@ inductive FlowRR (P : Program) (demand : MethodId → DemandEdge → Prop) (rc :
       FlowRR P demand rc M l0 n l → (M, n, Instr.call c, n') ∈ P.edges →
       e1 ∈ c.toCallee → den e1.1 e1.2 l l1 →
       FlowRR P demand rc c.callee l1 (P.exit c.callee) l2 →
-      demand c.callee d → d.din.covers l1 → d.dout = some p → p.coversLoc l2 →
+      demand c.callee d → d.din.covers l1 → d.dout = some p → p.covers l2 →
       e2 ∈ c.fromCallee → den e2.1 e2.2 l2 l3 →
       FlowRR P demand rc M l0 n' l3
   | rcall {M l0 n l n' c e1 e2 l1 l2 l3 j g} :
