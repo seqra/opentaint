@@ -14,7 +14,8 @@ The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lea
 `PipelineStore.lean`, `PipelineDriver.lean`, `PipelineSeeds.lean` (with `ForwardSeeds.lean`), `PipelineNDZ.lean` (with
 `NDZ.lean`, `NDZeroBase.lean`), `PipelineAnyTaintEx.lean` and `PipelineAnyTaintExDriver.lean` (with the
 `AnyTaintEx*.lean` files of the tail `[any-taint]` and its exclusion, and the `AnyTaint*.lean` files that they reuse,
-`ap.md` §10.11). Every theorem named here
+`ap.md` §10.11), and, for the hand-off of the demand edges only, the `Handoff*.lean` files,
+`PipelineHandoffDriver.lean` and `PipelineHandoffDriverExt.lean` (`ap.md` §10.12; §7.3 to §7.8). Every theorem named here
 is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
 Language: ASD-STE100 Simplified Technical English.
@@ -28,8 +29,12 @@ The analyzer core:
 1. runs one run (`ap.md` §6): one direction, one field limit, one mode (run 1 or restricted), to a fixed point;
 2. exchanges the edges between the methods of a run with no loss (§5);
 3. detects the end of a run (§6);
-4. runs the sequence of runs and computes the hand-off from each run to the next (§7);
-5. gives the report: the vulnerabilities and the end of the analysis (§7.5, §9).
+4. runs the sequence of runs and computes the hand-off from each run to the next: only the DEMAND EDGES and the
+   seeds of the DEMAND vulnerabilities (§1, §7.3, §7.4);
+5. stops the sequence by its STOP RULES and by ONE BUDGET for the whole analysis: each run gets the rest of the budget
+   (§7.1). It LOCALIZES the remaining work: after each complete run it logs the FRONTIER, the part of the program that
+   the later runs still analyse (§7.8);
+6. gives the report: the vulnerabilities and the end of the analysis (§7.5, §9).
 
 The core is for the JVM. Go is out of scope.
 
@@ -39,14 +44,18 @@ Out of scope:
 * the prescan, the rule reduction and the `TaintAnalyzer` wiring (phase 3); §9 gives the interface;
 * the trace resolution. The core keeps no store of a run for a trace resolver (§7.6). The phase-3 output holds every
   entry of the report, CONFIRMED and DEMAND, and gives each one a simple trace (§9; `ap-history.md` F68);
-* the iteration policy: the field limit of each run, the budget and the stop rule for a budget (`ap.md` §6.6). The
-  driver takes the policy and the budget as parameters (§7.1).
+* the iteration policy: the field limit of each run, and a practical STOP STRATEGY that reads the frontier log
+  (`continueAfter`, §7.8). The driver takes the policy as a parameter (§7.1). The stop rules and the one budget are
+  in scope (item 5);
+* the localization of the ZERO FACT. The zero fact still enters every callee in every run (the backward rule `zin`,
+  the forward zero demand, §4.4), and its work is in the frontier log only as a measure (§7.8, §11 THE ZERO FACT;
+  `ap-history.md` F70).
 
 ### 0.1 Assumptions
 
 | # | Assumption |
 |---|---|
-| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `AnyTaintEx.DRXs`). The backward run has no `[any-taint]`: it stays `Backward.DB`. |
+| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `emitX`, `satX` and the restriction as an INTERSECTION `HandoffX.restrictIX`, `ap.md` §6.4; before F70 the spec instance was `AnyTaintEx.DRXs`, with `restrictX`). The backward run has no `[any-taint]`: it stays `Backward.DB`, with the intersection `Handoff.restrictI`. |
 | A2 | LINEARIZABLE SHARED ACTIONS. Each shared action of §5.2 and §5.3 is atomic: register a handler, insert a publication, read the storage, read the handler list. All of them have one total order. This order agrees with the program order of each thread. The Lean model is an interleaving model with these actions as steps. P3 (§5.3) is the implementation rule. |
 | A3 | RELIABLE EVENTS. An event that a thread sends to the channel of a runner arrives exactly once, unless the run is cancelled. The send happens before the receive (Kotlin `Channel`). |
 | A4 | READ-ONLY INPUTS. These inputs do not change during a run: the program, the rules, the lambda resolutions, the demand store, the record store and the seeds. The driver makes them before the run starts. The start of the run publishes them to every runner. |
@@ -71,14 +80,18 @@ and others). This document adds:
 | method analyzer | The actor of one method key in one run (§4). It owns the intra-procedural edges and every RUN store of its method. |
 | event | One message in the channel of a runner (§5.1). Its HANDLER is the code that the runner runs for it. |
 | subscription | A caller-side record `(caller edge, call statement, added fact)` (`ap.md` §8.4). |
-| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4). It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). |
+| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4): the INTERSECTION of the summary edge with one demand pattern. It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). The hand-off reads the publications, not the summary edges before the restriction (§7.3, §7.4). |
+| crossable | A summary leaf `j → g` (one leaf of the conclusion tree of a summary edge, `ap.md` §7.2) that the next run of EITHER direction crosses by a record, with no analysis of the callee (Lean `Handoff.Cross`). All of these hold: (1) the leaf is a leaf of a RECORD (`ap.md` §8.7 R1: a normal summary edge with one premise; a backward premise is not the zero fact); (2) the premise `j` has the tail `$`, or `*` with the Empty exclusion: not `[any]` and not a must-premise `[any-taint]`; (3) `j → g` is mark-reversible (`ap.md` §1); (4) the leaf `g` has no any tail: not `[any]`, and not `[any-taint]` with or without its exclusion. So the reversal of the leaf (`ap.md` §9.1) has a `$` or `*` (Empty) premise too. A backward leaf `jb → gb` is crossable if it is NORMAL (a backward record) and its reversal satisfies (2) to (4) (Lean `Handoff.CrossB`: the reversal `revRec` is always normal, so the test reads the layer of `gb` itself). Then the record of the leaf applies to EVERY CONCRETE added fact (forward) or requirement (backward) that covers one of its locations (every restricted run is concrete), by `inside` or by `applicable` (Lean `Handoff.cross_applies`), and its reversal is exact (`ap.md` §8.7 R3; Lean `Reverse.rev_exact_of_empty_premise`: the converse pairs; as a record, `ap.md` S14). §7.3 shows that (4) is necessary. |
+| demand edge | A published summary piece of a run that the next run of the other direction cannot reuse as a record: a publication (§4.6) of a summary leaf that is NOT crossable (Lean `Handoff.handF`, `demOfN`). Also, from a backward run, every zero-premise backward edge at the forward entry (§7.4 case 2). The run stores its demand edges when it publishes them (§4.6). The hand-off gives the next run only the demand edges (§7.3, §7.4); each one gives one demand pattern of the next run per member of its premise. The zero demand is not a demand edge: it is implicit for every method key (§4.4). A demand edge is not the same as a DEMAND-LAYER edge (`ap.md` §1): a normal leaf that is not crossable (an `[any-taint]` leaf, for example) is a demand edge too. |
+| DEMAND vulnerability | A vulnerability key whose state in the report is DEMAND after a complete forward run (§7.5): the latest complete forward run reports it, and NO complete forward run so far confirmed it. A key that an earlier run confirmed is CONFIRMED (final), also when the latest run reports it only in the demand layer. Only the sink witnesses of the DEMAND vulnerabilities are sink seeds of the hand-off (§7.3). The backward run also fires the sink seeds of a sink whose end fact a requirement reaches, also of a CONFIRMED vulnerability (§4.5 THE TRIGGER OF AN END FACT). |
+| frontier | The part of the program that the later runs still analyse after a complete run: the method keys with a non-zero initial fact in the run, and the demand edges that the run hands off, per method key (§7.8). The driver logs the frontier of each complete run (THE FRONTIER LOG, §7.8). |
 | storage with subscription | The callee-side store of the publications, with the list of the subscribed runners (§5.2). |
 | replay | The read of the storage when a subscription is new (§5.3). |
 | notification | The send of a new publication to every subscribed runner (§5.2). |
 | delivery | The event that carries a notification to one runner (§5.3). |
 | quiescence | The state of a run with no event in a channel or a local queue, no running handler, no worklist item and no pending publication (§6.2). |
 | barrier | The point between two runs: the first run is quiescent, and the next run has not started (§7.2). |
-| hand-off | What one run gives to the next run: the demand and the seeds (`ap.md` §8, §9.2). The records are PERSISTENT, not a hand-off (`ap.md` §8.7). |
+| hand-off | What one run gives to the next run: the demand edges and the seeds (`ap.md` §8, §9.2; §7.3, §7.4). The records are PERSISTENT, not a hand-off (`ap.md` §8.7): a crossable leaf goes to the records and not to the hand-off. |
 | complete run | A run that ended at quiescence. A run that ended by a timeout, its memory guard or an exception (every `Throwable`, §6.3) is INCOMPLETE. An incomplete run adds nothing to the report and refutes nothing (§7.5). |
 
 ---
@@ -152,13 +165,13 @@ The mode decides these rules (`ap.md` §6.1):
 | Rule | Run 1 (forward) | Restricted forward run | Backward run |
 |---|---|---|---|
 | initial facts of an added fact | the policy fact (`ap.md` §6.2) and the request answers | the emission `a ∩ D-c` (`ap.md` §6.3); the zero fact for the zero added fact | the emission; the zero fact enters every callee (rule `zin`) |
-| a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`, after the restriction in the callee | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
-| records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3) |
+| a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`, after the restriction in the callee (the INTERSECTION with a demand pattern, `ap.md` §6.4). A callee has a non-zero premise only where a demand pattern of it emits one (§4.4): a callee whose only demand pattern is the zero demand publishes no summary of a non-zero premise, and its callers cross it by its records (next row) | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
+| records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`). A CROSSABLE leaf (§1) of the run before is not in the demand (§7.3, §7.4): its record REPLACES the analysis of the callee, and the run crosses the call by the record. A callee of which the forward run before hands off no demand edge (for example, all its summary leaves are crossable), with no seed in its call subtree, is analysed only from the zero fact (§7.8 THE EXCLUSION) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3). A crossable forward leaf is not in the backward demand (§7.3): the backward run crosses the call by its reversal and never enters the callee for it |
 | mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no (assert) | no (assert) |
 | sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
-| the tail `[any-taint]` (`ap.md` W8, S15) | a source rule with an `[any]` target gives `[any-taint]` on a normal input: a complete edge (on a demand input `[any]`, W8). A pass rule with an `[any]` target keeps `[any]`: a may, in the demand layer (`ap.md` W6). A normal `[any-taint]` conclusion can carry an EXCLUSION `E` of first accessors, `(x, p, [any-taint], E, T)`: an exclusion edge (the keep edge of a strong write, a `*/E'` summary) gives `E ∪ E'` and the result stays normal (§4.3). Only the demotions of §4.3 make `[any]` of it (demand, no exclusion): the field-limit cut, a cleaner `part` row other than `atAndBelow` and `below` one accessor below it, a may target, a demand-layer input and (in a restricted run) the must-record demotion. No premise has the `[any-taint]` tail | as run 1. Also the `[any-taint]` premise (a MUST-PREMISE) of the emission (§4.4), with the exclusion that the emission gives it: it starts as itself in the normal layer, and its normal edges are complete | no `[any-taint]` (a forward-only tail, `ap.md` W8). The seed of an `[any]` sink pattern and the reversal of an `[any]` condition literal give `[any]`, in the demand layer (`ap.md` W6). Every result of the reversal of a micro edge whose forward target is `[any]` (a pass rule with an `AnyField` target) is in the demand layer, also a `$` result (§4.3). A complete edge is a normal edge, as before F69 (`ap.md` §8.7 R1) |
+| the tail `[any-taint]` (`ap.md` W8, S15) | a source rule with an `[any]` target gives `[any-taint]` on a normal input: a complete edge (on a demand input `[any]`, W8). A pass rule with an `[any]` target keeps `[any]`: a may, in the demand layer (`ap.md` W6). A normal `[any-taint]` conclusion can carry an EXCLUSION `E` of first accessors, `(x, p, [any-taint], E, T)`: an exclusion edge (the keep edge of a strong write, a `*/E'` summary) gives `E ∪ E'` and the result stays normal (§4.3). Only the demotions of §4.3 make `[any]` of it (demand, no exclusion): the field-limit cut, a cleaner `part` row other than `atAndBelow` and `below` one accessor below it, a may target, a demand-layer input and (in a restricted run) the must-record demotion. No premise has the `[any-taint]` tail | as run 1. Also the `[any-taint]` premise (a MUST-PREMISE) of the emission (§4.4), with the exclusion that the emission gives it: it starts as itself in the normal layer, and its normal edges are complete | no `[any-taint]` (a forward-only tail, `ap.md` W8). The seed of an `[any]` sink pattern and the reversal of an `[any]` condition literal give `[any]`, in the demand layer (`ap.md` W6). Every result of the reversal of a micro edge whose forward target is `[any]` (a pass rule with an `AnyField` target) is in the demand layer, also a `$` result (§4.3). So is every result of the reversal of a conjunctive micro edge (§4.3). A complete edge is a normal edge, as before F69 (`ap.md` §8.7 R1) |
 
 No run has a liveness check (§4.3).
 
@@ -178,7 +191,8 @@ only the forms that the analyzer reads: the forward forms of the interpreter, or
 | `edges` | method edge store (`ap.md` §8.1) | the edges, keyed per kind (`ap.md` §7.2): REACH per (statement, premise key, layer); FLOW per (statement, premise key, layer, base, exclusion, mark exclusion); TAINT per (statement, premise key, layer, base), and a normal TAINT tree also per the one exclusion of its `[any-taint]` leaves (`ap.md` §7.2) |
 | `initials` | initial fact store (`ap.md` §8.2) | the initial facts of the run: zero, emissions, answers |
 | `links` | added fact store (`ap.md` §8.3) | each added fact with its links: the caller reference and the layer of the added fact on the link |
-| `summaries` | run summary store (`ap.md` §8.5) | the summary edges BEFORE the restriction, per premise key and layer |
+| `summaries` | run summary store (`ap.md` §8.5) | two parts: the summary edges BEFORE the restriction, per premise key and layer (`persist` takes the records from them, `ap.md` §8.7 R1), and the DEMAND EDGES of the run: the published pieces of the summary leaves that are not crossable (§1, §4.6; `ap-impl.md` DD17, `RunSummaryStore.addDemand`, `demandEdges()`). The hand-off reads only the demand edges (§7.3, §7.4) |
+| `counters` | | the counters of the frontier log (§7.8) and of the stop rule `NO_DEMAND_EDGE` (§7.1): the DEMAND-LAYER OBJECTS of the run (the deltas of `edges.add` in the demand layer, the summary deltas in the demand layer (§4.6) and the new DEMAND LINKS, the links whose added fact is in the demand layer, §4.2 `addLink`, `ap.md` §8.3), the crossable summary leaves (counted at each summary delta, §4.6), the record applications at a call (§4.2 `applyRecord`), a flag that is true if a non-zero initial fact exists, the edges of the zero premise; as an option, the demand-layer results per demotion (§4.3) |
 | `requests` | request store (`ap.md` §8.8) | run 1 only: the standing mark and position requests and their answers |
 | `sourceHits` | source hit store (`ap.md` §8.11) | backward run only: the unconditional sources of this method that a requirement reached |
 | `conjunctions` | conjunction store (`ap.md` §8.9) | the standing literal inputs per (conjunctive micro edge or sink alternative, statement, literal index), with the evaluated `S` parts of the exit sinks (§4.7); the combinations of the callee summaries with several premises (§5.4) |
@@ -205,11 +219,11 @@ The runner calls these handlers. Each handler is part of one event (§5.1).
 | Handler | When | Actions | `ap.md` |
 |---|---|---|---|
 | `addRootZero()` | the run starts at a root | the zero fact is an initial fact | §6.1 |
-| `addLink(link)` | a caller binds a fact into this method | add the link (exact deduplication). A new added fact: emit its initial facts (§4.4). A new link: check the standing requests (§4.6). The zero added fact emits the zero fact. No request matches it. Its link serves the support (§7.5). | E1, E2 |
+| `addLink(link)` | a caller binds a fact into this method | add the link (exact deduplication). A new added fact: emit its initial facts (§4.4). A new link: check the standing requests (§4.6). A new link whose added fact is in the demand layer (a DEMAND LINK, `ap.md` §8.3) adds one to the demand-layer objects of `counters` (§4.1; the stop rule `NO_DEMAND_EDGE`, §7.1). The zero added fact emits the zero fact. No request matches it. Its link serves the support (§7.5). | E1, E2 |
 | `addZeroEntry()` | backward: the zero fact of a caller reaches a call to this method | the zero fact is an initial fact (rule `zin`) | §9.2 |
 | `addRequest(premise, request)` | run 1: a callee climbs a request through a link of this method | store it (exact deduplication); check it against every link of this method (§4.6) | E5, E7 |
 | `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then the stages after the callees stage (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
-| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5). A record with an `[any-taint]` premise whose premise covers the added fact (`applicable`) but does not lie inside it with the exclusions (not `inside`) gives each result in the demand layer: the result keeps its base, path and mark, and its layer goes up (an `[any-taint]` result becomes `[any]` and loses its exclusion, `ap.md` W8; the must-premise needs every location; Lean `AnyTaintEx.recLayerX`, necessary by `AnyTaintExact.CexApp.cex_app`) | §4.3, §8.7 R3, R4 |
+| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5). A record with an `[any-taint]` premise whose premise covers the added fact (`applicable`) but does not lie inside it with the exclusions (not `inside`) gives each result in the demand layer: the result keeps its base, path and mark, and its layer goes up (an `[any-taint]` result becomes `[any]` and loses its exclusion, `ap.md` W8; the must-premise needs every location; Lean `AnyTaintEx.recLayerX`, necessary by `AnyTaintExact.CexApp.cex_app`). Each application with a result is a RECORD CROSSING: it adds one to `counters` (§4.1; the frontier log, §7.8) | §4.3, §8.7 R3, R4 |
 | `step(quantum)` | a `Work` event | process at most `quantum` worklist items (§4.3) | §6.1 (S6: any order) |
 
 A new initial fact `j` (from any handler) is event E3: the analyzer adds the start edges of `j` to the worklist
@@ -256,9 +270,18 @@ A new initial fact `j` (from any handler) is event E3: the analyzer adds the sta
     `[any]` goes to the demand layer, whatever its tail, also a `$` result (`ap.md` §9.1): the may belongs to the
     forward rule. W6 puts every `[any]` result in the demand layer. The reversal of a source edge (forward target
     `[any-taint]`, a must) follows the ordinary rows of `ap.md` §4.1. This rule is argued, as the backward W6 (§11).
+    THE REVERSAL OF A CONJUNCTION (`ap.md` §9.1; `ap-history.md` F70). The reversal of a CONJUNCTIVE micro edge with
+    two or more positive literals (also of a conjunctive exit source, §4.4) gives EVERY result in the demand layer, as
+    the reversal of a may: a requirement that reaches one literal is not a converse flow of the conjunction. So no
+    backward summary through it is a record (`ap.md` §8.7 R1) or crossable (§1), and the hand-off gives it to the next
+    forward run (§7.4 case 3), which analyses the callee with all the members. This fixes a false positive that
+    existed before F70: a normal backward summary from the conclusion to ONE literal was a record, and its reversal
+    (R3) was a forward record of one literal, which drops the other literals (§11). Argued (§11).
 
   The core reads the target tail of the FORWARD form of the micro edge (`MicroEdge.forward`, §4.9): `[any]` is a may
-  (a pass rule), `[any-taint]` a must (a source). So the core needs no rule-kind flag, in either direction.
+  (a pass rule), `[any-taint]` a must (a source). The reversed literal of a conjunctive edge carries
+  `MicroEdge.conjunctive` (§4.9), a property of the form (the reversal made it), not of the rule kind. So the core
+  needs no rule-kind flag, in either direction.
 * A result AT AN END NODE of the run (§4.4) goes through the end rules and makes the summary edges (§4.6). This holds
   for every handler that makes such a result: `step`, and also `applySummary`, `applyRecord` and `zret` when the end
   node is a call (for example a backward end node whose forward entry statement is a call). An end node is a
@@ -301,11 +324,16 @@ Initial facts:
   emission reads the exclusion `E` of an `[any-taint]/E` added fact as part of its location set: a premise at the path
   of the added fact keeps `E` (a `$` premise has none); the pattern chain below the added fact, at `a.path ++ r`,
   gives a premise with no exclusion, and only if `E` admits `r` (else the emission is empty: no common location). The
-  backward run gives patterns with the tails `$`, `*/E` and `[any]` only (§7.3): the must flag comes from the added
+  backward run gives patterns with the tails `$` and `[any]` only (§7.4): the must flag comes from the added
   fact, not from the pattern (Lean: `AnyTaintEx.emitX`, `emitTX`; the vectors `AnyTaintEx.Vec.emit_at`,
   `emit_above_excluded`, `emit_above_exact`, and the table without exclusions `AnyTaint.EmitVec`).
 * THE ZERO DEMAND. `(zero, none)` is part of the demand of EVERY method key, also when the demand store has no entry
-  for it. So the zero added fact always emits the zero fact. The zero fact of a root is an initial fact.
+  for it. So the zero added fact always emits the zero fact. The zero fact of a root is an initial fact. The zero fact
+  is not localized: it enters every callee that it reaches, in every run (§11 THE ZERO FACT).
+* A METHOD KEY WHOSE ONLY DEMAND PATTERN IS THE ZERO DEMAND has only the zero fact as an initial fact (a seed of a
+  backward run is a zero-to-fact edge, not an initial fact). In a restricted FORWARD run its callers get its non-zero
+  results only from its records (§3); in a backward run its zero-premise summaries (the seed paths) also return (rule
+  `zret`). So the hand-off of the demand edges decides which method keys a run analyses from a non-zero fact (§7.8).
 * BACKWARD RUN. As a restricted run. Also, `addZeroEntry` makes the zero fact an initial fact (rule `zin`).
 * `initials.add` deduplicates. Each new initial fact starts with its start fact (`ap.md` §6.5) at every start node of
   its kind, then the start rules. The start fact of a must-premise `(x, p, [any-taint], E, T)` is the premise itself,
@@ -338,7 +366,7 @@ union of the premise sets (without the zero fact, `ap.md` §4.6), after the fiel
 to 5 (`interpreter.md` §4.7) and becomes a summary at the normal exit, an ND summary if its premise set has two or more
 members; the callers apply it by E6 (§5.4). At the exceptional exit it goes through step 2 only and ends there (§4.3).
 It is not a rule error. The backward run reverses it into one micro edge per literal (`StatementSummary.reversed`,
-§4.9).
+§4.9), and every result of such a reversed edge is in the demand layer (§4.3 THE REVERSAL OF A CONJUNCTION).
 
 The backward graph is the reversed graph (`ApplicationGraph.reversed`) with the EXIT WIRING. A node that reaches no
 forward exit gets an edge to an exceptional exit (`interpreter.md` I11 (e); today `JIRBackwardExitWiringGraph` on
@@ -409,6 +437,16 @@ end-fact edges of that sink to the zero fact, in the layer of the sink edge or o
 for the end facts of the entry sinks and of the exit sinks (§4.4). The backward run has no trigger: the reversed
 end-fact edges apply to every requirement (THE REVERSAL, below).
 
+THE TRIGGER OF AN END FACT (`ap.md` §9.2; `ap-history.md` F70). An end fact exists only after its sink triggers, so
+its reversal must demand the trigger. When the reversed end-fact edge of a sink alternative `A` at the statement `s`
+of the method key `M` applies to a requirement, it gives the zero fact (as before), and the analyzer also fires the
+sink seeds of `A` at `(M, s)` (SINK SEEDS, §4.7), once per `(M, s, A)`. So the next forward run demands the witness of
+the trigger, also when the vulnerability of `A` is CONFIRMED. The seeds of the hand-off do not change: only the DEMAND
+vulnerabilities are seeded at the barrier (§7.3). The same rule holds for the reversed end-fact edges of an entry sink
+and of an exit sink (§4.4); an unconditional sink (an entry sink, for example) has no sink seed (§4.7), so its trigger
+needs only the zero fact. The analyzer makes these seeds from the forms of the sink (`SinkRule.patterns`), not from
+the `SeedIndex`, so A4 holds. Argued: the model has no end facts (§11 THE TRIGGER OF AN END FACT).
+
 THE ALIAS GUARD (`Guard.MemoryEffect`; `interpreter.md` §3.8 AC3, AC4). Each forward result at `REWRITTEN` has an
 ORIGIN (`Origin`, §4.9): the stage that made it. The sources stage gives SOURCE, the end-fact stage END_FACT, a pass
 rule of the unresolved stage PASS. The default identity of the unresolved stage and the constructor stage give
@@ -424,7 +462,8 @@ THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
   from its forward end point to its forward start point.
 * A micro-edge stage gets the reversed summary (`StatementSummary.reversed`, §4.9).
 * A GUARD is a forward-only selection, so the reversal drops it: the reversed alias edges apply to every requirement
-  (`interpreter.md` AC5), and the reversed end-fact edges too. The reversal also drops every type filter.
+  (`interpreter.md` AC5), and the reversed end-fact edges too. A reversed end-fact edge that applies also fires the
+  sink seeds of its sink (THE TRIGGER OF AN END FACT, above). The reversal also drops every type filter.
 * The cleaners, the kill and the rewriter stay the same: a cleaner and a keep edge are their own reversal.
 * The callees stage stays the same: in the backward run it gives the backward summaries.
 * The sinks stay at `BOUND`.
@@ -476,22 +515,44 @@ The zero fact at a call. The zero base is not touched, so the zero fact passes o
 
 At an end node of the run, after the end rules, each new delta `j → g` (a summary delta, event E4):
 
-1. goes to `summaries` (the run summary store), with no restriction;
+1. goes to `summaries` (the run summary store), with no restriction. A delta in the demand layer adds one to the
+   demand-layer objects of `counters` (§4.1; the stop rule `NO_DEMAND_EDGE`, §7.1);
 2. gives the publications:
    * run 1: `j → g` itself;
    * a restricted forward run, and a backward summary whose premise set is not `{zero}`: `restrict(j, g, d)` for each
      demand pattern `d` that the restriction query returns (`ap.md` §6.4, §8.6). Each non-null result is published
-     once. The query is `near(j.base :: j.path)`. For a premise set with several members, it is the union of `near`
-     over the members;
+     once. The query is `covering(j.base :: j.path)`: the demand patterns of the method whose `D-c` is at or above
+     `j` (`ap.md` §8.6; `ap-impl.md` §7.7 `DemandStore.covering`). For a premise set with several members, it is the
+     union of `covering` over the members;
    * a backward summary with the premise set `{zero}`: `j → g` itself, with no restriction (`ap.md` §6.4);
+
+   THE RESTRICTION IS AN INTERSECTION (`ap.md` §6.4; `ap-history.md` F70). The premise `j` must lie INSIDE `D-c`
+   (overlap is not enough; an emitted premise always lies inside the entry pattern that emitted it, Lean
+   `Handoff.emitM_inside`, `HandoffX.emitX_inside`). Below `D-p` the conclusion stays whole if the tail of `D-p` admits
+   the step. At the path of `D-p` the conclusion tail is met with the tail of `D-p` (`[any] ∩ $ = $`,
+   `[any-taint]/E ∩ $ = $`, `[any-taint]/E ∩ */E2 = [any-taint]/(E ∪ E2)`; `[any] ∩ */E` keeps `[any]`). The layer
+   stays. The restriction only removes pairs, and it keeps every pair of a premise inside `D-c` whose exit location
+   `D-p` covers (Lean `Handoff.restrictI_sub`, `restrictI_contract`; with the exclusion `HandoffX.restrictIX_ok`,
+   `restrictIX_contract`).
 
    A publication carries the premise key of `j` with the tail of each member and the exclusion of an `[any-taint]`
    member, so the summaries of an `[any-taint]` premise and of an `[any]` premise of one path are different
-   publications (§4.1). The restriction does not change the premise. It reads the exclusion of an `[any-taint]/E`
-   conclusion as part of its location set: a conclusion above `D-p` gives the chain `D-p` with no exclusion only if
-   `E` admits the step down (`ap.md` §6.4). Lean: the object `pub m j mj jex g` of `PipelineAnyTaintEx.sysDRX`
-   carries the must flag `mj` and the exclusion `jex`; `AnyTaintEx.restrictX`;
+   publications (§4.1). The restriction does not change the premise. It reads the exclusion of a must-premise in the
+   inside test (Lean `HandoffX.insideLocXB`), and the exclusion of an `[any-taint]/E` conclusion as part of its
+   location set: a conclusion above `D-p` gives the chain of `D-p` only if `E` admits the step down, and that chain
+   has the exclusion `E2` of a `*/E2` exit pattern, else no exclusion (`ap.md` §6.4). Lean: the object
+   `pub m j mj jex g` of `PipelineAnyTaintEx.sysDRX` carries the must flag `mj` and the exclusion `jex`;
+   `HandoffX.restrictIX` (before F70 `AnyTaintEx.restrictX`); the backward run `Handoff.restrictI`;
 3. goes to `pendingPublications`.
+
+THE HAND-OFF READS THE PUBLICATIONS (`ap.md` §8.5; Lean `Handoff.pubD`, `pubR`). Run 1 publishes every summary edge
+as it is. A restricted run publishes the intersections. Each publication of a leaf that is NOT crossable (§1) is a
+demand edge of the run, and it gives one demand pattern of the next run per member of its premise (§7.3, §7.4). A
+crossable leaf gives no demand edge: `persist` keeps it as a record. THE RUN STORES ITS DEMAND EDGES: at each summary
+delta the analyzer also stores the published pieces of the leaves that are not crossable (`ApOps.demandPart`, then the
+same restriction as the publications; `RunSummaryStore.addDemand`, `ap-impl.md` DD17), and it counts the crossable
+leaves of the delta (`counters`, §4.1). The restriction acts leaf by leaf, so these pieces are the publications of the
+non-crossable leaves. The hand-off reads only these stored pieces (`demandEdges()`, §7.3, §7.4).
 
 The analyzer gives `pendingPublications` to its `SummaryStorage` (§5.2) before its `Work` event ends (§6.2, W3), as
 today `flushPendingSummaryEdges` does.
@@ -542,15 +603,19 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
   positives that this keeps (a later sink in the caller sees the state; the exit sink of the caller evaluates it again)
   are expected (`interpreter.md` G2, `ap.md` §11.1).
 * SEEDS. After run 1, every run has seeds. The driver gives a `SeedIndex` per (method key, statement):
-  * a backward run: the SINK SEEDS, the requirements of the vulnerabilities that the forward run before reported
-    (`ap.md` §9.2). A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
+  * a backward run: the SINK SEEDS, the requirements of the sink witnesses of the DEMAND vulnerabilities after the
+    forward run before (§1, §7.3; `ap.md` §9.2). A CONFIRMED vulnerability gives no seed of the hand-off: its state
+    is final (§7.5). The backward run also fires, by itself, the sink seeds of a sink alternative whose reversed
+    end-fact edge applies to a requirement, also of a CONFIRMED vulnerability (§4.5 THE TRIGGER OF AN END FACT).
+    A sink pattern gives one requirement. A conjunctive sink gives one requirement per positive
     literal. An unconditional sink gives none. The requirement of an `[any]` sink pattern (`ContainsMarkOnAnyField`)
     has the tail `[any]`: the backward run has no `[any-taint]` (`ap.md` W8, §9.2), so its seed is in the demand
     layer (`ap.md` W6), as before F69. The seeds of a witness are at its method key and its statement;
   * a forward restricted run: the SOURCE SEEDS, the unconditional sources that the backward run before reached
     (`ap.md` §6.1 rule 6, §8.11).
 * A sink seed enters as a zero-to-fact edge where the zero fact reaches its statement, cut by the field limit. A call
-  sink seeds at the rule point `BOUND` of the reversed plan (§4.5). An exit sink seeds in the start rules (§4.4).
+  sink seeds at the rule point `BOUND` of the reversed plan (§4.5). An exit sink seeds in the start rules (§4.4). A
+  sink seed of the trigger of an end fact (§4.5) enters in the same way, at the place of its sink.
 * A source seed is a filter on the SOURCES: the micro edges whose forward form (`MicroEdge.forward`, §4.9) goes from
   the zero fact to another base. In a forward restricted run, the analyzer applies a source only if `SeedIndex` has
   its forward form for that (method key, statement). The sources are at a statement (a read source, an exit source),
@@ -618,8 +683,10 @@ class ExitNode(val node: CommonInst, val exceptional: Boolean)
  *  conditional or conjunctive, and an end-fact action; a must); a pass rule with an `[any]` target keeps `[any]` (a
  *  may); a pass rule with an `AnyField` position on its premise side is a rule error (ap.md S15, W6; interpreter.md
  *  I14, D33). A reversed edge keeps its forward form: the backward AP reads its forward target tail, and every result
- *  of an edge whose forward target is `[any]` is in the demand layer (§4.3). No other flag tells the rule kind. */
-class MicroEdge(val edge: PathEdge, val forward: PathEdge)
+ *  of an edge whose forward target is `[any]` is in the demand layer (§4.3). `conjunctive`: a reversed literal of a
+ *  conjunctive edge (`StatementSummary.reversed`); every result of it is in the demand layer too (§4.3 THE REVERSAL OF
+ *  A CONJUNCTION). No other flag tells the rule kind. */
+class MicroEdge(val edge: PathEdge, val forward: PathEdge, val conjunctive: Boolean = false)
 
 /** interpreter.md I1: a statement summary. The AP applies it (ap.md §4.2). `typeFilters`: the operand filters, on the
  *  input (interpreter.md §2.1 step 3). `resultFilters`: the lhs and binding-back filters, on the results
@@ -627,7 +694,8 @@ class MicroEdge(val edge: PathEdge, val forward: PathEdge)
 class StatementSummary(val touched: Set<AccessPathBase>, val edges: List<MicroEdge>,
                        val conjunctions: List<ConjunctiveEdge>, val typeFilters: Map<AccessPathBase, TypeFilter>,
                        val resultFilters: Map<AccessPathBase, TypeFilter> = emptyMap()) {
-    /** ap.md §9.1, §9.2: each edge reversed; a conjunctive edge gives one edge per literal; the identity edge
+    /** ap.md §9.1, §9.2: each edge reversed; a conjunctive edge gives one edge per literal (an OR of the requirements,
+     *  each with `conjunctive = true`: every result of it is in the demand layer, §4.3); the identity edge
      *  `b.* → b.*` for each target base that the summary does not touch (A5); the touched bases with the targets;
      *  no type filter. The reversal gives no `[any-taint]` (ap.md W8, §9.1): the reversal of an `[any]` condition
      *  literal (`ContainsMarkOnAnyField`, also of a conjunctive edge) has the target tail `[any]`, and a forward target
@@ -668,7 +736,8 @@ class SinkRule(val rule: RuleId, val alternative: Int, val patterns: List<Patter
  *  (interpreter.md §5.3): in the sources stage of a call (§4.5), or at an exit (§4.4). Each literal and the
  *  target have a concrete mark and no `*` tail (S9, W7). The `[any]` target of a conjunctive source is
  *  `[any-taint]` (ap.md §4.6, S15). A literal reads the exclusion of an `[any-taint]/E` input as part of its location
- *  set (ap.md §4.6). */
+ *  set (ap.md §4.6). Its reversal gives one micro edge per literal, and every result of it is in the demand layer
+ *  (§4.3 THE REVERSAL OF A CONJUNCTION). */
 class ConjunctiveEdge(val literals: List<Pattern>, val target: PathFact)
 
 /** ap.md §4.8: the type filter `filter(b, may)` of one base; `may` is prefix-closed (S5; today a
@@ -699,7 +768,9 @@ enum class Origin { SOURCE, END_FACT, PASS, SUMMARY_EFFECT, IDENTITY }
 
 /** A forward-only selection of the inputs of a stage (§4.5). The reversal drops it. */
 sealed interface Guard {
-    /** The end-fact stage: it applies on a trigger of `sink`, to the zero fact (§4.5 THE END-FACT STAGE). */
+    /** The end-fact stage: it applies on a trigger of `sink`, to the zero fact (§4.5 THE END-FACT STAGE). The reversal
+     *  drops the selection, but the reversed `END_FACTS` stage keeps `sink`: a reversed end-fact edge that applies
+     *  fires the sink seeds of `sink` (§4.5 THE TRIGGER OF AN END FACT). */
     class SinkTriggered(val sink: SinkRule) : Guard
     /** The alias stage: every result whose origin is not IDENTITY (§4.5 THE ALIAS GUARD). */
     data object MemoryEffect : Guard { fun admits(o: Origin): Boolean = o != Origin.IDENTITY }
@@ -760,7 +831,7 @@ mode, not a field of the form:
 |---|---|---|
 | STATEMENT | a statement summary (`statementSummary`), the rule summary of a method boundary (`RuleStatement.summary`, with the touched bases and keep edges of §4.4 THE BOUNDARY RULE STATEMENTS), the kill on `S` (`CleanStep.Kill.keepEdges`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
 | STAGE | the summary of a call stage (`CallStage.Edges.summary`) | only the edges give results. The touched bases of the plan (`CallPlan.touched`) do the pass-over (§4.5). A stage summary has every base of its edges in its touched set, so its reversal adds no identity edge (the reversed plan has the PASS_OVER stage of the alias bases instead, §4.5) |
-| GEN | the end-fact edges at the method boundaries (`RuleStatement.endFacts`, the `SinkRule.endFacts` of an entry or exit sink) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE). At a call the end facts are the end-fact `Edges` stage (`END_FACTS`, STAGE mode, on the zero fact, on a trigger, §4.5), whose reversal adds no identity |
+| GEN | the end-fact edges at the method boundaries (`RuleStatement.endFacts`, the `SinkRule.endFacts` of an entry or exit sink) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE). Reversed, it applies to every requirement and fires the sink seeds of its sink (§4.5 THE TRIGGER OF AN END FACT). At a call the end facts are the end-fact `Edges` stage (`END_FACTS`, STAGE mode, on the zero fact, on a trigger, §4.5), whose reversal adds no identity |
 
 THE STATIC EXCEPTION. In run 1 the static exception of `ap.md` §4.10 item 1 acts on the statement micro edges: the
 statement summaries, the edges of the sources and the unresolved stages of a call (`StageKind.SOURCES`, `UNRESOLVED`),
@@ -901,7 +972,8 @@ gives nothing for them:
 The other leaves of the same record reverse as usual (a `$` leaf, a `*/E` leaf, an `[any-taint]` leaf with the empty
 exclusion): the premise of such a record has the Empty exclusion (in run 1 the policy premise `*` with `{}`; in a
 restricted run a `$` premise, since a normal edge has a `$` premise or a must-premise:
-`AnyTaintExKinds.DRXs_normal_premise`), so each leaf that R3 reverses reverses exactly
+`AnyTaintExKinds.DRX_normal_premise`, under `AnyTaintEx.EmitCopiesMarkX`, which `emitX` satisfies,
+`AnyTaintEx.emitX_copies`), so each leaf that R3 reverses reverses exactly
 (`Reverse.rev_exact_of_empty_premise`; `ap.md` §8.7 R3).
 
 The reversal of an `[any-taint]` leaf with the empty exclusion (a leaf `$ → [any-taint]`) has the premise `[any]` in
@@ -953,7 +1025,8 @@ publication. The caller combines it in its conjunction store (`ap.md` §8.9):
 * A subscription goes under EVERY index that it satisfies. No member is the zero fact (`ap.md` §4.6: a conjunction
   drops the zero fact), so the zero subscription never takes part (`PipelineNDZ.clDNz_ndpub_no_zero`,
   `clDNz_ndpub_zero_sub`; run 1; a restricted run is argued, `ap.md` §11.2). The backward run has no summary with several
-  premises: it reverses a conjunction into one micro edge per literal (`ap.md` §9.2).
+  premises: it reverses a conjunction into one micro edge per literal, with every result in the demand layer
+  (`ap.md` §9.1, §9.2; §4.3 THE REVERSAL OF A CONJUNCTION).
 * A new subscription under an index: combine it with the stored subscriptions of the other indexes (one per index,
   every combination), and apply the stored conclusion to each full combination.
 * A new conclusion delta: apply it to every full combination.
@@ -996,7 +1069,7 @@ theorems hold for every real schedule.
 | `PipelineAP.sysD_wf` and the other `*_wf` | each encoded system is well-formed (`Pipeline.Sys.WF`): every local rule has at least one premise, all of one actor; every join has subscriptions of one actor and one topic and a publication |
 | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, the object theorems (`clDNz_link`, `clDNz_sub`, `clDNz_pub`, `clDNz_ndpub`, `clDNz_npart`) | the encoding of the ND closure of the spec, `NDZ.DNz` (the union of the premise sets without the zero fact, `ap.md` §4.6, §10.10): it is well formed, and at a reachable quiescent state the processed objects are exactly `DNz` (no partial match) |
 | `PipelineNDZ.clDNz_ndpub_no_zero`, `clDNz_ndpub_zero_sub`, `joinNz_nd_no_zero_sub` | no index of a k-ary join is the zero fact, and (under `NDZeroBase.NoZeroGen` and `AlphaZero`, which the run-1 policy satisfies, `NDZeroBase.policy1_alphaZero`; run 1) the zero subscription satisfies no index (§5.4) |
-| `PipelineAnyTaintEx.sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, `result_D6X`, `result_DRX`, `result_DRXs`, the object theorems (`clD6X_link`, `clD6X_sub`, `clD6X_pub`, `clDRX_link`, `clDRX_sub`, `clDRX_pub`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (`ap.md` §10.11): run 1 with the layer rules W6 and W8 and the exclusion (`AnyTaintEx.D6X`) and a restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; the spec instance `AnyTaintEx.DRXs`). They are well formed, and at a reachable quiescent state the processed objects are exactly the closure, with the must flags and the exclusions (THE ENCODING WITH `[any-taint]`, below). `PipelineAnyTaintEx.SanityX.d6x_ann`, `drx_ann`: a normal `[any-taint]/{name}` edge is in both closures, so the encodings are not vacuous on the exclusion |
+| `PipelineAnyTaintEx.sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, `result_D6X`, `result_DRX`, `result_DRXs`, the object theorems (`clD6X_link`, `clD6X_sub`, `clD6X_pub`, `clDRX_link`, `clDRX_sub`, `clDRX_pub`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (`ap.md` §10.11): run 1 with the layer rules W6 and W8 and the exclusion (`AnyTaintEx.D6X`) and a restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`, generic in the rules; the spec instance has `emitX`, `satX` and `HandoffX.restrictIX`, before F70 `AnyTaintEx.DRXs`). They are well formed, and at a reachable quiescent state the processed objects are exactly the closure, with the must flags and the exclusions (THE ENCODING WITH `[any-taint]`, below). `PipelineAnyTaintEx.SanityX.d6x_ann`, `drx_ann`: a normal `[any-taint]/{name}` edge is in both closures, so the encodings are not vacuous on the exclusion |
 | `PipelineAnyTaintEx.known_D6X`, `known_DRX`, `no_lost_summary_D6X`, `no_lost_summary_DRX` | every processed object of a reachable state is in the closure (`Pipeline.reach_sound`), and the summary edge is never lost (`Pipeline.no_lost_join`): in `PipelineAnyTaintEx.sysDRX` a subscription of the caller premise and a publication of the callee premise, each with its must flag and its exclusion, whose join condition holds have their caller edge processed |
 
 The encoding (`PipelineAP.lean`): actor = method, topic = callee.
@@ -1040,8 +1113,10 @@ So at quiescence the analyzer computes exactly the closure that `ap.md` proves s
 (`Pipeline.quiescent_exact` with the `cl*_iff` theorems; `PipelineDriver.result_D`, `result_DR`, `result_DB`). With
 conjunctions the closure is `NDZ.DNz`, the ND closure with the zero-drop of `ap.md` §4.6 (`PipelineNDZ.result_DNz`).
 With the tail `[any-taint]` the closure of run 1 is `AnyTaintEx.D6X` and the closure of a restricted forward run is
-`AnyTaintEx.DRXs` (`PipelineAnyTaintEx.result_D6X`, `result_DRXs`); the backward run is `Backward.DB` as before
-(`PipelineAP.sysDB`).
+`AnyTaintEx.DRX` with the spec rules `emitX`, `satX` and the intersection `HandoffX.restrictIX`
+(`PipelineAnyTaintEx.result_D6X`, `result_DRX`, generic in the rules; before F70 the instance `AnyTaintEx.DRXs` with
+`restrictX`, `result_DRXs`); the backward run is `Backward.DB` as before, with the intersection `Handoff.restrictI`
+(`PipelineAP.sysDB`, generic in the restriction).
 This holds for the rules that the closures have. The end facts (`ap.md` §11.1), the aliases and their guard (`ap.md`
 §11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2, D35) are outside them (§11 THE
 ANALYZER ACTIONS OUTSIDE THE CLOSURES).
@@ -1171,9 +1246,12 @@ zero means quiescence (argued, §11).
 ```kotlin
 interface IterationPolicy {
     fun fieldLimit(runIndex: Int): Int                               // not decreasing (ap.md W3); run 1: >= 1, checked
-    /** Asked only after a complete FORWARD run (the budget; out of scope, ap.md §6.6). */
-    fun continueAfter(run: RunConfig, result: RunResult): Boolean
-    /** The timeout of one run. `remaining`: the budget minus the time so far (§0: the budget is in the policy). */
+    /** Asked only after a complete FORWARD run that no stop rule ended. `frontiers`: the frontier of every complete run
+     *  so far, in run order; the last one is that of `run` (§7.8). A practical stop strategy reads them (out of
+     *  scope). */
+    fun continueAfter(run: RunConfig, result: RunResult, frontiers: List<Frontier>): Boolean
+    /** The timeout of one run. `remaining`: the ONE budget of the analysis minus the time so far (§0). Default: the
+     *  run gets the rest of the budget. */
     fun timeout(run: RunConfig, remaining: Duration): Duration = remaining
 }
 
@@ -1184,10 +1262,11 @@ sealed interface Next {
 }
 
 class IterationDriver(private val policy: IterationPolicy, private val shared: SharedObjects,
-                      private val budget: Duration) {
+                      private val budget: Duration) {                // ONE budget for the whole analysis (§0)
     fun analyze(roots: List<MethodKey>): Report {
         val start = TimeSource.Monotonic.markNow()
         val report = ReportBuilder()                                  // §7.5
+        val frontiers = ArrayList<Frontier>()                         // §7.8: one per complete run
         var index = 1                                                 // the current run: AnalysisEnd names it
         fun end(status: RunStatus, reason: EndReason) = report.build(AnalysisEnd(status, index,
             if (index % 2 == 1) Direction.FORWARD else Direction.BACKWARD, reason))
@@ -1197,7 +1276,8 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
                 seeds = SeedIndex.EMPTY, roots = roots)
             while (true) {
                 index = config.index
-                when (val next = runOnce(config, report, policy.timeout(config, budget - start.elapsedNow()))) {
+                when (val next = runOnce(config, report, frontiers,
+                        policy.timeout(config, budget - start.elapsedNow()))) {
                     is Next.Run -> config = next.config               // the result of the run is garbage now (§7.6)
                     is Next.End -> return end(next.status, next.reason)
                 }
@@ -1210,7 +1290,8 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
 
     /** One run and its barrier. The `RunResult` is a local of this frame, so no live slot keeps it during the next run
      *  (§7.6). */
-    private fun runOnce(config: RunConfig, report: ReportBuilder, timeout: Duration): Next {
+    private fun runOnce(config: RunConfig, report: ReportBuilder, frontiers: MutableList<Frontier>,
+                        timeout: Duration): Next {
         val result = RunManager(config, shared).run(timeout)          // a new engine (§2); it joins its runners (§6.3)
         if (result.status != RunStatus.COMPLETE)                      // §7.5: adds nothing, refutes nothing
             return Next.End(result.status)
@@ -1218,29 +1299,38 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
         // barrier stops at its next checkpoint.
         val guard = MemoryManager(shared.refManager, BARRIER_MEMORY_THRESHOLD) { shared.cancellation.cancel() }
         val next = try {
-            guard.runWithMemoryManager { barrier(config, result, report) }   // the soft references stay enabled
+            guard.runWithMemoryManager { barrier(config, result, report, frontiers) }   // soft references stay enabled
         } catch (e: Cancellation.Cancelled) {
             Next.End(RunStatus.OOM)                                   // the barrier guard is the only canceller here
         }
         return if (shared.cancellation.isActive()) next else Next.End(RunStatus.OOM)   // a hit after the last checkpoint
     }
 
-    private fun barrier(config: RunConfig, result: RunResult, report: ReportBuilder): Next {
+    private fun barrier(config: RunConfig, result: RunResult, report: ReportBuilder,
+                        frontiers: MutableList<Frontier>): Next {
         val forward = config.direction == Direction.FORWARD
         if (forward) {
             confirm(result)                                           // §7.5 steps 1, 2: the support, the witnesses
             report.add(config, result)                                // §7.5 step 3
         }
-        shared.records.persist(config, result)                        // ap.md §8.7 R1
-        if (forward && !result.hasDemandVulnerability()) return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
-        if (forward && !policy.continueAfter(config, result)) return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
-        return Next.Run(handOff(config, result))                      // §7.3, §7.4
+        shared.records.persist(config, result)                        // ap.md §8.7 R1: the crossable leaves among them
+        val handOff = handOffOf(config, result, report)               // §7.3, §7.4: the demand edges and the seeds
+        val frontier = frontierOf(config, result, handOff, report)    // §7.8
+        frontiers += frontier
+        logger.info { frontier.toString() }                           // THE FRONTIER LOG (§7.8), every complete run
+        if (forward && !report.hasDemandVulnerability())              // no DEMAND vulnerability, so no seed
+            return Next.End(RunStatus.COMPLETE, EndReason.STOP_RULE)
+        if (forward && result.demandLayerEdges == 0L)                 // no demand-layer edge, summary or link (argued)
+            return Next.End(RunStatus.COMPLETE, EndReason.NO_DEMAND_EDGE)
+        if (forward && !policy.continueAfter(config, result, frontiers))
+            return Next.End(RunStatus.COMPLETE, EndReason.POLICY)
+        return Next.Run(nextConfig(config, handOff))
     }
 
-    private fun handOff(config: RunConfig, result: RunResult): RunConfig {
+    private fun nextConfig(config: RunConfig, handOff: HandOff): RunConfig {
         val limit = policy.fieldLimit(config.index + 1)
         require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
-        return RunConfig(config.index + 1, limit, demandOf(result), shared.records.view(), seedsOf(result), config.roots)
+        return RunConfig(config.index + 1, limit, handOff.demand, shared.records.view(), handOff.seeds, config.roots)
     }
 
     companion object {
@@ -1252,28 +1342,59 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
 ```
 
 * The run sequence is `ap.md` §6.6: run 1 (forward), run 2 (backward), run 3 (forward), and so on.
-* A forward run stops the iteration if every vulnerability that it reports has a confirmed witness (a sink edge or a
-  sink edge set) of this run (`ap.md` §6.6). `hasDemandVulnerability` reads the witnesses of the run in the
-  `VulnerabilityStore`, grouped by the vulnerability key (§4.7, §10). The policy can stop earlier.
-* The driver asks `continueAfter` only after a complete FORWARD run. A complete backward run always goes on to the next
-  forward run: its only output is the hand-off of that run (§7.4). So the iteration always ends after a forward run
-  (as `PipelineDriver.driver_iteration_upto`, §7.7), or at an abnormal end.
+* THE STOP RULES (`ap-history.md` F70). After a complete forward run, the barrier applies these rules, in this order:
+  1. `STOP_RULE`: after the run the report has NO DEMAND VULNERABILITY (§1): every vulnerability that the run reports
+     is CONFIRMED, by this run or by an earlier complete forward run (`ReportBuilder.hasDemandVulnerability`, §10).
+     Then the hand-off gives no sink seed (§7.3), so the next backward run has no requirement except the zero fact.
+     The CONFIRMED part of the report is final (a CONFIRMED state never changes, §7.5), and every real vulnerability
+     is CONFIRMED in it. Reason: each forward run reports every real vulnerability that no earlier complete forward
+     run confirmed (§7.7, `HandoffMain.iteration_generalN`; for the driver
+     `PipelineHandoffDriverExt.driver_iterationNX_demand`, finite `driver_iterationNX_upto`), and this run reports only
+     CONFIRMED ones. That every later forward run only
+     repeats the zero fact and the records is ARGUED (`HandoffExclusion.zinv_all` with no seed in any method, then
+     `HandoffExclusion.exclusion_demand` per method; the composition is not stated, §11 THE STOP RULE `STOP_RULE`);
+  2. `NO_DEMAND_EDGE` (the user's rule, `task.md`): the run has NO DEMAND-LAYER OBJECT: no demand-layer edge delta,
+     no demand-layer summary delta and no DEMAND LINK (a link whose added fact is in the demand layer, `ap.md` §8.3)
+     (`RunResult.demandLayerEdges == 0`, the `counters` of §4.1). Then every sink witness and every link of the run is
+     normal, so each sink witness satisfies conditions 1 and 2 of `ap.md` §4.9 and the condition on the layer of the
+     link, and a DEMAND entry fails only the JOINT support of a premise set with several members (a conjunction,
+     `ap.md` §4.6): no one call supplies all its members. That a later forward run cannot supply them at one call
+     either is ARGUED, not proved, and it is an open question (§11 THE STOP RULE `NO_DEMAND_EDGE`). The stop keeps
+     every real vulnerability in the report (§7.5 THE OUTPUT);
+  3. `POLICY`: `continueAfter(config, result, frontiers)` gave false (a practical stop strategy that reads the
+     frontier log, §7.8; out of scope).
+
+  At every stop after a complete forward run, the report holds every real vulnerability, CONFIRMED or DEMAND (§7.5
+  THE OUTPUT; for the driver `PipelineHandoffDriverExt.driver_iterationNX_upto`, with `C` = confirmed by a complete
+  forward run up to `k`). The three rules differ only in what a later run can still change: after `STOP_RULE` every
+  real vulnerability is CONFIRMED already; after `NO_DEMAND_EDGE` a later run confirms no more (argued, an open
+  question); after `POLICY` a later run can confirm more or refute a DEMAND entry.
+* The driver applies the stop rules and asks `continueAfter` only after a complete FORWARD run. A complete backward run
+  always goes on to the next forward run: its only output is the hand-off of that run (§7.4). So the iteration always
+  ends after a forward run, or at an abnormal end (§7.7).
 * The driver checks the field limit of each run: run 1 has at least 1 (`ap.md` S12 (d)), and the limit does not
   decrease (`ap.md` W3). A policy that breaks either is an error: the `require` fails, and the iteration ends as at a
   throw in the guarded region (`FAILED`; for run 1 the report has no entry).
-* THE TIMEOUT OF A RUN is `policy.timeout(config, remaining)`, where `remaining` is the budget minus the time so far
-  (by default the whole rest of the budget). The `RunManager` gets it in `run(timeout)`.
+* THE BUDGET. The analysis has ONE budget (`budget`, a parameter of the driver, §0). THE TIMEOUT OF A RUN is
+  `policy.timeout(config, remaining)`, where `remaining` is the budget minus the time so far: by default each run gets
+  the whole rest of the budget. The `RunManager` gets it in `run(timeout)`. A run that its timeout ends is incomplete
+  (§6.3), and the analysis ends with the report of the earlier complete forward runs (§7.5).
+* THE FRONTIER LOG. After EVERY complete run (forward and backward, also the last one), the barrier computes the
+  hand-off and logs the frontier of the run (§7.8). The stop rules do not read the frontier. `continueAfter` gets the
+  frontiers of every complete run so far.
 * THE END OF THE ANALYSIS is an output: `Report.end = AnalysisEnd(status, run, direction, reason)` (§10). `run` and
   `direction` are those of the last run. The reasons:
-  * `STOP_RULE`: a complete forward run with no demand vulnerability; `status` is `COMPLETE`;
+  * `STOP_RULE`: a complete forward run with no DEMAND vulnerability; `status` is `COMPLETE`;
+  * `NO_DEMAND_EDGE`: a complete forward run with a DEMAND vulnerability and no demand-layer object (edge delta,
+    summary delta, link); `status` is `COMPLETE`;
   * `POLICY`: `continueAfter` gave false after a complete forward run; `status` is `COMPLETE`;
   * `ABNORMAL`: an incomplete run (`status` is its status: `TIMEOUT`, `OOM` or `FAILED`), a throw in the guarded
     region of the driver (`status` is `FAILED`), or a hit of the memory guard of the barrier (`status` is `OOM`).
 * ONE GUARDED REGION. The whole loop body of the driver is one guarded region (`catch (e: Throwable)`): the
   `RunConfig` of run 1 and its check, `RunManager(...)`, `run(...)` and the barrier (the confirmation, `persist`, the
-  hand-off). A throw there, an `Error` too (§6.3), ends the iteration with `FAILED`. The driver returns the report so
-  far: the results of the earlier runs stay (`ap-history.md` F67, F68). The `RunManager` joins its runners on every exit
-  (§6.3), so no runner of the run runs when the driver returns.
+  hand-off, the frontier log). A throw there, an `Error` too (§6.3), ends the iteration with `FAILED`. The driver
+  returns the report so far: the results of the earlier runs stay (`ap-history.md` F67, F68). The `RunManager` joins
+  its runners on every exit (§6.3), so no runner of the run runs when the driver returns.
 * THE MEMORY GUARD OF THE BARRIER (§7.2 B4). A hit at the barrier ends the iteration with `AnalysisEnd(OOM, run,
   direction, ABNORMAL)` and the report so far. The barrier has no deadline (§11).
 
@@ -1286,62 +1407,142 @@ class IterationDriver(private val policy: IterationPolicy, private val shared: S
   (`TRACE_GENERATION_MEMORY_THRESHOLD = 0.99`) and the same mechanism (`TaintAnalysisUnitRunnerManager.kt:374-384`,
   `:645`). The soft-reference managers stay enabled during the barrier, so `persist` interns with live tables and the
   persisted records share nodes. A hit cancels the `Cancellation`; the loops of the barrier (the support, `persist`,
-  the hand-off) call `Cancellation.checkpoint` once per analyzer, so the barrier stops at its next checkpoint. The
+  the hand-off, the frontier) call `Cancellation.checkpoint` once per analyzer, so the barrier stops at its next
+  checkpoint. The
   iteration then ends with `AnalysisEnd(OOM, run, direction, ABNORMAL)` and the report so far (§7.1). The driver also
   checks the `Cancellation` after the barrier, so a hit after the last checkpoint is not lost (the next `RunManager`
   would activate the `Cancellation` again). The barrier has no deadline (§11).
 
-With B1, the hand-off reads the closure of the run (`PipelineDriver.result_D`, `result_DR`, `result_DB`). So the
-hand-off is exactly the hand-off of `ap.md` §9.2.
+With B1, the hand-off reads the closure of the run (`PipelineDriver.result_D`, `result_DR`, `result_DB`; with the
+tail `[any-taint]` `PipelineAnyTaintEx.result_D6X`, `result_DRX`): the demand edges that the run stored are its
+publications of the non-crossable leaves (§4.6). So the hand-off is exactly the hand-off of `ap.md` §9.2 (Lean
+`Handoff.handF`, `demOfN`; `PipelineHandoffDriver.driver_iterationNX` reads them from the final states, §7.7).
 
 ### 7.3 Forward run `n` to backward run `n + 1`
 
-From the `summaries` (run summary store) of every method analyzer and the sink edges of run `n`:
+THE RULE (`ap-history.md` F70). After run 1, every publication of a run (forward or backward) is the INTERSECTION of
+one of its summary edges with a DEMAND EDGE of the run before it (§1, §4.6). A crossable leaf never goes into the
+demand: the next run reuses it as a record (in its own direction by `ap.md` §8.7 R4, in the other direction by its
+reversal, R3). So a method key whose summary leaves are all crossable hands off no demand edge. If also no seed of the next backward run
+lies in its call subtree, the next backward run and the next FORWARD run analyse it only from the zero fact (§7.8 THE
+EXCLUSION; one round: `HandoffExclusion.exclusion_round`, `HandoffMain.exclusion_canon`, with the tail `[any-taint]`
+`HandoffXMain.exclusion_canonX`; over several rounds argued).
+The earlier hand-off read EVERY summary edge, in every layer, BEFORE the restriction (Lean
+`Backward.revSummaryDemand`, `Backward.demOf`): a complete callee was analysed again in every run, and the search
+space did not shrink (the program WRAP, §7.8).
 
-* DEMAND. For every summary edge `j → g` of the method, in every layer, BEFORE the restriction: one backward demand
-  pattern `(D-c = g, D-p = j)` per leaf of `g` (Lean `Backward.revSummaryDemand`). For a summary with several premises:
-  one pattern per member (`ap.md` §9.2; argued, `ap.md` §11.2). The driver builds the `DemandStore` of run `n + 1`
-  from them. The backward run has no `[any-taint]` (`ap.md` W8), so the driver reads a forward summary as a location
-  set: a leaf or a premise with the `[any-taint]` tail gives a pattern with the tail `[any]`, and the hand-off drops
-  the exclusion `E` of an `[any-taint]/E` leaf or premise (a larger backward demand: sound; `ap.md` §9.2). Lean: the
-  driver reads each forward run with its exclusions and must flags dropped (`AnyTaintExCov.forget6`, `forgetX`;
-  `PipelineAnyTaintExDriver.resultSeqX`). The hand-off of a run with the exclusion can be SMALLER than that of the
-  same run without it: the exclusion removes summaries (`AnyTaintExCov.CexRoute.route_a_false`); the driver theorem
-  reads each refined run directly (§7.7).
-* SINK SEEDS. The `SeedIndex` of the vulnerabilities that run `n` reported (§4.7; `ap.md` §9.2).
-* RECORDS. The `RecordStore` persists the normal summary edges with one premise (`ap.md` §8.7 R1, forward).
+From the demand edges that each method analyzer of run `n` stored (`summaries.demandEdges()`, §4.6) and the report
+after run `n` (§7.5):
+
+* DEMAND (the demand edges of run `n`; `ap.md` §9.2; Lean `Handoff.handF`). For every summary edge `j → g` of the
+  method (one premise key, one layer) and every leaf of `g` that is NOT CROSSABLE (§1), every PUBLICATION `j → g'` of
+  that leaf (§4.6) gives one backward demand pattern `(D-c = g', D-p = j)`. Run 1 publishes every leaf as it is
+  (`g' = g`; Lean `pubD`). A restricted forward run publishes the intersections with its demand patterns (`ap.md`
+  §6.4; Lean `pubR` with `restrictI`). The run stores these pieces when it publishes them (`RunSummaryStore.addDemand`,
+  §4.6), and the hand-off reads only the stored pieces (`demandEdges()`). The driver builds the `DemandStore` of run
+  `n + 1` from these patterns.
+  * A CROSSABLE leaf gives no demand pattern. The backward run crosses the call by the reversal of its record
+    (`ap.md` §8.7 R3; Lean `revRec`, `HandoffBackward.cross_step`): the requirement covers a location of the
+    reversed premise, so the reversed record applies by `inside` or `applicable` (`Handoff.cross_applies`). The
+    backward run never enters the callee for that leaf.
+  * A NORMAL leaf that is not crossable IS a demand edge: a leaf with an any tail (`[any]`, `[any-taint]` with or
+    without `E`), a leaf of a must-premise, a leaf that is not mark-reversible. The backward run cannot cross it: the
+    reversal of an `[any]` leaf has the premise `[any]`, and a `$` requirement neither satisfies that premise nor is
+    covered by it (Lean `HandoffCases.revRec_any_premise`, `not_cross_of_any`, `dollar_blocked`). Condition (4) of CROSSABLE is NECESSARY: a hand-off that drops a normal `[any]` leaf (the
+    looser test `HandoffCases.CrossL`, the forward conditions only) loses a real vulnerability, with the source seeds
+    (`HandoffCases.AnyW.cegar_cross_anyw`) and without them (`HandoffCases.AnyM.cegar_cross_anym`).
+  * A summary with several premises `{j1, …, jk} → g` is never a record (`ap.md` §8.7 R1), so no leaf of it is
+    crossable. Each publication of a leaf gives one pattern `(D-c = g', D-p = jm)` per member `jm` (`ap.md` §9.2;
+    argued, `ap.md` §11.2).
+  * A zero-premise summary edge follows the same rules: a crossable leaf of it is a record (R1), and a leaf that is
+    not crossable gives `(D-c = g', D-p = zero)` for each publication. In a restricted run a zero-premise summary has
+    a publication only through a demand pattern with a `D-p` (§4.6).
+  * The backward run has no `[any-taint]` (`ap.md` W8), so the driver reads a forward summary as a location set: a
+    leaf or a premise with the `[any-taint]` tail gives a pattern with the tail `[any]`, and the hand-off drops the
+    exclusion `E` of an `[any-taint]/E` leaf or premise (a larger backward demand: sound; `ap.md` §9.2). Lean: the
+    driver reads each forward run with its exclusions and must flags dropped (`AnyTaintExCov.forget6`, `forgetX`;
+    `PipelineAnyTaintExDriver.resultSeqX`; the publication `HandoffX.pubRX`). The crossable test reads the same view:
+    an `[any-taint]` leaf or premise is `[any]` there, so it is never crossable. The hand-off of a run with the
+    exclusion can be SMALLER than that of the same run without it: the exclusion removes summaries
+    (`AnyTaintExCov.CexRoute.route_a_false`); the driver theorem reads each refined run directly (§7.7).
+* SINK SEEDS (Lean `seeds k`). The `SeedIndex` of the sink witnesses of the DEMAND vulnerabilities after run `n` (§1):
+  the vulnerability keys that run `n` reports and that NO complete forward run so far confirmed (the DEMAND entries
+  of the report, `ReportBuilder.demandEntries`, §10). Every sink witness of such a key in run `n` gives its seeds
+  (§4.7; `ap.md` §9.2). A CONFIRMED vulnerability gives no seed, also when run `n` reports it only in the demand
+  layer: its state is final (§7.5), and a confirmed vulnerability is real (`ap.md` §8.10). The iteration theorem
+  needs only this: every vulnerability that run `n` reports is CONFIRMED by a run up to `n` or seeded (the hypothesis
+  `hseeds` of `HandoffMain.iteration_generalN` and of `PipelineHandoffDriverExt.driver_iterationNX_demand`, with
+  `C k` = "a complete forward run up to `k` confirmed the key", §7.7). With no DEMAND vulnerability there is no seed,
+  and the driver stops (`STOP_RULE`, §7.1).
+  THE TRIGGER OF AN END FACT. These are the seeds of the hand-off. The backward run also fires, by itself, the sink
+  seeds of a sink alternative whose reversed end-fact edge applies to a requirement, also of a CONFIRMED
+  vulnerability (§4.5 THE TRIGGER OF AN END FACT): an end fact exists only after its sink triggers, so a requirement
+  on it demands the trigger. Without this rule a real DEMAND vulnerability whose flow starts at the end fact of a
+  CONFIRMED sink is refuted: the next forward run does not demand the witness of the CONFIRMED sink, the sink does not
+  trigger, and the end fact is not made. Argued (§11 THE TRIGGER OF AN END FACT).
+* RECORDS. The `RecordStore` persists the normal summary edges with one premise (`ap.md` §8.7 R1, forward). Every
+  crossable leaf is a leaf of such a record (§1): it goes to the records and not to the demand. A normal leaf that is
+  not crossable goes to both: its record applies in the later forward runs (R4), and its publications are demand
+  edges.
   COMPLETE is one notion: a normal edge. A normal forward edge is complete also with an `[any-taint]` leaf (with its
   exclusion) or an `[any-taint]` premise, so `persist` keeps it with the tails and the exclusions. (The premise of a
   normal edge of a restricted forward run is a `$` premise or a must-premise `[any-taint]` with a concrete mark:
-  `AnyTaintExKinds.DRXs_normal_premise`, `DRXs_must_premise`.) A record with an `[any-taint]` premise keeps that tail
+  `AnyTaintExKinds.DRX_normal_premise`, `DRX_must_premise`, under `AnyTaintEx.EmitCopiesMarkX`, §5.3.) A record with
+  an `[any-taint]` premise keeps that tail
   and its exclusion: it applies by `inside`, or by `applicable` with demand results (§3), and no leaf of it is ever
   reversed (§5.3). Of any other record, an `[any-taint]/E` leaf with `E ≠ {}` is not reversed; the other leaves of
   its record are (R3 is leaf by leaf, §5.3).
 
 ### 7.4 Backward run `n + 1` to forward run `n + 2`
 
-From the `summaries` of every backward method analyzer, for every method `M` (`ap.md` §9.2; Lean `Backward.demOf`):
+The same rule as §7.3, in the other direction. From the demand edges that each backward method analyzer stored
+(`summaries.demandEdges()`, §4.6), for every method `M` (`ap.md` §9.2; Lean `Handoff.demOfN`):
 
 1. the zero demand `(D-c = zero, D-p = none)` (implicit for every method key, §4.4);
-2. for every zero-premise backward edge at the forward entry of `M`, with the conclusion `gb`: `(D-c = gb, none)`;
-3. for every backward summary `jb → gb` of `M` whose premise `jb` is not the zero fact, in every layer:
-   `(D-c = gb, D-p = jb)`.
+2. for every zero-premise backward edge at the forward entry of `M`, with the conclusion `gb`: `(D-c = gb, none)`.
+   A zero-premise backward edge is never a record (`ap.md` §8.7 R1: the seed paths), so it is always a demand edge.
+   It is not restricted (§4.6), and it is not localized (§11 THE ZERO FACT);
+3. for every backward summary `jb → gb` of `M` whose premise `jb` is not the zero fact, and every leaf of `gb` that is
+   NOT CROSSABLE (§1: the leaf is not normal, or its reversal is not crossable; Lean `¬ Handoff.CrossB jb gb`), every
+   PUBLICATION `jb → gb'` of that leaf (§4.6: the intersection with a backward demand pattern of `M`) gives
+   `(D-c = gb', D-p = jb)`. The run stores these pieces (§4.6), and the hand-off reads them (`demandEdges()`). A
+   backward summary through the reversal of a conjunction is in the demand layer (§4.3 THE REVERSAL OF A
+   CONJUNCTION), so it is never crossable, and this case hands it off. A CROSSABLE leaf gives none: the next forward
+   run crosses the call by the reversal of its record (`ap.md` §8.7 R3; Lean `revRec`, the record set
+   `HandoffBackward.rcNextOf`: each record from the backward run is the reversal of a NORMAL backward leaf,
+   `HandoffBackward.rcNextOf_back_normal`), with no analysis of the callee for it. Example: the getter `get(x): ret = x.f` has a run-1 summary in the demand layer, so
+   it is a demand edge; its backward summary `(ret, .a, $, T) → (arg, .f.a, $, T)` is normal and its reversal is
+   crossable (`Handoff.CrossB`), so forward run 3 crosses `get` by the reversed record, analyses `get` only from the
+   zero fact, and reports the vulnerability in the NORMAL layer (Lean `HandoffCases.Getter`: `g1_exit_demand`,
+   `revRec_g_cross`, `revRec_g_crossB`, `demG_exact`, `fg_getter_zero_only`, `fg_record_sat`, `fg_found`).
 
 SOURCE SEEDS: the `SeedIndex` of the `sourceHits` of every backward method analyzer (§4.7; `ap.md` §8.11, §9.2;
-Lean `FSeeds.srcHit`).
+Lean `FSeeds.srcHit`). A source in a callee that the backward run crosses by a record is not hit, so it does not fire
+in the next forward run. Its result still reaches that run: through the record (a zero-premise forward record of the
+callee applies whatever the seeds, `ap.md` §9.2), or through a demand edge of the callee, which makes the backward run
+enter the callee and hit the source. PROVED: contract B with the source seeds (`HandoffSrc.B_srcN`: the recorded calls
+read no seed) and the iteration (`HandoffSrc.iteration_srcN`, `iteration_srcN_canon`, finite `iteration_srcN_upto`;
+with the tail `[any-taint]` `HandoffSrc.iteration_srcNX`, `iteration_srcNX_upto`; the driver
+`PipelineHandoffDriverExt.driver_iteration_srcNX`, `driver_iteration_srcNX_upto`). THE SOURCE SEEDS DO NOT FILTER THE
+RECORDS: a source inside a crossable callee applies through its record in every later run, whatever the seeds
+(`HandoffSrc.SrcRec.found_unseeded`). This adds only facts of the full program: a precision point, not a loss.
 
 RECORDS: the `RecordStore` persists the normal backward summary edges with one premise that is not the zero fact
 (`ap.md` §8.7 R1, backward). The backward run has no `[any-taint]`, so a backward edge is complete when it is normal,
 as before F69. The may stays out of the records: an `[any]` requirement is in the demand layer (W6), and so is every
-result of a reversed micro edge whose forward target is `[any]` (§4.3).
+result of a reversed micro edge whose forward target is `[any]` and of a reversed conjunctive micro edge (§4.3). So a
+demand-layer backward leaf is never crossable, also when its reversal has crossable tails: it is a demand edge (case
+3; Lean `Handoff.CrossB` reads the layer).
 
-THE DEMAND PATTERNS of the backward run have the tails `$`, `*/E` and `[any]`. The emission of the next forward run
-gives the tail of the ADDED fact for two any tails (`ap.md` §6.3), so an `[any-taint]` added fact still gives a
-must-premise from an `[any]` pattern (§4.4; Lean `AnyTaintEx.emitTX`).
+THE DEMAND PATTERNS that the backward run hands off have the tails `$` and `[any]`: no `*` tail, for seeds with
+concrete marks and no `*` tail (Lean `HandoffNoStar.demOfN_nonstar`, `canon_dem_nonstar`; §7.8). The emission of
+the next forward run gives the tail of the ADDED fact for two any tails (`ap.md` §6.3), so an `[any-taint]` added fact
+still gives a must-premise from an `[any]` pattern (§4.4; Lean `AnyTaintEx.emitTX`).
 
 THE STATIC BASE. `S` is touched at every call, in every run (`interpreter.md` §3.3), so the driver gives no static
 input. A callee that touches no static gives the static fact back through its run-1 identity summary, which is a
-record in every later run (`ap.md` §8.7). This needs no rule at the call.
+record in every later run (`ap.md` §8.7). This needs no rule at the call. The identity summary `(S, ., *) → (S, ., *)`
+is crossable (§1), so it is never a demand edge: no run enters such a callee for the static fact.
 
 ### 7.5 Confirmation and the report
 
@@ -1370,9 +1571,11 @@ After a complete forward run, at the barrier:
    reads `E` (`ap.md` §4.9), so the confirmation needs no other test. In a restricted forward run a member of its
    premise set can be an `[any-taint]` must-premise (condition 2). Lean: `AnyTaintEx.Confirmed6X` (run 1),
    `ConfirmedX` (a restricted forward run); a confirmed vulnerability is real (`AnyTaintExExact.confirmed_real_valid6X`,
-   `confirmed_realX_valid`; under S7 and S13, and in a restricted run with the spec rules, which have the rule
-   hypotheses, `AnyTaintExExact.specX_rules`, and with exact records in normal form, `AnyTaintEx.RecsExactX`,
-   `AnyTaintExExact.RecsConcX`, `RecsWFX`; `ap.md` §10.11). Over the run sequence
+   `confirmed_realX_valid`; under S7 and S13, and in a restricted run with the spec rules (`emitX`, `satX` and the
+   intersection `restrictIX` of F70), which have the rule hypotheses (`HandoffX.restrictIX_ok`: the hypothesis
+   `AnyTaintExExact.RestrictOKX`; for the earlier restriction `restrictX`, `AnyTaintExExact.specX_rules`), and with
+   exact records in normal form, `AnyTaintEx.RecsExactX`, `AnyTaintExExact.RecsConcX`, `RecsWFX`; `ap.md` §10.11).
+   Over the run sequence
    (`AnyTaintExExact.seq_confirmed_realX_valid`) this holds when every record is an exit edge of an earlier forward
    run of the same program (`AnyTaintExExact.RecsFromRunsX`), with no exactness hypothesis on the records; with the
    reversed backward records and with the source seeds it is argued (`ap.md` §8.7 R4, §11.2).
@@ -1392,13 +1595,18 @@ key. One key can come from several runs; the state CONFIRMED wins (`ap.md` §8.1
 earlier forward run that the latest complete forward run does not report is REFUTED, so it leaves the report.
 
 THE OUTPUT holds EVERY entry of the report: the CONFIRMED and the DEMAND vulnerabilities, each with the simple trace
-(§9; `ap-history.md` F68). So the output holds every vulnerability of the latest complete forward run, and the claim
-of `ap.md` §0.1 and §6.6 (the analysis can stop at any complete forward run) holds for the output too: a complete
-forward run holds every real vulnerability in some layer (`PipelineDriver.driver_iteration_upto`, with the tail
-`[any-taint]` `PipelineAnyTaintExDriver.driver_iteration_uptoX`, §7.7), and the report keeps every vulnerability of the
-latest complete forward run, in one of its two states. A vulnerability that stays DEMAND in every run (for example one
-whose taint passes only through a pass rule with an `AnyField` target, a may `[any]`: `ap.md` W6 forward, and the
-demand layer of its reversal backward, §4.3) is output with the state DEMAND.
+(§9; `ap-history.md` F68). So the output holds every vulnerability of the latest complete forward run and every
+vulnerability that an earlier complete forward run confirmed, and the claim of `ap.md` §0.1 and §6.6 (the analysis
+can stop at any complete forward run) holds for the output too. With the seeds of the DEMAND vulnerabilities only
+(§7.3), a complete forward run need not report a vulnerability that an earlier run confirmed. But every real
+vulnerability is, at every complete forward run, reported by that run (in some layer) or CONFIRMED by an earlier one
+(`HandoffMain.iteration_generalN`, with the tail `[any-taint]` `HandoffXIter.iteration_generalNX`; for the driver
+`PipelineHandoffDriverExt.driver_iterationNX_demand`, finite `driver_iterationNX_upto`; §7.7). The report
+keeps both: the CONFIRMED state is final, and the DEMAND state holds every vulnerability of the latest complete
+forward run that no run confirmed. The refutation stays sound: a DEMAND vulnerability that no run confirmed and that
+the latest complete forward run does not report is not real (the same theorem). A vulnerability that stays DEMAND in
+every run (for example one whose taint passes only through a pass rule with an `AnyField` target, a may `[any]`:
+`ap.md` W6 forward, and the demand layer of its reversal backward, §4.3) is output with the state DEMAND.
 
 AN `[any]`-TARGET SOURCE. Its result has the tail `[any-taint]`: a normal edge (`ap.md` W8). So a vulnerability whose
 taint comes from such a source CAN BE CONFIRMED (`ap-history.md` F69). Run 1 can confirm it if a normal sink edge
@@ -1438,18 +1646,23 @@ that it found before the timeout (`TaintAnalyzer.kt:157-223`). This is a deviati
 
 | Data | Stays until | Read by |
 |---|---|---|
-| the run summary stores of a run, and the `sourceHits` of a backward run | its hand-off is computed (the end of its barrier) | §7.3, §7.4; `persist` (`ap.md` §8.7 R1) |
+| the run summary stores of a run (the summaries before the restriction and the stored demand edges, §4.1, §4.6) and the `sourceHits` of a backward run | its hand-off is computed (the end of its barrier) | §7.3, §7.4 (the demand edges, the source hits); `persist` (the summaries, `ap.md` §8.7 R1) |
+| the `counters` of every analyzer of a run (§4.1) | its frontier is logged (the end of its barrier) | §7.1 (`NO_DEMAND_EDGE`), §7.8 |
+| the frontier of a run (counts and method keys, no edge) | the end of the analysis | §7.8; `continueAfter` |
 | the links of a forward run | its confirmation is computed | §7.5 |
 | the edge stores, the initial fact stores, and the links of a backward run | the end of the run | — (the barrier never reads them) |
 | `SummaryStorage`, `SubscriptionManager`, the runners, the backward analyzers | the end of the run, or its hand-off | — |
 | `RecordStore`, `VulnerabilityStore`, `MethodContextCache`, `ApManager` | the end of the analysis | every run |
 
-THE BARRIER READS ONLY: the links of a forward run (the support), the summaries (`persist`, the hand-off), the
-`sourceHits` of a backward run (the hand-off), the `VulnerabilityStore` (the confirmation, the report, the stop rule,
-the sink seeds) and the forms of the `MethodContextCache` (the seed patterns). So the `RunManager` keeps of a complete
-run only what the barrier reads: at the end of the run it drops the edge stores, the initial fact stores and the links
-of a backward run. The barrier holds the stores that it reads under its own memory guard (§7.2 B4). The driver keeps
-the result of a run only in the frame of its barrier (`runOnce`, §7.1), so no live slot keeps it during the next run.
+THE BARRIER READS ONLY: the links of a forward run (the support), the summaries before the restriction (`persist`),
+the stored demand edges (the hand-off, §4.6), the `sourceHits` of a backward run (the hand-off), the `counters` (the
+stop rule `NO_DEMAND_EDGE`, the frontier), the `VulnerabilityStore` and the report (the confirmation,
+the report, the stop rule `STOP_RULE`, the sink seeds of the DEMAND vulnerabilities) and the forms of the
+`MethodContextCache` (the seed patterns). So the `RunManager` keeps of a complete run only what the barrier reads: at
+the end of the run it drops the edge stores, the initial fact stores and the links of a backward run. Before it drops
+an initial fact store, it sets the `counters` that the frontier reads (a non-zero initial fact exists or not). The
+barrier holds the stores that it reads under its own memory guard (§7.2 B4). The driver keeps the result of a run
+only in the frame of its barrier (`runOnce`, §7.1), so no live slot keeps it during the next run.
 Every other object of a run is garbage after the run: the edge stores too. No store of a run stays for a trace resolver
 (the trace resolution is out of scope, §9). An incomplete run keeps no store after it ends (§7.5). The engine of a run
 is never used again (§2), so no state of one run can leak into the next run. This removes the leaks of today's reuse
@@ -1457,54 +1670,272 @@ is never used again (§2), so no state of one run can leak into the next run. Th
 
 ### 7.7 The driver theorems
 
-THEOREM (`PipelineDriver.driver_iteration`). Hypotheses:
+The driver of §7.1 with the hand-off of §7.3 and §7.4 (`ap-history.md` F70; `ap.md` §10.12). The theorems join three
+parts:
+
+LEAN NUMBERING. The Lean theorems count the forward runs only: the forward run `k` of Lean is the run `2k + 1` of
+§7.1 (run 1 is `k = 0`), and the backward run after it is the run `2k + 2`.
+
+* THE FORWARD CONTRACT of a restricted forward run (`Handoff.CoversN`). Every witness whose calls that return are
+  DEMANDED (one demand pattern covers the entry location, with its mark, and the exit location) or RECORDED (a crossable
+  record of the run has the pair) is JUSTIFIED by the run (by a publication or a crossable record), and the run reports
+  its vulnerability. Proved for `DR … emitM satI restrictI` (`Handoff.coversN_DR`, by `coverageRN`: a demanded call
+  uses the emission inside `D-c`, `emitM_inside`, and the contract of the intersection, `restrictI_contract`; a
+  recorded call uses `cross_applies`). With the tail `[any-taint]`: `DRX … emitX satX restrictIX`, read with the
+  exclusions dropped, with the base records embedded (`HandoffX.coversN_DRXI`, `RecsEmbed`). Run 1 justifies every
+  real witness and reports it (`Handoff.run1_justifies`; with `[any-taint]` `HandoffX.run0X_contract`).
+* THE BACKWARD CONTRACT (`Handoff.BackwardContractN`). Every witness that forward run `k` justifies, of a SEEDED sink,
+  is demanded or recorded in the next forward run. Proved for `Backward.DB` of `Reverse.Program.rev P` with `emitM`,
+  `satI`, `restrictI`, the demand `handF`, the backward records `recsBOf` (the reversals of the crossable records)
+  and the next forward records `rcNextOf` (`HandoffBackward.B_generalN`, `B_generalN_canon`; a crossable call:
+  `HandoffBackward.cross_step`).
+* THE ITERATION (`HandoffIter.iteration_abstract_or`): run 1 and the two contracts, with "every vulnerability that a
+  forward run reports is confirmed or seeded", give the conclusion below.
+
+THEOREM (`HandoffMain.iteration_generalN`). The canonical run sequence of the spec rules (`HandoffMain.canonState`):
+run 1 is `D … policy1` with the publication `pubD` and no record; the backward run after forward run `k` is
+`Backward.DB` of `Reverse.Program.rev P` with `emitM`, `satI`, `restrictI`, the demand `handF` of run `k`, the records
+`recsBOf`, no sinks, the zero rules (`zbind = true`) and the seeds `seeds k`; the next forward run is
+`DR … emitM satI restrictI` with the demand `demOfN` of that backward run, the publication `pubR` and the records
+`rcNextOf`. The field limits are free. Hypotheses:
 
 * the program satisfies the hypotheses of `Backward.iteration_general` (`ap.md` §6.6): `P.WF`, `Reverse.BindTargetsStar`,
   `Backward.StmtsMarkRev`, `NoZeroBack`, `ZeroKept`, `ExitReach`, and every sink pattern has the tail `$` or `[any]`;
-* run 1 uses `policy1`. The forward restricted runs use `emitM`, `satI` and `restrictU`. The backward runs use the
-  same three on `Reverse.Program.rev P`, with no sinks and with the zero rules (`zbind = true`). The field limits and the
-  record sets are free;
-* every run is complete: `stF k` (forward run `2k + 1`) and `stB k` (backward run `2k + 2`) are reachable quiescent
-  states of their encoded systems;
-* the hand-offs CONTAIN those of §7.3 and §7.4, computed from the final states:
-  * the backward demand contains `revSummaryDemand` of forward run `2k + 1` (`hdemB`);
-  * the seeds contain the sink of every vulnerability of that run (`hseeds`);
-  * the forward demand contains `demOf` of backward run `2k + 2` (`hdem`).
+* THE SEEDS (`hseeds`): every vulnerability that forward run `k` reports satisfies a predicate `C k` or is in
+  `seeds k`.
 
-Conclusion: for every real flow to a sink (a reachable location that a sink pattern with a concrete mark covers),
-every forward run holds the vulnerability, in some layer.
+Conclusion: for every real flow to a sink (a reachable location that a sink pattern with a concrete mark covers), at
+every forward run `k`, an earlier forward run satisfies `C` for it, or run `k` reports it, in some layer.
 
-`PipelineDriver.driver_iteration_upto` is the same theorem for a FINITE sequence: the driver stops after forward run
-`2K + 1`, and only the runs up to it must be complete. This is the stop structure of the driver of §7.1, for the
-forward runs without source seeds: the driver stops only after a complete forward run (the stop rule or
-`continueAfter`), or at an abnormal end, which adds nothing to the report (§7.5). With the source seeds:
-`PipelineSeeds.driver_iteration_src` (below), its finite form argued (§11); the static rule and the conjunctions: §11.
-The proof extends the sequence after `K` with the full demand and with every sink as a seed.
+The seeds of §7.3 satisfy `hseeds` with `C k` = "a complete forward run up to `k` confirmed the vulnerability key"
+(cumulative): a vulnerability that run `k` reports is CONFIRMED in the report after run `k`, or it is a DEMAND
+vulnerability, and its witnesses are seeds. So after every complete forward run the report holds every real
+vulnerability (§7.5 THE OUTPUT), and `STOP_RULE` keeps every real vulnerability CONFIRMED (§7.1). For the driver of
+§7.1 this is the pipeline form with the DEMAND seeds (below).
 
-The records are not hypotheses: the record sets are free. For the runs with the static rule, `ap.md` proves the
-iteration (`StaticsIter.iteration_general_DS`), and `PipelineAP.clDS_iff` gives the closure equality; the pipeline form
-of that theorem is argued (§11).
+* `HandoffMain.iteration_generalN_all`: `C` false, every reported vulnerability seeded: every forward run reports
+  every real vulnerability.
+* `HandoffMain.iteration_generalN_incl`, THE INCLUSION FORM: the driver may hand off MORE than the canonical sets.
+  The backward demand contains `handF` of run `k` (`hdemB`), the backward records contain the reversed crossable
+  records (`hrecB`), the forward demand contains `demOfN` of the backward run (`hdem`), and the records of the next
+  forward run contain `rcNextOf` (`HandoffBackward.NextRecs`, `hrc`). So an implementation may also hand off a
+  crossable leaf or keep more records (`HandoffMain.flowRR_mono`, `reachRR_mono`, `flowRDN_mono_rc`,
+  `reachRDN_mono_rc`).
 
-THEOREM (`PipelineSeeds.driver_iteration_src`). The same, with the source seeds (§4.7). Forward run `2k + 3` analyzes
-the program `FSeeds.keepSources P σ_k`; `σ_k` contains the source hits of backward run `2k + 2`, computed from its
-final state (`FSeeds.srcHit`). The conclusion is the same: every forward run holds every real vulnerability of `P`. The
-proof joins `PipelineDriver.result_D`, `result_DR`, `result_DB` with `FSeeds.iteration_src`. Its finite form (as
-`PipelineDriver.driver_iteration_upto`) is argued (§11).
+THEOREM, WITH THE TAIL `[any-taint]` (`HandoffXIter.iteration_generalNX`; `ap.md` §10.11). The same on the canonical
+sequence of the spec closures (`HandoffXIter.canonStateX`): run 1 is `AnyTaintEx.D6X … policy1`, read by
+`AnyTaintExCov.forget6`; the next forward run is `AnyTaintEx.DRX … emitX satX restrictIX` with the base records
+embedded (`HandoffXIter.embedRecs`), read by `forgetX`, with the publication `HandoffX.pubRX`; the backward runs are
+as above (the backward run has no `[any-taint]`). Also `HandoffXIter.iteration_generalNX_all`,
+`HandoffXIter.iteration_reportsNX_canon`, and the inclusion forms `HandoffXIter.iteration_generalNX_incl` (with `C`)
+and `HandoffXIter.iteration_reportsNX` (every vulnerability seeded); their X records of the next forward run contain
+the embedded crossable base records (`hrecX`), and may contain more. The hypotheses are those of
+`AnyTaintExCov.iteration_reportsX`. PROVED.
 
-THEOREM (`PipelineAnyTaintExDriver.driver_iterationX`; the tail `[any-taint]` with its exclusion, `ap.md` §10.11). The
-same, with run 1 a run of `PipelineAnyTaintEx.sysD6X` and every forward restricted run a run of `sysDRX` with the spec
-rules `emitX`, `satX`, `restrictX` (the closure `AnyTaintEx.DRXs`); every backward run is a run of
-`PipelineAP.sysDB`, as before (the backward run has no `[any-taint]`). The driver reads each forward run with its
-exclusions and must flags dropped (`PipelineAnyTaintExDriver.resultSeqX`; `AnyTaintExCov.forget6`, `forgetX`): the
-hand-offs of §7.3 and §7.4 have no exclusion and no must flag. This hand-off can be smaller than that of the same run
-without the exclusion (`AnyTaintExCov.CexRoute.route_a_false`), so the proof reads each refined run directly: every
-refined run justifies its own witnesses (`AnyTaintExCov.iteration_reportsX`). The hypotheses are those of
-`PipelineDriver.driver_iteration` (every sink pattern has the tail `$` or `[any]`); there is no hypothesis on the taint
-edges and on the records. The conclusion is the same: every forward run holds every real vulnerability, in some layer.
-The proof joins `PipelineAnyTaintEx.result_D6X`, `result_DRXs` and `PipelineDriver.result_DB` with
-`AnyTaintExCov.iteration_reportsX` (through `PipelineAnyTaintExDriver.resultSeqX_runSeqX`).
-`PipelineAnyTaintExDriver.driver_iteration_uptoX` is the finite form, and `driver_iteration_srcX` the form with the
-source seeds (as `PipelineSeeds.driver_iteration_src`; `AnyTaintExCov.iteration_srcX`; its finite form argued, §11).
+THEOREM, THE PIPELINE FORM (`PipelineHandoffDriver.driver_iterationNX`). Hypotheses: those of
+`HandoffXIter.iteration_reportsNX`; every run is complete: `st1` (run 1, `PipelineAnyTaintEx.sysD6X`), `stR k` (the
+restricted forward run `2k + 3` of §7.1, `sysDRX … emitX satX restrictIX`) and `stB k` (the backward run `2k + 2`,
+`PipelineAP.sysDB … emitM satI restrictI`) are reachable quiescent states; the driver computes the hand-offs from the
+final states (`pubSeqXst`): the backward demand contains `handF` (`hdemB`), the backward records the reversed
+crossable records (`hrecB`), the base records `NextRecs` (`hrcN`), the X records embed them (`hrecX`), the forward
+demand contains `demOfN` (`hdem`), and the seeds contain EVERY vulnerability of the forward run (`hseeds`).
+Conclusion: every forward run holds every real vulnerability, in some layer. The proof joins
+`PipelineAnyTaintEx.result_D6X`, `result_DRX` and `PipelineDriver.result_DB` (both generic in the rules) with
+`HandoffXIter.iteration_reportsNX` (through `PipelineHandoffDriver.resultSeqX_runSeqNX`, `pubSeqXst_pubSeqNX`). This
+is the form with ALL the seeds.
+
+THEOREM, THE PIPELINE FORM WITH THE DEMAND SEEDS (`PipelineHandoffDriverExt.driver_iterationNX_demand`). The
+hypotheses of `PipelineHandoffDriver.driver_iterationNX`, with `hseeds` in the form "every vulnerability that forward
+run `k` reports satisfies `C k` or is seeded". With `C k` = "a complete forward run up to `k` confirmed the key"
+(CONFIRMED in the sense of `ap.md` §4.9; the seeds of §7.3 satisfy `hseeds`), the conclusion is: at every forward run
+`k`, every real vulnerability is reported by run `k`, in some layer, or confirmed by an earlier forward run. On the
+final states: `PipelineHandoffDriverExt.driver_iterationNX_demand_known`. PROVED. The instance
+`PipelineHandoffDriverExt.driver_iterationNX_confirmed` fixes a weaker `C` (a run up to `k` reported the key in the
+NORMAL layer, with no test of the support): it is not the confirmation of §7.5, so it is not the form of this driver.
+
+THE DRIVER OF §7.1 AGAINST THESE THEOREMS:
+
+* THE SEEDS OF THE DEMAND VULNERABILITIES. The AP forms with `C` (`HandoffMain.iteration_generalN`,
+  `HandoffXIter.iteration_generalNX` and their inclusion forms) and the pipeline form
+  (`PipelineHandoffDriverExt.driver_iterationNX_demand`) are proved.
+* A FINITE SEQUENCE. The driver stops after a complete forward run (a stop rule or `continueAfter`), or at an abnormal
+  end, which adds nothing to the report (§7.5). The finite forms stop the induction at the last complete forward run
+  `K`: they need the hypotheses only for the runs before `K`, and they read no run after `K`
+  (`HandoffUpto.iteration_generalN_upto`, `iteration_generalN_canon_upto`, `iteration_generalNX_upto`,
+  `iteration_generalNX_canon_upto`; the driver `PipelineHandoffDriverExt.driver_iterationNX_upto`). PROVED.
+* THE STOP RULES. The report part of `STOP_RULE` follows from the iteration theorem (§7.1); that every later forward
+  run only repeats the zero fact and the records is argued (§11). `NO_DEMAND_EDGE` is argued (§11).
+* THE SOURCE SEEDS (§7.4): PROVED, with the forward runs on the seeded program `FSeeds.keepSources P σ`
+  (`HandoffSrc.B_srcN`, `iteration_srcN`, `iteration_srcN_canon`, `iteration_srcNX`; the driver
+  `PipelineHandoffDriverExt.driver_iteration_srcNX`; finite `HandoffSrc.iteration_srcN_upto`, `iteration_srcNX_upto`,
+  `PipelineHandoffDriverExt.driver_iteration_srcNX_upto`). The sources at a call, at the method start and at the method
+  exit, and the exactness of a seeded run, are argued (§11 THE SOURCE SEEDS).
+* THE STATIC RULE AND THE CONJUNCTIONS with the new hand-off: argued (§11). The forward runs of the theorems above
+  have no ND edge, and the backward run of the model has no reversed conjunction (§4.3 THE REVERSAL OF A CONJUNCTION).
+* THE END FACTS and THE TRIGGER OF AN END FACT (§4.5): outside the model (§11).
+* THE EXCLUSION AND THE NARROWING: §7.8.
+
+THE EARLIER HAND-OFF (before F70). `PipelineDriver.driver_iteration`, `driver_iteration_upto`,
+`PipelineSeeds.driver_iteration_src`, `PipelineAnyTaintExDriver.driver_iterationX`, `driver_iteration_uptoX` and
+`driver_iteration_srcX` state that every forward run holds every real vulnerability for the hand-off of EVERY summary
+edge, in every layer, BEFORE the restriction (`Backward.revSummaryDemand`, `Backward.demOf`), with the restriction
+`restrictU` (`restrictX`) and with every reported vulnerability seeded. Their hypotheses say that the hand-offs
+CONTAIN those sets. The hand-off of §7.3 and §7.4 does not contain them (it leaves out the crossable leaves and reads
+the intersections), so the driver of §7.1 is not an instance of these theorems. They stay true for the earlier
+design, with the source seeds (`FSeeds.keepSources`, `FSeeds.srcHit`, `FSeeds.iteration_src`; with the tail
+`[any-taint]` `AnyTaintExCov.iteration_srcX`) and with a finite sequence; the new hand-off has its own forms of both
+(`HandoffSrc`, `HandoffUpto`, `PipelineHandoffDriverExt`, above). For
+the runs with the static rule, `ap.md` proves the iteration of the earlier hand-off
+(`StaticsIter.iteration_general_DS`), and `PipelineAP.clDS_iff` gives the closure equality (§11). With the tail
+`[any-taint]` the driver reads each forward run with its exclusions and must flags dropped (`AnyTaintExCov.forget6`,
+`forgetX`; `PipelineAnyTaintExDriver.resultSeqX`). That hand-off can be smaller than that of the same run without the
+exclusion (`AnyTaintExCov.CexRoute.route_a_false`), so every proof reads each refined run directly
+(`AnyTaintExCov.iteration_reportsX`; with the new hand-off `HandoffXIter.iteration_generalNX`).
+
+### 7.8 Localization and the frontier
+
+The hand-off of the demand edges only (§7.3, §7.4) LOCALIZES the remaining work: a run analyses from a non-zero fact
+only the method keys that a demand edge of the run before reaches (§4.4). Two theorems tell how this part changes from
+run to run, and the frontier log measures it (`task.md`; `ap-history.md` F70).
+
+THE EXCLUSION THEOREM (`HandoffExclusion.exclusion_theorem`; from the leaves `HandoffExclusion.exclusion_round`; on
+the canonical sequence `HandoffMain.exclusion_canon`; on the spec closures with the tail `[any-taint]`, forward runs
+`AnyTaintEx.DRX … emitX`, `HandoffXMain.exclusion_roundX` and, on `HandoffXIter.canonStateX`,
+`HandoffXMain.exclusion_canonX`). Lean numbering (§7.7): `k` counts the forward runs only, so forward run `k + 1` of
+Lean is the forward run after forward run `k`. Let a method key `M` satisfy, after forward run `k`:
+
+* forward run `k` hands off NO DEMAND EDGE of `M` (the frontier field `demandEdges[M]` is 0; Lean `hdem : ∀ d, ¬ demB
+  M d` with `demB` = the hand-off `handF` of run `k`). A SUFFICIENT CONDITION: every summary leaf of `M` in run `k`
+  is crossable (§1), every exit edge of every initial fact, the zero fact too (`HandoffExclusion.exclusion_round`,
+  `HandoffMain.exclusion_canon`);
+* no seed of the backward run after run `k` lies in the CALL SUBTREE of `M`: `M` and every method that `M` reaches
+  through calls (Lean `HandoffExclusion.Reaches`). A seed here is a seed of the hand-off or a seed that the backward
+  run fires by THE TRIGGER OF AN END FACT (§4.5): both give seed paths, which return to every caller (rule `zret`).
+
+Then in the backward run after run `k` every edge of `M` is the zero edge, and in forward run `k + 1` the only
+initial fact of `M` is the zero fact, and every edge of `M` has the zero premise. The program hypotheses:
+`HandoffExclusion.NoZeroGenP` (the conditions (a) to (c) of `NDZeroBase.NoZeroGen`: the only statement micro edge
+into the zero base is the zero keep edge, the only binding into the zero base of a callee is the zero binding, and no
+binding back goes to the zero base) and no cleaner on the zero base; the seeds have concrete marks
+(`BExact.SeedsConc`). The steps: with no demand edge of `M`, the backward run emits no non-zero initial fact in `M`
+(`HandoffExclusion.init_zero_nodem`); with no seed below `M`, every backward edge of `M` is the zero edge
+(`HandoffExclusion.zinv_all`, `exclusion_backward_nodem`); so `demOfN` gives `M` only the zero demand
+(`HandoffExclusion.exclusion_demand`); so the next forward run emits only the zero fact in `M`
+(`HandoffExclusion.forward_zero_init`, `forward_zero_edges`; all in `HandoffExclusion.exclusion_theorem`).
+
+A METHOD KEY THAT LEAVES THE FRONTIER STAYS OUT while no seed lies in its call subtree. In forward run `k + 1` the
+only demand pattern of `M` is the zero demand `(zero, none)`. In a restricted run a zero-premise summary is published
+only through a demand pattern `(zero, jb)` with a `D-p` (§7.3), and a restriction with no `D-p` has no result
+(`HandoffCases.restrictI_none`). So `M` publishes nothing, and forward run `k + 1` hands off no demand edge of `M`,
+also no demand edge from the zero fact. The condition of the first bullet holds again, so the one-round theorem
+(`HandoffExclusion.exclusion_theorem`) applies to the next round. This composition over several rounds is ARGUED:
+each round is a Lean theorem, the induction is not (§11). It is the observation of `task.md`: a method key with no
+demand edge after forward run `i` gets none in a later run, while no seed lies in its call subtree.
+
+PROGRAM WRAP (`HandoffCases.Wrap`; the field limits 1, 2, 3):
+
+```java
+root():  x.a.b.c = source();  r = wrap(x);  sink(r.f.a.b.c);
+wrap(x): z = new Z();  z.f = x;  return z;               // the model: ret.f = arg
+```
+
+Run 1 gives `wrap` only the complete summary `(arg, ., *) → (ret, .f, *)`, and it is crossable
+(`Wrap.w1_exit_cross`, `w1_wrap_exits_cross`). The root cuts the source to `(x, .a, [any], T)` and reports the
+vulnerability in the demand layer, so its sink is a seed (`seedsW_exact`).
+
+* THE EARLIER HAND-OFF analyses `wrap` again. Backward run 2 enters `wrap` with `(ret, .f.a, [any], T)`
+  (`Wrap.old_b2_wrap_init`) and hands off `((arg, .a, [any], T), (ret, .f.a, [any], T))` (`old_dem_w`); forward run
+  3 emits `(arg, .a.b.c, $, T)` in `wrap` (`old_f3_wrap_init`) and cuts INSIDE `wrap` (`old_f3_wrap_cut`): a
+  demand-layer edge in `wrap`, which had none in run 1.
+* THE HAND-OFF OF §7.3 gives only the leaf of the root (`Wrap.handF_w1_exact`). Backward run 2 crosses `wrap` by the
+  reversed record (`bn_cross`, by `applicable`) and has only the zero fact in `wrap` (`bn_wrap_zero_only`,
+  `bn_wrap_edges_zero`). The forward demand is the zero demand and `((x, .a, [any], T), none)` of the root
+  (`demN_exact`). Forward run 3 has only the zero fact in `wrap` (`fn_wrap_zero_only`, `fn_wrap_edges_zero`), applies
+  the record of `wrap` in the root (`fn_record_applicable`: by `applicable`, not by `satI`; the call is a RECORDED
+  call, `wrap_reachRR`), cuts in the ROOT (`fn_cut_in_root`) and still reports the vulnerability (`fn_found`). All in
+  one statement: `Wrap.wrap_old_vs_new`.
+
+THE NARROWING THEOREM: the search space only shrinks, with NO EXCEPTION
+(`HandoffNoStar.narrowing_canon_loc_exact`; its two halves `HandoffNoStar.narrowing_canon_fwd_exact` and
+`HandoffNoStar.narrowing_canon_back_exact`; one hand-off: `Handoff.handF_narrow`, `handF_narrow_loc`,
+`demOfN_narrow`, `handF_narrow_DR_exact`). Let forward runs `n` and `n + 2` be restricted runs (`n >= 3`; in the
+Lean numbering of §7.7 they are the forward runs `k + 1` and `k + 2`). Every demand pattern of forward run `n + 2`
+WITH AN EXIT PATTERN (case 3 of §7.4: a fact-to-fact demand edge `(gb', jb)`) lies inside a demand pattern `d` of
+forward run `n` of the same method key, as LOCATIONS: its exit pattern `jb` inside `D-p` of `d`, and its entry pattern
+`gb'` inside `D-c` of `d`. The reason: it comes from `d` through a forward exit edge `j → g` (piece `g'`) and a
+backward exit edge `jb → gb` (piece `gb'`), and each restriction puts its premise inside `D-c` and its result inside
+`D-p` of the demand pattern that published it (`Handoff.restrictI_narrow`). So `jb ⊆ g' ⊆ D-p(d)` and
+`gb' ⊆ j ⊆ D-c(d)`. The hypotheses: the seeds have concrete marks and no `*` tail (`BExact.SeedsConc`; a sink pattern
+has the tail `$` or `[any]`, `HandoffNoStar.nonstar_of_sinkK`). THE THEOREM DOES NOT NARROW the zero demand and the
+seed-path patterns `(gb, none)` (case 2 of §7.4): as locations they shrink when the backward field limit grows
+(argued), but their COUNT can grow (§11 THE SEED PATHS). The induction over the rounds is in the theorem: it holds
+for every round of the canonical sequence.
+
+WHY THERE IS NO EXCEPTION (`ap-history.md` F70). The intersection keeps two cells whole (`Handoff.RExc`,
+`restrictI_inter`): (a) an `[any]` conclusion at or above a `*/E` exit pattern keeps `[any]` (W2: a concrete mark has
+no `*` tail), and (b) a `*` conclusion stays as it is. Both need a `*` tail, and with the hand-off of the demand edges
+no demand pattern after run 1 has one:
+
+* run 1 hands off no pattern with a `*` entry tail, and its exit patterns (premises of run 1) have the tail `$` or
+  `*/{}`: every normal FLOW leaf of run 1 is crossable (§1), and W2 leaves no demand-layer `*` (Lean
+  `HandoffNoStar.handF_run1_nonstar`, `run1_exit_star_cross`);
+* a backward run with such a demand and with the seeds above emits no `*` premise and has no `*` conclusion
+  (`HandoffNoStar.DB_edge_nonstar`), so its hand-off has no `*` pattern (`HandoffNoStar.demOfN_nonstar`); so no demand
+  pattern of a forward run has a `*` tail (`HandoffNoStar.canon_dem_nonstar`);
+* a restricted forward run has no `*` conclusion (`Handoff.DR_exit_not_star`), and with no `*` exit pattern the
+  forward narrowing is exact (`Handoff.handF_narrow_DR_exact`).
+
+A `*/E` exit pattern occurs only in backward run 2, as a run-1 premise `*/{}`, and there cell (a) adds no location
+(`HandoffNoStar.rexc_empty_loc`, `narrowing_canon_back_loc`). The older statements `HandoffMain.narrowing_canon`,
+`narrowing_canon_loc` keep both cells as exceptions; the exceptions of `narrowing_canon_loc` are loose (an existential cell that every `*` exit pattern satisfies), so the `_exact` forms are
+the narrowing theorem. The narrowing is of locations, not of counts: one demand pattern can give several pieces.
+
+WITH THE TAIL `[any-taint]` (forward runs `AnyTaintEx.DRX … emitX satX restrictIX`). One hand-off:
+`HandoffX.handF_narrowX`, `handF_narrowX_DRX` (the exceptions `HandoffX.RExcX`), exact with the exclusions. Over a
+round on `HandoffXIter.canonStateX`: `HandoffXMain.narrowing_canonX`, `narrowing_canonX_loc`, and with no `*` pattern
+`HandoffNoStar.narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`. The hand-off reads each forward run with the
+exclusions dropped (§7.3). In general a handed-off pattern can then reach past the earlier one at an excluded
+location (the `Dropped` alternative of `HandoffXMain.narrowing_canonX_loc`; `HandoffX.XVec.v_inside_only_with_excl`,
+`HandoffXMain.XMVec.exit_dropped`, which need a `*/E` demand pattern). With no `*` pattern, as on the spec sequence,
+the exit side is exact, and the entry side is exact unless the premise exclusion is Universe, which the AP never has
+(`ap.md` §1: no exclusion is Universe; the model keeps `Excl.univ` only to encode a `$` premise;
+`HandoffNoStar.narrowing_canonX_loc_exact`).
+
+THE FRONTIER LOG. After each complete run the driver logs the frontier of the run (§7.1; `Frontier`, §10). The log
+has counts and method keys, no edge, so it costs one pass over the analyzers of the run (the `counters`, §4.1) and
+over the hand-off:
+
+* forward run: the method keys with a non-zero initial fact (`analysed`); the demand edges that the run hands off,
+  per method key (`demandEdges`, §7.3); the crossable summary leaves (`crossableLeaves`: the records that replace an
+  analysis in the next runs); the record applications that crossed a call in this run (`recordCrossings`); the
+  DEMAND and the CONFIRMED vulnerabilities after the run (`demandVulnerabilities`, `confirmedVulnerabilities`); the
+  sink seeds that it hands off (`seeds`);
+* backward run: the method keys with a non-zero initial fact; the demand edges that it hands off (§7.4); the
+  crossable backward leaves; the record applications at a call (`recordCrossings`: the backward records and the
+  reversed forward records); the source seeds;
+* both: THE WORK OF THE ZERO FACT, the part that §11 THE ZERO FACT leaves: the method keys that the run analysed
+  only from the zero fact (`zeroOnly`) and the number of their edges (`zeroOnlyEdges`);
+* AN OPTION (a diagnostic): per run, the number of demand-layer results per operation that set the layer
+  (`demandByCause`): the field-limit cut, a may target, a cleaner row, the must-record demotion, a demand-layer input
+  (§4.3).
+
+By the narrowing theorem the demand patterns with an exit pattern only shrink as locations per method key (not the
+seed-path patterns `(gb, none)`, and not as counts); by the exclusion theorem a method key leaves `analysed` when the
+run hands off no demand edge of it (for example, all its leaves are crossable) and no seed is in its call subtree. The
+log shows how fast this happens on a real program.
+
+HOW A LATER STOP STRATEGY CAN READ THE LOG (not normative: the policy is out of scope, §0). `continueAfter` gets the
+frontiers of every complete run (§7.1). Examples:
+
+* THE FRONTIER IS STABLE: two forward runs with the same set `analysed`, the same demand edges per method key and no
+  new CONFIRMED vulnerability. Between them only the field limit changed: by the narrowing theorem the demand patterns
+  with an exit pattern cannot grow as locations (the seed-path patterns are outside the theorem), so a further pair of
+  runs can gain only by the larger field limit;
+* THE FRONTIER IS SMALL against the work of the zero fact (`zeroOnlyEdges`): a further pair of runs costs mostly a
+  full pass of the zero fact (§11) for a small part of the program;
+* THE BUDGET: the time of the last pair of runs and the size of the frontier give an estimate of the next pair. If the
+  next forward run cannot complete in the rest of the budget, a stop now gives the same report as that incomplete run
+  (§7.5: an incomplete run adds nothing) and ends earlier.
 
 ---
 
@@ -1622,7 +2053,10 @@ sealed interface RequestKind {
     data class Position(val path: PathNode) : RequestKind
 }
 
-/** A seed (§4.7). A sink seed (backward run): one requirement of a reported sink; the requirement of an `[any]` sink
+/** A seed (§4.7). A sink seed (backward run): one requirement of a sink witness of a DEMAND vulnerability (§1, §7.3);
+ *  a CONFIRMED vulnerability gives none in the hand-off. The backward run also makes sink seeds by itself: those of a
+ *  sink alternative whose reversed end-fact edge applies to a requirement (§4.5 THE TRIGGER OF AN END FACT), once per
+ *  (method key, statement, alternative); they are not in the `SeedIndex`. The requirement of an `[any]` sink
  *  pattern has the tail `[any]`, in the demand layer (the backward run has no `[any-taint]`, ap.md W8, §9.2). A
  *  source seed (forward restricted run): one unconditional source edge that the backward run reached, in its forward
  *  form; the method key, the statement and the edge identify it in both runs (ap.md §8.11). */
@@ -1683,18 +2117,47 @@ interface VulnerabilityStore {
  *  runner that does not stop at the join. No CANCELLED: every cancel has a known cause (§6.3). */
 enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }
 
-/** The result of one run. The driver reads its stores only if `status == COMPLETE` (§7.5). */
+/** The result of one run. The driver reads its stores only if `status == COMPLETE` (§7.5). `demandLayerEdges`: the sum
+ *  of the `counters` of its analyzers (§4.1): the demand-layer objects of the run, that is the deltas of `edges.add`
+ *  and the summary deltas in the demand layer and the new demand links (§4.2 `addLink`, §4.6); 0 gives the stop rule
+ *  NO_DEMAND_EDGE after a forward run (§7.1). `recordCrossings`: the record applications at a call (§4.2, §7.8). The
+ *  DEMAND vulnerabilities are a state of the REPORT, not of one run: `ReportBuilder.hasDemandVulnerability`. */
 class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer>, val runIndex: Int,
-                val vulnerabilities: VulnerabilityStore) {
-    /** §7.1: a vulnerability key of THIS run with no confirmed witness of this run (any alternative, any method key). */
-    fun hasDemandVulnerability(): Boolean =
-        vulnerabilities.witnessesOf(runIndex).groupBy({ it.first }, { it.second }).values
-            .any { witnesses -> witnesses.none { it.confirmed } }
-}
+                val vulnerabilities: VulnerabilityStore, val demandLayerEdges: Long, val recordCrossings: Long)
 
-/** §7.1: why the iteration ended. ABNORMAL: an incomplete run (its status), a throw in the guarded region of the driver
- *  (FAILED), or a hit of the memory guard of the barrier (OOM). */
-enum class EndReason { STOP_RULE, POLICY, ABNORMAL }
+/** §7.3, §7.4: what a complete run hands to the next run of the other direction. `demand`: the patterns of the demand
+ *  edges only (the publications of the leaves that are not crossable, which the run stored, `summaries.demandEdges()`,
+ *  §4.6; from a backward run also the zero-premise edges; the zero demand is implicit, §4.4). `seeds`: the sink seeds of
+ *  the DEMAND vulnerabilities (forward run), or the source seeds (backward run). */
+class HandOff(val demand: DemandStore, val seeds: SeedIndex)
+
+/** §7.8: THE FRONTIER of one complete run, for the log and for `continueAfter`. Counts and method keys only, no edge.
+ *  The vulnerability counts are 0 after a backward run. `demandByCause`: an option (a diagnostic), null if the AP does
+ *  not count the demotions (§4.3). */
+data class Frontier(
+    val run: Int,
+    val direction: Direction,
+    val analysed: Set<MethodKey>,                    // the method keys with a non-zero initial fact
+    val demandEdges: Map<MethodKey, Int>,            // the demand edges that the run hands off, per method key
+    val crossableLeaves: Long,                       // the crossable summary leaves (records that replace an analysis)
+    val recordCrossings: Long,                       // record applications at a call (forward and reversed records)
+    val demandVulnerabilities: Int,                  // the DEMAND vulnerabilities after the run (forward)
+    val confirmedVulnerabilities: Int,               // the CONFIRMED vulnerabilities after the run (forward)
+    val seeds: Int,                                  // the seeds that the run hands off
+    val zeroOnly: Set<MethodKey>,                    // the method keys analysed only from the zero fact (§11)
+    val zeroOnlyEdges: Long,                         // the edges of those method keys: the work of the zero fact
+    val demandByCause: Map<DemandCause, Long>? = null,
+)
+
+/** §4.3, §7.8: the operations that put a result into the demand layer (the option `Frontier.demandByCause`). */
+enum class DemandCause { FIELD_LIMIT_CUT, MAY_TARGET, CLEANER_ROW, MUST_RECORD, DEMAND_INPUT }
+
+/** §7.1: why the iteration ended. STOP_RULE: no DEMAND vulnerability after a complete forward run. NO_DEMAND_EDGE: a
+ *  complete forward run with no demand-layer edge delta, summary delta or link (argued, §11). POLICY: `continueAfter`
+ *  gave false. ABNORMAL: an
+ *  incomplete run (its status), a throw in the guarded region of the driver (FAILED), or a hit of the memory guard of
+ *  the barrier (OOM). */
+enum class EndReason { STOP_RULE, NO_DEMAND_EDGE, POLICY, ABNORMAL }
 
 /** §7.1: the end of the analysis. `run`, `direction`: the last run. */
 data class AnalysisEnd(val status: RunStatus, val run: Int, val direction: Direction, val reason: EndReason)
@@ -1724,8 +2187,15 @@ class ReportBuilder {
         demand = next                                                               // one step (§7.5 step 3)
     }
 
-    fun build(end: AnalysisEnd): Report =
-        Report(confirmed.values + demand.values.filter { it.key !in confirmed }, end)
+    /** §1, §7.3: the DEMAND vulnerabilities after the latest complete forward run: its keys that NO complete forward
+     *  run confirmed (a key that an earlier run confirmed is final, also if the latest run reports it only in the
+     *  demand layer). Their witnesses of that run are the sink seeds. */
+    fun demandEntries(): List<Report.Entry> = demand.values.filter { it.key !in confirmed }
+
+    /** §7.1: false gives the stop rule STOP_RULE (no DEMAND vulnerability, so no seed). */
+    fun hasDemandVulnerability(): Boolean = demandEntries().isNotEmpty()
+
+    fun build(end: AnalysisEnd): Report = Report(confirmed.values + demandEntries(), end)
 }
 
 /** §4.3: an item of the worklist. The layer is `facts.layer`. */
@@ -1771,8 +2241,14 @@ class InFlight(private val onZero: () -> Unit) {
 ```
 
 Other names: `SharedObjects` holds the shared objects of §2. `confirm` computes steps 1 and 2 of §7.5 on the links of
-a complete forward run and sets `SinkWitness.confirmed`. `handOff` makes the `RunConfig` of the next run by §7.3 and
-§7.4: `demandOf` builds the `DemandStore` and `seedsOf` the `SeedIndex` from the stores of the run.
+a complete forward run and sets `SinkWitness.confirmed`. `handOffOf(config, result, report)` gives the `HandOff` of a
+complete run by §7.3 and §7.4: `demandOf` builds the `DemandStore` of the next run from `summaries.demandEdges()` of
+every analyzer (the stored publications of the leaves that are not crossable, §4.6; a backward run also gives its
+zero-premise edges), and `seedsOf` the `SeedIndex` (a forward run: the witnesses of `report.demandEntries()`; a
+backward run: the `sourceHits`). `ApOps.demandPart` (`ap-impl.md` §5.9) gives the non-crossable part of a summary
+value at each summary delta (§4.6); its per-leaf forms are `cross` and `crossReversed` (`ap-impl.md` §6; Lean
+`Handoff.Cross`, `Handoff.CrossB`). `nextConfig` makes the `RunConfig` of the next run. `frontierOf(config, result, handOff, report)` makes the frontier of §7.8 in one pass over the `counters` of the
+analyzers (§4.1), the hand-off and the report.
 `RecordStore.view` gives the read-only view of a run; `RecordStore.persist` adds the records of `ap.md` §8.7 R1 at a
 barrier. `CalleeSubscriptions` and `PublicationIndex` are the path tries of §5.3 and §5.2.
 `MethodContextCache.forms(key: MethodKey)` gives the cached forms of §4.8 for a method key, in both directions: the
@@ -1816,11 +2292,85 @@ ARGUED, NOT PROVED:
   with the inner points of a call.
 * THE SOURCE SEEDS at a call, at the method start and at the method exit: the model restricts the statement sources
   (`FSeeds.keepSources`); the others are the same micro edges at another place (`ap.md` §11.2). The exactness of a
-  seeded run for `P` (`ap.md` §11.2). The source seeds in a finite sequence: extend it after `K` with every source as
-  a seed (`FSeeds.flow_keep_all_iff`), as `PipelineDriver.driver_iteration_upto` does with the sinks.
+  seeded run for `P` (`ap.md` §11.2). The soundness of the source seeds with the new hand-off is proved, also in a
+  finite sequence: the finite forms stop the induction at the last run (`HandoffSrc.iteration_srcN_upto`,
+  `iteration_srcNX_upto`, `PipelineHandoffDriverExt.driver_iteration_srcNX_upto`; §7.4, §7.7).
 * THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`PipelineAP.clDS_iff`,
   `clDN_iff`). The pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md`
-  §11.2), are argued.
+  §11.2), are argued, for the earlier hand-off and for the hand-off of the demand edges.
+* THE HAND-OFF OF THE DEMAND EDGES (§7.3, §7.4, §7.7; `ap-history.md` F70). Proved for the AP closures (with `C`),
+  for the pipeline with the tail `[any-taint]` (with all the seeds, `PipelineHandoffDriver.driver_iterationNX`, and
+  with the DEMAND seeds, `PipelineHandoffDriverExt.driver_iterationNX_demand`), in the finite form (`HandoffUpto`,
+  `PipelineHandoffDriverExt.driver_iterationNX_upto`) and with the source seeds (`HandoffSrc`,
+  `PipelineHandoffDriverExt.driver_iteration_srcNX`). Argued:
+  * TREES: the model has one path fact per exit edge. The code tests each leaf of a conclusion tree (§1) and restricts
+    a tree leaf by leaf (§4.6);
+  * THE BACKWARD LAYER IN THE CROSSABLE TEST. `Handoff.demOfN` hands off every backward leaf with `¬ Handoff.CrossB`:
+    a demand-layer backward leaf is always a demand edge and never a record, as in the spec (§1, §7.4; `ap.md` §8.7
+    R1). But `Backward.DB` has no backward W6 layer rule (below): the layer that the spec gives a backward edge (every
+    result of a reversed may edge) is not the layer of the model. So the hand-off is the spec hand-off of the layers
+    that `Backward.DB` computes; with the layers of the spec it is argued, as the backward W6 itself;
+  * THE STORED PIECES (§4.6): the restriction acts leaf by leaf, so the pieces that the run stores for the
+    non-crossable part of a summary delta are the publications of the non-crossable leaves (the union over the deltas
+    equals the pieces of the whole summary). The model has the relations `Handoff.pubD`, `pubR`; the fuzzer compares
+    the stored pieces with the reference (`analyzer-impl.md` §9.2);
+  * A SUMMARY WITH SEVERAL PREMISES: never a record, so every publication of it gives one demand pattern per member
+    (as the earlier hand-off; `ap.md` §11.2);
+  * THE TRIGGER OF AN END FACT (§4.5, §7.3). The model has no end facts (§5.5). Before F70 every reported
+    vulnerability was seeded, so the witness of the trigger of an end fact was demanded in every run. With the seeds
+    of the DEMAND vulnerabilities only, a CONFIRMED sink is not seeded at the barrier, and without the rule of §4.5 a
+    later forward run does not make its end facts: a real DEMAND vulnerability whose flow starts at such an end fact
+    is refuted, and the analysis can stop with `STOP_RULE` without it. The rule fires the sink seeds of the trigger
+    when a requirement reaches the reversed end-fact edge, so the next forward run demands the witness of the trigger
+    and makes the end fact again;
+  * THE REVERSAL OF A CONJUNCTION (§4.3). Restricted runs with ND edges are not modelled (`ap.md` §11.2). The rule
+    fixes a false positive that existed before F70: the OR-reversal gave a NORMAL backward summary from the
+    conclusion to one literal, R1 persisted it, and R3 reversed it into a forward record of that literal alone, which
+    drops the other literals of the conjunction (a CONFIRMED false positive at a call that supplies only one literal).
+    With every result of the reversal in the demand layer, no such backward summary is a record or crossable, case 3
+    of §7.4 hands it off, and the next forward run analyses the callee with all the members;
+  * A COST LIMIT. Normal and demand trees of one premise key are separate edges, and no subsumption crosses the
+    layers. So a demand-layer piece whose every pair a crossable piece of the same premise and the same demand
+    pattern already has is still a demand edge: the backward run enters the callee for nothing, and the callee stays
+    in the frontier while its seed exists (for example a may next to an exact write of the same field). A rule that
+    drops such a piece needs a Lean variant of `HandoffBackward.seg_genN` (the crossable branch justifies the
+    witness); it is a later task. Cost only, not a loss.
+* THE EXCLUSION OVER SEVERAL ROUNDS (§7.8). One round is proved (`HandoffExclusion.exclusion_theorem`, with the
+  sufficient condition of `HandoffExclusion.exclusion_round`; `HandoffMain.exclusion_canon`; with the tail
+  `[any-taint]` `HandoffXMain.exclusion_roundX`, `exclusion_canonX`). The next round is
+  `HandoffExclusion.exclusion_theorem` again, with `HandoffCases.restrictI_none` for "no demand edge". The induction
+  over the rounds ("it stays out while no seed is below it") is not stated in Lean.
+* THE SEED PATHS (§7.8). The narrowing theorem (`HandoffNoStar.narrowing_canon_loc_exact`; with the tail
+  `[any-taint]` `HandoffNoStar.narrowing_canonX_loc_exact`) does not narrow the patterns `(gb, none)` (case 2 of
+  §7.4) and the zero demand. As locations the seed paths shrink when the backward field limit grows (argued), but
+  their COUNT can grow. (The exclusions that the hand-off drops, §7.3, are no gap of the theorem: with no `*`
+  pattern the X narrowing is exact except at a Universe premise exclusion, which the AP never has (`ap.md` §1),
+  `HandoffNoStar.narrowing_canonX_loc_exact`; the general form `HandoffXMain.narrowing_canonX_loc` has the `Dropped`
+  alternative.)
+* THE STOP RULE `STOP_RULE` (§7.1). That every real vulnerability is CONFIRMED in the report is proved (§7.7). That
+  every later forward run only repeats the zero fact and the records is argued: in a backward run with no seed every
+  edge of every method is the zero edge (`HandoffExclusion.zinv_all` for each method, with no seed anywhere), so
+  `HandoffExclusion.exclusion_demand` gives each method only the zero demand. The composition over every method and
+  over the later rounds is not stated in Lean.
+* THE STOP RULE `NO_DEMAND_EDGE` (§7.1). With no demand-layer edge delta, no demand-layer summary delta and no demand
+  link, every sink witness and every link of the run is normal, so a remaining DEMAND entry fails only the joint
+  support of a premise set with several members (a conjunction). A demand link is counted because a call cleaner can
+  demote an `[any-taint]` bound fact to `[any]` on a link (`ap.md` §2.2 THE DEMOTIONS) while every edge of the callee
+  stays normal (the emission `[any] ∩ $` gives a `$` premise that starts normal). AN OPEN QUESTION: in a complete
+  restricted forward run with no demand-layer object, if no one call supplies every member of the premise set of a
+  sink witness, can a later forward run (a narrower demand, a larger field limit, more records) have one call that
+  supplies every member of a sink witness of the same key? No counterexample is known: with every link normal, an
+  emitted member equals its added fact or lies inside a normal `[any-taint]` link. But the seed paths (case 2 of
+  §7.4) are not narrowed, and restricted runs with ND edges are not modelled (`ap.md` §11.2). No Lean statement has
+  this. The stop keeps every real vulnerability in the report (§7.7); the argument is only about a later
+  confirmation.
+* THE ZERO FACT IS NOT LOCALIZED (§0; a later task, `ap-history.md` F70). In every run the zero fact enters every
+  callee that it reaches: the backward rule `zin` (§4.5) and the forward zero demand with the zero binding (§4.4).
+  Every zero-premise backward edge at a forward entry is a demand edge `(gb, none)` (§7.4): it is never a record and
+  it is not narrowed. So the work of the zero fact repeats in every run, whatever the frontier: it is the floor of the
+  cost of a run, and the frontier log measures it (`zeroOnly`, `zeroOnlyEdges`, §7.8). The exclusion theorem is about
+  the non-zero facts: an excluded method key is still analysed from the zero fact. With only the zero demand it
+  publishes nothing in a restricted run, so it gives no demand edge from the zero fact (§7.8).
 
 * THE UNCHANGED PATH (§4.3). Its items skip `edges.add`. Its set discards only an item equal to an item that the
   `unchanged` queue already took, so a discarded item gives no new result. The model stores every edge. Not storing
@@ -1851,8 +2401,10 @@ ARGUED, NOT PROVED:
     backward W6 before F69. They are not a pure layer raise in `Backward.DB`: a demoted requirement can reach the zero
     fact as a demand zero fact, and `Backward.DB` reads the normal zero fact. But wherever such a zero-premise
     requirement reaches the zero fact, the normal zero edge of the zero premise is already at that node (the rules
-    `start` and `zpass` from the seed node, with `Backward.ZeroKept`), and `Backward.demOf` and `FSeeds.srcHit` read
-    every layer. So the rule only removes normal backward edges, so only records (`ap.md` §11.2);
+    `start` and `zpass` from the seed node, with `Backward.ZeroKept`), and `Handoff.demOfN` (before F70
+    `Backward.demOf`) and `FSeeds.srcHit` read every layer. So the rule only moves normal backward edges out of the
+    records: with the hand-off of §7.4 such a leaf becomes a demand edge (THE BACKWARD LAYER IN THE CROSSABLE TEST,
+    above; `ap.md` §11.2);
   * `[any-taint]` in a restricted forward run with ND edges (§5.4): `AnyTaintEx.DRX` has no ND edge, and
     `AnyTaintND.DNzT` has no must-premise and no exclusion (`ap.md` §11.2);
   * the cleaners stage and the rewriter of a call (§4.5) on an `[any-taint]/E` fact: the cleaner rows of `ap.md` §4.7
@@ -1913,17 +2465,31 @@ false positive. Before F69 the same finding was a DEMAND entry. A `$` fact has t
 | `PipelineProofs.lean` | `reach_sound`, `quiescent_complete`, `quiescent_exact`, `no_lost_join`; the counterexamples `PCex.cex_P1` to `cex_P4` and `PCex.step_finds_edge`; the counter model (`Quiesce.creach_inv`, `cnt_zero_iff`, `done_iff`, `done_final`, `bad_early_done`); the dominance theorems (`quiescent_dominates`, `reach_soundD`) |
 | `PipelineAP.lean` | the encodings of `D`, `DR`, `DB`, `DS`, `DN`; the `*_wf` theorems; `clD_iff`, `clDR_iff`, `clDB_iff`, `clDS_iff`, `clDN_iff`; the object theorems (`clD_link`, `clD_sub`, `clD_pub` and the other forms) |
 | `PipelineStore.lean` | the completeness of the index lookups of §5.3 (`replay_run1`, `deliver_run1`, `replay_restricted`, `deliver_restricted`, `record_lookup`) |
-| `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB`, `driver_iteration`, `driver_iteration_upto` |
+| `PipelineDriver.lean` | `result_D`, `result_DR`, `result_DB` (generic in the rules: also the backward run with `restrictI`), `driver_iteration`, `driver_iteration_upto` (the earlier hand-off, §7.7) |
 | `PipelineNDZ.lean` (with `NDZ.lean`, `NDZeroBase.lean`) | `PipelineNDZ.sysDNz_wf`, `clDNz_iff`, `result_DNz`, `clDNz_ndpub_zero_sub`: the encoding of `NDZ.DNz` (§5.4, §5.5) |
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
 | `PipelineAnyTaintEx.lean` (with `AnyTaintExDefs.lean`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (§5.5): `sysD6X`, `sysDRX`, `XPObj6`, `XPObj`, `sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, the object theorems, `known_D6X`, `known_DRX`, `result_D6X`, `result_DRX`, `result_DRXs`, `no_lost_summary_D6X`, `no_lost_summary_DRX`, `SanityX` |
-| `PipelineAnyTaintExDriver.lean` (with `AnyTaintExCov.lean`) | the driver with the tail `[any-taint]` and its exclusion (§7.7): `resultSeqX`, `resultSeqX_runSeqX`, `driver_iterationX`, `driver_iteration_uptoX`, `driver_iteration_srcX` |
-| `AnyTaintExDefs.lean`, `AnyTaintExCov.lean`, `AnyTaintExExact.lean`, `AnyTaintExKinds.lean`, `AnyTaintExCases.lean`, `AnyTaintExCases2.lean` | the AP model of the tail `[any-taint]` with its exclusion: THE SPEC CLOSURES (`ap.md` §10.11). This document cites: the closures `AnyTaintEx.D6X`, `DRX`, `DRXs`, the objects `XObj`, `XFact`, the operations `w6tX`, `transferX`, `limitFX`, `cleanResX`, `partX`, `annX`, `checkX`, `emitX`, `emitTX`, `satX`, `restrictX`, `startX`, `recLayerX` (with `DRX.retRec`), the predicates `SatInsideX` (`satX_inside`), `EndExactX`, `RecsExactX`, `SupLinkX`, `SupX`, `Confirmed6X`, `ConfirmedX`, the vectors `Vec`; `AnyTaintExCov.forget6`, `forgetX`, `iteration_reportsX`, `iteration_srcX`, `CexRoute.route_a_false`; `AnyTaintExExact.startX_must_end`, `confirmed_real_valid6X`, `confirmed_realX_valid`, `seq_confirmed_realX_valid`, `RecsFromRunsX`, `specX_rules`, `RecsConcX`, `RecsWFX`, `recs_of_DRX`, `CexExactCleaner.cex_exact_cleaner`; `AnyTaintExKinds.D6X_flow_no_any_taint` (run 1, under S7, S10 and S15: an edge whose premise has the mark `*`, a FLOW edge, has no normal `[any-taint]` conclusion), `D6X_any_conc`, `DRXs_normal_premise`, `DRXs_must_premise` (a normal edge of a restricted run has a `$` premise or a must-premise `[any-taint]` with a concrete mark); the worked programs of `AnyTaintExCases` (§13) and of `AnyTaintExCases2` (the round-1 programs G, C, I and PassRule re-derived in `D6X` and `DRXs`; §7.5, §13) |
+| `PipelineAnyTaintExDriver.lean` (with `AnyTaintExCov.lean`) | the driver with the tail `[any-taint]` and its exclusion, for the earlier hand-off (§7.7): `resultSeqX`, `resultSeqX_runSeqX`, `driver_iterationX`, `driver_iteration_uptoX`, `driver_iteration_srcX` |
+| `HandoffDefs.lean` | the hand-off of the demand edges only (`ap-history.md` F70; `ap.md` §10.12), the definitions (namespace `Handoff`): the intersection `restrictI` (`insideLocB`, `meetConcK`, `restrictConcI`), the crossable test `CrossK`, `Cross`, the backward test `CrossB` and the reversed record `revRec` (§1), the publications `Pub`, `pubD`, `pubR` (§4.6), the two hand-offs `handF` (§7.3) and `demOfN` (§7.4), the witnesses `FlowRR`, `ReachRR` (demanded or recorded) and `FlowRDN`, `ReachRDN` (justified), the contracts `CoversN`, `BackwardContractN` (§7.7) |
+| `HandoffRestrict.lean`, `HandoffCoverage.lean` | the intersection (namespace `Handoff`): `restrictI_sub`, `restrictI_contract`, `restrictI_not_RestrictContract` (the old contract form, a premise that only overlaps `D-c`, is false), `emitM_inside`, `insideLoc_coversLoc`, `restrictI_inter` with its exceptions `RExc`, `restrictI_narrow`, `pubD_sub`, `pubR_sub`; the narrowing of one hand-off `handF_narrow`, `handF_narrow_loc`, `demOfN_narrow`, `handF_narrow_DR`, `handF_narrow_DR_exact`, `handF_DR_nonstar`, `DR_exit_not_star`; the vectors `RVec.v64_restrictI`, `v64_restrictU`, `vOverlap_restrictI`, `vOverlap_restrictU`, `vNoExit` and every row `RVec.row_*` of `restrictConcI`; the forward contract `cross_applies`, `coverageRN`, `reach_strongRN`, `coversN_DR`, run 1 `run1_justifies` (§7.7) |
+| `HandoffBackward.lean`, `HandoffIter.lean` | the backward contract (namespace `HandoffBackward`): `cross_step`, `seg_genN`, `reach_of_db_genN`, `demanded_genN`, `B_generalN`, `B_generalN_canon`, `NextRecs`, `recsBOf`, `rcNextOf`, `rcNextOf_back_normal` (a record from the backward run is the reversal of a normal backward leaf), `crossB_em`; the iteration (namespace `HandoffIter`): `Run0Contract`, `iteration_invariantN`, `iteration_abstract_or`, `iteration_abstract`, `iteration_abstract_neg`, `iteration_all_seeded` (§7.7) |
+| `HandoffExclusion.lean` | THE EXCLUSION (namespace `HandoffExclusion`, §7.8): `NoZeroGenP`, `Reaches`, `zinv_all`, `exclusion_backward`, `init_zero_nodem`, `exclusion_backward_nodem`, `exclusion_demand`, `forward_zero_init`, `forward_zero_edges`, `exclusion_theorem` (the hypothesis: no demand edge of the method key), `exclusion_round` (the sufficient condition: every summary leaf crossable) |
+| `HandoffMain.lean` | the canonical sequence of the spec rules (namespace `HandoffMain`): `canonState`; THE ITERATION `iteration_generalN`, `iteration_generalN_all`, `iteration_generalN_incl` (with `flowRR_mono`, `reachRR_mono`, `flowRDN_mono_rc`, `reachRDN_mono_rc`); the exclusion `exclusion_canon`; the narrowing with both cells of `Handoff.RExc` as exceptions `narrowing_canon_fwd`, `narrowing_canon_back`, `narrowing_canon`, `narrowing_canon_loc` (the exact form is in `HandoffNoStar.lean`) (§7.7, §7.8) |
+| `HandoffCases.lean` | the worked programs (namespace `HandoffCases`, §7.8, §13): `restrictI_none`; WRAP (`Wrap.w1_exit_cross`, `w1_wrap_exits_cross`, `seedsW_exact`, `old_b2_wrap_init`, `old_dem_w`, `old_f3_wrap_init`, `old_f3_wrap_cut`, `handF_w1_exact`, `bn_cross`, `bn_wrap_zero_only`, `bn_wrap_edges_zero`, `demN_exact`, `fn_wrap_zero_only`, `fn_wrap_edges_zero`, `fn_record_applicable`, `fn_cut_in_root`, `fn_found`, `wrap_reachRR`, `wrap_old_vs_new`); the CEGAR of `Cross` (`revRec_any_premise`, `not_cross_of_any`, `dollar_blocked`, `CrossL`, `handFL`, `AnyW.cegar_cross_anyw`, `AnyM.cegar_cross_anym`); the getter (`Getter.g1_exit_demand`, `revRec_g_cross`, `revRec_g_crossB`, `demG_exact`, `fg_getter_zero_only`, `fg_record_sat`, `fg_found`) |
+| `HandoffRCases.lean` | programs 1 and 2 of `ap.md` §6.3, §6.4 with the intersection `restrictI` and the hand-off of the demand edges (namespace `HandoffRCases`, §13 item 7): `p1_no_exit`, `p1_found_I`, `p1_handoff`, `p1_chain`; `r1_c_not_cross`, `b2_handF`, `b2_inside`, `b2_restrictI_eq_U`, `b2_not_crossB`, `p2_handoff`, `f3_inside`, `f3_restrictI_eq_U`, `p2_found_I`, `p2_chain` |
+| `HandoffUpto.lean` | THE FINITE FORMS (namespace `HandoffUpto`, §7.7): the induction stops at the last run `K`, with the hypotheses only for the runs before `K`: `iteration_generalN_upto`, `iteration_generalN_canon_upto`, `iteration_generalNX_upto`, `iteration_generalNX_canon_upto` |
+| `HandoffSrc.lean` | THE SOURCE SEEDS with the hand-off of the demand edges (namespace `HandoffSrc`, §7.4, §7.7): contract B into the seeded program `B_srcN` (the recorded calls read no seed); the iteration `iteration_srcN`, `iteration_srcN_upto`, `iteration_srcN_canon`, with the tail `[any-taint]` `iteration_srcNX`, `iteration_srcNX_upto`; the program `SrcRec` (`SrcRec.found_unseeded`: a record applies a source that the seeds drop; the source seeds do not filter the records) |
+| `HandoffXMain.lean` | the exclusion and the narrowing over a round on the spec closures with the tail `[any-taint]` (namespace `HandoffXMain`, §7.8): `forward_zero_initX`, `forward_zero_edgesX`, `exclusion_roundX`, `exclusion_canonX`; `narrowing_canonX_fwd`, `narrowing_canonX_back`, `narrowing_canonX`, `narrowing_canonX_loc` (with the `Dropped` alternative: the hand-off drops the exclusions); the vectors `XMVec.exit_dropped`, `entry_dropped` |
+| `HandoffNoStar.lean` | NO `*` DEMAND PATTERN, AND THE EXACT NARROWING (namespace `HandoffNoStar`, §7.8): run 1 `run1_exit_star_cross`, `handF_run1_nonstar`; the backward run `DB_edge_nonstar`, `demOfN_nonstar`; the sequence `canon_dem_nonstar`, `canon_handF_nonstar`; cell (a) at `*/{}` `rexc_empty_loc`; THE NARROWING `narrowing_canon_fwd_exact`, `narrowing_canon_back_exact`, `narrowing_canon_back_loc`, `narrowing_canon_loc_exact`; with the tail `[any-taint]` `handF_run1X_nonstar`, `canonX_dem_nonstar`, `narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`; the seeds `nonstar_of_sinkK` |
+| `PipelineHandoffDriverExt.lean` | the pipeline forms of the driver of §7.1 (namespace `PipelineHandoffDriverExt`, §7.7): the DEMAND seeds `driver_iterationNX_demand`, `driver_iterationNX_demand_known`; the instance with a weaker `C` (a report in the normal layer) `driver_iterationNX_confirmed`; the finite form `driver_iterationNX_upto`; the source seeds `driver_iteration_srcNX`, `driver_iteration_srcNX_upto` |
+| `HandoffXRestrict.lean`, `HandoffXCoverage.lean`, `HandoffXIter.lean`, `PipelineHandoffDriver.lean` | the hand-off of the demand edges on the spec closures with the tail `[any-taint]` (§4.6, §7.7, §7.8): the intersection with the exclusion (namespace `HandoffX`) `restrictIX`, `insideLocXB`, `restrictIX_ok`, `restrictIX_contract`, `emitX_inside`, `restrictIX_inter` with `RExcX`, `pubRX`, `handF_narrowX`, `handF_narrowX_DRX`, the vectors `XVec.v64_demand`, `v64_taint`, `v_taint_star`, `v_at_rows`, `v_above_rows`, `v_below_rows`, `v_overlap`, `v_inside_only_with_excl`, `v_old_above_not_inter`; the forward contract `coversN_DRXI` (`RecsEmbed`) and run 1 `run0X_contract`; the iteration (namespace `HandoffXIter`) `canonStateX`, `embedRecs`, `iteration_generalNX`, `iteration_generalNX_all`, `iteration_reportsNX_canon`, `iteration_generalNX_incl`, `iteration_reportsNX`; the pipeline form `PipelineHandoffDriver.driver_iterationNX` (`resultSeqX_runSeqNX`, `pubSeqXst_pubSeqNX`) |
+| `AnyTaintExDefs.lean`, `AnyTaintExCov.lean`, `AnyTaintExExact.lean`, `AnyTaintExKinds.lean`, `AnyTaintExCases.lean`, `AnyTaintExCases2.lean` | the AP model of the tail `[any-taint]` with its exclusion: THE SPEC CLOSURES (`ap.md` §10.11). This document cites: the closures `AnyTaintEx.D6X`, `DRX`, `DRXs`, the objects `XObj`, `XFact`, the operations `w6tX`, `transferX`, `limitFX`, `cleanResX`, `partX`, `annX`, `checkX`, `emitX`, `emitTX`, `satX`, `restrictX`, `startX`, `recLayerX` (with `DRX.retRec`), the predicates `SatInsideX` (`satX_inside`), `EndExactX`, `RecsExactX`, `SupLinkX`, `SupX`, `Confirmed6X`, `ConfirmedX`, the vectors `Vec`; `AnyTaintExCov.forget6`, `forgetX`, `iteration_reportsX`, `iteration_srcX`, `CexRoute.route_a_false`; `AnyTaintExExact.startX_must_end`, `confirmed_real_valid6X`, `confirmed_realX_valid`, `seq_confirmed_realX_valid`, `RecsFromRunsX`, `specX_rules`, `RecsConcX`, `RecsWFX`, `recs_of_DRX`, `CexExactCleaner.cex_exact_cleaner`; `AnyTaintExKinds.D6X_flow_no_any_taint` (run 1, under S7, S10 and S15: an edge whose premise has the mark `*`, a FLOW edge, has no normal `[any-taint]` conclusion), `D6X_any_conc`, `DRX_normal_premise`, `DRX_must_premise` (under `AnyTaintEx.EmitCopiesMarkX`, `AnyTaintEx.emitX_copies`: a normal edge of a restricted run has a `$` premise or a must-premise `[any-taint]` with a concrete mark; before F70 `DRXs_normal_premise`, `DRXs_must_premise`); the worked programs of `AnyTaintExCases` (§13) and of `AnyTaintExCases2` (the round-1 programs G, C, I and PassRule re-derived in `D6X`, and their restricted runs in `DRXs` with the earlier restriction `restrictX` and the earlier hand-off, the record of the earlier design; §7.5, §13) |
 | `AnyTaintDefs.lean`, `AnyTaintSim.lean`, `AnyTaintExact.lean`, `AnyTaintND.lean`, `AnyTaintCases.lean`, `PipelineAnyTaint.lean`, `PipelineAnyTaintDriver.lean` | the model of the first F69 form (the demotion at an exclusion, `AnyTaint.D6T`, `DRT`), not the spec closures. This document cites from it only what still states a rule of the spec: the taint edges `AnyTaint.TaintEdges`; the counterexamples `AnyTaintExact.CexApp.cex_app`, `CexApp.record_not_pair_exact`, `CexRev.cex_rev`, `CexSupMark.cex_sup_mark` and the lemma `markSub_conc`; the conjunction `AnyTaintND.DNzT`, `Example`; the transfer with no exclusion `AnyTaintCases.Cut.cut_transfer` (§13 item 31); the vectors `AnyTaint.EmitVec`, `Sanity`. The round-1 programs G, C, I and PassRule of `AnyTaintCases.lean` are only the program terms that `AnyTaintExCases2.lean` imports: their results in the spec closures are those of `AnyTaintExCases2` |
 
 THE TAIL `[any-taint]` AGAINST THE MODEL. The base model has three tail kinds (`.star e`, `.any`, `.exact`). The spec
 has four, and the forward `[any-taint]` can carry an exclusion (`ap.md` W8). The spec closures are the refined ones,
-`AnyTaintEx.D6X` and `DRXs` (an annotated fact `AnyTaintEx.XFact` is a base fact with its exclusion):
+`AnyTaintEx.D6X` and `DRX` with `emitX`, `satX` and `HandoffX.restrictIX` (before F70 `DRXs`, with `restrictX`) (an
+annotated fact `AnyTaintEx.XFact` is a base fact with its exclusion):
 
 | Spec | Model |
 |---|---|
@@ -1931,7 +2497,7 @@ has four, and the forward `[any-taint]` can carry an exclusion (`ap.md` W8). The
 | `$` | `.exact` |
 | `[any]` (a may) | a `.any` fact in the demand layer, with no exclusion (`AnyTaintEx.normX`) |
 | `[any-taint]/E` conclusion (a must) | a `.any` fact in the normal layer with a concrete mark and the exclusion `E` (`AnyTaintEx.XFact`, `carriesB`; in run 1 every normal `.any` conclusion has a concrete mark, `AnyTaintExKinds.D6X_any_conc`) |
-| `[any-taint]/E` premise (a must-premise) | a premise with the must flag and the exclusion of `AnyTaintEx.XObj` (`init M j true jex`, `edge M j true jex n f`); it has the tail `.any` and a concrete mark (`AnyTaintExKinds.DRXs_must_premise`) |
+| `[any-taint]/E` premise (a must-premise) | a premise with the must flag and the exclusion of `AnyTaintEx.XObj` (`init M j true jex`, `edge M j true jex n f`); it has the tail `.any` and a concrete mark (`AnyTaintExKinds.DRX_must_premise`) |
 | `[any-taint]/E` added fact | `added M a true aex`: `.any`, normal on its link, with the exclusion `aex` |
 | the sources with an `[any]` target (`ap.md` S15) | the taint edges `AnyTaint.TaintEdges` (`AnyTaintEx.w6tX` reads them) |
 | the backward run (no `[any-taint]`) | `Backward.DB`: no must flag, no exclusion; the driver reads each forward run with them dropped (`AnyTaintExCov.forget6`, `forgetX`) |
@@ -1964,16 +2530,37 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
 6. COUNTER. A handler that sends after a delay: the run does not end before the send (Q2). A new `RunManager` made
    after an aborted one (test harness) analyzes every method (§6.3, §7.6).
 7. HAND-OFF. Programs 1 and 2 of `ap.md` §6.3, §6.4: the demand of run 3 equals `Backward.dem1_exact` (program 1) and
-   `dem2_exact` (program 2); run 3 reports the vulnerability (`Backward.p1_found`, `p2_found`).
+   `dem2_exact` (program 2); run 3 reports the vulnerability (`Backward.p1_found`, `p2_found`). These Lean results are
+   of the earlier hand-off (`Backward.demOf`, `restrictU`). `dem1_exact` holds for every backward demand and record
+   set, and no call of program 1 returns, so it holds for the hand-off of §7.4 too. With the intersection and the
+   hand-off of the demand edges both programs are proved (`HandoffRCases`): program 1 (`p1_handoff`, `p1_found_I`,
+   `p1_chain`) and program 2 (the summary of `c` is not crossable, `r1_c_not_cross`; the backward summary is in the
+   demand layer, `b2_not_crossB`; the intersection gives the pieces of `restrictU`, `b2_restrictI_eq_U`,
+   `f3_restrictI_eq_U`; `p2_handoff`, `p2_found_I`, `p2_chain`). The Lean results show that the hand-off CONTAINS
+   these patterns; that it EQUALS them (the demand of run 3 is exactly `dem1_exact`, `dem2_exact`) is checked by hand
+   (`ap.md` §6.4).
 8. MODES. A request in a restricted run fails the assert. A backward run has no sink check. The zero fact enters every
    callee in the backward run. The reversed plan of a JVM call gives the steps of `interpreter.md` §4.9 in its order
    (the table of §4.5), with the reversed source results and the seeds at the rule point `BOUND`. The reversed alias
    edges apply to every requirement; the forward ones only to the results that AC3 and AC4 select.
-9. STOP RULE. A forward run whose vulnerabilities all have a confirmed sink edge stops the iteration, also when they
-   have demand-layer sink edges too (§7.1).
+9. STOP RULES (§7.1). A forward run whose vulnerabilities all have a confirmed sink edge stops the iteration
+   (`STOP_RULE`), also when they have demand-layer sink edges too. So does a forward run whose only unconfirmed
+   vulnerability an EARLIER run confirmed: it is not a DEMAND vulnerability, it gives no seed, and the driver stops
+   with `STOP_RULE`. A forward run with a DEMAND vulnerability and no demand-layer object (a conjunctive sink whose
+   literals come from two different call statements, so the joint support fails) stops with `NO_DEMAND_EDGE`; the
+   report keeps the DEMAND entry. A demand-layer summary delta alone (a cut of the exit rules) and a demand link alone
+   each count as a demand-layer object, so the driver goes on (program DLINK, `analyzer-impl.md` §9.1 row 21):
+   `root(): dto = srcAny(); c(dto)`, `c(x): y = x.q.r; m(y)` with the call cleaner `clean(T, arg0.g.k, exact)` at
+   `m(y)`, `m(p): sink(p.g.h); throw`, and the field limits 1 to 5: forward run 3 has only normal edges, but the cleaner demotes the bound fact to
+   `(p, ., [any], T)` on a DEMAND link, so it does not stop with `NO_DEMAND_EDGE`, and forward run 5 CONFIRMS the
+   vulnerability (§7.1). The seeds of the hand-off of a backward run are exactly the witnesses of the DEMAND
+   vulnerabilities: a vulnerability that an earlier run confirmed and that the latest run reports in the demand layer
+   gives no seed (§7.3).
 10. SOURCE SEEDS. In forward run 3, a source that backward run 2 did not reach does not fire; a source on the witness
-    of a reported vulnerability fires, and run 3 reports the vulnerability. A requirement that reaches a source records
-    exactly one hit for that (method key, statement, source edge) (§4.7). A source at a call, at a method entry, at a
+    outside a recorded call fires, and run 3 reports the vulnerability. A source inside a crossable callee is not hit
+    and does not fire, and the record of the callee gives its result (`x = mk(); sink(x)`, `mk(): ret = source()`:
+    run 3 reports the vulnerability in the normal layer through the record, `HandoffSrc.SrcRec.found_unseeded`). A
+    requirement that reaches a source records exactly one hit for that (method key, statement, source edge) (§4.7). A source at a call, at a method entry, at a
     method exit and at a read each records its hit. Two sources of one statement that give the same zero result both
     record a hit.
 11. REGRESSION. The existing analysis tests, through phase 3 (`bidirectional-task.md` phase 4).
@@ -1986,8 +2573,9 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
     `ABNORMAL`, the status `FAILED` (not `OOM`). A hit of the barrier memory guard (a `Cancellation.Cancelled` at a
     barrier checkpoint, or a cancel after the last one) gives the report so far, `ABNORMAL` and `OOM`. A throw in
     `RunManager(...)`, in `run(...)` on the caller thread, or a policy with `fieldLimit(1) < 1` gives `FAILED` and the
-    report so far (empty for run 1), and no runner is alive after the return. A stop by the stop rule and by the policy
-    gives `STOP_RULE` and `POLICY` (§6.3, §7.1).
+    report so far (empty for run 1), and no runner is alive after the return. A stop by the two stop rules and by the
+    policy gives `STOP_RULE`, `NO_DEMAND_EDGE` and `POLICY` (§6.3, §7.1). Each complete run, also the last one, logs
+    one frontier, and `continueAfter` gets the frontiers of every complete run in run order (§7.8).
 13. REPORT. Run 1 complete (one CONFIRMED and one DEMAND vulnerability), run 2 complete, run 3 incomplete: the report
     is that of run 1, and run 3 refutes nothing. `continueAfter` is never asked after a backward run (§7.1, §7.5).
     Run 1 incomplete (TIMEOUT): the report has no entry, `end = (TIMEOUT, 1, FORWARD, ABNORMAL)`, and the output is
@@ -2023,8 +2611,9 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
     ContainsMark(Argument(1), B)`, with the exit items `(arg(0), $, A)` under the premise `i0` and `(arg(1), $, B)` under
     `i1`: the full combination gives the ND summary `{i0, i1} → ret.$ (U)`, and the caller applies it by E6; each
     literal input stays in the conjunction store; the exit items stay in the summary (§4.4).
-22. THE `[any]`-TARGET SOURCE IS CONFIRMED (analysis test; program G, a Spring DTO through a getter; the results in the
-    spec closures `AnyTaintEx.D6X`, `DRXs` are those of `AnyTaintExCases2`). `root(): dto = srcAny(); x = get(dto);
+22. THE `[any]`-TARGET SOURCE IS CONFIRMED (analysis test; program G, a Spring DTO through a getter; the Lean results
+    are those of `AnyTaintExCases2`: run 1 in the spec closure `AnyTaintEx.D6X`, run 3 in `AnyTaintEx.DRXs` with the
+    earlier restriction `restrictX` and the earlier hand-off, the record of the earlier design). `root(): dto = srcAny(); x = get(dto);
     sinkAny(x)`, `get(p): return p.f`, where `srcAny` is a source with an `[any]` target and `sinkAny` a
     `ContainsMarkOnAnyField` sink. Run 1 reports the vulnerability as DEMAND (the getter summary is the case `above`;
     `AnyTaintExCases2.G.run1_flow_above`, `G.run1_not_confirmed`). Backward run 2 hands off the demand
@@ -2103,6 +2692,84 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
     DEMAND entry (`CUT.cut_reports`). A JVM analysis test of the cut runs with `L = 1` and a fact deeper than the
     limit: the source `dto.f.g = srcAny()` gives `(dto, .f, [any], T)` in the demand layer with no exclusion
     (`AnyTaintCases.Cut.cut_transfer`, a transfer with no exclusion), so a sink below `dto.f` is a DEMAND entry.
+
+The items 32 to 40 test the hand-off of the demand edges, the stop rules and the frontier (`ap-history.md` F70; §4.3,
+§4.5, §7.3 to §7.8). The items 22 and 23 cite Lean results of the earlier hand-off (`AnyTaintExCases2.G.handoffX_get`,
+`AnyTaintExCases.B.run3_must`, with `restrictX`): there the summaries that the hand-off reads are not crossable (a
+demand-layer getter, a demand given by hand), and the intersection keeps the same pieces, so the expected values do
+not change (argued).
+
+32. WRAP (§7.8; `HandoffCases.Wrap`, the field limits 1, 2, 3). `root(): x.a.b.c = source(); r = wrap(x);
+    sink(r.f.a.b.c)`, `wrap(x): z = new Z(); z.f = x; return z`. Run 1: the summary of `wrap` is crossable, and the
+    vulnerability is DEMAND. The frontier of run 1 has no demand edge of `wrap`. Backward run 2 has only the zero fact
+    in `wrap`: it crosses `wrap` by the reversed record. Forward run 3 analyses `wrap` only from the zero fact (`wrap`
+    is in `zeroOnly`, not in `analysed`), applies the record of `wrap` in the root (one record crossing), cuts in the
+    root and reports the vulnerability (`Wrap.wrap_old_vs_new`). A test hand-off that reads every summary edge before
+    the restriction (the earlier hand-off) makes runs 2 and 3 analyse `wrap` from a non-zero fact, with a demand-layer
+    edge in `wrap` in run 3 (`Wrap.old_b2_wrap_init`, `old_f3_wrap_cut`).
+33. A CROSSABLE CALLEE IS NEVER ENTERED BY THE BACKWARD RUN. A callee whose run-1 summary leaves are all crossable (the
+    `wrap` of item 32, a setter `set(v): this.f = v`, an identity `id(p): return p`) has no non-zero initial fact in
+    the backward run (`HandoffCases.Wrap.bn_wrap_zero_only`, `bn_wrap_edges_zero`). The requirement crosses it by the
+    reversed record (`bn_cross`, by `applicable`) and still reaches the source in the caller, so the next forward run
+    fires that source and reports the vulnerability (`fn_found`).
+34. THE GETTER IS CROSSED BY THE REVERSED BACKWARD RECORD (§7.4; `HandoffCases.Getter`). `root(): x.f.a = source();
+    r = get(x); sink(r.a)`, `get(x): ret = x.f`. The run-1 summary of `get` is in the demand layer, so it is a demand
+    edge (`Getter.g1_exit_demand`). Backward run 2 enters `get` and gives the NORMAL backward summary
+    `(ret, .a, $, T) → (arg, .f.a, $, T)`; it is normal and its reversal is crossable, so it is not a demand edge
+    (`revRec_g_cross`, `revRec_g_crossB`, `demG_exact`: `get` gets only the zero demand). Forward run 3 analyses `get` only from the zero fact
+    (`fg_getter_zero_only`), crosses the call by the reversed record (by `satI`, `fg_record_sat`) and reports the
+    vulnerability in the NORMAL layer under the zero premise of the root (`fg_found`), so run 3 confirms it and the
+    driver stops (`STOP_RULE`).
+35. THE CONDITION ON THE REVERSAL IN `Cross` (CEGAR regression tests, `HandoffCases.AnyW`, `AnyM`; AP-level). A callee
+    `anyw` whose summary has a NORMAL leaf with an any tail (in the model `(arg, ., *) → (ret, ., [any])`, the
+    `[any-taint]` of F69): the hand-off of §7.3 gives the leaf as a demand edge, the backward run enters `anyw`,
+    reaches the source and the next forward run reports the vulnerability. A test hand-off with the looser test
+    (`HandoffCases.CrossL`: the forward conditions only, `handFL`) drops the leaf; the `$` requirement cannot cross the
+    reversed premise `[any]` (`dollar_blocked`), and the next forward run reports nothing: with the source seeds
+    (ANYW, `AnyW.cegar_cross_anyw`; the source in the root) and without them (ANYM, `AnyM.cegar_cross_anym`; the
+    source in a callee `mk`, whose summary is in the demand layer).
+36. THE RESTRICTION VECTORS (`ap.md` §6.4; §4.6). The intersection against the earlier restriction: `[any]` against
+    `D-p = $` gives `$` (`Handoff.RVec.v64_restrictI`; `restrictU` keeps `[any]`, `v64_restrictU`); a premise that only
+    overlaps `D-c` gives no result (`vOverlap_restrictI`; `restrictU` gives one, `vOverlap_restrictU`); no `D-p` gives
+    none (`vNoExit`); every row of the conclusion restriction (`RVec.row_*`). With the exclusion (`HandoffX.XVec`):
+    the same example (`v64_demand`, `v64_taint`), `[any-taint]/{4} ∩ */{5} = [any-taint]/{4, 5}` (`v_taint_star`),
+    the rows at, above and below `D-p` (`v_at_rows`, `v_above_rows`, `v_below_rows`), a premise that only overlaps
+    `D-c` (`v_overlap`), a premise inside `D-c` only with its exclusion (`v_inside_only_with_excl`), and the cell above
+    a `*/E2` exit pattern, where `restrictX` was not the intersection (`v_old_above_not_inter`).
+37. THE FRONTIER (§7.8). The frontier log of item 32 over runs 1 to 5 (the field limits 1 to 5): `wrap` is in
+    `analysed` in run 1 and in no later run while no seed is in its call subtree (`HandoffMain.exclusion_canon`; the
+    later rounds argued, §11); every demand pattern WITH AN EXIT PATTERN of run 5 lies inside a demand pattern of
+    run 3 of the same method key, as locations (`HandoffNoStar.narrowing_canon_loc_exact`). The demand of the root is
+    the zero demand and the seed-path pattern `((x, .a, [any], T), none)` (`HandoffCases.Wrap.demN_exact`): these are
+    not part of the theorem (§11 THE SEED PATHS), so the test does not assert the narrowing for them; every complete
+    run logs one frontier with every field of §7.8; the
+    backward run 2 has at least one reversed crossing, and run 3 at least one record crossing. The condition on the
+    seeds is needed: if `wrap` calls a callee with the sink of a DEMAND vulnerability on the argument of `wrap`, the
+    seed gives a zero-premise backward edge of `wrap` with a non-zero requirement (§7.4 case 2), and `wrap` is in
+    `analysed` again in the next forward run, although its summary leaves are crossable.
+38. THE SEEDS OF THE DEMAND VULNERABILITIES (§7.3). Two vulnerabilities: run 1 confirms one and reports the other as
+    DEMAND. Backward run 2 seeds only the DEMAND one. Forward run 3 need not report the CONFIRMED one; the report after
+    run 3 still holds both: the first as CONFIRMED (final), the second as CONFIRMED or DEMAND by run 3 (§7.5).
+39. THE TRIGGER OF AN END FACT (§4.5, §7.3; argued, §11; program END, `analyzer-impl.md` §9.1 row 31).
+    `root(): x = source(); r = M(x); sinkAny(r)`, `M(p): y = sinkCall(p); w = wrap(y); return w`, where `sinkCall` is a sink `ContainsMark(arg0, T)` with the end-fact
+    action `AssignMark(U, Result)`, `wrap` an unresolved callee with the pass rule `CopyAllMarks(arg0 →
+    Result.[AnyField])` (a may) and `sinkAny` a sink `ContainsMarkOnAnyField(arg0, U)`. Run 1 CONFIRMS the sink of
+    `sinkCall` (V1) and reports `sinkAny(r)` (V2) as DEMAND; the hand-off seeds only V2. In backward run 2 the
+    requirement of V2 reaches the reversed end-fact edge in `M`, and the analyzer fires the sink seed `(p, ., $, T)` of
+    V1 at that statement, once; its seed path gives `M` the pattern `((p, ., $, T), none)` and reaches `source()` in
+    the root (a source hit). Forward run 3 triggers V1 again, makes the end fact, publishes
+    `zero → (ret, ., [any], U)` of `M` through the pattern `(zero, (ret, ., [any], U))`, and reports V2. A test
+    analyzer with no trigger seeds does not report V2 in run 3, and the driver ends with `STOP_RULE` without it.
+40. THE REVERSAL OF A CONJUNCTION (§4.3; a regression of a false positive that existed before F70; argued, §11;
+    program CONJ, `analyzer-impl.md` §9.1 row 32).
+    `root(): a = srcT1(); b = srcT2(); r1 = M(a, b); y.f.g = r1; sinkT(y.f.g); r2 = M(a, c); sinkT(r2)`,
+    `M(p1, p2): ret = lib(p1, p2); return ret`, where `lib` is a conjunctive source `ContainsMark(arg0, T1) ∧
+    ContainsMark(arg1, T2) → Result.$ (T)` and `c` is clean; the field limits 1, 2, 3. Run 1 reports `sinkT(y.f.g)`
+    as DEMAND (the cut) and does not report `sinkT(r2)`. In backward run 2 the reversal of the conjunction in `M` gives
+    `(ret, ., $, T) → (p1, ., $, T1)` and `(ret, ., $, T) → (p2, ., $, T2)` in the DEMAND layer: no record, not
+    crossable, both handed off (§7.4 case 3). Forward run 3 analyses `M` with both members: the first call CONFIRMS
+    `sinkT(y.f.g)`, and the second call gives nothing, so `sinkT(r2)` is not reported. A test reversal that keeps the
+    normal layer makes both backward summaries records, and run 3 reports `sinkT(r2)` CONFIRMED (the false positive).
 
 ---
 
