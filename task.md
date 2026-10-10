@@ -17,16 +17,17 @@ Use ASD-STE100 Simplified Technical English language
 
 We are working on [bidirectional-task.md](bidirectional-task.md)
 
-We need to extend the analyzer-core spec. Currently, we have no clear termination criteria.
-We should focus on complete edges. 
-The obvious approach: the forward run has no demand edges -> terminate. 
-The deeper approach: we should try to exclude methods without demand edges after forward from the analysis. 
-So, we reduce the search space on each iteration.
-The reason is: if the vuln was confirmed on the iteration i, then it will be confirmed on the all iterations j > i.
-Another key observation: if the method has no forward demand edges at iteration i, then it will have no demanand edges on all iterations j > i, so the method is complete
+Read project memory from the previous session: `~/.claude/projects/-drive-testcomp-opentaint-go-rules-opentaint-w3/`
 
-Finally, we will have a simple time budget, for the entire process.
-But we should design an approach, to efficiently localize the remaining need-to-analzye code.
-If we have a good localization on practice, it will be easer to design a practical stop strategies later.
+No we have a compete spec for the AP and analyzer (see spec/). Also, we have an implementation proposal docs.
+Our current goal is to review and finalize the spec.
+1) Perform a deep review of demand handling and summary restriction mechanism. Finalize the spec and the proofs.
+2) Check that the spec matches the proofs and vice versa
+3) Check that the spec is self-contained (we have no hidden invariants in proofs or somewhere else)
+4) Check that the spec has no major holes 
+5) Check that the spec is concise 
+6) Check that the implementation proposal matches the spec precisely.
+7) Check that the implementation proposal has no major gaps (don't know how to implement)
+If we found a major gap or misalignment -- aks me for the decision on how to fix it. I will specify the correct behavior.
 
 Use subagents.
