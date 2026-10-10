@@ -1,0 +1,135 @@
+/-
+  Run: cd spec/lean && lake build && lake env lean audit.lean
+
+  Check every declaration from an ApSpec module, including private declarations and generated
+  helpers. Fail if a transitive axiom is not propext or Quot.sound. This checks compiled proof
+  dependencies, rather than only the declarations that have a #print axioms command.
+-/
+import ApSpec
+import Lean
+
+open Lean Elab Command
+
+run_elab do
+  let env ← getEnv
+  let mut audited : Nat := 0
+  let mut failed : Nat := 0
+  for (name, _) in env.constants.toList do
+    let fromApSpec := match env.getModuleIdxFor? name with
+      | some i => env.header.moduleNames[i.toNat]!.getRoot == `ApSpec
+      | none => false
+    if fromApSpec then
+      audited := audited + 1
+      let deps ← collectAxioms name
+      let unexpected := deps.filter (fun n => n != `propext && n != `Quot.sound)
+      if !unexpected.isEmpty then
+        failed := failed + 1
+        logInfo m!"Unexpected axioms: {name}: {unexpected}"
+  logInfo m!"Audited {audited} ApSpec declarations; {failed} have unexpected axioms."
+  if failed > 0 then
+    throwError "Constructive axiom audit failed."
+
+-- Run the certified L6 witness through Lean's compiler as ordinary data.
+#eval do
+  let f := ApSpec.Abs.witnessVector 1
+  if f.base != 3 || !f.path.isEmpty || f.kind != ApSpec.Kind.star ApSpec.Excl.empty ||
+      f.mark != ApSpec.MarkA.star || f != ApSpec.Abs.witnessVector 2 then
+    throw (IO.userError "Executable emission witness failed.")
+  IO.println "Executable emission witness passed."
+
+-- The cleaner witness is computed from cleanRes, including mark exclusions.
+#eval do
+  let f := ApSpec.Abs.cleanerWitnessVector 1
+  let expected : ApSpec.AFact := ⟨⟨3, [4], .star ApSpec.Excl.empty, .star⟩, false⟩
+  if f != expected then
+    throw (IO.userError "Executable disjoint cleaner witness failed.")
+  let g := ApSpec.Abs.cleanerOtherMarkVector
+  let expectedOther : ApSpec.AFact := ⟨⟨3, [], .star ApSpec.Excl.empty, .starEx [2]⟩, false⟩
+  if g != expectedOther then
+    throw (IO.userError "Executable cleaner exclusion witness failed.")
+  IO.println "Executable cleaner witnesses passed."
+
+-- The lowered action computes an old-base or temporary intermediate location.
+#eval do
+  if ApSpec.CleanerLowering.lowerKeepVector != (⟨4, [4], 1⟩ : ApSpec.Loc) ||
+      ApSpec.CleanerLowering.lowerTempVector != (⟨6, [9], 2⟩ : ApSpec.Loc) then
+    throw (IO.userError "Executable field-cleaner lowering witness failed.")
+  let expected : ApSpec.AFact := ⟨⟨4, [], .star (.set [5, 5]), .star⟩, false⟩
+  if ApSpec.CleanerLowering.backwardKeepVector != expected then
+    throw (IO.userError "Executable backward keep witness failed.")
+  IO.println "Executable field-cleaner lowering witnesses passed."
+
+-- Check all reach/mark policies and the computed normal outside-field X witness.
+#eval do
+  let expected : List (List Bool) :=
+    [[true, false, false, false, false], [false, true, false, false, false],
+      [true, true, false, false, false], [true, false, true, false, false],
+      [false, true, false, true, false], [true, true, true, true, false]]
+  if ApSpec.CleanerLowering.cleanReachVectors != expected ||
+      ApSpec.CleanerLowering.lowerReachVectors !=
+        ([⟨6, [9], 1⟩, ⟨6, [], 1⟩, ⟨6, [9], 2⟩,
+          ⟨6, [9], 2⟩, ⟨6, [], 2⟩, ⟨4, [4], 1⟩] : List ApSpec.Loc) ||
+      ApSpec.CleanerLowering.backwardKeepReachVectors !=
+        List.replicate 6 ApSpec.CleanerLowering.backwardKeepVector then
+    throw (IO.userError "Executable field-cleaner reach policy failed.")
+  for reach in [ApSpec.CleanReach.exact, .below, .atAndBelow] do
+    let f := (ApSpec.FieldCleanerX.outsideWitness reach).val
+    if f != ApSpec.FieldCleanerX.outside || f.af.demand then
+      throw (IO.userError "Executable outside-field X witness failed.")
+  IO.println "Executable field-cleaner reach and X witnesses passed."
+
+-- Data certificates for the actual hit, normal report and exact run-3 closure.
+#eval do
+  let hit := ApSpec.ReviewFieldCleaner.sourceHitWitness.val
+  let finding := ApSpec.ReviewFieldCleaner.findingWitness.val
+  let trace := ApSpec.ReviewFieldCleaner.traceWitness.val
+  if hit != ApSpec.ReviewFieldCleaner.sourceE ||
+      finding != (⟨ApSpec.ReviewReversal.sink, false⟩ : ApSpec.AFact) ||
+      trace.edges.length != 23 || !trace.reqs.isEmpty then
+    throw (IO.userError "Executable lowered-program certificate failed.")
+  IO.println "Executable lowered-program certificates passed."
+
+-- The root EXACT regression supplies data for its real flow and exact loss trace.
+#eval do
+  let sink := ApSpec.ReviewRootCleaner.concreteSinkWitness.val
+  let trace := ApSpec.ReviewRootCleaner.strictTraceWitness.val
+  if sink != (⟨2, [6, 4], 1⟩ : ApSpec.Loc) ||
+      (trace.1.edges.length, trace.2.1.edges.length, trace.2.2.edges.length) != (17, 13, 7) ||
+      !trace.1.reqs.isEmpty || !trace.2.1.reqs.isEmpty || !trace.2.2.reqs.isEmpty ||
+      !trace.2.2.vulns.isEmpty then
+    throw (IO.userError "Executable root EXACT regression failed.")
+  IO.println "Executable root EXACT regression passed."
+
+-- The proposed backward cleaner produces a reached record and false normal finding.
+#eval do
+  let record := ApSpec.ReviewBackwardCleaner.badRecordWitness.val
+  let finding := ApSpec.ReviewBackwardCleaner.normalFindingWitness.val
+  let expectedRec : ApSpec.PFact × ApSpec.AFact :=
+    (⟨4, [], .star ApSpec.Excl.empty, .star⟩,
+      ⟨⟨5, [6], .star (.set [4, 4]), .star⟩, false⟩)
+  let added : ApSpec.AFact := ⟨⟨4, [], .exact, .conc 1⟩, false⟩
+  let expectedReturn : ApSpec.AFact := ⟨⟨5, [6], .exact, .conc 1⟩, false⟩
+  if record != expectedRec ||
+      (ApSpec.applySummary added record.1 record.2).facts != [expectedReturn] ||
+      finding != (⟨⟨2, [6], .exact, .conc 1⟩, false⟩ : ApSpec.AFact) then
+    throw (IO.userError "Executable backward cleaner experiment failed.")
+  IO.println "Executable backward cleaner experiment passed."
+
+-- F75 uses the same base-dependent cleaner in both directions.
+#eval do
+  let repaired := ApSpec.ReviewBaseCleaner.Repaired.repairedWitness.val
+  let rejected := ApSpec.ReviewBaseCleaner.Blocked.rejectedWitness.val
+  let expected : ApSpec.PFact × ApSpec.AFact :=
+    (⟨3, [], .exact, .conc 1⟩, ⟨⟨5, [6, 4], .exact, .conc 1⟩, false⟩)
+  let added : ApSpec.AFact := ⟨⟨3, [], .exact, .conc 1⟩, false⟩
+  let rootT : ApSpec.AFact := ⟨⟨4, [], .exact, .conc 1⟩, false⟩
+  if repaired != expected ||
+      (ApSpec.applySummary added repaired.1 repaired.2).facts != [expected.2] ||
+      !(ApSpec.applySummary rootT rejected.1 rejected.2).facts.isEmpty ||
+      !(ApSpec.BaseCleaner.vectors.all ApSpec.BaseCleaner.vectorOK) ||
+      (ApSpec.BaseCleaner.requestedPair 1).value != (none, some 1) ||
+      (ApSpec.BaseCleaner.requestedPair 2).value !=
+        (some (ApSpec.BaseCleaner.residual ApSpec.BaseCleaner.fieldStar 1), none) ||
+      ApSpec.BaseCleaner.workWitness.val != (33, 1) then
+    throw (IO.userError "Executable base-cleaner correction failed.")
+  IO.println "Executable base-cleaner correction and batch witnesses passed."

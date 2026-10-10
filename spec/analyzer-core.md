@@ -18,12 +18,12 @@ The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lea
 `PipelineHandoffDriver.lean` and `PipelineHandoffDriverExt.lean` (`ap.md` §10.12; §7.3 to §7.8). Every theorem named here
 is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
-THE RULES OF DECISION F72 ARE NORMATIVE, AND THEIR PROOFS ARE PENDING (`ap-history.md` F72). A restricted run can
+THE RULES OF F72 WITH THE F75 CLEANER CORRECTION ARE NORMATIVE; their general proofs are pending (`ap-history.md`). A restricted run can
 analyse with the abstract mark `*` (§3 THE MARKS OF A RESTRICTED RUN). The theorems that this document names for the
 restricted runs and for the iteration (§5.5, §7.7, §7.8, §12) are proved for the CONCRETE restricted runs of F70 and
 F71 (the emission `emitM`, the closures with request rules that never fire, `RExact.DR_concrete`). For the rules of
-F72 they are NOT YET PROVED. The task is §11 PENDING: THE LEAN MODEL OF F72 (also `ap.md` §11.2). The theorem names
-stay in this document: they hold for the concrete design.
+F72 those general results remain pending. The checked local F72 results and their assumptions are in `ap.md` §10.13.
+Section 11 states the remaining obligations. The earlier theorem names stay as evidence for the concrete design.
 
 Language: ASD-STE100 Simplified Technical English.
 
@@ -64,7 +64,7 @@ Out of scope:
 
 | # | Assumption |
 |---|---|
-| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `emitX`, `satX` and the restriction as an INTERSECTION `HandoffX.restrictIX`, `ap.md` §6.4; before F70 the spec instance was `AnyTaintEx.DRXs`, with `restrictX`). The backward run has no `[any-taint]`: it stays `Backward.DB`, with the intersection `Handoff.restrictI`. These are the closures of the CONCRETE restricted runs (F70, F71): they keep the request rules, which never fire there. The restricted closures of F72 (no request rules; the emission `emitW`, the satisfaction `satW`, the hand-offs with the mark normalization; the planned names `DRA`, `DBA`) are not yet in the model (§11 PENDING: THE LEAN MODEL OF F72). |
+| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `emitX`, `satX` and the restriction as an INTERSECTION `HandoffX.restrictIX`, `ap.md` §6.4; before F70 the spec instance was `AnyTaintEx.DRXs`, with `restrictX`). The backward run has no `[any-taint]`: it stays `Backward.DB`, with the intersection `Handoff.restrictI`. These are the closures of the CONCRETE restricted runs (F70, F71): they keep the request rules, which never fire there. The restricted closures of F72 (no request rules; the emission `emitW`, the satisfaction `satW`, the hand-offs with the mark normalization; Lean: `Abs.DRA`, `Abs.DBA`) are defined in the base model (`ap.md` §10.13); their general coverage, X-tail extension and pipeline instance remain pending (§11). |
 | A2 | LINEARIZABLE SHARED ACTIONS. Each shared action of §5.2 and §5.3 is atomic: register a handler, insert a publication, read the storage, read the handler list. All of them have one total order. This order agrees with the program order of each thread. The Lean model is an interleaving model with these actions as steps. P3 (§5.3) is the implementation rule. |
 | A3 | RELIABLE EVENTS. An event that a thread sends to the channel of a runner arrives exactly once, unless the run is cancelled. The send happens before the receive (Kotlin `Channel`). |
 | A4 | READ-ONLY INPUTS. These inputs do not change during a run: the program, the rules, the lambda resolutions, the demand store, the record store and the seeds. The driver makes them before the run starts. The start of the run publishes them to every runner. |
@@ -178,7 +178,7 @@ The mode decides these rules (`ap.md` §6.1):
 | the marks of the facts | `*` and `*∖X` (the policy facts and their FLOW edges), and concrete marks (the answers, the zero fact, the sources) | NOT CONCRETE since F72: the edges of a FLOW premise (the mark `*`) have the marks `*` and `*∖X` (FLOW trees, `ap.md` §7.2), and their callees can get added facts with these marks; the edges of a concrete premise and of the zero fact have concrete marks. Before F72 every restricted run was concrete | as the restricted forward run |
 | a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`; for a FLOW premise (the mark `*`) also `applicable(j, a)` (`ap.md` §4.3; F72 R3; §5.3 `matches`). This test applies after the restriction in the callee (the INTERSECTION with a demand pattern, in the locations and the marks, `ap.md` §6.4; §4.6). A callee has a non-zero premise only where a demand pattern of it emits one (§4.4): a callee whose only demand pattern is the zero demand publishes no summary of a non-zero premise, and its callers cross it by its records (next row) | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
 | records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`). A CROSSABLE leaf (§1) of the run before is not in the demand (§7.3, §7.4): its record REPLACES the analysis of the callee, and the run crosses the call by the record. A callee of which the forward run before hands off no demand edge (for example, all its summary leaves are crossable), with no seed in its call subtree, is analysed only from the zero fact (§7.8 THE EXCLUSION) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3). A crossable forward leaf is not in the backward demand (§7.3): the backward run crosses the call by its reversal and never enters the callee for it |
-| mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no request rule and no static rule (F72 R4). On a fact with the mark `*` or `*∖X`, an operation that needs a concrete mark gives nothing and raises no request: the mark gate of a micro edge with a concrete premise mark, the sink check, the part of a cleaner (the fact continues as `*∖{T}`) (`ap.md` §4.5, §4.7, §4.9; §4.6) | as the restricted forward run (the backward run has no sink check) |
+| mark and position requests, static rule | yes (`ap.md` §4.5, §4.10); a selected-mark cleaner requests T for every same-base abstract fact, before the path test (F75) | no request rule and no static rule (F72 R4). On a fact with the mark `*` or `*∖X`, a concrete mark gate or sink gives nothing; a selected-mark cleaner keeps every same-base fact with mark `*∖(X ∪ {T})`, including disjoint paths (F75, `ap.md` §4.7). No request is raised | as the restricted forward run (the backward run has no sink check) |
 | sinks | the sink check (`ap.md` §4.9) | the sink check; on a `*` or `*∖X` fact it gives nothing (no request, `ap.md` §4.9) | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
@@ -538,7 +538,9 @@ THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
 * A GUARD is a forward-only selection, so the reversal drops it: the reversed alias edges apply to every requirement
   (`interpreter.md` AC5), and the reversed end-fact edges too. A reversed end-fact edge that applies also fires the
   sink seeds of its sink (THE TRIGGER OF AN END FACT, above). The reversal also drops every type filter.
-* The cleaners, the kill and the rewriter stay the same: a cleaner and a keep edge are their own reversal.
+* A primitive cleaner is its own reversal. Reverse the action order in the cleaners stage and the rewriter.
+  A field action is reversed write, clean temporary, reversed read (F74); reverse each statement summary.
+  The static kill keeps its keep edges.
 * The callees stage stays the same: in the backward run it gives the backward summaries.
 * The sinks stay at `BOUND`.
 * The touched bases: the forward touched bases and the alias bases (the target bases of a stage that ends at the
@@ -669,7 +671,8 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
 * A RESTRICTED RUN HAS NO REQUEST RULE (forward and backward; `ap.md` §4.5, §6.1 rule 4; `ap-history.md` F72 R4).
   It can have facts with the mark `*` or `*∖X` (§3), but an operation that needs a concrete mark on such a fact gives
   NOTHING and raises no request: the mark gate of a micro edge with a concrete premise mark, the sink check, and the
-  part of a cleaner (the fact continues as `*∖{T}`; `ap.md` §4.7). These are the mark rows of `interpreter.md` §5.4:
+  T branch of every same-base selected-mark cleaner (the fact continues as `*∖(X ∪ {T})`, also on disjoint paths;
+  F75, `ap.md` §4.7). These are the mark rows of `interpreter.md` §5.4:
   also a conditional source, a `CopyMark(T)` pass rule, an ND literal, a literal of a conjunctive sink and the summary
   rewriter. The analyzer of a restricted run has no `requests` store, so `addRequest` and `RequestIn` do not occur there:
   the AP operations of a restricted run make no request (`RunConfig.run1` selects the mode). Before F72 the reason was
@@ -859,16 +862,20 @@ class TypeFilter(val may: FactApFilter, val markPolicy: MarkPolicy? = null)
  *  the base itself; `elements = k`: the k-th element type). A leaf below a field or a class accessor has no policy. */
 fun interface MarkPolicy { fun keeps(mark: TaintMark, elements: Int): Boolean }
 
-/** ap.md §4.7: the cleaner `clean(position, reach, mark)` (interpreter.md §5.2); `mark == null`: every mark. Never on
- *  the zero base. */
+/** ap.md §4.7: one primitive cleaner; `mark == null`: every mark. Never on the zero base.
+ *  A field action lowers to CleanStep.Field (F74, interpreter.md §5.2). */
 class Cleaner(val base: AccessPathBase, val path: PathNode?, val reach: CleanReach, val mark: TaintMark?)
 enum class CleanReach { EXACT, BELOW, AT_AND_BELOW }
 
-/** One step of the cleaners stage, in the rule order: a cleaner, or the `RemoveAllMarks` kill on `S` (a statement
- *  summary of keep edges, not a cleaner; interpreter.md §1.4, I12 (e)). Each one is its own reversal. */
+/** One action of the cleaners stage. A field action holds its three ordinary operations and a fresh temporary.
+ *  Each statement uses STATEMENT mode and its field-limit cut. Project away the temporary at the action's end,
+ *  in both directions. Reverse the action order and each action's operations (F74). */
 sealed interface CleanStep {
     class Clean(val cleaner: Cleaner) : CleanStep
     class Kill(val keepEdges: StatementSummary) : CleanStep
+    class Field(val temporary: AccessPathBase, val read: StatementSummary,
+                val cleaner: Cleaner, val write: StatementSummary) : CleanStep
+    fun reversed(): CleanStep
 }
 
 enum class CallPoint { BEFORE, BOUND, ADDED, RETURNED, REWRITTEN, AFTER }
@@ -902,7 +909,7 @@ sealed interface CallStage {
     data class Edges(override val from: CallPoint, override val to: CallPoint, val kind: StageKind,
                      val summary: StatementSummary, val guard: Guard? = null) : CallStage
     data class Clean(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage
-    data class Rewrite(override val from: CallPoint, override val to: CallPoint, val cleaners: List<Cleaner>) : CallStage
+    data class Rewrite(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage
     data class Callees(override val from: CallPoint, override val to: CallPoint, val callees: List<MethodKey>) : CallStage
 }
 
@@ -939,13 +946,14 @@ mode, not a field of the form:
 
 | Mode | Forms | Rule |
 |---|---|---|
-| STATEMENT | a statement summary (`statementSummary`), the rule summary of a method boundary (`RuleStatement.summary`, with the touched bases and keep edges of §4.4 THE BOUNDARY RULE STATEMENTS), the kill on `S` (`CleanStep.Kill.keepEdges`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
+| STATEMENT | a statement summary (`statementSummary`), the rule summary of a method boundary (`RuleStatement.summary`, with the touched bases and keep edges of §4.4 THE BOUNDARY RULE STATEMENTS), the kill on `S` (`CleanStep.Kill.keepEdges`), the read and write of a field cleaner (`CleanStep.Field`) | `interpreter.md` §2.1 steps 2 to 5: a fact on an untouched base passes; a fact on a touched base keeps only what an edge gives |
 | STAGE | the summary of a call stage (`CallStage.Edges.summary`) | only the edges give results. The touched bases of the plan (`CallPlan.touched`) do the pass-over (§4.5). A stage summary has every base of its edges in its touched set, so its reversal adds no identity edge (the reversed plan has the PASS_OVER stage of the alias bases instead, §4.5) |
 | GEN | the end-fact edges at the method boundaries (`RuleStatement.endFacts`, the `SinkRule.endFacts` of an entry or exit sink) | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). An end-fact edge reads the zero fact: on a trigger of its sink, it applies to the zero fact in the layer of the sink edge or of the combination (§4.5 THE END-FACT STAGE). Reversed, it applies to every requirement and fires the sink seeds of its sink (§4.5 THE TRIGGER OF AN END FACT). At a call the end facts are the end-fact `Edges` stage (`END_FACTS`, STAGE mode, on the zero fact, on a trigger, §4.5), whose reversal adds no identity |
 
 THE STATIC EXCEPTION. In run 1 the static exception of `ap.md` §4.10 item 1 acts on the statement micro edges: the
 statement summaries, the edges of the sources and the unresolved stages of a call (`StageKind.SOURCES`, `UNRESOLVED`),
-the kill on `S` and the boundary rule statements. At a call it is tested on the caller edge. It acts on no other stage.
+the kill on `S`, the read and write of a field cleaner (F74), and the boundary rule statements.
+At a call it is tested on the caller edge. It acts on no other stage.
 
 ---
 
@@ -1099,7 +1107,7 @@ A must-premise needs every location of it, so a summary of an `[any-taint]` prem
 the premise lies INSIDE, with the exclusions of both (`ap.md` §4.3; Lean `AnyTaintEx.SatInsideX`: the exactness needs
 it, `satX` has it, `AnyTaintEx.satX_inside`). An `[any-taint]` premise occurs only in a forward restricted run, and
 there `matches` is `inside`; so `matches` needs no other test. A FLOW PREMISE (the mark `*`, a restricted run since
-F72) is satisfied by `inside` or by `applicable` (`ap.md` §4.3; F72 R3; Lean, PENDING: `satW`): it passes the mark
+F72) is satisfied by `inside` or by `applicable` (`ap.md` §4.3; F72 R3; Lean: `Abs.satW` in the base model; the X-tail extension is pending): it passes the mark
 of the added fact, as the policy premise of run 1 and a `*`-premise record do. `satisfies` reads the mark of the
 premise, so `matches` needs no other test. A concrete premise is satisfied by `inside` only. A normal edge of a
 must-premise is END-EXACT: every
@@ -1241,7 +1249,7 @@ With the tail `[any-taint]` the closure of run 1 is `AnyTaintEx.D6X` and the clo
 This holds for the rules that the closures have. The end facts (`ap.md` §11.1), the aliases and their guard (`ap.md`
 §11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2, D35) are outside them (§11 THE
 ANALYZER ACTIONS OUTSIDE THE CLOSURES).
-THE RESTRICTED CLOSURES OF F72 ARE NOT ENCODED YET (PENDING, §11). `DR`, `DRX` and `Backward.DB` keep the request
+THE F72 BASE CLOSURES ARE DEFINED (`Abs.DRA`, `Abs.DBA`); their pipeline encoding is pending (§11). `DR`, `DRX` and `Backward.DB` keep the request
 rules; with the emission `emitM` (`emitX`) no request rule fires (`RExact.DR_no_request`, `BExact.DB_no_request`).
 With the emission of F72 a restricted run has `*` facts, so the closures of F72 have no request rules (`DRA`, `DBA`,
 §11). The protocol model (`Pipeline.lean`, a rule system with owners) does not depend on the rules, so only their
@@ -2485,61 +2493,43 @@ caller thread (`FAILED`) call it. `RunManager.run(timeout)` joins the runners on
 
 ## 11. Limits
 
-PENDING: THE LEAN MODEL OF F72 (`ap-history.md` F72; the same item is in `ap.md` §11.2). The rules R1 to R6 of §3
-are NORMATIVE. Their Lean model is a PENDING TASK. Until it is done, every theorem that this document names for the
-restricted runs, the hand-offs and the iteration (§5.5, §7.7, §7.8, §12) holds for the CONCRETE design of F70 and
-F71 only, and the proposals (`ap-impl.md`, `analyzer-impl.md`) follow F71. The plan (new files `ApSpec/Abs*.lean`;
-the existing files do not change):
+PENDING: THE LEAN MODEL OF F72 (`ap-history.md` F72). The checked results and their assumptions are in
+`ap.md` §10.13; the remaining proof plan is in `ap.md` §11.2. This is the single proof-status list for both specs.
+The local model now defines the normalized hand-offs, shared emission, satisfaction, and the two closures without
+requests. It proves base-model normal-edge exactness (L5), guarded emission (L6), and index query equivalence.
+The F70/F71 iteration and pipeline theorems do not transfer to F72 through these local results.
 
-* THE DEFINITIONS (`AbsDefs.lean`): `markNorm` (`*∖X` becomes `*`) and `normDem`; the hand-offs `handFA`, `demOfNA`
-  (`Handoff.handF`, `demOfN` with `normDem`, R1); `flowK`, `flowForm` and the emission
-  `emitW d a := match emitM d a with | none => none | some j => if d.mark = * then some (flowForm d) else some j`
-  (R2); the satisfaction `satW` (`satI`, or `applicable` for a `*`-mark premise, R3); the closures `DRA` (the forward
-  restricted run: `Restricted.DR` with no request rules, generic in the emission, the satisfaction, the restriction
-  and the records) and `DBA` (`Backward.DB` with no request rules) (R4); the restriction stays `Handoff.restrictI`
-  (R5); the mark-agnostic flow `FlowMA`; the witnesses with modes (`FlowRRA`, `ReachRRA` for the input, `FlowRDNA`,
-  `ReachRDNA` for the output); the contracts `CoversNA` and `BackwardContractNA`.
-* THE MODES. A demanded witness has a MODE at each call that returns. ABSTRACT: a `*` pattern demands the call, and the
-  inner flow is MARK-AGNOSTIC: every statement step uses a micro edge with a `*` premise mark, every cleaner step has a
-  cleaner whose mark is not the mark of the location (or the all-marks cleaner), and every nested call is in the
-  abstract mode or crossed by a record with a `*` premise. CONCRETE: a concrete pattern demands the call; the inner
-  flow is as before F72, and the nested calls can have either mode.
-* THE LEMMAS:
-  * L1, forward abstract coverage: from a `*` premise that covers the entry location, a mark-agnostic flow is covered
-    by an edge of the premise, with no request (no request rule exists);
-  * L2, run 1 selects the right mode: run 1 (`D … policy1`, with its requests) justifies every real witness, at each
-    call by a FLOW premise (then the inner flow is mark-agnostic: the coverage followed it with no request) or by an
-    answer (a concrete premise);
-  * L3, backward abstract coverage: a `*` requirement covers the reversed flow of a mark-agnostic flow (the reversal
-    of a `*`-mark micro edge has `*` marks, `Reverse.MarkRev`; a cleaner is its own reversal);
-  * L4, contract B with the modes: an abstract-mode call that a FLOW summary justifies meets a `*` pattern in the
-    backward run; the requirement is weakened to `*`, its backward analysis covers the reversed mark-agnostic flow
-    (L3), and the hand-off gives a `*` pattern. A concrete-mode call is justified by a concrete summary, the backward
-    run keeps the concrete mark, and the hand-off gives a concrete pattern;
-  * L5, exactness: a normal edge of a `*` premise in a restricted run is exact, so the records stay exact (also for a
-    FLOW premise with an exclusion, §5.3);
-  * L6, the emission contract: for every pattern `d` and added fact `a` that both cover a location `l` with its mark,
-    `emitW` gives a premise `j` that covers `l` and `satW j a` (a `*` pattern: `flowForm d` covers `l` with every
-    mark; a concrete pattern: as `RCore.emitM_contract_I`).
-* THE ITERATION: as `HandoffMain.iteration_generalN`, with the closures `DRA`, `DBA` and the modes; then the forms that
-  §7.7 gives for the concrete design: the pipeline form (the encodings of `DRA` and `DBA`, §5.5), the finite form,
-  the source seeds and the tail `[any-taint]`.
-* THE CEGAR PROGRAMS COME FIRST (`AbsCases.lean`; the tests are §13 items 43 to 46): (i) THE GETTER WITH TWO MARKS
-  `T` and `U` under one `*` pattern: one FLOW premise for both added facts, and both vulnerabilities are reported;
-  (ii) A MARK-CHANGING PASS RULE `T → U` inside a callee that a `*` pattern reaches: the `*` analysis gives nothing for
-  it, and the flow is found through the concrete pattern that the request and the answer of run 1 made; (iii) A
-  PARTIAL CLEANER of `T` under a `*` premise; (iv) THE SEARCH FOR A COUNTEREXAMPLE TO R6: a flow that needs a
-  concrete mark in a callee that only `*` patterns reach after run 1 (for example a concrete demand that the backward
-  weakening loses). If R6 fails, the result gives the program and the smallest change of the rules.
-* ALSO PENDING with F72: the exclusion and the narrowing (§7.8), the support of the confirmation with FLOW premises
-  (§7.5), the inside property of the FLOW form (§4.4, §4.6), and the form of `Handoff.cross_applies` for an added fact
-  with the mark `*` (§1).
-* WHAT F72 MAKES FALSE (these statements describe the concrete design): `RExact.DR_concrete`, `BExact.DB_concrete`,
-  `RExact.DR_no_request`, `BExact.DB_no_request`, `RExact.final_not_star`, `Handoff.DR_exit_not_star`,
-  `HandoffNoStar.DB_edge_nonstar`, `demOfN_nonstar`, `canon_dem_nonstar`, `canon_handF_nonstar`, and the conclusion
-  "no demand pattern after run 1 has a `*` tail" that they give (§7.8). Each one rests on the mark-copying emission
-  (the hypothesis `EmitCopiesMark`, or the fixed emission `emitM`), and `emitW` does not copy the mark of a `*`
-  pattern. `HandoffNoStar.handF_run1_nonstar` and `run1_exit_star_cross` read run 1 only, which F72 does not change.
+The full F72 proof must include the field-cleaner lowering condition (`ap.md` §4.7, F74), then general L1 to L4,
+the X-tail guard, confirmation support, narrowing, localization,
+the X-tail extension and the pipeline instance. The local CEGAR kernels are not proofs of the exact IR programs of
+§13. The proposals keep the F71 restricted-run rules until the proofs are complete (the order of `ap.md` §11.2).
+They include the independently checked local F74 field-action lowering.
+
+CEGAR FOUND A MODE-CONTRACT GAP. In `get(p) { clean(q, T); return p; }`, with different bases `p` and `q`, the AP
+keeps the FLOW fact and raises no request. The old abstract mode rejects the cleaner because its mark is `T`.
+Run 1 reports the real sink but does not meet the old mode contract (`ReviewDemand.Before.not_run1_contract_with_modes`).
+The user approved the fact-dependent cleaner rule (F73, `ap.md` §6.6). Disjointness must be tested against the propagated fact: two paths on
+one base can be disjoint, while a coarser FLOW fact can overlap the same cleaner (`ReviewDemand.same_base_disjoint_flow`).
+A test on the concrete witness location alone is insufficient.
+
+THE FIELD-CLEANER MODEL NEEDED A CORRECTION. `ReviewReversal` uses an atomic cleaner on `p.g`, which can lose a flow
+after backward FLOW emission. The user's F74 rule is `tmp = p.g; clean(tmp, T); p.g = tmp`, with the ordinary
+strong-write keep edges. The backward run keeps `p.*/{g}` with mark `*`, disjoint from the cleaner on `tmp`.
+The atomic kernel is not the interpreter program. The general proof must state and use this lowering condition.
+
+A SEPARATE ROOT-EXACT GAP remains. `ReviewRootCleaner` changes the action to `clean(p, EXACT, T)`.
+It has the empty path and preserves the concrete `p.n` flow. Run 1 is disjoint and raises no request, but the
+backward FLOW fact `p.*` loses T. The exact 1, 2, 3 trace has no source hit and no run-3 finding (`ap.md` §10.13).
+This action has no field lowering. Its rule correction awaits the user's decision.
+
+L6 HAS A GUARD. An abstract entry pattern needs the tail `$`, `[any]`, or `*/{}`. For an abstract pattern with
+`*/E`, `E ≠ {}`, common locations alone do not make the emitted FLOW premise satisfiable (`Abs.emitW_needs_patTail`).
+The guard holds for run 1 (`Abs.handFA_run1_PatTail`) and the explicit alternating base sequence with concrete,
+non-star seeds (`AbsHandoff.shapeSeq_PatTail`). The X-tail and pipeline forms remain open. L6 for a concrete pattern also requires a concrete added mark. These are explicit proof assumptions, not
+established properties of every F72 run.
+
+The earlier concreteness, no-star-exit and no-star-demand theorems remain evidence for F70/F71 only (`ap.md` §11.2).
+The F72 no-request property follows from its closure rules; it does not follow from those earlier concreteness proofs.
 
 ARGUED, NOT PROVED:
 
@@ -2722,7 +2712,7 @@ it, in the demand layer and with no exclusion:
 
 * the field-limit cut: the cut path is above the fact, so it drops the exclusion (`ap.md` §4.4;
   `AnyTaintExCases.CUT.run1_cut`, `cut_reports`: `sink(x.f.h)`, confirmed with a larger limit, is a DEMAND entry);
-* a cleaner `part` row of `ap.md` §4.7 other than the `atAndBelow` and `below` rows one accessor below the fact: the
+* a primitive AP cleaner `part` row of `ap.md` §4.7 other than the `atAndBelow` and `below` rows one accessor below the fact: the
   `exact` cleaner at the path of the fact or one accessor below it, and every cleaner two or more accessors below it.
   There is no shape for "every location but one" (`AnyTaintExCases.CL.exact_result`; the demotion is necessary,
   `AnyTaintExExact.CexExactCleaner.cex_exact_cleaner`: `[any-taint]/{f}` would miss the real `x.f.g`, and a normal
@@ -2733,6 +2723,12 @@ it, in the demand layer and with no exclusion:
 * the must-record demotion (§4.2 `applyRecord`; `AnyTaintEx.recLayerX`).
 
 This is a precision loss, not a soundness loss: the vulnerability stays in the report as a DEMAND entry.
+
+A named field action uses F74, rather than applying the primitive directly to the old base. For a normal
+`(x, p, [any-taint], E, T)` input and a field `f ∉ E`, every reach keeps the normal outside-field fact with
+`E ∪ {f}`. `exact` also returns demand `(x, p.f, [any], T)`; `below` also returns normal `(x, p.f, $, T)`;
+`atAndBelow` returns only the outside-field fact. A demotion of the temporary does not demote the outside-field
+fact. `FieldCleanerX` checks these three local vectors. These checks do not prove the F72 X iteration.
 
 THE ALIAS GAP (an expected false-positive source, `ap.md` §11.1). A WEAK UPDATE keeps an `[any-taint]` object whole: a
 deep write through a local (`a = dto.address; a.city = clean`: the alias edge is gen-only, `interpreter.md` G7) or
@@ -2745,10 +2741,9 @@ false positive. Before F69 the same finding was a DEMAND entry. A `$` fact has t
 
 ## 12. The formal model
 
-The files of this table model the CONCRETE restricted runs (`ap-history.md` F70, F71). The model of the rules of F72
-(§3) is PENDING (§11 PENDING: THE LEAN MODEL OF F72): the planned new files are `AbsDefs.lean` and `AbsCases.lean`
-(the definitions and the CEGAR programs first), then `AbsForward.lean`, `AbsBackward.lean` and `AbsIter.lean` (the
-lemmas L1 to L6 and the iteration). The existing files do not change.
+The files of this table model the CONCRETE restricted runs (`ap-history.md` F70, F71). The checked F72 base modules,
+their assumptions and the remaining obligations are listed in `ap.md` §10.13 and §11.2. The F72 pipeline instance
+is pending (§11). The existing concrete-design theorems keep their scope.
 
 | File | Content |
 |---|---|
