@@ -319,10 +319,11 @@ and §13 refer to this part.
    literals come from two different call statements, so the joint support fails) stops with `NO_DEMAND_EDGE`; the
    report keeps the DEMAND entry. A demand-layer summary delta alone (a cut of the exit rules) and a demand link alone
    each count as a demand-layer object, so the driver goes on (program DLINK, `analyzer-impl.md` §9.1 row 21):
-   `root(): dto = srcAny(); c(dto)`, `c(x): y = x.q.r; m(y)` with the call cleaner `clean(T, arg0.g.k, exact)` at
+   `root(): dto = srcAny(); c(dto)`, `c(x): y = x.q.r; m(y)` with the primitive root call cleaner `clean(T, arg0, exact)` at
    `m(y)`, `m(p): sink(p.g.h); throw`, and the field limits 1 to 5: forward run 3 has only normal edges, but the cleaner demotes the bound fact to
    `(p, ., [any], T)` on a DEMAND link, so it does not stop with `NO_DEMAND_EDGE`, and forward run 5 CONFIRMS the
-   vulnerability (§7.1). The seeds of the hand-off of a backward run are exactly the witnesses of the DEMAND
+   vulnerability (§7.1). `CurrentDemandLink.Certificate.check` computes the local concrete fact trace; it is not
+   a full iteration theorem. The seeds of the hand-off to a backward run come from the witnesses of the DEMAND
    vulnerabilities: a vulnerability that an earlier run confirmed and that the latest run reports in the demand layer
    gives no seed (§7.3).
 10. SOURCE SEEDS. In forward run 3, a source that backward run 2 did not reach does not fire; a source on the witness

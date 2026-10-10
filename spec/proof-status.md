@@ -41,13 +41,21 @@ kinds or an integrated current closure/iteration theorem.
 | F76's computed raw exact-to-must selector returns a normal read-view certificate and omits its backward demand | `CurrentMustReverse.omit_eq_guardsB`, `omit_eq_normal_read`, `normalMustWitness`, `publicationPlan` | Raw native singleton forward record; normal must target and concrete marks; exact premise with empty annotation, not a must-premise. Conclusion E is arbitrary and retained. Other shapes keep generic classification; must-premises remain demand. `publicationPlan` preserves the new branch's raw selection bit, not the full generic selector. This adds a local branch to generic Cross; it is not a full current hand-off/closure theorem. |
 | F76's star/E view matches each canonical concrete exact or may-any requirement covering an admitted marked location | `CurrentMustReverse.concrete_read_matches`, `selected_view_transfer` | Arbitrary E. Matching is `inside || applicable`; exact transfer returns the old premise without the suffix. Abstract marks are outside this contract. |
 | Omitted exact-to-must record returns a distinct upstream mark and reaches zero through an actual reversed source edge | `CurrentMustReverse.Certificate.upstreamSourceWitness`, `restricted_publication_keeps_selection` | Executable local chain with U ≠ T and nonempty E; the annotated restriction publishes an exact piece while keeping the raw omission bit. The witness does not model the source-hit store or full iteration. |
+| Complete local raw selector combines generic crossing, F76, cardinality, layer and backward zero | [CurrentSummarySelection.lean](lean/ApSpec/CurrentSummarySelection.lean): `selected_iff`, `demand_iff`, `publication_keeps_selection` | Native typed provenance is supplied by the caller: coherent premise E, must flag/kind, and no normal backward any tail. The backward test rejects must premises and requires mark reversibility. Publication carries the full raw demand bit. No closure or persistence theorem is claimed. |
+| Two TAINT class gates and one FLOW class gate select exactly the per-leaf demand part | `CurrentSummarySelection.packed_selection_equiv`, `counted_selection_equiv`, `concrete_class`, `flow_class` | TAINT leaves have concrete marks, one layer and exact/any tails. Exact/any identities, output E, bases and paths do not affect selection. FLOW has an abstract mark and normal star tail. Equality concerns selected leaves, not output trie packing or shared structural walks. |
+| Normalized TAINT destination lookup preserves unique exclusion keys and every retained annotated leaf | [CurrentTaintGroupKeys.lean](lean/ApSpec/CurrentTaintGroupKeys.lean): `insert_unique`, `insert_canonical`, `merge_normalize`, `place_reads` | Local subtraction/factory/destination model. Removing the last must leaf resets E to Empty; lookup uses that remainder key. Does not prove T2, full store delta or trie sharing. |
+| Sink oracle joins positive literals only within one method key | [CurrentSinkJoin.lean](lean/ApSpec/CurrentSinkJoin.lean): `method_isolation`, `scoped_iff`, `same_method_retained` | Finite local join partition; computed counterexample rejects inputs from different contexts. Sink checks and confirmation are separate. |
+| Hand-off counts equal accepted stored patterns, excluding duplicate and implicit-zero insertions | [CurrentDemandFrontier.lean](lean/ApSpec/CurrentDemandFrontier.lean): `method_count_delta`, `build_count` | Local builder/count interface. Pattern tags stand for already normalized canonical patterns; the model does not prove AP normalization. |
+| Exact counted-depth metadata skips a subtree exactly when all paths fit the budget | [CurrentDepthCache.lean](lean/ApSpec/CurrentDepthCache.lean): `depthWitness`, `skip_iff_fits`, `stored_skip_iff_fits` | Counted and uncounted accessors, sibling maxima, signed Int representability. The 32,768/32,767 executable regression rejects the old Short saturation shortcut. Does not prove the whole field-limit tree operation. |
+| Root EXACT cleaner produces the coarse demand link and preserves the precise descendant in the DLINK fixture | [CurrentDemandLink.lean](lean/ApSpec/CurrentDemandLink.lean): `precise_descendant_disjoint`, `Certificate.check` | Actual annotated read, binding, cut, concrete emission and cleaner vectors at limits 2–5. Local fact trace only; no CFG, source-hit, hand-off or full five-run confirmation theorem. A named field cleaner uses F74 lowering and cannot supply this demotion fixture. |
+| Alias selection accepts every demand-layer result and skips only normal identity results | [CurrentAliasGuard.lean](lean/ApSpec/CurrentAliasGuard.lean): `demand_passes`, `normal_identity_skips`, `selection_iff` | Local origin/layer guard used by the engine and form reference. Computed regression retains demand default identity and constructor results. Does not prove alias analysis or the whole call plan. |
 | Restricted runs have no request objects | `Current.FC_no_req`, `BC_no_req` | By closure definition, not by concreteness. Abstract facts can occur. |
 
 An existence result is not obtained by selecting data from a proposition. The
 certificates above compute the relevant AP function first and carry its proof.
 Runtime checks evaluate those data through Lean's compiler.
 
-The checked optimization is the maintained candidate index. On the distinct
+The maintained candidate index is a checked optimization. On the distinct
 33-demand workload, `CurrentDemand.reductionWorkWitness` computes 33 full restriction
 calls for a scan and 1 for indexed lookup. This counts full restriction calls;
 it excludes index construction. Lookup also walks at most the key length plus
@@ -55,6 +63,13 @@ one path-map nodes. Both queries return the same result set. Cleaner batching
 has a separate 33-to-1 base-guard check witness in `BaseCleaner.workWitness`;
 it still maps the residual over all leaves. Neither result claims constant total
 runtime or an optimized sharing theorem for the whole analyzer.
+
+The class selector has a separate work certificate. On 33 sibling must leaves,
+`CurrentSummarySelection.Certificate.workWitness` computes 33 selector calls and
+33 leaf visits for the reference, versus two calls and no leaf walk for the class
+shortcut. `counted_selection_equiv` proves equal results; `countedPacked_uniform`
+proves that equal flags need no leaf walk. Different flags still need a walk.
+These counts exclude construction, mark comparisons, trie packing and consumers.
 
 The regression modules preserve their design versions:
 
@@ -101,5 +116,6 @@ lake env lean audit.lean
 axioms other than `propext` and `Quot.sound`; thus `sorryAx`, classical choice, and
 native proof oracles fail the audit. It also executes the cleaner, lowering,
 regression, emission, reduction, normalization, index-cost, tree, must-hand-off,
-and must-summary read-view witnesses.
+must-summary read-view, full-selector, destination-key, sink-join, frontier-count,
+depth-cache, demand-link, and alias-guard witnesses.
 The exact declaration count is reported by the audit and changes with the model.

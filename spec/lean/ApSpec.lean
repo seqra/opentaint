@@ -100,3 +100,10 @@ import ApSpec.CurrentHandoff
 import ApSpec.CurrentKinds
 import ApSpec.CurrentMustHandoff
 import ApSpec.CurrentMustReverse
+import ApSpec.CurrentSummarySelection
+import ApSpec.CurrentTaintGroupKeys
+import ApSpec.CurrentSinkJoin
+import ApSpec.CurrentDemandFrontier
+import ApSpec.CurrentDepthCache
+import ApSpec.CurrentDemandLink
+import ApSpec.CurrentAliasGuard

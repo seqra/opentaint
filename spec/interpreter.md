@@ -393,7 +393,8 @@ At a call to `<init>`, every added fact (the bound fact after the cleaners, `S` 
 it keeps its caller base, and it also enters the callee. This is the ad-hoc rule of today (`isConstructor` in
 `JIRMethodCallFlowFunction`). So a constructor call is a weak update of its receiver and its arguments. It is an
 expected false-positive source (gap G8, ap.md §11.1). The pass-over result does not take the summary rewriter; it takes
-the binding back and the field limit (§4.5 step 6). It is an IDENTITY result, so it takes no alias (AC4).
+the binding back and the field limit (§4.5 step 6). In the NORMAL layer it is an IDENTITY result and takes no alias.
+A DEMAND-layer result takes aliases (AC4).
 
 ### 3.6 Virtual calls and several callees
 
@@ -450,7 +451,7 @@ facts).
 | AC1 | JVM: for each caller local `x` that a binding back writes (`r`, `o`, `ai`), the alias paths `(b, q)` of `x` that hold BOTH before and after the call (`forEachAliasAfterCallStatement`; constant bases skipped). Go: the heap aliases at the statement (`forEachHeapAliasAtStatement`). |
 | AC2 | For each alias: the binding-back edge `P.* → b.q.*` beside `P.* → x.*`. The alias base is a gen-only target (weak, gap G7). |
 | AC3 | The alias edges apply to: every summary result that is not an identity result (AC4), so every demand-layer result and every zero-premise summary result; the source results at the call; the end facts of a sink (§4.1); the pass-rule results. |
-| AC4 | An IDENTITY result is a summary result in the NORMAL layer that is equal to the start fact of its premise (ap.md §6.5). The default identity of an unresolved callee (§3.7) and the constructor pass-over (§3.5) are IDENTITY results too. An identity result is not copied to the aliases (as today): the alias already holds the same facts, because the writes keep the aliases (§2.5). A demand-layer result is never an identity result: it always goes to the aliases, also when it is equal to its start fact (a demand start fact can be coarser than the premise, so the alias does not hold it). |
+| AC4 | An IDENTITY result is a summary result in the NORMAL layer that is equal to the start fact of its premise (ap.md §6.5). The default identity of an unresolved callee (§3.7) and the constructor pass-over (§3.5) are IDENTITY results too when they are in the NORMAL layer. An identity result is not copied to the aliases (as today): the alias already holds the same facts, because the writes keep the aliases (§2.5). A demand-layer result is never an identity result: it always goes to the aliases, also when it is equal to its start fact (a demand start fact can be coarser than the premise, so the alias does not hold it). |
 | AC5 | AC3 and AC4 are an exception to I2: they select the results to which the alias edges apply. The selection leaves out only the normal-layer identity results, which the alias base already holds. The backward run applies the reversed alias edges to every requirement (§4.9). |
 
 ### 3.9 Lambdas and closures

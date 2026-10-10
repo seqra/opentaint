@@ -2856,7 +2856,7 @@ See [proof-status.md](proof-status.md) for current scope and
 See [proof-status.md](proof-status.md) for current scope and
 [proof-history.md](proof-history.md) for the historical catalog.
 
-### 10.13 F72 to F75: checked results and open obligations
+### 10.13 F72 to F76: checked results and open obligations
 
 See [proof-status.md](proof-status.md) for current scope and
 [proof-history.md](proof-history.md) for the historical catalog.

@@ -10,10 +10,12 @@
   omission through CurrentMustReverse; these are not equivalence proofs for
   that broadened selector. The copy certificates apply to selected demand pieces.
 
-  Generic demand selection reads the RAW leaf. Restriction then publishes a piece;
-  the handoff copies that piece. Thus a raw must leaf narrowed to an exact
-  piece still generates demand, and that demand stays exact. These are local
-  conversion/publication results, not a current annotated-closure theorem.
+  The historical generic demand selector reads the RAW leaf. Restriction then
+  publishes a piece, and the handoff copies it. In that older selector every
+  raw must conclusion is selected, also when its piece narrows to exact. F76's
+  complete selector omits native exact-premise must leaves. These local copy
+  results still apply to current selected demand pieces; the historical selector
+  does not specify current demand ownership.
   The blocked-record vector below uses generic revRec as a diagnostic. F76's
   actual must-summary reader uses CurrentMustReverse's STAR/E view instead.
 -/

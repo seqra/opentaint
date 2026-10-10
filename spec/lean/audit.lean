@@ -254,3 +254,65 @@ run_elab do
       (ApSpec.Abs.satW p blocked || ApSpec.applicable p blocked) then
     throw (IO.userError "Executable concrete must-view matching certificate failed.")
   IO.println "Executable concrete must-view matching certificates passed."
+
+-- Full current raw selection: generic Cross plus F76, cardinality, layer and zero.
+#eval do
+  let expected := [false, false, true, true, true, true, true, false, true]
+  let j := ApSpec.CurrentSummarySelection.Certificate.exactEntry
+  let m := ApSpec.CurrentSummarySelection.Certificate.mustEntry
+  let leaves := ApSpec.CurrentSummarySelection.Certificate.normalLeaves
+  let piece := ApSpec.CurrentSummarySelection.Certificate.outputExact
+  let work := ApSpec.CurrentSummarySelection.Certificate.workWitness
+  let expectedWork : ApSpec.CurrentSummarySelection.SelectionWork ×
+      ApSpec.CurrentSummarySelection.SelectionWork := (⟨33, 33⟩, ⟨2, 0⟩)
+  if ApSpec.CurrentSummarySelection.Certificate.cases != expected ||
+      work != expectedWork ||
+      ApSpec.CurrentSummarySelection.selectPacked .forward [j] false leaves != [] ||
+      ApSpec.CurrentSummarySelection.selectPacked .forward [m] false leaves != leaves ||
+      ApSpec.CurrentSummarySelection.publicationPlan .forward
+        ApSpec.CurrentSummarySelection.Certificate.rawMust piece != (true, piece) ||
+      ApSpec.HandoffX.restrictIX m.fact m.ex
+        ApSpec.CurrentSummarySelection.Certificate.outputMust
+        ApSpec.CurrentSummarySelection.Certificate.restrictedDemand != some piece then
+    throw (IO.userError "Executable full raw summary selector failed.")
+  IO.println "Executable full raw summary selector and packed flags passed."
+
+-- A removed final must leaf changes E; lookup uses the actual remainder key.
+#eval do
+  let result := ApSpec.CurrentTaintGroupKeys.Certificate.witness.val
+  let expected : List ApSpec.CurrentTaintGroupKeys.Row :=
+    [⟨ApSpec.Excl.empty, [ApSpec.CurrentTaintGroupKeys.Certificate.mustRoot,
+      ApSpec.CurrentTaintGroupKeys.Certificate.exactG]⟩]
+  if result.1.length != 2 || result.2 != expected then
+    throw (IO.userError "Executable normalized taint-group destination failed.")
+  IO.println "Executable normalized taint-group destination passed."
+
+-- The oracle joins sink slots only within one method key.
+#eval do
+  if !ApSpec.CurrentSinkJoin.Certificate.check then
+    throw (IO.userError "Executable sink join method isolation failed.")
+  IO.println "Executable sink join method isolation passed."
+
+-- Frontier counts accepted stored patterns, excluding duplicates and implicit zero.
+#eval do
+  if !ApSpec.CurrentDemandFrontier.Certificate.check then
+    throw (IO.userError "Executable stored demand frontier count failed.")
+  IO.println "Executable stored demand frontier count passed."
+
+-- Exact counted-depth metadata cannot skip the cut at the former Short boundary.
+#eval do
+  if !ApSpec.CurrentDepthCache.workWitness then
+    throw (IO.userError "Executable exact depth cache guard failed.")
+  IO.println "Executable exact depth cache guard passed."
+
+-- Root EXACT cleaning demotes the coarse link and leaves the precise descendant.
+#eval do
+  if !ApSpec.CurrentDemandLink.Certificate.check then
+    throw (IO.userError "Executable current demand-link fixture failed.")
+  IO.println "Executable current demand-link fixture passed."
+
+-- AC4: demand identities take aliases; only normal identities skip them.
+#eval do
+  if !ApSpec.CurrentAliasGuard.Certificate.check then
+    throw (IO.userError "Executable alias origin/layer guard failed.")
+  IO.println "Executable alias origin/layer guard passed."
