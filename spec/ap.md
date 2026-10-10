@@ -6,8 +6,8 @@ This document defines facts, edges, AP operations, runs, and stores for
 [analyzer-core.md](analyzer-core.md) defines events, ownership, scheduling, and the
 iteration driver. Each rule has one owner; the other specs use its contract.
 
-The current rules are F72 with the F74 field-cleaner lowering and F75 base-dependent
-cleaner split. [ap-history.md](ap-history.md) records the decisions.
+The current rules include F72 demand sharing, F74 field-cleaner lowering, F75
+base-dependent cleaner splitting, and F76 must-summary read views. [ap-history.md](ap-history.md) records the decisions.
 [proof-status.md](proof-status.md) separates current checked results from historical
 proofs and open obligations. Local proof results do not establish the full current
 iteration. A Lean name is evidence; the rules and their conditions are stated here.
@@ -48,7 +48,7 @@ them. Each proof uses only the conditions stated in [proof-status.md](proof-stat
 | S8 | No initial fact, micro edge, or binding has `*/Universe`. A `$` premise has a concrete mark. No micro edge has a `$` premise and `*` target; a `$` target requires a concrete premise mark. | Interpreter |
 | S9 | Each conjunction literal names a concrete mark. | Interpreter |
 | S10 | A statement edge reads a touched base. Every call binding has `*` premise mark and `*` tails on both sides. A conjunctive target has a concrete mark and no `*` tail (W7). | Interpreter |
-| S11 | Backward construction: (a) binding target marks are `*`; (b) statement edges are mark-reversible (§1); (c) no forward back-binding targets zero; (d) each non-call keeps zero, no cleaner acts on zero, and a filter on zero accepts its empty path; (e) each node reachable from a root/callee entry can reach its virtual exit; (f) sink patterns have `$` or `[any]`; (g) statement edges and bindings have exact shape (§1): a `*` premise with a `$` or `[any]` target has empty field exclusion. Clause (g) is needed for reversed-record exactness. | Interpreter and CFG |
+| S11 | Backward construction: (a) binding target marks are `*`; (b) statement edges are mark-reversible (§1); (c) no forward back-binding targets zero; (d) each non-call keeps zero, no cleaner acts on zero, and a filter on zero accepts its empty path; (e) each node reachable from a root/callee entry can reach its virtual exit; (f) sink patterns have `$` or `[any]`; (g) statement edges and bindings have exact shape (§1): a `*` premise with a `$` or `[any]` target has empty field exclusion. Clause (g) is needed for generic reversed-edge exactness; the record views of §8.7 have their own shapes. | Interpreter and CFG |
 | S12 | Static construction: a static position is a read/sink path on `S`, cut to the class and field. An `S→S` edge is an identity restriction or reads and writes at/below a static field. An edge from another base to a bare class position has concrete `$` premise and target; each literal of a conjunctive edge has the same form. No pass rule reads/writes a bare class position. Calls bind `S.*→S.*`. Class accessors do not count and each limit is at least 1. A cleaner on `S` names its mark; removing all marks at a static position is a strong-write kill. The empty-path whole-base all-mark cleaner is the one exception: it drops each `S` fact whole. `S` differs from zero. Run 1 uses §6.2. Restricted runs require the edge/binding/limit conditions and records that preserve the static invariant. | Interpreter |
 | S13 | Validity for exactness: filters accept all valid locations; validity of an edge's end implies validity of its start, for statement edges and both call bindings. For conjunctions this holds for each literal. | Type-filter placement |
 | S14 | Input records are exact on valid end locations. Must records are end-exact on admitted locations, have concrete conclusions, and satisfy W8 normal form. Reversed backward records require the extra conditions of §8.7; dropping backward filters can break exactness (§11.1). | Record store |
@@ -84,8 +84,8 @@ current iteration remain proof obligations (§11.2).
 | exact; end-exact | Exact means every edge pair is a concrete flow. For a must-premise, end-exact means each admitted end comes from some admitted start; its arbitrary pairs need not be flows. “Exact” also names `$` and a cleaner reach. |
 | mark-reversible | `i→f` has an abstract conclusion mark, or a concrete premise mark. |
 | exact shape | Excludes `*/E→$` and `*/E→any` with nonempty premise exclusion. |
-| record; must record | A persisted normal single-premise raw summary (§8.7); a record whose premise is a must-premise. |
-| crossable leaf | A normal single-premise raw leaf with `$` or `*/{}` premise, mark reversibility, and no any conclusion. Backward eligibility requires a nonzero premise and crossable reversal. It replaces callee analysis in both directions through records (§8.7). |
+| record; must record; read view | A persisted normal single-premise raw summary (§8.7); a record whose premise is a must-premise; a transient premise pattern and conclusion used to read one record leaf from the other direction. A read view is not persisted or started as an initial fact. |
+| crossable leaf | A raw normal singleton leaf reused instead of demand. Forward: either `$` or `*/{}` premise, mark reversibility, and no any conclusion (generic case), or the F76 exact-to-must case of §8.7 R3. Backward: nonzero premise and a generic crossable reversal. A must-premise is not crossable. Decide before restriction; persist the whole raw record. |
 | demand edge | A published piece of a **non-crossable raw** summary leaf. It gives the next run a pattern per premise member (§9.2). Determine crossability before restriction. A normal leaf can give demand edges; every demand-layer leaf does. Lean's `DemandEdge` instead names a demand pattern. |
 | caller fact; bound fact; added fact | A caller edge's conclusion; its value after binding into callee coordinates; its value after call cleaners. Callee summaries apply to added facts. |
 | link | An added fact paired with its caller edge. |
@@ -996,10 +996,10 @@ summary (§5.3 events E2 and E4); `applySummary` does not test it again.
   `AnyTaint.SatInside`, `satI_inside`.)
 * A RECORD `j → g` (§8.7) applies in the direction in which it was derived when `applicable(j, a)`, or when `a`
   satisfies `j` by `inside` (restricted runs), in every run after the run that made it (R4). In the other direction it
-  applies through its reversal (R3, §9.1). A record is exact (S14; a must record is end-exact), so the result adds no
-  false pair (a must record, applied by `inside`: no false end location), modulo the expected false-positive sources
-  of §11.1 (a record through an end fact; a reversed backward record on a program with type filters). A record is not
-  restricted.
+  applies through its read view (R3). S14 and the R3/R4 layer guards make normal
+  results exact, or end-exact for a must record applied by `inside`. A backward
+  must-premise view gives demand results and makes no pair-exactness claim.
+  The expected false-positive sources of §11.1 still apply. Records are not restricted.
   THE RECORD DEMOTION. A must record (an `[any-taint]` premise, §8.7) that applies by `applicable` only (the added fact
   lies inside the premise, and `inside` is false) gives its result in the DEMAND layer: the record needs every
   location of its premise, and the added fact has only some of them. By `inside` it gives the result of the
@@ -2368,9 +2368,11 @@ candidates; the store then applies the exact test that the section names (`overl
   hand-off reads only them, §9.2). The summary edges before the restriction serve only the records (R1).
 * The premise key keeps its tail and its exclusion: a must-premise and the `[any]` premise at the same path have
   their own summaries (§7.1). A forward summary with the `[any-taint]` tail on its premise or its conclusion is a
-  record if it is normal (§8.7 R1); the backward run has no `[any-taint]` (W8 (d)). Such a leaf is never crossable
-  (§1), so it is always a demand edge. The hand-off to the backward run reads a forward `[any-taint]/E` conclusion as
-  the pattern `[any]` (§9.2).
+  record if it is normal (§8.7 R1); the backward run has no `[any-taint]` (W8 (d)).
+  A raw normal singleton leaf `P.$(U)→x.p.[any-taint]/E(T)` with concrete marks
+  and empty premise exclusion gives **no backward demand**: R3's normal view
+  crosses it. A must-premise leaf still gives demand; its view is demand-layer.
+  Selected must demand pieces become may patterns without exclusions (§9.2).
 
 ### 8.6 Demand store (RUN, read only; callee)
 
@@ -2405,8 +2407,9 @@ The native store retains the raw summary's initial kind and conclusion kind.
 A valid initial kind is zero, concrete exact/any (including a forward must
 premise), or abstract star with empty field exclusion. An abstract premise has
 only FLOW conclusions: abstract marks and star-normal or any-demand tails.
-Insertion, retained unions, and permitted reversed reads must preserve these
-conditions. Current base tail/mark preservation is checked by `Current.native_record_kinds`,
+Insertion and retained unions must preserve these conditions. Generic reversed
+native shapes have the guards below. Transient read views have the separate R3
+contract; they do not have to satisfy native initial-kind conditions. Current base tail/mark preservation is checked by `Current.native_record_kinds`,
 `revRec_kinds`, and `record_kinds_union`; the full X integration remains open.
 These theorems do not prove all typed FLOW layer flags; W6 and full packing
 preservation remain open. The concrete runtime stores must enforce the full
@@ -2426,7 +2429,7 @@ class Record(
     val direction: Direction,          // FORWARD: premise = entry fact; BACKWARD: premise = exit fact
     val premise: InitialAp,            // the one member of the premise set; the zero fact only for FORWARD (R1);
                                        // the tail ANY_TAINT (a must record, with its exclusion) only for FORWARD
-                                       // (R1); never reversed (R3)
+                                       // (R1); backward read views give DEMAND results (R3)
     val conclusion: Facts,             // normal layer (§7.2): REACH (forward {zero} → zero, backward {jb} → zero),
                                        // a FLOW tree (a `*` premise, may carry a mark exclusion) or a TAINT tree
 )
@@ -2471,93 +2474,85 @@ Rules:
   `base :: leaf path` for EACH leaf path of the conclusion tree. Its lookup is `around(base :: q)` for the fact at
   `q`: a leaf whose reversal covers the fact is at or above it, and a leaf whose reversal lies inside the fact is at or
   below it (`PipelineStore.record_lookup`, with the reversed premise as the key).
-* R3. Only a record is reversed, so only a complete summary edge (R1). A reader in the other direction reverses the
-  record LEAF BY LEAF by §9.1 (the `byExit` index of R2 keys each leaf path) and then applies it as R4 says (the
-  reversed premise is looked up in `byExit`, then tested as in R4). Only a mark-reversible record has a reversal (§1);
-  a record that is not mark-reversible is not read in the other direction. Two kinds of leaf have NO reversal:
-  * every leaf of a MUST RECORD (an `[any-taint]` premise): it is end-exact, not exact pair by pair, and its reversal
-    would claim a must requirement ("every location below the premise leads to the sink") that the program does not
-    have (`AnyTaintExact.CexRev.cex_rev`: the must record of `ret = p.g` reverses into a pair `ret → p.f` that is not
-    a converse flow);
-  * an `[any-taint]/E` leaf with `E ≠ {}`: a backward premise has no exclusion of `[any-taint]` (W8 (d)), and the
-    reversal without `E` would relate the excluded locations, which the forward edge does not reach.
+* R3. A reader in the other direction computes one transient read view per
+  permitted leaf of a native record. R2 finds candidates by the old conclusion's
+  base/path. R4 tests the view's actual premise, including its mark and exclusion.
+  The view carries a premise `Pattern` and one `Conclusion` with its layer. Do not
+  construct an `InitialAp` or a persisted `Record` from it, emit it, or apply
+  `startFact`: starting a concrete star would lose its exclusion and demote it.
 
-  Every other leaf of the same record reverses as usual (the whole record is never dropped for one leaf). Example: of
-  the zero-premise record with the two leaves `(ret, ., [any-taint], {name}, T)` and `(ret, .k, $, U)`, only the `$`
-  leaf reverses. A leaf `$ → [any-taint]` with `E = {}` (a source result)
-  reverses into `[any] → $`: the backward premise tail is `[any]` (W8 (d); §9.1). It applies only to an `[any]`
-  requirement (§4.3: a `$` requirement below the premise neither satisfies it by `applicable` nor contains it), and
-  such a requirement is in the demand layer (W6), so the result is in the demand layer too: a reuse limit, no loss of
-  soundness. Every record whose premise has the Empty exclusion and that is mark-reversible reverses exactly
-  (`Reverse.rev_exact_of_empty_premise`), so every leaf that R3 reverses reverses exactly (§9.1). A reversed backward
-  record has no type filter (the backward run does not type-filter): an expected false-positive source (§11.1). On a
-  program without type filters (`Exact.FiltUp`), a normal backward
-  summary with a non-zero premise reverses into an exact forward record under S11 (c) and (g), when the records that
-  its backward run reads are exact (`BExact.rev_record_exact`, `revRecs_exact`, `revRecs_exactM`; without S11 (c) it
-  is false, `BExact.CexZeroBack.cex_rec`). An exact forward record reverses into an exact backward record under
-  S11 (g) (`Reverse.backward_reuse_precise`). The two directions together are argued (§11.2). The model has no end
-  facts: a record through an end fact, in either direction, is not exact (§11.1).
-  THE REVERSAL OF A CROSSABLE LEAF (§1) is exact (`Reverse.rev_exact_of_empty_premise`: the converse pairs; as a
-  record, S14), and its premise has the tail `$` or `*` with the Empty exclusion. So
-  it applies to EVERY concrete requirement that has a common location with it, by `inside` or by `applicable`
-  (`Handoff.cross_applies`): the backward run crosses the call by it (rule `retRec`; `HandoffBackward.cross_step`) and
-  does not enter the callee for it (R5). Since F72 a requirement can have the mark `*` (§9.2): a reversal with a `*`
-  premise applies to it too, and a reversal with a concrete premise does not (no request, §4.5). In the same way the
-  next forward run crosses a call by the reversal of a crossable backward leaf (`HandoffBackward.NextRecs`). A backward leaf through the reversal of a conjunctive micro
-  edge is never crossable: it is in the demand layer (§9.1, THE REVERSAL OF A CONJUNCTION), because its reversal
-  drops the other literals of the conjunction. A reversed `[any]` premise (the reversal of an `[any]` or an
-  `[any-taint]` leaf) does not cross: a `$` requirement neither satisfies it nor is covered by it
-  (`HandoffCases.revRec_any_premise`, `not_cross_of_any`, `dollar_blocked`), so such a leaf must stay a demand edge.
-  A looser hand-off that reads only the forward conditions (1) to (3) of §1 and drops such a leaf loses a real
-  vulnerability: the backward run cannot cross the call, so it does not reach the source
-  (`HandoffCases.AnyW.cegar_cross_anyw`, with the source seeds; `HandoffCases.AnyM.cegar_cross_anym`, with no source
-  seeds).
-* R4. A record applies to an added fact when its premise covers the fact (`applicable`, §4.3) or lies inside it
-  (`inside`, §4.3), in every run after the run that made it, IN THE SAME DIRECTION (run 1 is the first run, so it
-  reads no record). Lean: rule `retRec` (`sat ∨ applicable`). A MUST RECORD applies by `inside` with the result of the
-  application, and by `applicable` only with a DEMAND result (the record demotion of §4.3; Lean: `AnyTaintEx.DRX`,
-  rule `retRec` with `AnyTaintEx.recLayerX`; round 1 `AnyTaint.DRT` with `AnyTaint.recLayer`; necessary:
-  `AnyTaintExact.CexApp.cex_app`). A record is exact (S14; a must record end-exact), so it adds no false pair (a must
-  record, applied by `inside`: no false end location). For the records of a forward run this is proved run by run: a
-  normal edge of run 1 or of a forward restricted run is exact when the records that the run reads are exact
-  (`RExact.recs_of_D_valid`, `recs_of_DR_valid`; for programs without type filters `recs_of_D`, `recs_of_DR`; the union of two record sets,
-  `recs_union`). If every record is an exit edge of an earlier forward run (`BExact.RecsFromRuns`), the forward
-  records stay exact over the run sequence (`BExact.recsSeq_exact`, `recsSeq_exactV`, `accRecs_exact`,
-  `accRecs_exactM`). So every normal edge and every confirmed vulnerability of every forward run is real with no
-  EXACTNESS hypothesis on the records (`BExact.seq_edge_exact`, `seq_confirmed_real` for `Exact.FiltUp`; with S13,
-  compose `BExact.recsSeq_exactV` with `RExact.edge_exactR_valid` and `RMain.confirmed_real_M_valid`). With the
-  reversed backward records of R3, and with the source seeds, this is argued (§11.2). With the `[any-taint]` tail and
-  its exclusion the same holds for the closures `AnyTaintEx.D6X` and `AnyTaintEx.DRX` (with every restriction that has
-  `AnyTaintExExact.RestrictOKX`, the intersection by `HandoffX.restrictIX_ok`): the exit edges of run 1 are
-  exact records (`AnyTaintExExact.liftRecsX_exact`), those of a forward restricted run are exact or end-exact on the
-  admitted locations, with a concrete conclusion mark and in the normal form of W8 (`recs_of_DRX_valid`,
-  `recsConc_of_DRX`, `recsWF_of_DRX`), over the run sequence too when every record is an exit edge of an earlier
-  forward run of the same program (`recsSeq_exactX_valid`, `RecsFromRunsX`), and then every confirmed vulnerability of
-  every forward restricted run is real with no EXACTNESS hypothesis on the records (`seq_confirmed_realX_valid`; the
-  hypothesis `RecsFromRunsX` stays).
-  A backward normal edge with a non-zero premise is exact for the reversed program (`BExact.edge_exactB`,
-  `edge_exactB_valid`, `edge_exactB_rev`; under S11 (c)). A zero-premise backward edge is never persisted (R1).
-  A conjunction result whose premise set has one member can be a record. It is exact for the support semantics of
-  §3.5 (`NDZeroThms.nd_edge_exact_z`, `nd_edge_exact_valid_z`), not in the sense of `RExact.RecsExact`. Its reuse
-  (R4) and its reversal (R3) are argued with the restricted runs with ND edges (§11.2). The exactness holds for the
-  reference semantics (§3.5), modulo the expected false-positive sources (§11.1). Lean: rule `retRec` (§11.2),
-  `RCases.p3_reuse`, `RMain.p3_reuse_exact`.
-  A CROSSABLE record (§1) applies to EVERY concrete added fact that has a common location with its premise
-  (`Handoff.cross_applies`: by `inside` or by `applicable`), so every pair of the record from such a location reaches
-  the caller (rule `retRec`; the recorded calls of `Handoff.FlowRR`, `Handoff.coverageRN`). Since F72 an added fact
-  can have an abstract mark (a fact of a FLOW premise of the caller): a crossable record with a `*` premise applies
-  to it too (its premise has the Empty exclusion, so it covers the added fact or lies inside it at every common
-  location; argued, PENDING §11.2), and a record with a concrete premise does not (§4.5). A record of a FLOW premise
-  of a restricted run (§6.5) is a `*`-premise record; its base normal-edge exactness is checked by `Current.FW_edge_exact` under the record/filter conditions in [proof-status.md](proof-status.md).
-* R5. Strict demand: after run 1 the abstraction reads only the demand (§6.3). It emits the demanded facts and
-  checks nothing else; a record never causes an emission and never replaces one. The records only add edges (R4).
-  But THE HAND-OFF LEAVES OUT THE CROSSABLE LEAVES (a subset of the leaves that R1 persists): a crossable leaf is not
-  a demand edge (§9.2). So a callee whose summary leaves are all crossable gets no demand pattern from them, and so no
-  emission from them (except the zero fact, §9.2; a seed in its call subtree still gives it the patterns of the seed
-  paths, §9.2 case 2). The later runs cross it by its records (R4) and by their reversals (R3), and
-  the later forward runs do not analyse it again while no seed lies in its call subtree (§6.6;
-  `HandoffMain.exclusion_canon`). The crossable records are then not an optimization:
-  the coverage needs them (`HandoffBackward.NextRecs`, `HandoffMain.iteration_generalN`).
+  For a normal singleton **forward** record, with concrete marks `U` and `T`:
+
+  | Native leaf | Backward read view | View layer |
+  |---|---|---|
+  | `P.$(U) → x.p.[any-taint]/E(T)` | `x.p.*/E(T) → P.$(U)` | normal |
+  | `P.[any-taint]/Ej(U) → x.p.[any-taint]/E(T)` | `x.p.*/E(T) → P.[any](U)` | demand |
+  | `P.[any-taint]/Ej(U) → x.p.$(T)` | `x.p.$(T) → P.[any](U)` | demand |
+
+  Preserve the old conclusion's `E` on the new star premise. Forget `Ej` when
+  weakening the old must-premise to may `[any]`. `$` sides have empty exclusion.
+  Application also keeps the input's layer: a demand requirement gives demand
+  results even through a normal view.
+  “Ordinary `[any]`” means the may tail; W6 makes its result demand-layer.
+  The star is a **field tail**, still with concrete mark `T`. It does not bypass
+  the concrete mark gate or raise a restricted-run request.
+
+  The first view is exactly the annotated converse (`CurrentMustReverse.exact_converse`),
+  including different marks and paths. Its exact target discards the incoming
+  suffix: `x.p.h.$(T)` gives `P.$(U)`, not `P.h.$(U)`. An excluded first accessor
+  gives no result. S14 exactness of the native record is still required to infer
+  real program flows from this local relation equality.
+  The must-premise views retain every annotated converse pair after weakening
+  (`CurrentMustReverse.must_any_converse_covers`, `must_exact_converse_covers`).
+  This inclusion is not converse program-flow exactness. A must-premise record
+  is only end-exact. Its views give demand results and cannot create a normal
+  backward record (`must_application_demand`). A normal reversal would claim false
+  converse pairs for `ret=p.g` (`AnyTaintExact.CexRev.cex_rev`).
+
+  Other native record shapes use generic leaf reversal (§9.1), only when
+  mark-reversible. This includes `$→$` and canonical abstract `*→*/E` leaves.
+  An arbitrary concrete-star native premise is not an allowed substitute for `P`:
+  a star-to-star view would wrongly correlate its suffix with the old any target.
+  Keep generic micro-edge reversal separate from these record views.
+
+  Exactness of generic reversed backward records still needs S11's mark/shape/zero
+  conditions, exact backward input records, and the filter/validity conditions
+  in [proof-status.md](proof-status.md). Dropping backward type filters does not
+  prove exactness. Full current read-view/closure integration remains open.
+  F76 classifies the exact-to-must raw leaf in the first row as crossable and
+  omits its backward demand (`CurrentMustReverse.omit_eq_guardsB`,
+  `normalMustWitness`). R1 persists the whole raw record, including `E`.
+  `byExit` finds its read view; the next forward run reuses the native record.
+  Must-premise leaves still give demand even when their demand-layer views apply.
+  This decision reads the raw leaf, never a narrowed publication.
+* R4. In its own direction, a native record applies by `applicable || inside`
+  (§4.3) in later runs. It is not restricted. A must native record keeps ordinary
+  transfer on its `inside` part; its `applicable`-only part gives DEMAND results
+  with any must exclusion forgotten. It needs every admitted premise location
+  (`AnyTaintExact.CexApp.cex_app`).
+
+  An opposite-direction read uses R3's actual `Pattern` and result layer. S14
+  exactness of the native record is required for normal results. A must native
+  record is end-exact; its backward view is demand-layer. Normal records add no
+  false pair under these conditions, subject to §11.1's reference-semantics and
+  filter/end-fact limits. The local certificates and full integration limits are
+  in [proof-status.md](proof-status.md).
+
+  A generic crossable premise matches each concrete added fact covering a common
+  location (`Handoff.cross_applies`). In the F76 branch, the star read premise
+  keeps `E` and matches canonical concrete `$` or may `[any]` requirements covering
+  an admitted location (`CurrentMustReverse.concrete_read_matches`). Exact chains
+  give the old exact premise without their suffix (`selected_view_transfer`).
+  Abstract requirements still need an abstract premise mark;
+  concrete record views do not raise restricted-run requests.
+* R5. After run 1, emission reads only demand (§6.3). A record or read view never
+  causes or replaces an emission. Omit demand only for crossable raw leaves of
+  R1-persisted records. A method whose leaves are all crossable gets no demand
+  from them; without a seed in its call subtree, it has only zero analysis.
+  Returning calls use the native record in the same direction and the permitted
+  read view in the other direction. Records remain available even when their
+  internal sources are not next-run seeds. Full current no-loss iteration,
+  including the F76 selection, remains open (§11.2).
 
 ### 8.8 Request store (RUN 1 only, per method; callee)
 
@@ -2670,108 +2665,59 @@ A sink witness (Kotlin: `SinkWitness`) has these fields:
 
 ## 9. Reversal and the backward direction
 
-### 9.1 Reversal of a record or a micro edge
+### 9.1 Micro-edge reversal and record read views
 
-The reversal `rev(i, f)` (Lean: `revEdge`, `revKinds`) reads an edge `i → f` from the other side. It reverses a record
-for a reader in the other direction (§8.7 R3), and every micro edge of the reversed program (§9.2). The new premise is
-the old conclusion; the exclusion goes to the NEW CONCLUSION, so the new premise has the Empty exclusion. A micro edge
-can have every row of the table except the row `$ → */E`, which S8 forbids, and the rows with an `[any-taint]`
-premise (S15: only a target has the `[any-taint]` tail); a row `*/E → $` or `*/E → [any]` has `E = {}` (S11 (g),
-`interpreter.md` I3). A forward micro edge with an `[any]` premise is the `[any]` literal of a source (S15: a pass
-rule with an `AnyField` premise is a rule error, `interpreter.md` D33). The last column says whether a record can
-have the row. Only three rows occur for a record, because:
+Generic `rev(i,f)` (Lean `revEdge`, `revKinds`) reverses a micro edge. R3 also
+uses it for ordinary record leaves. F76 must-summary record views use R3's
+separate table; they do not change interpreter micro edges.
 
-* an `[any]` premise starts in the demand layer (§6.5), so it has no record;
-* an `[any]` conclusion is in the demand layer (W6), so it is no record;
-* no leaf of a record with an `[any-taint]` premise (a must record) and no `[any-taint]/E` leaf with `E ≠ {}` is ever
-  reversed; R3 is leaf by leaf, so the other leaves of the record reverse (§8.7 R3; `AnyTaintExact.CexRev.cex_rev`);
-* a `*` premise has no `[any-taint]` conclusion (run 1: `AnyTaintExKinds.D6X_flow_no_any_taint` for the spec closure
-  `AnyTaintEx.D6X`, under S7, S10 and S15; round 1 `AnyTaintSim.D6T_flow_no_any_taint`, also under `W6.SummaryStar`;
-  a restricted run of the concrete design has no `*` premise, `AnyTaintExExact.DRX_conc`, round 1
-  `AnyTaintSim.kinds_DRT`; a FLOW premise of an F72 run has none either: an `[any-taint]` target needs a concrete
-  premise mark, §4.5; argued, PENDING §11.2);
-* a `$` premise has a concrete mark (S8), so it has no `*` conclusion (W2, `Coverage.edge_conc`);
-* a `*` premise never gives a normal `$` conclusion: every `$`-target micro edge has a concrete premise mark (S8),
-  so on a `*`-mark fact the mark gate raises a request, and a case `above` result is in the demand layer.
+The generic reversal moves the edge exclusion to the new conclusion. The new
+premise has empty field exclusion. It changes marks as follows: the new premise
+mark is `i.mark` if `f.mark` is abstract, else `f.mark`; the new conclusion mark
+is `f.mark` if abstract, else `i.mark`. A reversal requires mark reversibility:
+an abstract conclusion mark or a concrete premise mark.
 
-| `i.tail` | `f.tail` | new premise tail | new conclusion tail | occurs for a record |
-|---|---|---|---|---|
-| `*` | `*/E` | `*` | `*/E` | yes |
-| `$` | `$` | `$` | `$` | yes |
-| `[any]` | `*/E` | `*` | `*/E` | no |
-| `$` | `*/E` | `$` | `$` | no |
-| `*` | `$` | `$` | `[any]` | no |
-| `[any]` | `$` | `$` | `[any]` (the `[any]` literal of a source; in the demand layer, W6) | no |
-| `$` | `[any]` | `[any]` | `$` | no (a pass rule with an `AnyField` target: every result in the demand layer, below) |
-| `*` | `[any]` | `[any]` | `[any]` | no |
-| `[any]` | `[any]` | `[any]` | `[any]` | no |
-| `$` | `[any-taint]` (`E = {}`) | `[any]` | `$` | yes: a source result; the reversal applies only to an `[any]` requirement, so with a demand result (§8.7 R3) |
-| `$` | `[any-taint]/E`, `E ≠ {}` | | | no: not reversed (§8.7 R3) |
-| `[any]` | `[any-taint]` | `[any]` | `[any]` | no (a conditional source with an `[any]` literal) |
-| `[any-taint]` | every tail | | | no: a must record is not reversed (§8.7 R3) |
+| Forward premise tail | Forward target tail | Reversed premise | Reversed target |
+|---|---|---|---|
+| `*` | `*/E` | `*` | `*/E` |
+| `$` | `$` | `$` | `$` |
+| `[any]` | `*/E` | `*` | `*/E` |
+| `$` | `*/E` | `$` | `$` |
+| `*` | `$` | `$` | `[any]` |
+| `[any]` | `$` | `$` | `[any]` |
+| `$` | `[any]` | `[any]` | `$` |
+| `*` | `[any]` | `[any]` | `[any]` |
+| `[any]` | `[any]` | `[any]` | `[any]` |
+| `$` | `[any-taint]` | `[any]` | `$` |
+| `[any]` | `[any-taint]` | `[any]` | `[any]` |
 
-THE BACKWARD RUN HAS NO `[any-taint]` (W8 (d)): in a reversal every new premise or conclusion with an any tail is
-`[any]`. So the reversed `[any]` literal of a source (a `ContainsMarkOnAnyField` check) has the target `[any]`, and
-the reversed edge of a source whose forward target is `[any-taint]` has the backward premise tail `[any]`
-(`interpreter.md` §4.9). W6 puts every `[any]` result of the backward run in the demand layer (argued, §11.2).
+These are generic algebra rows, not a list of permitted native records.
+S8 forbids the micro row `$→*`. S11(g) requires empty premise exclusion for
+`*→$` and `*→any`. S15 permits `[any-taint]` only as a source target, with empty
+initial exclusion; no micro edge has a must-premise. No backward side has
+`[any-taint]`. A forward `[any]` premise is a source condition literal; AnyField
+pass premises are rule errors.
 
-THE REVERSAL OF A MAY. The reversal of a micro edge whose FORWARD target is `[any]` (a pass rule with an `AnyField`
-target, a may) gives EVERY result in the demand layer, also a `$` result: the forward edge writes some field, not
-every field, so a requirement through its reversal is not exact. The reversal of a micro edge whose forward target is
-`[any-taint]` (a source, a must) follows the ordinary rows and keeps the layer of the requirement (for example the
-source hit, §9.2). The forward target tail tells the two apart: no other rule-kind flag is needed (`interpreter.md`
-I14, §4.9). This layer rule is argued with the backward W6 (§11.2). A reversed record never has an any-tail
-conclusion.
+Generic reversal is the exact converse when the edge is mark-reversible and
+has exact shape (no nonempty premise exclusion on `*→$` or `*→any`). With empty
+premise exclusion this is `Reverse.rev_exact_of_empty_premise`. This theorem
+covers generic algebra, not end-exact must records or F76's separate reader.
+The native record shape and current exactness limits are in §8.7 and
+[proof-status.md](proof-status.md).
 
-THE REVERSAL OF A CONJUNCTION. The reversal of a conjunctive micro edge (two or more positive literals, §4.6; also a
-conjunctive exit source) gives one micro edge per literal (§9.2), and it gives EVERY result in the demand layer, as
-the reversal of a may: a requirement that reaches one literal is not a converse flow of the conjunction, because the
-conjunction also needs the other literals. So no backward summary through it is a record (§8.7 R1) or crossable (§1,
-Lean `Handoff.CrossB`), and case 3 of §9.2 hands it off to the next forward run, which analyses the callee with every
-member of the premise set. This rule repairs a false positive that existed before F70: R3 reversed such a normal
-backward summary into a forward record of one literal, and that record gives a normal result without the other
-literals (`ap-history.md` F70). Example (`lib(a, b)`: a conjunctive source `ContainsMark(arg0, T1) ∧
-ContainsMark(arg1, T2) → Result.$ (T)`):
+A reversed **may** micro edge (forward target `[any]`) gives every result in the
+demand layer, including `$` results. A reversed source (forward target
+`[any-taint]`) follows ordinary transfer and keeps the requirement's layer.
+The forward target tail identifies the two cases; no rule-kind flag is needed.
+This rule differs from F76's star premise for a cached must-summary conclusion.
 
-```java
-root():    a = srcT1();  b = srcT2();
-           r1 = M(a, b);  y.f.g = r1;  sinkT(y.f.g);   // V1: real
-           r2 = M(a, c);  sinkT(r2);                   // V2: not real (c carries no T2)
-M(p1, p2): ret = lib(p1, p2);  return ret;
-```
-
-With the field limits 1, 2 and 3, forward run 1 reports V1 as a DEMAND entry (the cut of `y.f.g`) and does not report
-V2. Backward run 2 reverses the conjunction in `M` into `(ret, ., $, T) → (p1, ., $, T1)` and
-`(ret, ., $, T) → (p2, ., $, T2)`. With these edges in the normal layer (as before this rule), each backward summary
-is a record and crossable, and forward run 3 applies the one-literal record `(p1, ., $, T1) → (ret, ., $, T)` at
-the second call (with the hand-off of the demand edges `M` gets only the zero demand, so this record is the only
-path through `M`): V2 CONFIRMED, a false positive. With every result in the demand layer, case 3 gives `M` the demand
-patterns of both members, and forward run 3 analyses `M` with the conjunction: V2 is not reported. Argued, not
-modelled (restricted runs with ND edges, §11.2).
-
-The new premise mark is `i.mark` if `f.mark` is abstract (`*` or `*∖X`), else `f.mark`. The new conclusion mark is
-`f.mark` (`*` or `*∖X`) if it is abstract, else `i.mark`.
-
-* The reversal needs a MARK-REVERSIBLE edge: `f.mark` is abstract, or `i.mark` is concrete (Lean: `Reverse.MarkRev`).
-  A mark-producing edge under a `*`-mark premise has no reversal (`no_rev_of_star_conc`). S11 (b) asks that every
-  statement micro edge is mark-reversible; a call binding has the marks `*` to `*` (S10, S11 (a)), so it is
-  mark-reversible too.
-* The reversal of an edge is EXACT (the reversed pairs are exactly the converse pairs) if the edge is mark-reversible
-  and has an EXACT SHAPE: every row of the table except `*/E → $` and `*/E → [any]` with a premise exclusion
-  `E ≠ {}` (Lean: `Reverse.ExactShape`). With the Empty premise exclusion every row has an exact shape
-  (`rev_exact_of_empty_premise`). A normal edge of a forward restricted run has a premise with the `$` tail (for `DR`:
-  `RExact.complete_premise_exact`; for `AnyTaintEx.DRX` under C3, which `AnyTaintEx.emitX_copies` gives:
-  `AnyTaintExKinds.DRX_normal_premise`, a `$` premise that is not a must-premise, or a must-premise, which has the
-  `[any-taint]` tail and a concrete mark, `DRX_must_premise`) or
-  a must-premise (not reversed, §8.7 R3), and a record of run 1 has a
-  premise with the Empty exclusion (§2.2). (For the concrete design. Since F72 a normal edge of a restricted run can
-  also have a FLOW premise, which can have the exclusion `E` of its `*/E` pattern. Its normal leaves have the `*` tail
-  (§7.2: a FLOW tree has no `$` leaf, and its `[any]` leaves are demand), and a leaf `*/E → */E'` has an exact shape,
-  so it reverses exactly too; argued, PENDING §11.2.) So every leaf of a mark-reversible forward record that R3
-  reverses reverses exactly, also a leaf `$ → [any-taint]` with `E = {}` (its premise has the Empty exclusion;
-  `Reverse.rev_exact_of_empty_premise`, with the model kind `.any`). A normal backward summary with a non-zero premise
-  reverses into an exact forward record (`BExact.summary_rev_flow`, `rev_record_exact`; under `Exact.FiltUp`, S11 (c)
-  and (g)).
+Reverse a conjunction into one edge per literal and put every result in the
+demand layer. One literal alone does not establish the conjunction. Such a
+backward summary cannot become a record. For example, a source in `M(a,b)` needs
+`a.$(T1)` and `b.$(T2)`. Reversing either literal as normal and persisting its
+summary would let a later forward call `M(a,c)` confirm a sink without `c.$(T2)`.
+Demand results instead make the next forward run analyse both literals. Full
+restricted ND integration remains open.
 
 ### 9.2 The backward run
 
@@ -2814,13 +2760,14 @@ that entered the callee. Apply the reversed binding back and field limit without
 restriction or satisfaction test: the balanced-return exception. A nonzero
 summary uses normal restriction and satisfaction. Persist eligible raw nonzero
 backward summaries; never persist a zero-premise backward seed path (§8.7).
-Forward records apply through their actual leaf reversal (§9.1).
+Forward records apply through their transient leaf read views (§8.7 R3).
 
 Record a source hit when a concrete requirement reaches an unconditional source
 and its reversed source edge applies. A `*` requirement cannot pass that concrete
 mark gate. A caller's concrete mark passed through a FLOW summary can yield a hit.
 The hits are next forward source seeds. A recorded call needs no inner source
-seed; its record supplies the result. The source filter never removes records.
+seed; its record supplies the result. Applying a read view is not a source hit;
+record a hit only at an actual reversed source edge. The source filter never removes records.
 
 Hand-offs read **stored publications of raw non-crossable leaves**, not arbitrary
 raw exit edges. Crossability is decided before restriction. Normalize
@@ -3007,9 +2954,10 @@ normal with `f` in its exclusion, §4.1.)
   `(x, ., [any-taint], {}, T)`, then `clean(x.f, exact, T)`: the kept fact becomes `(x, ., [any], T)` in the demand
   layer, and `(x, ., [any-taint], {f}, T)` alone would be disjoint from the cleaner and stay normal. This direct
   AP example is not the F74 named field action, whose outside-field keep branch stays normal.
-* THE REUSE OF A SOURCE RECORD. The reversal of a forward record leaf `$ → [any-taint]` is `[any] → $` (§8.7 R3): it
-  applies only to an `[any]` requirement, so it gives the backward run only demand results. No leaf of a must record
-  and no `[any-taint]/E` leaf with `E ≠ {}` is reversed; the other leaves of the record are (§8.7 R3).
+* F76 removes the cached source-record reuse limit: an exact-premise must
+  conclusion uses a concrete `*/E` backward read premise and preserves `E`.
+  A must forward premise instead gives a may `[any]` demand result (§8.7 R3).
+  Native record insertion and generic micro-edge reversal are unchanged.
 * THE HAND-OFF DROPS THE EXCLUSION (§9.2): the backward demand of an `[any-taint]/E` summary conclusion is the pattern
   `[any]`, so the backward run can follow requirements on the excluded locations, which no forward fact reaches. For
   the same reason one step of the narrowing of §6.6 can be coarser on the patterns that the hand-off reads (no
@@ -3022,7 +2970,7 @@ normal with `f` in its exclusion, §4.1.)
 The current rules are defined, but a local demand contract is not a full iteration
 proof. The remaining obligations are:
 
-* mode coverage and contract B for F72/F75, including F74 lowering;
+* mode coverage and contract B for F72/F75, including F74 lowering and F76 read views;
 * the combined `[any-taint]`/field-exclusion closures, entry guard, static rule,
   and restricted conjunction support;
 * current round-to-round narrowing, method exclusion, source-seeded confirmation,
@@ -3061,5 +3009,6 @@ are in [proof-history.md](proof-history.md).
 ## 13. Test plan (TDD)
 
 The test vectors, regressions, and implementation checks are in
-[validation-plan.md](validation-plan.md). Current checks must use the F72/F75
-operations and guards; older closure results apply only to their stated version.
+[validation-plan.md](validation-plan.md). Current checks use the F72/F75 demand
+operations and F76 record views with their guards; older closure results apply
+only to their stated version.

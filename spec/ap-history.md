@@ -7,13 +7,32 @@ interpretation. The tags F*n*, UD*n* and the resolved Q*n* occur only here.
 
 Language: ASD-STE100 Simplified Technical English.
 
-Current checkpoint: F72/F74/F75 rules, local demand and reduction certificates,
+Current checkpoint: F72/F74/F75/F76 rules, local demand and reduction certificates,
 candidate-index equivalence, and base exactness are described in
 [proof-status.md](proof-status.md). The proposals now use the checked current
 demand reference. Status notes in older rows record their review date; the current
 matrix is the source for remaining mode, W6/X, and pipeline/iteration obligations.
 
 ---
+
+## F76: must-summary read views
+
+A normal singleton forward leaf `P.$(U)→x.p.[any-taint]/E(T)` can be read
+backward as `x.p.*/E(T)→P.$(U)`, normal. The star tail accepts admitted field
+chains; the exact target discards their suffix. The old conclusion exclusion
+stays on the view's premise. This is a transient application view, not a native
+initial fact or a new persisted record.
+
+If the forward premise is itself must, weaken it to may `[any]` with no old
+premise exclusion and force the backward result to DEMAND. This avoids claiming
+false normal converse pairs from an end-exact must record. Generic interpreter
+micro-edge reversal and native persistence are unchanged. The forward classifier
+adds the exact-to-must normal-view case: omit its backward demand and keep the
+whole raw record, including E. Must-premise leaves still produce demand.
+Backward crossing selection is unchanged. Select before summary restriction. The new local converse, inclusion, application,
+and layer certificates are in [proof-status.md](proof-status.md). Full current
+closure/iteration integration remains open. Earlier rows below retain their
+original reversal policy and proof scope.
 
 ## 1. Versions
 

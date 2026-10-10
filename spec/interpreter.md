@@ -739,6 +739,9 @@ Go has no exit rules. The summary edge is the fact after each `return`, for a ba
 ### 4.9 Backward run
 
 The backward run applies the AP rules of ap.md §9.2 to the reversed program. This section gives the interpreter part.
+Micro edges use AP §9.1's generic reversal. Cached summary records use the
+separate transient read views of AP §8.7 R3. F76's concrete star premise for a
+must-summary conclusion changes the record reader, not these interpreter forms.
 The interpreter gives only the forward forms; the analyzer core makes the backward forms by a reversal: the reversed
 statement summary, the reversed entry and exit rules, and the reversed call plan (analyzer-core.md §4.5, §4.9). The
 call order below is the reversal of the forward call order of §4.5, stage by stage; the reversal drops every type

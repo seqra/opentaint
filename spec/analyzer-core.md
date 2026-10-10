@@ -19,7 +19,7 @@ The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lea
 is machine-checked. [proof-status.md](proof-status.md) explains constructive
 witnesses and the axiom audit, and lists the limits of each result.
 
-The current AP rules are F72/F74/F75. Checked local contracts, historical
+The current AP rules include F72/F74/F75/F76. Checked local contracts, historical
 protocol proofs, and remaining current pipeline/driver obligations are listed in
 [proof-status.md](proof-status.md). This spec defines the required behavior; it
 does not claim a full current iteration proof.
@@ -90,8 +90,8 @@ document adds:
 | event | One message in the channel of a runner (§5.1). Its HANDLER is the code that the runner runs for it. |
 | subscription | A caller-side record `(caller edge, call statement, added fact)` (`ap.md` §8.4). |
 | publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4): the INTERSECTION of the summary edge with one demand pattern, in the locations AND the marks (`ap-history.md` F71): the premise lies inside `D-c` with its mark, and the mark of the conclusion meets the mark of `D-p` (§4.6). It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). The hand-off reads the publications, not the summary edges before the restriction (§7.3, §7.4). |
-| crossable | A summary leaf `j → g` (one leaf of the conclusion tree of a summary edge, `ap.md` §7.2) that the next run of EITHER direction crosses by a record, with no analysis of the callee (Lean `Handoff.Cross`). All of these hold: (1) the leaf is a leaf of a RECORD (`ap.md` §8.7 R1: a normal summary edge with one premise; a backward premise is not the zero fact); (2) the premise `j` has the tail `$`, or `*` with the Empty exclusion: not `[any]` and not a must-premise `[any-taint]`; (3) `j → g` is mark-reversible (`ap.md` §1); (4) the leaf `g` has no any tail: not `[any]`, and not `[any-taint]` with or without its exclusion. So the reversal of the leaf (`ap.md` §9.1) has a `$` or `*` (Empty) premise too. A backward leaf `jb → gb` is crossable if it is NORMAL (a backward record) and its reversal satisfies (2) to (4) (Lean `Handoff.CrossB`: the reversal `revRec` is always normal, so the test reads the layer of `gb` itself). Then the record of the leaf applies to EVERY CONCRETE added fact (forward) or requirement (backward) that covers one of its locations, by `inside` or by `applicable` (Lean `Handoff.cross_applies`, proved for the concrete runs). Since F72 a restricted run can also have an added fact or a requirement with the mark `*` or `*∖X` (§3 THE MARKS OF A RESTRICTED RUN): a record applies to it only if the premise of the record has the mark `*` (the mark test of `inside` and of `applicable`, `ap.md` §4.3); this form of `cross_applies` is PENDING (§11). The reversal of the leaf is exact (`ap.md` §8.7 R3; Lean `Reverse.rev_exact_of_empty_premise`: the converse pairs; as a record, `ap.md` S14). §7.3 shows that (4) is necessary. |
-| demand edge | A published summary piece of a run that the next run of the other direction cannot reuse as a record: a publication (§4.6) of a summary leaf that is NOT crossable (Lean `Handoff.handF`, `demOfN`). Also, from a backward run, every zero-premise backward edge at the forward entry (§7.4 case 2). The run stores its demand edges when it publishes them (§4.6). The hand-off gives the next run only the demand edges (§7.3, §7.4); each one gives one demand pattern of the next run per member of its premise. The zero demand is not a demand edge: it is implicit for every method key (§4.4). A demand edge is not the same as a DEMAND-LAYER edge (`ap.md` §1): a normal leaf that is not crossable (an `[any-taint]` leaf, for example) is a demand edge too. |
+| crossable | AP §1's raw-leaf classifier. Forward: the generic normal singleton `$`/empty-star, mark-reversible, no-any case, or F76's normal exact-concrete premise to must-concrete conclusion with empty premise exclusion. Backward: a normal nonzero leaf with generic crossable reversal. R1 persists the whole raw edge. F76's view retains conclusion E and matches admitted concrete field requirements; abstract requirements need an abstract premise mark. |
+| demand edge | A stored publication of a raw non-crossable summary leaf (AP §8.5), plus the backward zero-premise case of §7.4. Select on the raw leaf, then restrict. Each publication gives a demand pattern per premise member. Zero demand is implicit. This is distinct from a DEMAND-LAYER edge: must-premise normal leaves produce demand, but normal singleton exact-to-must leaves use their read views and give no backward demand. |
 | DEMAND vulnerability | A vulnerability key whose state in the report is DEMAND after a complete forward run (§7.5): the latest complete forward run reports it, and NO complete forward run so far confirmed it. A key that an earlier run confirmed is CONFIRMED (final), also when the latest run reports it only in the demand layer. Only the sink witnesses of the DEMAND vulnerabilities are sink seeds of the hand-off (§7.3). The backward run also fires the sink seeds of a sink whose end fact a requirement reaches, also of a CONFIRMED vulnerability (§4.5 THE TRIGGER OF AN END FACT). |
 | frontier | The part of the program that the later runs still analyse after a complete run: the method keys with a non-zero initial fact in the run, and the demand edges that the run hands off, per method key (§7.8). The driver logs the frontier of each complete run (THE FRONTIER LOG, §7.8). |
 | storage with subscription | The callee-side store of the publications, with the list of the subscribed runners (§5.2). |
@@ -176,7 +176,7 @@ The mode decides these rules (`ap.md` §6.1):
 | initial facts of an added fact | the policy fact (`ap.md` §6.2) and the request answers | the emission of `ap.md` §6.3 (§4.4; F72 R2): an entry pattern `D-c` with the mark `*` gives its FLOW FORM, one initial fact for every added fact under it (SHARING); a `D-c` with a concrete mark gives `a ∩ D-c` with the mark of `a`, only for an `a` with that mark: an added fact with the mark `*` or `*∖X` under a concrete pattern emits NOTHING (the user's decision: "The added fact can't satisfy the demand"); the zero fact for the zero added fact | the same emission, with the requirement as the added fact: a `*` pattern weakens the requirement to the FLOW form of the pattern (§4.4); after the hand-off normalization no entry pattern has the mark `*∖X` (§7.3); the zero fact enters every callee (rule `zin`) |
 | the marks of the facts | `*` and `*∖X` (the policy facts and their FLOW edges), and concrete marks (the answers, the zero fact, the sources) | NOT CONCRETE since F72: the edges of a FLOW premise (the mark `*`) have the marks `*` and `*∖X` (FLOW trees, `ap.md` §7.2), and their callees can get added facts with these marks; the edges of a concrete premise and of the zero fact have concrete marks. Before F72 every restricted run was concrete | as the restricted forward run |
 | a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`; for a FLOW premise (the mark `*`) also `applicable(j, a)` (`ap.md` §4.3; F72 R3; §5.3 `matches`). This test applies after the restriction in the callee (the INTERSECTION with a demand pattern, in the locations and the marks, `ap.md` §6.4; §4.6). A callee has a non-zero premise only where a demand pattern of it emits one (§4.4): a callee whose only demand pattern is the zero demand publishes no summary of a non-zero premise, and its callers cross it by its records (next row) | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
-| records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`). A CROSSABLE leaf (§1) of the run before is not in the demand (§7.3, §7.4): its record REPLACES the analysis of the callee, and the run crosses the call by the record. A callee of which the forward run before hands off no demand edge (for example, all its summary leaves are crossable), with no seed in its call subtree, is analysed only from the zero fact (§7.8 THE EXCLUSION) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3). A crossable forward leaf is not in the backward demand (§7.3): the backward run crosses the call by its reversal and never enters the callee for it |
+| records (`ap.md` §8.7 R3, R4) | none | same-direction native forward records by `byEntry`; backward records through transient leaf views by `byExit`. Match by `applicable || inside`. A must native record gives demand results on the `applicable`-only part. Crossable leaves replace callee analysis; a method with no demand or subtree seed has only zero analysis | native backward records by `byEntry`; transient views of forward records by `byExit`. An exact-premise must conclusion uses a concrete star premise carrying its exclusion and an exact normal target. A must forward premise becomes a may `[any]` demand target. Match the view itself by `applicable || inside`; never start it as an initial fact. Crossable leaves replace callee analysis; other records can apply alongside demand |
 | mark and position requests, static rule | yes (`ap.md` §4.5, §4.10); a selected-mark cleaner requests T for every same-base abstract fact, before the path test (F75) | no request rule and no static rule (F72 R4). On a fact with the mark `*` or `*∖X`, a concrete mark gate or sink gives nothing; a selected-mark cleaner keeps every same-base fact with mark `*∖(X ∪ {T})`, including disjoint paths (F75, `ap.md` §4.7). No request is raised | as the restricted forward run (the backward run has no sink check) |
 | sinks | the sink check (`ap.md` §4.9) | the sink check; on a `*` or `*∖X` fact it gives nothing (no request, `ap.md` §4.9) | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
@@ -264,7 +264,8 @@ The runner calls these handlers. Each handler is part of one event (§5.1).
 | `addZeroEntry()` | backward: the zero fact of a caller reaches a call to this method | the zero fact is an initial fact (rule `zin`) | §9.2 |
 | `addRequest(premise, request)` | run 1: a callee climbs a request through a link of this method | store it (exact deduplication); check it against every link of this method (§4.6) | E5, E7 |
 | `applySummary(sub, pub)` | the `SubscriptionManager` matched a publication with a subscription of this method | one premise: apply the summary to the added fact (`ap.md` §4.3), then the stages after the callees stage (§4.5). Several premises: the combination of §5.4. | §4.3, E2, E4, E6 |
-| `applyRecord(sub, record)` | a new subscription of this method; the record (already reversed by the `SubscriptionManager` if it is from the other direction) covers or contains its added fact | apply the record, then the stages after the callees stage (§4.5). A record with an `[any-taint]` premise whose premise covers the added fact (`applicable`) but does not lie inside it with the exclusions (not `inside`) gives each result in the demand layer: the result keeps its base, path and mark, and its layer goes up (an `[any-taint]` result becomes `[any]` and loses its exclusion, `ap.md` W8; the must-premise needs every location; Lean `AnyTaintEx.recLayerX`, necessary by `AnyTaintExact.CexApp.cex_app`). Each application with a result is a RECORD CROSSING: it adds one to `counters` (§4.1; the frontier log, §7.8) | §4.3, §8.7 R3, R4 |
+| `applyRecord(sub, record)` | a new subscription; a same-direction native record covers or contains the added fact | apply the record, then the stages after the callees stage (§4.5). A must-premise record gives demand results on its `applicable`-only part; W8 drops a demoted must exclusion. Each application with a result increments `recordCrossings` | AP §4.3, §8.7 R4 |
+| `applyRecordView(sub, view)` | a new subscription; an opposite-direction transient leaf view covers or contains the added fact | apply the view directly with its premise exclusion and result layer, then the stages after the callees stage. Do not emit, start, persist, or demote its premise through `InitialAp`. Count each application with a result as a record crossing | AP §8.7 R3 |
 | `step(quantum)` | a `Work` event | process at most `quantum` worklist items (§4.3) | §6.1 (S6: any order) |
 
 A new initial fact `j` (from any handler) is event E3: the analyzer adds the start edges of `j` to the worklist
@@ -944,7 +945,7 @@ class SubscriptionManager(private val runner: UnitRunner, private val config: Ru
         for (rec in config.records.byExit(sub.callee, a))                    // the other direction (ap.md §8.7 R3)
             if (rec.direction != config.direction)
                 for (rev in rec.reversedAt(a))                               // one reversal per leaf that byExit returns
-                    if (recordApplies(rev.premise.toPattern(), a)) analyzer.applyRecord(sub, rev)
+                    if (recordApplies(rev.premise, a)) analyzer.applyRecordView(sub, rev)
     }
 
     /** The notification of a callee storage: one Delivery event to the channel of this runner. */
@@ -976,26 +977,29 @@ fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean {
 fun recordApplies(p: Pattern, a: Pattern): Boolean = applicable(p, a) || inside(p, a)
 ```
 
-`byEntry` and `byExit` use the lookup `around` (`ap.md` §8.7 R2). `rec.reversedAt(a)` gives the reversal (`ap.md`
-§9.1) of each mark-reversible conclusion leaf of `rec` that `byExit` returns for `a`: R3 reverses a record LEAF BY
-LEAF (`ap.md` §8.7 R3; the `byExit` index keys each leaf path). Two kinds of leaf have no reversal, and `reversedAt`
-gives nothing for them:
+`byEntry` and `byExit` use `around` (AP §8.7 R2). For a reader in the other
+direction, `rec.reversedAt(a)` computes one transient `RecordLeafView` per
+permitted nearby leaf. AP §8.7 R3 owns its shape, mark, exclusion, and layer.
+Use a `Pattern` premise, not an `InitialAp`. Apply it after the ordinary record
+match `applicable || inside`; do not re-use restricted callee `satisfies` alone.
+An exact field requirement below a star view applies by `applicable` even when
+`inside` is false.
 
-* every leaf of a record with an `[any-taint]` premise (a must record): it is END-EXACT only, so its reversal has a
-  pair that is not a converse flow, and it is not an exact backward record (Lean `AnyTaintExact.CexRev.cex_rev`);
-* an `[any-taint]/E` leaf with `E ≠ {}`: its reversal would need an `[any]` premise with an exclusion, and the
-  backward run has none (`ap.md` W8).
+For `P.$(U)→x.f.[any-taint]/E(T)`, the view is
+`x.f.*/E(T)→P.$(U)`, normal. Preserve `E`; discard the incoming suffix at the
+exact target. For a must forward premise, replace its old tail by may `[any]`,
+forget its old exclusion, and force every view result to DEMAND. Such a view
+cannot produce a persisted normal backward record. No backward fact has
+`[any-taint]`. Generic micro-edge reversal remains AP §9.1's operation.
 
-Other permitted leaves reverse by AP §9.1. Exact reversal requires the
-empty-premise-exclusion and mark-reversibility conditions stated there. A canonical
-FLOW premise has empty field exclusion under AP §6.1's hand-off/record guards.
-The current base exactness and shape proofs are in [proof-status.md](proof-status.md);
-full X-record/pipeline integration remains open. An arbitrary nonempty-star
-premise is not justified by the canonical theorem.
-
-The reversal of an `[any-taint]` leaf with the empty exclusion (a leaf `$ → [any-taint]`) has the premise `[any]` in
-the backward run (`ap.md` §9.1). It applies only to an `[any]` requirement, which is in the demand layer (W6), so its
-results are in the demand layer. It gives no normal backward edge: a reuse limit (§11).
+The exact-premise view has a checked local annotated-converse certificate.
+Actual-flow exactness also needs S14 exactness of the native input record.
+Current native-record and generic-reversal proofs do not certify concrete-star
+views as native initial kinds. Full read-view/closure and X integration remain
+open in [proof-status.md](proof-status.md). F76 omits backward demand for a raw
+normal singleton exact-premise must leaf; the normal view replaces its nonzero
+callee analysis. Must-premise leaves still give demand. Select before restriction
+and retain the whole raw normal record, including its conclusion exclusion.
 
 A must-premise needs every location of it, so a summary of an `[any-taint]` premise applies only to an added fact that
 the premise lies INSIDE, with the exclusions of both (`ap.md` §4.3; Lean `AnyTaintEx.SatInsideX`: the exactness needs
@@ -1362,8 +1366,11 @@ Build `SeedIndex` from all witnesses of the report's DEMAND keys after run `n`.
 Confirmed keys add no hand-off sink seed. The interpreter forms supply each
 alternative's patterns. The backward engine can add the end-fact trigger seeds
 defined in AP §9.2 during the run. Retain raw normal single-premise records and
-make their permitted leaf reversals available (AP §8.7). A normal non-crossable leaf
-can be both a same-direction record and a source of demand pieces.
+make their transient leaf read views available (AP §8.7). A normal non-crossable
+leaf can be a same-direction record, have a demand-layer backward view, and
+produce demand pieces. A normal singleton exact-to-must leaf instead gives no
+backward demand and uses its normal star view. Do not synthesize a source hit
+from a view; source hits require actual reversed source edges (AP §9.2).
 
 ### 7.4 Backward run `n + 1` to forward run `n + 2`
 
