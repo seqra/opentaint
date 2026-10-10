@@ -133,3 +133,43 @@ run_elab do
       ApSpec.BaseCleaner.workWitness.val != (33, 1) then
     throw (IO.userError "Executable base-cleaner correction failed.")
   IO.println "Executable base-cleaner correction and batch witnesses passed."
+
+-- Current local demand contracts compute their actual AP operation results.
+#eval do
+  let emitted := (ApSpec.CurrentDemand.sharedEmission 1).premise
+  let reduced := ApSpec.CurrentDemand.reducedWitness.conclusion
+  let expectedEmission : ApSpec.PFact := ⟨3, [], .star ApSpec.Excl.empty, .star⟩
+  let expectedReduction : ApSpec.AFact := ⟨⟨5, [4], .exact, .conc 1⟩, true⟩
+  if emitted != expectedEmission ||
+      emitted != (ApSpec.CurrentDemand.sharedEmission 2).premise ||
+      reduced != expectedReduction ||
+      ApSpec.CurrentDemand.reductionWorkWitness.val != (33, 1) ||
+      !(ApSpec.Handoff.restrictI ApSpec.CurrentDemand.j ApSpec.CurrentDemand.g
+        ApSpec.CurrentDemand.markRejected).isNone ||
+      (ApSpec.CurrentDemand.restrictIndexed
+        (ApSpec.CurrentDemand.demandIndex ApSpec.CurrentDemand.storedDemands)
+        ApSpec.CurrentDemand.j ApSpec.CurrentDemand.g) != [expectedReduction] then
+    throw (IO.userError "Executable current demand certificates failed.")
+  IO.println "Executable current demand certificates and prefix-index witness passed."
+
+-- The current tree reference reads marks, converts any to exact and keeps its key.
+#eval do
+  let t := ApSpec.CurrentTreeReduction.treeWitness.val
+  let actual := ApSpec.Tree.toAFacts 5 t
+  let expected := ApSpec.CurrentTreeReduction.expected
+  if t.mx != [3] || t.excl != ApSpec.Excl.set [8] || !t.demand ||
+      !(actual.all (fun a => expected.contains a)) ||
+      !(expected.all (fun a => actual.contains a)) || actual.length != 2 then
+    throw (IO.userError "Executable current tree reduction certificate failed.")
+  IO.println "Executable current tree reduction certificate passed."
+
+-- The native record shape survives actual reversal, including its mark exclusion.
+#eval do
+  let record := ApSpec.Current.recordShapeWitness.val
+  let expected : ApSpec.PFact × ApSpec.AFact :=
+    (⟨4, [], .star ApSpec.Excl.empty, .star⟩,
+      ⟨⟨3, [], .star (.set [4]), .starEx [1]⟩, false⟩)
+  let added : ApSpec.AFact := ⟨⟨4, [], .exact, .conc 1⟩, false⟩
+  if record != expected || !(ApSpec.applySummary added record.1 record.2).facts.isEmpty then
+    throw (IO.userError "Executable current record-shape certificate failed.")
+  IO.println "Executable current record-shape certificate passed."

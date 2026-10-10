@@ -7,6 +7,12 @@ interpretation. The tags F*n*, UD*n* and the resolved Q*n* occur only here.
 
 Language: ASD-STE100 Simplified Technical English.
 
+Current checkpoint: F72/F74/F75 rules, local demand and reduction certificates,
+candidate-index equivalence, and base exactness are described in
+[proof-status.md](proof-status.md). The proposals now use the checked current
+demand reference. Status notes in older rows record their review date; the current
+matrix is the source for remaining mode, W6/X, and pipeline/iteration obligations.
+
 ---
 
 ## 1. Versions

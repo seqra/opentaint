@@ -90,3 +90,11 @@ import ApSpec.ReviewRootCleaner
 import ApSpec.ReviewBackwardCleaner
 import ApSpec.BaseCleaner
 import ApSpec.ReviewBaseCleaner
+import ApSpec.CurrentDemand
+import ApSpec.CurrentDemandClosure
+import ApSpec.CurrentTreeReduction
+
+import ApSpec.CurrentDefs
+import ApSpec.CurrentExact
+import ApSpec.CurrentHandoff
+import ApSpec.CurrentKinds
