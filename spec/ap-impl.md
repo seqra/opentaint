@@ -40,11 +40,12 @@ The sections below cite these decisions by their id.
 | DD9 | `TypeFilter(may, markPolicy)` is a class in `bidi.ap`. `ApOps.filter` applies `may` to the path, then the mark policy to the concrete marks of a TAINT tree at the root path and at each node of the `[e]` chain below the root, with the type of that level (`MarkPolicy.keeps(mark, elements)`), as today. `TypeFilter.and` is the conjunction of two filters on one base. The backward run applies no filter and no policy. | `interpreter.md` §5.1 applies the mark policy "after the filter", to the same facts. Part II builds `may` with today's `JIRFactTypeChecker`. Today the filter of the element type (`FilterNext` of `[e]`) also reads the marks below `[e]` (§5.5). Only a TAINT leaf has a concrete mark. | §5.5, §26.2 |
 | DD10 | THE VULNERABILITY KEY AND THE WITNESSES. The key is `(rule, method, statement)`: the method of the method key WITHOUT the context, so one sink statement reached in several contexts is one vulnerability (`ap-history.md` F67). `VulnerabilityStore` keeps SEVERAL witnesses per key: one entry per (key, alternative, method key, run, witness shape). A `SinkWitness` names its `alternative` (the index of the sink alternative of the rule at the statement) and its `methodKey`; its pattern (`ap.md` §8.10) is derived from them: `SinkRule.patterns` of that alternative in the forms (§7.12). The facts of an entry are the union of the triggering parts of every witness of that entry. | The confirmation reads only the method key and the shape (the premise set and the layer of each sink edge), and each sink edge stays a leaf. So the merge loses nothing. With the alternative and the method key in the entry, the union never joins two group keys at one literal and never mixes two alternatives (§7.12). | §7.12 |
 | DD11 | FORMS PER METHOD KEY. `JIRMethodForms` caches the call plans and the entry rules per method key. `JIRMethodEntry` caches the statement summaries and the exit rules per method. | The callees of a call and the start filter read the context of the key. `analyzer-core.md` §4.8 now caches these forms per method key too (SI16, RESOLVED (F68)). | §31.2 |
-| DD12 | THREE CONCLUSION KINDS (`ap.md` §7.2). `Reach` (the zero fact: one bit per layer), `FlowTree` (abstract marks: a `*` leaf with the tree exclusion in the normal layer, an `[any]` leaf in the demand layer, the tree mark `*∖X`), `TaintTree` (concrete marks: `$` and `[any-taint]` leaves in the normal layer; `$` and `[any]` leaves in the demand layer; DD16). FLOW follows from the premise (`PremiseKey.isFlow`), REACH from the zero base of the conclusion; a `PremiseSet` (an ND edge) is ALWAYS TAINT. The TYPES enforce W2 and the `$`/`*` split: a `FlowTree` has one flag per node and no concrete mark, so no `[any-taint]` leaf (W8 (a)); a `TaintTree` has no `*` leaf and no mark exclusion, and its ONE exclusion is the exclusion `E` of its `[any-taint]` leaves (a normal tree only; DD16). The constructors check W1 for the demand layer (a demand `FlowTree` and a demand `TaintTree` have the Empty exclusion), so no constructor path, `withRoot` included, makes a bad value. The layer of a `TaintTree` names its any leaves (W8 (b), DD16), so W6 is not a constructor check: the operation that applies a may `[any]` target puts its result in the demand layer (§5.3 `EdgeApplication.put`); the backward run has no `[any-taint]`, so there a normal `TaintTree` has no any leaf (W6; §7.8). The restricted runs have REACH and TAINT only. Proved: `Kinds.kinds_D`, `kinds_DR`, `kinds_DB_taint`, `nd_taint`, `ndz_taint` (`ap.md` §10.10). For run 1 with the static rule (`Statics.DS`: the position answer and the static mark answer) the partition is argued (`ap.md` §11.2). | `ap.md` §7.2 gives the reasons (S7, S8, W2, W6, W8, `Coverage.edge_conc`; for `[any-taint]` in the spec closures, PROVED: `AnyTaintExKinds.D6X_any_conc` (a normal `.any` conclusion of run 1 has a concrete mark; under `AnyTaint.TaintConc`, `AnyTaint.BindNoAny`), `AnyTaintExKinds.D6X_flow_no_any_taint` (a `*` premise has no `[any-taint]` conclusion; under S7, `AnyTaint.TaintConc`, `AnyTaint.BindNoAny`, no `W6.SummaryStar`), `AnyTaintExKinds.D6X_flow_no_excl` (and no exclusion), `AnyTaintExKinds.kinds_D6X`, and the premises of a normal restricted edge `AnyTaintExKinds.DRXs_normal_premise`, `AnyTaintExKinds.DRXs_must_premise`; round 1: `AnyTaintSim.D6T_any_conc`, `AnyTaintSim.D6T_flow_no_any_taint`, `AnyTaintSim.kinds_D6T`, `AnyTaintSim.kinds_DRT`; the exclusion only on a normal `.any` with a concrete mark: `AnyTaintEx.carriesB`, `AnyTaintEx.normX`). The mark gate becomes simple (§5.3): every request comes from a FLOW fact. | §4.1, §5 |
+| DD12 | THREE CONCLUSION KINDS (`ap.md` §7.2). `Reach` (the zero fact: one bit per layer), `FlowTree` (abstract marks: a `*` leaf with the tree exclusion in the normal layer, an `[any]` leaf in the demand layer, the tree mark `*∖X`), `TaintTree` (concrete marks: `$` and `[any-taint]` leaves in the normal layer; `$` and `[any]` leaves in the demand layer; DD16). FLOW follows from the premise (`PremiseKey.isFlow`), REACH from the zero base of the conclusion; a `PremiseSet` (an ND edge) is ALWAYS TAINT. The TYPES enforce W2 and the `$`/`*` split: a `FlowTree` has one flag per node and no concrete mark, so no `[any-taint]` leaf (W8 (a)); a `TaintTree` has no `*` leaf and no mark exclusion, and its ONE exclusion is the exclusion `E` of its `[any-taint]` leaves (a normal tree only; DD16). The constructors check W1 for the demand layer (a demand `FlowTree` and a demand `TaintTree` have the Empty exclusion), so no constructor path, `withRoot` included, makes a bad value. The layer of a `TaintTree` names its any leaves (W8 (b), DD16), so W6 is not a constructor check: the operation that applies a may `[any]` target puts its result in the demand layer (§5.3 `EdgeApplication.put`); the backward run has no `[any-taint]`, so there a normal `TaintTree` has no any leaf (W6; §7.8). The restricted runs have REACH and TAINT only. Proved: `Kinds.kinds_D`, `kinds_DR`, `kinds_DB_taint`, `nd_taint`, `ndz_taint` (`ap.md` §10.10). For run 1 with the static rule (`Statics.DS`: the position answer and the static mark answer) the partition is argued (`ap.md` §11.2). | `ap.md` §7.2 gives the reasons (S7, S8, W2, W6, W8, `Coverage.edge_conc`; for `[any-taint]` in the spec closures, PROVED: `AnyTaintExKinds.D6X_any_conc` (a normal `.any` conclusion of run 1 has a concrete mark; under `AnyTaint.TaintConc`, `AnyTaint.BindNoAny`), `AnyTaintExKinds.D6X_flow_no_any_taint` (a `*` premise has no `[any-taint]` conclusion; under S7, `AnyTaint.TaintConc`, `AnyTaint.BindNoAny`, no `W6.SummaryStar`), `AnyTaintExKinds.D6X_flow_no_excl` (and no exclusion), `AnyTaintExKinds.kinds_D6X`, and the premises of a normal restricted edge `AnyTaintExKinds.DRX_normal_premise`, `AnyTaintExKinds.DRX_must_premise` (every restriction, also `HandoffX.restrictIX` of F70; under `AnyTaintEx.EmitCopiesMarkX`, which `AnyTaintEx.emitX_copies` gives; `DRXs_normal_premise`, `DRXs_must_premise` are the instances of the earlier restriction, the record of the earlier design); round 1: `AnyTaintSim.D6T_any_conc`, `AnyTaintSim.D6T_flow_no_any_taint`, `AnyTaintSim.kinds_D6T`, `AnyTaintSim.kinds_DRT`; the exclusion only on a normal `.any` with a concrete mark: `AnyTaintEx.carriesB`, `AnyTaintEx.normX`). The mark gate becomes simple (§5.3): every request comes from a FLOW fact. | §4.1, §5 |
 | DD13 | THE PREMISE KEY is the `InitialAp` itself for one member, and a `PremiseSet` (a sorted array) for two or more. The union of premise sets (`ApManager.union`, `premiseOf`) DROPS the zero fact: `{zero}` only if every input is `{zero}`, so `{zero, i}` is `{i}`. So a `PremiseSet` is exactly an ND edge: no zero member, every member with a concrete mark, TAINT conclusions only (its `init` checks the members; `MethodEdgeStore` and `RunSummaryStore` check the kind). Proved equivalent to the list model of the Lean `ND.DN`: `NDZero.dnz_to_dn`, `dn_to_dnz` (`ap.md` §10.10). | `ap.md` §7.1, §4.6; `ap-history.md` F65. One member is the common case: no wrapper, no list. The zero fact adds no condition: it is at every node that an edge reaches. | §3.4, §5.1 |
 | DD14 | ONE TRIE. `TrieNode<P>` is the one hash-consed node; the payload `P` is the leaf of the node (`FlowLeaf` or `TaintLeaves`), with its algebra `LeafAlgebra<P>`. ONE set of generic algorithms (`TrieOps.kt`; the code is in §4 and §5.5 to §5.7): merge and delta (T1, T4), maps, prepend and chain, `minusNode`, `graft`, the fold (T5), the subsumption, the cut (`ap.md` §4.4), the path filter, interning, `boundedDepth`; and one path walk (`walkPath`). No other depth bound: today's `limitFieldAccess`, `limitElementAccess` and `containsStatic` are not ported (§2, §4.2). Per kind only: the edge application, the gate, `clean`, `checkMark`, `satisfying`/`applySummary`, `restrict`, `emit`. The other shared utilities: `MarkGate` (one mark gate), `Results` (one result collector per kind), `Facts.groupKey` (one store key), and the two standing joins `KaryJoin` (k slots of one type) and `StandingJoin` (two sides with index lookups). | No non-trivial logic is written twice. Today's `AccessTree.AccessNode` algorithms are adapted once (§2). The two joins differ in what they own (§7.10). | §4, §5, §7.10 |
 | DD15 | NAMES. `applyCompiledEdge` (with `EdgeApplication`) is the TREE FORM of `concat` of `ap.md` §4.1 ("delta-concat"): it computes the part of each fact that the premise selects (case `below` or `above`) and concatenates it with the target. The reference keeps the spec name `concat`. `MarkCheck`/`checkMark` is the one check of a mark literal: sinks, conjunction literals, conjunctive sinks. `MarkGate` is the one mark gate (`ap.md` §4.1 steps 4 and 5) of `applyCompiledEdge`, `checkMark` and `satisfying`. | `ap-history.md` F64. | §5.3, §5.8 |
-| DD16 | THE `[any-taint]` TAIL (`ap.md` §2.3 W8; `ap-history.md` F69), FORWARD ONLY. `Tail.ANY_TAINT` names it in the per-path forms, in `InitialAp` (a must-premise) and in the TARGET of a source micro edge (no micro edge has the premise `[any-taint]`, `interpreter.md` I14). The backward run has no `[any-taint]`: W6 puts every backward any leaf in the demand layer, as before F69. A node has NO NEW FIELD for it: the any marks of a TAINT node (`TaintLeaves.any`) are `[any-taint]` leaves in a NORMAL tree and `[any]` leaves in a DEMAND tree, so the layer gives the name (W8 (b), `ap.md` §7.2 the TAINT row). THE EXCLUSION (`ap.md` W8, §4.1): a normal TAINT tree carries ONE exclusion `E` of first accessors for its `[any-taint]` leaves (`TaintTree.exclusion`, in the group key, as the exclusion of a FLOW tree; Lean `AnyTaintEx.XFact`, `carriesB`); the `$` leaves do not read it, and a demand tree has the Empty exclusion. The exclusion REPLACES the demotion at an exclusion: the keep edge of a strong write, a `*/E'` summary or record and the `atAndBelow`/`below` cleaners one accessor below the fact give `[any-taint]` with a larger exclusion, normal (§5.3, §5.6). Only these demote `[any-taint]` to `[any]` (`ap.md` §2.2): the field-limit cut; a cleaner `part` row other than `atAndBelow`/`below` one accessor below the fact (the `exact` cleaner at or below the fact, any cleaner two or more accessors below it); a may target (the `[any]` target of a pass rule); a demand input (a demand fact, summary or record); the must-record demotion. Each one is the move of the leaf to the demand tree with the exclusion dropped (`ap.md` §3.1; Lean `AnyTaintEx.limitFX`, `partX`, `w6tX`, `layerX`, `recLayerX`). A FLOW tree has no `[any-taint]` (W8 (a)). W6 is a rule of the operations: a may `[any]` target (a pass rule) puts its result in the demand layer, a taint edge (a source, `ap.md` S15) keeps the layer of its input (§5.3). The premise key holds the tail and the exclusion, so a must-premise `(x, p, [any-taint], E, T)` and the `[any]` premise `(x, p, [any], T)` are two keys (§3.4). No rule-kind flag: the reversal of a micro edge reads its FORWARD target tail (`MicroEdge.may`, Part II §23.1): a forward `[any]` target (a may) gives every result in the demand layer, also backward (`interpreter.md` I14, §4.9). | The model has one kind `.any` with the layer as the must flag of a conclusion (`ap.md` §10.11, §11.2: a normal `.any` is `[any-taint]`, a demand `.any` is `[any]`) and the exclusion of `AnyTaintEx.XFact` on a normal `.any` with a concrete mark, so the trie and the model agree, and no node or interning code changes. The TAINT group keeps one normal tree per exclusion (T1, T2, T3 as for FLOW, §4.3). T5 and the subsumption of `ap.md` §8.1 act in a normal TAINT tree too, but an `[any-taint]` leaf absorbs and subsumes only `[any-taint]` leaves with its mark (below it through an accessor that its exclusion admits; at its node with a superset exclusion), NEVER a `$` leaf: a later demoting cleaner row can move the `[any-taint]` leaf to the demand tree, and the `$` leaf must stay normal (`(x, ., [any-taint], T)` and `(x, .g, $, T)`, then the `exact` cleaner at `x.f`: `sink(x.g)` stays CONFIRMED; `ap-history.md` F69). In a demand tree an `[any]` leaf absorbs the `$` and the `[any]` leaves below it, as before (§4.3, §4.4). | §3.2, §3.4, §4.1, §4.3, §4.4, §5.3, §5.4, §5.6, §5.7, §5.9, §7.8, §7.12, §23.1 |
+| DD16 | THE `[any-taint]` TAIL (`ap.md` §2.3 W8; `ap-history.md` F69), FORWARD ONLY. `Tail.ANY_TAINT` names it in the per-path forms, in `InitialAp` (a must-premise) and in the TARGET of a source micro edge (no micro edge has the premise `[any-taint]`, `interpreter.md` I14). The backward run has no `[any-taint]`: W6 puts every backward any leaf in the demand layer, as before F69. A node has NO NEW FIELD for it: the any marks of a TAINT node (`TaintLeaves.any`) are `[any-taint]` leaves in a NORMAL tree and `[any]` leaves in a DEMAND tree, so the layer gives the name (W8 (b), `ap.md` §7.2 the TAINT row). THE EXCLUSION (`ap.md` W8, §4.1): a normal TAINT tree carries ONE exclusion `E` of first accessors for its `[any-taint]` leaves (`TaintTree.exclusion`, in the group key, as the exclusion of a FLOW tree; Lean `AnyTaintEx.XFact`, `carriesB`); the `$` leaves do not read it, and a demand tree has the Empty exclusion. The exclusion REPLACES the demotion at an exclusion: the keep edge of a strong write, a `*/E'` summary or record and the `atAndBelow`/`below` cleaners one accessor below the fact give `[any-taint]` with a larger exclusion, normal (§5.3, §5.6). Only these demote `[any-taint]` to `[any]` (`ap.md` §2.2): the field-limit cut; a cleaner `part` row other than `atAndBelow`/`below` one accessor below the fact (the `exact` cleaner at or below the fact, any cleaner two or more accessors below it); a may target (the `[any]` target of a pass rule); a demand input (a demand fact, summary or record); the must-record demotion. Each one is the move of the leaf to the demand tree with the exclusion dropped (`ap.md` §3.1; Lean `AnyTaintEx.limitFX`, `partX`, `w6tX`, `layerX`, `recLayerX`). A FLOW tree has no `[any-taint]` (W8 (a)). W6 is a rule of the operations: a may `[any]` target (a pass rule) puts its result in the demand layer, a taint edge (a source, `ap.md` S15) keeps the layer of its input (§5.3). The premise key holds the tail and the exclusion, so a must-premise `(x, p, [any-taint], E, T)` and the `[any]` premise `(x, p, [any], T)` are two keys (§3.4). No rule-kind flag: the reversal of a micro edge reads its FORWARD target tail (`MicroEdge.may`, Part II §23.1): a forward `[any]` target (a may) gives every result in the demand layer, also backward (`interpreter.md` I14, §4.9). The reversal of a literal of a conjunctive edge gives every result in the demand layer too (F70, DD17 (4): `MicroEdge.conjunctive` marks a reversed form, not a rule kind). | The model has one kind `.any` with the layer as the must flag of a conclusion (`ap.md` §10.11, §11.2: a normal `.any` is `[any-taint]`, a demand `.any` is `[any]`) and the exclusion of `AnyTaintEx.XFact` on a normal `.any` with a concrete mark, so the trie and the model agree, and no node or interning code changes. The TAINT group keeps one normal tree per exclusion (T1, T2, T3 as for FLOW, §4.3). T5 and the subsumption of `ap.md` §8.1 act in a normal TAINT tree too, but an `[any-taint]` leaf absorbs and subsumes only `[any-taint]` leaves with its mark (below it through an accessor that its exclusion admits; at its node with a superset exclusion), NEVER a `$` leaf: a later demoting cleaner row can move the `[any-taint]` leaf to the demand tree, and the `$` leaf must stay normal (`(x, ., [any-taint], T)` and `(x, .g, $, T)`, then the `exact` cleaner at `x.f`: `sink(x.g)` stays CONFIRMED; `ap-history.md` F69). In a demand tree an `[any]` leaf absorbs the `$` and the `[any]` leaves below it, as before (§4.3, §4.4). | §3.2, §3.4, §4.1, §4.3, §4.4, §5.3, §5.4, §5.6, §5.7, §5.9, §7.8, §7.12, §23.1 |
+| DD17 | THE HAND-OFF OF DEMAND EDGES ONLY (`ap-history.md` F70; `ap.md` §6.4, §8.5, §8.7, §9.2; `analyzer-core.md` §7.3, §7.4). Three AP parts. (1) THE RESTRICTION IS AN INTERSECTION (F70 D4): `ApOps.restrict` gives a result only if the premise lies INSIDE `D-c` (`insideLoc`, with the exclusion of the premise; before F70: if it overlaps `D-c`), and at the path of `D-p` it MEETS the tails: `[any] ∩ $ = $`, `[any-taint]/E ∩ $ = $`, `[any-taint]/E ∩ */E2 = [any-taint]/(E ∪ E2)`, above a `*/E2` `D-p` the chain `[any-taint]/E2`; a demand `[any]` against `*/E2` stays `[any]` (W2: the cell (a) of `Handoff.RExc`; it adds a location only when `E2 ≠ {}`, and no run meets that case: no demand pattern after run 1 has a `*` tail, see the reason). (2) THE CROSSABLE TEST (F70 D2): the reference forms `crossK`, `cross`, `crossReversed` (§6) and their tree form `ApOps.demandPart` (§5.9) find the summary leaves that the next run cannot use as a record: a leaf is crossable if it is normal, its premise is `$` or `*` with the Empty exclusion (not `[any]`, not a must-premise), it is mark-reversible, and its reversal has such a premise too (so the leaf has no any tail). A BACKWARD leaf is crossable if it is normal and its forward reversal is crossable (Lean `Handoff.CrossB`). (3) THE DEMAND EDGES (F70 D1, D3): `RunSummaryStore` keeps, DURING THE RUN, the PUBLISHED pieces of the leaves that are not crossable (`addDemand`, `demandEdges()`) beside the summaries before the restriction (`all()`, which only the records read, R1). The hand-off (`analyzer-impl.md` `HandOff`) reads only `demandEdges()`. The restriction query is `DemandStore.covering`. Two rules of the FORMS (Part II) go with it. (4) THE REVERSAL OF A CONJUNCTION (`ap.md` §9.2; Part II §23.1, §23.2): the reversal of a conjunctive edge (two or more positive literals: a conjunctive source at a call or at an exit) gives EVERY result in the demand layer, as the reversal of a may (`MicroEdge.may`, with `MicroEdge.conjunctive`). (5) THE TRIGGER OF AN END FACT (`ap.md` §9.2; Part II §23.4 to §23.6): a reversed end-fact edge keeps its sink alternative (at a call `CallStage.Edges.trigger`; at a method boundary the sinks of the reversed `RuleStatement`, found by the forward form of the edge), so that the backward run fires the sink seeds of that alternative when the edge applies to a requirement. NO CHANGE: R1 (every crossable leaf is a leaf of a persisted record, §7.8), the zero demand of every method key (F70 D5), the field limits. The seeds of a backward run are the sinks of the DEMAND entries of the report after the forward run (reported by the latest complete forward run, confirmed by no complete forward run so far; F70 D6, `ap.md` §8.10; the driver, `analyzer-impl.md` `HandOff.toBackward`), and the trigger seeds of (5). | The user's rule (F70 D1): after run 1, every summary edge of a run is the intersection with a demand edge of the run before it, and a complete edge is a record, never a demand edge. THE EXCLUSION: a method key of which the forward run hands off no demand edge, with no seed of the next backward run in its call subtree, has only the zero fact as an initial fact in the next forward run (`HandoffExclusion.exclusion_theorem`, `HandoffMain.exclusion_canon`; the sufficient condition "every summary leaf of the method key is crossable": `HandoffExclusion.exclusion_round`; program WRAP, `HandoffCases.Wrap.wrap_old_vs_new`). Over several rounds the one-round theorem applies again (argued; each step is a theorem: with only the zero demand the method key publishes nothing, `HandoffCases.restrictI_none`, so it hands off no demand edge again). THE NARROWING: every demand pattern with an exit pattern (case 3 of `ap.md` §9.2) of a forward run lies inside a demand pattern of the forward run before it, of the same method key, as locations, with NO exception (`HandoffNoStar.narrowing_canon_loc_exact`; the form with the cells of `Handoff.RExc`: `HandoffMain.narrowing_canon_loc`). The cells add no location: run 1 hands off no pattern with a `*` entry tail (every normal FLOW leaf of run 1 is crossable, and a demand FLOW leaf is `[any]` by W2: `HandoffNoStar.handF_run1_nonstar`), and with concrete seeds with no `*` tail (a sink pattern is `$` or `[any]`) no demand pattern of a forward run has a `*` tail (`HandoffNoStar.canon_dem_nonstar`). So the forward narrowing is exact from forward run 3 (`Handoff.handF_narrow_DR_exact`, `HandoffNoStar.narrowing_canon_fwd_exact`), and so is the backward narrowing (`HandoffNoStar.narrowing_canon_back_exact`; after run 1 only the cell (a) at a `*/{}` premise of run 1 is left, and it adds no location: `HandoffNoStar.rexc_empty_loc`, `narrowing_canon_back_loc`). The zero demand and the zero-premise backward patterns `(gb, none)` (the seed paths) are not narrowed: as locations they become smaller when the backward field limit grows (argued), and their count can grow. Each forward run still reports every real vulnerability that no earlier forward run confirmed (`HandoffMain.iteration_generalN`, with `C k`: confirmed by some forward run up to `k`). With the `[any-taint]` tail and its exclusion (the spec closures) the iteration (`HandoffXIter.iteration_generalNX`), the exclusion (`HandoffXMain.exclusion_roundX`, `exclusion_canonX`) and the round narrowing (`HandoffXMain.narrowing_canonX_loc`) are proved too. On the view of the hand-off, which drops the exclusions, the narrowing is coarser (the `Dropped` locations of `narrowing_canonX_loc`); with `*`-free seeds it is exact on the exit side, and on the entry side except a premise with the exclusion Universe (`HandoffNoStar.narrowing_canonX_loc_exact`): a precision point. (4) is the fix of a false CONFIRMED that existed before F70: the OR-reversal gave a NORMAL backward edge to ONE literal, R1 persisted it, and R3 reversed it into a forward record that does not need the other literals (the program of Part II §33.3, the third test; argued: the model has no restricted run with ND edges). (5): an end fact exists only after its sink triggers, so its reversal demands the trigger, also when the vulnerability of the sink is CONFIRMED (argued: the model has no end facts). The AP gives the test and the pieces, because both read tails, layers and the tree form; the driver only collects them. | §5.9, §6, §7.6, §7.7, §7.8, §7.12, §8 (tests 7, 17, 22, 24), §23.1 to §23.8, §33, §34 SI21 |
 
 ---
 
@@ -80,7 +81,7 @@ and the stores of `ap.md` §8. Part I adds these members. `analyzer-impl.md` and
 | `TrieNode<P>`, `TrieLeaf`, `FlowLeaf`, `TaintLeaves`, `LeafAlgebra<P>`, `FlowAlgebra`, `TaintAlgebra`, `TrieInterner<P>`, `walkPath` | The one trie and its generic algorithms (DD14). | §4 |
 | `FlowGroup`, `TaintGroup`, `ConclusionGroup`, `StoreInterners` | The merge rules T1 to T5 and the subsumption of `ap.md` §8.1, per kind and for all kinds of one premise key. | §4.3 |
 | `ApMode`, `ApOut` (`result(f: Facts)`), `CollectingOut` | The constants of a run that the operations read; the receiver of the results and of the requests. | §3.2, §5.2 |
-| `ApOps.applyEdge` (with `may`), and inside it `applyCompiledEdge`, `EdgeApplication`, `MarkGate` | The micro edge on all paths of one `Facts` (`ap.md` §7.3; DD15). `may = true`: every result in the demand layer (a micro edge whose forward target is `[any]`, `MicroEdge.may`, Part II §23.1). | §5.3 |
+| `ApOps.applyEdge` (with `may`), and inside it `applyCompiledEdge`, `EdgeApplication`, `MarkGate` | The micro edge on all paths of one `Facts` (`ap.md` §7.3; DD15). `may = true`: every result in the demand layer (a micro edge whose forward target is `[any]`, and since F70 the reversed literal of a conjunctive edge: `MicroEdge.may`, Part II §23.1). | §5.3 |
 | `ApOps.satisfying(a, j, mode, record = false)` | The part of an added fact whose facts satisfy the premise `j` (P4 of `analyzer-core.md` §5.3, DD4). | §5.4 |
 | `Tail.ANY_TAINT`, `Tail.isAny` | The tail `[any-taint]` of `ap.md` W8 and the any-tail test of `ap.md` §3.4 (K7, DD16). | §3.2 |
 | `ApOps.startFact(i)`; the reference `startFact(i)` | `ap.md` §6.5: a must-premise `(x, p, [any-taint], E, T)` starts as itself, in the normal layer, with its exclusion (Lean `AnyTaintEx.startX`). It occurs only in a forward restricted run, so no row reads the direction: no direction parameter (A1). | §5.9, §6 |
@@ -94,14 +95,16 @@ and the stores of `ap.md` §8. Part I adds these members. `analyzer-impl.md` and
 | `ApOps.checkMark(c, p, mode): MarkCheck` (`None`, `Request`, `Holds(facts, covered)`) | The one check of a mark literal: a sink, a conjunction literal, a literal of a conjunctive sink (`ap.md` §4.6, §4.9; DD15). | §5.8 |
 | `ApOps.without(c, part)`, `ApOps.withoutMarks(c, marks)`, `ApOps.targetTree(target, layer)`, `ConjunctiveEdge` | The exact removal of a part (the global-state rule of `interpreter.md` §4.7 step 3); the removal of every leaf with a mark of a set, at every depth and with both tails (the entry marks, `interpreter.md` §4.7 step 4); a one-leaf TAINT tree for a conjunction target or an end fact; the conjunctive micro edge. | §5.8 |
 | `ApOps.zero(layer): Reach`, `ApOps.policy(added)` | The end facts take no input fact: on a trigger they apply to the zero fact in the layer of the sink edge or of the combination (`interpreter.md` §4.1); `ap.md` §6.2 on one `Facts`. | §5.9 |
-| `ApOps.restrict(j, g, d): List<Facts>` | `ap.md` §6.4 on one value gives up to two values: an `[any-taint]` leaf of `g` above `D-p` moves to `D-p.path` with no exclusion, the part at or below `D-p` keeps the exclusion of `g` (one exclusion per tree; Lean `AnyTaintEx.restrictConcX`). | §5.9 |
+| `ApOps.restrict(j, g, d): List<Facts>` | `ap.md` §6.4 on one value, AS AN INTERSECTION (F70 D4; DD17): the premise must lie inside `D-c`, and the tails meet at the path of `D-p`. One tree has one exclusion, so one value gives up to three values: the leaves at or below `D-p` keep the exclusion `E` of `g`, the `[any-taint]` leaves at a `*/E2` `D-p` get `E ∪ E2`, the chain of the leaves above `D-p` gets `E2` or none (Lean `Handoff.restrictI`; with the exclusion `HandoffX.restrictIX`, `meetExX`, `chainExX`). | §5.9 |
+| `ApOps.demandPart(premise, g, direction)`; the reference forms `crossK`, `cross`, `crossReversed` | The leaves of a summary value that are NOT crossable: the hand-off gives their published pieces as demand edges (F70 D2, D3; Lean `Handoff.Cross`, for a backward leaf `Handoff.CrossB`, `handF`, `demOfN`). (The premise test of the restriction, `insideLoc`, is a reference form of `ap.md` §6.4; Lean `Handoff.insideLocB`, `HandoffX.insideLocXB`.) | §5.9, §6 |
+| `RunSummaryStore.addDemand(premise, piece)`, `demandEdges()` | The demand edges of a run: the published pieces of the non-crossable leaves (F70 D3), stored during the run at each summary delta (`analyzer-impl.md` `summaryDelta`). The hand-off reads only them; `all()` stays for the records (R1). | §7.6 |
 | `ApOps.requestAction(i, kind, a, caller): RequestAction` | The AP rule of one (request, link) pair (`ap.md` §4.5, §4.10 items 2 to 4). | §5.10 |
 | `ApOps.leaves(f)`, `ApOps.leavesNear(f, p)` | The per-path view of one `Facts`, and its leaves that overlap `(f.base, p, *, {}, *)` (one walk of `p`). The links and the tests read it. | §5.11 |
 | `ApManager(cancellation, refManager)`, `ApManager.softRefs`, `ExclusionSet.of(a: AccessorIdx)`, `InitialAp.manager` (internal), `ApManager.newInterners()`, `ApManager.flowTree`, `taintTree`, `factsOf` | The `RefManager` of the memory guard holds the soft trie tables (DD5); the exclusion `{a}` of one keep edge (`interpreter.md` §2.1 `strongKeep`); `Record.reversedAt` interns the reversed premise; the trie interners of one store (DD5); the canonical factories of the three kinds. | §3.2, §3.4, §4.5, §5.1 |
 | `MethodEdgeStore(m, method, lm, fieldLimit)`, `edgesAt` | The edges per kind (`ap.md` §8.1), with the W3 assert; two queries of the edges at a statement for the tests (trace resolution is out of scope, `ap-history.md` F67). | §7.3 |
 | `AddedFactStore` (the key per kind, `add` returns the delta, `overlapping(base, path)`, `links()`) | DD4. The request join of `ap.md` §8.8 and the support at the barrier read the links. | §7.5 |
-| `DemandStore.Builder`; the implicit zero demand of `near` | The driver builds the store before the run (`analyzer-core.md` A4); every method key has the zero demand (`analyzer-core.md` §4.4). | §7.7 |
-| `RecordStore` (an interface), `PersistentRecordStore`, `view()`, `persist(direction, summaries)`, `Record.reversedAt(a)` | A run reads the store through a read-only view (`analyzer-core.md` A4). The driver persists the records at a barrier (R1: every normal one-premise summary, in a forward run also the must records and the `[any-taint]` leaves; a backward run has no `[any-taint]`). A reader in the other direction reads the reversed records (R3: none for a must record and for an `[any-taint]` leaf with a non-empty exclusion). | §7.8 |
+| `DemandStore.Builder`; the implicit zero demand of `near`; `DemandStore.covering` | The driver builds the store before the run (`analyzer-core.md` A4); every method key has the zero demand (`analyzer-core.md` §4.4; F70 D5: no change). `covering`: the restriction query of the intersection, the patterns whose `D-c` is at or above the premise (F70 D4). | §7.7 |
+| `RecordStore` (an interface), `PersistentRecordStore`, `view()`, `persist(direction, summaries)`, `Record.reversedAt(a)` | A run reads the store through a read-only view (`analyzer-core.md` A4). The driver persists the records at a barrier (R1: every normal one-premise summary, in a forward run also the must records and the `[any-taint]` leaves; a backward run has no `[any-taint]`). A reader in the other direction reads the reversed records (R3: none for a must record and for an `[any-taint]` leaf with a non-empty exclusion). Every crossable leaf (F70 D2) is a leaf of a persisted record, so the next run crosses its method key by the record and the hand-off gives no demand edge for it (§7.8). | §7.8 |
 | `KaryJoin<T>`, `StandingJoin<A, B>(nearB, nearA, meet)` (`newA`, `newB`); `ConjunctionStore.add(rule, statement, arity, literal, input)`, `Input`, `Combination`, `ndJoin<S>(NdKey)`, `NdSummaryJoin` | The two standing joins: k slots of one type (the literals of a conjunction or of a conjunctive sink, the members of a summary with several premises; `ap.md` §8.9, `analyzer-core.md` §5.4), and two sides with index lookups (the request × link join of `ap.md` §8.8). | §7.10 |
 | `RequestKind.Position(path: PathNode)` (the type of `analyzer-core.md` §10) | The path of a position is an interned `PathNode` (§3.3), not a list: the key of `RequestStore`, the argument of `ApOut.positionRequest` and of `ApManager.position`. | §5.2, §7.9 |
 | `SourceHitStore.entries()` | The driver reads the source hits at the barrier. | §7.11 |
@@ -136,7 +139,7 @@ core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/da
   │ ├ Clean.kt             the cleaner per kind (§5.6)
   │ ├ Limit.kt             the field limit, the cut (§5.7)
   │ ├ MarkCheck.kt         MarkCheck, checkMark, without, targetTree (§5.8)
-  │ ├ Demand.kt            zero, startFact, policy, emit, restrict (§5.9)
+  │ ├ Demand.kt            zero, startFact, policy, emit, restrict, demandPart (§5.9)
   │ ├ Primitives.kt        Cleaner, CleanReach, TypeFilter, MarkPolicy, ConjunctiveEdge, RequestAction
   │ └ Reference.kt         the per-path forms of ap.md §3.4, §4.1, §6.3, §6.4 and of §6 (DD2)
   └ store/
@@ -1286,7 +1289,7 @@ inline fun <P : TrieLeaf> TrieNode<P>.walk(path: IntArray, onPrefix: (Int, TrieN
 | `applyCompiledEdge` (§5.3) | the case `above` | the subtree U of the case `below` |
 | `satisfying` (§5.4) | `inside`: the leaves above `j` | `applicable`: the subtree at `j`; `inside`: the leaves at `j` |
 | `checkMark` (§5.8) | the leaves above the pattern | the leaves at and below the pattern |
-| `restrict`, `emit` (§5.9) | the moved any marks; the emissions above `D-c` | the node of `D-p`; the meet and the facts below `D-c` |
+| `restrict`, `emit` (§5.9) | the moved any marks; the emissions above `D-c` | the node of `D-p`: the meet of the tails and the leaves below `D-p` (F70); the meet and the facts below `D-c` |
 | `PathTrie` (§7.2) | `lookupPrefixes` | `find` (`lookupExtensions`, `around`) |
 
 `clean` (§5.6) does not use `walkPath`: it rebuilds the spine of `x.p` with its own recursion (`cleanSpine`).
@@ -1467,13 +1470,14 @@ class ApOps(val manager: ApManager) {
     /** `may`: the micro edge is a MAY (its FORWARD target is `[any]`: a pass rule with an `AnyField` target, Part II §23.1
      *  `MicroEdge.may`), so every result is in the demand layer. Forward W6 gives it anyway (every result has the `[any]`
      *  tail); backward it is the rule of the reversed may edge, also for a `$` result (interpreter.md I14, §4.9 the
-     *  pass-rule row; argued, ap.md §11.2). The engine passes `me.may` (analyzer-impl.md `EngineAlgebra`). */
+     *  pass-rule row; argued, ap.md §11.2), and of the reversed literal of a conjunctive edge (F70, THE REVERSAL OF A
+     *  CONJUNCTION, Part II §23.1 `MicroEdge.conjunctive`). The engine passes `me.may` (analyzer-impl.md `EngineAlgebra`). */
     fun applyEdge(c: Facts, premise: PremiseKey, e: PathEdge, statementEdge: Boolean, mode: ApMode, out: ApOut, may: Boolean = false) {
         val ce = e.compiled ?: manager.compile(e).also { e.compiled = it }        // the compile cache of the edge; `ap.md` §7.5 has no walk memo (Part II §34 SI18)
         applyCompiledEdge(c, ce, edgeDemand = may, staticAt = staticIdentityDepth(c, premise, ce, statementEdge, mode), mode, out)
     }
     // Part I §5.4: satisfying, applySummary, applyCombination.   Part I §5.5: filter.   Part I §5.6: clean.
-    // Part I §5.7: limit.   Part I §5.8: checkMark, without, targetTree.   Part I §5.9: zero, startFact, policy, emit, restrict.
+    // Part I §5.7: limit.   Part I §5.8: checkMark, without, targetTree.   Part I §5.9: zero, startFact, policy, emit, restrict, demandPart.
     // Part I §5.10: requestAction.   Part I §5.11: reverse, leaves.
 }
 ```
@@ -2422,7 +2426,7 @@ class ConjunctiveEdge(val literals: List<Pattern>, val target: PathFact) {
 `TrieOps.chain(m, path, spine, tip)` builds one leaf per depth on `path` and the node `tip` at its end (`null` if
 everything is empty); `minusNode` walks `part` inside `c`. Both are in §4.2.
 
-### 5.9 `zero`, `startFact`, `policy`, `emit`, `restrict` (`ap.md` §2.4, §6.2–§6.5, §7.4)
+### 5.9 `zero`, `startFact`, `policy`, `emit`, `restrict`, `demandPart` (`ap.md` §2.4, §6.2–§6.5, §7.4, §9.2)
 
 ```kotlin
 /** The zero fact in a layer (ap.md §2.4). The END FACTS of a sink take no input fact: on a trigger they apply
@@ -2518,42 +2522,153 @@ fun ApOps.emit(d: DemandPattern, added: Facts): List<InitialAp> {
     }
 }
 
-/** ap.md §6.4 on a whole value (§7.4, RStore.restrictTree). Cost |D-p.path| + 1 + width; kept subtrees are shared. A
- *  restricted run has REACH and TAINT only. An any leaf above D-p moves to D-p.path IN THE SAME LAYER: `(D-p.path, g.tail)`
- *  (an `[any-taint]` leaf of a normal tree stays `[any-taint]`: every location below it carries the mark), or `$` for a
- *  `$` D-p. The premise `j` keeps its tail (a must-premise stays one), and the layer stays (Lean restrictU,
- *  AnyTaint.RestrictFact, restrictU_fact). D-c and D-p are read as locations (no pattern has `[any-taint]`, ap.md W8 (d);
- *  `DemandStore.Builder.add` asserts it, Part I §7.7).
- *  THE EXCLUSION (A2; Lean AnyTaintEx.restrictX, restrictConcX, the vectors AnyTaintEx.Vec.restrict_vectors): the
- *  premise `j` must overlap `D-c` with its exclusion (`overlap` reads the exclusion of an `[any-taint]` j, ap.md §3.4); an
- *  `[any-taint]/E` leaf of `g` above `D-p` (`D-p.path = q ++ r`) moves only if E admits `r`, and the moved any leaf has
- *  no exclusion (every location below `D-p` is in it); the part at or below `D-p` keeps E. One tree has one exclusion, so
- *  the result is two values when both parts exist and E is not Empty; else one value, as before. Contract C5 for the
- *  conclusions with no `*` tail: `AnyTaintExCov.restrictX_contractNS`. */
+/** ap.md §6.4 on a whole value (§7.4): THE RESTRICTION AS AN INTERSECTION (F70 D4, DD17; Lean Handoff.restrictI,
+ *  restrictConcI, meetConcK; with the exclusion of `[any-taint]` HandoffX.restrictIX, restrictConcIX, meetExX, chainExX).
+ *  Cost |D-p.path| + 1 + width, as before; kept subtrees are shared. A restricted run has REACH and TAINT only. The
+ *  premise `j` keeps its tail and its exclusion (a must-premise stays one), and the layer of `g` stays. D-c and D-p are
+ *  read as locations (no pattern has `[any-taint]`, ap.md W8 (d); `DemandStore.Builder.add` asserts it, Part I §7.7).
+ *  THE PREMISE: `j`, with its exclusion, must lie INSIDE `D-c` (the reference `insideLoc` of §6.4; Lean
+ *  Handoff.insideLocB, HandoffX.insideLocXB); a premise that only overlaps `D-c` gives no result (before F70 it kept all
+ *  of `j`; the vectors Handoff.RVec.vOverlap_restrictI, vOverlap_restrictU, HandoffX.XVec.v_overlap). An emitted premise
+ *  always lies inside the `D-c` that emitted it (Handoff.emitM_inside, HandoffX.emitX_inside), so the coverage loses
+ *  nothing: C5 holds for every premise inside `D-c` (Handoff.restrictI_contract, HandoffX.restrictIX_contract), and the
+ *  old C5 form, for a premise that only overlaps `D-c`, is false (Handoff.restrictI_not_RestrictContract). The test reads
+ *  the exclusion of the premise, so the exclusion can put a premise inside `D-c` (HandoffX.XVec.v_inside_only_with_excl:
+ *  `*/{}` with the premise exclusion `{4}` lies inside `*/{4}`). For a must-premise `[any-taint]/E` the hand-off gives the pattern
+ *  `[any]` with no exclusion (analyzer-impl.md `HandOff.located`). The narrowing of the demand (F70 D8) is exact in the
+ *  form with the exclusions (HandoffX.handF_narrowX). On the view of the hand-off (no exclusions) the narrowing is
+ *  coarser in the model (HandoffX.XVec.v_inside_only_with_excl; HandoffXMain.narrowing_canonX_loc: the `Dropped`
+ *  locations). No demand pattern after run 1 has a `*` tail (HandoffNoStar.canonX_dem_nonstar), so on that view the
+ *  narrowing is exact on the exit side, and on the entry side except a premise with the exclusion Universe
+ *  (HandoffNoStar.narrowing_canonX_loc_exact, NSVec.entry_univ). A precision point, not a soundness one.
+ *  THE CONCLUSION, leaf by leaf against `D-p`:
+ *  * BELOW `D-p` (`g.path = D-p.path ++ r`, `r ≠ []`): the leaf with the exclusion `E` of `g`, if the tail of `D-p`
+ *    admits `r` (no child for a `$` D-p, every child for `[any]`, the children that `E2` admits for `*/E2`).
+ *  * AT `D-p`: THE MEET OF THE TAILS. A `$` leaf stays `$`. Against a `$` D-p an any leaf becomes `$` in its layer (the
+ *    example of ap.md §6.4: `[any] ∩ $ = $`, Handoff.RVec.v64_restrictI; `[any-taint]/E ∩ $ = $`, HandoffX.XVec.v64_taint).
+ *    Against an `[any]` D-p an any leaf stays, an `[any-taint]/E` leaf with `E`. Against a `*/E2` D-p an `[any-taint]/E`
+ *    leaf becomes `[any-taint]/(E ∪ E2)` (HandoffX.XVec.v_taint_star), and a demand `[any]` leaf stays `[any]`: a concrete
+ *    mark has no `*` tail (W2), and a demand `[any]` has no exclusion (the exception (a) of Handoff.RExc, HandoffX.RExcX).
+ *  * ABOVE `D-p` (`D-p.path = g.path ++ r`, `r ≠ []`): an any leaf whose exclusion `E` admits `r` gives the chain of D-p
+ *    in its layer: `$` for a `$` D-p; else the any tail with the exclusion `E2` of a `*/E2` D-p (an `[any-taint]` leaf,
+ *    HandoffX.chainExX; before F70 the Empty exclusion, which is not the intersection: HandoffX.XVec.v_above_rows,
+ *    v_old_above_not_inter) or with none (an `[any]` D-p; a demand
+ *    `[any]` leaf, also against `*/E2`: the exception (a)). A `$` leaf gives nothing.
+ *  * Apart, another base: nothing.
+ *  So every pair of a result has its entry in D-c and its exit in D-p, except the exception (a) (Handoff.restrictI_inter,
+ *  HandoffX.restrictIX_inter). In a forward run that is the only cell (a forward run has no `*` conclusion,
+ *  Handoff.DR_exit_not_star), and it adds a location only against a `*/E2` D-p with `E2 ≠ {}`: no forward run after
+ *  run 1 has such a D-p (run 1 hands off no `*` pattern, HandoffNoStar.handF_run1_nonstar; DD17), so the forward
+ *  narrowing is exact from forward run 3 (Handoff.handF_narrow_DR_exact). The backward run has no `*` conclusion
+ *  (concrete seeds with no `*` tail: HandoffNoStar.DB_edge_nonstar). Its D-p is a forward premise: in backward run 2 a
+ *  premise of run 1 (`*/{}`: the cell (a) adds no location, HandoffNoStar.rexc_empty_loc), later with no `*` tail
+ *  (HandoffNoStar.canon_handF_nonstar). The restriction only removes pairs (Handoff.restrictI_sub;
+ *  HandoffX.restrictIX_ok: the normal form of W8 stays). A `*` conclusion never occurs in a restricted forward run
+ *  (Handoff.DR_exit_not_star): FLOW fails the check.
+ *  ONE EXCLUSION PER TREE: the leaves at or below D-p keep `E`, the `[any-taint]` leaves at a `*/E2` D-p get `E ∪ E2`, the
+ *  chain gets `E2` or none. `Results` (Part I §5.2) keys each part by (layer, exclusion) and merges equal keys, so one
+ *  normal TAINT value gives up to three values; a demand value, a value with no any leaf and the `$` D-p give one. The
+ *  tree form of the intersection is argued (§7.4, §11.2): the Lean tree theorems (RStore.restrictTreeE_mem_U) are for
+ *  the restriction before F70, and test 7 (Part I §8) compares this code with the per-path `restrict` of §6.4. */
 fun ApOps.restrict(j: InitialAp, g: Facts, d: DemandPattern): List<Facts> {
     val dp = d.exit ?: return emptyList()                                  // the demand does not reach the exit
-    if (!overlap(j.toPattern(), d.entry)) return emptyList()               // the premise: all of j or nothing
+    if (!insideLoc(j.toPattern(), d.entry)) return emptyList()             // the premise lies INSIDE D-c (reads Ej; §6.4)
     if (g.base != dp.fact.base) return emptyList()
     return when (g) {
-        is Reach -> listOf(g)                                              // the zero fact at the empty path of D-p
+        is Reach -> if (dp.fact.path.isEmpty()) listOf(g) else emptyList() // the zero fact `$` at the empty path: the meet keeps it
         is FlowTree -> error("a restricted run is concrete")
         is TaintTree -> {
             val m = manager
+            val alg = m.taintAlg
             val pa = dp.fact.path.toIntArray()
-            var moved = MarkSet.EMPTY                                      // the any marks above D-p.path that E lets through
-            val u = g.root.walk(pa) { dd, n -> if (g.exclusion.admits(pa[dd])) moved += n.leaf.any }   // step 1: `$` leaves and off-chain children go
-            val movedLeaf = if (dp.fact.tail == Tail.EXACT) m.taintLeaves(moved, MarkSet.EMPTY) else m.taintLeaves(MarkSet.EMPTY, moved)
-            val kids = u?.let { m.taintAlg.retainChildren(it) { a -> dp.tailAdmits(listOf(a)) } }   // step 2: the children that D-p admits
-            fun tree(n: TaintNode?, e: ExclusionSet) = n?.takeIf { !it.isEmpty }   // the layer and the mark of g
-                ?.let { m.taintTree(g.base, g.layer, m.taintAlg.prepend(m, m.path(pa), it), e) }
-            val split = g.exclusion != ExclusionSet.Empty && !moved.isEmpty && dp.fact.tail != Tail.EXACT   // A2: two exclusions
-            if (!split) listOfNotNull(tree(m.taintAlg.withLeaf(kids, m.taintAlg.union(u?.leaf ?: TaintLeaves.EMPTY, movedLeaf)), g.exclusion))
-            else listOfNotNull(tree(m.taintAlg.withLeaf(kids, u?.leaf ?: TaintLeaves.EMPTY), g.exclusion),   // at or below D-p: E stays
-                               tree(m.taintAlg.leafNode(movedLeaf), ExclusionSet.Empty))                   // moved: no exclusion
+            val at = m.path(pa)
+            var moved = MarkSet.EMPTY                                      // ABOVE: the any marks that E lets down to D-p.path
+            val u = g.root.walk(pa) { k, n -> if (g.exclusion.admits(pa[k])) moved += n.leaf.any }   // `$` leaves and off-chain children go
+            val here = u?.leaf ?: TaintLeaves.EMPTY                         // AT D-p
+            val below = u?.let { alg.retainChildren(it) { a -> dp.tailAdmits(listOf(a)) } }   // BELOW: the children that D-p admits
+            val res = Results(m, g.base)                                    // one value per (layer, exclusion)
+            fun put(n: TaintNode?, e: ExclusionSet) { if (n != null) res.taint(g.layer, alg.prepend(m, at, n), e) }
+            when (dp.fact.tail) {
+                Tail.EXACT ->                                               // [any] ∩ $ = $, [any-taint]/E ∩ $ = $; no step below `$`
+                    put(alg.withLeaf(null, alg.leaves(here.exact + here.any + moved, MarkSet.EMPTY)), ExclusionSet.Empty)
+                Tail.ANY -> {
+                    put(alg.withLeaf(below, here), g.exclusion)             // at and below: the leaves with E
+                    put(alg.withLeaf(null, alg.leaves(MarkSet.EMPTY, moved)), ExclusionSet.Empty)   // the chain `[any-taint]/{}` or `[any]`
+                }
+                Tail.STAR -> {                                              // D-p = `*/E2`; a demand value has no exclusion (Results)
+                    put(alg.withLeaf(below, alg.leaves(here.exact, MarkSet.EMPTY)), g.exclusion)              // below: E; `$` at D-p
+                    put(alg.withLeaf(null, alg.leaves(MarkSet.EMPTY, here.any)), g.exclusion.union(dp.exclusion))   // [any-taint]/(E ∪ E2)
+                    put(alg.withLeaf(null, alg.leaves(MarkSet.EMPTY, moved)), dp.exclusion)                   // the chain `[any-taint]/E2`
+                }
+                Tail.ANY_TAINT -> error("W8 (d): no pattern has the tail [any-taint]")
+            }
+            CollectingOut().also(res::flush).results
+        }
+    }
+}
+
+/** F70 D2, D3 (DD17): the part of the summary value `g` of `premise` whose leaves are NOT CROSSABLE: the hand-off gives
+ *  its published pieces as DEMAND EDGES (Lean Handoff.handF: `¬ Cross j g`; Handoff.demOfN: `¬ Handoff.CrossB jb gb`,
+ *  where `CrossB` reads the layer of `gb`: normal, and `Cross` of the reversal).
+ *  null: every leaf is crossable. Then the next run crosses the call by the record (R1 persists it, Part I §7.8: by R4 in
+ *  its direction, by R3 in the other) and gets no demand for this edge. `direction`: the direction of the run of `g`.
+ *  The test reads the premise, the layer of `g` and, per leaf, only its tail and if its mark is concrete
+ *  (`cross`, `crossReversed`, Part I §6). So it is ONE test per leaf class of a value: the REACH leaf, the FLOW flags,
+ *  the `$` leaves and the any leaves of a TAINT tree.
+ *  EVERY LEAF IS A DEMAND EDGE for: a summary with several premises (never a record, R1); a demand value (a cut, a may, a
+ *  demand input, and backward the reversal of a conjunction, Part II §23.1 `MicroEdge.conjunctive`: never a record,
+ *  R1); a backward zero-premise summary (the seed paths, never a record, R1; Handoff.demOfN
+ *  case 2 gives `(gb, none)`); forward, a premise that `crossK` rejects (`[any]`, a must-premise `[any-taint]/E`, `*/E`
+ *  with `E ≠ {}`). Else, forward, the `[any-taint]` leaves of a normal TAINT tree: the reversed premise is `[any]`
+ *  (HandoffCases.revRec_any_premise, not_cross_of_any), and a `$` requirement neither lies inside it nor is covered by it
+ *  (HandoffCases.dollar_blocked); without their demand edges a real vulnerability is lost (HandoffCases.AnyW.cegar_cross_anyw,
+ *  AnyM.cegar_cross_anym). A normal FLOW value under a `*` premise with the Empty exclusion and a normal REACH value are
+ *  crossable (WRAP: HandoffCases.Wrap.w1_exit_cross); so is a normal backward `$` leaf of a `$` premise
+ *  (HandoffCases.Getter.revRec_g_crossB) and a normal backward `{jb} -> zero` with a `$` premise (its reversal is the
+ *  forward source record `zero -> jb`, Part I §7.8 `reversedAt`; for an `[any]` premise the reversal has an any tail).
+ *  A COST LIMIT (ap.md §11.2): the normal and the demand value of one premise key are two values, and no subsumption
+ *  crosses the layers. So a demand piece whose pairs a crossable piece of the same premise and pattern already has (a
+ *  may next to an exact write) stays a demand edge, and the callee stays in the frontier. A rule that drops it needs a
+ *  Lean variant of HandoffBackward.seg_genN; this code does not drop it. */
+fun ApOps.demandPart(premise: PremiseKey, g: Facts, direction: Direction): Facts? {
+    val j = premise as? InitialAp ?: return g                                     // several premises: never a record (R1)
+    if (g.layer == Layer.DEMAND) return g                                         // a demand edge is never a record (R1)
+    if (direction == Direction.BACKWARD && j.isZero) return g                     // the seed paths (demOfN case 2; R1)
+    val jp = j.toPattern()
+    fun crossable(tail: Tail, mark: MarkSlot): Boolean {                          // one leaf class; the test reads no path
+        val c = Conclusion(PathFact(g.base, emptyList(), tail, mark), ExclusionSet.Empty, demand = false)
+        return if (direction == Direction.FORWARD) cross(jp, c) else crossReversed(jp, c)
+    }
+    val concrete = MarkSlot.Concrete(TaintMark.ZERO)                             // a concrete mark: `cross` reads only that
+    return when (g) {
+        is Reach -> g.takeUnless { crossable(Tail.EXACT, concrete) }             // `{zero} -> zero`; backward `{jb} -> zero`
+        is FlowTree -> g.takeUnless { crossable(Tail.STAR, MarkSlot.Star(g.markExclusion)) }   // the normal flags `*/E`
+        is TaintTree -> {
+            val keepExact = !crossable(Tail.EXACT, concrete)
+            val keepAny = !crossable(Tail.ANY_TAINT, concrete)                    // a normal tree: never crossable (an any tail)
+            when {
+                keepExact && keepAny -> g
+                !keepExact && !keepAny -> null
+                else -> manager.taintAlg.mapLeaves(g.root) { l ->
+                    manager.taintAlg.leaves(if (keepExact) l.exact else MarkSet.EMPTY, if (keepAny) l.any else MarkSet.EMPTY)
+                }?.let(g::withRoot)                                               // withRoot drops E with the last any leaf
+            }
         }
     }
 }
 ```
+
+THE CALLS OF `demandPart` (F70 D3; the analyzer, `analyzer-impl.md` `summaryDelta`). For each new summary delta `j → g`
+the analyzer publishes as before, and it also adds to `RunSummaryStore.addDemand` (§7.6) the PUBLISHED pieces of
+`p = demandPart(premise, delta, direction)`: in run 1 `p` itself (Lean `Handoff.pubD`); in a restricted run
+`restrict(jm, p, d)` for every member `jm` and every pattern `d` of `DemandStore.covering` (Lean `Handoff.pubR`); for a
+backward `{zero}` summary `p` itself (it is published unrestricted, the balanced return of `ap.md` §9.2). The restriction
+acts leaf by leaf, so these pieces are exactly the publications of the non-crossable leaves (D3). A SUMMARY WITH SEVERAL
+PREMISES is restricted per member: a pattern `d` restricts it if the member `jm` lies inside its `D-c`, and the result
+keeps the whole premise set (argued, `ap.md` §6.4). `ap.md` §6.4 also needs every member inside the `D-c` of some
+pattern of the method: in a restricted run every member is an emitted premise, so it lies inside the `D-c` that
+emitted it (`Handoff.emitM_inside`), and the code needs no test for it. Every leaf of such a summary is a demand edge
+(never a record, R1), one per member.
 
 ### 5.10 `requestAction` (`ap.md` §4.5, §4.10 items 2 to 4)
 
@@ -2660,7 +2775,8 @@ private inline fun taintPatterns(f: TaintTree, path: IntArray, leaf: TaintLeaves
 `PathFact` to `inside`; `Tail`, `MarkSet`, `ExclusionSet` and `MarkSlot` are in `Facts.kt`, §3.2; the location tests
 read the exclusion of an `[any-taint]` pattern, A2), `ap.md` §4.1 (`PathEdge` to `normalize`, with W8 and the exclusion
 rows in `below`, `above` and `normalize`), `ap.md` §6.3 (`meet`, `emit`, `satisfies`, `recordDemand`) and `ap.md` §6.4
-(`restrict`). An `[any-taint]/E` per-path fact carries `E` in the `exclusion` field of its `Pattern` or `Conclusion`. The `Accessor`
+(`insideLoc`, `meetConclusion`, `restrict`: since F70 the intersection, the premise inside `D-c` and the meet of the
+tails at `D-p`; Lean `Handoff.restrictI`, `HandoffX.restrictIX`). An `[any-taint]/E` per-path fact carries `E` in the `exclusion` field of its `Pattern` or `Conclusion`. The `Accessor`
 of the spec is `AccessorIdx` (DD6), so `rootOrClass` calls `q[0].isClass()` (a function here, a property in `ap.md`
 §4.1). The reference `concat` is the per-path delta-concat of `ap.md` §4.1; `applyCompiledEdge` (§5.3) is its tree
 form (DD15). The tests compare every operation on `Facts` with these forms, through `ApOps.leaves` (§5.11). `PathEdge`
@@ -2674,8 +2790,8 @@ data class PathEdge(val from: PathFact, val to: PathFact, val exclusion: Exclusi
 }
 ```
 
-The forms that `ap.md` does not give in Kotlin (from the Lean definitions in `Basic.lean`, `ND.lean` and
-`Subsume.lean`):
+The forms that `ap.md` does not give in Kotlin (from the Lean definitions in `Basic.lean`, `ND.lean`,
+`Subsume.lean`, and for F70 `HandoffDefs.lean` and `HandoffXRestrict.lean`):
 
 ```kotlin
 /** ap.md §6.5 (Lean startFact; a must-premise: AnyTaint.startT, with the exclusion AnyTaintEx.startX). No direction
@@ -2848,6 +2964,38 @@ fun revTails(i: Tail, f: Tail): Pair<Tail, Tail> = when (i) {             // the
     Tail.ANY_TAINT -> error("§8.7 R3: an `[any-taint]` premise is not reversed")   // revEdge returns null before
 }
 
+/** F70 D2 (Lean Handoff.CrossK; the Boolean form HandoffCases.crossKB): a premise tail that a record application
+ *  accepts for EVERY fact that covers one of its locations: `$` (by `inside`) or `*` with the Empty exclusion (by
+ *  `inside` or `applicable`; Handoff.cross_applies). Not `[any]`, not a must-premise `[any-taint]`, not `*/E` with
+ *  `E ≠ {}`. */
+fun crossK(tail: Tail, exclusion: ExclusionSet): Boolean =
+    tail == Tail.EXACT || (tail == Tail.STAR && exclusion == ExclusionSet.Empty)
+
+/** F70 D2 (Lean Handoff.Cross; HandoffCases.crossB is the Boolean form of Handoff.Cross, cross_iff): the record leaf `j -> c` is CROSSABLE:
+ *  BOTH directions cross it with no analysis of its method key. It is normal, its premise passes `crossK`, it is
+ *  mark-reversible (Lean Reverse.MarkRev: the mark of `c` is abstract, or the mark of `j` is concrete), and its reversal
+ *  (§9.1, the new premise with the Empty exclusion) has a premise that passes `crossK`. The reversed premise of an any
+ *  tail is `[any]` (HandoffCases.revRec_any_premise), so `c` has no any tail (HandoffCases.not_cross_of_any); the last
+ *  test then holds for every pair of `revTails` that is left. Example: the exit edge `(arg, ., *) -> (ret, .f, *)` of
+ *  `wrap` (HandoffCases.Wrap.w1_exit_cross). */
+fun cross(j: Pattern, c: Conclusion): Boolean =
+    !c.demand && crossK(j.fact.tail, j.exclusion) &&
+        (c.fact.mark is MarkSlot.Star || j.fact.mark is MarkSlot.Concrete) &&                   // MarkRev
+        !c.fact.tail.isAny && crossK(revTails(j.fact.tail, c.fact.tail).first, ExclusionSet.Empty)   // the reversed premise
+
+/** F70 D2, D3 for a BACKWARD leaf `jb -> c` (Lean Handoff.CrossB, in Handoff.demOfN case 3: normal, and `Cross` of
+ *  the reversal): `c` is NORMAL and its forward reversal is crossable (HandoffCases.Getter.revRec_g_crossB:
+ *  `(ret, .a, $, T) -> (arg, .f.a, $, T)`; its `Cross` part HandoffCases.Getter.revRec_g_cross). R1 persists only a
+ *  normal backward edge, so a demand leaf has no record and stays a demand edge; the model reads the layer too
+ *  (HandoffBackward.crossB_em, rcNextOf_back_normal; Part II §34 SI21, RESOLVED). A leaf that is not mark-reversible
+ *  has no reversal (`revEdge` gives null) and is not crossable. A zero premise is never a record (R1):
+ *  `ApOps.demandPart` gives such a summary whole before this test (demOfN case 2). */
+fun crossReversed(jb: Pattern, c: Conclusion): Boolean {
+    if (c.demand) return false
+    val r = revEdge(PathEdge(jb.fact, c.fact, c.exclusion)) ?: return false
+    return cross(Pattern(r.from, ExclusionSet.Empty), Conclusion(r.to, r.exclusion, demand = false))
+}
+
 /** ap.md §8.1 (Subsume.subsumesB, markSubsB): s subsumes n inside one layer. FlowGroup and TaintGroup are its tree form.
  *  An `[any]` s (demand) subsumes every fact at or below its path with its mark. An `[any-taint]/Es` s (normal)
  *  subsumes, with its mark, in its layer, ONLY `[any-taint]` facts: an `[any-taint]/En` fact at its path if `Es ⊆ En`,
@@ -2884,7 +3032,7 @@ tests, and `asConclusions(f: Facts)`: the leaves of `f` (§5.11) with the layer 
 |---|---|---|---|---|
 | `MethodEdgeStore`, `InitialFactStore`, `RequestStore`, `ConjunctionStore` (with its `KaryJoin`s), the `StandingJoin` of the requests and links | RUN: garbage at the end of the run (`analyzer-core.md` §7.6; `freeze`, `analyzer-impl.md` §7.7) | the runner of the method (O1) | the same runner | none: single writer |
 | `AddedFactStore` (the links) | RUN; the links of a FORWARD run stay until the confirmation at its barrier (`analyzer-core.md` §7.6) | the runner of the method (O1) | the same runner; the driver at the barrier of a forward run (the support, O5) | none: single writer; the join of the runners (`analyzer-core.md` §6.3) orders the barrier reads |
-| `RunSummaryStore`, `SourceHitStore` | HAND-OFF | the runner of the method (O1) | the driver at the barrier | as above |
+| `RunSummaryStore`, `SourceHitStore` | HAND-OFF | the runner of the method (O1) | the driver at the barrier (`RunSummaryStore.all()`: the records, R1; `demandEdges()`: the hand-off, F70 D3) | as above |
 | `DemandStore` | RUN, read-only | the driver, before the run (`Builder.build`) | any runner (`analyzer-core.md` A4) | immutable after `build`; the start of the run publishes it |
 | `RecordStore` | PERSISTENT | the driver, at a barrier (`persist`, inside the memory guard of the barrier, §7.8) | any runner, through `view()` (`analyzer-core.md` A4) | written only when no runner is alive; `view()` rejects writes |
 | `VulnerabilityStore` | PERSISTENT | any runner (O4) | the driver at the barrier | nested `ConcurrentHashMap`s; `merge` is atomic per (key, shape) (§7.12) |
@@ -3111,11 +3259,34 @@ candidate key, the walk of its path and the leaves at or below it (`leavesNear`)
 ### 7.6 `RunSummaryStore` (`ap.md` §8.5)
 
 ```kotlin
-/** ap.md §8.5. Key (premise key, layer, kind key) -> the exit conclusions, BEFORE the restriction (analyzer-core.md
- *  §4.6). HAND-OFF. REPLACE of MethodInitialToFinalApSummaries (ap/ifds/access/tree/MethodInitialToFinalApSummaries.kt:13),
- *  which unions the exclusions of different summaries (:271). */
+/** ap.md §8.5. HAND-OFF. Two parts, each keyed by (premise key, layer, kind key) (ConclusionGroup, Part I §4.3):
+ *  * THE SUMMARIES: the exit conclusions BEFORE the restriction (`add`; analyzer-core.md §4.6 item 1). Only the records
+ *    read them, at the barrier (R1, `PersistentRecordStore.persist`, Part I §7.8): a record is the whole complete edge
+ *    (Lean HandoffBackward.rcNextOf, NextRecs: the exit edges of the run, not their pieces).
+ *  * THE DEMAND EDGES OF THE RUN (F70 D1, D3; `addDemand`, `demandEdges()`): the PUBLISHED pieces of the summary leaves
+ *    that are NOT crossable (`ApOps.demandPart`; the calls: Part I §5.9). Run 1 publishes every summary as it is
+ *    (Lean Handoff.pubD); a restricted run publishes the intersections with its demand patterns (Lean Handoff.pubR); a
+ *    backward zero-premise summary is published unrestricted (ap.md §9.2, the balanced return). THE HAND-OFF READS ONLY
+ *    THESE (analyzer-impl.md `HandOff`; before F70 it read every summary of every layer before the restriction): one
+ *    demand pattern per (leaf of a piece, member of the premise key), forward to backward `(D-c = g', D-p = jm)`,
+ *    backward to forward `(D-c = gb', D-p = jb)`, or `(gb, none)` for a backward zero premise (Lean Handoff.handF,
+ *    demOfN). A crossable leaf gives no demand edge: the next run crosses its call by the record. ap.md §8.5 keeps, for
+ *    each published piece, the leaf that it comes from, so that the hand-off can test the leaf. The code tests the leaf
+ *    when it makes the piece (`demandPart` before the restriction) and keeps only the pieces of the non-crossable
+ *    leaves: the same demand edges, with no link from a piece to its leaf.
+ *  So a method key whose summary leaves are all crossable has no demand edge. After a FORWARD run, if also no seed of
+ *  the next backward run lies in its call subtree, the next forward run analyses it only from the zero fact (F70 D7;
+ *  HandoffExclusion.exclusion_theorem with the hypothesis "no demand edge of the method key", exclusion_round with
+ *  "every summary leaf crossable"; HandoffMain.exclusion_canon; with `[any-taint]` HandoffXMain.exclusion_roundX,
+ *  exclusion_canonX). The zero demand of every method key stays (F70 D5; DemandStore, Part I §7.7). The groups merge
+ *  only by T1 to T5, which never remove a location of a stored piece, so a merged piece demands at least what each
+ *  piece demanded. COST: a second group per premise key,
+ *  only for the pieces of the non-crossable leaves.
+ *  REPLACE of MethodInitialToFinalApSummaries (ap/ifds/access/tree/MethodInitialToFinalApSummaries.kt:13), which unions
+ *  the exclusions of different summaries (:271). */
 class RunSummaryStore(private val m: ApManager) {
     private val groups = Reference2ObjectOpenHashMap<PremiseKey, ConclusionGroup>()
+    private val demand = Reference2ObjectOpenHashMap<PremiseKey, ConclusionGroup>()     // F70 D3: the demand edges
     private val interners = m.newInterners()
 
     fun add(premise: PremiseKey, g: Facts): Facts? {
@@ -3124,32 +3295,70 @@ class RunSummaryStore(private val m: ApManager) {
         return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(g)
     }
 
+    /** F70 D3: one published piece of the non-crossable leaves of a summary of `premise` (a publication of
+     *  `ApOps.demandPart`, Part I §5.9). The delta or null, as `add`. */
+    fun addDemand(premise: PremiseKey, piece: Facts): Facts? {
+        check((piece is FlowTree) == premise.isFlow)                     // K6, as `add`
+        return demand.getOrPut(premise) { ConclusionGroup(m, interners) }.add(piece)
+    }
+
+    /** R1: the summaries before the restriction; the records read them (Part I §7.8). */
     fun all(): Sequence<Pair<PremiseKey, Facts>> = groups.asSequence().flatMap { (p, g) -> g.all().map { p to it } }
+
+    /** F70 D3: the demand edges of the run; the hand-off reads only these. */
+    fun demandEdges(): Sequence<Pair<PremiseKey, Facts>> = demand.asSequence().flatMap { (p, g) -> g.all().map { p to it } }
 }
 ```
+
+THE WRAP EXAMPLE (`ap-history.md` F70; `HandoffCases.Wrap`). Run 1 gives `wrap` the one summary `(arg, ., *) → (ret, .f, *)`,
+a normal FLOW value under the policy fact: `demandPart` is null, so `demandEdges()` of `wrap` is empty
+(`HandoffCases.Wrap.handF_w1_exact`: the only demand edge of run 1 is in the root), and the summary is a record (R1).
+Backward run 2 crosses `wrap` by its reversal (`HandoffCases.Wrap.bn_cross`) and does not enter it, except by the zero
+fact (`bn_wrap_zero_only`). Forward run 3 crosses `wrap` by the record (`fn_record_applicable`: by `applicable`), cuts
+the path in the root (`fn_cut_in_root`), analyses `wrap` only from the zero fact (`fn_wrap_zero_only`) and reports the
+vulnerability (`fn_found`). With the hand-off before F70, runs 2 and 3 enter `wrap` again and run 3 cuts inside it
+(`old_b2_wrap_init`, `old_f3_wrap_init`, `old_f3_wrap_cut`; the two together: `wrap_old_vs_new`).
 
 ### 7.7 `DemandStore` (`ap.md` §8.6)
 
 ```kotlin
 /** ap.md §8.6. RUN, read-only. The driver builds it from the hand-off of ap.md §9.2 (analyzer-core.md §7.3, §7.4).
+ *  THE DEMAND EDGES ONLY (F70 D1, D3): the hand-off reads only the published pieces of the summary leaves that are not
+ *  crossable (`RunSummaryStore.demandEdges()`, Part I §7.6), so a method key whose summary leaves of the run before are
+ *  all crossable has only the zero demand here. In a FORWARD run that needs also no seed of the backward run in its call
+ *  subtree: a seed below it gives it the zero-premise backward summaries of the seed paths, which are never crossable, so
+ *  it gets the patterns `(gb, none)` (Lean Handoff.demOfN case 2). THE ZERO DEMAND `(zero, none)` of every method key
+ *  stays (F70 D5: the zero fact is not localized; it still enters every callee).
  *  THE PATTERN TAILS (A1, A2): a pattern has the tail `$`, `*/E` or `[any]`, never `[any-taint]`. A forward demand comes
- *  from the backward run, which has no `[any-taint]`. A backward demand comes from the forward summaries: the hand-off
- *  reads a forward `[any-taint]/E` leaf or must-premise as a location set and gives the pattern `[any]` with no
- *  exclusion (analyzer-impl.md `HandOff.toBackward`, its `located`: a larger backward demand, sound; the model drops E too: Lean
- *  AnyTaintExCov.forget6, forgetX). No option keeps E: a backward pattern has no shape for it (W8 (a), (d)). The store
- *  keeps the patterns as the hand-off gives them, and `Builder.add` asserts W8 (d); `emit` asserts it too (Part I §5.9). */
+ *  from the backward run, which has no `[any-taint]`. A backward demand comes from the published pieces of the forward
+ *  summaries: the hand-off reads a forward `[any-taint]/E` leaf or must-premise as a location set and gives the pattern
+ *  `[any]` with no exclusion (analyzer-impl.md `HandOff.toBackward`, its `located`: a larger backward demand, sound; the
+ *  model drops E too: Lean AnyTaintExCov.forget6, forgetX). No option keeps E: a backward pattern has no shape for it
+ *  (W8 (a), (d)). The store keeps the patterns as the hand-off gives them, and `Builder.add` asserts W8 (d); `emit`
+ *  asserts it too (Part I §5.9). */
 class DemandStore private constructor(
     private val byMethod: Map<MethodKey, PathTrie<DemandPattern>>,      // keyed by `base :: D-c.path`
     private val zeroDemand: DemandPattern,                              // (zero, none) of EVERY method key (§9.2, analyzer-core.md §4.4)
 ) {
-    /** `near(q)`: the emission query (§6.3) for an added fact, the restriction query (§6.4) for a premise.
-     *  RStore.near_equiv, emit_complete_M, restrict_complete_U. On the zero base it also gives the implicit zero demand.
-     *  A stored zero-base pattern can have an exit pattern: `(D-c = zero, D-p = jb)` from a backward summary that reached a
-     *  source (§9.2 item 3); it restricts the zero-premise summaries of the method. */
+    /** `near(q)`: the emission query (§6.3) for an added fact. RStore.near_equiv, emit_complete_M. On the zero base it
+     *  also gives the implicit zero demand. Before F70 it was also the restriction query (RStore.restrict_complete_U, for
+     *  a premise that overlaps D-c); it returns every pattern of `covering`, so a caller that still uses it for the
+     *  restriction gets the same results (`ApOps.restrict` tests `insideLoc`), at a higher cost. */
     fun near(method: MethodKey, base: AccessPathBase, path: PathNode?): List<DemandPattern> {
         val stored = byMethod[method]?.around(base, path?.toIntArray() ?: EMPTY_PATH).orEmpty()
         return if (base == AccessPathBase.Zero) stored + zeroDemand else stored
     }
+
+    /** F70 D4, the restriction query (§6.4) for one premise member `j`: the patterns whose `D-c` is AT OR ABOVE `j`
+     *  (`lookupPrefixes`). Only these can hold `j` inside their `D-c`: `insideLoc` is a `covers` test, which needs the path
+     *  of D-c to be a prefix of the path of `j` (Lean Handoff.insideLocB is `coversB`). Equal to the list filter by
+     *  Store.PathMap.lookupPrefixes_equiv; `ApOps.restrict` then tests `insideLoc`. A stored zero-base pattern
+     *  `(D-c = zero, D-p = jb)` restricts the zero-premise summaries of the method: it comes from a backward
+     *  `{jb} -> zero` (a requirement that reached a source) that is NOT crossable (§9.2 case 3); a crossable one is a
+     *  record, and the forward run reads its reversal, the source record `zero -> jb` (Part I §7.8). The zero demand has
+     *  no D-p, so it restricts nothing and this query leaves it out. */
+    fun covering(method: MethodKey, base: AccessPathBase, path: PathNode?): List<DemandPattern> =
+        byMethod[method]?.lookupPrefixes(base, path?.toIntArray() ?: EMPTY_PATH).orEmpty()
 
     class Builder(private val m: ApManager) {
         private val byMethod = HashMap<MethodKey, PathTrie<DemandPattern>>()
@@ -3266,6 +3475,28 @@ class PersistentRecordStore(private val m: ApManager) : RecordStore {
     }
 }
 ```
+
+THE CROSSABLE LEAVES ARE RECORDS (F70 D2, D3; DD17). `persist` does not change (R1), and it reads `RunSummaryStore.all()`,
+the summaries before the restriction: a record is the whole complete edge, not a published piece (Lean
+`HandoffBackward.rcNextOf`, `NextRecs`). Every leaf that `ApOps.demandPart` does not give to the hand-off is a leaf of
+a record: such a leaf is normal and has one premise; forward, R1 keeps every normal one-premise summary; backward,
+`crossReversed` needs a normal leaf of a non-zero premise, and R1 keeps every normal backward summary of a non-zero
+premise. So the next run crosses that call by the record, with no analysis of the callee: in the direction of the record
+by `byEntry` (R4), in the other direction by `byExit` and `reversedAt` (R3). The reversal exists (`revEdge` is not null:
+the leaf is mark-reversible and has no `[any-taint]`), and its premise is `$` or `*` with the Empty exclusion, so it
+applies to every CONCRETE added fact or requirement (every restricted run is concrete) that covers one of its
+locations, by `inside` or by `applicable` (Lean `Handoff.cross_applies`, with its hypothesis of a concrete mark; WRAP:
+`HandoffCases.Wrap.bn_cross`, `fn_record_applicable`). R5 stays: a record never causes and never replaces an emission;
+a crossable callee gets no emission because the hand-off gives it no demand edge (`ap.md` §8.7). A zero-premise
+forward record (for example a source in a crossable callee) applies at every call, also when the next forward run does
+not seed its source (Lean `HandoffSrc.SrcRec.found_unseeded`): the source seeds do not filter the records. It only adds
+facts of the full program and removes none, so this is a point of precision, not of soundness. The store also keeps records with leaves that are not
+crossable (a must record, an `[any-taint]/E` leaf, a `$ -> [any-taint]` leaf): they apply as before (R4, R3), and the
+hand-off gives their leaves as demand edges too. A larger record set is allowed
+(`HandoffMain.iteration_generalN_incl`: the records contain the crossable ones). A backward summary through the
+reversal of a conjunction is in the demand layer (Part II §23.1 `MicroEdge.conjunctive`), so R1 keeps no record of it
+and the hand-off gives it as a demand edge (F70; before F70 it was a normal record, and its reversal dropped the other
+literals).
 
 ### 7.9 `RequestStore`, `RequestKind` (`ap.md` §8.8)
 
@@ -3468,7 +3699,13 @@ class SinkEdge(val premise: PremiseKey, val layer: Layer, val facts: Facts) {
  *  set in this method key.
  *  THE PATTERN of a witness (ap.md §8.10) is DERIVED, not stored: the patterns of `alternative` of the rule at the
  *  statement in the method key, `SinkRule.patterns` of that `SinkRule` in the forms of `methodKey` (the same in every run,
- *  interpreter.md I5). The hand-off reads them there (analyzer-impl.md §7.2). */
+ *  interpreter.md I5). The hand-off reads them there (analyzer-impl.md §7.2). It seeds the backward run only with the
+ *  sinks of the DEMAND entries of the report after the forward run: a key that the latest complete forward run reports
+ *  and that no complete forward run so far confirmed (F70 D6, ap.md §8.10: a CONFIRMED vulnerability is final;
+ *  HandoffMain.iteration_generalN with `C k` = confirmed by some forward run up to `k`: each forward run reports every
+ *  real vulnerability that no earlier run confirmed). The backward run also fires the sink seeds of an alternative
+ *  whose reversed end-fact edge applies to a requirement, also of a CONFIRMED key (THE TRIGGER OF AN END FACT, ap.md
+ *  §9.2; Part II §23.4). */
 class SinkWitness(val alternative: Int, val methodKey: MethodKey, val edges: List<SinkEdge>, val run: Int,
                   val endFacts: List<PathFact> = emptyList()) {
     @Volatile var confirmed: Boolean = false                           // set only at the barrier of a complete forward run
@@ -3486,8 +3723,10 @@ class SinkWitness(val alternative: Int, val methodKey: MethodKey, val edges: Lis
  *  DD16; Lean AnyTaintEx.Confirmed6X, ConfirmedX; the conjunction AnyTaintND.ConfirmedNzT). Condition 2: each member of
  *  the premise set is the zero fact, an exact concrete fact `(x, p, $, T)`, or, in a FORWARD RESTRICTED run, a
  *  must-premise `(x, p, [any-taint], E, T)` (an emission of a normal `[any-taint]` added fact, ap.md §6.3). These are
- *  the only premises of a normal restricted edge (PROVED: AnyTaintExKinds.DRXs_normal_premise, DRXs_must_premise: a `$`
- *  premise that is not must, or a must-premise `.any` with a concrete mark). */
+ *  the only premises of a normal restricted edge (PROVED: AnyTaintExKinds.DRX_normal_premise, DRX_must_premise, for every
+ *  restriction, also HandoffX.restrictIX, under AnyTaintEx.EmitCopiesMarkX, which AnyTaintEx.emitX_copies gives: a `$`
+ *  premise that is not must, or a must-premise `.any` with a concrete mark; DRXs_normal_premise and DRXs_must_premise
+ *  are the instances of the earlier restriction). */
 fun confirmableMember(j: InitialAp, mode: ApMode): Boolean =
     j.isZero || (j.mark is MarkSlot.Concrete && (j.tail == Tail.EXACT ||
         (j.tail == Tail.ANY_TAINT && mode.restricted && mode.direction == Direction.FORWARD)))
@@ -3575,14 +3814,16 @@ merge (DD10). It is not today's merge:
 * A conjunctive sink: the union of `(a1, b1)` and `(a2, b2)` of one alternative also denotes `(a1, b2)`. That
   combination is a witness too: `a1` and `b2` are stored inputs of the literals of that alternative at that statement,
   and `ConjunctionStore.add` (§7.10, one join per alternative) gives every combination of the stored inputs.
-* The run is part of the shape. So a witness of one run never merges with a witness of another run
-  (`RunResult.hasDemandVulnerability`, `analyzer-core.md` §10, reads the witnesses of one run).
+* The run is part of the shape. So a witness of one run never merges with a witness of another run (the report reads
+  the witnesses of each run, `witnessesOf(run)`; DEMAND is a state of the report, not of one run:
+  `ReportBuilder.hasDemandVulnerability`, `analyzer-core.md` §10).
 * The merge only makes the number of entries per key smaller: one entry per shape, not one per delta that triggers the
   sink.
 
 The driver builds the report at the barrier from `witnessesOf(run)` (`analyzer-impl.md` §7.6, `Report`): the
-vulnerabilities that a complete forward run confirmed, and the DEMAND vulnerabilities of the latest complete forward
-run; an incomplete run adds nothing and refutes nothing (`ap-history.md` F67). If no forward run is complete (an
+vulnerabilities that a complete forward run confirmed, and the DEMAND entries: the keys that the latest complete
+forward run reports and that no complete forward run so far confirmed (`ap.md` §8.10; F70 D6: only these seed the next
+backward run); an incomplete run adds nothing and refutes nothing (`ap-history.md` F67). If no forward run is complete (an
 incomplete run 1), the report has no entry, and the status gives the cause (`ap-history.md` F68 (2)). The fields of an
 entry are those of `Report.Entry`; the witnesses of its key (one or more per alternative and method key) give, with the
 forms (`SinkRule.patterns`), the patterns, the sink edges and the end facts of `ap.md` §8.10. Trace resolution is out of
@@ -3592,9 +3833,11 @@ CONFIRMED entry: its sink edge is normal with `[any-taint]/E` facts (condition 1
 supply its must-premise (conditions 2, 3.2.3). A strong write into the object keeps it normal with a larger exclusion,
 so a sink on the written field is not reported and a sink on another field is CONFIRMED in run 1
 (`AnyTaintExCases.S.run1_name_not_reported`, `S.run1_email_confirmed`; `X.fh_confirmed`; `R.z_confirmed`); an
-identity callee and a source confirm in run 1, a getter and a sink in the callee in run 3 (in the spec closures
-`AnyTaintEx.D6X`, `DRXs`: `AnyTaintExCases2.I.run1_confirmed`, `PassRule.source_confirmed`, `G.run3_confirmed`,
-`C.run3_confirmed`). Only a vulnerability that rests on a demotion of `ap.md` §2.2 stays a DEMAND entry: the field-limit
+identity callee and a source confirm in run 1, a getter and a sink in the callee in run 3 (run 1 in the spec closure
+`AnyTaintEx.D6X`: `AnyTaintExCases2.I.run1_confirmed`, `PassRule.source_confirmed`; run 3 in `AnyTaintEx.DRXs`, with
+the earlier restriction and hand-off, the record of the earlier design: `G.run3_confirmed`, `C.run3_confirmed`; with
+the intersection `HandoffX.restrictIX` and the hand-off of the demand edges the same programs are argued, `ap.md`
+§11.2). Only a vulnerability that rests on a demotion of `ap.md` §2.2 stays a DEMAND entry: the field-limit
 cut, a cleaner `part` row other than `atAndBelow`/`below` one accessor below the fact (the `exact` cleaner at or below
 it, any cleaner two or more accessors below it), a may target (a pass rule with an `AnyField` target), a demand input (a
 demand fact, summary or record), the must-record demotion (`AnyTaintExCases2.PassRule.pass_not_confirmed`,
@@ -3621,9 +3864,9 @@ runs once per leaf algebra (`FlowAlgebra`, `TaintAlgebra`): the trie code is sha
 | 2 | `ApManagerConcurrencyTest` | 8 threads intern the same accessors, marks, paths, premises and leaves: one object each, no hang (a timeout fails the test) | — |
 | 3 | `ReferenceDenotationTest` | `covers`, `overlap`, `applicable`, `inside`, `cleanPos` against `den` (`ap.md` §3.2) on a bounded universe with a fresh accessor and a fresh mark (item 2) | `coversB_sound`, `overlapB_of_common`, `cleanPos_inside_sound`, `cleanPos_disjoint_sound` |
 | 4 | `TrieOpsTest`, `TrieInternerTest` | each generic function of §4.2 and §4.6 on both algebras against a list-of-leaves model: `mergeAdd`/`mergeAddDelta` (the delta unions to the merge; a shared subtree pair is merged once; a deep trie needs no deep stack), `mapChildren` (an unchanged child list returns the node itself), `replaceChild` (insert, replace, and remove with a null child), `withLeaf`, `mapLeaves`, `retainChildren`, `prepend`/`chain` (also a spine shorter than the path, and a tip with its own leaf), `minusNode`, `forEachLeaf`, `foldUnder`, `foldUnderDelta` (after a group add to a folded trie, it equals `foldUnder` of the whole merged trie; also with an `admits` that rejects a child accessor below an absorbing leaf), `subtract` (also with `admits`), `filterPath`, `FieldLimitCut`, `walk`; `graft` MERGES at nested occurrences (`g = {ret.*, ret.f.*}` with `r` at `[]` and `[f]` keeps both `ret.f` leaves), drops a node of `g` with no occurrence, keeps a shared subtree of `g` shared; no operation collapses a repeated field, a chain of three `[e]` or a path below a class accessor (only `L` bounds a path); `foldAll` and `foldLeaves` include the leaf of the node itself (a trie with only a root leaf; a cut child with a leaf); `boundedDepth` and `hasAny` equal a recount. `TrieInterner`: two equal tries give one object, with `interned = true`; after `SoftReferenceManager.cleanup()` the next intern makes a new table, and the earlier interned nodes stay valid and equal (only sharing is lost); with a disabled manager (`createRef` gives null) interning still works within one call; `internIfRequired` interns a trie of `SIZE_TO_FORCE_INTERN` nodes at once and one add in `INTERN_RATE` otherwise | `Tree.rule1_mem`, `Tree.prependPath` |
-| 5 | `KindTest` | the types enforce W1, W2 and W8 (a): `flowTree` gives the Empty exclusion in the demand layer; a FLOW tree has no `[any-taint]` leaf (no concrete mark); `Results` routes each result to its kind and canonical key (a source on REACH gives TAINT, the zero keep edge and the zero binding `zero.* -> zero.*` on `Reach.NORMAL` and `Reach.DEMAND` give the same `Reach`, a `*` edge on FLOW gives FLOW); THE LAYER NAMES THE ANY LEAVES (DD16): a normal TAINT tree with an any leaf reads `[any-taint]` through `leaves`, the same root in the demand layer reads `[any]`; `Results` has no W6 split (a normal any leaf stays normal); W6 is the rule of `put`: a may `[any]` target gives a demand result; the `init` check of `FlowTree` (W1 demand) fails on a bad `withRoot`; `InitialAp` rejects an `[any-taint]` premise with the mark `*` (W8 (a)) and accepts its exclusion; THE EXCLUSION OF A TAINT TREE (A2): `taintTree` gives the Empty exclusion in the demand layer and for a root with no any leaf, `TaintTree.init` rejects any other exclusion, `withRoot` keeps it (and drops it with the last any leaf), `leaves` gives `[any-taint]/E`, `Results` keys TAINT by (layer, exclusion), the group key holds it (item 1) | `Invariant.final_star_legal`, `Coverage.edge_conc`, `AnyTaintExKinds.D6X_any_conc`, `D6X_flow_no_any_taint`, `D6X_flow_no_excl`, `kinds_D6X`, `DRXs_must_premise`, `AnyTaintSim.kinds_DRT`, `AnyTaintEx.carriesB`, `normX` |
+| 5 | `KindTest` | the types enforce W1, W2 and W8 (a): `flowTree` gives the Empty exclusion in the demand layer; a FLOW tree has no `[any-taint]` leaf (no concrete mark); `Results` routes each result to its kind and canonical key (a source on REACH gives TAINT, the zero keep edge and the zero binding `zero.* -> zero.*` on `Reach.NORMAL` and `Reach.DEMAND` give the same `Reach`, a `*` edge on FLOW gives FLOW); THE LAYER NAMES THE ANY LEAVES (DD16): a normal TAINT tree with an any leaf reads `[any-taint]` through `leaves`, the same root in the demand layer reads `[any]`; `Results` has no W6 split (a normal any leaf stays normal); W6 is the rule of `put`: a may `[any]` target gives a demand result; the `init` check of `FlowTree` (W1 demand) fails on a bad `withRoot`; `InitialAp` rejects an `[any-taint]` premise with the mark `*` (W8 (a)) and accepts its exclusion; THE EXCLUSION OF A TAINT TREE (A2): `taintTree` gives the Empty exclusion in the demand layer and for a root with no any leaf, `TaintTree.init` rejects any other exclusion, `withRoot` keeps it (and drops it with the last any leaf), `leaves` gives `[any-taint]/E`, `Results` keys TAINT by (layer, exclusion), the group key holds it (item 1) | `Invariant.final_star_legal`, `Coverage.edge_conc`, `AnyTaintExKinds.D6X_any_conc`, `D6X_flow_no_any_taint`, `D6X_flow_no_excl`, `kinds_D6X`, `DRX_must_premise`, `AnyTaintSim.kinds_DRT`, `AnyTaintEx.carriesB`, `normX` |
 | 6 | `ApplyEdgeVectorsTest` | every `example` of `Cases.lean` and `RestrictedCases.lean`, on the reference forms AND on `ApOps`; the model vectors with a normal `.any` result (`ap.md` §13 item 1) assert the layer of `ap.md` §4.1: demand for a may `[any]` target or an `[any]` input, a normal `[any-taint]` fact for a taint edge or a normal `.any` input with a CONCRETE mark (a `.any` input with the mark `*` is `[any]` in the demand layer); the `decide` vectors of `AnyTaintEx.Vec` with their exclusions (`setter_keep`, `read_excluded`, `read_admitted`, `above_star_excl`, `source_any_target`, `below_keeps`, `summary_ann`) and, round 1, `AnyTaint.EmitVec`, `AnyTaint.Sanity`, `AnyTaintCases.PassRule.source_vs_pass`, `Cut.cut_transfer`; the `[any-taint]` rows of `ap.md` §4.2 on the tree form (§5.3); the zero binding on the zero fact (item 1) | `Cases.lean`, `RestrictedCases.lean`, `AnyTaintEx.Vec`, `AnyTaint.EmitVec`, `AnyTaint.Sanity`, `AnyTaintCases` |
-| 7 | `FactsEquivalenceTest` | random `Facts` of each kind and random edges (every tail and mark row, the static exception, `*∖X`, the bindings of Part II §28.2 with the zero binding, and summary-like edges with a `toExclusion` on REACH inputs too: a zero-premise summary `zero.$ -> P.[any-taint]/Et`): the results of `applyCompiledEdge`, read by `leaves`, equal the per-leaf `concat`, layer, exclusion, mark exclusion and requests included; the same for `clean`, `filter`, `limit`, `restrict`, `checkMark`, `withoutMarks` (against `clean` with `atAndBelow` at the root per mark) and `satisfying` against their reference forms, also `satisfying(..., record = true)` with a must-premise `[any-taint]/Ej` and a `*/Ej` premise (the exclusion `Ej` against an any leaf, `applicable`) (item 2) | `Tree.applyTreeE_mem`, `applyTreeE_den`, `applyTreeE_grouped_key`, `RStore.restrictTreeE_mem_U` |
+| 7 | `FactsEquivalenceTest` | random `Facts` of each kind and random edges (every tail and mark row, the static exception, `*∖X`, the bindings of Part II §28.2 with the zero binding, and summary-like edges with a `toExclusion` on REACH inputs too: a zero-premise summary `zero.$ -> P.[any-taint]/Et`): the results of `applyCompiledEdge`, read by `leaves`, equal the per-leaf `concat`, layer, exclusion, mark exclusion and requests included; the same for `clean`, `filter`, `limit`, `restrict`, `checkMark`, `withoutMarks` (against `clean` with `atAndBelow` at the root per mark) and `satisfying` against their reference forms, also `satisfying(..., record = true)` with a must-premise `[any-taint]/Ej` and a `*/Ej` premise (the exclusion `Ej` against an any leaf, `applicable`); `restrict` (the intersection of F70: the union of the results of `restrict` per leaf, with random `D-c` and `D-p` of every tail and exclusion) and `demandPart` (against the per-leaf filter of `cross` and `crossReversed`, test 24) (item 2) | `Tree.applyTreeE_mem`, `applyTreeE_den`, `applyTreeE_grouped_key`; the restriction: `RStore.restrictTreeE_mem_U` is the tree theorem of the restriction before F70, the tree form of the intersection is argued against its per-path forms `Handoff.restrictI`, `HandoffX.restrictIX` |
 | 8 | `MarkGateTest` | every row of `ap.md` §4.1 steps 4 and 5 per kind: FLOW + `T` gives no fact and the request `T` if `T ∉ X`, nothing if `T ∈ X`; TAINT + `T` keeps the leaves with `T`; `*` passes every mark; a `*∖Y` target drops the marks in `Y`; the `check` preconditions of `CompiledEdge` fail: S7 (a `*∖X` premise; a concrete target under a `*` premise), S8 (a `$` premise with `*`; a `$` premise with a `*` target; a `$` target under a `*` premise) and W1 (`x.[any] (T) →_{f} y.$ (T)`: a non-empty exclusion with no `*` side); the request comes after the position test (an apart fact gives none) (items 3, 4) | `CoreAux.markComp_sound`, `Core.applyEdge_sound` |
 | 9 | `MergeRulesTest` | per kind: T1; FLOW: T2 and T2' only for equal content, the delta of T2 is the whole merged tree minus what the §8.1 subsumption drops (one case with a subsuming tree, one without), no union across trees; TAINT: one tree per layer; T4 deltas union to the value; a leaf below a stored `[any]` of the same mark gives null, also on its second arrival (the termination guard of T5); the same in a NORMAL TAINT tree for an `[any-taint]` leaf below a stored `[any-taint]/E` leaf through an accessor that E admits, and NOT through an accessor in E (T5 and `ap.md` §8.1 in its layer); a `$` leaf at or below a stored normal `[any-taint]` leaf of its mark is NOT dropped and NOT folded (DD16: `{x: [any-taint] (T)}` then `x.g.$ (T)` keeps both leaves, and after `clean(x.f, exact, T)` the leaf `x.g.$ (T)` is still NORMAL); a normal leaf below a stored demand `[any]` leaf is NOT dropped (a demand leaf never subsumes a normal one); TAINT with the exclusion (A2): one normal tree per exclusion, T1 merges the same exclusion, two normal trees with equal content and the exclusions `{f}`, `{g}` merge to one tree with `{}` (T2: the intersection, the whole merged tree as the delta), never a union of exclusions (T3), an `[any-taint]/{f}` leaf subsumes `[any-taint]/{f, g}` at its node and not `[any-taint]/{}` (item 8) | `Tree.rule1_mem`, `rule2_den`, `rule2_mark`, `Subsume.merge_inter`, `union_loses_pairs` |
 | 10 | `SubsumptionTest` | `FlowGroup.add` and `TaintGroup.add` drop exactly what `subsumes` (§6) drops; never across layers or kinds | `Subsume.subsumes_sound`, `recordSubsumesLB_layer` |
@@ -3633,13 +3876,14 @@ runs once per leaf algebra (`FlowAlgebra`, `TaintAlgebra`): the trie code is sha
 | 14 | `TypeFilterTest` | accepted path passes with its tail; rejected path drops; `FilterNext`; `and` is the conjunction (of the paths and of the policies); the mark policy drops a rejected concrete mark of a TAINT leaf, both tails, at the root path (level 0) and at each node of the `[e]` chain (`b.[e].$ (T)` with level 1, `b.[e].[e].[any] (T)` with level 2, as today on `byte[]`, `int[][]`, `Integer[]`), after the path filter; a leaf below a field or off the `[e]` chain stays; an `[e]` child whose marks all go is removed; an unchanged tree is returned as it is; a FLOW tree has no policy (item 6; `interpreter.md` §5.1) | `Core.filt_keeps` (path part; the policy is gap G6, no theorem) |
 | 15 | `MarkCheckTest` | the `check` vectors of `ap.md` §4.9 on `checkMark` and `markCheck`; `*∖X` with T ∈ X; the static premise; REACH holds for the zero pattern; `Holds.normalPart`/`demandPart` equal `conjDemand` per leaf (a fully covered input is normal only; a normal `[any-taint]` input that overlaps a `$` literal and is not covered by it is normal only, `ap.md` §4.6; an `[any]` input is demand); `(x, ., [any-taint], T)` triggers a `$` pattern at `x.f` and an `[any]` pattern at `x` (as `[any]`, `ap.md` §4.9), in the normal layer; `(x, ., [any-taint], {f}, T)` does not trigger a `$` pattern at `x.f` or `x.f.g` and is no input of a literal there, and it triggers `x.g` and `x` (the exclusion, A2); `without(c, Holds.facts)` has no leaf of the part and keeps every other leaf, also when the part has only `$` leaves of a tree with an exclusion | `check_sound`, `check_request_star`, `ND.conjLayer`, `ND.Example.c3_normal`, `AnyTaintND.conjLayerT`, `lit_loc`, `Example.layer_new`, `AnyTaintExact.sink_den`, `AnyTaintEx.Vec.check_vectors`, `AnyTaintExCases.S.run1_name_no_trigger` |
 | 16 | `SummaryKindsTest` | `applySummary` for every kind pair of §5.4 equals the per-leaf `concat` with the summary edge, also for a summary with a root leaf (`ret.$ (T)`, `arg0.[any] (T)`, a normal `arg0.[any-taint] (T)`: its kind edge has the target `[any-taint]` and keeps the layer); `satisfying(FLOW a, concrete j)` is null and no request comes (item 9); `applyCombination` gives the layer of `ND.DN.ndBind`; THE MUST-PREMISE (`ap.md` §4.3, §13 item 10): a summary of `(p, .f, [any-taint], T)` applies only to an added fact that it lies inside (`(p, ., [any-taint], T)`: normal results; `(p, ., [any], T)` on a demand link: demand results), never to `(p, .f.g, [any-taint], T)`; WITH THE EXCLUSION (A2): `(p, ., [any-taint], {f}, T)` does not satisfy `(p, .f, [any-taint], T)` and satisfies `(p, .g, [any-taint], T)`; at one path `[any-taint]/{f}` satisfies the premise `[any-taint]/{f, g}` and not `[any-taint]/{}`; the kind edge of an `[any-taint]/Eg` summary leaf gives `Eg` (`toExclusion`), on a TAINT added fact AND on the zero fact: the zero-premise summary `{zero} -> (ret, ., [any-taint], {name}, T)` on `Reach.NORMAL` gives `(ret, ., [any-taint], {name}, T)` NORMAL (the REACH branch of `EdgeApplication` passes `toExclusion`; program `mk`, test 23), and a must-premise `[any-taint]/Ej` filters the case below by `Ej` (`fromExclusion`); `applicable` reads `Ej` against an any leaf (§5.4 `applicablePart`): a must record `[any-taint]/{f}` does not apply to the added fact `[any-taint]/{g}` at its path and applies to `[any-taint]/{f, g}`, a `*/{f}` premise applies to `[any-taint]/{f}` at its path and not to a demand `[any]`; a must record by `satisfying(..., record = true)` gives the whole part, and the split of §5.4 (THE RECORD DEMOTION) gives the result of `inside` and the same facts in the demand layer with no exclusion for the `applicable`-only part (the program `AnyTaintExact.CexApp`); `recordDemand` (§6) agrees per leaf | `Coverage.summary_step`, `applicable_mark`, `ND.DN.ndBind`, `AnyTaint.SatInside`, `satI_inside`, `recLayer_fact`, `AnyTaintEx.satX`, `satX_inside`, `recLayerX`, `applySummaryX`, `Vec.sat_vectors`, `Vec.summary_ann`, `AnyTaintExact.CexApp.cex_app` |
-| 17 | `EmissionTest`, `RestrictionTest` | every row of `ap.md` §6.3 and §6.4; two insertion orders; programs 1 and 2 (items 11, 12); every cell of THE MEET OF THE TAILS that occurs (`AnyTaint.EmitVec`): an `[any-taint]` added fact (a normal link) against an `[any]` pattern gives the must-premise, an `[any]` added fact (a demand link) the `[any]` premise, `$` against an any tail `$`, an `[any]` added fact against `*/E` `*/E`; a pattern with the tail `[any-taint]` fails the `check` of `emit` and of `DemandStore.Builder.add` (W8 (d)), and so does a normal `[any-taint]` added fact against a `*/E` pattern (the cell does not occur); a must and a may added fact at one path give two premise keys; WITH THE EXCLUSION (A2): `(o, ., [any-taint], {name}, T)` against `(o, .f, [any], T)` gives `(o, .f, [any-taint], {}, T)` and against `(o, .name, [any], T)` nothing, at its path the must-premise `[any-taint]/{name}`, below it the fact itself with `{name}`; `startFact` of a must-premise `[any-taint]/E` is itself, normal, with E; `restrict` of an `[any-taint]/E` conclusion above `D-p` keeps its tail and its layer, with no exclusion, only if E admits the step down, and gives two values when the part at `D-p` keeps E (items 11, 12) | `RCore.emitM_inter`, `emitM_complete`, `RCases.p1_found_M`, `p2_found_M`, `AnyTaint.emitT_eq`, `EmitVec`, `AnyTaintEx.Vec.emit_at`, `emit_above_excluded`, `emit_below`, `start_must`, `restrict_vectors`, `AnyTaintExCov.emitX_contract`, `restrictX_contractNS` |
+| 17 | `EmissionTest`, `RestrictionTest` | every row of `ap.md` §6.3 and §6.4; two insertion orders; programs 1 and 2 (items 11, 12); every cell of THE MEET OF THE TAILS that occurs (`AnyTaint.EmitVec`): an `[any-taint]` added fact (a normal link) against an `[any]` pattern gives the must-premise, an `[any]` added fact (a demand link) the `[any]` premise, `$` against an any tail `$`, an `[any]` added fact against `*/E` `*/E`; a pattern with the tail `[any-taint]` fails the `check` of `emit` and of `DemandStore.Builder.add` (W8 (d)), and so does a normal `[any-taint]` added fact against a `*/E` pattern (the cell does not occur); a must and a may added fact at one path give two premise keys; WITH THE EXCLUSION (A2): `(o, ., [any-taint], {name}, T)` against `(o, .f, [any], T)` gives `(o, .f, [any-taint], {}, T)` and against `(o, .name, [any], T)` nothing, at its path the must-premise `[any-taint]/{name}`, below it the fact itself with `{name}`; `startFact` of a must-premise `[any-taint]/E` is itself, normal, with E. THE RESTRICTION AS AN INTERSECTION (F70 D4; `ap.md` §6.4), on `ApOps.restrict` and on the reference `restrict`, with every vector of `Handoff.RVec` and `HandoffX.XVec`: the §6.4 example `[any] ∩ $ = $` (before F70 `[any]`); `[any-taint]/E ∩ $ = $` with no exclusion; `[any-taint]/{4} ∩ */{5} = [any-taint]/{4, 5}`; the other cells at `D-p` (`[any-taint]/E ∩ [any]` keeps E, `[any] ∩ */E2` stays `[any]`, `$` stays against every tail); above `D-p`: the chain `[any-taint]/E2` of a `*/E2` `D-p` (before F70 `[any-taint]/{}`), nothing when E excludes the step, `$` for a `$` `D-p`, nothing for a `$` leaf; below `D-p`: the leaf with E when the tail of `D-p` admits the step, else nothing; apart, another base, no `D-p`: nothing; a premise that only overlaps `D-c` gives nothing (before F70 a result), a premise inside `D-c` only with its own exclusion gives a result; the exception (a) is real against a `*/E2` `D-p` with `E2 ≠ {}` (a pair of the result outside `D-p`; an operation vector: no run meets this case, `HandoffNoStar.canon_dem_nonstar`, `canon_handF_nonstar`, DD17) and adds no location against `*/{}`; the `*` rows of `RVec` on the reference form only (a restricted run has no `*` conclusion: `ApOps.restrict` fails its check on FLOW). ONE EXCLUSION PER TREE: one normal TAINT value with `[any-taint]/E` leaves above, at and below a `*/E2` `D-p` gives three values with the exclusions `E2`, `E ∪ E2` and `E`; with E Empty the first two merge; a demand value and a `$` `D-p` give one value. `DemandStore.covering` gives every pattern that `restrict` accepts. Programs 1 and 2 give the same results as before F70: their emitted premises lie inside their `D-c`, the restriction gives the same pieces as `restrictU`, and run 3 reports their vulnerabilities with the intersection and the hand-off of the demand edges (`HandoffRCases`; that the hand-off gives exactly these patterns is checked by hand) (items 11, 12) | `RCore.emitM_inter`, `emitM_complete`, `RCases.p1_found_M`, `p2_found_M`, `AnyTaint.emitT_eq`, `EmitVec`, `AnyTaintEx.Vec.emit_at`, `emit_above_excluded`, `emit_below`, `start_must`, `AnyTaintExCov.emitX_contract`; F70: `HandoffRCases.p1_found_I`, `p1_handoff`, `p1_chain`, `p2_found_I`, `p2_handoff`, `p2_chain`, `f3_restrictI_eq_U`, `b2_restrictI_eq_U`, `b2_not_crossB`; `Handoff.restrictI_sub`, `restrictI_contract`, `restrictI_inter`, `restrictI_not_RestrictContract`, `emitM_inside`, `RVec.v64_restrictI`, `v64_restrictU`, `vOverlap_restrictI`, `vOverlap_restrictU`, `vNoExit`, every `RVec.row_*`, `RVec.inter_exc_any`, `inter_exc_star`, `inter_exc_star_at`; `HandoffX.restrictIX_ok`, `restrictIX_contract`, `restrictIX_inter`, `emitX_inside`, `XVec.v64_demand`, `v64_taint`, `v_taint_star`, `v_at_rows`, `v_above_rows`, `v_below_rows`, `v_overlap`, `v_inside_only_with_excl`, `v_old_above_not_inter`, `inter_exc_any`, `inter_exc_star` |
 | 18 | `RequestActionTest` | answer, climb, nothing; the chain answer; `ap.md` §4.10 items 2–4; the run-1 case of §5.10: a FLOW link under a concrete callee request climbs; `requestAction` rejects a premise that is not a policy fact `(x, [], *, {}, *)` or a static position answer `(S, p, *, {}, *)`; a request in a restricted run fails its assert (`EdgeApplication.flowHit`, `checkMark`, `FlowClean`); THE POSITION-REQUEST VECTORS of item 9 (`ap.md` §4.10), on `ApOps.applyEdge` with `statementEdge = true` in run 1: an identity static `*` edge at the root `[]` and at a class `[<C>]`, a static read `x = C.s`, the class keep edge of a write `C.s = x` and a pass rule between static fields each raise the position request cut to the static field and give no fact; a sink on `S.<C>.f` raises the ordinary mark request; a deep read below a static field is the ordinary case `above`; the root keep edge adds `<C>` to the exclusion; an added fact at or below the position answers it, an added fact above it does not; the climb through a caller edge on `S`; the mark answer on a static premise (the added fact itself at or below, the chain answer above) (item 9) | `answerInit_covers`, `Statics.CexClean.shallow_misses` |
 | 19 | `ReversalTest` | every row of `ap.md` §9.1 that occurs for a record, with `*∖X`; converse results on one concrete pair; a backward REACH record reverses into a forward source (item 15); the `[any-taint]` rows (A1: no reversal gives `[any-taint]`): `$ -> [any-taint]` (the Empty exclusion) reverses into `[any] -> $`, `[any] -> [any-taint]` into `[any] -> [any]`, `[any] -> $` into `$ -> [any]`; `revEdge` gives null for an `[any-taint]` premise and for an `[any-taint]` conclusion with a non-empty exclusion (R3); `Record.reversedAt` of a must record is empty, and of a record with the leaves `(ret, ., [any-taint], {f}, T)` and `(ret, .g, $, T)` it reverses only the `$` leaf (R3 leaf by leaf) | `Reverse.revEdge_exact`, `rev_starEx_exact`, `rev_exact_of_empty_premise`, `AnyTaintExact.CexRev.cex_rev` |
 | 20 | `PathTrieTest` | `lookupPrefixes`, `lookupExtensions`, `around` equal their list filters on random keys; `add` of a value that is at the position already returns false and stores nothing; the lookups give the values in insertion order (item 14) | `Store.lookupPrefixes_equiv`, `lookupExtensions_equiv`, `mem_around_indexBy` |
 | 21 | `KaryJoinTest` | `KaryJoin`: every combination comes out exactly once, in every arrival order (all permutations of a few inputs, arity 2 to 4); an input in two slots; a repeated input gives nothing. `StandingJoin`: with two `PathTrie`-backed sides and an overlap `near`, every overlapping pair meets exactly once in every arrival order, and no other pair meets | `standing_complete` |
-| 22 | `AddedFactStoreTest`, `RequestStoreTest`, `DemandStoreTest`, `RecordStoreTest`, `ConjunctionStoreTest`, `VulnerabilityStoreTest`, `MethodEdgeStoreTest` | each index against its list filter; a new caller edge of an existing added fact is a new link (the example of `ap.md` §4.5); each leaf has one key, except a `$` leaf of a normal TAINT value, which can be in the key `E` and in the key `{}` of one caller reference (two links, and the consumers deduplicate: one initial fact, one edge; §7.5); `AddedFactStore.overlapping` equals `links().filter { overlap(it.addedFact, q) }` for queries above, at and below the leaves, and for a `*/E` leaf above the query whose `E` excludes the next accessor (no link); `ApOps.leavesNear` equals `leaves(f).filter { overlap }` per kind; 100 000 caller keys at one position are added and queried in linear time (a timeout fails the test); `RequestStore.add` rejects a premise that is not `(x, [], *, {}, *)` (item 9); a backward edge `{jb} → zero` is stored as REACH and its repeat gives null; the kind assert of `add` (K6), and a `PremiseSet` key with a REACH or FLOW value is rejected (`MethodEdgeStore`, `RunSummaryStore`); `MethodEdgeStore.edgesAt` (both overloads) against a list of every added edge: the REACH bits as `Reach` per layer, one premise or all, the pattern overload returns the whole stored value; a combination of a `{zero}` input and an `{i}` input has the premise `{i}`, and of two `{zero}` inputs `{zero}` (`ConjunctionStore`); `ConjunctionStoreTest`: two alternatives of one rule (two `SinkRule`s of one `rule`, each with the literal `(arg0, [], $, T)`) stay apart: an input of the first never completes a combination of the second (`ap.md` §8.9; item 14); `RecordStoreTest`: `persist` (R1) skips a DEMAND summary, a `PremiseSet` summary and a backward zero-premise summary, keeps a forward `{zero}` summary and a normal one-premise summary, and gives a repeat of a record as no new record; R1 WITH `[any-taint]` (one notion of complete: a normal edge): a forward normal summary with `[any-taint]/E` leaves and a forward must record are kept, with their exclusions; a normal backward summary with an any leaf fails the W6 assert (the backward run has no `[any-taint]`); `AddedFactStoreTest`: an `[any-taint]` added fact on a normal link and an `[any]` one on a demand link of one path are two keys, two `[any-taint]` added facts with the exclusions `{}` and `{f}` are two keys, and `links()` reports `Tail.ANY_TAINT` with its exclusion and `Tail.ANY`; `DemandStoreTest`: a pattern keeps its tail as given (`$`, `*/E` or `[any]`); inside a `runWithMemoryManager` region (the barrier guard, B4) two equal conclusions of `SIZE_TO_FORCE_INTERN` nodes of two method keys persist to one interned node (§4.5 THE LIFETIME OF A TABLE), and a cancelled `Cancellation` stops `persist` at its next method key; `SinkWitness.supportPremise` drops the zero fact; E6 in two orders. `VulnerabilityStoreTest`: two alternatives of one `Argument(*)` sink on `arg0` and on `arg1`, both with `{zero}` and normal, give two entries of one key and no exception; two method keys (two contexts) of one method at one statement give ONE `VulnerabilityKey` and two entries, each with its own method key; a witness whose method key is not of the key's method is rejected; the merge of one entry keeps every sink leaf and its end facts, never crosses group keys (also a demand input on normal facts), and the confirmation of a merged entry equals that of its witnesses (DD10); THE REFERENCE FORMS OF THE CONFIRMATION (`ap.md` §13 item 17): `confirmableMember` accepts a must-premise only in a forward restricted run; `supplies` accepts a `$` member and a must-premise inside a normal `[any-taint]` link with the same mark, rejects a `$` member with another concrete mark (the mark condition; its reason is the model premise of `AnyTaintExact.CexSupMark.cex_sup_mark`, which `InitialAp.init` cannot build: test 5) and every member of a demand `[any]` link, and in run 1 only `jm = a`; with the exclusion (A2): a normal link `(o, ., [any-taint], {name}, T)` supplies `(o, .email, $, T)` and not `(o, .name, $, T)` (items 7, 14; the report and output parts of item 14 are `analyzer-impl.md` §9.1 rows 21 and 22) | `standing_complete`, `RStore.near_equiv`, `PipelineStore.record_lookup`, `NDConfirmed.CexSites.cex_sites`, `AnyTaintEx.SupLinkX`, `SupX`, `AnyTaint.SupLink`, `SupT`, `AnyTaintExact.CexSupMark.cex_sup_mark`, `markSub_conc` |
-| 23 | `AnyTaintProgramsTest` (unit level, on `ApOps` and the stores, each program as a hand-made run with the forms of the Lean program; the analysis tests of the same programs are `analyzer-impl.md` §9.1) | THE WORKED PROGRAMS OF THE SPEC CLOSURES `AnyTaintEx.D6X` and `DRXs` (`ap.md` §13 items 16, 17; the round-1 programs re-derived in `AnyTaintExCases2`): G (`root() { dto = srcAny(); x = get(dto); sinkAny(x); }`, `get(p) { return p.f; }`): run 1 gives the FLOW summary of `get` as the case `above` (demand) and a demand sink edge; the backward hand-off demand `((p, .f, [any], T), (ret, ., [any], T))`; in run 3 the added fact `(p, ., [any-taint], T)` emits the must-premise `(p, .f, [any-taint], T)`, its start is normal, the summary `(p, .f, [any-taint], T) -> (ret, ., [any-taint], T)` is normal, and the sink edge in `root` is normal with a supported must-premise; C (`use(o) { sinkAny(o.f); }`): the must-premise `(o, .f, [any-taint], T)` and a normal sink edge in `use`, supported through the normal `[any-taint]` link; I (`x = id(dto)`, `id(p) { return p; }`): the run-1 FLOW summary `(p, ., *, *) -> (ret, ., *, *)` on the added fact `(p, ., [any-taint], {}, T)` gives `(x, ., [any-taint], {}, T)` NORMAL, and `sinkAny(x)` a normal sink edge under `{zero}` (run 1 confirms; no DEMAND entry); P: `P.$ (T) -> Q.[any-taint] (T)` normal, `P.$ (T) -> Q.[any] (T)` demand; `mk` (`mk() { d = srcAny(); d.setName(c); return d; }`, `root() { r = mk(); sink(r.name); sink(r.email); }`): the zero-premise summary `{zero} -> (ret, ., [any-taint], {name}, T)` applied on `Reach.NORMAL` gives `(r, ., [any-taint], {name}, T)` NORMAL (the REACH branch keeps `toExclusion`, §5.3; Example 4), so `sink(r.name)` has no witness and `sink(r.email)` a normal sink edge; THE PROGRAMS WITH THE EXCLUSION (`AnyTaintExCases`, A2; `ap.md` §13 item 16, `interpreter.md` §7.2 item 30): S (`dto.setName(c)`, `setName(n) { this.name = n; }`): the run-1 record `(this, ., *, *) -> (this, ., */{name}, *)` on the added fact `(this, ., [any-taint], {}, T)` gives `(dto, ., [any-taint], {name}, T)` NORMAL, `sink(dto.name)` has no witness and `sink(dto.email)` a normal sink edge; SD (the setter one call deeper): the same in `root`; B (the broad demand `(D-c = (this, ., [any], T), D-p = (this, ., [any], T))`, by hand, with the run-1 records): run 3 emits the must-premise `(this, ., [any-taint], {}, T)` and its summary is `(this, ., [any-taint], {name}, T)`, normal; in the caller `sink(d.name)` has no witness and `sinkAny(e)` a normal sink edge (run 3; through `IterationDriver` B stops after run 1, which already confirms `sinkAny(e)`); X (`x.f.g = c` as ONE statement: a synthetic statement summary on the AP, the keep edges of `strongKeep(x, [f, g])` and the gen edge `c.* -> x.f.g.*`, applied with `ops.applyEdge`; not a JIR form: the JVM makes `t = x.f; t.g = c`, Part II test 15): the two results `(x, ., [any-taint], {f}, T)` and `(x, .f, [any-taint], {g}, T)`, two trees; R (`y = dto.name; z = dto.email` after S): no result on `y`, `(z, ., [any-taint], {}, T)` on `z`; CL: the three cleaners at `x.f` (Part I §5.6); CUT (the results of X cut with `ops.limit(…, 0, …)`: the AP limit with `L = 0`, which no run has, `ApMode`): `(x, ., [any], T)` in the demand layer with no exclusion; THE CONJUNCTION (`AnyTaintND.Example`): `x = srcAny(); y = src();` and `(x, .f, $, T) ∧ (y, ., $, U) -> (z, ., $, V)` gives a normal result | `AnyTaintExCases2.G.run1_flow_above`, `run1_not_confirmed`, `HX_exact`, `handoffX_get`, `run3_must`, `run3_sink_normal`, `run3_must_supported`, `run3_confirmed`; `C.run3_must`, `run3_sink_normal`, `run3_supported`; `I.run1_flow`, `app_normal`, `run1_sink_normal`, `run1_confirmed`, `run1_no_demand`; `PassRule.source_vs_pass`, `source_normal`, `pass_demand`; `AnyTaintEx.Vec.summary_ann` (`mk`); `AnyTaintExCases.S.record_app`, `S.run1_dto_ann`, `S.run1_name_not_reported`, `S.run1_email_confirmed`, `SD.same_result`, `B.run3_must`, `B.run3_summary`, `B.run3_name_not_reported`, `B.run3_anyE_confirmed`, `X.two_results`, `X.locations_exact`, `R.reads`, `CL.atAndBelow_result`, `CL.below_result`, `CL.exact_result`, `CUT.cut_ops`, `CUT.run1_cut`; `AnyTaintND.Example.layer_new`, `confirmed` |
+| 22 | `AddedFactStoreTest`, `RequestStoreTest`, `DemandStoreTest`, `RecordStoreTest`, `ConjunctionStoreTest`, `VulnerabilityStoreTest`, `MethodEdgeStoreTest`, `RunSummaryStoreTest` | each index against its list filter; a new caller edge of an existing added fact is a new link (the example of `ap.md` §4.5); each leaf has one key, except a `$` leaf of a normal TAINT value, which can be in the key `E` and in the key `{}` of one caller reference (two links, and the consumers deduplicate: one initial fact, one edge; §7.5); `AddedFactStore.overlapping` equals `links().filter { overlap(it.addedFact, q) }` for queries above, at and below the leaves, and for a `*/E` leaf above the query whose `E` excludes the next accessor (no link); `ApOps.leavesNear` equals `leaves(f).filter { overlap }` per kind; 100 000 caller keys at one position are added and queried in linear time (a timeout fails the test); `RequestStore.add` rejects a premise that is not `(x, [], *, {}, *)` (item 9); a backward edge `{jb} → zero` is stored as REACH and its repeat gives null; the kind assert of `add` (K6), and a `PremiseSet` key with a REACH or FLOW value is rejected (`MethodEdgeStore`, `RunSummaryStore`); `MethodEdgeStore.edgesAt` (both overloads) against a list of every added edge: the REACH bits as `Reach` per layer, one premise or all, the pattern overload returns the whole stored value; a combination of a `{zero}` input and an `{i}` input has the premise `{i}`, and of two `{zero}` inputs `{zero}` (`ConjunctionStore`); `ConjunctionStoreTest`: two alternatives of one rule (two `SinkRule`s of one `rule`, each with the literal `(arg0, [], $, T)`) stay apart: an input of the first never completes a combination of the second (`ap.md` §8.9; item 14); `RecordStoreTest`: `persist` (R1) skips a DEMAND summary, a `PremiseSet` summary and a backward zero-premise summary, keeps a forward `{zero}` summary and a normal one-premise summary, and gives a repeat of a record as no new record; R1 WITH `[any-taint]` (one notion of complete: a normal edge): a forward normal summary with `[any-taint]/E` leaves and a forward must record are kept, with their exclusions; a normal backward summary with an any leaf fails the W6 assert (the backward run has no `[any-taint]`); `AddedFactStoreTest`: an `[any-taint]` added fact on a normal link and an `[any]` one on a demand link of one path are two keys, two `[any-taint]` added facts with the exclusions `{}` and `{f}` are two keys, and `links()` reports `Tail.ANY_TAINT` with its exclusion and `Tail.ANY`; `DemandStoreTest`: a pattern keeps its tail as given (`$`, `*/E` or `[any]`); `covering` equals the list filter "the path of `D-c` is a prefix of the query" on random keys, `near` contains every pattern of `covering`, and the zero demand stays implicit (F70 D5); F70 (D2, D3), `RunSummaryStoreTest`: `all()` keeps every summary before the restriction and `demandEdges()` exactly the pieces given to `addDemand`, each with the K6 check; `RecordStoreTest`: every leaf that `demandPart` keeps out of the hand-off is a leaf of a record that `persist` adds (a forward normal one-premise summary; a backward normal summary of a non-zero premise), and a backward demand summary is no record and is all in `demandPart`; inside a `runWithMemoryManager` region (the barrier guard, B4) two equal conclusions of `SIZE_TO_FORCE_INTERN` nodes of two method keys persist to one interned node (§4.5 THE LIFETIME OF A TABLE), and a cancelled `Cancellation` stops `persist` at its next method key; `SinkWitness.supportPremise` drops the zero fact; E6 in two orders. `VulnerabilityStoreTest`: two alternatives of one `Argument(*)` sink on `arg0` and on `arg1`, both with `{zero}` and normal, give two entries of one key and no exception; two method keys (two contexts) of one method at one statement give ONE `VulnerabilityKey` and two entries, each with its own method key; a witness whose method key is not of the key's method is rejected; the merge of one entry keeps every sink leaf and its end facts, never crosses group keys (also a demand input on normal facts), and the confirmation of a merged entry equals that of its witnesses (DD10); THE REFERENCE FORMS OF THE CONFIRMATION (`ap.md` §13 item 17): `confirmableMember` accepts a must-premise only in a forward restricted run; `supplies` accepts a `$` member and a must-premise inside a normal `[any-taint]` link with the same mark, rejects a `$` member with another concrete mark (the mark condition; its reason is the model premise of `AnyTaintExact.CexSupMark.cex_sup_mark`, which `InitialAp.init` cannot build: test 5) and every member of a demand `[any]` link, and in run 1 only `jm = a`; with the exclusion (A2): a normal link `(o, ., [any-taint], {name}, T)` supplies `(o, .email, $, T)` and not `(o, .name, $, T)` (items 7, 14; the report and output parts of item 14 are `analyzer-impl.md` §9.1 rows 21 and 22) | `standing_complete`, `RStore.near_equiv`, `PipelineStore.record_lookup`, `NDConfirmed.CexSites.cex_sites`, `AnyTaintEx.SupLinkX`, `SupX`, `AnyTaint.SupLink`, `SupT`, `AnyTaintExact.CexSupMark.cex_sup_mark`, `markSub_conc` |
+| 23 | `AnyTaintProgramsTest` (unit level, on `ApOps` and the stores, each program as a hand-made run with the forms of the Lean program; the analysis tests of the same programs are `analyzer-impl.md` §9.1) | THE WORKED PROGRAMS OF THE SPEC CLOSURE `AnyTaintEx.D6X` (run 1) and of `AnyTaintEx.DRXs` (the restricted runs with the earlier restriction and hand-off, the record of the earlier design; with the intersection `HandoffX.restrictIX` the same results are argued, `ap.md` §11.2) (`ap.md` §13 items 16, 17; the round-1 programs re-derived in `AnyTaintExCases2`): G (`root() { dto = srcAny(); x = get(dto); sinkAny(x); }`, `get(p) { return p.f; }`): run 1 gives the FLOW summary of `get` as the case `above` (demand) and a demand sink edge; the backward hand-off demand `((p, .f, [any], T), (ret, ., [any], T))`; in run 3 the added fact `(p, ., [any-taint], T)` emits the must-premise `(p, .f, [any-taint], T)`, its start is normal, the summary `(p, .f, [any-taint], T) -> (ret, ., [any-taint], T)` is normal, and the sink edge in `root` is normal with a supported must-premise; C (`use(o) { sinkAny(o.f); }`): the must-premise `(o, .f, [any-taint], T)` and a normal sink edge in `use`, supported through the normal `[any-taint]` link; I (`x = id(dto)`, `id(p) { return p; }`): the run-1 FLOW summary `(p, ., *, *) -> (ret, ., *, *)` on the added fact `(p, ., [any-taint], {}, T)` gives `(x, ., [any-taint], {}, T)` NORMAL, and `sinkAny(x)` a normal sink edge under `{zero}` (run 1 confirms; no DEMAND entry); P: `P.$ (T) -> Q.[any-taint] (T)` normal, `P.$ (T) -> Q.[any] (T)` demand; `mk` (`mk() { d = srcAny(); d.setName(c); return d; }`, `root() { r = mk(); sink(r.name); sink(r.email); }`): the zero-premise summary `{zero} -> (ret, ., [any-taint], {name}, T)` applied on `Reach.NORMAL` gives `(r, ., [any-taint], {name}, T)` NORMAL (the REACH branch keeps `toExclusion`, §5.3; Example 4), so `sink(r.name)` has no witness and `sink(r.email)` a normal sink edge; THE PROGRAMS WITH THE EXCLUSION (`AnyTaintExCases`, A2; `ap.md` §13 item 16, `interpreter.md` §7.2 item 30): S (`dto.setName(c)`, `setName(n) { this.name = n; }`): the run-1 record `(this, ., *, *) -> (this, ., */{name}, *)` on the added fact `(this, ., [any-taint], {}, T)` gives `(dto, ., [any-taint], {name}, T)` NORMAL, `sink(dto.name)` has no witness and `sink(dto.email)` a normal sink edge; SD (the setter one call deeper): the same in `root`; B (the broad demand `(D-c = (this, ., [any], T), D-p = (this, ., [any], T))`, by hand, with the run-1 records): run 3 emits the must-premise `(this, ., [any-taint], {}, T)` and its summary is `(this, ., [any-taint], {name}, T)`, normal; in the caller `sink(d.name)` has no witness and `sinkAny(e)` a normal sink edge (run 3; through `IterationDriver` B stops after run 1, which already confirms `sinkAny(e)`); X (`x.f.g = c` as ONE statement: a synthetic statement summary on the AP, the keep edges of `strongKeep(x, [f, g])` and the gen edge `c.* -> x.f.g.*`, applied with `ops.applyEdge`; not a JIR form: the JVM makes `t = x.f; t.g = c`, Part II test 15): the two results `(x, ., [any-taint], {f}, T)` and `(x, .f, [any-taint], {g}, T)`, two trees; R (`y = dto.name; z = dto.email` after S): no result on `y`, `(z, ., [any-taint], {}, T)` on `z`; CL: the three cleaners at `x.f` (Part I §5.6); CUT (the results of X cut with `ops.limit(…, 0, …)`: the AP limit with `L = 0`, which no run has, `ApMode`): `(x, ., [any], T)` in the demand layer with no exclusion; THE CONJUNCTION (`AnyTaintND.Example`): `x = srcAny(); y = src();` and `(x, .f, $, T) ∧ (y, ., $, U) -> (z, ., $, V)` gives a normal result | `AnyTaintExCases2.G.run1_flow_above`, `run1_not_confirmed`, `HX_exact`, `handoffX_get`, `run3_must`, `run3_sink_normal`, `run3_must_supported`, `run3_confirmed`; `C.run3_must`, `run3_sink_normal`, `run3_supported`; `I.run1_flow`, `app_normal`, `run1_sink_normal`, `run1_confirmed`, `run1_no_demand`; `PassRule.source_vs_pass`, `source_normal`, `pass_demand`; `AnyTaintEx.Vec.summary_ann` (`mk`); `AnyTaintExCases.S.record_app`, `S.run1_dto_ann`, `S.run1_name_not_reported`, `S.run1_email_confirmed`, `SD.same_result`, `B.run3_must`, `B.run3_summary`, `B.run3_name_not_reported`, `B.run3_anyE_confirmed`, `X.two_results`, `X.locations_exact`, `R.reads`, `CL.atAndBelow_result`, `CL.below_result`, `CL.exact_result`, `CUT.cut_ops`, `CUT.run1_cut`; `AnyTaintND.Example.layer_new`, `confirmed` |
+| 24 | `CrossTest` (F70 D2, D3; DD17) | `crossK` against `HandoffCases.crossKB` (`crossK_iff`), `cross` against `HandoffCases.crossB` (the Boolean form of `Handoff.Cross`, `cross_iff`), `crossReversed` against `decide (Handoff.CrossB jb gb)` (its `Decidable` instance is in `HandoffCases`), on every premise tail and exclusion, every leaf tail, both mark kinds and both layers (a small complete universe): a leaf is crossable exactly when it is normal, its premise is `$` or `*` with the Empty exclusion, it is mark-reversible and it has no any tail; an `[any]` premise, a must-premise `[any-taint]/E` and a `*/{f}` premise are not crossable; an `[any-taint]` leaf (also with the Empty exclusion) and an `[any]` leaf are not; a demand leaf is not. THE VECTORS OF THE MODEL: the exit edge `(arg, ., *) -> (ret, .f, *)` of `wrap` is crossable; the reversal of a leaf with an any tail has the premise `[any]`, which a `$` requirement neither lies inside nor is covered by (`inside`, `applicable` false); the normal backward getter edge `(ret, .a, $, T) -> (arg, .f.a, $, T)` is crossable (`crossReversed`, Lean `CrossB`); a normal backward `{jb} -> zero` with a `$` premise too (its reversal is the source record `zero -> jb`), and with an `[any]` premise not; a demand backward `$ -> $` leaf is not (SI21, RESOLVED by `Handoff.CrossB`), also one from the reversal of a conjunction (Part II §23.1). `ApOps.demandPart`: null for the run-1 FLOW summary of `wrap` and for a normal REACH value; the whole value for a `PremiseSet` premise, a demand value (also a backward one through the reversal of a conjunction), a backward `{zero}` premise and a forward `[any]`, `[any-taint]/E` or `*/{f}` premise; only the `[any-taint]` leaves of a normal TAINT value under a `$` premise (its `$` leaves are crossable), with the exclusion of the value; the result equals the leaves of `leaves(g)` for which `cross` (forward) or `crossReversed` (backward) is false | `Handoff.Cross`, `CrossK`, `revRec`, `cross_applies`; `HandoffCases.cross_iff`, `crossK_iff`, `Wrap.w1_exit_cross`, `revRec_any_premise`, `not_cross_of_any`, `dollar_blocked`, `any_record_blocks_dollar`, `Getter.revRec_g_cross`, `Getter.revRec_g_crossB`, `AnyW.cegar_cross_anyw`, `AnyM.cegar_cross_anym`; `Handoff.CrossB`, `HandoffBackward.crossB_em` |
 
 Example 1 — `ApplyEdgeVectorsTest`, the vector `a = b.f` on `(b, ., */{h}, *)` (`Cases.lean:64`, `ap.md` §4.2 table row 2):
 
@@ -3847,6 +4091,97 @@ class AnyTaintProgramsTest {
 }
 ```
 
+Example 5 — `RestrictionTest` (test 17) and `CrossTest` (test 24), the intersection and the crossable test of F70 (Lean
+`Handoff.RVec`, `HandoffX.XVec`, `HandoffCases`):
+
+```kotlin
+class RestrictionTest {
+    private val m = ApManager(Cancellation())
+    private val ops = ApOps(m)
+    private val f4 = m.accessors.index(FieldAccessor("C", "f4", "C"))
+    private val f5 = m.accessors.index(FieldAccessor("C", "f5", "C"))
+    private val f7 = m.accessors.index(FieldAccessor("C", "f7", "C"))
+    private val arg = AccessPathBase.Argument(0); private val ret = AccessPathBase.Return
+    private val T = m.marks.mark("T")
+    private fun conc(b: AccessPathBase, p: List<Int>, tail: Tail) = PathFact(b, p, tail, MarkSlot.Concrete(T))
+    private fun pat(b: AccessPathBase, p: List<Int>, tail: Tail, e: ExclusionSet = ExclusionSet.Empty) =
+        Pattern(PathFact(b, p, tail, MarkSlot.STAR), e)
+    private val j = m.initial(arg, null, Tail.EXACT, ExclusionSet.Empty, MarkSlot.Concrete(T))     // `arg.$ (T)` (XVec.j1)
+    private val dc = pat(arg, emptyList(), Tail.EXACT)                                               // XVec.dc1
+
+    @Test // XVec.v64_demand, v64_taint; ap.md §6.4 the example (before F70 the any leaf stayed: RVec.v64_restrictU)
+    fun `at a dollar exit pattern an any leaf becomes dollar in its layer`() {
+        for (layer in Layer.entries) {                                      // `[any-taint]/{f4}` (normal), `[any]` (demand)
+            val g = m.factsOf(conc(ret, emptyList(), Tail.ANY_TAINT), ExclusionSet.of(f4), layer)
+            val r = ops.restrict(j, g, DemandPattern(dc, pat(ret, emptyList(), Tail.EXACT))).single()
+            assertEquals(layer, r.layer)
+            assertEquals(listOf(Pattern(conc(ret, emptyList(), Tail.EXACT), ExclusionSet.Empty)), ops.leaves(r).toList())
+        }
+    }
+
+    @Test // XVec.v_taint_star, v_above_rows, v_below_rows: one exclusion per tree, so three values (an operation
+          // vector: no run has a `*/E2` D-p with E2 ≠ {}, HandoffNoStar.canon_dem_nonstar, canon_handF_nonstar; DD17)
+    fun `against a star exit pattern the any-taint leaves above, at and below get the exclusions of the intersection`() {
+        val e = ExclusionSet.of(f4)
+        val g = listOf(emptyList(), listOf(f7), listOf(f7, f7))              // above, at and below D-p = `ret.f7.*/{f5}`
+            .map { m.factsOf(conc(ret, it, Tail.ANY_TAINT), e, Layer.NORMAL) }.reduce { a, b -> m.mergeAddDelta(a, b).first }
+        val out = ops.restrict(j, g, DemandPattern(dc, pat(ret, listOf(f7), Tail.STAR, ExclusionSet.of(f5))))
+        assertEquals(3, out.size)
+        assertEquals(setOf(
+            Pattern(conc(ret, listOf(f7), Tail.ANY_TAINT), ExclusionSet.of(f5)),               // the chain: `[any-taint]/E2`
+            Pattern(conc(ret, listOf(f7), Tail.ANY_TAINT), e.union(ExclusionSet.of(f5))),      // the meet: `[any-taint]/(E ∪ E2)`
+            Pattern(conc(ret, listOf(f7, f7), Tail.ANY_TAINT), e)),                            // below: the leaf with E
+            out.flatMap { ops.leaves(it).toList() }.toSet())
+    }
+
+    @Test // RVec.vOverlap_inside, vOverlap_restrictI (before F70: vOverlap_restrictU gave g)
+    fun `a premise that only overlaps D-c gives nothing`() {
+        val any = m.initial(arg, null, Tail.ANY, ExclusionSet.Empty, MarkSlot.Concrete(T))      // `arg.[any] (T)` (RVec.vJo)
+        val d = DemandPattern(pat(arg, listOf(f5), Tail.EXACT), pat(ret, emptyList(), Tail.ANY))  // RVec.vDo
+        assertTrue(overlap(any.toPattern(), d.entry) && !insideLoc(any.toPattern(), d.entry))
+        assertTrue(ops.restrict(any, m.factsOf(conc(ret, emptyList(), Tail.ANY_TAINT), ExclusionSet.Empty, Layer.NORMAL), d).isEmpty())
+    }
+}
+
+class CrossTest {
+    private val m = ApManager(Cancellation())
+    private val ops = ApOps(m)
+    private val f = m.accessors.index(FieldAccessor("C", "f", "C"))
+    private val arg = AccessPathBase.Argument(0); private val ret = AccessPathBase.Return
+    private val T = m.marks.mark("T")
+    private fun conc(b: AccessPathBase, p: List<Int>, tail: Tail) = PathFact(b, p, tail, MarkSlot.Concrete(T))
+
+    @Test // HandoffCases.Wrap.w1_exit_cross, handF_w1_exact: the run-1 summary of `wrap` gives no demand edge
+    fun `the run-1 summary of wrap is crossable`() {
+        val policy = m.initial(arg, null, Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)               // `(arg, ., *, {}, *)`
+        val leaf = PathFact(ret, listOf(f), Tail.STAR, MarkSlot.STAR)                                 // `(ret, .f, *)`
+        assertTrue(cross(policy.toPattern(), Conclusion(leaf, ExclusionSet.Empty, demand = false)))
+        assertNull(ops.demandPart(policy, m.factsOf(leaf, ExclusionSet.Empty, Layer.NORMAL), Direction.FORWARD))
+    }
+
+    @Test // HandoffCases.revRec_any_premise, dollar_blocked; AnyW.cegar_cross_anyw: the any leaf must stay a demand edge
+    fun `an any-taint leaf is a demand edge and its dollar sibling is crossable`() {
+        val jT = m.initial(arg, null, Tail.EXACT, ExclusionSet.Empty, MarkSlot.Concrete(T))
+        val g = m.mergeAddDelta(m.factsOf(conc(ret, emptyList(), Tail.ANY_TAINT), ExclusionSet.Empty, Layer.NORMAL),
+                                m.factsOf(conc(ret, listOf(f), Tail.EXACT), ExclusionSet.Empty, Layer.NORMAL)).first
+        val part = checkNotNull(ops.demandPart(jT, g, Direction.FORWARD))
+        assertEquals(listOf(Pattern(conc(ret, emptyList(), Tail.ANY_TAINT), ExclusionSet.Empty)), ops.leaves(part).toList())
+        val rev = checkNotNull(revEdge(PathEdge(jT.toPattern().fact, conc(ret, emptyList(), Tail.ANY_TAINT), ExclusionSet.Empty)))
+        val p = Pattern(rev.from, ExclusionSet.Empty)                                                 // the reversed premise `[any]`
+        val req = Pattern(conc(ret, listOf(f), Tail.EXACT), ExclusionSet.Empty)                       // a `$` requirement below it
+        assertEquals(Tail.ANY, p.fact.tail)
+        assertFalse(inside(p, req) || applicable(p, req))                                             // the backward run cannot cross it
+    }
+
+    @Test // Handoff.CrossB (SI21, RESOLVED): a demand backward leaf is never a record (R1), so it stays a demand edge
+    fun `a demand backward leaf is not crossable`() {
+        val jb = Pattern(conc(ret, emptyList(), Tail.EXACT), ExclusionSet.Empty)
+        assertTrue(crossReversed(jb, Conclusion(conc(arg, listOf(f), Tail.EXACT), ExclusionSet.Empty, demand = false)))   // Getter.revRec_g_crossB
+        assertFalse(crossReversed(jb, Conclusion(conc(arg, listOf(f), Tail.EXACT), ExclusionSet.Empty, demand = true)))
+    }
+}
+```
+
 After the unit tests pass, the analysis tests of `ap.md` §13 item 16 run through phase 3 (`analyzer-impl.md` §8.1).
 The six static programs of item 9 are analysis tests too, as Java samples of the Lean programs: `Statics.CexAbove`,
 `CexWide`, `CexClean`, `CopyF2F` and `DeepSink` give their vulnerability through a normal sink edge, and
@@ -3991,12 +4326,13 @@ Three rows are now in the spec (RESOLVED (F68)); they stay here as a record.
 | `SinkRule.unconditional`, `conjunctive`, `seedPatterns()` | `analyzer-core.md` §4.9 defines `SinkRule(rule, alternative, patterns, endFacts)`; Part II adds these three derived members. `alternative` names the sink alternative of a witness (`ap.md` §8.10: the witnesses of two alternatives never merge). | §23.4 |
 | `ExitRules.entryMarkRemoval(base): MarkSet?` | The marks that the core removes from a zero-premise item on `base` (`interpreter.md` §4.7 step 4, D35): the entry marks on `this` and `arg(i)`; null (nothing to remove) on another base or with no entry mark. The core removes every leaf with such a mark, at any depth and with both tails, with `ApOps.withoutMarks` (Part I §5.8). | §23.4 |
 | `MicroEdge.isSource`, `MicroEdge.isIdentity`, `StatementSummary.edgesOf`, `StatementSummary.targets`, `CallPlan.stagesFrom`, `identityEdge(b)` | The source-seed places (`analyzer-core.md` §4.7), the alias guard (AC4), the edges of one base, the target bases (A5), the stages from one point, the identity edge of `interpreter.md` A5, §3.5 and §3.7. | §23.1, §23.2, §23.6 |
-| `MicroEdge.may` (derived: `forward.to.tail == Tail.ANY`) | THE MAY EDGE (`interpreter.md` I14, §4.9): a micro edge whose FORWARD target is `[any]` (a pass rule with an `AnyField` target) gives every result in the demand layer, also backward, where its reversal can give a `$` result. The forward target tail of the edge tells it, so the forms carry no rule-kind flag (the backward run has no `[any-taint]`: the reversal of a source and of a pass rule differ only here). `analyzer-core.md` §4.9 `MicroEdge(edge, forward)` has the field that it reads; the engine passes it to `ApOps.applyEdge(..., may)` (`analyzer-impl.md` `EngineAlgebra`). | §23.1, §23.8 |
+| `MicroEdge.conjunctive`, `CallStage.Edges.trigger` (F70) | `analyzer-core.md` §4.9 has `MicroEdge(edge, forward, conjunctive)`: a reversed literal of a conjunctive edge, whose every result is in the demand layer (`analyzer-core.md` §4.3 THE REVERSAL OF A CONJUNCTION; `MicroEdge.may` reads it). `trigger` is an addition: the sink alternative of a reversed `END_FACTS` stage, whose sink seeds the core fires when the stage gives a result (`analyzer-core.md` §4.5 THE TRIGGER OF AN END FACT: "the reversed `END_FACTS` stage keeps `sink`"). At a method boundary the core finds the sinks of a reversed end-fact edge by its forward form (`RuleStatement.reversed`). | §23.1, §23.2, §23.4, §23.5 |
+| `MicroEdge.may` (derived: `forward.to.tail == Tail.ANY`, or `conjunctive`) | THE MAY EDGE (`interpreter.md` I14, §4.9): a micro edge whose FORWARD target is `[any]` (a pass rule with an `AnyField` target) gives every result in the demand layer, also backward, where its reversal can give a `$` result. The forward target tail of the edge tells it, so the forms carry no rule-kind flag (the backward run has no `[any-taint]`: the reversal of a source and of a pass rule differ only here). `analyzer-core.md` §4.9 `MicroEdge(edge, forward, conjunctive)` has the fields that it reads; the engine passes it to `ApOps.applyEdge(..., may)` (`analyzer-impl.md` `EngineAlgebra`). Since F70 a `conjunctive` edge (the reversed literal of a conjunctive edge) is a may too (THE REVERSAL OF A CONJUNCTION, §23.1). | §23.1, §23.8 |
 | the stage `AFTER → BEFORE` of kind `PASS_OVER` in `CallPlan.reversed()` | The identity edge `b.* → b.*` of an alias base (`analyzer-core.md` §4.5, `interpreter.md` A5). RESOLVED (F68): `analyzer-core.md` §4.5 THE REVERSAL and the PASS_OVER row (step 1) of its step table now have this stage, and §4.9 the kind `PASS_OVER` (SI9). | §23.6 |
 | `FormsCache`, `MethodForms`, `DirectedForms` | The forms cache of `analyzer-core.md` §4.8 and the direction table of `analyzer-core.md` §4.9. `analyzer-impl.md` §3.4 uses them. | §23.7 |
 | `UnresolvedCallObserver` (`reached(call, position, plan)`); `JIRInterpreter` implements it; `CallPlan.passReads` | The external method tracker records the taint that reaches an unresolved callee, as today. `passReads`: the positions that a pass rule of the rule set reads (not a default model), for its `ruleApplied`. | §28.5, §23.6 |
 | `FormApplier<P, F>` (`statement`, `stage`, `gen`), `FactAlgebra<P, F>`, `Place(node, statementEdge, sources)` | The three application modes belong to the forms; one implementation for the engine (`EngineAlgebra`, `analyzer-impl.md` §4.3) and both oracles. | §23.3 |
-| `ReferenceAlgebra(mode, request, allowsSource, sourceHit, manager, conjunction)`, `FormsReference(ops, algebra)` (`applier`, `conclusions`, `apply`, `agrees`, `run(plan, inputs, at, hooks, from)`), `PlanItem(premise, c, origin)`, `PlanHooks(guards, atBound, callees, clean, exit)` | The per-path algebra on `Reference.kt`, with the static exception and the filter test, and the one per-path walk of a call plan; `NaiveClosure` (`analyzer-impl.md` §9.2) passes its hooks. | §23.8 |
+| `ReferenceAlgebra(mode, request, allowsSource, sourceHit, manager, conjunction)`, `FormsReference(ops, algebra)` (`applier`, `conclusions`, `apply`, `agrees`, `run(plan, inputs, at, hooks, from)`), `PlanItem(premise, c, origin)`, `PlanHooks(guards, atBound, callees, clean, exit, trigger)` | The per-path algebra on `Reference.kt`, with the static exception and the filter test, and the one per-path walk of a call plan; `NaiveClosure` (`analyzer-impl.md` §9.2) passes its hooks. | §23.8 |
 | `StageKind.originOf(me, prev)`; `FormApplier.statement(..., untouched)` | The `Origin` rule of `interpreter.md` §3.8 AC3, AC4, once for the engine and the per-path walk; the unchanged path of the engine through the STATEMENT mode. | §23.3, §23.5 |
 
 ---
@@ -4028,8 +4364,11 @@ class ExitNode(val node: CommonInst, val exceptional: Boolean)
  *  records the source hits (backward run) ONLY on an `isSource` edge of: a statement summary, `RuleStatement.summary`
  *  (entry and exit rules), and a `StageKind.SOURCES` stage. NEVER on `RuleStatement.endFacts`, `SinkRule.endFacts` or a
  *  `StageKind.END_FACTS` stage: an end fact has the shape `zero -> P.$ (T)` or `zero -> P.[any-taint] (T)` of a source
- *  (interpreter.md I14), but it applies as usual. */
-class MicroEdge(val edge: PathEdge, val forward: PathEdge) {
+ *  (interpreter.md I14), but it applies as usual. Backward, a reversed end-fact edge that applies to a requirement
+ *  also fires the sink seeds of its sink (THE TRIGGER OF AN END FACT, §23.4).
+ *  `conjunctive` (analyzer-core.md §4.9): this is the reversal of ONE literal of a conjunctive edge (§23.2); only
+ *  `StatementSummary.reversed` sets it. */
+class MicroEdge(val edge: PathEdge, val forward: PathEdge, val conjunctive: Boolean = false) {
     init {                                                       // interpreter.md I14: no forward form has the premise
         check(forward.from.tail != Tail.ANY_TAINT)                                 // `[any-taint]` (a pass rule with an
         check(edge == forward || (edge.from.tail != Tail.ANY_TAINT && edge.to.tail != Tail.ANY_TAINT))    // AnyField premise
@@ -4042,8 +4381,15 @@ class MicroEdge(val edge: PathEdge, val forward: PathEdge) {
      *  every result of the edge is in the demand layer, forward (W6: every result has the `[any]` tail) and backward (its
      *  reversal `Q.[any] (T) -> P.$ (T)` can give a `$` result; review RS-1; argued, ap.md §11.2). A source has the
      *  forward target `[any-taint]` (a must; its reversal follows the ordinary rows), so the forward target tail tells the
-     *  two apart and no rule-kind flag is needed. The core passes it to `ApOps.applyEdge(..., may)` (Part I §5.3). */
-    val may: Boolean get() = forward.to.tail == Tail.ANY
+     *  two apart and no rule-kind flag is needed. The core passes it to `ApOps.applyEdge(..., may)` (Part I §5.3).
+     *  THE REVERSAL OF A CONJUNCTION (F70; ap.md §9.2; analyzer-core.md §4.3; DD17 (4)): a `conjunctive` edge gives every
+     *  result in the demand layer too, as the reversal of a may. A requirement that reaches one literal is not a converse
+     *  flow of the conjunction (the other literals must hold too), so no backward summary through it is a record (R1) or
+     *  crossable (Lean Handoff.CrossB), and the hand-off gives it to the next forward run, which analyses the callee with
+     *  every member. Before F70 these results followed the ordinary rows: a NORMAL backward edge to one literal, a record
+     *  by R1, and by R3 a forward record that drops the other literals (a false CONFIRMED; the program of §33.3, the third
+     *  test). Argued: the model has no restricted run with ND edges (ap.md §11.2). */
+    val may: Boolean get() = forward.to.tail == Tail.ANY || conjunctive
     companion object { fun of(e: PathEdge) = MicroEdge(e, e) }
 }
 
@@ -4092,13 +4438,16 @@ class StatementSummary(
      *  run has no `[any-taint]`: the reversed `[any]` literal gives the requirement `[any]` (W6: demand), and a forward
      *  `[any-taint]` target is the reversed premise `[any]`. Each reversed micro edge keeps its forward form, so
      *  `MicroEdge.may` (§23.1) tells the core that the reversal of a pass rule with an `AnyField` target gives demand
-     *  results only. */
+     *  results only. THE REVERSAL OF A CONJUNCTION (F70; ap.md §9.2; interpreter.md §4.9 STATEMENTS, §5.3): a
+     *  `ConjunctiveEdge` (two or more positive literals, Part I §5.8: a conjunctive source at a call or at an exit) gives
+     *  one reversed edge per literal, an OR of the requirements, each one `conjunctive`, so `MicroEdge.may` puts every
+     *  result of it in the demand layer (§23.1). */
     fun reversed(): StatementSummary {
         val rev = ArrayList<MicroEdge>()
         for (e in edges) rev += MicroEdge(revOrFail(e.edge), e.forward)
-        for (c in conjunctions) for (lit in c.literals) {                                  // an OR of the requirements
-            val fwd = PathEdge(lit.fact, c.target, ExclusionSet.Empty)                    // a literal is a Pattern (Part I §5.8)
-            rev += MicroEdge(revOrFail(fwd), fwd)
+        for (c in conjunctions) for (lit in c.literals) {                                  // an OR of the requirements,
+            val fwd = PathEdge(lit.fact, c.target, ExclusionSet.Empty)                    // every result demand (F70);
+            rev += MicroEdge(revOrFail(fwd), fwd, conjunctive = true)                     // a literal is a Pattern (Part I §5.8)
         }
         val back = StatementSummary(touched + targets, rev, emptyList(), emptyMap())      // no filter (§5.1 last rows)
         return back.withIdentities(passOverBases(targets, touched))                     // A5
@@ -4142,7 +4491,7 @@ field.
 |---|---|---|
 | STATEMENT | `statementSummary`, `RuleStatement.summary`, `CleanStep.Kill.keepEdges` | `interpreter.md` §2.1 steps 2–5: an untouched base passes; a touched base keeps only what an edge gives |
 | STAGE | `CallStage.Edges.summary` | only the edges give results; the plan relevance (`CallPlan.touched`) does the pass-over (`analyzer-core.md` §4.5). A stage summary has every base of its edges in `touched`, so `reversed()` adds no identity edge |
-| GEN | `RuleStatement.endFacts`, `SinkRule.endFacts` at the method boundaries | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). At a call the end facts are the `END_FACTS` `Edges` stage (STAGE mode, on the zero fact, on a trigger; §28.1), whose reversal adds no identity |
+| GEN | `RuleStatement.endFacts`, `SinkRule.endFacts` at the method boundaries | the input stays where it is; the edges add results (`interpreter.md` §4.1 END FACTS, §4.7 step 2). At a call the end facts are the `END_FACTS` `Edges` stage (STAGE mode, on the zero fact, on a trigger; §28.1), whose reversal adds no identity. Reversed, an end-fact edge applies to every requirement, and when it gives a result the core fires the sink seeds of its sink (THE TRIGGER OF AN END FACT, §23.4; F70) |
 
 ONE FORM APPLIER. `FormApplier` writes the three modes once, generic over the fact algebra `FactAlgebra<P, F>` (`P`:
 the premise set; `F`: the facts of one input). Users, each with its own algebra:
@@ -4226,11 +4575,12 @@ class FormApplier<P, F>(private val alg: FactAlgebra<P, F>) {
 
 The engine applies one micro edge with the public `ApOps.applyEdge(c, premise, me.edge, statementEdge, mode, out, may =
 me.may)` (Part I §5.3; it is `EngineAlgebra.applyEdge`; `may`: the reversal of a pass rule with an `AnyField` target
-gives demand results, §23.1). Its internal tree step is `applyCompiledEdge`, the tree form of the delta-concat
+and the reversed literal of a conjunctive edge give demand results, §23.1). Its internal tree step is `applyCompiledEdge`, the tree form of the delta-concat
 of `ap.md` §4.1. The kind of the result follows from the edge and the input (`ap.md` §7.2): the zero keep edge keeps
 `Reach`; an edge from the zero fact (a source, an end fact) gives a TAINT tree; a `*`-to-`*` edge keeps the kind of its
 input (FLOW or TAINT); an edge with a concrete premise mark gives TAINT from TAINT, and only the request from FLOW
-(run 1). A conjunctive edge does not go through `applyEdge` (`FactAlgebra.conjunction`): the engine checks each literal
+(run 1). A conjunctive edge does not go through `applyEdge` forward (`FactAlgebra.conjunction`; backward its reversal
+is one `conjunctive` micro edge per literal, §23.2, and goes through `applyEdge` with `may`): the engine checks each literal
 with `ApOps.checkMark` (Part I), and each `MarkCheck.Holds` (with its `covered` part, for the layer of `ap.md` §4.6) is one
 input of the k-ary join (`ConjunctionStore`, Part I §7.10); a full combination gives the target as a TAINT tree
 (`ApOps.targetTree`). Its premise set is the union of the premise sets of the inputs without the zero fact, or `{zero}`
@@ -4264,14 +4614,24 @@ class SinkRule(
     val conjunctive: Boolean get() = patterns.size >= 2                         // ap.md §4.9, §8.9
     /** ap.md §9.2 SINK SEEDS: one requirement per positive literal; none for an unconditional sink. The requirement of an
      *  `[any]` pattern (`ContainsMarkOnAnyField`) has the tail `[any]` and is in the demand layer (W6; the backward run has
-     *  no `[any-taint]`: interpreter.md I11 (f), I14, §4.9). */
+     *  no `[any-taint]`: interpreter.md I11 (f), I14, §4.9). The backward run gets these seeds in two ways: the hand-off
+     *  seeds the alternatives of the DEMAND entries of the report (F70 D6, Part I §7.12), and THE TRIGGER OF AN END FACT
+     *  (F70; ap.md §9.2; analyzer-core.md §4.5) fires them in the run: when a reversed end-fact edge of this alternative
+     *  at the statement `s` of the method key `M` applies to a requirement, the core fires these seeds at `(M, s)`, once
+     *  per `(M, s, alternative)`, also when the vulnerability of the alternative is CONFIRMED. An end fact exists only
+     *  after its sink triggers, so its reversal demands the trigger. An unconditional sink has no seed: its trigger needs
+     *  only the zero fact, which enters every method key (F70 D5). Argued: the model has no end facts. */
     fun seedPatterns(): List<Pattern> = if (unconditional) emptyList() else patterns
 }
 
 /** analyzer-core.md §4.9. `summary` is STATEMENT mode; `endFacts` is GEN mode (the union of `sinks[*].endFacts`). */
 class RuleStatement(val summary: StatementSummary, val endFacts: StatementSummary, val sinks: List<SinkRule>) {
     /** interpreter.md §4.9 RULE ROLES: the sources and the end facts reverse; the sinks stay (the place of the seeds);
-     *  every filter goes (the context filter of the entry rules too). */
+     *  every filter goes (the context filter of the entry rules too). THE TRIGGER OF AN END FACT (F70; `SinkRule.
+     *  seedPatterns`): each reversed end-fact edge keeps its forward form, which is an end-fact edge of one or more sinks of
+     *  `sinks` (`SinkRule.endFacts`). So the core finds the sink alternatives of a reversed end-fact edge by its forward
+     *  form (`analyzer-impl.md` `RuleWorklist`), and it fires their sink seeds when the edge applies to a requirement. Two
+     *  alternatives with the same end-fact edge both fire: the end fact can come from either trigger. */
     fun reversed(): RuleStatement {
         val s = summary.reversed()
         // Forward, an end-fact target is a GEN target: it passes the place. So the requirement on it passes (A5).
@@ -4361,7 +4721,10 @@ fun StageKind.originOf(me: MicroEdge?, prev: Origin?): Origin? = when (this) {
     else -> prev
 }
 
-/** A forward-only selection of the inputs of a stage (analyzer-core.md §4.9). The reversal drops it. */
+/** A forward-only selection of the inputs of a stage (analyzer-core.md §4.9). The reversal drops it. The reversed
+ *  `END_FACTS` stage keeps the `sink` of its `SinkTriggered` guard as `CallStage.Edges.trigger`: that is not a
+ *  selection of the inputs (the reversed stage applies to every requirement), it names the sink alternative whose seeds
+ *  fire (THE TRIGGER OF AN END FACT, §23.4 `SinkRule.seedPatterns`). */
 sealed interface Guard {
     /** interpreter.md §4.1 END FACTS. The sink TRIGGERS at BOUND: for a plain sink, `checkMark` gives `MarkCheck.Holds` on
      *  a bound fact of the caller edge `(i, layer)` (the layer of that sink edge); for a conjunctive sink, the k-ary join
@@ -4381,10 +4744,15 @@ sealed interface CallStage {
     val to: CallPoint
     fun reversed(): CallStage
 
-    /** `kind`: analyzer-core.md §4.9 (Part II §22.2). The summary is STAGE mode. */
+    /** `kind`: analyzer-core.md §4.9 (Part II §22.2). The summary is STAGE mode. `trigger` (F70; a reversed plan only):
+     *  the sink alternative of a reversed `END_FACTS` stage, the `sink` of the forward guard. When the stage gives a
+     *  result on a requirement, the core fires the sink seeds of `trigger` at `BOUND` (`SinkRule.seedPatterns`, §23.4;
+     *  ap.md §9.2 THE TRIGGER OF AN END FACT; analyzer-core.md §4.5). */
     data class Edges(override val from: CallPoint, override val to: CallPoint, val kind: StageKind,
-                     val summary: StatementSummary, val guard: Guard? = null) : CallStage {
-        override fun reversed() = Edges(to, from, kind, summary.reversed(), guard = null)     // no guard, no filter
+                     val summary: StatementSummary, val guard: Guard? = null, val trigger: SinkRule? = null) : CallStage {
+        init { check(trigger == null || (kind == StageKind.END_FACTS && guard == null)) }
+        override fun reversed() = Edges(to, from, kind, summary.reversed(), guard = null,       // no guard, no filter;
+            trigger = (guard as? Guard.SinkTriggered)?.sink)                                  // the sink of the trigger
     }
     data class Clean(override val from: CallPoint, override val to: CallPoint, val steps: List<CleanStep>) : CallStage {
         override fun reversed() = Clean(to, from, steps)                                      // own reversal
@@ -4432,13 +4800,13 @@ The reversed plan of a JVM call against the backward call order (`interpreter.md
 | 1 relevance | `touched` = `{S, o, ai, r}` | `touched + aliasBases` |
 | 1 the pass-over of the alias bases (alias identity) | none: forward, an alias base is untouched and passes over the call | `AFTER→BEFORE PASS_OVER` |
 | 2 reversed binding back, alias edges | `REWRITTEN→AFTER BIND_BACK`, `REWRITTEN→AFTER ALIASES (MemoryEffect)` | `AFTER→REWRITTEN BIND_BACK`, `AFTER→REWRITTEN ALIASES` (no guard) |
-| 3 reversed sources, end facts | `BOUND→REWRITTEN SOURCES`, `BOUND→REWRITTEN END_FACTS (SinkTriggered)` | `REWRITTEN→BOUND SOURCES` (a reversed `[any]` literal gives an `[any]` requirement, demand; a forward `[any-taint]` target is the reversed premise `[any]`: I14, §4.9), `REWRITTEN→BOUND END_FACTS` (no guard) |
+| 3 reversed sources, end facts | `BOUND→REWRITTEN SOURCES`, `BOUND→REWRITTEN END_FACTS (SinkTriggered)` | `REWRITTEN→BOUND SOURCES` (a reversed `[any]` literal gives an `[any]` requirement, demand; a forward `[any-taint]` target is the reversed premise `[any]`: I14, §4.9; a conjunctive source reverses into one edge per literal, every result demand: `MicroEdge.conjunctive`, F70), `REWRITTEN→BOUND END_FACTS` (no guard; `trigger` = the sink of the forward guard: when the stage gives a result, the sink seeds of that alternative fire at `BOUND`, THE TRIGGER OF AN END FACT, F70) |
 | 4 reversed rewriter | `RETURNED→REWRITTEN Rewrite` | `REWRITTEN→RETURNED Rewrite` |
 | 5.1 resolved callees | `ADDED→RETURNED Callees` | `RETURNED→ADDED Callees` |
 | 5.2 unresolved callee | `ADDED→RETURNED UNRESOLVED` (identity; pass rules) | `RETURNED→ADDED UNRESOLVED` (both; every result of a reversed pass rule with an `AnyField` target is demand, also a `$` result: `MicroEdge.may`, `interpreter.md` §4.9; argued, `ap.md` §11.2) |
 | 5.3 constructor | `ADDED→REWRITTEN CONSTRUCTOR` | `REWRITTEN→ADDED CONSTRUCTOR` |
 | 6 reversed cleaners, kill | `BOUND→ADDED Clean` | `ADDED→BOUND Clean` (same steps) |
-| 7 seeds, read positions | `sinks` at `BOUND` | `sinks` at `BOUND` (the core seeds there) |
+| 7 seeds, read positions | `sinks` at `BOUND` | `sinks` at `BOUND` (the core seeds there: the seeds of the hand-off, and the trigger seeds of step 3) |
 | 8 reversed binding in | `BEFORE→BOUND BIND_IN` | `BOUND→BEFORE BIND_IN` |
 | 9 field limit | exit `AFTER` | exit `BEFORE` |
 
@@ -4452,8 +4820,8 @@ each direction" of `analyzer-core.md` §4.9. `MethodContextCache.directed()` mak
 /** A forward form and its reversal per slot (a statement index), each made once. No race: one runner uses a method
  *  (analyzer-core.md O1), and the join of a run orders the runs (analyzer-core.md B1), so a plain array is enough. A second build would
  *  break the identity keys of the run state (a `ConjunctiveEdge` or a conjunctive `SinkRule` is the key of
- *  `ConjunctionStore.add`, `Guard.SinkTriggered` names its `SinkRule`: Part II §31.2 MEMORY), so this cache must never
- *  rebuild a form. */
+ *  `ConjunctionStore.add`, `Guard.SinkTriggered` names its `SinkRule`, a reversed `END_FACTS` stage names it as `trigger`
+ *  and the backward core keys the trigger seeds by it: Part II §31.2 MEMORY), so this cache must never rebuild a form. */
 class FormsCache<F : Any>(size: Int, private val reverse: (F) -> F) {
     private val slots = arrayOfNulls<Any>(2 * size)
     @Suppress("UNCHECKED_CAST")
@@ -4508,7 +4876,8 @@ do nothing; `NaiveClosure` (`analyzer-impl.md` §9.2) passes its own.
 view of a `Facts`), `agrees` (the core result and the reference result denote the same locations in each layer) and
 `run`, THE ONE PER-PATH WALK OF A CALL PLAN. It has no mode logic of its own. `run` carries the `Origin` of each item
 (`StageKind.originOf`, §23.5) and takes `PlanHooks`: the forward guards (the sink trigger of `END_FACTS`, the alias
-selection by `Origin`), the sink check at `BOUND`, the callees stage, the cleaners and the field limit at the exit point.
+selection by `Origin`), the sink check at `BOUND`, the callees stage, the cleaners, the field limit at the exit point and,
+backward, the sink seeds that a reversed `END_FACTS` stage fires (`trigger`, THE TRIGGER OF AN END FACT, §23.4).
 With the default hooks it is the walk of the forms tests (§33.3). The closure oracle (`analyzer-impl.md` §9.2) calls it
 with its own hooks and one `FormsReference` per method, so it has no walk of its own. The engine keeps its own plan
 runner (`analyzer-impl.md` §4.5): it is the code under test; it shares `FormApplier` and `originOf`.
@@ -4598,6 +4967,10 @@ class PlanHooks(
     val clean: (Cleaner, PlanItem) -> List<PlanItem> = { _, it -> listOf(it) },
     /** The exit point: the field limit of the run (`limit` of Reference.kt; ap.md §4.4 rows 2, 3, 6). */
     val exit: (PlanItem) -> PlanItem = { it },
+    /** BACKWARD, THE TRIGGER OF AN END FACT (F70; §23.4): a reversed `END_FACTS` stage with the `trigger` `sink` gave a
+     *  result. The hook fires the sink seeds of `sink` (the closure: one zero-premise item per `seedPatterns()`, once per
+     *  method key, statement and alternative) and gives them; they go on from `BOUND`, the end point of the stage. */
+    val trigger: (SinkRule) -> List<PlanItem> = { emptyList() },
 )
 
 /** The oracle of the forms: FormApplier over a ReferenceAlgebra (the same mode logic as the engine, §23.3), and the one
@@ -4681,10 +5054,14 @@ class FormsReference(
                                     applier.stage(st.summary, zeroPremise, zero, place) { pr, x, me ->
                                         out += PlanItem(pr, x, st.kind.originOf(me, null)) }
                                 }
-                            else -> for (i in items) {
-                                if (guard == Guard.MemoryEffect && !Guard.MemoryEffect.admits(checkNotNull(i.origin))) continue   // AC3, AC4
-                                applier.stage(st.summary, i.premise, i.c, place) { pr, x, me ->
-                                    out += PlanItem(pr, x, st.kind.originOf(me, i.origin)) }
+                            else -> {
+                                for (i in items) {
+                                    if (guard == Guard.MemoryEffect && !Guard.MemoryEffect.admits(checkNotNull(i.origin))) continue   // AC3, AC4
+                                    applier.stage(st.summary, i.premise, i.c, place) { pr, x, me ->
+                                        out += PlanItem(pr, x, st.kind.originOf(me, i.origin)) }
+                                }
+                                val sink = st.trigger                                           // backward: THE TRIGGER OF AN END FACT
+                                if (sink != null && out.isNotEmpty()) out += hooks.trigger(sink)   // st.to == BOUND
                             }
                         }
                     }
@@ -5847,7 +6224,10 @@ edge (`analyzer-core.md` §4.3, §4.4). The unconditional exit sources and the u
 `ZERO_PATTERN`) fire on the zero fact at both exits, so an unconditional exit sink can report at both exits: expected
 and approved (D22, D26; §34 SI11, SI12). The backward run starts the zero fact at both exits; the start rules of each exit
 are `exitRules(method, exit).reversed()` and the seeds of its exit sinks; a seed also takes the reversed exit sources of
-that exit (`interpreter.md` §4.9 SEEDS; `DirectedForms.startRules`, Part II §23.7).
+that exit (`interpreter.md` §4.9 SEEDS; `DirectedForms.startRules`, Part II §23.7). A reversed end-fact edge of an exit
+sink that applies to a requirement there also fires the seeds of that sink (THE TRIGGER OF AN END FACT, F70; Part II
+§23.4); an entry sink is unconditional, so its trigger fires no seed. The reversed conjunctive exit source gives every
+result in the demand layer (`MicroEdge.conjunctive`, Part II §23.1).
 
 ---
 
@@ -5867,8 +6247,10 @@ fun exitNodes(key: MethodKey): List<ExitNode> =
 
 A summary edge exists for every base except a local (`isSummaryBase`, §25; today
 `JIRMethodCallFactMapper.isValidMethodExitFact`, `JIRMethodCallFactMapper.kt:207-208`). The zero base is a summary base.
-A backward summary `jb -> zero` (a requirement that reaches an unconditional source) must exist: the hand-off makes the
-forward demand `(D-c = zero, D-p = jb)` from it (`analyzer-core.md` §7.4 item 3). Without the zero base this demand is lost.
+A backward summary `jb -> zero` (a requirement that reaches an unconditional source) must exist. If it is crossable
+(normal, F70 D2: `crossReversed`, Part I §6), it is a record, and the next forward run reads its reversal, the source
+record `zero -> jb` (Part I §7.8). Else the hand-off makes the forward demand `(D-c = zero, D-p = jb)` from it
+(`analyzer-core.md` §7.4 item 3; F70 D3). Without the zero base the record and this demand are lost.
 
 ```kotlin
 // JIRInterpreter (Part II §25)
@@ -6082,8 +6464,10 @@ MEMORY. The caches keep their forms with strong references for the whole analysi
 method key, and the reversals after the first backward run. The forms are small against the run stores (one
 `StatementSummary` per statement, with a few `PathEdge`s; one `CallPlan` per call). A soft reference as today
 (`JVM/analysis/JIRMethodAnalysisContext.kt:53-85`) is not safe here. The core keys run state by the identity of form
-objects: a `ConjunctiveEdge` or a conjunctive `SinkRule` is the `rule` key of `ConjunctionStore.add` (Part I §7.10), and
-`Guard.SinkTriggered` names its `SinkRule`. A rebuilt form is a new key, and the stored literal inputs are lost. The
+objects: a `ConjunctiveEdge` or a conjunctive `SinkRule` is the `rule` key of `ConjunctionStore.add` (Part I §7.10),
+`Guard.SinkTriggered` names its `SinkRule`, and so does the `trigger` of a reversed `END_FACTS` stage (the backward core
+fires the trigger seeds once per statement and `SinkRule`, §23.4). A rebuilt form is a new key, and the stored literal
+inputs are lost. The
 caches have the lifetime of the analysis (`JIRMethodEntries` lives as long as the `IterationDriver`). The vulnerability
 store does not read this identity: a witness names its sink alternative by `SinkRule.alternative` (§23.4), which a
 rebuilt form keeps.
@@ -6277,10 +6661,10 @@ In the column "Pins (`interpreter.md`)", a bare § number names a section of `in
 
 | # | Test class (module, package) | Needs (Part I) | Pins (`interpreter.md`) | Lean |
 |---|---|---|---|---|
-| 1 | `StatementSummaryReversalTest` (opentaint-dataflow, `bidi.interp`) | `Reference.kt` (`revEdge`) | §4.9 STATEMENTS: touched + targets; A5 identity for a gen-only target; a conjunction gives one edge per literal; no filter; `forward` kept; I14 and A1: no reversed form has `[any-taint]` (the reversed `[any]` literal of a source, also of a conjunctive edge, is `[any]`; a forward `[any-taint]` target is the premise `[any]`), and `MicroEdge.may` of the reversal of `P.$ (T) -> Q.[any] (T)` is true, of the source `P.$ (T) -> Q.[any-taint] (T)` false | `Reverse.Stmt.rev`, `rev_touched`, `revNoId_breaks`, `Stmt.rev_step_iff`, `AnyTaint.Sanity` |
-| 2 | `RuleStatementReversalTest` (same) | `Reference.kt` | §4.9 RULE ROLES; end-fact targets pass; `ExitRules.reversed` drops G2; clean steps unchanged | `Reverse.revInstr` |
+| 1 | `StatementSummaryReversalTest` (opentaint-dataflow, `bidi.interp`) | `Reference.kt` (`revEdge`) | §4.9 STATEMENTS: touched + targets; A5 identity for a gen-only target; a conjunction gives one edge per literal, each `conjunctive` with `MicroEdge.may` true (F70, THE REVERSAL OF A CONJUNCTION), and a plain edge is never `conjunctive`; no filter; `forward` kept; I14 and A1: no reversed form has `[any-taint]` (the reversed `[any]` literal of a source, also of a conjunctive edge, is `[any]`; a forward `[any-taint]` target is the premise `[any]`), and `MicroEdge.may` of the reversal of `P.$ (T) -> Q.[any] (T)` is true, of the source `P.$ (T) -> Q.[any-taint] (T)` false | `Reverse.Stmt.rev`, `rev_touched`, `revNoId_breaks`, `Stmt.rev_step_iff`, `AnyTaint.Sanity` |
+| 2 | `RuleStatementReversalTest` (same) | `Reference.kt` | §4.9 RULE ROLES; end-fact targets pass; `ExitRules.reversed` drops G2; clean steps unchanged; THE TRIGGER OF AN END FACT (F70): the reversed `RuleStatement` keeps its `sinks`, and the forward form of each reversed end-fact edge is an end-fact edge of a sink of `sinks` (two exit sinks with the same end-fact action: one reversed edge, whose forward form names both) | `Reverse.revInstr` |
 | 3 | `MicroEdgeBuilderTest` (same) | `Reference.kt`, `ExclusionSet.of` | the write rule: `C.s = x` gives two keep edges with one exclusion each; a weak write keeps the base; A2/A3 alias edges; STAGE and GEN modes; `TypeFilter.and` on one base | `Cases.lean` `storeF` |
-| 4 | `CallPlanReversalTest` (same) | `Reference.kt` (`revEdge`, `concat`), `ApManager` | the step table of Part II §23.6; guards and filters go; `PASS_OVER` for alias bases; entry/exit swap; a non-forward plan fails; the zero fact passes over and enters (`FormsReference.run`); forward, `FormsReference.run` with `PlanHooks(guards = true)` on a hand-built plan: `END_FACTS` acts only on the zero fact and gives the layer of the sink that fired at `BOUND`, `ALIASES` skips an `IDENTITY` origin, each result gets `StageKind.originOf`, a run from `RETURNED` starts at that point | `Reverse.Call.rev`, `bindRev_of_star` |
+| 4 | `CallPlanReversalTest` (same) | `Reference.kt` (`revEdge`, `concat`), `ApManager` | the step table of Part II §23.6; guards and filters go; `PASS_OVER` for alias bases; entry/exit swap; a non-forward plan fails; the zero fact passes over and enters (`FormsReference.run`); forward, `FormsReference.run` with `PlanHooks(guards = true)` on a hand-built plan: `END_FACTS` acts only on the zero fact and gives the layer of the sink that fired at `BOUND`, `ALIASES` skips an `IDENTITY` origin, each result gets `StageKind.originOf`, a run from `RETURNED` starts at that point; F70 (§33.3, the third and fourth tests): THE TRIGGER OF AN END FACT: the reversed `END_FACTS` stage has no guard and `trigger` = the sink of its forward guard, and backward `FormsReference.run` calls `PlanHooks.trigger` once with that sink when a requirement on the end-fact target reaches the stage, and the seed items go on from `BOUND`; THE REVERSAL OF A CONJUNCTION (the call `ret = lib(p1, p2)` with the conjunctive source `ContainsMark(arg0, T1) ∧ ContainsMark(arg1, T2) → Result.$ (T)`): the reversed `SOURCES` stage takes the NORMAL requirement `(ret, ., $, T)` to `(p1, ., $, T1)` and `(p2, ., $, T2)`, both in the DEMAND layer (before F70 both normal) | `Reverse.Call.rev`, `bindRev_of_star` |
 | 4a | `FormApplierTest` (same) | `Reference.kt`, `ApManager` | the three modes of `FormApplier` over `ReferenceAlgebra` and over a recording algebra: STATEMENT passes an untouched base and kills a touched one; the operand filter acts on the input before every edge, the result filter on each result; STAGE passes nothing by itself and gives the micro edge of each result; GEN adds results, applies no filter and is never a source-seed place; at a source-seed place the seed filter acts before a source edge and the hit is recorded only when a result exists (once per micro edge, before the result goes on); the static exception only with `Place.statementEdge` in run 1; `ReferenceAlgebra.passes` against `ApOps.filter` (Part I §5.5) | `Reverse.Stmt.rev` (the modes), `Statics.genFireB` (the static exception), `Core.filt_keeps` |
 | 5 | `JIRStatementFormsTest` (opentaint-jvm-dataflow, `jvm.bidi.interp`; replaces the edge asserts of `JIRStatementSummaryTest`) | `ApManager` | one test per row of §2.2; §2.4 pinned rows; operand vs result filters; read source at `x = C.s` with `ZERO_KEEP`; a read source with a non-`Result` target is a rule error | `Cases.lean` `loadF`, `loadF'`, `storeF` |
 | 6 | `JIRRuleFormsTest` (same) | `ApManager` | §4.1 rows, AnyField table; §4.2 negated literal, `Or`, cubes; §5.3 conjunctions (ND sources only); `pass`: a `CopyMark(T, P → Q)` gives the one edge `P.t (T) -> Q.t (T)`; §5.2 one test per mapping row with `<string-bytes>`; D20: a cleaner with a mark literal left gives no step and no request; §4.2 array elements: the alternatives of a call sink, with `SinkRule.alternative` = 0, 1, ... in the cube and array-choice order, the same for two builds; §1.3 the two invariants of a rule position: `[arg0, ".*", ".f"]` and `.*.*` in a source, a sink, a pass rule and a cleaner are each one rule error, logged once, and `pos` does not throw (D29); A RULE ERROR REJECTS THE WHOLE RULE (`valid`, Part II §27.1): the sink `Or(ContainsMark(Argument(0).AnyField.f, T), ContainsMark(Argument(1), T))` gives no `SinkRule` (not a sink on `arg1`), the cleaner `RemoveMark(T, Argument(0)), RemoveAllMarks(ClassStatic(C).AnyField)` gives no step (no clean of `arg0`), a bad position in a NEGATED literal rejects the rule too, and the other rules of the method get their forms; `AnyClassStatic` in `RemoveAllMarks` gives `CleanStep.Clean(Cleaner(S, [], AT_AND_BELOW, all))`, in any other rule element a rule error, also in a condition literal (`ContainsMark(AnyClassStatic, T)`, `ContainsMark(PositionWithAccess(AnyClassStatic, f), T)`); a pass rule with a mark literal is not rejected (`RuleErrors.applied`, D24); §1.4 rows and rule errors (`interpreter.md` §7.2 items 11, 19, 20; Part II §33.5 items 14, 16); THE TAINT ANNOTATION (I14, D32; `interpreter.md` §7.2 item 29): `AssignMarkOnAnyAccessor` and `AssignMark` on `PositionWithAccess(Argument(0), AnyField)` give the target `arg0.[any-taint] (T)` with the Empty exclusion (at a call, at the start, at an exit, at a read, and the target of a conjunctive source), `ContainsMarkOnAnyField(Q, T')` gives the premise `Q.[any] (T')`, `CopyMark(T, P → Q.AnyField)` gives `P.$ (T) -> Q.[any] (T)` (a may: `MicroEdge.may`), an end fact on a plain position gives `P.$ (T)` and on an AnyField position `P.[any-taint] (T)` (I14, SI19); an `[any-taint]` or `[any]` target on a class position is a rule error; D33: `CopyAllMarks(Argument(0).AnyField → Result)` and `CopyMark(T, Argument(0).AnyField → Result)` are rule errors, logged once, and give no pass edge (`interpreter.md` §7.2 item 19) | `Statics.SWF`, `Statics.CexAny`, `NDExact.LitConc`, `AnyTaint.TaintConc`, `AnyTaint.Sanity`, `AnyTaintEx.Vec.source_any_target` |
@@ -6299,7 +6683,8 @@ Order: by the "Needs" column. 1 → 2 → 3 → 4 → 4a (`Reference.kt` and `Ap
 
 `FormsFixtures` (test sources of `opentaint-dataflow`, `bidi.interp`): tests 1 to 4a have no JIR, because
 `opentaint-dataflow/build.gradle.kts` has only `opentaint_ir_api_common`. `testCall()` gives a fake `CommonInst` call
-statement with a location and a method, and `testMethodKey(name)` the key `MethodEntryPoint(EmptyMethodContext, entry)`
+statement with a location and a method, `testSink()` a fake `CommonTaintConfigurationSink` (the `rule` of a hand-made
+`SinkRule`), and `testMethodKey(name)` the key `MethodEntryPoint(EmptyMethodContext, entry)`
 of a fake `CommonMethod` with a fake entry statement, as the fake call statements of `ApFixtures` (`analyzer-impl.md`
 §9.1). The JIR test kit (`JIRInterpreterTestKit`, §33.2) is a fixture of `opentaint-jvm-dataflow` and serves tests 5
 to 11 only.
@@ -6432,6 +6817,71 @@ class CallPlanReversalTest {
         val tb = ref.run(rev, item(onB), at, hooks)
         assertTrue(tb.any { (p, i) -> p == BEFORE && i.c.fact.base == b })                // PASS_OVER (A5)
         assertTrue(tb.any { (p, i) -> p == REWRITTEN && i.c.fact.base == ret })           // reversed alias edge (AC5)
+    }
+
+    private val backward = FormsReference(ApOps(manager),
+        ReferenceAlgebra(ApMode(run1 = false, Direction.BACKWARD, fieldLimit = Int.MAX_VALUE), manager = manager))
+    private val call = Place(testCall(), statementEdge = false, sources = false)
+    private fun conc(b: AccessPathBase, m: TaintMark) = PathFact(b, emptyList(), Tail.EXACT, MarkSlot.Concrete(m))
+    private fun stage(vararg es: PathEdge) = MicroEdgeBuilder().apply { es.forEach { edge(it) } }.buildStage()
+
+    /** F70, THE REVERSAL OF A CONJUNCTION (ap.md §9.2; analyzer-core.md §4.3), a regression test. `M(p1, p2) { r =
+     *  lib(p1, p2); return r; }`, `lib`: the conjunctive source `ContainsMark(arg0, T1) ∧ ContainsMark(arg1, T2) ->
+     *  Result.$ (T)`. A requirement that reaches one literal is not a converse flow of the conjunction, so every result is
+     *  DEMAND: the backward summaries of `M` are no record (R1), not crossable (Lean Handoff.CrossB), and the hand-off
+     *  gives them to the next forward run (case 3). Before F70 both results were NORMAL: the backward summary
+     *  `(ret, ., $, T) -> (p1, ., $, T1)` of `M` was a record, forward run 3 crossed `M` by its reversal, a record of one
+     *  literal, and `r2 = M(a, c); sinkT(r2)` was a false CONFIRMED (`c` has no `T2`; the analysis test:
+     *  analyzer-impl.md §9.1). */
+    @Test
+    fun `the reversal of a conjunctive source gives demand results only`() {
+        val p1 = AccessPathBase.LocalVar(4); val p2 = AccessPathBase.LocalVar(5); val arg1 = AccessPathBase.Argument(1)
+        val t1 = manager.marks.mark("T1"); val t2 = manager.marks.mark("T2")
+        val lib = ConjunctiveEdge(listOf(Pattern(conc(arg0, t1), ExclusionSet.Empty), Pattern(conc(arg1, t2), ExclusionSet.Empty)),
+            conc(ret, T))
+        val plan = CallPlan(setOf(p1, p2, r), listOf(
+            CallStage.Edges(BEFORE, BOUND, BIND_IN, stage(starEdge(Z, listOf(), Z, listOf()),
+                starEdge(p1, listOf(), arg0, listOf()), starEdge(p2, listOf(), arg1, listOf()))),
+            CallStage.Edges(BOUND, REWRITTEN, SOURCES, MicroEdgeBuilder().apply { keepZero(); conjunction(lib) }.buildStage()),
+            CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, stage(starEdge(arg0, listOf(), p1, listOf()),
+                starEdge(arg1, listOf(), p2, listOf()), starEdge(ret, listOf(), r, listOf()))),
+        ), sinks = emptyList(), entry = BEFORE, exit = AFTER)
+        val rev = plan.reversed()
+        val lits = rev.stages.filterIsInstance<CallStage.Edges>().single { it.kind == SOURCES }.summary.edges.filter { it.conjunctive }
+        assertEquals(2, lits.size)
+        assertTrue(lits.all { it.may })                                                   // an OR, every result demand
+        val req = Conclusion(conc(r, T), ExclusionSet.Empty, demand = false)               // the NORMAL requirement (r, ., $, T)
+        val trace = backward.run(rev, listOf(PlanItem(emptySet(), req, origin = null)), call)
+        val atEntry = trace.filter { (p, i) -> p == BEFORE && i.c.fact.base != Z }.map { it.second.c }
+        assertEquals(setOf(conc(p1, t1), conc(p2, t2)), atEntry.map { it.fact }.toSet())
+        assertTrue(atEntry.all { it.demand })                                              // before F70: both NORMAL
+    }
+
+    /** F70, THE TRIGGER OF AN END FACT (ap.md §9.2; analyzer-core.md §4.5). `r = sinkCall(a)`, the sink
+     *  `ContainsMark(arg0, U)` with the end-fact action `AssignMark(T, Result)`. The end fact exists only after the sink
+     *  triggers, so a requirement on it demands the trigger: the reversed stage fires the sink seeds of its sink. */
+    @Test
+    fun `a reversed end-fact stage keeps its sink and fires its seeds`() {
+        val u = manager.marks.mark("U")
+        val end = PathEdge(ZERO_FACT, conc(ret, T), ExclusionSet.Empty)
+        val sk = SinkRule(testSink(), alternative = 0, patterns = listOf(Pattern(conc(arg0, u), ExclusionSet.Empty)),
+            endFacts = listOf(MicroEdge.of(end)))
+        val plan = CallPlan(setOf(a, r), listOf(
+            CallStage.Edges(BEFORE, BOUND, BIND_IN, stage(starEdge(Z, listOf(), Z, listOf()), starEdge(a, listOf(), arg0, listOf()))),
+            CallStage.Edges(BOUND, REWRITTEN, END_FACTS, stage(end), Guard.SinkTriggered(sk)),
+            CallStage.Edges(REWRITTEN, AFTER, BIND_BACK, stage(starEdge(arg0, listOf(), a, listOf()), starEdge(ret, listOf(), r, listOf()))),
+        ), sinks = listOf(sk), entry = BEFORE, exit = AFTER)
+        val rev = plan.reversed()
+        val revEnd = rev.stages.filterIsInstance<CallStage.Edges>().single { it.kind == END_FACTS }
+        assertTrue(revEnd.guard == null && revEnd.trigger === sk)                          // no guard; the sink of the guard
+        val fired = ArrayList<SinkRule>()
+        val seed = PlanItem(setOf(ZERO_PATTERN), Conclusion(sk.seedPatterns().single().fact, ExclusionSet.Empty, demand = false), null)
+        val hooks = PlanHooks(trigger = { s -> fired += s; listOf(seed) })                 // the closure: one seed per pattern
+        val req = Conclusion(conc(r, T), ExclusionSet.Empty, demand = false)               // a requirement on the end fact
+        val trace = backward.run(rev, listOf(PlanItem(emptySet(), req, origin = null)), call, hooks)
+        assertEquals(listOf(sk), fired)                                                    // once
+        assertTrue(trace.any { (p, i) -> p == BOUND && i.c.fact.base == Z })              // the zero fact, as before F70
+        assertTrue(trace.any { (p, i) -> p == BEFORE && i.c.fact == conc(a, u) })         // the seed demands the trigger in the caller
     }
 }
 ```
@@ -6698,7 +7148,8 @@ the rows on 2026-10-07 (`ap-history.md` F63), SI3 again on 2026-10-08 (F65), SI1
 and the place in the spec; "as proposed" means that the proposal stands. The columns "This proposal" and "Effect" give
 the code of this document after the decision. Every row stays as a record. The ids `SI1` to `SI20` are ids of this
 document; they are not the rules `S1` to `S15` of `ap.md`. SI19 and SI20 come from F69 (the tail `[any-taint]`): SI20
-is RESOLVED by the amendment (no rule-kind carrier is needed), and SI19 is RESOLVED by `interpreter.md` I14.
+is RESOLVED by the amendment (no rule-kind carrier is needed), and SI19 is RESOLVED by `interpreter.md` I14. SI21 comes
+from F70 (the hand-off of demand edges only, DD17); it is RESOLVED by the model fix `Handoff.CrossB`.
 
 | Id | Spec | Today (`path:line`) | This proposal | Effect on the findings | Decision (2026-10-07 unless the row says another date) |
 |---|---|---|---|---|---|
@@ -6722,3 +7173,4 @@ is RESOLVED by the amendment (no rule-kind carrier is needed), and SI19 is RESOL
 | SI18 | `ap.md` §7.5, §7.6; `analyzer-core.md` §8 (`AccessPathBaseStorage`: "REUSE the structure") | Today an identity cache memoises the walk of a fact tree (`annotateAbstractNodes(cache)`, `AccessTree.kt:735`), and `AccessorInterner.AccessorStorage`, `MethodAnalyzerEdges.EdgeStorage` and `AccessPathBaseStorage` hold the accessors and the edges. `ap.md` §7.5 says "an identity cache memoises the walk of §7.3", and §7.6 says "Reuse" for accessor interning and "Reuse with the new fact types" for `EdgeStorage` and `AccessPathBaseStorage`. | No walk memo: `PathEdge.compiled` (§5.3) is a compile cache of the edge, not a walk memo; a walk of `applyCompiledEdge` shares every unchanged subtree (§4.2). The accessor tables are ADAPTed (`AccessorTable`, `MarkTable`, §3.1: no `ConcurrentReadSafe` map, only the field and the class storages); `EdgeStorage` is REPLACEd by `ConclusionGroup` (§4.3: one premise key, every base and kind); `AccessPathBaseStorage` is NOT USED (it rejects `Zero`, §2). | None on the findings: the three are representation choices; the walk memo is a cost only. | RESOLVED (F68): the spec follows the proposal: `ap.md` §7.5 has no walk memo (a later optimization), `ap.md` §7.6 and `analyzer-core.md` §8 adapt, replace or do not use the three storages. Perf only; the reasons are in §2 (the rows of `AccessorInterner.AccessorStorage`, `EdgeStorage`, `MethodAnalyzerEdges`); `analyzer-impl.md` §10 row 6. |
 | SI19 | `interpreter.md` I14, §4.1 END FACTS; `ap.md` S15 | An end-fact action `AssignMark(T, PositionWithAccess(P, AnyField))` of `trackFactsReachAnalysisEnd` makes the any-accessor fact below `P`, as a source action does (`DF/taint/Source.kt:16-28`). The spec gives only the end fact `Zero → (sink statement, P.$ (T))` (§4.1 END FACTS), and I14 says "an end-fact action is an `AssignMark`, so its target is `$`"; neither has a row for an `AnyField` position, so `[any-taint]` (a must, as a source) or `[any]` (a may) is not decided. | `markTarget` → `RulePos.sourceFact` for a source and for an end fact: `P.$ (T)`, or `P.[any-taint] (T)` with the Empty exclusion for an `AnyField` position (§27.2, §27.3; I14). (Was, round 1: `endFacts` kept the `[any]` of `RulePos.fact`, a may in the demand layer.) | An end fact through an `AnyField` position is a normal `[any-taint]` fact, as a source result: a finding through it can be CONFIRMED. | RESOLVED (F69, round 2): `interpreter.md` I14 and §4.1 END FACTS now say that an end-fact action applies as the target of a source: `P.$ (T)`, or `P.[any-taint] (T)` for an `AnyField` position (a must, as a source, and as today's `Source.kt`); `markTarget` gives the same target for both. |
 | SI20 | `analyzer-core.md` §4.9 (`MicroEdge`), `interpreter.md` I14, `ap.md` §9.1 | Today no micro edge has a rule kind: a pass rule and a source are evaluated by different evaluators (`DF/taint/Propagator.kt`, `DF/taint/Source.kt`). The first F69 text of I14 said that the annotation belongs to the rule kind, not to the form, and that "the forward forms carry the rule kind of each source edge to the reversal" (one form `Q.[any] (T) → P.$ (T)` is a conditional source at one call and the pass rule `CopyMark(T, Q.AnyField → P)` at another); `analyzer-core.md` §4.9 has `MicroEdge(edge, forward)` with no field for it, and `ap.md` §9.1 gives the two results but not the carrier. | First round: `MicroEdge.kind: RuleKind`. NOW: no rule kind. The backward run has no `[any-taint]` (A1), so a reversed source literal and a reversed pass rule have the same form; the only backward difference is the may of a pass rule with an `AnyField` target, and its FORWARD target tail `[any]` tells it: `MicroEdge.may` (`forward.to.tail == Tail.ANY`, §23.1), passed to `ApOps.applyEdge(..., may)` (Part I §5.3). `revEdge(e)` has no `source` parameter (Part I §6). | None on the forward run. Backward: every result of a reversed pass rule with an `AnyField` target is demand, also a `$` result (review RS-1), so no backward summary through it is a record; a reversed source follows the ordinary rows. | RESOLVED (F69, round 2; `interpreter.md` I14, §4.9: "the forward target tail tells the reversal the rule kind, so the forms need no other flag"): `analyzer-core.md` §4.9 `MicroEdge(edge, forward)` needs no new field; `may` is a derived member (§22.2). |
+| SI21 | `ap.md` §9.2 and `analyzer-core.md` §7.4 (F70 D2, D3: the backward hand-off); Lean `Handoff.demOfN`, `Handoff.revRec`, `Handoff.CrossB`, `HandoffBackward.NextRecs` (clause `back`), `HandoffBackward.rcNextOf` | None: the old core has no backward run, and before F70 the hand-off gave every backward summary. | `crossReversed` and `demandPart` (Part I §6, §5.9) give a backward leaf to the hand-off when it is in the DEMAND layer, also when its reversal has crossable tails (a `$ -> $` leaf after the meet `[any] ∩ $ = $` of a demand callee summary, of a reversed may, or of the reversal of a conjunction, Part II §23.1). Reason: R1 persists only a normal backward edge, so a demand leaf has no record, and without its demand edge the next forward run has neither a demand edge nor a record for that call. The spec reads the layer too (`ap.md` §1 "crossable", §9.2 case 3: "it is normal and its reversal is a crossable forward leaf"). Before the model fix the model did not: `Handoff.revRec` makes the normal layer, so `Handoff.demOfN` dropped such a leaf from the demand, and `HandoffBackward.rcNextOf` (and the clause `back` of `HandoffBackward.NextRecs`) made its reversal a normal forward record. | Before the model fix: coverage argued, and the theorem did not cover the code literally (the code hands off more, which the hypothesis `hdem` of `HandoffMain.iteration_generalN_incl` allows, but it has no record for such a leaf, which `hrc : NextRecs` asked for); the model record of a demand edge was not exact. After the fix the code is the canonical sequence: no gap. Precision: the code keeps R1 (a record is exact). | RESOLVED (F70): the model reads the layer: `Handoff.CrossB jb gb` (`gb.demand = false` and `Cross` of the reversal) in `Handoff.demOfN` case 3, in `HandoffBackward.rcNextOf` and in `HandoffBackward.NextRecs` (clause `back`) (`HandoffBackward.crossB_em`, `HandoffBackward.rcNextOf_back_normal`), as proposed; `HandoffMain.iteration_generalN_incl` with `hrc : NextRecs` covers the code. |
