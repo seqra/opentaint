@@ -19,15 +19,12 @@ We are working on [bidirectional-task.md](bidirectional-task.md)
 
 Read project memory from the previous session: `~/.claude/projects/-drive-testcomp-opentaint-go-rules-opentaint-w3/`
 
-No we have a compete spec for the AP and analyzer (see spec/). Also, we have an implementation proposal docs.
-Our current goal is to review and finalize the spec.
-1) Perform a deep review of demand handling and summary restriction mechanism. Finalize the spec and the proofs.
-2) Check that the spec matches the proofs and vice versa
-3) Check that the spec is self-contained (we have no hidden invariants in proofs or somewhere else)
-4) Check that the spec has no major holes 
-5) Check that the spec is concise 
-6) Check that the implementation proposal matches the spec precisely.
-7) Check that the implementation proposal has no major gaps (don't know how to implement)
+Now we have a compete spec for the AP and analyzer (see spec/). 
+The current step is: finalize the implementation proposal.
+Here is the checklist:
+1) Precisely analyze the demand edge handling, abstraction and summary emission/reduction. These operations must match the specification precisely  
+2) All other operations also should match the spec. Review them.
+3) The implementation proposal shouldn't use staled facts or rules. Review that all used rules are actual
 If we found a major gap or misalignment -- aks me for the decision on how to fix it. I will specify the correct behavior.
 
 Use subagents.
