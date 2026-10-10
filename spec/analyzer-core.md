@@ -478,11 +478,12 @@ the `SeedIndex`, so A4 holds. Argued: the model has no end facts (§4.5; [proof-
 THE ALIAS GUARD (`Guard.MemoryEffect`; `interpreter.md` §3.8 AC3, AC4). Each forward result at `REWRITTEN` has an
 ORIGIN (`Origin`, §4.9): the stage that made it. The sources stage gives SOURCE, the end-fact stage END_FACT, a pass
 rule of the unresolved stage PASS. The default identity of the unresolved stage and the constructor stage give
-IDENTITY. A summary result or a record result (the callees stage) is an IDENTITY only in one case: it is in the NORMAL
+the origin IDENTITY. This origin is a candidate; the guard also reads the current layer. A summary result or a record
+result (the callees stage) has the origin IDENTITY only in one case: it is in the NORMAL
 layer, and it is equal to the start fact of its premise (`ap.md` §6.5). Every other summary result has a memory effect
 (SUMMARY_EFFECT): a DEMAND-layer result always goes to the aliases, and so does every result of a zero-premise
 summary (`ap-history.md` F67). The cleaners and the rewriter keep the origin of their input. The alias stage takes
-every result whose origin is not IDENTITY.
+every DEMAND-layer result and every result whose origin is not IDENTITY. It skips only NORMAL-layer IDENTITY results.
 
 THE REVERSAL (`CallPlan.reversed`; the rules of `ap.md` §9.1, §9.2):
 
@@ -779,7 +780,8 @@ sealed interface CleanStep {
 
 enum class CallPoint { BEFORE, BOUND, ADDED, RETURNED, REWRITTEN, AFTER }
 
-/** interpreter.md §3.8 AC3, AC4: where a forward result at REWRITTEN comes from (§4.5 THE ALIAS GUARD). */
+/** interpreter.md §3.8 AC3, AC4: where a forward result at REWRITTEN comes from (§4.5 THE ALIAS GUARD).
+ *  IDENTITY is a candidate origin; the current layer determines whether the result skips aliases. */
 enum class Origin { SOURCE, END_FACT, PASS, SUMMARY_EFFECT, IDENTITY }
 
 /** A forward-only selection of the inputs of a stage (§4.5). The reversal drops it. */
@@ -788,8 +790,10 @@ sealed interface Guard {
      *  drops the selection, but the reversed `END_FACTS` stage keeps `sink`: a reversed end-fact edge that applies
      *  fires the sink seeds of `sink` (§4.5 THE TRIGGER OF AN END FACT). */
     class SinkTriggered(val sink: SinkRule) : Guard
-    /** The alias stage: every result whose origin is not IDENTITY (§4.5 THE ALIAS GUARD). */
-    data object MemoryEffect : Guard { fun admits(o: Origin): Boolean = o != Origin.IDENTITY }
+    /** The alias stage skips only NORMAL identity results (§4.5 THE ALIAS GUARD). */
+    data object MemoryEffect : Guard {
+        fun admits(o: Origin, layer: Layer): Boolean = layer == Layer.DEMAND || o != Origin.IDENTITY
+    }
 }
 
 /** The kind of an `Edges` stage (ap-impl.md §23.5). SOURCES and UNRESOLVED hold statement micro edges: the static
