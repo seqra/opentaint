@@ -27,7 +27,9 @@
     demand edge that run `k + 1` hands off lies inside the reversal of a demand edge of its
     demand; every non-zero demand edge of run `k + 1` lies inside the reversal of a backward demand
     edge; so every non-zero demand edge of run `k + 2` lies inside a demand edge of run `k + 1`
-    (with the exceptions `RExc` of `HandoffRestrict.lean`).
+    (with the exceptions `RExc` of `HandoffRestrict.lean`). The mark-aware forms (F71):
+    `narrowing_canon_fwdM`, `narrowing_canon_backM`, `narrowing_canonM`, `narrowing_canon_locM`
+    (the narrowing in the locations AND the marks; in the exception cells the marks still narrow).
 
   All proofs are constructive (`propext`, `Quot.sound` only).
 -/
@@ -301,6 +303,123 @@ theorem narrowing_canon_loc (k : Nat) {M : MethodId} {d'' : DemandEdge}
       · exact Or.inr ⟨gb, j, hc⟩
 
 #print axioms narrowing_canon_loc
+
+/-! ### The narrowing with the marks (F71, the mark-aware restriction)
+
+  The restriction tests the marks too (`insideB`, `concMarkB`). Every run of the sequence is
+  concrete (the forward runs by `RExact.DR_concrete`; the backward runs by `BExact.DB_concrete`
+  when the seeds have concrete marks), so the abstract-mark exception of
+  `Handoff.restrictI_narrowM` does not occur: the narrowing holds in the locations AND the marks
+  (`insideB`, `PFact.covers`), and in the `[any]` / `RExc` cells the marks still narrow. -/
+
+/-- THE NARROWING, FORWARD TO BACKWARD, MARK-AWARE (`handF_narrow_DRM` on the sequence). -/
+theorem narrowing_canon_fwdM (k : Nat) {m : MethodId} {d' : DemandEdge}
+    (h : handF P (CS (k + 1)).R (CS (k + 1)).pub m d') :
+    ∃ j g g' d p, (CS (k + 1)).R (.init m j) ∧
+      (DEMk k) m d ∧ d.dout = some p ∧ restrictI j g d = some g' ∧ d' = ⟨g'.fact, some j⟩ ∧
+      insideB j d.din = true ∧
+      (insideB g'.fact p = true ∨
+       ((g.fact.kind = .any ∧ (∃ E, p.kind = .star E) ∧
+         g'.fact = ⟨g.fact.base, p.path, .any, g.fact.mark⟩ ∧ g'.demand = g.demand) ∧
+        markSubB p.mark g'.fact.mark = true)) :=
+  handF_narrow_DRM h
+
+#print axioms narrowing_canon_fwdM
+
+/-- THE NARROWING, BACKWARD TO FORWARD, MARK-AWARE (`demOfN_narrow` on the sequence, with seeds
+    that have concrete marks). -/
+theorem narrowing_canon_backM (k : Nat) (hsd : BExact.SeedsConc (seeds k)) {M : MethodId}
+    {d' : DemandEdge} (h : (DEMk k) M d') :
+    d' = ⟨zeroFact, none⟩ ∨
+    (∃ g, (DBk k) (.edge M zeroFact ((Program.rev P).exit M) g) ∧ d' = ⟨g.fact, none⟩) ∨
+    ∃ jb gb gb' d p, (DBk k) (.init M jb) ∧ jb ≠ zeroFact ∧
+      (DBk k) (.edge M jb ((Program.rev P).exit M) gb) ∧
+      ¬ CrossB jb gb ∧
+      handF P (CS k).R (CS k).pub M d ∧ d.dout = some p ∧ restrictI jb gb d = some gb' ∧
+      d' = ⟨gb'.fact, some jb⟩ ∧ insideB jb d.din = true ∧
+      (insideB gb'.fact p = true ∨ (RExc gb p gb' ∧ markSubB p.mark gb'.fact.mark = true)) := by
+  rcases demOfN_narrow h with h1 | h2 | ⟨jb, gb, gb', d, p, hi, hz, he, hnc, hdem, hdo, hres,
+    hd', _, _⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · obtain ⟨_, t, ht⟩ := BExact.DB_edge_concrete RCov.emitM_copies hsd he
+    obtain ⟨p', hdo', hin, hcon⟩ := restrictI_narrow_conc hres ht
+    have hpp : p' = p := Option.some.inj (hdo'.symm.trans hdo)
+    subst hpp
+    exact Or.inr (Or.inr ⟨jb, gb, gb', d, p', hi, hz, he, hnc, hdem, hdo, hres, hd', hin, hcon⟩)
+
+#print axioms narrowing_canon_backM
+
+/-- THE NARROWING OVER ONE ROUND, MARK-AWARE: `narrowing_canon` with the locations AND the marks
+    (`PFact.covers`). In the two exception cells the locations do not narrow, but the marks do. -/
+theorem narrowing_canonM (k : Nat) (hsd : BExact.SeedsConc (seeds (k + 1))) {M : MethodId}
+    {d'' : DemandEdge} (h : (DEMk (k + 1)) M d'') :
+    d'' = ⟨zeroFact, none⟩ ∨
+    (∃ g, (DBk (k + 1)) (.edge M zeroFact ((Program.rev P).exit M) g) ∧ d'' = ⟨g.fact, none⟩) ∨
+    ∃ j g g' d p jb gb gb',
+      (DEMk k) M d ∧ d.dout = some p ∧ restrictI j g d = some g' ∧
+      restrictI jb gb ⟨g'.fact, some j⟩ = some gb' ∧ d'' = ⟨gb'.fact, some jb⟩ ∧
+      (∀ l, jb.covers l → g'.fact.covers l) ∧
+      ((∀ l, g'.fact.covers l → p.covers l) ∨
+        ((g.fact.kind = .any ∧ (∃ E, p.kind = .star E) ∧
+          g'.fact = ⟨g.fact.base, p.path, .any, g.fact.mark⟩ ∧ g'.demand = g.demand) ∧
+         ∀ x, g'.fact.mark.admits x → p.mark.admits x)) ∧
+      ((∀ l, gb'.fact.covers l → j.covers l) ∨
+        (RExc gb j gb' ∧ ∀ x, gb'.fact.mark.admits x → j.mark.admits x)) ∧
+      (∀ l, j.covers l → d.din.covers l) := by
+  rcases narrowing_canon_backM (k + 1) hsd h with h1 | h2 | ⟨jb, gb, gb', dB, pB, _, _, _, _, hdB,
+    hdo, hres, hd'', hin, hcon⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · obtain ⟨j, g, g', d, p, _, hdem, hdop, hresF, hdB', hinF, hconF⟩ := narrowing_canon_fwdM k hdB
+    subst hdB'
+    have hpB : pB = j := (Option.some.inj hdo).symm
+    subst hpB
+    refine Or.inr (Or.inr ⟨pB, g, g', d, p, jb, gb, gb', hdem, hdop, hresF, hres, hd'',
+      fun l hl => insideB_covers hin hl, ?_, ?_, fun l hl => insideB_covers hinF hl⟩)
+    · rcases hconF with hc | ⟨hc, hm⟩
+      · exact Or.inl (fun l hl => insideB_covers hc hl)
+      · exact Or.inr ⟨hc, fun x hx => CoreAux.markSubB_sound hm hx⟩
+    · rcases hcon with hc | ⟨hc, hm⟩
+      · exact Or.inl (fun l hl => insideB_covers hc hl)
+      · exact Or.inr ⟨hc, fun x hx => CoreAux.markSubB_sound hm hx⟩
+
+#print axioms narrowing_canonM
+
+/-- The composed form, MARK-AWARE: a non-zero demand edge of forward run `k + 2` whose two
+    restrictions met no exception cell lies inside a demand edge of forward run `k + 1`, in its
+    locations AND its marks. In an exception cell the marks of the composed pattern still lie in
+    the marks of that edge. -/
+theorem narrowing_canon_locM (k : Nat) (hsd : BExact.SeedsConc (seeds (k + 1))) {M : MethodId}
+    {d'' : DemandEdge} (h : (DEMk (k + 1)) M d'') :
+    d'' = ⟨zeroFact, none⟩ ∨
+    (∃ g, (DBk (k + 1)) (.edge M zeroFact ((Program.rev P).exit M) g) ∧ d'' = ⟨g.fact, none⟩) ∨
+    ∃ jb gb' d p, (DEMk k) M d ∧ d.dout = some p ∧ d'' = ⟨gb'.fact, some jb⟩ ∧
+      ((∀ l, jb.covers l → p.covers l) ∨
+        ((∃ g g', RExc g p g') ∧ ∀ x, jb.mark.admits x → p.mark.admits x)) ∧
+      ((∀ l, gb'.fact.covers l → d.din.covers l) ∨
+        ((∃ gb j, RExc gb j gb') ∧ ∀ x, gb'.fact.mark.admits x → d.din.mark.admits x)) := by
+  rcases narrowing_canonM k hsd h with h1 | h2 | ⟨j, g, g', d, p, jb, gb, gb', hdem, hdop, _, hres,
+    hd'', hjb, hF, hB, hj⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · -- the marks of `jb` lie in the marks of `g'` (`insideB`), those of `j` in the marks of `D-c`
+    obtain ⟨_, _, hinB, _, _⟩ := restrictI_someM hres
+    have hjbm : ∀ x, jb.mark.admits x → g'.fact.mark.admits x :=
+      fun x hx => CoreAux.markSubB_sound (insideB_mark hinB) hx
+    have hjm : ∀ x, j.mark.admits x → d.din.mark.admits x := by
+      intro x hx
+      have hc := hj ⟨j.base, j.path, x⟩ ⟨rfl, ⟨[], by rw [List.append_nil], RAux.tailI_nil _⟩, hx⟩
+      exact hc.2.2
+    refine Or.inr (Or.inr ⟨jb, gb', d, p, hdem, hdop, hd'', ?_, ?_⟩)
+    · rcases hF with hc | ⟨hc, hm⟩
+      · exact Or.inl (fun l hl => hc l (hjb l hl))
+      · exact Or.inr ⟨⟨g, g', Or.inl hc⟩, fun x hx => hm x (hjbm x hx)⟩
+    · rcases hB with hc | ⟨hc, hm⟩
+      · exact Or.inl (fun l hl => hj l (hc l hl))
+      · exact Or.inr ⟨⟨gb, j, hc⟩, fun x hx => hjm x (hm x hx)⟩
+
+#print axioms narrowing_canon_locM
 
 end Canon
 

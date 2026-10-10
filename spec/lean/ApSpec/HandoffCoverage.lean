@@ -11,7 +11,9 @@
                            for a flow `FlowRR P dem rc`: an edge of the initial fact covers the
                            pair, and the flow is justified by the run (`FlowRDN … (pubR dem) rc`).
                            A demanded call: the emission (`emitM_contract_I`), the premise inside
-                           `D-c` (`emitM_inside`), the restriction (`restrictI_contract`), the
+                           `D-c` with its mark (`emitM_insideB`: the added fact is concrete), the
+                           restriction (`restrictI_contract`: the demand edge covers the exit
+                           location WITH its mark, `FlowRR.call`, F71), the
                            application (`RCov.sat_step`), the binding back (`bind_out`), rule
                            `DR.ret`. A recorded call: `cross_applies`, `RCov.sat_step` or
                            `Coverage.summary_step`, rule `DR.retRec`. The run is concrete
@@ -185,8 +187,9 @@ theorem coverageRN (hwf : P.WF) {M : MethodId} {l0 : Loc} {n : Node} {l : Loc}
     obtain ⟨j, hemit, hjc, hsat⟩ := RCore.emitM_contract_I d.din a.fact l1 t ht hdin hac
     have hj := DR.initR hadd hdem hemit
     obtain ⟨g, hg, hdg, hfc'⟩ := ihc j hj hjc
-    -- The intersection keeps the demanded pair.
-    obtain ⟨g', hres, hdg', _⟩ := restrictI_contract (emitM_inside hemit) hdg hdout hp
+    -- The intersection keeps the demanded pair (the premise lies inside `D-c` with its mark,
+    -- and the exit location has a mark of `D-p`: the restriction is mark-aware, F71).
+    obtain ⟨g', hres, hdg', _⟩ := restrictI_contract (emitM_insideB hemit ht).1 hdg hdout hp
     obtain ⟨r, hr, hdr⟩ := sat_step RCore.satI_contract hsat hda hdg'
     obtain ⟨r', hr', hdr'⟩ := bind_out hwf he he2 hdr hd2
     exact ⟨_, DR.ret hf he he1 ha hj hg hdem hres hsat hr he2 hr', limitF_sound hdr',

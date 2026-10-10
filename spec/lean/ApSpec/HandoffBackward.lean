@@ -18,8 +18,11 @@
   of a justified witness (`FlowRDN`) there are three cases:
     * a published piece `j → g'` of an exit edge `j → g` that is NOT crossable: the backward run
       enters the callee by the demand edge `(g', j)` of `handF`, the emitted premise lies inside
-      `g'` (`emitM_inside_B`), so the intersection restriction keeps the pair
-      (`restrictI_contract_B`). After the callee, the backward summary `jb → gb` is NORMAL with a
+      `g'` with its mark (`emitM_insideB_B`: the requirement is concrete), and the exit location
+      of the backward pair has its mark in `D-p = j` (the forward pair), so the mark-aware
+      intersection restriction keeps the pair (`restrictI_contract_B`, F70). The demanded call of
+      `FlowRR` gets the exit location with its mark in `D-p = jb` (`jb` covers it). After the
+      callee, the backward summary `jb → gb` is NORMAL with a
       crossable reversal (`CrossB`, decided by its layer and `cross_em`: `crossB_em`) and it is a
       RECORDED call of `FlowRR` with the record `revRec (jb, gb)`, or its piece is handed off (a
       DEMANDED call of `FlowRR`, `demOfN` case 3);
@@ -30,7 +33,9 @@
 
   Agent R proves `emitM_inside`, `cross_applies` and `restrictI_contract` in
   `HandoffRestrict.lean` / `HandoffCoverage.lean`. This file has local copies under other names
-  (`emitM_inside_B`, `cross_applies_B`, `restrictI_contract_B`), so it does not wait for them.
+  (`emitM_inside_B`, `emitM_insideB_B`, `concMarkB_of_den_B`, `cross_applies_B`,
+  `restrictI_contract_B`), so it does not import them. They follow the mark-aware restriction of
+  F71 (`insideB`, `concMarkB`).
 
   Main results:
     * `seg_genN`: the backward segment of a justified flow; the flow is demanded or recorded in the
@@ -188,23 +193,89 @@ theorem cross_applies_B {j a : PFact} {l : Loc} (hk : CrossK j.kind) (hj : j.cov
         exact CoreAux.tailI_append_admits hta
 
 #print axioms cross_applies_B
+#print axioms subB_union_left
+#print axioms markSub_conc_of_admits
+#print axioms den_covers_init
 
-/-- `restrictI_contract` (agent R), local copy: if the premise lies inside `D-c`, the
-    intersection restriction keeps every pair of the edge whose exit location `D-p` covers, in
-    the same layer. Every cell of `restrictConcI`, also a `*` conclusion. -/
+/-- `emitM_insideB` (HandoffRestrict), local copy (F71, the mark-aware restriction): an emitted
+    premise of a CONCRETE added fact lies inside its entry pattern in its locations AND its marks
+    (`insideB`). On a concrete mark, the emission test `markMatchB` is `markSubB`. -/
+theorem emitM_insideB_B {d a j : PFact} {t : Mark} (h : emitM d a = some j)
+    (ha : a.mark = .conc t) : insideB j d = true := by
+  have hm := RCore.emitM_mark h
+  obtain ⟨_, hmm, _⟩ := RCore.emitM_cases h
+  have hsub : markSubB d.mark j.mark = true := by
+    rw [hm, ha]
+    rw [ha] at hmm
+    have he : markMatchB d.mark (.conc t) = markSubB d.mark (.conc t) := by
+      cases d.mark <;> rfl
+    rw [← he]
+    exact hmm
+  unfold insideB
+  rw [emitM_inside_B h, hsub]
+  rfl
+
+#print axioms emitM_insideB_B
+
+/-- `concMarkB_of_den` (HandoffRestrict), local copy: a pair of the edge whose exit location has a
+    mark of `D-p` passes the mark test of the conclusion (every mark cell). -/
+theorem concMarkB_of_den_B {j f p : PFact} {l1 l2 : Loc} (hd : den j f l1 l2)
+    (hp : p.mark.admits l2.mark) : concMarkB p.mark f.mark = true := by
+  obtain ⟨_, _, _, hm2, hps, _⟩ := hd
+  cases hf : f.mark with
+  | conc u =>
+    rw [hf] at hm2
+    have h2 : l2.mark = u := hm2
+    cases hpm : p.mark with
+    | star => rfl
+    | conc t =>
+      rw [hpm] at hp
+      have h3 : l2.mark = t := hp
+      show Nat.beq t u = true
+      rw [← h3, ← h2]
+      exact Nat.beq_refl _
+    | starEx x =>
+      rw [hpm] at hp
+      have h3 : memB l2.mark x = false := hp
+      rw [h2] at h3
+      show (!(memB u x)) = true
+      rw [h3]
+      rfl
+  | star => cases p.mark <;> rfl
+  | starEx x =>
+    rw [hf] at hm2 hps
+    have h2 : l2.mark = l1.mark := hm2
+    have h3 : memB l1.mark x = false := hps
+    cases hpm : p.mark with
+    | star => rfl
+    | conc u =>
+      rw [hpm] at hp
+      have h4 : l2.mark = u := hp
+      show (!(memB u x)) = true
+      rw [← h4, h2, h3]
+      rfl
+    | starEx _ => rfl
+
+#print axioms concMarkB_of_den_B
+
+/-- `restrictI_contract` (HandoffRestrict), local copy, MARK-AWARE (F71): if the premise lies
+    inside `D-c` in its locations and marks (`insideB`), the intersection restriction keeps every
+    pair of the edge whose exit location (with its mark) `D-p` covers, in the same layer. Every
+    cell of `restrictConcI`, also a `*` conclusion; the mark test by `concMarkB_of_den_B`. -/
 theorem restrictI_contract_B {j : PFact} {g : AFact} {d : DemandEdge} {p : PFact} {l1 l2 : Loc}
-    (hin : insideLocB j d.din = true) (hden : den j g.fact l1 l2) (hdout : d.dout = some p)
-    (hp : p.coversLoc l2) :
+    (hin : insideB j d.din = true) (hden : den j g.fact l1 l2) (hdout : d.dout = some p)
+    (hp : p.covers l2) :
     ∃ g', restrictI j g d = some g' ∧ den j g'.fact l1 l2 ∧ g'.demand = g.demand := by
   have hR : restrictI j g d = restrictConcI g p := by
     unfold restrictI
     rw [hdout]
     dsimp only
-    rw [if_pos hin]
+    rw [hin, concMarkB_of_den_B hden hp.2.2]
+    rfl
   rw [hR]
   have hden0 := hden
   obtain ⟨hb1, hb2, hm1, hm2, hps, σ, τ, hp1, hp2, hti, htf⟩ := hden
-  obtain ⟨hbp, σ', hpp, htp⟩ := hp
+  obtain ⟨hbp, ⟨σ', hpp, htp⟩, _⟩ := hp
   have hb : Nat.beq g.fact.base p.base = true := by rw [← hb2, ← hbp]; exact Nat.beq_refl _
   have hpath : p.path ++ σ' = g.fact.path ++ τ := by rw [← hpp, ← hp2]
   rcases CoreAux.relate_common hpath with ⟨r, hrel, hq, hσ⟩ | ⟨r, hrel, _, hr, hτ⟩
@@ -324,6 +395,8 @@ theorem cross_em (j : PFact) (g : AFact) : Cross j g ∨ ¬ Cross j g := by
     · exact Or.inr (fun h => h2 h.2.1)
   · exact Or.inr (fun h => h1 h.1)
 
+#print axioms crossK_em
+#print axioms markRev_em
 #print axioms cross_em
 
 /-- `CrossB` is decidable (the layer is a `Bool`, `Cross` by `cross_em`). -/
@@ -516,9 +589,11 @@ theorem seg_genN (hW : P.WF) (hT : BindTargetsStar P) (hmr : StmtsMarkRev P)
       obtain ⟨⟨gb, hgb, hdgb, _, _⟩, hfrc⟩ := ihc jb (startFact jb) l2 (DB.start hjb)
         (startFact_sound hjbc) ⟨ta, by rw [startFact_mark]; exact hjbm⟩
         (fun _ hk => Invariant.startFact_legal hk)
-      -- the intersection restriction by the demand edge keeps the pair
+      -- the intersection restriction by the demand edge keeps the pair: the emitted premise
+      -- lies inside `g'` with its mark, and the exit location `l1` of the backward pair has its
+      -- mark in `D-p = j` (the forward pair: `j` covers `l1`; F71)
       obtain ⟨gb', hres, hdgb', _⟩ := restrictI_contract_B (d := ⟨g'.fact, some j⟩)
-        (emitM_inside_B hemit) hdgb rfl (RCov.covers_loc hjc)
+        (emitM_insideB_B hemit hta) hdgb rfl hjc
       -- the backward summary piece applied, and the reversed binding into the callee
       obtain ⟨r, hr, hdr⟩ := RCov.sat_step RCore.satI_contract hsat hda hdgb'
       have her1 : revEdge e1.1 e1.2 ∈ (Call.rev c).fromCallee := List.mem_map.mpr ⟨e1, he1, rfl⟩
@@ -550,7 +625,7 @@ theorem seg_genN (hW : P.WF) (hT : BindTargetsStar P) (hmr : StmtsMarkRev P)
         have hdem : demOfN (Program.rev P) DBr (pubR demB) c.callee ⟨gb'.fact, some jb⟩ :=
           Or.inr (Or.inr ⟨jb, gb, gb', hjb, hne, hgb, hncb, ⟨_, hdB, hres⟩, rfl⟩)
         exact ⟨res, FlowRR.call hfr he he1 hd1 hfrc hdem (den_covers_final hdgb') rfl
-          (RCov.covers_loc hjbc) he2 hd2⟩
+          hjbc he2 hd2⟩
   | @rcall M l0 n l n' c e1 e2 l1 l2 l3 j g _ he he1 hd1 hrcj hcr hjc hdg he2 hd2 ih =>
     intro i f lX h hd hc hl
     -- a crossable record of `rc`: the backward run crosses it by its reversal

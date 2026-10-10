@@ -18,6 +18,13 @@ The formal model is in [`spec/lean`](lean): `Pipeline.lean`, `PipelineProofs.lea
 `PipelineHandoffDriver.lean` and `PipelineHandoffDriverExt.lean` (`ap.md` §10.12; §7.3 to §7.8). Every theorem named here
 is machine-checked and constructive (`ap.md` §10 defines the term). §11 lists what is argued and not proved.
 
+THE RULES OF DECISION F72 ARE NORMATIVE, AND THEIR PROOFS ARE PENDING (`ap-history.md` F72). A restricted run can
+analyse with the abstract mark `*` (§3 THE MARKS OF A RESTRICTED RUN). The theorems that this document names for the
+restricted runs and for the iteration (§5.5, §7.7, §7.8, §12) are proved for the CONCRETE restricted runs of F70 and
+F71 (the emission `emitM`, the closures with request rules that never fire, `RExact.DR_concrete`). For the rules of
+F72 they are NOT YET PROVED. The task is §11 PENDING: THE LEAN MODEL OF F72 (also `ap.md` §11.2). The theorem names
+stay in this document: they hold for the concrete design.
+
 Language: ASD-STE100 Simplified Technical English.
 
 ---
@@ -26,7 +33,9 @@ Language: ASD-STE100 Simplified Technical English.
 
 The analyzer core:
 
-1. runs one run (`ap.md` §6): one direction, one field limit, one mode (run 1 or restricted), to a fixed point;
+1. runs one run (`ap.md` §6): one direction, one field limit, one mode (run 1 or restricted), to a fixed point. Only
+   run 1 has requests. A restricted run analyses with the abstract mark `*` where its demand has a `*` pattern, and
+   with a concrete mark only where a concrete-mark demand exists (§3; `ap-history.md` F72);
 2. exchanges the edges between the methods of a run with no loss (§5);
 3. detects the end of a run (§6);
 4. runs the sequence of runs and computes the hand-off from each run to the next: only the DEMAND EDGES and the
@@ -55,7 +64,7 @@ Out of scope:
 
 | # | Assumption |
 |---|---|
-| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `emitX`, `satX` and the restriction as an INTERSECTION `HandoffX.restrictIX`, `ap.md` §6.4; before F70 the spec instance was `AnyTaintEx.DRXs`, with `restrictX`). The backward run has no `[any-taint]`: it stays `Backward.DB`, with the intersection `Handoff.restrictI`. |
+| A1 | The AP operations and stores satisfy `ap.md`. The interpreter satisfies `interpreter.md` I1–I14. The proofs of this document use only the closures of `ap.md` (Lean `D`, `DR`, also `DR` of the seeded program `FSeeds.keepSources P σ` (§7.7), `Backward.DB`, `Statics.DS`, and with the conjunctions `NDZ.DNz`, the closure of the spec (§5.5), with its list model `ND.DN`). With the tail `[any-taint]` (`ap.md` W8, §10.11) they also use run 1 with the layer rules W6 and W8 and the exclusion of `[any-taint]` (`AnyTaintEx.D6X`) and the restricted forward run with must-premises and exclusions (`AnyTaintEx.DRX`; with the spec rules `emitX`, `satX` and the restriction as an INTERSECTION `HandoffX.restrictIX`, `ap.md` §6.4; before F70 the spec instance was `AnyTaintEx.DRXs`, with `restrictX`). The backward run has no `[any-taint]`: it stays `Backward.DB`, with the intersection `Handoff.restrictI`. These are the closures of the CONCRETE restricted runs (F70, F71): they keep the request rules, which never fire there. The restricted closures of F72 (no request rules; the emission `emitW`, the satisfaction `satW`, the hand-offs with the mark normalization; the planned names `DRA`, `DBA`) are not yet in the model (§11 PENDING: THE LEAN MODEL OF F72). |
 | A2 | LINEARIZABLE SHARED ACTIONS. Each shared action of §5.2 and §5.3 is atomic: register a handler, insert a publication, read the storage, read the handler list. All of them have one total order. This order agrees with the program order of each thread. The Lean model is an interleaving model with these actions as steps. P3 (§5.3) is the implementation rule. |
 | A3 | RELIABLE EVENTS. An event that a thread sends to the channel of a runner arrives exactly once, unless the run is cancelled. The send happens before the receive (Kotlin `Channel`). |
 | A4 | READ-ONLY INPUTS. These inputs do not change during a run: the program, the rules, the lambda resolutions, the demand store, the record store and the seeds. The driver makes them before the run starts. The start of the run publishes them to every runner. |
@@ -66,7 +75,8 @@ Out of scope:
 ## 1. Terms
 
 `ap.md` §1 defines the AP terms (fact, edge, premise set, layer, link, added fact, run, demand pattern, record, request,
-and others). This document adds:
+and others; since F72 also the FLOW FORM of a `*` pattern, the FLOW PREMISE and the SHARING of the emission). This
+document adds:
 
 | Term | Meaning |
 |---|---|
@@ -80,8 +90,8 @@ and others). This document adds:
 | method analyzer | The actor of one method key in one run (§4). It owns the intra-procedural edges and every RUN store of its method. |
 | event | One message in the channel of a runner (§5.1). Its HANDLER is the code that the runner runs for it. |
 | subscription | A caller-side record `(caller edge, call statement, added fact)` (`ap.md` §8.4). |
-| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4): the INTERSECTION of the summary edge with one demand pattern. It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). The hand-off reads the publications, not the summary edges before the restriction (§7.3, §7.4). |
-| crossable | A summary leaf `j → g` (one leaf of the conclusion tree of a summary edge, `ap.md` §7.2) that the next run of EITHER direction crosses by a record, with no analysis of the callee (Lean `Handoff.Cross`). All of these hold: (1) the leaf is a leaf of a RECORD (`ap.md` §8.7 R1: a normal summary edge with one premise; a backward premise is not the zero fact); (2) the premise `j` has the tail `$`, or `*` with the Empty exclusion: not `[any]` and not a must-premise `[any-taint]`; (3) `j → g` is mark-reversible (`ap.md` §1); (4) the leaf `g` has no any tail: not `[any]`, and not `[any-taint]` with or without its exclusion. So the reversal of the leaf (`ap.md` §9.1) has a `$` or `*` (Empty) premise too. A backward leaf `jb → gb` is crossable if it is NORMAL (a backward record) and its reversal satisfies (2) to (4) (Lean `Handoff.CrossB`: the reversal `revRec` is always normal, so the test reads the layer of `gb` itself). Then the record of the leaf applies to EVERY CONCRETE added fact (forward) or requirement (backward) that covers one of its locations (every restricted run is concrete), by `inside` or by `applicable` (Lean `Handoff.cross_applies`), and its reversal is exact (`ap.md` §8.7 R3; Lean `Reverse.rev_exact_of_empty_premise`: the converse pairs; as a record, `ap.md` S14). §7.3 shows that (4) is necessary. |
+| publication | A summary edge that the callee gives to its subscribers. In a restricted run it is the result of the restriction (`ap.md` §6.4): the INTERSECTION of the summary edge with one demand pattern, in the locations AND the marks (`ap-history.md` F71): the premise lies inside `D-c` with its mark, and the mark of the conclusion meets the mark of `D-p` (§4.6). It carries its premise key with the tail of each member and the exclusion of an `[any-taint]` member (§4.1, §4.6). The hand-off reads the publications, not the summary edges before the restriction (§7.3, §7.4). |
+| crossable | A summary leaf `j → g` (one leaf of the conclusion tree of a summary edge, `ap.md` §7.2) that the next run of EITHER direction crosses by a record, with no analysis of the callee (Lean `Handoff.Cross`). All of these hold: (1) the leaf is a leaf of a RECORD (`ap.md` §8.7 R1: a normal summary edge with one premise; a backward premise is not the zero fact); (2) the premise `j` has the tail `$`, or `*` with the Empty exclusion: not `[any]` and not a must-premise `[any-taint]`; (3) `j → g` is mark-reversible (`ap.md` §1); (4) the leaf `g` has no any tail: not `[any]`, and not `[any-taint]` with or without its exclusion. So the reversal of the leaf (`ap.md` §9.1) has a `$` or `*` (Empty) premise too. A backward leaf `jb → gb` is crossable if it is NORMAL (a backward record) and its reversal satisfies (2) to (4) (Lean `Handoff.CrossB`: the reversal `revRec` is always normal, so the test reads the layer of `gb` itself). Then the record of the leaf applies to EVERY CONCRETE added fact (forward) or requirement (backward) that covers one of its locations, by `inside` or by `applicable` (Lean `Handoff.cross_applies`, proved for the concrete runs). Since F72 a restricted run can also have an added fact or a requirement with the mark `*` or `*∖X` (§3 THE MARKS OF A RESTRICTED RUN): a record applies to it only if the premise of the record has the mark `*` (the mark test of `inside` and of `applicable`, `ap.md` §4.3); this form of `cross_applies` is PENDING (§11). The reversal of the leaf is exact (`ap.md` §8.7 R3; Lean `Reverse.rev_exact_of_empty_premise`: the converse pairs; as a record, `ap.md` S14). §7.3 shows that (4) is necessary. |
 | demand edge | A published summary piece of a run that the next run of the other direction cannot reuse as a record: a publication (§4.6) of a summary leaf that is NOT crossable (Lean `Handoff.handF`, `demOfN`). Also, from a backward run, every zero-premise backward edge at the forward entry (§7.4 case 2). The run stores its demand edges when it publishes them (§4.6). The hand-off gives the next run only the demand edges (§7.3, §7.4); each one gives one demand pattern of the next run per member of its premise. The zero demand is not a demand edge: it is implicit for every method key (§4.4). A demand edge is not the same as a DEMAND-LAYER edge (`ap.md` §1): a normal leaf that is not crossable (an `[any-taint]` leaf, for example) is a demand edge too. |
 | DEMAND vulnerability | A vulnerability key whose state in the report is DEMAND after a complete forward run (§7.5): the latest complete forward run reports it, and NO complete forward run so far confirmed it. A key that an earlier run confirmed is CONFIRMED (final), also when the latest run reports it only in the demand layer. Only the sink witnesses of the DEMAND vulnerabilities are sink seeds of the hand-off (§7.3). The backward run also fires the sink seeds of a sink whose end fact a requirement reaches, also of a CONFIRMED vulnerability (§4.5 THE TRIGGER OF AN END FACT). |
 | frontier | The part of the program that the later runs still analyse after a complete run: the method keys with a non-zero initial fact in the run, and the demand edges that the run hands off, per method key (§7.8). The driver logs the frontier of each complete run (THE FRONTIER LOG, §7.8). |
@@ -164,16 +174,48 @@ The mode decides these rules (`ap.md` §6.1):
 
 | Rule | Run 1 (forward) | Restricted forward run | Backward run |
 |---|---|---|---|
-| initial facts of an added fact | the policy fact (`ap.md` §6.2) and the request answers | the emission `a ∩ D-c` (`ap.md` §6.3); the zero fact for the zero added fact | the emission; the zero fact enters every callee (rule `zin`) |
-| a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`, after the restriction in the callee (the INTERSECTION with a demand pattern, `ap.md` §6.4). A callee has a non-zero premise only where a demand pattern of it emits one (§4.4): a callee whose only demand pattern is the zero demand publishes no summary of a non-zero premise, and its callers cross it by its records (next row) | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
+| initial facts of an added fact | the policy fact (`ap.md` §6.2) and the request answers | the emission of `ap.md` §6.3 (§4.4; F72 R2): an entry pattern `D-c` with the mark `*` gives its FLOW FORM, one initial fact for every added fact under it (SHARING); a `D-c` with a concrete mark gives `a ∩ D-c` with the mark of `a`, only for an `a` with that mark: an added fact with the mark `*` or `*∖X` under a concrete pattern emits NOTHING (the user's decision: "The added fact can't satisfy the demand"); the zero fact for the zero added fact | the same emission, with the requirement as the added fact: a `*` pattern weakens the requirement to the FLOW form of the pattern (§4.4); after the hand-off normalization no entry pattern has the mark `*∖X` (§7.3); the zero fact enters every callee (rule `zin`) |
+| the marks of the facts | `*` and `*∖X` (the policy facts and their FLOW edges), and concrete marks (the answers, the zero fact, the sources) | NOT CONCRETE since F72: the edges of a FLOW premise (the mark `*`) have the marks `*` and `*∖X` (FLOW trees, `ap.md` §7.2), and their callees can get added facts with these marks; the edges of a concrete premise and of the zero fact have concrete marks. Before F72 every restricted run was concrete | as the restricted forward run |
+| a summary applies to an added fact `a` if | `applicable(j, a)` | `inside(j, a)`; for a FLOW premise (the mark `*`) also `applicable(j, a)` (`ap.md` §4.3; F72 R3; §5.3 `matches`). This test applies after the restriction in the callee (the INTERSECTION with a demand pattern, in the locations and the marks, `ap.md` §6.4; §4.6). A callee has a non-zero premise only where a demand pattern of it emits one (§4.4): a callee whose only demand pattern is the zero demand publishes no summary of a non-zero premise, and its callers cross it by its records (next row) | as the restricted forward run; a zero-premise summary applies to the zero fact of the caller with no test and no restriction (rule `zret`) |
 | records (`ap.md` §8.7 R3, R4) | none | the FORWARD records by `byEntry`, and the reversed BACKWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. A forward record with an `[any-taint]` premise that applies by `applicable` only gives its results in the demand layer (`ap.md` §4.3; §4.2 `applyRecord`). A CROSSABLE leaf (§1) of the run before is not in the demand (§7.3, §7.4): its record REPLACES the analysis of the callee, and the run crosses the call by the record. A callee of which the forward run before hands off no demand edge (for example, all its summary leaves are crossable), with no seed in its call subtree, is analysed only from the zero fact (§7.8 THE EXCLUSION) | the BACKWARD records by `byEntry`, and the reversed FORWARD records by `byExit`; each when `applicable(p, a)` or `inside(p, a)`. The reversal is LEAF BY LEAF: no leaf of a forward record with an `[any-taint]` premise has a reversal; of any other record, an `[any-taint]/E` leaf with `E ≠ {}` has none, and the other leaves reverse (`ap.md` §8.7 R3; §5.3). A crossable forward leaf is not in the backward demand (§7.3): the backward run crosses the call by its reversal and never enters the callee for it |
-| mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no (assert) | no (assert) |
-| sinks | the sink check (`ap.md` §4.9) | the sink check | no sink check; the sink seeds (`ap.md` §9.2) |
+| mark and position requests, static rule | yes (`ap.md` §4.5, §4.10) | no request rule and no static rule (F72 R4). On a fact with the mark `*` or `*∖X`, an operation that needs a concrete mark gives nothing and raises no request: the mark gate of a micro edge with a concrete premise mark, the sink check, the part of a cleaner (the fact continues as `*∖{T}`) (`ap.md` §4.5, §4.7, §4.9; §4.6) | as the restricted forward run (the backward run has no sink check) |
+| sinks | the sink check (`ap.md` §4.9) | the sink check; on a `*` or `*∖X` fact it gives nothing (no request, `ap.md` §4.9) | no sink check; the sink seeds (`ap.md` §9.2) |
 | unconditional sources | every source fires | only the source seeds fire (`ap.md` §6.1 rule 6); a zero-premise forward record still applies (`ap.md` §9.2) | every reversed source edge, with no seed filter (the backward run is on the full program, Lean `Reverse.Program.rev P`); it records the source hits (`ap.md` §8.11) |
 | type filters | yes | yes | no |
 | the tail `[any-taint]` (`ap.md` W8, S15) | a source rule with an `[any]` target gives `[any-taint]` on a normal input: a complete edge (on a demand input `[any]`, W8). A pass rule with an `[any]` target keeps `[any]`: a may, in the demand layer (`ap.md` W6). A normal `[any-taint]` conclusion can carry an EXCLUSION `E` of first accessors, `(x, p, [any-taint], E, T)`: an exclusion edge (the keep edge of a strong write, a `*/E'` summary) gives `E ∪ E'` and the result stays normal (§4.3). Only the demotions of §4.3 make `[any]` of it (demand, no exclusion): the field-limit cut, a cleaner `part` row other than `atAndBelow` and `below` one accessor below it, a may target, a demand-layer input and (in a restricted run) the must-record demotion. No premise has the `[any-taint]` tail | as run 1. Also the `[any-taint]` premise (a MUST-PREMISE) of the emission (§4.4), with the exclusion that the emission gives it: it starts as itself in the normal layer, and its normal edges are complete | no `[any-taint]` (a forward-only tail, `ap.md` W8). The seed of an `[any]` sink pattern and the reversal of an `[any]` condition literal give `[any]`, in the demand layer (`ap.md` W6). Every result of the reversal of a micro edge whose forward target is `[any]` (a pass rule with an `AnyField` target) is in the demand layer, also a `$` result (§4.3). So is every result of the reversal of a conjunctive micro edge (§4.3). A complete edge is a normal edge, as before F69 (`ap.md` §8.7 R1) |
 
 No run has a liveness check (§4.3).
+
+THE MARKS OF A RESTRICTED RUN (`ap-history.md` F72; the AP rules are in `ap.md` §4.3, §4.5, §6.1, §6.3, §6.4, §6.6,
+§9.2). THE RULE: a restricted run analyses with a concrete mark only if a concrete-mark demand exists. Run 1 keeps its
+requests; their answers make the concrete-mark summaries where the marks matter, and the hand-off gives them to the
+next run as concrete patterns (or, if they are crossable, as records). A forward demand with `*` gives a backward
+demand with `*`, and a concrete demand stays concrete. The core part of each rule:
+
+* R1, THE HAND-OFF NORMALIZATION (§7.3, §7.4). Every hand-off replaces the mark `*∖X` of a demand pattern by `*`, in
+  `D-c` and in `D-p`: a larger demand, so it is sound. The summaries and the records keep `*∖X`: it blocks a mark that
+  the summary cannot pass. A demand for a mark in `X` comes as its own demand edge, with the concrete mark;
+* R2, THE EMISSION (§4.4). The initial fact is the WEAKEST fact inside `D-c` that covers the common part with the added
+  fact (the requirement in the backward run). A `*` pattern gives its FLOW FORM, which does not depend on the added
+  fact (SHARING); a concrete pattern gives `a ∩ D-c` with the mark of `a`, as before F72;
+* R3, THE SATISFACTION (§5.3). A summary of a FLOW premise applies by `inside` or by `applicable`; a summary of a
+  concrete premise by `inside`, as before;
+* R4, NO REQUEST AFTER RUN 1, in both directions (§4.6). On a `*` or `*∖X` fact an operation that needs a concrete
+  mark gives nothing (the table above);
+* R5, THE RESTRICTION (§4.6). The mark-aware intersection of F71. A FLOW premise lies inside its own `*` pattern, and
+  inside no concrete pattern;
+* R6, THE CLAIM (PENDING, §11): every flow that needs a concrete mark is demanded by a concrete pattern or crossed by a
+  concrete record, and every flow that a `*` pattern demands needs no concrete mark. So no request is needed after
+  run 1, and every forward run still reports every real vulnerability that no earlier run confirmed. A sink fires only
+  under a concrete premise (the method of a sink gets a concrete demand from its seed, and the chain of calls down
+  stays concrete), so the confirmation does not change (§7.5).
+
+WHAT F72 REPLACES: decision F35 (version 4), "no request after run 1, so a restricted run is CONCRETE", and its cost
+(`ap.md` §6.3): NO SHARING, one initial fact per distinct added fact (path, tail, mark), so the premises are a product
+of the marks. Since F72 a restricted run (forward or backward) can have `*` premises (FLOW premises), FLOW conclusions,
+added facts and requirements with the marks `*` and `*∖X`, and `*∖X` marks on its summaries. Two consequences: the
+backward weakening makes the backward demand coarser (for example the requirement `ret.*` in place of `ret`, §7.4), and
+the restricted runs have no request rules. The Lean model of these rules is PENDING (§11).
 
 ---
 
@@ -317,16 +359,42 @@ Initial facts:
 * RUN 1. For an added fact `a`: the policy fact `(a.base, [], *, {}, *)`, or the zero fact for the zero fact
   (`ap.md` §6.2). The request answers are initial facts too (`ap.md` §4.5, §4.10).
 * RESTRICTED RUN. For an added fact `a`, the emission query `near(a.base :: a.path)` returns demand patterns of the
-  method (`ap.md` §8.6). Each one whose emission is not empty gives one initial fact `a ∩ D-c` (`ap.md` §6.3).
+  method (`ap.md` §8.6). Each one whose common part with `a` is not empty (`a ∩ D-c`, `ap.md` §6.3) gives ONE initial
+  fact: THE WEAKEST FACT INSIDE `D-c` THAT COVERS THE COMMON PART (`ap-history.md` F72 R2; Lean, PENDING: `emitW`):
+  * A `D-c` WITH THE MARK `*`: its FLOW FORM `(D-c.base, D-c.path, flowK(D-c.tail), *)`, with `flowK(*/E) = */E`,
+    `flowK([any]) = */{}` and `flowK($) = $` (`ap.md` §6.3). It does not depend on `a`: every added fact under the
+    pattern gets the same initial fact, whatever its mark, path and tail (SHARING), and `initials.add` stores it once.
+    The FLOW premise has FLOW edges (`ap.md` §7.2), and its summaries pass the mark of each added fact;
+  * A `D-c` WITH A CONCRETE MARK: `a ∩ D-c` with the mark of `a`, as before F72 (Lean `emitM`). No weaker normal
+    premise lies inside a concrete pattern: a `*` tail with a concrete mark starts as `[any]` in the demand layer
+    (`ap.md` W2, §6.5), and a must-premise is a stronger assumption. The rest of this bullet is about this case.
+
   The tail of `a ∩ D-c` follows the emission table of `ap.md` §6.3: for an added fact and a pattern that both have an
   any tail, it is the tail of the ADDED FACT. So an `[any-taint]` added fact (it is normal on its link, `ap.md` W8)
   gives an `[any-taint]` initial fact, a MUST-PREMISE, and an `[any]` added fact gives an `[any]` initial fact. The
   emission reads the exclusion `E` of an `[any-taint]/E` added fact as part of its location set: a premise at the path
   of the added fact keeps `E` (a `$` premise has none); the pattern chain below the added fact, at `a.path ++ r`,
   gives a premise with no exclusion, and only if `E` admits `r` (else the emission is empty: no common location). The
-  backward run gives patterns with the tails `$` and `[any]` only (§7.4): the must flag comes from the added
-  fact, not from the pattern (Lean: `AnyTaintEx.emitX`, `emitTX`; the vectors `AnyTaintEx.Vec.emit_at`,
-  `emit_above_excluded`, `emit_above_exact`, and the table without exclusions `AnyTaint.EmitVec`).
+  must flag comes from the added fact, not from the pattern (Lean: `AnyTaintEx.emitX`, `emitTX`; the vectors
+  `AnyTaintEx.Vec.emit_at`, `emit_above_excluded`, `emit_above_exact`, and the table without exclusions
+  `AnyTaint.EmitVec`). The backward run gives the forward run concrete patterns with the tails `$` and `[any]` (§7.4).
+  Since F72 it also gives `*` patterns, and every forward pattern with a `*` tail has the mark `*` (a concrete mark has
+  no `*` tail, W2): the emission gives its FLOW form, so the meet of the tails never reads a `*/E` forward pattern.
+  THE MARK OF THE EMISSION (`ap.md` §6.3; `ap-history.md` F71, F72). A concrete `T` in `D-c` admits only an added fact
+  with the mark `T`, and the initial fact has that mark (Lean `markMatchB`). AN ABSTRACT ADDED FACT UNDER A CONCRETE
+  PATTERN EMITS NOTHING (the user's decision, 2026-10-10: "If an added fact is * and the demand is T -- nothing is
+  emitted. That is OK. The added fact can't satisfy the demand."). So an added fact with the mark `*` or `*∖X` (since
+  F72 a restricted run has them, under a FLOW premise) gets no initial fact from a pattern with a concrete mark, and
+  no request asks for the mark (R4). This is the emission `emitM` as it is (`markMatchB T * = false`; `ap.md` §6.3,
+  the table of the marks). A `*` in `D-c` admits every mark and gives the FLOW form, with the mark `*`. THE
+  `*∖X` CELL IS DEAD SINCE F72: the hand-off replaces every `*∖X` pattern mark by `*` (R1, §7.3, §7.4). Before F72 a
+  backward entry pattern with the mark `*∖X` (a run-1 summary conclusion after a cleaner) admitted every mark that is
+  not in `X`, and a requirement with a mark in `X` got no initial fact from it (`Handoff.RVec.vEmit_starEx_T`;
+  `vEmit_starEx_U`; before F71 `*∖X` counted as `*`, `vEmit_starEx_T_pre70`). The implementation can keep the test of
+  the cell. The emitted premise lies inside its `D-c`, in its locations and its mark: for a concrete added fact under a
+  concrete pattern this is proved (Lean `Handoff.emitM_insideB`; with the exclusion `HandoffX.emitX_insideXB`); for
+  the FLOW form it is PENDING (§11; R5: it lies inside its own `*` pattern). So the restriction of its summaries keeps
+  it (§4.6).
 * THE ZERO DEMAND. `(zero, none)` is part of the demand of EVERY method key, also when the demand store has no entry
   for it. So the zero added fact always emits the zero fact. The zero fact of a root is an initial fact. The zero fact
   is not localized: it enters every callee that it reaches, in every run (§11 THE ZERO FACT).
@@ -334,11 +402,17 @@ Initial facts:
   backward run is a zero-to-fact edge, not an initial fact). In a restricted FORWARD run its callers get its non-zero
   results only from its records (§3); in a backward run its zero-premise summaries (the seed paths) also return (rule
   `zret`). So the hand-off of the demand edges decides which method keys a run analyses from a non-zero fact (§7.8).
-* BACKWARD RUN. As a restricted run. Also, `addZeroEntry` makes the zero fact an initial fact (rule `zin`).
+* BACKWARD RUN. As a restricted run, with the requirement as the added fact (`ap.md` §9.2; F72 R2). A `*` pattern
+  weakens the requirement to its FLOW form. Example, the getter `get(p): ret = p.name`: the requirement
+  `(ret, ., $, T)` under the pattern `(ret, ., [any], *)` (the run-1 summary of the getter is in the demand layer, so
+  it is a demand edge, §7.3) gives the FLOW premise `(ret, ., *, {}, *)`, and a requirement with another mark under
+  the same pattern gives the same premise (SHARING, `ap.md` §6.3). Also, `addZeroEntry` makes the zero fact an initial
+  fact (rule `zin`).
 * `initials.add` deduplicates. Each new initial fact starts with its start fact (`ap.md` §6.5) at every start node of
   its kind, then the start rules. The start fact of a must-premise `(x, p, [any-taint], E, T)` is the premise itself,
   `(x, p, [any-taint], E, T)`, in the normal layer (a forward restricted run only: the backward run has no
   must-premise). Its edges are END-EXACT (`ap.md` §1; Lean: `AnyTaintEx.startX`; `AnyTaintExExact.startX_must_end`).
+  The start fact of a FLOW premise (F72, forward and backward) is that of `ap.md` §6.5.
 
 Start nodes, end nodes and their rules. The interpreter gives the forward ones; the backward ones are their reversal
 (§4.9):
@@ -526,21 +600,44 @@ At an end node of the run, after the end rules, each new delta `j → g` (a summ
      union of `covering` over the members;
    * a backward summary with the premise set `{zero}`: `j → g` itself, with no restriction (`ap.md` §6.4);
 
-   THE RESTRICTION IS AN INTERSECTION (`ap.md` §6.4; `ap-history.md` F70). The premise `j` must lie INSIDE `D-c`
-   (overlap is not enough; an emitted premise always lies inside the entry pattern that emitted it, Lean
-   `Handoff.emitM_inside`, `HandoffX.emitX_inside`). Below `D-p` the conclusion stays whole if the tail of `D-p` admits
-   the step. At the path of `D-p` the conclusion tail is met with the tail of `D-p` (`[any] ∩ $ = $`,
-   `[any-taint]/E ∩ $ = $`, `[any-taint]/E ∩ */E2 = [any-taint]/(E ∪ E2)`; `[any] ∩ */E` keeps `[any]`). The layer
-   stays. The restriction only removes pairs, and it keeps every pair of a premise inside `D-c` whose exit location
-   `D-p` covers (Lean `Handoff.restrictI_sub`, `restrictI_contract`; with the exclusion `HandoffX.restrictIX_ok`,
-   `restrictIX_contract`).
+   THE RESTRICTION IS AN INTERSECTION, IN THE LOCATIONS AND THE MARKS (`ap.md` §6.4; `ap-history.md` F70, F71). It
+   reads `D-c` and `D-p` with their marks:
+   * THE PREMISE `j` must lie INSIDE `D-c`, in its locations and its marks: every location of `j` is a location of
+     `D-c`, and the marks of `j` are a subset of the marks of `D-c` (a `*` pattern admits every mark, a concrete `T`
+     only `T`, a `*∖X` pattern every mark that is not in `X`; Lean `Handoff.insideB`, that is `insideLocB` and
+     `markSubB`). Overlap is not enough. An emitted premise always lies inside the entry pattern that emitted it, with
+     its mark (Lean `Handoff.emitM_inside`, `emitM_insideB`; with the exclusion `HandoffX.emitX_inside`,
+     `emitX_insideXB`; §4.4). A FLOW premise (F72 R5) lies inside its own `*` pattern, and inside NO concrete pattern
+     (`markSubB T * = false`): so a concrete pattern never publishes a summary of a FLOW premise, and a `*` pattern
+     publishes the summaries of its FLOW premise and of every concrete premise inside it (the Lean form for the FLOW
+     premise is PENDING, §11). After the hand-off normalization (R1) no pattern has the mark `*∖X`, so that cell of
+     the test is dead.
+   * THE MARK OF THE CONCLUSION must meet the mark of `D-p` (Lean `Handoff.concMarkB`): two concrete marks must be the
+     same; a `*∖X` side does not admit a concrete mark in `X`; a `*` side meets every mark. Under a concrete premise
+     both marks are concrete, so the test is "the same mark": the conclusion `(ret, .f, $, T)` against
+     `D-p = (ret, .f, $, U)` gives no publication (`Handoff.RVec.vMark_user_restrictI`; with `D-p = (ret, .f, $, T)`
+     it is published, `vMark_user_same`). A conclusion with an abstract mark (`*` or `*∖X`) stays as it is (no form is
+     the intersection of a pass-through mark with `T`): the test keeps it if it can pass a mark of `D-p`. Before F72 it
+     never occurred in a restricted run. Since F72 it is the conclusion of a FLOW premise (§3).
+
+   Below `D-p` the conclusion stays whole if the tail of `D-p` admits the step. At the path of `D-p` the conclusion
+   tail is met with the tail of `D-p` (`[any] ∩ $ = $`, `[any-taint]/E ∩ $ = $`,
+   `[any-taint]/E ∩ */E2 = [any-taint]/(E ∪ E2)`; `[any] ∩ */E` keeps `[any]`). The layer and the mark stay. The
+   restriction only removes pairs. It keeps every pair `(l1, l2)` of a premise inside `D-c` (in the locations and the
+   marks) if `D-p` covers `l2` with its mark: contract C5 (Lean `Handoff.restrictI_sub`, `restrictI_contract`; with
+   the exclusion `HandoffX.restrictIX_ok`, `restrictIX_contract`). The form of C5 that reads the locations only is
+   false for this restriction (`Handoff.restrictI_contract_loc_false`,
+   `HandoffX.XVec.restrictIX_contract_loc_false`: the example above). Before F71 the restriction read `D-c` and `D-p`
+   as locations only: it published that conclusion with another mark (`vMark_user_loc`), and the hand-off could give
+   it to the next run. That cost precision and work; it lost no flow and gave no false CONFIRMED.
 
    A publication carries the premise key of `j` with the tail of each member and the exclusion of an `[any-taint]`
    member, so the summaries of an `[any-taint]` premise and of an `[any]` premise of one path are different
    publications (§4.1). The restriction does not change the premise. It reads the exclusion of a must-premise in the
-   inside test (Lean `HandoffX.insideLocXB`), and the exclusion of an `[any-taint]/E` conclusion as part of its
-   location set: a conclusion above `D-p` gives the chain of `D-p` only if `E` admits the step down, and that chain
-   has the exclusion `E2` of a `*/E2` exit pattern, else no exclusion (`ap.md` §6.4). Lean: the object
+   inside test, together with the mark test (Lean `HandoffX.insideXB`, that is `insideLocXB` and `markSubB`; the
+   conclusion test `concMarkB` is that of `restrictI`), and the exclusion of an `[any-taint]/E` conclusion as part of
+   its location set: a conclusion above `D-p` gives the chain of `D-p` only if `E` admits the step down, and that
+   chain has the exclusion `E2` of a `*/E2` exit pattern, else no exclusion (`ap.md` §6.4). Lean: the object
    `pub m j mj jex g` of `PipelineAnyTaintEx.sysDRX` carries the must flag `mj` and the exclusion `jex`;
    `HandoffX.restrictIX` (before F70 `AnyTaintEx.restrictX`); the backward run `Handoff.restrictI`;
 3. goes to `pendingPublications`.
@@ -569,7 +666,16 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
   * nothing: the added fact has another concrete mark or excludes the mark; or, for a position request, the added
     fact is above the position and the caller premise is not on `S`.
 * Both sides of this join are in one analyzer, so one handler sees both. The join needs no protocol.
-* In a restricted run a request is an error (assert; `ap.md` §6.1 rule 4).
+* A RESTRICTED RUN HAS NO REQUEST RULE (forward and backward; `ap.md` §4.5, §6.1 rule 4; `ap-history.md` F72 R4).
+  It can have facts with the mark `*` or `*∖X` (§3), but an operation that needs a concrete mark on such a fact gives
+  NOTHING and raises no request: the mark gate of a micro edge with a concrete premise mark, the sink check, and the
+  part of a cleaner (the fact continues as `*∖{T}`; `ap.md` §4.7). These are the mark rows of `interpreter.md` §5.4:
+  also a conditional source, a `CopyMark(T)` pass rule, an ND literal, a literal of a conjunctive sink and the summary
+  rewriter. The analyzer of a restricted run has no `requests` store, so `addRequest` and `RequestIn` do not occur there:
+  the AP operations of a restricted run make no request (`RunConfig.run1` selects the mode). Before F72 the reason was
+  that a restricted run had no `*` fact, and the implementation asserted that no request occurred (decision F35).
+  That every flow which needs a concrete mark is still found after run 1 is the claim R6 (§3; PENDING, §11): the
+  answers of run 1 make the concrete-mark summaries, and the hand-off carries them as concrete patterns or records.
 
 ### 4.7 Sinks, vulnerabilities, seeds and source hits
 
@@ -626,6 +732,10 @@ Requests (run 1 only; `ap.md` §4.5, §4.10, §8.8):
   source: a statement, the reversed sources stage of a call (§4.5), and the reversed exit and entry rules (§4.4). The
   analyzer records the hit whatever `edges.add` gives: also when the store drops the zero result as a duplicate.
 * The backward run has no sink check.
+* THE SINK CHECK ON A `*` FACT (a forward restricted run; F72 R4). The check needs a concrete effective mark
+  (`ap.md` §4.9). On a fact whose effective mark is `*` or `*∖X` it gives nothing and raises no request. A FLOW
+  premise has only edges with abstract marks (§3), so no sink edge has a FLOW premise in its premise set: a sink
+  fires only under a concrete premise or the zero fact (R6; PENDING, §11).
 
 ### 4.8 The method context
 
@@ -948,7 +1058,8 @@ fun matches(sub: Subscription, pub: Publication, config: RunConfig): Boolean {
     val premise = pub.premise                                                // PremiseKey, ap.md §7.1
     if (sub.zeroOnly) return premise.isZero                                  // backward rule zret: no test
     return (0 until premise.size).any { k ->                                 // one member; several members: §5.4
-        satisfies(premise.member(k).toPattern(), sub.addedFact, config.restricted)   // ap.md §6.3 `satisfies`
+        satisfies(premise.member(k).toPattern(), sub.addedFact, config.restricted)   // ap.md §6.3 `satisfies`:
+        // restricted: inside; for a FLOW premise (the mark *) also applicable (F72 R3)
     }
 }
 
@@ -974,7 +1085,11 @@ exclusion): the premise of such a record has the Empty exclusion (in run 1 the p
 restricted run a `$` premise, since a normal edge has a `$` premise or a must-premise:
 `AnyTaintExKinds.DRX_normal_premise`, under `AnyTaintEx.EmitCopiesMarkX`, which `emitX` satisfies,
 `AnyTaintEx.emitX_copies`), so each leaf that R3 reverses reverses exactly
-(`Reverse.rev_exact_of_empty_premise`; `ap.md` §8.7 R3).
+(`Reverse.rev_exact_of_empty_premise`; `ap.md` §8.7 R3). THIS IS THE CONCRETE DESIGN. Since F72 the emission does not
+copy the mark of a `*` pattern (`EmitCopiesMarkX` does not hold), and a normal edge of a restricted run can also have
+a FLOW premise (§3). A FLOW premise of a `*/E` pattern has the exclusion `E`, and `Reverse.rev_exact_of_empty_premise`
+does not apply to its records when `E ≠ {}`. The exactness of the normal edges of a FLOW premise and of their
+reversals is PENDING (§11, lemma L5).
 
 The reversal of an `[any-taint]` leaf with the empty exclusion (a leaf `$ → [any-taint]`) has the premise `[any]` in
 the backward run (`ap.md` §9.1). It applies only to an `[any]` requirement, which is in the demand layer (W6), so its
@@ -983,7 +1098,11 @@ results are in the demand layer. It gives no normal backward edge: a reuse limit
 A must-premise needs every location of it, so a summary of an `[any-taint]` premise applies only to an added fact that
 the premise lies INSIDE, with the exclusions of both (`ap.md` §4.3; Lean `AnyTaintEx.SatInsideX`: the exactness needs
 it, `satX` has it, `AnyTaintEx.satX_inside`). An `[any-taint]` premise occurs only in a forward restricted run, and
-there `matches` is `inside`; so `matches` needs no other test. A normal edge of a must-premise is END-EXACT: every
+there `matches` is `inside`; so `matches` needs no other test. A FLOW PREMISE (the mark `*`, a restricted run since
+F72) is satisfied by `inside` or by `applicable` (`ap.md` §4.3; F72 R3; Lean, PENDING: `satW`): it passes the mark
+of the added fact, as the policy premise of run 1 and a `*`-premise record do. `satisfies` reads the mark of the
+premise, so `matches` needs no other test. A concrete premise is satisfied by `inside` only. A normal edge of a
+must-premise is END-EXACT: every
 admitted location of its conclusion gets its value from some admitted location of the premise. It is not exact pair
 by pair (`AnyTaintEx.EndExactX`; `AnyTaintExact.CexApp.record_not_pair_exact`).
 
@@ -993,10 +1112,12 @@ The index queries (`ap.md` §8; keys `base :: path`):
 |---|---|---|
 | run 1, `applicable(j, a)`: `a` at or below `j` | `lookupPrefixes(a.base :: a.path)` | `lookupExtensions(j.base :: j.path)` |
 | restricted, `inside(j, a)`: `j` at or below `a` | `lookupExtensions(a.base :: a.path)` | `lookupPrefixes(j.base :: j.path)` |
+| restricted, a FLOW premise `j` (F72): `inside(j, a)` or `applicable(j, a)` | both lookups of the two rows above, on the publications of FLOW premises | both lookups of the two rows above, for a new FLOW premise `j` |
 | a record, `applicable` or `inside` | `around(a.base :: a.path)` on `byEntry`, and on `byExit` with the reversed premise as the key | (records are read-only) |
 
 Each lookup returns every entry that its exact test accepts (`PipelineStore.replay_run1`, `deliver_run1`,
-`replay_restricted`, `deliver_restricted`, `record_lookup`). Both paths then call `matches`.
+`replay_restricted`, `deliver_restricted`, `record_lookup`). For a FLOW premise the union of the two candidate sets
+contains every entry that `inside` or `applicable` accepts. Both paths then call `matches`.
 
 The subscription insert deduplicates exactly. It never drops a subscription that a stored subscription subsumes.
 Reason: the run-1 test is not monotone in the added fact (a fact above `j` does not satisfy `j`). So a subsumed
@@ -1120,6 +1241,11 @@ With the tail `[any-taint]` the closure of run 1 is `AnyTaintEx.D6X` and the clo
 This holds for the rules that the closures have. The end facts (`ap.md` §11.1), the aliases and their guard (`ap.md`
 §11.2, S2), and the global-state rule with the entry-mark removal (`interpreter.md` G2, D35) are outside them (§11 THE
 ANALYZER ACTIONS OUTSIDE THE CLOSURES).
+THE RESTRICTED CLOSURES OF F72 ARE NOT ENCODED YET (PENDING, §11). `DR`, `DRX` and `Backward.DB` keep the request
+rules; with the emission `emitM` (`emitX`) no request rule fires (`RExact.DR_no_request`, `BExact.DB_no_request`).
+With the emission of F72 a restricted run has `*` facts, so the closures of F72 have no request rules (`DRA`, `DBA`,
+§11). The protocol model (`Pipeline.lean`, a rule system with owners) does not depend on the rules, so only their
+encoding (the `*_wf` and `cl*_iff` theorems) is new work.
 
 THE MODEL AND THE CODE. Actor: a `RunMethodAnalyzer`. `known`: the RUN stores of the analyzers, the
 `SubscriptionManager` tries and the `SummaryStorage` tries. `inbox`: the channels, the local queues, the worklists,
@@ -1437,10 +1563,22 @@ after run `n` (§7.5):
 * DEMAND (the demand edges of run `n`; `ap.md` §9.2; Lean `Handoff.handF`). For every summary edge `j → g` of the
   method (one premise key, one layer) and every leaf of `g` that is NOT CROSSABLE (§1), every PUBLICATION `j → g'` of
   that leaf (§4.6) gives one backward demand pattern `(D-c = g', D-p = j)`. Run 1 publishes every leaf as it is
-  (`g' = g`; Lean `pubD`). A restricted forward run publishes the intersections with its demand patterns (`ap.md`
-  §6.4; Lean `pubR` with `restrictI`). The run stores these pieces when it publishes them (`RunSummaryStore.addDemand`,
-  §4.6), and the hand-off reads only the stored pieces (`demandEdges()`). The driver builds the `DemandStore` of run
-  `n + 1` from these patterns.
+  (`g' = g`; Lean `pubD`). A restricted forward run publishes the intersections with its demand patterns, in the
+  locations and the marks (`ap.md` §6.4; §4.6; Lean `pubR` with `restrictI`). The run stores these pieces when it
+  publishes them (`RunSummaryStore.addDemand`, §4.6), and the hand-off reads only the stored pieces
+  (`demandEdges()`). The driver builds the `DemandStore` of run `n + 1` from these patterns.
+  * THE MARKS OF A PATTERN (`ap-history.md` F71, F72). The pattern keeps the marks of the piece, with one change, THE
+    HAND-OFF NORMALIZATION (F72 R1; Lean, PENDING: `handFA`): a mark `*∖X` becomes `*`. So `D-c` has the mark of `g'`
+    and `D-p` the mark of `j`, each with `*∖X` read as `*`. The backward run reads both marks: its emission gives the
+    FLOW form for a `*` `D-c` and tests the mark of the requirement against a concrete `D-c` (§4.4), and its
+    restriction tests the mark of its conclusion against `D-p` (§4.6). A leaf of run 1 after a cleaner can have the
+    mark `*∖X`: its pattern has the mark `*`, a larger demand, so it is sound. For the demand the `*∖X` has no
+    meaning: the summary and its record keep `*∖X`, and there it stops a mark in `X` at the application (`ap.md` §4.1
+    step 5, §4.3). If a mark `T` in `X` is really demanded, an own demand edge with the concrete mark `T` exists: in run
+    1 the cleaner raises the request for `T`, and the summary of its answer is a concrete piece (the user's rule; the
+    claim R6, PENDING, §11). Between F71 and F72 the backward entry pattern kept `*∖X` and admitted
+    every concrete mark that is not in `X` (`ap.md` §6.3, §9.2); before F71 `*∖X` counted as `*` there, as it does
+    again since F72.
   * A CROSSABLE leaf gives no demand pattern. The backward run crosses the call by the reversal of its record
     (`ap.md` §8.7 R3; Lean `revRec`, `HandoffBackward.cross_step`): the requirement covers a location of the
     reversed premise, so the reversed record applies by `inside` or `applicable` (`Handoff.cross_applies`). The
@@ -1459,7 +1597,8 @@ after run `n` (§7.5):
     a publication only through a demand pattern with a `D-p` (§4.6).
   * The backward run has no `[any-taint]` (`ap.md` W8), so the driver reads a forward summary as a location set: a
     leaf or a premise with the `[any-taint]` tail gives a pattern with the tail `[any]`, and the hand-off drops the
-    exclusion `E` of an `[any-taint]/E` leaf or premise (a larger backward demand: sound; `ap.md` §9.2). Lean: the
+    exclusion `E` of an `[any-taint]/E` leaf or premise (a larger backward demand: sound; `ap.md` §9.2). The marks
+    stay, except the normalization of `*∖X` to `*` (above): this view changes only the tails and the exclusions. Lean: the
     driver reads each forward run with its exclusions and must flags dropped (`AnyTaintExCov.forget6`, `forgetX`;
     `PipelineAnyTaintExDriver.resultSeqX`; the publication `HandoffX.pubRX`). The crossable test reads the same view:
     an `[any-taint]` leaf or premise is `[any]` there, so it is never crossable. The hand-off of a run with the
@@ -1487,7 +1626,9 @@ after run `n` (§7.5):
   COMPLETE is one notion: a normal edge. A normal forward edge is complete also with an `[any-taint]` leaf (with its
   exclusion) or an `[any-taint]` premise, so `persist` keeps it with the tails and the exclusions. (The premise of a
   normal edge of a restricted forward run is a `$` premise or a must-premise `[any-taint]` with a concrete mark:
-  `AnyTaintExKinds.DRX_normal_premise`, `DRX_must_premise`, under `AnyTaintEx.EmitCopiesMarkX`, §5.3.) A record with
+  `AnyTaintExKinds.DRX_normal_premise`, `DRX_must_premise`, under `AnyTaintEx.EmitCopiesMarkX`, §5.3. These lemmas
+  describe the concrete design: since F72 the premise of a normal edge can also be a FLOW premise, and the emission of
+  a `*` pattern does not copy the mark, §5.3.) A record with
   an `[any-taint]` premise keeps that tail
   and its exclusion: it applies by `inside`, or by `applicable` with demand results (§3), and no leaf of it is ever
   reversed (§5.3). Of any other record, an `[any-taint]/E` leaf with `E ≠ {}` is not reversed; the other leaves of
@@ -1504,17 +1645,31 @@ The same rule as §7.3, in the other direction. From the demand edges that each 
    It is not restricted (§4.6), and it is not localized (§11 THE ZERO FACT);
 3. for every backward summary `jb → gb` of `M` whose premise `jb` is not the zero fact, and every leaf of `gb` that is
    NOT CROSSABLE (§1: the leaf is not normal, or its reversal is not crossable; Lean `¬ Handoff.CrossB jb gb`), every
-   PUBLICATION `jb → gb'` of that leaf (§4.6: the intersection with a backward demand pattern of `M`) gives
-   `(D-c = gb', D-p = jb)`. The run stores these pieces (§4.6), and the hand-off reads them (`demandEdges()`). A
-   backward summary through the reversal of a conjunction is in the demand layer (§4.3 THE REVERSAL OF A
-   CONJUNCTION), so it is never crossable, and this case hands it off. A CROSSABLE leaf gives none: the next forward
-   run crosses the call by the reversal of its record (`ap.md` §8.7 R3; Lean `revRec`, the record set
+   PUBLICATION `jb → gb'` of that leaf (§4.6: the intersection with a backward demand pattern of `M`, in the
+   locations and the marks) gives `(D-c = gb', D-p = jb)`, with the hand-off normalization: a mark `*∖X` of `gb'`
+   becomes `*` (F72 R1, §7.3; Lean, PENDING: `demOfNA`). The exit pattern `jb` is an emitted requirement: a concrete
+   requirement with its mark, or (since F72) a FLOW requirement with the mark `*` (§4.4). It covers the forward exit
+   location of each backward pair with its mark. So the next forward run publishes through a concrete `jb` only a
+   conclusion with the mark of `jb` (§4.6), and a real flow through the call is DEMANDED with both marks (§7.7; Lean
+   `HandoffBackward.seg_genN`, for the concrete design; with the FLOW requirements of F72 this is contract B with the
+   modes, PENDING, §11). The run stores these pieces (§4.6), and the
+   hand-off reads them (`demandEdges()`). A backward summary through the reversal of a conjunction is in the demand
+   layer (§4.3 THE REVERSAL OF A CONJUNCTION), so it is never crossable, and this case hands it off. A CROSSABLE leaf
+   gives none: the next forward run crosses the call by the reversal of its record (`ap.md` §8.7 R3; Lean `revRec`,
+   the record set
    `HandoffBackward.rcNextOf`: each record from the backward run is the reversal of a NORMAL backward leaf,
    `HandoffBackward.rcNextOf_back_normal`), with no analysis of the callee for it. Example: the getter `get(x): ret = x.f` has a run-1 summary in the demand layer, so
    it is a demand edge; its backward summary `(ret, .a, $, T) → (arg, .f.a, $, T)` is normal and its reversal is
    crossable (`Handoff.CrossB`), so forward run 3 crosses `get` by the reversed record, analyses `get` only from the
    zero fact, and reports the vulnerability in the NORMAL layer (Lean `HandoffCases.Getter`: `g1_exit_demand`,
-   `revRec_g_cross`, `revRec_g_crossB`, `demG_exact`, `fg_getter_zero_only`, `fg_record_sat`, `fg_found`).
+   `revRec_g_cross`, `revRec_g_crossB`, `demG_exact`, `fg_getter_zero_only`, `fg_record_sat`, `fg_found`; these are
+   results of the concrete design). SINCE F72 (PENDING the model) the pattern of `get` is `(ret, ., [any], *)`, a `*`
+   pattern, so backward run 2 weakens the requirement `(ret, .a, $, T)` to the FLOW premise `(ret, ., *, {}, *)`
+   (§4.4): the backward demand is coarser, `ret.*` in place of `ret.a`. The backward summary is
+   `(ret, ., *, {}, *) → (arg, .f, *, {}, *)`. It is normal and its reversal `(arg, .f, *, {}, *) → (ret, ., *, {}, *)`
+   is crossable, so forward run 3 crosses `get` by the reversed record, now by `applicable` (the added fact
+   `(arg, .f.a, $, T)` lies below its premise), analyses `get` only from the zero fact and reports the vulnerability in
+   the NORMAL layer. The one record serves every mark.
 
 SOURCE SEEDS: the `SeedIndex` of the `sourceHits` of every backward method analyzer (§4.7; `ap.md` §8.11, §9.2;
 Lean `FSeeds.srcHit`). A source in a callee that the backward run crosses by a record is not hit, so it does not fire
@@ -1534,10 +1689,14 @@ result of a reversed micro edge whose forward target is `[any]` and of a reverse
 demand-layer backward leaf is never crossable, also when its reversal has crossable tails: it is a demand edge (case
 3; Lean `Handoff.CrossB` reads the layer).
 
-THE DEMAND PATTERNS that the backward run hands off have the tails `$` and `[any]`: no `*` tail, for seeds with
-concrete marks and no `*` tail (Lean `HandoffNoStar.demOfN_nonstar`, `canon_dem_nonstar`; §7.8). The emission of
-the next forward run gives the tail of the ADDED fact for two any tails (`ap.md` §6.3), so an `[any-taint]` added fact
-still gives a must-premise from an `[any]` pattern (§4.4; Lean `AnyTaintEx.emitTX`).
+THE DEMAND PATTERNS that the backward run hands off. From a concrete requirement they are concrete, with the tails `$`
+and `[any]`: no `*` tail, for seeds with concrete marks and no `*` tail. Before F72 every backward requirement was
+concrete, so no pattern had a `*` tail (Lean `HandoffNoStar.demOfN_nonstar`, `canon_dem_nonstar`; §7.8). THIS DOES NOT
+HOLD FOR F72: a FLOW requirement (§4.4) has FLOW conclusions, so the backward run also hands off patterns with the
+mark `*`, also with a `*` tail (`*/E`); the next forward run emits their FLOW form (§4.4). The emission of the next
+forward run gives the tail of the ADDED fact for two any tails under a concrete pattern (`ap.md` §6.3), so an
+`[any-taint]` added fact still gives a must-premise from a concrete `[any]` pattern (§4.4; Lean `AnyTaintEx.emitTX`).
+Under a `*` pattern it gets the FLOW premise.
 
 THE STATIC BASE. `S` is touched at every call, in every run (`interpreter.md` §3.3), so the driver gives no static
 input. A callee that touches no static gives the static fact back through its run-1 identity summary, which is a
@@ -1561,6 +1720,9 @@ After a complete forward run, at the barrier:
      (`AnyTaintExact.markSub_conc`); the explicit condition rejects a member with the mark `*`
      (`AnyTaintExact.CexSupMark.cex_sup_mark`). The link carries the tail and the exclusion of its added fact, so the
      support needs no other data.
+   * a FLOW premise (F72) never takes part in the support: no sink edge has a FLOW premise (§4.7), and every edge of a
+     FLOW premise has an abstract mark, so its caller edges never supply a concrete member. So the confirmation does
+     not change with F72 (R6, PENDING the model, §11).
 
    The support is a property of a premise set in one method key. The links carry the data (E-2).
 2. Mark each sink witness of the run (a sink edge, or a sink edge set) confirmed or not (`ap.md` §4.9 conditions 1 to
@@ -1670,6 +1832,20 @@ is never used again (§2), so no state of one run can leak into the next run. Th
 
 ### 7.7 The driver theorems
 
+THE THEOREMS OF THIS SECTION ARE FOR THE CONCRETE RESTRICTED RUNS (`ap-history.md` F70, F71). Their restricted runs
+are `DR … emitM satI restrictI` (`AnyTaintEx.DRX … emitX satX restrictIX`) and `Backward.DB … emitM satI restrictI`:
+the emission copies the mark of the added fact, so every restricted run is concrete (`RExact.DR_concrete`,
+`BExact.DB_concrete`), and the closures keep request rules that never fire (`RExact.DR_no_request`,
+`BExact.DB_no_request`). THE RULES OF F72 (§3) change the emission (`emitW`), the satisfaction (`satW`), the two
+hand-offs (the normalization R1: `handFA`, `demOfNA`) and the closures (no request rules: `DRA`, `DBA`). FOR THEM THE
+THEOREMS BELOW ARE NOT YET PROVED: the task is §11 PENDING: THE LEAN MODEL OF F72 (the modes, the lemmas L1 to L6, the
+iteration). The names below stay: they hold for the concrete design. They rest on the mark-copying emission (the
+hypothesis `EmitCopiesMark`), which is false for `emitW` (a `*` pattern gives the mark `*`), so these claims DO NOT
+HOLD FOR F72: `RExact.DR_concrete` and
+`BExact.DB_concrete` (a restricted run has `*` facts), `RExact.DR_no_request` and `BExact.DB_no_request` (with `emitW`
+the request rules of `DR` and `DB` can fire; the F72 closures have none). The proofs that use them have to be done
+again with the modes (L2, L4).
+
 The driver of §7.1 with the hand-off of §7.3 and §7.4 (`ap-history.md` F70; `ap.md` §10.12). The theorems join three
 parts:
 
@@ -1677,18 +1853,28 @@ LEAN NUMBERING. The Lean theorems count the forward runs only: the forward run `
 §7.1 (run 1 is `k = 0`), and the backward run after it is the run `2k + 2`.
 
 * THE FORWARD CONTRACT of a restricted forward run (`Handoff.CoversN`). Every witness whose calls that return are
-  DEMANDED (one demand pattern covers the entry location, with its mark, and the exit location) or RECORDED (a crossable
-  record of the run has the pair) is JUSTIFIED by the run (by a publication or a crossable record), and the run reports
-  its vulnerability. Proved for `DR … emitM satI restrictI` (`Handoff.coversN_DR`, by `coverageRN`: a demanded call
-  uses the emission inside `D-c`, `emitM_inside`, and the contract of the intersection, `restrictI_contract`; a
-  recorded call uses `cross_applies`). With the tail `[any-taint]`: `DRX … emitX satX restrictIX`, read with the
-  exclusions dropped, with the base records embedded (`HandoffX.coversN_DRXI`, `RecsEmbed`). Run 1 justifies every
-  real witness and reports it (`Handoff.run1_justifies`; with `[any-taint]` `HandoffX.run0X_contract`).
+  DEMANDED (one demand pattern has a `D-c` that covers the entry location WITH ITS MARK and a `D-p` that covers the
+  exit location WITH ITS MARK; Lean `Handoff.FlowRR.call`, `p.covers l2`) or RECORDED (a crossable record of the run
+  has the pair) is JUSTIFIED by the run (by a publication or a crossable record), and the run reports its
+  vulnerability. Proved for `DR … emitM satI restrictI` (`Handoff.coversN_DR`, by `coverageRN`: a demanded call uses
+  the emission inside `D-c` with its mark, `emitM_insideB`, and the contract of the intersection,
+  `restrictI_contract`: a premise inside `D-c` in its locations and its marks, and an exit location that `D-p` covers
+  with its mark; a recorded call uses `cross_applies`). Before F71 the demanded witness read the exit location without
+  its mark (`p.coversLoc l2`); with the mark-aware restriction that form of the contract is false
+  (`Handoff.restrictI_contract_loc_false`). With the tail `[any-taint]`: `DRX … emitX satX restrictIX`, read with the
+  exclusions dropped, with the base records embedded (`HandoffX.coversN_DRXI`, `RecsEmbed`; its hypotheses
+  `HandoffX.EmitInsideX` and `RestrictInsideX` read the marks too, by `insideXB` and `p.covers l2`). Run 1 justifies
+  every real witness and reports it (`Handoff.run1_justifies`; with `[any-taint]` `HandoffX.run0X_contract`).
 * THE BACKWARD CONTRACT (`Handoff.BackwardContractN`). Every witness that forward run `k` justifies, of a SEEDED sink,
   is demanded or recorded in the next forward run. Proved for `Backward.DB` of `Reverse.Program.rev P` with `emitM`,
   `satI`, `restrictI`, the demand `handF`, the backward records `recsBOf` (the reversals of the crossable records)
   and the next forward records `rcNextOf` (`HandoffBackward.B_generalN`, `B_generalN_canon`; a crossable call:
-  `HandoffBackward.cross_step`).
+  `HandoffBackward.cross_step`). The backward run gives the demanded witness WITH THE MARKS: its emitted premise lies
+  inside `D-c` with its mark (in the concrete design the requirement is concrete, `HandoffBackward.emitM_insideB_B`;
+since F72 a FLOW requirement lies inside its `*` pattern, R5, PENDING), and `D-p = j` covers
+  the exit location of the backward pair with its mark (`j` covers it by the forward pair), so the mark-aware
+  restriction keeps the pair (`restrictI_contract_B`); its premise `jb` covers the exit location of the next forward
+  run with its mark (`HandoffBackward.seg_genN`).
 * THE ITERATION (`HandoffIter.iteration_abstract_or`): run 1 and the two contracts, with "every vulnerability that a
   forward run reports is confirmed or seeded", give the conclusion below.
 
@@ -1796,7 +1982,9 @@ exclusion (`AnyTaintExCov.CexRoute.route_a_false`), so every proof reads each re
 
 The hand-off of the demand edges only (§7.3, §7.4) LOCALIZES the remaining work: a run analyses from a non-zero fact
 only the method keys that a demand edge of the run before reaches (§4.4). Two theorems tell how this part changes from
-run to run, and the frontier log measures it (`task.md`; `ap-history.md` F70).
+run to run, and the frontier log measures it (`task.md`; `ap-history.md` F70). As in §7.7, THE TWO THEOREMS ARE FOR
+THE CONCRETE RESTRICTED RUNS; for the rules of F72 (§3) they are NOT YET PROVED (§11 PENDING: THE LEAN MODEL OF F72).
+The narrowing with no exception uses facts that F72 makes false (WHY THERE IS NO EXCEPTION, below).
 
 THE EXCLUSION THEOREM (`HandoffExclusion.exclusion_theorem`; from the leaves `HandoffExclusion.exclusion_round`; on
 the canonical sequence `HandoffMain.exclusion_canon`; on the spec closures with the tail `[any-taint]`, forward runs
@@ -1855,26 +2043,31 @@ vulnerability in the demand layer, so its sink is a seed (`seedsW_exact`).
   call, `wrap_reachRR`), cuts in the ROOT (`fn_cut_in_root`) and still reports the vulnerability (`fn_found`). All in
   one statement: `Wrap.wrap_old_vs_new`.
 
-THE NARROWING THEOREM: the search space only shrinks, with NO EXCEPTION
-(`HandoffNoStar.narrowing_canon_loc_exact`; its two halves `HandoffNoStar.narrowing_canon_fwd_exact` and
-`HandoffNoStar.narrowing_canon_back_exact`; one hand-off: `Handoff.handF_narrow`, `handF_narrow_loc`,
-`demOfN_narrow`, `handF_narrow_DR_exact`). Let forward runs `n` and `n + 2` be restricted runs (`n >= 3`; in the
-Lean numbering of §7.7 they are the forward runs `k + 1` and `k + 2`). Every demand pattern of forward run `n + 2`
-WITH AN EXIT PATTERN (case 3 of §7.4: a fact-to-fact demand edge `(gb', jb)`) lies inside a demand pattern `d` of
-forward run `n` of the same method key, as LOCATIONS: its exit pattern `jb` inside `D-p` of `d`, and its entry pattern
-`gb'` inside `D-c` of `d`. The reason: it comes from `d` through a forward exit edge `j → g` (piece `g'`) and a
-backward exit edge `jb → gb` (piece `gb'`), and each restriction puts its premise inside `D-c` and its result inside
-`D-p` of the demand pattern that published it (`Handoff.restrictI_narrow`). So `jb ⊆ g' ⊆ D-p(d)` and
-`gb' ⊆ j ⊆ D-c(d)`. The hypotheses: the seeds have concrete marks and no `*` tail (`BExact.SeedsConc`; a sink pattern
-has the tail `$` or `[any]`, `HandoffNoStar.nonstar_of_sinkK`). THE THEOREM DOES NOT NARROW the zero demand and the
-seed-path patterns `(gb, none)` (case 2 of §7.4): as locations they shrink when the backward field limit grows
-(argued), but their COUNT can grow (§11 THE SEED PATHS). The induction over the rounds is in the theorem: it holds
-for every round of the canonical sequence.
+THE NARROWING THEOREM (the concrete design; for F72 PENDING, WHY THERE IS NO EXCEPTION below): the search space only
+shrinks, in the LOCATIONS AND THE MARKS, with NO EXCEPTION (`HandoffNoStar.narrowing_canon_loc_exactM`; its two halves `HandoffNoStar.narrowing_canon_fwd_exactM` and
+`HandoffNoStar.narrowing_canon_back_exactM`; one hand-off: `Handoff.handF_narrowM`, `handF_narrow_locM`,
+`demOfN_narrowM`, `handF_narrow_DR_exactM`; the forms in the locations only, `HandoffNoStar.narrowing_canon_loc_exact`,
+`narrowing_canon_fwd_exact`, `narrowing_canon_back_exact`, `Handoff.handF_narrow`, `handF_narrow_loc`,
+`demOfN_narrow`, `handF_narrow_DR_exact`, stay true). Let forward runs `n` and `n + 2` be restricted runs (`n >= 3`;
+in the Lean numbering of §7.7 they are the forward runs `k + 1` and `k + 2`). Every demand pattern of forward run
+`n + 2` WITH AN EXIT PATTERN (case 3 of §7.4: a fact-to-fact demand edge `(gb', jb)`) lies inside a demand pattern `d`
+of forward run `n` of the same method key, in its LOCATIONS AND ITS MARKS: every location of its exit pattern `jb`,
+with its mark, is a location of `D-p` of `d` with its mark, and every location of its entry pattern `gb'`, with its
+mark, is a location of `D-c` of `d` with its mark. The reason: it comes from `d` through a forward exit edge `j → g`
+(piece `g'`) and a backward exit edge `jb → gb` (piece `gb'`), and each restriction puts its premise inside `D-c` and
+its result inside `D-p` of the demand pattern that published it, in the locations and the marks
+(`Handoff.restrictI_narrow`; with the marks `restrictI_narrowM`, and for a concrete conclusion mark
+`restrictI_narrow_conc`). So `jb ⊆ g' ⊆ D-p(d)` and `gb' ⊆ j ⊆ D-c(d)`. The hypotheses: the seeds have concrete
+marks and no `*` tail (`BExact.SeedsConc`; a sink pattern has the tail `$` or `[any]`,
+`HandoffNoStar.nonstar_of_sinkK`). THE THEOREM DOES NOT NARROW the zero demand and the seed-path patterns
+`(gb, none)` (case 2 of §7.4): as locations they shrink when the backward field limit grows (argued), but their COUNT
+can grow (§11 THE SEED PATHS). The induction over the rounds is in the theorem: it holds for every round of the
+canonical sequence.
 
 WHY THERE IS NO EXCEPTION (`ap-history.md` F70). The intersection keeps two cells whole (`Handoff.RExc`,
 `restrictI_inter`): (a) an `[any]` conclusion at or above a `*/E` exit pattern keeps `[any]` (W2: a concrete mark has
-no `*` tail), and (b) a `*` conclusion stays as it is. Both need a `*` tail, and with the hand-off of the demand edges
-no demand pattern after run 1 has one:
+no `*` tail), and (b) a `*` conclusion stays as it is. Both need a `*` tail, and in the CONCRETE DESIGN, with the
+hand-off of the demand edges, no demand pattern after run 1 has one:
 
 * run 1 hands off no pattern with a `*` entry tail, and its exit patterns (premises of run 1) have the tail `$` or
   `*/{}`: every normal FLOW leaf of run 1 is crossable (§1), and W2 leaves no demand-layer `*` (Lean
@@ -1885,18 +2078,42 @@ no demand pattern after run 1 has one:
 * a restricted forward run has no `*` conclusion (`Handoff.DR_exit_not_star`), and with no `*` exit pattern the
   forward narrowing is exact (`Handoff.handF_narrow_DR_exact`).
 
-A `*/E` exit pattern occurs only in backward run 2, as a run-1 premise `*/{}`, and there cell (a) adds no location
+F72 MAKES THE LAST TWO BULLETS FALSE. A FLOW requirement of a backward run has `*` conclusions, so the backward
+hand-off gives `*` patterns (the claims of `HandoffNoStar.DB_edge_nonstar`, `demOfN_nonstar` and `canon_dem_nonstar`
+do not hold for F72), and a FLOW premise of a restricted forward run has `*` conclusions (the claim of
+`Handoff.DR_exit_not_star` does not hold). The first bullet still holds: F72 does not change run 1, and the
+normalization R1 changes only marks (`handF_run1_nonstar` and `run1_exit_star_cross` read run 1 only). So with F72 the
+cells (a) and (b) can occur after backward run 2, and the `_exact` forms below are not the narrowing of the F72
+sequence. The candidate is the form with the two cells as exceptions (`HandoffMain.narrowing_canon`,
+`narrowing_canon_loc` and their `M` forms); it is not yet proved for the F72 runs (PENDING, §11).
+
+In the concrete design a `*/E` exit pattern occurs only in backward run 2, as a run-1 premise `*/{}`, and there cell (a) adds no location
 (`HandoffNoStar.rexc_empty_loc`, `narrowing_canon_back_loc`). The older statements `HandoffMain.narrowing_canon`,
 `narrowing_canon_loc` keep both cells as exceptions; the exceptions of `narrowing_canon_loc` are loose (an existential cell that every `*` exit pattern satisfies), so the `_exact` forms are
-the narrowing theorem. The narrowing is of locations, not of counts: one demand pattern can give several pieces.
+the narrowing theorem. Their forms with the marks, `HandoffMain.narrowing_canon_fwdM`, `narrowing_canon_backM`,
+`narrowing_canonM` and `narrowing_canon_locM`, keep the same two cells for the locations, but in these cells the marks
+still narrow. The narrowing is of locations and marks, not of counts: one demand pattern can give several pieces.
+
+THE MARKS HAVE NO EXCEPTION (`ap-history.md` F71). The mark test of the restriction keeps a conclusion with an
+abstract mark (`*` or `*∖X`) against a concrete `D-p`, so for one restriction the marks narrow except at an abstract
+conclusion mark (`Handoff.restrictI_interM`, `restrictI_narrowM`; the cell is real, `Handoff.RVec.inter_exc_absmark`).
+In the concrete design every run of the sequence is concrete: the restricted forward runs (`RExact.DR_concrete`), and
+the backward runs with seeds of concrete marks (`BExact.SeedsConc`, `BExact.DB_concrete`). So this cell never occurs
+on the sequence, and the narrowing with the marks has no mark exception (`Handoff.restrictI_inter_conc`,
+`restrictI_narrow_conc`, `handF_narrow_DRM`; the `M` forms above). THIS DOES NOT HOLD FOR F72: a FLOW premise has
+conclusions with abstract marks (§3), so the cell can occur, and the normalization R1 replaces `*∖X` by the larger
+`*`. The narrowing of the marks for F72 is PENDING (§11).
 
 WITH THE TAIL `[any-taint]` (forward runs `AnyTaintEx.DRX … emitX satX restrictIX`). One hand-off:
 `HandoffX.handF_narrowX`, `handF_narrowX_DRX` (the exceptions `HandoffX.RExcX`), exact with the exclusions. Over a
 round on `HandoffXIter.canonStateX`: `HandoffXMain.narrowing_canonX`, `narrowing_canonX_loc`, and with no `*` pattern
-`HandoffNoStar.narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`. The hand-off reads each forward run with the
+`HandoffNoStar.narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`. With the marks (`restrictIX` has the mark
+tests of `restrictI`, `HandoffX.insideXB` and `concMarkB`): one hand-off `HandoffX.handF_narrowXM`,
+`handF_narrowX_DRXM`, and over a round `HandoffXMain.narrowing_canonX_fwdM`, `narrowing_canonX_backM`,
+`narrowing_canonXM`; in the exception cells the marks still narrow. The hand-off reads each forward run with the
 exclusions dropped (§7.3). In general a handed-off pattern can then reach past the earlier one at an excluded
 location (the `Dropped` alternative of `HandoffXMain.narrowing_canonX_loc`; `HandoffX.XVec.v_inside_only_with_excl`,
-`HandoffXMain.XMVec.exit_dropped`, which need a `*/E` demand pattern). With no `*` pattern, as on the spec sequence,
+`HandoffXMain.XMVec.exit_dropped`, which need a `*/E` demand pattern). With no `*` pattern, as on the sequence of the concrete design (not of F72, which has `*` patterns),
 the exit side is exact, and the entry side is exact unless the premise exclusion is Universe, which the AP never has
 (`ap.md` §1: no exclusion is Universe; the model keeps `Excl.univ` only to encode a `$` premise;
 `HandoffNoStar.narrowing_canonX_loc_exact`).
@@ -1919,18 +2136,19 @@ over the hand-off:
   (`demandByCause`): the field-limit cut, a may target, a cleaner row, the must-record demotion, a demand-layer input
   (§4.3).
 
-By the narrowing theorem the demand patterns with an exit pattern only shrink as locations per method key (not the
-seed-path patterns `(gb, none)`, and not as counts); by the exclusion theorem a method key leaves `analysed` when the
-run hands off no demand edge of it (for example, all its leaves are crossable) and no seed is in its call subtree. The
-log shows how fast this happens on a real program.
+By the narrowing theorem the demand patterns with an exit pattern only shrink, in the locations and the marks, per
+method key (not the seed-path patterns `(gb, none)`, and not as counts); by the exclusion theorem a method key leaves
+`analysed` when the run hands off no demand edge of it (for example, all its leaves are crossable) and no seed is in
+its call subtree. The log shows how fast this happens on a real program. For the rules of F72 both theorems are
+PENDING (§11), so the log is also the measure of these properties until the proofs are done.
 
 HOW A LATER STOP STRATEGY CAN READ THE LOG (not normative: the policy is out of scope, §0). `continueAfter` gets the
 frontiers of every complete run (§7.1). Examples:
 
 * THE FRONTIER IS STABLE: two forward runs with the same set `analysed`, the same demand edges per method key and no
   new CONFIRMED vulnerability. Between them only the field limit changed: by the narrowing theorem the demand patterns
-  with an exit pattern cannot grow as locations (the seed-path patterns are outside the theorem), so a further pair of
-  runs can gain only by the larger field limit;
+  with an exit pattern cannot grow in the locations or the marks (the seed-path patterns are outside the theorem; for
+  F72 the theorem is PENDING), so a further pair of runs can gain only by the larger field limit;
 * THE FRONTIER IS SMALL against the work of the zero fact (`zeroOnlyEdges`): a further pair of runs costs mostly a
   full pass of the zero fact (§11) for a small part of the program;
 * THE BUDGET: the time of the last pair of runs and the size of the frontier give an estimate of the next pair. If the
@@ -2041,8 +2259,10 @@ data class Subscription(val callee: MethodKey, val addedFact: Pattern, val linkL
     val caller: MethodKey get() = ref.caller
 }
 
-/** A publication: a summary edge of the callee, after the restriction in a restricted run. Its layer is
- *  `conclusion.layer`. `premise` holds the tail of each member and the exclusion of an `[any-taint]` member: an
+/** A publication: a summary edge of the callee, after the restriction in a restricted run (the intersection with
+ *  one demand pattern, in the locations and the marks: the premise lies inside `D-c` with its mark, and the
+ *  conclusion mark meets the mark of `D-p`; ap.md §6.4; §4.6). Its layer is `conclusion.layer`, and its marks are
+ *  those of the summary edge. `premise` holds the tail of each member and the exclusion of an `[any-taint]` member: an
  *  `[any-taint]` premise and an `[any]` premise of one path are two premise keys, so two publications (§4.6; Lean:
  *  the must flag and the exclusion of `pub` in `PipelineAnyTaintEx.sysDRX`). */
 data class Publication(val premise: PremiseKey, val conclusion: Facts)
@@ -2127,7 +2347,9 @@ class RunResult(val status: RunStatus, val analyzers: Sequence<RunMethodAnalyzer
 
 /** §7.3, §7.4: what a complete run hands to the next run of the other direction. `demand`: the patterns of the demand
  *  edges only (the publications of the leaves that are not crossable, which the run stored, `summaries.demandEdges()`,
- *  §4.6; from a backward run also the zero-premise edges; the zero demand is implicit, §4.4). `seeds`: the sink seeds of
+ *  §4.6; from a backward run also the zero-premise edges; the zero demand is implicit, §4.4); each pattern keeps the
+ *  marks of its piece, with `*∖X` replaced by `*` (F72 R1), and the next run reads them (§7.3 THE MARKS OF A
+ *  PATTERN). `seeds`: the sink seeds of
  *  the DEMAND vulnerabilities (forward run), or the source seeds (backward run). */
 class HandOff(val demand: DemandStore, val seeds: SeedIndex)
 
@@ -2244,7 +2466,8 @@ Other names: `SharedObjects` holds the shared objects of §2. `confirm` computes
 a complete forward run and sets `SinkWitness.confirmed`. `handOffOf(config, result, report)` gives the `HandOff` of a
 complete run by §7.3 and §7.4: `demandOf` builds the `DemandStore` of the next run from `summaries.demandEdges()` of
 every analyzer (the stored publications of the leaves that are not crossable, §4.6; a backward run also gives its
-zero-premise edges), and `seedsOf` the `SeedIndex` (a forward run: the witnesses of `report.demandEntries()`; a
+zero-premise edges), with every pattern mark `*∖X` replaced by `*` (the hand-off normalization, F72 R1, §7.3), and
+`seedsOf` the `SeedIndex` (a forward run: the witnesses of `report.demandEntries()`; a
 backward run: the `sourceHits`). `ApOps.demandPart` (`ap-impl.md` §5.9) gives the non-crossable part of a summary
 value at each summary delta (§4.6); its per-leaf forms are `cross` and `crossReversed` (`ap-impl.md` §6; Lean
 `Handoff.Cross`, `Handoff.CrossB`). `nextConfig` makes the `RunConfig` of the next run. `frontierOf(config, result, handOff, report)` makes the frontier of §7.8 in one pass over the `counters` of the
@@ -2262,6 +2485,62 @@ caller thread (`FAILED`) call it. `RunManager.run(timeout)` joins the runners on
 
 ## 11. Limits
 
+PENDING: THE LEAN MODEL OF F72 (`ap-history.md` F72; the same item is in `ap.md` §11.2). The rules R1 to R6 of §3
+are NORMATIVE. Their Lean model is a PENDING TASK. Until it is done, every theorem that this document names for the
+restricted runs, the hand-offs and the iteration (§5.5, §7.7, §7.8, §12) holds for the CONCRETE design of F70 and
+F71 only, and the proposals (`ap-impl.md`, `analyzer-impl.md`) follow F71. The plan (new files `ApSpec/Abs*.lean`;
+the existing files do not change):
+
+* THE DEFINITIONS (`AbsDefs.lean`): `markNorm` (`*∖X` becomes `*`) and `normDem`; the hand-offs `handFA`, `demOfNA`
+  (`Handoff.handF`, `demOfN` with `normDem`, R1); `flowK`, `flowForm` and the emission
+  `emitW d a := match emitM d a with | none => none | some j => if d.mark = * then some (flowForm d) else some j`
+  (R2); the satisfaction `satW` (`satI`, or `applicable` for a `*`-mark premise, R3); the closures `DRA` (the forward
+  restricted run: `Restricted.DR` with no request rules, generic in the emission, the satisfaction, the restriction
+  and the records) and `DBA` (`Backward.DB` with no request rules) (R4); the restriction stays `Handoff.restrictI`
+  (R5); the mark-agnostic flow `FlowMA`; the witnesses with modes (`FlowRRA`, `ReachRRA` for the input, `FlowRDNA`,
+  `ReachRDNA` for the output); the contracts `CoversNA` and `BackwardContractNA`.
+* THE MODES. A demanded witness has a MODE at each call that returns. ABSTRACT: a `*` pattern demands the call, and the
+  inner flow is MARK-AGNOSTIC: every statement step uses a micro edge with a `*` premise mark, every cleaner step has a
+  cleaner whose mark is not the mark of the location (or the all-marks cleaner), and every nested call is in the
+  abstract mode or crossed by a record with a `*` premise. CONCRETE: a concrete pattern demands the call; the inner
+  flow is as before F72, and the nested calls can have either mode.
+* THE LEMMAS:
+  * L1, forward abstract coverage: from a `*` premise that covers the entry location, a mark-agnostic flow is covered
+    by an edge of the premise, with no request (no request rule exists);
+  * L2, run 1 selects the right mode: run 1 (`D … policy1`, with its requests) justifies every real witness, at each
+    call by a FLOW premise (then the inner flow is mark-agnostic: the coverage followed it with no request) or by an
+    answer (a concrete premise);
+  * L3, backward abstract coverage: a `*` requirement covers the reversed flow of a mark-agnostic flow (the reversal
+    of a `*`-mark micro edge has `*` marks, `Reverse.MarkRev`; a cleaner is its own reversal);
+  * L4, contract B with the modes: an abstract-mode call that a FLOW summary justifies meets a `*` pattern in the
+    backward run; the requirement is weakened to `*`, its backward analysis covers the reversed mark-agnostic flow
+    (L3), and the hand-off gives a `*` pattern. A concrete-mode call is justified by a concrete summary, the backward
+    run keeps the concrete mark, and the hand-off gives a concrete pattern;
+  * L5, exactness: a normal edge of a `*` premise in a restricted run is exact, so the records stay exact (also for a
+    FLOW premise with an exclusion, §5.3);
+  * L6, the emission contract: for every pattern `d` and added fact `a` that both cover a location `l` with its mark,
+    `emitW` gives a premise `j` that covers `l` and `satW j a` (a `*` pattern: `flowForm d` covers `l` with every
+    mark; a concrete pattern: as `RCore.emitM_contract_I`).
+* THE ITERATION: as `HandoffMain.iteration_generalN`, with the closures `DRA`, `DBA` and the modes; then the forms that
+  §7.7 gives for the concrete design: the pipeline form (the encodings of `DRA` and `DBA`, §5.5), the finite form,
+  the source seeds and the tail `[any-taint]`.
+* THE CEGAR PROGRAMS COME FIRST (`AbsCases.lean`; the tests are §13 items 43 to 46): (i) THE GETTER WITH TWO MARKS
+  `T` and `U` under one `*` pattern: one FLOW premise for both added facts, and both vulnerabilities are reported;
+  (ii) A MARK-CHANGING PASS RULE `T → U` inside a callee that a `*` pattern reaches: the `*` analysis gives nothing for
+  it, and the flow is found through the concrete pattern that the request and the answer of run 1 made; (iii) A
+  PARTIAL CLEANER of `T` under a `*` premise; (iv) THE SEARCH FOR A COUNTEREXAMPLE TO R6: a flow that needs a
+  concrete mark in a callee that only `*` patterns reach after run 1 (for example a concrete demand that the backward
+  weakening loses). If R6 fails, the result gives the program and the smallest change of the rules.
+* ALSO PENDING with F72: the exclusion and the narrowing (§7.8), the support of the confirmation with FLOW premises
+  (§7.5), the inside property of the FLOW form (§4.4, §4.6), and the form of `Handoff.cross_applies` for an added fact
+  with the mark `*` (§1).
+* WHAT F72 MAKES FALSE (these statements describe the concrete design): `RExact.DR_concrete`, `BExact.DB_concrete`,
+  `RExact.DR_no_request`, `BExact.DB_no_request`, `RExact.final_not_star`, `Handoff.DR_exit_not_star`,
+  `HandoffNoStar.DB_edge_nonstar`, `demOfN_nonstar`, `canon_dem_nonstar`, `canon_handF_nonstar`, and the conclusion
+  "no demand pattern after run 1 has a `*` tail" that they give (§7.8). Each one rests on the mark-copying emission
+  (the hypothesis `EmitCopiesMark`, or the fixed emission `emitM`), and `emitW` does not copy the mark of a `*`
+  pattern. `HandoffNoStar.handF_run1_nonstar` and `run1_exit_star_cross` read run 1 only, which F72 does not change.
+
 ARGUED, NOT PROVED:
 
 * SUBSUMPTION. The AP operations simulate the subsumption of the edge stores (`Subsume.subsumesB`, the tree merges T1
@@ -2269,7 +2548,9 @@ ARGUED, NOT PROVED:
   dominates the added fact of a subscription, the join with the stored one gives a dominating result. `inside` has
   this property.
   `applicable` has it only through the invariants of run 1 (the policy premises are at the root path,
-  `Statics.no_any_above`). So the subscriptions and the links deduplicate exactly (§5.3).
+  `Statics.no_any_above`). Since F72 a restricted run also applies the summaries of a FLOW premise by `applicable`
+  (§5.3), and a FLOW premise is not always at the root path: there the property is not argued. So the subscriptions
+  and the links deduplicate exactly (§5.3).
 * TREES. The model publishes path facts. The code publishes the deltas of trees: a subscriber gets every delta, and
   the union of the deltas is the tree (`ap.md` §7.2 T4). The subscription side is the same: the delta insert of an
   added fact tree replays only the new paths, and the old paths were replayed before.
@@ -2298,13 +2579,14 @@ ARGUED, NOT PROVED:
 * THE DRIVER with the static rule and with the conjunctions. The closure equalities hold (`PipelineAP.clDS_iff`,
   `clDN_iff`). The pipeline form of `StaticsIter.iteration_general_DS`, and the iteration with conjunctions (`ap.md`
   §11.2), are argued, for the earlier hand-off and for the hand-off of the demand edges.
-* THE HAND-OFF OF THE DEMAND EDGES (§7.3, §7.4, §7.7; `ap-history.md` F70). Proved for the AP closures (with `C`),
+* THE HAND-OFF OF THE DEMAND EDGES (§7.3, §7.4, §7.7; `ap-history.md` F70). In the concrete design (for F72 see
+  PENDING, above), proved for the AP closures (with `C`),
   for the pipeline with the tail `[any-taint]` (with all the seeds, `PipelineHandoffDriver.driver_iterationNX`, and
   with the DEMAND seeds, `PipelineHandoffDriverExt.driver_iterationNX_demand`), in the finite form (`HandoffUpto`,
   `PipelineHandoffDriverExt.driver_iterationNX_upto`) and with the source seeds (`HandoffSrc`,
   `PipelineHandoffDriverExt.driver_iteration_srcNX`). Argued:
   * TREES: the model has one path fact per exit edge. The code tests each leaf of a conclusion tree (§1) and restricts
-    a tree leaf by leaf (§4.6);
+    a tree leaf by leaf (§4.6), with the mark test of the conclusion on the mark of each leaf;
   * THE BACKWARD LAYER IN THE CROSSABLE TEST. `Handoff.demOfN` hands off every backward leaf with `¬ Handoff.CrossB`:
     a demand-layer backward leaf is always a demand edge and never a record, as in the spec (§1, §7.4; `ap.md` §8.7
     R1). But `Backward.DB` has no backward W6 layer rule (below): the layer that the spec gives a backward edge (every
@@ -2315,7 +2597,9 @@ ARGUED, NOT PROVED:
     equals the pieces of the whole summary). The model has the relations `Handoff.pubD`, `pubR`; the fuzzer compares
     the stored pieces with the reference (`analyzer-impl.md` §9.2);
   * A SUMMARY WITH SEVERAL PREMISES: never a record, so every publication of it gives one demand pattern per member
-    (as the earlier hand-off; `ap.md` §11.2);
+    (as the earlier hand-off; `ap.md` §11.2). Its restriction reads the marks as for one premise: each member lies
+    inside a `D-c` in its locations and its mark, and the mark of the conclusion meets the mark of `D-p` (`ap.md`
+    §6.4);
   * THE TRIGGER OF AN END FACT (§4.5, §7.3). The model has no end facts (§5.5). Before F70 every reported
     vulnerability was seeded, so the witness of the trigger of an end fact was demanded in every run. With the seeds
     of the DEMAND vulnerabilities only, a CONFIRMED sink is not seeded at the barrier, and without the rule of §4.5 a
@@ -2339,14 +2623,16 @@ ARGUED, NOT PROVED:
   sufficient condition of `HandoffExclusion.exclusion_round`; `HandoffMain.exclusion_canon`; with the tail
   `[any-taint]` `HandoffXMain.exclusion_roundX`, `exclusion_canonX`). The next round is
   `HandoffExclusion.exclusion_theorem` again, with `HandoffCases.restrictI_none` for "no demand edge". The induction
-  over the rounds ("it stays out while no seed is below it") is not stated in Lean.
-* THE SEED PATHS (§7.8). The narrowing theorem (`HandoffNoStar.narrowing_canon_loc_exact`; with the tail
-  `[any-taint]` `HandoffNoStar.narrowing_canonX_loc_exact`) does not narrow the patterns `(gb, none)` (case 2 of
+  over the rounds ("it stays out while no seed is below it") is not stated in Lean. (The concrete design; for F72 the
+  one round is PENDING too, above.)
+* THE SEED PATHS (§7.8). The narrowing theorem (`HandoffNoStar.narrowing_canon_loc_exactM`, in the locations and the
+  marks, and `narrowing_canon_loc_exact`; with the tail `[any-taint]` `HandoffNoStar.narrowing_canonX_loc_exact` and
+  `HandoffXMain.narrowing_canonXM`) does not narrow the patterns `(gb, none)` (case 2 of
   §7.4) and the zero demand. As locations the seed paths shrink when the backward field limit grows (argued), but
   their COUNT can grow. (The exclusions that the hand-off drops, §7.3, are no gap of the theorem: with no `*`
   pattern the X narrowing is exact except at a Universe premise exclusion, which the AP never has (`ap.md` §1),
   `HandoffNoStar.narrowing_canonX_loc_exact`; the general form `HandoffXMain.narrowing_canonX_loc` has the `Dropped`
-  alternative.)
+  alternative. Since F72 the sequence has `*` patterns, so for F72 this is part of the PENDING narrowing, above.)
 * THE STOP RULE `STOP_RULE` (§7.1). That every real vulnerability is CONFIRMED in the report is proved (§7.7). That
   every later forward run only repeats the zero fact and the records is argued: in a backward run with no seed every
   edge of every method is the zero edge (`HandoffExclusion.zinv_all` for each method, with no seed anywhere), so
@@ -2459,6 +2745,11 @@ false positive. Before F69 the same finding was a DEMAND entry. A `$` fact has t
 
 ## 12. The formal model
 
+The files of this table model the CONCRETE restricted runs (`ap-history.md` F70, F71). The model of the rules of F72
+(§3) is PENDING (§11 PENDING: THE LEAN MODEL OF F72): the planned new files are `AbsDefs.lean` and `AbsCases.lean`
+(the definitions and the CEGAR programs first), then `AbsForward.lean`, `AbsBackward.lean` and `AbsIter.lean` (the
+lemmas L1 to L6 and the iteration). The existing files do not change.
+
 | File | Content |
 |---|---|
 | `Pipeline.lean` | the rule system with owners, its closure, the state and the steps of the protocol (frozen definitions) |
@@ -2470,19 +2761,19 @@ false positive. Before F69 the same finding was a DEMAND entry. A `$` fact has t
 | `ForwardSeeds.lean`, `PipelineSeeds.lean` | the source seeds: `FSeeds.keepSources`, `srcHit`, `srcHit_applies`, `B_src`, `iteration_src`; `PipelineSeeds.driver_iteration_src` (`ap.md` §10.9) |
 | `PipelineAnyTaintEx.lean` (with `AnyTaintExDefs.lean`) | the encodings of the closures of the tail `[any-taint]` with its exclusion (§5.5): `sysD6X`, `sysDRX`, `XPObj6`, `XPObj`, `sysD6X_wf`, `sysDRX_wf`, `clD6X_iff`, `clDRX_iff`, the object theorems, `known_D6X`, `known_DRX`, `result_D6X`, `result_DRX`, `result_DRXs`, `no_lost_summary_D6X`, `no_lost_summary_DRX`, `SanityX` |
 | `PipelineAnyTaintExDriver.lean` (with `AnyTaintExCov.lean`) | the driver with the tail `[any-taint]` and its exclusion, for the earlier hand-off (§7.7): `resultSeqX`, `resultSeqX_runSeqX`, `driver_iterationX`, `driver_iteration_uptoX`, `driver_iteration_srcX` |
-| `HandoffDefs.lean` | the hand-off of the demand edges only (`ap-history.md` F70; `ap.md` §10.12), the definitions (namespace `Handoff`): the intersection `restrictI` (`insideLocB`, `meetConcK`, `restrictConcI`), the crossable test `CrossK`, `Cross`, the backward test `CrossB` and the reversed record `revRec` (§1), the publications `Pub`, `pubD`, `pubR` (§4.6), the two hand-offs `handF` (§7.3) and `demOfN` (§7.4), the witnesses `FlowRR`, `ReachRR` (demanded or recorded) and `FlowRDN`, `ReachRDN` (justified), the contracts `CoversN`, `BackwardContractN` (§7.7) |
-| `HandoffRestrict.lean`, `HandoffCoverage.lean` | the intersection (namespace `Handoff`): `restrictI_sub`, `restrictI_contract`, `restrictI_not_RestrictContract` (the old contract form, a premise that only overlaps `D-c`, is false), `emitM_inside`, `insideLoc_coversLoc`, `restrictI_inter` with its exceptions `RExc`, `restrictI_narrow`, `pubD_sub`, `pubR_sub`; the narrowing of one hand-off `handF_narrow`, `handF_narrow_loc`, `demOfN_narrow`, `handF_narrow_DR`, `handF_narrow_DR_exact`, `handF_DR_nonstar`, `DR_exit_not_star`; the vectors `RVec.v64_restrictI`, `v64_restrictU`, `vOverlap_restrictI`, `vOverlap_restrictU`, `vNoExit` and every row `RVec.row_*` of `restrictConcI`; the forward contract `cross_applies`, `coverageRN`, `reach_strongRN`, `coversN_DR`, run 1 `run1_justifies` (§7.7) |
-| `HandoffBackward.lean`, `HandoffIter.lean` | the backward contract (namespace `HandoffBackward`): `cross_step`, `seg_genN`, `reach_of_db_genN`, `demanded_genN`, `B_generalN`, `B_generalN_canon`, `NextRecs`, `recsBOf`, `rcNextOf`, `rcNextOf_back_normal` (a record from the backward run is the reversal of a normal backward leaf), `crossB_em`; the iteration (namespace `HandoffIter`): `Run0Contract`, `iteration_invariantN`, `iteration_abstract_or`, `iteration_abstract`, `iteration_abstract_neg`, `iteration_all_seeded` (§7.7) |
+| `HandoffDefs.lean` | the hand-off of the demand edges only (`ap-history.md` F70; `ap.md` §10.12), the definitions (namespace `Handoff`): the intersection `restrictI` in the locations and the marks (`ap-history.md` F71: the premise test `insideB`, that is `insideLocB` and `markSubB`; the conclusion mark test `concMarkB`; `meetConcK`, `restrictConcI`), the demanded call `FlowRR.call` with `p.covers l2` (the exit location with its mark), the crossable test `CrossK`, `Cross`, the backward test `CrossB` and the reversed record `revRec` (§1), the publications `Pub`, `pubD`, `pubR` (§4.6), the two hand-offs `handF` (§7.3) and `demOfN` (§7.4), the witnesses `FlowRR`, `ReachRR` (demanded or recorded) and `FlowRDN`, `ReachRDN` (justified), the contracts `CoversN`, `BackwardContractN` (§7.7) |
+| `HandoffRestrict.lean`, `HandoffCoverage.lean` | the intersection (namespace `Handoff`): `restrictI_sub`, `restrictI_contract` (a premise inside `D-c` by `insideB`, an exit location that `D-p` covers with its mark), `restrictI_contract_loc_false` (its form in the locations only is false: the user's example), `restrictI_of`, `restrictI_someM`, `restrictI_not_RestrictContract` (the old contract form, a premise that only overlaps `D-c`, is false), `emitM_inside`, `emitM_insideB` (a concrete added fact: the premise lies inside `D-c` with its mark), `insideB_covers`, `insideLoc_coversLoc`, `restrictI_inter` with its exceptions `RExc`, with the marks `restrictI_interM` (the exception of an abstract conclusion mark, `Invariant.AbsMark`) and `restrictI_inter_conc`, `restrictI_narrow`, `restrictI_narrowM`, `restrictI_narrow_conc`, `pubD_sub`, `pubR_sub`; the narrowing of one hand-off `handF_narrow`, `handF_narrow_loc`, `demOfN_narrow`, `handF_narrow_DR`, `handF_narrow_DR_exact`, with the marks `handF_narrowM`, `handF_narrow_locM`, `demOfN_narrowM`, `handF_narrow_DRM`, `handF_narrow_DR_exactM`, and `handF_DR_nonstar`, `DR_exit_not_star`; the vectors `RVec.v64_restrictI`, `v64_restrictU`, `vOverlap_restrictI`, `vOverlap_restrictU`, `vNoExit`, every row `RVec.row_*` of `restrictConcI`, the mark tests `RVec.vMark_user_inside`, `vMark_user_concMark`, `vMark_user_restrictI`, `vMark_user_restrictU`, `vMark_user_loc`, `vMark_user_same`, `vMark_prem_loc`, `vMark_prem_inside`, `vMark_prem_restrictI`, `vMark_inStarEx_T`, `vMark_inStarEx_U`, `vMark_outStarEx_T`, `vMark_outStarEx_U`, `inter_exc_absmark`, and the emission of `*∖X` `RVec.vEmit_starEx_T`, `vEmit_starEx_T_pre70`, `vEmit_starEx_U`; the forward contract `cross_applies`, `coverageRN`, `reach_strongRN`, `coversN_DR`, run 1 `run1_justifies` (§7.7) |
+| `HandoffBackward.lean`, `HandoffIter.lean` | the backward contract (namespace `HandoffBackward`): `cross_step`, `seg_genN` (with the local copies of the mark-aware forms `emitM_insideB_B`, `concMarkB_of_den_B`, `restrictI_contract_B`), `reach_of_db_genN`, `demanded_genN`, `B_generalN`, `B_generalN_canon`, `NextRecs`, `recsBOf`, `rcNextOf`, `rcNextOf_back_normal` (a record from the backward run is the reversal of a normal backward leaf), `crossB_em`; the iteration (namespace `HandoffIter`): `Run0Contract`, `iteration_invariantN`, `iteration_abstract_or`, `iteration_abstract`, `iteration_abstract_neg`, `iteration_all_seeded` (§7.7) |
 | `HandoffExclusion.lean` | THE EXCLUSION (namespace `HandoffExclusion`, §7.8): `NoZeroGenP`, `Reaches`, `zinv_all`, `exclusion_backward`, `init_zero_nodem`, `exclusion_backward_nodem`, `exclusion_demand`, `forward_zero_init`, `forward_zero_edges`, `exclusion_theorem` (the hypothesis: no demand edge of the method key), `exclusion_round` (the sufficient condition: every summary leaf crossable) |
-| `HandoffMain.lean` | the canonical sequence of the spec rules (namespace `HandoffMain`): `canonState`; THE ITERATION `iteration_generalN`, `iteration_generalN_all`, `iteration_generalN_incl` (with `flowRR_mono`, `reachRR_mono`, `flowRDN_mono_rc`, `reachRDN_mono_rc`); the exclusion `exclusion_canon`; the narrowing with both cells of `Handoff.RExc` as exceptions `narrowing_canon_fwd`, `narrowing_canon_back`, `narrowing_canon`, `narrowing_canon_loc` (the exact form is in `HandoffNoStar.lean`) (§7.7, §7.8) |
+| `HandoffMain.lean` | the canonical sequence of the spec rules (namespace `HandoffMain`): `canonState`; THE ITERATION `iteration_generalN`, `iteration_generalN_all`, `iteration_generalN_incl` (with `flowRR_mono`, `reachRR_mono`, `flowRDN_mono_rc`, `reachRDN_mono_rc`); the exclusion `exclusion_canon`; the narrowing with both cells of `Handoff.RExc` as exceptions `narrowing_canon_fwd`, `narrowing_canon_back`, `narrowing_canon`, `narrowing_canon_loc`, and its forms with the marks `narrowing_canon_fwdM`, `narrowing_canon_backM`, `narrowing_canonM`, `narrowing_canon_locM` (in the two cells the marks still narrow; the exact form is in `HandoffNoStar.lean`) (§7.7, §7.8) |
 | `HandoffCases.lean` | the worked programs (namespace `HandoffCases`, §7.8, §13): `restrictI_none`; WRAP (`Wrap.w1_exit_cross`, `w1_wrap_exits_cross`, `seedsW_exact`, `old_b2_wrap_init`, `old_dem_w`, `old_f3_wrap_init`, `old_f3_wrap_cut`, `handF_w1_exact`, `bn_cross`, `bn_wrap_zero_only`, `bn_wrap_edges_zero`, `demN_exact`, `fn_wrap_zero_only`, `fn_wrap_edges_zero`, `fn_record_applicable`, `fn_cut_in_root`, `fn_found`, `wrap_reachRR`, `wrap_old_vs_new`); the CEGAR of `Cross` (`revRec_any_premise`, `not_cross_of_any`, `dollar_blocked`, `CrossL`, `handFL`, `AnyW.cegar_cross_anyw`, `AnyM.cegar_cross_anym`); the getter (`Getter.g1_exit_demand`, `revRec_g_cross`, `revRec_g_crossB`, `demG_exact`, `fg_getter_zero_only`, `fg_record_sat`, `fg_found`) |
-| `HandoffRCases.lean` | programs 1 and 2 of `ap.md` §6.3, §6.4 with the intersection `restrictI` and the hand-off of the demand edges (namespace `HandoffRCases`, §13 item 7): `p1_no_exit`, `p1_found_I`, `p1_handoff`, `p1_chain`; `r1_c_not_cross`, `b2_handF`, `b2_inside`, `b2_restrictI_eq_U`, `b2_not_crossB`, `p2_handoff`, `f3_inside`, `f3_restrictI_eq_U`, `p2_found_I`, `p2_chain` |
+| `HandoffRCases.lean` | programs 1 and 2 of `ap.md` §6.3, §6.4 with the intersection `restrictI` and the hand-off of the demand edges (namespace `HandoffRCases`, §13 item 7): `p1_no_exit`, `p1_found_I`, `p1_handoff`, `p1_chain`; `r1_c_not_cross`, `b2_handF`, `b2_inside`, `b2_insideB`, `b2_concMark`, `b2_restrictI_eq_U`, `b2_not_crossB`, `p2_handoff`, `f3_inside`, `f3_insideB`, `f3_concMark`, `f3_restrictI_eq_U`, `p2_found_I`, `p2_chain` (the mark tests pass, so the results are those before F71) |
 | `HandoffUpto.lean` | THE FINITE FORMS (namespace `HandoffUpto`, §7.7): the induction stops at the last run `K`, with the hypotheses only for the runs before `K`: `iteration_generalN_upto`, `iteration_generalN_canon_upto`, `iteration_generalNX_upto`, `iteration_generalNX_canon_upto` |
 | `HandoffSrc.lean` | THE SOURCE SEEDS with the hand-off of the demand edges (namespace `HandoffSrc`, §7.4, §7.7): contract B into the seeded program `B_srcN` (the recorded calls read no seed); the iteration `iteration_srcN`, `iteration_srcN_upto`, `iteration_srcN_canon`, with the tail `[any-taint]` `iteration_srcNX`, `iteration_srcNX_upto`; the program `SrcRec` (`SrcRec.found_unseeded`: a record applies a source that the seeds drop; the source seeds do not filter the records) |
-| `HandoffXMain.lean` | the exclusion and the narrowing over a round on the spec closures with the tail `[any-taint]` (namespace `HandoffXMain`, §7.8): `forward_zero_initX`, `forward_zero_edgesX`, `exclusion_roundX`, `exclusion_canonX`; `narrowing_canonX_fwd`, `narrowing_canonX_back`, `narrowing_canonX`, `narrowing_canonX_loc` (with the `Dropped` alternative: the hand-off drops the exclusions); the vectors `XMVec.exit_dropped`, `entry_dropped` |
-| `HandoffNoStar.lean` | NO `*` DEMAND PATTERN, AND THE EXACT NARROWING (namespace `HandoffNoStar`, §7.8): run 1 `run1_exit_star_cross`, `handF_run1_nonstar`; the backward run `DB_edge_nonstar`, `demOfN_nonstar`; the sequence `canon_dem_nonstar`, `canon_handF_nonstar`; cell (a) at `*/{}` `rexc_empty_loc`; THE NARROWING `narrowing_canon_fwd_exact`, `narrowing_canon_back_exact`, `narrowing_canon_back_loc`, `narrowing_canon_loc_exact`; with the tail `[any-taint]` `handF_run1X_nonstar`, `canonX_dem_nonstar`, `narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`; the seeds `nonstar_of_sinkK` |
+| `HandoffXMain.lean` | the exclusion and the narrowing over a round on the spec closures with the tail `[any-taint]` (namespace `HandoffXMain`, §7.8): `forward_zero_initX`, `forward_zero_edgesX`, `exclusion_roundX`, `exclusion_canonX`; `narrowing_canonX_fwd`, `narrowing_canonX_back`, `narrowing_canonX`, `narrowing_canonX_loc` (with the `Dropped` alternative: the hand-off drops the exclusions); with the marks `narrowing_canonX_fwdM`, `narrowing_canonX_backM`, `narrowing_canonXM`; the vectors `XMVec.exit_dropped`, `entry_dropped` |
+| `HandoffNoStar.lean` | NO `*` DEMAND PATTERN, AND THE EXACT NARROWING, for the concrete design (F72 has `*` patterns after run 1, so the claims about the sequence and the backward run do not hold for F72; the run-1 results and the general lemmas stay, §7.8, §11) (namespace `HandoffNoStar`, §7.8): run 1 `run1_exit_star_cross`, `handF_run1_nonstar`; the backward run `DB_edge_nonstar`, `demOfN_nonstar`; the sequence `canon_dem_nonstar`, `canon_handF_nonstar`; cell (a) at `*/{}` `rexc_empty_loc`; THE NARROWING `narrowing_canon_fwd_exact`, `narrowing_canon_back_exact`, `narrowing_canon_back_loc`, `narrowing_canon_loc_exact`, and in the locations AND the marks `narrowing_canon_fwd_exactM`, `narrowing_canon_back_exactM`, `narrowing_canon_loc_exactM`; with the tail `[any-taint]` `handF_run1X_nonstar`, `canonX_dem_nonstar`, `narrowing_canonX_fwd_exact`, `narrowing_canonX_loc_exact`; the seeds `nonstar_of_sinkK` |
 | `PipelineHandoffDriverExt.lean` | the pipeline forms of the driver of §7.1 (namespace `PipelineHandoffDriverExt`, §7.7): the DEMAND seeds `driver_iterationNX_demand`, `driver_iterationNX_demand_known`; the instance with a weaker `C` (a report in the normal layer) `driver_iterationNX_confirmed`; the finite form `driver_iterationNX_upto`; the source seeds `driver_iteration_srcNX`, `driver_iteration_srcNX_upto` |
-| `HandoffXRestrict.lean`, `HandoffXCoverage.lean`, `HandoffXIter.lean`, `PipelineHandoffDriver.lean` | the hand-off of the demand edges on the spec closures with the tail `[any-taint]` (§4.6, §7.7, §7.8): the intersection with the exclusion (namespace `HandoffX`) `restrictIX`, `insideLocXB`, `restrictIX_ok`, `restrictIX_contract`, `emitX_inside`, `restrictIX_inter` with `RExcX`, `pubRX`, `handF_narrowX`, `handF_narrowX_DRX`, the vectors `XVec.v64_demand`, `v64_taint`, `v_taint_star`, `v_at_rows`, `v_above_rows`, `v_below_rows`, `v_overlap`, `v_inside_only_with_excl`, `v_old_above_not_inter`; the forward contract `coversN_DRXI` (`RecsEmbed`) and run 1 `run0X_contract`; the iteration (namespace `HandoffXIter`) `canonStateX`, `embedRecs`, `iteration_generalNX`, `iteration_generalNX_all`, `iteration_reportsNX_canon`, `iteration_generalNX_incl`, `iteration_reportsNX`; the pipeline form `PipelineHandoffDriver.driver_iterationNX` (`resultSeqX_runSeqNX`, `pubSeqXst_pubSeqNX`) |
+| `HandoffXRestrict.lean`, `HandoffXCoverage.lean`, `HandoffXIter.lean`, `PipelineHandoffDriver.lean` | the hand-off of the demand edges on the spec closures with the tail `[any-taint]` (§4.6, §7.7, §7.8): the intersection with the exclusion (namespace `HandoffX`) `restrictIX` (with the mark tests of `restrictI`), `insideLocXB`, `insideXB` (`insideLocXB` and `markSubB`), `restrictIX_ok`, `restrictIX_contract`, `restrictIX_contract_base`, `restrictIX_of`, `emitX_inside`, `emitX_insideXB`, `restrictIX_inter` with `RExcX`, `restrictIX_interM`, `restrictIX_inter_conc`, `restrictIX_narrowM`, `pubRX`, `handF_narrowX`, `handF_narrowX_DRX`, `handF_narrowXM`, `handF_narrowX_DRXM`, the vectors `XVec.v64_demand`, `v64_taint`, `v_taint_star`, `v_at_rows`, `v_above_rows`, `v_below_rows`, `v_overlap`, `v_inside_only_with_excl`, `v_old_above_not_inter`, the mark tests `XVec.vM_user`, `vM_prem`, `vM_inStarEx`, `vM_outStarEx`, `vM_emit`, `XVec.restrictIX_contract_loc_false`; the forward contract `coversN_DRXI` (`RecsEmbed`; the hypotheses `EmitInsideX`, `RestrictInsideX` read the marks) and run 1 `run0X_contract`; the iteration (namespace `HandoffXIter`) `canonStateX`, `embedRecs`, `iteration_generalNX`, `iteration_generalNX_all`, `iteration_reportsNX_canon`, `iteration_generalNX_incl`, `iteration_reportsNX`; the pipeline form `PipelineHandoffDriver.driver_iterationNX` (`resultSeqX_runSeqNX`, `pubSeqXst_pubSeqNX`) |
 | `AnyTaintExDefs.lean`, `AnyTaintExCov.lean`, `AnyTaintExExact.lean`, `AnyTaintExKinds.lean`, `AnyTaintExCases.lean`, `AnyTaintExCases2.lean` | the AP model of the tail `[any-taint]` with its exclusion: THE SPEC CLOSURES (`ap.md` §10.11). This document cites: the closures `AnyTaintEx.D6X`, `DRX`, `DRXs`, the objects `XObj`, `XFact`, the operations `w6tX`, `transferX`, `limitFX`, `cleanResX`, `partX`, `annX`, `checkX`, `emitX`, `emitTX`, `satX`, `restrictX`, `startX`, `recLayerX` (with `DRX.retRec`), the predicates `SatInsideX` (`satX_inside`), `EndExactX`, `RecsExactX`, `SupLinkX`, `SupX`, `Confirmed6X`, `ConfirmedX`, the vectors `Vec`; `AnyTaintExCov.forget6`, `forgetX`, `iteration_reportsX`, `iteration_srcX`, `CexRoute.route_a_false`; `AnyTaintExExact.startX_must_end`, `confirmed_real_valid6X`, `confirmed_realX_valid`, `seq_confirmed_realX_valid`, `RecsFromRunsX`, `specX_rules`, `RecsConcX`, `RecsWFX`, `recs_of_DRX`, `CexExactCleaner.cex_exact_cleaner`; `AnyTaintExKinds.D6X_flow_no_any_taint` (run 1, under S7, S10 and S15: an edge whose premise has the mark `*`, a FLOW edge, has no normal `[any-taint]` conclusion), `D6X_any_conc`, `DRX_normal_premise`, `DRX_must_premise` (under `AnyTaintEx.EmitCopiesMarkX`, `AnyTaintEx.emitX_copies`: a normal edge of a restricted run has a `$` premise or a must-premise `[any-taint]` with a concrete mark; before F70 `DRXs_normal_premise`, `DRXs_must_premise`); the worked programs of `AnyTaintExCases` (§13) and of `AnyTaintExCases2` (the round-1 programs G, C, I and PassRule re-derived in `D6X`, and their restricted runs in `DRXs` with the earlier restriction `restrictX` and the earlier hand-off, the record of the earlier design; §7.5, §13) |
 | `AnyTaintDefs.lean`, `AnyTaintSim.lean`, `AnyTaintExact.lean`, `AnyTaintND.lean`, `AnyTaintCases.lean`, `PipelineAnyTaint.lean`, `PipelineAnyTaintDriver.lean` | the model of the first F69 form (the demotion at an exclusion, `AnyTaint.D6T`, `DRT`), not the spec closures. This document cites from it only what still states a rule of the spec: the taint edges `AnyTaint.TaintEdges`; the counterexamples `AnyTaintExact.CexApp.cex_app`, `CexApp.record_not_pair_exact`, `CexRev.cex_rev`, `CexSupMark.cex_sup_mark` and the lemma `markSub_conc`; the conjunction `AnyTaintND.DNzT`, `Example`; the transfer with no exclusion `AnyTaintCases.Cut.cut_transfer` (§13 item 31); the vectors `AnyTaint.EmitVec`, `Sanity`. The round-1 programs G, C, I and PassRule of `AnyTaintCases.lean` are only the program terms that `AnyTaintExCases2.lean` imports: their results in the spec closures are those of `AnyTaintExCases2` |
 
@@ -2521,7 +2812,10 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
 3. THE `[any]` DELIVERY. In a restricted run (`inside`), a caller fact with `[any]` above the premise of a summary that
    the callee publishes AFTER the subscription, with 10 or more subscriptions: the caller gets the summary (P4). The
    same with an `[any-taint]` caller fact and the summary of its must-premise. With an `[any-taint]/E` caller fact, a
-   premise below it through an accessor in `E` gets no summary, and a premise through another accessor gets it.
+   premise below it through an accessor in `E` gets no summary, and a premise through another accessor gets it. A
+   FLOW premise (F72, §5.3): a caller fact below the premise (`applicable`) and a caller fact above it (`inside`) both
+   get the summary, by the replay and by the delivery; a summary of a concrete premise does not reach a `*` caller
+   fact.
 4. SEVERAL PREMISES. A summary `{j1, j2} → g`: premise 1 matched by a delivery, premise 2 by a replay, with the
    conclusion in two deltas: the caller applies both deltas (§5.4).
 5. RECORDS. A forward record does not apply in its forward form in a backward run; its reversal applies. A backward
@@ -2535,11 +2829,15 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
    set, and no call of program 1 returns, so it holds for the hand-off of §7.4 too. With the intersection and the
    hand-off of the demand edges both programs are proved (`HandoffRCases`): program 1 (`p1_handoff`, `p1_found_I`,
    `p1_chain`) and program 2 (the summary of `c` is not crossable, `r1_c_not_cross`; the backward summary is in the
-   demand layer, `b2_not_crossB`; the intersection gives the pieces of `restrictU`, `b2_restrictI_eq_U`,
-   `f3_restrictI_eq_U`; `p2_handoff`, `p2_found_I`, `p2_chain`). The Lean results show that the hand-off CONTAINS
+   demand layer, `b2_not_crossB`; the mark tests of the restriction pass, `b2_insideB`, `b2_concMark`, `f3_insideB`,
+   `f3_concMark`; the intersection gives the pieces of `restrictU`, `b2_restrictI_eq_U`, `f3_restrictI_eq_U`;
+   `p2_handoff`, `p2_found_I`, `p2_chain`). The Lean results show that the hand-off CONTAINS
    these patterns; that it EQUALS them (the demand of run 3 is exactly `dem1_exact`, `dem2_exact`) is checked by hand
    (`ap.md` §6.4).
-8. MODES. A request in a restricted run fails the assert. A backward run has no sink check. The zero fact enters every
+8. MODES. A restricted run (forward and backward) raises no request (F72 R4): on a `*` fact the mark gate of a micro
+   edge with a concrete premise mark gives no result, the sink check gives no witness, and a partial cleaner of `T`
+   gives the fact `*∖{T}`; the run has no request store, and its request counter is 0. Run 1 raises the requests of
+   the same program. A backward run has no sink check. The zero fact enters every
    callee in the backward run. The reversed plan of a JVM call gives the steps of `interpreter.md` §4.9 in its order
    (the table of §4.5), with the reversed source results and the seeds at the rule point `BOUND`. The reversed alias
    edges apply to every requirement; the forward ones only to the results that AC3 and AC4 select.
@@ -2626,6 +2924,13 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
     supported through its link (`AnyTaintExCases2.C.run3_supported`, `C.run3_confirmed_handoff`). Program I (`get`
     with `return p`) is CONFIRMED in run 1, with no DEMAND entry, so the iteration stops after run 1
     (`AnyTaintExCases2.I.run1_flow`, `I.run1_confirmed`, `I.run1_no_demand`).
+    SINCE F72 (PENDING the model; the Lean results above are of the concrete design): the run-1 pattern of `get` is
+    `(D-c = (ret, ., [any], *), D-p = (p, ., *, {}, *))`, a `*` pattern, so backward run 2 weakens the requirement
+    `(ret, ., [any], T)` to the FLOW premise `(ret, ., *, {}, *)` (§4.4). Its backward summary
+    `(ret, ., *, {}, *) → (p, .f, *, {}, *)` is normal and its reversal is crossable, so `get` hands off no demand edge.
+    Forward run 3 crosses `get` by the reversed record, which applies to the added fact `(p, ., [any-taint], {}, T)`
+    by `inside` with a normal result (the case `above` of an `[any-taint]` fact, `ap.md` §4.3), and the expected
+    result is the same: run 3 CONFIRMS the vulnerability. The test asserts the hand-off and the result of run 3.
 23. THE SETTER KEEPS `[any-taint]` WITH AN EXCLUSION (analysis test; program S of `AnyTaintExCases`, a Spring DTO
     through a setter). `root(): dto = srcAny(); dto.setName(c); sink(dto.name); sink(dto.email)`,
     `setName(n): this.name = n`, `c` clean. The run-1 summary `(this, ., *, {}, *) → (this, ., */{name}, *)` of
@@ -2693,8 +2998,9 @@ included, are exact records, or END-EXACT records for a must-premise, on the loc
     limit: the source `dto.f.g = srcAny()` gives `(dto, .f, [any], T)` in the demand layer with no exclusion
     (`AnyTaintCases.Cut.cut_transfer`, a transfer with no exclusion), so a sink below `dto.f` is a DEMAND entry.
 
-The items 32 to 40 test the hand-off of the demand edges, the stop rules and the frontier (`ap-history.md` F70; §4.3,
-§4.5, §7.3 to §7.8). The items 22 and 23 cite Lean results of the earlier hand-off (`AnyTaintExCases2.G.handoffX_get`,
+The items 32 to 42 test the hand-off of the demand edges, the stop rules and the frontier (`ap-history.md` F70; §4.3,
+§4.5, §7.3 to §7.8), and the marks of the restriction and of the emission (`ap-history.md` F71; §4.4, §4.6). The
+items 22 and 23 cite Lean results of the earlier hand-off (`AnyTaintExCases2.G.handoffX_get`,
 `AnyTaintExCases.B.run3_must`, with `restrictX`): there the summaries that the hand-off reads are not crossable (a
 demand-layer getter, a demand given by hand), and the intersection keeps the same pieces, so the expected values do
 not change (argued).
@@ -2719,7 +3025,11 @@ not change (argued).
     (`revRec_g_cross`, `revRec_g_crossB`, `demG_exact`: `get` gets only the zero demand). Forward run 3 analyses `get` only from the zero fact
     (`fg_getter_zero_only`), crosses the call by the reversed record (by `satI`, `fg_record_sat`) and reports the
     vulnerability in the NORMAL layer under the zero premise of the root (`fg_found`), so run 3 confirms it and the
-    driver stops (`STOP_RULE`).
+    driver stops (`STOP_RULE`). These Lean results are of the concrete design. SINCE F72 (PENDING the model; §7.4):
+    backward run 2 emits the FLOW premise `(ret, ., *, {}, *)` in `get` (the pattern of `get` has the mark `*`), and
+    the backward summary is `(ret, ., *, {}, *) → (arg, .f, *, {}, *)`; it is normal and its reversal is crossable, so
+    `get` still gets only the zero demand. Forward run 3 crosses the call by the reversed record by `applicable`, and
+    the result is the same: the vulnerability in the NORMAL layer, CONFIRMED, `STOP_RULE`.
 35. THE CONDITION ON THE REVERSAL IN `Cross` (CEGAR regression tests, `HandoffCases.AnyW`, `AnyM`; AP-level). A callee
     `anyw` whose summary has a NORMAL leaf with an any tail (in the model `(arg, ., *) → (ret, ., [any])`, the
     `[any-taint]` of F69): the hand-off of §7.3 gives the leaf as a demand edge, the backward run enters `anyw`,
@@ -2735,12 +3045,16 @@ not change (argued).
     the same example (`v64_demand`, `v64_taint`), `[any-taint]/{4} ∩ */{5} = [any-taint]/{4, 5}` (`v_taint_star`),
     the rows at, above and below `D-p` (`v_at_rows`, `v_above_rows`, `v_below_rows`), a premise that only overlaps
     `D-c` (`v_overlap`), a premise inside `D-c` only with its exclusion (`v_inside_only_with_excl`), and the cell above
-    a `*/E2` exit pattern, where `restrictX` was not the intersection (`v_old_above_not_inter`).
+    a `*/E2` exit pattern, where `restrictX` was not the intersection (`v_old_above_not_inter`). The mark tests of the
+    restriction: item 41.
 37. THE FRONTIER (§7.8). The frontier log of item 32 over runs 1 to 5 (the field limits 1 to 5): `wrap` is in
     `analysed` in run 1 and in no later run while no seed is in its call subtree (`HandoffMain.exclusion_canon`; the
     later rounds argued, §11); every demand pattern WITH AN EXIT PATTERN of run 5 lies inside a demand pattern of
-    run 3 of the same method key, as locations (`HandoffNoStar.narrowing_canon_loc_exact`). The demand of the root is
-    the zero demand and the seed-path pattern `((x, .a, [any], T), none)` (`HandoffCases.Wrap.demN_exact`): these are
+    run 3 of the same method key, in the locations and the marks (`HandoffNoStar.narrowing_canon_loc_exactM`; the
+    concrete design. WRAP has no `*` pattern after run 1, so the expected values do not change with F72; for F72 the
+    theorem is PENDING, §11). The
+    demand of the root is the zero demand and the seed-path pattern `((x, .a, [any], T), none)`
+    (`HandoffCases.Wrap.demN_exact`): these are
     not part of the theorem (§11 THE SEED PATHS), so the test does not assert the narrowing for them; every complete
     run logs one frontier with every field of §7.8; the
     backward run 2 has at least one reversed crossing, and run 3 at least one record crossing. The condition on the
@@ -2770,6 +3084,84 @@ not change (argued).
     crossable, both handed off (§7.4 case 3). Forward run 3 analyses `M` with both members: the first call CONFIRMS
     `sinkT(y.f.g)`, and the second call gives nothing, so `sinkT(r2)` is not reported. A test reversal that keeps the
     normal layer makes both backward summaries records, and run 3 reports `sinkT(r2)` CONFIRMED (the false positive).
+41. THE MARK-AWARE RESTRICTION (`ap.md` §6.4; §4.6; `ap-history.md` F71). THE USER'S EXAMPLE, a core test: a
+    restricted forward run with a demand store given by hand, a method key with the one demand pattern
+    `D-c = (x, ., $, T)`, `D-p = (ret, .f, $, U)`, and the summary delta `(x, ., $, T) → (ret, .f, $, T)` at its exit.
+    The premise lies inside `D-c`, but the conclusion mark `T` is not the mark `U` of `D-p`: the analyzer publishes
+    nothing for it. The same delta against `D-p = (ret, .f, $, T)` is published; its leaf is crossable (normal, a `$`
+    premise and a `$` leaf, mark-reversible; §1), so it is a record and no demand edge with either `D-p`. A
+    demand-layer form of the same delta (`m(x){ ret.f.g = x; }` at the field limit 1: the leaf `(ret, .f, [any], T)`,
+    which the meet with `D-p = (ret, .f, $, T)` makes `(ret, .f, $, T)` in the demand layer) is published and stored
+    as a demand edge (`summaries.demandEdges()`) with `D-p = (ret, .f, $, T)`, and not with `D-p = (ret, .f, $, U)`;
+    the frontier counts its demand edge only in the first case. The AP-level data
+    (`Handoff.RVec`): the premise test passes (`vMark_user_inside`), the conclusion mark test fails
+    (`vMark_user_concMark`), so no result (`vMark_user_restrictI`); the locations alone match, so the test in the
+    locations only (before F71) and `restrictU` keep the edge (`vMark_user_loc`, `vMark_user_restrictU`); with the mark
+    `T` in `D-p` it is kept (`vMark_user_same`). A premise mark that `D-c` does not admit (`(x, ., $, T)` against
+    `D-c = (x, ., $, U)`): inside as locations, not as marks, so no result (`vMark_prem_loc`, `vMark_prem_inside`,
+    `vMark_prem_restrictI`). THE `*∖X` CELLS: `D-c = (x, ., $, *∖{T})` gives no result for a premise with the mark `T`
+    and keeps a premise with the mark `U` (`vMark_inStarEx_T`, `vMark_inStarEx_U`); `D-p = (ret, .f, $, *∖{T})` gives
+    no result for a conclusion with the mark `T` and keeps one with the mark `U` (`vMark_outStarEx_T`,
+    `vMark_outStarEx_U`). (Since F72 the `*∖X` pattern cells are dead in a real run: the hand-off normalization R1
+    replaces `*∖X` by `*`; the vectors stay as tests of the test function.) An abstract conclusion mark stays whole
+    (`inter_exc_absmark`). Before F72 this was AP-level only; since F72 a restricted run has such conclusions, the
+    conclusions of a FLOW premise (§3, §4.6). In the X form (with the exclusions): `HandoffX.XVec.vM_user`, `vM_prem`, `vM_inStarEx`,
+    `vM_outStarEx`. The
+    contract in the locations only is false on the user's example (`Handoff.restrictI_contract_loc_false`,
+    `HandoffX.XVec.restrictIX_contract_loc_false`).
+42. THE `*∖X` EMISSION (`ap.md` §6.3; §4.4; `ap-history.md` F71). A core test: a backward run with a demand store
+    given by hand, a method key with a demand pattern whose entry pattern is `D-c = (ret, ., $, *∖{T})` (between F71
+    and F72 a backward entry pattern with the mark `*∖X` came from a run-1 summary conclusion after a cleaner, §7.3;
+    since F72 the hand-off replaces `*∖X` by `*`, so no real run has this pattern, and this test only checks the cell
+    of the emission), and two requirements at its forward exit, `(ret, ., $, T)` and `(ret, ., $, U)`. Only
+    the second gives an initial fact, `(ret, ., $, U)`: a requirement with a mark in `X` cannot come from that summary,
+    because the summary does not pass the mark. The AP-level data: the entry pattern `(x, ., $, *∖{T})` and the added
+    fact `(x, ., $, T)` give nothing (`Handoff.RVec.vEmit_starEx_T`; before F71 `*∖X` counted as `*`, and the emission
+    gave `(x, ., $, T)`, `vEmit_starEx_T_pre70`); the added fact `(x, ., $, U)` gives `(x, ., $, U)`, which lies inside
+    the entry pattern with its mark (`vEmit_starEx_U`); in the X form `HandoffX.XVec.vM_emit`.
+
+The items 43 to 47 test the rules of F72 (§3; `ap-history.md` F72). Their Lean model is PENDING (§11): the items
+43, 45 and 46 are the CEGAR programs of the plan (`AbsCases.lean`, (i) to (iv)). Until the model is done, each test
+records what the iteration gives; a real vulnerability that the F72 iteration misses is a counterexample to R6, and
+the coordinator gets the program.
+
+43. SHARING: THE GETTER WITH TWO MARKS (CEGAR (i); §4.4). `root(): a = srcT(); b = srcU(); x = get(a); y = get(b);
+    sinkT(x); sinkU(y)`, `get(p): return p.name`, with `srcT`, `srcU` sources with the marks `T`, `U` and `sinkT`,
+    `sinkU` sinks of these marks. The run-1 summary of `get` is in the demand layer (the case `above`), so its pattern
+    is `(D-c = (ret, ., [any], *), D-p = (p, ., *, {}, *))`, a `*` pattern. Backward run 2 has ONE non-zero initial
+    fact in `get`, the FLOW premise `(ret, ., *, {}, *)`, for both requirements (one `initials.add` stores it). A
+    restricted run never has more than one initial fact per `*` pattern in `get`: if forward run 3 emits in `get`, it
+    emits ONE FLOW premise for both added facts; if the backward FLOW summary is crossable, run 3 crosses `get` by its
+    reversed record and has only the zero fact there. Both vulnerabilities are reported. Before F72 the restricted
+    runs had one initial fact per mark (NO SHARING).
+44. THE HAND-OFF NORMALIZATION AND THE CONCRETE PATTERN (R1, R2; §7.3, §4.4). `m(x): y = x.f; clean(T, y);
+    return y`, with a cleaner of `T`. Its run-1 summary has a `*∖{T}` conclusion in the demand layer, so it is a
+    demand edge. The `DemandStore` of backward run 2 has the pattern with the mark `*` (not `*∖{T}`), and the stored
+    publication keeps `*∖{T}`; the record and the summary still stop the mark `T` at the application. The requirements
+    `(ret, ., $, T)` and `(ret, ., $, U)` both get the FLOW premise. THE USER'S CELL: a core test with a demand store
+    given by hand, the pattern `D-c = (x, ., $, T)` and the added fact `(x, ., $, *)` (or `(x, ., $, *∖{U})`): no
+    initial fact, and no request (§4.4: "The added fact can't satisfy the demand").
+45. NO REQUEST AFTER RUN 1 (R4; CEGAR (ii), (iii); §4.6). In both programs the callee `c` reads a field of its
+    argument, so its run-1 FLOW summary is in the demand layer, not crossable, and its pattern has the mark `*`.
+    (ii) A MARK-CHANGING PASS RULE: `root(): a.h = srcT(); r = c(a); sinkU(r)`, `c(p): y = p.h; q = lib(y);
+    return q`, where `lib` is unresolved with a pass rule from `arg0` with the mark `T` to `Result` with the mark `U`.
+    In each restricted run the FLOW premise of `c` gives no result at the pass rule and no request (the mark gate);
+    the vulnerability is found through the concrete pattern that the request and the answer of run 1 made (the
+    concrete-mark summary of `c`). (iii) A PARTIAL CLEANER of `T` under a `*` premise: `root(): a.h.f = srcT();
+    a.h.g = srcT(); a.h.k = srcU(); r = c(a); sinkT(r.f); sinkT(r.g); sinkU(r.k)`, `c(p): y = p.h; clean(T, y.f);
+    return y`. The FLOW fact continues as `*∖{T}` with no request. Expected: `sinkT(r.f)` is not reported, and
+    `sinkT(r.g)` and `sinkU(r.k)` are reported; `sinkT(r.g)` only through the concrete pattern of run 1 (the request
+    of the cleaner and its answer).
+46. THE SEARCH FOR A COUNTEREXAMPLE TO R6 (CEGAR (iv)). A DIFFERENTIAL TEST on generated programs (the fuzzer of
+    `analyzer-impl.md` §9.2) and on the programs of this list: the iteration with the rules of F72 against the
+    iteration of the concrete design (the rules of F71, with the same field limits). The F72 report must hold every
+    vulnerability of the concrete report, with the same or a better state. The generator aims at a flow that needs a
+    concrete mark in a callee that only `*` patterns reach after run 1, for example a concrete demand that the
+    backward weakening loses (a requirement `ret.a` with the mark `T` that only a `*` pattern `ret.*` covers, and a
+    mark-specific rule below `ret.a`). A missed vulnerability is a counterexample: the test keeps the program.
+47. THE BACKWARD WEAKENING (R2 backward; §4.4, §7.4). In the getter of item 34 the DemandStore of forward run 3 has no
+    pattern of `get` except the zero demand, the backward initial fact of `get` is `(ret, ., *, {}, *)` (not
+    `(ret, .a, $, T)`), and the frontier of backward run 2 has `get` in `analysed` with one initial fact.
 
 ---
 

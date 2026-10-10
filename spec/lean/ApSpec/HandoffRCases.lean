@@ -28,6 +28,11 @@
       vulnerability (`p2_found_I`, and the chain run 1 → backward run 2 → run 3 with the new
       hand-off, `p2_chain`).
 
+  THE MARK-AWARE RESTRICTION (F71, 2026-10-10): `restrictI` tests the marks too (`insideB`,
+  `concMarkB`). Both programs have one concrete mark `T` (the demand patterns have `T` or `*`), so
+  every mark test passes and every result above is the same (`b2_insideB`, `b2_concMark`,
+  `f3_insideB`, `f3_concMark`; the `decide` facts are computed with the new definition).
+
   All proofs are constructive (`propext`, `Quot.sound` only).
 -/
 import ApSpec.HandoffDefs
@@ -150,6 +155,14 @@ theorem b2_emit : emitM Backward.Gc.fact Backward.Jb2 = some Backward.Jb2 := by 
 /-- The emitted backward premise lies inside `D-c = (ret,.[any],*)`. -/
 theorem b2_inside : insideLocB Backward.Jb2 Backward.Gc.fact = true := by decide
 
+/-- THE MARK TESTS (F71, the mark-aware restriction): the emitted backward premise lies inside
+    `D-c` with its mark too (`insideB`: the `D-c` mark `*` admits `T`), and the conclusion mark
+    `T` meets the `D-p` mark `*` (`concMarkB`). So `restrictI` gives the same result as before
+    F71. -/
+theorem b2_insideB : insideB Backward.Jb2 Backward.Gc.fact = true := by decide
+
+theorem b2_concMark : concMarkB Backward.Jc.mark Backward.Gb2.fact.mark = true := by decide
+
 /-- `restrictI` keeps the backward summary `(arg,.h.i,[any],T)` (below `D-p = (arg,.*,*)`). -/
 theorem b2_restrictI :
     restrictI Backward.Jb2 Backward.Gb2 ⟨Backward.Gc.fact, some Backward.Jc⟩ =
@@ -170,6 +183,8 @@ theorem b2_not_crossB : ¬ CrossB Backward.Jb2 Backward.Gb2 :=
 #print axioms b2_handF
 #print axioms b2_emit
 #print axioms b2_inside
+#print axioms b2_insideB
+#print axioms b2_concMark
 #print axioms b2_restrictI
 #print axioms b2_restrictI_eq_U
 #print axioms b2_not_crossB
@@ -224,6 +239,15 @@ theorem f3_emit : emitM RCases.Prog2.ddM.din RCases.Prog2.A.fact = some RCases.P
 /-- The initial fact lies inside `D-c`. -/
 theorem f3_inside : insideLocB RCases.Prog2.JM RCases.Prog2.ddM.din = true := by decide
 
+/-- THE MARK TESTS (F71): the initial fact `(arg,.h.i.f,[any],T)` lies inside
+    `D-c = (arg,.h.i,[any],T)` with its mark too, and the conclusion mark `T` is the mark `T` of
+    `D-p = (ret,.f.k,[any],T)`. So `restrictI` gives the same result as before F71. -/
+theorem f3_insideB : insideB RCases.Prog2.JM RCases.Prog2.ddM.din = true := by decide
+
+theorem f3_concMark :
+    (∃ p, RCases.Prog2.ddM.dout = some p ∧ concMarkB p.mark RCases.Prog2.GM.fact.mark = true) :=
+  ⟨_, rfl, by decide⟩
+
 /-- `restrictI` restricts the exit fact `(ret,.f,[any],T)` by `D-p = (ret,.f.k,[any],T)` to
     `(ret,.f.k,[any],T)` (the case above `D-p`: the chain of `D-p`). -/
 theorem f3_restrictI :
@@ -238,6 +262,8 @@ theorem f3_restrictI_eq_U :
 
 #print axioms ddM_eq
 #print axioms f3_emit
+#print axioms f3_insideB
+#print axioms f3_concMark
 #print axioms f3_inside
 #print axioms f3_restrictI
 #print axioms f3_restrictI_eq_U

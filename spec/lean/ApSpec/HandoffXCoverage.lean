@@ -19,7 +19,9 @@
                              contracts `EmitContractX`, `EmitCopiesMarkX`, `EmitInsideX`,
                              `RestrictInsideX`, `CrossSatX`), and the justified flow
                              `FlowRDN P (forgetX DRX) (pubRXw …) rc`. A demanded call: the
-                             emission inside `D-c` and the intersection keep the pair (rule `ret`).
+                             emission inside `D-c` (with its mark: the added fact is concrete) and
+                             the mark-aware intersection keep the pair (rule `ret`; `FlowRR.call`
+                             gives the exit location with its mark in `D-p`, F71).
                              A recorded call: the embedded record (rule `retRec`, no demotion).
     XC3 `reach_strongRXI`, `coversN_DRXI_gen`: the witness form and THE FORWARD CONTRACT.
     XC4 `coversN_DRXI`       THE FORWARD CONTRACT OF THE SPEC RUN (`emitX`, `satX`, `restrictIX`):
@@ -39,15 +41,17 @@ open ApSpec.AnyTaintExCov (forgetX forget6)
 
 /-! ## 0. The contracts of the generic rules -/
 
-/-- The emission gives a premise that lies inside its entry pattern, with its exclusion. -/
+/-- The emission gives, for a CONCRETE added fact, a premise that lies inside its entry pattern,
+    with its exclusion and its mark (`insideXB`; the mark-aware restriction, F71). -/
 def EmitInsideX (emit : PFact → PFact → Excl → Option (PFact × Excl)) : Prop :=
-  ∀ d a aex j jex, emit d a aex = some (j, jex) → insideLocXB j jex d = true
+  ∀ d a aex j jex t, a.mark = .conc t → emit d a aex = some (j, jex) → insideXB j jex d = true
 
-/-- C5 of the intersection with exclusions: if the premise (with its exclusion) lies inside
-    `D-c`, a pair of the edge whose exit location `D-p` covers stays, in the same layer. -/
+/-- C5 of the intersection with exclusions, MARK-AWARE (F71): if the premise (with its exclusion)
+    lies inside `D-c` in its locations and marks, a pair of the edge whose exit location (with its
+    mark) `D-p` covers stays, in the same layer. -/
 def RestrictInsideX (restrict : PFact → Excl → XFact → DemandEdge → Option XFact) : Prop :=
-  ∀ j jex g d p l1 l2, insideLocXB j jex d.din = true → denX j jex g.af.fact g.ex l1 l2 →
-    d.dout = some p → p.coversLoc l2 →
+  ∀ j jex g d p l1 l2, insideXB j jex d.din = true → denX j jex g.af.fact g.ex l1 l2 →
+    d.dout = some p → p.covers l2 →
     ∃ g', restrict j jex g d = some g' ∧ denX j jex g'.af.fact g'.ex l1 l2 ∧
       g'.af.demand = g.af.demand
 
@@ -66,9 +70,9 @@ def RecsEmbed (rc : Recs) (recs : MethodId → PFact × Bool × Excl × XFact �
 theorem restrictIX_inside_contract : RestrictInsideX restrictIX :=
   fun _ _ _ _ _ _ _ hin hden hdout hp => restrictIX_contract hin hden hdout hp
 
-/-- The spec emission has the contract `EmitInsideX` (X3). -/
+/-- The spec emission has the contract `EmitInsideX` (X3, mark-aware: `emitX_insideXB`). -/
 theorem emitX_insideX : EmitInsideX emitX :=
-  fun _ _ _ _ _ h => emitX_inside h
+  fun _ _ _ _ _ _ ha h => emitX_insideXB h ha
 
 /-- A record that is not must is never demoted. -/
 theorem recLayerX_false (s : Bool) (x : XFact) : recLayerX false s x = x := by
@@ -220,8 +224,9 @@ theorem coverageRXI (hwf : P.WF) (hE : EmitContractX emit sat) (hem : EmitCopies
     obtain ⟨j, jex, hemit, hjc, hsat⟩ := hE d.din a.af.fact a.ex l1 t ht hdin hacX
     have hj := DRX.initR hadd hdem (emitTX_of hemit _)
     obtain ⟨g, hg, hdg, hfc'⟩ := ihc j _ jex hj hjc
-    -- the intersection keeps the demanded pair
-    obtain ⟨g', hres, hdg', _⟩ := hR j jex g d p l1 l2 (hEi _ _ _ _ _ hemit) hdg hdout hp
+    -- the intersection keeps the demanded pair (the premise lies inside `D-c` with its mark, and
+    -- the demand edge covers the exit location with its mark: the restriction is mark-aware, F71)
+    obtain ⟨g', hres, hdg', _⟩ := hR j jex g d p l1 l2 (hEi _ _ _ _ _ _ ht hemit) hdg hdout hp
     obtain ⟨r, hr, hdr⟩ := summary_stepConcX ht hda hdg'
     obtain ⟨r', hr', hdr'⟩ := bind_outX hwf he he2 hdr hd2
     exact ⟨_, DRX.ret hf he he1 ha hj hg hdem hres hsat hr he2 hr', limitFX_sound hdr',

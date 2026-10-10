@@ -150,6 +150,13 @@ theorem bindIn_zero_only {e : MicroEdge} (he : e.2.base = zeroBase → e = (zSta
 #print axioms cleanRes_zero_only
 #print axioms bindBack_zero_none
 #print axioms bindIn_zero_only
+#print axioms applyEdge_base
+#print axioms revEdge_fst_base
+#print axioms zero_keep_rev
+#print axioms apply_zero_keep
+#print axioms apply_zero_id
+#print axioms apply_zero_zstar
+#print axioms applySummary_zero
 
 /-! ## 3. The backward run -/
 
@@ -195,6 +202,7 @@ theorem DB_edge_init {M : MethodId} {i : PFact} {n : Node} {f : AFact}
     (h : DBr (.edge M i n f)) : DBr (.init M i) :=
   DB_edgeInit h
 
+#print axioms DB_edgeInit
 #print axioms DB_edge_init
 
 /-- The invariant: in a call-closed set of methods `S` with no seed, every zero-premise edge has
@@ -292,6 +300,7 @@ theorem exclusion_backward (hG : NoZeroGenP P)
   have hi := hinit i (DB_edge_init h)
   exact ⟨hi, zinv_all hG hcl reaches_closed hseed h Reaches.refl hi⟩
 
+#print axioms reaches_closed
 #print axioms exclusion_backward
 
 /-- With a mark-copying emission and concrete seeds, a method with no demand edge has only the
@@ -410,6 +419,7 @@ theorem forward_zero_edges {M : MethodId} (hdem : ∀ d, dem M d → d.din = zer
     {i : PFact} {n : Node} {f : AFact} (h : DRr (.edge M i n f)) : i = zeroFact :=
   forward_zero_init hdem (DR_edgeInit h)
 
+#print axioms DR_edgeInit
 #print axioms forward_zero_edges
 
 end Forward

@@ -1165,7 +1165,15 @@ theorem emitM_contract : EmitContractConc emitM satO := by
     exact h'
   cases hmd : d.mark with
   | star => rfl
-  | starEx _ => rfl
+  | starEx x =>
+    -- the exact test of `*∖x` (F71): the demanded location has a mark that is not in `x`
+    rw [hmd] at hdm
+    have h : memB l.mark x = false := hdm
+    rw [hla] at h
+    rw [ham]
+    show (!(memB t x)) = true
+    rw [h]
+    rfl
   | conc T =>
     rw [hmd] at hdm
     have hlT : l.mark = T := hdm

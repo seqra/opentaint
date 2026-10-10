@@ -34,6 +34,25 @@
     `HandoffBackward.lean`); `emitM_nonstar`, `DR_nonstar`, `DR_exit_not_star`,
     `restrictConcI_nonstar` (the `*`-free invariants of a restricted run with `emitM`).
   Helpers are in the namespace `RAux`.
+
+  THE MARK-AWARE RESTRICTION (decision F71, the user, 2026-10-10). `restrictI` tests the marks too:
+  the premise lies inside `D-c` in its locations AND its marks (`insideB`), and the conclusion
+  mark meets the mark of `D-p` (`concMarkB`). The changes:
+    * `restrictI_contract` has the hypotheses `insideB j d.din = true` and `p.covers l2` (the exit
+      location WITH its mark in `D-p`); the mark test follows from the pair (`concMarkB_of_den`).
+      The location form (marks ignored) is FALSE now (`restrictI_contract_loc_false`).
+    * `emitM_insideB`: an emitted premise of a CONCRETE added fact lies inside its entry pattern
+      with its mark (the emission test `markMatchB` is `markSubB` on a concrete mark).
+    * `restrictI_interM`, `restrictI_inter_conc`: every pair of a result has its entry location
+      WITH its mark in `D-c`, and its exit location with its mark in `D-p`, except the cells of
+      `RExc` (locations) and an abstract conclusion mark (`AbsMark`: the exit mark is the entry
+      mark, and `concMarkB` keeps such an edge).
+    * `restrictI_narrowM`, `handF_narrowM`, `handF_narrow_locM`, `demOfN_narrowM`,
+      `handF_narrow_DRM`, `handF_narrow_DR_exactM`: the narrowing with the marks (`insideB`).
+    * The location forms (`restrictI_inter`, `handF_narrow`, …) stay as they were.
+    * Vectors (`RVec`): the user's example (`restrictI` gives nothing, `restrictU` keeps the edge),
+      a premise mark that `D-c` does not admit, the `*∖x` cells, the emission with a `*∖x` entry
+      pattern (`emitM` gives nothing, the emission before F71 gave a premise).
 -/
 import ApSpec.HandoffDefs
 
@@ -110,6 +129,75 @@ theorem tailI_nil (k : Kind) : tailI k [] := by
 #print axioms meetConcK_tailF_of
 #print axioms tailI_nil
 
+/-! ### The mark tests (F71) -/
+
+/-- On a concrete conclusion mark, the mark test of the conclusion is the mark inclusion. -/
+theorem concMarkB_conc (pm : MarkA) (t : Mark) : concMarkB pm (.conc t) = markSubB pm (.conc t) := by
+  cases pm <;> rfl
+
+/-- On a concrete fact mark, the mark test of the emission is the mark inclusion. -/
+theorem markMatchB_conc (dm : MarkA) (t : Mark) : markMatchB dm (.conc t) = markSubB dm (.conc t) := by
+  cases dm <;> rfl
+
+/-- A concrete conclusion mark that passes the mark test is a mark of `D-p`. -/
+theorem concMarkB_conc_admits {pm : MarkA} {t : Mark} (h : concMarkB pm (.conc t) = true) :
+    pm.admits t := by
+  rw [concMarkB_conc] at h
+  exact CoreAux.markSubB_sound h (rfl : (MarkA.conc t).admits t)
+
+/-- A pair of the edge whose exit location has a mark of `D-p` passes the mark test of the
+    conclusion. Every cell: a concrete conclusion mark is the exit mark; a `*` conclusion mark
+    always passes; a `*∖x` conclusion mark passes the exit mark, which is not in `x`. -/
+theorem concMarkB_of_den {j f p : PFact} {l1 l2 : Loc} (hd : den j f l1 l2)
+    (hp : p.mark.admits l2.mark) : concMarkB p.mark f.mark = true := by
+  obtain ⟨_, _, _, hm2, hps, _⟩ := hd
+  cases hf : f.mark with
+  | conc u =>
+    rw [hf] at hm2
+    have h2 : l2.mark = u := hm2
+    cases hpm : p.mark with
+    | star => rfl
+    | conc t =>
+      rw [hpm] at hp
+      have h3 : l2.mark = t := hp
+      show Nat.beq t u = true
+      rw [← h3, ← h2]
+      exact Nat.beq_refl _
+    | starEx x =>
+      rw [hpm] at hp
+      have h3 : memB l2.mark x = false := hp
+      rw [h2] at h3
+      show (!(memB u x)) = true
+      rw [h3]
+      rfl
+  | star => cases p.mark <;> rfl
+  | starEx x =>
+    rw [hf] at hm2 hps
+    have h2 : l2.mark = l1.mark := hm2
+    have h3 : memB l1.mark x = false := hps
+    cases hpm : p.mark with
+    | star => rfl
+    | conc u =>
+      rw [hpm] at hp
+      have h4 : l2.mark = u := hp
+      show (!(memB u x)) = true
+      rw [← h4, h2, h3]
+      rfl
+    | starEx _ => rfl
+
+/-- Every mark is concrete or abstract (`Invariant.AbsMark`: `*` or `*∖x`). -/
+theorem mark_conc_or_abs (m : MarkA) : (∃ t, m = .conc t) ∨ Invariant.AbsMark m := by
+  cases m with
+  | star => exact Or.inr (Or.inl rfl)
+  | conc t => exact Or.inl ⟨t, rfl⟩
+  | starEx x => exact Or.inr (Or.inr ⟨x, rfl⟩)
+
+#print axioms concMarkB_conc
+#print axioms markMatchB_conc
+#print axioms concMarkB_conc_admits
+#print axioms concMarkB_of_den
+#print axioms mark_conc_or_abs
+
 end RAux
 open RAux
 
@@ -171,28 +259,63 @@ theorem restrictConcI_cases {sc g' : AFact} {p : PFact} (h : restrictConcI sc p 
 
 #print axioms restrictConcI_cases
 
-/-- A result of `restrictI`: the demand edge has an exit pattern, the premise lies inside the
-    entry pattern, and the conclusion is the result of `restrictConcI`. -/
-theorem restrictI_some {j : PFact} {g g' : AFact} {d : DemandEdge}
+/-- The two parts of `insideB`: the locations and the marks. -/
+theorem insideB_loc {j d : PFact} (h : insideB j d = true) : insideLocB j d = true := by
+  unfold insideB at h
+  rw [Bool.and_eq_true] at h
+  exact h.1
+
+theorem insideB_mark {j d : PFact} (h : insideB j d = true) : markSubB d.mark j.mark = true := by
+  unfold insideB at h
+  rw [Bool.and_eq_true] at h
+  exact h.2
+
+theorem insideB_intro {j d : PFact} (h1 : insideLocB j d = true)
+    (h2 : markSubB d.mark j.mark = true) : insideB j d = true := by
+  unfold insideB
+  rw [h1, h2]
+  rfl
+
+/-- A result of `restrictI`, MARK-AWARE (F71): the demand edge has an exit pattern, the premise
+    lies inside the entry pattern in its locations and its marks, the conclusion mark passes the
+    mark test of `D-p`, and the conclusion is the result of `restrictConcI`. -/
+theorem restrictI_someM {j : PFact} {g g' : AFact} {d : DemandEdge}
     (h : restrictI j g d = some g') :
-    ∃ p, d.dout = some p ∧ insideLocB j d.din = true ∧ restrictConcI g p = some g' := by
+    ∃ p, d.dout = some p ∧ insideB j d.din = true ∧ concMarkB p.mark g.fact.mark = true ∧
+      restrictConcI g p = some g' := by
   unfold restrictI at h
   cases hd : d.dout with
   | none => rw [hd] at h; cases h
   | some p =>
     rw [hd] at h
     dsimp only at h
-    cases hi : insideLocB j d.din with
-    | false => rw [hi, if_neg Bool.false_ne_true] at h; cases h
-    | true => rw [hi, if_pos rfl] at h; exact ⟨p, rfl, rfl, h⟩
+    cases hi : insideB j d.din with
+    | false => rw [hi, Bool.false_and, if_neg Bool.false_ne_true] at h; cases h
+    | true =>
+      cases hc : concMarkB p.mark g.fact.mark with
+      | false => rw [hi, hc, Bool.true_and, if_neg Bool.false_ne_true] at h; cases h
+      | true => rw [hi, hc, Bool.true_and, if_pos rfl] at h; exact ⟨p, rfl, rfl, hc, h⟩
 
+/-- A result of `restrictI`, the location form: the demand edge has an exit pattern, the premise
+    lies inside the entry pattern (locations), and the conclusion is the result of
+    `restrictConcI`. -/
+theorem restrictI_some {j : PFact} {g g' : AFact} {d : DemandEdge}
+    (h : restrictI j g d = some g') :
+    ∃ p, d.dout = some p ∧ insideLocB j d.din = true ∧ restrictConcI g p = some g' := by
+  obtain ⟨p, hd, hi, _, hc⟩ := restrictI_someM h
+  exact ⟨p, hd, insideB_loc hi, hc⟩
+
+/-- With an exit pattern, a premise inside `D-c` (locations and marks) and a conclusion mark that
+    passes the mark test, `restrictI` is `restrictConcI`. -/
 theorem restrictI_of {j : PFact} {g : AFact} {d : DemandEdge} {p : PFact}
-    (hd : d.dout = some p) (hi : insideLocB j d.din = true) :
+    (hd : d.dout = some p) (hi : insideB j d.din = true)
+    (hm : concMarkB p.mark g.fact.mark = true) :
     restrictI j g d = restrictConcI g p := by
   unfold restrictI
   rw [hd]
   dsimp only
-  rw [if_pos hi]
+  rw [hi, hm]
+  rfl
 
 /-- A `*` conclusion is never changed: the result is the edge itself. -/
 theorem restrictConcI_star {sc g' : AFact} {p : PFact} {e : Excl} (hk : sc.fact.kind = .star e)
@@ -208,9 +331,24 @@ theorem restrictConcI_star {sc g' : AFact} {p : PFact} {e : Excl} (hk : sc.fact.
   · rw [hk] at hk'; cases hk'
   · exact h4
 
+/-- `restrictConcI` keeps the mark of the conclusion. -/
+theorem restrictConcI_mark {sc g' : AFact} {p : PFact} (h : restrictConcI sc p = some g') :
+    g'.fact.mark = sc.fact.mark := by
+  obtain ⟨_, ⟨_, h1⟩ | ⟨_, _, _, _, h2⟩ | ⟨_, _, _, _, h3⟩ | ⟨_, _, _, _, _, _, h4⟩⟩ :=
+    restrictConcI_cases h
+  · rw [h1]
+  · rw [h2]
+  · rw [h3]
+  · rw [h4]
+
+#print axioms insideB_loc
+#print axioms insideB_mark
+#print axioms insideB_intro
+#print axioms restrictI_someM
 #print axioms restrictI_some
 #print axioms restrictI_of
 #print axioms restrictConcI_star
+#print axioms restrictConcI_mark
 
 /-! ## 2. R1: the restriction only removes pairs -/
 
@@ -268,15 +406,17 @@ theorem pubR_sub (dem : MethodId → DemandEdge → Prop) :
     the empty continuation, and the other cells keep the conclusion tail); below `D-p` the edge
     stays; above `D-p` an `[any]` conclusion gives the chain of `D-p`, a `*` conclusion stays (its
     exclusion admits the step: the continuation is the initial one), a `$` conclusion has no
-    pair there. -/
+    pair there. MARK-AWARE (F71): the premise lies inside `D-c` with its marks (`insideB`), and
+    the exit location has a mark of `D-p` (`p.covers l2`), so the conclusion mark passes the mark
+    test (`concMarkB_of_den`, every mark cell). -/
 theorem restrictI_contract {j : PFact} {g : AFact} {d : DemandEdge} {p : PFact} {l1 l2 : Loc}
-    (hin : insideLocB j d.din = true) (hden : den j g.fact l1 l2) (hdout : d.dout = some p)
-    (hp : p.coversLoc l2) :
+    (hin : insideB j d.din = true) (hden : den j g.fact l1 l2) (hdout : d.dout = some p)
+    (hp : p.covers l2) :
     ∃ g', restrictI j g d = some g' ∧ den j g'.fact l1 l2 ∧ g'.demand = g.demand := by
-  rw [restrictI_of hdout hin]
+  rw [restrictI_of hdout hin (concMarkB_of_den hden hp.2.2)]
   have hden0 := hden
   obtain ⟨hb1, hb2, hm1, hm2, hps, σ, τ, hp1, hp2, hti, htf⟩ := hden
-  obtain ⟨hbp, σ', hpp, htp⟩ := hp
+  obtain ⟨hbp, ⟨σ', hpp, htp⟩, _⟩ := hp
   have hb : Nat.beq g.fact.base p.base = true := by rw [← hb2, ← hbp]; exact Nat.beq_refl _
   have hpath : p.path ++ σ' = g.fact.path ++ τ := by rw [← hpp, ← hp2]
   rcases CoreAux.relate_common hpath with ⟨r, hrel, _, hσ⟩ | ⟨r, hrel, _, hr, hτ⟩
@@ -370,9 +510,36 @@ theorem emitM_coversLoc {d a j : PFact} {l : Loc} (h : emitM d a = some j) (hj :
     d.coversLoc l :=
   insideLoc_coversLoc (emitM_inside h) hj
 
+/-- R3, MARK-AWARE (F71). An emitted premise of a CONCRETE added fact lies inside its entry
+    pattern in its locations AND its marks, and it has the mark of the added fact. The emission
+    test `markMatchB d.mark (.conc t)` is `markSubB d.mark (.conc t)` (`markMatchB_conc`). -/
+theorem emitM_insideB {d a j : PFact} {t : Mark} (h : emitM d a = some j) (ha : a.mark = .conc t) :
+    insideB j d = true ∧ j.mark = a.mark := by
+  have hm := RCore.emitM_mark h
+  obtain ⟨_, hmm, _⟩ := RCore.emitM_cases h
+  refine ⟨insideB_intro (emitM_inside h) ?_, hm⟩
+  rw [hm, ha, ← markMatchB_conc, ← ha]
+  exact hmm
+
+/-- The location-and-mark form of `insideB`: every location of `j` (with its mark) is a location
+    of `d` (with its mark). -/
+theorem insideB_covers {j d : PFact} {l : Loc} (h : insideB j d = true) (hj : j.covers l) :
+    d.covers l := by
+  have hd := insideLoc_coversLoc (insideB_loc h) (RCore.covers_coversLoc hj)
+  exact ⟨hd.1, hd.2, CoreAux.markSubB_sound (insideB_mark h) hj.2.2⟩
+
+/-- An emitted premise of a concrete added fact covers only locations of its entry pattern, with
+    their marks. -/
+theorem emitM_covers {d a j : PFact} {t : Mark} {l : Loc} (h : emitM d a = some j)
+    (ha : a.mark = .conc t) (hj : j.covers l) : d.covers l :=
+  insideB_covers (emitM_insideB h ha).1 hj
+
 #print axioms emitM_inside
 #print axioms insideLoc_coversLoc
 #print axioms emitM_coversLoc
+#print axioms emitM_insideB
+#print axioms insideB_covers
+#print axioms emitM_covers
 
 /-! ## 5. R4: the intersection property, with its exact exceptions -/
 
@@ -466,9 +633,58 @@ theorem rexc_any_chain {g g' : AFact} {p : PFact} {j : PFact} {l1 l2 : Loc}
   rw [hx] at hb2 hp2
   exact ⟨by rw [hb2]; exact hbp, τ, hp2⟩
 
+/-- The exit mark of a pair of a result of `restrictI` is a mark of `D-p`, unless the conclusion
+    mark is abstract (then the exit mark is the entry mark, and the mark test keeps the edge). -/
+theorem restrictI_exit_mark {j : PFact} {g g' : AFact} {p : PFact} {l1 l2 : Loc}
+    (hm : concMarkB p.mark g.fact.mark = true) (hc : restrictConcI g p = some g')
+    (hd : den j g'.fact l1 l2) : p.mark.admits l2.mark ∨ Invariant.AbsMark g.fact.mark := by
+  rcases mark_conc_or_abs g.fact.mark with ⟨t, ht⟩ | habs
+  · left
+    obtain ⟨_, _, _, hm2, _⟩ := hd
+    rw [restrictConcI_mark hc, ht] at hm2
+    have h2 : l2.mark = t := hm2
+    rw [ht] at hm
+    rw [h2]
+    exact concMarkB_conc_admits hm
+  · exact Or.inr habs
+
+/-- R4, MARK-AWARE (F71). Every pair of a result of `restrictI` has its entry location WITH its
+    mark in `D-c` (the premise lies inside `D-c` with its marks), and its exit location in `D-p`
+    (except the cells of `RExc`) with a mark of `D-p` (except an abstract conclusion mark). The
+    two exceptions are independent: `RExc` is on the locations, `AbsMark` on the marks. -/
+theorem restrictI_interM {j : PFact} {g g' : AFact} {d : DemandEdge}
+    (h : restrictI j g d = some g') {l1 l2 : Loc} (hd : den j g'.fact l1 l2) :
+    d.din.covers l1 ∧ ∃ p, d.dout = some p ∧ (p.coversLoc l2 ∨ RExc g p g') ∧
+      (p.mark.admits l2.mark ∨ Invariant.AbsMark g.fact.mark) := by
+  obtain ⟨p, hdo, hin, hm, hc⟩ := restrictI_someM h
+  have hj : j.covers l1 :=
+    ⟨hd.1, (RCore.coversLoc_of_den hd).2, hd.2.2.1⟩
+  exact ⟨insideB_covers hin hj, p, hdo, restrictConcI_exit hc hd, restrictI_exit_mark hm hc hd⟩
+
+/-- R4 for a CONCRETE conclusion mark (every exit edge of a restricted run): every pair of a
+    result has its entry location with its mark in `D-c`, and its exit location with its mark in
+    `D-p`, except the cells of `RExc`, where the exit mark is still a mark of `D-p`. -/
+theorem restrictI_inter_conc {j : PFact} {g g' : AFact} {d : DemandEdge} {t : Mark}
+    (h : restrictI j g d = some g') (ht : g.fact.mark = .conc t) {l1 l2 : Loc}
+    (hd : den j g'.fact l1 l2) :
+    d.din.covers l1 ∧ ∃ p, d.dout = some p ∧
+      (p.covers l2 ∨ (RExc g p g' ∧ p.mark.admits l2.mark)) := by
+  obtain ⟨hin, p, hdo, hloc, hmk⟩ := restrictI_interM h hd
+  have hmk' : p.mark.admits l2.mark := by
+    rcases hmk with hmk | hab
+    · exact hmk
+    · exact absurd ht (Invariant.AbsMark.not_conc hab t)
+  refine ⟨hin, p, hdo, ?_⟩
+  rcases hloc with hl | hr
+  · exact Or.inl ⟨hl.1, hl.2, hmk'⟩
+  · exact Or.inr ⟨hr, hmk'⟩
+
 #print axioms restrictConcI_exit
 #print axioms restrictI_inter
 #print axioms rexc_any_chain
+#print axioms restrictI_exit_mark
+#print axioms restrictI_interM
+#print axioms restrictI_inter_conc
 
 /-! ### Remark: the `*` cell at `D-p` has an exact form
 
@@ -713,8 +929,43 @@ theorem restrictI_narrow {j : PFact} {g g' : AFact} {d : DemandEdge}
   obtain ⟨p, hdo, hin, hc⟩ := restrictI_some h
   exact ⟨p, hdo, hin, restrictConcI_inside hc⟩
 
+/-- The narrowing of one restriction, MARK-AWARE (F71): the premise lies inside `D-c` with its
+    marks; the result conclusion lies inside `D-p` in its locations (except `RExc`) and in its
+    marks (except an abstract conclusion mark). -/
+theorem restrictI_narrowM {j : PFact} {g g' : AFact} {d : DemandEdge}
+    (h : restrictI j g d = some g') :
+    ∃ p, d.dout = some p ∧ insideB j d.din = true ∧
+      (insideLocB g'.fact p = true ∨ RExc g p g') ∧
+      (markSubB p.mark g'.fact.mark = true ∨ Invariant.AbsMark g.fact.mark) := by
+  obtain ⟨p, hdo, hin, hm, hc⟩ := restrictI_someM h
+  refine ⟨p, hdo, hin, restrictConcI_inside hc, ?_⟩
+  rcases mark_conc_or_abs g.fact.mark with ⟨t, ht⟩ | habs
+  · left
+    rw [restrictConcI_mark hc, ht, ← concMarkB_conc, ← ht]
+    exact hm
+  · exact Or.inr habs
+
+/-- The narrowing of one restriction for a CONCRETE conclusion mark: the result conclusion lies
+    inside `D-p` with its marks (`insideB`), except the cells of `RExc`, where its mark is still a
+    mark of `D-p`. -/
+theorem restrictI_narrow_conc {j : PFact} {g g' : AFact} {d : DemandEdge} {t : Mark}
+    (h : restrictI j g d = some g') (ht : g.fact.mark = .conc t) :
+    ∃ p, d.dout = some p ∧ insideB j d.din = true ∧
+      (insideB g'.fact p = true ∨ (RExc g p g' ∧ markSubB p.mark g'.fact.mark = true)) := by
+  obtain ⟨p, hdo, hin, hloc, hmk⟩ := restrictI_narrowM h
+  have hmk' : markSubB p.mark g'.fact.mark = true := by
+    rcases hmk with hmk | hab
+    · exact hmk
+    · exact absurd ht (Invariant.AbsMark.not_conc hab t)
+  refine ⟨p, hdo, hin, ?_⟩
+  rcases hloc with hl | hr
+  · exact Or.inl (insideB_intro hl hmk')
+  · exact Or.inr ⟨hr, hmk'⟩
+
 #print axioms restrictConcI_inside
 #print axioms restrictI_narrow
+#print axioms restrictI_narrowM
+#print axioms restrictI_narrow_conc
 
 /-- R5. THE NARROWING THEOREM (forward to backward). Every demand edge `d'` that a restricted run
     (publication `pubR dem`) hands off comes from a demand edge `d` of `dem` that published it,
@@ -760,9 +1011,61 @@ theorem demOfN_narrow {Pb : Program} {R : Obj → Prop} {demB : MethodId → Dem
   · obtain ⟨p, hdo, hin, hcon⟩ := restrictI_narrow hres
     exact Or.inr (Or.inr ⟨jb, gb, gb', d, p, hi, hz, he, hnc, hdem, hdo, hres, rfl, hin, hcon⟩)
 
+/-- R5, MARK-AWARE (F71). As `handF_narrow`: the exit pattern of `d'` (the premise `j`) lies
+    inside the entry pattern of `d` in its locations AND marks (`insideB`); the entry pattern of
+    `d'` (the piece `g'`) lies inside the exit pattern `p` of `d` in its locations (except `RExc`)
+    and in its marks (except an abstract conclusion mark). -/
+theorem handF_narrowM {P : Program} {R : Obj → Prop} {dem : MethodId → DemandEdge → Prop}
+    {m : MethodId} {d' : DemandEdge} (h : handF P R (pubR dem) m d') :
+    ∃ j g g' d p, R (.init m j) ∧ R (.edge m j (P.exit m) g) ∧ ¬ Cross j g ∧
+      dem m d ∧ d.dout = some p ∧ restrictI j g d = some g' ∧ d' = ⟨g'.fact, some j⟩ ∧
+      insideB j d.din = true ∧ (insideLocB g'.fact p = true ∨ RExc g p g') ∧
+      (markSubB p.mark g'.fact.mark = true ∨ Invariant.AbsMark g.fact.mark) := by
+  obtain ⟨j, g, g', hi, he, hnc, ⟨d, hdem, hres⟩, rfl⟩ := h
+  obtain ⟨p, hdo, hin, hcon, hmk⟩ := restrictI_narrowM hres
+  exact ⟨j, g, g', d, p, hi, he, hnc, hdem, hdo, hres, rfl, hin, hcon, hmk⟩
+
+/-- R5, MARK-AWARE, the location form: the exit locations of `d'` (with their marks) are entry
+    locations of `d` (with their marks); the entry locations of `d'` are exit locations of `d`
+    (except `RExc`), and the marks of the entry pattern of `d'` are marks of `D-p` (except an
+    abstract conclusion mark). -/
+theorem handF_narrow_locM {P : Program} {R : Obj → Prop} {dem : MethodId → DemandEdge → Prop}
+    {m : MethodId} {d' : DemandEdge} (h : handF P R (pubR dem) m d') :
+    ∃ j g g' d p, dem m d ∧ d.dout = some p ∧ d' = ⟨g'.fact, some j⟩ ∧
+      (∀ l, j.covers l → d.din.covers l) ∧
+      ((∀ l, g'.fact.coversLoc l → p.coversLoc l) ∨ RExc g p g') ∧
+      ((∀ x, g'.fact.mark.admits x → p.mark.admits x) ∨ Invariant.AbsMark g.fact.mark) := by
+  obtain ⟨j, g, g', d, p, _, _, _, hdem, hdo, _, hd', hin, hcon, hmk⟩ := handF_narrowM h
+  refine ⟨j, g, g', d, p, hdem, hdo, hd', fun l hl => insideB_covers hin hl, ?_, ?_⟩
+  · rcases hcon with hc | hc
+    · exact Or.inl (fun l hl => insideLoc_coversLoc hc hl)
+    · exact Or.inr hc
+  · rcases hmk with hc | hc
+    · exact Or.inl (fun x hx => CoreAux.markSubB_sound hc hx)
+    · exact Or.inr hc
+
+/-- R5 (backward to forward), MARK-AWARE (F71): `demOfN_narrow` with `insideB` and the mark part. -/
+theorem demOfN_narrowM {Pb : Program} {R : Obj → Prop} {demB : MethodId → DemandEdge → Prop}
+    {M : MethodId} {d' : DemandEdge} (h : demOfN Pb R (pubR demB) M d') :
+    d' = ⟨zeroFact, none⟩ ∨ (∃ g, R (.edge M zeroFact (Pb.exit M) g) ∧ d' = ⟨g.fact, none⟩) ∨
+    ∃ jb gb gb' d p, R (.init M jb) ∧ jb ≠ zeroFact ∧ R (.edge M jb (Pb.exit M) gb) ∧
+      ¬ CrossB jb gb ∧
+      demB M d ∧ d.dout = some p ∧ restrictI jb gb d = some gb' ∧ d' = ⟨gb'.fact, some jb⟩ ∧
+      insideB jb d.din = true ∧ (insideLocB gb'.fact p = true ∨ RExc gb p gb') ∧
+      (markSubB p.mark gb'.fact.mark = true ∨ Invariant.AbsMark gb.fact.mark) := by
+  rcases h with h1 | h2 | ⟨jb, gb, gb', hi, hz, he, hnc, ⟨d, hdem, hres⟩, rfl⟩
+  · exact Or.inl h1
+  · exact Or.inr (Or.inl h2)
+  · obtain ⟨p, hdo, hin, hcon, hmk⟩ := restrictI_narrowM hres
+    exact Or.inr (Or.inr ⟨jb, gb, gb', d, p, hi, hz, he, hnc, hdem, hdo, hres, rfl, hin, hcon,
+      hmk⟩)
+
 #print axioms handF_narrow
 #print axioms handF_narrow_loc
 #print axioms demOfN_narrow
+#print axioms handF_narrowM
+#print axioms handF_narrow_locM
+#print axioms demOfN_narrowM
 
 /-- In a restricted forward run with the mark-copying emission `emitM`, no exit edge has a `*`
     conclusion (every final fact has a concrete mark, and W2 gives a `*` tail only to an abstract
@@ -802,8 +1105,35 @@ theorem handF_narrow_DR {P : Program} {counted : Acc → Bool} {L : Nat}
   · exact Or.inr hc
   · exact absurd hk (DR_exit_not_star he e)
 
+/-- R5 for a restricted forward run with `emitM`, MARK-AWARE (F71). The run is concrete, so the
+    abstract-mark exception does not occur: the premise lies inside `D-c` with its marks, and the
+    piece lies inside `D-p` with its marks, except the `[any]` cell, where its mark is still a
+    mark of `D-p`. -/
+theorem handF_narrow_DRM {P : Program} {counted : Acc → Bool} {L : Nat}
+    {demand dem : MethodId → DemandEdge → Prop} {sat : PFact → PFact → Bool}
+    {restrict : PFact → AFact → DemandEdge → Option AFact} {recs : Recs}
+    {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
+    {m : MethodId} {d' : DemandEdge}
+    (h : handF P (DR P counted L demand emitM sat restrict recs sinks roots) (pubR dem) m d') :
+    ∃ j g g' d p, DR P counted L demand emitM sat restrict recs sinks roots (.init m j) ∧
+      dem m d ∧ d.dout = some p ∧ restrictI j g d = some g' ∧ d' = ⟨g'.fact, some j⟩ ∧
+      insideB j d.din = true ∧
+      (insideB g'.fact p = true ∨
+       ((g.fact.kind = .any ∧ (∃ E, p.kind = .star E) ∧
+         g'.fact = ⟨g.fact.base, p.path, .any, g.fact.mark⟩ ∧ g'.demand = g.demand) ∧
+        markSubB p.mark g'.fact.mark = true)) := by
+  obtain ⟨j, g, g', hi, he, _, ⟨d, hdem, hres⟩, rfl⟩ := h
+  obtain ⟨_, t, ht⟩ := RExact.DR_concrete RCore.emitM_copies he
+  obtain ⟨p, hdo, hin, hcon⟩ := restrictI_narrow_conc hres ht
+  refine ⟨j, g, g', d, p, hi, hdem, hdo, hres, rfl, hin, ?_⟩
+  rcases hcon with hc | ⟨hc | ⟨⟨e, hk⟩, _⟩, hmk⟩
+  · exact Or.inl hc
+  · exact Or.inr ⟨hc, hmk⟩
+  · exact absurd hk (DR_exit_not_star he e)
+
 #print axioms DR_exit_not_star
 #print axioms handF_narrow_DR
+#print axioms handF_narrow_DRM
 
 /-! ### When the narrowing is exact
 
@@ -954,8 +1284,27 @@ theorem handF_narrow_DR_exact {P : Program} {counted : Acc → Bool} {L : Nat}
   · exact hc
   · exact absurd hE (hdout m d p hdem hdo E)
 
+/-- THE EXACT NARROWING, MARK-AWARE (F71): as `handF_narrow_DR_exact`, with the marks. Every
+    handed-off demand edge lies inside the reversal of the demand edge that published it, in
+    its locations AND its marks, with no exception. -/
+theorem handF_narrow_DR_exactM {P : Program} {counted : Acc → Bool} {L : Nat}
+    {demand dem : MethodId → DemandEdge → Prop} {sat : PFact → PFact → Bool}
+    {restrict : PFact → AFact → DemandEdge → Option AFact} {recs : Recs}
+    {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
+    (hdout : ∀ m d p, dem m d → d.dout = some p → NoStarK p.kind)
+    {m : MethodId} {d' : DemandEdge}
+    (h : handF P (DR P counted L demand emitM sat restrict recs sinks roots) (pubR dem) m d') :
+    ∃ (j : PFact) (g' : AFact) (d : DemandEdge) (p : PFact), dem m d ∧ d.dout = some p ∧
+      d' = ⟨g'.fact, some j⟩ ∧ insideB j d.din = true ∧ insideB g'.fact p = true := by
+  obtain ⟨j, g, g', d, p, _, hdem, hdo, _, hd', hin, hcon⟩ := handF_narrow_DRM h
+  refine ⟨j, g', d, p, hdem, hdo, hd', hin, ?_⟩
+  rcases hcon with hc | ⟨⟨_, ⟨E, hE⟩, _, _⟩, _⟩
+  · exact hc
+  · exact absurd hE (hdout m d p hdem hdo E)
+
 #print axioms handF_DR_nonstar
 #print axioms handF_narrow_DR_exact
+#print axioms handF_narrow_DR_exactM
 
 /-! ## 7. R6: vectors (namespace `RVec`) -/
 
@@ -1078,6 +1427,130 @@ theorem row_apart : restrictConcI (cA [1]) (pA [2]) = none := by decide
 #print axioms row_above_exact
 #print axioms row_apart
 
+/-! ### The mark tests (F71)
+
+  Bases: `x = 1`, `ret = 4`; the accessor `f = 4`; the marks `T = 1`, `U = 2`. -/
+
+/-- THE USER'S EXAMPLE: the edge `(x,.,$,T) → (ret,.f,$,T)` and the demand edge with
+    `D-c = (x,.,$,T)` and `D-p = (ret,.f,$,U)`. The conclusion has the mark `T`, the demand
+    the mark `U`: the mark-aware restriction gives nothing; `restrictU` (and the location-only
+    test before F71: the locations match) keeps the edge. -/
+def mJ : PFact := ⟨1, [], .exact, .conc 1⟩
+def mG : AFact := ⟨⟨4, [4], .exact, .conc 1⟩, false⟩
+def mD : DemandEdge := ⟨⟨1, [], .exact, .conc 1⟩, some ⟨4, [4], .exact, .conc 2⟩⟩
+
+theorem vMark_user_inside : insideB mJ mD.din = true := by decide
+theorem vMark_user_concMark : concMarkB (.conc 2) mG.fact.mark = false := by decide
+theorem vMark_user_restrictI : restrictI mJ mG mD = none := by decide
+theorem vMark_user_restrictU : restrictU mJ mG mD = some mG := by decide
+/-- The locations alone match (the test before F71 kept the edge). -/
+theorem vMark_user_loc :
+    insideLocB mJ mD.din = true ∧ restrictConcI mG ⟨4, [4], .exact, .conc 2⟩ = some mG := by
+  decide
+/-- The same edge with `D-p = (ret,.f,$,T)`: kept. -/
+theorem vMark_user_same :
+    restrictI mJ mG ⟨mD.din, some ⟨4, [4], .exact, .conc 1⟩⟩ = some mG := by decide
+
+/-- A premise mark that `D-c` does not admit: the premise `(x,.,$,T)` and `D-c = (x,.,$,U)`. The
+    premise lies inside `D-c` in its locations, not in its marks: nothing. -/
+def mDc : DemandEdge := ⟨⟨1, [], .exact, .conc 2⟩, some ⟨4, [4], .exact, .conc 1⟩⟩
+
+theorem vMark_prem_loc : insideLocB mJ mDc.din = true := by decide
+theorem vMark_prem_inside : insideB mJ mDc.din = false := by decide
+theorem vMark_prem_restrictI : restrictI mJ mG mDc = none := by decide
+
+/-- THE `*∖x` CELLS, entry side: `D-c = (x,.,$,*∖[T])`. A premise with the mark `T` is not inside
+    (nothing); a premise with the mark `U` is inside (kept). -/
+def mDx : DemandEdge := ⟨⟨1, [], .exact, .starEx [1]⟩, some ⟨4, [4], .exact, .star⟩⟩
+def mJU : PFact := ⟨1, [], .exact, .conc 2⟩
+def mGU : AFact := ⟨⟨4, [4], .exact, .conc 2⟩, false⟩
+
+theorem vMark_inStarEx_T : insideB mJ mDx.din = false ∧ restrictI mJ mG mDx = none := by decide
+theorem vMark_inStarEx_U : insideB mJU mDx.din = true ∧ restrictI mJU mGU mDx = some mGU := by
+  decide
+
+/-- THE `*∖x` CELLS, exit side: `D-p = (ret,.f,$,*∖[T])`. A conclusion with the mark `T` does not
+    meet it (nothing); a conclusion with the mark `U` meets it (kept). -/
+def mDpx : DemandEdge := ⟨⟨1, [], .exact, .star⟩, some ⟨4, [4], .exact, .starEx [1]⟩⟩
+
+theorem vMark_outStarEx_T : restrictI mJ mG mDpx = none := by decide
+theorem vMark_outStarEx_U : restrictI mJU mGU mDpx = some mGU := by decide
+
+/-- THE ABSTRACT-MARK EXCEPTION (of `restrictI_interM`) is real: the edge `(x,.,$,*) → (ret,.,$,*)`
+    and `D-p = (ret,.,$,U)`. The mark test keeps the edge (an abstract conclusion mark meets
+    every mark); the pair `(x,T) → (ret,T)` is in the result, but its exit location has the mark
+    `T`, not a mark of `D-p`. The location part holds. -/
+def maJ : PFact := ⟨1, [], .exact, .star⟩
+def maG : AFact := ⟨⟨4, [], .exact, .star⟩, false⟩
+def maP : PFact := ⟨4, [], .exact, .conc 2⟩
+def maD : DemandEdge := ⟨⟨1, [], .exact, .star⟩, some maP⟩
+
+theorem inter_exc_absmark :
+    restrictI maJ maG maD = some maG ∧ den maJ maG.fact ⟨1, [], 1⟩ ⟨4, [], 1⟩ ∧
+      maP.coversLoc ⟨4, [], 1⟩ ∧ ¬ maP.covers ⟨4, [], 1⟩ := by
+  refine ⟨by decide, ⟨rfl, rfl, trivial, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩,
+    ⟨rfl, [], rfl, rfl⟩, ?_⟩
+  intro ⟨_, _, hm⟩
+  have h : (1 : Mark) = 2 := hm
+  exact absurd h (by decide)
+
+/-- The emission test before F71: `*∖x` counted as `*` (a copy of the old `markMatchB`). -/
+def markMatchB70 : MarkA → MarkA → Bool
+  | .star,     _         => true
+  | .conc t,   .conc t'  => Nat.beq t t'
+  | .conc _,   .star     => false
+  | .conc _,   .starEx _ => false
+  | .starEx _, _         => true
+
+/-- The emission before F71 (`emitM` with `markMatchB70`). -/
+def emitM70 (d a : PFact) : Option PFact :=
+  if Nat.beq d.base a.base && markMatchB70 d.mark a.mark then
+    match relate d.path a.path with
+    | .below [] => some ⟨a.base, a.path, meetK a.kind d.kind, a.mark⟩
+    | .below r  => if admitsTailB d.kind r then some a else none
+    | .above r  => if admitsTailB a.kind r then some ⟨d.base, d.path, d.kind, a.mark⟩ else none
+    | .apart    => none
+  else none
+
+/-- THE EMISSION VECTOR: the entry pattern `(x,.,$,*∖[T])` and an added fact `(x,.,$,T)`. The
+    emission gives nothing (the mark `T` is excluded); before F71 it gave the premise `(x,.,$,T)`.
+    An added fact `(x,.,$,U)` gives the premise `(x,.,$,U)`, which lies inside the entry pattern
+    with its mark. -/
+def eD : PFact := ⟨1, [], .exact, .starEx [1]⟩
+def eA : PFact := ⟨1, [], .exact, .conc 1⟩
+def eAU : PFact := ⟨1, [], .exact, .conc 2⟩
+
+theorem vEmit_starEx_T : emitM eD eA = none := by decide
+theorem vEmit_starEx_T_pre70 : emitM70 eD eA = some eA := by decide
+theorem vEmit_starEx_U : emitM eD eAU = some eAU ∧ insideB eAU eD = true := by decide
+
+/-- A remark on `emitM_insideB` (it needs a CONCRETE added fact): an abstract added fact `(x,.,$,*)`
+    passes the emission test of `*∖[T]` (`markMatchB (*∖x) * = true`), but the premise is not
+    inside the entry pattern in its marks (`markSubB (*∖[T]) * = false`). A restricted run has no
+    abstract added fact (`RExact.DR_concrete`). -/
+theorem vEmit_abstract :
+    emitM eD ⟨1, [], .exact, .star⟩ = some ⟨1, [], .exact, .star⟩ ∧
+      insideB ⟨1, [], .exact, .star⟩ eD = false := by decide
+
+#print axioms vMark_user_inside
+#print axioms vMark_user_concMark
+#print axioms vMark_user_restrictI
+#print axioms vMark_user_restrictU
+#print axioms vMark_user_loc
+#print axioms vMark_user_same
+#print axioms vMark_prem_loc
+#print axioms vMark_prem_inside
+#print axioms vMark_prem_restrictI
+#print axioms vMark_inStarEx_T
+#print axioms vMark_inStarEx_U
+#print axioms vMark_outStarEx_T
+#print axioms vMark_outStarEx_U
+#print axioms inter_exc_absmark
+#print axioms vEmit_starEx_T
+#print axioms vEmit_starEx_T_pre70
+#print axioms vEmit_starEx_U
+#print axioms vEmit_abstract
+
 end RVec
 
 /-- So the contract of the earlier restrictions (`RestrictContract`: the entry location only in
@@ -1096,5 +1569,25 @@ theorem restrictI_not_RestrictContract : ¬ RestrictContract restrictI := by
   cases hg'
 
 #print axioms restrictI_not_RestrictContract
+
+/-- CEGAR (F71): the location form of the contract C5 (the premise inside `D-c` in its locations,
+    the exit location in `D-p` in its locations, marks ignored) is FALSE for the mark-aware
+    restriction. The user's example: the pair `(x,T) → (ret.f,T)` has its exit location in the
+    locations of `D-p = (ret,.f,$,U)`, but not its mark; `restrictI` gives nothing. So
+    `restrictI_contract` takes `insideB` and `p.covers l2` (the exit location WITH its mark). -/
+theorem restrictI_contract_loc_false :
+    ¬ (∀ (j : PFact) (g : AFact) (d : DemandEdge) (p : PFact) (l1 l2 : Loc),
+        insideLocB j d.din = true → den j g.fact l1 l2 → d.dout = some p → p.coversLoc l2 →
+        ∃ g', restrictI j g d = some g' ∧ den j g'.fact l1 l2 ∧ g'.demand = g.demand) := by
+  intro h
+  have hden : den RVec.mJ RVec.mG.fact ⟨1, [], 1⟩ ⟨4, [4], 1⟩ :=
+    ⟨rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl⟩
+  have hp : (⟨4, [4], .exact, .conc 2⟩ : PFact).coversLoc ⟨4, [4], 1⟩ := ⟨rfl, [], rfl, rfl⟩
+  obtain ⟨g', hg', _, _⟩ :=
+    h RVec.mJ RVec.mG RVec.mD _ _ _ RVec.vMark_user_loc.1 hden rfl hp
+  rw [RVec.vMark_user_restrictI] at hg'
+  cases hg'
+
+#print axioms restrictI_contract_loc_false
 
 end ApSpec.Handoff

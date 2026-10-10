@@ -4,8 +4,10 @@
 
   `restrictX` (`AnyTaintExDefs.lean`) keeps the premise whole if it OVERLAPS `D-c`, and keeps the
   whole conclusion at the path of `D-p`. `restrictIX` is the intersection:
-    * the premise `(j, jex)` must lie INSIDE `D-c` (`insideLocXB`: locations, marks ignored, the
-      premise exclusion read; an emitted premise lies inside its entry pattern, `emitX_inside`);
+    * the premise `(j, jex)` must lie INSIDE `D-c` (`insideXB`: `insideLocXB` on the locations,
+      the premise exclusion read, and the marks, F71; an emitted premise of a concrete added fact
+      lies inside its entry pattern, `emitX_inside`, `emitX_insideXB`);
+    * the conclusion mark must meet the mark of `D-p` (`concMarkB`, F71);
     * at the path of `D-p` the conclusion tail is met with the tail of `D-p` (`meetConcK` for the
       tail, `meetExX` for the exclusion):
         `[any]` (demand) ∩ `$` = `$`,           `[any-taint]/E` ∩ `$` = `$`,
@@ -40,6 +42,13 @@
                               result with its exclusion lies inside `D-p`, the premise with its
                               exclusion inside `D-c`). `pubRX`, `handF_narrowX`: the narrowing of
                               the forward hand-off read on the forgotten view.
+    MARK-AWARE (F71, the user, 2026-10-10): `restrictIX` has the SAME mark tests as
+    `Handoff.restrictI`: the premise inside `D-c` in its marks too (`insideXB` = `insideLocXB`
+    and `markSubB`), the conclusion mark meets the mark of `D-p` (`concMarkB`). So
+    `restrictIX_contract` takes `insideXB` and `p.covers l2` (the location form is false,
+    `XVec.restrictIX_contract_loc_false`); `emitX_insideXB` (a concrete added fact);
+    `restrictIX_interM`, `restrictIX_inter_conc`, `restrictIX_narrowM`, `handF_narrowXM`,
+    `handF_narrowX_DRXM` (the marks narrow too); the location forms stay; vectors `XVec.vM_*`.
     X5 vectors (`decide`, namespace `XVec`): the §6.4 example in X form, the cell
                               `[any-taint]/E ∩ */E2`, the cell above a `*/E2` exit pattern (and the
                               old cell of `restrictConcX` there is not the intersection,
@@ -98,13 +107,22 @@ def restrictConcIX (sc : XFact) (dout : PFact) : Option XFact :=
     | .above r        => if sc.ex.admits r then some (normX ⟨g', chainExX dout.kind⟩) else none
     | .apart          => none
 
-/-- THE RESTRICTION OF `ap.md` §6.4 AS AN INTERSECTION, WITH THE EXCLUSION. No `D-p`: no result.
-    The premise `(sp, spex)` must lie INSIDE `D-c` (`insideLocXB`). The conclusion is
-    `restrictConcIX`. The layer stays. -/
+/-- The premise `(j, jex)` lies INSIDE the pattern `d` in its locations (with its exclusion,
+    `insideLocXB`) AND in its marks (`markSubB d.mark j.mark`): the X form of
+    `Handoff.insideB` (decision F71, the mark-aware restriction). -/
+def insideXB (j : PFact) (jex : Excl) (d : PFact) : Bool :=
+  insideLocXB j jex d && markSubB d.mark j.mark
+
+/-- THE RESTRICTION OF `ap.md` §6.4 AS AN INTERSECTION, WITH THE EXCLUSION, MARK-AWARE (F71). No
+    `D-p`: no result. The premise `(sp, spex)` must lie INSIDE `D-c` in its locations and marks
+    (`insideXB`), and the conclusion mark must meet the mark of `D-p` (`concMarkB`): the SAME mark
+    tests as `Handoff.restrictI`. The conclusion is `restrictConcIX`. The layer stays. -/
 def restrictIX (sp : PFact) (spex : Excl) (sc : XFact) (d : DemandEdge) : Option XFact :=
   match d.dout with
   | none   => none
-  | some p => if insideLocXB sp spex d.din then restrictConcIX sc p else none
+  | some p =>
+    if insideXB sp spex d.din && concMarkB p.mark sc.af.fact.mark then restrictConcIX sc p
+    else none
 
 /-! ## 2. Small lemmas -/
 
@@ -296,8 +314,44 @@ theorem insideLocXB_of_base {j d : PFact} (jex : Excl) (h : insideLocB j d = tru
     | nil => exact tailSubB_subB hm jex
     | cons x r => exact hm
 
+/-- The two parts of `insideXB`: the locations and the marks. -/
+theorem insideXB_loc {j d : PFact} {jex : Excl} (h : insideXB j jex d = true) :
+    insideLocXB j jex d = true := by
+  unfold insideXB at h
+  rw [Bool.and_eq_true] at h
+  exact h.1
+
+theorem insideXB_mark {j d : PFact} {jex : Excl} (h : insideXB j jex d = true) :
+    markSubB d.mark j.mark = true := by
+  unfold insideXB at h
+  rw [Bool.and_eq_true] at h
+  exact h.2
+
+theorem insideXB_intro {j d : PFact} {jex : Excl} (h1 : insideLocXB j jex d = true)
+    (h2 : markSubB d.mark j.mark = true) : insideXB j jex d = true := by
+  unfold insideXB
+  rw [h1, h2]
+  rfl
+
+/-- `insideB` (no exclusion read) implies `insideXB` for every premise exclusion. -/
+theorem insideXB_of_base {j d : PFact} (jex : Excl) (h : insideB j d = true) :
+    insideXB j jex d = true :=
+  insideXB_intro (insideLocXB_of_base jex (insideB_loc h)) (insideB_mark h)
+
+/-- The location-and-mark form of `insideXB`: every admitted location of the premise (with its
+    exclusion) that has a mark of the premise is a location of `d` with a mark of `d`. -/
+theorem insideXB_sound {j d : PFact} {jex : Excl} {l : Loc} (h : insideXB j jex d = true)
+    (hj : AnyTaintExCov.CovLocX j jex l) (hm : j.mark.admits l.mark) : d.covers l := by
+  have hd := insideLocXB_sound (insideXB_loc h) hj
+  exact ⟨hd.1, hd.2, CoreAux.markSubB_sound (insideXB_mark h) hm⟩
+
 #print axioms insideLocXB_sound
 #print axioms insideLocXB_of_base
+#print axioms insideXB_loc
+#print axioms insideXB_mark
+#print axioms insideXB_intro
+#print axioms insideXB_of_base
+#print axioms insideXB_sound
 
 /-! ## 4. X3: an emitted premise lies inside its entry pattern -/
 
@@ -329,9 +383,16 @@ theorem emitX_inside {d a j : PFact} {aex jex : Excl} (h : emitX d a aex = some 
     insideLocXB j jex d = true :=
   insideLocXB_of_base jex (emitX_inside_base h)
 
+/-- X3, MARK-AWARE (F71): the premise that `emitX` emits from a CONCRETE added fact lies inside its
+    entry pattern in its locations (with its exclusion) AND its marks. -/
+theorem emitX_insideXB {d a j : PFact} {aex jex : Excl} {t : Mark}
+    (h : emitX d a aex = some (j, jex)) (ha : a.mark = .conc t) : insideXB j jex d = true :=
+  insideXB_of_base jex (emitM_insideB (emitX_emitM h) ha).1
+
 #print axioms emitX_emitM
 #print axioms emitX_inside_base
 #print axioms emitX_inside
+#print axioms emitX_insideXB
 
 /-! ## 5. The cells of `restrictConcIX` and `restrictIX` -/
 
@@ -403,30 +464,49 @@ theorem restrictConcIX_cases {sc g' : XFact} {p : PFact} (h : restrictConcIX sc 
             rw [hx, if_pos rfl] at h
             exact Or.inr (Or.inr (Or.inr ⟨r, e, hP, hr0, rfl, he, hx, (Option.some.inj h).symm⟩))
 
-/-- A result of `restrictIX`: the demand edge has an exit pattern, the premise lies inside the
-    entry pattern, and the conclusion is the result of `restrictConcIX`. -/
-theorem restrictIX_some {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
+/-- A result of `restrictIX`, MARK-AWARE (F71): the demand edge has an exit pattern, the premise
+    lies inside the entry pattern in its locations and its marks, the conclusion mark passes the
+    mark test of `D-p`, and the conclusion is the result of `restrictConcIX`. -/
+theorem restrictIX_someM {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
     (h : restrictIX j jex g d = some g') :
-    ∃ p, d.dout = some p ∧ insideLocXB j jex d.din = true ∧ restrictConcIX g p = some g' := by
+    ∃ p, d.dout = some p ∧ insideXB j jex d.din = true ∧
+      concMarkB p.mark g.af.fact.mark = true ∧ restrictConcIX g p = some g' := by
   unfold restrictIX at h
   cases hd : d.dout with
   | none => rw [hd] at h; cases h
   | some p =>
     rw [hd] at h
     dsimp only at h
-    cases hi : insideLocXB j jex d.din with
-    | false => rw [hi, if_neg Bool.false_ne_true] at h; cases h
-    | true => rw [hi, if_pos rfl] at h; exact ⟨p, rfl, rfl, h⟩
+    cases hi : insideXB j jex d.din with
+    | false => rw [hi, Bool.false_and, if_neg Bool.false_ne_true] at h; cases h
+    | true =>
+      cases hc : concMarkB p.mark g.af.fact.mark with
+      | false => rw [hi, hc, Bool.true_and, if_neg Bool.false_ne_true] at h; cases h
+      | true => rw [hi, hc, Bool.true_and, if_pos rfl] at h; exact ⟨p, rfl, rfl, hc, h⟩
 
+/-- A result of `restrictIX`, the location form: the demand edge has an exit pattern, the premise
+    lies inside the entry pattern (locations, with its exclusion), and the conclusion is the result
+    of `restrictConcIX`. -/
+theorem restrictIX_some {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
+    (h : restrictIX j jex g d = some g') :
+    ∃ p, d.dout = some p ∧ insideLocXB j jex d.din = true ∧ restrictConcIX g p = some g' := by
+  obtain ⟨p, hd, hi, _, hc⟩ := restrictIX_someM h
+  exact ⟨p, hd, insideXB_loc hi, hc⟩
+
+/-- With an exit pattern, a premise inside `D-c` (locations and marks) and a conclusion mark that
+    passes the mark test, `restrictIX` is `restrictConcIX`. -/
 theorem restrictIX_of {j : PFact} {jex : Excl} {g : XFact} {d : DemandEdge} {p : PFact}
-    (hd : d.dout = some p) (hi : insideLocXB j jex d.din = true) :
+    (hd : d.dout = some p) (hi : insideXB j jex d.din = true)
+    (hm : concMarkB p.mark g.af.fact.mark = true) :
     restrictIX j jex g d = restrictConcIX g p := by
   unfold restrictIX
   rw [hd]
   dsimp only
-  rw [if_pos hi]
+  rw [hi, hm]
+  rfl
 
 #print axioms restrictConcIX_cases
+#print axioms restrictIX_someM
 #print axioms restrictIX_some
 #print axioms restrictIX_of
 
@@ -456,16 +536,23 @@ theorem restrictConcIX_fact {sc g' : XFact} {p : PFact} (h : restrictConcIX sc p
 
 /-- On the forgotten view, `restrictIX` is the base intersection `restrictI` of `HandoffDefs.lean`
     for a premise that lies inside `D-c` with no exclusion read (`insideLocB`; e.g. every premise
-    with `jex = {}`): the same result fact, in the same layer. -/
+    with `jex = {}`): the same result fact, in the same layer. Both restrictions have the same mark
+    tests (F71), so the marks of a result of `restrictIX` pass the tests of `restrictI`. -/
 theorem restrictIX_restrictI {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
     (hin : insideLocB j d.din = true) (h : restrictIX j jex g d = some g') :
     restrictI j g.af d = some g'.af := by
-  obtain ⟨p, hdo, _, hc⟩ := restrictIX_some h
-  rw [restrictI_of hdo hin]
+  obtain ⟨p, hdo, hix, hcm, hc⟩ := restrictIX_someM h
+  rw [restrictI_of hdo (insideB_intro hin (insideXB_mark hix)) hcm]
   exact restrictConcIX_fact hc
+
+/-- `restrictConcIX` keeps the mark of the conclusion. -/
+theorem restrictConcIX_mark {sc g' : XFact} {p : PFact} (h : restrictConcIX sc p = some g') :
+    g'.af.fact.mark = sc.af.fact.mark :=
+  restrictConcI_mark (restrictConcIX_fact h)
 
 #print axioms restrictConcIX_fact
 #print axioms restrictIX_restrictI
+#print axioms restrictConcIX_mark
 
 /-! ## 6. X1: the restriction only removes pairs, in normal form -/
 
@@ -676,24 +763,25 @@ theorem restrictConcIX_contract {j : PFact} {jex : Excl} {g : XFact} {p : PFact}
       | nil => exact hr rfl
       | cons x r' => exact List.cons_ne_nil x (r' ++ σ') hτ.symm
 
-/-- X2. THE CONTRACT C5 OF THE INTERSECTION WITH THE EXCLUSION: if the premise (with its
-    exclusion) lies inside `D-c`, every pair of the edge (exclusions read) whose exit location `D-p`
-    covers stays, in the same layer. For EVERY conclusion (also `*`). -/
+/-- X2. THE CONTRACT C5 OF THE INTERSECTION WITH THE EXCLUSION, MARK-AWARE (F71): if the premise
+    (with its exclusion) lies inside `D-c` in its locations and marks (`insideXB`), every pair of
+    the edge (exclusions read) whose exit location (with its mark) `D-p` covers stays, in the same
+    layer. For EVERY conclusion (also `*`); the mark test by `concMarkB_of_den`. -/
 theorem restrictIX_contract {j : PFact} {jex : Excl} {g : XFact} {d : DemandEdge} {p : PFact}
-    {l1 l2 : Loc} (hin : insideLocXB j jex d.din = true) (hden : denX j jex g.af.fact g.ex l1 l2)
-    (hdout : d.dout = some p) (hp : p.coversLoc l2) :
+    {l1 l2 : Loc} (hin : insideXB j jex d.din = true) (hden : denX j jex g.af.fact g.ex l1 l2)
+    (hdout : d.dout = some p) (hp : p.covers l2) :
     ∃ g', restrictIX j jex g d = some g' ∧ denX j jex g'.af.fact g'.ex l1 l2 ∧
       g'.af.demand = g.af.demand := by
-  rw [restrictIX_of hdout hin]
-  exact restrictConcIX_contract hden hp
+  rw [restrictIX_of hdout hin (RAux.concMarkB_of_den (denX_den hden) hp.2.2)]
+  exact restrictConcIX_contract hden (RCore.covers_coversLoc hp)
 
-/-- X2 from the base inside test (`insideLocB`, the form of `emitX_inside_base`). -/
+/-- X2 from the base inside test (`insideB`, the form of `emitM_insideB`). -/
 theorem restrictIX_contract_base {j : PFact} {jex : Excl} {g : XFact} {d : DemandEdge}
-    {p : PFact} {l1 l2 : Loc} (hin : insideLocB j d.din = true)
-    (hden : denX j jex g.af.fact g.ex l1 l2) (hdout : d.dout = some p) (hp : p.coversLoc l2) :
+    {p : PFact} {l1 l2 : Loc} (hin : insideB j d.din = true)
+    (hden : denX j jex g.af.fact g.ex l1 l2) (hdout : d.dout = some p) (hp : p.covers l2) :
     ∃ g', restrictIX j jex g d = some g' ∧ denX j jex g'.af.fact g'.ex l1 l2 ∧
       g'.af.demand = g.af.demand :=
-  restrictIX_contract (insideLocXB_of_base jex hin) hden hdout hp
+  restrictIX_contract (insideXB_of_base jex hin) hden hdout hp
 
 #print axioms restrictConcIX_contract
 #print axioms restrictIX_contract
@@ -872,8 +960,40 @@ theorem restrictIX_inter {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge
   obtain ⟨hb1, _, _, _, _, σ, _, hp1, _, hti, _, hjex, _⟩ := hd0
   exact ⟨insideLocXB_sound hin ⟨hb1, σ, hp1, hti, hjex⟩, p, hdo, restrictConcIX_exit hc hd⟩
 
+/-- X4, MARK-AWARE (F71). Every pair of a result of `restrictIX` (exclusions read) has its entry
+    location WITH its mark in `D-c`, and its exit location in `D-p` (except `RExcX`) with a mark of
+    `D-p` (except an abstract conclusion mark). -/
+theorem restrictIX_interM {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
+    (h : restrictIX j jex g d = some g') {l1 l2 : Loc} (hd : denX j jex g'.af.fact g'.ex l1 l2) :
+    d.din.covers l1 ∧ ∃ p, d.dout = some p ∧ (p.coversLoc l2 ∨ RExcX g p g') ∧
+      (p.mark.admits l2.mark ∨ Invariant.AbsMark g.af.fact.mark) := by
+  obtain ⟨p, hdo, hin, hm, hc⟩ := restrictIX_someM h
+  have hd0 := hd
+  obtain ⟨hb1, _, hm1, _, _, σ, _, hp1, _, hti, _, hjex, _⟩ := hd0
+  exact ⟨insideXB_sound hin ⟨hb1, σ, hp1, hti, hjex⟩ hm1, p, hdo, restrictConcIX_exit hc hd,
+    restrictI_exit_mark hm (restrictConcIX_fact hc) (denX_den hd)⟩
+
+/-- X4 for a CONCRETE conclusion mark (every exit edge of a restricted run): the exit location has
+    its mark in `D-p`, also in the cells of `RExcX`. -/
+theorem restrictIX_inter_conc {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge} {t : Mark}
+    (h : restrictIX j jex g d = some g') (ht : g.af.fact.mark = .conc t) {l1 l2 : Loc}
+    (hd : denX j jex g'.af.fact g'.ex l1 l2) :
+    d.din.covers l1 ∧ ∃ p, d.dout = some p ∧
+      (p.covers l2 ∨ (RExcX g p g' ∧ p.mark.admits l2.mark)) := by
+  obtain ⟨hin, p, hdo, hloc, hmk⟩ := restrictIX_interM h hd
+  have hmk' : p.mark.admits l2.mark := by
+    rcases hmk with hmk | hab
+    · exact hmk
+    · exact absurd ht (Invariant.AbsMark.not_conc hab t)
+  refine ⟨hin, p, hdo, ?_⟩
+  rcases hloc with hl | hr
+  · exact Or.inl ⟨hl.1, hl.2, hmk'⟩
+  · exact Or.inr ⟨hr, hmk'⟩
+
 #print axioms restrictConcIX_exit
 #print axioms restrictIX_inter
+#print axioms restrictIX_interM
+#print axioms restrictIX_inter_conc
 
 /-! ### The pattern form: the result lies inside `D-p` -/
 
@@ -987,8 +1107,25 @@ theorem restrictIX_narrow {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdg
   obtain ⟨p, hdo, hin, hc⟩ := restrictIX_some h
   exact ⟨p, hdo, hin, restrictConcIX_inside hc⟩
 
+/-- X4, THE PATTERN FORM, MARK-AWARE (F71): the premise lies inside `D-c` with its exclusion AND
+    its marks; the result lies inside `D-p` with its exclusion (except `RExcX`) and its marks
+    (except an abstract conclusion mark). -/
+theorem restrictIX_narrowM {j : PFact} {jex : Excl} {g g' : XFact} {d : DemandEdge}
+    (h : restrictIX j jex g d = some g') :
+    ∃ p, d.dout = some p ∧ insideXB j jex d.din = true ∧
+      (insideLocXB g'.af.fact g'.ex p = true ∨ RExcX g p g') ∧
+      (markSubB p.mark g'.af.fact.mark = true ∨ Invariant.AbsMark g.af.fact.mark) := by
+  obtain ⟨p, hdo, hin, hm, hc⟩ := restrictIX_someM h
+  refine ⟨p, hdo, hin, restrictConcIX_inside hc, ?_⟩
+  rcases RAux.mark_conc_or_abs g.af.fact.mark with ⟨t, ht⟩ | habs
+  · left
+    rw [restrictConcIX_mark hc, ht, ← RAux.concMarkB_conc, ← ht]
+    exact hm
+  · exact Or.inr habs
+
 #print axioms restrictConcIX_inside
 #print axioms restrictIX_narrow
+#print axioms restrictIX_narrowM
 
 /-! ### The narrowing of the forward hand-off, read on the forgotten view -/
 
@@ -1066,8 +1203,66 @@ theorem handF_narrowX_DRX {P : Program} {taint : TaintEdges} {counted : Acc → 
     · rw [hk] at hns
       exact absurd hns (fun h' => Bool.noConfusion h')
 
+/-- X4, THE NARROWING OF THE FORWARD HAND-OFF, MARK-AWARE (F71): as `handF_narrowX`, with the
+    marks: the premise lies inside `D-c` with its exclusion and its marks (`insideXB`), the piece
+    lies inside `D-p` with its exclusion (except `RExcX`) and its marks (except an abstract
+    conclusion mark). -/
+theorem handF_narrowXM {P : Program} {R : XObj → Prop} {dem : MethodId → DemandEdge → Prop}
+    {m : MethodId} {d' : DemandEdge}
+    (h : handF P (AnyTaintExCov.forgetX R) (pubRX P R dem) m d') :
+    ∃ j mj jex gx g' gex' d p, R (.edge m j mj jex (P.exit m) gx) ∧ dem m d ∧
+      d.dout = some p ∧ restrictIX j jex gx d = some ⟨g', gex'⟩ ∧ d' = ⟨g'.fact, some j⟩ ∧
+      insideXB j jex d.din = true ∧
+      (insideLocXB g'.fact gex' p = true ∨ RExcX gx p ⟨g', gex'⟩) ∧
+      (markSubB p.mark g'.fact.mark = true ∨ Invariant.AbsMark gx.af.fact.mark) := by
+  obtain ⟨j, g, g'', _, _, _, ⟨mj, jex, gex, gex', d, hR, hdem, hres⟩, hd'⟩ := h
+  obtain ⟨p, hdo, hin, hcon, hmk⟩ := restrictIX_narrowM hres
+  exact ⟨j, mj, jex, ⟨g, gex⟩, g'', gex', d, p, hR, hdem, hdo, hres, hd', hin, hcon, hmk⟩
+
+/-- The narrowing for a restricted run with the exclusion, MARK-AWARE (F71): every conclusion has a
+    concrete mark (`AnyTaintExCov.concX_all`), so the abstract-mark exception does not occur; the
+    premise and the piece lie inside `D-c` and `D-p` with their marks (`insideXB`), except the cell
+    (a) of `RExcX` on a DEMAND-LAYER `[any]` piece, where the mark of the piece is still a mark of
+    `D-p`. -/
+theorem handF_narrowX_DRXM {P : Program} {taint : TaintEdges} {counted : Acc → Bool} {L : Nat}
+    {dem : MethodId → DemandEdge → Prop} {emit : PFact → PFact → Excl → Option (PFact × Excl)}
+    {sat : PFact → Excl → PFact → Excl → Bool}
+    {recs : MethodId → PFact × Bool × Excl × XFact → Prop}
+    {sinks : List (MethodId × Node × PFact)} {roots : List MethodId}
+    (hem : EmitCopiesMarkX emit) {m : MethodId} {d' : DemandEdge}
+    (h : handF P (AnyTaintExCov.forgetX
+        (DRX P taint counted L dem emit sat restrictIX recs sinks roots))
+      (pubRX P (DRX P taint counted L dem emit sat restrictIX recs sinks roots) dem) m d') :
+    ∃ j jex gx g' gex' d p, dem m d ∧ d.dout = some p ∧
+      restrictIX j jex gx d = some ⟨g', gex'⟩ ∧ d' = ⟨g'.fact, some j⟩ ∧
+      insideXB j jex d.din = true ∧
+      (insideXB g'.fact gex' p = true ∨
+        (gx.af.demand = true ∧ RExcX gx p ⟨g', gex'⟩ ∧ markSubB p.mark g'.fact.mark = true)) := by
+  obtain ⟨j, mj, jex, gx, g', gex', d, p, hR, hdem, hdo, hres, hd', hin, hcon, hmk⟩ :=
+    handF_narrowXM h
+  refine ⟨j, jex, gx, g', gex', d, p, hdem, hdo, hres, hd', hin, ?_⟩
+  obtain ⟨_, ⟨t, ht⟩, hns, _⟩ :=
+    AnyTaintExCov.concX_all P taint counted L dem emit sat restrictIX recs sinks roots hem hR
+  have hmk' : markSubB p.mark g'.fact.mark = true := by
+    rcases hmk with hmk | hab
+    · exact hmk
+    · exact absurd ht (Invariant.AbsMark.not_conc hab t)
+  rcases hcon with hc | hc
+  · exact Or.inl (insideXB_intro hc hmk')
+  · refine Or.inr ⟨?_, hc, hmk'⟩
+    rcases hc with ⟨hk, hcar, _⟩ | ⟨⟨e, hk⟩, _⟩
+    · unfold carriesB at hcar
+      rw [hk, ht] at hcar
+      cases hdm : gx.af.demand with
+      | true => rfl
+      | false => rw [hdm] at hcar; exact absurd hcar (fun h' => Bool.noConfusion h')
+    · rw [hk] at hns
+      exact absurd hns (fun h' => Bool.noConfusion h')
+
 #print axioms handF_narrowX
 #print axioms handF_narrowX_DRX
+#print axioms handF_narrowXM
+#print axioms handF_narrowX_DRXM
 
 /-! ## 9. X5: vectors (`decide`) -/
 
@@ -1229,6 +1424,82 @@ theorem v_old_above_not_inter :
     rw [hσ] at ht
     exact Bool.noConfusion ht
 
+/-! ### The mark tests (F71), in X form
+
+  Bases: `x = 1`, `ret = 4`; the accessor `f = 4`; the marks `T = 1`, `U = 2`. -/
+
+def mJ : PFact := ⟨1, [], .exact, .conc 1⟩
+def mJU : PFact := ⟨1, [], .exact, .conc 2⟩
+def mGx : XFact := ⟨⟨⟨4, [4], .exact, .conc 1⟩, false⟩, Excl.empty⟩
+def mD : DemandEdge := ⟨⟨1, [], .exact, .conc 1⟩, some ⟨4, [4], .exact, .conc 2⟩⟩
+
+/-- THE USER'S EXAMPLE IN X FORM: the edge `(x,.,$,T) → (ret,.f,$,T)` and the demand edge with
+    `D-c = (x,.,$,T)`, `D-p = (ret,.f,$,U)`: `restrictIX` gives nothing, `restrictX` keeps the edge;
+    with `D-p = (ret,.f,$,T)` the edge is kept. -/
+theorem vM_user :
+    restrictIX mJ Excl.empty mGx mD = none ∧ restrictX mJ Excl.empty mGx mD = some mGx ∧
+    restrictIX mJ Excl.empty mGx ⟨mD.din, some ⟨4, [4], .exact, .conc 1⟩⟩ = some mGx := by
+  decide
+
+/-- A premise mark that `D-c` does not admit: `D-c = (x,.,$,U)` and the premise `(x,.,$,T)`. The
+    premise lies inside `D-c` in its locations, not in its marks: nothing. -/
+theorem vM_prem :
+    insideLocXB mJ Excl.empty ⟨1, [], .exact, .conc 2⟩ = true ∧
+    insideXB mJ Excl.empty ⟨1, [], .exact, .conc 2⟩ = false ∧
+    restrictIX mJ Excl.empty mGx ⟨⟨1, [], .exact, .conc 2⟩, some ⟨4, [4], .exact, .conc 1⟩⟩ =
+      none := by decide
+
+/-- THE `*∖x` CELLS, entry side: `D-c = (x,.,$,*∖[T])`. A premise with the mark `T`: nothing; a
+    premise with the mark `U`: kept. -/
+theorem vM_inStarEx :
+    restrictIX mJ Excl.empty mGx ⟨⟨1, [], .exact, .starEx [1]⟩, some ⟨4, [4], .exact, .star⟩⟩ =
+      none ∧
+    restrictIX mJU Excl.empty ⟨⟨⟨4, [4], .exact, .conc 2⟩, false⟩, Excl.empty⟩
+      ⟨⟨1, [], .exact, .starEx [1]⟩, some ⟨4, [4], .exact, .star⟩⟩ =
+      some ⟨⟨⟨4, [4], .exact, .conc 2⟩, false⟩, Excl.empty⟩ := by decide
+
+/-- THE `*∖x` CELLS, exit side: an `[any-taint]/{4}` conclusion with the mark `T` against
+    `D-p = (ret,.,$,*∖[T])`: nothing; the same conclusion with the mark `U`: the meet `$`. -/
+theorem vM_outStarEx :
+    restrictIX mJ Excl.empty ⟨⟨⟨4, [], .any, .conc 1⟩, false⟩, .set [4]⟩
+      ⟨⟨1, [], .exact, .star⟩, some ⟨4, [], .exact, .starEx [1]⟩⟩ = none ∧
+    restrictIX mJU Excl.empty ⟨⟨⟨4, [], .any, .conc 2⟩, false⟩, .set [4]⟩
+      ⟨⟨1, [], .exact, .star⟩, some ⟨4, [], .exact, .starEx [1]⟩⟩ =
+      some ⟨⟨⟨4, [], .exact, .conc 2⟩, false⟩, Excl.empty⟩ := by decide
+
+/-- THE EMISSION VECTOR IN X FORM: the entry pattern `(x,.,$,*∖[T])`: an added fact with the mark
+    `T` gives nothing (before F71: the premise `(x,.,$,T)`, `Handoff.RVec.vEmit_starEx_T_pre70`);
+    an added fact with the mark `U` gives the premise `(x,.,$,U)` with no exclusion, inside the
+    entry pattern with its mark. -/
+theorem vM_emit :
+    emitX ⟨1, [], .exact, .starEx [1]⟩ mJ Excl.empty = none ∧
+    emitX ⟨1, [], .exact, .starEx [1]⟩ mJU Excl.empty = some (mJU, Excl.empty) ∧
+    insideXB mJU Excl.empty ⟨1, [], .exact, .starEx [1]⟩ = true := by decide
+
+/-- CEGAR (F71): the location form of the contract X2 (the premise inside `D-c` in its locations,
+    the exit location in the locations of `D-p`) is FALSE for the mark-aware `restrictIX` (the
+    user's example). -/
+theorem restrictIX_contract_loc_false :
+    ¬ (∀ (j : PFact) (jex : Excl) (g : XFact) (d : DemandEdge) (p : PFact) (l1 l2 : Loc),
+        insideLocXB j jex d.din = true → denX j jex g.af.fact g.ex l1 l2 → d.dout = some p →
+        p.coversLoc l2 →
+        ∃ g', restrictIX j jex g d = some g' ∧ denX j jex g'.af.fact g'.ex l1 l2 ∧
+          g'.af.demand = g.af.demand) := by
+  intro h
+  have hden : denX mJ Excl.empty mGx.af.fact mGx.ex ⟨1, [], 1⟩ ⟨4, [4], 1⟩ :=
+    ⟨rfl, rfl, rfl, rfl, trivial, [], [], rfl, rfl, rfl, rfl, rfl, rfl⟩
+  have hp : (⟨4, [4], .exact, .conc 2⟩ : PFact).coversLoc ⟨4, [4], 1⟩ := ⟨rfl, [], rfl, rfl⟩
+  have hin : insideLocXB mJ Excl.empty mD.din = true := by decide
+  obtain ⟨g', hg', _, _⟩ := h mJ Excl.empty mGx mD _ _ _ hin hden rfl hp
+  rw [vM_user.1] at hg'
+  cases hg'
+
+#print axioms vM_user
+#print axioms vM_prem
+#print axioms vM_inStarEx
+#print axioms vM_outStarEx
+#print axioms vM_emit
+#print axioms restrictIX_contract_loc_false
 #print axioms v_old_above_not_inter
 #print axioms v64_demand
 #print axioms v64_taint

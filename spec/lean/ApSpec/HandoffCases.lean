@@ -3,6 +3,12 @@
   the program WRAP (old hand-off against new hand-off), the CEGAR of the condition `Cross`
   (programs ANYW and ANYM), and a getter.
 
+  THE MARK-AWARE RESTRICTION (F71, 2026-10-10): `restrictI` tests the marks too (`insideB`,
+  `concMarkB`), and the emission tests a `*∖x` entry mark exactly (`markMatchB`). Every program
+  here has the one concrete mark `T` (the run-1 patterns have the mark `*`), so every mark test
+  passes. The `decide` facts and the closure invariants are computed with the new definitions,
+  and every conclusion of this file still holds (WRAP, ANYW, ANYM, the getter).
+
   Part 0. `Cross` and `CrossK` as Boolean tests (`cross_iff`), so `decide` can read them.
 
   Part 1. The program WRAP:
