@@ -778,7 +778,7 @@ RULE ROLES (ap.md §9.2 gives the AP rules):
 | sink (at a call, entry, exit) of a DEMAND entry of the report after the previous forward run (ap.md §8.10, §9.2); the sink alternative of an end-fact action that a requirement reaches (the row above) | a SEED (below). A sink with several positive literals seeds one requirement per literal. A sink with no positive literal seeds no requirement: the zero demand covers its witness. The seed of an `[any]` pattern (`ContainsMarkOnAnyField`) has the tail `[any]` and is in the demand layer (W6; I14). |
 | other sinks, also the sinks of a CONFIRMED vulnerability (except through THE TRIGGER OF AN END FACT) | none |
 | pass rule, default getter rule | its reversed edges (from and to swapped). The `AnyField` target of a pass rule (a may, D18) is the reversed premise `Q.[any]`. EVERY result of such a reversed edge is in the demand layer, also a `$` result: the forward target `[any]` tells it (I14; the backward W6, argued, ap.md §11.2). So no backward summary through it is a record. (An `AnyField` premise is a rule error, D33.) |
-| cleaner (an unconditional cleaner, §4.2, also the whole-base cleaner of `AnyClassStatic`, §1.4), summary rewriter | the same cleaner: a cleaner is its own reversal (ap.md §9.2) |
+| cleaner (an unconditional cleaner, §4.2, also the whole-base cleaner of `AnyClassStatic`, §1.4), summary rewriter | the same primitive cleaner; a field action is reversed write, clean temporary, reversed read (§5.2, F74). Reverse the action order. |
 | the `RemoveAllMarks` kill on `S` (§1.4) | the same keep edges: the reversal of a keep edge is the same edge (ap.md §9.2); at the place of the reversed cleaners (step 6 below) |
 | the global-state rule and the removal of the entry marks (G2) | none |
 | type filter, mark policy | none |
@@ -937,6 +937,22 @@ A cleaner is `(base, path, reach, mark)` with `reach ∈ {exact, below, atAndBel
 (ap.md §4.7). The interpreter maps the rule actions as follows. The base is in callee coordinates (§1.3). A cleaner on
 a static position follows §1.4 first.
 
+FIELD-POSITION ACTIONS (F74). A cleaner on an ordinary field `x.f` has this reference form:
+
+```text
+tmp = x.f
+clean(tmp, reach, mark)
+x.f = tmp
+```
+
+`tmp` is a fresh temporary base. The read and the strong write use §2.2 or §2.3, with their identity and keep
+edges, filters and field limits. The primitive cleaner has the empty path on `tmp`; it keeps the action's reach
+and mark. Keep the temporary facts until the write-back; then discard the temporary. The backward order is the
+reversed write, the same primitive cleaner, and the reversed read. This form applies at the cleaner placements
+and the summary rewriter below. It preserves a normal FLOW fact outside `x.f` with all its marks; an atomic
+primitive on the field path can instead exclude a mark from the entire ancestor fact. The AP primitive table
+(`ap.md` §4.7) remains the table for `clean(tmp, reach, mark)`.
+
 | Rule action | Cleaner | Note |
 |---|---|---|
 | `RemoveMark(T, P, Exact)`, P with no `AnyField` | `(P, exact, T)` | |
@@ -949,7 +965,7 @@ a static position follows §1.4 first.
 | Go `RemoveMark(T, P)`, `RemoveAllMarks(P)` | as the JVM `Exact` rows | P with `AnyAccessor` maps to `below` |
 | JVM position of type `String` | also `(P.<string-bytes>, same reach, same mark)` | as today |
 
-ON AN `[any-taint]` FACT the cleaner compares the locations as for an `[any]` fact, with no location in the excluded
+ON AN `[any-taint]` FACT the primitive cleaner compares the locations as for an `[any]` fact, with no location in the excluded
 part (ap.md §4.7, `cleanPos`). For the forward fact `(x, p, [any-taint], E, T)` and a cleaner of `T` (or of all marks),
 with `P = x.p`:
 
@@ -961,6 +977,8 @@ with `P = x.p`:
 * a cleaner whose path goes through an excluded accessor (`P.f` or deeper, with `f ∈ E`) cleans no location of the
   fact: the fact passes;
 * every other cleaner strictly below `x.p` gives a `part` result.
+
+These are primitive AP rows. A named field action uses the read and write above; apply the row to its temporary.
 
 Each `part` result of this list goes to the demand layer with the tail `[any]` and no exclusion (ap.md §4.7, W8): this
 loses precision (no fact shape has "every location except one", ap.md §11.1). Lean: `AnyTaintEx.cleanResX`, the vectors
@@ -1051,7 +1069,9 @@ CALLER premise (§5.4). A cleaner on `Result` acts only through the rewriter (op
 
 A request exists only in forward run 1. The interpreter raises a MARK REQUEST where a rule needs a concrete mark `T`
 and the fact has the mark `*` or `*∖X` with `T ∉ X` (and its premise has an abstract mark). The request is on the
-premise of the edge. A fact whose mark excludes `T` raises no request for `T`. On the static base the static exception
+premise of the edge. A fact whose mark excludes `T` raises no request for `T` at a mark gate or sink. A selected-mark
+cleaner is the F75 exception: it requests T on every same-base abstract fact, also if its mark already excludes T.
+The request uses the incoming premise, before adding T to the conclusion's mark exclusion. On the static base the static exception
 of §2.1 step 4 raises a POSITION REQUEST instead (ap.md §4.10).
 
 | Point | Rule element | Mechanism |
@@ -1060,7 +1080,7 @@ of §2.1 step 4 raises a POSITION REQUEST instead (ap.md §4.10).
 | conjunctive sink (§5.3) | each positive literal on a `*`-mark fact | the sink check of the literal (ap.md §4.9); one request per literal |
 | source at a call, exit source | the premise mark of a conditional source | the mark gate of `concat` (ap.md §4.1 step 4) |
 | pass rule | the premise mark of `CopyMark(T)` | the mark gate |
-| cleaner action | one mark, a `*`-mark fact, a partly cleaned position (no request if the fact mark excludes `T`) | `clean` (ap.md §4.7) |
+| cleaner action | selected mark T; a same-base fact with `*` or `*∖X`, for every path and reach, including T in X | `clean` before the position test (F75, ap.md §4.7); preserve the fact with mark `*∖(X ∪ {T})` and request T |
 | summary rewriter | as the cleaner action | `clean`, on the caller premise |
 | ND source | a literal on a `*`-mark fact | the mark gate of the literal |
 | a statement micro edge on `S` | its premise path lies strictly below an identity static `*` edge at the root `[]` or at a class `[<C>]` (a static read `[<C>, s]`, Go `[<G>]`; the class keep edge `[<C>]` of a static write or of a `RemoveAllMarks` kill; a conditional source at a call or at an exit, or a pass rule, on a static field) | the position request for the path cut to at most two accessors (§2.1 step 4; ap.md §4.10) |
@@ -1070,8 +1090,8 @@ of §2.1 step 4 raises a POSITION REQUEST instead (ap.md §4.10).
 A restricted run (forward or backward) has NO REQUEST (ap.md §4.5, §6.1; `ap-history.md` F72 R4). Since F72 it can
 have facts with the mark `*` or `*∖X` (the facts of a FLOW premise, ap.md §6.3). At each mark row of the table such a
 fact gives NOTHING and raises no request: the sink check reports nothing, the mark gate gives no result (a conditional
-source, a pass rule, an ND literal), and a cleaner action or the summary rewriter that cleans a part of the fact keeps
-the fact as `*∖{T}` (ap.md §4.7). The static rows do not apply (no static rule after run 1). The interpreter gives the
+source, a pass rule, an ND literal), and a selected-mark cleaner action or summary rewriter keeps every same-base
+abstract fact as `*∖(X ∪ {T})`, even on a disjoint path (F75, ap.md §4.7). Another base passes unchanged. The static rows do not apply (no static rule after run 1). The interpreter gives the
 same forms in every run; only the AP operations read the mode. (Before F72 no fact of a restricted run had the mark
 `*`, and the interpreter asserted that no request occurred.)
 
@@ -1090,7 +1110,7 @@ The columns "Today" use today's notation (§0).
 | D5 | summary application | delta with refinement (`tryApplySummaryEdge`) | guarded by satisfaction | ap.md §4.3 |
 | D6 | call bindings | rebase functions (`mapMethodCallToStartFlowFact`, `mapMethodExitToReturnFlowFact`) | binding micro edges (§3.1) | one operation for every flow (I4); same mapping |
 | D7 | Go cleaners | only the summary rewriter, only user-defined `RemoveMark` | `clean` at the call site for every cleaner rule, plus the rewriter | the same cleaner placement in both languages |
-| D8 | cleaner on an abstract fact | `DeepAccessorExclusion` claims; a refinement request on abstract nodes | `clean` (`*∖x` mark; a request on a partly cleaned position) | ap.md §4.7 |
+| D8 | selected-mark cleaner on an abstract fact | `DeepAccessorExclusion` claims; a refinement request on abstract nodes | same-base `clean`: `*∖(X ∪ {T})` and a run-1 request T, for every path and reach (F75) | ap.md §4.7 |
 | D9 | reach `ExactAndAnyField` | cleans only through an `[any]` at the position | `atAndBelow` | `[any]` means "any continuation" in the new AP. The cleaner removes a mark only from a fact that lies inside the cleaned locations (ap.md §4.7), so it over-approximates |
 | D10 | `RemoveAllMarks(P.AnyField)` | removes only an `[any]` child | `(P, below, all)` | the same meaning of `[any]` |
 | D11 | type filter form | `FactTypeChecker` over the tree (Accept, Reject, FilterNext) | `filter(base, may)`, prefix-closed, tails kept, a separate mark policy | the ap.md §4.8 primitive; same predicate |
@@ -1113,7 +1133,7 @@ The columns "Today" use today's notation (§0).
 | D29 | a rule position with an inner or a repeated `AnyField` (§1.3) | handled by the fact readers (`FactReaderUtils.kt:54-138`) | a rule error: the interpreter rejects the whole rule (no form at any place, and the rewriter does not select it, §1.3, §5.2) and logs it once | `[any]` is a tail only (ap.md W4); fewer findings are possible (`ap-history.md` F67) |
 | D30 | the global-state rule (§4.7 step 3, G2) | the exit sinks run only on zero-premise edges (`JIRMethodExitRuleProvider.kt:18-19`); the evaluated `S` facts of a REACHED exit sink are dropped (`JIRSequentTaintUtil.kt:76-85`, `JIRMethodSequentFlowFunction.kt:186-188`) | for an item whose premise is the zero fact, the evaluated `S` part goes also when a conjunctive exit sink is not complete, and stays the stored input of its literal; a caller-set `S` fact is evaluated (D21) but not dropped: it returns to the caller through the callee summary | `ap-history.md` F67 (5), F68 (3); fewer facts in the callers of the method that sets the state; the FP shapes of a caller-set state: G2 |
 | D31 | an exit source with two or more positive literals in one alternative of its condition (§4.7 step 1, §5.3) | evaluated fact-locally from stored assumptions with an empty precondition (`JIRMethodSequentFlowFunction.kt:211-219`, `TaintUtil.kt:97-104, 203-207`): it fires under the premise of the fact that completes the combination | an ND edge at the exit, as at a call: each literal stores its input; a full combination is an exit item with the union of the premise sets, and at the normal exit an ND summary (E6); not a rule error | the correct premise set (today the result belongs to one fact); the findings of today stay (`ap-history.md` F68 (4)) |
-| D32 | a source with an `AnyField` target (§4.1, I14): `AssignMarkOnAnyAccessor` (Go `AnyAccessor`), or `AssignMark` on `PositionWithAccess(P, AnyField)` (for example the DTO argument of a Spring entry point, `SpringRuleProvider.kt:61-76`); at a call, at the method start, at an exit or at a read, plain or conjunctive | the source makes a fact with an `[any]` accessor below `P` (`Source.kt:26`). In the new AP before F69 this fact had the `[any]` tail, so W6 put every result of it in the demand layer: a vulnerability whose taint came only from it was never confirmed (a DEMAND entry) | the target tail `[any-taint]`, a MUST, in the forward runs only (ap.md W8). Its results keep their layer, so a normal edge with it is complete, and such a vulnerability can be CONFIRMED: in run 1 when the sink reads the tainted object in the method of the source (`AnyTaintExCases2.PassRule.source_confirmed`), or after a callee whose FLOW summary keeps the whole object (program I, ap.md §6.2; `AnyTaintExCases2.I.run1_confirmed`); in a restricted run through a getter (program G, `AnyTaintExCases2.G.run3_confirmed`) and with the sink in the callee (program C, `AnyTaintExCases2.C.run3_confirmed`). These results are of the closures `AnyTaintEx.D6X` (run 1, a spec closure) and `AnyTaintEx.DRXs` (run 3 with the earlier restriction and the earlier hand-off: the record of the earlier design, ap.md §10.11); with the intersection and the hand-off of the demand edges (the spec closures `AnyTaintEx.DRX` with `HandoffX.restrictIX`) the run-3 results of programs G and C are argued (ap.md §11.2). The round-1 results of the same programs, in `AnyTaintCases`, are of `AnyTaint.D6T` and `DRT`. A strong write into the object keeps it exact with an EXCLUSION: after the setter `dto.setName(c)` the object is `(dto, ., [any-taint], {name}, T)`, normal, so `sink(dto.name)` is not reported and `sink(dto.email)` is CONFIRMED in run 1 (§2.4; program S, `AnyTaintExCases.S.run1_dto_ann`, `S.run1_name_not_reported`, `S.run1_email_confirmed`). A read through an excluded accessor gives nothing (program R), and the cleaners `atAndBelow` and `below` one accessor below the object add the accessor to the exclusion (§5.2; program CL). Only these operations make it `[any]` in the demand layer, with no exclusion (ap.md §2.2): the field-limit cut (`AnyTaintExCases.CUT.cut_reports`); a cleaner `part` row other than the `atAndBelow` and `below` rows one accessor below the object, that is the `exact` cleaner at the path of the object or below it, and every cleaner two or more accessors below it (a cleaner whose path goes through an excluded accessor cleans nothing; §5.2; `CL.exact_result`); a may target (the `[any]` target of a pass rule, D18); a demand input (a demand fact, summary or record); and the must-record demotion (ap.md §4.3; `AnyTaintEx.recLayerX`). A weak update keeps the object whole (§0.1). A pass rule with an `AnyField` target keeps `[any]` (D18). The backward run has no `[any-taint]` (§4.9) | the `[any]` target of a source is a must, so W6 lost precision on it; the demotion at an exclusion (the first F69 text) lost it again at every setter (`AnyTaintExCases.S.run1T_not_confirmed`). The normal edges of run 1 are exact; in a restricted run a normal edge of a must-premise is END-EXACT; a confirmed vulnerability is real (ap.md §10.11). Every complete forward run reports every real vulnerability that no earlier forward run confirmed, in some layer (`HandoffXIter.iteration_generalNX`, with the seeds of the DEMAND entries of the report, §4.9; with the seeds of every reported vulnerability and the hand-off before F70: `AnyTaintExCov.iteration_reportsX`). The exclusion removes the reports of the excluded locations, and these are not real (`AnyTaintExCases.S.name_not_real`, `X.locations_exact`). More confirmed entries, fewer demand entries (`ap-history.md` F69) |
+| D32 | a source with an `AnyField` target (§4.1, I14): `AssignMarkOnAnyAccessor` (Go `AnyAccessor`), or `AssignMark` on `PositionWithAccess(P, AnyField)` (for example the DTO argument of a Spring entry point, `SpringRuleProvider.kt:61-76`); at a call, at the method start, at an exit or at a read, plain or conjunctive | the source makes a fact with an `[any]` accessor below `P` (`Source.kt:26`). In the new AP before F69 this fact had the `[any]` tail, so W6 put every result of it in the demand layer: a vulnerability whose taint came only from it was never confirmed (a DEMAND entry) | the target tail `[any-taint]`, a MUST, in the forward runs only (ap.md W8). Its results keep their layer, so a normal edge with it is complete, and such a vulnerability can be CONFIRMED: in run 1 when the sink reads the tainted object in the method of the source (`AnyTaintExCases2.PassRule.source_confirmed`), or after a callee whose FLOW summary keeps the whole object (program I, ap.md §6.2; `AnyTaintExCases2.I.run1_confirmed`); in a restricted run through a getter (program G, `AnyTaintExCases2.G.run3_confirmed`) and with the sink in the callee (program C, `AnyTaintExCases2.C.run3_confirmed`). These results are of the closures `AnyTaintEx.D6X` (run 1, a spec closure) and `AnyTaintEx.DRXs` (run 3 with the earlier restriction and the earlier hand-off: the record of the earlier design, ap.md §10.11); with the intersection and the hand-off of the demand edges (the spec closures `AnyTaintEx.DRX` with `HandoffX.restrictIX`) the run-3 results of programs G and C are argued (ap.md §11.2). The round-1 results of the same programs, in `AnyTaintCases`, are of `AnyTaint.D6T` and `DRT`. A strong write into the object keeps it exact with an EXCLUSION: after the setter `dto.setName(c)` the object is `(dto, ., [any-taint], {name}, T)`, normal, so `sink(dto.name)` is not reported and `sink(dto.email)` is CONFIRMED in run 1 (§2.4; program S, `AnyTaintExCases.S.run1_dto_ann`, `S.run1_name_not_reported`, `S.run1_email_confirmed`). A read through an excluded accessor gives nothing (program R), and the cleaners `atAndBelow` and `below` one accessor below the object add the accessor to the exclusion (§5.2; program CL). Only these operations make it `[any]` in the demand layer, with no exclusion (ap.md §2.2): the field-limit cut (`AnyTaintExCases.CUT.cut_reports`); a primitive AP cleaner `part` row other than the `atAndBelow` and `below` rows one accessor below the object, that is the primitive `exact` cleaner at the path of the object or below it, and a primitive cleaner two or more accessors below it (an excluded path cleans nothing; §5.2; `CL.exact_result`); F74 named field actions apply that primitive to the temporary and keep normal outside-field facts (`FieldCleanerX`); a may target (the `[any]` target of a pass rule, D18); a demand input (a demand fact, summary or record); and the must-record demotion (ap.md §4.3; `AnyTaintEx.recLayerX`). A weak update keeps the object whole (§0.1). A pass rule with an `AnyField` target keeps `[any]` (D18). The backward run has no `[any-taint]` (§4.9) | the `[any]` target of a source is a must, so W6 lost precision on it; the demotion at an exclusion (the first F69 text) lost it again at every setter (`AnyTaintExCases.S.run1T_not_confirmed`). The normal edges of run 1 are exact; in a restricted run a normal edge of a must-premise is END-EXACT; a confirmed vulnerability is real (ap.md §10.11). Every complete forward run reports every real vulnerability that no earlier forward run confirmed, in some layer (`HandoffXIter.iteration_generalNX`, with the seeds of the DEMAND entries of the report, §4.9; with the seeds of every reported vulnerability and the hand-off before F70: `AnyTaintExCov.iteration_reportsX`). The exclusion removes the reports of the excluded locations, and these are not real (`AnyTaintExCases.S.name_not_real`, `X.locations_exact`). More confirmed entries, fewer demand entries (`ap-history.md` F69) |
 | D33 | a pass rule with an `AnyField` position on its premise side (§1.3, §4.1): `CopyAllMarks(P.AnyField → Q)`, `CopyMark(T, P.AnyField → Q)`, also with an `AnyField` target; Go `CopyData`, `CopyTaintMark` with `AnyAccessor` on the from position | the content below the any-field node of `P` is copied below `Q` (D18) | a rule error: the interpreter rejects the whole rule and logs it once (§1.3, as D29) | the rule reads one field that it does not know, so its result is a may; but a `$` result of an `[any]` premise keeps its layer (ap.md §4.1), so W6 cannot keep the may out of the normal layer, and a finding that rests on it could be CONFIRMED. Today's rule base has no such rule: the only `AnyField` in a pass rule is a target (Go `json.Unmarshal`, `arg(0) → arg(1).*`) (`ap-history.md` F69) |
 | D34 | the summary rewriter on an `AnyField` action position of a selected source (§5.2): `AssignMarkOnAnyAccessor` on `P`, `AssignMark` on `PositionWithAccess(P, AnyField)` (Go `AnyAccessor`) | the rewriter cleans every action position with `RemoveMark(T, position, Exact)` (`JIRMethodCallRuleBasedSummaryRewriter.kt:105`); on `PositionWithAccess(P, AnyField)` that is the `below` row of §5.2. The text of §5.2 before F69 gave `clean(P, exact, T)` | `clean(P, atAndBelow, T)` | the source marks every location at or below `P` (a must, I14), so these are the rule positions that the rewriter overrides. The `exact` cleaner at `P` keeps the marks of the callee below `P`, and on an `[any-taint]` result at `P` it gives a `part` result in the demand layer (§5.2); today's `below` row keeps the mark of the callee at `P` itself (`ap-history.md` F69) |
 | D35 | the removal of the entry marks at the normal exit (§4.7 step 4, G2), on a zero-premise fact on `this` or `arg(i)` | `TaintMarkRemover` (`JIRMethodSequentFlowFunction.kt:301-314`, applied at `:156`) rejects every mark accessor of the entry-mark set that it reads, but the filter reads only the children of the root node: a non-mark accessor gets `Accept`, and `Accept` keeps the whole subtree below it (`AccessTree.kt:1031-1056`, the tree form of the default `ApMode.Tree`); the mark is the last accessor of a fact path (`AccessPathCreationUtils.kt:12-21`). So only `b.$ (m)` goes; `b.f.$ (m)` and the any child `b.[any] (m)` (the `AnyField` part of the Spring DTO source) stay | every leaf with an entry mark goes, at any depth, with both tails: `(b, p, $, m)` for every path `p`, and `(b, p, [any-taint], E, m)` with its exclusion | an entry-point source must not leak into the callers in any part (G2). Since F69 the `AnyField` part of the source is a normal `[any-taint]` fact (D32), so a leak of it gives CONFIRMED false positives in the callers. Fewer findings are possible in the callers of an entry point (`ap-history.md` F69) |
@@ -1168,12 +1188,15 @@ getter rules; no type filter in the backward run.
    result goes through the aliases; a constructor fact passes over the call.
 5. Go cleaner at the call site (D7): a non-user-defined `RemoveMark` rule cleans the argument; the same rule with a
    resolved callee and with an unresolved callee.
-6. Cleaner mapping: one test per row of §5.2, including `<string-bytes>`. Also on the fact `(x, p, [any-taint], E, T)`
-   (§5.2, program `AnyTaintExCases.CL`): at `x.p` the `below` row keeps `(x, p, $, T)` in the layer of the fact; at
-   `x.p.f` with `f ∉ E` the `atAndBelow` row gives `(x, p, [any-taint], E ∪ {f}, T)`, and the `below` row gives it and
-   `(x, p.f, $, T)`, in the layer of the fact; a cleaner at `x.p.f` with `f ∈ E` cleans nothing; the `exact` row and
-   every other `part` result are `[any]` in the demand layer, with no exclusion (`AnyTaintEx.Vec.clean_atAndBelow`,
-   `clean_below`, `clean_excluded`, `clean_exact`).
+6. Cleaner mapping: one test per row of §5.2, including `<string-bytes>`. Keep the primitive AP tests
+   (`AnyTaintExCases.CL`, `AnyTaintEx.Vec.clean_exact`) separate from the lowered field-action tests (F74).
+   On the normal fact `(x, p, [any-taint], E, T)`, a named action at `x.p.f`, with `f ∉ E`, keeps the normal
+   outside-field fact `(x, p, [any-taint], E ∪ {f}, T)` for every reach. `atAndBelow` gives only that fact;
+   `below` also gives normal `(x, p.f, $, T)`; `exact` also gives demand `(x, p.f, [any], T)` with no exclusion.
+   With `f ∈ E`, the read gives no temporary fact and the action keeps the original fact. The single-field
+   vectors are `FieldCleanerX.exact_vector`, `below_vector`, `atAndBelow_vector`. Also test the read and write
+   filters, the ordinary statement cuts, a shared fresh temporary in the reversed action, and projection
+   away from that temporary before publication.
 7. Type filter placement: one test per row of §5.1; a `*`, an `[any]` and an `[any-taint]` fact always pass, with
    their tails and exclusions; the policy drops a mark on an `int` base.
 8. Requests: one test per row of §5.4 in run 1, also the static rows (JVM `x = C.s`, `C.s = x`, Go `x = G`, a sink on
