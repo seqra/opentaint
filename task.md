@@ -22,9 +22,10 @@ Read project memory from the previous session: `~/.claude/projects/-drive-testco
 Now we have a compete spec for the AP and analyzer (see spec/). 
 The current step is: finalize the implementation proposal.
 Here is the checklist:
-1) Precisely analyze the demand edge handling, abstraction and summary emission/reduction. These operations must match the specification precisely  
-2) All other operations also should match the spec. Review them.
-3) The implementation proposal shouldn't use staled facts or rules. Review that all used rules are actual
+1) Precisely analyze the demand edge handling, abstraction and summary emission/reduction. These operations must match the specification precisely
+2) Precisely analyze summary edge application logic. Review the edge case handling.  
+3) All other operations also should match the spec. Review them.
+4) The implementation proposal shouldn't use staled facts or rules. Review that all used rules are actual
 If we found a major gap or misalignment -- aks me for the decision on how to fix it. I will specify the correct behavior.
 
 Use subagents.
