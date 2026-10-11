@@ -1,7 +1,11 @@
 package org.opentaint.semgrep.util
 
 import base.RuleSample
+<<<<<<< HEAD
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
+=======
+import org.opentaint.dataflow.bidi.driver.IterationPolicy
+>>>>>>> 50014ba25... Validate JVM bidirectional entry with real iteration and acceptance suites
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -18,7 +22,8 @@ import kotlin.test.assertTrue
 import kotlin.test.fail
 
 abstract class SampleBasedTest(
-    private val configurationRequired: Boolean = false
+    private val configurationRequired: Boolean = false,
+    private val bidiPolicy: IterationPolicy? = null,
 ) {
     inline fun <reified T : RuleSample> runTest(
         expectStateVar: Boolean = false,
@@ -113,7 +118,7 @@ abstract class SampleBasedTest(
 
     private val sampleData by lazy { samplesDb.loadSampleData() }
 
-    private val runner by lazy { TestAnalysisRunner(samplesDb) }
+    private val runner by lazy { TestAnalysisRunner(samplesDb, bidiPolicy) }
 
     fun closeRunner() {
         runner.close()
