@@ -23,6 +23,9 @@ import kotlin.io.path.walk
 import kotlin.time.Duration.Companion.seconds
 
 class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
+    private val ifdsBidirectional: Boolean by option(help = "Use forward/backward JVM analysis with increasing field limits")
+        .flag(default = false)
+
     private val cwe: List<Int> by option(help = "Analyzer CWE")
         .int().multiple()
 
@@ -120,6 +123,7 @@ class ProjectAnalyzerRunner : AbstractAnalyzerRunner() {
         storeSummaries = false,
         experimentalAAInterProcCallDepth = experimentalAAInterProcCallDepth,
         iterationLimit = iterationLimit,
+        ifdsBidirectional = ifdsBidirectional,
     )
 
     override fun commonOptions(): CommonAnalysisOptions = commonOptions

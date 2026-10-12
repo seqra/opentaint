@@ -26,6 +26,7 @@ data class CommonAnalysisOptions(
     val storeSummaries: Boolean = false,
     val experimentalAAInterProcCallDepth: Int = 1,
     val iterationLimit: Int? = null,
+    val ifdsBidirectional: Boolean = false,
 ) {
     val summariesApMode get() = ifdsApMode.takeIf { storeSummaries }
 
