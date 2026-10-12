@@ -1,11 +1,9 @@
 package org.opentaint.semgrep.util
 
 import base.RuleSample
-<<<<<<< HEAD
 import org.opentaint.dataflow.ap.ifds.access.AnyAccessorUnrollStrategy
-=======
+import org.opentaint.dataflow.bidi.driver.FixedLimits
 import org.opentaint.dataflow.bidi.driver.IterationPolicy
->>>>>>> 50014ba25... Validate JVM bidirectional entry with real iteration and acceptance suites
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedItem
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintAssignAction
 import org.opentaint.dataflow.configuration.jvm.serialized.SerializedTaintConfig
@@ -23,7 +21,8 @@ import kotlin.test.fail
 
 abstract class SampleBasedTest(
     private val configurationRequired: Boolean = false,
-    private val bidiPolicy: IterationPolicy? = null,
+    private val bidiPolicy: IterationPolicy? =
+        if (System.getenv("OPENTAINT_TEST_BIDI") == "true") FixedLimits((1..9).toList()) else null,
 ) {
     inline fun <reified T : RuleSample> runTest(
         expectStateVar: Boolean = false,
@@ -76,12 +75,7 @@ abstract class SampleBasedTest(
                 missedPositive.add(sample)
             }
         }
-        assertTrue(
-            missedPositive.isEmpty(),
-            "Expected $missedPositive to be positive, but no vulnerability was found."
-        )
-
-        val falseNegative = hashSetOf<NegativeCase>()
+        val falsePositive = hashSetOf<NegativeCase>()
         for (sample in data.negativeClasses) {
             val vulnerabilities = results[sample.className]
             assertNotNull(vulnerabilities, "No results for ${sample.className}")
@@ -93,11 +87,24 @@ abstract class SampleBasedTest(
                 continue
             }
 
-            falseNegative.add(sample)
+            falsePositive.add(sample)
+        }
+        // Report both sets before either assertion can stop this test.
+        println("SAMPLE_RESULT mode=${if (bidiPolicy == null) "legacy" else "bidi"} " +
+            "rule=$sampleClassName positive=${data.positiveClasses.size} " +
+            "negative=${data.negativeClasses.size} " +
+            "missed=${missedPositive.map { it.className }.sorted()} " +
+            "unexpected=${falsePositive.map { it.className }.sorted()}")
+        if (bidiPolicy != null && (missedPositive.isNotEmpty() || falsePositive.isNotEmpty())) {
+            println("BIDI_RULES rule=$sampleClassName rules=${javaRule.taintRules.flatMap { it.rules }}")
         }
         assertTrue(
-            falseNegative.isEmpty(),
-            "Expected $falseNegative to be negative, but vulnerabilities were found."
+            missedPositive.isEmpty(),
+            "Expected $missedPositive to be positive, but no vulnerability was found."
+        )
+        assertTrue(
+            falsePositive.isEmpty(),
+            "Expected $falsePositive to be negative, but vulnerabilities were found."
         )
     }
 
