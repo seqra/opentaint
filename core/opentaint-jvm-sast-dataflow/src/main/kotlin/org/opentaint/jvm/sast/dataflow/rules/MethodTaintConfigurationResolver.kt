@@ -91,7 +91,8 @@ class MethodTaintConfigurationResolver(
     val taintMarkManager: TaintMarkManager,
     val cp: JIRClasspath,
     val objectTypeName: TypeName,
-    val method: JIRMethod
+    val method: JIRMethod,
+    private val ignoreSinkEndFacts: Boolean = false,
 ) {
     private val typedMethod by lazy { resolveTypedMethod() }
     
@@ -206,7 +207,7 @@ class MethodTaintConfigurationResolver(
         is SerializedRule.Sink -> {
             listOf(TaintMethodSink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
+                if (ignoreSinkEndFacts) emptyList() else trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
             ))
         }
@@ -214,7 +215,7 @@ class MethodTaintConfigurationResolver(
         is SerializedRule.MethodExitSink -> {
             listOf(TaintMethodExitSink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
+                if (ignoreSinkEndFacts) emptyList() else trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
             ))
         }
@@ -222,7 +223,7 @@ class MethodTaintConfigurationResolver(
         is SerializedRule.MethodEntrySink -> {
             listOf(TaintMethodEntrySink(
                 method, condition,
-                trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
+                if (ignoreSinkEndFacts) emptyList() else trackFactsReachAnalysisEnd?.flatMap { it.resolve(ctx) }.orEmpty(),
                 ruleId(), meta(), info, serializedId
             ))
         }
