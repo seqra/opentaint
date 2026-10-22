@@ -1,6 +1,8 @@
 import OpentaintIrDependency.opentaint_ir_api_python
 import OpentaintIrDependency.opentaint_ir_core_python
 import OpentaintUtilDependency.opentaintUtilJvm
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import org.opentaint.common.JunitDependencies
 import org.opentaint.common.KotlinDependency
 import org.opentaint.common.ensurePirEnvInitialized
@@ -27,6 +29,7 @@ dependencies {
     testImplementation(kotlin("test"))
     testImplementation(JunitDependencies.Libs.junit_jupiter)
     testImplementation(JunitDependencies.Libs.junit_jupiter_params)
+
     testImplementation(opentaint_ir_api_python)
     testImplementation(opentaint_ir_core_python)
     testImplementation(opentaintUtilJvm)
@@ -40,14 +43,12 @@ val antlrPkgPath = antlrPkg.replace('.', '/')
 
 val grammarUpstreamDir = layout.buildDirectory.dir("grammar/upstream")
 val grammarPatchedDir = layout.buildDirectory.dir("grammar/patched")
-val grammarJavaDir = layout.buildDirectory.dir("grammar/java/$antlrPkgPath")
+val grammarJavaDir = layout.buildDirectory.dir("grammar/java/")
+
 // Pinned to a specific commit so the patch keeps applying cleanly.
 val grammarCommitSha = "b8da12293f626bc561e5c05c4011f5b5b5e778a8"
 val grammarBaseUrl = "https://raw.githubusercontent.com/antlr/grammars-v4/$grammarCommitSha/python/python3_14"
 val grammarPatchFile = layout.projectDirectory.file("grammar/semgrep-extensions.patch")
-
-// Java base classes the generated lexer/parser inherit from (superClass in the grammars).
-val grammarJavaBases = listOf("PythonLexerBase.java")
 
 val downloadPythonGrammar by tasks.registering {
     inputs.property("commitSha", grammarCommitSha)
@@ -62,11 +63,10 @@ val downloadPythonGrammar by tasks.registering {
                 target.outputStream().use { input.copyTo(it) }
             }
         }
-        val javaDir = grammarJavaDir.get().asFile.apply { mkdirs() }
-        grammarJavaBases.forEach { f ->
-            val content = uri("$grammarBaseUrl/Java/$f").toURL().readText()
-            javaDir.resolve(f).writeText("package $antlrPkg;\n$content")
-        }
+        val javaDir = grammarJavaDir.get().asFile.resolve(antlrPkgPath).apply { mkdirs() }
+        val baseFile = javaDir.resolve("PythonLexerBase.java")
+        val content = uri("$grammarBaseUrl/Java/PythonLexerBase.java").toURL().readText()
+        baseFile.writeText("package $antlrPkg;\n$content")
     }
 }
 
@@ -76,32 +76,40 @@ val patchPythonGrammar by tasks.registering {
     inputs.file(grammarPatchFile)
     outputs.dir(grammarPatchedDir)
     doLast {
-        val patched = grammarPatchedDir.get().asFile
-        val upstream = grammarUpstreamDir.get().asFile
-        patched.deleteRecursively()
-        patched.mkdirs()
-        listOf("PythonLexer.g4", "PythonParser.g4").forEach { f ->
-            upstream.resolve(f).copyTo(patched.resolve(f), overwrite = true)
-        }
-        val result = exec {
-            workingDir = patched
-            commandLine(
-                "patch",
-                "--no-backup-if-mismatch",
-                "-p1",
-                "-i", grammarPatchFile.asFile.absolutePath,
-            )
-            isIgnoreExitValue = true
-        }
-        if (result.exitValue != 0) {
-            throw GradleException("Failed to apply ${grammarPatchFile.asFile} (exit ${result.exitValue})")
-        }
+        applyPatch(
+            upstream = grammarUpstreamDir.get().asFile,
+            patched = grammarPatchedDir.get().asFile,
+            files = listOf("PythonLexer.g4", "PythonParser.g4"),
+            patchFile = grammarPatchFile.asFile
+        )
     }
 }
 
+fun applyPatch(upstream: File, patched: File, files: List<String>, patchFile: File) {
+    patched.deleteRecursively()
+    patched.mkdirs()
+    files.forEach { f ->
+        upstream.resolve(f).copyTo(patched.resolve(f), overwrite = true)
+    }
+    val result = exec {
+        workingDir = patched
+        commandLine(
+            "patch",
+            "--no-backup-if-mismatch",
+            "-p1",
+            "-i", patchFile.absolutePath,
+        )
+        isIgnoreExitValue = true
+    }
+    if (result.exitValue != 0) {
+        throw GradleException("Failed to apply $patchFile (exit ${result.exitValue})")
+    }
+}
+
+
 sourceSets {
     main {
-        java.srcDir(layout.buildDirectory.dir("grammar/java"))
+        java.srcDir(grammarJavaDir)
         antlr.setSrcDirs(listOf(grammarPatchedDir))
     }
 }
@@ -114,13 +122,18 @@ tasks.generateGrammarSource {
 
 tasks.withType<JavaCompile> {
     options.compilerArgs.remove("-Werror")
-    sourceCompatibility = JavaVersion.VERSION_11.toString()
-    targetCompatibility = JavaVersion.VERSION_11.toString()
     dependsOn(downloadPythonGrammar)
 }
 
-tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-    kotlinOptions.jvmTarget = "11"
+tasks.named<JavaCompile>("compileTestJava") {
+    sourceCompatibility = JavaVersion.VERSION_17.toString()
+    targetCompatibility = JavaVersion.VERSION_17.toString()
+}
+
+tasks.named<KotlinCompile>("compileTestKotlin") {
+    compilerOptions {
+        jvmTarget = JvmTarget.JVM_17
+    }
 }
 
 tasks.compileKotlin {
@@ -133,8 +146,7 @@ tasks.compileTestKotlin {
 
 tasks.withType<Test> {
     useJUnitPlatform()
-    maxHeapSize = "8g"
-    maxParallelForks = 1
+    jvmArgs = listOf("-Xmx8g")
 
     systemProperty("PY_SAMPLES_DIR", layout.projectDirectory.dir("samples-py").asFile.absolutePath)
     ensurePirEnvInitialized()
