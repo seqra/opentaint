@@ -91,9 +91,17 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                 if (k >= 0) {
                     val stored = list[k]
                     val exclusion = stored.exclusion.intersect(pending.exclusion)
-                    if (exclusion == stored.exclusion) return null
+                    // Equal ordinary content can still carry a new protected membership.
+                    if (exclusion == stored.exclusion) {
+                        val rest = subtractSubsumed(pending, list) ?: return null
+                        val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
+                        val root = alg.mergeAdd(stored.root, rest.root, m.cancellation)
+                        list[k] = stored.withRoot(interner.internIfRequired(root)).withProtection(protection)
+                        return rest
+                    }
                     list.removeAt(k)
                     pending = m.taintTree(pending.base, pending.layer, stored.root, exclusion, pending.anyTail)
+                        .withProtection(mergeProtection(stored.nonSubsumable, pending.nonSubsumable))
                     continue
                 }
             }
@@ -108,22 +116,42 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                 list += rest.withRoot(interner.internIfRequired(rest.root))
                 return rest
             }
-            val (merged, delta) = alg.mergeAddDelta(list[i].root, rest.root, m.cancellation)
-            if (delta == null) return null
-            list[i] = list[i].withRoot(interner.internIfRequired(merged))
-            return m.taintTree(pending.base, pending.layer, delta, rest.exclusion, rest.anyTail)
+            val stored = list[i]
+            val (merged, delta) = alg.mergeAddDelta(stored.root, rest.root, m.cancellation)
+            val protection = mergeProtection(stored.nonSubsumable, rest.nonSubsumable)
+            val deltaRoot = mergeProtection(delta, rest.nonSubsumable) ?: return null
+            list[i] = stored.withRoot(interner.internIfRequired(merged)).withProtection(protection)
+            return m.taintTree(pending.base, pending.layer, deltaRoot, rest.exclusion, rest.anyTail)
+                .withProtection(rest.nonSubsumable)
         }
     }
 
     private fun subtractSubsumed(t: TaintTree, others: List<TaintTree>): TaintTree? {
+        val ordinary = subtract(t.root, t, others, protectedOnly = false)
+        // Ordinary ANY coverage cannot consume a fresh protected EXACT dependency.
+        val protection = t.nonSubsumable?.let { subtract(it, t, others, protectedOnly = true) }
+        val root = mergeProtection(ordinary, protection) ?: return null
+        if (root === t.root && protection === t.nonSubsumable) return t
+        return t.withRoot(root).withProtection(protection)
+    }
+
+    private fun mergeProtection(a: TaintNode?, b: TaintNode?): TaintNode? = when {
+        a == null -> b
+        b == null -> a
+        else -> m.taintAlg.mergeAdd(a, b, m.cancellation)
+    }
+
+    private fun subtract(root: TaintNode, t: TaintTree, others: List<TaintTree>,
+                         protectedOnly: Boolean): TaintNode? {
         val alg = m.taintAlg
-        var root = t.root
+        var remaining = root
         for (stored in others) {
             m.cancellation.checkpoint()
+            val storedRoot = if (protectedOnly) stored.nonSubsumable ?: continue else stored.root
             val storedMay = stored.anyTail == Tail.ANY
             val coversAny = storedMay || t.anyTail == Tail.ANY_TAINT
             val anyAt = coversAny && (storedMay || stored.exclusion.isSubsetOf(t.exclusion))
-            root = alg.subtract(root, stored.root, TaintLeaves.EMPTY,
+            remaining = alg.subtract(remaining, storedRoot, TaintLeaves.EMPTY,
                 at = { alg.leaves(if (storedMay) it.exact + it.any else it.exact,
                     if (anyAt) it.any else MarkSet.EMPTY) },
                 below = { alg.leaves(if (storedMay) it.any else MarkSet.EMPTY,
@@ -131,7 +159,7 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
                 admits = stored.exclusion::admits,
                 cancellation = m.cancellation) ?: return null
         }
-        return if (root === t.root) t else t.withRoot(root)
+        return remaining
     }
 }
 

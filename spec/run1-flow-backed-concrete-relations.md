@@ -1,6 +1,6 @@
 # Concrete relations backed by FLOW
 
-Date: 24 October 2026. Status: **specification and checked models; not implemented**.
+Date: 24 October 2026. Status: **implemented and locally checked; project measurements pending**.
 
 This specification selects cross-premise FLOW reuse, exact concrete relation
 compression, and FLOW priority in run-1. Read the
@@ -427,7 +427,14 @@ TAINT no-memory-effect test can ignore a tail kind which the FLOW test
 keeps. Equal AP pairs alone do not prove equality of those classifications.
 This proposal does not change `hasNoMemoryEffect`. Unsupported identity
 cells use the fallback. The selected ANY/ANY cell with different input and
-output bases has the same nonidentity classification.
+output bases has the same nonidentity classification. For a same-base output,
+the TAINT path must differ from the initial path. Both cells then have a
+memory effect. A TAINT output at the initial path has no memory effect, while
+the ANY FLOW output has one under the current classifier. Keep that identity
+output as a marked residual. Apply this test per output path, including when
+other outputs in the same tree are eligible. The AP coverage and application
+proofs already allow equal input and output bases; the proof dossier also
+checks this identity-class gate.
 
 ## 7. FLOW priority
 

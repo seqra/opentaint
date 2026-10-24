@@ -66,9 +66,12 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                     val input = ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)
                     if (core.config.run1) {
                         val targets = HashMap<Layer, Facts>()
-                        checkNotNull(originConjunctionStore).addOrigins(edge, node, edge.literals.size, index, input) { initial, layer ->
+                        val assigned = if (core.mode.markMode == MarkMode.FULL)
+                            (edge.target.mark as? MarkSlot.Concrete)?.mark else null
+                        val triggering = (literal.fact.mark as? MarkSlot.Concrete)?.mark
+                        checkNotNull(originConjunctionStore).addProtectedOrigins(edge, node, edge.literals.size, index, input, assigned, triggering) { initial, layer, nonSubsumable ->
                             val result = targets.getOrPut(layer) { core.ops.targetTree(edge.target, layer, core.mode) }
-                            sink(initial, core.forceRun1Layer(initial, result))
+                            sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)))
                         }
                         continue
                     }
@@ -110,7 +113,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                     core.collectAfterRun1Policy(at) { _, result ->
                         core.sourceHits?.add(core.key, node, edge.forward, action.id)
                         sink(premise, result, action.id)
-                    }, may = edge.may)
+                    }, may = edge.may, ruleAssignment = true)
             }
         }
         if (source.backward) {
@@ -137,8 +140,10 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                                     source.transfer(selected.leaves[index], action, multi = true).forward, action.id)
                             }) continue
                             val result = core.ops.targetTree(action.target, cube.layer, core.mode)
-                            cube.emitOrigins(action.id) { initial ->
-                                sink(initial, core.forceRun1Layer(initial, result), action.id)
+                            val assigned = if (core.mode.markMode == MarkMode.FULL)
+                                (action.target.mark as? MarkSlot.Concrete)?.mark else null
+                            cube.emitProtectedOrigins(action.id, assigned) { initial, nonSubsumable ->
+                                sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)), action.id)
                             }
                         }
                     }
@@ -176,6 +181,9 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
             if (predicate.isMulti(leaf)) multiLeaf(predicate, leaf, pattern, allowSingle = false)
         }
     }
+
+    private fun protectTarget(result: Facts, nonSubsumable: Boolean): Facts =
+        if (nonSubsumable && result is TaintTree) result.withProtection(result.root) else result
 
     override fun checkSinks(premise: PremiseKey, node: CommonInst, facts: Facts, sinks: List<SinkRule>): Triggers {
         return checkSinksAt(premise, node, facts, sinks,

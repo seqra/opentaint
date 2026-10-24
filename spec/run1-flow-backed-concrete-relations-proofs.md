@@ -1,6 +1,6 @@
 # Proofs for concrete relations backed by FLOW
 
-Date: 24 October 2026. Status: **constructive models checked; runtime unchanged**.
+Date: 24 October 2026. Status: **constructive models and local implementation checks pass; project measurements pending**.
 Contract: [complete specification](run1-flow-backed-concrete-relations.md).
 Reference runtime: `40e20d16f03ab046df75a53a489bb331b065a9c1`.
 Latest measured Thingsboard iteration: **run-1 OOM**, no COMPLETE/accepted run.
@@ -316,6 +316,19 @@ lifting preserves these observations when the complete observer adapter
 is unchanged. Do not apply that claim to alias/identity classifications
 without the specification's additional equality test or fallback.
 
+The existing alias classifier also has a checked ANY cell. The theorem
+`any_flow_alias_effect` shows that an ANY FLOW output has a memory effect
+under that classifier: its initial and final tails are not both STAR.
+`same_base_nonidentity_any_alias_effect` shows that a same-base diagonal
+TAINT output also has a memory effect when its path differs from the initial
+path. The AP coverage and application theorems already permit equal bases.
+Thus the two classifications agree for that nonidentity output. In contrast,
+`same_path_any_alias_mismatch` checks the same-path case, where the TAINT
+output has no memory effect and the ANY FLOW output has one. Keep that
+marked output. Split a mixed tree per output path; do not require a different
+base for every eligible output. These laws use the existing classifier and
+do not change alias application.
+
 ## 9. Counted saving and checks
 
 The counted cost is **geometry applications/containers**, not CPU time or
@@ -341,6 +354,7 @@ source hashes, commands and results. The audit checks every declaration
 owned by the six new modules and runs executable controls. Only the existing
 `propext` and `Quot.sound` dependencies are permitted; no Classical choice,
 `sorryAx` or new axiom is permitted. The integrated build passes **191 jobs**;
-the owned audit checks **455 declarations** and **29 executable controls**.
-Runtime adapter work remains an implementation gate. Analyzer implementation
-files are unchanged.
+the owned audit checks **460 declarations** and **32 executable controls**.
+Runtime adapter checks remain an implementation gate. The
+[implementation validation](../docs/reports/bidirectional-flow-backed-concrete-validation-20261024.md)
+records local correspondence checks and their limits.

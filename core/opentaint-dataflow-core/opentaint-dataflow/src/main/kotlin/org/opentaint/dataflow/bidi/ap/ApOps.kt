@@ -13,13 +13,24 @@ class ApOps(val manager: ApManager) {
     }
     fun applyEdge(c: Facts, premise: PremiseKey, e: PathEdge, statementEdge: Boolean,
                   mode: ApMode, out: ApOut, may: Boolean = false,
-                  unchangedStaticInitial: InitialAp? = null) {
+                  unchangedStaticInitial: InitialAp? = null, ruleAssignment: Boolean = false) {
         check(unchangedStaticInitial == null ||
             (unchangedStaticInitial === premise && unchangedStaticInitial.manager === manager)) {
             "The ordinary static gate needs this edge's original initial"
         }
         val ce = compiled(e)
-        applyCompiledEdge(c, ce, may, staticIdentityDepth(c, premise, ce, statementEdge, mode), mode, out,
+        val from = e.from.mark as? MarkSlot.Concrete
+        val assigned = e.to.mark as? MarkSlot.Concrete
+        val protect = mode.run1 && mode.markMode == MarkMode.FULL && ruleAssignment &&
+            from != null && assigned != null &&
+            (from.mark == assigned.mark || premise.members.any {
+                (it.mark as? MarkSlot.Concrete)?.mark == assigned.mark && from.mark != assigned.mark
+            })
+        val sink = if (!protect) out else object : ApOut {
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, manager.markSetOf(assigned!!.mark)))
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        applyCompiledEdge(c, ce, may, staticIdentityDepth(c, premise, ce, statementEdge, mode), mode, sink,
             unchangedStaticInitial)
     }
 
@@ -32,6 +43,14 @@ class ApOps(val manager: ApManager) {
     internal fun applyCompiledEdge(c: Facts, ce: CompiledEdge, edgeDemand: Boolean,
                                    staticAt: Int, mode: ApMode, out: ApOut,
                                    unchangedStaticInitial: InitialAp? = null) {
+        manager.transportProtection(c, out) { part, sink ->
+            applyCompiledEdgeRaw(part, ce, edgeDemand, staticAt, mode, sink, unchangedStaticInitial)
+        }
+    }
+
+    private fun applyCompiledEdgeRaw(c: Facts, ce: CompiledEdge, edgeDemand: Boolean,
+                                    staticAt: Int, mode: ApMode, out: ApOut,
+                                    unchangedStaticInitial: InitialAp?) {
         manager.cancellation.checkpoint()
         if (c.base != ce.fromBase) return
         val sink = out.run1Policy(manager, mode)
@@ -48,10 +67,31 @@ class ApOps(val manager: ApManager) {
         satisfying(a, j.toPattern(), mode, record)
 
     fun satisfying(a: Facts, j: Pattern, mode: ApMode, record: Boolean = false): Facts? =
-        satisfyingPart(manager, a, j, mode, record)
+        satisfyingPart(manager, a, j, mode, record)?.let { retainProtection(a, it, manager.cancellation) }
 
-    fun applySummary(a: Facts, j: InitialAp, g: Facts, mode: ApMode, out: ApOut) =
-        applySummaryPart(this, a, j, g, mode, out)
+    fun applySummary(a: Facts, j: InitialAp, g: Facts, mode: ApMode, out: ApOut,
+                     original: PremiseKey? = null) {
+        val masks = (g as? TaintTree)?.protectedPart()?.let { protected ->
+            ProtectionOutputs(manager).also { applySummaryPart(this, a.withoutProtection(), j, protected, mode, it) }
+        }
+        val incoming = (j.mark as? MarkSlot.Concrete)?.mark
+        var restored = MarkSet.EMPTY
+        if (mode.run1 && mode.markMode == MarkMode.FULL && original != null && incoming != null) {
+            for (i in original.members) {
+                val origin = (i.mark as? MarkSlot.Concrete)?.mark ?: continue
+                if (origin != incoming) restored += origin
+            }
+        }
+        val restoredMarks = manager.intern(restored)
+        val sink = if (masks == null && restoredMarks.isEmpty) out else object : ApOut {
+            override fun result(f: Facts) {
+                val flagged = masks?.attach(f) ?: f
+                out.result(if (restoredMarks.isEmpty) flagged else manager.selectedProtection(flagged, restoredMarks))
+            }
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        applySummaryPart(this, a, j, g, mode, sink)
+    }
 
     fun applyRecordLeaf(a: Facts, view: RecordLeafView, mode: ApMode, out: ApOut) =
         applyRecordLeafPart(this, a, view, mode, out)
@@ -68,22 +108,47 @@ class ApOps(val manager: ApManager) {
     fun leaves(f: Facts): Sequence<Pattern> = leafViews(manager, f)
     fun leavesNear(f: Facts, p: IntArray): Sequence<Pattern> = nearLeafViews(manager, f, p)
 
-    fun clean(c: Facts, premise: PremiseKey, cl: Cleaner, mode: ApMode, out: ApOut) =
-        cleanFacts(manager, c, premise, cl, mode, out.run1Policy(manager, mode))
+    fun clean(c: Facts, premise: PremiseKey, cl: Cleaner, mode: ApMode, out: ApOut) {
+        val protect = mode.run1 && mode.markMode == MarkMode.FULL && c.base == cl.base
+        val sink = if (!protect) out else object : ApOut {
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, cl.mark?.let(manager::markSetOf)))
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        manager.transportProtection(c, sink) { part, target ->
+            cleanFacts(manager, part, premise, cl, mode, target.run1Policy(manager, mode))
+        }
+    }
 
     /** Selected FULL mask; null Cleaner.mark retains its all-mark meaning on the scalar API. */
     fun cleanSelectedFullMask(c: Facts, premise: PremiseKey, geometry: Cleaner, selected: MarkSet,
                               mode: ApMode, request: (MarkSet) -> Unit, out: ApOut) {
         check(geometry.mark != null) { "A FULL cleanup block must have selected-mark geometry" }
-        cleanSelectedFullMask(manager, c, geometry, selected, mode, request, out.run1Policy(manager, mode))
+        val sink = if (c.base != geometry.base) out else object : ApOut {
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, selected))
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        val protected = (c as? TaintTree)?.protectedPart()
+        val masks = protected?.let { part -> ProtectionOutputs(manager).also {
+            cleanSelectedFullMask(manager, part, geometry, selected, mode, {}, it.run1Policy(manager, mode))
+        } }
+        val target = if (masks == null) sink else object : ApOut {
+            override fun result(f: Facts) = sink.result(masks.attach(f))
+            override fun markRequest(mark: TaintMark) = sink.markRequest(mark)
+        }
+        cleanSelectedFullMask(manager, c, geometry, selected, mode, request, target.run1Policy(manager, mode))
     }
 
-    fun filter(c: Facts, f: TypeFilter): Facts? = filterFacts(manager, c, f)
-    fun limit(c: Facts, fieldLimit: Int, out: ApOut) = limitFacts(manager, c, fieldLimit, out)
+    fun filter(c: Facts, f: TypeFilter): Facts? = filterFacts(manager, c, f)?.let { retainProtection(c, it, manager.cancellation) }
+    fun limit(c: Facts, fieldLimit: Int, out: ApOut) = manager.transportProtection(c, out) { part, sink ->
+        limitFacts(manager, part, fieldLimit, sink)
+    }
     /** Pass the original initial only when the run-1 static catalog covers this check. */
     fun checkMark(c: Facts, p: Pattern, mode: ApMode,
                   unchangedStaticInitial: InitialAp? = null): MarkCheck =
-        markCheckFacts(manager, c, p, mode, unchangedStaticInitial)
+        when (val result = markCheckFacts(manager, c, p, mode, unchangedStaticInitial)) {
+            is MarkCheck.Holds -> MarkCheck.Holds(retainProtection(c, result.facts, manager.cancellation))
+            else -> result
+        }
     fun withoutMarks(c: Facts, marks: MarkSet): Facts? = withoutMarksPart(manager, c, marks)
 
     fun targetTree(target: PathFact, layer: Layer, mode: ApMode? = null): Facts {

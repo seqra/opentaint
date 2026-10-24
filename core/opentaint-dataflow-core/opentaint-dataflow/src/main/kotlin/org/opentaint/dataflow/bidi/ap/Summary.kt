@@ -184,7 +184,9 @@ private fun <G : TrieLeaf> graftSummary(m: ApManager, g: TrieNode<G>, occurs: (G
     when (r) {
         is Reach -> r
         is FlowTree -> r.withRoot(checkNotNull(FlowAlgebra.graft(g, occurs, r.root, m.cancellation)))
-        is TaintTree -> r.withRoot(checkNotNull(m.taintAlg.graft(g, occurs, r.root, m.cancellation)))
+        is TaintTree -> m.taintTree(r.base, r.layer,
+            checkNotNull(m.taintAlg.graft(g, occurs, r.root, m.cancellation)), r.exclusion, r.anyTail,
+            r.nonSubsumable?.let { m.taintAlg.graft(g, occurs, it, m.cancellation) })
     }
 
 /** Matching is supplied by the caller. W7 makes each complete concrete member return the same target. */
@@ -213,7 +215,7 @@ internal fun applyMatchedCombinationPart(
         manager.cancellation.checkpoint()
         if (linkLayer == Layer.DEMAND) layer = Layer.DEMAND
     }
-    out.result(manager.taintTree(g.base, layer, g.root, g.exclusion, g.anyTail))
+    out.result(g.withLayer(layer))
 }
 
 /** Remove identical annotated leaves; preserve the other leaves without record demotion. */

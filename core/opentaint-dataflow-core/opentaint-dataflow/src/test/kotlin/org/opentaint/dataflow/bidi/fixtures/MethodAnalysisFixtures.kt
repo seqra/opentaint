@@ -245,12 +245,12 @@ class MethodAnalysisFixtures(
              seeds: SeedIndex = SeedIndex.EMPTY,
              localFactory: MethodLocalServicesFactory? = null,
              callFactory: MethodCallServicesFactory? = null,
-             key: MethodKey = this.key): RunMethodAnalyzer =
-        core(config(index, L, demand, seeds), localFactory, callFactory, key)
+             key: MethodKey = this.key, observe: Boolean = true): RunMethodAnalyzer =
+        core(config(index, L, demand, seeds), localFactory, callFactory, key, observe)
 
     fun core(config: RunConfig, localFactory: MethodLocalServicesFactory? = null,
              callFactory: MethodCallServicesFactory? = null,
-             key: MethodKey = this.key): RunMethodAnalyzer {
+             key: MethodKey = this.key, observe: Boolean = true): RunMethodAnalyzer {
         lateinit var actor: RunMethodAnalyzer
         val port = object : RunnerPort<RunMethodAnalyzer> {
             override val config = config
@@ -293,11 +293,11 @@ class MethodAnalysisFixtures(
                 check(key == actor.key) { "The finite port owns one method actor" }
                 return actor
             }
-            override val onProcess: (MethodKey, EdgeDelta) -> Unit = { key, edge ->
+            override val onProcess: ((MethodKey, EdgeDelta) -> Unit)? = if (!observe) null else { key, edge ->
                 processed += edge
                 this@MethodAnalysisFixtures.onProcess?.invoke(key, edge)
             }
-            override val onCut: (Cut, Facts) -> Unit = { point, facts ->
+            override val onCut: ((Cut, Facts) -> Unit)? = if (!observe) null else { point, facts ->
                 cuts += point to facts
                 this@MethodAnalysisFixtures.onCut?.invoke(point, facts)
             }

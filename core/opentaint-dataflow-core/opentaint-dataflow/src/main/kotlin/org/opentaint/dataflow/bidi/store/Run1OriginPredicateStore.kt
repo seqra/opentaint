@@ -21,7 +21,8 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
     private data class Header(val leaf: Int, val layer: Layer, val group: GroupKey?)
     private data class Choice(val node: Int, val branch: Int)
     private class VersionedInput(val input: ConjunctionStore.Input, val version: Long = 0)
-    private class Domain(val choices: PersistentMap<InitialAp, VersionedInput>)
+    private class Domain(val choices: PersistentMap<InitialAp, VersionedInput>,
+                         val hasProtection: Boolean = choices.values.any { (it.input.facts as? TaintTree)?.nonSubsumable != null })
 
     /** Hashes use child hashes. Equality walks a DAG without recursion or repeated shared subtrees. */
     private sealed class Proof(val node: Int, private val hash: Int) {
@@ -95,8 +96,9 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
         private set
 
     private class EmittedOrigins {
-        val nonzero = HashSet<InitialAp>()
-        var zero = false
+        val nonzero = HashMap<InitialAp, Boolean>()
+        var zero: Boolean? = null
+        var protectedAll = false
         // Only the last processed shape/version is retained, never an old domain snapshot or chain.
         var shape: Shape? = null
         var version = -1L
@@ -109,12 +111,15 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
         val layer: Layer,
     ) {
         /** Emit each original once per fixed action target. ZERO needs one complete all-ZERO binding. */
-        abstract fun emitOrigins(action: Any, emit: (InitialAp) -> Unit)
+        fun emitOrigins(action: Any, emit: (InitialAp) -> Unit) =
+            emitProtectedOrigins(action, null) { initial, _ -> emit(initial) }
+        abstract fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Boolean) -> Unit)
     }
 
     private class ReadyResult(proof: ProofKey, leaves: List<Int>, layer: Layer,
-                              private val emitAction: (Any, (InitialAp) -> Unit) -> Unit) : ReadyCube(proof, leaves, layer) {
-        override fun emitOrigins(action: Any, emit: (InitialAp) -> Unit) = emitAction(action, emit)
+                              private val emitAction: (Any, TaintMark?, (InitialAp, Boolean) -> Unit) -> Unit) : ReadyCube(proof, leaves, layer) {
+        override fun emitProtectedOrigins(action: Any, assigned: TaintMark?, emit: (InitialAp, Boolean) -> Unit) =
+            emitAction(action, assigned, emit)
     }
 
     /** Facts enter one canonical leaf. Only supported proof/header shapes are combined at AND. */
@@ -147,7 +152,7 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
             // A later publication contains the merged facts of an older queued version.
             if (state.nodes[current]?.get(support.shape) !== support) continue
             if (current == predicate.root) {
-                emit(readyCube(rule, state, support))
+                emit(readyCube(rule, state, support, predicate))
                 continue
             }
             predicate.parentsOf(current) { parent ->
@@ -278,7 +283,7 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
             val fresh = if (previous == null) value else unionInput(previous, value)
             if (fresh !== previous) choices = choices.put(initial, fresh)
         }
-        return if (choices === a.choices) a else Domain(choices)
+        return if (choices === a.choices) a else Domain(choices, a.hasProtection || b.hasProtection)
     }
 
     /** A repeated canonical leaf selects the same original and complete header in every operand. */
@@ -345,30 +350,46 @@ internal class Run1OriginPredicateStore(private val manager: ApManager, private 
             RootKey(ProofKey(rule, leaves, flat), leaves, shape.headers, shape.headersHash)
         }
 
-    private fun readyCube(rule: RuleOccurrenceId, state: State, support: Support): ReadyCube {
+    private fun readyCube(rule: RuleOccurrenceId, state: State, support: Support, predicate: RulePredicate): ReadyCube {
         val key = rootKey(rule, state, support.shape)
         check(support.domains.isNotEmpty()) { "Unconditional sources keep their existing GEN path" }
         check(support.domains.values.all { it.choices.isNotEmpty() })
         val layer = if (key.headers.values.any { it.layer == Layer.DEMAND }) Layer.DEMAND else Layer.NORMAL
         statistics?.rootOutcome(growth = state.emitted.containsKey(key))
-        return ReadyResult(key.proof, key.leaves, layer) answer@{ action, emit ->
+        val triggering = key.leaves.mapNotNull { (predicate.leaves[it].fact.mark as? MarkSlot.Concrete)?.mark }
+        return ReadyResult(key.proof, key.leaves, layer) answer@{ action, assigned, emit ->
             val admitted = state.emitted.getOrPut(key) { HashMap() }.getOrPut(action) { EmittedOrigins() }
             if (admitted.shape === support.shape && admitted.version == support.version) return@answer
+            val hasProtection = assigned != null && (support.domains.values.any { it.hasProtection } || assigned in triggering)
+            val protectionGrowth = hasProtection && !admitted.protectedAll
             fun offer(initial: InitialAp) {
                 manager.cancellation.checkpoint()
                 originMembershipVisits++
-                if (!initial.isZero && admitted.nonzero.add(initial)) emit(initial)
+                if (initial.isZero) return
+                val originMark = (initial.mark as? MarkSlot.Concrete)?.mark
+                val flag = hasProtection || (assigned != null && originMark == assigned && triggering.any { it != assigned })
+                val previous = admitted.nonzero[initial]
+                if (previous == null || flag && !previous) {
+                    admitted.nonzero[initial] = previous == true || flag
+                    emit(initial, flag)
+                }
             }
-            // A root snapshot may supersede a queued older version. Use its delta only if this
-            // action saw the immediately previous version; otherwise reconcile the current domains.
+            // Only a new contribution flag needs to revisit prior origins. Ordinary domain growth
+            // retains the linear membership path; it does not enumerate input-origin products.
             val consecutive = admitted.shape === support.shape && admitted.version + 1 == support.version
             admitted.shape = support.shape
             admitted.version = support.version
-            if (consecutive) for (initial in support.addedOrigins) offer(initial)
+            admitted.protectedAll = admitted.protectedAll || hasProtection
+            if (consecutive && !protectionGrowth) for (initial in support.addedOrigins) offer(initial)
             else for (domain in support.domains.values) for (initial in domain.choices.keys) offer(initial)
-            if (!admitted.zero && support.domains.values.all { it.choices.containsKey(manager.zero) }) {
-                admitted.zero = true
-                emit(manager.zero)
+            if (support.domains.values.all { it.choices.containsKey(manager.zero) }) {
+                val zeroProtected = assigned != null && (assigned in triggering || support.domains.values.any {
+                    (it.choices[manager.zero]?.input?.facts as? TaintTree)?.nonSubsumable != null
+                })
+                if (admitted.zero == null || zeroProtected && admitted.zero == false) {
+                    admitted.zero = admitted.zero == true || zeroProtected
+                    emit(manager.zero, zeroProtected)
+                }
             }
         }
     }

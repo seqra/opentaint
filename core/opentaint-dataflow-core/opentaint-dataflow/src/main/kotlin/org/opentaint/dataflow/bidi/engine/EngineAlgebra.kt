@@ -29,13 +29,13 @@ internal class EngineAlgebra(private val core: RunMethodAnalyzer) : FactAlgebra<
                            out: ResultSink) {
         if (disabledStaticEdge(me)) return
         core.ops.applyEdge(c, premise, me.edge, statementEdge, core.mode,
-            core.collect(premise, c, out), may = me.may)
+            core.collect(premise, c, out), may = me.may, ruleAssignment = me.isSource || me.actionId != null)
     }
 
     override fun applyEdgeAt(me: MicroEdge, c: Facts, premise: PremiseKey, at: Place, out: ResultSink) {
         if (disabledStaticEdge(me)) return
         core.ops.applyEdge(c, premise, me.edge, at.statementEdge, core.mode,
-            core.collect(input(at, premise, c), out), may = me.may)
+            core.collect(input(at, premise, c), out), may = me.may, ruleAssignment = me.isSource || me.actionId != null)
     }
 
     private fun disabledStaticEdge(me: MicroEdge): Boolean = core.config.disableRun1Statics && (

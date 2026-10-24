@@ -1,6 +1,6 @@
 # Current proof status
 
-## Specified: concrete relations backed by FLOW
+## Implemented; project measurements pending: concrete relations backed by FLOW
 
 The [complete specification](run1-flow-backed-concrete-relations.md) and
 [proof dossier](run1-flow-backed-concrete-relations-proofs.md) select FULL
@@ -19,14 +19,16 @@ exact mask decoding, finite-key progress and queue/barrier laws. Original
 C2/C5 executable certificates supply demand-selected starts and restriction;
 general StrongQueries permission is not a premise. Unsupported cells keep
 exact fallback. Runtime adapter correspondence and differential checks remain
-implementation gates. Analyzer implementation files are unchanged.
+implementation gates. The [implementation validation](../docs/reports/bidirectional-flow-backed-concrete-validation-20261024.md)
+records the closed common/JVM/Go/configuration suites and the unchanged 11
+application failures. Project measurements are pending.
 
 The [check receipt](lean/run1-flow-backed-concrete-relations-checks.json)
 records the final model build and owned axiom/control audit. Latest measured
 Thingsboard is **run-1 OOM**, no COMPLETE/accepted forward run. No new project
 measurement or engine speedup is claimed.
-The integrated Lean build passes 191 jobs; the owned audit checks 455
-declarations and 29 executable controls, with no unexpected axioms.
+The integrated Lean build passes 191 jobs; the owned audit checks 460
+declarations and 32 executable controls, with no unexpected axioms.
 
 ## Implemented and measured: Semgrep provider selection and early specialization
 

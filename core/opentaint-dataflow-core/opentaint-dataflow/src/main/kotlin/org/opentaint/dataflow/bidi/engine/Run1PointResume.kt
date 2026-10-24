@@ -50,7 +50,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
     private data class CallKey(val callee: MethodKey, val ref: org.opentaint.dataflow.bidi.store.CallerRef,
                                val linkLayer: Layer, val premise: PremiseKey, val result: Pattern,
                                val layer: Layer, val member: Int)
-    private class CallContinuation(val key: CallKey, val part: Subscription, val publication: Publication, val member: Int) { var waiting = MarkSet.EMPTY }
+    private class CallContinuation(val key: CallKey, var part: Subscription, var publication: Publication, val member: Int) { var waiting = MarkSet.EMPTY }
     private val callKeys = HashMap<CallKey, Long>()
     private val calls = HashMap<Long, CallContinuation>()
 
@@ -60,12 +60,20 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
         val statistics = core.context.shared.n2Statistics
         for (leaf in core.ops.leaves(pub.conclusion)) {
             statistics?.staticGroupCallOffered()
-            val piece = pub.copy(conclusion = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer))
+            val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
+            val conclusion = if (plain is TaintTree && pub.conclusion is TaintTree)
+                plain.withProtection(pub.conclusion.nonSubsumable) else plain
+            val piece = pub.copy(conclusion = conclusion)
             val key = CallKey(part.callee, part.ref, part.linkLayer, pub.premise, leaf, pub.layer, member)
             val id = callKeys.getOrPut(key) {
                 (++next).also { calls[it] = CallContinuation(key, part, piece, member) }
             }
             val row = calls.getValue(id)
+            // An ordinary duplicate may add protection while the pool reply
+            // is pending. The resumed composition must see the current flags.
+            row.publication = row.publication.copy(conclusion =
+                core.ap.mergeAddDelta(row.publication.conclusion, piece.conclusion).first)
+            row.part = row.part.copy(added = core.ap.mergeAddDelta(row.part.added, part.added).first)
             val fresh = MarkSet.of(core.ap.marks.runtimeAtom(atom, core.mode.markMode)) - row.waiting
             if (fresh.isEmpty) continue
             statistics?.staticGroupCallFallbackAdmitted()
