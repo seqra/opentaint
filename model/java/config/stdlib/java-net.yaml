@@ -25,6 +25,10 @@ passThrough:
     to:
     - this
     - .java.net.URI#value#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#<init>
   signature: (java.lang.String, java.lang.String, int, java.lang.String) void
   copy:
@@ -250,6 +254,10 @@ passThrough:
     to:
     - this
     - .java.net.URI#value#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.HttpCookie#<init>
   signature:
     params:

@@ -27,7 +27,9 @@ passThrough:
 - function: javax.servlet.http.Cookie#getPath
   signature: () java.lang.String
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.servlet.http.Cookie#path#java.lang.String
     to: result
 - function: javax.servlet.http.Cookie#getValue
   signature: () java.lang.String
@@ -37,7 +39,9 @@ passThrough:
 - function: javax.servlet.http.Cookie#getDomain
   signature: () java.lang.String
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.servlet.http.Cookie#domain#java.lang.String
     to: result
 - function: javax.servlet.http.PushBuilder#addHeader
   signature: (java.lang.String, java.lang.String) javax.servlet.http.PushBuilder
@@ -57,9 +61,9 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
+    to:
+    - this
+    - .javax.servlet.http.Cookie#domain#java.lang.String
 - function: javax.servlet.http.PushBuilder#getMethod
   signature: () java.lang.String
   copy:
@@ -79,9 +83,9 @@ passThrough:
   signature: (java.lang.String) void
   copy:
   - from: arg(0)
-    to: this
-  - from: arg(1)
-    to: this
+    to:
+    - this
+    - .javax.servlet.http.Cookie#path#java.lang.String
 - function: javax.servlet.http.Cookie#<init>
   signature: (java.lang.String, java.lang.String) void
   copy:
