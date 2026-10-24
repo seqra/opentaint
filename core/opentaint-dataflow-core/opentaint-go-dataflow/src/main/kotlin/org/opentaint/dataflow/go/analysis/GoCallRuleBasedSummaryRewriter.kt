@@ -54,7 +54,8 @@ class GoCallRuleBasedSummaryRewriter(
             if (sourceRuleWithCond.condition.isFalse) continue
 
             val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.pos }
-            result += UserRuleDefinedAction(sourceRule, positions, ruleInfo.relevantTaintMarks)
+            result += UserRuleDefinedAction(sourceRule, positions,
+                sourceRule.effectiveRelevantTaintMarks ?: ruleInfo.relevantTaintMarks)
         }
 
         for (cleanRuleWithCond in config.allRelevantCleanRulesForCallStatement(signature, statement, callExpr, returnValue)) {
@@ -64,7 +65,8 @@ class GoCallRuleBasedSummaryRewriter(
             if (cleanRuleWithCond.condition.isFalse) continue
 
             val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.pos }
-            result += UserRuleDefinedAction(cleanRule, positions, ruleInfo.relevantTaintMarks)
+            result += UserRuleDefinedAction(cleanRule, positions,
+                cleanRule.effectiveRelevantTaintMarks ?: ruleInfo.relevantTaintMarks)
         }
 
         result

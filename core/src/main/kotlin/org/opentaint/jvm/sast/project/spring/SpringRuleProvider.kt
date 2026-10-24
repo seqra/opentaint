@@ -23,8 +23,21 @@ import org.opentaint.dataflow.configuration.jvm.TaintMethodSource
 import org.opentaint.dataflow.configuration.jvm.TaintPassThrough
 import org.opentaint.dataflow.configuration.jvm.TaintStaticFieldSource
 import org.opentaint.dataflow.configuration.jvm.This
+import org.opentaint.dataflow.configuration.jvm.appendSyntheticRules
+import org.opentaint.dataflow.configuration.jvm.expandSpecializedActions
 import org.opentaint.dataflow.configuration.mkTrue
 import org.opentaint.dataflow.jvm.ap.ifds.taint.TaintRulesProvider
+import org.opentaint.dataflow.jvm.ap.ifds.taint.originalPassThroughRulesForAliases
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JVMRuleSelectionCapability
+import org.opentaint.dataflow.jvm.ap.ifds.taint.executableRuleCatalog
+import org.opentaint.dataflow.jvm.ap.ifds.taint.includeExecutableRuleScope
+import org.opentaint.dataflow.jvm.ap.ifds.taint.currentMarkReduction
+import org.opentaint.dataflow.jvm.ap.ifds.taint.applyExecutableMarkReduction
+import org.opentaint.dataflow.jvm.ap.ifds.taint.JVMExecutableRuleCatalog
+import org.opentaint.dataflow.jvm.ap.ifds.taint.ExecutableMarkReduction
+import org.opentaint.dataflow.jvm.ap.ifds.taint.BidirectionalRulesProviderFactory
+import org.opentaint.dataflow.jvm.ap.ifds.taint.forBidirectionalCore
+import org.opentaint.dataflow.jvm.ap.ifds.taint.resolveBaseAp
 import org.opentaint.ir.api.common.CommonMethod
 import org.opentaint.ir.api.common.cfg.CommonInst
 import org.opentaint.ir.api.jvm.JIRField
@@ -33,7 +46,15 @@ import org.opentaint.ir.api.jvm.JIRMethod
 class SpringRuleProvider(
     private val base: TaintRulesProvider,
     private val springCtx: SpringWebProjectContext,
-) : TaintRulesProvider by base {
+) : TaintRulesProvider by base, BidirectionalRulesProviderFactory, JVMRuleSelectionCapability {
+    override fun executableRuleCatalog() = base.executableRuleCatalog()
+    override fun includeExecutableRuleScope(key: Any, scope: () -> JVMExecutableRuleCatalog?) =
+        base.includeExecutableRuleScope(key, scope)
+    override fun currentMarkReduction() = base.currentMarkReduction()
+    override fun applyExecutableMarkReduction(reduction: ExecutableMarkReduction) =
+        base.applyExecutableMarkReduction(reduction)
+
+    override fun bidirectionalRulesView(): TaintRulesProvider = SpringRuleProvider(base.forBidirectionalCore(), springCtx)
     override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean): Iterable<TaintEntryPointSource> {
         if (method is SpringGeneratedMethod) return emptyList()
         return base.entryPointRulesForMethod(method, statement, fact, allRelevant)
@@ -119,8 +140,17 @@ class SpringRuleProvider(
         allRelevant: Boolean
     ): Iterable<TaintPassThrough> {
         if (method is SpringGeneratedMethod) return emptyList()
-        val rules = base.passTroughRulesForMethod(method, statement, fact, allRelevant).toList()
+        val rules = base.passTroughRulesForMethod(method, statement, fact, allRelevant)
 
+        return withRepositoryPassRules(method, rules)
+    }
+
+    override fun originalPassThroughRulesForAliases(method: CommonMethod): Iterable<TaintPassThrough> {
+        if (method is SpringGeneratedMethod) return emptyList()
+        return withRepositoryPassRules(method, base.originalPassThroughRulesForAliases(method))
+    }
+
+    private fun withRepositoryPassRules(method: CommonMethod, rules: Iterable<TaintPassThrough>): Iterable<TaintPassThrough> {
         val springRepoMethodInfo = springCtx.springRepositoryMethods[method]
             ?: return rules
 
@@ -128,7 +158,7 @@ class SpringRuleProvider(
             ?: return rules
 
         val repoRule = TaintPassThrough(method, mkTrue(), repoActions, info = null)
-        return rules + repoRule
+        return appendSyntheticRules(rules, listOf(repoRule))
     }
 
     private fun RepositoryMethodInfo.actions(): List<CopyAllMarks>? {

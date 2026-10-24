@@ -7,6 +7,7 @@ import org.opentaint.dataflow.configuration.jvm.ActionPosition
 import org.opentaint.dataflow.configuration.jvm.RemoveMark
 import org.opentaint.dataflow.configuration.jvm.TaintConfigurationItem
 import org.opentaint.dataflow.configuration.jvm.TaintMark
+import org.opentaint.dataflow.configuration.jvm.resetMarks
 import org.opentaint.dataflow.configuration.jvm.serialized.UserDefinedRuleInfo
 import org.opentaint.dataflow.jvm.ap.ifds.CallPositionToJIRValueResolver
 import org.opentaint.dataflow.jvm.ap.ifds.JIRMarkAwareConditionRewriter
@@ -70,7 +71,7 @@ class JIRMethodCallRuleBasedSummaryRewriter(
             if (simplifiedCondition.isFalse) continue
 
             val positions = sourceRule.actionsAfter.mapTo(hashSetOf()) { it.position }
-            indexRule(sourceRule, positions, ruleInfo.relevantTaintMarks)
+            indexRule(sourceRule, positions, sourceRule.resetMarks().mapTo(linkedSetOf()) { it.second })
         }
 
         for (cleanRule in taintCtx.allRelevantCleanRulesForCallStatement(statement)) {
@@ -80,7 +81,7 @@ class JIRMethodCallRuleBasedSummaryRewriter(
             if (simplifiedCondition.isFalse) continue
 
             val positions = cleanRule.actionsAfter.filterIsInstance<RemoveMark>().mapTo(hashSetOf()) { it.position }
-            indexRule(cleanRule, positions, ruleInfo.relevantTaintMarks)
+            indexRule(cleanRule, positions, cleanRule.resetMarks().mapTo(linkedSetOf()) { it.second })
         }
 
         result
