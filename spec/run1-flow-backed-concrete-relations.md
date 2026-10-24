@@ -91,16 +91,18 @@ part E is eligible for replacement only if all these tests pass:
 
 ```kotlin
 // This implementation handles the proved run-1 ANY output case.
-fun canReplaceAny(e: MarkedPart, f: FlowPart): Boolean =
+fun canReplaceAny(e: MarkedPart, f: FlowTreePart): Boolean =
     e.inputMark == e.outputMark &&
     !e.nonSubsumable &&
     sameRelationScope(e, f) &&
     sameInitialShapeIgnoringMark(e, f) &&
     e.finalBase == f.finalBase &&
-    e.finalTail == ANY && f.finalTail == ANY &&
-    isPrefix(f.finalFields, e.finalFields) &&
-    f.admits(e.outputMark) &&
-    enoughLayerStrength(f, e)
+    e.finalTail == ANY &&
+    f.fields.anyPrefixOf(e.finalFields) { leaf ->
+        leaf.tail == e.finalTail &&
+        leaf.admits(e.outputMark) &&
+        enoughLayerStrength(f, leaf, e)
+    }
 ```
 
 `sameRelationScope` keeps the method/context, point/endpoint, call stage and
@@ -117,6 +119,29 @@ FLOW x.f.[any]   contains TAINT x.f.[any]
 FLOW x.f.[any]   does not contain TAINT x.[any]
 FLOW x.f.[any]   does not contain TAINT x.g.[any]
 ```
+
+The FLOW conclusion contains a concrete **field tree**. The tested TAINT
+conclusion has one concrete field path. Coverage requires **any one** eligible
+FLOW output path from that tree to prefix the TAINT path:
+
+```text
+FLOW tree paths: {x.f, x.g.h}, each with an ANY output
+TAINT path:      x.g.h.k
+Result:         covered by x.g.h
+```
+
+The FLOW tree need not be a single path or equal the TAINT path. It need
+not cover the entire TAINT tree either: test each TAINT output path/mark.
+One qualifying FLOW path is sufficient. Its tail, mark exclusion and layer
+checks must all pass at that same path. An internal branch node with no
+FLOW output annotation is not a covering output. A prefix which excludes
+T does not prevent another eligible prefix from covering T.
+
+`anyPrefixOf` walks the TAINT field path through the FLOW trie and checks
+the output annotations at the root and each reached prefix node. It stops
+at the first qualifying output. It does not enumerate all FLOW paths or
+compare every FLOW/TAINT path pair. The existing single-path proof applies
+to the selected FLOW path; the FLOW tree denotes the union of its outputs.
 
 This means spatial containment, not a longer textual path containing a
 shorter path. For EXACT tails only the same point is contained. A correlated
