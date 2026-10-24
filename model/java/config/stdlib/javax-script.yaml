@@ -30,10 +30,6 @@ passThrough:
     - this
     - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
-  - from:
-    - this
-    - .javax.script.ScriptContext#attribute#java.lang.Object
-    to: result
 - function: javax.script.Bindings#putAll
   signature: (java.util.Map) void
   copy:
@@ -68,8 +64,10 @@ passThrough:
   signature: (java.lang.String, java.lang.Object, int) void
   taintCopyOnly: true
   copy:
-  - from: arg(0)
-    to: this
+  - from: arg(1)
+    to:
+    - this
+    - .javax.script.ScriptContext#attribute#java.lang.Object
 - function: javax.script.ScriptEngine#setBindings
   signature:
     params:
@@ -148,7 +146,9 @@ passThrough:
   signature: (java.lang.String, int) java.lang.Object
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.Bindings#put
   signature: (java.lang.Object, java.lang.Object) java.lang.Object
@@ -190,7 +190,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#contextData#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.Bindings#put
   signature: (java.lang.String, java.lang.Object) java.lang.Object
@@ -208,10 +208,10 @@ passThrough:
 - function: javax.script.ScriptContext#setAttribute
   signature: (java.lang.String, java.lang.Object, int) void
   copy:
-  - from: arg(0)
+  - from: arg(1)
     to:
     - this
-    - .javax.script.ScriptContext#contextData#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
 - function: javax.script.ScriptEngineManager#getBindings
   signature: () javax.script.Bindings
   copy:
@@ -247,7 +247,9 @@ passThrough:
   signature: (java.lang.String, int) java.lang.Object
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptEngine#setBindings
   signature: (javax.script.Bindings, int) void
@@ -259,7 +261,9 @@ passThrough:
   signature: (java.lang.String) java.lang.Object
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptEngineManager#setBindings
   signature: (javax.script.Bindings) void
@@ -279,14 +283,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#contextData#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptContext#getAttribute
   signature: (java.lang.String) java.lang.Object
   copy:
   - from:
     - this
-    - .javax.script.ScriptContext#contextData#java.lang.Object
+    - .javax.script.ScriptContext#attribute#java.lang.Object
     to: result
 - function: javax.script.ScriptEngine#getBindings
   signature:
