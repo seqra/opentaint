@@ -63,6 +63,14 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
 - function: java.text.DecimalFormatSymbols#setExponentSeparator
   signature: (java.lang.String) void
   copy:
@@ -77,6 +85,14 @@ passThrough:
     to:
     - this
     - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
 - function: java.text.DecimalFormatSymbols#setZeroDigit
   signature: (char) void
   copy:
@@ -611,6 +627,16 @@ passThrough:
     - this
     - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
     - .java.text.DecimalFormatSymbols#currency#java.util.Currency
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormatSymbols#internationalCurrencySymbol#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#symbols#java.text.DecimalFormatSymbols
+    - .java.text.DecimalFormatSymbols#currencySymbol#java.lang.String
 - function:
     package: java.text
     class: MessageFormat
@@ -1617,4 +1643,111 @@ passThrough:
   - from:
     - this
     - .java.text.DecimalFormat#pattern#java.lang.String
+    to: result
+- function: java.text.DecimalFormatSymbols#getLocale
+  signature: () java.util.Locale
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormatSymbols#locale#java.util.Locale
+    to: result
+- function: java.text.DecimalFormat#setMultiplier
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#multiplier#int
+- function: java.text.DecimalFormat#getMultiplier
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#multiplier#int
+    to: result
+- function: java.text.DecimalFormat#setGroupingSize
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#groupingSize#int
+- function: java.text.DecimalFormat#getGroupingSize
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#groupingSize#int
+    to: result
+- function: java.text.DecimalFormat#setMaximumIntegerDigits
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#maximumIntegerDigits#int
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#minimumIntegerDigits#int
+- function: java.text.DecimalFormat#getMaximumIntegerDigits
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#maximumIntegerDigits#int
+    to: result
+- function: java.text.DecimalFormat#setMinimumIntegerDigits
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#minimumIntegerDigits#int
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#maximumIntegerDigits#int
+- function: java.text.DecimalFormat#getMinimumIntegerDigits
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#minimumIntegerDigits#int
+    to: result
+- function: java.text.DecimalFormat#setMaximumFractionDigits
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#maximumFractionDigits#int
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#minimumFractionDigits#int
+- function: java.text.DecimalFormat#getMaximumFractionDigits
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#maximumFractionDigits#int
+    to: result
+- function: java.text.DecimalFormat#setMinimumFractionDigits
+  signature: (int) void
+  copy:
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#minimumFractionDigits#int
+  - from: arg(0)
+    to:
+    - this
+    - .java.text.DecimalFormat#maximumFractionDigits#int
+- function: java.text.DecimalFormat#getMinimumFractionDigits
+  signature: () int
+  copy:
+  - from:
+    - this
+    - .java.text.DecimalFormat#minimumFractionDigits#int
     to: result
