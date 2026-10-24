@@ -9,13 +9,30 @@ import java.util.IdentityHashMap
 
 /** One writer owns the method's statement/premise values for a run. */
 class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, private val lm: LanguageManager,
-                      private val fieldLimit: Int) {
+                      private val fieldLimit: Int, flowBacked: Boolean = false) {
     init { require(fieldLimit >= 1) { "The field limit must be positive" } }
 
     private val size = lm.getMaxInstIndex(method.method) + 1
     private val reach = IdentityHashMap<PremiseKey, Array<BitSet>>()
     private val groups = IdentityHashMap<PremiseKey, Array<ConclusionGroup?>>()
     private val interners = m.newInterners()
+    // Local rule observations still need concrete membership. Share its exact
+    // diagonal geometry here; semantic replacement is a summary boundary only.
+    private val packed: Array<FlowBackedSummaries?>? = if (flowBacked) arrayOfNulls(size) else null
+
+    /** Null selects the exact scalar fallback; an empty result is a duplicate.
+     * The packet decoder, not its FLOW-shaped storage key, determines K6. */
+    fun addDiagonal(node: CommonInst, offered: DiagonalDelta): List<DiagonalDelta>? {
+        m.cancellation.checkpoint()
+        val statements = packed ?: return null
+        check(offered.initialShape.manager === m) { "A diagonal packet needs an owned initial shape" }
+        check(offered.base !is AccessPathBase.CleanerTemporary && offered.base != AccessPathBase.Zero)
+        assert(offered.geometry.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
+        val index = lm.getInstIndex(node)
+        val owner = statements[index] ?: FlowBackedSummaries(m, replaceCovered = false, interners = interners)
+            .also { statements[index] = it }
+        return owner.addDiagonal(offered)
+    }
 
     /** T4: new leaves, or the whole merged value when a T2 annotation changes. */
     fun add(node: CommonInst, premise: PremiseKey, f: Facts): Facts? {
@@ -34,6 +51,11 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
             is FlowTree -> assert(f.root.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
             is TaintTree -> assert(f.root.boundedDepth <= fieldLimit) { "W3: a stored conclusion must be within the field limit" }
         }
+        packed?.let { statements ->
+            val owner = statements[index] ?: FlowBackedSummaries(m, replaceCovered = false, interners = interners)
+                .also { statements[index] = it }
+            return owner.add(premise, f)
+        }
         val statements = groups.getOrPut(premise) { arrayOfNulls(size) }
         val group = statements[index] ?: ConclusionGroup(m, interners).also { statements[index] = it }
         return group.add(f)
@@ -43,6 +65,10 @@ class MethodEdgeStore(private val m: ApManager, private val method: MethodKey, p
     fun edgesAt(node: CommonInst, premise: PremiseKey? = null): Sequence<Pair<PremiseKey, Facts>> = sequence {
         m.cancellation.checkpoint()
         val index = lm.getInstIndex(node)
+        packed?.get(index)?.let { owner ->
+            if (premise == null) yieldAll(owner.all())
+            else for (facts in owner.borrow(premise)) yield(premise to facts)
+        }
         val keys = if (premise != null) listOf(premise) else LinkedHashSet<PremiseKey>().also { keys ->
             for (key in reach.keys) { m.cancellation.checkpoint(); keys += key }
             for (key in groups.keys) { m.cancellation.checkpoint(); keys += key }

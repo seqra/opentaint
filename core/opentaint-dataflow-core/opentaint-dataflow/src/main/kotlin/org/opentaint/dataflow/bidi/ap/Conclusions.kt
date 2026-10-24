@@ -47,6 +47,7 @@ class TaintTree internal constructor(
     val root: TaintNode,
     val exclusion: ExclusionSet = ExclusionSet.Empty,
     val anyTail: Tail = if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY,
+    val nonSubsumable: TaintNode? = null,
 ) : Facts {
     init {
         check(base != AccessPathBase.Zero) { "Only REACH represents zero" }
@@ -57,7 +58,7 @@ class TaintTree internal constructor(
         }
     }
     internal fun withRoot(root: TaintNode) = TaintTree(base, layer, root, if (root.hasAny) exclusion else ExclusionSet.Empty,
-        if (root.hasAny) anyTail else Tail.ANY_TAINT)
+        if (root.hasAny) anyTail else Tail.ANY_TAINT, nonSubsumable?.let { intersectTaintMask(it, root) })
     override fun equals(other: Any?): Boolean = this === other || (other is TaintTree && layer == other.layer &&
         base == other.base && anyTail == other.anyTail && exclusion == other.exclusion && root == other.root)
     override fun hashCode(): Int = ((root.hashCode() * 31 + base.hashCode()) * 31 + exclusion.hashCode()) * 2 + layer.ordinal + anyTail.ordinal * 17
@@ -94,7 +95,7 @@ val Facts.groupKey: GroupKey get() = when (this) {
 fun Facts.withLayer(layer: Layer): Facts = if (this.layer == layer) this else when (this) {
     is Reach -> Reach.of(layer)
     is FlowTree -> FlowTree(base, layer, exclusion, markExclusion, root, tail)
-    is TaintTree -> TaintTree(base, layer, root, exclusion, anyTail)
+    is TaintTree -> TaintTree(base, layer, root, exclusion, anyTail, nonSubsumable)
 }
 
 /** Exact TAINT leaves do not carry E and must not inherit a sibling's loss. */
@@ -106,9 +107,10 @@ internal fun run1CoverFacts(m: ApManager, f: Facts, emit: (Facts) -> Unit) {
             else FlowTree(f.base, Layer.DEMAND, ExclusionSet.Empty, f.markExclusion, f.root, f.tail))
         is TaintTree -> if (f.exclusion == ExclusionSet.Empty) emit(f) else {
             m.taintAlg.mapLeaves(f.root, m.cancellation) { m.taintLeaves(it.exact, MarkSet.EMPTY) }
-                ?.let { emit(m.taintTree(f.base, f.layer, it)) }
+                ?.let { emit(m.taintTree(f.base, f.layer, it, nonSubsumable = f.nonSubsumable?.let { mask -> intersectTaintMask(mask, it) })) }
             m.taintAlg.mapLeaves(f.root, m.cancellation) { m.taintLeaves(MarkSet.EMPTY, it.any) }
-                ?.let { emit(m.taintTree(f.base, Layer.DEMAND, it, anyTail = f.anyTail)) }
+                ?.let { emit(m.taintTree(f.base, Layer.DEMAND, it, anyTail = f.anyTail,
+                    nonSubsumable = f.nonSubsumable?.let { mask -> intersectTaintMask(mask, it) })) }
         }
     }
 }

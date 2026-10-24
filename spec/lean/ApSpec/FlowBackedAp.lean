@@ -1,6 +1,7 @@
 /- Original AP execution: cross-premise ANY instantiation, without StrongQueries. -/
 import ApSpec.Run1FlowTaintCoverage
 import ApSpec.CurrentDemand
+import ApSpec.Run1SummaryAliasAdmission
 
 namespace ApSpec.FlowBackedAp
 open ApSpec ApSpec.Abs ApSpec.Run1FlowTaintCoverage
@@ -79,6 +80,46 @@ theorem any_tree_output_covers
     ⟨present, suffix, rfl⟩,
     any_output_prefix_covers ib ob ip path suffix t (excluded path) allowed l0 l1 marked⟩
 
+/-- A canonical leaf for the existing raw-summary alias classifier. Layers
+    and exclusion headers do not affect that classifier. -/
+def aliasCellLeaf (b : Run1SummaryAliasAdmission.Base) (p : List Nat)
+    (tail : Run1SummaryAliasAdmission.Tail) (payload : Run1SummaryAliasAdmission.Payload) :
+    Run1SummaryAliasAdmission.Leaf := ⟨⟨b, p, tail, .demand, [], []⟩, payload⟩
+
+/-- The selected ANY FLOW is an effect even when its bases and paths agree:
+    its output tail is not STAR. -/
+theorem any_flow_alias_effect (ib ob : Run1SummaryAliasAdmission.Base) (ip op : List Nat) :
+    Run1SummaryAliasAdmission.noMemoryEffect
+      (aliasCellLeaf ib ip .star .flow) (aliasCellLeaf ob op .any .flow) = false := by
+  simp [Run1SummaryAliasAdmission.noMemoryEffect, aliasCellLeaf]
+
+/-- Equal bases are safe in this nonidentity ANY cell. The marked output
+    path differs from the initial path; both raw summaries are effects.
+    The FLOW prefix path need not equal the marked path. -/
+theorem same_base_nonidentity_any_alias_effect
+    (b : Run1SummaryAliasAdmission.Base) (ip fp tp : List Nat)
+    (t : Run1SummaryAliasAdmission.Mark) (different : ip ≠ tp) :
+    Run1SummaryAliasAdmission.noMemoryEffect
+      (aliasCellLeaf b ip .star .flow) (aliasCellLeaf b fp .any .flow) = false ∧
+    Run1SummaryAliasAdmission.noMemoryEffect
+      (aliasCellLeaf b ip .star (.taint t)) (aliasCellLeaf b tp .any (.taint t)) = false := by
+  constructor
+  · exact any_flow_alias_effect b b ip fp
+  · simp [Run1SummaryAliasAdmission.noMemoryEffect, aliasCellLeaf, different]
+
+/-- A same-path marked output has a different alias class from ANY FLOW.
+    Keep this exact annotated output in the scalar residual. -/
+theorem same_path_any_alias_mismatch
+    (b : Run1SummaryAliasAdmission.Base) (p : List Nat)
+    (t : Run1SummaryAliasAdmission.Mark) (nonzero : b ≠ .zero) :
+    Run1SummaryAliasAdmission.noMemoryEffect
+      (aliasCellLeaf b p .star .flow) (aliasCellLeaf b p .any .flow) = false ∧
+    Run1SummaryAliasAdmission.noMemoryEffect
+      (aliasCellLeaf b p .star (.taint t)) (aliasCellLeaf b p .any (.taint t)) = true := by
+  constructor
+  · exact any_flow_alias_effect b b p p
+  · simp [Run1SummaryAliasAdmission.noMemoryEffect, aliasCellLeaf, nonzero]
+
 def containmentControls : List Bool := [
   decide (dropPrefix [10] [10,20] = some [20]),
   decide (dropPrefix [10,20] [10] = none),
@@ -87,7 +128,15 @@ def containmentControls : List Bool := [
     some (initial 2 [10] .star)),
   decide (coveringPaths [[10], [20,30]] [20,30,40] = [[20,30]]),
   decide (coveringPaths [[10], [20,30]] [20,40] = []),
-  decide (coveringPaths [[], [20], [20,30]] [20,30,40] = [[], [20], [20,30]])
+  decide (coveringPaths [[], [20], [20,30]] [20,30,40] = [[], [20], [20,30]]),
+  !Run1SummaryAliasAdmission.noMemoryEffect
+    (aliasCellLeaf (.arg 0) [] .star .flow) (aliasCellLeaf (.arg 0) [10] .any .flow),
+  !Run1SummaryAliasAdmission.noMemoryEffect
+    (aliasCellLeaf (.arg 0) [] .star (.taint (.full 1 7)))
+    (aliasCellLeaf (.arg 0) [10] .any (.taint (.full 1 7))),
+  Run1SummaryAliasAdmission.noMemoryEffect
+    (aliasCellLeaf (.arg 0) [] .star (.taint (.full 1 7)))
+    (aliasCellLeaf (.arg 0) [] .any (.taint (.full 1 7)))
 ]
 
 /-- Reversing the abstract guide uses the existing emitter's FLOW form. -/
@@ -109,6 +158,9 @@ theorem protected_guide_start (b : Base) (p : List Acc) (t : Mark) :
 #print axioms prefix_guide_start
 #print axioms coveringPaths_exact
 #print axioms any_tree_output_covers
+#print axioms any_flow_alias_effect
+#print axioms same_base_nonidentity_any_alias_effect
+#print axioms same_path_any_alias_mismatch
 #print axioms abstract_guide_start
 #print axioms protected_guide_start
 end ApSpec.FlowBackedAp

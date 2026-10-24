@@ -12,6 +12,107 @@ class DeltaWorklistTest {
     private val premise = f.manager.initial(f.pattern())
     private fun edge(index: Int, layer: Layer = Layer.NORMAL) = EdgeDelta(premise, f.inst(index), f.fact(layer = layer))
     private fun zero(index: Int, layer: Layer = Layer.NORMAL) = EdgeDelta(f.manager.zero, f.inst(index), f.ops.zero(layer))
+    private fun flow(index: Int, layer: Layer = Layer.NORMAL) = EdgeDelta(
+        f.manager.initial(f.pattern(tail = Tail.STAR, mark = MarkSlot.STAR)),
+        f.inst(index), f.fact(tail = Tail.STAR, mark = MarkSlot.STAR, layer = layer))
+
+    @Test fun `nonzero FLOW changed precedes unchanged TAINT`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val taintChanged = edge(1)
+        val taintUnchanged = edge(2)
+        val flowChanged = flow(3, Layer.DEMAND)
+        val flowUnchanged = flow(4)
+        work.add(taintChanged)
+        work.addUnchanged(taintUnchanged)
+        work.add(flowChanged)
+        work.addUnchanged(flowUnchanged)
+        for (expected in listOf(flowUnchanged, flowChanged, taintUnchanged, taintChanged)) {
+            assertSame(expected, work.removeNext())
+            work.afterProcess()
+        }
+        assertTrue(work.isEmpty)
+    }
+
+    @Test fun `FLOW changed between unchanged partitions retains the repeat burst`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val flowUnchanged = flow(1)
+        val flowChanged = flow(2)
+        val taintUnchanged = edge(3)
+        assertTrue(work.addUnchanged(taintUnchanged))
+        assertTrue(work.addUnchanged(flowUnchanged))
+        work.add(flowChanged)
+        assertSame(flowUnchanged, work.removeNext())
+        work.afterProcess()
+        assertFalse(work.addUnchanged(flowUnchanged))
+        assertSame(flowChanged, work.removeNext())
+        work.afterProcess()
+        assertFalse(work.addUnchanged(flowUnchanged))
+        assertFalse(work.addUnchanged(taintUnchanged))
+        assertSame(taintUnchanged, work.removeNext())
+        work.afterProcess()
+        assertTrue(work.isEmpty)
+        assertTrue(work.addUnchanged(flowUnchanged))
+        assertTrue(work.addUnchanged(taintUnchanged))
+    }
+
+    @Test fun `FLOW arriving from TAINT work regains priority without a global barrier`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val first = edge(1)
+        val second = edge(2)
+        val generated = flow(3)
+        work.add(first)
+        work.add(second)
+        assertSame(second, work.removeNext())
+        work.add(generated)
+        work.afterProcess()
+        assertSame(generated, work.removeNext())
+        work.afterProcess()
+        assertSame(first, work.removeNext())
+        work.afterProcess()
+        assertTrue(work.isEmpty)
+    }
+
+    @Test fun `ordinary equal protection upgrade has a distinct unchanged repeat key`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val plain = edge(1)
+        val facts = plain.facts as TaintTree
+        val protected = plain.copy(facts = facts.withProtection(facts.root))
+        assertEquals(plain, protected)
+        assertTrue(work.addUnchanged(plain))
+        assertTrue(work.addUnchanged(protected))
+        assertFalse(work.addUnchanged(protected.copy()))
+        assertSame(protected, work.removeNext())
+        work.afterProcess()
+        assertFalse(work.addUnchanged(plain))
+        assertSame(plain, work.removeNext())
+        work.afterProcess()
+        assertTrue(work.isEmpty)
+    }
+
+    @Test fun `clear releases every FLOW priority lane and its shared repeat keys`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val changedFlow = flow(1)
+        val unchangedFlow = flow(2)
+        val changedTaint = edge(3)
+        val unchangedTaint = edge(4)
+        work.add(changedFlow)
+        work.add(changedTaint)
+        assertTrue(work.addUnchanged(unchangedFlow))
+        assertTrue(work.addUnchanged(unchangedTaint))
+        assertEquals(4, work.size)
+        work.clear()
+        assertTrue(work.isEmpty)
+        assertFalse(work.hasZeroWork)
+        assertEquals(0, work.size)
+        assertFails { work.removeNext() }
+        assertTrue(work.addUnchanged(unchangedFlow))
+        assertTrue(work.addUnchanged(unchangedTaint))
+        assertSame(unchangedFlow, work.removeNext())
+        work.afterProcess()
+        assertSame(unchangedTaint, work.removeNext())
+        work.afterProcess()
+        assertTrue(work.isEmpty)
+    }
 
     @Test fun `new worklist has no pending content`(): Unit {
         val work = DeltaWorklist()
@@ -19,6 +120,33 @@ class DeltaWorklistTest {
         assertFalse(work.hasZeroWork)
         assertEquals(0, work.size)
         assertFails { work.removeNext() }
+    }
+
+    @Test fun `FLOW priority retains original global unchanged order while ZERO is pending`(): Unit {
+        val work = DeltaWorklist(flowFirst = true)
+        val changedZero = zero(1)
+        val unchangedFlow = flow(2)
+        val unchangedZero = zero(3)
+        val unchangedTaint = edge(4)
+        val changedFlow = flow(5)
+        val changedTaint = edge(6)
+        work.add(changedTaint)
+        work.add(changedFlow)
+        work.add(changedZero)
+        work.addUnchanged(unchangedFlow)
+        work.addUnchanged(unchangedZero)
+        work.addUnchanged(unchangedTaint)
+        for (expected in listOf(unchangedTaint, unchangedZero, unchangedFlow, changedZero)) {
+            assertTrue(work.hasZeroWork)
+            assertSame(expected, work.removeNext())
+            work.afterProcess()
+        }
+        assertFalse(work.hasZeroWork)
+        assertSame(changedFlow, work.removeNext())
+        work.afterProcess()
+        assertSame(changedTaint, work.removeNext())
+        work.afterProcess()
+        assertTrue(work.isEmpty)
     }
 
     @Test fun `unchanged then zero then other queues each use LIFO order`(): Unit {

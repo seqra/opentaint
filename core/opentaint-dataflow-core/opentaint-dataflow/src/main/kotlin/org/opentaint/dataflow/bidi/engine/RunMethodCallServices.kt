@@ -24,6 +24,24 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
     private data class PlanFact(val premise: PremiseKey, val facts: Facts, val identityCandidate: Boolean?)
     private fun planFact(premise: PremiseKey, facts: Facts, identity: Boolean?) =
         PlanFact(premise, facts, identity)
+    /** One cleaner step owns this collection. Ordinary identity stays unchanged;
+     * equal results must OR their annotation before the next step sees them. */
+    private class PlanFacts(private val ap: ApManager) : AbstractMutableCollection<PlanFact>() {
+        private val values = LinkedHashMap<PlanFact, PlanFact>()
+        override val size: Int get() = values.size
+        override fun iterator(): MutableIterator<PlanFact> = values.values.iterator()
+        override fun add(element: PlanFact): Boolean {
+            val old = values[element]
+            if (old == null) {
+                values[element] = element
+                return true
+            }
+            val (merged, delta) = ap.mergeAddDelta(old.facts, element.facts)
+            if (delta == null) return false
+            values[element] = element.copy(facts = merged)
+            return true
+        }
+    }
     private class CallContext(val node: CommonInst, val call: CommonCallExpr, val plan: CallPlan, val callerLayer: Layer)
     private class Frame(val point: CallPoint, val facts: List<PlanFact>, val pendingDemotion: Boolean) {
         var entered = false
@@ -192,7 +210,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                 if (current.all { fullCleanupCollectorFixed(it.premise, it.facts) }) {
                     val mask = block.marksFrom(stepIndex, core.ap.cancellation)
                     statistics?.fullCleanupBlock(stepIndex > block.first, block.end - stepIndex, current.size)
-                    val next = LinkedHashSet<PlanFact>()
+                    val next = PlanFacts(core.ap)
                     for (input in current) {
                         core.ap.cancellation.checkpoint()
                         val address = at(input, stepIndex, CleanerPhase.CLEAN)
@@ -219,7 +237,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             val phase = if (stepIndex == firstStep) firstPhase else CleanerPhase.INPUT
             // Finish every current-step effect before merging equal inputs to the next step.
             val next: MutableCollection<PlanFact> =
-                if (core.config.run1) LinkedHashSet() else ArrayList()
+                if (core.config.run1) PlanFacts(core.ap) else ArrayList()
             for (input in current) {
                 core.ap.cancellation.checkpoint()
                 when (step) {
@@ -353,7 +371,9 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                 core.ap.cancellation.checkpoint()
                 statistics?.staticGroupCallOffered()
                 statistics?.staticGroupCallDirect()
-                val scalar = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
+                val plain = core.ap.factsOf(leaf.fact, leaf.exclusion, pub.layer)
+                val scalar = if (plain is TaintTree && pub.conclusion is TaintTree)
+                    plain.withProtection(pub.conclusion.nonSubsumable) else plain
                 applyStaticInput(part, pub, member, actual, scalar)
             }
         } else core.staticCallInterest(part, pub, member)
@@ -485,7 +505,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             core.ops.applySummary(part.added, premise, group, core.mode, core.collect(at) { pr, result ->
                 if (core.config.run1 && result.base == STATIC) core.promoteStaticSummary(pr, result)
                 else results += planFact(pr, result, identity)
-            })
+            }, original = part.ref.premise)
         }
     }
 

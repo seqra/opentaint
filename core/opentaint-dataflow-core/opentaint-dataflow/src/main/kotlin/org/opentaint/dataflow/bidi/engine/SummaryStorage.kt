@@ -13,9 +13,10 @@ class SummaryStorage(
     ops: ApOps,
     private val steps: ProtocolSteps,
     private val statistics: Run1AbstractionStatistics? = null,
+    flowBacked: Boolean = false,
 ) {
     private val lock = Any()
-    private val published = PublicationIndex(ap, ops)
+    private val published = PublicationIndex(ap, ops, flowBacked)
     private val subscribers = LinkedHashSet<SubscriptionManager>()
     private val requests = RequestStorage()
 

@@ -149,9 +149,10 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
         flowTree(base, layer, exclusion, MarkExclusions.fromMarks(mx, marks), root, tail)
 
     fun taintTree(base: AccessPathBase, layer: Layer, root: TaintNode, exclusion: ExclusionSet = ExclusionSet.Empty,
-                  anyTail: Tail = if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY): TaintTree =
+                  anyTail: Tail = if (layer == Layer.NORMAL) Tail.ANY_TAINT else Tail.ANY,
+                  nonSubsumable: TaintNode? = null): TaintTree =
         TaintTree(base, layer, root, if (anyTail == Tail.ANY || !root.hasAny) ExclusionSet.Empty else intern(exclusion),
-            if (root.hasAny) anyTail else Tail.ANY_TAINT)
+            if (root.hasAny) anyTail else Tail.ANY_TAINT, nonSubsumable?.let { intersectTaintMask(it, root, cancellation) })
 
     fun taintLeaves(exact: MarkSet, any: MarkSet): TaintLeaves = taintAlg.leaves(exact, any)
     fun newInterners(): StoreInterners = StoreInterners(softRefs, cancellation)

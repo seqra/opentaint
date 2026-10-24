@@ -3,6 +3,7 @@ package org.opentaint.dataflow.bidi.driver
 import mu.KLogging
 import org.opentaint.dataflow.bidi.ap.Direction
 import org.opentaint.dataflow.bidi.ap.MethodKey
+import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.engine.MethodCallServicesFactory
 import org.opentaint.dataflow.bidi.engine.MethodLocalServicesFactory
 import org.opentaint.dataflow.bidi.engine.RunConfig
@@ -15,6 +16,7 @@ import org.opentaint.dataflow.bidi.engine.RunResult
 import org.opentaint.dataflow.bidi.engine.RunStatus
 import org.opentaint.dataflow.bidi.engine.SharedObjects
 import org.opentaint.dataflow.bidi.engine.readRun1MarkMode
+import org.opentaint.dataflow.bidi.store.RelationCensus
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.dataflow.util.MemoryManager
 import java.util.Collections
@@ -79,6 +81,9 @@ class IterationDriver internal constructor(
             throw error
         }
         logger.info { "BIDI_RUN_END run=${config.index} status=${result.status} engineTime=${start.elapsedNow()}" }
+        if (config.run1 && config.mode.markMode == MarkMode.FULL && result.status == RunStatus.COMPLETE) {
+            logger.info { "BIDI_FLOW_BACKED_STATISTICS run=${config.index} neutralBatches=${result.analyzers.sumOf { it.neutralBatchApplications }} neutralMemberships=${result.analyzers.sumOf { it.neutralBatchMemberships }} bulkStorePackets=${result.analyzers.sumOf { it.neutralBulkStorePackets }} bulkStoreMemberships=${result.analyzers.sumOf { it.neutralBulkStoreMemberships }} scalarStoreFallbackMemberships=${result.analyzers.sumOf { it.neutralScalarFallbackMemberships }}" }
+        }
         logOptimizationStatistics(config, "END")
         if (result.status != RunStatus.COMPLETE) return Next.End(result.status)
         val barrierStart = TimeSource.Monotonic.markNow()
@@ -111,6 +116,11 @@ class IterationDriver internal constructor(
     }
 
     private fun barrier(config: RunConfig, result: RunResult<RunMethodAnalyzer>, report: ReportBuilder): Next {
+        if (config.run1 && config.mode.markMode == MarkMode.FULL && shared.n2Statistics != null) {
+            val raw = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.census() }
+            val selected = result.analyzers.fold(RelationCensus()) { counts, actor -> counts + actor.summaries.demandCensus() }
+            logger.info { "BIDI_FLOW_BACKED_CENSUS run=${config.index} raw=$raw selected=$selected" }
+        }
         val forward = config.direction == Direction.FORWARD
         if (forward) {
             report.add(config, result)

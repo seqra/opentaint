@@ -27,11 +27,12 @@ class RunMethodAnalyzer(
     internal val forward: Boolean = port.config.direction == Direction.FORWARD
     private val limit = port.config.fieldLimit
 
-    private var edgeStore: MethodEdgeStore? = MethodEdgeStore(ap, key, port.shared.language, limit)
+    private var edgeStore: MethodEdgeStore? = MethodEdgeStore(ap, key, port.shared.language, limit,
+        flowBacked = mode.run1 && mode.markMode == MarkMode.FULL)
     private var initialStore: InitialFactStore? = InitialFactStore()
     val edges: MethodEdgeStore get() = checkNotNull(edgeStore) { "The method edges were released" }
     val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
-    val summaries = RunSummaryStore(ap)
+    val summaries = RunSummaryStore(ap, flowBacked = mode.run1 && mode.markMode == MarkMode.FULL)
     val sourceHits: SourceHitStore? = if (forward) null else SourceHitStore()
     private val currentQueries = if (config.restricted)
         StrongQueries(ops, mode, checkNotNull(config.demand).staticQueryPolicy) else null
@@ -75,7 +76,8 @@ class RunMethodAnalyzer(
     internal val localServices: MethodLocalServices get() = checkNotNull(local) { "The local services were released" }
     private val callServices: MethodCallServices get() = checkNotNull(calls) { "The call services were released" }
     internal val applier = FormApplier(EngineAlgebra(this))
-    private val worklist = DeltaWorklist()
+    private val worklist = DeltaWorklist(flowFirst = mode.run1 && mode.markMode == MarkMode.FULL,
+        batchManager = ap.takeIf { mode.run1 && mode.markMode == MarkMode.FULL })
     private var pending = ArrayList<Publication>()
 
     override var steps: Long = 0; private set
@@ -85,6 +87,11 @@ class RunMethodAnalyzer(
     var nonZeroInitial: Boolean = false; private set
     override var recordCrossings: Long = 0; private set
     var triggerSeeds: Long = 0; private set
+    var neutralBatchApplications: Long = 0; private set
+    var neutralBatchMemberships: Long = 0; private set
+    var neutralBulkStorePackets: Long = 0; private set
+    var neutralBulkStoreMemberships: Long = 0; private set
+    var neutralScalarFallbackMemberships: Long = 0; private set
 
     private var initialized = false
 
@@ -425,8 +432,12 @@ class RunMethodAnalyzer(
                 if (processed >= quantum) {
                     return false
                 }
-                processed++
-                process(worklist.removeNext())
+                if (mode.run1 && mode.markMode == MarkMode.FULL)
+                    processed += processPending(worklist.removeNextBatch(), quantum - processed)
+                else {
+                    processed++
+                    process(worklist.removeNext())
+                }
                 worklist.afterProcess()
             }
             flushPublications()
@@ -450,6 +461,74 @@ class RunMethodAnalyzer(
         steps++
         runnerPort.onProcess?.invoke(key, item)
         if (context.callAt(item.node) != null) callServices.process(item) else runStatement(item)
+    }
+
+    /** A batch can cross only a certified plain statement. Keep a remainder
+     * counted as work before any successor, yield or request/static barrier. */
+    private fun processPending(work: PendingWork, budget: Int): Int {
+        if (work is PendingWork.Scalar) {
+            process(work.delta)
+            return 1
+        }
+        work as PendingWork.MarkedBatch
+        val node = work.node
+        var used = 0
+        val plainPoint = context.callAt(node) == null && !context.isEnd(node) &&
+            !context.isExceptionalExit(node) && runnerPort.onProcess == null && runnerPort.onCut == null &&
+            !dropsStaticField(work.batch.initialShape)
+        if (plainPoint) forms.withStatement(key, node) { summary ->
+            if (!NeutralRelationBatch.certifies(summary)) return@withStatement
+            val chunk = work.batch.take(budget)
+            used = chunk.size
+            worklist.addBatch(node, work.batch, work.unchanged)
+            steps += used
+            neutralBatchApplications++
+            neutralBatchMemberships += used
+            check(chunk.applyPacked(ops, summary, mode,
+                emit = { shape, facts, marks -> emitPackedAfter(node, shape, facts, marks) },
+                untouched = { shape, facts, marks ->
+                    NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
+                        emitUnchanged(EdgeDelta(premise, node, value))
+                    }
+                }))
+        }
+        if (used != 0) return used
+        val (premise, facts) = work.batch.removeFirst()
+        worklist.addBatch(node, work.batch, work.unchanged)
+        process(EdgeDelta(premise, node, facts))
+        return 1
+    }
+
+    private fun emitPackedAfter(node: CommonInst, shape: InitialAp, facts: TaintTree, marks: MarkSet) {
+        val offered = NeutralRelationBatch.toDiagonal(ap, shape, facts, marks)
+        if (offered == null) {
+            // Classify once, then use the exact decoder for an unsupported
+            // tail or partial-protection cell. No scalar tree is built first.
+            neutralScalarFallbackMemberships += marks.size
+            NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value -> emitAfter(premise, node, value) }
+            return
+        }
+        check(!context.isEnd(node) && !context.isExceptionalExit(node))
+        context.forEachSuccessor(node) { successor ->
+            ap.cancellation.checkpoint()
+            val fresh = edges.addDiagonal(successor, offered)
+            if (fresh == null) {
+                // Differing overlapping geometry needs the existing scalar
+                // admission law. This fallback is selected before decoding.
+                neutralScalarFallbackMemberships += marks.size
+                NeutralRelationBatch.decodePacked(ap, shape, facts, marks) { premise, value ->
+                    edges.add(successor, premise, value)?.let { push(EdgeDelta(premise, successor, it)) }
+                }
+            } else for (delta in fresh) {
+                ap.cancellation.checkpoint()
+                neutralBulkStorePackets++
+                neutralBulkStoreMemberships += delta.marks.size
+                edgeDeltas += delta.marks.size
+                if (delta.layer == Layer.DEMAND) demandLayerEdges += delta.marks.size
+                worklist.addBatch(successor, checkNotNull(NeutralRelationBatch.fromDiagonal(ap, delta)))
+                requestWork()
+            }
+        }
     }
 
     private fun runStatement(item: EdgeDelta) {
@@ -526,7 +605,9 @@ class RunMethodAnalyzer(
         private val add: ResultSink = { premise, facts ->
             cut(point, premise, facts) { pr, result ->
                 val key = pr to result
-                items.putIfAbsent(key, RuleItem(pr, result))
+                val old = items[key]
+                val merged = if (old == null) result else ap.mergeAddDelta(old.facts, result).first
+                items[key] = RuleItem(pr, merged)
             }
         }
 
