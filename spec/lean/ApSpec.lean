@@ -181,3 +181,9 @@ import ApSpec.SemgrepReducedMarksTermination
 import ApSpec.SemgrepRuleCompaction
 import ApSpec.SemgrepMetadataProjection
 import ApSpec.RuleProviderComposition
+import ApSpec.FlowBackedProtection
+import ApSpec.FlowBackedAp
+import ApSpec.FlowBackedStore
+import ApSpec.FlowBackedPriority
+import ApSpec.FlowBackedHandoff
+import ApSpec.FlowBackedRelationsCounterexamples

@@ -1,6 +1,6 @@
 # Reuse FLOW relations for concrete FULL marks in run-1
 
-Date: 24 October 2026. Status: **unselected next-iteration proposal**.
+Date: 24 October 2026. Status: **section 3 specified; remaining proposals unselected**.
 Measured runtime: `40e20d16f03ab046df75a53a489bb331b065a9c1`.
 Clarification: prefer FLOW coverage over independent concrete-mark transport.
 The design uses the original demand-driven AP emission/restriction, without
@@ -8,6 +8,11 @@ StrongQueries. The latest [Thingsboard run-1 comparison](../reports/bidirectiona
 measures ANY/ANY overlap. Same-mark generation and mark cycles use the
 selected non-subsumable annotation in section 3.7; no CM definiteness test
 is required.
+The [complete FLOW-backed specification](../../spec/run1-flow-backed-concrete-relations.md)
+and [proof dossier](../../spec/run1-flow-backed-concrete-relations-proofs.md)
+supersede section 3. They include triggering-conclusion assignment protection,
+cleaner assign-back, local and call cycle protection, and original AP handoff
+witnesses. The analyzer implementation remains unchanged.
 All fixed-project commands, profile scopes and six required OOM owner
 scopes are closed. This proposal uses the corrected candidate measurements.
 It changes no analyzer code. Read the
@@ -403,8 +408,10 @@ while the rule adds a real pair absent from the read. The selected protection
 rules below retain this dependency. Do not infer that a source rule may be
 deleted in later runs just because its coarse run-1 output is contained in
 FLOW. Keep original rule evaluation; protected demands make the necessary
-marked analyses available. The full inter-run simulation remains a required
-proof, rather than an assumption about StrongQueries.
+marked analyses available. The new proof dossier gives constructive transport
+extraction and original AP C2/C5 handoff witnesses for the selected scalar
+scope. Runtime adapter correspondence remains an implementation gate;
+general StrongQueries is not a proof assumption.
 
 The latest run-1 comparison measures local same-path FLOW/ANY coverage:
 18,869 of 29,151 method-point memberships and 10,631 of 11,752 summary
@@ -422,23 +429,28 @@ entry is needed.
 
 The selected rules are:
 
-1. A rule assigns T and emits an edge whose original premise has mark T:
+1. A rule assigns T and its accepted triggering conclusion has mark T:
    the T conclusion is non-subsumable. Apply this to every concrete-mark
    generating rule action, including source, conjunction and end-fact paths
-   where that premise is retained. A plain `* -> *` transfer is not an
-   assignment of T.
+   where that origin is retained. A surviving selected-T cleaner result is
+   an assign-back of T and is protected too. Other bases, unselected marks
+   and complete kills keep their original behavior. A plain `* -> *`
+   transfer is not an assignment of T.
 2. A summary has a non-subsumable conclusion: its application produces a
    non-subsumable conclusion. Ordinary transport also preserves protection
    already present on its input.
-3. Composing caller `T -> U` with summary `U -> T`, for `U != T`, produces
-   non-subsumable `T -> T`. Compare with the caller's original premise mark,
-   not only the current incoming fact's U.
+3. Composing `T -> U` with `U -> T`, for `U != T`, produces
+   non-subsumable `T -> T`. Apply this to local rule composition and summary
+   application. Compare with the original premise mark in this cycle test;
+   the assignment test above uses the triggering conclusion.
 4. Identical edges merge by OR on this annotation. A non-subsumable copy
    dominates a subsumable copy, in either arrival order.
 
 ```kotlin
-fun onRuleAssignment(origin: FullMark?, assigned: FullMark, old: Boolean): Boolean =
-    old || origin == assigned
+fun onRuleAssignment(
+    origin: FullMark?, triggering: FullMark, assigned: FullMark, old: Boolean,
+): Boolean = old || triggering == assigned ||
+    (origin == assigned && triggering != assigned)
 
 fun onSummaryApplication(
     origin: FullMark?, incoming: FullMark, outgoing: FullMark,

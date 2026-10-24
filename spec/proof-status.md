@@ -1,5 +1,31 @@
 # Current proof status
 
+## Specified: concrete relations backed by FLOW
+
+The [complete specification](run1-flow-backed-concrete-relations.md) and
+[proof dossier](run1-flow-backed-concrete-relations-proofs.md) select FULL
+run-1 cross-premise ANY coverage, exact residual geometry sharing and local
+FLOW priority. New edge-local protection compares rule assignments with
+the triggering conclusion, treats selected cleaner survivors as assign-back,
+protects local/call mark cycles, and merges by OR. Protection-only growth
+is real work. These are explicit handoff/admission changes; field transfer,
+source guards, static service and ordinary equality/hash remain unchanged.
+
+Constructive models check actual original AP summary equality, constructive
+transport extraction, normalized relation/protected-obligation preservation,
+exact mask decoding, finite-key progress and queue/barrier laws. Original
+C2/C5 executable certificates supply demand-selected starts and restriction;
+general StrongQueries permission is not a premise. Unsupported cells keep
+exact fallback. Runtime adapter correspondence and differential checks remain
+implementation gates. Analyzer implementation files are unchanged.
+
+The [check receipt](lean/run1-flow-backed-concrete-relations-checks.json)
+records the final model build and owned axiom/control audit. Latest measured
+Thingsboard is **run-1 OOM**, no COMPLETE/accepted forward run. No new project
+measurement or engine speedup is claimed.
+The integrated Lean build passes 191 jobs; the owned audit checks 447
+declarations and 22 executable controls, with no unexpected axioms.
+
 ## Implemented and measured: Semgrep provider selection and early specialization
 
 The [complete specification](semgrep-rule-selection-and-specialization.md)
@@ -59,8 +85,9 @@ retains the PDF two-location gap, censored Thingsboard result, OWASP 9,179
 trace total versus CI's expected 4,112, and failed 60-second targets.
 No project outcome is certified by these constructive models. The
 [next proposal](../docs/design/bidirectional-rule-selection-next-iteration-20261024.md)
-uses current concrete-mark store replication. It is unselected and its
-transfer/handoff proofs are requirements for future work.
+uses current concrete-mark store replication. Its FLOW-backed section now
+has the specification and local proofs above; the other proposals remain
+unselected. Runtime adapters and performance acceptance remain future work.
 
 ## Implemented: FULL return cleanup and temporary static supplies
 
