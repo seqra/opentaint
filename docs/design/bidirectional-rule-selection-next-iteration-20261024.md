@@ -1,7 +1,13 @@
-# Avoid repeated ordinary FULL transport in run-1
+# Reuse FLOW relations for concrete FULL marks in run-1
 
 Date: 24 October 2026. Status: **unselected next-iteration proposal**.
 Measured runtime: `40e20d16f03ab046df75a53a489bb331b065a9c1`.
+Clarification: prefer FLOW coverage over independent concrete-mark transport.
+The design uses the original demand-driven AP emission/restriction, without
+StrongQueries. The latest [Thingsboard run-1 comparison](../reports/bidirectional-thingsboard-flow-taint-coverage-20261024.md)
+measures ANY/ANY overlap. Same-mark generation and mark cycles use the
+selected non-subsumable annotation in section 3.7; no CM definiteness test
+is required.
 All fixed-project commands, profile scopes and six required OOM owner
 scopes are closed. This proposal uses the corrected candidate measurements.
 It changes no analyzer code. Read the
@@ -89,7 +95,7 @@ batching in caller storage and cannot bound that adapter's opportunity.
 
 | Rank | Proposal | Current → new | Expected impact and limit |
 | --- | --- | --- | --- |
-| 1 | Process exact FULL mark relations in batches | Repeat the same AP transport under scalar initial marks → share the transport with an exact input/output mark relation | Can remove whole transfer, store and join operations when many marks use the same geometry. The eligible weighted fraction must be measured. |
+| 1 | Subtract covered concrete summary effects; share residual geometry; process FLOW first | Repeat marked summary outputs → keep the covering FLOW and only uncovered marked residuals; use exact masks for residual geometry | The biased eight-method sample has local FLOW/ANY coverage for 10,631 of 11,752 marked summary memberships. This is not a global saving estimate or a completed handoff proof. |
 | 2 | Keep execution facts only at required boundaries of plain linear regions | Store changed/touched intermediate values and enqueue per-statement work → apply the same plain steps locally and store boundary results | Can remove actual intermediate admissions and queue operations. Unchanged emission already bypasses MethodEdgeStore. Required boundary coverage and the eligible retained fraction are not measured yet. |
 
 These are algorithmic work-removal proposals. Neither has a measured
@@ -105,162 +111,387 @@ filter, or another static writer index from these measurements. The slow
 Thingsboard tail is inherited full-GC pressure. Reduce the admitted state
 which causes that pressure.
 
-## 3. Exact FULL mark relations
+## 3. Concrete relations backed by FLOW
 
-### Current and new behavior
+### 3.1 The three storage cases
 
-`TaintTree` can already pack several conclusion marks. The initial premise
-still has one concrete mark. That separate initial key prevents two equal
-transports from sharing one MethodEdgeStore row.
+The primary optimization is to reuse an existing FLOW relation. A DEMAND
+FLOW/ANY relation can also subsume a same-mark DEMAND TAINT/ANY relation;
+coverage is not limited to NORMAL FLOW. Batching
+equal TAINT relations is a second step. `TaintTree` already packs conclusion
+marks, but scalar marked premises still duplicate geometry and its containers.
+
+| Corresponding FLOW | Concrete relation | Retained representation |
+| --- | --- | --- |
+| NORMAL or DEMAND, with proved summary coverage and handoff replacement | Represented by the mark-preserving FLOW relation and its normal record or demand | No separate TAINT summary or T demand. Required marked intraprocedural observations still run. |
+| NORMAL or DEMAND, with reusable geometry but without the proof above | Keeps its original TAINT annotations and any required marked demand | FLOW reference plus an exact FULL mark set and the original TAINT header; no duplicate geometry. |
+| No corresponding reusable FLOW geometry | Cannot use a FLOW reference | Explicit TAINT relation. Equal residual relations can still share geometry and an exact mark set. |
+
+Apply this classification per covered part, not only per whole tree. If FLOW
+covers one output leaf or some marks, retain the remainder in compact or
+explicit form. A DEMAND FLOW edge cannot replace a NORMAL TAINT proof.
+In the measured eight-method summary scope, 887 of 1,157 marked premise rows
+are partly covered and only 36 are wholly covered. Whole-tree tests are
+insufficient.
+
+**Proposed semantic amendment to the previous proposal:** the current core
+forces every run-1 `TaintTree` to DEMAND. The new design permits a concrete
+relation to use the NORMAL status that its corresponding NORMAL FLOW
+relation already proves. It then needs no independent marked demand. This
+is a coverage rule, not a blanket removal of `forceRun1Layer`. Static-origin
+relations stay DEMAND. Field cuts, field writes, source actions and cleaners
+retain their existing semantics.
+
+A NORMAL summary does not make a DEMAND caller input NORMAL. Summary
+application still combines the input layer and the summary layer as today.
+Nor does FLOW establish that a particular mark is available: a real marked
+input or the existing request/supply mechanism must establish that fact.
+DEMAND/ANY subsumption needs no NORMAL strengthening. Its covering FLOW
+remains DEMAND. Omitting a covered T demand requires the original AP handoff
+proof described below; it is not justified by StrongQueries.
+
+### 3.2 Subsumption and geometry sharing are different tests
+
+For a FLOW relation `F`, let `lift(F, T)` be its mark-preserving concrete
+relation for FULL mark `T`, using the existing AP semantics. A concrete
+relation `E(T)` is covered only when every input/output pair of `E(T)` is
+in `lift(F, T)`, with sufficient layer strength. NORMAL coverage also
+requires that the lift is NORMAL for the relevant concrete input.
+
+```text
+I(p, STAR, *) -> q/ANY/(* minus X), DEMAND
+I(p, STAR, T) -> q/ANY/T,           DEMAND
+T not in X: local pair inclusion holds across these initial keys.
+```
+
+The new [local Lean model](../../spec/lean/ApSpec/Run1FlowTaintCoverage.lean)
+proves this inclusion in the existing AP denotation. It does not by itself
+prove that every marked rule dependency can disappear from the next run.
+
+This is cross-premise semantic coverage. It is not the existing same-premise
+`ConclusionGroup` subsumption test. Compare the same method/context and
+point or summary endpoint. Keep original input/output path correlation,
+tails, exact/MUST leaves, field exclusions and mark exclusions. `F` must
+admit `T`. Preserve canonical initial identities and all contributing origins.
+An excluded mark, a mark-changing action or a different origin is not
+covered merely because the bases and field chains agree.
+
+```text
+FLOW:          p.*/* -> x.*/*, NORMAL
+Valid instance: p.q/T -> x.q/T, NORMAL       // same suffix q
+
+Not an instance: p.left/T -> x.right/T       // suffix changed
+```
+
+In particular, the current broad initial `I(p,*,T)` can produce
+`x/[any]/T DEMAND`. Equal unmarked base/path names alone do not prove that
+this broad relation is covered by `p.* -> x.* NORMAL`. Do not relabel its
+`[any]` leaf as NORMAL or replace it with a MUST leaf. Keep its marked demand
+if the AP coverage test cannot prove coverage. The proof must account for
+the canonical run-1 marked-initial grammar; it must not assume a new exact
+initial shape. The notation above describes relation instances, not new
+run-1 initial facts.
+
+This does **not** require storing that TAINT geometry in full. For storage,
+the FLOW input/output geometry can serve as an immutable template while a
+small TAINT header preserves the different tails and layer:
+
+```text
+F0 = I(p,*,*) -> x.*/*, NORMAL
+row = (F0, marks={T,U}, original TAINT header=DEMAND/[any])
+decode(row) = { I(p,*,T) -> x/[any]/T DEMAND,
+                I(p,*,U) -> x/[any]/U DEMAND }
+```
+
+The original premise tail/exclusion and per-leaf exact/any annotations must
+also be recoverable. Share only geometry that agrees exactly; split the row
+or leave a residual when required. This compression does not use the FLOW
+layer as a TAINT proof and does not authorize reusing a mark-dependent
+transfer result. Thus even a NORMAL FLOW template can back a compact TAINT
+DEMAND row when semantic subsumption is unavailable.
+
+### 3.3 Storage organization
+
+Use the same classification in method-point and summary storage. One
+immutable FLOW geometry can serve many marks. A compact mark set records
+membership and progress; it does not recreate a conclusion trie per mark.
+
+```kotlin
+// Contract pseudocode; keys remain scoped to the owning ApManager.
+data class FlowBackedMarks(
+    val flow: FlowRelationRef,  // stable, complete relation at this endpoint
+    val marks: FullMarkSet,     // exact same-mark input/output membership
+    val header: ConcreteHeader, // original premise, tails, layer, E and leaf tags
+)
+
+class ConcreteRelations {
+    val flow: FlowRelationStore
+    val backed: Map<Pair<FlowRelationRef, ConcreteHeader>, FullMarkSet>
+    val explicit: ExplicitTaintStore
+
+    fun admit(edge: ConcreteOffer) {
+        val (subsumed, remaining) = flow.partitionByProvedCoverage(edge)
+        val (shareable, remainder) = flow.partitionByGeometry(remaining)
+        observeRequiredMarkedEffects(edge) // before removing redundant transport
+        recordCoveredEffects(subsumed)     // no duplicate summary or T demand
+        admitBackedMarks(shareable)       // preserve its original TAINT header
+        explicit.admit(remainder)         // existing merge/delta laws
+    }
+}
+```
+
+`partitionByProvedCoverage` needs an executable semantic/handoff witness for each
+accepted part. `partitionByGeometry` needs an exact reconstruction witness,
+not a NORMAL proof. Decoding a compact row must recover its complete old
+relation, including the original marked premise. If the reference and small
+header cannot recover a tail or annotation, that part remains explicit.
+Do not retain a second complete tree inside `ConcreteHeader`. For NORMAL
+coverage, the FLOW relation itself supplies the transfer; do not enumerate
+every possible mark into a summary-side membership set. Intraprocedural mark
+progress is still required where actual marked arrivals can cause rule work.
+
+The proof witnesses do not require retained derivation histories or support
+labels on runtime edges.
+
+Use one authoritative delta admission across compact and explicit values.
+Several possible FLOW references must not admit the same concrete member
+several times. Preserve the existing annotation-change and subsumption delta
+laws, not only set subtraction on mark masks. Moving an existing member
+between representations must not make it new work.
+
+`FlowRelationRef` points to an immutable, retained relation, not a borrowed
+form, transient delta or mutable store row. Its owner remains the existing
+method actor or summary storage. Publishing to another owner uses immutable
+values and the existing subscription protocol. No global dependency graph
+or new request store is required by this proposal.
+
+Keep the existing typed `InitialAp`/`Facts` invariant: do not put a TAINT
+tree under a FLOW premise in `MethodEdgeStore`, or erase the mark from
+`InitialAp` equality. The compact relation is a separate representation
+with an exact decoder through the owning ApManager.
+
+Within every mark set, input `T` maps to output `T`. `{T,U}` never means
+`T -> U` or `U -> T`. FULL owners and primitive properties stay exact; the
+mask is not a new mark token or GROUP wildcard. Partition primitive filters
+exactly or use the scalar path. Keep differing images in separate rows and
+split a row when only some marks gain an output. Cross-mark residuals retain
+their actual input/output mark relation.
+
+### 3.4 FLOW-first processing, with late arrivals
+
+Prefer FLOW transport before concrete transport at the same permitted
+logical phase. This makes the covering relation available before admitting
+many scalar concrete summaries. It is a scheduling optimization, not a
+correctness prerequisite.
+
+```kotlin
+fun chooseWithinCurrentPhase(): Work =
+    flowWork.removeNextOrNull() ?: concreteWork.removeNext()
+
+fun onFlowAdded(delta: FlowRelation) {
+    publishNewFlow(delta)
+    compactCoveredExplicitParts(delta) // no replay of old semantic effects
+}
+
+fun onMarkedArrival(input: MarkedInput) {
+    val fresh = markedProgress.admit(input)
+    if (!fresh.isEmpty()) enqueueMarkedWork(fresh)
+}
+```
+
+Use this simple local priority inside the current nonzero phase: take FLOW
+while it is available, then TAINT. Keep the existing actor quantum and
+cancellation; do not add a global completion barrier. Preserve ZERO/control
+phases and the unchanged repeat-set contract. The
+policy must consider FLOW in both changed and unchanged lanes; a TAINT
+unchanged burst must not always bypass pending FLOW changed work. FLOW generated by a
+later concrete rule or another method can arrive after TAINT. Do not wait
+for a global “all FLOW complete” barrier. Store the explicit relation first,
+then compact it when coverage becomes available. Migration changes storage,
+not semantic novelty; it must not re-enqueue old outputs or repeat reports.
+If late NORMAL coverage replaces a demand-only representation, expose that
+new stronger coverage through the normal publication protocol.
+For late DEMAND coverage, preserve the FLOW demand and retire only proved
+redundant T demands. Apply the relation admission law at raw summary,
+selected-demand and publication owners. Removing an actor-local payload
+alone leaves the published copies and future caller candidates intact.
+
+Both old/new subscriptions must see the FLOW coverage or the residual
+concrete relation regardless of arrival order. For a marked caller input,
+the existing NORMAL FLOW summary must be usable without first creating a
+separate marked callee summary. Validate this path explicitly.
+
+For certified plain operations, process one geometry with a mask of fresh
+marks instead of applying the same structural transfer once per mark.
+Only new membership or new geometry/annotation is work. Rules, conditions,
+cleaners, ND joins, static operations and observations remain evaluation
+boundaries unless an exact batch adapter is proved. NORMAL FLOW coverage
+removes duplicate transport/storage; it does not remove marked rule checks.
+Do not construct one complete scalar edge per mark before classifying it.
+
+`ProcessingAddress` still includes node and complete logical stage. Keep
+resume site, cleaner step/phase, caller layer, identity candidate and pending
+demotion separate. A packed work item owns immutable geometry and an exact
+mask. All continuations remain counted work and must drain before existing
+request/static commit barriers. Standing subscriptions are not queued work.
+
+### 3.5 Examples
 
 ```java
 Object pass(Object p) {
     Object x = p;
-    Object y = x;
-    return y;
+    return x;
 }
 ```
 
-At one program point, two current edges are:
+For a real exact `p.q/T` input, `p.* -> ret.* NORMAL` already returns
+`ret.q/T` with the input's layer. Before: a marked analysis can additionally
+store and publish a T-specific relation. After: use the FLOW summary directly
+for its covered part. A sink check on `x/T` still runs when T really arrives.
+The broad synthetic initial discussed in §3.2 needs its own coverage test.
 
-```text
-I(p, *, T) -> x/[any]/T, DEMAND
-I(p, *, U) -> x/[any]/U, DEMAND
+```java
+Object writeThenPass(Object p) {
+    p.f = clean();
+    return p;
+}
 ```
 
-The proposed value is one exact relation:
+The run-1 rule moves `p.*` to DEMAND and keeps E empty when the write would
+update E. It does not become a NORMAL pass. Where that DEMAND FLOW covers
+T/U transport, retain one reference with `{T,U}` instead of two TAINT
+geometries. Handoff still exposes the FULL T and U demands. Keep any uncovered
+geometry explicit. If the complete demand-replacement proof applies, the
+FLOW demand replaces the covered T/U demands too. Otherwise this is geometry
+sharing only. The field-write rule itself is unchanged.
 
-```text
-input geometry:  I(p, *)
-output geometry: x/[any], DEMAND
-input marks:     {T,U}
-output mark:     same as that row's input mark
-
-decode = { I(p,*,T) -> x/[any]/T,
-           I(p,*,U) -> x/[any]/U }
+```java
+Object generate() {
+    return sourceT();
+}
 ```
 
-It does not contain `I(p,*,T) -> x/U` or `I(p,*,U) -> x/T`. A mark mask
-must not become an independent input/output Cartesian product. FULL names,
-owners and primitive properties stay exact. These masks are storage values;
-they are not new taint marks or GROUP wildcards.
+`ZERO -> ret/T` creates T; it is not a mark-preserving FLOW instance.
+Keep the explicit source relation with its current layer policy. Likewise,
+`I(p,T) -> ret/U` is not covered by a T-preserving FLOW relation. This
+proposal does not change source guards, all-ZERO tests or action semantics.
 
-### Storage and propagation
+### 3.6 Handoff and expected savings
 
-Start with the strict same-mark case. All structural fields must agree.
-ZERO, FLOW, cross-mark outputs and unsupported shapes keep their existing
-path. Do not combine different initial bases or fields merely because they
-have the same output.
+Persist NORMAL FLOW summaries under the selected record contract. Keep
+DEMAND FLOW as guidance. A proved covering FLOW relation can replace both
+the T summary and its T demand. The covering relation need not be NORMAL.
+For residuals which only share geometry, preserve the original FULL marked
+demands. Do not substitute a GROUP demand.
+
+Use original AP section 6.3 and 6.4: an abstract demand starts its FLOW form;
+a caller's concrete input instantiates the returned FLOW relation. No
+StrongQueries admission, actual-input fallback or unrestricted response
+permission may be an assumption of the proof. Source/sink observation
+obligations remain. Static query policy stays within its separately selected
+scope; do not revive static-to-static propagation.
+
+The source-dependency argument is precise for `T != U`: a conditional source
+retains its original T premise and emits U. FLOW preserves the input mark,
+so it cannot subsume T-to-U. Keep that dependency and the backward T path.
+Sinks keep their T seeds. CM itself does not exclude T; mark-removal actions
+do, and a FLOW result excluding T cannot subsume T.
+
+The local Lean model checks a read of `p.right` plus
+`CM(p.left,T) -> assign T to x`: run-1 FLOW can contain the generated image
+while the rule adds a real pair absent from the read. The selected protection
+rules below retain this dependency. Do not infer that a source rule may be
+deleted in later runs just because its coarse run-1 output is contained in
+FLOW. Keep original rule evaluation; protected demands make the necessary
+marked analyses available. The full inter-run simulation remains a required
+proof, rather than an assumption about StrongQueries.
+
+The latest run-1 comparison measures local same-path FLOW/ANY coverage:
+18,869 of 29,151 method-point memberships and 10,631 of 11,752 summary
+memberships in the same eight stress stores. It also separates STAR-only
+residuals. These are snapshot measurements, not a global savings estimate
+or a certificate for future-rule redundancy.
+
+### 3.7 Non-subsumable concrete conclusions
+
+Use one annotation per logical output leaf/mark. This annotation belongs to
+the edge, not to the global mark T. It changes FLOW-subsumption eligibility,
+not CM truth, the FULL identity, the layer or the field geometry. No CM
+definiteness check, grounding history, new rule-provider mark or MarkTable
+entry is needed.
+
+The selected rules are:
+
+1. A rule assigns T and emits an edge whose original premise has mark T:
+   the T conclusion is non-subsumable. Apply this to every concrete-mark
+   generating rule action, including source, conjunction and end-fact paths
+   where that premise is retained. A plain `* -> *` transfer is not an
+   assignment of T.
+2. A summary has a non-subsumable conclusion: its application produces a
+   non-subsumable conclusion. Ordinary transport also preserves protection
+   already present on its input.
+3. Composing caller `T -> U` with summary `U -> T`, for `U != T`, produces
+   non-subsumable `T -> T`. Compare with the caller's original premise mark,
+   not only the current incoming fact's U.
+4. Identical edges merge by OR on this annotation. A non-subsumable copy
+   dominates a subsumable copy, in either arrival order.
 
 ```kotlin
-data class InitialGeometry(
-    val base: Base, val path: Path, val tail: Tail, val exclusion: FieldExclusion,
-)
+fun onRuleAssignment(origin: FullMark?, assigned: FullMark, old: Boolean): Boolean =
+    old || origin == assigned
 
-data class SameMarkTransport(
-    val initial: InitialGeometry,
-    val output: UnmarkedConclusionImage, // every base, leaf, layer, E and tail
-    val marks: FullMarkSet,
-)
+fun onSummaryApplication(
+    origin: FullMark?, incoming: FullMark, outgoing: FullMark,
+    inputProtected: Boolean, summaryProtected: Boolean,
+): Boolean = inputProtected || summaryProtected ||
+    (origin == outgoing && incoming != outgoing)
 
-fun decode(row: SameMarkTransport): Sequence<OrdinaryEdge> =
-    row.marks.asSequence().flatMap { t ->
-        row.output.withMark(t).map { c ->
-            OrdinaryEdge(ap.initial(canonicalPattern(row.initial, t)), c)
-        }
-    }
+fun canRemoveT(edge: MarkedLeaf, flow: FlowRelation): Boolean =
+    !edge.nonSubsumable && flow.coversMarkedRelation(edge)
 
-fun admit(at: ProcessingAddress, offered: SameMarkTransport) {
-    val family = store[at, offered.initial]
-    var newMarks = offered.marks
-    for (old in family.snapshot()) {
-        val common = old.marks intersect offered.marks
-        if (common.isEmpty()) continue
-        newMarks -= common
-        val (joined, delta) = addWithExistingStoreLaws(old.output, offered.output)
-        if (delta.isEmpty()) continue
-        family.removeMarks(old, common)
-        family.mergeEqualImage(joined, common)
-        pending.add(at, offered.initial, delta, common)
-    }
-    if (newMarks.isNotEmpty()) {
-        family.mergeEqualImage(offered.output, newMarks)
-        pending.add(at, offered.initial, offered.output, newMarks)
-    }
-}
+fun mergeSameLeaf(old: MarkedLeaf, offered: MarkedLeaf): MarkedLeaf =
+    old.copy(nonSubsumable = old.nonSubsumable || offered.nonSubsumable)
 ```
 
-The method actor owns the mutable store and pending masks. A batch carries
-no borrowed form payload or mutable caller collection. It keeps the same
-method/context ownership as the existing solver. Request storage already
-merges mark sets; this proposal does not add another request copy.
-Within one family, input masks are pairwise disjoint: each mark has one
-complete current image. `ProcessingAddress` includes the node and complete
-logical processing stage. Keep resume site, cleaner step/phase, caller
-layer, identity candidate and pending demotion separate when they apply.
-Equal node and fact values alone do not make two continuations interchangeable.
-The first implementation can leave all such continuations on the old path.
-`InitialAp` remains canonical and identity-equal. Decode through the owning
-ApManager; do not create noncanonical initial objects or change InitialAp
-equality to erase marks. Geometry/mask keys are separate immutable values.
-They are scoped to the owning ApManager. Never combine numerical mark IDs
-from different managers.
-An update can split a cohort when only some marks gain an output. Equal
-complete images can join again. Never give another member a late output
-which belongs to only one mark. The pseudocode does not authorize replacing
-the existing subsumption and annotation-change delta laws with plain union.
-The family snapshot contains immutable row values, not views whose masks
-change during the loop. Mixed scalar and packed values need one authoritative
-current relation and delta admission. If a member gains a cross-mark output,
-migrate its complete image to the scalar path atomically, without publishing
-old values as new deltas. Keep every residual mark. The first adapter can
-keep that member scalar for the rest of the run.
+For packed output marks, store the protected subset of each leaf's mark set.
+Its members must remain in the full set. Preserve membership-specific
+protection when splitting or merging masks; one protected T must not protect
+unrelated U. Keep the annotation through assignments, alias effects, cuts,
+calls and static summaries. A real kill removes the killed membership and
+its annotation. Projection/packing cannot clear surviving protection.
 
-Apply one known plain transfer to the common geometry. Use exact mask
-operations for a mark-dependent filter only after its correspondence is
-proved. Expand unsupported cases into the existing scalar path.
+Protection-only growth is a delta, even if the ordinary T fact already
+exists. It must reach successors, summaries, publication storage and the
+handoff barrier. If the old unprotected copy was already subsumed, a later
+protected copy must recreate the required marked residual and demand.
+Flag-only work must not create a second ordinary report/source/sink identity.
+The ordinary observation key remains unchanged; its metadata gains protection.
+The annotation grows only from false to true, so identical repeat delivery
+does not create an endless work cycle.
 
-```kotlin
-fun step(row: SameMarkTransport, operation: Operation) {
-    when (operation) {
-        is CertifiedPlainTransfer -> {
-            val out = operation.applyGeometry(row.output)
-            if (!out.isEmpty()) emit(row.copy(output = out))
-        }
-        else -> decode(row).forEach(existingEngine::step)
-    }
-}
-```
+The handoff keeps protected T as an ordinary FULL marked demand. Later runs
+need no special mark identity or StrongQueries rule to read it. The selected
+static query adapters remain separately scoped. Static T relations use the
+same coverage/protection rule: there is no general static exemption. Actual
+pool supply effects must still execute before redundant transport is removed.
 
-This is contract pseudocode. `CertifiedPlainTransfer` requires a proved
-correspondence to the existing AP operation. A condition, cleaner, source,
-ND join, static operation or observation is a scalar boundary until a
-separate exact batch adapter is proved. Do not replace condition evaluation
-with a mark-mask membership shortcut without that proof.
-Preserve per-leaf exact and any/MUST occupancy, not only a global tail.
-Partition primitive-sensitive filters exactly or leave them scalar. Each
-plain step must retain the original cuts, run1Cover, limit handling and
-forceRun1Layer at the same logical point. Current run-1 TaintTree results
-are DEMAND; this proposal does not strengthen them to NORMAL.
+Current heap measurements do not contain this annotation. The 90.46% local
+summary overlap is a candidate count before protection, not the final number
+of deletable outputs. Measure the protected fraction before predicting a
+project-wide saving.
 
-The first storage adapter can target MethodEdgeStore. Extend summary and
-caller-input storage only when they preserve the same complete relation.
-For a summary lookup on T, intersect the mask with `{T}` and expose the
-existing T premise. Handoff must expose every original NORMAL summary and
-every marked DEMAND pattern to run-2. It must not substitute a group demand.
+For one eligible relation used by k marks, the target is one geometry and
+an exact mask instead of k premise/conclusion containers. NORMAL coverage
+also removes separate concrete summary publication and subscription work.
+DEMAND coverage retains mark membership but shares geometry and certified
+plain transfer work. Without FLOW, exact same-mark batching remains possible;
+unsupported residuals use the scalar store. Mask cost still grows with its
+representation, and mark-dependent boundaries still perform required work.
 
-### Why it can save work
-
-For k marks and one common plain transfer, the current path performs k
-shape transfers and admits k scalar initial rows. The proposed path performs
-one shape transfer and a mask operation. It can also replace k equal store
-headers with one header. Some bitset work still grows with k; do not call
-it constant-time for arbitrary masks.
-
-For a workload fraction f with average eligible width k, the ideal number
-of shape applications changes by `1 / (1 - f + f/k)`. This is a conditional
-work model, not a measured engine speedup. CPU outside that lane, decoding
-at boundaries and memory/GC still matter.
+For an eligible operation fraction f of average width k, ideal shape-work
+reduction is `1 / (1 - f + f/k)`. This is not a measured engine speedup.
+Count eliminated geometry applications, stored cells and joins rather than
+only wider packets. No whole-project two-times result is established yet.
 
 ## 4. Plain linear regions
 
@@ -331,37 +562,73 @@ Do not silently remove a future trace/proof requirement.
 
 ## 5. Semantic scope and required proofs
 
-The intended semantic changes are **none**. FULL stays the default. Keep
-initial grammar, field limits, primitive rules, field updates/exclusions,
-layers, all origins, exact all-ZERO admission, selected conditions/actions,
-static-pool transitions, controllers, exit rules and later-run behavior.
+The proposed changes are FLOW-first scheduling, cross-premise summary
+subtraction and replacement of proved redundant marked demands. Today the
+stores keep FLOW and TAINT under separate initial keys. The new representation
+can omit an effect supplied by the covering FLOW, including DEMAND/ANY FLOW.
+It keeps residual geometry/marks and the covering layer. The NORMAL-covered
+case may also use the existing NORMAL proof instead of a forced marked
+DEMAND, but replacing DEMAND by NORMAL on path similarity is outside scope.
+
+FULL stays the default. Keep initial grammar, field limits, primitive rules,
+field updates/exclusions, all origins, exact all-ZERO admission, selected
+conditions/actions, static-pool transitions, controllers and exit rules.
+Later runs use the original AP demand-driven emission and restriction,
+without StrongQueries. Their guidance can omit only unprotected concrete
+relations whose replacement has the required original-AP proof. Rule
+conditions and actions remain in the program; no new later-run rule deletion
+is part of this design. The new annotation prevents the same-mark dependency
+loss without changing field processing or testing CM definiteness.
+Plain-region execution is still an exact optimization, without an additional
+layer or field-transfer change.
 Do not put transfer-support state into MethodEdgeStore or revive
 GroundingSupport. Compiler labels must not alter configuration equality.
 
 Follow the [proof guide](../../spec/proof-guide.md) before implementation.
 The constructive models must provide executable decoders and witnesses:
 
-1. Packing/decoding preserves the complete ordinary edge relation. It never
-   creates a cross-mark pair or combines independent origins into an ND edge.
-2. Every certified plain operation commutes with decoding, including kills,
-   layer changes, exact/any tails and primitive filters.
-3. Mixed packed/scalar admission and replay reach the same finite closure.
-   Fair batching must not hide pending work from global termination. Masks,
+1. Construct the mark-preserving FLOW lift from the existing AP operations.
+   The coverage witness preserves input/output suffix correlation and the
+   canonical marked-initial grammar. It admits only marks allowed by FLOW
+   exclusions, and cannot create mark availability or strengthen a DEMAND
+   input. Include RED controls for `p.left/T -> x.right/T`, broad MAY versus
+   correlated STAR, excluded T, different origins and mark-changing GEN.
+2. Geometry-backed decoding and explicit residuals preserve the complete
+   concrete relation. NORMAL-covered parts are supplied by NORMAL FLOW.
+   The combined representation preserves semantic coverage and observation
+   identity, not necessarily the raw old list of redundant TAINT demands.
+   It never creates cross-mark pairs or combines origins into an ND edge.
+3. Every certified plain operation commutes with decoding/coverage,
+   including kills, layer changes, exact/any tails and primitive filters.
+   A FLOW-covered marked arrival still triggers required rule evaluation.
+4. FLOW-first and mixed compact/scalar admission reach the same finite
+   semantic closure regardless of arrival order. Test FLOW-before-TAINT,
+   TAINT-before-FLOW, late NORMAL coverage, recursive calls and late
+   subscribers. Migration must not replay old observations. Fair batching
+   must not hide pending work from global termination. Masks,
    decoded members and region continuations remain in counted fact work,
    cancellation, quantum and zero-phase accounting. They must drain before
    the existing request/static commit barriers, not only before the final
    termination check. Stored current masks and standing unanswered
    subscriptions are not queued work and must not keep a completed solver
    alive.
-4. At each rule/observation boundary, preserve complete binding identities,
+5. At each rule/observation boundary, preserve complete binding identities,
    all contributing origins and the all-ZERO cube test. Preserve source,
    sink and report occurrence identity; callback counters are separate.
-5. A linear-region step expands to an executable old step sequence. Every
+6. A linear-region step expands to an executable old step sequence. Every
    external resume and observable point has a retained boundary or an exact
    replay witness. Preserve exceptional and non-returning paths.
-6. Handoff yields the same NORMAL summaries and FULL marked demand patterns.
-   For every old run-2 start, construct the corresponding new start.
-7. Prove reduced operation counts for explicit finite eligible workloads.
+7. For every retired marked demand, construct its original-AP replacement:
+   a permitted NORMAL record or a retained FLOW demand, its FLOW-form
+   emission, restricted callee response and ordinary marked caller
+   application. Equal concrete starts are not required, but every required
+   observation and source-hit path must survive. Prove T-to-U preservation,
+   same-mark assignment protection, summary inheritance, cycle protection
+   and protected-duplicate dominance. Include protection-only deltas and
+   late reappearance after earlier subsumption. No
+   StrongQueries premise or unproved future-query completion is allowed.
+   All remaining FULL marked demands decode exactly.
+8. Prove reduced operation counts for explicit finite eligible workloads.
    State the scope and bitset cost. Do not claim a whole-project 2x bound.
 
 These are proof obligations, not completed Lean claims. If a proof requires
@@ -371,11 +638,15 @@ batch adapter.
 
 ## 6. Implementation and acceptance plan
 
-The corrected measurements are sealed. Extend the bounded stress result
-with a representative weighted output/operation sample before setting a
-whole-project savings target. Measure the share at certified plain points
-separately for rank 2. A top-store sample is not a global saving estimate.
-Reject a proposal whose eligible share is small.
+The corrected measurements are sealed. Add a representative, weighted
+coverage census at method points and summary endpoints: NORMAL semantic
+coverage, geometry sharing with NORMAL/DEMAND templates, and explicit
+residuals. Report covered leaves/mark memberships, retained geometry and
+operation counts separately. Preserve tails, exclusions, layers and origin
+correlation during the census. A match
+after erasing only the mark is not a coverage result. Measure the share at
+certified plain points separately for rank 2. A top-store sample is not a
+global saving estimate. Reject a proposal whose eligible share is small.
 
 Then build the constructive model and RED controls. Cover same-mark versus
 cross-mark pairs; full mark owners; primitive/nonprimitive filters; ZERO;
@@ -383,10 +654,13 @@ field overwrite/disjoint/prefix cases; NORMAL/DEMAND; late point resumes;
 recursive calls; conditional sources; cleaners; ND origins; and marked
 run-2 guidance. Compare decoded logical relations and observation multisets.
 
-Implement one adapter at a time behind a run-1 gate. Keep the old path for
-unsupported cases. Measure shape applications, queue items, retained cells,
-decoded scalar boundaries and peak bytes. Do not count a wider packet as
-less work if its implementation still repeats every old operation.
+Implement one adapter at a time behind a run-1 gate: coverage classification
+and residual admission, compact method-point rows, summary query/publication,
+then FLOW-first scheduling and certified mask transfers. Scheduling alone
+must not be needed for correctness. Keep the old path for unsupported cases.
+Measure shape applications, queue items, retained cells, marked publications,
+joins, decoded scalar boundaries and peak bytes. Do not count a wider packet
+as less work if its implementation still repeats every old operation.
 
 Finally repeat the fixed FULL/statics-ON/default-AA project campaign with
 the same heap/time limits. Require unchanged finding identities and
