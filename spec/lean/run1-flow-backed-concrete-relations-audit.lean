@@ -31,7 +31,7 @@ run_elab do
   logInfo m!"Total FLOW-backed declarations: {total}; no unexpected axioms."
 
 #eval do
-  let controls := ApSpec.FlowBackedPriority.controls ++
+  let controls := ApSpec.FlowBackedAp.containmentControls ++ ApSpec.FlowBackedPriority.controls ++
     ApSpec.FlowBackedHandoff.controls ++ ApSpec.FlowBackedRelationsCounterexamples.controls
   if !(controls.all id) then throw (IO.userError "FLOW-backed control failed")
   IO.println s!"Executable FLOW-backed controls: {controls.length} passed."

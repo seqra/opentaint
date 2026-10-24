@@ -14,7 +14,8 @@ replacement through retained FLOW guidance or a NORMAL FLOW record. Exact
 compression preserves every remaining marked relation and flag.
 
 The local semantic cell proved here is a canonical STAR/Empty initial with
-an ANY final, at equal complete scope and geometry. A mark must be admitted
+an ANY final, at equal complete scope and input geometry. The FLOW output
+path can equal or prefix the marked output path. A mark must be admitted
 by FLOW, its relation must be diagonal and unprotected, and layer strength
 must suffice. Unsupported cells retain their exact old semantics. Geometry
 sharing does not require semantic subsumption.
@@ -37,7 +38,7 @@ general StrongQueries premise appears in a new model or proof.
 | Module | Executable object and checked result |
 | --- | --- |
 | [Run1FlowTaintCoverage](lean/ApSpec/Run1FlowTaintCoverage.lean) | Original pair denotation; ANY coverage; excluded-mark, cross-mark and STAR correlation counterexamples; original source-rule witness |
-| [FlowBackedAp](lean/ApSpec/FlowBackedAp.lean) | Actual original `applySummary` equality; abstract and concrete `emitW` results |
+| [FlowBackedAp](lean/ApSpec/FlowBackedAp.lean) | Actual original `applySummary` equality for equal paths; output-prefix pair coverage and narrower-requirement emission; abstract and concrete `emitW` results |
 | [FlowBackedProtection](lean/ApSpec/FlowBackedProtection.lean) | Flag functions; typed finite derivations; executable transport extractor |
 | [FlowBackedStore](lean/ApSpec/FlowBackedStore.lean) | Admission, exact masks, normalized relation/obligation preservation, progress and counted geometry cost |
 | [FlowBackedPriority](lean/ApSpec/FlowBackedPriority.lean) | Four-lane nonzero queue, exact pop, finite-credit measure and barrier predicate |
@@ -61,12 +62,30 @@ the output preserves the input mark, and T passes the exclusion gate.
 Thus every E pair is an F pair. This is a cross-initial-key proof, not an
 existing same-ConclusionGroup test.
 
+For a marked output at `q ++ suffix`, the same statement holds with FLOW
+output q and ANY tails. `any_output_prefix_covers` uses the marked pair's
+actual output suffix r and constructs the FLOW suffix `suffix ++ r`.
+Associativity gives the same concrete location; all input and mark witnesses
+are unchanged. This proves the requested output-location containment, including
+proper prefixes. It does not treat a longer field path as a larger location
+set, or remove a field exclusion or correlation requirement.
+
 The stronger executable result is `any_summary_application`. For every
 actual AFact whose mark is T, and either equal summary layer, applying E
 or F returns **equal Res values**. After the mark gates reduce, both calls
 execute the same path relation, tail operation, normalization and layer OR.
 Requests are equal too. This checks the real `applySummary`, not a new
 operation defined to return the expected value.
+
+For proper prefixes the output headers can differ, so equality is not claimed.
+Pair inclusion and original `applySummary_sound` preserve each concrete
+composition pair in the covering FLOW application. The concrete input rules
+out a mark-request alternative. At the handoff, `prefix_guide_start` computes
+the original `emitW` result for a marked requirement strictly below the FLOW
+ANY entry pattern: the result is the FLOW form at the original broader path.
+Original C2/C5 then supplies the same whole-premise and requested-pair
+guarantees. This is an extension of the equal-path supported cell; no new
+StrongQueries admission or new initial shape is introduced.
 
 If F excludes T, no such proof exists. If an edge changes T to U, FLOW
 preservation of the input mark makes pair coverage impossible when T differs
@@ -307,6 +326,6 @@ source hashes, commands and results. The audit checks every declaration
 owned by the six new modules and runs executable controls. Only the existing
 `propext` and `Quot.sound` dependencies are permitted; no Classical choice,
 `sorryAx` or new axiom is permitted. The integrated build passes **191 jobs**;
-the owned audit checks **447 declarations** and **22 executable controls**.
+the owned audit checks **450 declarations** and **26 executable controls**.
 Runtime adapter work remains an implementation gate. Analyzer implementation
 files are unchanged.
