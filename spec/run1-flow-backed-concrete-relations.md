@@ -13,6 +13,10 @@ The current documentation parent is `8e7084b492d7d827ab93c8d3d686a9e59a159a38`.
 The latest Thingsboard measurement reached **run-1 OOM**. It has no COMPLETE
 or accepted forward run. No new project run was made for this specification.
 
+Terminology: **protection is the non-subsumable flag**. These names refer to
+the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
+mechanism, support label or dependency graph.
+
 ## 1. Selected changes and unchanged behavior
 
 The objective is to remove duplicate relation storage and propagation. Making
@@ -74,7 +78,8 @@ introduced in run-2. Unsupported shapes use the existing representation.
 A comparison key includes method/context, node or summary endpoint,
 normal/exceptional exit, complete premise geometry and the applicable call
 stage. It also includes resume address, cleaner phase, original caller
-scope and layer annotations when these affect transfer. Equality of base
+scope, identity/alias effect class and layer annotations when these affect
+transfer. Equality of base
 names alone is insufficient.
 
 ## 3. Two distinct uses of FLOW
@@ -85,26 +90,53 @@ Let `lift(F,T)` be the original AP relation of F on input mark T. A concrete
 part E is eligible for replacement only if all these tests pass:
 
 ```kotlin
-fun canReplace(e: MarkedPart, f: FlowPart): Boolean =
+// This implementation handles the proved run-1 ANY output case.
+fun canReplaceAny(e: MarkedPart, f: FlowPart): Boolean =
     e.inputMark == e.outputMark &&
     !e.nonSubsumable &&
-    sameScopeAndGeometry(e, f) &&
+    sameRelationScope(e, f) &&
+    sameInitialShapeIgnoringMark(e, f) &&
+    e.finalBase == f.finalBase &&
+    e.finalTail == ANY && f.finalTail == ANY &&
+    isPrefix(f.finalFields, e.finalFields) &&
     f.admits(e.outputMark) &&
-    enoughLayerStrength(f, e) &&
-    provedApplicationAndHandoffCell(e, f)
+    enoughLayerStrength(f, e)
 ```
 
-`sameScopeAndGeometry` compares the complete input and output paths and
-annotations required by the selected AP cell. It does not discard tails.
-An executable coverage test must implement the proved cells below. It must
-return false for an unsupported cell. No theorem search or derivation history
-is required at runtime.
+`sameRelationScope` keeps the method/context, point/endpoint, call stage and
+applicable effect class described in section 2. Initial shapes must agree
+in base, concrete field path, tail and E; only their marks differ. Output
+bases and field tail kinds must agree. The FLOW output's location set must
+**contain** the TAINT output's location set. Containment includes equality.
 
-The mandatory first cell is the equal-geometry **ANY/ANY** pair shown in
-section 2, with canonical STAR/Empty initials and T not in X. Both relations
-are DEMAND. The existing AP reducer gives equal concrete applications,
-including facts, requests and result layers. The same local equality holds
-when the summary layers are equal and NORMAL. A stronger NORMAL FLOW proof
+For ANY tails this is exactly the prefix test above:
+
+```text
+FLOW x.[any]     contains TAINT x.f.[any]
+FLOW x.f.[any]   contains TAINT x.f.[any]
+FLOW x.f.[any]   does not contain TAINT x.[any]
+FLOW x.f.[any]   does not contain TAINT x.g.[any]
+```
+
+This means spatial containment, not a longer textual path containing a
+shorter path. For EXACT tails only the same point is contained. A correlated
+STAR tail also requires its input/output suffix relation; a prefix test
+alone is not sufficient for it.
+
+The former name `provedApplicationAndHandoffCell` meant a case of the AP
+operation table for which design-time proofs exist. It was a specification
+placeholder, not an extra runtime mechanism. The explicit shape checks above
+replace it. Unsupported tail cells retain the exact fallback. No theorem
+search, per-edge proof object or derivation history is required at runtime.
+
+The mandatory cell is an **ANY/ANY** pair with canonical STAR/Empty initials
+and T not in X. Both relations are DEMAND. If the output paths are equal,
+the existing AP reducer gives equal concrete applications, including facts,
+requests and result layers. If the FLOW path is a proper prefix, its existing
+broader image contains the marked image; the results need not be equal
+headers. The prefix proof also checks original demand emission at a narrower
+marked requirement. The equal-path local equality holds when the summary
+layers are equal and NORMAL. A stronger NORMAL FLOW proof
 can replace a DEMAND marked part only under the original normal-record
 contract. DEMAND FLOW cannot replace a NORMAL proof.
 
@@ -151,7 +183,8 @@ a second complete conclusion tree.
 
 ## 4. Non-subsumable conclusions
 
-The flag belongs to one logical edge output leaf and FULL mark. It does
+The non-subsumable flag, also called protection, belongs to one logical edge
+output leaf and FULL mark. It does
 not affect CM, the ordinary fact key, the mark interner, layer or field
 geometry. It only prevents FLOW replacement and carries a required marked
 dependency to the handoff.
@@ -558,6 +591,35 @@ are wholly covered; 887 are partly covered. This requires leaf-level
 pruning. The sample is biased and has no protection flags. It is not a
 whole-project deletion percentage or a speedup prediction. Latest measured
 iteration remains **run-1 OOM**.
+
+A row here is one method's concrete initial/premise group, not one output
+edge. One row can contain a return output and many static-field outputs:
+
+```text
+before: I(p,T) -> {ret/T, C.f/T, C.g/T, C.h/T}
+FLOW covers the three static outputs but not ret/T
+after:  I(p,T) -> {ret/T}                // one partly covered row remains
+```
+
+| Sampled concrete rows | Meaning before non-subsumable flags |
+| --- | --- |
+| 36 wholly covered | Every output membership passes the coverage test; candidate to remove the whole row |
+| 887 partly covered | Remove covered output memberships; keep each row's remaining outputs |
+| 234 not covered | No output membership passes that test |
+
+Those 1,157 rows hold 11,752 output memberships. Removing the 10,631
+candidates would leave 1,121 memberships before flags. The count of retained
+premise keys can therefore remain large while output payload/transport falls
+sharply. These measurements used equal paths; they do not measure the extra
+prefix-containment candidates added by this clarification.
+
+We expect less retained output geometry and less summary publication/caller
+application work if many candidates remain unprotected. FLOW priority should
+let the engine omit such work before publication. Partial row pruning alone
+does not remove all premise-key lookups or their mark-matching cost. Actual
+static supplies and local rule checks also remain required. The snapshot
+does not measure the protected fraction or establish a two-times engine
+improvement, successful run-1 completion, or resolution of the OOM.
 
 For one eligible geometry used by k marks, exact backing uses one geometry
 and a mask instead of k geometry containers. Certified neutral transfer

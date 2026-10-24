@@ -14,6 +14,48 @@ theorem any_summary_application (a : AFact) (ib ob : Base)
     applySummary a (initial ib ip .star) ⟨anyFinal ob op (.starEx xs), layer⟩ := by
   simp [applySummary, applyEdge, initial, anyFinal, actual, markGate, markComp, allowed]
 
+/-- ANY output containment is prefix containment of field paths, with the
+    shorter FLOW path containing every marked descendant. Initial shapes
+    stay equal. This is pair inclusion, not equality of output headers. -/
+theorem any_output_prefix_covers
+    (ib ob : Base) (ip fp suffix : List Acc) (t : Mark) (xs : List Mark)
+    (allowed : memB t xs = false) (l0 l1 : Loc)
+    (marked : den (initial ib ip (.conc t))
+      (anyFinal ob (fp ++ suffix) (.conc t)) l0 l1) :
+    den (initial ib ip .star) (anyFinal ob fp (.starEx xs)) l0 l1 := by
+  obtain ⟨hb0, hb1, hm0, hm1, _, s, r, hp0, hp1, hi, _⟩ := marked
+  have mark0 : l0.mark = t := hm0
+  have mark1 : l1.mark = t := hm1
+  refine ⟨hb0, hb1, trivial, ?_, ?_, s, suffix ++ r, hp0, ?_, hi, trivial⟩
+  · change l1.mark = l0.mark
+    exact mark1.trans mark0.symm
+  · change memB l0.mark xs = false
+    rw [mark0]
+    exact allowed
+  · simpa [anyFinal, List.append_assoc] using hp1
+
+/-- Original demand emission also works when the actual marked requirement
+    is strictly below the covering abstract ANY pattern. -/
+theorem prefix_guide_start (b : Base) (p suffix : List Acc) (t : Mark) :
+    emitW (anyFinal b p .star) ⟨b, p ++ suffix, .exact, .conc t⟩ =
+      some (initial b p .star) := by
+  cases suffix with
+  | nil =>
+    simp [emitW, emitM, anyFinal, initial, flowForm, relate,
+      CoreAux.dropPrefix_some.mpr (List.append_nil p).symm, markMatchB, meetK, flowK]
+  | cons a rest =>
+    simp [emitW, emitM, anyFinal, initial, flowForm, relate,
+      CoreAux.dropPrefix_some.mpr (rfl : p ++ a :: rest = p ++ a :: rest),
+      markMatchB, admitsTailB, flowK]
+
+def containmentControls : List Bool := [
+  decide (dropPrefix [10] [10,20] = some [20]),
+  decide (dropPrefix [10,20] [10] = none),
+  decide (dropPrefix [10] [30] = none),
+  decide (emitW (anyFinal 2 [10] .star) ⟨2,[10,20],.exact,.conc 7⟩ =
+    some (initial 2 [10] .star))
+]
+
 /-- Reversing the abstract guide uses the existing emitter's FLOW form. -/
 theorem abstract_guide_start (b : Base) (p : List Acc) (t : Mark) :
     emitW (anyFinal b p .star) ⟨b, p, .exact, .conc t⟩ =
@@ -29,6 +71,8 @@ theorem protected_guide_start (b : Base) (p : List Acc) (t : Mark) :
     CoreAux.dropPrefix_some.mpr (List.append_nil p).symm, markMatchB, meetK]
 
 #print axioms any_summary_application
+#print axioms any_output_prefix_covers
+#print axioms prefix_guide_start
 #print axioms abstract_guide_start
 #print axioms protected_guide_start
 end ApSpec.FlowBackedAp

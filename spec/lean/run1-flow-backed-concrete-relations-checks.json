@@ -3,15 +3,9 @@
   "status": "models checked; runtime unchanged",
   "reference_runtime": "40e20d16f03ab046df75a53a489bb331b065a9c1",
   "documentation_parent": "8e7084b492d7d827ab93c8d3d686a9e59a159a38",
-  "scope": "FULL run-1; canonical STAR/Empty to ANY cell, exact residual decode, protection, local priority and original AP C2/C5 boundary",
+  "scope": "FULL run-1; canonical STAR/Empty to ANY with equal or containing output paths, exact residual decode, non-subsumable flag, local priority and original AP C2/C5 boundary",
   "toolchain": "leanprover/lean4:v4.33.1",
   "commands": [
-    {
-      "cwd": "spec/lean",
-      "command": "lake build ApSpec.FlowBackedStore ApSpec.FlowBackedPriority ApSpec.FlowBackedHandoff ApSpec.FlowBackedRelationsCounterexamples",
-      "exit_code": 0,
-      "jobs": 59
-    },
     {
       "cwd": "spec/lean",
       "command": "lake build",
@@ -24,18 +18,18 @@
       "exit_code": 0,
       "output": [
         "Audited ApSpec.FlowBackedProtection: 188 declarations.",
-        "Audited ApSpec.FlowBackedAp: 48 declarations.",
+        "Audited ApSpec.FlowBackedAp: 51 declarations.",
         "Audited ApSpec.FlowBackedStore: 138 declarations.",
         "Audited ApSpec.FlowBackedPriority: 41 declarations.",
         "Audited ApSpec.FlowBackedHandoff: 10 declarations.",
         "Audited ApSpec.FlowBackedRelationsCounterexamples: 22 declarations.",
-        "Total FLOW-backed declarations: 447; no unexpected axioms.",
-        "Executable FLOW-backed controls: 22 passed."
+        "Total FLOW-backed declarations: 450; no unexpected axioms.",
+        "Executable FLOW-backed controls: 26 passed."
       ]
     }
   ],
-  "audited_owned_declarations": 447,
-  "executable_controls": 22,
+  "audited_owned_declarations": 450,
+  "executable_controls": 26,
   "permitted_axioms": [
     "propext",
     "Quot.sound"
@@ -51,8 +45,8 @@
   "proof_boundary": "Constructive scalar AP/model laws and relative finite replay; no Kotlin/IR refinement or general whole-engine termination proof. Runtime correspondence tests remain implementation gates.",
   "sha256": {
     "spec/lean/ApSpec.lean": "60500f8d1bca69b6bc7cff7e5b2f7b96b76576ae215eb5039c7dffd3c2286cfb",
-    "spec/lean/run1-flow-backed-concrete-relations-audit.lean": "c9757bff29d0ebb1b4d5fac9701dcf6d650c6fa8e3af5ae15d3b641e284a040d",
-    "spec/lean/ApSpec/FlowBackedAp.lean": "803f0c77524605a038057290ae655c69a5887f2712031f5cbb8234f40466ef17",
+    "spec/lean/run1-flow-backed-concrete-relations-audit.lean": "85aa7a4c8550503f5a2d1ef7cb1a32806469dfd08f230069924f69cc872b8dbd",
+    "spec/lean/ApSpec/FlowBackedAp.lean": "3e0ee127a59572d1500d77d90258c76374e1b8596beb1f24cf676eea58339d60",
     "spec/lean/ApSpec/FlowBackedHandoff.lean": "e8063959eea307511973fbc3a04f0da96e1e79af1026e415973f17a45701fafd",
     "spec/lean/ApSpec/FlowBackedPriority.lean": "f09097d00b43e44d05ef5c6dbe904fa4b2f0daffd973c81fa37ec4eb9601ce16",
     "spec/lean/ApSpec/FlowBackedProtection.lean": "8cf75e5052b8e99bfba2ac3a70a100a868aadcfa2453eb0abfc97afd19263765",
@@ -65,8 +59,14 @@
     "spec/lean/ApSpec/AbsWitness.lean": "f684f1d9272e843946d70263b95a9c232a3b11985797764630ff5bf2829873ea",
     "spec/lean/ApSpec/CurrentDemand.lean": "23ba389105498a0592d2f6ba2d7f8e13c0f519ccd7bb06cce89b446af9a67abb",
     "spec/lean/ApSpec/BaseCleaner.lean": "bae707f5332119765b5369035538e0213d3a8b7752dc3adba54f5d50b8f9ad98",
-    "spec/run1-flow-backed-concrete-relations.md": "fa5da10ecd773ac6c38059df1608088d40475134028c9e373697b8bb26a10ae5",
-    "spec/run1-flow-backed-concrete-relations-proofs.md": "29f1e166335e97c306c0ad7a2d73d85dcaf03c99730d32698a5f4db3822fe35b",
+    "spec/run1-flow-backed-concrete-relations.md": "edce055d3b554382e6f91bcf441bc0c5a2bdee7540ac3bc651b68bc9324c2641",
+    "spec/run1-flow-backed-concrete-relations-proofs.md": "6c1ea04929f21f68c92967fd968d6d6e2e071e32f72e90add8a6b77c7bdd608e",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd"
-  }
+  },
+  "clarifications": [
+    "Protection is exactly the non-subsumable flag, not another mechanism.",
+    "Replace the proof-cell placeholder with explicit supported shape checks.",
+    "For ANY outputs, the FLOW path can prefix the TAINT path; checked pair inclusion and original narrower-requirement emission.",
+    "The saved coverage measurement used equal paths, before non-subsumable flags; no new project performance measurement."
+  ]
 }
