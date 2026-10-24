@@ -48,12 +48,46 @@ theorem prefix_guide_start (b : Base) (p suffix : List Acc) (t : Mark) :
       CoreAux.dropPrefix_some.mpr (rfl : p ++ a :: rest = p ++ a :: rest),
       markMatchB, admitsTailB, flowK]
 
+/-- Finite reference for the geometry candidates of an annotated FLOW tree.
+    Production visits prefix nodes along the single target path instead. -/
+def coveringPaths (flowPaths : List (List Acc)) (taintPath : List Acc) : List (List Acc) :=
+  flowPaths.filter (fun p => (dropPrefix p taintPath).isSome)
+
+theorem coveringPaths_exact (paths : List (List Acc)) (target path : List Acc) :
+    path ∈ coveringPaths paths target ↔ path ∈ paths ∧ ∃ suffix, target = path ++ suffix := by
+  simp only [coveringPaths, List.mem_filter]
+  constructor
+  · rintro ⟨present, hp⟩
+    cases he : dropPrefix path target with
+    | none => simp [he] at hp
+    | some suffix => exact ⟨present, suffix, CoreAux.dropPrefix_some.mp he⟩
+  · rintro ⟨present, suffix, hp⟩
+    exact ⟨present, by rw [CoreAux.dropPrefix_some.mpr hp]; rfl⟩
+
+/-- One eligible output path in a FLOW tree is enough. The supplied path
+    and suffix are the actual computed prefix witness, not chosen data. -/
+theorem any_tree_output_covers
+    (ib ob : Base) (ip : List Acc) (paths : List (List Acc))
+    (path suffix : List Acc) (t : Mark) (excluded : List Acc → List Mark)
+    (present : path ∈ paths) (allowed : memB t (excluded path) = false)
+    (l0 l1 : Loc)
+    (marked : den (initial ib ip (.conc t))
+      (anyFinal ob (path ++ suffix) (.conc t)) l0 l1) :
+    ∃ output, output ∈ coveringPaths paths (path ++ suffix) ∧
+      den (initial ib ip .star) (anyFinal ob output (.starEx (excluded output))) l0 l1 := by
+  exact ⟨path, (coveringPaths_exact paths (path ++ suffix) path).mpr
+    ⟨present, suffix, rfl⟩,
+    any_output_prefix_covers ib ob ip path suffix t (excluded path) allowed l0 l1 marked⟩
+
 def containmentControls : List Bool := [
   decide (dropPrefix [10] [10,20] = some [20]),
   decide (dropPrefix [10,20] [10] = none),
   decide (dropPrefix [10] [30] = none),
   decide (emitW (anyFinal 2 [10] .star) ⟨2,[10,20],.exact,.conc 7⟩ =
-    some (initial 2 [10] .star))
+    some (initial 2 [10] .star)),
+  decide (coveringPaths [[10], [20,30]] [20,30,40] = [[20,30]]),
+  decide (coveringPaths [[10], [20,30]] [20,40] = []),
+  decide (coveringPaths [[], [20], [20,30]] [20,30,40] = [[], [20], [20,30]])
 ]
 
 /-- Reversing the abstract guide uses the existing emitter's FLOW form. -/
@@ -73,6 +107,8 @@ theorem protected_guide_start (b : Base) (p : List Acc) (t : Mark) :
 #print axioms any_summary_application
 #print axioms any_output_prefix_covers
 #print axioms prefix_guide_start
+#print axioms coveringPaths_exact
+#print axioms any_tree_output_covers
 #print axioms abstract_guide_start
 #print axioms protected_guide_start
 end ApSpec.FlowBackedAp

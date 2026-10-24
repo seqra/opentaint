@@ -4,7 +4,8 @@
 
 The [complete specification](run1-flow-backed-concrete-relations.md) and
 [proof dossier](run1-flow-backed-concrete-relations-proofs.md) select FULL
-run-1 cross-premise ANY coverage (equal or containing output paths), exact
+run-1 cross-premise ANY coverage (any qualifying FLOW tree path which prefixes
+the TAINT path), exact
 residual geometry sharing and local
 FLOW priority. New edge-local protection compares rule assignments with
 the triggering conclusion, treats selected cleaner survivors as assign-back,
@@ -24,8 +25,8 @@ The [check receipt](lean/run1-flow-backed-concrete-relations-checks.json)
 records the final model build and owned axiom/control audit. Latest measured
 Thingsboard is **run-1 OOM**, no COMPLETE/accepted forward run. No new project
 measurement or engine speedup is claimed.
-The integrated Lean build passes 191 jobs; the owned audit checks 450
-declarations and 26 executable controls, with no unexpected axioms.
+The integrated Lean build passes 191 jobs; the owned audit checks 455
+declarations and 29 executable controls, with no unexpected axioms.
 
 ## Implemented and measured: Semgrep provider selection and early specialization
 

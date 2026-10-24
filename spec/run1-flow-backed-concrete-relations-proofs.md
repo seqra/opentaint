@@ -38,7 +38,7 @@ general StrongQueries premise appears in a new model or proof.
 | Module | Executable object and checked result |
 | --- | --- |
 | [Run1FlowTaintCoverage](lean/ApSpec/Run1FlowTaintCoverage.lean) | Original pair denotation; ANY coverage; excluded-mark, cross-mark and STAR correlation counterexamples; original source-rule witness |
-| [FlowBackedAp](lean/ApSpec/FlowBackedAp.lean) | Actual original `applySummary` equality for equal paths; output-prefix pair coverage and narrower-requirement emission; abstract and concrete `emitW` results |
+| [FlowBackedAp](lean/ApSpec/FlowBackedAp.lean) | Actual original `applySummary` equality for equal paths; output-prefix and tree-to-path coverage; narrower-requirement emission; abstract and concrete `emitW` results |
 | [FlowBackedProtection](lean/ApSpec/FlowBackedProtection.lean) | Flag functions; typed finite derivations; executable transport extractor |
 | [FlowBackedStore](lean/ApSpec/FlowBackedStore.lean) | Admission, exact masks, normalized relation/obligation preservation, progress and counted geometry cost |
 | [FlowBackedPriority](lean/ApSpec/FlowBackedPriority.lean) | Four-lane nonzero queue, exact pop, finite-credit measure and barrier predicate |
@@ -69,6 +69,21 @@ Associativity gives the same concrete location; all input and mark witnesses
 are unchanged. This proves the requested output-location containment, including
 proper prefixes. It does not treat a longer field path as a larger location
 set, or remove a field exclusion or correlation requirement.
+
+**Tree-to-path lift.** A FLOW field tree denotes the union of its output
+paths. For one TAINT field path, find a FLOW output path which prefixes it
+and has the required tail, mark admission and layer. Apply the prefix theorem
+to that output. The resulting pair belongs to the FLOW tree by the same
+output's union membership. This uses one actual matching path, not a
+single-path restriction on the FLOW tree. It does not require every FLOW
+branch to cover the TAINT path. Metadata from different branches cannot be
+combined to manufacture a qualifying output.
+
+The concrete trie search follows the TAINT path and tests annotated prefix
+nodes. A branch node without an output annotation contributes no relation.
+The proof's finite `coveringPaths` reference enumerates matching output paths
+and supplies the exact prefix candidates; it is not the proposed production
+trie traversal or a reason to enumerate the whole FLOW tree at runtime.
 
 The stronger executable result is `any_summary_application`. For every
 actual AFact whose mark is T, and either equal summary layer, applying E
@@ -326,6 +341,6 @@ source hashes, commands and results. The audit checks every declaration
 owned by the six new modules and runs executable controls. Only the existing
 `propext` and `Quot.sound` dependencies are permitted; no Classical choice,
 `sorryAx` or new axiom is permitted. The integrated build passes **191 jobs**;
-the owned audit checks **450 declarations** and **26 executable controls**.
+the owned audit checks **455 declarations** and **29 executable controls**.
 Runtime adapter work remains an implementation gate. Analyzer implementation
 files are unchanged.
