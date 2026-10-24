@@ -44,6 +44,14 @@ tests:
       - security.codeinjection.TemplateInjectionSpringSamples$SafeTemplateControllerWithResolver#previewSafeWithResolver
   - rule-id: java/security/command-injection.yaml#os-command-injection
     positive:
+      - security.passthrough.PassthroughDecimalFormatSamples#setCurrencyTogetCurrency
+      - security.passthrough.PassthroughDecimalFormatSamples#setCurrencyTogetCurrencySymbol
+      - security.passthrough.PassthroughDecimalFormatSamples#setCurrencyTogetInternationalCurrencySymbol
+      - security.passthrough.PassthroughDecimalFormatSamples#setInternationalCurrencySymbolTogetCurrency
+      - security.passthrough.PassthroughDecimalFormatSamples#setInternationalCurrencySymbolTogetCurrencySymbol
+      - security.passthrough.PassthroughDecimalFormatSamples#setInternationalCurrencySymbolTogetInternationalCurrencySymbol
+      - security.passthrough.PassthroughDecimalFormatSamples#formatCurrencyTogetCurrencySymbol
+      - security.passthrough.PassthroughDecimalFormatSamples#formatCurrencyTogetInternationalCurrencySymbol
       - security.commandinjection.CommandInjectionServletSamples$UnsafeCommandServlet#doGet
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePing
       - security.commandinjection.CommandInjectionSpringSamples$UnsafeCommandInjectionController#unsafePingList
@@ -143,6 +151,9 @@ tests:
       - security.passthrough.PassthroughSerializationSamples#yamlLoadUnsafe
       - security.passthrough.PassthroughSerializationSamples#propertiesStoreUnsafe
     negative:
+      - security.passthrough.PassthroughDecimalFormatSamples#currencyDoesNotSetNaN
+      - security.passthrough.PassthroughDecimalFormatSamples#codeDoesNotSetInfinity
+      - security.passthrough.PassthroughDecimalFormatSamples#displaySymbolDoesNotSetCode
       - security.passthrough.PassthroughContainerSamples#arrayElementSafe
       - security.passthrough.PassthroughContainerSamples#arraysCopyOfSafe
       - security.passthrough.PassthroughContainerSamples#systemArrayCopySafe
@@ -250,8 +261,21 @@ tests:
       - security.crypto.HashRandomAndMiscCryptoSamples$CustomDigestInsecure
   - rule-id: java/security/crypto.yaml#bad-hexa-conversion
     positive:
+      - security.passthrough.PassthroughDecimalFormatSamples#multiplier
+      - security.passthrough.PassthroughDecimalFormatSamples#groupingSize
+      - security.passthrough.PassthroughDecimalFormatSamples#maximumIntegerDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#minimumIntegerDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#maximumFractionDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#minimumFractionDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#clampMaximumIntegerDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#clampMinimumIntegerDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#clampMaximumFractionDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#clampMinimumFractionDigits
       - security.crypto.HashRandomAndMiscCryptoSamples#badHexaConversion
     negative:
+      - security.passthrough.PassthroughDecimalFormatSamples#multiplierDoesNotSetGrouping
+      - security.passthrough.PassthroughDecimalFormatSamples#groupingDoesNotSetDigits
+      - security.passthrough.PassthroughDecimalFormatSamples#integerDoesNotSetFraction
       - security.crypto.HashRandomAndMiscCryptoSamples#goodHexaConversion
   - rule-id: java/security/crypto.yaml#blowfish-insufficient-key-size
     positive:
