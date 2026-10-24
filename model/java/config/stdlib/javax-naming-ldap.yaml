@@ -4,10 +4,14 @@ passThrough:
   signature: (java.lang.String, boolean, java.lang.String) void
   taintCopyOnly: true
   copy:
-  - from: arg(2)
-    to: this
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
 - function: javax.naming.ldap.SortResponseControl#<init>
   signature:
     params:
@@ -73,10 +77,6 @@ passThrough:
     - index: 0
       type: java.lang.String
   copy:
-  - from: arg(0)
-    to:
-    - this
-    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
   - from: arg(0)
     to:
     - this
@@ -208,7 +208,9 @@ passThrough:
   signature: () java.lang.String
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
     to: result
 - function: javax.naming.ldap.ControlFactory#getControlInstance
   signature: (javax.naming.ldap.Control) javax.naming.ldap.Control
@@ -289,7 +291,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.ldap.SortKey#sortKeyData#java.lang.Object
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
     to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.directory.Attributes) void
@@ -312,6 +314,10 @@ passThrough:
   copy:
   - from: arg(0)
     to: this
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.SortResponseControl#<init>
   signature: (java.lang.String, boolean, byte[]) void
   taintCopyOnly: true
@@ -410,8 +416,14 @@ passThrough:
   signature: (java.lang.String, java.lang.Object) void
   taintCopyOnly: true
   copy:
-  - from: arg(*)
-    to: this
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.ldap.Rdn#type#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.ldap.Rdn#value#java.lang.Object
 - function: javax.naming.ldap.SortKey#<init>
   signature:
     params:
@@ -421,7 +433,7 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
 - function: javax.naming.ldap.Rdn#unescapeValue
   signature: (java.lang.String) java.lang.Object
   taintCopyOnly: true
@@ -440,7 +452,9 @@ passThrough:
   signature: () java.lang.String
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
     to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.directory.Attributes) void
@@ -494,6 +508,12 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.SortControl#<init>
   signature: (java.lang.String, boolean) void
   copy:
@@ -509,6 +529,10 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.SortControl#sortKeys#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.Rdn#toAttributes
   signature: () javax.naming.directory.Attributes
   copy:
@@ -537,7 +561,7 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.SortKey#sortKeyData#java.lang.Object
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
 - function: javax.naming.ldap.Control#getID
   signature: () java.lang.String
   taintCopyOnly: true
@@ -566,15 +590,19 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
     to: result
 - function: javax.naming.ldap.Rdn#<init>
   signature: (java.lang.String, java.lang.Object) void
   copy:
-  - from: arg(*)
+  - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.Rdn#rdnValue#java.lang.Object
+    - .javax.naming.ldap.Rdn#type#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .javax.naming.ldap.Rdn#value#java.lang.Object
 - function: javax.naming.ldap.SortResponseControl#getAttributeID
   signature: () java.lang.String
   taintCopyOnly: true
@@ -644,6 +672,12 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.SortControl#sortKeys#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.ExtendedRequest#createExtendedResponse
   signature:
     params:
@@ -659,13 +693,15 @@ passThrough:
   copy:
   - from:
     - this
-    - .javax.naming.ldap.SortKey#sortKeyData#java.lang.Object
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
     to: result
 - function: javax.naming.ldap.Rdn#getValue
   signature: () java.lang.Object
   taintCopyOnly: true
   copy:
-  - from: this
+  - from:
+    - this
+    - .javax.naming.ldap.Rdn#value#java.lang.Object
     to: result
 - function: javax.naming.ldap.HasControls#getControls
   signature: () javax.naming.ldap.Control[]
@@ -712,6 +748,12 @@ passThrough:
     to:
     - this
     - .javax.naming.ldap.SortControl#sortKeys#java.lang.Object
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.Rdn#getValue
   signature: () java.lang.Object
   copy:
@@ -729,6 +771,12 @@ passThrough:
     to: this
   - from: arg(0)
     to: this
+  - from:
+    - arg(0)
+    - '[*]'
+    to:
+    - this
+    - .javax.naming.ldap.BasicControl#encodedValue#byte[]
 - function: javax.naming.ldap.Rdn#<init>
   signature: (javax.naming.ldap.Rdn) void
   copy:
@@ -756,15 +804,24 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
 - function: javax.naming.ldap.SortKey#<init>
   signature: (java.lang.String, boolean, java.lang.String) void
   copy:
-  - from: arg(2)
-    to:
-    - this
-    - .javax.naming.ldap.SortKey#sortKeyData#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .javax.naming.ldap.SortKey#sortKeyData#java.lang.Object
+    - .javax.naming.ldap.SortKey#attributeId#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .javax.naming.ldap.SortKey#matchingRuleId#java.lang.String
+- function: javax.naming.ldap.Rdn#getType
+  signature: () java.lang.String
+  copy:
+  - from:
+    - this
+    - .javax.naming.ldap.Rdn#type#java.lang.String
+    to: result
