@@ -913,7 +913,9 @@ passThrough:
   taintCopyOnly: true
   copy:
   - from: arg(0)
-    to: this
+    to:
+    - this
+    - .java.text.DecimalFormat#decimalConfiguration#java.lang.Object
 - function:
     package: java.text
     class: MessageFormat
