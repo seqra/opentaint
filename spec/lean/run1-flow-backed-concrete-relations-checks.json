@@ -1,6 +1,6 @@
 {
   "date": "2026-10-24",
-  "status": "models and local implementation checks pass; project measurements pending",
+  "status": "models and local implementation checks pass; all12 fixed project commands, profiles and all6 source-bound OOM heap reports closed",
   "reference_runtime": "40e20d16f03ab046df75a53a489bb331b065a9c1",
   "documentation_parent": "8e7084b492d7d827ab93c8d3d686a9e59a159a38",
   "scope": "FULL run-1; canonical STAR/Empty to ANY with any eligible FLOW tree output path prefixing the TAINT field path, exact residual decode, non-subsumable flag, local priority and original AP C2/C5 boundary; ANY alias-effect classification preserves same-path identity residuals",
@@ -35,12 +35,13 @@
     "Quot.sound"
   ],
   "unexpected_axioms": [],
-  "new_project_measurement": false,
+  "new_project_measurement": true,
   "latest_thingsboard": {
-    "reached": "run-1",
+    "reached": "run-2",
     "outcome": "OOM",
-    "complete": null,
-    "accepted": null
+    "complete": "run-1",
+    "accepted": "run-1",
+    "run1_engine_seconds": 392.438698222
   },
   "proof_boundary": "Constructive scalar AP/model laws and relative finite replay; no Kotlin/IR refinement or general whole-engine termination proof. Runtime correspondence tests remain implementation gates.",
   "sha256": {
@@ -59,8 +60,8 @@
     "spec/lean/ApSpec/AbsWitness.lean": "f684f1d9272e843946d70263b95a9c232a3b11985797764630ff5bf2829873ea",
     "spec/lean/ApSpec/CurrentDemand.lean": "23ba389105498a0592d2f6ba2d7f8e13c0f519ccd7bb06cce89b446af9a67abb",
     "spec/lean/ApSpec/BaseCleaner.lean": "bae707f5332119765b5369035538e0213d3a8b7752dc3adba54f5d50b8f9ad98",
-    "spec/run1-flow-backed-concrete-relations.md": "bc2b5197ee09332f68806ad55f971446bf1b5e68b3fd5015349f6fbfc5465444",
-    "spec/run1-flow-backed-concrete-relations-proofs.md": "c2ea2a452cd17a9b83f77a1c7e2060993a5b6c5112fc73048a784bef8e58404c",
+    "spec/run1-flow-backed-concrete-relations.md": "cb210e0781260c2f264bfc1a4381eefb51ba176a7602abd49b5431f361f02b10",
+    "spec/run1-flow-backed-concrete-relations-proofs.md": "dfb2e87b0bb7e5a1a70aea28c81253a14049bae520d1d84264add5fb4e11e01c",
     "spec/proof-guide.md": "c51296c2773f7a09bc96e3a4679c0b97610c38baf792b39e0de7ef2bf4787dcd",
     "spec/lean/ApSpec/Run1SummaryAliasAdmission.lean": "fc50eba187b0862c5334966f19ff7aa54ded23b90295c2a6117a4640698a0ec3"
   },
@@ -68,8 +69,14 @@
     "Protection is exactly the non-subsumable flag, not another mechanism.",
     "Replace the proof-cell placeholder with explicit supported shape checks.",
     "For ANY outputs, the FLOW path can prefix the TAINT path; checked pair inclusion and original narrower-requirement emission.",
-    "The saved coverage measurement used equal paths, before non-subsumable flags; no new project performance measurement.",
+    "The saved coverage measurement used equal paths, before non-subsumable flags; the fresh candidate now completes run-1 and reaches run-2 OOM.",
     "FLOW has a field tree; any eligible annotated output path which prefixes the single TAINT path is sufficient. Production searches prefix nodes along the TAINT path, not all FLOW paths.",
     "Same-base nonidentity ANY outputs have the same memory-effect class; same-path TAINT identity outputs retain their marked residual."
-  ]
+  ],
+  "measured_runtime": "5ec1b30be614a0cfdc31ec3102bfa2f9301ee21e",
+  "performance_report": "docs/reports/bidirectional-flow-backed-concrete-performance-20261024.md",
+  "campaign_terminal_sha256": "ba092c37ca299628dce8dc9ab58a050c84c706dcaa33fd7a8dcd48e3da2fd5ac",
+  "capture_analysis_closed_utc_date": "2026-10-25",
+  "heap_summary": "../run1-flow-backed-20261024/validation/source-bound-heap-summary.json",
+  "profile_summary": "../run1-flow-backed-20261024/validation/profiles-analysis.json"
 }
