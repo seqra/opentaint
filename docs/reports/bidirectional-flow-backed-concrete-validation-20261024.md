@@ -1,14 +1,17 @@
 # FLOW-backed concrete relations: implementation validation
 
-Date: 24 October 2026. Status: implementation and local validation complete;
-fixed project measurements pending.
+Local checks and measurements: 24 October 2026. Capture analysis closed:
+25 October 2026. Status: implementation, local validation, all 12 fixed
+project commands, profiles and all six source-bound OOM heap reports complete.
 
 The selected contract is
 [Concrete relations backed by FLOW](../../spec/run1-flow-backed-concrete-relations.md).
 The scalar reference runtime is `40e20d16f03ab046df75a53a489bb331b065a9c1`.
-The implementation commit will pin the closed local checks. No new project
-performance result is available yet. The previous
-Thingsboard measurement reached **run-1 OOM**, with no COMPLETE or accepted run.
+The implementation commit is `5ec1b30be614a0cfdc31ec3102bfa2f9301ee21e`.
+The [fresh project report](bidirectional-flow-backed-concrete-performance-20261024.md)
+records all fixed commands. Thingsboard completes and accepts **run-1** in
+392.439 s engine time, then reaches **run-2 OOM**. Its latest COMPLETE and
+accepted forward iteration is run-1. The 60-second run-1 target remains unmet.
 
 ## Selected behavior
 
@@ -120,11 +123,26 @@ retains the complete case and failed-assertion checks. The evidence root is
 Proof logs are under `validation/proofs/`. Current test commands, source hashes,
 XML, and terminal receipts are under `validation/current-tests/`.
 
-## Remaining checks
+## Fixed project evidence
 
-The project campaign must run OWASP, Conductor,
-Thingsboard, and Stirling-PDF with their fixed heaps and timeouts through Gradle
-`runProjectAnalyzer`. It must compare locations with fresh main, capture CPU
-profiles and OOM heaps, and report the latest reached, COMPLETE, and accepted
-iteration. No speedup, project precision result, or OOM resolution is claimed
-from the local tests.
+The campaign runs OWASP, Conductor, Thingsboard and Stirling-PDF through
+Gradle `runProjectAnalyzer` with their fixed heaps and timeouts. Source,
+input and helper guards pass for all 12 main/reference/candidate commands.
+The candidate and reference finding multisets match for Conductor, PDF and
+OWASP. Thingsboard's reference has no accepted run-1 report; the candidate
+retains all 14 main locations but has many unrefined run-1 candidates.
+
+Conductor and PDF reach **run-2 OOM**, with **run-1 COMPLETE and accepted**.
+OWASP reaches **run-11 COMPLETE and accepted**. All 4,112 OWASP main locations
+are present, but its 9,179 Simple trace entries fail the CI total of 4,112,
+as in the reference. PDF retains two strict missing main locations. The
+fresh controls confirm exit-to-last-return relocation; they do not prove
+that the candidate covers each original tainted return path.
+
+These are failed project acceptance gates, not new local test failures.
+Run-1 completion does not resolve the later OOMs. The performance report
+keeps engine time, report barriers, whole command time, finding coverage
+and occurrence counts separate. All 12 profile leaves are decoded and all
+six OOM heap reports pass their source/layout/query controls. The
+[next proposal](../design/bidirectional-flow-backed-next-iteration-20261024.md)
+contains no implemented change.

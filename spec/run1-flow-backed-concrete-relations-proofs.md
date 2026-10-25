@@ -1,9 +1,13 @@
 # Proofs for concrete relations backed by FLOW
 
-Date: 24 October 2026. Status: **constructive models and local implementation checks pass; project measurements pending**.
+Date: 24 October 2026. Status: **constructive models and local implementation checks pass; fixed project commands closed**.
 Contract: [complete specification](run1-flow-backed-concrete-relations.md).
 Reference runtime: `40e20d16f03ab046df75a53a489bb331b065a9c1`.
-Latest measured Thingsboard iteration: **run-1 OOM**, no COMPLETE/accepted run.
+Measured implementation: `5ec1b30be614a0cfdc31ec3102bfa2f9301ee21e`.
+Latest measured Thingsboard iteration: **run-2 OOM**, with **run-1 COMPLETE
+and accepted**, engine time 392.439 s. See the
+[fresh performance report](../docs/reports/bidirectional-flow-backed-concrete-performance-20261024.md).
+Project outcomes are validation evidence; they do not extend the proof scope.
 
 ## 1. Claim, scope and proof order
 

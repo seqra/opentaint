@@ -1,6 +1,6 @@
 # Concrete relations backed by FLOW
 
-Date: 24 October 2026. Status: **implemented and locally checked; project measurements pending**.
+Date: 24 October 2026. Status: **implemented and locally checked; fixed project commands closed**.
 
 This specification selects cross-premise FLOW reuse, exact concrete relation
 compression, and FLOW priority in run-1. Read the
@@ -9,9 +9,12 @@ It replaces section 3 of the
 [next-iteration proposal](../docs/design/bidirectional-rule-selection-next-iteration-20261024.md).
 
 The reference runtime is `40e20d16f03ab046df75a53a489bb331b065a9c1`.
-The current documentation parent is `8e7084b492d7d827ab93c8d3d686a9e59a159a38`.
-The latest Thingsboard measurement reached **run-1 OOM**. It has no COMPLETE
-or accepted forward run. No new project run was made for this specification.
+The design documentation was based on `8e7084b492d7d827ab93c8d3d686a9e59a159a38`.
+The measured implementation is `5ec1b30be614a0cfdc31ec3102bfa2f9301ee21e`.
+The latest Thingsboard command reaches **run-2 OOM**, with **run-1 COMPLETE
+and accepted** at 392.439 s engine time. The
+[fresh performance report](../docs/reports/bidirectional-flow-backed-concrete-performance-20261024.md)
+records the results and remaining gates. The 60-second run-1 target is not met.
 
 Terminology: **protection is the non-subsumable flag**. These names refer to
 the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
@@ -125,10 +128,18 @@ conclusion has one concrete field path. Coverage requires **any one** eligible
 FLOW output path from that tree to prefix the TAINT path:
 
 ```text
+fieldCoverage(FLOW.tree, TAINT.path) =
+    exists annotated output q in FLOW.tree, suffix:
+        TAINT.path = q ++ suffix
+
 FLOW tree paths: {x.f, x.g.h}, each with an ANY output
 TAINT path:      x.g.h.k
 Result:         covered by x.g.h
 ```
+
+The suffix can be empty, so an equal path also passes. Test paths as field
+accessor sequences, with the common base checked separately. This field
+test does not replace the mark, tail, layer, scope or protection tests.
 
 The FLOW tree need not be a single path or equal the TAINT path. It need
 not cover the entire TAINT tree either: test each TAINT output path/mark.
@@ -616,13 +627,14 @@ tags and mark exclusions are never merged by this operation.
 
 ## 10. Expected savings and implementation gates
 
-The [latest local snapshot report](../docs/reports/bidirectional-thingsboard-flow-taint-coverage-20261024.md)
+The [pre-implementation local snapshot report](../docs/reports/bidirectional-thingsboard-flow-taint-coverage-20261024.md)
 finds 10,631 covered output memberships among 11,752 in eight selected
 summary stress stores, before protection. Only 36 of 1,157 concrete rows
 are wholly covered; 887 are partly covered. This requires leaf-level
 pruning. The sample is biased and has no protection flags. It is not a
-whole-project deletion percentage or a speedup prediction. Latest measured
-iteration remains **run-1 OOM**.
+whole-project deletion percentage or a speedup prediction. That reference
+snapshot was from **run-1 OOM**. The latest candidate reaches **run-2 OOM**,
+with **run-1 COMPLETE and accepted**.
 
 A row here is one method's concrete initial/premise group, not one output
 edge. One row can contain a return output and many static-field outputs:
@@ -652,6 +664,14 @@ does not remove all premise-key lookups or their mark-matching cost. Actual
 static supplies and local rule checks also remain required. The snapshot
 does not measure the protected fraction or establish a two-times engine
 improvement, successful run-1 completion, or resolution of the OOM.
+
+The fresh completed candidate run-1 has 2,080,902 retained raw concrete
+summary output memberships; 943,551 are protected. This is about 45.34% of
+the retained outputs, not all offered outputs. The mean neutral batch width
+is about 2.015, while the diagonal summary mark/geometry row ratio is about
+13.04. Storage sharing does not imply that same runtime batch width. The
+392.439 s completion and later run-2 OOM are measured results, not results
+inferred from the earlier sample.
 
 For one eligible geometry used by k marks, exact backing uses one geometry
 and a mask instead of k geometry containers. Certified neutral transfer
