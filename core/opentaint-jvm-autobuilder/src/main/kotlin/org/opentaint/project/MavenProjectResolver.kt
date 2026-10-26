@@ -24,7 +24,7 @@ class MavenProjectResolver(
     private val resolverDir: Path,
     override val projectSourceRoot: Path
 ) : ProjectResolver {
-    private val resolvedProjectDependencies = mutableListOf<Path>()
+    private val resolvedProjectDependencies = mutableListOf<ResolvedDependency>()
     private val resolvedModules = mutableListOf<ProjectModuleClasses>()
 
     private var executableFound = true
@@ -129,7 +129,7 @@ class MavenProjectResolver(
                 dependencyResolver.addDependencies(deps)
             }
 
-        resolvedProjectDependencies += dependencyResolver.resolveDependenciesJars()
+        resolvedProjectDependencies += dependencyResolver.resolveDependencies()
     }
 
     class MavenDependencyGraphResolver {
@@ -153,11 +153,13 @@ class MavenProjectResolver(
             }
         }
 
-        fun resolveDependenciesJars(): List<Path> {
+        fun resolveDependencies(
+            resolvePath: (MavenArtifact) -> Path? = { mavenLocalRepoPath.resolve(it.artifactJarPath).takeIf { p -> p.exists() } },
+        ): List<ResolvedDependency> {
             val buildArtifactsNames = buildArtifacts.mapTo(mutableSetOf()) { artifacts.getValue(it).artifactName }
             return artifacts.values
-                .filter { artifact -> artifact.artifactName !in buildArtifactsNames }
-                .mapNotNull { artifact -> mavenLocalRepoPath.resolve(artifact.artifactJarPath).takeIf { it.exists() } }
+                .filter { it.artifactName !in buildArtifactsNames }
+                .mapNotNull { a -> resolvePath(a)?.let { ResolvedDependency(it, mavenPurl(a.groupId, a.artifactId, a.version)) } }
         }
     }
 
