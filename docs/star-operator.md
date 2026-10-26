@@ -1,6 +1,6 @@
-# Whole-object taint with `$VAR*`
+# Whole-object taint with `$*VAR`
 
-The star operator controls field-sensitive taint scope. It does not make an AST pattern match more source code: `$BOX` and `$BOX*` select the same program value. The star changes which taint facts are marked or expected at that occurrence.
+The star operator controls field-sensitive taint scope. It does not make an AST pattern match more source code: `$BOX` and `$*BOX` select the same program value. The star changes which taint facts are marked or expected at that occurrence.
 
 ## Why base and field scope differ
 
@@ -24,35 +24,38 @@ Plain and starred occurrences answer those questions differently:
 
 ```text
 $REQUEST   = the base value
-$REQUEST*  = the base value plus the any-field scope rooted at it, at any depth
+$*REQUEST  = the base value plus the any-field scope rooted at it, at any depth
 ```
 
-All four combinations are meaningful and behave differently:
+The source and sink scopes can be chosen independently:
 
-| Producer | Consumer | `store(request)` after `request.user.email` tainted |
-|---|---|---|
-| `$R = receive()` | `store($V)` | not reported: only the base was marked, and only the base is checked |
-| `$R = receive()` | `store($V*)` | not reported: no field was ever marked |
-| `$R* = receive()` | `store($V)` | not reported: fields carry marks, but the sink checks the base only |
-| `$R* = receive()` | `store($V*)` | reported: fields carry marks and the sink accepts a mark on any field |
+| Source occurrence | Sink occurrence | Source marks | Sink checks |
+|---|---|---|---|
+| `$R = receive()` | `store($V)` | base | base |
+| `$R = receive()` | `store($*V)` | base | base or any nested field |
+| `$*R = receive()` | `store($V)` | base and every nested field | base |
+| `$*R = receive()` | `store($*V)` | base and every nested field | base or any nested field |
 
-The star belongs to an occurrence, not to the metavariable's identity. `$REQUEST` and `$REQUEST*` refer to the same bound value, and a rule may star one occurrence of a name while leaving another occurrence plain.
+A starred source also marks the base, so a plain sink can still report when that base reaches it. To test a sink's whole-object scope separately, taint only a nested field of an otherwise clean object: a plain sink should stay silent, and a starred sink should report.
 
-Adjacency is significant:
+The star belongs to an occurrence, not to the metavariable's identity. `$REQUEST` and `$*REQUEST` refer to the same bound value, and a rule may star one occurrence of a name while leaving another occurrence plain.
+
+The star is a prefix directly after `$`:
 
 ```text
-$X*       whole-object occurrence
+$*X       whole-object occurrence
 $X * $Y   multiplication
+$X*$Y     multiplication
 ```
 
-`$Y*` directly followed by a non-identifier is the star operator; `$Y * z` with whitespace stays arithmetic.
+The supported form is `$*VAR`. The retired suffix form `$VAR*` no longer denotes whole-object taint. Multiplication remains arithmetic with or without whitespace.
 
 ### Where a star may appear
 
 The star attaches to a metavariable occurrence in expression-like positions:
 
-- Java/JVM: a call argument `sink($Y*)`, an assignment left-hand side `$X* = src()`, a typed declaration `String $X* = src()`, a formal parameter `$TYPE $INPUT*` inside a method-declaration pattern, and a return value `return $UNTRUSTED*;`.
-- Go: a call argument `pkg.Sink($Y*)`, an assignment left-hand side `$X* = pkg.Source()`, a typed metavariable `($Y* : string)`, and a receiver position `$C*.Serve()` including typed receivers `($C* : *exec.Cmd).Run()`.
+- Java/JVM: a call argument `sink($*Y)`, an assignment left-hand side `$*X = src()`, a typed declaration `String $*X = src()`, a formal parameter `$TYPE $*INPUT` inside a method-declaration pattern, and a return value `return $*UNTRUSTED;`.
+- Go: a call argument `pkg.Sink($*Y)`, an assignment left-hand side `$*X = pkg.Source()`, a typed metavariable `($*Y : string)`, and a receiver position `$*C.Serve()` including typed receivers `($*C : *exec.Cmd).Run()`.
 
 Constraint fields (`focus-metavariable`, `metavariable-pattern`, `metavariable-regex`, propagator `from`/`to`, join `on`) always use the plain name; see [Star and pattern clauses](#star-and-pattern-clauses).
 
@@ -83,7 +86,7 @@ rules:
     severity: ERROR
     pattern-sources:
       - patterns:
-          - pattern: $BOX* = src()
+          - pattern: $*BOX = src()
           - focus-metavariable: $BOX
     pattern-sinks:
       - patterns:
@@ -116,7 +119,7 @@ pattern-sources:
   - patterns:
       - pattern: |
           @$ANNOTATION(...)
-          $RET $METHOD(..., $TYPE $INPUT*, ...) {
+          $RET $METHOD(..., $TYPE $*INPUT, ...) {
             ...
           }
       - focus-metavariable: $INPUT
@@ -124,7 +127,7 @@ pattern-sources:
 
 ```java
 @PostMapping("/profile")
-String update(ProfileForm form) {   // $INPUT* marks form and all its fields
+String update(ProfileForm form) {   // $*INPUT marks form and all its fields
     return render(form.getBio());   // the field read carries the mark
 }
 ```
@@ -139,7 +142,7 @@ rules:
     message: A whole-object source field reaches the sink
     severity: WARNING
     pattern-sources:
-      - pattern: $X* = util.Source()
+      - pattern: $*X = util.Source()
     pattern-sinks:
       - pattern: util.Sink($Y)
 ```
@@ -172,7 +175,7 @@ rules:
           - focus-metavariable: $VALUE
     pattern-sinks:
       - patterns:
-          - pattern: store($BOX*)
+          - pattern: store($*BOX)
           - focus-metavariable: $BOX
 ```
 
@@ -214,7 +217,7 @@ rules:
       - pattern: util.Source(...)
     pattern-sinks:
       - patterns:
-          - pattern: util.SinkBox($Y*)
+          - pattern: util.SinkBox($*Y)
           - focus-metavariable: $Y
 ```
 
@@ -235,7 +238,7 @@ A typed starred metavariable keeps both the type constraint and the whole-object
 ```yaml
 pattern-sinks:
   - patterns:
-      - pattern: 'storage.Store(($BOX* : *model.Box))'
+      - pattern: 'storage.Store(($*BOX : *model.Box))'
       - focus-metavariable: $BOX
 ```
 
@@ -245,10 +248,10 @@ Receiver positions star the same way. A realistic command-execution sink reports
 pattern-sinks:
   - pattern-either:
       - patterns:
-          - pattern: '($C* : *exec.Cmd).Run()'
+          - pattern: '($*C : *exec.Cmd).Run()'
           - focus-metavariable: $C
       - patterns:
-          - pattern: '($C* : *exec.Cmd).CombinedOutput()'
+          - pattern: '($*C : *exec.Cmd).CombinedOutput()'
           - focus-metavariable: $C
 ```
 
@@ -257,7 +260,7 @@ And a response-write sink where a tainted field inside the written object is the
 ```yaml
 pattern-sinks:
   - patterns:
-      - pattern: $W.Write($B*)
+      - pattern: $W.Write($*B)
       - focus-metavariable: $B
 ```
 
@@ -278,7 +281,7 @@ rules:
           - focus-metavariable: $VALUE
     pattern-sanitizers:
       - patterns:
-          - pattern: clean($BOX*)
+          - pattern: clean($*BOX)
           - focus-metavariable: $BOX
     pattern-sinks:
       - patterns:
@@ -318,7 +321,7 @@ rules:
       - pattern: util.Source(...)
     pattern-sanitizers:
       - patterns:
-          - pattern: util.Clean($C*)
+          - pattern: util.Clean($*C)
           - focus-metavariable: $C
     pattern-sinks:
       - pattern: util.Sink($Y)
@@ -330,7 +333,7 @@ var b Box
 b.Value = Source()
 Sink(b.Value)
 
-// Negative: Clean($C*) clears the object including the nested field.
+// Negative: Clean($*C) clears the object including the nested field.
 var b Box
 b.Value = Source()
 cleaned := Clean(b)
@@ -366,7 +369,7 @@ sink(w);
 
 ```yaml
 pattern-propagators:
-  - pattern: $OUTPUT = summarize($INPUT*)
+  - pattern: $OUTPUT = summarize($*INPUT)
     from: $INPUT
     to: $OUTPUT
 ```
@@ -388,7 +391,7 @@ Without the `from` star the propagator reads only the base mark, and the field-t
 
 ```yaml
 pattern-propagators:
-  - pattern: $OUTPUT* = expand($INPUT)
+  - pattern: $*OUTPUT = expand($INPUT)
     from: $INPUT
     to: $OUTPUT
 ```
@@ -407,7 +410,7 @@ sink(document.metadata.title);         // any field read is tainted
 
 ```yaml
 pattern-propagators:
-  - pattern: $OUTPUT* = cloneAndFlatten($INPUT*)
+  - pattern: $*OUTPUT = cloneAndFlatten($*INPUT)
     from: $INPUT
     to: $OUTPUT
 ```
@@ -422,7 +425,7 @@ Go uses the same four combinations with Go-shaped assignment patterns:
 
 ```yaml
 pattern-propagators:
-  - pattern: $OUTPUT* = model.CloneAndFlatten($INPUT*)
+  - pattern: $*OUTPUT = model.CloneAndFlatten($*INPUT)
     from: $INPUT
     to: $OUTPUT
 ```
@@ -442,7 +445,7 @@ pattern: use($VALUE)
 ```
 
 ```yaml
-pattern: use($VALUE*)
+pattern: use($*VALUE)
 ```
 
 The star matters only when the occurrence is consumed by a taint role — a source, sink, sanitizer, propagator, or join boundary. In a rule with no taint role attached to `$VALUE`, both spellings report the same matches.
@@ -455,7 +458,7 @@ Starred and plain occurrences of one name still unify:
 patterns:
   - pattern: |
       ...
-      $BOX* = sourceBox();
+      $*BOX = sourceBox();
       ...
   - pattern: |
       ...
@@ -473,8 +476,8 @@ Set scope explicitly in every branch:
 pattern-sources:
   - patterns:
       - pattern-either:
-          - pattern: $INPUT* = request.bodyObject()
-          - pattern: $INPUT* = request.jsonObject()
+          - pattern: $*INPUT = request.bodyObject()
+          - pattern: $*INPUT = request.jsonObject()
       - focus-metavariable: $INPUT
 ```
 
@@ -482,7 +485,7 @@ Branches are independent alternatives, so a star in one branch does not carry to
 
 ```yaml
 pattern-either:
-  - pattern: $INPUT* = request.bodyObject()
+  - pattern: $*INPUT = request.bodyObject()
   - pattern: $INPUT = request.queryString()
 ```
 
@@ -494,7 +497,7 @@ A starred produced value can be bound in an enclosing declaration or factory pat
 pattern-sources:
   - patterns:
       - pattern-inside: |
-          $REQUEST_TYPE $REQUEST* = receive();
+          $REQUEST_TYPE $*REQUEST = receive();
           ...
       - pattern: process($REQUEST)
       - focus-metavariable: $REQUEST
@@ -518,7 +521,7 @@ metavariable-regex:
   regex: ^(receive|read)$
 ```
 
-Do not write `$REQUEST*` in the `metavariable:` field. The constraint restricts which values the name can bind; the star on an occurrence elsewhere in the formula still controls taint scope for that occurrence.
+Do not write `$*REQUEST` in the `metavariable:` field. The constraint restricts which values the name can bind; the star on an occurrence elsewhere in the formula still controls taint scope for that occurrence.
 
 ### `focus-metavariable`
 
@@ -526,11 +529,11 @@ Focus always uses the plain name:
 
 ```yaml
 patterns:
-  - pattern: store($BOX*)
+  - pattern: store($*BOX)
   - focus-metavariable: $BOX
 ```
 
-Focus selects which bound value the role applies to; the starred occurrence in the AST pattern decides the scope.
+Focus selects which bound value the role applies to; the starred occurrence in the AST pattern decides the scope. A starred sink needs `focus-metavariable` to preserve its whole-object check. Without focus, a bare sink pattern becomes a generic argument-position check and the star does not widen it.
 
 ## Star and negative patterns
 
@@ -540,7 +543,7 @@ A non-coinciding negative composes with a starred positive without interaction:
 
 ```yaml
 patterns:
-  - pattern: store($BOX*)
+  - pattern: store($*BOX)
   - pattern-not: store(safeBox())
   - focus-metavariable: $BOX
 ```
@@ -554,8 +557,8 @@ When a positive and a negative pattern select the same position, the scopes shou
 | Positive | Negative | Result |
 |---|---|---|
 | `$X` | `$X` | full structural exclusion |
-| `$X*` | `$X*` | full structural exclusion |
-| `$X*` | `$X` | full structural exclusion, plus a non-fatal rule-load diagnostic |
+| `$*X` | `$*X` | full structural exclusion |
+| `$*X` | `$X` | full structural exclusion, plus a non-fatal rule-load diagnostic |
 
 Example of the third row:
 
@@ -563,7 +566,7 @@ Example of the third row:
 patterns:
   - pattern: |
       @$ANNOTATION(...)
-      $RET $METHOD(..., $TYPE $INPUT*, ...) {
+      $RET $METHOD(..., $TYPE $*INPUT, ...) {
         ...
       }
   - pattern-not: |
@@ -573,9 +576,9 @@ patterns:
       }
 ```
 
-In principle the mismatched pair could mean "exclude the base arm but keep nested-field taint", but that scoped complement is not supported. The combination behaves as full exclusion — identical to writing `$INPUT*` in the negative — and the loader reports a non-fatal diagnostic so the mismatch is visible. The rule still loads. Write the same scope in both occurrences when full exclusion is intended; do not rely on the diagnostic appearing for every position (some negative positions are resolved before the check runs).
+In principle the mismatched pair could mean "exclude the base arm but keep nested-field taint", but that scoped complement is not supported. The combination behaves as full exclusion — identical to writing `$*INPUT` in the negative — and the loader reports a non-fatal diagnostic so the mismatch is visible. The rule still loads. Write the same scope in both occurrences when full exclusion is intended; do not rely on the diagnostic appearing for every position (some negative positions are resolved before the check runs).
 
-The ordinary rule for negatives is unchanged: every metavariable used by a negative pattern must be introduced by a positive producer pattern. Star does not make free negative metavariables valid. See [negative clauses and metavariable domains](rule-pattern-clauses.md#negative-clauses-and-metavariable-domains).
+The ordinary rule for negatives is unchanged: they constrain the surrounding positive matches. A fresh metavariable may narrow a re-description of the producing events; a separate event must use a value bound by the producer. Star does not introduce a new metavariable domain. See [negative clauses and metavariable domains](rule-pattern-clauses.md#negative-clauses-and-metavariable-domains).
 
 ## Star and joins
 
@@ -593,7 +596,7 @@ rules:
     severity: NOTE
     pattern-sources:
       - patterns:
-          - pattern: $INPUT* = request.bodyObject()
+          - pattern: $*INPUT = request.bodyObject()
           - focus-metavariable: $INPUT
 ```
 
@@ -609,7 +612,7 @@ rules:
     severity: NOTE
     pattern-sinks:
       - patterns:
-          - pattern: store($VALUE*)
+          - pattern: store($*VALUE)
           - focus-metavariable: $VALUE
 ```
 
@@ -663,7 +666,7 @@ copy:
     to: result
 ```
 
-Use `$VAR*` for security-rule scope such as "any part of this request object". Use a [pass-through model](passthrough-models.md) for external-library movement that must preserve or remap field paths.
+Use `$*VAR` for security-rule scope such as "any part of this request object". Use a [pass-through model](passthrough-models.md) for external-library movement that must preserve or remap field paths.
 
 ## Review checklist
 

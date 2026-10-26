@@ -565,7 +565,7 @@ Without focus, a call-shaped sink can be broader than intended and accept taint 
 Focus uses the plain metavariable name even when its AST occurrence is starred:
 
 ```yaml
-- pattern: sink($VALUE*)
+- pattern: sink($*VALUE)
 - focus-metavariable: $VALUE
 ```
 

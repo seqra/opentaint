@@ -529,6 +529,6 @@ For external calls, also run `opentaint scan` with `--track-external-methods` an
 - Negative metavariables are introduced by positive producer patterns.
 - Direct, interprocedural, field, alias, and modeled-library flows are covered where relevant.
 - Each join fan-in and fan-out edge is covered.
-- `$VAR*` rules cover base and nested-field behavior separately.
+- `$*VAR` rules cover base and nested-field behavior separately.
 - Messages, severity, CWE, description, and remediation describe the same evidence.
 - The final result is verified in JSON and SARIF, not only by successful YAML loading.
