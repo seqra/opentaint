@@ -118,9 +118,9 @@ class KindFactoryTest {
 
     private fun rebuildTaint(leaves: Collection<Conclusion>): TaintNode =
         build(prefixMap(leaves), manager.taintAlg) { at ->
-            assertTrue(at.all { it.fact.tail == Tail.EXACT || it.fact.tail == Tail.ANY || it.fact.tail == Tail.ANY_TAINT })
+            assertTrue(at.all { it.fact.mark is MarkSlot.Concrete })
             val exact = at.filter { it.fact.tail == Tail.EXACT }.map { (it.fact.mark as MarkSlot.Concrete).mark.id }
-            val any = at.filter { it.fact.tail == Tail.ANY || it.fact.tail == Tail.ANY_TAINT }
+            val any = at.filter { it.fact.tail != Tail.EXACT }
                 .map { (it.fact.mark as MarkSlot.Concrete).mark.id }
             manager.taintLeaves(MarkSet(exact.toIntArray()), MarkSet(any.toIntArray()))
         }
@@ -285,8 +285,8 @@ class KindFactoryTest {
             Row(Tail.EXACT, mt, empty, Layer.DEMAND, Tail.EXACT, empty, true),
             Row(Tail.ANY, mt, ex(g), Layer.NORMAL, Tail.ANY, empty, true),
             Row(Tail.ANY, mt, ex(g), Layer.DEMAND, Tail.ANY, empty, true),
-            Row(Tail.STAR, mt, ex(g), Layer.NORMAL, Tail.ANY, empty, true),
-            Row(Tail.STAR, mt, ex(g), Layer.DEMAND, Tail.ANY, empty, true),
+            Row(Tail.STAR, mt, ex(g), Layer.NORMAL, Tail.STAR, ex(g), false),
+            Row(Tail.STAR, mt, ex(g), Layer.DEMAND, Tail.STAR, ex(g), true),
             Row(Tail.ANY_TAINT, mt, ex(g), Layer.NORMAL, Tail.ANY_TAINT, ex(g), false),
             Row(Tail.ANY_TAINT, mt, ex(g), Layer.DEMAND, Tail.ANY_TAINT, ex(g), true),
             Row(Tail.STAR, abstract, ex(g), Layer.NORMAL, Tail.STAR, ex(g), false),

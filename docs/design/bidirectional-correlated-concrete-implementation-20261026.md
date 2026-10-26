@@ -1,11 +1,11 @@
 # Correlated concrete initials and general FLOW replacement: implementation proposal
 
-Date: 26 October 2026. Status: **proposal; no analyzer code changes**.
+Date: 26 October 2026. Status: **implemented and locally checked; fresh project measurements pending**.
 Language: ASD-STE100 Simplified Technical English. Technical names follow the source.
 
 Contract: [correlated concrete specification](../../spec/run1-correlated-concrete-initials.md).
 Proofs: [implementation proof dossier](../../spec/correlated-concrete-implementation-proofs.md).
-Documentation parent: `1c927f358`. Runtime core tree:
+Documentation parent: `1c927f358`. Baseline runtime core tree:
 `e3ede1a36d3b04d79a23cc93285f385ecd968dbf`.
 The latest referenced Thingsboard result is **run-2 OOM; run-1 COMPLETE**,
 including the [16 GiB experiment](../reports/bidirectional-run2-16g-memory-20261026.md).
@@ -13,8 +13,10 @@ There is no new project measurement in this proposal.
 
 The two behavior decisions are now incorporated in section 11: persist
 NORMAL FLOW with nonempty E, and use semantic input alias closure to remove
-identity-only alias work. The local proofs are checked; Kotlin adapter tests
-remain implementation gates.
+identity-only alias work. The local proofs and Kotlin adapter tests pass. The
+[local validation report](../reports/bidirectional-correlated-concrete-validation-20261026.md)
+records the full suites and unchanged baseline failures. Project gates and
+the section 13 investigation remain pending.
 
 ## 1. Selected semantic changes
 
@@ -65,6 +67,8 @@ core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/
 | `ap/FlowBackedCoverage.kt` | General counterpart and two output-coverage cells |
 | `store/FlowBackedSummaries.kt`, `DiagonalRelations.kt` | Normalize STAR/ANY; remove alias identity exceptions; retain late flags |
 | `ap/DiagonalDelta.kt`, `engine/NeutralRelationBatch.kt` | Carry the output tail through packet admission and decode |
+| `store/StoreValues.kt` | Preserve the actual tail/E when packing a scalar leaf |
+| `store/ConjunctionStore.kt`, `KaryJoin.kt` | Replay late annotations on existing semantic join members |
 | `ap/ApOps.kt`, `engine/RunMethodLocalServices.kt` | Remove run/FULL gates from existing protection rules |
 | `store/RecordStore.kt`, `ap/Reference.kt`, `ap/Summary.kt` | Transport protection through native/reversed record application |
 | `engine/RunMethodAnalyzer.kt`, `PublicationIndex.kt`, `store/RunSummaries.kt` | Enable general summary admission; keep local concrete processing |
@@ -468,7 +472,11 @@ do not enumerate new origin products or convert the ND result to unary.
 Flag upgrades must enter standing join inputs as observable metadata, since
 ordinary `Facts.equals` ignores the flag. Admit a new annotation on the
 existing literal/member key. It is not a new join member: OR the current bit
-and replay the already-owned combinations which use that member. If a work
+and replay the already-owned semantic combinations which use that member.
+`ConjunctionStore` uses the existing `KaryJoin.replace` operation to recompute
+these completed tuples from standing members. It does not retain a new
+Cartesian-product archive. `NdSummaryJoin` uses its existing completed list.
+The equal-key check keeps the member and product sets unchanged. If a work
 key carries the bit, keep that work key separate from join-member identity. Do not add compiler/source metadata to ordinary fact equality.
 
 The selected-cleaner wrapper protects the surviving selected atom in any

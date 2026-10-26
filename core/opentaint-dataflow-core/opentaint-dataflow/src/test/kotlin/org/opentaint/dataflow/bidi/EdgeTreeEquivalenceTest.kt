@@ -75,9 +75,11 @@ class EdgeTreeEquivalenceTest {
             is TaintTree -> {
                 require(typed.all { it is TaintTree })
                 val root = typed.drop(1).fold(first.root) { root, next -> manager.taintAlg.mergeAdd(root, (next as TaintTree).root) }
-                val exclusion = leaves.firstOrNull { it.fact.tail == Tail.ANY_TAINT }?.exclusion ?: ExclusionSet.Empty
-                require(leaves.filter { it.fact.tail == Tail.ANY_TAINT }.all { it.exclusion == exclusion })
-                manager.taintTree(first.base, first.layer, root, exclusion, (typed.firstOrNull { it is TaintTree && it.root.hasAny } as? TaintTree)?.anyTail ?: Tail.ANY_TAINT)
+                val spans = typed.filterIsInstance<TaintTree>().filter { it.root.hasAny }
+                val span = spans.firstOrNull()
+                require(spans.all { it.anyTail == span!!.anyTail && it.exclusion == span.exclusion })
+                manager.taintTree(first.base, first.layer, root,
+                    span?.exclusion ?: ExclusionSet.Empty, span?.anyTail ?: Tail.ANY_TAINT)
             }
         }
         return Input(facts, leaves)
@@ -158,6 +160,8 @@ class EdgeTreeEquivalenceTest {
                 pack(listOf(value(path, Tail.EXACT))), pack(listOf(value(path, Tail.EXACT, demand = true))),
                 pack(listOf(value(path, Tail.ANY_TAINT, exclusion = ex(k)))),
                 pack(listOf(value(path, Tail.ANY, demand = true))),
+                pack(listOf(value(path, Tail.STAR, exclusion = ex(k)))),
+                pack(listOf(value(path, Tail.STAR, demand = true, exclusion = ex(k)))),
                 flow(listOf(path), mx = marks(u.id), exclusion = ex(k)),
                 flow(listOf(path), demand = true, mx = marks(u.id)),
             )

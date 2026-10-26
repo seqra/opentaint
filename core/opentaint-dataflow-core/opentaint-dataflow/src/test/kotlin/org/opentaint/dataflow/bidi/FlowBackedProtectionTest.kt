@@ -137,19 +137,19 @@ class FlowBackedProtectionTest {
         assertTrue(out.results.isEmpty())
     }
 
-    @Test fun `later and GROUP rule paths do not create annotations`(): Unit = with(v) {
+    @Test fun `later and GROUP rule paths protect same atom assignments`(): Unit = with(v) {
         val input = pack(leaf(p(), Tail.EXACT, mt))
         val edge = PathEdge(PathFact(x, p(), Tail.EXACT, mt), PathFact(y, p(), Tail.EXACT, mt), ExclusionSet.Empty)
         val out = CollectingOut()
         ops.applyEdge(input, premise(mark = mt), edge, false, ApMode(false, Direction.FORWARD, 2), out, ruleAssignment = true)
         assertTrue(out.results.isNotEmpty())
-        assertTrue(out.results.all { (it as TaintTree).nonSubsumable == null })
+        assertTrue(out.results.all { (it as TaintTree).nonSubsumable != null })
         val grouped = CollectingOut()
         val groupMode = ApMode(true, Direction.FORWARD, 1, MarkMode.GROUP)
         ops.applyEdge(ops.runtimeFact(input, groupMode), premise(mark = mt), edge, false,
             groupMode, grouped, ruleAssignment = true)
         assertTrue(grouped.results.isNotEmpty())
-        assertTrue(grouped.results.all { (it as TaintTree).nonSubsumable == null })
+        assertTrue(grouped.results.all { (it as TaintTree).nonSubsumable != null })
     }
 
     @Test fun `bulk selected cleaner keeps old flags and protects only its surviving selected marks`(): Unit = with(v) {

@@ -1,6 +1,6 @@
 # Proofs for correlated concrete initials and general FLOW subsumption
 
-Date: 26 October 2026. Status: local constructive model checked; runtime is unchanged.
+Date: 26 October 2026. Status: local constructive model and Kotlin correspondence checks pass; project validation pending.
 Read the [spec](run1-correlated-concrete-initials.md) first.
 
 ## 1. Model and scope

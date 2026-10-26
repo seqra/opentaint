@@ -132,7 +132,7 @@ class CallServiceLifetimeTest {
             }
             assertFailsWith<IllegalStateException> {
                 service.applyRecordView(part, RecordLeafView(f.run1Pattern(),
-                    Conclusion(f.run1Pattern(AccessPathBase.Return).fact, ExclusionSet.Empty, true)))
+                    Conclusion(f.run1Pattern(AccessPathBase.Return).fact, ExclusionSet.Empty, true)), false)
             }
             assertEquals(steps, core.steps)
             assertTrue(f.events.isEmpty())
@@ -153,7 +153,7 @@ class CallServiceLifetimeTest {
             val view = RecordLeafView(f.pattern(), Conclusion(f.pattern(AccessPathBase.Return).fact,
                 ExclusionSet.Empty, false))
             val apply: () -> Unit = {
-                if (native) core.applyRecord(part, record) else core.applyRecordView(part, view)
+                if (native) core.applyRecord(part, record) else core.applyRecordView(part, view, false)
             }
             f.cancellation.cancel()
             assertFailsWith<Cancellation.Cancelled> { apply() }

@@ -5,11 +5,12 @@ import org.opentaint.dataflow.bidi.ap.*
 import java.util.ArrayDeque
 import java.util.IdentityHashMap
 
-/** Exact diagonal FULL relations. The owner enables this store only in FULL
- * run-1. A row has one immutable output geometry and two exact mark masks.
+/** Exact diagonal relations for the current runtime atoms.
+ * A row has one immutable typed output geometry and two exact mark masks.
  * No original scalar tree or historical row is retained behind the masks. */
 class DiagonalRelations(private val m: ApManager, private val interners: StoreInterners = m.newInterners()) {
-    private data class Header(val initial: InitialAp, val base: AccessPathBase, val layer: Layer)
+    private data class Header(val initial: InitialAp, val base: AccessPathBase, val layer: Layer,
+                              val tail: Tail, val exclusion: ExclusionSet)
     private class Masks(var marks: MarkSet, var protected: MarkSet)
     private val headers = LinkedHashMap<Header, LinkedHashMap<FlowNode, Masks>>()
 
@@ -43,7 +44,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     fun addDiagonal(delta: DiagonalDelta): List<DiagonalDelta>? {
         m.cancellation.checkpoint()
         require(delta.initialShape.manager === m) { "A diagonal packet must use this AP manager" }
-        val header = Header(delta.initialShape, delta.base, delta.layer)
+        val header = Header(delta.initialShape, delta.base, delta.layer, delta.tail, delta.exclusion)
         val previous = headers[header]
         if (previous != null) for ((shape, masks) in previous) {
             m.cancellation.checkpoint()
@@ -65,7 +66,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     fun supports(premise: PremiseKey, facts: Facts): Boolean {
         m.cancellation.checkpoint()
         val f = facts as? TaintTree ?: return false
-        if (f.anyTail != Tail.ANY || f.exclusion != ExclusionSet.Empty ||
+        if ((f.anyTail != Tail.STAR && f.anyTail != Tail.ANY) ||
             flowInitialForCoverage(m, premise) == null) return false
         val mark = ((premise as InitialAp).mark as MarkSlot.Concrete).mark
         val all = m.taintAlg.foldAll(f.root, m.cancellation)
@@ -77,12 +78,12 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     /** Admit geometry/mask memberships before constructing the one scalar
      * delta needed by the current interpreter interface. */
     fun add(premise: PremiseKey, facts: Facts): Facts? {
-        require(supports(premise, facts)) { "Only canonical diagonal FULL ANY relations use this store" }
+        require(supports(premise, facts)) { "Only admitted diagonal STAR or ANY relations use this store" }
         val f = facts as TaintTree
         val initial = premise as InitialAp
         val mark = (initial.mark as MarkSlot.Concrete).mark
         val one = m.markSetOf(mark)
-        val header = Header(checkNotNull(flowInitialForCoverage(m, premise)), f.base, f.layer)
+        val header = Header(checkNotNull(flowInitialForCoverage(m, premise)), f.base, f.layer, f.anyTail, f.exclusion)
         val rows = headers.getOrPut(header) { LinkedHashMap() }
         val offered = geometry(f.root)
         val offeredFlags = f.nonSubsumable?.let(::geometry)
@@ -95,20 +96,20 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         for ((shape, masks) in rows.entries.toList()) {
             m.cancellation.checkpoint()
             if (mark !in masks.marks) continue
-            fresh = fresh?.let { subtractCovered(it, shape) }
+            fresh = fresh?.let { subtract(it, shape, header.tail) }
             if (mark in masks.protected) {
-                freshFlags = union(freshFlags, overlap(offered, shape))
+                freshFlags = union(freshFlags, overlap(offered, shape, header.tail))
                 continue
             }
-            val upgrade = offeredFlags?.let { overlap(shape, it) } ?: continue
+            val upgrade = offeredFlags?.let { overlap(shape, it, header.tail) } ?: continue
             upgrades = union(upgrades, upgrade)
             removeMark(rows, shape, masks, one)
             subtractExact(shape, upgrade)?.let { admit(rows, it, one, MarkSet.EMPTY) }
             admit(rows, upgrade, one, one)
         }
         if (fresh != null) {
-            if (offeredFlags != null) freshFlags = union(freshFlags, overlap(fresh, offeredFlags))
-            freshFlags = freshFlags?.let { overlap(fresh, it) }
+            if (offeredFlags != null) freshFlags = union(freshFlags, overlap(fresh, offeredFlags, header.tail))
+            freshFlags = freshFlags?.let { overlap(fresh, it, header.tail) }
             val plain = freshFlags?.let { subtractExact(fresh, it) } ?: if (freshFlags == null) fresh else null
             if (plain != null) admit(rows, plain, one, MarkSet.EMPTY)
             if (freshFlags != null) admit(rows, freshFlags, one, one)
@@ -143,29 +144,20 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         }
     }
 
-    /** Semantic compaction is restricted to the proved nonidentity ANY cell.
-     * Geometry is subtracted once for every eligible exact mark mask. Caller
-     * owns scope/endpoint and original NORMAL-record handoff obligations. */
+    /** Remove plain diagonal outputs covered by one complete typed FLOW row. */
     fun compact(flowInitial: InitialAp, flowFacts: FlowTree) {
         m.cancellation.checkpoint()
-        if (!flowInitial.isFlow || flowInitial.tail != Tail.STAR ||
-            flowInitial.exclusion != ExclusionSet.Empty || flowFacts.tail != Tail.ANY) return
+        if (!flowInitial.isFlow || (flowInitial.tail != Tail.STAR && flowInitial.tail != Tail.ANY) ||
+            (flowFacts.tail != Tail.STAR && flowFacts.tail != Tail.ANY)) return
         for ((header, rows) in headers.entries.toList()) {
-            if (header.initial !== flowInitial || header.base != flowFacts.base ||
-                (flowFacts.layer == Layer.DEMAND && header.layer == Layer.NORMAL)) continue
+            if (header.initial !== flowInitial || header.base != flowFacts.base || header.tail != flowFacts.tail ||
+                (flowFacts.layer == Layer.DEMAND && header.layer == Layer.NORMAL) ||
+                (header.tail == Tail.STAR && !flowFacts.exclusion.isSubsetOf(header.exclusion))) continue
             for ((shape, masks) in rows.entries.toList()) {
                 m.cancellation.checkpoint()
                 val selected = m.intern((masks.marks - masks.protected) - flowFacts.markExclusion)
                 if (selected.isEmpty) continue
-                var rest = subtractCovered(shape, flowFacts.root)
-                if (header.initial.base == header.base &&
-                    shape.walk(flowInitial.pathData) { _, _ -> m.cancellation.checkpoint() }?.leaf == FlowLeaf.LEAF) {
-                    // Restore only the annotated identity output. A structural
-                    // prefix node or its descendants are not identity arms.
-                    m.cancellation.checkpoint()
-                    val identity = FlowAlgebra.prepend(m, flowInitial.path, FlowAlgebra.LEAF_NODE)
-                    rest = union(rest, identity)
-                }
+                val rest = subtract(shape, flowFacts.root, header.tail)
                 if (rest === shape || rest == shape) continue
                 removeMark(rows, shape, masks, selected)
                 if (rest != null) admit(rows, rest, selected, MarkSet.EMPTY)
@@ -197,6 +189,15 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
         a == null -> b
         b == null -> a
         else -> FlowAlgebra.mergeAdd(a, b, m.cancellation)
+    }
+
+    private fun subtract(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? =
+        if (tail == Tail.STAR) subtractExact(a, b) else subtractCovered(a, b)
+
+    private fun overlap(a: FlowNode, b: FlowNode, tail: Tail): FlowNode? {
+        if (tail != Tail.STAR) return overlap(a, b)
+        val outside = subtractExact(a, b) ?: return a
+        return subtractExact(a, outside)
     }
 
     private fun subtractCovered(a: FlowNode, b: FlowNode): FlowNode? = FlowAlgebra.subtract(a, b, FlowLeaf.NONE,
@@ -250,7 +251,7 @@ class DiagonalRelations(private val m: ApManager, private val interners: StoreIn
     }
 
     private fun decode(header: Header, shape: FlowNode, mark: TaintMark, protected: FlowNode?): TaintTree =
-        m.taintTree(header.base, header.layer, scalar(shape, mark), anyTail = Tail.ANY,
+        m.taintTree(header.base, header.layer, scalar(shape, mark), header.exclusion, anyTail = header.tail,
             nonSubsumable = protected?.let { scalar(it, mark) })
 
     private class OverlapKey(val shape: FlowNode, val protected: FlowNode?, val above: Boolean) {

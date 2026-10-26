@@ -231,7 +231,7 @@ class RecordReadViewsTest {
         val input = typed(conclusion(y, listOf(g), Tail.EXACT, mt))
         for (view in malformed) {
             val out = CollectingOut()
-            assertFails(view.toString()) { ops.applyRecordLeaf(input, view, forward, out) }
+            assertFails(view.toString()) { ops.applyRecordLeaf(input, view, false, forward, out) }
             assertTrue(out.results.isEmpty())
             assertNoRequests(out)
         }
@@ -285,7 +285,7 @@ class RecordReadViewsTest {
 
     private fun apply(view: RecordLeafView, input: Facts, mode: ApMode): Set<Conclusion> {
         val out = CollectingOut()
-        ops.applyRecordLeaf(input, view, mode, out)
+        ops.applyRecordLeaf(input, view, false, mode, out)
         assertNoRequests(out)
         return decode(out.results)
     }

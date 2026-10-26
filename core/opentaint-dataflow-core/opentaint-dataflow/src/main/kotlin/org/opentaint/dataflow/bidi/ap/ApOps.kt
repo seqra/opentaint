@@ -19,15 +19,14 @@ class ApOps(val manager: ApManager) {
             "The ordinary static gate needs this edge's original initial"
         }
         val ce = compiled(e)
-        val from = e.from.mark as? MarkSlot.Concrete
-        val assigned = e.to.mark as? MarkSlot.Concrete
-        val protect = mode.run1 && mode.markMode == MarkMode.FULL && ruleAssignment &&
-            from != null && assigned != null &&
-            (from.mark == assigned.mark || premise.members.any {
-                (it.mark as? MarkSlot.Concrete)?.mark == assigned.mark && from.mark != assigned.mark
+        val from = (e.from.mark as? MarkSlot.Concrete)?.mark?.let { manager.marks.runtimeAtom(it, mode.markMode) }
+        val assigned = (e.to.mark as? MarkSlot.Concrete)?.mark?.let { manager.marks.runtimeAtom(it, mode.markMode) }
+        val protect = ruleAssignment && from != null && assigned != null &&
+            (from == assigned || premise.members.any {
+                (it.mark as? MarkSlot.Concrete)?.mark?.let { atom -> manager.marks.runtimeAtom(atom, mode.markMode) } == assigned && from != assigned
             })
         val sink = if (!protect) out else object : ApOut {
-            override fun result(f: Facts) = out.result(manager.selectedProtection(f, manager.markSetOf(assigned!!.mark)))
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, manager.markSetOf(assigned!!)))
             override fun markRequest(mark: TaintMark) = out.markRequest(mark)
         }
         applyCompiledEdge(c, ce, may, staticIdentityDepth(c, premise, ce, statementEdge, mode), mode, sink,
@@ -74,11 +73,11 @@ class ApOps(val manager: ApManager) {
         val masks = (g as? TaintTree)?.protectedPart()?.let { protected ->
             ProtectionOutputs(manager).also { applySummaryPart(this, a.withoutProtection(), j, protected, mode, it) }
         }
-        val incoming = (j.mark as? MarkSlot.Concrete)?.mark
+        val incoming = (j.mark as? MarkSlot.Concrete)?.mark?.let { manager.marks.runtimeAtom(it, mode.markMode) }
         var restored = MarkSet.EMPTY
-        if (mode.run1 && mode.markMode == MarkMode.FULL && original != null && incoming != null) {
+        if (original != null && incoming != null) {
             for (i in original.members) {
-                val origin = (i.mark as? MarkSlot.Concrete)?.mark ?: continue
+                val origin = (i.mark as? MarkSlot.Concrete)?.mark?.let { manager.marks.runtimeAtom(it, mode.markMode) } ?: continue
                 if (origin != incoming) restored += origin
             }
         }
@@ -93,8 +92,22 @@ class ApOps(val manager: ApManager) {
         applySummaryPart(this, a, j, g, mode, sink)
     }
 
-    fun applyRecordLeaf(a: Facts, view: RecordLeafView, mode: ApMode, out: ApOut) =
-        applyRecordLeafPart(this, a, view, mode, out)
+    fun applyRecordLeaf(a: Facts, view: RecordLeafView, nonSubsumable: Boolean,
+                        mode: ApMode, out: ApOut, original: PremiseKey? = null) {
+        val trigger = (view.premise.fact.mark as? MarkSlot.Concrete)?.mark
+            ?.let { manager.marks.runtimeAtom(it, mode.markMode) }
+        var restored = MarkSet.EMPTY
+        if (original != null && trigger != null) for (i in original.members) {
+            val origin = (i.mark as? MarkSlot.Concrete)?.mark
+                ?.let { manager.marks.runtimeAtom(it, mode.markMode) } ?: continue
+            if (origin != trigger) restored += origin
+        }
+        val sink = if (restored.isEmpty) out else object : ApOut {
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, restored))
+            override fun markRequest(mark: TaintMark) = out.markRequest(mark)
+        }
+        applyRecordLeafPart(this, a, view, nonSubsumable, mode, sink)
+    }
 
     fun applyCombination(parts: List<Pair<Facts, InitialAp>>, g: TaintTree, mode: ApMode, out: ApOut) =
         applyCombinationPart(manager, parts, g, mode, out.run1Policy(manager, mode))
@@ -109,9 +122,9 @@ class ApOps(val manager: ApManager) {
     fun leavesNear(f: Facts, p: IntArray): Sequence<Pattern> = nearLeafViews(manager, f, p)
 
     fun clean(c: Facts, premise: PremiseKey, cl: Cleaner, mode: ApMode, out: ApOut) {
-        val protect = mode.run1 && mode.markMode == MarkMode.FULL && c.base == cl.base
+        val protect = c.base == cl.base
         val sink = if (!protect) out else object : ApOut {
-            override fun result(f: Facts) = out.result(manager.selectedProtection(f, cl.mark?.let(manager::markSetOf)))
+            override fun result(f: Facts) = out.result(manager.selectedProtection(f, cl.mark?.let { manager.markSetOf(manager.marks.runtimeAtom(it, mode.markMode)) }))
             override fun markRequest(mark: TaintMark) = out.markRequest(mark)
         }
         manager.transportProtection(c, sink) { part, target ->

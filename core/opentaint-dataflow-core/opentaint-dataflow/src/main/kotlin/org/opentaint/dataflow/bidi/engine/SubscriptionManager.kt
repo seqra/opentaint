@@ -238,6 +238,7 @@ class SubscriptionManager(port: SubscriptionPort) {
         val cancellation = ops.manager.cancellation
         val applier = port.applier(part.caller)
         val seen = HashSet<Any>()
+        val seenViews = HashMap<RecordLeafView, Boolean>()
         for (leaf in ops.leaves(part.added)) {
             cancellation.checkpoint()
             for (record in records.byEntry(part.callee, leaf)) {
@@ -249,11 +250,14 @@ class SubscriptionManager(port: SubscriptionPort) {
             for (record in records.byExit(part.callee, leaf)) {
                 cancellation.checkpoint()
                 if (record.direction == direction) continue
-                for (view in record.reversedAt(leaf)) {
+                record.forEachReversedAt(leaf) { view, nonSubsumable ->
                     cancellation.checkpoint()
-                    if (!seen.add(view)) continue
-                    val added = ops.satisfying(part.added, view.premise, mode, record = true) ?: continue
-                    applier.applyRecordView(part.copy(added = added), view)
+                    val previous = seenViews[view]
+                    if (previous == true || previous == false && !nonSubsumable) return@forEachReversedAt
+                    seenViews[view] = previous == true || nonSubsumable
+                    val added = ops.satisfying(part.added, view.premise, mode, record = true)
+                        ?: return@forEachReversedAt
+                    applier.applyRecordView(part.copy(added = added), view, nonSubsumable)
                 }
             }
         }

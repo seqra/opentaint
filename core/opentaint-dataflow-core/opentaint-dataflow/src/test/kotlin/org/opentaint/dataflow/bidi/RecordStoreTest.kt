@@ -82,7 +82,6 @@ class RecordStoreTest {
             for (direction in Direction.entries) {
                 add(row(premise(p(f), Tail.STAR), listOf(leaf(p(g))), direction))
                 add(row(premise(p(f), Tail.ANY, MarkSlot.STAR), listOf(flow(p(g))), direction))
-                add(row(premise(p(f), Tail.STAR, MarkSlot.STAR, ex(h)), listOf(flow(p(g))), direction))
                 add(row(exact, listOf(leaf(p(g), layer = Layer.DEMAND)), direction))
                 add(row(abstract, listOf(flow(p(g), Layer.DEMAND)), direction))
                 add(row(exact, listOf(flow(p(g))), direction))
@@ -215,7 +214,6 @@ class RecordStoreTest {
         val bad = listOf(
             Triple(Direction.FORWARD, premise(p(f), Tail.STAR), leaf(p(g))),
             Triple(Direction.FORWARD, premise(p(f), Tail.ANY, MarkSlot.STAR), flow(p(g))),
-            Triple(Direction.FORWARD, premise(p(f), Tail.STAR, MarkSlot.STAR, ex(h)), flow(p(g))),
             Triple(Direction.BACKWARD, premise(p(f), Tail.ANY_TAINT, e = ex(h)), leaf(p(g))),
             Triple(Direction.BACKWARD, premise(p(f)), leaf(p(g), Tail.ANY_TAINT)),
         )

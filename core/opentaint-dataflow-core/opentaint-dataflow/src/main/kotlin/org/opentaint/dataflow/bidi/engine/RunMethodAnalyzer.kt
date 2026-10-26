@@ -32,7 +32,7 @@ class RunMethodAnalyzer(
     private var initialStore: InitialFactStore? = InitialFactStore()
     val edges: MethodEdgeStore get() = checkNotNull(edgeStore) { "The method edges were released" }
     val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
-    val summaries = RunSummaryStore(ap, flowBacked = mode.run1 && mode.markMode == MarkMode.FULL)
+    val summaries = RunSummaryStore(ap, flowBacked = true)
     val sourceHits: SourceHitStore? = if (forward) null else SourceHitStore()
     private val currentQueries = if (config.restricted)
         StrongQueries(ops, mode, checkNotNull(config.demand).staticQueryPolicy) else null
@@ -321,7 +321,7 @@ class RunMethodAnalyzer(
 
     internal fun knownStaticInput(initial: InitialAp): Facts {
         check(hasKnownStaticGroupInput(initial))
-        return ap.factsOf(initial.toPattern().fact, ExclusionSet.Empty, Layer.DEMAND)
+        return ops.startFact(initial, mode)
     }
 
     private fun boundedStaticSummaryOut(premise: PremiseKey, emit: (Facts) -> Unit): ApOut = object : ApOut {
@@ -789,7 +789,8 @@ class RunMethodAnalyzer(
         }
     }
     override fun applyRecord(part: Subscription, record: Record): Unit = callServices.applyRecord(part, record)
-    override fun applyRecordView(part: Subscription, view: RecordLeafView): Unit = callServices.applyRecordView(part, view)
+    override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean): Unit =
+        callServices.applyRecordView(part, view, nonSubsumable)
     internal fun countRecordCrossing() { recordCrossings++ }
     internal fun countTriggerSeed() { triggerSeeds++ }
 

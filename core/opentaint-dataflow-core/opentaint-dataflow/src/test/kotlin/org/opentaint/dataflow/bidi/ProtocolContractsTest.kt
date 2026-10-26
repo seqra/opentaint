@@ -88,11 +88,11 @@ class ProtocolContractsTest {
         val applier = object : SummaryApplier {
             override fun applySummary(part: Subscription, pub: Publication, member: Int) { calls += listOf(part, pub, member) }
             override fun applyRecord(part: Subscription, record: Record) { calls += listOf(part, record) }
-            override fun applyRecordView(part: Subscription, view: RecordLeafView) { calls += listOf(part, view) }
+            override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) { calls += listOf(part, view) }
         }
         applier.applySummary(part, pub, 2)
         applier.applyRecord(part, record)
-        applier.applyRecordView(part, view)
+        applier.applyRecordView(part, view, false)
         assertEquals(listOf(listOf(part, pub, 2), listOf(part, record), listOf(part, view)), calls)
         assertSame(pub, calls[0][1])
         assertSame(record, calls[1][1])

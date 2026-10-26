@@ -66,9 +66,8 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                     val input = ConjunctionStore.Input(premise, checked.facts.layer, checked.facts)
                     if (core.config.run1) {
                         val targets = HashMap<Layer, Facts>()
-                        val assigned = if (core.mode.markMode == MarkMode.FULL)
-                            (edge.target.mark as? MarkSlot.Concrete)?.mark else null
-                        val triggering = (literal.fact.mark as? MarkSlot.Concrete)?.mark
+                        val assigned = runtimeAtom(core, (edge.target.mark as? MarkSlot.Concrete)?.mark)
+                        val triggering = runtimeAtom(core, (literal.fact.mark as? MarkSlot.Concrete)?.mark)
                         checkNotNull(originConjunctionStore).addProtectedOrigins(edge, node, edge.literals.size, index, input, assigned, triggering) { initial, layer, nonSubsumable ->
                             val result = targets.getOrPut(layer) { core.ops.targetTree(edge.target, layer, core.mode) }
                             sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)))
@@ -80,7 +79,9 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                     for (combination in combinations) {
                         core.ap.cancellation.checkpoint()
                         val result = core.ops.targetTree(edge.target, combination.layer, core.mode)
-                        sink(combination.premise, core.forceRun1Layer(combination.premise, result))
+                        val protected = ruleProtection(core, combination.inputs, combination.premise,
+                            runtimeAtom(core, (edge.target.mark as? MarkSlot.Concrete)?.mark))
+                        sink(combination.premise, core.forceRun1Layer(combination.premise, protectTarget(result, protected)))
                         core.ap.cancellation.checkpoint()
                     }
                 }
@@ -140,8 +141,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                                     source.transfer(selected.leaves[index], action, multi = true).forward, action.id)
                             }) continue
                             val result = core.ops.targetTree(action.target, cube.layer, core.mode)
-                            val assigned = if (core.mode.markMode == MarkMode.FULL)
-                                (action.target.mark as? MarkSlot.Concrete)?.mark else null
+                            val assigned = runtimeAtom(core, (action.target.mark as? MarkSlot.Concrete)?.mark)
                             cube.emitProtectedOrigins(action.id, assigned) { initial, nonSubsumable ->
                                 sink(initial, core.forceRun1Layer(initial, protectTarget(result, nonSubsumable)), action.id)
                             }
@@ -157,7 +157,9 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
                                 source.transfer(selected.leaves[index], action, multi = true).forward, action.id)
                         }) continue
                         val result = core.ops.targetTree(action.target, combination.layer, core.mode)
-                        sink(combination.premise, core.forceRun1Layer(combination.premise, result), action.id)
+                        val protected = ruleProtection(core, combination.inputs, combination.premise,
+                            runtimeAtom(core, (action.target.mark as? MarkSlot.Concrete)?.mark))
+                        sink(combination.premise, core.forceRun1Layer(combination.premise, protectTarget(result, protected)), action.id)
                     }
                 }
             }
@@ -179,6 +181,26 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
             core.ap.cancellation.checkpoint()
             if (predicate.isUnary(leaf)) transfer(pattern, multi = false)
             if (predicate.isMulti(leaf)) multiLeaf(predicate, leaf, pattern, allowSingle = false)
+        }
+    }
+
+    private fun runtimeAtom(core: RunMethodAnalyzer, atom: TaintMark?): TaintMark? =
+        atom?.let { core.ap.marks.runtimeAtom(it, core.mode.markMode) }
+
+    /** All accepted contributors remain in the exact ND premise. */
+    private fun ruleProtection(core: RunMethodAnalyzer, inputs: List<ConjunctionStore.Input>,
+                               premise: PremiseKey, assigned: TaintMark?): Boolean {
+        if (assigned == null) return false
+        val triggers = ArrayList<TaintMark>()
+        for (input in inputs) {
+            val facts = input.facts as? TaintTree ?: continue
+            if (facts.nonSubsumable != null) return true
+            val leaves = core.ap.taintAlg.foldAll(facts.root, core.ap.cancellation)
+            for (id in (leaves.exact + leaves.any).ids) triggers += core.ap.marks.runtimeAtom(TaintMark(id), core.mode.markMode)
+        }
+        if (assigned in triggers) return true
+        return triggers.any { it != assigned } && premise.members.any {
+            runtimeAtom(core, (it.mark as? MarkSlot.Concrete)?.mark) == assigned
         }
     }
 

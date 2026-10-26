@@ -49,8 +49,8 @@ internal class FlowBackedSummaries(private val m: ApManager,
         val residual = normalize(premise, offered) ?: return null
         if (diagonal.supports(premise, residual)) return diagonal.add(premise, residual)
         // A cross-mark or exact sibling must not create a second authoritative
-        // copy of the diagonal ANY membership in the scalar fallback.
-        if (residual is TaintTree && residual.anyTail == Tail.ANY) {
+        // copy of the diagonal membership in the scalar fallback.
+        if (residual is TaintTree && (residual.anyTail == Tail.STAR || residual.anyTail == Tail.ANY)) {
             val initial = flowInitialForCoverage(m, premise)
             val mark = ((premise as? InitialAp)?.mark as? MarkSlot.Concrete)?.mark
             if (initial != null && mark != null) {
@@ -89,31 +89,13 @@ internal class FlowBackedSummaries(private val m: ApManager,
         return groups.getOrPut(premise) { ConclusionGroup(m, interners) }.add(residual)
     }
 
-    /** ANY FLOW is an effect. A diagonal TAINT output on the exact initial
-     * path is an identity and stays; other paths have the same effect class.
-     * Spatial coverage alone cannot erase that identity/alias difference. */
+    /** All supported typed cells use the same coverage law. Call consumers
+     * retain their own identity classifier; it is not a summary-store guard. */
     fun normalize(premise: PremiseKey, facts: Facts): Facts? {
-        if (!replaceCovered || facts !is TaintTree || facts.anyTail != Tail.ANY) return facts
+        if (!replaceCovered || facts !is TaintTree || (facts.anyTail != Tail.STAR && facts.anyTail != Tail.ANY)) return facts
         val initial = flowInitialForCoverage(m, premise) ?: return facts
         val flow = groups[initial]?.all()?.filterIsInstance<FlowTree>() ?: return facts
-        val concrete = premise as InitialAp
-        if (initial.base != facts.base)
-            return removeFlowCoveredAny(m, concrete, facts, flow.asIterable(), facts.nonSubsumable)
-        var result: TaintTree? = null
-        for ((part, identity) in m.run1SummaryParts(concrete, facts)) {
-            m.cancellation.checkpoint()
-            val retained = if (identity) part as TaintTree else removeFlowCoveredAny(m, concrete,
-                part as TaintTree, flow.asIterable(), part.nonSubsumable) ?: continue
-            val old = result
-            result = if (old == null) retained else {
-                val root = m.taintAlg.mergeAdd(old.root, retained.root, m.cancellation)
-                val flags = old.nonSubsumable?.let { a -> retained.nonSubsumable?.let { b ->
-                    m.taintAlg.mergeAdd(a, b, m.cancellation)
-                } ?: a } ?: retained.nonSubsumable
-                m.taintTree(facts.base, facts.layer, root, facts.exclusion, facts.anyTail, flags)
-            }
-        }
-        return result
+        return removeFlowCovered(m, premise, facts, flow.asIterable(), facts.nonSubsumable)
     }
 
     fun all(): Sequence<Pair<PremiseKey, Facts>> = sequence {

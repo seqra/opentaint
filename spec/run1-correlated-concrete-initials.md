@@ -1,6 +1,6 @@
 # Correlated concrete initials and general FLOW subsumption
 
-Date: 26 October 2026. Status: **proposed; analyzer code is unchanged**.
+Date: 26 October 2026. Status: **implemented and locally checked; project validation pending**.
 Language: ASD-STE100 Simplified Technical English. Technical terms are defined below.
 The file name is retained for existing links. The contract applies to **all runs**.
 
@@ -604,13 +604,13 @@ to STAR because both use the current `any` payload channel. Existing ANY
 coverage can cover a STAR pair under the same original and protection gate;
 it does not reclassify the retained ANY as STAR.
 
-Implementation must update the following current gates. This is a proposal,
-not permission to apply them without their matching transfer/flag changes:
+The selected implementation uses the following gates. Each gate requires
+its matching transfer and flag changes; do not enable an owner in isolation:
 
 ```kotlin
 // All runs. Replacement retains the shape, scope, layer and flag gates above.
 val summaries = RunSummaryStore(ap, flowBacked = true)
-val publications = PublicationIndex(ap, flowBacked = true)
+val publications = PublicationIndex(ap, ops, flowBacked = true)
 
 // No run/FULL gate inside the semantic matcher or protection transfer.
 val counterpart = flowInitialForCoverage(ap, premise) // Check legal geometry.

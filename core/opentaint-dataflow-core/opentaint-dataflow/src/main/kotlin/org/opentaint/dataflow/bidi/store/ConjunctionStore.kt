@@ -7,7 +7,11 @@ import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.Collections
 
 /** The semantic E6 member after full matching; no accepted Facts version is retained. */
-internal data class NdBinding(val ref: CallerRef, val linkLayer: Layer)
+internal data class NdBinding(val ref: CallerRef, val linkLayer: Layer) {
+    // Invocation metadata never changes the accepted E6 member key.
+    var triggering: TaintMark? = null
+    var nonSubsumable: Boolean = false
+}
 
 /** Standing literal inputs for one method and run. One writer owns this store. */
 class ConjunctionStore(private val m: ApManager, private val statistics: N2Statistics? = null,
@@ -35,7 +39,20 @@ class ConjunctionStore(private val m: ApManager, private val statistics: N2Stati
         val key = rule to statement
         val join = joins[key]
         require(join == null || join.arity == arity) { "A rule at a statement has one fixed arity" }
-        val inputs = (join ?: KaryJoin<Input>(arity, m.cancellation).also { joins[key] = it }).add(literal, input)
+        val state = join ?: KaryJoin<Input>(arity, m.cancellation).also { joins[key] = it }
+        val previous = state.current(literal, input)
+        val inputs = if (previous == null) state.add(literal, input)
+        else {
+            val oldFacts = previous.facts ?: return emptyList()
+            val (merged, delta) = m.mergeAddDelta(oldFacts, checkNotNull(input.facts))
+            if (delta == null) return emptyList()
+            val updated = previous.copy(facts = merged)
+            // Recompute only the already-complete semantic combinations at
+            // this slot. The equal member key changes no product set, and no
+            // Cartesian-product archive is retained for annotation replay.
+            check(updated == previous)
+            state.replace(literal, previous, updated)
+        }
         val out = ArrayList<CompleteBinding>(inputs.size)
         for (combination in inputs) {
             m.cancellation.checkpoint()
@@ -76,8 +93,20 @@ class NdSummaryJoin<S : Any>(private val m: ApManager, arity: Int, private val s
     internal val combinationCount: Int get() = full.size
 
     /** Put a subscription under every member index it satisfies; new combinations meet all stored values. */
-    fun addSubscription(index: Int, s: S): List<Pair<List<S>, TaintTree>> {
+    fun addSubscription(index: Int, s: S, upgrade: ((S, S) -> Boolean)? = null): List<Pair<List<S>, TaintTree>> {
         m.cancellation.checkpoint()
+        val previous = members.current(index, s)
+        if (previous != null) {
+            statistics?.recordE6(0, 1, 0)
+            if (upgrade == null || !upgrade(previous, s)) return emptyList()
+            val out = ArrayList<Pair<List<S>, TaintTree>>()
+            for (combination in full) {
+                m.cancellation.checkpoint()
+                if (combination[index] !== previous) continue
+                for (group in conclusion.values) for (g in group.all()) out += combination to g
+            }
+            return out
+        }
         val previousMembers = if (statistics != null) members.memberCount else 0
         val fresh = members.add(index, s)
         statistics?.let {

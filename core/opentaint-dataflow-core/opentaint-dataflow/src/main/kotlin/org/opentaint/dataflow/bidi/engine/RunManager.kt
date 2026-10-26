@@ -71,7 +71,7 @@ class RunManager<A : RunActor>(
         check(!ended) { "The run has ended" }
         shared.cancellation.checkpoint()
         storages.computeIfAbsent(key) { SummaryStorage(it, shared.ap, shared.ops, steps,
-            shared.abstractionStatistics, flowBacked = config.run1 && config.mode.markMode == MarkMode.FULL) }
+            shared.abstractionStatistics, flowBacked = true) }
     }
 
     fun route(event: RunEvent): Boolean {

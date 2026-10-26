@@ -355,11 +355,9 @@ class FiniteProgramFixtures(val cancellation: Cancellation = Cancellation(), thr
              layer: Layer = Layer.NORMAL): Facts {
         val fact = PathFact(base, ownedList(path), tail, mark)
         val value = ap.factsOf(fact, exclusion, layer)
-        val demand = layer == Layer.DEMAND || tail == Tail.ANY || (tail == Tail.STAR && mark !is MarkSlot.Star)
+        val demand = layer == Layer.DEMAND || tail == Tail.ANY
         val raw = if (base == AccessPathBase.Zero) Conclusion(fact, ExclusionSet.Empty, layer == Layer.DEMAND)
-            else if (demand && (tail == Tail.STAR || tail == Tail.ANY_TAINT || tail == Tail.ANY))
-                Conclusion(fact.copy(tail = Tail.ANY), ExclusionSet.Empty, true)
-            else Conclusion(fact, exclusion, demand)
+            else Conclusion(fact, if (tail == Tail.ANY || tail == Tail.EXACT) ExclusionSet.Empty else exclusion, demand)
         rawFacts[value] = listOf(raw)
         return value
     }

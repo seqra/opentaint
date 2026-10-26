@@ -77,11 +77,14 @@ class ApManager(val cancellation: Cancellation, refManager: RefManager = RefMana
         }
         is TaintTree -> {
             val root = checkNotNull(taintAlg.mapCanonicalLeaves(f.root, cancellation) { projectedLeaf(it, mode) })
+            val protected = f.nonSubsumable?.let { mask ->
+                taintAlg.mapCanonicalLeaves(mask, cancellation) { projectedLeaf(it, mode) }
+            }
             val layer = if (mode.markMode == MarkMode.GROUP) Layer.DEMAND else f.layer
             val tail = if (root.hasAny) f.anyTail else Tail.ANY_TAINT
             val exclusion = if (tail == Tail.ANY || !root.hasAny) ExclusionSet.Empty else intern(f.exclusion)
-            if (root === f.root && layer == f.layer && tail == f.anyTail && exclusion === f.exclusion) f
-            else taintTree(f.base, layer, root, exclusion, tail)
+            if (root === f.root && protected === f.nonSubsumable && layer == f.layer && tail == f.anyTail && exclusion === f.exclusion) f
+            else taintTree(f.base, layer, root, exclusion, tail, protected)
         }
     }
 

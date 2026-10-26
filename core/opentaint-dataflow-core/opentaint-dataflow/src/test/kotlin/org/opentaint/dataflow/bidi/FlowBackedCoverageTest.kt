@@ -63,16 +63,19 @@ class FlowBackedCoverageTest {
     }
 
     @Test
-    fun `initial mapping admits canonical full STAR hypotheses only`() {
+    fun `initial mapping preserves admitted STAR and ANY geometry and runtime atoms`() {
         val marked = initial(path = listOf(f))
         val expected = initial(mark = MarkSlot.STAR, path = listOf(f))
         assertSame(expected, flowInitialForCoverage(m, marked))
         assertNull(flowInitialForCoverage(m, m.zero))
         assertNull(flowInitialForCoverage(m, initial(tail = Tail.EXACT)))
-        assertNull(flowInitialForCoverage(m, initial(tail = Tail.ANY)))
-        assertNull(flowInitialForCoverage(m, initial(e = ExclusionSet.of(g))))
+        assertSame(initial(tail = Tail.ANY, mark = MarkSlot.STAR),
+            flowInitialForCoverage(m, initial(tail = Tail.ANY)))
+        assertSame(initial(e = ExclusionSet.of(g), mark = MarkSlot.STAR),
+            flowInitialForCoverage(m, initial(e = ExclusionSet.of(g))))
         assertNull(flowInitialForCoverage(m, expected))
-        assertNull(flowInitialForCoverage(m, initial(mark = MarkSlot.Concrete(m.marks.runtimeAtom(t, MarkMode.GROUP)))))
+        assertSame(initial(mark = MarkSlot.STAR),
+            flowInitialForCoverage(m, initial(mark = MarkSlot.Concrete(m.marks.runtimeAtom(t, MarkMode.GROUP)))))
         assertNull(flowInitialForCoverage(m, m.premiseOf(listOf(marked, initial(mark = MarkSlot.Concrete(u))))))
         val foreign = StoreFixtures().manager
         assertNull(flowInitialForCoverage(foreign, marked))

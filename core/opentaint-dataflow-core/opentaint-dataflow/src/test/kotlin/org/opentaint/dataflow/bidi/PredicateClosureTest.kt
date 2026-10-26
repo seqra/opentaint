@@ -97,9 +97,39 @@ class PredicateClosureTest {
             (p.marks + fresh + (p.marks + fresh).map { f.manager.marks.group(f.manager.marks.groupOf(it)) } + TaintMark.ZERO).distinct(), 2)
     }
 
+    /** This program's concrete STAR identities come only from unprotected entry
+     * seeds. Its source rules assign another atom/position. Apply the selected
+     * identity coverage law at summary boundaries, leaving every local operation,
+     * request, rule result and witness in the independent oracle unchanged. */
+    private fun selectedSummaries(observation: RunObservation): RunObservation {
+        fun reduce(rows: Set<ObservedEdge>): Set<ObservedEdge> = rows.filterTo(LinkedHashSet()) { row ->
+            val initial = row.premise.singleOrNull()
+            val mark = initial?.fact?.mark as? MarkSlot.Concrete
+            val seed = initial != null && initial.fact.tail == Tail.STAR && mark != null &&
+                row.conclusion.fact == initial.fact && row.conclusion.exclusion == initial.exclusion &&
+                row.conclusion.demand
+            !seed || rows.none { flow ->
+                val source = flow.premise.singleOrNull()
+                val target = flow.conclusion
+                source == initial!!.copy(fact = initial.fact.copy(mark = MarkSlot.STAR)) &&
+                    flow.method == row.method && flow.node == row.node && !target.demand &&
+                    target.fact.base == initial.fact.base && target.fact.path == initial.fact.path &&
+                    target.fact.tail == Tail.STAR && target.fact.mark is MarkSlot.Star &&
+                    mark!!.mark !in (target.fact.mark as MarkSlot.Star).excluded &&
+                    target.exclusion.isSubsetOf(initial.exclusion)
+            }
+        }
+        val raw = reduce(observation.rawSummaries)
+        val removed = observation.rawSummaries - raw
+        // Selection/publication receives the normalized raw result. This is not
+        // coverage between different owners or removal of a delivered witness.
+        return observation.copy(rawSummaries = raw, publications = observation.publications - removed,
+            selectedDemand = observation.selectedDemand - removed)
+    }
+
     private fun compare(f: DriverFixtures, p: Program, config: RunConfig): RunObservation {
-        val expected = NaiveClosure(f.program, config, semantics = NaiveClosure.Semantics.SELECTED).run()
-        val raw = RawCurrentClosure(f.program, config, f.program.inputs(config)).run()
+        val expected = selectedSummaries(NaiveClosure(f.program, config, semantics = NaiveClosure.Semantics.SELECTED).run())
+        val raw = selectedSummaries(RawCurrentClosure(f.program, config, f.program.inputs(config)).run())
         expected.assertEquivalent(raw, universe(f, p))
         for (sameUnit in listOf(false, true)) for (policy in listOf(SchedulePolicy.FIFO,
             SchedulePolicy.REPLAY_FIRST, SchedulePolicy.NOTIFY_FIRST)) {
@@ -135,8 +165,8 @@ class PredicateClosureTest {
         for (limit in listOf(1)) DriverFixtures().use { f ->
             val p = program(f, width = 8)
             val config = f.program.config(L = limit, roots = listOf(p.root))
-            val expected = NaiveClosure(f.program, config, semantics = NaiveClosure.Semantics.SELECTED).run()
-            val raw = RawCurrentClosure(f.program, config, f.program.inputs(config)).run()
+            val expected = selectedSummaries(NaiveClosure(f.program, config, semantics = NaiveClosure.Semantics.SELECTED).run())
+            val raw = selectedSummaries(RawCurrentClosure(f.program, config, f.program.inputs(config)).run())
             expected.assertEquivalent(raw, universe(f, p))
             assertTrue(expected.requests.mapNotNull { (it.kind as? RequestKind.Mark)?.mark }
                 .toSet().containsAll(p.marks.take(8).map { GroupedScalarMarks(f.manager.marks).atom(it) }))
@@ -309,7 +339,7 @@ class PredicateClosureTest {
             assertEquals(listOf(1, 2, 3), f.results.map { it.runIndex })
             for ((expected, actual) in reference.runs.zip(f.results)) {
                 assertEquals(RunStatus.COMPLETE, actual.status)
-                val want = expected.observation
+                val want = selectedSummaries(expected.observation)
                 val observed = retained(actual, f.ops)
                 RunObservation(rawSummaries = want.rawSummaries, selectedDemand = want.selectedDemand,
                     sourceHits = want.sourceHits, witnesses = want.witnesses).assertEquivalent(

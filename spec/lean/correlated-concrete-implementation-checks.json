@@ -1,6 +1,6 @@
 {
   "date": "2026-10-26",
-  "status": "proposed; local constructive laws checked; analyzer implementation unchanged",
+  "status": "implemented; local constructive and Kotlin gates checked; fresh project/shape gates pending",
   "documentation_parent": "1c927f358b96f138aabb3b6eafb9d1eeba295046",
   "runtime_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
   "scope": "Concrete STAR seeds and general FLOW subsumption in all runs and current mark domains; typed packets, current residuals/protection, normal STAR/E FLOW record persistence/reversal, semantic input alias closure; no alias-class guard or StrongQueries",
@@ -42,19 +42,21 @@
     "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
   },
   "proof_boundary": "Constructive reference AP transport/summary laws, packet decode, residual admission/protection, native STAR/E record view/export and semantic alias-closure induction. Relative to existing producer/IR correspondence contracts; no whole-Kotlin/Java alias-analysis proof, whole-engine termination bound, or measured speedup claim.",
-  "implementation_gates": "Proposal sections 11-13; Kotlin correspondence tests, fixed project validation and post-implementation run-1 edge-shape/coverage investigation.",
+  "implementation_gates": "Local formal and Kotlin gates checked; fixed project validation and post-implementation run-1 shape investigation remain pending.",
   "sha256": {
-    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "fbec56bf6964cc34e5078d54886e428c0c9d2bcf50027ca8f87d3bdba0ea15d5",
-    "spec/correlated-concrete-implementation-proofs.md": "3251cb7607b9431978ffc177817b6d0e17025129933e3bdbb4d054e361dea19e",
-    "spec/run1-correlated-concrete-initials.md": "19984fd4c5a521c56b7b50d43983d2a50ef1ae5178cc82698c5a05cf81e11175",
-    "spec/run1-correlated-concrete-initials-proofs.md": "1eebe1d539715d51b0d289f25e8f12403719ce80602e669fa4ef0dc711f8a4a9",
+    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "c11d69f9fcf91bd09379d07f3928d1f198ee5fe3e6b6a9207384a513fab60d1b",
+    "spec/correlated-concrete-implementation-proofs.md": "7966b38d0ba3bd8f8321d96845615f77fc13f5bf3a2844109241cab3e49efe01",
+    "spec/run1-correlated-concrete-initials.md": "3ba7acdc0246ce8257038dfa8ed6652732bad0ef9da67743b21867f9b0787642",
+    "spec/run1-correlated-concrete-initials-proofs.md": "76ce6c30ab13b7740167bf1bb8f675ee286ffdd5f6078e674f0172cd23d56935",
     "spec/lean/ApSpec/CorrelatedConcreteImplementation.lean": "53b9d73a3d4194bf3f46b56fcef3b9d391b3134d4e8aeffa3b134ddbb5e1acfd",
     "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
     "spec/lean/correlated-concrete-implementation-audit.lean": "06ec0ffea544beb725441150e8c363eca75337f0be77fd0e1d019baa79facd4a",
     "spec/lean/ApSpec.lean": "61b944113e7c5e226662503aa12fa70a1ca646c20e0b39db868f505017ccc962",
-    "spec/ap.md": "d00e81a60e814e6bad395241b1294b6103c117013b019d395308b440543f8344"
+    "spec/ap.md": "adbedf780ce712159495da4bbb286f9788af173aeda52cde74aedc2f2f755632"
   },
   "audited_owned_declarations": 318,
   "audited_implementation_declarations": 222,
-  "executable_controls": 26
+  "executable_controls": 26,
+  "implementation_core_tree": "f809c4552dd4a7a797fd61595f0932595e56537c",
+  "local_validation_report": "docs/reports/bidirectional-correlated-concrete-validation-20261026.md"
 }

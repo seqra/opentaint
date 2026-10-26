@@ -411,7 +411,8 @@ class Run1StaticService(private val ap: ApManager, private val markMode: MarkMod
         for (atom in atoms.ids) {
             val executable = ap.marks.runtimeAtom(TaintMark(atom), markMode)
             check(executable.id == atom) { "Static reply contains an atom from a different run mode" }
-            val one = ap.factsOf(region.fact.copy(mark = MarkSlot.Concrete(executable)), region.exclusion, Layer.DEMAND) as TaintTree
+            val one = ap.factsOf(region.fact.copy(mark = MarkSlot.Concrete(executable),
+                tail = if (region.fact.tail == Tail.EXACT) Tail.EXACT else Tail.ANY), ExclusionSet.Empty, Layer.DEMAND) as TaintTree
             result = if (result == null) one else ap.taintTree(one.base, Layer.DEMAND,
                 ap.taintAlg.mergeAdd(result.root, one.root, ap.cancellation), one.exclusion, one.anyTail)
         }

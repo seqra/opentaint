@@ -1,6 +1,6 @@
 {
   "date": "2026-10-26",
-  "status": "proposed; local constructive checks pass; analyzer implementation unchanged",
+  "status": "implemented; local constructive and Kotlin gates checked; fresh project/shape gates pending",
   "baseline_revision": "f4954c26403bc7ecb8b64018f8aabdd479fd022d",
   "baseline_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
   "scope": "All runs and both directions: concrete STAR identity seeds, suffix-preserving transfer, ANY-prefix and STAR equal-path/exclusion-aware FLOW replacement, explicit owner/initial geometry; no alias-class guard and no StrongQueries",
@@ -10,7 +10,7 @@
       "cwd": "spec/lean",
       "command": "lake build",
       "exit_code": 0,
-      "jobs": 192
+      "jobs": 193
     },
     {
       "cwd": "spec/lean",
@@ -37,14 +37,16 @@
     "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
   },
   "proof_boundary": "Local AP seed, coverage, application, reversal, layer and handoff laws; covered-relation union preservation without alias classification. No whole-engine Kotlin/IR refinement, metadata-dependent alias continuation/candidate equality, rule/ND closure, typed-cleaner/record-adapter completeness, termination or measured speedup proof.",
-  "implementation_gates": "Spec section 9, including all-run protection and native/reversed record views; analyzer code unchanged.",
+  "implementation_gates": "Local formal and Kotlin gates checked; fixed project validation and post-implementation run-1 shape investigation remain pending.",
   "sha256": {
     "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
     "spec/lean/run1-correlated-concrete-initials-audit.lean": "51e149499373d9f36db06f5120b050728d024ff7b5230922261291530ca228b1",
-    "spec/run1-correlated-concrete-initials.md": "19984fd4c5a521c56b7b50d43983d2a50ef1ae5178cc82698c5a05cf81e11175",
-    "spec/run1-correlated-concrete-initials-proofs.md": "1eebe1d539715d51b0d289f25e8f12403719ce80602e669fa4ef0dc711f8a4a9"
+    "spec/run1-correlated-concrete-initials.md": "3ba7acdc0246ce8257038dfa8ed6652732bad0ef9da67743b21867f9b0787642",
+    "spec/run1-correlated-concrete-initials-proofs.md": "76ce6c30ab13b7740167bf1bb8f675ee286ffdd5f6078e674f0172cd23d56935"
   },
   "documentation_parent": "cb59ac456",
   "selected_guard_removal": "Remove sameAliasEffectClass and the same-base ANY identity exception from subsumption. Existing call-stage identity classifiers remain. Represented pair union is preserved; alias callback/candidate equality is not claimed.",
-  "implementation_extension": "spec/lean/correlated-concrete-implementation-checks.json"
+  "implementation_extension": "spec/lean/correlated-concrete-implementation-checks.json",
+  "implementation_core_tree": "f809c4552dd4a7a797fd61595f0932595e56537c",
+  "local_validation_report": "docs/reports/bidirectional-correlated-concrete-validation-20261026.md"
 }

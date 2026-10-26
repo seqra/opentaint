@@ -67,5 +67,5 @@ interface SummaryApplier {
         error("This summary applier does not support run-1 conditional statics")
     }
     fun applyRecord(part: Subscription, record: Record)
-    fun applyRecordView(part: Subscription, view: RecordLeafView)
+    fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean)
 }

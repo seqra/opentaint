@@ -72,15 +72,17 @@ class Run1StaticGroupProtocolRemovalTest {
         override fun close() = f.close()
     }
 
-    @Test fun `known field and exact class inputs equal actual first pool replies for every scalar target tail`() {
+    @Test fun `selected field STAR input differs from independent pool ANY and preserves fixed summary targets`() {
         for (exactClass in listOf(false, true)) Fixture(exactClass).use { t ->
             val supply = t.ground()
             val actual = t.service.facts(supply.region, supply.groups)
             val known = t.actor.knownStaticInput(t.initial)
-            assertEquals(actual, known)
-            val expected = t.f.pattern(STATIC, t.path, if (exactClass) Tail.EXACT else Tail.ANY,
+            val expected = t.f.pattern(STATIC, t.path, if (exactClass) Tail.EXACT else Tail.STAR,
                 MarkSlot.Concrete(t.atom))
             assertEquals(listOf(expected), t.f.ops.leaves(known).toList())
+            assertEquals(listOf(expected.copy(fact = expected.fact.copy(
+                tail = if (exactClass) Tail.EXACT else Tail.ANY))), t.f.ops.leaves(actual).toList())
+            assertEquals(t.f.ops.startFact(t.initial, t.actor.mode), known)
             assertEquals(Layer.DEMAND, known.layer)
             assertTrue(t.actor.hasKnownStaticGroupInput(t.initial))
 

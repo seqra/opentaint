@@ -106,11 +106,13 @@ class DiagonalDeltaTest {
     }
 
     @Test
-    fun `packet contract rejects invalid full masks and foreign owner admission`() {
+    fun `packet contract admits current atoms but rejects empty zero and foreign owner`() {
         assertFailsWith<IllegalArgumentException> { packet().copy(marks = MarkSet.EMPTY) }
         assertFailsWith<IllegalArgumentException> { packet().copy(marks = MarkSet.of(TaintMark.ZERO)) }
         val group = m.marks.runtimeAtom(t, MarkMode.GROUP)
-        assertFailsWith<IllegalArgumentException> { packet().copy(marks = MarkSet.of(group)) }
+        val grouped = packet().copy(marks = MarkSet.of(group))
+        assertNotNull(DiagonalRelations(m).addDiagonal(grouped))
+        assertNull(NeutralRelationBatch.fromDiagonal(m, grouped), "GROUP keeps the existing scalar transport fallback")
         assertFailsWith<IllegalArgumentException> { packet().copy(initialShape = m.zero) }
         assertFailsWith<IllegalArgumentException> { packet().copy(geometry = FlowAlgebra.leafNode(FlowLeaf.NONE)) }
         val other = StoreFixtures().manager
