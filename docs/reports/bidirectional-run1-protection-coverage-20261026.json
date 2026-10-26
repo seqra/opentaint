@@ -1,0 +1,980 @@
+{
+  "state": "VALIDATED",
+  "created_utc": "2026-10-26T12:19:39.494992+00:00",
+  "binding": {
+    "state": "READY",
+    "utc": "2026-10-26T11:28:57.117038+00:00",
+    "base_revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+    "patch_sha256": "5e429e4ddfd5f3748b890de8bf32b63c315499d31f1393be1b3e984d02dd509c",
+    "scope": "Read-only completion census in an isolated checkout. Toggle protection only on copied temporary values; do not change stored edges. Stop after normal run-1 report/handoff. The pure 16g benchmark is unchanged.",
+    "tests": {
+      "name": "org.opentaint.dataflow.bidi.DiagnosticCoverageTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-26T11:23:30",
+      "hostname": "dev-1",
+      "time": "0.06"
+    }
+  },
+  "test_result": {
+    "name": "org.opentaint.dataflow.bidi.DiagnosticCoverageTest",
+    "tests": "4",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-10-26T11:23:30",
+    "hostname": "dev-1",
+    "time": "0.06"
+  },
+  "test_xml_sha256": "5994c725bd707d33dad8426c7e4687fbd473958497df858bbdd17700422a339a",
+  "projects": {
+    "Thingsboard": {
+      "project": "thingsboard",
+      "scope": "Current method-owned summary output memberships at the completed run-1 barrier. Raw and selected owners are not additive.",
+      "counts": {
+        "raw": {
+          "concreteMemberships": 2081089,
+          "flagAnnotations": 943638,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 131034,
+          "blockedOnlyByFlag": 131034,
+          "concreteRows": 1145084,
+          "rowsBlockedByFlag": 59550,
+          "staticMemberships": 902474,
+          "staticFlagAnnotations": 889558,
+          "staticBlockedOnlyByFlag": 97565,
+          "notCoveredForOtherReasons": 1950055
+        },
+        "selected": {
+          "concreteMemberships": 2081125,
+          "flagAnnotations": 943675,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 131070,
+          "blockedOnlyByFlag": 131070,
+          "concreteRows": 1145120,
+          "rowsBlockedByFlag": 59586,
+          "staticMemberships": 902474,
+          "staticFlagAnnotations": 889558,
+          "staticBlockedOnlyByFlag": 97565,
+          "notCoveredForOtherReasons": 1950055
+        }
+      },
+      "diagnostic_marker": "12:03:19.844 |I| IterationDriver - BIDI_RUN1_COVERAGE_DIAGNOSTIC run=1 raw=DiagnosticCoverage(concreteMemberships=2081089, flagAnnotations=943638, removableWithFlags=0, removableIgnoringFlags=131034, blockedOnlyByFlag=131034, concreteRows=1145084, rowsBlockedByFlag=59550, staticMemberships=902474, staticFlagAnnotations=889558, staticBlockedOnlyByFlag=97565) selected=DiagnosticCoverage(concreteMemberships=2081125, flagAnnotations=943675, removableWithFlags=0, removableIgnoringFlags=131070, blockedOnlyByFlag=131070, concreteRows=1145120, rowsBlockedByFlag=59586, staticMemberships=902474, staticFlagAnnotations=889558, staticBlockedOnlyByFlag=97565)",
+      "ordinary_census_marker": "12:03:14.325 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=2081089, protectedOutputMemberships=943638, diagonalGeometryRows=83731, diagonalMarkRows=1126177, scalarConcreteRows=18907, flowOutputAnnotations=246922) selected=RelationCensus(concreteOutputMemberships=2081125, protectedOutputMemberships=943675, diagonalGeometryRows=83733, diagonalMarkRows=1126213, scalarConcreteRows=18907, flowOutputAnnotations=246922)",
+      "ordinary_census": {
+        "raw": {
+          "concreteOutputMemberships": 2081089,
+          "protectedOutputMemberships": 943638,
+          "diagonalGeometryRows": 83731,
+          "diagonalMarkRows": 1126177,
+          "scalarConcreteRows": 18907,
+          "flowOutputAnnotations": 246922
+        },
+        "selected": {
+          "concreteOutputMemberships": 2081125,
+          "protectedOutputMemberships": 943675,
+          "diagonalGeometryRows": 83733,
+          "diagonalMarkRows": 1126213,
+          "scalarConcreteRows": 18907,
+          "flowOutputAnnotations": 246922
+        }
+      },
+      "summary": {
+        "status": "OK",
+        "gradle_exit": 0,
+        "analyzer_exit": 0,
+        "command_wall_seconds": 1095.0303103774786,
+        "wall_seconds": 1095.0781638771296,
+        "peak_rss_bytes": 19412856832,
+        "analysis_started_elapsed": 202.62605252861977,
+        "full_started_elapsed": 434.11006523668766,
+        "profiles": {
+          "normal": {
+            "start_elapsed": 494.22794848680496,
+            "duration_requested": 30,
+            "requested_delay_seconds": 60,
+            "anchor": "run-1-engine",
+            "latest_run": 1,
+            "engine_active": true,
+            "end_observed_elapsed": 525.2977986931801,
+            "end_latest_run": 1,
+            "end_engine_active": true,
+            "return_code": 0
+          }
+        },
+        "continuous_jfr": true,
+        "run1_recording": {
+          "returncode": 0,
+          "output": "3206886:\nDumped recording, 179.0 MB written to:\n\n/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/run1.jfr\n",
+          "elapsed": 996.2166982293129,
+          "latest_run": 1
+        },
+        "sarif": true,
+        "latest_bidi_iteration": "run-1",
+        "latest_complete_bidi_iteration": "run-1",
+        "latest_accepted_forward_report": "run-1",
+        "bidi_iteration_progress": {
+          "state": "AVAILABLE",
+          "latest_reached": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_START",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "14m 9.439880222s markMode=FULL",
+            "timeout_seconds": 849.439880222,
+            "start_line": "11:53:51.471 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=14m 9.439880222s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "9m 22.222505588s",
+            "engine_seconds": 562.222505588,
+            "end_line": "12:03:13.693 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=9m 22.222505588s",
+            "barrier_time": "18.137215168s",
+            "barrier_seconds": 18.137215168,
+            "iteration_time": "9m 40.410945636s",
+            "iteration_seconds": 580.410945636,
+            "barrier_line": "12:03:31.882 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=18.137215168s iterationTime=9m 40.410945636s"
+          },
+          "latest_complete_engine": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_END status=COMPLETE",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "14m 9.439880222s markMode=FULL",
+            "timeout_seconds": 849.439880222,
+            "start_line": "11:53:51.471 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=14m 9.439880222s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "9m 22.222505588s",
+            "engine_seconds": 562.222505588,
+            "end_line": "12:03:13.693 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=9m 22.222505588s"
+          },
+          "latest_accepted_forward_report": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "Run N (FORWARD) frontier after report.add",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "14m 9.439880222s markMode=FULL",
+            "timeout_seconds": 849.439880222,
+            "start_line": "11:53:51.471 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=14m 9.439880222s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "9m 22.222505588s",
+            "engine_seconds": 562.222505588,
+            "end_line": "12:03:13.693 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=9m 22.222505588s",
+            "forward_frontier_line": "12:03:31.214 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 38017, demand edges 2379891 in 73599 method keys, left 44, record crossings 0, DEMAND 102187, CONFIRMED 0, seeds 154881, zero only 35652 (258340 edges)"
+          },
+          "invalid_run_start_lines": [],
+          "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, so missing forward-frontier evidence is unavailable, not proof of an empty report."
+        }
+      },
+      "manifest": {
+        "project": "thingsboard",
+        "side": "bidi",
+        "revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+        "patch_sha256": "4a8942f4b6b0bfb461e673c61ba6762d849de8bc36c49890b958a600593e03b7",
+        "config": {
+          "model": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-thingsboard/opentaint-project/project.yaml",
+          "memory": "16g",
+          "timeout": 1080,
+          "outer_timeout": 1200
+        },
+        "model_sha256": "1246cb43621245e0ef971a51052b54a56abd60725860f44824f00f34d57b58f3",
+        "command": [
+          "./gradlew",
+          ":runProjectAnalyzer",
+          "--console=plain",
+          "-I",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/benchmark.init.gradle",
+          "-x",
+          ":opentaint-ir:go:buildGoServer"
+        ],
+        "runner_args": [
+          "--project",
+          "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-thingsboard/opentaint-project/project.yaml",
+          "--output-dir",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/reports",
+          "--ifds-analysis-timeout",
+          "1080",
+          "--logs-file",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/analyzer.log",
+          "--verbosity",
+          "debug",
+          "--semgrep-rule-set",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/source/rules/ruleset",
+          "--sarif-generate-fingerprint",
+          "--sarif-semgrep-style-id",
+          "--semgrep-rule-severity",
+          "warning",
+          "--semgrep-rule-severity",
+          "error",
+          "--ifds-bidirectional"
+        ],
+        "test_revision": "bbdbcc5fd35d976d93348760ea60561e4670f68c",
+        "guard_heap_snapshot": true,
+        "form_statistics": true,
+        "optimization_statistics": true,
+        "run1_mark_mode": "FULL",
+        "analyzer_jvm_args": [
+          "-Xmx16g",
+          "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+          "-Djdk.util.jar.enableMultiRelease=false",
+          "-XX:FlightRecorderOptions=stackdepth=256",
+          "-XX:StartFlightRecording=filename=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/continuous.jfr,settings=profile,dumponexit=true,maxsize=256m",
+          "-Xlog:gc*:file=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/gc.log:time,uptime,level,tags:filecount=0",
+          "-Dopentaint.memorySnapshotDir=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi",
+          "-XX:+HeapDumpOnOutOfMemoryError",
+          "-XX:HeapDumpPath=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/jvm-oom.hprof",
+          "-Dopentaint.bidi.run1MarkMode=FULL",
+          "-Dopentaint.bidi.disableRun1Statics=false",
+          "-Dorg.opentaint.bidi.formStatistics=true",
+          "-Dorg.opentaint.bidi.optimizationStatistics=true",
+          "-Dopentaint.diagnostic.run1Coverage=true"
+        ],
+        "started_utc": "2026-10-26T11:46:38Z",
+        "analyzer_executable": "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "analyzer_command_sha256": "2ae2a5fdf57cd14f13bc73433f8eea232df3b6c936b25d246cf94dcbb4da41f2",
+        "analyzer_started_elapsed": 130.48293915390968
+      },
+      "log": "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/thingsboard/bidi/analyzer.log",
+      "log_sha256": "339db5e1ee794458b87a3835e4367b434462831e8a90174da45ec0279c79f3a2",
+      "original_timed_run1": {
+        "state": "COMPLETE",
+        "scope": "Actual 16g timed run-1 completion. Current raw and selected summary memberships, separate owners.",
+        "marker": "08:31:06.059 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=2081317, protectedOutputMemberships=943493, diagonalGeometryRows=83820, diagonalMarkRows=1129426, scalarConcreteRows=18877, flowOutputAnnotations=246774) selected=RelationCensus(concreteOutputMemberships=2081353, protectedOutputMemberships=943530, diagonalGeometryRows=83822, diagonalMarkRows=1129462, scalarConcreteRows=18877, flowOutputAnnotations=246774)",
+        "counts": {
+          "raw": {
+            "concreteOutputMemberships": 2081317,
+            "protectedOutputMemberships": 943493,
+            "diagonalGeometryRows": 83820,
+            "diagonalMarkRows": 1129426,
+            "scalarConcreteRows": 18877,
+            "flowOutputAnnotations": 246774
+          },
+          "selected": {
+            "concreteOutputMemberships": 2081353,
+            "protectedOutputMemberships": 943530,
+            "diagonalGeometryRows": 83822,
+            "diagonalMarkRows": 1129462,
+            "scalarConcreteRows": 18877,
+            "flowOutputAnnotations": 246774
+          }
+        }
+      }
+    },
+    "Conductor": {
+      "project": "conductor",
+      "scope": "Current method-owned summary output memberships at the completed run-1 barrier. Raw and selected owners are not additive.",
+      "counts": {
+        "raw": {
+          "concreteMemberships": 20187,
+          "flagAnnotations": 20,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 0,
+          "blockedOnlyByFlag": 0,
+          "concreteRows": 9914,
+          "rowsBlockedByFlag": 0,
+          "staticMemberships": 3502,
+          "staticFlagAnnotations": 0,
+          "staticBlockedOnlyByFlag": 0,
+          "notCoveredForOtherReasons": 20187
+        },
+        "selected": {
+          "concreteMemberships": 20187,
+          "flagAnnotations": 20,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 0,
+          "blockedOnlyByFlag": 0,
+          "concreteRows": 9914,
+          "rowsBlockedByFlag": 0,
+          "staticMemberships": 3502,
+          "staticFlagAnnotations": 0,
+          "staticBlockedOnlyByFlag": 0,
+          "notCoveredForOtherReasons": 20187
+        }
+      },
+      "diagnostic_marker": "12:07:24.229 |I| IterationDriver - BIDI_RUN1_COVERAGE_DIAGNOSTIC run=1 raw=DiagnosticCoverage(concreteMemberships=20187, flagAnnotations=20, removableWithFlags=0, removableIgnoringFlags=0, blockedOnlyByFlag=0, concreteRows=9914, rowsBlockedByFlag=0, staticMemberships=3502, staticFlagAnnotations=0, staticBlockedOnlyByFlag=0) selected=DiagnosticCoverage(concreteMemberships=20187, flagAnnotations=20, removableWithFlags=0, removableIgnoringFlags=0, blockedOnlyByFlag=0, concreteRows=9914, rowsBlockedByFlag=0, staticMemberships=3502, staticFlagAnnotations=0, staticBlockedOnlyByFlag=0)",
+      "ordinary_census_marker": "12:07:24.122 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=20187, protectedOutputMemberships=20, diagonalGeometryRows=2120, diagonalMarkRows=3239, scalarConcreteRows=6675, flowOutputAnnotations=36666) selected=RelationCensus(concreteOutputMemberships=20187, protectedOutputMemberships=20, diagonalGeometryRows=2120, diagonalMarkRows=3239, scalarConcreteRows=6675, flowOutputAnnotations=36666)",
+      "ordinary_census": {
+        "raw": {
+          "concreteOutputMemberships": 20187,
+          "protectedOutputMemberships": 20,
+          "diagonalGeometryRows": 2120,
+          "diagonalMarkRows": 3239,
+          "scalarConcreteRows": 6675,
+          "flowOutputAnnotations": 36666
+        },
+        "selected": {
+          "concreteOutputMemberships": 20187,
+          "protectedOutputMemberships": 20,
+          "diagonalGeometryRows": 2120,
+          "diagonalMarkRows": 3239,
+          "scalarConcreteRows": 6675,
+          "flowOutputAnnotations": 36666
+        }
+      },
+      "summary": {
+        "status": "OK",
+        "gradle_exit": 0,
+        "analyzer_exit": 0,
+        "command_wall_seconds": 155.85583537817,
+        "wall_seconds": 155.87201011180878,
+        "peak_rss_bytes": 18899869696,
+        "analysis_started_elapsed": 83.26970252394676,
+        "full_started_elapsed": 130.34969954192638,
+        "profiles": {},
+        "continuous_jfr": true,
+        "run1_recording": {
+          "returncode": 0,
+          "output": "3251672:\nDumped recording, 23.4 MB written to:\n\n/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/run1.jfr\n",
+          "elapsed": 150.40970243513584,
+          "latest_run": 1
+        },
+        "sarif": true,
+        "latest_bidi_iteration": "run-1",
+        "latest_complete_bidi_iteration": "run-1",
+        "latest_accepted_forward_report": "run-1",
+        "bidi_iteration_progress": {
+          "state": "AVAILABLE",
+          "latest_reached": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_START",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 13.381712409s markMode=FULL",
+            "timeout_seconds": 1033.381712409,
+            "start_line": "12:07:03.127 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 13.381712409s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "20.785453882s",
+            "engine_seconds": 20.785453882,
+            "end_line": "12:07:23.912 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=20.785453882s",
+            "barrier_time": "1.105695885s",
+            "barrier_seconds": 1.105695885,
+            "iteration_time": "21.918705273s",
+            "iteration_seconds": 21.918705273,
+            "barrier_line": "12:07:25.045 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=1.105695885s iterationTime=21.918705273s"
+          },
+          "latest_complete_engine": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_END status=COMPLETE",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 13.381712409s markMode=FULL",
+            "timeout_seconds": 1033.381712409,
+            "start_line": "12:07:03.127 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 13.381712409s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "20.785453882s",
+            "engine_seconds": 20.785453882,
+            "end_line": "12:07:23.912 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=20.785453882s"
+          },
+          "latest_accepted_forward_report": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "Run N (FORWARD) frontier after report.add",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 13.381712409s markMode=FULL",
+            "timeout_seconds": 1033.381712409,
+            "start_line": "12:07:03.127 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 13.381712409s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "20.785453882s",
+            "engine_seconds": 20.785453882,
+            "end_line": "12:07:23.912 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=20.785453882s",
+            "forward_frontier_line": "12:07:24.781 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 11224, demand edges 72858 in 17417 method keys, left 41, record crossings 0, DEMAND 44, CONFIRMED 0, seeds 60, zero only 6241 (20717 edges)"
+          },
+          "invalid_run_start_lines": [],
+          "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, so missing forward-frontier evidence is unavailable, not proof of an empty report."
+        }
+      },
+      "manifest": {
+        "project": "conductor",
+        "side": "bidi",
+        "revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+        "patch_sha256": "4a8942f4b6b0bfb461e673c61ba6762d849de8bc36c49890b958a600593e03b7",
+        "config": {
+          "model": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml",
+          "memory": "16g",
+          "timeout": 1080,
+          "outer_timeout": 1200
+        },
+        "model_sha256": "3457cf5a1b3c63e0710dfa50a9fbca1c4229f2726ea3276cc409e019515ee35d",
+        "command": [
+          "./gradlew",
+          ":runProjectAnalyzer",
+          "--console=plain",
+          "-I",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/benchmark.init.gradle",
+          "-x",
+          ":opentaint-ir:go:buildGoServer"
+        ],
+        "runner_args": [
+          "--project",
+          "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml",
+          "--output-dir",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/reports",
+          "--ifds-analysis-timeout",
+          "1080",
+          "--logs-file",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/analyzer.log",
+          "--verbosity",
+          "debug",
+          "--semgrep-rule-set",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/source/rules/ruleset",
+          "--sarif-generate-fingerprint",
+          "--sarif-semgrep-style-id",
+          "--semgrep-rule-severity",
+          "warning",
+          "--semgrep-rule-severity",
+          "error",
+          "--semgrep-rule-set",
+          "/drive-testcomp/opentaint-go-rules/opentaint-test/projects/extensions/conductor/rules",
+          "--passthrough-approximations",
+          "/drive-testcomp/opentaint-go-rules/opentaint-test/projects/extensions/conductor/passthrough",
+          "--java-dataflow-approximations",
+          "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/dataflow-compiled",
+          "--ifds-bidirectional"
+        ],
+        "test_revision": "bbdbcc5fd35d976d93348760ea60561e4670f68c",
+        "guard_heap_snapshot": true,
+        "form_statistics": true,
+        "optimization_statistics": true,
+        "run1_mark_mode": "FULL",
+        "analyzer_jvm_args": [
+          "-Xmx16g",
+          "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+          "-Djdk.util.jar.enableMultiRelease=false",
+          "-XX:FlightRecorderOptions=stackdepth=256",
+          "-XX:StartFlightRecording=filename=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/continuous.jfr,settings=profile,dumponexit=true,maxsize=256m",
+          "-Xlog:gc*:file=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/gc.log:time,uptime,level,tags:filecount=0",
+          "-Dopentaint.memorySnapshotDir=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi",
+          "-XX:+HeapDumpOnOutOfMemoryError",
+          "-XX:HeapDumpPath=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/jvm-oom.hprof",
+          "-Dopentaint.bidi.run1MarkMode=FULL",
+          "-Dopentaint.bidi.disableRun1Statics=false",
+          "-Dorg.opentaint.bidi.formStatistics=true",
+          "-Dorg.opentaint.bidi.optimizationStatistics=true",
+          "-Dopentaint.diagnostic.run1Coverage=true"
+        ],
+        "started_utc": "2026-10-26T12:04:53Z",
+        "analyzer_executable": "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "analyzer_command_sha256": "91fd2c320714012b94eb4c308f60415daf002f777254ee76cca717e5299c38ab",
+        "analyzer_started_elapsed": 4.0856801718473434
+      },
+      "log": "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/conductor/bidi/analyzer.log",
+      "log_sha256": "1fc88a96869b6e9c80a98f26a569c8b1921dd18a19caccd7323a891f2aedb279",
+      "original_timed_run1": {
+        "state": "COMPLETE",
+        "scope": "Actual 16g timed run-1 completion. Current raw and selected summary memberships, separate owners.",
+        "marker": "08:37:05.091 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=20181, protectedOutputMemberships=20, diagonalGeometryRows=2120, diagonalMarkRows=3239, scalarConcreteRows=6672, flowOutputAnnotations=36742) selected=RelationCensus(concreteOutputMemberships=20181, protectedOutputMemberships=20, diagonalGeometryRows=2120, diagonalMarkRows=3239, scalarConcreteRows=6672, flowOutputAnnotations=36742)",
+        "counts": {
+          "raw": {
+            "concreteOutputMemberships": 20181,
+            "protectedOutputMemberships": 20,
+            "diagonalGeometryRows": 2120,
+            "diagonalMarkRows": 3239,
+            "scalarConcreteRows": 6672,
+            "flowOutputAnnotations": 36742
+          },
+          "selected": {
+            "concreteOutputMemberships": 20181,
+            "protectedOutputMemberships": 20,
+            "diagonalGeometryRows": 2120,
+            "diagonalMarkRows": 3239,
+            "scalarConcreteRows": 6672,
+            "flowOutputAnnotations": 36742
+          }
+        }
+      }
+    },
+    "Stirling-PDF": {
+      "project": "Stirling-PDF",
+      "scope": "Current method-owned summary output memberships at the completed run-1 barrier. Raw and selected owners are not additive.",
+      "counts": {
+        "raw": {
+          "concreteMemberships": 24772,
+          "flagAnnotations": 2249,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 15,
+          "blockedOnlyByFlag": 15,
+          "concreteRows": 3786,
+          "rowsBlockedByFlag": 14,
+          "staticMemberships": 15037,
+          "staticFlagAnnotations": 19,
+          "staticBlockedOnlyByFlag": 1,
+          "notCoveredForOtherReasons": 24757
+        },
+        "selected": {
+          "concreteMemberships": 24772,
+          "flagAnnotations": 2249,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 15,
+          "blockedOnlyByFlag": 15,
+          "concreteRows": 3786,
+          "rowsBlockedByFlag": 14,
+          "staticMemberships": 15037,
+          "staticFlagAnnotations": 19,
+          "staticBlockedOnlyByFlag": 1,
+          "notCoveredForOtherReasons": 24757
+        }
+      },
+      "diagnostic_marker": "12:09:37.449 |I| IterationDriver - BIDI_RUN1_COVERAGE_DIAGNOSTIC run=1 raw=DiagnosticCoverage(concreteMemberships=24772, flagAnnotations=2249, removableWithFlags=0, removableIgnoringFlags=15, blockedOnlyByFlag=15, concreteRows=3786, rowsBlockedByFlag=14, staticMemberships=15037, staticFlagAnnotations=19, staticBlockedOnlyByFlag=1) selected=DiagnosticCoverage(concreteMemberships=24772, flagAnnotations=2249, removableWithFlags=0, removableIgnoringFlags=15, blockedOnlyByFlag=15, concreteRows=3786, rowsBlockedByFlag=14, staticMemberships=15037, staticFlagAnnotations=19, staticBlockedOnlyByFlag=1)",
+      "ordinary_census_marker": "12:09:37.387 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=24772, protectedOutputMemberships=2249, diagonalGeometryRows=518, diagonalMarkRows=1540, scalarConcreteRows=2246, flowOutputAnnotations=4876) selected=RelationCensus(concreteOutputMemberships=24772, protectedOutputMemberships=2249, diagonalGeometryRows=518, diagonalMarkRows=1540, scalarConcreteRows=2246, flowOutputAnnotations=4876)",
+      "ordinary_census": {
+        "raw": {
+          "concreteOutputMemberships": 24772,
+          "protectedOutputMemberships": 2249,
+          "diagonalGeometryRows": 518,
+          "diagonalMarkRows": 1540,
+          "scalarConcreteRows": 2246,
+          "flowOutputAnnotations": 4876
+        },
+        "selected": {
+          "concreteOutputMemberships": 24772,
+          "protectedOutputMemberships": 2249,
+          "diagonalGeometryRows": 518,
+          "diagonalMarkRows": 1540,
+          "scalarConcreteRows": 2246,
+          "flowOutputAnnotations": 4876
+        }
+      },
+      "summary": {
+        "status": "OK",
+        "gradle_exit": 0,
+        "analyzer_exit": 0,
+        "command_wall_seconds": 135.5964838117361,
+        "wall_seconds": 135.59891006350517,
+        "peak_rss_bytes": 10299297792,
+        "analysis_started_elapsed": 60.16584466397762,
+        "full_started_elapsed": 91.21914303302765,
+        "profiles": {},
+        "continuous_jfr": true,
+        "run1_recording": {
+          "returncode": 0,
+          "output": "3260320:\nDumped recording, 19.1 MB written to:\n\n/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/run1.jfr\n",
+          "elapsed": 128.30214895308018,
+          "latest_run": 1
+        },
+        "sarif": true,
+        "latest_bidi_iteration": "run-1",
+        "latest_complete_bidi_iteration": "run-1",
+        "latest_accepted_forward_report": "run-1",
+        "bidi_iteration_progress": {
+          "state": "AVAILABLE",
+          "latest_reached": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_START",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 28.967044132s markMode=FULL",
+            "timeout_seconds": 1048.967044132,
+            "start_line": "12:09:00.102 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 28.967044132s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "37.240068077s",
+            "engine_seconds": 37.240068077,
+            "end_line": "12:09:37.342 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=37.240068077s",
+            "barrier_time": "417.787867ms",
+            "barrier_seconds": 0.41778786700000003,
+            "iteration_time": "37.662943475s",
+            "iteration_seconds": 37.662943475,
+            "barrier_line": "12:09:37.765 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=417.787867ms iterationTime=37.662943475s"
+          },
+          "latest_complete_engine": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_END status=COMPLETE",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 28.967044132s markMode=FULL",
+            "timeout_seconds": 1048.967044132,
+            "start_line": "12:09:00.102 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 28.967044132s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "37.240068077s",
+            "engine_seconds": 37.240068077,
+            "end_line": "12:09:37.342 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=37.240068077s"
+          },
+          "latest_accepted_forward_report": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "Run N (FORWARD) frontier after report.add",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "17m 28.967044132s markMode=FULL",
+            "timeout_seconds": 1048.967044132,
+            "start_line": "12:09:00.102 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 28.967044132s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "37.240068077s",
+            "engine_seconds": 37.240068077,
+            "end_line": "12:09:37.342 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=37.240068077s",
+            "forward_frontier_line": "12:09:37.734 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 2269, demand edges 36772 in 7258 method keys, left 0, record crossings 0, DEMAND 973, CONFIRMED 0, seeds 1012, zero only 4989 (36501 edges)"
+          },
+          "invalid_run_start_lines": [],
+          "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, so missing forward-frontier evidence is unavailable, not proof of an empty report."
+        }
+      },
+      "manifest": {
+        "project": "Stirling-PDF",
+        "side": "bidi",
+        "revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+        "patch_sha256": "4a8942f4b6b0bfb461e673c61ba6762d849de8bc36c49890b958a600593e03b7",
+        "config": {
+          "model": "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/project.yaml",
+          "memory": "16g",
+          "timeout": 1080,
+          "outer_timeout": 1200
+        },
+        "model_sha256": "b62263d3134af8b0c93426dedcd15a976808e4c8e838950c1a4959022d5d3ef4",
+        "command": [
+          "./gradlew",
+          ":runProjectAnalyzer",
+          "--console=plain",
+          "-I",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/benchmark.init.gradle",
+          "-x",
+          ":opentaint-ir:go:buildGoServer"
+        ],
+        "runner_args": [
+          "--project",
+          "/drive-testcomp/opentaint-go-rules/e2e-root/model-Stirling-PDF/project.yaml",
+          "--output-dir",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/reports",
+          "--ifds-analysis-timeout",
+          "1080",
+          "--logs-file",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/analyzer.log",
+          "--verbosity",
+          "debug",
+          "--semgrep-rule-set",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/source/rules/ruleset",
+          "--sarif-generate-fingerprint",
+          "--sarif-semgrep-style-id",
+          "--semgrep-rule-severity",
+          "warning",
+          "--semgrep-rule-severity",
+          "error",
+          "--ifds-bidirectional"
+        ],
+        "test_revision": "bbdbcc5fd35d976d93348760ea60561e4670f68c",
+        "guard_heap_snapshot": true,
+        "form_statistics": true,
+        "optimization_statistics": true,
+        "run1_mark_mode": "FULL",
+        "analyzer_jvm_args": [
+          "-Xmx16g",
+          "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+          "-Djdk.util.jar.enableMultiRelease=false",
+          "-XX:FlightRecorderOptions=stackdepth=256",
+          "-XX:StartFlightRecording=filename=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/continuous.jfr,settings=profile,dumponexit=true,maxsize=256m",
+          "-Xlog:gc*:file=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/gc.log:time,uptime,level,tags:filecount=0",
+          "-Dopentaint.memorySnapshotDir=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi",
+          "-XX:+HeapDumpOnOutOfMemoryError",
+          "-XX:HeapDumpPath=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/jvm-oom.hprof",
+          "-Dopentaint.bidi.run1MarkMode=FULL",
+          "-Dopentaint.bidi.disableRun1Statics=false",
+          "-Dorg.opentaint.bidi.formStatistics=true",
+          "-Dorg.opentaint.bidi.optimizationStatistics=true",
+          "-Dopentaint.diagnostic.run1Coverage=true"
+        ],
+        "started_utc": "2026-10-26T12:07:29Z",
+        "analyzer_executable": "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "analyzer_command_sha256": "5c8cc290e2440062e1b2e0efc3df205e2c24bbcdb4ad7ad38919f2c2236a4ca7",
+        "analyzer_started_elapsed": 3.0527486950159073
+      },
+      "log": "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/Stirling-PDF/bidi/analyzer.log",
+      "log_sha256": "451b9ae6487295e82366bd090fdc03befbb2aeb39637b9abd9a03a37141bae33",
+      "original_timed_run1": {
+        "state": "COMPLETE",
+        "scope": "Actual 16g timed run-1 completion. Current raw and selected summary memberships, separate owners.",
+        "marker": "08:43:30.287 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=24774, protectedOutputMemberships=2249, diagonalGeometryRows=518, diagonalMarkRows=1540, scalarConcreteRows=2248, flowOutputAnnotations=4876) selected=RelationCensus(concreteOutputMemberships=24774, protectedOutputMemberships=2249, diagonalGeometryRows=518, diagonalMarkRows=1540, scalarConcreteRows=2248, flowOutputAnnotations=4876)",
+        "counts": {
+          "raw": {
+            "concreteOutputMemberships": 24774,
+            "protectedOutputMemberships": 2249,
+            "diagonalGeometryRows": 518,
+            "diagonalMarkRows": 1540,
+            "scalarConcreteRows": 2248,
+            "flowOutputAnnotations": 4876
+          },
+          "selected": {
+            "concreteOutputMemberships": 24774,
+            "protectedOutputMemberships": 2249,
+            "diagonalGeometryRows": 518,
+            "diagonalMarkRows": 1540,
+            "scalarConcreteRows": 2248,
+            "flowOutputAnnotations": 4876
+          }
+        }
+      }
+    },
+    "OWASP": {
+      "project": "OWASP",
+      "scope": "Current method-owned summary output memberships at the completed run-1 barrier. Raw and selected owners are not additive.",
+      "counts": {
+        "raw": {
+          "concreteMemberships": 111133,
+          "flagAnnotations": 413,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 0,
+          "blockedOnlyByFlag": 0,
+          "concreteRows": 27370,
+          "rowsBlockedByFlag": 0,
+          "staticMemberships": 2062,
+          "staticFlagAnnotations": 44,
+          "staticBlockedOnlyByFlag": 0,
+          "notCoveredForOtherReasons": 111133
+        },
+        "selected": {
+          "concreteMemberships": 111133,
+          "flagAnnotations": 413,
+          "removableWithFlags": 0,
+          "removableIgnoringFlags": 0,
+          "blockedOnlyByFlag": 0,
+          "concreteRows": 27370,
+          "rowsBlockedByFlag": 0,
+          "staticMemberships": 2062,
+          "staticFlagAnnotations": 44,
+          "staticBlockedOnlyByFlag": 0,
+          "notCoveredForOtherReasons": 111133
+        }
+      },
+      "diagnostic_marker": "12:14:39.987 |I| IterationDriver - BIDI_RUN1_COVERAGE_DIAGNOSTIC run=1 raw=DiagnosticCoverage(concreteMemberships=111133, flagAnnotations=413, removableWithFlags=0, removableIgnoringFlags=0, blockedOnlyByFlag=0, concreteRows=27370, rowsBlockedByFlag=0, staticMemberships=2062, staticFlagAnnotations=44, staticBlockedOnlyByFlag=0) selected=DiagnosticCoverage(concreteMemberships=111133, flagAnnotations=413, removableWithFlags=0, removableIgnoringFlags=0, blockedOnlyByFlag=0, concreteRows=27370, rowsBlockedByFlag=0, staticMemberships=2062, staticFlagAnnotations=44, staticBlockedOnlyByFlag=0)",
+      "ordinary_census_marker": "12:14:39.740 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=111133, protectedOutputMemberships=413, diagonalGeometryRows=223, diagonalMarkRows=594, scalarConcreteRows=26776, flowOutputAnnotations=11235) selected=RelationCensus(concreteOutputMemberships=111133, protectedOutputMemberships=413, diagonalGeometryRows=223, diagonalMarkRows=594, scalarConcreteRows=26776, flowOutputAnnotations=11235)",
+      "ordinary_census": {
+        "raw": {
+          "concreteOutputMemberships": 111133,
+          "protectedOutputMemberships": 413,
+          "diagonalGeometryRows": 223,
+          "diagonalMarkRows": 594,
+          "scalarConcreteRows": 26776,
+          "flowOutputAnnotations": 11235
+        },
+        "selected": {
+          "concreteOutputMemberships": 111133,
+          "protectedOutputMemberships": 413,
+          "diagonalGeometryRows": 223,
+          "diagonalMarkRows": 594,
+          "scalarConcreteRows": 26776,
+          "flowOutputAnnotations": 11235
+        }
+      },
+      "summary": {
+        "status": "OK",
+        "gradle_exit": 0,
+        "analyzer_exit": 0,
+        "command_wall_seconds": 335.0572578459978,
+        "wall_seconds": 335.0603515803814,
+        "peak_rss_bytes": 12370538496,
+        "analysis_started_elapsed": 53.250773429870605,
+        "full_started_elapsed": 127.37467949092388,
+        "profiles": {
+          "normal": {
+            "start_elapsed": 187.5112984329462,
+            "duration_requested": 30,
+            "requested_delay_seconds": 60,
+            "anchor": "run-1-engine",
+            "latest_run": 1,
+            "engine_active": true,
+            "end_observed_elapsed": 218.5727475732565,
+            "end_latest_run": 1,
+            "end_engine_active": true,
+            "return_code": 0
+          }
+        },
+        "continuous_jfr": true,
+        "run1_recording": {
+          "returncode": 0,
+          "output": "3268382:\nDumped recording, 28.0 MB written to:\n\n/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/run1.jfr\n",
+          "elapsed": 294.70235173404217,
+          "latest_run": 1
+        },
+        "sarif": true,
+        "latest_bidi_iteration": "run-1",
+        "latest_complete_bidi_iteration": "run-1",
+        "latest_accepted_forward_report": "run-1",
+        "bidi_iteration_progress": {
+          "state": "AVAILABLE",
+          "latest_reached": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_START",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "15m 25.597665392s markMode=FULL",
+            "timeout_seconds": 925.597665392,
+            "start_line": "12:11:51.965 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=15m 25.597665392s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "2m 47.534809178s",
+            "engine_seconds": 167.534809178,
+            "end_line": "12:14:39.499 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=2m 47.534809178s",
+            "barrier_time": "4.527307655s",
+            "barrier_seconds": 4.527307655,
+            "iteration_time": "2m 52.095065891s",
+            "iteration_seconds": 172.095065891,
+            "barrier_line": "12:14:44.060 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=4.527307655s iterationTime=2m 52.095065891s"
+          },
+          "latest_complete_engine": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "BIDI_RUN_END status=COMPLETE",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "15m 25.597665392s markMode=FULL",
+            "timeout_seconds": 925.597665392,
+            "start_line": "12:11:51.965 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=15m 25.597665392s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "2m 47.534809178s",
+            "engine_seconds": 167.534809178,
+            "end_line": "12:14:39.499 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=2m 47.534809178s"
+          },
+          "latest_accepted_forward_report": {
+            "state": "AVAILABLE",
+            "label": "run-1",
+            "source": "Run N (FORWARD) frontier after report.add",
+            "engine_end_seen": true,
+            "engine_status": "COMPLETE",
+            "run": 1,
+            "direction": "FORWARD",
+            "limit": 1,
+            "timeout": "15m 25.597665392s markMode=FULL",
+            "timeout_seconds": 925.597665392,
+            "start_line": "12:11:51.965 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=15m 25.597665392s markMode=FULL",
+            "status": "COMPLETE",
+            "engine_time": "2m 47.534809178s",
+            "engine_seconds": 167.534809178,
+            "end_line": "12:14:39.499 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=2m 47.534809178s",
+            "forward_frontier_line": "12:14:43.994 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 4413, demand edges 133966 in 12083 method keys, left 0, record crossings 0, DEMAND 9709, CONFIRMED 0, seeds 11077, zero only 7670 (308677 edges)"
+          },
+          "invalid_run_start_lines": [],
+          "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, so missing forward-frontier evidence is unavailable, not proof of an empty report."
+        }
+      },
+      "manifest": {
+        "project": "OWASP",
+        "side": "bidi",
+        "revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+        "patch_sha256": "4a8942f4b6b0bfb461e673c61ba6762d849de8bc36c49890b958a600593e03b7",
+        "config": {
+          "model": "/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml",
+          "memory": "16g",
+          "timeout": 1000,
+          "outer_timeout": 1200
+        },
+        "model_sha256": "e8fd467e410051c3b0b36d461d953780e5819345fd3b7fddc68a3f8769e09873",
+        "command": [
+          "./gradlew",
+          ":runProjectAnalyzer",
+          "--console=plain",
+          "-I",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/benchmark.init.gradle",
+          "-x",
+          ":opentaint-ir:go:buildGoServer"
+        ],
+        "runner_args": [
+          "--project",
+          "/drive-testcomp/opentaint-go-rules/owasp-ci-investigation/project/project.yaml",
+          "--output-dir",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/reports",
+          "--ifds-analysis-timeout",
+          "1000",
+          "--logs-file",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/analyzer.log",
+          "--verbosity",
+          "debug",
+          "--semgrep-rule-set",
+          "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/source/rules/ruleset",
+          "--sarif-generate-fingerprint",
+          "--ifds-bidirectional"
+        ],
+        "test_revision": "bbdbcc5fd35d976d93348760ea60561e4670f68c",
+        "guard_heap_snapshot": true,
+        "form_statistics": true,
+        "optimization_statistics": true,
+        "run1_mark_mode": "FULL",
+        "analyzer_jvm_args": [
+          "-Xmx16g",
+          "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+          "-Djdk.util.jar.enableMultiRelease=false",
+          "-XX:FlightRecorderOptions=stackdepth=256",
+          "-XX:StartFlightRecording=filename=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/continuous.jfr,settings=profile,dumponexit=true,maxsize=256m",
+          "-Xlog:gc*:file=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/gc.log:time,uptime,level,tags:filecount=0",
+          "-Dopentaint.memorySnapshotDir=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi",
+          "-XX:+HeapDumpOnOutOfMemoryError",
+          "-XX:HeapDumpPath=/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/jvm-oom.hprof",
+          "-Dopentaint.bidi.run1MarkMode=FULL",
+          "-Dopentaint.bidi.disableRun1Statics=false",
+          "-Dorg.opentaint.bidi.formStatistics=true",
+          "-Dorg.opentaint.bidi.optimizationStatistics=true",
+          "-Dopentaint.diagnostic.run1Coverage=true"
+        ],
+        "started_utc": "2026-10-26T12:09:45Z",
+        "analyzer_executable": "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+        "analyzer_command_sha256": "d3062a5c3b055e032a745409173d0c7f54619f4c77be11d0314735818270847b",
+        "analyzer_started_elapsed": 5.128888562321663
+      },
+      "log": "/drive-testcomp/opentaint-go-rules/run2-16g-20261026/run1-coverage/campaign/OWASP/bidi/analyzer.log",
+      "log_sha256": "485b1bc96269077db6e82bda33f90665a70e5cab7608b79d2f61f217c967d018",
+      "original_timed_run1": {
+        "state": "COMPLETE",
+        "scope": "Actual 16g timed run-1 completion. Current raw and selected summary memberships, separate owners.",
+        "marker": "08:54:00.205 |I| IterationDriver - BIDI_FLOW_BACKED_CENSUS run=1 raw=RelationCensus(concreteOutputMemberships=111133, protectedOutputMemberships=413, diagonalGeometryRows=223, diagonalMarkRows=594, scalarConcreteRows=26776, flowOutputAnnotations=11235) selected=RelationCensus(concreteOutputMemberships=111133, protectedOutputMemberships=413, diagonalGeometryRows=223, diagonalMarkRows=594, scalarConcreteRows=26776, flowOutputAnnotations=11235)",
+        "counts": {
+          "raw": {
+            "concreteOutputMemberships": 111133,
+            "protectedOutputMemberships": 413,
+            "diagonalGeometryRows": 223,
+            "diagonalMarkRows": 594,
+            "scalarConcreteRows": 26776,
+            "flowOutputAnnotations": 11235
+          },
+          "selected": {
+            "concreteOutputMemberships": 111133,
+            "protectedOutputMemberships": 413,
+            "diagonalGeometryRows": 223,
+            "diagonalMarkRows": 594,
+            "scalarConcreteRows": 26776,
+            "flowOutputAnnotations": 11235
+          }
+        }
+      }
+    }
+  },
+  "method": "For each retained TaintTree, use the production FlowBackedSummaries.normalize on the unchanged value and on a temporary copy withoutProtection. Count output path/mark memberships before/after; never mutate the summary stores. Preserve all other gates.",
+  "original_production_revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+  "measurement_note": "This is a separate diagnostic cohort. Its own ordinary completion census is the exact count oracle. Do not subtract totals from separate runs."
+}
