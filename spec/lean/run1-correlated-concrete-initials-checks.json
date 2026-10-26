@@ -41,9 +41,10 @@
   "sha256": {
     "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
     "spec/lean/run1-correlated-concrete-initials-audit.lean": "51e149499373d9f36db06f5120b050728d024ff7b5230922261291530ca228b1",
-    "spec/run1-correlated-concrete-initials.md": "d5505d3a189ba468dc8a3124f4586aa83a15d47c422cce674da920628f3b1cd6",
-    "spec/run1-correlated-concrete-initials-proofs.md": "c733347407d522127e0ea344fe6cab805f632e0f012cf2d9c430a7c1a4ebab36"
+    "spec/run1-correlated-concrete-initials.md": "19984fd4c5a521c56b7b50d43983d2a50ef1ae5178cc82698c5a05cf81e11175",
+    "spec/run1-correlated-concrete-initials-proofs.md": "1eebe1d539715d51b0d289f25e8f12403719ce80602e669fa4ef0dc711f8a4a9"
   },
   "documentation_parent": "cb59ac456",
-  "selected_guard_removal": "Remove sameAliasEffectClass and the same-base ANY identity exception from subsumption. Existing call-stage identity classifiers remain. Represented pair union is preserved; alias callback/candidate equality is not claimed."
+  "selected_guard_removal": "Remove sameAliasEffectClass and the same-base ANY identity exception from subsumption. Existing call-stage identity classifiers remain. Represented pair union is preserved; alias callback/candidate equality is not claimed.",
+  "implementation_extension": "spec/lean/correlated-concrete-implementation-checks.json"
 }

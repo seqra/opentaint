@@ -54,6 +54,11 @@ also makes FLOW subsumption a general mechanism in both directions, with
 explicit geometry, exclusion, layer and protection gates. It lists the
 remaining ANY producers. This is a
 design target; the current analyzer and the historical W2 proofs are unchanged.
+The detailed implementation proposal also selects persistence of NORMAL FLOW
+with nonempty initial/output exclusions and proves identity-only alias
+redundancy under semantic input alias closure. Its
+[implementation proof dossier](correlated-concrete-implementation-proofs.md)
+states the reference invariants and the remaining Kotlin correspondence tests.
 
 [interpreter.md](interpreter.md) defines IR construction and rule order.
 [analyzer-core.md](analyzer-core.md) defines events, ownership, scheduling, and the

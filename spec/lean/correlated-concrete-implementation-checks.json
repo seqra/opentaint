@@ -1,0 +1,60 @@
+{
+  "date": "2026-10-26",
+  "status": "proposed; local constructive laws checked; analyzer implementation unchanged",
+  "documentation_parent": "1c927f358b96f138aabb3b6eafb9d1eeba295046",
+  "runtime_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
+  "scope": "Concrete STAR seeds and general FLOW subsumption in all runs and current mark domains; typed packets, current residuals/protection, normal STAR/E FLOW record persistence/reversal, semantic input alias closure; no alias-class guard or StrongQueries",
+  "selected_decisions": {
+    "native_records": "Persist valid NORMAL FLOW with nonempty input/output E; retain field exclusions through full native matching and reversed views. No extra FLOW demand fallback.",
+    "identity_aliases": "Identity-only alias candidates are redundant under established positive semantic input alias closure; no runtime closure store, barrier, guard or extra FLOW alias flag."
+  },
+  "open_behavior_decisions": [],
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "commands": [
+    {
+      "cwd": "spec/lean",
+      "command": "lake build",
+      "exit_code": 0,
+      "jobs": 193
+    },
+    {
+      "cwd": "spec/lean",
+      "command": "lake env lean correlated-concrete-implementation-audit.lean",
+      "exit_code": 0,
+      "output": [
+        "Audited ApSpec.Run1CorrelatedConcreteInitials: 96 declarations.",
+        "Audited ApSpec.CorrelatedConcreteImplementation: 222 declarations.",
+        "Total correlated-concrete declarations: 318; no unexpected axioms.",
+        "Executable correlated concrete implementation controls: 26 passed."
+      ]
+    }
+  ],
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "unexpected_axioms": [],
+  "new_project_measurement": false,
+  "latest_referenced_thingsboard": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "outcome": "OOM",
+    "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
+  },
+  "proof_boundary": "Constructive reference AP transport/summary laws, packet decode, residual admission/protection, native STAR/E record view/export and semantic alias-closure induction. Relative to existing producer/IR correspondence contracts; no whole-Kotlin/Java alias-analysis proof, whole-engine termination bound, or measured speedup claim.",
+  "implementation_gates": "Proposal sections 11-12; Kotlin correspondence tests and fixed project validation after implementation.",
+  "sha256": {
+    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "be44116f6f764d2c9aa368fe194e0bb99e9241036e6c76c884fbd5470b18f088",
+    "spec/correlated-concrete-implementation-proofs.md": "3251cb7607b9431978ffc177817b6d0e17025129933e3bdbb4d054e361dea19e",
+    "spec/run1-correlated-concrete-initials.md": "19984fd4c5a521c56b7b50d43983d2a50ef1ae5178cc82698c5a05cf81e11175",
+    "spec/run1-correlated-concrete-initials-proofs.md": "1eebe1d539715d51b0d289f25e8f12403719ce80602e669fa4ef0dc711f8a4a9",
+    "spec/lean/ApSpec/CorrelatedConcreteImplementation.lean": "53b9d73a3d4194bf3f46b56fcef3b9d391b3134d4e8aeffa3b134ddbb5e1acfd",
+    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
+    "spec/lean/correlated-concrete-implementation-audit.lean": "06ec0ffea544beb725441150e8c363eca75337f0be77fd0e1d019baa79facd4a",
+    "spec/lean/ApSpec.lean": "61b944113e7c5e226662503aa12fa70a1ca646c20e0b39db868f505017ccc962",
+    "spec/ap.md": "d00e81a60e814e6bad395241b1294b6103c117013b019d395308b440543f8344"
+  },
+  "audited_owned_declarations": 318,
+  "audited_implementation_declarations": 222,
+  "executable_controls": 26
+}
