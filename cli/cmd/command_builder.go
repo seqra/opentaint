@@ -58,6 +58,7 @@ type AnalyzerBuilder struct {
 	jarPath                               string
 	maxMemory                             string
 	ruleIDs                               []string
+	ruleIDExcludes                        []string
 	passthroughApproximations             []string
 	dataflowApproximations                []string
 	trackExternalMethods                  bool
@@ -143,6 +144,11 @@ func (a *AnalyzerBuilder) SetMaxMemory(maxMemory string) *AnalyzerBuilder {
 
 func (a *AnalyzerBuilder) AddRuleID(ruleID string) *AnalyzerBuilder {
 	a.ruleIDs = append(a.ruleIDs, ruleID)
+	return a
+}
+
+func (a *AnalyzerBuilder) AddRuleIDExclude(ruleID string) *AnalyzerBuilder {
+	a.ruleIDExcludes = append(a.ruleIDExcludes, ruleID)
 	return a
 }
 
@@ -247,6 +253,10 @@ func (a *AnalyzerBuilder) BuildNativeCommand() []string {
 
 	for _, ruleID := range a.ruleIDs {
 		flags = append(flags, "--semgrep-rule-id", ruleID)
+	}
+
+	for _, ruleID := range a.ruleIDExcludes {
+		flags = append(flags, "--semgrep-rule-id-exclude", ruleID)
 	}
 
 	for _, passthrough := range a.passthroughApproximations {

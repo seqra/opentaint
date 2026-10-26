@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -97,5 +98,34 @@ func TestAutobuilderBuildNativeCommandRoutesDependenciesToDependencyFlag(t *test
 	}
 	if !containsFlagPair(cmd, "--pkg", "com.example") {
 		t.Fatalf("package com.example not passed as --pkg; command was %v", cmd)
+	}
+}
+
+func TestAnalyzerBuilderEmitsRuleIDIncludeAndExclude(t *testing.T) {
+	cmd := NewAnalyzerBuilder().
+		SetProject("p.yaml").
+		AddRuleID("a.yaml:keep").
+		AddRuleIDExclude("a.yaml:drop").
+		BuildNativeCommand()
+
+	joined := strings.Join(cmd, " ")
+	if !strings.Contains(joined, "--semgrep-rule-id a.yaml:keep") {
+		t.Errorf("missing inclusion flag: %s", joined)
+	}
+	if !strings.Contains(joined, "--semgrep-rule-id-exclude a.yaml:drop") {
+		t.Errorf("missing exclusion flag: %s", joined)
+	}
+}
+
+func TestAnalyzerBuilderExclusionOnlyEmitsNoInclusionFlags(t *testing.T) {
+	cmd := NewAnalyzerBuilder().
+		SetProject("p.yaml").
+		AddRuleIDExclude("a.yaml:drop").
+		BuildNativeCommand()
+
+	for i, arg := range cmd {
+		if arg == "--semgrep-rule-id" {
+			t.Errorf("unexpected inclusion flag at %d: %v", i, cmd)
+		}
 	}
 }

@@ -14,6 +14,7 @@ import (
 	"github.com/seqra/opentaint/internal/load_trace"
 	"github.com/seqra/opentaint/internal/rules"
 	"github.com/seqra/opentaint/internal/sarif"
+	"github.com/seqra/opentaint/internal/triage"
 	"github.com/seqra/opentaint/internal/validation"
 	"github.com/seqra/opentaint/internal/version"
 
@@ -38,6 +39,9 @@ type ScanConfig struct {
 	Recompile                 bool
 	LogFile                   string
 	RuleID                    []string
+	ExcludeRuleID             []string
+	ErrorOnFindings           bool
+	ErrorOnSeverity           []string
 	PassthroughApproximations []string
 	DataflowApproximations    []string
 	TrackExternalMethods      bool
@@ -84,9 +88,11 @@ The source-path argument is the project root. It is optional. The default is the
 
 OpenTaint writes the findings to a SARIF report. Use --output to set the report path. If --output is not set, the report goes into the project model directory. A summary is shown when the scan completes.
 
+Use --error-on-findings to exit with code 2 when findings remain. Use --error-on-severity to limit which levels count.
+
 Before your first scan, run "opentaint pull" one time. For a Go project, the "go" command must also be on your PATH. To read a report again later, use "opentaint summary".
 
-` + scanExitCodesHelp("Scan completed"),
+` + gateExitCodesHelp("Scan completed"),
 	Example: `  # Scan the current directory with the built-in rules
   opentaint scan .
 
@@ -98,6 +104,9 @@ Before your first scan, run "opentaint pull" one time. For a Go project, the "go
 
   # Use your own rules and show only errors
   opentaint scan . --ruleset ./rules --severity error -o report.sarif
+
+  # Fail CI when the scan reports an error
+  opentaint scan . --error-on-findings --error-on-severity error -o report.sarif
 
   # Give a large project more time and memory
   opentaint scan . --timeout 30m --max-memory 16G -o report.sarif
@@ -152,9 +161,11 @@ func addEntryPointsFlag(cmd *cobra.Command) {
 
 func addRuleIDFlag(cmd *cobra.Command) {
 	cmd.Flags().StringArrayVar(&scanFlags.RuleID, "rule-id", nil, "Run only rules with this ID (repeatable)")
+	cmd.Flags().StringArrayVar(&scanFlags.ExcludeRuleID, "exclude-rule-id", nil, "Never run rules matching this ID: full id, bare name, or glob over the full id (repeatable, overrides rules.exclude from the config)")
 }
 
 func addScanFlags(cmd *cobra.Command) {
+	addGateFlags(cmd, &scanFlags.ErrorOnFindings, &scanFlags.ErrorOnSeverity)
 	cmd.Flags().DurationVarP(&globals.Config.Scan.Timeout, "timeout", "t", 900*time.Second, "Maximum wall-clock time for analysis (e.g. 30m, 1h)")
 
 	cmd.Flags().StringArrayVar(&scanFlags.Ruleset, "ruleset", []string{"builtin"}, "Rules to run: a YAML file, a directory of .yml or .yaml files, or builtin for the built-in rules (repeatable)")
@@ -185,6 +196,9 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		WithRuleset(cfg.Ruleset).
 		WithSemgrepCompatibility(cfg.SemgrepCompatibilitySarif).
 		WithRuleID(cfg.RuleID).
+		WithExcludeRuleID(cfg.ExcludeRuleID).
+		WithErrorOnFindings(cfg.ErrorOnFindings).
+		WithErrorOnSeverity(cfg.ErrorOnSeverity).
 		WithPassthroughApproximations(cfg.PassthroughApproximations).
 		WithDataflowApproximations(cfg.DataflowApproximations).
 		WithTrackExternalMethods(cfg.TrackExternalMethods)
@@ -192,6 +206,76 @@ func currentScanBuilder(cfg ScanConfig, sourcePath string) *utils.OpentaintComma
 		b.WithSeverity(cfg.Severity)
 	}
 	return b
+}
+
+// resolveRuleIDs determines which rules the analyzer should run, as exact
+// inclusion and exclusion ids (patterns never reach the analyzer).
+//
+// --rule-id wins over the config lists, as flags do everywhere else. Honoring
+// a flag and rules.only together would silently intersect two selections the
+// user never asked to combine. --exclude-rule-id overrides rules.exclude the
+// same way, and composes with --rule-id since both were asked for explicitly.
+// Returns the zero value when nothing restricts the rules, which runs the
+// whole ruleset.
+func resolveRuleIDs(cfg ScanConfig, absRuleSetPaths []RulesetType) rules.Resolved {
+	var rulesetRoots []string
+	for _, r := range absRuleSetPaths {
+		rulesetRoots = append(rulesetRoots, r.Path)
+	}
+
+	if len(cfg.RuleID) > 0 {
+		// The explicit list is small, so exclusions are subtracted right here
+		// and the analyzer sees only the survivors.
+		ids, err := rules.ApplyExclusions(cfg.RuleID, cfg.ExcludeRuleID)
+		if err != nil {
+			out.Fatalf("%s", err)
+		}
+		warnUnmatchedRulePatterns(rules.Selection{Exclude: cfg.ExcludeRuleID}, cfg.RuleID)
+		if cfg.ExpandRuleRefs {
+			ids = rules.ExpandRuleIDs(ids, rulesetRoots)
+		}
+		return rules.Resolved{Include: ids}
+	}
+
+	selection := configuredRuleSelection(cfg)
+	selected, err := rules.Select(selection, rulesetRoots)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
+	if selection.Active() {
+		warnUnmatchedRulePatterns(selection, rules.ListRuleIDs(rulesetRoots))
+	}
+	return selected
+}
+
+// warnUnmatchedRulePatterns surfaces selection patterns that matched no rule.
+// A pattern matching nothing is usually a typo, and staying silent would make
+// an exclusion look effective when it never was.
+func warnUnmatchedRulePatterns(selection rules.Selection, all []string) {
+	for _, pattern := range selection.Unmatched(all) {
+		out.Warnf("Rule pattern %q matches no rule in the active ruleset", pattern)
+	}
+}
+
+// configuredRuleSelection merges the rules.only / rules.exclude lists from the
+// configuration file with the --exclude-rule-id flag, which overrides the
+// configured exclude list when set.
+// ruleSelectionActive reports whether any rule allow/deny input is in play —
+// the flags or the config lists. Only then does rule resolution read the
+// ruleset from disk.
+func ruleSelectionActive(cfg ScanConfig) bool {
+	return len(cfg.RuleID) > 0 || len(cfg.ExcludeRuleID) > 0 || configuredRuleSelection(cfg).Active()
+}
+
+func configuredRuleSelection(cfg ScanConfig) rules.Selection {
+	selection := rules.Selection{
+		Only:    globals.Config.Rules.Only,
+		Exclude: globals.Config.Rules.Exclude,
+	}
+	if len(cfg.ExcludeRuleID) > 0 {
+		selection.Exclude = cfg.ExcludeRuleID
+	}
+	return selection
 }
 
 func isDefaultSeverity(sev []string) bool {
@@ -207,6 +291,10 @@ func dockerScanSuggestion(cfg ScanConfig, projectRoot, sarifReportPath string) o
 }
 
 func runScan(cmd *cobra.Command, cfg ScanConfig) {
+	gateSeverities, err := triage.ParseGateSeverities(cfg.ErrorOnSeverity)
+	if err != nil {
+		out.Fatalf("%s", err)
+	}
 	userProjectPath := filepath.Clean(cfg.UserProjectPath)
 	absUserProjectRoot := log.AbsPathOrExit(userProjectPath, "project path")
 
@@ -311,17 +399,23 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 		out.Fatalf("Input validation failed: %s", err)
 	}
 
-	if cfg.DryRun {
-		runDryRun("the build and scan")
-		return
-	}
-
 	hasBuiltin := false
 	for _, ruleSetPath := range absRuleSetPaths {
 		if ruleSetPath.Builtin {
 			hasBuiltin = true
 			break
 		}
+	}
+
+	if hasBuiltin && ruleSelectionActive(cfg) {
+		if _, err := utils.EnsureRulesPath(out); err != nil {
+			failf("Failed to prepare built-in rules: %s", err)
+		}
+	}
+	resolvedRules := resolveRuleIDs(cfg, absRuleSetPaths)
+	if cfg.DryRun {
+		runDryRun("the build and scan")
+		return
 	}
 
 	// Go projects: the analyzer starts a go-ssa-server process, and that server
@@ -424,16 +518,11 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 	if maxMemory != "" {
 		nativeBuilder.SetMaxMemory(maxMemory)
 	}
-	ruleIDs := cfg.RuleID
-	if cfg.ExpandRuleRefs && len(ruleIDs) > 0 {
-		var roots []string
-		for _, r := range absRuleSetPaths {
-			roots = append(roots, r.Path)
-		}
-		ruleIDs = rules.ExpandRuleIDs(ruleIDs, roots)
-	}
-	for _, ruleID := range ruleIDs {
+	for _, ruleID := range resolvedRules.Include {
 		nativeBuilder.AddRuleID(ruleID)
+	}
+	for _, ruleID := range resolvedRules.Exclude {
+		nativeBuilder.AddRuleIDExclude(ruleID)
 	}
 	addPassthroughApproximations(nativeBuilder, cfg.PassthroughApproximations)
 	if cfg.TrackExternalMethods {
@@ -564,6 +653,9 @@ func runScan(cmd *cobra.Command, cfg ScanConfig) {
 
 	if analyzerFail != nil {
 		os.Exit(analyzerFail.ExitCode)
+	}
+	if report != nil {
+		exitOnGate(triage.Gate{Enabled: cfg.ErrorOnFindings, Severities: gateSeverities}, report)
 	}
 }
 
@@ -834,4 +926,25 @@ func scanProject(analyzerBuilder *AnalyzerBuilder, javaRunner java.JavaRunner) (
 	}
 
 	return javaRunner.ExecuteJavaCommand(analyzerCommand, commandSucceeded)
+}
+
+const ExitFindings = 2
+
+func addGateFlags(cmd *cobra.Command, errorOnFindings *bool, severities *[]string) {
+	cmd.Flags().BoolVar(errorOnFindings, "error-on-findings", false, "Exit with code 2 when findings remain")
+	cmd.Flags().StringArrayVar(severities, "error-on-severity", nil, "Restrict --error-on-findings to these levels: note, warning, error, none (repeatable or comma-separated, defaults to all)")
+}
+
+func exitOnGate(gate triage.Gate, report *sarif.Report) {
+	count, tripped := gate.Evaluate(report)
+	if !tripped {
+		return
+	}
+	out.Blank()
+	scope := "finding"
+	if count != 1 {
+		scope = "findings"
+	}
+	out.Error(fmt.Sprintf("%d %s reported (--error-on-findings)", count, scope))
+	os.Exit(ExitFindings)
 }

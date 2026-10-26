@@ -217,9 +217,15 @@ type Address struct {
 // Key/value pairs that provide additional information about the special locations.
 //
 // Key/value pairs that provide additional information about the version control details.
+// Property bags are the one open-ended part of the SARIF schema: any key is
+// legal. Extra holds every key other than "tags" verbatim so that reading a
+// report, modifying it and writing it back never discards tool metadata. See
+// property_bag.go for the marshalling.
 type PropertyBag struct {
 	// A set of distinct strings that provide additional information.
 	Tags []string `json:"tags,omitempty"`
+	// Every other key in the bag, preserved as raw JSON.
+	Extra map[string]json.RawMessage `json:"-"`
 }
 
 // A single artifact. In some cases, this artifact might be nested within another artifact.
