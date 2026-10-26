@@ -148,11 +148,14 @@ replacement. This selects a change in auxiliary alias work.
 `later_alias_layer_distinction` checks the existing later-run DEMAND bypass:
 a normal identity skips aliases, while a demand identity enables them.
 Thus the pair-union proof does not imply identical alias callback/candidate
-sets. Required concrete alias-flow and demand coverage is still a runtime
-adapter obligation. The JVM plan has separate direct BIND_BACK and alias
-arms; the direct arm remains. No proof in this module establishes all
-metadata-dependent alias continuations, and no replacement guard is inferred
-from that proof limit. Spec section 5.2 records the precise boundary.
+sets. The JVM plan has separate direct BIND_BACK and alias arms; the direct arm
+remains. The [implementation proof module](lean/ApSpec/CorrelatedConcreteImplementation.lean)
+now establishes positive input alias closure under the existing definition,
+mark-producer and cleaning contracts. It proves that identity-only alias
+consequences are already covered, and that other enabled alias steps retain
+coverage. This does not assume equality of false may-alias candidates.
+Kotlin/IR correspondence with the producer contracts remains an implementation
+gate. No replacement guard is inferred from that proof boundary.
 
 ## 5. Statics
 
@@ -204,6 +207,15 @@ FLOW demand or a normal record. Native and reversed views must retain their
 actual direction, tails, exclusions, layers and protection. Do not treat a
 record with an unverified/missing annotation adapter as a removable barrier.
 No persistence eligibility is granted by the new STAR tail.
+
+The user selected persistence of NORMAL FLOW records with nonempty E.
+The implementation model's `normal_covered_flow_has_record` uses C0 and the
+STAR/ANY start table to prove that every NORMAL covering FLOW is eligible
+under the revised abstract STAR/E record rule. `native_star_view_exact`
+proves reversal while retaining Ei union Eo. The old native-validator
+counterexample remains a regression control, not the selected behavior.
+The driver persists before handoff, so D FLOW demand or a native/reversed
+NORMAL FLOW record supplies the export witness in both directions.
 
 This is a relative original-AP replay argument. It does not prove arbitrary
 multi-run Kotlin closure, a new query permission, or equality of old coarse

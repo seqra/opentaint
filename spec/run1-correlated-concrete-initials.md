@@ -4,7 +4,9 @@ Date: 26 October 2026. Status: **proposed; analyzer code is unchanged**.
 Language: ASD-STE100 Simplified Technical English. Technical terms are defined below.
 The file name is retained for existing links. The contract applies to **all runs**.
 
-Read this spec with its [proof dossier](run1-correlated-concrete-initials-proofs.md).
+Read this spec with its [proof dossier](run1-correlated-concrete-initials-proofs.md),
+[detailed implementation proposal](../docs/design/bidirectional-correlated-concrete-implementation-20261026.md)
+and [implementation proofs](correlated-concrete-implementation-proofs.md).
 The runtime baseline is `f4954c26403bc7ecb8b64018f8aabdd479fd022d`, core tree
 `e3ede1a36d3b04d79a23cc93285f385ecd968dbf`. The latest referenced Thingsboard
 measurement has **run-1 COMPLETE; run-2 OOM**, including the 16 GiB experiment.
@@ -38,7 +40,8 @@ which marked demands remain. These are selected changes, not factory details.
 | Same-suffix transport | Concrete STAR is erased or rejected | Retain derived STAR in any run and direction | Normalization, transfer, summaries |
 | Summary replacement | Enabled for FULL run-1, ANY output | General mechanism in every run; ANY prefix and STAR equal-path cells | Coverage, application, handoff, persistence |
 | Dependency protection | Selected producers enable it for FULL run-1 | Apply the same non-subsumable contract wherever replacement is enabled | Rule/cleaner/cycle flags, record views |
-| Alias compatibility guard | Alias identity/effect mismatch blocks replacement | Coverage does not test alias classification | Relation replacement; alias work can differ |
+| Alias compatibility guard | Alias identity/effect mismatch blocks replacement | Coverage does not test alias classification; identity-only aliases are redundant under input closure | Relation replacement and alias closure |
+| Native FLOW records | Abstract STAR input requires Empty E | Persist valid NORMAL FLOW with nonempty initial/output E | Native matching, reversal and handoff |
 | Typed representation | No concrete STAR conclusion | Distinct concrete STAR header, with the ordinary phase-specific E | Constructors, keys, decode, readers |
 
 The earlier `mode.run1 && mode.markMode == FULL` tests were scope limits in
@@ -62,9 +65,10 @@ The following contracts stay unchanged:
   run-1 origins and later ND rules keep their current transfer contracts.
 - The run-1 static pool, three request sets, activation, summary erasure and
   implicit static demand remain. Later calls require the actual static premise.
-- Barriers, FLOW priority, alias-effect classification, normal record eligibility
-  and original demand emission/restriction remain. This proposal does not
-  extend the run-1 scheduling policy to other runs.
+- Barriers, FLOW priority, alias-effect classification, normal-layer and
+  direction checks, and original demand emission/restriction remain. Native
+  FLOW records now accept nonempty initial E. This proposal does not extend
+  the run-1 scheduling policy to other runs.
 
 There is no new grounding support, actual-input validation, dependency graph,
 mark token or rule specialization. StrongQueries is not part of the proof.
@@ -445,13 +449,24 @@ while a covered DEMAND marked result enables them. Dropping that marked
 result can therefore remove auxiliary alias candidates. The call classifiers
 stay unchanged; the removed row is no longer an input to them.
 
-The pair-union theorem proves that covered summary relations remain.
-It does not prove equality of alias callback counts or every old alias
-candidate. Whole-pipeline validation must show that required concrete flows
-and their demands remain under the existing alias contract. In particular,
-check the later NORMAL-FLOW/DEMAND-TAINT case. Do not claim this from pair
-coverage alone, add a hidden compatibility guard, or silently rewrite alias
-transfer to close that adapter proof. No analyzer code changes are made here.
+The selected rule is that identity-only alias candidates are redundant
+under positive input alias closure. A real T at p and a genuine alias q
+require q/T to be represented by the input closure already. This is semantic
+coverage, possibly through FLOW, not a requirement to store all concrete
+alias candidates. It is a fixed-point invariant, not a new call barrier.
+
+The [implementation model](lean/ApSpec/CorrelatedConcreteImplementation.lean)
+establishes closure for initial inputs, alias definitions/copies, real mark
+producers and cleaning, then proves identity-only redundancy. It separately
+proves coverage through an enabled alias edge. Existing producer and binding
+adapters must satisfy those contracts; correspondence tests remain mandatory.
+A method can have other effects while publishing an identity arm. Those
+effects still use their retained summaries and source/assignment rows; an
+identity arm is not proof that the whole method has no side effects.
+
+The pair-union theorem alone does not establish this closure and does not
+prove equality of false may-alias candidates or callback counts. Keep the
+removed guard absent. No alias classifier or analyzer code is changed here.
 
 ## 6. Handoff between runs
 
@@ -479,6 +494,20 @@ apply. Protection keeps separate concrete guides at assignments, surviving
 cleaners and cycles. Each run recomputes these flags on its own derivations;
 ordinary cross-run demand patterns do not gain a new support label.
 No actual-input-only query or StrongQueries permission is added.
+
+Persist every valid NORMAL FLOW summary with its legal initial Ei and
+output Eo, including nonempty E after run-1. Remove the old native validator's
+Empty-E requirement for abstract STAR initials. Keep the current singleton,
+normal-layer and direction checks; do not promote a D row to a normal record.
+The driver already persists normal records before handoff. Native matching
+and reversed views must retain both exclusions. For STAR/STAR reversal, their
+union on the shared STAR side retains the exact native pair relation.
+
+A selected FLOW initial is STAR or ANY. ANY starts D and cannot reach N by
+ordinary same-original transfer. Thus every NORMAL covering FLOW has a STAR
+initial and is persistable with the revised validator. Every D covering FLOW
+retains its ordinary demand export. This closes the export witness without
+an extra FLOW demand fallback, a retained covered T demand or StrongQueries.
 
 A concrete STAR seed remains D. Its tail does not grant normal-record
 eligibility. Other results use the existing layer rule and record check.
