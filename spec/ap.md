@@ -46,6 +46,13 @@ theorems retain their original assumptions.
 
 This document defines facts, edges, AP operations, runs, and stores for
 [bidirectional-task.md](../bidirectional-task.md). It is normative.
+
+The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
+selects a FULL run-1 exception to W2: a concrete STAR initial starts with a
+correlated concrete STAR DEMAND conclusion. It defines the permitted transfer
+and summary coverage cells and lists the remaining ANY producers. This is a
+design target; the current analyzer and the historical W2 proofs are unchanged.
+
 [interpreter.md](interpreter.md) defines IR construction and rule order.
 [analyzer-core.md](analyzer-core.md) defines events, ownership, scheduling, and the
 iteration driver. Each rule has one owner; the other specs use its contract.

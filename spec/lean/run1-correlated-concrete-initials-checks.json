@@ -1,0 +1,47 @@
+{
+  "date": "2026-10-26",
+  "status": "proposed; local constructive checks pass; analyzer implementation unchanged",
+  "baseline_revision": "f4954c26403bc7ecb8b64018f8aabdd479fd022d",
+  "baseline_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
+  "scope": "FULL run-1 concrete STAR identity seeds, selected suffix-preserving transfer, equal-output-path STAR FLOW replacement; no StrongQueries",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "commands": [
+    {
+      "cwd": "spec/lean",
+      "command": "lake build",
+      "exit_code": 0,
+      "jobs": 192
+    },
+    {
+      "cwd": "spec/lean",
+      "command": "lake env lean run1-correlated-concrete-initials-audit.lean",
+      "exit_code": 0,
+      "output": [
+        "Audited ApSpec.Run1CorrelatedConcreteInitials: 74 declarations; no unexpected axioms.",
+        "Executable correlated concrete initial controls: 8 passed."
+      ]
+    }
+  ],
+  "audited_owned_declarations": 74,
+  "executable_controls": 8,
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "unexpected_axioms": [],
+  "new_project_measurement": false,
+  "latest_referenced_thingsboard": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "outcome": "OOM",
+    "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
+  },
+  "proof_boundary": "Local seed/suffix laws, original AP pair denotation, geometry and application equality, pattern handoff; relative original-emitter/restriction replay. No whole-engine Kotlin/IR refinement, general closure/termination, cleaner branch completeness, or measured speedup proof.",
+  "implementation_gates": "Spec section 9; no analyzer implementation or JVM test changes selected for this task.",
+  "sha256": {
+    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "3a9932a98bf62444badc819163e6dc893ddbcd5c9bfa5f2abdaea4564f957eb0",
+    "spec/lean/run1-correlated-concrete-initials-audit.lean": "51e149499373d9f36db06f5120b050728d024ff7b5230922261291530ca228b1",
+    "spec/run1-correlated-concrete-initials.md": "7916590a68c76607b94a284b0fbf5a82f8f07f75882f71e04e4d04e5ef4373dd",
+    "spec/run1-correlated-concrete-initials-proofs.md": "9dc8c546eb12308b758ce96e4feae03cf721a0ae9f187fb3da4723fe2c85a63b"
+  }
+}
