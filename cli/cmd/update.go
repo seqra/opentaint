@@ -20,13 +20,25 @@ var (
 var updateCmd = &cobra.Command{
 	Use:   "update [version]",
 	Short: "Update opentaint to the latest version",
-	Long: `Update opentaint to the latest version (or a specific version).
+	Long: `Update the opentaint binary to the latest release. To get a specified version, give the version argument. Only upgrades are possible. The command refuses a version that is older than the current one.
 
-This command detects how opentaint was installed and provides appropriate
-instructions for package manager installations. For binary installations,
-it performs an in-place update.
+If opentaint was installed with Homebrew or npm, the command does not change the binary. It shows the correct package-manager command.
 
-Only upgrades are supported — downgrading to an older version is refused.`,
+To see the latest version without a download, use --check. To skip the confirmation prompt, use --yes.
+
+After a successful update, remove the old artifacts with "opentaint prune".`,
+	Example: `  # Update to the latest release
+  opentaint update
+
+  # See if a newer version is available, without a download
+  opentaint update --check
+
+  # Update to a specified version without a prompt
+  opentaint update 1.2.3 --yes
+
+  # Recipe: update, then remove the artifacts of the old version
+  opentaint update --yes
+  opentaint prune --yes`,
 	Args: cobra.MaximumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		// Check installation method first
@@ -35,11 +47,11 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 		switch method {
 		case utils.InstallMethodHomebrew:
 			out.Print("opentaint was installed via Homebrew.")
-			out.Print("Run: brew upgrade --cask opentaint")
+			suggest("To update, run:", "brew upgrade --cask opentaint")
 			return
 		case utils.InstallMethodNpm:
 			out.Print("opentaint was installed via npm.")
-			out.Print("Run: npm install -g @seqra/opentaint@latest")
+			suggest("To update, run:", "npm install -g @seqra/opentaint@latest")
 			return
 		}
 
@@ -75,7 +87,7 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 			out.Warnf("Could not compare versions: %s", err)
 			out.Printf("Current: %s, Latest: %s", currentVersion, targetVersion)
 			if !updateYes {
-				out.Print("Use --yes to proceed anyway.")
+				suggest("To proceed anyway, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
 			}
 		}
@@ -94,9 +106,8 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 			out.Section("Update Available").
 				Field("Current version", fmt.Sprintf("v%s", currentVersion)).
 				Field("Latest version", fmt.Sprintf("v%s", targetVersion)).
-				Line().
-				Text("Run 'opentaint update' to update.").
 				Render()
+			suggest("To update, run:", "opentaint update")
 			return
 		}
 
@@ -107,6 +118,7 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 		if !updateYes {
 			if !out.Confirm("Proceed with update?", false) {
 				out.Print("Update cancelled.")
+				suggest("To update without confirming, run:", "opentaint update --yes")
 				return
 			}
 		}
@@ -132,7 +144,7 @@ Only upgrades are supported — downgrading to an older version is refused.`,
 		}
 
 		out.Successf("Successfully updated to v%s", targetVersion)
-		suggest("To clean up old artifacts run", "opentaint prune")
+		suggest("To clean up old artifacts, run:", "opentaint prune")
 	},
 }
 

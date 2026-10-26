@@ -57,24 +57,27 @@ func resolveCategories() (utils.PruneCategory, error) {
 
 var pruneCmd = &cobra.Command{
 	Use:   "prune",
-	Short: "Remove stale downloaded artifacts from ~/.opentaint",
-	Long: `Remove stale downloaded artifacts from the local cache (~/.opentaint).
+	Short: "Remove old downloaded artifacts from the cache",
+	Long: `Remove old downloaded artifacts from the local cache (~/.opentaint). The command removes analyzer and autobuilder JARs that a newer version replaced, old rules, JDK and JRE versions that do not match the configuration, and cached project models.
 
-Identifies artifacts that are no longer needed:
-- Old versions of analyzer JARs, autobuilder JARs, and rules
-- Downloaded JDK/JRE versions that don't match the current version
-- Cached project models
+To select categories, use --artifacts, --rules, --jdk, --models, --logs, or --install. With no category flag, the command removes artifacts, rules, jdk, and models. The --all flag removes everything, with logs and install-tier artifacts included. Do not give --all together with a category flag.
 
-Use category flags to prune selectively:
-  --artifacts   Stale analyzer and autobuilder JARs
-  --rules       Stale rules directories
-  --jdk         Old JDK/JRE versions
-  --models      Cached project models
-  --logs        Project log files
-  --install     Install-tier lib and JRE artifacts (requires re-download)
+To see the deletions without a removal, use --dry-run. To skip the confirmation prompt, use --yes. To download the toolchain again, run "opentaint pull".`,
+	Example: `  # Remove the default categories, with a confirmation prompt
+  opentaint prune
 
-Without category flags, prunes: artifacts + rules + jdk + models.
-With --all: prunes everything including logs and install-tier.`,
+  # Remove only the old JDK and JRE versions
+  opentaint prune --jdk
+
+  # Remove everything, with logs and install-tier artifacts included
+  opentaint prune --all
+
+  # See what the command would delete, without a deletion
+  opentaint prune --dry-run
+
+  # Recipe: get disk space back, keep the current toolchain
+  opentaint prune --dry-run
+  opentaint prune --yes`,
 	Run: func(cmd *cobra.Command, args []string) {
 		categories, err := resolveCategories()
 		if err != nil {
@@ -84,23 +87,23 @@ With --all: prunes everything including logs and install-tier.`,
 		// Acquire global prune lock
 		pruneLockPath, err := utils.PruneLockPath()
 		if err != nil {
-			out.Fatalf("Failed to resolve prune lock path: %s", err)
+			failf("Failed to resolve prune lock path: %s", err)
 		}
 		pruneLock, err := utils.TryLockExclusive(pruneLockPath, utils.LockMeta{
 			PID:     os.Getpid(),
 			Command: "prune",
 		})
 		if err == utils.ErrLocked {
-			out.Fatal("Another prune is already running")
+			failWith(1, "Another prune is already running")
 		}
 		if err != nil {
-			out.Fatalf("Failed to acquire prune lock: %s", err)
+			failf("Failed to acquire prune lock: %s", err)
 		}
 		defer pruneLock.Unlock()
 
 		result, err := utils.ScanForStaleArtifacts(categories)
 		if err != nil {
-			out.Fatalf("Failed to scan for stale artifacts: %s", err)
+			failf("Failed to scan for stale artifacts: %s", err)
 		}
 
 		// Display skipped projects
@@ -130,22 +133,27 @@ With --all: prunes everything including logs and install-tier.`,
 			Render()
 
 		if pruneDryRun {
-			out.Print("Dry run mode. No files were deleted.")
+			out.Print("Dry run complete. No files were deleted.")
+			suggest("To delete these artifacts, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 			return
 		}
 
 		if !pruneYes {
 			if !out.Confirm("Delete these artifacts?", false) {
 				out.Print("Prune cancelled.")
+				suggest("To prune without confirming, run:", withFlag(rerunWithoutDryRun(), "--yes"))
 				return
 			}
 		}
 
 		if err := utils.DeleteArtifacts(result.Stale); err != nil {
-			out.Fatalf("Failed to delete artifacts: %s", err)
+			failf("Failed to delete artifacts: %s", err)
 		}
 
 		out.Successf("Pruned %d items, freed %s", result.TotalCount, output.FormatSize(result.TotalSize))
+		if pruneInstall || pruneAll {
+			suggest("To restore the removed components, run:", "opentaint pull")
+		}
 	},
 }
 
