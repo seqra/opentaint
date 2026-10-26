@@ -421,6 +421,18 @@ A packet requires a diagonal initial/output atom and exact membership masks.
 It must not interpret a packed mark set as every mark on every input/output
 combination. Each decoded atom recreates its own concrete initial.
 
+The admission law in section 5.3 also applies across tail/E headers in the
+same initial/base/layer scope. An existing TAINT ANY can cover a later TAINT
+STAR. Equal STAR roots can merge their exclusions under the scalar law.
+Checking only an identical `Header` is insufficient. Keep the same-header
+fast path. For a conflicting atom in a sibling header, restore that atom's
+current rows into a temporary `TaintGroup`, apply its admission law, and
+encode the changed current rows back into shared masks. A packet must select
+this scalar path before mutation. Retain no scalar snapshot after admission.
+This is TAINT-to-TAINT deduplication; FLOW-to-TAINT replacement still requires
+equal output tails. Do not compact an older STAR merely because ANY arrives
+later; retain the existing scalar arrival policy.
+
 ```kotlin
 fun decode(h: Header, geometry: FlowNode, atom: TaintMark, flags: FlowNode?) =
     taintTree(h.base, h.layer, scalar(geometry, atom), h.exclusion, h.tail,
@@ -784,6 +796,17 @@ and the [uncovered-edge examples](../reports/bidirectional-run1-uncovered-exampl
 Use those reports as the investigation method, not as measurements of the
 new implementation. Focus on Thingsboard, and include Conductor, Stirling-PDF
 and OWASP under the selected fixed project commands and settings.
+
+This investigation is a required post-implementation step. Passing the code
+and proof checks does not complete the performance validation. The report
+must give a before/after answer to each of these questions:
+
+- Which edge shapes remain after run-1, and how many memberships have each shape?
+- How many memberships were subsumed, and how many remain non-subsumed?
+- How many retained memberships are blocked only by the non-subsumable flag?
+- Why are the other memberships not subsumed? Show representative concrete
+  edges and all relevant FLOW candidates for each major reason.
+- How do these changes affect summary publications and demands for run-2?
 
 Capture a read-only census at the completed, joined **run-1 barrier**. Record
 the exact analyzer revision, core tree, configuration and coverage-checker

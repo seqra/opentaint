@@ -189,3 +189,4 @@ import ApSpec.FlowBackedHandoff
 import ApSpec.FlowBackedRelationsCounterexamples
 import ApSpec.Run1CorrelatedConcreteInitials
 import ApSpec.CorrelatedConcreteImplementation
+import ApSpec.DiagonalTypedAdmission

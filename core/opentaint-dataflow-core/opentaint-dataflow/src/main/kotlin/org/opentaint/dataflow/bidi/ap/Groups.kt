@@ -73,6 +73,16 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
 
     fun all(): Sequence<TaintTree> = trees[0].asSequence() + trees[1].asSequence()
 
+    /** Restore one complete current typed header for a temporary admission
+     * adapter. Do not re-admit the snapshot: that would compact old STAR rows
+     * merely because a later ANY row is already present. No history is kept. */
+    internal fun restoreCurrent(t: TaintTree) {
+        m.cancellation.checkpoint()
+        val list = trees[t.layer.ordinal]
+        check(list.none { it.anyTail == t.anyTail && it.exclusion == t.exclusion })
+        list += t
+    }
+
     fun add(t: TaintTree): TaintTree? {
         val alg = m.taintAlg
         val list = trees[t.layer.ordinal]
