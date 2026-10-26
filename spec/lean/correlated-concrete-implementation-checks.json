@@ -42,9 +42,9 @@
     "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
   },
   "proof_boundary": "Constructive reference AP transport/summary laws, packet decode, residual admission/protection, native STAR/E record view/export and semantic alias-closure induction. Relative to existing producer/IR correspondence contracts; no whole-Kotlin/Java alias-analysis proof, whole-engine termination bound, or measured speedup claim.",
-  "implementation_gates": "Proposal sections 11-12; Kotlin correspondence tests and fixed project validation after implementation.",
+  "implementation_gates": "Proposal sections 11-13; Kotlin correspondence tests, fixed project validation and post-implementation run-1 edge-shape/coverage investigation.",
   "sha256": {
-    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "be44116f6f764d2c9aa368fe194e0bb99e9241036e6c76c884fbd5470b18f088",
+    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "fbec56bf6964cc34e5078d54886e428c0c9d2bcf50027ca8f87d3bdba0ea15d5",
     "spec/correlated-concrete-implementation-proofs.md": "3251cb7607b9431978ffc177817b6d0e17025129933e3bdbb4d054e361dea19e",
     "spec/run1-correlated-concrete-initials.md": "19984fd4c5a521c56b7b50d43983d2a50ef1ae5178cc82698c5a05cf81e11175",
     "spec/run1-correlated-concrete-initials-proofs.md": "1eebe1d539715d51b0d289f25e8f12403719ce80602e669fa4ef0dc711f8a4a9",

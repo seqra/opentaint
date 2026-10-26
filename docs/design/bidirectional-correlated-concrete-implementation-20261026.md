@@ -743,6 +743,8 @@ before its producers, protection and export paths are ready.
 6. Run the focused engine tests and the existing mandatory analyzer checks.
    Then use the selected fixed project commands. Do not run a performance
    ablation or change the heap limit as part of this implementation by default.
+7. After implementation, complete the run-1 edge-shape investigation in
+   section 13. Include its results in the implementation report.
 
 Required tests include:
 
@@ -765,3 +767,116 @@ completed and accepted iteration. Record STAR/ANY/must/exact memberships,
 covered/flag-blocked rows, publications, demand pairs and peak/retained bytes.
 Compare fixed source revisions and commands. This proposal claims no measured
 speedup, memory reduction or completion at run-2.
+
+## 13. Post-implementation run-1 edge-shape investigation
+
+After implementation and correctness checks, repeat the investigation used
+in the [run-1 protection/coverage census](../reports/bidirectional-run1-protection-coverage-20261026.md)
+and the [uncovered-edge examples](../reports/bidirectional-run1-uncovered-examples-20261026.md).
+Use those reports as the investigation method, not as measurements of the
+new implementation. Focus on Thingsboard, and include Conductor, Stirling-PDF
+and OWASP under the selected fixed project commands and settings.
+
+Capture a read-only census at the completed, joined **run-1 barrier**. Record
+the exact analyzer revision, core tree, configuration and coverage-checker
+version. Each report must include the latest reached, completed and accepted
+iteration, such as `run-2 / run-1 / run-1`. Keep a run-1 diagnostic capture
+separate from the full timed run if they are different executions.
+
+### 13.1 Stored shapes and actual replacement
+
+Count scalar output memberships, not just packed rows or canonical AP objects.
+A membership is one output path/tail/layer/atom under its method, initial
+premise and collection owner. Decode shared geometry and mark masks exactly.
+Report raw summaries and selected/published summaries separately; do not add
+their counts. Keep method-point facts, NORMAL records and run-2 demand pairs
+in separate tables when included.
+
+Required breakdowns are:
+
+- FLOW and concrete TAINT totals, with and without non-subsumable annotations.
+- Input/output tail pairs: STAR, ANY, EXACT and must. Show the new STAR/STAR
+  population and remaining STAR/ANY population explicitly.
+- Initial/output bases: static, nonstatic and ZERO where applicable. State
+  whether a static share refers to the initial, output or either endpoint.
+- Layers, same-atom versus cross-atom relations, and output field-chain shapes.
+- Largest methods, field paths and mark groups by retained memberships and
+  publication/processing workload. Keep stored counts separate from work counts.
+
+Run the implemented normalizer on temporary values to partition the retained
+concrete memberships:
+
+| Category | Definition |
+| --- | --- |
+| Removable now | The normalizer removes the membership with protection honored |
+| Blocked only by protection | It remains normally, but removing only the protection mask on a temporary copy makes it removable |
+| Not covered for other reasons | It remains even with protection cleared |
+
+These categories must be disjoint and sum to the retained concrete total.
+Flag presence is a separate count: a flagged edge can also lack any covering
+FLOW relation. A geometric match alone is not proof that the flag is the
+only blocker. One actual FLOW output must pass all remaining tests together.
+
+At a completed normalized summary boundary, `Removable now` should be zero.
+Investigate a nonzero result as a possible admission/compaction/checker
+mismatch. Do not weaken the coverage rules to force that count to zero.
+Check that every run-1 E is Empty and that erased static-static summaries
+have not returned to storage.
+
+Also measure memberships already removed by FLOW during run-1. Distinguish
+covered-offer rejections from compaction of stored memberships. These are
+event counts and can include repeated offers; do not label them globally
+distinct subsumed edges. Do not retain a full removed-edge history to obtain
+this statistic. A barrier census alone cannot recover that history.
+
+### 13.2 Explain why retained edges are not subsumed
+
+Break down `Not covered for other reasons` with the actual updated predicates:
+
+- No FLOW counterpart for the complete initial geometry and owner.
+- Unsupported initial or output kind, ZERO/ND premise, or cross-atom result.
+- Different output bases or tail kinds.
+- STAR output path inequality, including a proper-prefix mismatch.
+- No annotated FLOW prefix for an ANY output; a trie branch is not an output.
+- FLOW excludes the selected atom or has insufficient layer strength.
+- Insufficient suffix admission by FLOW. Nonempty E in run-1 is an invariant
+  failure, not a legitimate new run-1 rejection category.
+
+Several candidate FLOW rows can fail different tests. Record a stable primary
+reason for additive totals and secondary reasons where useful. Do not combine
+the geometry of one FLOW output with the mark/layer headers of another.
+Alias identity/effect mismatch is no longer a valid subsumption blocker; flag
+it as an implementation regression if the old exception remains.
+
+For the largest categories, provide representative real examples with:
+
+1. The code under analysis, method and statement when relevant.
+2. The complete concrete edge: initial, output, tail, E, atom, layer and flag.
+3. All FLOW candidates under the matching initial in the same owner, with
+   their headers and annotated output paths. Label other-initial rows separately.
+4. The exact failed test, or the covering FLOW witness for a flag-only blocker.
+
+Put large complete candidate lists in the machine-readable evidence and state
+any display truncation. For tail mismatches, identify the operation which
+introduced ANY: a deeper read, field cut, explicit may target or binder loss.
+Use sampled replay if needed; do not add permanent per-edge provenance.
+
+### 13.3 Compare and report the result
+
+Report before/after counts and shares for retained concrete memberships,
+STAR/ANY shapes, actual removals, protection-only blocking and each major
+rejection reason. Bind every comparison to its source and predicate version:
+the earlier checker had an ANY-only cell and an alias identity exception.
+Do not silently reuse its classifications for the new mechanism.
+
+Explain whether the expected effect occurred: more same-suffix concrete STAR
+outputs covered by FLOW, fewer marked summary publications and fewer run-2
+T demands. Correlate the remaining shapes with retained bytes and processing
+counts; a membership reduction alone does not prove a time or memory saving.
+
+Write a report in `docs/reports/` with machine-readable counts and reproducible
+diagnostic commands. Reconcile each table with that execution's ordinary
+completion census. Keep diagnostic time out of the timed engine comparison.
+Rank any remaining workload opportunities by measured impact and distinguish
+necessary marked dependencies from avoidable propagation. Do not implement
+another optimization as part of this investigation without a separate proposal.
