@@ -22,14 +22,14 @@ func TestMatchPath(t *testing.T) {
 
 func TestMatchSeverity(t *testing.T) {
 	r := makeResult("r", Error, "a.java", 1, nil)
-	if !matchSeverity(&r, []string{"ERROR"}) {
+	if !MatchesSeverity(&r, []string{"ERROR"}) {
 		t.Error("expected case-insensitive error match")
 	}
-	if matchSeverity(&r, []string{"warning"}) {
+	if MatchesSeverity(&r, []string{"warning"}) {
 		t.Error("expected warning not to match an error")
 	}
 	nilLevel := Result{Locations: r.Locations}
-	if !matchSeverity(&nilLevel, []string{"note"}) {
+	if !MatchesSeverity(&nilLevel, []string{"note"}) {
 		t.Error("expected nil level to be treated as note")
 	}
 }
