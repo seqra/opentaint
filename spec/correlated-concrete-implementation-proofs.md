@@ -118,6 +118,19 @@ and `DiagonalDelta` fields must be passed through `NeutralRelationBatch`.
 A geometry lacking the required uniform mark/protection shape must use the
 existing scalar fallback before mutation. No Cartesian expansion is needed.
 
+### 4.1 Cross-header admission correspondence
+
+The typed decoder laws do not establish that separate output headers apply
+all selected same-premise TAINT admission cells. Revision `85dc2bbf8` keeps
+a later STAR offer even when an earlier same-original ANY row already covers
+it. Scalar and packet diagonal paths share this redundant-work gap.
+The [typed admission dossier](diagonal-typed-admission-proofs.md) and
+[constructive module](lean/ApSpec/DiagonalTypedAdmission.lean) state the narrow
+correction, independent `TaintGroup` oracle controls, protection and exclusion
+laws, and limits. The represented union is retained; this is not evidence of
+lost facts or an infinite loop. The correction does not add retroactive
+STAR-before-ANY compaction or unsupported cross-bucket normalization.
+
 ## 5. Current residuals, late flags and duplicate work
 
 The `Residual` model stores only current FLOW coverage, explicit marked

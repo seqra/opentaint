@@ -1,7 +1,8 @@
 # Correlated concrete implementation: local validation
 
-Date: 26 October 2026. Status: **implementation and local gates complete;
-real-project measurements and the run-1 shape investigation remain pending**.
+Date: 26 October 2026. Status: **initial implementation and local gates complete;
+a packed-admission correction passes focused checks. Final broad checks,
+project measurements and the run-1 shape investigation remain pending**.
 
 The implementation follows the [selected proposal](../design/bidirectional-correlated-concrete-implementation-20261026.md)
 and [general contract](../../spec/run1-correlated-concrete-initials.md).
@@ -9,8 +10,10 @@ The pre-change revision is `583a58063ab67ad18b8664d45badee065e68fd85`, with core
 `e3ede1a36d3b04d79a23cc93285f385ecd968dbf`. The implemented core is
 `f809c4552dd4a7a797fd61595f0932595e56537c`.
 
-The real-project candidate has not started. Its latest reached, completed
-and accepted iteration are **unavailable**. The real JVM alias controls
+The intermediate candidate at `85dc2bbf8` has reached **run-2**, with
+**run-1 COMPLETE and accepted**, on Thingsboard and Conductor. Both stopped
+with OOM during run-2. The fixed cohort is still running. These results do
+not validate the pending admission correction. The real JVM alias controls
 reach **run-3**, including a later marked demand. These controls do not
 supply project performance results.
 
@@ -93,10 +96,11 @@ is changed by these test commands.
 Measure the committed implementation with the four fixed project commands.
 Compare findings with fresh main using main's own rule catalog. Use the same
 branch catalog for the pre-change/current optimization comparison. The initial
-shared-catalog main commands are supplemental: they report 929 OWASP traces
-and do not satisfy the CI expectation of 4,112. The native-main correction
-has separate commands and artifacts. Do not substitute those 929 traces for
-the required main correctness baseline.
+shared-catalog main commands are supplemental: they report 929 OWASP traces.
+The native-main correction has separate commands and artifacts. Its 2,633
+traces match the workflow pinned at main revision `c86a5fbd6`. The branch
+workflow expects 4,112; it is not the native-main CI target. Do not substitute
+the 929 shared-catalog traces for the required main correctness baseline.
 
 Keep engine time, report barriers, dump pauses and command time separate.
 Include latest reached, completed and accepted iterations. Analyze every

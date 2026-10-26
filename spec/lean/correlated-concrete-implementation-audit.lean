@@ -1,10 +1,11 @@
 import ApSpec.CorrelatedConcreteImplementation
+import ApSpec.DiagonalTypedAdmission
 import Lean
 
 open Lean Elab Command
 
 run_elab do
-  let owners := #[`ApSpec.Run1CorrelatedConcreteInitials, `ApSpec.CorrelatedConcreteImplementation]
+  let owners := #[`ApSpec.Run1CorrelatedConcreteInitials, `ApSpec.CorrelatedConcreteImplementation, `ApSpec.DiagonalTypedAdmission]
   let env ← getEnv
   let mut total : Nat := 0
   for owner in owners do
