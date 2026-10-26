@@ -9,6 +9,13 @@ and accepted**, engine time 392.439 s. See the
 [fresh performance report](../docs/reports/bidirectional-flow-backed-concrete-performance-20261024.md).
 Project outcomes are validation evidence; they do not extend the proof scope.
 
+The proposed [general correlated-concrete extension](run1-correlated-concrete-initials.md)
+removes the run-1/FULL restriction from runtime admission and proves general
+path/exclusion/application cells. Its
+[updated dossier](run1-correlated-concrete-initials-proofs.md) states the new
+all-run protection and adapter obligations. The historical model and measured
+implementation described here keep their original scope.
+
 ## 1. Claim, scope and proof order
 
 The optimization preserves the supported concrete transport relation and

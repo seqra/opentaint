@@ -1,156 +1,199 @@
-# Proofs for correlated concrete initials
+# Proofs for correlated concrete initials and general FLOW subsumption
 
 Date: 26 October 2026. Status: local constructive model checked; runtime is unchanged.
 Read the [spec](run1-correlated-concrete-initials.md) first.
 
 ## 1. Model and scope
 
-The [model](lean/ApSpec/Run1CorrelatedConcreteInitials.lean) imports the existing
-AP `den`, geometry, mark gates, emitter and FLOW-backed handoff certificates.
-It does not modify their historical definitions. `seed` is the new FULL run-1
-start. `rawApply` exposes the existing geometry/mark result before the old W2
-erasure. Production may use that result only in the selected owner cells.
-It is not a replacement for the general AP normalizer.
+The [model](lean/ApSpec/Run1CorrelatedConcreteInitials.lean) retains its file
+and namespace names for existing links. Its general operations have no run,
+direction or mark-mode parameter. A numeric mark denotes the current runtime
+atom, FULL or GROUP. The proofs do not enumerate a group's full members.
 
-Paths and marks in the theorems are arbitrary lists and natural numbers.
-Witnesses contain explicit suffixes. No classical choice, `sorry` or new axiom
-is used. The audit permits only `propext` and `Quot.sound`, as in the existing
-AP proof project.
+The model imports the existing AP pair denotation, geometry, mark gates,
+emitter and FLOW-backed handoff certificates. Historical operations and
+claims are unchanged. `selectedStart` is the general concrete STAR start.
+`rawApply` exposes the current geometry/mark result before historical W2
+erasure. The producer must still establish the bound-suffix invariant.
+No proof turns an independent ANY value into a correlated STAR value.
 
-## 2. Seed and precision
+Paths, marks, exclusions and summary layers are parameters. Witnesses contain
+explicit suffixes. There is no classical choice, `sorry` or new axiom. The
+audit permits only `propext` and `Quot.sound`, as in the existing AP project.
+Availability in all runs does not imply that every initial/output shape has
+a well-formed FLOW counterpart or that every runtime adapter is proved.
 
-For each admitted concrete input `x.p.s/T`, `seed_identity` constructs the
-pair from that input to itself. Thus the new seed does not lose an input.
-`seed_is_demand` keeps its layer. This is a conditional identity; it does not
-assert that T exists on every descendant.
+## 2. General seed and precision
 
-`new_seed_inside_old` proves inclusion in the old ANY seed. The old seed
-permits an input suffix `[f]` to produce suffix `[g]`. Theorems
-`old_seed_cross_suffix` and `new_seed_rejects_cross_suffix` check this pair.
-The two seeds are not abstractly equivalent. The selected semantic change
-removes a false suffix association.
+`start_keeps_star_exclusion` checks that the selected concrete STAR initial
+starts with exactly that STAR and E, in DEMAND. `excluded_seed_identity`
+constructs the identity pair for every suffix admitted by E. No run or FULL
+condition is needed. The mark is supplied by the input; the seed is not a
+source or proof of must-taint.
+
+`selected_seed_inside_old` proves inclusion in the old seed with arbitrary E.
+
+The earlier `seed` is the Empty-E specialization. `seed_identity` and
+`seed_is_demand` check its identity and layer. `new_seed_inside_old` proves
+inclusion in the old ANY seed. `old_seed_cross_suffix` admits input suffix
+[f] and output suffix [g]; `new_seed_rejects_cross_suffix` rejects that pair.
+The seed change is a strict precision change, not equality of coarse results.
+The controls also check that ANY and EXACT start rows stay unchanged.
+
+Ordinary validation still restricts which initials a run can select. Run-1
+requires Empty E and its bounded path grammar. Later runs retain their
+ordinary paths and exclusions. A theorem about arbitrary E does not authorize
+an initial forbidden by that grammar.
 
 ## 3. Transfer coverage
 
 `correlated_copy` and `copy_composes` construct the same suffix at each copy
-endpoint. `trace` gives executable locations for a finite list of copy points.
-`raw_copy_keeps_star` checks the actual existing geometry/mark dispatch without
-the W2 erasure. No input/field/mark matcher has to change for this dispatch.
-Typed readers do need to admit the new tail.
+endpoint. `trace` gives executable locations for a finite copy sequence.
+`raw_copy_keeps_star` checks the existing dispatch without W2 erasure.
 
-`descent_any_cover` supplies independent input/output suffixes for a read below
-the tracked prefix. `descent_geometry` and `raw_descent_widens` check the
-existing above-prefix result. `explicit_may_geometry` keeps an explicit may
-target. `cut_any_cover` constructs the output suffix lost by a field cut.
-These results justify keeping these ANY sites. They do not justify general
-STAR recovery after widening.
+`descent_any_cover` constructs independent suffixes for a read below the
+tracked prefix. `descent_geometry` and `raw_descent_widens` check the current
+above-prefix result. `explicit_may_geometry` keeps an explicit may target.
+`cut_any_cover` constructs the output suffix lost by a field cut. These
+laws justify retaining the necessary ANY sites in either direction.
 
-For a below-only cleaner, a surviving root is an EXACT output.
-`cleaner_root_cover` constructs that root result. The concrete cleaner must
-still set the existing protection flag. The theorem is a local residual
-cover, not a proof of every current typed cleaner branch.
+For a below-only cleaner at the tracked root, `cleaner_root_cover` constructs
+an EXACT root residual. The current selected-cleaner protection must remain.
+This is a local residual cover, not a proof of every typed cleaner branch.
 
-For the remaining operations, the required witness argument is as follows:
+The remaining witness argument preserves the current transfer contracts:
 
 - Full overwrite/clean: a killed location is not a surviving witness.
-- Disjoint transfer/filter: the existing row and witness stay valid.
-- Partial field overwrite: the existing E-free DEMAND residual contains each
-  surviving suffix. Keep that suffix; do not create an exclusion.
-- Fixed source/GEN target: use the existing target witness. Do not bind its
-  new suffix to the input suffix.
-- Selected cleaner residual: keep its existing mark and protection. Use
-  EXACT for a root residual and the E-free cover for other partials.
-- Finite joins: retain the row from the contributing branch, with its own
-  tail and flag. Do not force a common ANY/STAR header on unlike branches.
+- Disjoint transfer/filter: retain the current row and witness.
+- Run-1 partial overwrite: its existing E-free D residual contains each
+  surviving suffix. Keep the suffix; do not create an exclusion.
+- Later strong field transfer: preserve the existing admitted/excluded
+  suffix test. Do not import the run-1 E-free cover into that run.
+- Source/GEN/ND fixed target: use its existing target witness. Do not bind
+  a generated output suffix to the input suffix.
+- Partial cleaner: use the current spatial residual and E policy; retain
+  protection on a selected-mark survivor.
+- Finite join: retain the contributing row's tail and OR its protection.
+  Do not merge unlike tail headers into a common STAR header.
 
-An induction over concrete program derivations uses the identity at entry
-and these local surviving-witness cases. This gives the design argument for
-sound coverage. The Lean module checks the listed seed, geometry and suffix
-laws. It does **not** establish the Kotlin/IR correspondence, general source/ND
-closure, or all typed cleaner and field-write cases. The implementation tests
-in spec section 9 are required gates. A proof of an old W2 closure is not a
-proof of the extended closure.
+These cases give the design's induction over surviving concrete witnesses.
+The Lean module checks the stated local laws. It does **not** prove all
+Kotlin/IR transfers, typed cleaners, rule/ND closure, or general solver
+termination. The implementation gates in spec section 9 remain required.
+Historical W2 and backward no-concrete-STAR proofs do not prove the new grammar.
 
-## 4. Summary replacement
+## 4. General summary replacement
 
-`star_specialization` proves exact pair equality for a concrete T input and
-the equal-geometry FLOW instance, if FLOW admits T. Both use the same suffix.
-`star_summary_application` checks equality of computed results, layers and
-requests using the existing geometry and mark operations before W2 erasure.
-It is stronger than output-path overlap. It does not authorize a new call
-binding or a different scope.
+`general_specialization` proves pair equality after mark specialization for
+arbitrary equal initial/output kinds and paths, if FLOW admits T. It includes
+nonempty STAR exclusions and an ANY initial. Runtime eligibility separately
+requires representable, well-formed FLOW shapes. The conceptual theorem does
+not permit abstract-mark EXACT or must facts.
+
+`star_exclusion_cover` proves STAR coverage when the FLOW output excludes no
+more suffixes than the TAINT output. It uses the executable `Excl.subB` test
+and the existing `CoreAux.Excl.subB_sound` theorem. Initial geometry, including
+E, is equal. The output paths are equal. The input and output suffix witnesses
+are unchanged.
+
+`any_prefix_cover_general` proves ANY prefix coverage for arbitrary equal
+initial geometry. The constructed FLOW output suffix is `extra ++ suffix`.
+No run-1, Empty-E or FULL premise is used.
+
+`general_summary_application` proves equal computed outputs, requests and
+layers for equal-shaped summaries on an actual T input, with arbitrary
+initial/output kinds. It uses the existing geometry and mark operations
+before W2 erasure. Prefix-only or weaker-exclusion coverage is inclusion,
+not equality of every computed output; original restriction still applies.
+
+`star_reverse` constructs the reversed same-suffix pair and swaps the initial
+and output exclusions. Thus correlation and specialization are not
+forward-only properties. The store still compares one direction/view at a
+time. Correct construction of the typed reverse view is an adapter obligation.
+
+`layer_composition` proves that sufficient layer strength survives the ordinary
+OR with an incoming layer. A marked NORMAL row requires NORMAL FLOW. A marked
+DEMAND row can use NORMAL or DEMAND FLOW. No proof promotes a marked layer.
+The concrete seed continues to use its current DEMAND policy.
 
 `star_alias_class` proves equal raw identity/alias-effect classification for
-these STAR FLOW and same-mark STAR TAINT shapes, for arbitrary bases and paths.
+STAR FLOW and same-mark STAR TAINT, for arbitrary bases and paths.
+`longer_star_output` and `prefix_star_does_not_cover` reject the ANY prefix
+rule for STAR. Input suffix [] ends at different output locations.
 
-`longer_star_output` and `prefix_star_does_not_cover` give a counterexample
-to the ANY prefix rule in the STAR cell. The input suffix is empty. FLOW ends
-at `return.f`; the marked edge ends at `return.f.g`. Keep path equality for
-STAR. The existing ANY prefix theorem remains valid in its old scope.
-
-`protection_blocks` and `exclusion_blocks` check mandatory negative admission
-gates. Existing assignment, selected-cleaner, cycle and sticky-union proofs in
-`FlowBackedProtection` still apply: changing the tail does not remove a
-dependency barrier. Scope, identity/effect and producer-hook checks remain
-separate implementation obligations. Pair inclusion alone cannot erase them.
+`protection_blocks` and `exclusion_blocks` check mandatory negative gates.
+The existing assignment, cleaner, local/call-cycle and sticky-merge contracts
+must now hold in every enabled run and mark domain. The original protection
+model is independent of run number. Enabling its corresponding runtime hooks
+and preserving masks through native/reversed record views are new explicit
+implementation obligations. Missing metadata is not proof of an unprotected
+row. Unsupported cells keep the marked residual.
 
 ## 5. Statics
 
-A static read can retain a conditional `C.f.*` original even when ZERO
-activates the summary during run-1. A same-suffix reader is then the ordinary
-copy case. Current call code already keeps that original or selects the
-canonical marked static original. The proposal preserves this ownership.
+During run-1, ZERO can activate a reader while the procedure retains or
+selects a conditional static original. A same-suffix reader is then the
+ordinary copy case. Later runs require the actual static premise. General
+subsumption does not change this distinction.
 
-A pool membership proves only mark availability at a region. It does not
-bind two independently derived suffixes. `independent_supply_any` constructs
-the general independent pair. The cross-suffix counterexample shows why a
-STAR result is invalid if an adapter discards its binder. Keep ANY there.
+Pool membership proves mark availability, not equality of independent
+writer/reader suffixes. `independent_supply_any` supplies the independent
+pair. The cross-suffix counterexample rejects STAR when the binder is lost.
+A raw pool materializer must select ANY explicitly. A typed encoder no
+longer performs that semantic erasure from mark kind alone. Once the current
+procedure selects its canonical STAR initial, the general identity seed applies.
 
-The three-set protocol, read/write activation and universal static demand
-fallback are unchanged. Their existing completeness arguments remain
-applicable provided the new typed adapter preserves these memberships and
-the static original. This file does not prove a new global static algorithm.
+The three-set protocol, read/write activation, S-S erasure and static demand
+fallback are unchanged. Their existing arguments require the new adapters
+to preserve those memberships and the selected original. No new global static
+algorithm is proved or selected here.
 
-## 6. Handoff and marked demand replacement
+## 6. Handoff, records and demand replacement
 
-`marked_handoff` retains T while changing the backward entry STAR to ANY.
-`handoff_covers` proves equal pattern location/mark sets. `flow_handoff`
-checks the corresponding abstract guide. The original initial remains the
-other endpoint; the stored forward result is not rewritten during run-1.
+`marked_handoff` retains T while converting the Empty-E STAR conclusion to
+an ANY backward entry pattern. `handoff_covers` proves equal pattern sets
+for Empty E. `handoff_exclusion_cover` proves inclusion for arbitrary E;
+there is no equality claim when forward-to-backward handoff drops nonempty E.
+`flow_handoff` checks the corresponding abstract entry. The original endpoint
+keeps its normal handoff shape and exclusion. Backward-to-forward keeps its
+existing construction; no extra STAR erasure is selected for that direction.
 
-For an unreplaced marked row, handoff therefore keeps every represented
-marked location and its demand. A concrete STAR row remains DEMAND; it does
-not become a normal record.
+For a retained marked row, the direction's ordinary handoff keeps its
+witness demand. For a replaced row:
 
-For a replaced row:
-
-1. `star_specialization` supplies the same pair under the retained FLOW guide.
-2. `flow_guide_start` checks the original emitter on an actual T input.
-   The existing `prefix_guide_start` covers an input below that guide prefix.
-3. `star_summary_application` supplies equal instantiated geometry and layers.
-4. The existing `FlowBackedHandoff.startFromFlowGuide` and
+1. `general_specialization`, `star_exclusion_cover`, or
+   `any_prefix_cover_general` supplies the covered pair in retained FLOW.
+2. `flow_guide_start` checks the original emitter on an actual T input;
+   the existing `prefix_guide_start` handles a descendant input.
+3. `general_summary_application` supplies equal equal-shape instantiation;
+   inclusion cells retain the requested pair by ordinary restriction.
+4. Existing `FlowBackedHandoff.startFromFlowGuide` and
    `publishFromFlowGuide` certificates use original emission and whole-premise
-   restriction. The actual demand coverage and whole-premise gates still apply.
-5. The existing protected transport replay keeps separate concrete guides at
-   assignments, surviving cleaners and mark cycles. A plain removed diagonal
-   row has no such barrier.
+   restriction. Their coverage and whole-premise gates still apply.
+5. Protection keeps concrete guides at dependency barriers. It must be
+   computed and transported on the actual current derivation in every run.
 
-This is a relative original-AP replay argument for the selected replacement
-cell. It does not assert that arbitrary FLOW geometry can replace a marked
-dependency, or that an input can start a query without a demand. It does not
-use StrongQueries. The prior FLOW-backed dossier retains its closure and
-runtime-correspondence limits.
+A removed NORMAL marked row needs a retained NORMAL FLOW row, eligible for
+persistence under the same native record rules. A D row can use retained
+FLOW demand or a normal record. Native and reversed views must retain their
+actual direction, tails, exclusions, layers and protection. Do not treat a
+record with an unverified/missing annotation adapter as a removable barrier.
+No persistence eligibility is granted by the new STAR tail.
+
+This is a relative original-AP replay argument. It does not prove arbitrary
+multi-run Kotlin closure, a new query permission, or equality of old coarse
+candidate counts. StrongQueries is not used. Each query still needs its
+ordinary demand and whole-premise restriction.
 
 ## 7. Audit and implementation boundary
 
-Run the commands recorded in the [check receipt](lean/run1-correlated-concrete-initials-checks.json).
+Run the commands in the [receipt](lean/run1-correlated-concrete-initials-checks.json).
 The [audit](lean/run1-correlated-concrete-initials-audit.lean) checks every
-owned declaration and executes the finite controls. Historical modules are
-imported; their definitions and claims are not rewritten.
+owned declaration and executes finite controls. Historical modules remain
+unchanged. The general laws extend their stated local cells; they do not
+retroactively expand their old closure claims.
 
-The source inventory was checked against direct `Tail.ANY` sites and implicit
-DEMAND defaults. It separates executable facts, transport reconstruction,
-patterns and views. Implementation must also audit consumers of a new STAR
-header. The local model does not prove that the listed Kotlin sites implement
-the extension. No whole-engine termination, observational equivalence of the
-old coarse result, memory bound or speedup is claimed.
+The source inventory separates executable facts, reconstruction, patterns
+and read views. The revised spec also identifies phase-gated summary and
+protection owners which implementation must update. No analyzer source is
+changed. No whole-engine termination, memory bound or speedup is claimed.
