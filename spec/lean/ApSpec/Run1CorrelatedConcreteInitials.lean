@@ -331,6 +331,44 @@ theorem handoff_exclusion_cover (b p e m) (l : Loc)
   obtain ⟨hb,⟨s,hp,_⟩,hm⟩ := h
   exact ⟨hb,⟨s,hp,trivial⟩,hm⟩
 
+/-- Removing a covered relation preserves the union of represented pairs.
+    Identity/alias classification is deliberately not a premise. This is a
+    relation theorem, not equality of metadata-dependent alias callbacks. -/
+theorem remove_covered_relation (ei eo fi fo : PFact)
+    (covers : ∀ x y, den ei eo x y → den fi fo x y) (x y : Loc) :
+    (den fi fo x y ∨ den ei eo x y) ↔ den fi fo x y := by
+  constructor
+  · intro h
+    cases h with
+    | inl flow => exact flow
+    | inr marked => exact covers x y marked
+  · exact Or.inl
+
+theorem remove_covered_star (a b : Base) (p q : List Acc) (ki : Kind)
+    (ef et : Excl) (t : Mark) (xs : List Mark)
+    (less : ef.subB et = true) (allowed : memB t xs = false) (x y : Loc) :
+    (den (shaped a p ki .star) (shaped b q (.star ef) (.starEx xs)) x y ∨
+      den (shaped a p ki (.conc t)) (shaped b q (.star et) (.conc t)) x y) ↔
+    den (shaped a p ki .star) (shaped b q (.star ef) (.starEx xs)) x y :=
+  remove_covered_relation _ _ _ _
+    (fun x y h => star_exclusion_cover a b p q ki ef et t xs less allowed x y h) x y
+
+theorem remove_covered_any (a b : Base) (p q extra : List Acc) (ki : Kind)
+    (t : Mark) (xs : List Mark) (allowed : memB t xs = false) (x y : Loc) :
+    (den (shaped a p ki .star) (shaped b q .any (.starEx xs)) x y ∨
+      den (shaped a p ki (.conc t)) (shaped b (q ++ extra) .any (.conc t)) x y) ↔
+    den (shaped a p ki .star) (shaped b q .any (.starEx xs)) x y :=
+  remove_covered_relation _ _ _ _
+    (fun x y h => any_prefix_cover_general a b p q extra ki t xs allowed x y h) x y
+
+/-- The later-run alias guard has a DEMAND bypass. Pair coverage alone
+    therefore does not establish equal alias callback sets across layers. -/
+def laterAliasEnabled (noEffect demand : Bool) : Bool := demand || !noEffect
+
+theorem later_alias_layer_distinction :
+    laterAliasEnabled true false = false ∧ laterAliasEnabled true true = true := by
+  decide
+
 def controls : List Bool := [
   decide ((seed 1 [] 7).fact.kind = .star Excl.empty),
   decide ((seed 1 [] 7).demand = true),
@@ -348,7 +386,9 @@ def controls : List Bool := [
   decide (selectedStart (shaped 2 [10,20] .any (.conc 7)) =
     ⟨shaped 2 [10,20] .any (.conc 7),true⟩),
   decide (selectedStart (shaped 2 [10,20] .exact (.conc 7)) =
-    ⟨shaped 2 [10,20] .exact (.conc 7),false⟩)
+    ⟨shaped 2 [10,20] .exact (.conc 7),false⟩),
+  decide (laterAliasEnabled true false = false),
+  decide (laterAliasEnabled true true = true)
 ]
 
 end ApSpec.Run1CorrelatedConcreteInitials

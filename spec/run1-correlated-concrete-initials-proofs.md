@@ -116,8 +116,9 @@ OR with an incoming layer. A marked NORMAL row requires NORMAL FLOW. A marked
 DEMAND row can use NORMAL or DEMAND FLOW. No proof promotes a marked layer.
 The concrete seed continues to use its current DEMAND policy.
 
-`star_alias_class` proves equal raw identity/alias-effect classification for
-STAR FLOW and same-mark STAR TAINT, for arbitrary bases and paths.
+`star_alias_class` records equal raw identity/effect classification for
+STAR FLOW and same-mark STAR TAINT. It is a diagnostic law, not a premise
+of subsumption. `sameAliasEffectClass` is removed from admission.
 `longer_star_output` and `prefix_star_does_not_cover` reject the ANY prefix
 rule for STAR. Input suffix [] ends at different output locations.
 
@@ -128,6 +129,30 @@ model is independent of run number. Enabling its corresponding runtime hooks
 and preserving masks through native/reversed record views are new explicit
 implementation obligations. Missing metadata is not proof of an unprotected
 row. Unsupported cells keep the marked residual.
+
+`remove_covered_relation` proves that removing E from the union of F and E
+preserves every represented pair when E is covered by F. It has no identity
+or alias-class premise. `remove_covered_star` and `remove_covered_any` apply
+that theorem to the selected STAR/E and ANY-prefix cells.
+
+The explicit owner/initial test in spec section 5.1 states the scope in which
+these relations are compared. It is not a new producer, key or caller store.
+The concrete initial and unrestricted FLOW initial have equal base, path,
+tail and E; collection ownership establishes the method/run/view boundary.
+
+The old alias-class guard and the same-base ANY identity exception no longer
+limit those theorems. The original counterexample to classification equality
+remains valid, but classification equality is no longer a contract of relation
+replacement. This selects a change in auxiliary alias work.
+
+`later_alias_layer_distinction` checks the existing later-run DEMAND bypass:
+a normal identity skips aliases, while a demand identity enables them.
+Thus the pair-union proof does not imply identical alias callback/candidate
+sets. Required concrete alias-flow and demand coverage is still a runtime
+adapter obligation. The JVM plan has separate direct BIND_BACK and alias
+arms; the direct arm remains. No proof in this module establishes all
+metadata-dependent alias continuations, and no replacement guard is inferred
+from that proof limit. Spec section 5.2 records the precise boundary.
 
 ## 5. Statics
 

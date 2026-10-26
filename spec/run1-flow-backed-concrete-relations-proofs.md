@@ -15,6 +15,9 @@ path/exclusion/application cells. Its
 [updated dossier](run1-correlated-concrete-initials-proofs.md) states the new
 all-run protection and adapter obligations. The historical model and measured
 implementation described here keep their original scope.
+The extension removes the alias-class guard and proves covered-pair union
+preservation without it. Classification-equality examples below explain the
+historical restriction; they do not impose that guard on the new contract.
 
 ## 1. Claim, scope and proof order
 
