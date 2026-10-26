@@ -59,7 +59,7 @@ func (f Filters) matches(r *Result) bool {
 	if len(f.Paths) > 0 && !matchPath(r, f.Paths) {
 		return false
 	}
-	if len(f.Severities) > 0 && !matchSeverity(r, f.Severities) {
+	if len(f.Severities) > 0 && !MatchesSeverity(r, f.Severities) {
 		return false
 	}
 	if len(f.RuleIDs) > 0 && !matchRuleID(r, f.RuleIDs) {
@@ -92,7 +92,7 @@ func matchPath(r *Result, patterns []string) bool {
 
 // matchSeverity reports whether the result's level equals any supplied level
 // (case-insensitive). A nil/empty level is treated as "note".
-func matchSeverity(r *Result, levels []string) bool {
+func MatchesSeverity(r *Result, levels []string) bool {
 	actual := strings.ToLower(string(findingLevel(r)))
 	for _, l := range levels {
 		if strings.ToLower(strings.TrimSpace(l)) == actual {
@@ -118,10 +118,10 @@ func ruleLeaf(id string) string {
 // matchRuleID reports whether the result's rule-id matches any supplied value as
 // a full-id exact match, a leaf exact match, or a doublestar glob over the full id.
 func matchRuleID(r *Result, values []string) bool {
-	if r.RuleID == nil {
-		return false
-	}
-	full := *r.RuleID
+	return r.RuleID != nil && MatchesRuleID(*r.RuleID, values)
+}
+
+func MatchesRuleID(full string, values []string) bool {
 	leaf := ruleLeaf(full)
 	for _, v := range values {
 		// skip blank values (cobra StringArrayVar can yield them) so an empty
@@ -170,8 +170,12 @@ var validSeverities = map[string]bool{"error": true, "warning": true, "note": tr
 
 // ValidateSeverity returns an error if level is not a recognized SARIF level.
 func ValidateSeverity(level string) error {
+	return ValidateSeverityFor("--severity", level)
+}
+
+func ValidateSeverityFor(flag, level string) error {
 	if validSeverities[strings.ToLower(strings.TrimSpace(level))] {
 		return nil
 	}
-	return fmt.Errorf("invalid --severity %q: valid values are error, warning, note, none", level)
+	return fmt.Errorf("invalid %s %q: valid values are error, warning, note, none", flag, level)
 }
