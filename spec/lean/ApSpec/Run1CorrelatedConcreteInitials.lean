@@ -1,4 +1,6 @@
-/- Selected FULL run-1 extension. The existing AP pair denotation is unchanged.
+/- General correlated-concrete extension. The file name is retained for links.
+   There is no run, direction, or mark-representation guard in these laws.
+   The existing AP pair denotation is unchanged.
    We do not change the historical normalizer or claim Kotlin refinement. -/
 import ApSpec.FlowBackedAp
 import ApSpec.FlowBackedHandoff
@@ -9,7 +11,7 @@ open ApSpec ApSpec.Abs ApSpec.Run1FlowTaintCoverage
 @[simp] theorem empty_admits (s : List Acc) : Excl.empty.admits s = true := by
   cases s <;> rfl
 
-/-- New seed, under its existing concrete STAR original. The layer stays DEMAND. -/
+/-- Empty-exclusion specialization of the general concrete STAR seed. -/
 def seed (b : Base) (p : List Acc) (t : Mark) : AFact :=
   ⟨initial b p (.conc t), true⟩
 
@@ -134,7 +136,7 @@ theorem star_alias_class
     simp [Run1SummaryAliasAdmission.noMemoryEffect,ApSpec.FlowBackedAp.aliasCellLeaf,hz,hb,hp]
 
 /-- Existing geometry dispatch already separates copy from descent and may.
-    The new scoped normalizer must retain the first of these raw STAR results. -/
+    The revised normalizer retains the first of these raw STAR results. -/
 theorem same_prefix_geometry (q : List Acc) :
     belowCase (.star Excl.empty) (.star Excl.empty) [] q (.star Excl.empty) =
       some (q, .star Excl.empty, false) := rfl
@@ -148,8 +150,8 @@ theorem explicit_may_geometry (q : List Acc) :
       (fun (p,k,_) => (p,k)) = some (q,.any) := rfl
 
 /-- The existing geometry and mark kernels before the historical W2 erasure.
-    Production may use this result only after the selected owner legality test.
-    In particular this is not a replacement for the general AP normalizer. -/
+    Producers must preserve the suffix binding. Generic constructors and
+    normalization must not erase it from mark kind or run number alone. -/
 def rawApply (c : AFact) (fr to : PFact) : Res :=
   if Nat.beq c.fact.base fr.base then
     let geo := match relate fr.path c.fact.path with
@@ -229,6 +231,106 @@ theorem cleaner_root_cover (a b : Base) (p q s : List Acc) (t : Mark) :
     den (initial a p (.conc t)) ⟨b,q,.exact,.conc t⟩ (location a p s t) ⟨b,q,t⟩ := by
   exact ⟨rfl,rfl,rfl,rfl,trivial,s,[],rfl,by simp, empty_admits s,rfl⟩
 
+/-! General cells: arbitrary paths, exclusions, direction and runtime atoms.
+    The numeric mark is the selected atom, which can denote FULL or GROUP.
+    The producer remains responsible for deriving the stated suffix relation. -/
+
+def shaped (b : Base) (p : List Acc) (k : Kind) (m : MarkA) : PFact := ⟨b,p,k,m⟩
+
+def selectedStart (i : PFact) : AFact :=
+  match i.kind, i.mark with
+  | .star _, .conc _ => ⟨i,true⟩
+  | _, _ => startFact i
+
+theorem start_keeps_star_exclusion (b p e t) :
+    selectedStart (shaped b p (.star e) (.conc t)) =
+      ⟨shaped b p (.star e) (.conc t),true⟩ := rfl
+
+theorem excluded_seed_identity (b p e t) (s : List Acc) (admitted : e.admits s = true) :
+    den (shaped b p (.star e) (.conc t))
+      (selectedStart (shaped b p (.star e) (.conc t))).fact
+      (location b p s t) (location b p s t) := by
+  exact ⟨rfl,rfl,rfl,rfl,trivial,s,s,rfl,rfl,admitted,rfl,admitted⟩
+
+theorem selected_seed_inside_old (b p e t) (l0 l1 : Loc)
+    (h : den (shaped b p (.star e) (.conc t))
+      (selectedStart (shaped b p (.star e) (.conc t))).fact l0 l1) :
+    den (shaped b p (.star e) (.conc t))
+      (startFact (shaped b p (.star e) (.conc t))).fact l0 l1 := by
+  obtain ⟨b0,b1,m0,m1,pass,s,r,p0,p1,hi,_⟩ := h
+  exact ⟨b0,b1,m0,m1,pass,s,r,p0,p1,hi,trivial⟩
+
+/-- Specialization does not depend on any phase. Runtime eligibility separately
+    requires that both conceptual tails are representable and well formed. -/
+theorem general_specialization (a b : Base) (p q : List Acc) (ki ko : Kind)
+    (t : Mark) (xs : List Mark) (allowed : memB t xs = false) (l0 l1 : Loc) :
+    den (shaped a p ki (.conc t)) (shaped b q ko (.conc t)) l0 l1 ↔
+      l0.mark = t ∧ den (shaped a p ki .star) (shaped b q ko (.starEx xs)) l0 l1 := by
+  constructor
+  · rintro ⟨b0,b1,m0,m1,_,s,r,p0,p1,hi,hf⟩
+    refine ⟨m0,b0,b1,trivial,?_,?_,s,r,p0,p1,hi,hf⟩
+    · exact m1.trans m0.symm
+    · change memB l0.mark xs = false
+      rw [m0]
+      exact allowed
+  · rintro ⟨hm,b0,b1,_,m1,_,s,r,p0,p1,hi,hf⟩
+    exact ⟨b0,b1,hm,m1.trans hm,trivial,s,r,p0,p1,hi,hf⟩
+
+/-- A FLOW STAR output may exclude fewer first fields, never more. -/
+theorem star_exclusion_cover (a b : Base) (p q : List Acc) (ki : Kind)
+    (ef et : Excl) (t : Mark) (xs : List Mark)
+    (less : ef.subB et = true) (allowed : memB t xs = false) (l0 l1 : Loc)
+    (h : den (shaped a p ki (.conc t)) (shaped b q (.star et) (.conc t)) l0 l1) :
+    den (shaped a p ki .star) (shaped b q (.star ef) (.starEx xs)) l0 l1 := by
+  have h' := (general_specialization a b p q ki (.star et) t xs allowed l0 l1).mp h
+  obtain ⟨b0,b1,m0,m1,pass,s,r,p0,p1,hi,eq,admit⟩ := h'.2
+  exact ⟨b0,b1,m0,m1,pass,s,r,p0,p1,hi,eq,CoreAux.Excl.subB_sound less admit⟩
+
+/-- ANY prefix coverage also permits arbitrary, equal initial geometry. -/
+theorem any_prefix_cover_general (a b : Base) (p q extra : List Acc) (ki : Kind)
+    (t : Mark) (xs : List Mark) (allowed : memB t xs = false) (l0 l1 : Loc)
+    (h : den (shaped a p ki (.conc t)) (shaped b (q ++ extra) .any (.conc t)) l0 l1) :
+    den (shaped a p ki .star) (shaped b q .any (.starEx xs)) l0 l1 := by
+  obtain ⟨b0,b1,m0,m1,_,s,r,p0,p1,hi,_⟩ := h
+  refine ⟨b0,b1,trivial,?_,?_,s,extra ++ r,p0,?_,hi,trivial⟩
+  · exact m1.trans m0.symm
+  · change memB l0.mark xs = false
+    rw [m0]
+    exact allowed
+  · simpa [shaped,List.append_assoc] using p1
+
+/-- Both forward and backward application use the same selected AP kernel. -/
+theorem general_summary_application (c : AFact) (a b : Base) (p q : List Acc)
+    (ki ko : Kind) (t : Mark) (xs : List Mark) (layer : Bool)
+    (actual : c.fact.mark = .conc t) (allowed : memB t xs = false) :
+    rawSummary c (shaped a p ki (.conc t)) ⟨shaped b q ko (.conc t),layer⟩ =
+      rawSummary c (shaped a p ki .star) ⟨shaped b q ko (.starEx xs),layer⟩ := by
+  simp [rawSummary,rawApply,shaped,actual,markGate,markComp,allowed]
+
+/-- Reversing a diagonal STAR relation keeps the bound suffix and swaps E. -/
+theorem star_reverse (a b : Base) (p q : List Acc) (ei eo : Excl)
+    (t : Mark) (l0 l1 : Loc)
+    (h : den (shaped a p (.star ei) (.conc t)) (shaped b q (.star eo) (.conc t)) l0 l1) :
+    den (shaped b q (.star eo) (.conc t)) (shaped a p (.star ei) (.conc t)) l1 l0 := by
+  obtain ⟨b0,b1,m0,m1,_,s,r,p0,p1,hi,eq,hf⟩ := h
+  subst r
+  exact ⟨b1,b0,m1,m0,trivial,s,s,p1,p0,hf,rfl,hi⟩
+
+def layerCovers (flowDemand markedDemand : Bool) : Prop :=
+  flowDemand = false ∨ markedDemand = true
+
+theorem layer_composition (incoming f e : Bool) (strong : layerCovers f e) :
+    layerCovers (incoming || f) (incoming || e) := by
+  cases incoming <;> cases f <;> cases e <;> simp_all [layerCovers]
+
+/-- Erasing E at a forward-to-backward pattern boundary is a cover, not
+    equality of location sets when E is nonempty. -/
+theorem handoff_exclusion_cover (b p e m) (l : Loc)
+    (h : (shaped b p (.star e) m).covers l) :
+    (handoffEntry (shaped b p (.star e) m)).covers l := by
+  obtain ⟨hb,⟨s,hp,_⟩,hm⟩ := h
+  exact ⟨hb,⟨s,hp,trivial⟩,hm⟩
+
 def controls : List Bool := [
   decide ((seed 1 [] 7).fact.kind = .star Excl.empty),
   decide ((seed 1 [] 7).demand = true),
@@ -238,7 +340,15 @@ def controls : List Bool := [
   decide (canReplace true false true = false),
   decide (dropPrefix [10] [10,20] = some [20]),
   decide (trace [(1,[]),(2,[10]),(3,[20])] [30] 7 =
-    [⟨1,[30],7⟩,⟨2,[10,30],7⟩,⟨3,[20,30],7⟩])
+    [⟨1,[30],7⟩,⟨2,[10,30],7⟩,⟨3,[20,30],7⟩]),
+  decide (selectedStart (shaped 1 [10] (.star (.set [20])) (.conc 7)) =
+    ⟨shaped 1 [10] (.star (.set [20])) (.conc 7),true⟩),
+  decide ((Excl.set [10]).subB (.set [10,20]) = true),
+  decide ((Excl.set [10,20]).subB (.set [10]) = false),
+  decide (selectedStart (shaped 2 [10,20] .any (.conc 7)) =
+    ⟨shaped 2 [10,20] .any (.conc 7),true⟩),
+  decide (selectedStart (shaped 2 [10,20] .exact (.conc 7)) =
+    ⟨shaped 2 [10,20] .exact (.conc 7),false⟩)
 ]
 
 end ApSpec.Run1CorrelatedConcreteInitials

@@ -1,154 +1,184 @@
-# Correlated concrete initials in run-1
+# Correlated concrete initials and general FLOW subsumption
 
 Date: 26 October 2026. Status: **proposed; analyzer code is unchanged**.
 Language: ASD-STE100 Simplified Technical English. Technical terms are defined below.
+The file name is retained for existing links. The contract applies to **all runs**.
 
 Read this spec with its [proof dossier](run1-correlated-concrete-initials-proofs.md).
-The baseline is `f4954c26403bc7ecb8b64018f8aabdd479fd022d`, core tree
+The runtime baseline is `f4954c26403bc7ecb8b64018f8aabdd479fd022d`, core tree
 `e3ede1a36d3b04d79a23cc93285f385ecd968dbf`. The latest referenced Thingsboard
 measurement has **run-1 COMPLETE; run-2 OOM**, including the 16 GiB experiment.
-This proposal has no new project measurement. See the
+This revision has no new project measurement. See the
 [run-1 census](../docs/reports/bidirectional-run1-protection-coverage-20261026.md)
 and [16 GiB report](../docs/reports/bidirectional-run2-16g-memory-20261026.md).
 
 ## 1. Selected changes
 
-For FULL run-1, start a concrete STAR initial with the same STAR conclusion.
-Keep the DEMAND layer. Preserve that tail through operations which preserve
-the initial suffix. Add the equal-output-path STAR cell to summary subsumption.
+A concrete STAR initial starts with the same STAR conclusion, in every run.
+Preserve that tail through operations which preserve the initial suffix.
+Apply FLOW subsumption in every run, forward or backward, at the existing
+summary admission points. The operation has no run-number or mark-mode gate.
 
 ```text
-Current: (x.*, T) -> (x.[any], T), DEMAND
-New:     (x.*, T) -> (x.*, T),     DEMAND
+Current: (x.*/E, T) -> (x.[any], T),   DEMAND
+New:     (x.*/E, T) -> (x.*/E, T),     DEMAND
 ```
 
-**This is a semantic change.** It removes an initial approximation. It also
-changes the legal conclusion grammar. It is not a factory-only optimization.
+For run-1, E is Empty. Later runs can have nonempty E. FULL marks and GROUP
+atoms use the same AP operation. This does not introduce GROUP into a run
+which currently uses FULL.
+
+**The seed change is semantic.** It removes an initial approximation and
+changes the legal conclusion grammar. General summary replacement also changes
+which marked demands remain. These are selected changes, not factory details.
 
 | Mechanism | Current | New | Affected contract |
 | --- | --- | --- | --- |
-| Concrete initial result | Independent output suffix, ANY | Same input/output suffix, STAR | AP start, W2 |
-| Same-suffix transport | Concrete STAR is erased or rejected | Legal concrete STAR is retained | Normalization, transfer, summaries |
-| Summary replacement | Proved ANY/ANY cell | Existing ANY cell plus equal-path STAR/STAR cell | FLOW coverage, application, handoff |
-| Typed representation | No concrete STAR conclusion | A distinct concrete STAR header | Constructors, keys, decode, readers |
+| Concrete initial result | Independent output suffix, ANY | Same input/output suffix, STAR; retain E | AP start, W2 |
+| Same-suffix transport | Concrete STAR is erased or rejected | Retain derived STAR in any run and direction | Normalization, transfer, summaries |
+| Summary replacement | Enabled for FULL run-1, ANY output | General mechanism in every run; ANY prefix and STAR equal-path cells | Coverage, application, handoff, persistence |
+| Dependency protection | Selected producers enable it for FULL run-1 | Apply the same non-subsumable contract wherever replacement is enabled | Rule/cleaner/cycle flags, record views |
+| Typed representation | No concrete STAR conclusion | Distinct concrete STAR header, with the ordinary phase-specific E | Constructors, keys, decode, readers |
+
+The earlier `mode.run1 && mode.markMode == FULL` tests were scope limits in
+this proposal. They were not semantic requirements. Remove them from STAR
+legality, initial emission and the subsumption mechanism.
 
 The following contracts stay unchanged:
 
-- FULL is the default run-1 mode. GROUP mode keeps its current behavior.
-- Public run-1 field limit is 1. Run-2 and later direction/limit rules stay unchanged.
-- Requests select the same initials. A request is mark-only. It has no field
-  exclusion. Concrete inputs do not relay requests.
-- Initial field paths, marks and layers do not change. There is no run-1 ANY
-  initial. ZERO and exact global class markers keep their current seeds.
-- Every run-1 field exclusion E is Empty. Complete field overwrites kill;
-  disjoint fields survive. A residual that needs an exclusion update moves
-  to DEMAND and keeps its tail and Empty E.
-- Rule conditions, fixed-target assignments, sources, sinks, all contributing
-  origins, cleaners and non-subsumable flags keep their current contracts.
-- Static activation, the three request sets, writer selection, static summary
-  erasure and the universal static DEMAND fallback stay unchanged.
-- FLOW priority, barriers, alias-effect classification, normal record
-  persistence and original demand emission/restriction stay unchanged.
+- FULL is the default run-1 mode. Each run keeps its current mark domain.
+  GROUP selected-mark cleaners still cannot kill the whole group.
+- Run-1 uses field limit 1. Later direction and field-limit rules stay unchanged.
+- Requests and demands select the same initials. A run-1 request is mark-only,
+  has no E, and is not relayed by a concrete input.
+- Initial field paths, marks and seed layers do not change. There is no run-1
+  ANY initial. Later ANY/EXACT/must initials keep their current start rows.
+  ZERO and exact global class markers keep their current seeds.
+- Run-1 E is Empty. Full overwrite kills and disjoint preservation remain.
+  An exclusion-needing run-1 residual demotes and keeps its tail and Empty E.
+  Later runs retain the existing strong field operations and E rules.
+- Rule conditions, fixed-target actions, sources, sinks, all contributing
+  run-1 origins and later ND rules keep their current transfer contracts.
+- The run-1 static pool, three request sets, activation, summary erasure and
+  implicit static demand remain. Later calls require the actual static premise.
+- Barriers, FLOW priority, alias-effect classification, normal record eligibility
+  and original demand emission/restriction remain. This proposal does not
+  extend the run-1 scheduling policy to other runs.
 
 There is no new grounding support, actual-input validation, dependency graph,
 mark token or rule specialization. StrongQueries is not part of the proof.
 
-This spec overrides the concrete-STAR exclusion in [AP W2](ap.md#23-well-formedness-rules),
-AP start/normalization, and the ANY-only limit in
-[FLOW-backed relations](run1-flow-backed-concrete-relations.md), only in the
-FULL run-1 cells defined here. Historical Lean theorems keep their old scope.
-In particular, an old W2 proof does not prove the new conclusion invariant.
+This spec replaces the concrete-STAR ban in [AP W2](ap.md#23-well-formedness-rules)
+and the run-1/FULL admission limit in
+[FLOW-backed relations](run1-flow-backed-concrete-relations.md).
+The proved replacement shapes are stated in section 5. Availability in every
+run does not authorize every possible shape. Historical W2 and backward
+no-concrete-STAR theorems keep their old assumptions; they do not prove this
+extended grammar. The backward ban on must-taint stays unchanged.
 
 ## 2. Meaning and legal shapes
 
-`T` is one full mark. `F` is an abstract FLOW mark. `N` is NORMAL and `D` is
-DEMAND. `p`, `q` and `s` are sequences of field accessors. `$` is EXACT.
+`T` and `U` are selected runtime mark atoms. In FULL mode an atom is a full
+mark. In GROUP mode it is a group. `F` is the abstract FLOW mark. `N` is NORMAL
+and `D` is DEMAND. `p`, `q` and `s` are field paths. `$` is EXACT.
 `[any]` is a may tail. `[any-taint]` is the existing must tail.
-These three tails and STAR are different values.
+These tails and STAR are different values.
 
 ```text
-I = (x.p.*, T)
-I -> (y.q.*, T)       means x.p.s/T -> y.q.s/T
-I -> (y.q.[any], T)   permits x.p.s/T -> y.q.r/T for independent s and r
+I = (x.p.*/Ei, T)
+I -> (y.q.*/Eo, T)   means x.p.s/T -> y.q.s/T, for s admitted by Ei and Eo
+I -> (y.q.[any], T)  permits x.p.s/T -> y.q.r/T, for independent s and r
 ```
 
-STAR binds the output suffix to the suffix of the **original initial**.
-It does not assert that all fields carry T. An actual input must still supply
-the mark. Emitting a mark request does not prove that such an input exists.
+**A STAR conclusion uses the suffix bound by its original relation.** A seed
+or a correlation-preserving transfer must establish that property. That is
+the legality condition. It does not depend on run, direction, mark mode,
+Empty E, or a mandatory DEMAND layer.
 
-The new concrete STAR conclusion is legal only when all these tests pass:
+A concrete mark selects which mark the row carries. STAR selects how its
+field suffix relates to the original. These are separate properties.
+Same input/output mark is required for FLOW subsumption, not for the meaning
+of a STAR tail. This spec does not add STAR targets to source/GEN rules.
+Their existing fixed targets still control their outputs.
 
-```kotlin
-mode.run1 && mode.markMode == FULL
-original is InitialAp && !original.isZero
-original.tail == STAR && original.exclusion.isEmpty()
-original.mark == Concrete(T) && !T.isGroup
-conclusion.mark == Concrete(T)
-conclusion.exclusion.isEmpty() && conclusion.layer == DEMAND
-// The seed or the selected transfer preserves the original suffix.
-```
+Do not invent a suffix binder for ZERO or an ND premise set. Keep their
+current fixed-target results. Do not treat an independent ANY value or a
+must-taint value as STAR. Ordinary constructors encode the supplied kind;
+transfer owns the proof that a STAR kind is appropriate. No new support label
+is needed. The original relation already identifies the binder.
 
-The grammar alone does not prove the last condition. A known copy/summary
-operation must establish it. Do not test only equal marks and output paths.
-Do not add a runtime support label. The original already owns the suffix.
+An actual input must still supply T. A concrete STAR seed is not a source
+and does not assert that every descendant has T. For a CM check, STAR is not
+a must-taint observation. Keep the current overlap/mark test and layer rule.
 
-The existing initial grammar applies. A non-static nonexact initial has a
-base and an empty concrete path. A static nonexact initial names class and
-field, `S.C.f.*`. A bare class mark remains EXACT, `S.C.$/T`. A whole-static
-root is not a new concrete initial. Do not emit a nonexact class-wide mark.
-
-Concrete STAR under ZERO, an ND premise, a different initial mark, an EXACT
-initial, or another run is outside this extension. Exact and must sources
-do not acquire STAR. In particular, STAR is not another name for must-taint.
+Each run retains its existing initial grammar. In run-1 a non-static initial
+has an empty concrete path; a nonexact static initial names `S.C.f.*`.
+An exact global class marker stays `S.C.$/T`. Later runs can use their existing
+deeper paths and exclusions. Do not add broad concrete root/class statics.
 
 ## 3. Initial emission
 
-Apply the change after the current request/input match has selected an initial.
-Do not change which request matches or widen the actual input at this step.
+After the current request/input/demand match selects an initial, start its
+identity relation. A STAR initial is not widened because its mark is concrete.
 
 ```kotlin
-fun start(initial: InitialAp, mode: ApMode): Facts = when {
-    mode.run1 && mode.markMode == FULL &&
-        !initial.isZero && initial.tail == STAR && initial.mark is Concrete -> {
-        checkRun1Initial(initial)
-        taintTree(initial.base, DEMAND, leafAt(initial.path, initial.mark),
-            exclusion = Empty, nonExactTail = STAR, nonSubsumable = false)
+fun start(initial: InitialAp): Facts {
+    if (initial.isZero) return Reach.NORMAL
+    return when (initial.tail) {
+        STAR -> when (val mark = initial.mark) {
+            is AbstractMark -> flowTree(initial.base, NORMAL,
+                leafAt(initial.path), initial.exclusion, mark.exclusion,
+                tail = STAR)
+            is ConcreteMark -> taintTree(initial.base, DEMAND,
+                leafAt(initial.path, mark), initial.exclusion,
+                nonExactTail = STAR, nonSubsumable = false)
+        }
+        else -> currentStart(initial) // ANY, EXACT and must rows are unchanged.
     }
-    else -> currentStart(initial)
 }
 ```
 
-`nonExactTail` is pseudocode for a typed header. It must not use the current
-default `DEMAND => ANY`. An initial answer is not a rule assignment. It does
-not set the non-subsumable flag.
+This function needs no mode parameter. The caller already validates the
+initial and selects its runtime atom. A wrapper can still accept a mode to
+project the atom; it must not use that mode to widen the tail. Run-1 validation
+still requires Empty E and its bounded grammar. Later validation permits its ordinary nonempty E.
 
-Use the same start contract when a static point selects its canonical concrete
-STAR original. Keep the current static point and call stage. Do not replay
-the method from entry. Raw pool membership remains mark availability; it does
-not carry a writer's suffix into a reader.
+The concrete STAR seed stays DEMAND, as before. An identity alone does not
+change the current seed-layer policy. Subsequent transfers preserve their
+computed layer; they do not infer a layer from the tail. Do not set the
+non-subsumable flag on an identity seed.
+
+Use the same start operation when a run-1 static point selects a concrete
+STAR original. Keep its point and call stage. Do not replay the method from
+entry. A raw pool reply has no bound writer/reader suffix; it remains an
+independent value until the existing procedure selects the static original.
 
 ## 4. Transfer and deliberate loss of correlation
 
-Use the current AP geometry cases. Replace the final W2 erasure only when the
-new owner and transfer conditions hold. A change to layer alone does not
-change a field tail.
+Use the current AP geometry and mark kernels in every direction. Remove the
+mark-only W2 erasure after a legal STAR result. A layer change alone does not
+change a field tail. Let `L` be the layer computed by the current operation.
 
-| Operation on a legal concrete STAR row | Result |
+| Operation on a concrete STAR row | Result |
 | --- | --- |
-| Identity or copy at the tracked prefix | STAR, same original suffix, D |
-| Input is below a copy premise | Append the known path remainder; keep STAR and D |
-| Read premise is strictly below the tracked prefix | ANY/D, unless the target is EXACT |
+| Identity or copy at the tracked prefix | STAR, same suffix, L |
+| Input below a copy premise | Append the known remainder; keep STAR and L |
+| Read premise strictly below the tracked prefix | ANY/D, unless the target is EXACT |
 | Explicit may target | ANY/D |
 | Field-limit overflow | ANY/D at the retained prefix |
 | Ordinary call bindings and diagonal STAR summary | Compose the suffix; keep STAR if the actual input is STAR |
-| Summary applied to an actual ANY or EXACT value | Keep the computed ANY or EXACT result; do not recover STAR |
-| Complete overwrite | Kill, as now |
+| Summary on an actual ANY or EXACT value | Keep the computed ANY or EXACT result; do not recover STAR |
+| Full overwrite | Kill, as now |
 | Disjoint write/cleaner/filter | Keep the original tail |
-| Field write needs a residual exclusion | Keep STAR, Empty E and D; do not introduce ANY only for demotion |
-| Source, fixed rule target, ND output | Use its existing EXACT, ANY or must target |
+| Field transfer needs an exclusion | Use the current run's E/layer policy; preserve a representable STAR suffix |
+| Source, fixed rule target, ND output | Use the existing EXACT, ANY or must target |
 
-For example, a read below the tracked prefix consumes part of the unknown
-suffix. The fixed original cannot rebind that suffix:
+In run-1, an exclusion-needing residual uses Empty E and D. In later runs,
+retain the ordinary exclusion when the current strong transfer produces it.
+Do not apply the run-1 E-free cover to later runs. Do not change a selected
+cleaner's spatial cases or the current partial-cleaning approximation.
+
+A read below the tracked prefix consumes part of the unknown suffix:
 
 ```java
 Object read(Object p) { return p.f; }
@@ -173,88 +203,108 @@ After:  p.*/T -> p.*/T     -> b.value.*/T     -> return.value.*/T, D
 FLOW:   p.*/F -> return.value.*/F, N or D
 ```
 
-The new marked result has the same suffix as the FLOW result. Field-limit
-overflow can still change both results to ANY. This example does not claim
-that an arbitrary setter or library method has a precise copy summary.
+Field-limit overflow can still change either result to ANY. This example
+assumes a precise copy summary for any setter/library operation it uses.
 
-### 4.1 Cleaners and rule actions
+### 4.1 Cleaners, rules and protection
 
-A selected FULL cleaner still requests T on FLOW, excludes it from FLOW and
-uses the current spatial rows on concrete T. A surviving selected-T result
-keeps the existing non-subsumable flag. RemoveAllMarks can kill.
+FULL selected cleaners keep their current requests, exclusions and kills.
+GROUP selected cleaners request the group and retain it, as now.
+RemoveAllMarks can kill. A surviving selected-mark result keeps the existing
+non-subsumable protection wherever summary replacement can consume it.
 
-Handle concrete STAR explicitly in the spatial cleaner. In particular:
+Handle STAR explicitly in the spatial cleaner. For a below-only cleaner at
+the tracked root, retain the current root residual:
 
 ```text
 Input:  I -> x.*/T
 Action: remove T strictly below x
-Output: I -> x.$/T, D, non-subsumable
+Output: I -> x.$/T, same surviving layer, non-subsumable
 ```
 
-The root can survive. Do not retain the entire STAR row for this case merely
-because the current `tail.isAny` helper excludes STAR. EXACT is an independent
-root result. For other partial cleans use the current E-free residual policy.
-Do not add a strong field validation step or change GROUP cleaners.
+Do not retain the whole STAR row because `tail.isAny` excludes STAR.
+For other partial cleaners keep the current spatial approximation and E rule.
+A fixed-position assignment uses its existing target. It does not inherit
+the trigger's suffix. This includes same-T/cross-mark assignments, sink end
+facts and ND results. All-ZERO cube tests keep their current behavior.
 
-A CM check uses the current overlap/mark test. A concrete STAR observation
-is not a must-taint observation. It stays DEMAND. Do not treat a hypothetical
-STAR initial as a source or as proof that all of its fields carry T.
+The existing protection rules now apply in every run and selected mark domain:
+assignment compares the assigned atom to the triggering conclusion atom;
+local/call cycles protect a restored original atom; summary protection is
+sticky; identical plain/protected rows merge into the protected row.
+For ND, consider every contributing input and keep its current premise set.
+Do not change ND into unary edges in later runs.
 
-An assignment to a fixed position uses its current target. It does not inherit
-the triggering row's suffix. The same rule applies to a same-T assignment,
-a cross-mark assignment, sink end facts and an all-origin ND result.
-All-ZERO cube tests and ZERO generation keep their current behavior.
+This extension needs no member enumeration. A GROUP atom is compared as one
+atom. Protecting a same-group action can be conservative; it does not let the
+cleaner kill the group or restore its full members.
 
 ### 4.2 Statics and suffix ownership
 
-ZERO satisfies a static premise only during run-1. It activates the current
-static reader procedure. It does not supply a suffix itself.
-
-The current code retains a static original: the FLOW path resumes under the
-published static initial; the concrete path selects a canonical static
-initial in `applyStaticInput`/`concreteInitial`. Keep this contract:
+ZERO can activate a static premise only during run-1. It does not supply a
+suffix. The existing procedure retains or selects a static original:
 
 ```text
-I(S.C.f.*/T) -> local.*/T, D    // Legal if the read preserves that suffix.
-I(S.C.f.*/T) -> return.*/T, D   // Legal through the same conditional copy.
-ZERO         -> return.*/T     // Not authorized by a static pool reply.
+I(S.C.f.*/T) -> local.*/T, D    // Legal for a same-suffix read.
+I(S.C.f.*/T) -> return.*/T, D   // Legal through a conditional copy.
+ZERO         -> return.*/T     // A pool reply does not authorize this.
 ```
 
-Pool supplies from different writers have independent suffixes. Keep the
-current region/mark union. Do not equate a writer suffix with a reader suffix.
-A raw pool reply or a join which no longer retains the selected original uses
-the existing ANY/EXACT representation. If an adapter actually removes the
-binder, it must emit an independent ANY/D result. It must not emit STAR under
-ZERO or another original. This is a boundary condition, not a new static route.
+Different writers have independent suffixes. Keep the current pool union.
+A raw pool value uses ANY/EXACT. Installing the selected canonical STAR
+initial uses the identity seed. A saved ANY image stays ANY.
+No new S-S summaries are stored or sent in run-1. Later calls require the
+actual static fact and use ordinary summary application and field behavior.
 
-No new `S -> S` summaries are stored or sent to callers. Static-to-static
-summary erasure and implicit later-run guidance remain in force.
+## 5. General FLOW replacement
 
-## 5. FLOW replacement
+Enable the mechanism in **all runs and directions**, for each current mark
+domain. It compares relations in one current view, not a forward row against
+an unreversed backward row, or unrelated native records from different runs.
+Do not synthesize extra FLOW queries to make a counterpart exist. If there
+is no matching FLOW row, keep the marked row.
 
-Changing the seed does not make the current ANY-only matcher accept STAR.
-Add a separate STAR cell at the existing summary admission points.
-Do not remove a concrete seed or skip its local checks because FLOW exists.
-Actual T processing is still needed for CM, sources, cleaners and sinks.
+A candidate has a singleton, non-ZERO initial. Its FLOW counterpart has the
+same complete initial shape, including tail and E, with the mark replaced by
+F. That counterpart must be well formed. STAR and ANY initial tails can use
+this test. EXACT and must initials have no legal abstract-mark counterpart;
+keep their marked rows. ND rows also stay outside this replacement cell.
 
 ```kotlin
-fun coversStar(e: MarkedLeaf, f: FlowLeaf): Boolean =
+fun covers(e: MarkedLeaf, f: FlowLeaf): Boolean =
     sameSummaryScopeAndInitialGeometry(e, f) &&
-    e.initial.tail == STAR && e.inputMark == e.outputMark &&
-    e.tail == STAR && f.tail == STAR &&
-    e.finalBase == f.finalBase && e.finalPath == f.finalPath &&
-    e.fieldExclusion.isEmpty() && f.fieldExclusion.isEmpty() &&
+    e.inputMark == e.outputMark && !e.nonSubsumable &&
     e.outputMark !in f.markExclusion &&
-    !e.nonSubsumable &&
     (f.layer == NORMAL || e.layer == DEMAND) &&
-    sameAliasEffectClass(e, f)
+    sameAliasEffectClass(e, f) &&
+    when {
+        e.tail == STAR && f.tail == STAR ->
+            e.finalBase == f.finalBase && e.finalPath == f.finalPath &&
+            f.fieldExclusion.isSubsetOf(e.fieldExclusion)
+        e.tail == ANY && f.tail == ANY ->
+            e.finalBase == f.finalBase && f.finalPath.isPrefixOf(e.finalPath)
+        else -> false
+    }
 ```
 
-The FLOW tree must have an **output leaf at that exact path**. A trie node
-without an output leaf is not enough. Test each output path and mark. Keep
-method, endpoint, exit kind, call stage and the existing scope guards.
+There is no `run1`, `FULL`, forward-only or Empty-E admission test.
+For a FLOW tree, one actual output leaf must satisfy all gates for each
+marked output path/atom. A branch node without an output leaf is not enough.
+Keep method/context, direction/view, endpoint, exit kind, call stage and the
+existing alias-effect class in the comparison scope.
 
-For STAR, a proper path prefix is insufficient:
+For STAR, equal output paths and sufficient suffix admission are required.
+FLOW can exclude fewer first fields than TAINT, never more. Example:
+
+```text
+Same initial: x.p.*/{a}/T, or its FLOW counterpart
+FLOW output:  y.q.*/{b}/F
+TAINT output: y.q.*/{b,c}/T
+Result: covered, if the other gates pass. Every TAINT suffix passes FLOW.
+Reverse the two output exclusions: not covered.
+```
+
+A proper output path prefix is insufficient for STAR:
 
 ```text
 FLOW:  p.*   -> return.f.*
@@ -263,46 +313,59 @@ Input suffix []: FLOW ends at return.f; TAINT ends at return.f.g.
 Result: not covered.
 ```
 
-Keep the existing prefix test for ANY/ANY. Do not add cross-tail coverage,
-EXACT/must coverage, cross-mark coverage or protected-result coverage here.
-Do not turn an existing ANY row into STAR because a matching FLOW row arrives.
+Keep prefix containment for ANY/ANY. Keep the current same-base identity
+exception in the ANY alias-effect classifier. Equal-path STAR identities
+have the same FLOW and TAINT effect class. Do not add cross-tail, EXACT/must,
+cross-mark or protected-result replacement here. Do not recover STAR from
+ANY because a FLOW row arrives.
 
-Use the current non-subsumable rules: assignment checks the triggering
-conclusion mark; local and call cycles are protected; protection from a
-summary is sticky; identical plain/protected rows merge into the protected row.
-For same-path STAR identities, the current FLOW and TAINT alias-effect tests
-agree. No global change to `hasNoMemoryEffect` is required.
+Apply semantic replacement at the current raw/selected/published summary
+admission points. Typed local storage can share geometry, but it must still
+process actual T checks and all producer hooks. FLOW alone does not fire CM,
+source or sink observations. Removing an unprocessed marked seed is invalid.
 
-The retained FLOW row replaces a covered, unprotected STAR marked summary
-and its redundant T demand. Keep the current concrete processing and producer
-hooks before summary normalization. Do not remove a static supply, a sink
-occurrence or a rule-generated demand as a side effect of summary compression.
+The retained FLOW row replaces the eligible marked row. A DEMAND marked row
+then needs no duplicate T demand. A NORMAL marked row can be replaced only
+by NORMAL FLOW; retain the FLOW normal record under the existing persistence
+rules. Do not upgrade a layer or demote a normal relation to justify deletion.
 
-## 6. Handoff to run-2
+Carry the same protection through ordinary summaries and native/reversed
+record views before they enter an enabled admission store. A view which
+cannot preserve its mark/tail/flag cell must retain the marked residual.
+Do not enable a bypass with missing protection. This is extension of the
+existing Boolean metadata, not a new dependency or support mechanism.
 
-Keep the current handoff operation. Read a retained forward STAR conclusion
-as an ANY backward entry pattern. Keep its full mark T:
+## 6. Handoff between runs
+
+Keep the existing direction-specific handoff. Forward-to-backward converts
+a forward STAR conclusion into an ANY entry pattern; keep T:
 
 ```text
-Forward marked demand: I(x.*/T) -> y.q.*/T, D
-Backward guide:         entry y.q.[any]/T; exit x.*/T
+Forward marked demand: I(x.*/Ei/T) -> y.q.*/Eo/T, D
+Backward guide:         entry y.q.[any]/T; exit x.*/Ei/T
 ```
 
-This conversion applies to **patterns**, not to the run-1 stored conclusion.
-A pattern has no bound input/output suffix. Its location set is unchanged.
-No concrete STAR executable conclusion is added to run-2 or later runs.
-Concrete STAR D rows do not become normal records.
+For Empty Eo this has the same pattern location set. For nonempty Eo the
+entry pattern is a conservative cover because handoff drops Eo. It still
+retains each marked witness. The other endpoint keeps its ordinary shape.
+Must-taint handoff and the existing mark-domain interpretation stay unchanged.
 
-If the marked row is replaced, the corresponding FLOW record or FLOW demand
-remains. The original AP emitter can start its FLOW query on an actual marked
-input. The same-mark, unprotected transport has the same instantiated result.
-Original whole-premise restriction still applies. The existing assignment,
-cleaner and cycle protection keeps the separate marked guides at dependency
-barriers. No actual-input-only query or StrongQueries permission is added.
+Backward-to-forward keeps its current demand endpoint construction. Do not
+add the forward-to-backward erasure there. Both directions can now propagate
+concrete STAR when an admitted initial and transfer preserve its suffix.
+An unchanged ANY initial still starts ANY. This does not make all queries STAR.
 
-The proof claim is retention of concrete witnesses and ordinary demand
-coverage. It is not equality of the old coarse candidates. The new seed is
-strictly smaller than the old seed. Run-2 may therefore see fewer false candidates.
+If a row is replaced, the retained FLOW record or FLOW demand supplies the
+same-mark transport. Original AP emission and whole-premise restriction still
+apply. Protection keeps separate concrete guides at assignments, surviving
+cleaners and cycles. Each run recomputes these flags on its own derivations;
+ordinary cross-run demand patterns do not gain a new support label.
+No actual-input-only query or StrongQueries permission is added.
+
+A concrete STAR seed remains D. Its tail does not grant normal-record
+eligibility. Other results use the existing layer rule and record check.
+The proof claim is witness/demand coverage, not equality of the old coarse
+candidates. The new seed is strictly smaller than the old one.
 
 ## 7. Inventory of ANY construction
 
@@ -318,8 +381,8 @@ These are separate cases.
 
 | Source and operation | Why ANY exists now | Rule after this proposal |
 | --- | --- | --- |
-| `B/ap/Demand.kt: initialFacts`; `B/ap/Reference.kt: startFact` | Concrete STAR seed is projected to ANY | New FULL run-1 seed retains STAR; other run/mode cells stay as now |
-| `B/ap/Reference.kt: normalize`; `B/ap/ApManager.kt: factsOf` | W2 erases concrete STAR; the typed factory calls this normalizer | Retain only legal correlated FULL run-1 results. General W2 remains outside this extension |
+| `B/ap/Demand.kt: initialFacts`; `B/ap/Reference.kt: startFact` | Concrete STAR seed is projected to ANY | Every concrete STAR seed retains STAR and its E, in every run and mark mode |
+| `B/ap/Reference.kt: normalize`; `B/ap/ApManager.kt: factsOf` | W2 erases concrete STAR; the typed factory calls this normalizer | Retain derived concrete STAR in every run. Remove the mark-only W2 erasure; do not infer a suffix binder from a raw region |
 | `B/ap/EdgeApplication.kt: flow`, ancestor hit; `Reference.kt: above` | A read/binding/summary premise consumes an unknown suffix prefix | ANY/D unless target is EXACT; unchanged |
 | `B/ap/EdgeApplication.kt: taint`, ancestor hit | Same loss for concrete may or new STAR input | Keep ANY/D for STAR/may; current must-specific result stays separate |
 | `B/ap/EdgeApplication.kt: taint`, at a STAR target | A non-must concrete leaf is always emitted as ANY today | Keep STAR for legal same-suffix input; retain ANY for ANY input |
@@ -327,7 +390,7 @@ These are separate cases.
 | `B/ap/Limit.kt: limitFacts/FieldLimitCut`; `Reference.kt: limit` | A concrete path exceeds the field budget; folded leaves use `LeafAlgebra.asAny` | Cut branch becomes ANY/D with Empty E. The kept branch retains its own tail |
 | `J/interp/JIRRuleForms.kt: RulePos.star`, `CopyAllMarks`; `RulePos.fact`, `CopyMark` | A final AnyField pass target is may, not must | Keep the explicit ANY target. Do not reinterpret it as STAR |
 | `B/engine/RunMethodLocalServices.kt: seedFact`; `B/ap/ApOps.kt: targetTree` | A backward sink seed with an AnyField requirement becomes an executable concrete ANY value | Keep ANY/D. The original sink pattern and the SEED field cut still apply |
-| `B/ap/Reference.kt: reverse` and micro-edge reversal | Reversing a may/fixed edge can require an independent suffix | Keep the existing reversal table and demand bit; no new run-1 producer policy |
+| `B/ap/Reference.kt: reverse` and micro-edge reversal | Reversing a may/fixed edge can require an independent suffix | Keep the existing reversal table and demand bit; a resulting ANY stays ANY |
 
 The ancestor-hit and explicit-target rows include local edges, call bindings,
 alias micro-edges and applied method summaries. These use one AP transfer
@@ -344,14 +407,17 @@ ANY from them. Moving a must result to DEMAND alone must not do so.
 | `B/ap/ApOut.kt: Results.flow/taint`; `Conclusions.kt`; `ApManager.kt` | Omitted tail arguments infer ANY from DEMAND; TAINT normal defaults to must | Pass STAR explicitly on the selected new paths. Layer is not a reason to erase a tail |
 | `B/ap/Summary.kt: leafKinds` | A summary leaf becomes an edge with the stored ANY header | Compile the actual STAR/ANY/must header; do not erase STAR |
 | `B/store/DiagonalRelations.kt: decode`; `B/engine/NeutralRelationBatch.kt: emit` | Current diagonal packets decode with an explicit ANY tail | Keep packets typed by tail, or use the scalar STAR fallback. An ANY packet cannot decode to STAR, or vice versa |
-| `B/engine/Run1StaticService.kt: facts` | `factsOf` converts a canonical field STAR/full-mark reply to ANY | Keep raw membership independent. At an existing selected concrete STAR original, use the new start contract; keep raw ANY where no such binder exists |
-| `B/engine/RunMethodAnalyzer.kt: knownStaticInput` | Rebuilds the canonical input through `factsOf`, which erases concrete STAR | Use the new scoped seed under that known static original |
+| `B/engine/Run1StaticService.kt: facts` | `factsOf` converts a canonical field STAR/concrete-atom reply to ANY | Keep raw membership independent. At an existing selected concrete STAR original, use the new start contract; keep raw ANY where no such binder exists |
+| `B/engine/RunMethodAnalyzer.kt: knownStaticInput` | Rebuilds the canonical input through `factsOf`, which erases concrete STAR | Use the general seed under that known static original |
 | `B/engine/Run1PointResume.kt: direct/packed answers`; `RunMethodCallServices.kt: applyStaticInput/applyStaticSummary` | Rebuilds scalar facts and applies a saved FLOW/summary image | Select the existing static original, then preserve only a same-suffix result. An ANY saved image stays ANY |
 
 Generic reconstruction sites such as scalar summary extraction, return cleanup,
 protection replay and diagnostic decode must preserve the supplied tail. They
 do not have independent widening permission. `withLayer` must preserve it too.
-Raw APIs without a valid selected owner continue to use the general normalizer.
+A raw encoder preserves the supplied tail. A producer without a suffix binder
+must select ANY explicitly before encoding. For example, a raw static pool
+reply uses ANY/D; installing its selected canonical initial uses the STAR
+identity seed. Factory normalization must not decide this from the run number.
 
 ### 7.3 ANY patterns, demands and transient read views
 
@@ -374,79 +440,87 @@ new legal STAR type. An arbitrary blanket replacement of `isAny` is unsafe.
 
 ## 8. Representation and implementation obligations
 
-The following pseudocode describes the boundary. It is not a new generic
-normalization policy:
+Replace the mark-only W2 ban with the bound-suffix invariant. A generic
+constructor and normalizer must retain a legal STAR value in any run. Keep
+ANY when a read, cut, explicit target or binder loss actually loses correlation.
+Do not let the constructor decide this from mark kind, layer or run number.
 
-```kotlin
-fun finishCorrelatedCopy(owner: InitialAp, value: RawResult, mode: ApMode): Facts {
-    if (mode.isRun1Full && value.keepsOriginalSuffix &&
-        owner.tail == STAR && owner.mark == value.mark && !owner.isZero) {
-        return encodeWithExplicitTail(value, STAR, DEMAND, Empty)
-    }
-    return currentNormalizeAndEncode(value)
-}
-```
-
-`keepsOriginalSuffix` is a result of the selected transfer branch, not a
-stored per-edge Boolean or a support object. An actual above/cut/may branch
-has already lost correlation and cannot enter this branch. Other existing
-STAR FLOW results retain the current field-write contract.
-
-The typed TAINT nonexact header must distinguish STAR, ANY and ANY_TAINT.
-One trie payload channel can serve a nonexact mark set if its header retains
-that distinction. Include the header in grouping, equality and hashing. Keep
-EXACT siblings and non-subsumable masks exact. A STAR branch cannot inherit
-an ANY sibling's header when roots merge. The protection Boolean remains
-metadata with explicit OR admission; do not put it into semantic edge equality.
+The typed TAINT nonexact header distinguishes STAR, ANY and ANY_TAINT.
+Include the tail and E in grouping, equality and hashing. Keep EXACT siblings
+and protection masks exact. A STAR branch cannot inherit an ANY sibling's
+header when roots merge. Protection remains metadata with explicit OR
+admission; it is not part of ordinary edge equality.
 
 Same-premise TAINT admission needs an explicit STAR case. Deduplicate equal
-STAR paths/marks and OR their flags. Do not apply a must-leaf descendant rule
-to a STAR leaf because both use the current `any` payload channel. Existing
-ANY coverage can cover a STAR pair only under that same original and the
-existing protection gate; it must not reclassify the retained ANY as STAR.
-This is distinct from the new cross-premise FLOW replacement cell.
+STAR paths/atoms and OR their flags. Do not apply a must-leaf descendant rule
+to STAR because both use the current `any` payload channel. Existing ANY
+coverage can cover a STAR pair under the same original and protection gate;
+it does not reclassify the retained ANY as STAR.
 
-Audit constructors, canonicalization, groups, selection, restriction, mark
-checks, scalar leaves, summary compilation, call adapters, flags and packet
-decode. Adding STAR only to `initialFacts` will fail validation or erase it on
-the next operation. A typed STAR fallback is acceptable before packet support.
+Implementation must update the following current gates. This is a proposal,
+not permission to apply them without their matching transfer/flag changes:
+
+```kotlin
+// All runs. Replacement retains the shape, scope, layer and flag gates above.
+val summaries = RunSummaryStore(ap, flowBacked = true)
+val publications = PublicationIndex(ap, flowBacked = true)
+
+// No run/FULL gate inside the semantic matcher or protection transfer.
+val counterpart = flowInitialForCoverage(ap, premise) // Check legal geometry.
+val seed = start(initial)                           // Check the initial tail.
+```
+
+Audit `RunMethodAnalyzer` admission owners, `FlowBackedCoverage`,
+`FlowBackedSummaries`, `DiagonalRelations`, local rule/ND producers,
+`ApOps` cleaner/cycle protection, record views and publication admission.
+Keep run-1-only queue, temporary static supply, cleanup and ND approximation
+optimizations scoped as before. A run-1 packet format can remain an
+optimization; the general scalar route must implement the same coverage law.
+
+Audit constructors, canonicalization, groups, positive/negative CM readers,
+selection, restriction, leaves, summary compilation, call adapters, flags
+and decode in both directions. Preserve E in later runs. Do not introduce
+unselected strong field validation, queries or new static pool routing.
 
 ## 9. Proof and validation gates
 
-The [Lean module](lean/ApSpec/Run1CorrelatedConcreteInitials.lean) checks the
-unchanged AP denotation, new seed identity, strict precision gain, copy
-composition, descent/cut covers, equal-path STAR specialization, exact
-application equality, the prefix counterexample and the original emitter.
-The [dossier](run1-correlated-concrete-initials-proofs.md) states the limits.
+The [Lean module](lean/ApSpec/Run1CorrelatedConcreteInitials.lean) retains its
+file name for links. Its general laws have no run or direction parameter.
+They cover arbitrary paths, mark atoms, initial tails, STAR exclusions and
+layers. They check the general seed identity, specialization, exclusion
+coverage, ANY prefix coverage, application, reversal and handoff cover.
+The [dossier](run1-correlated-concrete-initials-proofs.md) states their limits.
 
-Before implementation is accepted, run differential tests for:
+Before implementation is accepted, verify:
 
-1. FULL and GROUP start tables, ZERO, exact class marks, scalar/packed decode.
-2. Copies, reads above/below a prefix, aliases, limits and mixed STAR/ANY/EXACT
-   branches. Test suffixes `[]`, `[f]`, `[g]` and `[f,g]`, with field limit 1.
-3. Full kill, disjoint and exclusion-needing field writes; all partial cleaner
-   reaches; selected-mark survival and flag union.
-4. Sources, cross-mark/same-mark rules, cycles, zero and nonzero ND origins.
-   Do not inherit a source suffix from its trigger.
-5. Static late write/read activation, canonical direct/packed replies, retained
-   static anchors, ZERO activation, computed supplies and erased S-S rows.
-6. STAR exact-path and ANY prefix summary replacement, excluded/protected
-   negatives, alias-effect tests, repeated deltas, FLOW arriving first or last.
-7. Original handoff, emission and restriction on marked witnesses, including
-   protected dependencies and static fallback. Do not use StrongQueries in
-   the test oracle.
+1. Start tables in both directions and every existing mark domain. Include
+   STAR with Empty/nonempty E, later ANY/EXACT/must initials, ZERO and class marks.
+2. Copies, reads above/below a prefix, aliases, cuts and mixed STAR/ANY/EXACT
+   branches at field limits 1 and higher. Test suffixes [], [f], [g] and [f,g].
+3. Run-1 full kill/disjoint/E-free residuals and later strong exclusion rows.
+   Test every cleaner reach, GROUP no-kill, survival flags and flag union.
+4. Sources, same/cross-atom assignments, local/call cycles, run-1 unary origins
+   and later ND sets. Preserve every existing ZERO/condition/target contract.
+5. Static late activation, raw independent pool values, selected static
+   identity seeds and erased S-S rows in run-1. Later calls require actual statics.
+6. STAR equal-path/E-subset and ANY prefix summary replacement. Cover flags,
+   mark exclusions, scope, alias effects, layers and FLOW arriving first/last.
+7. Raw/selected/published stores and native/reversed records. Test no counterpart,
+   unsupported tails, new protected deltas and an all-runs scalar fallback.
+8. Both handoff directions, original emission and whole-premise restriction,
+   with marked witnesses and protected dependencies. Do not use StrongQueries
+   as the test oracle.
 
 Compare concrete witness retention and observations. Do not require equality
-of deliberately removed coarse pairs. No whole-engine refinement or performance
-result follows from the local Lean proofs alone.
+of deliberately removed coarse pairs. No whole-engine refinement or
+performance result follows from the local Lean proofs alone.
 
-Measure the completed run-1 census before and after: STAR/ANY/EXACT/must marked
-memberships, covered plain rows, flag-blocked rows, emitted requests, summary
-publications, engine time and retained bytes. Include the latest reached
-iteration, such as run-2 OOM, in each report. Keep the same project commands.
+Measure each reached run, not run-1 only: stored tails, covered plain rows,
+flag-blocked rows, publications, demand pairs, engine time and retained bytes.
+Include the latest reached iteration, such as run-2 OOM, in each report.
+Keep the project commands fixed. There is no new measurement in this revision.
 
-The expected saving is fewer same-mark summary rows, publications and backward
-T demands where the **seed was the only cause of ANY**. Above-prefix reads,
-cuts, source targets and protected results remain. STAR can also split a
-previously shared ANY header. The net memory/time gain must be measured; the
-existing uncovered counts do not predict it.
+The expected saving remains fewer redundant same-mark rows, publications
+and backward T demands. Above-prefix reads, cuts, fixed targets and protected
+results remain. New headers and protection in later runs have a cost. Measure
+the net effect; the previous run-1 census does not predict all-run savings.

@@ -48,9 +48,11 @@ This document defines facts, edges, AP operations, runs, and stores for
 [bidirectional-task.md](../bidirectional-task.md). It is normative.
 
 The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
-selects a FULL run-1 exception to W2: a concrete STAR initial starts with a
-correlated concrete STAR DEMAND conclusion. It defines the permitted transfer
-and summary coverage cells and lists the remaining ANY producers. This is a
+replaces the concrete-STAR ban in W2: a concrete STAR initial starts with a
+correlated concrete STAR DEMAND conclusion in every run and mark mode. It
+also makes FLOW subsumption a general mechanism in both directions, with
+explicit geometry, exclusion, layer and protection gates. It lists the
+remaining ANY producers. This is a
 design target; the current analyzer and the historical W2 proofs are unchanged.
 
 [interpreter.md](interpreter.md) defines IR construction and rule order.

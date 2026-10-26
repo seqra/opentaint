@@ -21,7 +21,9 @@ the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
 mechanism, support label or dependency graph.
 
 The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
-adds a separate equal-output-path STAR/STAR replacement cell for FULL run-1.
+makes the subsumption mechanism available in all runs and directions,
+including the existing ANY cell and a separate equal-output-path STAR cell.
+It retains the suffix-exclusion, layer and protection gates in every run.
 It does not extend the ANY prefix test to STAR. The implementation described
 in this document remains unchanged until that extension is implemented.
 
