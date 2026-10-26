@@ -20,6 +20,11 @@ Terminology: **protection is the non-subsumable flag**. These names refer to
 the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
 mechanism, support label or dependency graph.
 
+The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
+adds a separate equal-output-path STAR/STAR replacement cell for FULL run-1.
+It does not extend the ANY prefix test to STAR. The implementation described
+in this document remains unchanged until that extension is implemented.
+
 ## 1. Selected changes and unchanged behavior
 
 The objective is to remove duplicate relation storage and propagation. Making

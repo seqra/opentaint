@@ -1,0 +1,5513 @@
+{
+  "state": "VALIDATED",
+  "created_utc": "2026-10-26T13:53:54.947573+00:00",
+  "project": "conductor",
+  "binding": {
+    "base_revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+    "base_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
+    "patch_sha256": "145430cd0fff6464b12fe0c239c405e0ca8e7cced3c6fdb7325740e6e7b3fcae",
+    "scope": "Isolated read-only examples at completed run-1. All FLOW leaves in each sampled raw method-summary store are retained. Only memberships retained after removing protection qualify.",
+    "tests": {
+      "name": "org.opentaint.dataflow.bidi.CoverageExamplesTest",
+      "tests": "4",
+      "skipped": "0",
+      "failures": "0",
+      "errors": "0",
+      "timestamp": "2026-10-26T13:35:06",
+      "hostname": "dev-1",
+      "time": "0.039"
+    }
+  },
+  "manifest": {
+    "project": "conductor",
+    "side": "bidi",
+    "revision": "30b50b20029394eee9c34acb5afce934b08591b9",
+    "patch_sha256": "61024d1adcb1e102d041b140c66ff3223949ef3b9615e385dc32305429b3e1e6",
+    "config": {
+      "model": "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml",
+      "memory": "16g",
+      "timeout": 1080,
+      "outer_timeout": 1200
+    },
+    "model_sha256": "3457cf5a1b3c63e0710dfa50a9fbca1c4229f2726ea3276cc409e019515ee35d",
+    "command": [
+      "./gradlew",
+      ":runProjectAnalyzer",
+      "--console=plain",
+      "-I",
+      "/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/benchmark.init.gradle",
+      "-x",
+      ":opentaint-ir:go:buildGoServer"
+    ],
+    "runner_args": [
+      "--project",
+      "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/opentaint-project/project.yaml",
+      "--output-dir",
+      "/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/reports",
+      "--ifds-analysis-timeout",
+      "1080",
+      "--logs-file",
+      "/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/analyzer.log",
+      "--verbosity",
+      "debug",
+      "--semgrep-rule-set",
+      "/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/source/rules/ruleset",
+      "--sarif-generate-fingerprint",
+      "--sarif-semgrep-style-id",
+      "--semgrep-rule-severity",
+      "warning",
+      "--semgrep-rule-severity",
+      "error",
+      "--semgrep-rule-set",
+      "/drive-testcomp/opentaint-go-rules/opentaint-test/projects/extensions/conductor/rules",
+      "--passthrough-approximations",
+      "/drive-testcomp/opentaint-go-rules/opentaint-test/projects/extensions/conductor/passthrough",
+      "--java-dataflow-approximations",
+      "/drive-testcomp/opentaint-go-rules/opentaint-test/opentaint-test-conductor/dataflow-compiled",
+      "--ifds-bidirectional"
+    ],
+    "test_revision": "bbdbcc5fd35d976d93348760ea60561e4670f68c",
+    "guard_heap_snapshot": true,
+    "form_statistics": true,
+    "optimization_statistics": true,
+    "run1_mark_mode": "FULL",
+    "analyzer_jvm_args": [
+      "-Xmx16g",
+      "-Dorg.opentaint.ir.impl.storage.defaultBatchSize=2000",
+      "-Djdk.util.jar.enableMultiRelease=false",
+      "-XX:FlightRecorderOptions=stackdepth=256",
+      "-XX:StartFlightRecording=filename=/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/continuous.jfr,settings=profile,dumponexit=true,maxsize=256m",
+      "-Xlog:gc*:file=/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/gc.log:time,uptime,level,tags:filecount=0",
+      "-Dopentaint.memorySnapshotDir=/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi",
+      "-XX:+HeapDumpOnOutOfMemoryError",
+      "-XX:HeapDumpPath=/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/jvm-oom.hprof",
+      "-Dopentaint.bidi.run1MarkMode=FULL",
+      "-Dopentaint.bidi.disableRun1Statics=false",
+      "-Dorg.opentaint.bidi.formStatistics=true",
+      "-Dorg.opentaint.bidi.optimizationStatistics=true",
+      "-Dopentaint.diagnostic.run1Coverage=true",
+      "-Dopentaint.diagnostic.examplesFile=/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/examples.json"
+    ],
+    "started_utc": "2026-10-26T13:36:22Z",
+    "analyzer_executable": "/usr/lib/jvm/java-17-openjdk-amd64/bin/java",
+    "analyzer_command_sha256": "095afc004403b7dbb52bbd0427531277ab56c2ea653792bc0fed52ec0842a993",
+    "analyzer_started_elapsed": 27.27477318048477
+  },
+  "summary": {
+    "status": "OK",
+    "gradle_exit": 0,
+    "analyzer_exit": 0,
+    "command_wall_seconds": 102.63732905685902,
+    "wall_seconds": 102.64502672851086,
+    "peak_rss_bytes": 16213078016,
+    "analysis_started_elapsed": 63.35026806592941,
+    "full_started_elapsed": 86.38216173648834,
+    "profiles": {},
+    "continuous_jfr": true,
+    "run1_recording": {
+      "returncode": 0,
+      "output": "3473903:\nDumped recording, 17.6 MB written to:\n\n/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/run1.jfr\n",
+      "elapsed": 99.40221099555492,
+      "latest_run": 1
+    },
+    "sarif": true,
+    "latest_bidi_iteration": "run-1",
+    "latest_complete_bidi_iteration": "run-1",
+    "latest_accepted_forward_report": "run-1",
+    "bidi_iteration_progress": {
+      "state": "AVAILABLE",
+      "latest_reached": {
+        "state": "AVAILABLE",
+        "label": "run-1",
+        "source": "BIDI_RUN_START",
+        "engine_end_seen": true,
+        "engine_status": "COMPLETE",
+        "run": 1,
+        "direction": "FORWARD",
+        "limit": 1,
+        "timeout": "17m 36.174199511s markMode=FULL",
+        "timeout_seconds": 1056.174199511,
+        "start_line": "13:37:49.276 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 36.174199511s markMode=FULL",
+        "status": "COMPLETE",
+        "engine_time": "12.757304602s",
+        "engine_seconds": 12.757304602,
+        "end_line": "13:38:02.034 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=12.757304602s",
+        "barrier_time": "578.812882ms",
+        "barrier_seconds": 0.5788128819999999,
+        "iteration_time": "13.345256520s",
+        "iteration_seconds": 13.34525652,
+        "barrier_line": "13:38:02.621 |I| IterationDriver - BIDI_BARRIER_END run=1 barrierTime=578.812882ms iterationTime=13.345256520s"
+      },
+      "latest_complete_engine": {
+        "state": "AVAILABLE",
+        "label": "run-1",
+        "source": "BIDI_RUN_END status=COMPLETE",
+        "engine_end_seen": true,
+        "engine_status": "COMPLETE",
+        "run": 1,
+        "direction": "FORWARD",
+        "limit": 1,
+        "timeout": "17m 36.174199511s markMode=FULL",
+        "timeout_seconds": 1056.174199511,
+        "start_line": "13:37:49.276 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 36.174199511s markMode=FULL",
+        "status": "COMPLETE",
+        "engine_time": "12.757304602s",
+        "engine_seconds": 12.757304602,
+        "end_line": "13:38:02.034 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=12.757304602s"
+      },
+      "latest_accepted_forward_report": {
+        "state": "AVAILABLE",
+        "label": "run-1",
+        "source": "Run N (FORWARD) frontier after report.add",
+        "engine_end_seen": true,
+        "engine_status": "COMPLETE",
+        "run": 1,
+        "direction": "FORWARD",
+        "limit": 1,
+        "timeout": "17m 36.174199511s markMode=FULL",
+        "timeout_seconds": 1056.174199511,
+        "start_line": "13:37:49.276 |I| IterationDriver - BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=17m 36.174199511s markMode=FULL",
+        "status": "COMPLETE",
+        "engine_time": "12.757304602s",
+        "engine_seconds": 12.757304602,
+        "end_line": "13:38:02.034 |I| IterationDriver - BIDI_RUN_END run=1 status=COMPLETE engineTime=12.757304602s",
+        "forward_frontier_line": "13:38:02.533 |I| FrontierKt$frontierLogger$1 - Run 1 (FORWARD) frontier: analysed 11224, demand edges 72899 in 17417 method keys, left 41, record crossings 0, DEMAND 44, CONFIRMED 0, seeds 60, zero only 6241 (20708 edges)"
+      },
+      "invalid_run_start_lines": [],
+      "limits": "Latest reached follows actual start-marker order, including failed or unfinished engines. Report updates are proven by compact forward frontiers; a report may update before a later barrier failure, so missing forward-frontier evidence is unavailable, not proof of an empty report."
+    }
+  },
+  "tests": {
+    "name": "org.opentaint.dataflow.bidi.CoverageExamplesTest",
+    "tests": "4",
+    "skipped": "0",
+    "failures": "0",
+    "errors": "0",
+    "timestamp": "2026-10-26T13:35:06",
+    "hostname": "dev-1",
+    "time": "0.039"
+  },
+  "test_xml_sha256": "a1f0aa799f8031056be525cd96f15032f3a2c6e191b24212c3163e0c81639a47",
+  "source_examples": "/drive-testcomp/opentaint-go-rules/run1-coverage-examples-20261026/campaign/conductor/bidi/examples.json",
+  "source_examples_sha256": "2069443327d17604c9e496c2eb733df4125e91bc38c8c551a37cc39103436a3e",
+  "analyzer_log_sha256": "e35fe7b3d1205347488a6a688757a12394ff996d2952d4c550ba30624c6664cd",
+  "all_samples": {
+    "state": "COMPLETE",
+    "run": "run-1",
+    "scope": "raw summaries; sampled methods have at most 16 FLOW leaves; complete method FLOW lists",
+    "classification_priority": [
+      "ZERO_INITIAL",
+      "UNSUPPORTED_INITIAL",
+      "CROSS_MARK",
+      "EXACT_OR_MUST_OUTPUT",
+      "NO_FLOW_COUNTERPART",
+      "NO_FLOW_OUTPUT_BASE",
+      "STAR_ANY_TAIL_MISMATCH",
+      "FIELD_GEOMETRY_MISMATCH",
+      "MARK_EXCLUDED",
+      "LAYER_MISMATCH",
+      "IDENTITY_EFFECT_MISMATCH",
+      "OTHER_GATE"
+    ],
+    "sample_eligible_memberships_by_primary_reason": {
+      "UNSUPPORTED_INITIAL": 6595,
+      "STAR_ANY_TAIL_MISMATCH": 1541,
+      "FIELD_GEOMETRY_MISMATCH": 198,
+      "EXACT_OR_MUST_OUTPUT": 325,
+      "IDENTITY_EFFECT_MISMATCH": 10,
+      "ZERO_INITIAL": 5647,
+      "CROSS_MARK": 15,
+      "MARK_EXCLUDED": 6
+    },
+    "examples": [
+      {
+        "reason": "UNSUPPORTED_INITIAL",
+        "method": "com.netflix.conductor.annotationsprocessor.protogen.types.GenericType#getRawType() [{}]",
+        "initial": {
+          "base": "S",
+          "path_ids": [
+            1
+          ],
+          "path": [
+            "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;pos"
+          ],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 7,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=6)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "UNSUPPORTED_INITIAL",
+        "method": "com.netflix.conductor.annotationsprocessor.protogen.types.MessageType#getRawJavaType() [{}]",
+        "initial": {
+          "base": "S",
+          "path_ids": [
+            1
+          ],
+          "path": [
+            "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;pos"
+          ],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 7,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=6)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "UNSUPPORTED_INITIAL",
+        "method": "com.netflix.conductor.annotationsprocessor.protogen.types.ScalarType#getRawJavaType() [{}]",
+        "initial": {
+          "base": "S",
+          "path_ids": [
+            1
+          ],
+          "path": [
+            "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;pos"
+          ],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 7,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;source_0;_<S>_;1",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=6)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "STAR_ANY_TAIL_MISMATCH",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#confirmUpload(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            13860
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+          ],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                13860
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "STAR_ANY_TAIL_MISMATCH",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#initiateMultipartUpload(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            19328
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.MultipartInitResponse.fileHandleId"
+          ],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                19328
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.MultipartInitResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "STAR_ANY_TAIL_MISMATCH",
+        "method": "com.netflix.conductor.core.metadata.MetadataMapperService#populateTaskDefinitions(com.netflix.conductor.common.metadata.workflow.WorkflowDef) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 3,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "FIELD_GEOMETRY_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#createTasks(java.util.List) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                564
+              ],
+              "path": [
+                "java.lang.Iterable.Element"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "FIELD_GEOMETRY_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#createTasks(java.util.List) [{arg(0) == com.netflix.conductor.model.TaskModel}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                564
+              ],
+              "path": [
+                "java.lang.Iterable.Element"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "FIELD_GEOMETRY_MISMATCH",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#getUploadUrl(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            18308
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.FileUploadUrlResponse.fileHandleId"
+          ],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                18308
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadUrlResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                18312
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadUrlResponse.uploadUrl"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                11744
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.redis.jedis.JedisCommands"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                18312
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadUrlResponse.uploadUrl"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "EXACT_OR_MUST_OUTPUT",
+        "method": "org.conductoross.conductor.ai.tasks.worker.DocumentGenWorkers#storeDocument(java.lang.String, byte[]) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "EXACT_OR_MUST_OUTPUT",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#confirmUpload(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            13860
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+          ],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                13860
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "EXACT_OR_MUST_OUTPUT",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#initiateMultipartUpload(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            19328
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.MultipartInitResponse.fileHandleId"
+          ],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                19328
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.MultipartInitResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "IDENTITY_EFFECT_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#searchTaskSummary(java.lang.String, java.lang.String, int, int, java.util.List) [{}]",
+        "initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": true,
+        "corresponding_flow_initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                324
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.IndexDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "IDENTITY_EFFECT_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#searchTasks(java.lang.String, java.lang.String, int, int, java.util.List) [{}]",
+        "initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": true,
+        "corresponding_flow_initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                324
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.IndexDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "IDENTITY_EFFECT_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#searchWorkflowSummary(java.lang.String, java.lang.String, int, int, java.util.List) [{}]",
+        "initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": true,
+        "corresponding_flow_initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                324
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.IndexDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "ZERO_INITIAL",
+        "method": "com.netflix.conductor.rest.controllers.TaskResource#getPollData(java.lang.String) [{}]",
+        "initial": {
+          "base": "Z",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 0,
+            "name": "<zero>",
+            "key": "ControlZero"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "ZERO_INITIAL",
+        "method": "com.netflix.conductor.rest.controllers.WorkflowResource#rerun(java.lang.String, com.netflix.conductor.common.metadata.workflow.RerunWorkflowRequest) [{}]",
+        "initial": {
+          "base": "Z",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 0,
+            "name": "<zero>",
+            "key": "ControlZero"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "ZERO_INITIAL",
+        "method": "com.netflix.conductor.rest.controllers.WorkflowResource#startWorkflow(com.netflix.conductor.common.metadata.workflow.StartWorkflowRequest) [{}]",
+        "initial": {
+          "base": "Z",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 0,
+            "name": "<zero>",
+            "key": "ControlZero"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "CROSS_MARK",
+        "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#normalizeLocation(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 226,
+            "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "CROSS_MARK",
+        "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#extractHost(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 226,
+            "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "CROSS_MARK",
+        "method": "com.netflix.conductor.rest.controllers.TaskResource#poll(java.lang.String, java.lang.String, java.lang.String) [{}]",
+        "initial": {
+          "base": "arg1",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 78,
+            "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 4,
+            "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+            "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg1",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                332
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.ExecutionDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                11744
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.redis.jedis.JedisCommands"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                680
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.common.utils.ExternalPayloadStorage"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg2",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg2",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "MARK_EXCLUDED",
+        "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#normalizeLocation(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "MARK_EXCLUDED",
+        "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#extractHost(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      },
+      {
+        "reason": "MARK_EXCLUDED",
+        "method": "com.netflix.conductor.rest.controllers.TaskResource#poll(java.lang.String, java.lang.String, java.lang.String) [{}]",
+        "initial": {
+          "base": "arg1",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 78,
+            "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 78,
+            "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg1",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                332
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.ExecutionDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                11744
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.redis.jedis.JedisCommands"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                680
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.common.utils.ExternalPayloadStorage"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 4,
+                    "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+                  },
+                  {
+                    "id": 78,
+                    "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 4,
+                "name": "java/security/xss.yaml:xss#sink#1;sink_48;$<ARTIFICIAL>_2;3",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=3)))"
+              },
+              {
+                "id": 78,
+                "name": "java/security/xss.yaml:xss#sink#1#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=0), full=FullMarkId(value=77)))"
+              }
+            ]
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg2",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg2",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      }
+    ]
+  },
+  "selected": [
+    {
+      "title": "Different field tails",
+      "example": {
+        "reason": "STAR_ANY_TAIL_MISMATCH",
+        "method": "org.conductoross.conductor.core.storage.FileStorageServiceImpl#confirmUpload(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [
+            13860
+          ],
+          "path": [
+            "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+          ],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                13860
+              ],
+              "path": [
+                "org.conductoross.conductor.model.file.FileUploadCompleteResponse.fileHandleId"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      }
+    },
+    {
+      "title": "FLOW reaches collection elements, not the result root",
+      "example": {
+        "reason": "FIELD_GEOMETRY_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#createTasks(java.util.List) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                564
+              ],
+              "path": [
+                "java.lang.Iterable.Element"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      }
+    },
+    {
+      "title": "The matching ANY FLOW excludes the mark",
+      "example": {
+        "reason": "MARK_EXCLUDED",
+        "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#normalizeLocation(java.lang.String) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": [
+                  {
+                    "id": 66,
+                    "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+                  },
+                  {
+                    "id": 226,
+                    "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                    "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+                  }
+                ]
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": false,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "this",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 4,
+        "flow_edges_truncated": false
+      }
+    },
+    {
+      "title": "Same geometry, different summary effect class",
+      "example": {
+        "reason": "IDENTITY_EFFECT_MISMATCH",
+        "method": "com.netflix.conductor.core.dal.ExecutionDAOFacade#searchTaskSummary(java.lang.String, java.lang.String, int, int, java.util.List) [{}]",
+        "initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "output": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 77,
+            "name": "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=2), full=FullMarkId(value=76)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": true,
+        "corresponding_flow_initial": {
+          "base": "arg4",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 2,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": true,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 3,
+            "initial": {
+              "base": "arg4",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 4,
+            "initial": {
+              "base": "S",
+              "path_ids": [
+                5,
+                324
+              ],
+              "path": [
+                "__spring_registry__",
+                "__spring_registry__.com.netflix.conductor.dao.IndexDAO"
+              ],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 5,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [
+                5588
+              ],
+              "path": [
+                "com.netflix.conductor.common.run.SearchResult.results"
+              ],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": true,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          },
+          {
+            "index": 6,
+            "initial": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg1",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": false,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 7,
+        "flow_edges_truncated": false
+      }
+    },
+    {
+      "title": "An exact output is outside the current ANY cell",
+      "example": {
+        "reason": "EXACT_OR_MUST_OUTPUT",
+        "method": "org.conductoross.conductor.ai.tasks.worker.DocumentGenWorkers#storeDocument(java.lang.String, byte[]) [{}]",
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 8,
+            "name": "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;",
+            "key": "Full(mark=ExactMark(group=GroupId(value=1), full=FullMarkId(value=7)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "all_method_flow_edges": [
+          {
+            "index": 0,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "NORMAL",
+            "same_initial_geometry": true,
+            "same_output_base": false,
+            "same_tail": false,
+            "field_prefix": false,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": true,
+            "mark_exclusions": []
+          },
+          {
+            "index": 1,
+            "initial": {
+              "base": "arg0",
+              "path_ids": [],
+              "path": [],
+              "tail": "STAR",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "output": {
+              "base": "ret",
+              "path_ids": [],
+              "path": [],
+              "tail": "ANY",
+              "field_exclusion": "Empty",
+              "mark": {
+                "kind": "FLOW",
+                "excluded": []
+              }
+            },
+            "layer": "DEMAND",
+            "same_initial_geometry": true,
+            "same_output_base": true,
+            "same_tail": false,
+            "field_prefix": true,
+            "mark_allowed": true,
+            "layer_allowed": true,
+            "no_memory_effect": false,
+            "mark_exclusions": []
+          }
+        ],
+        "all_method_flow_edge_count": 2,
+        "flow_edges_truncated": false
+      }
+    },
+    {
+      "title": "A generated mark has a ZERO initial",
+      "example": {
+        "reason": "ZERO_INITIAL",
+        "method": "com.netflix.conductor.rest.controllers.TaskResource#getPollData(java.lang.String) [{}]",
+        "initial": {
+          "base": "Z",
+          "path_ids": [],
+          "path": [],
+          "tail": "EXACT",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 0,
+            "name": "<zero>",
+            "key": "ControlZero"
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          }
+        },
+        "layer": "DEMAND",
+        "retained_without_flag": true,
+        "no_memory_effect": false,
+        "corresponding_flow_initial": null,
+        "all_method_flow_edges": [],
+        "all_method_flow_edge_count": 0,
+        "flow_edges_truncated": false
+      }
+    }
+  ],
+  "cross_mark_example": {
+    "reason": "CROSS_MARK",
+    "method": "org.conductoross.conductor.ai.document.DocumentAccessPolicy#normalizeLocation(java.lang.String) [{}]",
+    "initial": {
+      "base": "arg0",
+      "path_ids": [],
+      "path": [],
+      "tail": "STAR",
+      "field_exclusion": "Empty",
+      "mark": {
+        "id": 66,
+        "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+        "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+      }
+    },
+    "output": {
+      "base": "ret",
+      "path_ids": [],
+      "path": [],
+      "tail": "EXACT",
+      "field_exclusion": "Empty",
+      "mark": {
+        "id": 226,
+        "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+        "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+      }
+    },
+    "layer": "DEMAND",
+    "retained_without_flag": true,
+    "no_memory_effect": false,
+    "corresponding_flow_initial": {
+      "base": "arg0",
+      "path_ids": [],
+      "path": [],
+      "tail": "STAR",
+      "field_exclusion": "Empty",
+      "mark": {
+        "kind": "FLOW",
+        "excluded": []
+      }
+    },
+    "all_method_flow_edges": [
+      {
+        "index": 0,
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "layer": "NORMAL",
+        "same_initial_geometry": true,
+        "same_output_base": true,
+        "same_tail": false,
+        "field_prefix": true,
+        "mark_allowed": true,
+        "layer_allowed": true,
+        "no_memory_effect": false,
+        "mark_exclusions": []
+      },
+      {
+        "index": 1,
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "output": {
+          "base": "ret",
+          "path_ids": [],
+          "path": [],
+          "tail": "ANY",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": [
+              {
+                "id": 66,
+                "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+              },
+              {
+                "id": 226,
+                "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+                "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+              }
+            ]
+          }
+        },
+        "layer": "DEMAND",
+        "same_initial_geometry": true,
+        "same_output_base": true,
+        "same_tail": false,
+        "field_prefix": true,
+        "mark_allowed": false,
+        "layer_allowed": true,
+        "no_memory_effect": false,
+        "mark_exclusions": [
+          {
+            "id": 66,
+            "name": "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=65)))"
+          },
+          {
+            "id": 226,
+            "name": "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2",
+            "key": "Full(mark=ExactMark(group=GroupId(value=4), full=FullMarkId(value=225)))"
+          }
+        ]
+      },
+      {
+        "index": 2,
+        "initial": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "output": {
+          "base": "arg0",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "layer": "NORMAL",
+        "same_initial_geometry": true,
+        "same_output_base": false,
+        "same_tail": false,
+        "field_prefix": false,
+        "mark_allowed": true,
+        "layer_allowed": true,
+        "no_memory_effect": true,
+        "mark_exclusions": []
+      },
+      {
+        "index": 3,
+        "initial": {
+          "base": "this",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "output": {
+          "base": "this",
+          "path_ids": [],
+          "path": [],
+          "tail": "STAR",
+          "field_exclusion": "Empty",
+          "mark": {
+            "kind": "FLOW",
+            "excluded": []
+          }
+        },
+        "layer": "NORMAL",
+        "same_initial_geometry": false,
+        "same_output_base": false,
+        "same_tail": false,
+        "field_prefix": false,
+        "mark_allowed": true,
+        "layer_allowed": true,
+        "no_memory_effect": true,
+        "mark_exclusions": []
+      }
+    ],
+    "all_method_flow_edge_count": 4,
+    "flow_edges_truncated": false
+  },
+  "aliases": {
+    "java/security/sqli.yaml:sql-injection#source#1;0;$UNTRUSTED;2": "Tsql",
+    "java/security/ssrf.yaml:ssrf#source#1;0;$UNTRUSTED;2": "Tssrf",
+    "java/security/ssrf.yaml:ssrf;2;$<ARTIFICIAL>_20;2": "Ussrf",
+    "java/lib/spring/conductor-grpc-request-sources.yaml:conductor-grpc-request-sources;0;_<T>_;": "Tgrpc"
+  },
+  "scope": "Current raw summary members retained by the production normalizer after protection is removed. Each complete method FLOW list is preserved; matching-initial and other-initial rows are separated for display."
+}
