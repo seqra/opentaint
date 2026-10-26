@@ -189,17 +189,15 @@ class NeutralRelationBatch private constructor(
                 delta.marks.ids.any { m.marks.isGroup(TaintMark(it)) || it == TaintMark.ZERO.id }) return null
             val leaf = m.taintAlg.leafNode(m.taintLeaves(MarkSet.EMPTY, delta.marks))
             val root = m.taintAlg.graft(delta.geometry, { !it.isEmpty }, leaf, m.cancellation) ?: return null
-            val packed = m.taintTree(delta.base, delta.layer, root, anyTail = Tail.ANY,
+            val packed = m.taintTree(delta.base, delta.layer, root, delta.exclusion, anyTail = delta.tail,
                 nonSubsumable = if (delta.protected) root else null)
             return NeutralRelationBatch(m, delta.initialShape, packed, delta.marks)
         }
 
         /** Certify the packet cell before any scalar result decoder is called. */
         fun toDiagonal(m: ApManager, initialShape: InitialAp, packed: TaintTree, marks: MarkSet): DiagonalDelta? {
-            if (initialShape.manager !== m || initialShape.mark != MarkSlot.STAR || initialShape.tail != Tail.STAR ||
-                initialShape.exclusion != ExclusionSet.Empty || packed.base == STATIC ||
-                packed.base is AccessPathBase.CleanerTemporary || packed.anyTail != Tail.ANY ||
-                packed.exclusion != ExclusionSet.Empty || marks.isEmpty ||
+            if (initialShape.manager !== m || initialShape.mark != MarkSlot.STAR || (initialShape.tail != Tail.STAR && initialShape.tail != Tail.ANY) || packed.base == STATIC ||
+                packed.base is AccessPathBase.CleanerTemporary || (packed.anyTail != Tail.STAR && packed.anyTail != Tail.ANY) || marks.isEmpty ||
                 marks.ids.any { m.marks.isGroup(TaintMark(it)) || it == TaintMark.ZERO.id }) return null
             var uniform = true
             m.taintAlg.forEachLeaf(packed.root, EMPTY_PATH, m.cancellation) { _, leaf ->
@@ -211,7 +209,8 @@ class NeutralRelationBatch private constructor(
                 m.taintAlg.minusNode(packed.root, protected, m.cancellation) != null) return null
             val geometry = FlowAlgebra.graft(packed.root, { !it.any.isEmpty }, FlowAlgebra.LEAF_NODE, m.cancellation)
                 ?: return null
-            return DiagonalDelta(initialShape, packed.base, packed.layer, geometry, m.intern(marks), protected != null)
+            return DiagonalDelta(initialShape, packed.base, packed.layer, geometry, m.intern(marks), protected != null,
+                packed.anyTail, packed.exclusion)
         }
 
         fun from(m: ApManager, premise: PremiseKey, facts: Facts): NeutralRelationBatch? {

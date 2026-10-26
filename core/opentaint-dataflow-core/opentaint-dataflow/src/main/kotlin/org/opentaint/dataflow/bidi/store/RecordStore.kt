@@ -11,7 +11,7 @@ class Record(
     val conclusion: Facts,
 ) {
     /** Transient opposite-direction reads retain their actual premise and result layer. */
-    fun reversedAt(a: Pattern): Sequence<RecordLeafView> = sequence {
+    private fun reversedLeavesAt(a: Pattern): Sequence<Pair<RecordLeafView, Boolean>> = sequence {
         val m = premise.manager
         m.cancellation.checkpoint()
         check(conclusion.layer == Layer.NORMAL) { "Only a normal native record has reversed views" }
@@ -22,9 +22,29 @@ class Record(
                 !(leaf.fact.path.startsWith(a.fact.path) || a.fact.path.startsWith(leaf.fact.path))) continue
             val view = reverseRecordLeaf(direction, nativePremise, Conclusion(leaf.fact, leaf.exclusion, demand = false))
                 ?: continue
-            yield(view)
+            val taint = conclusion as? TaintTree
+            val protected = taint?.nonSubsumable?.let { mask ->
+                var at: TaintNode? = mask
+                for (accessor in leaf.fact.path) {
+                    m.cancellation.checkpoint()
+                    at = at?.child(accessor)
+                }
+                val atom = (leaf.fact.mark as? MarkSlot.Concrete)?.mark
+                atom != null && at?.leaf?.let { marks ->
+                    atom in if (leaf.fact.tail == Tail.EXACT) marks.exact else marks.any
+                } == true
+            } == true
+            yield(view to protected)
         }
     }
+
+    /** Metadata is an invocation annotation, not part of RecordLeafView equality. */
+    fun forEachReversedAt(a: Pattern, emit: (RecordLeafView, Boolean) -> Unit) {
+        for ((view, nonSubsumable) in reversedLeavesAt(a)) emit(view, nonSubsumable)
+    }
+
+    /** Read-only geometry view for diagnostic and reference clients. */
+    fun reversedAt(a: Pattern): Sequence<RecordLeafView> = reversedLeavesAt(a).map { it.first }
 }
 
 /** Persistent native records. A run obtains a view that permits reads only. */
@@ -106,8 +126,8 @@ private fun checkNativeRecord(direction: Direction, premise: InitialAp, conclusi
     check((conclusion is FlowTree) == premise.isFlow) { "K6: the conclusion kind follows the native premise" }
     check(premise.isZero || when (premise.mark) {
         is MarkSlot.Concrete -> premise.tail != Tail.STAR
-        is MarkSlot.Star -> premise.tail == Tail.STAR && premise.exclusion == ExclusionSet.Empty
-    }) { "A native record needs a zero, concrete exact/any or empty-exclusion abstract STAR initial" }
+        is MarkSlot.Star -> premise.tail == Tail.STAR
+    }) { "A native record needs a zero, concrete exact/any or abstract STAR initial" }
     if (direction == Direction.BACKWARD) {
         check(!premise.isZero) { "R1: a backward zero-premise edge is not a native record" }
         check(premise.tail != Tail.ANY_TAINT) { "W8 (d): a backward record cannot have a must premise" }

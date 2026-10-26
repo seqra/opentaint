@@ -263,7 +263,7 @@ class RecordReplayTest {
                     else -> error("A restricted view cannot request")
                 }
                 val expected = reference(f, actor, forwardPlan.reversed(), initial, from = ADDED)
-                actor.applyRecordView(sub, view)
+                actor.applyRecordView(sub, view, false)
                 val wanted = if (blocked) emptySet() else setOf(Conclusion(PathFact(x, listOf(a), if (oldMust) Tail.ANY else Tail.EXACT, inMark),
                     ExclusionSet.Empty, oldMust || layer == Layer.DEMAND))
                 assertEquals(wanted, expected)

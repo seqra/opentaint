@@ -47,18 +47,20 @@ theorems retain their original assumptions.
 This document defines facts, edges, AP operations, runs, and stores for
 [bidirectional-task.md](../bidirectional-task.md). It is normative.
 
-The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
+The selected [correlated concrete initial extension](run1-correlated-concrete-initials.md)
 replaces the concrete-STAR ban in W2: a concrete STAR initial starts with a
 correlated concrete STAR DEMAND conclusion in every run and mark mode. It
 also makes FLOW subsumption a general mechanism in both directions, with
 explicit geometry, exclusion, layer and protection gates. It lists the
-remaining ANY producers. This is a
-design target; the current analyzer and the historical W2 proofs are unchanged.
+remaining ANY producers. The extension is implemented and takes precedence
+for these cells. Historical W2 proofs keep their original assumptions.
 The detailed implementation proposal also selects persistence of NORMAL FLOW
 with nonempty initial/output exclusions and proves identity-only alias
 redundancy under semantic input alias closure. Its
 [implementation proof dossier](correlated-concrete-implementation-proofs.md)
-states the reference invariants and the remaining Kotlin correspondence tests.
+states the reference invariants. The
+[local validation report](../docs/reports/bidirectional-correlated-concrete-validation-20261026.md)
+records the Kotlin correspondence checks; fresh project validation remains pending.
 
 [interpreter.md](interpreter.md) defines IR construction and rule order.
 [analyzer-core.md](analyzer-core.md) defines events, ownership, scheduling, and the

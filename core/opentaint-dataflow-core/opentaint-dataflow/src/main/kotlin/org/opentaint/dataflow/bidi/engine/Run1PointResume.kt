@@ -263,7 +263,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
                     val actual = core.staticFacts(effect.supply)
                     for (leaf in core.ops.leaves(actual)) {
                         val premise = concreteInitial(leaf)
-                        core.installPoint(premise, actual, at.site, at.callState)
+                        core.installPoint(premise, core.ops.startFact(premise, core.mode), at.site, at.callState)
                     }
                     return
                 }
@@ -315,7 +315,7 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
             for (leaf in core.ops.leaves(actual)) {
                 core.ap.cancellation.checkpoint()
                 val premise = concreteInitial(leaf)
-                core.ops.applySummary(core.ap.factsOf(leaf.fact, leaf.exclusion, Layer.DEMAND), key.initial, relation,
+                core.ops.applySummary(core.ops.startFact(premise, core.mode), key.initial, relation,
                     core.mode, object : ApOut {
                         override fun result(f: Facts) = core.installPoint(premise, f, key.site, key.state)
                         override fun markRequest(mark: TaintMark) = Unit // materialization clears mx only

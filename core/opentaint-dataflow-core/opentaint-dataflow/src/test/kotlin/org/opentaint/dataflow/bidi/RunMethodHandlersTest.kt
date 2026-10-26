@@ -261,7 +261,7 @@ class RunMethodHandlersTest {
                 applications += Triple(part, pub, member)
             }
             override fun applyRecord(part: Subscription, record: Record): Unit = error("No records in this fixture")
-            override fun applyRecordView(part: Subscription, view: RecordLeafView): Unit = error("No record views in this fixture")
+            override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean): Unit = error("No record views in this fixture")
             override fun freeze() = frozen()
         }
     }

@@ -3,14 +3,13 @@ package org.opentaint.dataflow.bidi.ap
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import java.util.ArrayDeque
 
-/** Only the proved canonical run-1 FULL cell has a cross-mark FLOW key.
- * The owner must also match method, point/exit, call stage and effect class. */
+/** The owner fixes method, run, view and summary endpoint. Preserve all
+ * admitted counterpart geometry; no runtime atom or iteration gate applies. */
 fun flowInitialForCoverage(m: ApManager, premise: PremiseKey): InitialAp? {
     m.cancellation.checkpoint()
     val initial = premise as? InitialAp ?: return null
     val mark = initial.mark as? MarkSlot.Concrete ?: return null
-    if (initial.manager !== m || initial.isZero || mark.mark == TaintMark.ZERO || initial.tail != Tail.STAR ||
-        initial.exclusion != ExclusionSet.Empty || m.marks.isGroup(mark.mark)) return null
+    if (initial.manager !== m || initial.isZero || mark.mark == TaintMark.ZERO || (initial.tail != Tail.STAR && initial.tail != Tail.ANY)) return null
     return m.initial(initial.base, initial.path, initial.tail, initial.exclusion, MarkSlot.STAR)
 }
 
@@ -34,25 +33,73 @@ fun flowCoversAny(m: ApManager, flow: FlowTree, base: AccessPathBase, path: IntA
     return false
 }
 
-/** Remove only plain diagonal ANY memberships covered by the supplied FLOW
- * trees. The owner has already checked scope, initial key, handoff and alias
- * effect compatibility. EXACT/MUST, cross-mark and protected parts remain.
- *
- * Each candidate tree is joined with the TAINT trie along matching branches.
- * There is no enumeration of FLOW paths or FLOW-path × TAINT-path product.
- * Protection is an explicit input, since ordinary fact equality ignores it. */
-fun removeFlowCoveredAny(m: ApManager, initial: PremiseKey, facts: TaintTree,
-                         flow: Iterable<FlowTree>, protection: TaintNode? = null): TaintTree? {
+/** Remove plain diagonal memberships under one complete FLOW candidate.
+ * STAR uses equal output paths and suffix-exclusion inclusion; ANY uses
+ * prefixes. EXACT/must, cross-atom and protected memberships remain. */
+fun removeFlowCovered(m: ApManager, initial: PremiseKey, facts: TaintTree,
+                      flow: Iterable<FlowTree>, protection: TaintNode? = null): TaintTree? {
     m.cancellation.checkpoint()
-    if (facts.anyTail != Tail.ANY || flowInitialForCoverage(m, initial) == null) return facts
+    if ((facts.anyTail != Tail.STAR && facts.anyTail != Tail.ANY) || flowInitialForCoverage(m, initial) == null) return facts
     val mark = ((initial as InitialAp).mark as MarkSlot.Concrete).mark
     var root: TaintNode = facts.root
     for (candidate in flow) {
         m.cancellation.checkpoint()
-        if (!eligibleAnyHeader(candidate, facts.base, mark, facts.layer)) continue
-        root = removeCoveredDiagonal(m, root, candidate.root, protection, mark) ?: return null
+        if (candidate.base != facts.base || candidate.tail != facts.anyTail || mark in candidate.markExclusion ||
+            (candidate.layer != Layer.NORMAL && facts.layer != Layer.DEMAND) ||
+            (facts.anyTail == Tail.STAR && !candidate.exclusion.isSubsetOf(facts.exclusion))) continue
+        root = if (facts.anyTail == Tail.STAR)
+            removeCoveredStar(m, root, candidate.root, protection, mark) ?: return null
+        else removeCoveredDiagonal(m, root, candidate.root, protection, mark) ?: return null
     }
     return if (root === facts.root) facts else facts.withRoot(root)
+}
+
+/** Compatibility entry for callers which explicitly inspect the ANY cell. */
+fun removeFlowCoveredAny(m: ApManager, initial: PremiseKey, facts: TaintTree,
+                         flow: Iterable<FlowTree>, protection: TaintNode? = null): TaintTree? =
+    if (facts.anyTail == Tail.ANY) removeFlowCovered(m, initial, facts, flow, protection) else facts
+
+private class StarCoverKey(val taint: TaintNode, val flow: FlowNode?, val protected: TaintNode?) {
+    override fun hashCode(): Int = (System.identityHashCode(taint) * 31 + System.identityHashCode(flow)) * 31 +
+        System.identityHashCode(protected)
+    override fun equals(other: Any?): Boolean = other is StarCoverKey && taint === other.taint &&
+        flow === other.flow && protected === other.protected
+}
+private class StarCoverFrame(val key: StarCoverKey, var expanded: Boolean = false)
+
+/** Equal-node walk: an annotated proper prefix cannot cover a shared suffix. */
+private fun removeCoveredStar(m: ApManager, root: TaintNode, flow: FlowNode,
+                              protection: TaintNode?, mark: TaintMark): TaintNode? {
+    val memo = HashMap<StarCoverKey, TaintNode?>()
+    val stack = ArrayDeque<StarCoverFrame>()
+    val initial = StarCoverKey(root, flow, protection)
+    val one = m.markSetOf(mark)
+    stack.addLast(StarCoverFrame(initial))
+    while (stack.isNotEmpty()) {
+        m.cancellation.checkpoint()
+        val frame = stack.peekLast()
+        val key = frame.key
+        if (memo.containsKey(key)) { stack.removeLast(); continue }
+        if (key.flow == null) { memo[key] = key.taint; stack.removeLast(); continue }
+        fun childKey(accessor: Int, child: TaintNode) =
+            StarCoverKey(child, key.flow.child(accessor), key.protected?.child(accessor))
+        if (!frame.expanded) {
+            frame.expanded = true
+            key.taint.accessorData?.forEachIndexed { i, accessor ->
+                val child = childKey(accessor, key.taint.childData!![i])
+                if (!memo.containsKey(child)) stack.addLast(StarCoverFrame(child))
+            }
+            continue
+        }
+        val leaf = key.taint.leaf
+        val remove = key.flow.leaf == FlowLeaf.LEAF && key.protected?.leaf?.any?.contains(mark) != true
+        val remaining = if (remove) m.taintLeaves(leaf.exact, leaf.any - one) else leaf
+        memo[key] = m.taintAlg.mapChildren(key.taint, remaining, m.cancellation) { accessor, child ->
+            memo.getValue(childKey(accessor, child))
+        }
+        stack.removeLast()
+    }
+    return memo.getValue(initial)
 }
 
 /** References are deliberate: structural trie hashing here would traverse

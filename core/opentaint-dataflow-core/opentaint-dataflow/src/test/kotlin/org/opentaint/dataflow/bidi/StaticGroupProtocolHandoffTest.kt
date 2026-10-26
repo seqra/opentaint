@@ -61,15 +61,18 @@ class StaticGroupProtocolHandoffTest {
             val run1 = f.results.first()
             assertEquals(RunStatus.COMPLETE, run1.status)
             val group = MarkSlot.Concrete(f.manager.marks.group(f.manager.marks.groupOf(full)))
-            val original = p.pattern(STATIC, path, Tail.STAR, group)
-            val output = p.pattern(returned, tail = Tail.ANY, mark = group)
+            // The concrete STAR relation is now covered by the retained FLOW
+            // relation. Its complete original/output pair guides the next run.
+            val original = p.pattern(STATIC, path, Tail.STAR, MarkSlot.STAR)
+            val output = p.pattern(returned, tail = Tail.STAR, mark = MarkSlot.STAR)
+            val backwardEntry = output.copy(fact = output.fact.copy(tail = Tail.ANY))
             for (method in listOf(getter, wrapper)) {
                 val actor = run1.analyzers.single { it.key == method }
                 val selected = actor.summaries.demandEdges().flatMap { (premise, facts) ->
                     f.ops.leaves(facts).map { premise.toPatternForTest() to it }
                 }.toSet()
-                assertTrue(original to output in selected, "This exact method retains the concrete static original")
-                assertTrue(DemandPattern(output, original) in checkNotNull(f.configs[1].demand).near(method, output),
+                assertTrue(original to output in selected, "The retained FLOW keeps this method original and correlated image")
+                assertTrue(DemandPattern(backwardEntry, original) in checkNotNull(f.configs[1].demand).near(method, backwardEntry),
                     "The next run receives the full ordered pair, not only a return entry")
             }
             val setterEntry = p.pattern(STATIC, path, Tail.EXACT, group)

@@ -56,13 +56,13 @@ class FlowBackedSummaryStoreTest {
             leaf(p(f), Tail.ANY, mu, Layer.DEMAND, base = y)), decoded(delta))
     }
 
-    @Test fun `same base identity effect and unsupported tails keep exact fallback`(): Unit = with(v) {
+    @Test fun `same base identity is subsumed while unsupported tails keep exact fallback`(): Unit = with(v) {
         val initial = premise(tail = Tail.STAR)
         val flowInitial = premise(tail = Tail.STAR, mark = MarkSlot.STAR)
         val store = RunSummaryStore(m, flowBacked = true)
         store.add(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND)))
         val sameBase = pack(leaf(p(), Tail.ANY, layer = Layer.DEMAND))
-        assertNotNull(store.add(initial, sameBase))
+        assertNull(store.add(initial, sameBase))
         val exact = pack(leaf(p(), Tail.EXACT, layer = Layer.DEMAND, base = y))
         store.add(flowInitial, pack(leaf(p(), Tail.ANY, MarkSlot.STAR, Layer.DEMAND, base = y)))
         assertNotNull(store.add(initial, exact))

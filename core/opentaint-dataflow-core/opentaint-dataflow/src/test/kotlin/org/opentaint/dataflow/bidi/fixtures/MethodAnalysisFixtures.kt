@@ -396,7 +396,7 @@ class MethodAnalysisFixtures(
             error("Summary application requires an explicit test service")
         override fun applyRecord(part: Subscription, record: Record): Unit =
             error("Record application requires an explicit test service")
-        override fun applyRecordView(part: Subscription, view: RecordLeafView): Unit =
+        override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean): Unit =
             error("Record views require an explicit test service")
         override fun freeze() = Unit
     }

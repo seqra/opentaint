@@ -14,7 +14,9 @@ private fun flowTails(a: FlowTree) = SummaryTails<FlowLeaf>(a.exclusion) { p, st
 }
 
 private fun taintTails(m: ApManager, a: TaintTree) =
-    SummaryTails<TaintLeaves>(ExclusionSet.Empty, a.exclusion) { p, _, any, exact ->
+    if (a.anyTail == Tail.STAR) SummaryTails<TaintLeaves>(a.exclusion) { p, star, _, exact ->
+        m.taintLeaves(if (exact) p.exact else MarkSet.EMPTY, if (star) p.any else MarkSet.EMPTY)
+    } else SummaryTails<TaintLeaves>(ExclusionSet.Empty, a.exclusion) { p, _, any, exact ->
         m.taintLeaves(if (exact) p.exact else MarkSet.EMPTY, if (any) p.any else MarkSet.EMPTY)
     }
 
@@ -123,7 +125,8 @@ internal fun applySummaryPart(ops: ApOps, a: Facts, j: InitialAp, g: Facts, mode
 }
 
 /** A transient native record uses its Pattern directly, retaining its own exclusions. */
-internal fun applyRecordLeafPart(ops: ApOps, a: Facts, view: RecordLeafView, mode: ApMode, out: ApOut) {
+internal fun applyRecordLeafPart(ops: ApOps, a: Facts, view: RecordLeafView, nonSubsumable: Boolean,
+                                 mode: ApMode, out: ApOut) {
     val m = ops.manager
     m.cancellation.checkpoint()
     val edge = ops.compiled(summaryEdge(view.premise, view.result))
@@ -135,7 +138,7 @@ internal fun applyRecordLeafPart(ops: ApOps, a: Facts, view: RecordLeafView, mod
     }
     for (r in one.results) {
         m.cancellation.checkpoint()
-        out.result(r)
+        out.result(if (nonSubsumable) m.selectedProtection(r, null) else r)
     }
 }
 
@@ -143,18 +146,19 @@ private class SummaryLeafKind(val edge: CompiledEdge, val graft: (Facts) -> Fact
 
 private fun leafKinds(m: ApManager, g: Facts, j: InitialAp): List<SummaryLeafKind> {
     val jOwn = j.tail == Tail.ANY_TAINT
+    val inputShared = if (jOwn) ExclusionSet.Empty else j.exclusion
     fun edge(tail: Tail, mark: MarkSlot, exclusion: ExclusionSet, toExclusion: ExclusionSet = ExclusionSet.Empty) =
         CompiledEdge(j.base, j.pathData, j.tail, j.mark, g.base, null, tail, mark,
-            m.intern(if (jOwn) ExclusionSet.Empty else exclusion),
+            m.intern(exclusion),
             m.intern(if (jOwn) j.exclusion else ExclusionSet.Empty), m.intern(toExclusion))
     return when (g) {
         is Reach -> listOf(SummaryLeafKind(edge(Tail.EXACT, MarkSlot.Concrete(TaintMark.ZERO), ExclusionSet.Empty)) { it })
         is FlowTree -> listOf(
             if (g.tail == Tail.STAR)
-                SummaryLeafKind(edge(Tail.STAR, MarkSlot.Star(g.markExclusion), j.exclusion.union(g.exclusion))) {
+                SummaryLeafKind(edge(Tail.STAR, MarkSlot.Star(g.markExclusion), inputShared.union(g.exclusion))) {
                     graftSummary(m, g.root, { p -> p == FlowLeaf.LEAF }, it)
                 }
-            else SummaryLeafKind(edge(Tail.ANY, MarkSlot.Star(g.markExclusion), j.exclusion)) {
+            else SummaryLeafKind(edge(Tail.ANY, MarkSlot.Star(g.markExclusion), inputShared)) {
                 graftSummary(m, g.root, { p -> p == FlowLeaf.LEAF }, it)
             })
         is TaintTree -> {
@@ -164,14 +168,16 @@ private fun leafKinds(m: ApManager, g: Facts, j: InitialAp): List<SummaryLeafKin
             for (id in all.exact.ids) {
                 m.cancellation.checkpoint()
                 val mark = TaintMark(id)
-                kinds += SummaryLeafKind(edge(Tail.EXACT, MarkSlot.Concrete(mark), j.exclusion)) {
+                kinds += SummaryLeafKind(edge(Tail.EXACT, MarkSlot.Concrete(mark), inputShared)) {
                     graftSummary(m, g.root, { p -> mark in p.exact }, it)
                 }
             }
             for (id in all.any.ids) {
                 m.cancellation.checkpoint()
                 val mark = TaintMark(id)
-                kinds += SummaryLeafKind(edge(anyTail, MarkSlot.Concrete(mark), j.exclusion, g.exclusion)) {
+                val shared = if (anyTail == Tail.STAR) inputShared.union(g.exclusion) else inputShared
+                val own = if (anyTail == Tail.ANY_TAINT) g.exclusion else ExclusionSet.Empty
+                kinds += SummaryLeafKind(edge(anyTail, MarkSlot.Concrete(mark), shared, own)) {
                     graftSummary(m, g.root, { p -> mark in p.any }, it)
                 }
             }

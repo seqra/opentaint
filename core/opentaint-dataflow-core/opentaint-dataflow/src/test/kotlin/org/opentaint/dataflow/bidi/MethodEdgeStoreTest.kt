@@ -48,15 +48,18 @@ internal class StoreValues(val fixture: StoreFixtures) {
         return when (first) {
             is Reach -> first
             is FlowTree -> {
-                require(values.all { it is FlowTree && it.exclusion == first.exclusion && it.markExclusion == first.markExclusion })
+                require(values.all { it is FlowTree && it.tail == first.tail &&
+                    it.exclusion == first.exclusion && it.markExclusion == first.markExclusion })
                 m.flowTree(first.base, first.layer, first.exclusion, first.markExclusion,
-                    values.drop(1).fold(first.root) { root, next -> FlowAlgebra.mergeAdd(root, (next as FlowTree).root) })
+                    values.drop(1).fold(first.root) { root, next -> FlowAlgebra.mergeAdd(root, (next as FlowTree).root) }, first.tail)
             }
             is TaintTree -> {
-                val e = leaves.firstOrNull { it.fact.tail == Tail.ANY_TAINT }?.exclusion ?: ExclusionSet.Empty
-                require(leaves.filter { it.fact.tail == Tail.ANY_TAINT }.all { it.exclusion == e })
+                val spans = values.filterIsInstance<TaintTree>().filter { it.root.hasAny }
+                val span = spans.firstOrNull()
+                require(spans.all { it.anyTail == span!!.anyTail && it.exclusion == span.exclusion })
                 m.taintTree(first.base, first.layer,
-                    values.drop(1).fold(first.root) { root, next -> m.taintAlg.mergeAdd(root, (next as TaintTree).root) }, e)
+                    values.drop(1).fold(first.root) { root, next -> m.taintAlg.mergeAdd(root, (next as TaintTree).root) },
+                    span?.exclusion ?: ExclusionSet.Empty, span?.anyTail ?: Tail.ANY_TAINT)
             }
         }
     }

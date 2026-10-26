@@ -67,7 +67,7 @@ class FlowGroup(private val m: ApManager, private val interner: TrieInterner<Flo
     }
 }
 
-/** TAINT values for one base. Normal must leaves retain E and never subsume exact leaves. */
+/** TAINT values for one base. STAR and must spans keep distinct suffix semantics. */
 class TaintGroup(private val m: ApManager, private val interner: TrieInterner<TaintLeaves>) {
     private val trees = arrayOf(ArrayList<TaintTree>(1), ArrayList<TaintTree>(1))
 
@@ -149,13 +149,14 @@ class TaintGroup(private val m: ApManager, private val interner: TrieInterner<Ta
             m.cancellation.checkpoint()
             val storedRoot = if (protectedOnly) stored.nonSubsumable ?: continue else stored.root
             val storedMay = stored.anyTail == Tail.ANY
-            val coversAny = storedMay || t.anyTail == Tail.ANY_TAINT
+            val storedStar = stored.anyTail == Tail.STAR
+            val coversAny = storedMay || stored.anyTail == t.anyTail
             val anyAt = coversAny && (storedMay || stored.exclusion.isSubsetOf(t.exclusion))
             remaining = alg.subtract(remaining, storedRoot, TaintLeaves.EMPTY,
                 at = { alg.leaves(if (storedMay) it.exact + it.any else it.exact,
                     if (anyAt) it.any else MarkSet.EMPTY) },
                 below = { alg.leaves(if (storedMay) it.any else MarkSet.EMPTY,
-                    if (coversAny) it.any else MarkSet.EMPTY) },
+                    if (coversAny && !storedStar) it.any else MarkSet.EMPTY) },
                 admits = stored.exclusion::admits,
                 cancellation = m.cancellation) ?: return null
         }

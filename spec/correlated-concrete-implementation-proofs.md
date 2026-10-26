@@ -1,7 +1,8 @@
 # Implementation proofs for correlated concrete initials
 
-Date: 26 October 2026. Status: **local constructive proofs checked; implementation correspondence tests remain**.
-The analyzer implementation is unchanged. Read the
+Date: 26 October 2026. Status: **local constructive proofs and implementation correspondence tests checked**.
+The analyzer implementation passes the local gates recorded in the
+[validation report](../docs/reports/bidirectional-correlated-concrete-validation-20261026.md). Read the
 [implementation proposal](../docs/design/bidirectional-correlated-concrete-implementation-20261026.md)
 and the [semantic specification](run1-correlated-concrete-initials.md).
 The latest referenced Thingsboard result is **run-2 OOM; run-1 COMPLETE**.

@@ -28,7 +28,7 @@ class PipelineFixtures(index: Int = 1, limit: Int = maxOf(1, index - 1),
     val deliveries = ArrayList<RunEvent.Delivery>()
     data class Summary(val caller: MethodKey, val part: Subscription, val publication: Publication, val member: Int)
     data class Native(val caller: MethodKey, val part: Subscription, val record: Record)
-    data class View(val caller: MethodKey, val part: Subscription, val view: RecordLeafView)
+    data class View(val caller: MethodKey, val part: Subscription, val view: RecordLeafView, val nonSubsumable: Boolean = false)
     val summaries = ArrayList<Summary>()
     val native = ArrayList<Native>()
     val views = ArrayList<View>()
@@ -57,8 +57,8 @@ class PipelineFixtures(index: Int = 1, limit: Int = maxOf(1, index - 1),
                 native += application
                 onRecord?.invoke(application)
             }
-            override fun applyRecordView(part: Subscription, view: RecordLeafView) {
-                val application = View(caller, part, view)
+            override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) {
+                val application = View(caller, part, view, nonSubsumable)
                 views += application
                 onView?.invoke(application)
             }

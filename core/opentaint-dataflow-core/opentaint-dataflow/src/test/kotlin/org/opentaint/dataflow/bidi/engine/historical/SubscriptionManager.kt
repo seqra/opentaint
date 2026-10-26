@@ -239,7 +239,7 @@ class SubscriptionManager(port: SubscriptionPort) {
                     cancellation.checkpoint()
                     if (!seen.add(view)) continue
                     val added = ops.satisfying(part.added, view.premise, mode, record = true) ?: continue
-                    applier.applyRecordView(part.copy(added = added), view)
+                    applier.applyRecordView(part.copy(added = added), view, false)
                 }
             }
         }

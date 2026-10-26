@@ -402,7 +402,8 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             val selected = core.ap.initial(Pattern(leaf.fact.copy(path = path,
                 tail = if (leaf.fact.tail == Tail.EXACT && leaf.fact.path.size <= 2) Tail.EXACT else Tail.STAR), ExclusionSet.Empty))
             val ref = CallerRef(core.key, selected, part.ref.callerLayer, part.ref.call, part.ref.stageOrdinal)
-            val input = part.copy(ref = ref, linkLayer = matched.layer, added = matched)
+            val selectedInput = core.forceRun1Layer(selected, core.ops.startFact(selected, core.mode))
+            val input = part.copy(ref = ref, linkLayer = selectedInput.layer, added = selectedInput)
             if (pub.premise is PremiseSet) ndMatch(input, pub, pub.premise, member)
             else {
                 val statistics = core.context.shared.n2Statistics
@@ -463,13 +464,13 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         resumeCallees(part.ref, tagged, pendingDemotion = true)
     }
 
-    override fun applyRecordView(part: Subscription, view: RecordLeafView) {
+    override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) {
         val core = active()
         val results = ArrayList<PlanFact>()
         val identity = recordLeafIdentity(view)
-        core.ops.applyRecordLeaf(part.added, view, core.mode, core.collect(part.ref.premise, part.added) { premise, result ->
+        core.ops.applyRecordLeaf(part.added, view, nonSubsumable, core.mode, core.collect(part.ref.premise, part.added) { premise, result ->
             results += planFact(premise, result, identity)
-        })
+        }, original = part.ref.premise)
         if (results.isNotEmpty()) core.countRecordCrossing()
         resumeCallees(part.ref, results)
     }
@@ -530,8 +531,18 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         check(part.linkLayer == matched.layer) { "The matched fact and link have the same layer" }
         val store = checkNotNull(core.localServices.conjunctions) { "Forward calls need their local conjunction store" }
         val join = store.ndJoin<NdBinding>(ConjunctionStore.NdKey(part.callee, premise, pub.layer, part.ref.call, part.ref.stageOrdinal))
-        val binding = NdBinding(part.ref, matched.layer)
-        for ((parts, result) in join.addSubscription(member, binding)) {
+        val binding = NdBinding(part.ref, matched.layer).also {
+            it.triggering = (premise.member(member).mark as? MarkSlot.Concrete)?.mark
+                ?.let { mark -> core.ap.marks.runtimeAtom(mark, core.mode.markMode) }
+            it.nonSubsumable = matched.nonSubsumable != null
+        }
+        val fresh = join.addSubscription(member, binding) { previous, offered ->
+            check(previous.triggering == offered.triggering)
+            val changed = offered.nonSubsumable && !previous.nonSubsumable
+            previous.nonSubsumable = previous.nonSubsumable || offered.nonSubsumable
+            changed
+        }
+        for ((parts, result) in fresh) {
             core.ap.cancellation.checkpoint()
             applyCombination(parts, result)
         }
@@ -555,8 +566,17 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
         val at = OperationInput(ResumeSite.CallStageInput(core.operation(ref.call, ref.stageOrdinal)), union, conclusion,
             CallResumeState(ref.callerLayer))
         core.ops.applyMatchedCombination(layers, conclusion, core.collect(at) { pr, result ->
-            if (core.config.run1 && result.base == STATIC) core.promoteStaticSummary(pr, result)
-            else results += planFact(pr, result, false)
+            val inherited = parts.any { it.nonSubsumable }
+            var protected = if (inherited && result is TaintTree) result.withProtection(result.root) else result
+            if (protected is TaintTree) {
+                val restored = MarkSet(union.members.mapNotNull { (it.mark as? MarkSlot.Concrete)?.mark }
+                    .map { core.ap.marks.runtimeAtom(it, core.mode.markMode) }
+                    .filter { origin -> parts.any { it.triggering != null && it.triggering != origin } }
+                    .map { it.id }.toIntArray())
+                protected = core.ap.selectedProtection(protected, restored)
+            }
+            if (core.config.run1 && protected.base == STATIC) core.promoteStaticSummary(pr, protected)
+            else results += planFact(pr, protected, false)
         })
         resumeCallees(ref, results)
     }

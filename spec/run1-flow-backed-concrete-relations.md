@@ -20,16 +20,16 @@ Terminology: **protection is the non-subsumable flag**. These names refer to
 the same per-output-leaf/per-FULL-mark Boolean. There is no second protection
 mechanism, support label or dependency graph.
 
-The proposed [correlated concrete initial extension](run1-correlated-concrete-initials.md)
+The selected [correlated concrete initial extension](run1-correlated-concrete-initials.md)
 makes the subsumption mechanism available in all runs and directions,
 including the existing ANY cell and a separate equal-output-path STAR cell.
 It retains the suffix-exclusion, layer and protection gates in every run.
-It does not extend the ANY prefix test to STAR. The implementation described
-in this document remains unchanged until that extension is implemented.
+It does not extend the ANY prefix test to STAR. The extension is implemented; the narrower coverage gates below describe
+the historical implementation.
 The extension also removes the alias identity/effect compatibility guard,
 including the same-base ANY identity exception. The scope and alias guards
 below describe the historical implementation; extension sections 5.1 and 5.2
-define the proposed owner/initial test and the guard removal.
+define the current owner/initial test and the guard removal.
 
 ## 1. Selected changes and unchanged behavior
 

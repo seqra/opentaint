@@ -38,7 +38,7 @@ class FlowBackedSameBaseTest {
     }
 
     @Test
-    fun `mixed same base tree prunes child and retains only same path identity in both orders`() {
+    fun `same base identity and child are both removed in both orders`() {
         val concrete = initial()
         val abstract = initial(mark = MarkSlot.STAR)
         val taint = marked(listOf(emptyList(), listOf(f)))
@@ -51,8 +51,8 @@ class FlowBackedSameBaseTest {
                 store.add(key, value)
                 store.addDemand(key, value)
             }
-            assertEquals(setOf(emptyList()), paths(store.borrow(concrete)))
-            assertEquals(setOf(emptyList()), paths(store.demandEdges().filter { it.first === concrete }.map { it.second }))
+            assertTrue(store.borrow(concrete).none())
+            assertTrue(store.demandEdges().none { it.first === concrete })
             assertTrue(store.all().any { it.first === abstract && it.second is FlowTree })
         }
     }
@@ -72,16 +72,16 @@ class FlowBackedSameBaseTest {
     }
 
     @Test
-    fun `packed same base compaction restores the exact annotated identity spine only`() {
+    fun `packed same base compaction removes identity and effect outputs`() {
         val concrete = initial(listOf(f))
         val abstract = initial(listOf(f), MarkSlot.STAR)
         val store = DiagonalRelations(m)
         store.add(concrete, marked(listOf(listOf(f), listOf(f, g), listOf(h))))
         store.compact(abstract, flow())
-        assertEquals(setOf(listOf(f)), paths(store.borrow(concrete)))
+        assertTrue(store.borrow(concrete).none())
         val before = store.census()
         store.compact(abstract, flow())
-        assertEquals(before, store.census(), "Repeated restoration is not new marked work")
+        assertEquals(before, store.census(), "Repeated compaction is not new marked work")
     }
 
     @Test

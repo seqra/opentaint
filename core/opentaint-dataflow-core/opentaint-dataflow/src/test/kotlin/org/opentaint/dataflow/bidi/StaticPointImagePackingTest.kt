@@ -22,7 +22,7 @@ class StaticPointImagePackingTest {
                 override fun process(item: EdgeDelta): Unit = error("Unexpected call processing")
                 override fun applySummary(part: Subscription, pub: Publication, member: Int): Unit = error("Unexpected summary")
                 override fun applyRecord(part: Subscription, record: Record): Unit = error("Unexpected record")
-                override fun applyRecordView(part: Subscription, view: RecordLeafView): Unit = error("Unexpected record view")
+                override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean): Unit = error("Unexpected record view")
                 override fun freeze() = Unit
             }
         })
@@ -71,7 +71,7 @@ class StaticPointImagePackingTest {
             f.drain(actor)
         }
 
-        /** The old scalar algorithm, without the new key or pending-image union. */
+        /** Independent scalar form of the correlated selected-initial policy. */
         fun scalarReference(at: OperationInput, group: GroupId): Set<OperationInput> {
             val actual = actor.staticFacts(RegionGroups(original.toPattern(), f.manager.marks.atomsFor(GroupSet.of(group))))
             val expected = HashSet<OperationInput>()
@@ -85,7 +85,7 @@ class StaticPointImagePackingTest {
                     // do not call the production concreteInitial helper.
                     val premise = f.manager.initial(STATIC, f.manager.path(staticPath), Tail.STAR,
                         ExclusionSet.Empty, leaf.fact.mark)
-                    f.ops.applySummary(f.manager.factsOf(leaf.fact, leaf.exclusion, Layer.DEMAND),
+                    f.ops.applySummary(f.ops.startFact(premise, actor.mode),
                         at.premise as InitialAp, relation, actor.mode, object : ApOut {
                             override fun result(facts: Facts) {
                                 expected += OperationInput(at.site, premise, facts.withLayer(Layer.DEMAND), at.callState)

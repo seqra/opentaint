@@ -132,12 +132,11 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
                 }
                 gate.taintMarks(u.leaf.exact)?.let { put(layer, Tail.EXACT, it) }
                 gate.taintMarks(u.leaf.any)?.let {
-                    if (must) {
-                        if (mode.run1 && ce.exclusion != ExclusionSet.Empty)
-                            put(Layer.DEMAND, Tail.ANY_TAINT, it)
-                        else put(layer, Tail.ANY_TAINT, it, e.union(ce.exclusion))
+                    when (c.anyTail) {
+                        Tail.STAR, Tail.ANY_TAINT -> put(layer, c.anyTail, it, e.union(ce.exclusion))
+                        Tail.ANY -> put(Layer.DEMAND, Tail.ANY, it)
+                        else -> error("Nonexact TAINT header")
                     }
-                    else put(Layer.DEMAND, Tail.ANY, it)
                 }
             }
             else -> {
@@ -152,13 +151,13 @@ internal class EdgeApplication(private val m: ApManager, private val ce: Compile
         if (ce.toBase == AccessPathBase.Zero) { results.reach(resultLayer); return }
         val leaf = when (tail) {
             Tail.EXACT -> m.taintLeaves(marks, MarkSet.EMPTY)
-            Tail.ANY, Tail.ANY_TAINT -> m.taintLeaves(MarkSet.EMPTY, marks)
-            Tail.STAR -> error("S8: a concrete mark has no STAR leaf")
+            Tail.STAR, Tail.ANY, Tail.ANY_TAINT -> m.taintLeaves(MarkSet.EMPTY, marks)
         }
-        val cover = mode.run1 && tail == Tail.ANY_TAINT && exclusion != ExclusionSet.Empty
+        val hasExclusion = tail == Tail.STAR || tail == Tail.ANY_TAINT
+        val cover = mode.run1 && hasExclusion && exclusion != ExclusionSet.Empty
         results.taint(if (cover) Layer.DEMAND else resultLayer,
             m.taintAlg.prepend(m, ce.toPath, m.taintAlg.leafNode(leaf)),
-            if (cover || tail != Tail.ANY_TAINT) ExclusionSet.Empty else exclusion,
+            if (cover || !hasExclusion) ExclusionSet.Empty else exclusion,
             if (tail == Tail.EXACT) Tail.ANY_TAINT else tail)
     }
 

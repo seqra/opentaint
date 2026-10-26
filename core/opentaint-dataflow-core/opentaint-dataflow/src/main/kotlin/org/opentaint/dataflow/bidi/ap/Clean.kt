@@ -190,7 +190,8 @@ private class TaintClean(private val m: ApManager, private val c: TaintTree, pri
                         else put(c.layer, at, Tail.ANY_TAINT, removed, c.exclusion.union(ExclusionSet.of(path[d])))
                         if (cl.reach == CleanReach.BELOW) put(c.layer, cl.path, Tail.EXACT, removed)
                     }
-                    tail.isAny && cl.reach == CleanReach.BELOW && d == path.size -> put(c.layer, at, Tail.EXACT, removed)
+                    (tail.isAny || tail == Tail.STAR) && cl.reach == CleanReach.BELOW && d == path.size ->
+                        put(c.layer, at, Tail.EXACT, removed)
                     else -> put(Layer.DEMAND, at, tail, removed, c.exclusion)
                 }
             }

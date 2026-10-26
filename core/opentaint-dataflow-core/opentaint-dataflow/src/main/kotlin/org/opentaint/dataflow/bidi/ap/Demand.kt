@@ -22,7 +22,8 @@ internal fun initialFacts(m: ApManager, i: InitialAp): Facts {
             val leaf = if (exact) m.taintLeaves(marks, MarkSet.EMPTY) else m.taintLeaves(MarkSet.EMPTY, marks)
             val layer = if (exact || i.tail == Tail.ANY_TAINT) Layer.NORMAL else Layer.DEMAND
             m.taintTree(i.base, layer, m.taintAlg.prepend(m, i.path, m.taintAlg.leafNode(leaf)),
-                if (i.tail == Tail.ANY_TAINT) i.exclusion else ExclusionSet.Empty)
+                if (i.tail == Tail.STAR || i.tail == Tail.ANY_TAINT) i.exclusion else ExclusionSet.Empty,
+                anyTail = if (exact) Tail.ANY_TAINT else i.tail)
         }
     }
 }

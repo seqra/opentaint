@@ -52,9 +52,9 @@ class TaintTree internal constructor(
     init {
         check(base != AccessPathBase.Zero) { "Only REACH represents zero" }
         check(!root.isEmpty) { "A conclusion tree must be nonempty" }
-        check(anyTail == Tail.ANY || anyTail == Tail.ANY_TAINT)
-        check(exclusion == ExclusionSet.Empty || (anyTail == Tail.ANY_TAINT && root.hasAny)) {
-            "Only must leaves have an exclusion"
+        check(anyTail == Tail.STAR || anyTail == Tail.ANY || anyTail == Tail.ANY_TAINT)
+        check(exclusion == ExclusionSet.Empty || (anyTail != Tail.ANY && root.hasAny)) {
+            "Only STAR and must leaves have an exclusion"
         }
     }
     internal fun withRoot(root: TaintNode) = TaintTree(base, layer, root, if (root.hasAny) exclusion else ExclusionSet.Empty,

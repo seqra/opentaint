@@ -145,10 +145,10 @@ class ReferenceOperationsTest {
     }
 
     @Test
-    fun `AP 6_5 start table preserves must exclusion and demotes concrete star`() {
+    fun `AP 6_5 start table preserves must and concrete STAR exclusions`() {
         val rows = listOf(
             p(listOf(f), Tail.STAR, MarkSlot.STAR, ex(g)) to c(listOf(f), Tail.STAR, MarkSlot.STAR, ex(g)),
-            p(listOf(f), Tail.STAR, mt, ex(g)) to c(listOf(f), Tail.ANY),
+            p(listOf(f), Tail.STAR, mt, ex(g)) to c(listOf(f), Tail.STAR, exclusion = ex(g), demand = true),
             p(listOf(f), Tail.ANY) to c(listOf(f), Tail.ANY),
             p(listOf(f), Tail.ANY, MarkSlot.STAR) to c(listOf(f), Tail.ANY, MarkSlot.STAR),
             p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g)) to c(listOf(f), Tail.ANY_TAINT, exclusion = ex(g)),

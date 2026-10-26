@@ -137,7 +137,7 @@ class ApCancellationTest {
             val input = pack(leaf(p(g, f, f), mark = mt, layer = layer, base = y))
             val selected = assertNotNull(ops.satisfying(input, view.premise, backward, record = true))
             cancelledOutput(setOf(leaf(p(f), mark = mu, layer = layer))) { out ->
-                ops.applyRecordLeaf(selected, view, backward, out)
+                ops.applyRecordLeaf(selected, view, false, backward, out)
             }
         }
     }

@@ -52,9 +52,9 @@ class Run1StaticDriverSafetyTest {
                                     seen.summaries += ReadSummary(config.index,part,pub)
                                     service.applySummary(part,pub,member)
                                 }
-                                override fun applyRecordView(part: Subscription, view: RecordLeafView) {
+                                override fun applyRecordView(part: Subscription, view: RecordLeafView, nonSubsumable: Boolean) {
                                     seen.views += ReadView(config.index, part, view)
-                                    service.applyRecordView(part, view)
+                                    service.applyRecordView(part, view, nonSubsumable)
                                 }
                                 override fun applyRecord(part: Subscription, record: Record) {
                                     seen.records += ReadRecord(config.index, part, record,

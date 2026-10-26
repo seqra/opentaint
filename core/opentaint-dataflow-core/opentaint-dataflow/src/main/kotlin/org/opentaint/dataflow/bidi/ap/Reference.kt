@@ -9,9 +9,6 @@ data class Pattern(val fact: PathFact, val exclusion: ExclusionSet)
 
 data class Conclusion(val fact: PathFact, val exclusion: ExclusionSet, val demand: Boolean) {
     init {
-        check(fact.tail != Tail.STAR || fact.mark is MarkSlot.Star) {
-            "A STAR conclusion needs an abstract mark"
-        }
         check(fact.tail != Tail.ANY || demand) { "W6: a may conclusion must be DEMAND" }
         check(fact.tail != Tail.ANY_TAINT || fact.mark is MarkSlot.Concrete) {
             "A must conclusion needs a concrete mark"
@@ -349,15 +346,13 @@ fun normalize(f: PathFact, exclusion: ExclusionSet, demand: Boolean): Conclusion
         check(f.mark is MarkSlot.Concrete)                                                                  // W8 (a)
         Conclusion(f, exclusion, demand)
     }
-    f.tail != Tail.STAR || f.mark is MarkSlot.Star -> Conclusion(f, exclusion, demand)
-    else -> Conclusion(f.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)                         // W2
+    else -> Conclusion(f, if (f.tail == Tail.EXACT) ExclusionSet.Empty else exclusion, demand)
 }
 
 /** ap.md §6.5 (Lean startFact; a must-premise: AnyTaint.startT, with the exclusion AnyTaintEx.startX). No direction
  *  parameter: a must-premise occurs only in a forward restricted run (A1), and no other row reads the run. */
 fun startFact(i: Pattern): Conclusion = when (i.fact.tail) {
-    Tail.STAR -> if (i.fact.mark is MarkSlot.Star) Conclusion(i.fact, i.exclusion, demand = false)
-                 else Conclusion(i.fact.copy(tail = Tail.ANY), ExclusionSet.Empty, demand = true)          // W2
+    Tail.STAR -> Conclusion(i.fact, i.exclusion, demand = i.fact.mark is MarkSlot.Concrete)
     Tail.ANY -> Conclusion(i.fact, ExclusionSet.Empty, demand = true)
     Tail.ANY_TAINT -> Conclusion(i.fact, i.exclusion, demand = false)                // a must-premise: itself, normal
     Tail.EXACT -> Conclusion(i.fact, ExclusionSet.Empty, demand = false)
@@ -446,7 +441,7 @@ fun concPart(cl: Cleaner, c: Conclusion): List<Conclusion> {
                else listOf(kept, c.copy(fact = c.fact.copy(path = p, tail = Tail.EXACT), exclusion = ExclusionSet.Empty))   // + x.p.f.$
     }
     return listOf(
-        if (c.fact.tail.isAny && cl.reach == CleanReach.BELOW && q == p)
+        if ((c.fact.tail.isAny || c.fact.tail == Tail.STAR) && cl.reach == CleanReach.BELOW && q == p)
             c.copy(fact = c.fact.copy(tail = Tail.EXACT), exclusion = ExclusionSet.Empty)   // in the layer of c
         else c.copy(demand = true))
 }
