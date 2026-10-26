@@ -38,6 +38,7 @@ which marked demands remain. These are selected changes, not factory details.
 | Same-suffix transport | Concrete STAR is erased or rejected | Retain derived STAR in any run and direction | Normalization, transfer, summaries |
 | Summary replacement | Enabled for FULL run-1, ANY output | General mechanism in every run; ANY prefix and STAR equal-path cells | Coverage, application, handoff, persistence |
 | Dependency protection | Selected producers enable it for FULL run-1 | Apply the same non-subsumable contract wherever replacement is enabled | Rule/cleaner/cycle flags, record views |
+| Alias compatibility guard | Alias identity/effect mismatch blocks replacement | Coverage does not test alias classification | Relation replacement; alias work can differ |
 | Typed representation | No concrete STAR conclusion | Distinct concrete STAR header, with the ordinary phase-specific E | Constructors, keys, decode, readers |
 
 The earlier `mode.run1 && mode.markMode == FULL` tests were scope limits in
@@ -276,7 +277,6 @@ fun covers(e: MarkedLeaf, f: FlowLeaf): Boolean =
     e.inputMark == e.outputMark && !e.nonSubsumable &&
     e.outputMark !in f.markExclusion &&
     (f.layer == NORMAL || e.layer == DEMAND) &&
-    sameAliasEffectClass(e, f) &&
     when {
         e.tail == STAR && f.tail == STAR ->
             e.finalBase == f.finalBase && e.finalPath == f.finalPath &&
@@ -290,8 +290,9 @@ fun covers(e: MarkedLeaf, f: FlowLeaf): Boolean =
 There is no `run1`, `FULL`, forward-only or Empty-E admission test.
 For a FLOW tree, one actual output leaf must satisfy all gates for each
 marked output path/atom. A branch node without an output leaf is not enough.
-Keep method/context, direction/view, endpoint, exit kind, call stage and the
-existing alias-effect class in the comparison scope.
+The ownership and initial-shape checks are defined in section 5.1. Alias
+identity/effect classification is not part of the comparison scope or the
+subsumption condition.
 
 For STAR, equal output paths and sufficient suffix admission are required.
 FLOW can exclude fewer first fields than TAINT, never more. Example:
@@ -313,11 +314,11 @@ Input suffix []: FLOW ends at return.f; TAINT ends at return.f.g.
 Result: not covered.
 ```
 
-Keep prefix containment for ANY/ANY. Keep the current same-base identity
-exception in the ANY alias-effect classifier. Equal-path STAR identities
-have the same FLOW and TAINT effect class. Do not add cross-tail, EXACT/must,
+Keep prefix containment for ANY/ANY. Do not add cross-tail, EXACT/must,
 cross-mark or protected-result replacement here. Do not recover STAR from
-ANY because a FLOW row arrives.
+ANY because a FLOW row arrives. The previous same-base ANY identity exception
+is removed from subsumption. Identity classification still controls its
+existing alias call stage; it does not block relation coverage.
 
 Apply semantic replacement at the current raw/selected/published summary
 admission points. Typed local storage can share geometry, but it must still
@@ -334,6 +335,123 @@ record views before they enter an enabled admission store. A view which
 cannot preserve its mark/tail/flag cell must retain the marked residual.
 Do not enable a bypass with missing protection. This is extension of the
 existing Boolean metadata, not a new dependency or support mechanism.
+
+### 5.1 Complete ownership and initial-shape test
+
+`sameSummaryScopeAndInitialGeometry` means the following checks. `owner` is
+pseudocode for the existing logical relation collection; it is not a new
+field to store on every edge.
+
+```kotlin
+fun sameSummaryScopeAndInitialGeometry(e: MarkedLeaf, f: FlowLeaf): Boolean {
+    if (e.owner !== f.owner) return false
+    val ei = e.initial as? InitialAp ?: return false
+    val fi = f.initial as? InitialAp ?: return false
+    return ei.manager === fi.manager &&
+        !ei.isZero && !fi.isZero &&
+        ei.mark is ConcreteMark && fi.mark == MarkSlot.STAR &&
+        (ei.tail == STAR || ei.tail == ANY) &&
+        ei.base == fi.base &&
+        ei.path == fi.path &&
+        ei.tail == fi.tail &&
+        ei.exclusion == fi.exclusion
+}
+```
+
+Path equality compares the full accessor sequence. Base equality includes
+the actual argument/local/static base identity. Field exclusion equality is
+set equality. Initial marks are the deliberate difference: concrete T on
+the marked initial, unrestricted F on its FLOW counterpart. Initial mark
+exclusions are not allowed. The main `covers` condition separately checks
+that the marked output is also T and that the FLOW output admits T.
+
+Two rows have the same logical owner only in the same active analysis view:
+
+| Owner component | Required equality |
+| --- | --- |
+| Run/view | Same active run and direction, selected mark domain and field limit; an imported record must first have its current native/reversed view |
+| Method key | Same full `MethodKey`, including context and entry statement; equal method names alone are insufficient |
+| Relation endpoint | Same summary boundary after the same boundary actions; a normal-return collection cannot cover an exceptional or intermediate-point result |
+| Collection role | Both raw summaries, both selected-demand summaries, or both published summaries; do not use a raw row to delete a restricted/publication row directly |
+| Call-local view, if present | Same caller method/original, call statement and stage/resume address already owned by that adapter |
+
+For the existing stores, the first four components are fixed by one
+`FlowBackedSummaries` owner in the method's raw store, selected store, or
+`PublicationIndex`. Its internal FLOW, diagonal and fallback buckets belong
+to that same logical owner. They are not different semantic scopes.
+Check owner identity once at the collection boundary; do not add a global
+scope index or repeat a large key on each leaf.
+
+A callee summary is shared by its callers. It has no caller-specific scope;
+do not add caller separation to its store. Normal returns already merged
+by that collection retain their common endpoint. Do not require equal
+physical return statements or add a new normal-exit reachability check.
+Current exceptional exits do not publish ordinary summaries.
+
+Current local method-point stores keep marked observations and do not perform
+this semantic deletion. A saved call/cleaner resume also retains its current
+address and phase. This definition does not authorize erasing local work or
+moving a relation across a call stage. Identity/effect flags are deliberately
+absent from owner equality; do not hide the removed alias guard in the scope.
+
+Initial equality is exact even if one initial field pattern could contain
+another. This proposal does not select cross-initial geometry subsumption.
+Output containment, layers, exclusions and protection use the separate tests
+in `covers`; they must not be folded into owner identity.
+
+### 5.2 No alias identity/effect guard
+
+Delete `sameAliasEffectClass` from the subsumption condition. Delete the
+same-base ANY identity residual exception in `FlowBackedSummaries.normalize`
+when it exists only to enforce that condition. Do not replace it with a
+caller-scope flag, an alias-class key or another equivalent admission test.
+
+Identity classification is an existing call-stage optimization. The current
+raw run-1 `hasNoMemoryEffect` test is:
+
+```kotlin
+fun hasNoMemoryEffect(i: PathFact, o: PathFact): Boolean =
+    i.base != ZERO && i.base == o.base && i.path == o.path &&
+    when {
+        i.mark is AbstractMark && o.mark is AbstractMark ->
+            i.tail == STAR && o.tail == STAR
+        i.mark is ConcreteMark && o.mark is ConcreteMark -> i.mark == o.mark
+        else -> false
+    }
+```
+
+It decides whether to enable alias micro-edges. It does not define the AP
+pair relation. Keep it at that consumer. Later/native summaries keep their
+current started-initial partition and reversed-record identity test. This
+proposal does not unify those classifiers or change the call-plan stages.
+
+For example, the removed guard previously blocked this replacement:
+
+```text
+TAINT: x.*/T -> x.[any]/T, D    raw identity: equal base/path/mark
+FLOW:  x.*/F -> x.[any]/F, D    raw effect: the output tail is ANY
+New result: covered, if all remaining gates pass; retain FLOW only.
+```
+
+FLOW admits every represented T pair. Its alias arm already exists while
+both rows are present. The JVM call plan also has an unguarded BIND_BACK arm;
+ALIASES is a separate arm from REWRITTEN to AFTER. Identity does not provide
+a separate direct-result bypass that must be saved in this example.
+
+**Guard removal selects a change in auxiliary work, not an equality claim
+for all alias-generated facts.** For later runs the current memory-effect
+guard admits every DEMAND result. A NORMAL FLOW identity can skip aliases
+while a covered DEMAND marked result enables them. Dropping that marked
+result can therefore remove auxiliary alias candidates. The call classifiers
+stay unchanged; the removed row is no longer an input to them.
+
+The pair-union theorem proves that covered summary relations remain.
+It does not prove equality of alias callback counts or every old alias
+candidate. Whole-pipeline validation must show that required concrete flows
+and their demands remain under the existing alias contract. In particular,
+check the later NORMAL-FLOW/DEMAND-TAINT case. Do not claim this from pair
+coverage alone, add a hidden compatibility guard, or silently rewrite alias
+transfer to close that adapter proof. No analyzer code changes are made here.
 
 ## 6. Handoff between runs
 
@@ -504,7 +622,9 @@ Before implementation is accepted, verify:
 5. Static late activation, raw independent pool values, selected static
    identity seeds and erased S-S rows in run-1. Later calls require actual statics.
 6. STAR equal-path/E-subset and ANY prefix summary replacement. Cover flags,
-   mark exclusions, scope, alias effects, layers and FLOW arriving first/last.
+   mark exclusions, scope, layers and FLOW arriving first/last. Include
+   same-base ANY identities and different alias classifications; neither
+   may reintroduce the removed subsumption guard.
 7. Raw/selected/published stores and native/reversed records. Test no counterpart,
    unsupported tails, new protected deltas and an all-runs scalar fallback.
 8. Both handoff directions, original emission and whole-premise restriction,

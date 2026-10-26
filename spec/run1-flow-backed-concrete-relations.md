@@ -26,6 +26,10 @@ including the existing ANY cell and a separate equal-output-path STAR cell.
 It retains the suffix-exclusion, layer and protection gates in every run.
 It does not extend the ANY prefix test to STAR. The implementation described
 in this document remains unchanged until that extension is implemented.
+The extension also removes the alias identity/effect compatibility guard,
+including the same-base ANY identity exception. The scope and alias guards
+below describe the historical implementation; extension sections 5.1 and 5.2
+define the proposed owner/initial test and the guard removal.
 
 ## 1. Selected changes and unchanged behavior
 

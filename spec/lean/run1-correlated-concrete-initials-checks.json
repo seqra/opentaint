@@ -3,7 +3,7 @@
   "status": "proposed; local constructive checks pass; analyzer implementation unchanged",
   "baseline_revision": "f4954c26403bc7ecb8b64018f8aabdd479fd022d",
   "baseline_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
-  "scope": "All runs and both directions: concrete STAR identity seeds in every selected mark domain, suffix-preserving transfer, general ANY-prefix and STAR equal-path/exclusion-aware FLOW replacement; no StrongQueries",
+  "scope": "All runs and both directions: concrete STAR identity seeds, suffix-preserving transfer, ANY-prefix and STAR equal-path/exclusion-aware FLOW replacement, explicit owner/initial geometry; no alias-class guard and no StrongQueries",
   "toolchain": "leanprover/lean4:v4.33.1",
   "commands": [
     {
@@ -17,13 +17,13 @@
       "command": "lake env lean run1-correlated-concrete-initials-audit.lean",
       "exit_code": 0,
       "output": [
-        "Audited ApSpec.Run1CorrelatedConcreteInitials: 91 declarations; no unexpected axioms.",
-        "Executable correlated concrete initial controls: 13 passed."
+        "Audited ApSpec.Run1CorrelatedConcreteInitials: 96 declarations; no unexpected axioms.",
+        "Executable correlated concrete initial controls: 15 passed."
       ]
     }
   ],
-  "audited_owned_declarations": 91,
-  "executable_controls": 13,
+  "audited_owned_declarations": 96,
+  "executable_controls": 15,
   "permitted_axioms": [
     "propext",
     "Quot.sound"
@@ -36,13 +36,14 @@
     "outcome": "OOM",
     "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
   },
-  "proof_boundary": "Local AP laws for general seeds, arbitrary initial paths/kinds, STAR exclusions, ANY prefix coverage, application equality, reversal, layer composition and handoff cover; relative original-emitter/restriction replay. No whole-engine Kotlin/IR refinement, rule/ND closure, typed-cleaner/record-adapter completeness, termination or measured speedup proof.",
+  "proof_boundary": "Local AP seed, coverage, application, reversal, layer and handoff laws; covered-relation union preservation without alias classification. No whole-engine Kotlin/IR refinement, metadata-dependent alias continuation/candidate equality, rule/ND closure, typed-cleaner/record-adapter completeness, termination or measured speedup proof.",
   "implementation_gates": "Spec section 9, including all-run protection and native/reversed record views; analyzer code unchanged.",
   "sha256": {
-    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "4d838889003ae115f23d3386c1b557d53196f25f36de6eecd5b5a9242cef8ad1",
+    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
     "spec/lean/run1-correlated-concrete-initials-audit.lean": "51e149499373d9f36db06f5120b050728d024ff7b5230922261291530ca228b1",
-    "spec/run1-correlated-concrete-initials.md": "bd119b5a72d255c7f7af176ef4de5f6d68be3b74d618287af4ebef064cd70732",
-    "spec/run1-correlated-concrete-initials-proofs.md": "8b9a306cf7d1bbf8137bdbbc5715192d48dbfd9d668b4f7f3f558242ac0a4df2"
+    "spec/run1-correlated-concrete-initials.md": "d5505d3a189ba468dc8a3124f4586aa83a15d47c422cce674da920628f3b1cd6",
+    "spec/run1-correlated-concrete-initials-proofs.md": "c733347407d522127e0ea344fe6cab805f632e0f012cf2d9c430a7c1a4ebab36"
   },
-  "documentation_parent": "864a05aa4"
+  "documentation_parent": "cb59ac456",
+  "selected_guard_removal": "Remove sameAliasEffectClass and the same-base ANY identity exception from subsumption. Existing call-stage identity classifiers remain. Represented pair union is preserved; alias callback/candidate equality is not claimed."
 }
