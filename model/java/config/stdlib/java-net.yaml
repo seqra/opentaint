@@ -6,17 +6,17 @@ passThrough:
   - from: arg(0)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.URI#toASCIIString
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.net.URI#<init>
   signature: (java.lang.String) void
@@ -24,7 +24,11 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.URL#<init>
   signature: (java.lang.String, java.lang.String, int, java.lang.String) void
   copy:
@@ -33,23 +37,23 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(3)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.URL#toExternalForm
   signature: () java.lang.String
   taintCopyOnly: true
@@ -108,7 +112,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URLConnection#getContent
   signature: (java.lang.Class[]) java.lang.Object
@@ -155,11 +159,11 @@ passThrough:
   - from: arg(1)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.InetAddress#toString
   signature: () java.lang.String
   taintCopyOnly: true
@@ -175,27 +179,27 @@ passThrough:
   - from: arg(4)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(2)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(3)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function:
     package: java.net
     class: URI
@@ -204,7 +208,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.net.URI#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String, int, java.lang.String,
@@ -213,7 +217,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.net.URLConnection#getContentEncoding
   signature: () java.lang.String
   taintCopyOnly: true
@@ -233,14 +237,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URL#getContent
   signature: () java.lang.Object
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URI#<init>
   signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String,
@@ -249,7 +253,11 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
 - function: java.net.HttpCookie#<init>
   signature:
     params:
@@ -399,13 +407,13 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.net.URI#toURL
   signature: () java.net.URL
   copy:
   - from:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
     to: result
 - function: java.net.URI#toURL
   signature: () java.net.URL
@@ -419,19 +427,19 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(0)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.URLConnection#getHeaderFieldKey
   signature:
     return: java.lang.String
@@ -451,7 +459,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URL#getHost
   signature: () java.lang.String
@@ -481,7 +489,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URLDecoder#decode
   signature: (java.lang.String, java.nio.charset.Charset) java.lang.String
@@ -531,7 +539,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function:
     package: java.net
@@ -558,13 +566,40 @@ passThrough:
   - from: this
     to: result
 - function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String)
-    void
+  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String) void
   copy:
-  - from: arg(*)
+  - from: arg(0)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#scheme#java.lang.String
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.URI#host#java.lang.String
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#path#java.lang.String
+  - from: arg(3)
+    to:
+    - this
+    - .java.net.URI#fragment#java.lang.String
+  - from: arg(0)
+    to:
+    - this
+    - .java.net.URI#value#java.lang.Object
+  - from: arg(1)
+    to:
+    - this
+    - .java.net.URI#value#java.lang.Object
+  - from: arg(2)
+    to:
+    - this
+    - .java.net.URI#value#java.lang.Object
+  - from: arg(3)
+    to:
+    - this
+    - .java.net.URI#value#java.lang.Object
 - function: java.net.HttpCookie#setValue
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -578,7 +613,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.HttpCookie#setDomain
   signature: (java.lang.String) void
   taintCopyOnly: true
@@ -610,14 +645,14 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URL#getHost
   signature: () java.lang.String
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.HttpCookie#setComment
   signature: (java.lang.String) void
@@ -692,15 +727,15 @@ passThrough:
   - from: arg(2)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(1)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
   - from: arg(*)
     to:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
 - function: java.net.URLConnection#getContentType
   signature: () java.lang.String
   taintCopyOnly: true
@@ -713,7 +748,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.net.URL#getFile
   signature:
     return: java.lang.String
@@ -793,13 +828,6 @@ passThrough:
   copy:
   - from: this
     to: result
-- function: java.net.URI#<init>
-  signature: (java.lang.String, java.lang.String, java.lang.String, java.lang.String)
-    void
-  taintCopyOnly: true
-  copy:
-  - from: arg(*)
-    to: this
 - function: java.net.URL#getHost
   signature:
     return: java.lang.String
@@ -836,7 +864,7 @@ passThrough:
   - from: arg(*)
     to:
     - this
-    - .java.net.URI#<rule-storage>#java.lang.Object
+    - .java.net.URI#value#java.lang.Object
 - function: java.net.URL#getContent
   signature: (java.lang.Class[]) java.lang.Object
   taintCopyOnly: true
@@ -916,7 +944,7 @@ passThrough:
   copy:
   - from:
     - this
-    - .java.net.URL#<rule-storage>#java.lang.Object
+    - .java.net.URL#spec#java.lang.Object
     to: result
 - function: java.net.URLDecoder#decode
   signature: (java.lang.String, java.lang.String) java.lang.String
