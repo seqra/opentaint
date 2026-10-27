@@ -1,16 +1,50 @@
 {
-  "date": "2026-10-26",
-  "status": "implemented; local constructive and Kotlin gates checked; fresh project/shape gates pending",
+  "date": "2026-10-27",
+  "status": "implemented; local constructive/Kotlin checks and fixed project/shape investigation complete; known failed gates retained",
   "documentation_parent": "1c927f358b96f138aabb3b6eafb9d1eeba295046",
-  "runtime_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
-  "scope": "Concrete STAR seeds and general FLOW subsumption in all runs and current mark domains; typed packets, current residuals/protection, normal STAR/E FLOW record persistence/reversal, semantic input alias closure; no alias-class guard or StrongQueries",
+  "scope": "Concrete STAR seeds and general FLOW subsumption in all runs and current mark domains; typed packets, current residuals/protection, normal STAR/E FLOW record persistence/reversal, semantic input alias closure; no alias-class guard. The formal AP model excludes StrongQueries; current later-run execution still retains StrongQueries unchanged",
   "selected_decisions": {
     "native_records": "Persist valid NORMAL FLOW with nonempty input/output E; retain field exclusions through full native matching and reversed views. No extra FLOW demand fallback.",
     "identity_aliases": "Identity-only alias candidates are redundant under established positive semantic input alias closure; no runtime closure store, barrier, guard or extra FLOW alias flag."
   },
   "open_behavior_decisions": [],
   "toolchain": "leanprover/lean4:v4.33.1",
-  "commands": [
+  "permitted_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "unexpected_axioms": [],
+  "new_project_measurement": true,
+  "latest_referenced_thingsboard": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted": "run-1",
+    "outcome": "HARD_TIMEOUT",
+    "source": "docs/reports/bidirectional-correlated-concrete-performance-20261026.md"
+  },
+  "proof_boundary": "Constructive reference AP transport/summary laws, packet decode, residual admission/protection, native STAR/E record view/export and semantic alias-closure induction. Relative to existing producer/IR correspondence contracts; no whole-Kotlin/Java alias-analysis proof, whole-engine termination bound, or measured speedup claim.",
+  "implementation_gates": "Investigation complete, not all outcome gates successful. Application 11 failures/13 skips unchanged; PDF 9 strict native locations missing; OWASP 9179 raw versus 4112 expected; Thingsboard timed export unavailable; real projects stop run-2; OWASP run-1 +29.69%.",
+  "sha256": {
+    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "ad6810f2a2118fc437fd69845ff61fc97ff7b19521980a57699d40631debfb47",
+    "spec/correlated-concrete-implementation-proofs.md": "4fcc9552b05c6901de9d680e19742d925654e6b20fd76b7fcb135d276b70179b",
+    "spec/run1-correlated-concrete-initials.md": "3ba7acdc0246ce8257038dfa8ed6652732bad0ef9da67743b21867f9b0787642",
+    "spec/run1-correlated-concrete-initials-proofs.md": "76ce6c30ab13b7740167bf1bb8f675ee286ffdd5f6078e674f0172cd23d56935",
+    "spec/lean/ApSpec/CorrelatedConcreteImplementation.lean": "53b9d73a3d4194bf3f46b56fcef3b9d391b3134d4e8aeffa3b134ddbb5e1acfd",
+    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
+    "spec/lean/correlated-concrete-implementation-audit.lean": "ee1332c01def3041c7754e13ec81893ecbe059df3bd369c8ddf4a064cb4393b0",
+    "spec/lean/ApSpec.lean": "20576ff77470a86bd0a78f6452f2a109a29f946245387f3a7a8acae5f2779663",
+    "spec/ap.md": "adbedf780ce712159495da4bbb286f9788af173aeda52cde74aedc2f2f755632",
+    "spec/lean/ApSpec/DiagonalTypedAdmission.lean": "a653e77ff156f75419545777ee6bbc39a2108224ba5738a30336848d810e4185"
+  },
+  "audited_owned_declarations": 356,
+  "audited_implementation_declarations": 222,
+  "executable_controls": 26,
+  "implementation_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "local_validation_report": "docs/reports/bidirectional-correlated-concrete-validation-20261026.md",
+  "baseline_runtime_core_tree": "e3ede1a36d3b04d79a23cc93285f385ecd968dbf",
+  "runtime_revision": "fcfe2e90558665d813bd74207832d4ae3fc83aec",
+  "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "historical_initial_commands": [
     {
       "cwd": "spec/lean",
       "command": "lake build",
@@ -29,34 +63,67 @@
       ]
     }
   ],
-  "permitted_axioms": [
-    "propext",
-    "Quot.sound"
-  ],
-  "unexpected_axioms": [],
-  "new_project_measurement": false,
-  "latest_referenced_thingsboard": {
-    "reached": "run-2",
-    "completed": "run-1",
-    "outcome": "OOM",
-    "source": "docs/reports/bidirectional-run2-16g-memory-20261026.md"
+  "historical_initial_audited_owned_declarations": 318,
+  "historical_initial_audited_implementation_declarations": 222,
+  "final_explicit_lean_verification": {
+    "state": "PASS",
+    "commands": [
+      {
+        "command": [
+          "taskset",
+          "-c",
+          "0",
+          "nice",
+          "-n",
+          "10",
+          "/home/sobol/.elan/bin/lean",
+          "-o",
+          "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/admission-fix-source/spec/lean/.lake/build/lib/lean/ApSpec/DiagonalTypedAdmission.olean",
+          "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/admission-fix-source/spec/lean/ApSpec/DiagonalTypedAdmission.lean"
+        ],
+        "exit": 0,
+        "log": "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/validation/cross-header-admission/lean-final-attempt2-0.log"
+      },
+      {
+        "command": [
+          "taskset",
+          "-c",
+          "0",
+          "nice",
+          "-n",
+          "10",
+          "/home/sobol/.elan/bin/lean",
+          "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/admission-fix-source/spec/lean/correlated-concrete-implementation-audit.lean"
+        ],
+        "exit": 0,
+        "log": "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/validation/cross-header-admission/lean-final-attempt2-1.log"
+      },
+      {
+        "command": [
+          "taskset",
+          "-c",
+          "0",
+          "nice",
+          "-n",
+          "10",
+          "/home/sobol/.elan/bin/lean",
+          "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/admission-fix-source/spec/lean/ApSpec.lean"
+        ],
+        "exit": 0,
+        "log": "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/validation/cross-header-admission/lean-final-attempt2-2.log"
+      }
+    ],
+    "LEAN_PATH": "/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026/admission-fix-source/spec/lean/.lake/build/lib/lean",
+    "cached_dependency_root": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean/.lake/build/lib/lean",
+    "source_sha256": {
+      "ApSpec/DiagonalTypedAdmission.lean": "a653e77ff156f75419545777ee6bbc39a2108224ba5738a30336848d810e4185",
+      "correlated-concrete-implementation-audit.lean": "ee1332c01def3041c7754e13ec81893ecbe059df3bd369c8ddf4a064cb4393b0",
+      "ApSpec.lean": "20576ff77470a86bd0a78f6452f2a109a29f946245387f3a7a8acae5f2779663"
+    },
+    "build_scope": "Final typed module, updated audit and aggregate entry use cached previously built dependencies; not a fresh full 193-job build after the 38 new declarations."
   },
-  "proof_boundary": "Constructive reference AP transport/summary laws, packet decode, residual admission/protection, native STAR/E record view/export and semantic alias-closure induction. Relative to existing producer/IR correspondence contracts; no whole-Kotlin/Java alias-analysis proof, whole-engine termination bound, or measured speedup claim.",
-  "implementation_gates": "Local formal and Kotlin gates checked; fixed project validation and post-implementation run-1 shape investigation remain pending.",
-  "sha256": {
-    "docs/design/bidirectional-correlated-concrete-implementation-20261026.md": "c11d69f9fcf91bd09379d07f3928d1f198ee5fe3e6b6a9207384a513fab60d1b",
-    "spec/correlated-concrete-implementation-proofs.md": "7966b38d0ba3bd8f8321d96845615f77fc13f5bf3a2844109241cab3e49efe01",
-    "spec/run1-correlated-concrete-initials.md": "3ba7acdc0246ce8257038dfa8ed6652732bad0ef9da67743b21867f9b0787642",
-    "spec/run1-correlated-concrete-initials-proofs.md": "76ce6c30ab13b7740167bf1bb8f675ee286ffdd5f6078e674f0172cd23d56935",
-    "spec/lean/ApSpec/CorrelatedConcreteImplementation.lean": "53b9d73a3d4194bf3f46b56fcef3b9d391b3134d4e8aeffa3b134ddbb5e1acfd",
-    "spec/lean/ApSpec/Run1CorrelatedConcreteInitials.lean": "dac9749a602f97cbb94d08c390c288405f4c47ae0f4bc22577196577cb96fb29",
-    "spec/lean/correlated-concrete-implementation-audit.lean": "06ec0ffea544beb725441150e8c363eca75337f0be77fd0e1d019baa79facd4a",
-    "spec/lean/ApSpec.lean": "61b944113e7c5e226662503aa12fa70a1ca646c20e0b39db868f505017ccc962",
-    "spec/ap.md": "adbedf780ce712159495da4bbb286f9788af173aeda52cde74aedc2f2f755632"
-  },
-  "audited_owned_declarations": 318,
-  "audited_implementation_declarations": 222,
-  "executable_controls": 26,
-  "implementation_core_tree": "f809c4552dd4a7a797fd61595f0932595e56537c",
-  "local_validation_report": "docs/reports/bidirectional-correlated-concrete-validation-20261026.md"
+  "audited_typed_admission_declarations": 38,
+  "performance_report": "docs/reports/bidirectional-correlated-concrete-performance-20261026.md",
+  "run1_shape_report": "docs/reports/bidirectional-correlated-concrete-run1-shapes-20261026.md",
+  "next_iteration_proposal": "docs/design/bidirectional-correlated-concrete-next-iteration-20261026.md"
 }

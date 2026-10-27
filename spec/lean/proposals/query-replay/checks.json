@@ -1,0 +1,133 @@
+{
+  "state": "PASS",
+  "status": "PROPOSAL_NOT_IMPLEMENTED",
+  "utc": "2026-10-27T00:23:18.427181+00:00",
+  "reference_revision": "fcfe2e90558665d813bd74207832d4ae3fc83aec",
+  "reference_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "scope": "Finite canonical-initial authorization transition; no whole-engine/source-adapter or runtime-saving theorem.",
+  "toolchain": "leanprover/lean4:v4.33.1",
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "limits": {
+    "Lean_workers": 1,
+    "CPU_affinity_count_on_supported_hosts": 1,
+    "Lean_memory_MiB": 768,
+    "command_timeout_seconds": 60
+  },
+  "verification_directory": "spec/lean/.lake/verification/query-replay/20261027T002317191685Z",
+  "verification_outputs_gitignored": true,
+  "checks": {
+    "both_commands_exit_zero": true,
+    "all_source_theorems_and_pure_definitions_audited": true,
+    "only_allowed_kernel_axioms": true,
+    "no_classical_choice_or_sorry_dependency": true,
+    "no_sorry_admit_or_custom_axiom_declaration": true,
+    "fifteen_controls_pass_model": true,
+    "fifteen_controls_pass_audit": true,
+    "expected_theorem_and_audit_counts": true,
+    "preserved_original_model_bytes": true,
+    "preserved_original_audit_bytes": true
+  },
+  "theorem_count": 24,
+  "theorems": [
+    "permits_iff",
+    "unique_mem",
+    "unique_nodup",
+    "mem_admit",
+    "admit_disjoint",
+    "admit_nodup",
+    "admitted_batch_disjoint",
+    "findMissing_none",
+    "findMissing_sound",
+    "transition_fresh_witness",
+    "newly_authorized_iff",
+    "unary_exact_borrow",
+    "candidate_membership",
+    "candidate_once",
+    "replay_exact",
+    "replay_once",
+    "complete_nd_required",
+    "unrelated_query_no_backfill",
+    "already_permitted_no_backfill",
+    "backward_zero_no_backfill",
+    "forward_zero_first_nonempty",
+    "late_annotation_regular_path",
+    "annotation_not_authorization",
+    "cumulative_replay_equivalent"
+  ],
+  "audited_declaration_count": 37,
+  "pure_definitions": [
+    "subset",
+    "permits",
+    "unique",
+    "admit",
+    "disjoint",
+    "transition",
+    "findMissing",
+    "candidates",
+    "replay",
+    "zeroPublished",
+    "zeroTransition",
+    "regularRawDelta",
+    "controls"
+  ],
+  "control_count": 15,
+  "observed_axioms": [
+    "Quot.sound",
+    "propext"
+  ],
+  "model_sha256": "37fa7d73b17f43a50660c547851608c66c9f3e81b508b67308373d2bfbafb47a",
+  "audit_sha256": "779258e1bc8e76cb6f1cd9da58272bf3e2aa4ea736d8c5bccd22657bc03f5973",
+  "checker_sha256": "c21206714e9229fd008dd6a1dc581fb889fecec73b29e35dfc3ff75aebf1a051",
+  "README_sha256": "ddb01b571ad5d2a9ce5232f902a36c9b1a12e4b0ad51186d0a40706247d74ec3",
+  "runtime_source_sha256_at_check": {
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/StrongQueries.kt": "3d0635b90ddb8e20250f9222dae076224e81ccb0dacc120d999c73adfff78739",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/engine/RunMethodAnalyzer.kt": "d21608744a5ab2ff58fcab1ba97d1fd9bba4693866cfaf7a970dd505550859ed",
+    "core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/org/opentaint/dataflow/bidi/store/RunSummaries.kt": "2d1f644ec723c3ef9326ffaeb8b31a49a7c8c27758ce6ed2dcfcfe31e0bbc4d0"
+  },
+  "runs": [
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "768",
+        "-o",
+        "<verification>/QueryReplay.olean",
+        "QueryReplay.lean"
+      ],
+      "cwd": "spec/lean/proposals/query-replay",
+      "exit_code": 0,
+      "wall_seconds": 0.8621122241020203,
+      "log": "spec/lean/.lake/verification/query-replay/20261027T002317191685Z/QueryReplay.log",
+      "log_sha256": "fe44548ec5cf316c0c3d80171f2a3c4aa6b6bc48c6dda1f9be382c77dd2bb8e6",
+      "source_sha256": "37fa7d73b17f43a50660c547851608c66c9f3e81b508b67308373d2bfbafb47a"
+    },
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "768",
+        "-o",
+        "<verification>/Audit.olean",
+        "Audit.lean"
+      ],
+      "cwd": "spec/lean/proposals/query-replay",
+      "exit_code": 0,
+      "wall_seconds": 0.3706416189670563,
+      "log": "spec/lean/.lake/verification/query-replay/20261027T002317191685Z/Audit.log",
+      "log_sha256": "d92a002b94d79d7883a24d18cd9529a2e7443a2d0ec3b4e8dafd74b73370a81e",
+      "source_sha256": "779258e1bc8e76cb6f1cd9da58272bf3e2aa4ea736d8c5bccd22657bc03f5973"
+    }
+  ],
+  "not_proved": [
+    "AP geometry/subsumption laws",
+    "whole-engine/source-adapter correspondence",
+    "regular raw-delta delivery/fairness",
+    "performance factor",
+    "broader StrongQueries policy removal",
+    "a new runtime candidate index"
+  ]
+}

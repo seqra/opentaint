@@ -1,111 +1,116 @@
-# Correlated concrete implementation: local validation
+# Correlated concrete implementation: validation
 
-Date: 26 October 2026. Status: **initial implementation and local gates complete;
-a packed-admission correction passes focused checks. Final broad checks,
-project measurements and the run-1 shape investigation remain pending**.
+Date: 27 October 2026. **The final runtime and local checks are complete.**
+The project performance and finding gates have separate outcomes in the
+[performance report](bidirectional-correlated-concrete-performance-20261026.md).
 
-The implementation follows the [selected proposal](../design/bidirectional-correlated-concrete-implementation-20261026.md)
+The implemented runtime is `fcfe2e90558665d813bd74207832d4ae3fc83aec`, core
+`57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`. The pre-iteration runtime is
+`583a58063ab67ad18b8664d45badee065e68fd85`, core
+`e3ede1a36d3b04d79a23cc93285f385ecd968dbf`. The intermediate `85dc2bbf8`
+runtime is superseded. Its project measurements do not validate the final
+runtime.
+
+The implementation follows the [proposal](../design/bidirectional-correlated-concrete-implementation-20261026.md)
 and [general contract](../../spec/run1-correlated-concrete-initials.md).
-The pre-change revision is `583a58063ab67ad18b8664d45badee065e68fd85`, with core
-`e3ede1a36d3b04d79a23cc93285f385ecd968dbf`. The implemented core is
-`f809c4552dd4a7a797fd61595f0932595e56537c`.
 
-The intermediate candidate at `85dc2bbf8` has reached **run-2**, with
-**run-1 COMPLETE and accepted**, on Thingsboard and Conductor. Both stopped
-with OOM during run-2. The fixed cohort is still running. These results do
-not validate the pending admission correction. The real JVM alias controls
-reach **run-3**, including a later marked demand. These controls do not
-supply project performance results.
+## Implemented behavior
 
-## Selected behavior and scope
+A concrete STAR initial emits a correlated STAR DEMAND identity in all
+runs and mark modes. Transfers retain STAR when their shared suffix is
+valid. Deeper reads, field cuts and explicit may targets can still emit ANY.
+Existing independent static pool values remain ANY or EXACT; they do not
+become correlated initials by relabeling.
 
-A concrete STAR initial now starts as a STAR DEMAND identity. It retains
-its field exclusion and shared suffix in all runs and mark modes. Copies
-and summaries retain STAR when the suffix relation remains valid. A deeper
-read, explicit may target or field cut can still produce ANY.
+Raw, selected and publication summary owners use FLOW replacement in all
+runs. STAR requires equal output paths and sufficient suffix admission;
+ANY uses an annotated FLOW prefix. Complete premise, base, tail, mark,
+exclusion and layer gates remain. Protected, cross-mark and unsupported
+EXACT/must/ND cases remain explicit. The alias-effect exception is removed
+under the selected positive input-alias-closure contract.
 
-FLOW replacement now applies to each raw, selected and publication owner
-in every run. STAR requires equal output paths and sufficient suffix
-admission. ANY retains its prefix coverage rule. The alias-class exception
-is removed. Protected, cross-mark and unsupported exact/must/ND rows remain
-explicit. Diagonal packets retain their actual tail and exclusion.
+Protection uses the triggering conclusion atom. Source/assignment protection,
+restored-atom cycles and surviving selected cleaners keep their required
+marked dependencies. Late flags emit annotation deltas. Native and reversed
+NORMAL records retain flags and legal nonempty initial/output exclusions.
+No extra alias-closure store or reference-manager change is introduced.
 
-Protection uses the triggering conclusion atom in every run. Late flags
-remain observable without adding a new join member. Conjunction annotation
-replay uses the existing product operation; no product archive is added.
-Native and reversed records retain flags. NORMAL FLOW records retain legal
-nonempty input and output exclusions.
+The final correction makes packed TAINT admission follow the existing scalar
+ANY/STAR law across output headers. An existing ANY can cover a later STAR
+offer; the opposite order retains the existing nonminimal STAR behavior.
+Same-tail exclusion merging, late flags and atomic packet fallback agree
+with scalar admission. This is not a new FLOW replacement cell. The correction
+retains current residuals, without a scalar history or a duplicate index.
 
-Independent static pool values remain ANY or EXACT. A selected canonical
-initial uses the correlated seed. This change does not relabel an existing
-ANY writer image as STAR. Existing static routing, writer registration,
-request sets and summary erasure remain unchanged.
+Run-1 field exclusions remain empty under the existing cover rule. Later
+strong updates, field limits, rule conditions, source/sink/exit behavior,
+ND premise sets after run-1, queue barriers, mark identities, static routing,
+requests, writer registration, IR and cache managers are unchanged.
+`StrongQueries` remains in later-run execution; the formal replacement
+models use the original AP demand-guidance contract and do not model that
+authorization policy as an optimization. The performance report explains
+this boundary.
 
-Run-1 field exclusions stay empty under the existing cover rule. Later
-strong field operations retain exclusions. Field bounds, rule conditions,
-source targets, sink semantics, ND premise sets after run-1, queue policy,
-run-1 local packing, mark identities, IR and cache managers are unchanged.
-No GroundingSupport, new request index, added-facts archive or runtime alias
-closure store is introduced.
+## Constructive and local controls
 
-## Formal and local checks
+The initial constructive build passed 193 jobs. The final typed-admission
+module, updated audit and aggregate entry point each compiled successfully.
+The audit checks **356 declarations and 26 executable controls**, with only
+the permitted `propext` and `Quot.sound` axioms. There is no Classical choice
+or `sorry`. Read the [proof dossier](../../spec/correlated-concrete-implementation-proofs.md)
+and [typed-admission proof](../../spec/diagonal-typed-admission-proofs.md)
+for the Kotlin/IR correspondence scope.
 
-The constructive Lean build passes 193 jobs. The implementation audit checks
-318 declarations and 26 executable controls, with no unexpected axioms.
-The [proof dossier](../../spec/correlated-concrete-implementation-proofs.md)
-states the model and Kotlin/IR correspondence boundary.
+The admission correction passes 31 focused Kotlin controls. Eight of its ten
+new controls fail on the intermediate implementation. Five JVM alias controls
+cover both event orders, field aliases and a later demanded alias target;
+they reach run-3. These local controls do not prove whole-engine correctness,
+termination or complete real-project no-FN behavior.
 
-All five broad suites executed afresh. The source guard confirms that the
-runtime source did not change during these commands.
+All broad suites executed afresh on the final runtime. Their source guards
+confirm that runtime sources did not change during the commands.
 
-| Suite | Current result |
-| --- | --- |
-| Common dataflow | 1,919 tests; no failures or skips |
-| JVM dataflow | 440 tests; no failures or skips |
-| Go dataflow | 1,323 tests; no failures or skips |
-| Configuration equality | 5 tests; no failures or skips |
-| Application | 1,039 tests; 11 failures; 13 skips |
+| Suite | Tests | Failures | Skips |
+| --- | ---: | ---: | ---: |
+| Common dataflow | 1,929 | 0 | 0 |
+| JVM dataflow | 440 | 0 | 0 |
+| Go dataflow | 1,323 | 0 | 0 |
+| Configuration equality | 5 | 0 | 0 |
+| Application | 1,039 | 11 | 13 |
 
-The application gate is not green. A fresh pre-change application run has
-1,034 tests, the same 11 failures and 13 skips. Every existing test has the
-same status. No test is removed or newly skipped. The five additional tests
-are passing alias controls. The complete failure assertions match, allowing
-only printed set order to vary. The compared finding sets contain no missing
-expected findings and no changed findings. Nine failures are existing cleaner
-extras; two are existing Spring fixture setup failures.
+The application suite is not green. The fresh pre-iteration run has the same
+eleven failures and thirteen skips. All pre-existing statuses and failure
+assertions match; the final correction adds ten passing common controls.
+The five additional application cases are passing alias controls. Nine
+application failures are existing cleaner extras; two are existing Spring
+fixture setup failures. Set-print order is the only ignored assertion-text
+difference. No existing case is removed or newly skipped.
 
-The controls cover generic STAR/E seeds, scalar/tree transfer, deeper-read
-widening, cleaners, flags and repeat idempotence, exact packet decoding,
-STAR/ANY coverage, protected record reversal and nonempty-E native records.
-Five actual JVM controls cover both alias/mark event orders, field aliases
-and a later demanded alias target. No runtime alias mechanism was added.
+## Project evidence and limits
 
-The evidence root is
-`/drive-testcomp/opentaint-go-rules/correlated-concrete-20261026`.
-The [fresh gate receipt](../../../correlated-concrete-20261026/validation/candidate-tests/terminal.json)
-contains commands, source hashes and XML hashes. The
-[application comparison](../../../correlated-concrete-20261026/validation/application-comparison.json)
-contains all existing case statuses and exact failed assertions. The
-[alias controls](../../../correlated-concrete-20261026/validation/alias-controls/)
-retain the targeted command and XML. The application test heap stays at
-4 GiB; the Gradle/compiler process uses 2 GiB. No analyzer heap or timeout
-is changed by these test commands.
+The fixed final commands use direct Gradle `runProjectAnalyzer`, configured
+heap/timeouts, FULL run-1, statics enabled and default aliases. Thingsboard,
+Conductor and PDF reach run-2 and complete/accept run-1. OWASP reaches run-9,
+completes run-8 and accepts run-7. Run-1 engine time improves on the three
+real projects and regresses 29.69% on OWASP. The 60-second target still fails
+on Thingsboard and OWASP. Three actual guard heaps have complete source-bound
+offline analyses.
 
-## Remaining project gates
+The final exports retain the native-main locations on Conductor and OWASP.
+The separate Thingsboard run-1 diagnostic retains all thirteen native-main
+locations; the timed export is unavailable. Nine PDF strict native locations
+remain missing: seven descendant-guard losses and two marker-present export
+fallbacks. The same native-core catalog control reproduces the losses, and
+the final export equals the fresh pre-iteration branch export. These are
+explicit failed comparison gates, not a complete no-FN claim. The branch
+OWASP raw-count gate also fails: 9,179 occurrences versus the expected 4,112,
+despite 4,112 unique result bodies. No unrelated catalog or exporter fix is
+part of this implementation.
 
-Measure the committed implementation with the four fixed project commands.
-Compare findings with fresh main using main's own rule catalog. Use the same
-branch catalog for the pre-change/current optimization comparison. The initial
-shared-catalog main commands are supplemental: they report 929 OWASP traces.
-The native-main correction has separate commands and artifacts. Its 2,633
-traces match the workflow pinned at main revision `c86a5fbd6`. The branch
-workflow expects 4,112; it is not the native-main CI target. Do not substitute
-the 929 shared-catalog traces for the required main correctness baseline.
-
-Keep engine time, report barriers, dump pauses and command time separate.
-Include latest reached, completed and accepted iterations. Analyze every
-actual memory-guard snapshot. Run the read-only section 13 census at the
-joined run-1 barrier, with the updated STAR/ANY predicates. Separate retained
-memberships, protection-only blockers, other reasons and removal events.
-Write the performance report and next-iteration proposal from these new
-measurements. This local report claims no project speedup or run-2 completion.
+The [machine-readable report](bidirectional-correlated-concrete-performance-20261026.json)
+binds the source, commands, test receipts, profiles, heaps, joined run-1
+shape partitions, full representative FLOW witnesses and finding cases.
+The proposal's required post-implementation investigation keeps stored
+memberships, removal events, protection-only blockers and actual work
+counts separate. Raw and selected owners are not added. Diagnostic times
+are excluded from the timed performance comparison.
