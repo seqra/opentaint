@@ -65,11 +65,7 @@ class GoIRFunctionImpl(
 
     override fun toString(): String = "GoIRFunction($fullName)"
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is GoIRFunction) return false
-        return fullName == other.fullName
-    }
+    override fun equals(other: Any?): Boolean = functionEquals(other)
 
-    override fun hashCode(): Int = fullName.hashCode()
+    override fun hashCode(): Int = functionHashCode()
 }

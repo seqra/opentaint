@@ -1,6 +1,10 @@
 package org.opentaint.ir.go.client
 
 import org.opentaint.ir.go.api.*
+import org.opentaint.ir.go.impl.GoIRConstImpl
+import org.opentaint.ir.go.impl.GoIRGlobalImpl
+import org.opentaint.ir.go.impl.functionEquals
+import org.opentaint.ir.go.impl.functionHashCode
 import org.opentaint.ir.go.type.*
 
 /** Lookup view. Only finite package members and individual lookup results retain resolved values. */
@@ -55,12 +59,6 @@ class GoIRTransformerChain(
         }
     }
 
-    private fun global(source: GoIRGlobal): GoIRGlobal = object : GoIRGlobal by source {
-        override val pkg get() = findPackage(path(source.pkg.importPath))!!
-        override val fullName get() = symbol(source.fullName)
-        override val type by lazy { types(source.type) }
-    }
-
     private fun reference(ref: GoIrFunctionReference): GoIrFunctionReference =
         ref.copy(pkg = path(ref.pkg), signature = types(ref.signature) as GoIRFuncType).also { it.program = this }
 
@@ -107,8 +105,8 @@ class GoIRTransformerChain(
             else params + freeVars.map { GoIRParameter(it.name, it.type, params.size + it.index) }
         override val returnType get() = signature.results.first()
         override fun flowGraph() = body?.instGraph ?: error("Function $name has no body")
-        override fun equals(other: Any?): Boolean = other is GoIRFunction && fullName == other.fullName
-        override fun hashCode(): Int = fullName.hashCode()
+        override fun equals(other: Any?): Boolean = functionEquals(other)
+        override fun hashCode(): Int = functionHashCode()
         override fun toString(): String = source.toString()
     }
 
@@ -122,14 +120,14 @@ class GoIRTransformerChain(
         override val importPath get() = path(source.importPath)
         override val functions by lazy { source.functions.map(::function) }
         override val namedTypes by lazy { source.namedTypes.map { NamedTypeView(it, this) } }
-        override val globals by lazy { source.globals.map(::global) }
-        override val constants by lazy {
-            source.constants.map { constant ->
-                object : GoIRConst by constant {
-                    override val pkg get() = this@PackageView
-                    override val fullName get() = symbol(constant.fullName)
-                    override val type by lazy { types(constant.type) }
-                }
+        override val globals: List<GoIRGlobal> by lazy {
+            source.globals.map {
+                GoIRGlobalImpl(it.name, symbol(it.fullName), types(it.type), this, it.isExported, it.position)
+            }
+        }
+        override val constants: List<GoIRConst> by lazy {
+            source.constants.map {
+                GoIRConstImpl(it.name, symbol(it.fullName), types(it.type), it.value, this, it.isExported, it.position)
             }
         }
         override fun findGlobal(name: String) = globals.find { it.name == name }
@@ -138,6 +136,9 @@ class GoIRTransformerChain(
         override val initFunction by lazy { source.initFunction?.let { reference(it.reference()).function } }
         override fun findNamedType(name: String) = namedTypes.find { it.name == name }
         override fun allMethods() = namedTypes.flatMap { it.allMethods() }
+        override fun equals(other: Any?): Boolean = other is GoIRPackage && importPath == other.importPath
+        override fun hashCode(): Int = importPath.hashCode()
+        override fun toString(): String = "GoIRPackage($importPath)"
     }
 
     private inner class NamedTypeView(private val source: GoIRNamedType, override val pkg: GoIRPackage) :
@@ -156,6 +157,9 @@ class GoIRTransformerChain(
         }
         override fun allMethods() = methods + pointerMethods
         override fun methodByName(name: String) = allMethods().find { it.name == name }
+        override fun equals(other: Any?): Boolean = other is GoIRNamedType && fullName == other.fullName
+        override fun hashCode(): Int = fullName.hashCode()
+        override fun toString(): String = "GoIRNamedType($fullName)"
     }
 }
 

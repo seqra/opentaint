@@ -10,16 +10,12 @@ import org.opentaint.ir.go.impl.GoIRFunctionImpl
 import org.opentaint.ir.go.type.*
 import java.util.IdentityHashMap
 
-internal data class SpecializedGoModelFunction(
-    val root: GoIRFunction,
-    val anonymousFunctions: List<GoIRFunction>,
-)
-
 /** Substitutes concrete type arguments and closure lookups while reading a generic model body. */
 internal class GoIRModelSpecializer(
     private val program: GoIRProgram,
 ) {
-    fun specialize(modelRoot: GoIRFunction, target: GoIRFunction): SpecializedGoModelFunction {
+    /** Returns the specialized root followed by its specialized anonymous functions. */
+    fun specialize(modelRoot: GoIRFunction, target: GoIRFunction): List<GoIRFunction> {
         require(modelRoot.bodyAvailable) { "Go model function ${modelRoot.fullName} has no body" }
         require(modelRoot.typeParams.size == target.typeArgs.size) {
             "Go generic instance ${target.fullName} has ${target.typeArgs.size} type arguments, " +
@@ -117,7 +113,7 @@ internal class GoIRModelSpecializer(
                 }) ?: error("Go model ${source.fullName} has no body")
             }
         }
-        return SpecializedGoModelFunction(root, sourceFunctions.map(functionMap::getValue))
+        return listOf(root) + sourceFunctions.map(functionMap::getValue)
     }
 
     private fun collectAnonymousFunctions(root: GoIRFunction): List<GoIRFunction> {

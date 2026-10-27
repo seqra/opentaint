@@ -2,19 +2,21 @@ package org.opentaint.ir.go.client
 
 import org.opentaint.ir.go.api.*
 
-internal data class ModelPathNormalizer(
-    val replacements: Map<String, String>,
-    val targets: Set<String>,
-    private val orderedModelPaths: List<String>,
-) {
-    fun path(value: String): String = replacements[value] ?: value
+/** Maps model-addressed packages (`opentaint/<target>`) and their symbols onto their target paths. */
+internal class GoIRModelPathTransformer private constructor(
+    private val replacements: Map<String, String>,
+) : GoIRTransformer {
+    val targets: Set<String> = replacements.values.toSet()
+    private val orderedModelPaths = replacements.keys.sortedByDescending(String::length)
 
-    fun symbol(value: String): String = orderedModelPaths.fold(value) { result, modelPath ->
+    override fun packagePath(importPath: String): String = replacements[importPath] ?: importPath
+
+    override fun symbolName(fullName: String): String = orderedModelPaths.fold(fullName) { result, modelPath ->
         result.replace(modelPath, replacements.getValue(modelPath))
     }
 
     companion object {
-        fun create(program: GoIRProgram): ModelPathNormalizer {
+        fun create(program: GoIRProgram): GoIRModelPathTransformer {
             val replacements = program.packages.values
                 .filterNot { it.isDependency || it.isStdlib || it.importPath == UNIVERSE_PACKAGE_PATH }
                 .associate { pkg ->
@@ -32,27 +34,10 @@ internal data class ModelPathNormalizer(
                 "Go model contains no model-addressed packages, expected at least one package " +
                     "under $GO_MODEL_PREFIX"
             }
-            return ModelPathNormalizer(
-                replacements,
-                replacements.values.toSet(),
-                replacements.keys.sortedByDescending(String::length),
-            )
+            return GoIRModelPathTransformer(replacements)
         }
     }
 }
 
 private const val GO_MODEL_PREFIX = "opentaint/"
 private const val UNIVERSE_PACKAGE_PATH = "<universe>"
-
-internal class GoIRModelPathTransformer(private val normalizer: ModelPathNormalizer) : GoIRTransformer {
-    override fun packagePath(importPath: String) = normalizer.path(importPath)
-    override fun symbolName(fullName: String) = normalizer.symbol(fullName)
-    override fun resolvePackage(importPath: String, next: () -> GoIRPackage?): GoIRPackage? {
-        val pkg = next() ?: return null
-        if (pkg.importPath !in normalizer.replacements) return pkg
-        return object : GoIRPackage by pkg {
-            override val isStdlib = false
-            override val isDependency = true
-        }
-    }
-}

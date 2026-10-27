@@ -8,13 +8,12 @@ internal object GoIRModelLoader {
         if (build.models.isEmpty()) return build.program
         val definitions = build.models.map { model ->
             val rawProgram = GoIRDeserializer().deserializeProgram(model.program)
-            val normalizer = try {
-                ModelPathNormalizer.create(rawProgram)
+            val paths = try {
+                GoIRModelPathTransformer.create(rawProgram)
             } catch (error: IllegalArgumentException) {
                 throw IllegalArgumentException("invalid Go model ${model.source}: ${error.message}", error)
             }
-            val program = GoIRTransformerChain(rawProgram, listOf(GoIRModelPathTransformer(normalizer)))
-            GoIRModelDefinition(model.source, program, normalizer.targets)
+            GoIRModelDefinition(model.source, GoIRTransformerChain(rawProgram, listOf(paths)), paths.targets)
         }
         return GoIRTransformerChain(build.program, listOf(GoIRModelTransformer(build.program, definitions)))
     }

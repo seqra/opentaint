@@ -130,6 +130,52 @@ class ModelTests {
     }
 
     @Test
+    fun `model views keep identity consistent with the original Go IR`(builder: GoIRTestBuilder) {
+        val project = project(
+            "example.com/original",
+            "package original\n" +
+                "type Box struct { Value string }\n" +
+                "var Global string\n" +
+                "const Constant = 1\n" +
+                "func Identity(value string) string { return \"original\" }\n" +
+                "func Untouched() {}\n",
+        )
+        val model = model(
+            "example.com/original",
+            "package original\n" +
+                "type Box struct { Value string; extra string }\n" +
+                "func Identity(value string) string { return value }\n",
+        )
+
+        val effectiveProgram = builder.buildFromDir(project, modelConfig(model))
+        val effective = effectiveProgram.findPackage("example.com/original")!!
+        val original = effectiveProgram.originalProgram.findPackage("example.com/original")!!
+        fun assertSameIdentity(first: Any, second: Any) {
+            assertThat(first).isEqualTo(second)
+            assertThat(second).isEqualTo(first)
+            assertThat(first.hashCode()).isEqualTo(second.hashCode())
+        }
+
+        assertSameIdentity(effective, original)
+        assertSameIdentity(effective.findNamedType("Box")!!, original.findNamedType("Box")!!)
+        assertSameIdentity(effective.findGlobal("Global")!!, original.findGlobal("Global")!!)
+        assertSameIdentity(effective.findConstant("Constant")!!, original.findConstant("Constant")!!)
+        assertSameIdentity(
+            effective.functions.single { it.name == "Untouched" },
+            original.functions.single { it.name == "Untouched" },
+        )
+        assertThat(effective.findNamedType("Box")!!.fields.first())
+            .isEqualTo(original.findNamedType("Box")!!.fields.first())
+
+        val approximation = effective.functions.single { it.name == "Identity" }
+        val originalIdentity = original.functions.single { it.name == "Identity" }
+        assertThat(approximation).isNotEqualTo(originalIdentity)
+        assertThat(originalIdentity).isNotEqualTo(approximation)
+        assertThat(approximation.body).isNotEqualTo(originalIdentity.body)
+        assertThat(setOf(approximation, originalIdentity)).hasSize(2)
+    }
+
+    @Test
     fun `partial model adds fields and methods after client deserialization`(builder: GoIRTestBuilder) {
         val project = Files.createTempDirectory("goir-model-fields-project")
         project.resolve("go.mod").write("module example.com/fields\ngo 1.22\n")

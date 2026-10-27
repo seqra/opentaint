@@ -1,17 +1,17 @@
 package org.opentaint.ir.go.client
 
 import org.opentaint.ir.go.api.GoIRApproximatedFunction
-import org.opentaint.ir.go.api.GoIRConst
-import org.opentaint.ir.go.api.GoIRField
+import org.opentaint.ir.go.api.GoIRBody
 import org.opentaint.ir.go.api.GoIRFunction
-import org.opentaint.ir.go.api.GoIRGlobal
-import org.opentaint.ir.go.api.GoIRInterfaceMethod
 import org.opentaint.ir.go.api.GoIRModelFunction
 import org.opentaint.ir.go.api.GoIRNamedType
 import org.opentaint.ir.go.api.GoIRPackage
 import org.opentaint.ir.go.api.GoIRProgram
 import org.opentaint.ir.go.api.GoIRTransformer
-import org.opentaint.ir.go.api.GoIRTypeParamDecl
+import org.opentaint.ir.go.impl.GoIRNamedTypeImpl
+import org.opentaint.ir.go.impl.GoIRPackageImpl
+import org.opentaint.ir.go.impl.functionEquals
+import org.opentaint.ir.go.impl.functionHashCode
 import org.opentaint.ir.go.type.GoIRAnonymousInterfaceType
 import org.opentaint.ir.go.type.GoIRAnonymousInterfaceTypeRef
 import org.opentaint.ir.go.type.GoIRArrayType
@@ -20,7 +20,6 @@ import org.opentaint.ir.go.type.GoIRChanType
 import org.opentaint.ir.go.type.GoIRFuncType
 import org.opentaint.ir.go.type.GoIRMapType
 import org.opentaint.ir.go.type.GoIRNamedInterfaceType
-import org.opentaint.ir.go.type.GoIRNamedTypeKind
 import org.opentaint.ir.go.type.GoIRNamedTypeRef
 import org.opentaint.ir.go.type.GoIRPointerType
 import org.opentaint.ir.go.type.GoIRSliceType
@@ -37,14 +36,13 @@ internal data class GoIRModelDefinition(
     val targetPaths: Set<String>,
 )
 
-/** A read-only view that applies partial Go models when a package is looked up. */
-internal class GoIRModelOverlayProgram(
-    override val originalProgram: GoIRProgram,
+/** Applies partial Go models by intercepting the lookup of every modeled package. */
+internal class GoIRModelTransformer(
+    private val originalProgram: GoIRProgram,
     definitions: List<GoIRModelDefinition>,
-) : GoIRProgram {
+) : GoIRTransformer {
     private val definitionsByTarget = linkedMapOf<String, GoIRModelDefinition>()
-    val modeledPaths: Set<String> get() = definitionsByTarget.keys
-    val modelDependencies = linkedMapOf<String, GoIRPackage>()
+    private val modelDependencies = linkedMapOf<String, GoIRPackage>()
 
     init {
         definitions.forEach { definition ->
@@ -71,26 +69,13 @@ internal class GoIRModelOverlayProgram(
         }
     }
 
-    override val packages: Map<String, GoIRPackage> by lazy {
-        (originalProgram.packages.keys + modelDependencies.keys).associateWithTo(linkedMapOf()) { path ->
-            findPackage(path) ?: error("Go package $path disappeared during model lookup")
-        }
-    }
+    override val additionalPackages: List<GoIRPackage> get() = modelDependencies.values.toList()
 
-    override val anonymousInterfaces: Map<Int, GoIRAnonymousInterfaceType>
-        get() = originalProgram.anonymousInterfaces
-
-    override fun findPackage(importPath: String): GoIRPackage? {
-        val original = originalProgram.findPackage(importPath) ?: return modelDependencies[importPath]
-        val definition = definitionsByTarget[importPath] ?: return original
+    override fun resolvePackage(importPath: String, next: () -> GoIRPackage?): GoIRPackage? {
+        val definition = definitionsByTarget[importPath] ?: return next()
+        val original = next() ?: return null
         return createPackage(original, definition.program.findPackage(importPath)!!)
     }
-
-    override fun allFunctions(): List<GoIRFunction> = packages.values.flatMap { it.functions }
-
-    override fun allNamedTypes(): List<GoIRNamedType> = packages.values.flatMap { it.namedTypes }
-
-    override fun mainPackage(): GoIRPackage? = packages.values.find { it.name == "main" }
 
     private fun validatePackage(target: String, definition: GoIRModelDefinition) {
         val original = originalProgram.findPackage(target)
@@ -128,27 +113,77 @@ internal class GoIRModelOverlayProgram(
             .associateBy { it.fullName }
         val used = mutableSetOf<GoIRFunction>()
         val specializedAnonymousFunctions = mutableListOf<GoIRFunction>()
-        val specializer = GoIRModelSpecializer(this)
-        val effectiveFunctions = original.functions.map { target ->
+        val specializer = GoIRModelSpecializer(originalProgram)
+        val result = GoIRPackageImpl(original.importPath, original.name, original.isStdlib, original.isDependency)
+        original.functions.forEach { target ->
             val replacement = modelByName[target.fullName]
-            if (replacement != null && replacement.bodyAvailable && sameSignature(replacement, target)) {
-                used += replacement
-                ModelFunctionCandidate(replacement, target)
-            } else {
-                val genericModel = target.originFullName?.let(modelByName::get)
-                if (genericModel != null && genericModel.bodyAvailable) {
+            val genericModel = target.originFullName?.let(modelByName::get)
+            result.addFunction(
+                if (replacement != null && replacement.bodyAvailable && sameSignature(replacement, target)) {
+                    used += replacement
+                    ApproximatedFunction(replacement, target)
+                } else if (genericModel != null && genericModel.bodyAvailable) {
                     val specialized = specializer.specialize(genericModel, target)
-                    specializedAnonymousFunctions += specialized.anonymousFunctions
-                    ModelFunctionCandidate(specialized.root, target)
+                    specializedAnonymousFunctions += specialized.drop(1)
+                    ApproximatedFunction(specialized.first(), target)
                 } else {
                     target
-                }
-            }
-        }.toMutableList()
-        effectiveFunctions += specializedAnonymousFunctions.map { ModelFunctionCandidate(it) }
-        effectiveFunctions += modelFunctions.filter { it !in used }.map { ModelFunctionCandidate(it) }
+                },
+            )
+        }
+        specializedAnonymousFunctions.forEach { result.addFunction(ModelFunction(it)) }
+        modelFunctions.filter { it !in used }.forEach { result.addFunction(ModelFunction(it)) }
 
-        return GoIRModelOverlayPackage(original, model, effectiveFunctions)
+        val functionsByName = buildMap { result.functions.forEach { putIfAbsent(it.fullName, it) } }
+        val modelTypes = model.namedTypes.associateBy { it.name }
+        original.namedTypes.forEach { target ->
+            val modelType = modelTypes[target.name]
+            result.addNamedType(modelType?.let { mergeNamedType(target, it, result, functionsByName) } ?: target)
+        }
+        model.namedTypes.filter { original.findNamedType(it.name) == null }.forEach(result::addNamedType)
+        (original.globals + model.globals).forEach { if (result.findGlobal(it.name) == null) result.addGlobal(it) }
+        (original.constants + model.constants).forEach { if (result.findConstant(it.name) == null) result.addConst(it) }
+        (original.imports + model.imports).distinctBy { it.importPath }.forEach { result._imports += it }
+        result.initFunction = original.initFunction
+        return result
+    }
+
+    private fun mergeNamedType(
+        original: GoIRNamedType,
+        model: GoIRNamedType,
+        pkg: GoIRPackage,
+        functionsByName: Map<String, GoIRFunction>,
+    ): GoIRNamedType {
+        val originalNames = original.fields.mapTo(mutableSetOf()) { it.name }
+        val fields = original.fields + model.fields.filter { it.name !in originalNames }
+            .mapIndexed { index, field -> field.copy(index = original.fields.size + index) }
+        val originalStruct = original.underlying as? GoIRStructType
+        val underlying = originalStruct?.let { struct ->
+            GoIRStructType(
+                fields.map { GoIRStructField(it.name, it.type, it.isEmbedded, it.tag) },
+                struct.structTypeRef,
+            )
+        } ?: original.underlying
+        val result = GoIRNamedTypeImpl(
+            original.name, original.fullName, pkg, underlying, original.kind, original.position, original.typeParams,
+        )
+        fields.mapTo(result._fields) { it.copy(enclosingType = result) }
+        effectiveMethods(original.methods, model.methods, functionsByName).let(result._methods::addAll)
+        effectiveMethods(original.pointerMethods, model.pointerMethods, functionsByName)
+            .let(result._pointerMethods::addAll)
+        result._interfaceMethods += original.interfaceMethods
+        result._embeddedInterfaces += original.embeddedInterfaces
+        return result
+    }
+
+    private fun effectiveMethods(
+        targetMethods: List<GoIRFunction>,
+        modelMethods: List<GoIRFunction>,
+        functionsByName: Map<String, GoIRFunction>,
+    ): List<GoIRFunction> {
+        val targetNames = targetMethods.mapTo(mutableSetOf()) { it.fullName }
+        return (targetMethods + modelMethods.filter { it.fullName !in targetNames })
+            .map { functionsByName[it.fullName] ?: it }
     }
 
     private fun validateFields(original: GoIRPackage, model: GoIRPackage, source: String) {
@@ -267,154 +302,18 @@ internal class GoIRModelOverlayProgram(
     }
 }
 
-private class GoIRModelOverlayPackage(
-    private val original: GoIRPackage,
-    private val model: GoIRPackage,
-    override val functions: List<GoIRFunction>,
-) : GoIRPackage {
-    override val importPath: String get() = original.importPath
-    override val name: String get() = original.name
-    override val isStdlib: Boolean get() = original.isStdlib
-    override val isDependency: Boolean get() = original.isDependency
-
-    private val functionsByName = functions.groupBy { it.fullName }
-
-    override val namedTypes: List<GoIRNamedType> by lazy {
-        val modelByName = model.namedTypes.associateBy { it.name }
-        val result = original.namedTypes.map { target ->
-            val modelType = modelByName[target.name]
-            if (modelType == null) target else GoIRModelOverlayNamedType(target, modelType, this, functionsByName)
-        }.toMutableList()
-        val originalNames = original.namedTypes.mapTo(mutableSetOf()) { it.name }
-        result += model.namedTypes.filter { it.name !in originalNames }
-        result
-    }
-
-    override val globals: List<GoIRGlobal> by lazy {
-        appendByName(original.globals, model.globals) { it.name }
-    }
-    override val constants: List<GoIRConst> by lazy {
-        appendByName(original.constants, model.constants) { it.name }
-    }
-    override val imports: List<GoIRPackage> by lazy {
-        appendByName(original.imports, model.imports) { it.importPath }
-    }
-    override val initFunction: GoIRFunction? get() = original.initFunction
-
-    override fun findNamedType(name: String): GoIRNamedType? = namedTypes.find { it.name == name }
-    override fun findGlobal(name: String): GoIRGlobal? = globals.find { it.name == name }
-    override fun findConstant(name: String): GoIRConst? = constants.find { it.name == name }
-    override fun allMethods(): List<GoIRFunction> = namedTypes.flatMap { it.allMethods() }
-
-    private fun <T> appendByName(first: List<T>, second: List<T>, name: (T) -> String): List<T> {
-        val names = first.mapTo(mutableSetOf(), name)
-        return first + second.filter { names.add(name(it)) }
-    }
-}
-
-private class GoIRModelOverlayNamedType(
-    private val original: GoIRNamedType,
-    private val model: GoIRNamedType,
-    override val pkg: GoIRPackage,
-    private val functionsByName: Map<String, List<GoIRFunction>>,
-) : GoIRNamedType {
-    override val name: String get() = original.name
-    override val fullName: String get() = original.fullName
-    override val underlying: GoIRType by lazy {
-        val originalStruct = original.underlying as? GoIRStructType
-        if (originalStruct == null) {
-            original.underlying
-        } else {
-            GoIRStructType(
-                fields.map { field ->
-                    GoIRStructField(
-                        field.name,
-                        field.type,
-                        field.isEmbedded,
-                        field.tag,
-                    )
-                },
-                originalStruct.structTypeRef,
-            )
-        }
-    }
-    override val kind: GoIRNamedTypeKind get() = original.kind
-    override val position get() = original.position
-    override val typeParams: List<GoIRTypeParamDecl> get() = original.typeParams
-
-    override val fields: List<GoIRField> by lazy {
-        val targetByName = original.fields.associateBy { it.name }
-        val result = original.fields.map { field -> field.copy(enclosingType = this) }.toMutableList()
-        model.fields.filter { it.name !in targetByName }.forEach { field ->
-            result += field.copy(index = result.size, enclosingType = this)
-        }
-        result
-    }
-
-    override val methods: List<GoIRFunction> by lazy { effectiveMethods(original.methods, model.methods) }
-    override val pointerMethods: List<GoIRFunction> by lazy {
-        effectiveMethods(original.pointerMethods, model.pointerMethods)
-    }
-    override val interfaceMethods: List<GoIRInterfaceMethod> get() = original.interfaceMethods
-    override val embeddedInterfaces: List<GoIRNamedType> get() = original.embeddedInterfaces
-
-    private fun effectiveMethods(
-        targetMethods: List<GoIRFunction>,
-        modelMethods: List<GoIRFunction>,
-    ): List<GoIRFunction> {
-        val targetNames = targetMethods.mapTo(mutableSetOf()) { it.fullName }
-        val result = targetMethods.map { target ->
-            functionsByName[target.fullName]
-                ?.firstOrNull()
-                ?: target
-        }.toMutableList()
-        modelMethods.filter { it.fullName !in targetNames }.forEach { modelMethod ->
-            result += functionsByName[modelMethod.fullName]
-                ?.firstOrNull()
-                ?: modelMethod
-        }
-        return result
-    }
-}
-
-private class ModelFunctionCandidate(
-    val implementation: GoIRFunction,
-    val original: GoIRFunction? = null,
-) : GoIRFunction by implementation
 
 private open class ModelFunction(protected val implementation: GoIRFunction) : GoIRModelFunction,
     GoIRFunction by implementation, GoIRBodyReader {
-    override fun readBody(owner: GoIRFunction, context: GoIRBodyContext) =
+    override fun readBody(owner: GoIRFunction, context: GoIRBodyContext): GoIRBody? =
         (implementation as GoIRBodyReader).readBody(owner, context)
     override val isSynthetic: Boolean get() = true
+    override fun equals(other: Any?): Boolean = functionEquals(other)
+    override fun hashCode(): Int = functionHashCode()
+    override fun toString(): String = "GoIRModelFunction($fullName)"
 }
 
 private class ApproximatedFunction(
     implementation: GoIRFunction,
     override val original: GoIRFunction,
 ) : ModelFunction(implementation), GoIRApproximatedFunction
-
-/** Resolves models as a lookup transformer; deserialization never applies it. */
-internal class GoIRModelTransformer(
-    program: GoIRProgram,
-    definitions: List<GoIRModelDefinition>,
-) : GoIRTransformer {
-    private val models = GoIRModelOverlayProgram(program, definitions)
-
-    override val additionalPackages: List<GoIRPackage> get() = models.modelDependencies.values.toList()
-
-    override fun resolveFunction(
-        reference: org.opentaint.ir.go.api.GoIrFunctionReference,
-        next: () -> GoIRFunction?,
-    ): GoIRFunction? {
-        val candidate = next() ?: return null
-        if (candidate !is ModelFunctionCandidate) return candidate
-        val original = candidate.original
-        return if (original == null) ModelFunction(candidate.implementation)
-        else ApproximatedFunction(candidate.implementation, original)
-    }
-
-
-    override fun resolvePackage(importPath: String, next: () -> GoIRPackage?): GoIRPackage? =
-        if (importPath in models.modeledPaths) models.findPackage(importPath) else next()
-}
