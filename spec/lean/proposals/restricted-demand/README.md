@@ -46,3 +46,12 @@ LEAN_PATH=.lake/build/lib/lean lean -j 1 -M 512 proposals/restricted-demand/Rest
 
 Only `propext` and `Quot.sound` occur in the combined axiom audits. There is no
 classical choice, new axiom or unproved placeholder.
+
+The second review adds `MarkBoundaryReview.lean` (18 audited declarations)
+and `EmissionRestrictionProbe.kt` (current scalar AP behavior only).
+`boundary-review-checks.json` records the complete outputs. The probe
+passes 14 original mark/STAR behavior checks and confirms two required
+corrections: ancestor E rebasing for concrete STAR, and the current
+MUST-input/STAR-demand adapter rejection. It does not apply those fixes.
+The original handoff keeps STAR/E; the selected proposal now removes the
+later STAR-to-ANY widening and updates the demand-adapter contract.

@@ -539,3 +539,163 @@ object DemandScopeReview {
 ```
 
 </details>
+
+
+## 11. Second review: STAR tails, concrete marks and balanced seed returns
+
+Date: 27 October 2026. Source snapshot `eab0b032c7c85e248a3b5d1fdf2c14cea3609aca`;
+runtime core remains `57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`.
+The latest referenced Thingsboard campaign reached **run-2**, completed
+**run-1**, and accepted **run-1**. This review starts no project or engine
+iteration. No production implementation was changed.
+
+The [complete proposal](../../spec/restricted-demand-static-closure.md)
+is corrected in sections 2, 3.2, 3.4, 3.6, 3.7 and 14. The changes below
+are demand-adapter changes; ordinary field transfer, mark protection,
+cleaners, aliases and full later-forward ND guards remain unchanged.
+
+### 11.1 Run-1 has no ND edge
+
+The current `RunMethodAnalyzer.checkPremise` requires one InitialAp in
+run-1. A complete ND **condition** is still checked, then each contributing
+original produces a separate singleton relation. A PremiseSet cannot enter
+run-1 method facts, summaries, subscriptions or static seeds. Thus normal
+ND summary selection is only a later-forward case, never a run-1 case.
+
+### 11.2 The backward-ZERO rule is original
+
+F57 introduced balanced seed returns on 6 October in `efd7b6373`.
+`Backward.DB.zret` returns a ZERO-origin sink requirement through the call
+where caller ZERO entered the callee, without a demand-restriction premise.
+`6b2b0fd5b` on 7 October states explicitly that the callee does not restrict
+that summary and the caller does not perform a satisfaction test. The first
+RunMethodAnalyzer (`b65b46d76`, 11 October) already implements this route.
+
+For `helper(q) { sinkT(q); }`, the backward seed yields ZERO → q/T at the
+method entry. The matching caller ZERO receives the requirement through
+that call's reversed binding. Requiring an ordinary nonzero return-summary
+pair would lose a locally consumed argument. This is seed propagation,
+not a concrete input assumption or a normal reusable program-flow record.
+The original AP sections 4.3, 6.4 and 9.2 already retain the rule. The earlier
+comparison's original column was incomplete; this is not a new SQ exception.
+
+### 11.3 A mark gate is not symmetric set intersection
+
+| Operation | Inputs | Required result |
+|---|---|---|
+| Entry emission | Demand T, actual FLOW | None, even if T is not excluded |
+| Entry emission | Demand FLOW, actual T | Shared FLOW initial, not T |
+| Exit reduction | Demand T, conclusion FLOW | Keep FLOW if T is not excluded; never turn it into T |
+| Exit reduction | Demand FLOW, conclusion T | Keep T |
+
+Whole-premise entry containment still runs before the exit mark gate. A
+concrete entry cannot authorize a FLOW original. Correlated STAR conclusions
+are also retained whole; cutting them to EXACT can change the pair relation.
+The current scalar AP agrees on 14 targeted cases, including exclusions,
+mark mismatch, absent exits and EXACT exit versus STAR conclusion.
+
+### 11.4 Real discrepancies found
+
+1. **STAR handoff widening is not original normalization.** Original
+   `Abs.normFact` preserves kind and field E and normalizes only mark
+   exclusions. Current `HandOff.toBackward` changes STAR to ANY and clears
+   E; `28a123f0e` introduced that rewrite on 16 October with SQ. The previous
+   proposal incorrectly preserved it. The corrected proposal removes it
+   and replaces the blanket typed STAR-entry rejection with the stated
+   original guard. The producer proof must exclude abstract STAR entries
+   with nonempty E, which original C2 does not cover.
+2. **Concrete STAR descent can attach E to the wrong path.** Actual
+   x/STAR/{f}/T and demand x.g/ANY/T both cover x.g.f/T when g differs
+   from f. Current `commonPart` emits x.g/STAR/{f}/T, which excludes that
+   location. Required result: x.g/STAR/{}/T. After the strict descent is
+   admitted, ancestor E must be rebased before the tail meet. This case
+   belongs to the selected concrete-STAR extension; the original proof
+   assumption that concrete inputs have no STAR tail cannot justify it.
+3. **Preserving STAR demand exposes the MUST/STAR cell.** Current `meet`
+   asserts that this pair cannot occur. The restored forward demand can
+   encounter a MUST input. Required location intersection at the same
+   path: MUST/(E1 union E2), preserving the MUST kind and current start
+   layer. The current probe confirms the assertion; it does not claim
+   that the assertion is reachable under today's non-STAR builder.
+
+The corrected proposal explicitly includes these adapter changes. No
+runtime field-write, alias, cleaner or mark-generation rule is changed.
+These results do not prove a whole JVM iteration or a universal project
+failure. The typed and packed adapters remain implementation acceptance
+obligations.
+
+### 11.5 Complete local receipt
+
+[MarkBoundaryReview.lean](../../spec/lean/proposals/restricted-demand/MarkBoundaryReview.lean)
+checks 18 declarations with no new axiom, choice or placeholder. In
+addition to the original mark gates, it proves the general first-accessor
+rebasing law and an executable admitted-location counterexample/correction.
+[EmissionRestrictionProbe.kt](../../spec/lean/proposals/restricted-demand/EmissionRestrictionProbe.kt)
+calls the current scalar AP. It passes 14 expected behavior checks and
+confirms two defects/adapter gaps. The complete outputs are embedded below
+and are also in
+[boundary-review-checks.json](../../spec/lean/proposals/restricted-demand/boundary-review-checks.json).
+
+```json
+{
+  "state": "SECOND_REVIEW_CHECKED_PROPOSAL_CORRECTED_IMPLEMENTATION_UNCHANGED",
+  "reviewed_checkout": "eab0b032c7c85e248a3b5d1fdf2c14cea3609aca",
+  "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "latest_referenced_project_iteration": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted_forward": "run-1"
+  },
+  "new_project_runs": 0,
+  "new_engine_iterations": 0,
+  "production_edits": 0,
+  "formal": {
+    "source": "spec/lean/proposals/restricted-demand/MarkBoundaryReview.lean",
+    "source_sha256": "2f471322b608594766a1b784f303559e05555f9989f268e56d9710a6e61b2aff",
+    "import": "ApSpec.AbsDefs",
+    "exit_code": 0,
+    "seconds": 0.29023538529872894,
+    "audited_declarations": 18,
+    "output": "'MarkBoundaryReview.concrete_entry_does_not_invent_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_rejects_abstract_even_when_mark_not_excluded' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_preserves_actual_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_rejects_other_mark' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_entry_emits_shared_flow' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_entry_does_not_copy_actual_mark_exclusions' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_cannot_authorize_flow_premise' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_keeps_correlated_abstract_conclusion' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_rejects_excluded_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_keeps_other_mark_exclusions' depends on axioms: [propext]\n'MarkBoundaryReview.exact_exit_does_not_decorrelate_star' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_exit_does_not_erase_concrete_mark' depends on axioms: [propext]\n'MarkBoundaryReview.original_normalization_preserves_star_and_field_exclusion' does not depend on any axioms\n'MarkBoundaryReview.admitted_descent_rebases_exclusion' depends on axioms: [propext]\n'MarkBoundaryReview.must_star_intersection_uses_exclusion_union' does not depend on any axioms\n'MarkBoundaryReview.ancestor_and_request_cover_location' does not depend on any axioms\n'MarkBoundaryReview.wrongly_copied_exclusion_loses_location' depends on axioms: [propext]\n'MarkBoundaryReview.corrected_rebasing_keeps_location' does not depend on any axioms\n",
+    "scope": "Original scalar mark gates and normalization; generic ancestor-exclusion rebasing; E-union intersection law and an explicit lost-location/corrected-location witness. Not a whole JVM/typed adapter proof."
+  },
+  "actual_scalar_AP": {
+    "source": "spec/lean/proposals/restricted-demand/EmissionRestrictionProbe.kt",
+    "source_sha256": "6b8a55c1c803aed8c9461e7dd445163e6f451b0a10be3a67cdee624a4f44879e",
+    "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+    "current_reference_class_sha256": "5476d2cc70cc658c450506f3f0aadb193b238e4b77aaddca6750fd89d1d6c661",
+    "compile_exit_code": 0,
+    "run_exit_code": 0,
+    "seconds": 2.081396132707596,
+    "passed_current_behavior_checks": 14,
+    "confirmed_defects_or_adapter_gaps": 2,
+    "output": "PASS emission T-demand + FLOW-input = none\nPASS emission T-demand + FLOW-excluding-U-input = none\nPASS emission T-demand + T-input = T\nPASS emission T-demand + U-input = none\nPASS emission FLOW-demand + T-input = shared STAR/FLOW\nPASS emission FLOW-demand + FLOW-excluding-T-input = shared STAR/FLOW\nPASS restriction T-entry rejects entire FLOW-premise\nPASS restriction T-exit keeps FLOW mark and STAR tail\nPASS restriction T-exit rejects FLOW excluding T\nPASS restriction T-exit keeps FLOW excluding only U\nPASS restriction EXACT T-exit does not cut correlated STAR\nPASS restriction FLOW-entry/exit retains actual T\nPASS restriction U-exit rejects concrete T\nPASS restriction absent exit = none\nCONFIRMED inherited-field-exclusion bug: actual=x.g/STAR/{f}/T intended=x.g/STAR/{}/T; x.g.f is wrongly lost\nCONFIRMED STAR-demand adapter gap: current meet rejects MUST-input with STAR-entry; required by preserved STAR demands in later forward runs\n",
+    "scope": "Current scalar AP emission/restriction. 14 expected behavior checks; confirms inherited-E defect and MUST/STAR adapter gap. No method actor or project run; implementation unchanged."
+  },
+  "history": {
+    "balanced_seed_return_design": {
+      "decision": "F57",
+      "date": "2026-10-06",
+      "commit": "efd7b637374b6011f69964ebfdac6c8f6562f941"
+    },
+    "explicit_no_restriction_wording": {
+      "date": "2026-10-07",
+      "commit": "6b2b0fd5b"
+    },
+    "first_analyzer_implementation": {
+      "date": "2026-10-11",
+      "commit": "b65b46d766790956bbfd50efaf74e706271eddf3"
+    },
+    "STAR_to_ANY_widening": {
+      "date": "2026-10-16",
+      "commit": "28a123f0eac937e8f2feca9ee5dd84e38fa8f979"
+    }
+  },
+  "remaining_acceptance_obligations": [
+    "Typed preserved-STAR builder and scalar/packed emission correspondence",
+    "MUST-input/STAR-entry cell with the original guarantee and layer handling",
+    "Producer proof of original abstract STAR/nonempty-E exclusion guard",
+    "General marked/correlated extension scope beyond original non-STAR concrete inputs"
+  ]
+}
+```

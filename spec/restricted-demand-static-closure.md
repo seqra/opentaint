@@ -11,6 +11,8 @@ is supporting evidence, not an additional policy. Follow
 
 The reviewed checkout is `e908c95899f98ef5ad60b24710aff72225021d18`;
 its runtime core is `57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`.
+The second review used `eab0b032c7c85e248a3b5d1fdf2c14cea3609aca`,
+with the same runtime core.
 The latest referenced Thingsboard campaign reached **run-2**, completed
 **run-1**, and accepted **run-1**. No project was rerun for this design.
 
@@ -27,7 +29,7 @@ run schedule remain in scope as stated below.
 | Restricted initial emission | Match actual input against fixed demand; use all matching entry patterns | `StrongQueries.admit` starts a canonical actual-input query even without demand | Restore demand-only emission for both restricted directions |
 | Abstract entry pattern | Emit one FLOW premise, shared across admitted caller marks | Only concrete guide entries refine the actual query; abstract guides do not start shared FLOW | Restore shared FLOW emission; do not filter abstract guides |
 | Concrete entry pattern | Intersect with an actual concrete mark; never get T from FLOW | Concrete intersections are additive to actual-query starts | Keep only the original demand intersection |
-| Summary permission | Require a complete entry/exit demand pair and whole-premise containment | `currentQueries.permits` can publish a raw computed summary without exit restriction | Restore C5 restriction; keep only the existing backward-ZERO exception |
+| Summary permission | C5 for ordinary summaries; the original backward seed-return rule is separate | `currentQueries.permits` can additionally publish raw summaries | Restore C5 and retain the original backward seed-return route, explained in section 3.6 |
 | Later input after a raw result | Replay existing publications and applicable records | A new query can scan all raw summaries and republish permitted originals | Remove that scan; demand stays immutable |
 | Demand selection at handoff | DEMAND, normal ND, and normal backward-ZERO publications are selected; other normal singletons supply records | `config.run1 || ...` selects every run-1 publication | Restore original selection in every run, including run-1 |
 | Static/static relations in run-1 | Ordinary AP can retain and apply relations which reach the exit | Current special static path erases them before storage/publication | Keep thin post-exit seeds; do not publish them during run-1 |
@@ -35,6 +37,7 @@ run schedule remain in scope as stated below.
 | Static producer conclusion | Ordinary exit summaries pass exit rules | Local writes and call static results go to `retainSummary` immediately | Route them to the existing post-return NormalExit, then run exit rules and common summary emission |
 | Actual write visibility | A write is an effect at its operation | Producer effects are offered before static-summary erasure | Preserve immediate producer effects; do not delay them until exit |
 | NORMAL persistence | Persist eligible raw normal singleton summaries, with their legal exclusions | Raw persistence exists | Keep it; synthetic completion is never a record |
+| STAR in handoff | Keep STAR and legal field E; normalize mark exclusions separately | `HandOff.toBackward` changes a STAR result to ANY and clears E | Remove that widening; support the preserved STAR demand under the original emission guard |
 
 These changes restore the original authority of demand. They deliberately
 change the current executable initial set and publication set. They are not
@@ -43,6 +46,15 @@ semantics-preserving replacements for the current SQ implementation.
 The new static closure is an over-approximation used to guide real run-2
 execution. It is not a new transfer rule. The exit shortcut is a selected
 run-1 transfer approximation. It cannot establish a confirmed normal flow.
+
+The second review corrects two mistakes in the preceding proposal. Its
+STAR-to-ANY handoff rewrite was taken from the current implementation,
+not the original AP contract. Its deeper concrete-STAR intersection could
+also copy E to the wrong path. Restoring STAR demand and rebasing that
+intersection are explicit changes to demand handling. They do not change
+ordinary field transfer or invent concrete marks from FLOW. The newly
+reachable MUST-input/STAR-entry intersection is specified below instead
+of leaving the old typed-domain assertion in place.
 
 After run-1, complete the missing demand through static positions. Keep
 ordinary restricted-run emission and complete entry/exit restriction.
@@ -149,6 +161,15 @@ can be satisfied by ZERO-origin inputs. Later forward runs keep full ND
 premises and their complete support requirements. This proposal does not
 change rule conditions, actions, specialization, equality or hashing.
 
+**Run-1 cannot produce an ND edge in the current implementation or this
+proposal.** Every run-1 executable original is one `InitialAp`, including
+ZERO. `PremiseSet` is invalid at its point stores, summaries, subscriptions
+and static seed boundary. A rule can have an ND guard, but only after the
+complete guard succeeds does it emit one singleton edge per contributing
+original. An ND guard is not an ND edge. There is no run-1 normal ND
+handoff case. The generic ND publication rules below apply to later
+forward runs (run-3 and later); backward runs also have no ND edges.
+
 The current `forceRun1Layer` policy makes every run-1 TAINT result, static
 result, or result with a static original DEMAND, including FULL mode.
 Keep that policy. Restoring demand selection does not promote these
@@ -227,11 +248,13 @@ The generic original FLOW form is:
 | ANY | STAR with empty E |
 | STAR/E | STAR/E |
 
-Keep entry base/path and mark `*`. The typed demand boundary used here is
-stricter than this generic function: its abstract entry has ANY, so the
-ordinary executable FLOW initial is STAR with empty E. An abstract EXACT
-value from the generic algebra is not a legal typed FlowTree initial.
-No new generic/unsupported demand shape is admitted by this proposal.
+Keep entry base/path and mark `*`. The restored typed boundary accepts
+abstract ANY and abstract STAR with empty E; both give a legal STAR/FLOW
+initial with empty E. A preserved concrete STAR demand keeps its legal E.
+An abstract EXACT value from the generic algebra is not a legal typed
+FlowTree initial. The original C2 guard excludes an abstract STAR entry
+with nonempty E; do not silently widen such an entry to ANY. The producer
+shape invariant must establish this guard before the snapshot is accepted.
 
 For a concrete entry with path p, intersect locations as follows:
 
@@ -248,21 +271,58 @@ The tail meet for equal paths is:
 |---|---|---|---|
 | EXACT | EXACT | EXACT | EXACT |
 | ANY | EXACT | ANY | STAR/E2 |
-| MUST/E1 | EXACT | MUST/E1 | Outside the canonical concrete-entry construction |
+| MUST/E1 | EXACT | MUST/E1 | MUST/(E1 union E2) |
 | Correlated concrete STAR/E1 | EXACT | STAR/E1 | STAR/(E1 union E2) |
+
+The MUST/STAR cell is required when STAR demand is preserved and the next
+forward run receives a must fact. The old implementation rejected this
+cell because its builder prohibited STAR entries. Union of exclusions is
+the location intersection; the initial keeps the MUST kind, actual mark
+and the existing start-layer policy. No must fact is introduced backward.
 
 The last row preserves the already selected correlated-STAR extension.
 Restoring the original protocol does not revert it to the historical
 STAR(T)-to-ANY(T) start. At a deeper demand path, use the existing rebased
-intersection: a retained MUST region has empty E there; do not copy an
-ancestor's first-accessor exclusion to a different path. EXACT has empty E.
+intersection: a retained MUST **or concrete STAR** region forgets the
+ancestor's E after the strict descent is admitted. Intersect that rebased
+region with the demand's tail/E at the new path. EXACT has empty E.
+
+```kotlin
+// Only the strictly-above branch, after actual.tailAdmits(suffix) succeeds.
+val rebased = actual.copy(exclusion = ExclusionSet.Empty)
+val (tail, e) = meet(rebased, entry) // Includes MUST intersect STAR.
+val initial = Pattern(entry.fact.copy(tail = tail, mark = actual.fact.mark), e)
+```
+
+For `actual=x/STAR/{f}/T` and `entry=x.g/ANY/T`, g is allowed and the
+initial is `x.g/STAR/{}/T`. Keeping `{f}` at x.g would incorrectly lose
+x.g.f. This correction changes only the emitted intersection, not the
+stored incoming fact or its exclusion.
 
 C2 is the required coverage contract: for every common admitted location
 and mark of the actual input and Dc, emission supplies a satisfiable
 initial covering it, wholly inside Dc. C3 preserves the actual concrete
 mark for a concrete entry and emits `*` for an abstract entry. The generic
-C2 proof excludes an abstract STAR entry with nonempty E. The canonical
-typed boundary enforces the stronger ANY abstract-entry condition.
+C2 proof excludes an abstract STAR entry with nonempty E. Preserve that
+guard; the previous blanket ban on all STAR entries is removed. A violation
+is a construction/proof gap, not permission to weaken E automatically.
+For a concrete entry, this contract also requires concrete input eligibility.
+It does not promise specialization of an abstract actual input to T merely
+because a set-theoretic reading of that input includes T.
+
+Do not read "intersection" as a symmetric set operation on marks:
+
+```text
+emission entry * , actual T       => shared FLOW initial, mark *
+emission entry T , actual *       => no initial
+emission entry T , actual *∖{U}   => no initial, even when U != T
+emission entry T , actual T       => location intersection, mark T
+```
+
+The concrete-entry eligibility gate precedes location intersection. An
+abstract input is not evidence of a concrete mark. Conversely, the FLOW
+initial for an abstract demand does not copy actual T or its mark exclusions.
+The actual caller input remains intact and filters/instantiates the answer.
 
 No matching entry means no nonzero initial. Do not synthesize an entry
 pattern from the actual input. Do not add a same-field EXACT initial merely
@@ -323,6 +383,21 @@ For canonical Dp, the mark gate is:
 The gate does not change an abstract result into a concrete one. A concrete
 entry cannot authorize a FLOW premise. Entry overlap alone is insufficient.
 
+Exit reduction has a different role from entry emission:
+
+```text
+exit demand T , conclusion *       => keep conclusion *, not T
+exit demand T , conclusion *∖{T}   => reject
+exit demand T , conclusion *∖{U}   => keep *∖{U}, when U != T
+exit demand * , conclusion T       => keep T, not *
+```
+
+For example, with `j=x/STAR/*`, raw `g=ret/STAR/*` and demand
+`(x/ANY/*, ret/ANY/T)`, C5 keeps g unchanged. Applying that shared summary
+to an actual U passes U; it does not generate T. The publication can extend
+outside the concrete exit demand, as the original representability rule
+allows. Its pairs still come from the raw correlated relation.
+
 Reduce the permitted conclusion geometry as follows. Let p be Dp's path.
 
 | Conclusion position | Reduction after the gates |
@@ -376,6 +451,10 @@ selected exactly when its layer is DEMAND, its premise is multi-member,
 or it is a backward ZERO-premise group. Selection is independent of tails
 and of which publication pieces result. Store the selected publications,
 not the unrestricted raw value, as ordinary next-run guidance.
+For run-1 specifically, no multi-member or backward case is possible:
+the predicate reduces to `delta.layer == DEMAND`. A run-1 NORMAL singleton
+supplies its eligible record only. Keeping the generic selector does not
+authorize a run-1 PremiseSet.
 
 Eligible raw NORMAL singleton relations persist at a complete barrier,
 including legal nonempty field exclusions. Native backward ZERO relations
@@ -390,6 +469,44 @@ exit for an original. Late callers replay publications and applicable
 records. There is no query-triggered `summaries.all()` authorization scan.
 
 ### 3.6 ZERO, seeds, sources and observations
+
+The backward ZERO route is the **original balanced seed return**, not a
+new exception introduced by this proposal or by StrongQueries. The first
+comparison table previously omitted it from the original column; that
+description was incomplete.
+
+Its history in this repository is:
+
+| Update | Evidence |
+|---|---|
+| F57, 6 October 2026, commit `efd7b637374b6011f69964ebfdac6c8f6562f941` | Replaced direct sink seeding/plain reversal with root ZERO, callee ZERO entry, ZERO-to-requirement seeds and balanced returns; `Backward.DB.zret` has no demand restriction premise |
+| 7 October 2026, commit `6b2b0fd5b` | Made the prose explicit: the callee does not restrict this summary and the caller makes no satisfaction test; section 9.2's balanced-return paragraph |
+| 11 October 2026, commit `b65b46d766790956bbfd50efaf74e706271eddf3` | The first `RunMethodAnalyzer` implementation already published raw backward ZERO summaries, before StrongQueries existed |
+
+The current original AP text states it in sections 4.3, 6.4 and 9.2.
+[F57](ap-history.md) records the design decision. It was absent from the
+earlier pre-F57 direct-seed design, not from the selected original AP
+protocol used as the reference here.
+
+```java
+void main(Object p) { helper(p); }
+void helper(Object q) { sinkT(q); }
+```
+
+Backward ZERO enters helper from this call. At its sink, the seed creates
+`ZERO -> q/T`. The requirement reaches helper's forward entry and returns
+through the **same call subscription** as `ZERO -> p/T` in main. There need
+not be a nonzero return-summary demand in helper: q is consumed locally.
+Ordinary `(ZERO, no-exit)` demand cannot publish this requirement under C5.
+The dedicated balanced route carries it out; ordinary reversed transfer
+then determines whether it reaches an actual source.
+
+This applies only to a backward summary whose **original is ZERO**. It
+does not apply to `j -> ZERO` with nonzero j, to a forward source summary,
+or to a nonzero static premise. It grants no new initial/query permission,
+does not remove field limits, and does not make the seed path a normal
+record. It remains balanced at an actual call, rather than broadcasting a
+requirement to unrelated callers.
 
 Keep the existing exceptions and seed roles:
 
@@ -430,26 +547,35 @@ its conclusion as entry and **no exit**. Keep the forward implicit ZERO
 entry. Backward seeds and forward source hits are separate from these
 summary pairs.
 
-Use the existing typed normalization in both explicit and virtual patterns:
+Use the original AP normalization, including the selected MUST-location
+conversion, in both explicit and virtual patterns:
 
 ```text
 MUST/E endpoint       -> ANY, empty E, without the must guarantee
 FLOW mark *∖X        -> FLOW mark *, without mark exclusions
 concrete mark         -> keep full identity or explicit group selector
-forward STAR result
-used as an entry      -> ANY, empty E (canonical entry location cover)
-STAR premise as exit  -> retain its legal E
+STAR endpoint         -> keep STAR and its legal field E on either side
 ```
 
-Demand entries are non-STAR; an abstract entry is ANY. An EXACT exit has
-a concrete entry mark. No demand endpoint has MUST or mark exclusions.
-Retain the supported static anchor grammar. These are the existing typed
-construction restrictions, not a new weakening of runtime facts or
-records. The original generic emitter/restrictor has a wider algebraic
-domain than this boundary. Do not infer new starts from that wider domain.
+Remove the current blanket STAR-entry rejection. Abstract entries use ANY
+or STAR/empty E. Concrete entries can use EXACT, ANY or STAR/E. An EXACT
+exit still requires a concrete entry mark in the typed adapter. No demand
+endpoint has MUST or mark exclusions. Keep the static anchor grammar.
+
+The current `HandOff.toBackward` STAR-to-ANY conversion was added in
+`28a123f0eac937e8f2feca9ee5dd84e38fa8f979` on 16 October, together with
+StrongQueries. It is not original AP normalization. It loses correlation
+and possibly E. The preceding draft incorrectly retained it as an existing
+typed construction rule. Remove this rewrite and update the typed builder
+and concrete intersection cases specified above. Do not turn the old
+canonical-shape theorems into assumptions about this extended producer set.
 
 The run-1 static completion below uses E-free run-1 endpoints and this
-same projection. It does not change later handoff geometry or record E.
+same projection. Normal summaries and records retain all runtime E and
+mark exclusions. A generated abstract STAR/E with nonempty E needs a
+separate C2 proof/behavior decision; the original guard does not justify
+silently accepting or widening it. Establish the producer guard as an
+acceptance invariant, rather than hiding a failure with another cast.
 
 ## 4. Static endpoints and relation kinds
 
@@ -1300,6 +1426,24 @@ There is no new axiom, classical choice or unproved placeholder. The ten
 separate original-demand audits also pass. These are 33 audited declarations
 across the two local models, not 33 whole-analyzer theorems.
 
+The second-review model
+[MarkBoundaryReview.lean](lean/proposals/restricted-demand/MarkBoundaryReview.lean)
+adds 18 audits of the original asymmetric mark gates, unchanged correlated
+STAR restriction, original STAR/E normalization, generic strict-descent
+exclusion rebasing and the E-union intersection law. There are 51 audits
+across the three local models. The current scalar Kotlin probe passes 14
+expected behavior checks and confirms the inherited-E defect and the
+MUST/STAR adapter gap. The new proposal does not describe those two current
+results as successful fixes.
+
+The [second-review receipt](lean/proposals/restricted-demand/boundary-review-checks.json)
+contains all outputs and source hashes. The
+[review report](../docs/reports/bidirectional-restricted-demand-scope-review-20261027.md)
+records the history and the corrected scope. Neither the old non-STAR
+canonical-shape proof nor these scalar controls prove the full extended
+typed emitter. Acceptance must check the supported STAR-entry builder,
+MUST cell and packed/scalar correspondence under the stated producer guard.
+
 The finite oracle compares eager and factored results in 91 cases, including
 80 deterministic random graphs. Three generic exit-pipeline controls also
 pass. These are design controls, not a production implementation or a new
@@ -1355,6 +1499,9 @@ tested. No runtime code is changed by this document.
 | `DemandStore.Builder.completeRun1StaticFields()` and its handoff call | Remove | No flag can enable the removed query/EXACT mechanism |
 | Current `implicitStaticPair`, `staticGroupsEnabled`, `includeStaticGroups()` and its handoff call | Replace with the frozen same-position carry family and static completion view | The old root-wide, group-only helper does not define the required FLOW carry and completed productive pairs |
 | Query-policy constructor plumbing and checks in the above owners | Remove | The receiving run already has its index, direction and limit |
+| `HandOff.toBackward` STAR-to-ANY entry rewrite | Remove | Original handoff preserves STAR and field E; this is separate from mark-exclusion normalization |
+| `DemandStore.Builder` blanket non-STAR-entry and abstract-ANY-only checks | Replace with the restored guard | Allow concrete STAR/E and abstract STAR/empty E; retain the C2 guard and typed abstract-EXACT prohibition |
+| `validFieldExclusion` restricted to a STAR exit | Extend to legal STAR entries as well | E is legal on a preserved STAR endpoint on either side |
 
 Removing `StrongQueries` does not remove `ops.emit`, `ops.restrict`,
 `restrictBy`, `InitialFactStore`, raw summary storage, publication storage,
@@ -1383,6 +1530,14 @@ deduplication or persistence path merely because the early caller is gone.
 
 ### 14.3 Move validation; remove its query-policy dependency
 
+Update the concrete intersection adapter separately from ordinary field
+transfer. `Reference.commonPart` must rebase ancestor E on a strict
+descent before meeting tails; apply the same law to packed emission.
+`Reference.meet` must replace its MUST-input/STAR-demand assertion with
+the MUST/(E1 union E2) cell. Keep MUST demand entries forbidden. These
+corrections are required by the retained correlated-STAR extension and
+preserved STAR demand; deleting SQ alone would not implement them.
+
 `validateRun2StaticFullInput` and `validateRun2StaticFullAnchor` currently
 share `StrongQueries.kt`. They enforce the selected grammar and are still
 needed. Move them to an AP/static-boundary validation file, for example
@@ -1401,6 +1556,7 @@ Test paths below are under `src/test/kotlin/org/opentaint/dataflow/bidi/`:
 | Existing test or assertion | Required replacement |
 |---|---|
 | `StrongQueriesTest` assertions for unconditional actual queries, raw-answer permission and extra exact starts | Demand-only entry/publication tests, FLOW sharing, no-demand/no-start, no ANY-to-EXACT and immutable late-arrival behavior |
+| `DemandStoreTest` rejection of all STAR entries; handoff expectations which widen STAR to ANY | Preserve legal STAR/E; accept the supported abstract STAR/empty form; reject only the stated unsupported forms |
 | `ImplicitStaticGroupDemandTest` reference inventory of root-wide group pairs | Same-position carry and full static closure tests, including FLOW, colored paths, markers and no cross-field carry |
 | `HandOffTest` and `StaticConditionalRequestJoinTest` policy-enum assertions | Assert incoming run-2 completion/carry behavior and its absence at later handoffs |
 | `StaticSeedGrammarTest` and `StaticProducerGrammarTest` policy setup | Use run-2 configuration and the retained grammar validators |
@@ -1442,7 +1598,9 @@ and proof receipts as historical evidence, with their original scope.
 4. Implement the equivalent frozen graph demand view. Match `near` and
    `covering` against the oracle, including marks, class markers and cycles.
 5. Restore original restricted-run emission and C5 publication. Remove the
-   broad query permission set/backfill and ANY-to-EXACT completion.
+   broad query permission set/backfill and ANY-to-EXACT completion. Preserve
+   STAR at handoff; update the typed demand guard and the concrete descent
+   and MUST/STAR cells before switching off the old query path.
 6. Keep the shared static carry as a demand family. Exercise the getter,
    setter, colored bridge, strong-kill and exit-rule cases end to end.
 7. Run the required common/JVM/driver checks and configured OWASP/project
@@ -1454,6 +1612,7 @@ Acceptance requires these behavior checks, beyond the finite design oracle:
 | Boundary | Required checks |
 |---|---|
 | Demand entry | No-demand/no-start; shared FLOW over several actual Ti; concrete mismatch; correct group/full selection; no ANY-to-EXACT start; legal E and MUST forward-only |
+| STAR demand | Preserved STAR handoff; ancestor E rebased on strict descent; MUST/STAR meets by E union; no unproved abstract STAR/nonempty-E entry; scalar/packed equality |
 | Restricted publication | Whole-member containment; exit mark mismatch; absent exit; retained full ND premise; raw NORMAL record distinct from restricted publication |
 | Arrival order | Answer-first and input-first give the same applied relations; later input never authorizes a raw-summary scan |
 | Static completion | All four compositions, arbitrary chain, siblings, transitive callers, call/static cycles, absent actors, exact MethodKey W/R ownership |
