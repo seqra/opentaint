@@ -170,6 +170,8 @@ OpenTaint loads the model module and the analyzed project modules in a temporary
 
 OpenTaint does not use model `init` functions. Supply only one model for each target package.
 
+Model packages apply only when their target package is present in the analyzed project. Unrelated model modules do not add their dependencies to the project.
+
 Java models use the same rule with dots. Add `opentaint.` before the target class name. For example, `opentaint.java.util.Optional` models `java.util.Optional`. Its source uses `package opentaint.java.util` and `class Optional`. The old `@Approximate` annotations still work. Use the prefix for new models.
 
 OpenTaint compiles each Java model project with its pinned dependencies and the OpenTaint approximation support classes.
