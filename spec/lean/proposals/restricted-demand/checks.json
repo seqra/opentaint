@@ -1,0 +1,36 @@
+{
+  "state": "LOCAL_BASELINE_AND_GAP_CHECKED_REPAIR_UNSELECTED",
+  "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "latest_referenced_project_iteration": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted_forward": "run-1"
+  },
+  "new_project_runs": 0,
+  "new_engine_iterations": 0,
+  "production_edits": 0,
+  "formal": {
+    "source": "spec/lean/proposals/restricted-demand/RestrictedDemand.lean",
+    "source_sha256": "4059e4ef9fc79dff4cc55d1e8774f86e81143096e7e839c13742693c2a31def4",
+    "import": "ApSpec.AbsDefs",
+    "theorems": 10,
+    "exit_code": 0,
+    "observed_axioms": [
+      "propext",
+      "Quot.sound"
+    ],
+    "scope": "Original demand gates and local wrapper rejection/missing-pair witnesses. No whole-JVM or repair-policy proof."
+  },
+  "actual_AP_controls": {
+    "source_sha256": "cad0796ef7c739e9ef66817fa7f9a942cc1a4c29e572b0f1c5d1ed4dadcd5b7a",
+    "compile_exit_code": 0,
+    "run_exit_code": 0,
+    "scenario_outcomes": 7,
+    "output": "PASS hidden-selected-cleaner/FLOW widenedStaticExit=allows callerTAnswer=0\nPASS copy/FLOW calleeStaticAnswer=allowed wrapperChangedField=blocked exactMissingPair=allows\nPASS setter/FLOW calleeProductiveAnswer=allowed wrapperNonstaticExit=blocked exactMissingPair=allows\nPASS static-read/T ordinarySTARreadRelation=subsumedByFLOW noNewProtectionAssumed\nPASS hidden-selected-cleaner/T widenedStaticExit=allows callerTAnswer=1\nPASS copy/T calleeStaticAnswer=allowed wrapperChangedField=blocked exactMissingPair=allows\nPASS setter/T calleeProductiveAnswer=allowed wrapperNonstaticExit=blocked exactMissingPair=allows\n",
+    "scope": "Actual AP reverse-shaped edge applications, selected cleaning, restriction, summary application and static-read summary subsumption. Run-1 exports are derived from selected static rules; no frontend or actor run."
+  },
+  "decision_required": [
+    "Complete static-related demand, including wrapper entry/exit and marked dependencies",
+    "Explicit static-related query exception with a defined wrapper scope"
+  ]
+}
