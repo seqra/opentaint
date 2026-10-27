@@ -1,0 +1,61 @@
+{
+  "state": "SECOND_REVIEW_CHECKED_PROPOSAL_CORRECTED_IMPLEMENTATION_UNCHANGED",
+  "reviewed_checkout": "eab0b032c7c85e248a3b5d1fdf2c14cea3609aca",
+  "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "latest_referenced_project_iteration": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted_forward": "run-1"
+  },
+  "new_project_runs": 0,
+  "new_engine_iterations": 0,
+  "production_edits": 0,
+  "formal": {
+    "source": "spec/lean/proposals/restricted-demand/MarkBoundaryReview.lean",
+    "source_sha256": "2f471322b608594766a1b784f303559e05555f9989f268e56d9710a6e61b2aff",
+    "import": "ApSpec.AbsDefs",
+    "exit_code": 0,
+    "seconds": 0.29023538529872894,
+    "audited_declarations": 18,
+    "output": "'MarkBoundaryReview.concrete_entry_does_not_invent_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_rejects_abstract_even_when_mark_not_excluded' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_preserves_actual_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_rejects_other_mark' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_entry_emits_shared_flow' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_entry_does_not_copy_actual_mark_exclusions' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_entry_cannot_authorize_flow_premise' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_keeps_correlated_abstract_conclusion' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_rejects_excluded_mark' depends on axioms: [propext]\n'MarkBoundaryReview.concrete_exit_keeps_other_mark_exclusions' depends on axioms: [propext]\n'MarkBoundaryReview.exact_exit_does_not_decorrelate_star' depends on axioms: [propext]\n'MarkBoundaryReview.abstract_exit_does_not_erase_concrete_mark' depends on axioms: [propext]\n'MarkBoundaryReview.original_normalization_preserves_star_and_field_exclusion' does not depend on any axioms\n'MarkBoundaryReview.admitted_descent_rebases_exclusion' depends on axioms: [propext]\n'MarkBoundaryReview.must_star_intersection_uses_exclusion_union' does not depend on any axioms\n'MarkBoundaryReview.ancestor_and_request_cover_location' does not depend on any axioms\n'MarkBoundaryReview.wrongly_copied_exclusion_loses_location' depends on axioms: [propext]\n'MarkBoundaryReview.corrected_rebasing_keeps_location' does not depend on any axioms\n",
+    "scope": "Original scalar mark gates and normalization; generic ancestor-exclusion rebasing; E-union intersection law and an explicit lost-location/corrected-location witness. Not a whole JVM/typed adapter proof."
+  },
+  "actual_scalar_AP": {
+    "source": "spec/lean/proposals/restricted-demand/EmissionRestrictionProbe.kt",
+    "source_sha256": "6b8a55c1c803aed8c9461e7dd445163e6f451b0a10be3a67cdee624a4f44879e",
+    "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+    "current_reference_class_sha256": "5476d2cc70cc658c450506f3f0aadb193b238e4b77aaddca6750fd89d1d6c661",
+    "compile_exit_code": 0,
+    "run_exit_code": 0,
+    "seconds": 2.081396132707596,
+    "passed_current_behavior_checks": 14,
+    "confirmed_defects_or_adapter_gaps": 2,
+    "output": "PASS emission T-demand + FLOW-input = none\nPASS emission T-demand + FLOW-excluding-U-input = none\nPASS emission T-demand + T-input = T\nPASS emission T-demand + U-input = none\nPASS emission FLOW-demand + T-input = shared STAR/FLOW\nPASS emission FLOW-demand + FLOW-excluding-T-input = shared STAR/FLOW\nPASS restriction T-entry rejects entire FLOW-premise\nPASS restriction T-exit keeps FLOW mark and STAR tail\nPASS restriction T-exit rejects FLOW excluding T\nPASS restriction T-exit keeps FLOW excluding only U\nPASS restriction EXACT T-exit does not cut correlated STAR\nPASS restriction FLOW-entry/exit retains actual T\nPASS restriction U-exit rejects concrete T\nPASS restriction absent exit = none\nCONFIRMED inherited-field-exclusion bug: actual=x.g/STAR/{f}/T intended=x.g/STAR/{}/T; x.g.f is wrongly lost\nCONFIRMED STAR-demand adapter gap: current meet rejects MUST-input with STAR-entry; required by preserved STAR demands in later forward runs\n",
+    "scope": "Current scalar AP emission/restriction. 14 expected behavior checks; confirms inherited-E defect and MUST/STAR adapter gap. No method actor or project run; implementation unchanged."
+  },
+  "history": {
+    "balanced_seed_return_design": {
+      "decision": "F57",
+      "date": "2026-10-06",
+      "commit": "efd7b637374b6011f69964ebfdac6c8f6562f941"
+    },
+    "explicit_no_restriction_wording": {
+      "date": "2026-10-07",
+      "commit": "6b2b0fd5b"
+    },
+    "first_analyzer_implementation": {
+      "date": "2026-10-11",
+      "commit": "b65b46d766790956bbfd50efaf74e706271eddf3"
+    },
+    "STAR_to_ANY_widening": {
+      "date": "2026-10-16",
+      "commit": "28a123f0eac937e8f2feca9ee5dd84e38fa8f979"
+    }
+  },
+  "remaining_acceptance_obligations": [
+    "Typed preserved-STAR builder and scalar/packed emission correspondence",
+    "MUST-input/STAR-entry cell with the original guarantee and layer handling",
+    "Producer proof of original abstract STAR/nonempty-E exclusion guard",
+    "General marked/correlated extension scope beyond original non-STAR concrete inputs"
+  ]
+}
