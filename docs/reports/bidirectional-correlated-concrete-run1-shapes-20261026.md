@@ -12,6 +12,10 @@ Each capture follows a COMPLETE forward limit-1 engine, joined/frozen runners, a
 
 ## Why protected static summaries increased
 
+The follow-up [cleaner protection investigation](bidirectional-cleaner-protection-necessity-20261027.md)
+traces three local flag births and tests whether the flags can be omitted. It
+includes all new facts, FLOW counterparts, AP controls and local proof inline.
+
 **Confirmed on matched old/current Thingsboard captures:** the new STAR start conclusion preserves a protected child which the old ANY summary store folds into a root. The call memory-effect classifier treats that old root as an identity. It skips alias delivery of the new protection to a captured callback field. The new child is nonidentity; its protection reaches that field, then travels through existing static FLOW summaries.
 
 Both versions use the same initial descriptor `I = (this, [], STAR, {}, T)`. The change is the emitted **conclusion**, not the legal initial grammar:
