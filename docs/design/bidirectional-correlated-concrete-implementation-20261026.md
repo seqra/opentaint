@@ -1,22 +1,30 @@
 # Correlated concrete initials and general FLOW replacement: implementation proposal
 
-Date: 26 October 2026. Status: **implemented and locally checked; fresh project measurements pending**.
+Date: 26 October 2026. Validation update: 27 October 2026.
+Status: **implemented; local checks, fixed-project measurements and run-1 census complete**.
+Known failed gates are recorded in the validation and performance reports.
 Language: ASD-STE100 Simplified Technical English. Technical names follow the source.
 
 Contract: [correlated concrete specification](../../spec/run1-correlated-concrete-initials.md).
 Proofs: [implementation proof dossier](../../spec/correlated-concrete-implementation-proofs.md).
 Documentation parent: `1c927f358`. Baseline runtime core tree:
 `e3ede1a36d3b04d79a23cc93285f385ecd968dbf`.
-The latest referenced Thingsboard result is **run-2 OOM; run-1 COMPLETE**,
-including the [16 GiB experiment](../reports/bidirectional-run2-16g-memory-20261026.md).
-There is no new project measurement in this proposal.
+The latest measured Thingsboard result is **run-2 HARD_TIMEOUT; run-1 COMPLETE
+and accepted**, at the configured 12 GiB heap. The
+[performance report](../reports/bidirectional-correlated-concrete-performance-20261026.md)
+records the exact runtime, commands and outcomes. The earlier
+[16 GiB experiment](../reports/bidirectional-run2-16g-memory-20261026.md)
+is historical evidence, not the current measurement.
 
 The two behavior decisions are now incorporated in section 11: persist
 NORMAL FLOW with nonempty E, and use semantic input alias closure to remove
 identity-only alias work. The local proofs and Kotlin adapter tests pass. The
 [local validation report](../reports/bidirectional-correlated-concrete-validation-20261026.md)
-records the full suites and unchanged baseline failures. Project gates and
-the section 13 investigation remain pending.
+records the full suites and unchanged baseline failures. The required
+[section 13 census](../reports/bidirectional-correlated-concrete-run1-shapes-20261026.md)
+is complete. Project gates have separate outcomes: known PDF native-location
+misses, OWASP raw-count mismatch, incomplete real-project run-2 and an OWASP
+run-1 regression remain explicit. They are not marked successful.
 
 ## 1. Selected semantic changes
 
@@ -59,26 +67,44 @@ core/opentaint-dataflow-core/opentaint-dataflow/src/main/kotlin/
   org/opentaint/dataflow/bidi/
 ```
 
-| Files | Required change |
+| Files | Change or audit |
 | --- | --- |
-| `ap/Conclusions.kt`, `ApManager.kt`, `ApOut.kt`, `LeafViews.kt` | Admit and preserve concrete STAR, E and protection |
-| `ap/Demand.kt`, `Reference.kt` | General STAR identity start; remove unconditional concrete STAR -> ANY |
-| `ap/EdgeApplication.kt`, `Summary.kt`, `Groups.kt`, `Clean.kt` | Implement STAR transfer, selectors, deduplication and cleaner residuals |
+| `ap/Conclusions.kt`, `ap/ApManager.kt`, `ap/ApOut.kt`, `ap/LeafViews.kt` | Admit and preserve concrete STAR, E and protection |
+| `ap/Demand.kt`, `ap/Reference.kt` | General STAR identity start; remove unconditional concrete STAR -> ANY |
+| `ap/EdgeApplication.kt`, `ap/Summary.kt`, `ap/Groups.kt`, `ap/Clean.kt` | Implement STAR transfer, selectors, deduplication and cleaner residuals |
 | `ap/FlowBackedCoverage.kt` | General counterpart and two output-coverage cells |
-| `store/FlowBackedSummaries.kt`, `DiagonalRelations.kt` | Normalize STAR/ANY; remove alias identity exceptions; retain late flags |
+| `store/FlowBackedSummaries.kt`, `store/DiagonalRelations.kt` | Normalize STAR/ANY; remove alias identity exceptions; retain late flags |
 | `ap/DiagonalDelta.kt`, `engine/NeutralRelationBatch.kt` | Carry the output tail through packet admission and decode |
-| `store/StoreValues.kt` | Preserve the actual tail/E when packing a scalar leaf |
-| `store/ConjunctionStore.kt`, `KaryJoin.kt` | Replay late annotations on existing semantic join members |
+| `store/AddedFacts.kt`, `engine/CalleeSubscriptions.kt` | Audit existing exact caller-input grouping and replay; retain the complete tail/E key |
+| `store/ConjunctionStore.kt`, `store/KaryJoin.kt` | Replay late annotations on existing semantic join members |
 | `ap/ApOps.kt`, `engine/RunMethodLocalServices.kt` | Remove run/FULL gates from existing protection rules |
-| `store/RecordStore.kt`, `ap/Reference.kt`, `ap/Summary.kt` | Transport protection through native/reversed record application |
-| `engine/RunMethodAnalyzer.kt`, `PublicationIndex.kt`, `store/RunSummaries.kt` | Enable general summary admission; keep local concrete processing |
-| `engine/Run1StaticService.kt`, `Run1PointResume.kt`, `RunMethodCallServices.kt` | Separate independent pool values from selected correlated initials |
+| `store/RecordStore.kt`, `engine/ProtocolContracts.kt`, `engine/SubscriptionManager.kt`, `engine/RunMethodCallServices.kt`, `ap/Reference.kt`, `ap/Summary.kt` | Transport protection through native/reversed record readers, callback contracts and application |
+| `engine/RunMethodAnalyzer.kt`, `engine/RunManager.kt`, `engine/SummaryStorage.kt`, `engine/PublicationIndex.kt`, `store/RunSummaries.kt` | Enable general summary admission; keep local concrete processing |
+| `engine/Run1StaticService.kt`, `engine/Run1PointResume.kt`, `engine/RunMethodCallServices.kt` | Separate independent pool values from selected correlated initials |
 | `driver/HandOff.kt`, `store/DemandStore.kt` | Retain the existing direction-specific handoff; close the export case in section 11 |
+
+Runtime scalar reconstruction uses `ap/ApManager.kt: factsOf` and
+`taintTree`. Packet reconstruction uses `engine/NeutralRelationBatch.kt:
+decode`, `decodePacked` and `fromDiagonal`, and `store/DiagonalRelations.kt:
+decode`. Caller input accumulation uses the existing complete `GroupKey`
+in `store/AddedFacts.kt`; `engine/CalleeSubscriptions.kt` owns its replay.
+There is no runtime `StoreValues` owner.
+
+`StoreValues.pack` is a test helper in
+[MethodEdgeStoreTest.kt](../../core/opentaint-dataflow-core/opentaint-dataflow/src/test/kotlin/org/opentaint/dataflow/bidi/MethodEdgeStoreTest.kt).
+Its scalar packing must also retain the actual tail and E. It is not a new
+runtime store or a second caller-input owner.
 
 One existing `FlowBackedSummaries` instance is one logical owner. Its FLOW,
 diagonal and fallback buckets have the same scope. Raw summaries, selected
 demands and publications have separate owners. Do not compare them directly.
 Do not add an owner object or caller coordinate to every stored edge.
+
+Equal owner scope does not require new cross-bucket TAINT normalization.
+The selected STAR/ANY diagonal admission cells retain their stated law;
+EXACT/must/cross-atom fallback rows keep their existing explicit representation.
+The same-premise table in section 5.3 is not a new claim that a diagonal ANY
+bucket must normalize those unsupported fallback buckets.
 
 ## 3. Typed representation
 
@@ -150,7 +176,7 @@ ZERO keeps `Reach.NORMAL`; abstract STAR keeps its current FLOW start.
 The mode wrapper can project atoms but does not select a different tail.
 The caller still validates each run's initial grammar and field bound.
 
-Update both scalar `startFact` and `normalize` in `Reference.kt`:
+Update both scalar `startFact` and `normalize` in `ap/Reference.kt`:
 
 ```kotlin
 fun normalize(f: PathFact, e: ExclusionSet, demand: Boolean): Conclusion =
@@ -211,7 +237,7 @@ input even if an equal-path FLOW summary exists.
 
 ### 5.2 Summary selection and compilation
 
-`Summary.kt: taintTails` must honor its `star` selector for STAR payloads.
+`ap/Summary.kt: taintTails` must honor its `star` selector for STAR payloads.
 It currently ignores that selector because concrete STAR did not exist.
 
 ```kotlin
