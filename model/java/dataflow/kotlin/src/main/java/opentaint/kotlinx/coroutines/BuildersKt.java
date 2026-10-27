@@ -10,12 +10,18 @@ import kotlinx.coroutines.CoroutineScope;
 import kotlinx.coroutines.CoroutineStart;
 import kotlinx.coroutines.Deferred;
 import kotlinx.coroutines.Job;
-import org.opentaint.ir.approximation.annotation.ApproximatedClassName;
 import org.opentaint.jvm.dataflow.approximations.ArgumentTypeContext;
 import org.opentaint.jvm.dataflow.approximations.OpentaintNdUtil;
 
-@ApproximatedClassName("BuildersKt__Builders_commonKt")
-public class BuildersBuildersCommon {
+public class BuildersKt {
+
+    public static final <T> T runBlocking(CoroutineContext ctx, @ArgumentTypeContext Function2<? super CoroutineScope, ? super Continuation<? super T>, ? extends Object> body) {
+        return (T) body.invoke(null, null);
+    }
+
+    public static Object runBlocking$default(CoroutineContext ctx, @ArgumentTypeContext Function2 body, int flags, Object unused) {
+        return body.invoke(null, null);
+    }
 
     public static final Job launch(CoroutineScope scope, CoroutineContext ctx, CoroutineStart start, @ArgumentTypeContext Function2<? super CoroutineScope, ? super Continuation<? super Unit>, ? extends Object> body) {
         if (OpentaintNdUtil.nextBool()) return null;

@@ -65,7 +65,7 @@ class ModelTests {
 
         assertThat(register.findInstructions<GoIRCall>())
             .anyMatch { it.call.target?.displayName == addTool.fullName }
-        assertThat(addTool.syntheticKind).isEqualTo("opentaint model")
+        assertThat(addTool).isInstanceOf(GoIRApproximatedFunction::class.java)
         assertThat(addTool.findInstructions<GoIRCall>())
             .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
     }
@@ -129,7 +129,7 @@ class ModelTests {
         val newServer = mcp.functions.single { it.name == "NewServer" }
         assertThat(newServer.findInstructions<GoIRCall>())
             .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
-        assertThat(rawAddTool.syntheticKind).isEqualTo("opentaint model")
+        assertThat(rawAddTool).isInstanceOf(GoIRApproximatedFunction::class.java)
         assertThat(rawAddTool.findInstructions<GoIRCall>())
             .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
         val genericAddTool = mcp.functions.single {
@@ -141,7 +141,7 @@ class ModelTests {
         val instantiatedAddTool = mcp.functions.single {
             it.fullName.startsWith("github.com/modelcontextprotocol/go-sdk/mcp.AddTool[")
         }
-        assertThat(instantiatedAddTool.syntheticKind).isEqualTo("opentaint model")
+        assertThat(instantiatedAddTool).isInstanceOf(GoIRApproximatedFunction::class.java)
         assertThat(instantiatedAddTool.findInstructions<GoIRCall>())
             .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
     }
@@ -797,6 +797,39 @@ class ModelTests {
         assertThat(builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).findPackage("net/url")).isNull()
         assertThat(program.findPackage("net/url")).isNotNull()
         assertThat(call.call.target?.displayName).isEqualTo("net/url.QueryEscape")
+    }
+
+    @Test
+    fun `model field access uses imported target declarations`(builder: GoIRTestBuilder) {
+        val project = project(
+            "example.com/options",
+            """
+            package options
+            type Options struct { Name string; Handler func(string) string }
+            func Register(options *Options, value string) string { return "original" }
+            """.trimIndent(),
+        )
+        val model = model(
+            "example.com/options",
+            """
+            package options
+            import target "example.com/options"
+            func Register(options *target.Options, value string) string {
+                return options.Handler(value)
+            }
+            """.trimIndent(),
+        )
+
+        val program = builder.buildFromDir(project, modelConfig(model))
+        val targetPackage = program.findPackage("example.com/options")!!
+        val register = targetPackage.functions.single { it.name == "Register" }
+        val handler = register.findExpressions<GoIRFieldAddrExpr>().single { it.fieldName == "Handler" }
+
+        assertThat(handler.fieldIndex).isEqualTo(1)
+        assertThat(register.findInstructions<GoIRCall>())
+            .anyMatch { it.call.target is GoIRCallTarget.Dynamic }
+        assertThat(targetPackage.findNamedType("Options")!!.fields.map { it.name })
+            .containsExactly("Name", "Handler")
     }
 
     @Test
