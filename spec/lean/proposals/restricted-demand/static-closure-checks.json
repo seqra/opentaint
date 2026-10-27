@@ -12,7 +12,7 @@
   "production_edits": 0,
   "formal": {
     "source": "spec/lean/proposals/restricted-demand/StaticClosure.lean",
-    "source_sha256": "82e2ebdc71f0544a362d864ea76241395ac4648fdb6dd074a85d0ee46976bb3a",
+    "source_sha256": "bec96f05c4a3eb1d6b8863fc61322ab2554a62bd9abd3cc4eb8bd42dc935aae8",
     "import": "Init",
     "command": [
       "lean",
@@ -24,15 +24,15 @@
     ],
     "working_directory": "spec/lean",
     "exit_code": 0,
-    "seconds": 0.7293460518121719,
-    "audited_declarations": 18,
+    "seconds": 0.827812448143959,
+    "audited_declarations": 23,
     "observed_axioms": [
       "propext",
       "Quot.sound"
     ],
     "core_equivalence_and_least_closure_axioms": [],
-    "output": "'StaticDemandClosure.eager_iff_factored' does not depend on any axioms\n'StaticDemandClosure.least' does not depend on any axioms\n'StaticDemandClosure.factor' does not depend on any axioms\n'StaticDemandClosure.expand' does not depend on any axioms\n'StaticDemandClosure.staticComposition' depends on axioms: [propext]\n'StaticDemandClosure.transitiveCaller' depends on axioms: [propext]\n'StaticDemandClosure.writerStaticReader' depends on axioms: [propext]\n'StaticDemandClosure.executableFactoredWitness' depends on axioms: [propext]\n'StaticDemandClosure.joinMark_sound' depends on axioms: [propext]\n'StaticDemandClosure.joinMarkWitness' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.distinct_marks_do_not_join' does not depend on any axioms\n'StaticDemandClosure.flow_keeps_mark_relation' does not depend on any axioms\n'StaticDemandClosure.marked_round_trip_stays_mapped' depends on axioms: [propext]\n'StaticDemandClosure.mapped_is_not_flow' does not depend on any axioms\n'StaticDemandClosure.queued_exit_is_normal' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.no_exit_has_no_summary' does not depend on any axioms\n'StaticDemandClosure.no_direct_summary_bypass' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.exit_handler_kill_is_kept' depends on axioms: [propext, Quot.sound]\n",
-    "scope": "Least guidance closure equals factored seed paths, with executable conversions; symbolic mark joins and generic exit-handler laws. Not a whole JVM iteration, AP geometry, FULL/GROUP adapter or complete producer-coverage theorem."
+    "output": "'StaticDemandClosure.eager_iff_factored' does not depend on any axioms\n'StaticDemandClosure.least' does not depend on any axioms\n'StaticDemandClosure.factor' does not depend on any axioms\n'StaticDemandClosure.expand' does not depend on any axioms\n'StaticDemandClosure.sourceWitness' does not depend on any axioms\n'StaticDemandClosure.targetWitness' does not depend on any axioms\n'StaticDemandClosure.completeRequiredRoute' does not depend on any axioms\n'StaticDemandClosure.staticComposition' depends on axioms: [propext]\n'StaticDemandClosure.transitiveCaller' depends on axioms: [propext]\n'StaticDemandClosure.writerStaticReader' depends on axioms: [propext]\n'StaticDemandClosure.executableFactoredWitness' depends on axioms: [propext]\n'StaticDemandClosure.joinMark_sound' depends on axioms: [propext]\n'StaticDemandClosure.joinMarkWitness' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.distinct_marks_do_not_join' does not depend on any axioms\n'StaticDemandClosure.flow_keeps_mark_relation' does not depend on any axioms\n'StaticDemandClosure.marked_round_trip_stays_mapped' depends on axioms: [propext]\n'StaticDemandClosure.mapped_is_not_flow' does not depend on any axioms\n'StaticDemandClosure.queued_exit_is_normal' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.no_exit_has_no_summary' does not depend on any axioms\n'StaticDemandClosure.no_direct_summary_bypass' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.exit_handler_kill_is_kept' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.unique_exit_preserves_input' does not depend on any axioms\n'StaticDemandClosure.unique_exit_runs_only_handler' depends on axioms: [propext]\n",
+    "scope": "Least guidance closure equals factored seed paths, with executable conversions, seed endpoint witnesses and required-path backward guide; symbolic mark joins and unique/generic exit-handler laws. Not a whole JVM iteration, AP geometry, FULL/GROUP adapter or complete producer-coverage theorem."
   },
   "finite_design_oracle": {
     "source": "spec/lean/proposals/restricted-demand/closure_oracle.py",
@@ -608,5 +608,27 @@
     "Original AP C2/C5 replay and unchanged ZERO, ND, seed, exclusion and record handling",
     "Required run-1 producers decompose into retained W/B/R paths",
     "Real analyzer regression suite and project campaign after implementation"
-  ]
+  ],
+  "original_demand_formal_recheck": {
+    "source": "spec/lean/proposals/restricted-demand/RestrictedDemand.lean",
+    "source_sha256": "4059e4ef9fc79dff4cc55d1e8774f86e81143096e7e839c13742693c2a31def4",
+    "command": [
+      "lean",
+      "-j",
+      "1",
+      "-M",
+      "512",
+      "proposals/restricted-demand/RestrictedDemand.lean"
+    ],
+    "working_directory": "spec/lean",
+    "exit_code": 0,
+    "seconds": 0.25325652956962585,
+    "output": "'RestrictedDemandDesign.emitted_has_demand' depends on axioms: [propext, Quot.sound]\n'RestrictedDemandDesign.published_has_pair' depends on axioms: [propext, Quot.sound]\n'RestrictedDemandDesign.empty_demand_starts_none' depends on axioms: [propext]\n'RestrictedDemandDesign.empty_demand_publishes_none' depends on axioms: [propext]\n'RestrictedDemandDesign.flow_initial_shared' depends on axioms: [propext]\n'RestrictedDemandDesign.static_callee_answer_is_permitted' depends on axioms: [propext]\n'RestrictedDemandDesign.wrapper_rejects_changed_static_exit' depends on axioms: [propext]\n'RestrictedDemandDesign.wrapper_rejects_nonstatic_exit_even_with_writer_pair' depends on axioms: [propext]\n'RestrictedDemandDesign.missing_static_pair_permits_answer' depends on axioms: [propext]\n'RestrictedDemandDesign.missing_argument_pair_permits_answer' depends on axioms: [propext]\n",
+    "audited_declarations": 10,
+    "environment": {
+      "LEAN_PATH": "spec/lean/.lake/build/lib/lean"
+    },
+    "scope": "Unchanged original AP emitW/restrictI demand gates, FLOW sharing and wrapper gap witnesses; historical actual Kotlin controls remain in checks.json."
+  },
+  "total_audited_declarations": 33
 }

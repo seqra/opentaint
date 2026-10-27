@@ -1,7 +1,9 @@
 # Restricted demand and static closure
 
 Proposal only. The analyzer implementation is unchanged. The selected repair
-is [static demand closure and run-1 exit routing](../../../restricted-demand-static-closure.md).
+is [restricted-run demand, static handoff closure and run-1 exit routing](../../../restricted-demand-static-closure.md).
+That specification is self-contained: it states original, current and
+proposed behavior, the complete pipeline, proofs and the removal ledger.
 
 [Design and embedded control evidence](../../../../docs/design/bidirectional-restricted-fact-management-20261027.md)
 states the baseline storages, pipeline and gap. `RestrictedDemand.lean`
@@ -20,8 +22,10 @@ algorithm is proved by the two exact missing-pair witnesses.
 
 `StaticClosure.lean` proves equality between eager guidance closure and
 factored seed paths, with executable witnesses in both directions. It also
-checks mark composition and the generic exit-handler contract. Its 18
+checks mark composition and the generic exit-handler contract. Its 23
 audited declarations pass; the core closure equivalence uses no axioms.
+Endpoint witnesses and the required-path guide are executable. The unique
+normal-exit laws preserve the input and execute only the selected handler.
 AP geometry, FULL/GROUP adapters and real JVM exit delivery remain explicit
 implementation obligations in the specification.
 
