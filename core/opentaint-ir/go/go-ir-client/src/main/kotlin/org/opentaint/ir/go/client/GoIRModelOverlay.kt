@@ -56,10 +56,13 @@ internal class GoIRModelOverlayProgram(
                 }
             }
         }
+        // Bundled modules can describe dependencies that this project does not use.
+        definitionsByTarget.entries.removeIf { (target, _) -> originalProgram.findPackage(target) == null }
         definitionsByTarget.forEach { (target, definition) ->
             validatePackage(target, definition)
         }
         definitions.forEach { definition ->
+            if (definition.targetPaths.none { it in definitionsByTarget }) return@forEach
             definition.program.packages.forEach { (path, pkg) ->
                 if (path !in definition.targetPaths && originalProgram.findPackage(path) == null) {
                     modelDependencies.putIfAbsent(path, pkg)

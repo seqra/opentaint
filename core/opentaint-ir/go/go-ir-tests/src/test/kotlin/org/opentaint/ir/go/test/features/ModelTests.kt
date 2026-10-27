@@ -584,6 +584,45 @@ class ModelTests {
     }
 
     @Test
+    fun `unrelated model does not add packages to the analyzed project`(builder: GoIRTestBuilder) {
+        val project = project("example.com/unrelated", "package unrelated\nfunc Target() {}\n")
+        val model = model(
+            "example.com/absent",
+            "package absent\nimport \"net/url\"\n" +
+                "func Identity(value string) string { return url.QueryEscape(value) }\n",
+        )
+
+        val program = builder.buildFromDir(project, modelConfig(model))
+
+        assertThat(program.findPackage("example.com/unrelated")).isNotNull()
+        assertThat(program.findPackage("example.com/absent")).isNull()
+        assertThat(program.findPackage("net/url")).isNull()
+        assertThat(program.packages.keys).containsExactlyInAnyOrderElementsOf(program.originalProgram.packages.keys)
+    }
+
+    @Test
+    fun `model module applies only to packages present in the project`(builder: GoIRTestBuilder) {
+        val project = project(
+            "example.com/partial",
+            "package partial\nfunc Identity(value string) string { return \"original\" }\n",
+        )
+        val model = model(
+            "example.com/partial",
+            "package partial\nfunc Identity(value string) string { return value }\n",
+        )
+        val absent = model.resolve("example.com/absent")
+        Files.createDirectories(absent)
+        absent.resolve("model.go").write("package absent\nfunc Target() {}\n")
+
+        val program = builder.buildFromDir(project, modelConfig(model))
+        val identity = program.findPackage("example.com/partial")!!.functions.single { it.name == "Identity" }
+        val returned = (identity.body!!.blocks.single().terminator as GoIRReturn).results.single()
+
+        assertThat(returned).isInstanceOf(GoIRParameterValue::class.java)
+        assertThat(program.findPackage("example.com/absent")).isNull()
+    }
+
+    @Test
     fun `model-only dependency is visible only through effective lookup`(builder: GoIRTestBuilder) {
         val project = project(
             "example.com/modeldependency",
