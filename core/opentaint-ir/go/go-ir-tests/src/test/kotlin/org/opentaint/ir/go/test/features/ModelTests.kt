@@ -736,6 +736,25 @@ class ModelTests {
     }
 
     @Test
+    fun `bundled models accept an unrelated Go project`(builder: GoIRTestBuilder) {
+        val project = project("example.com/unrelated", "package unrelated\nfunc Target() {}\n")
+        val modelRoot = Path.of(System.getProperty("opentaint.go.models.root"))
+        val models = Files.list(modelRoot).use { paths ->
+            paths.iterator().asSequence().filter { Files.isRegularFile(it.resolve("go.mod")) }.toList()
+        }
+        assertThat(models).isNotEmpty()
+
+        val program = builder.buildFromDir(
+            project,
+            GoIRLoadConfig(mode = GoIRLoadMode.PROJECT, modelDirs = models),
+        )
+
+        val withoutModels = builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT))
+        assertThat(program.findPackage("example.com/unrelated")).isNotNull()
+        assertThat(program.packages.keys).containsExactlyInAnyOrderElementsOf(withoutModels.packages.keys)
+    }
+
+    @Test
     fun `unrelated model does not add packages to the analyzed project`(builder: GoIRTestBuilder) {
         val project = project("example.com/unrelated", "package unrelated\nfunc Target() {}\n")
         val model = model(
