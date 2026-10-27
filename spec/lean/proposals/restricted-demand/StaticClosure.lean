@@ -126,6 +126,42 @@ theorem least {seeds : List Edge} {calls : List Call}
   | .inherit edge ha hb derived => up edge ha hb (least r seed up join derived)
   | .compose hm left right => join hm (least r seed up join left) (least r seed up join right)
 
+/-- Executable endpoint provenance. Completion may combine relations but it
+    cannot invent a new original (in particular, a ZERO original). -/
+structure SourceWitness (seeds : List Edge) (source : Vertex) where
+  owner : Nat
+  target : Vertex
+  member : (⟨owner, source, target⟩ : Edge) ∈ seeds
+
+structure TargetWitness (seeds : List Edge) (target : Vertex) where
+  owner : Nat
+  source : Vertex
+  member : (⟨owner, source, target⟩ : Edge) ∈ seeds
+
+def sourceWitness {seeds : List Edge} {calls : List Call}
+    {m : Nat} {a b : Vertex} (proof : Eager seeds calls m a b) : SourceWitness seeds a :=
+  match proof with
+  | .seed edge => ⟨m, b, edge⟩
+  | .inherit _ _ _ derived => sourceWitness derived
+  | .compose _ left _ => sourceWitness left
+
+def targetWitness {seeds : List Edge} {calls : List Call}
+    {m : Nat} {a b : Vertex} (proof : Eager seeds calls m a b) : TargetWitness seeds b :=
+  match proof with
+  | .seed edge => ⟨m, a, edge⟩
+  | .inherit _ _ _ derived => targetWitness derived
+  | .compose _ _ right => targetWitness right
+
+/-- A guide swaps endpoints. This is guidance projection, not an executable
+    summary reversal or an assertion that a real backward result exists. -/
+structure BackwardGuide (seeds : List Edge) (calls : List Call)
+    (m : Nat) (entry exit : Vertex) where
+  evidence : Eager seeds calls m exit entry
+
+def completeRequiredRoute {seeds : List Edge} {calls : List Call}
+    {m : Nat} {a b : Vertex} (route : Path seeds calls m a b) :
+    BackwardGuide seeds calls m b a := ⟨expand route⟩
+
 def c1 : Vertex := .static 1 7
 def c2 : Vertex := .static 2 7
 def c3 : Vertex := .static 3 7
@@ -244,10 +280,21 @@ theorem exit_handler_kill_is_kept (normalExits : List Nat) (fact : Nat) :
     exitResults (fun _ _ => []) normalExits fact = [] := by
   simp [exitResults]
 
+theorem unique_exit_preserves_input (normalExit fact : Nat) :
+    exitQueue [normalExit] fact = [(normalExit, fact)] := rfl
+
+theorem unique_exit_runs_only_handler (handler : Nat → Nat → List Nat)
+    (normalExit fact : Nat) :
+    exitResults handler [normalExit] fact = handler normalExit fact := by
+  simp [exitResults, exitQueue]
+
 #print axioms eager_iff_factored
 #print axioms least
 #print axioms factor
 #print axioms expand
+#print axioms sourceWitness
+#print axioms targetWitness
+#print axioms completeRequiredRoute
 #print axioms staticComposition
 #print axioms transitiveCaller
 #print axioms writerStaticReader
@@ -262,4 +309,6 @@ theorem exit_handler_kill_is_kept (normalExits : List Nat) (fact : Nat) :
 #print axioms no_exit_has_no_summary
 #print axioms no_direct_summary_bypass
 #print axioms exit_handler_kill_is_kept
+#print axioms unique_exit_preserves_input
+#print axioms unique_exit_runs_only_handler
 end StaticDemandClosure
