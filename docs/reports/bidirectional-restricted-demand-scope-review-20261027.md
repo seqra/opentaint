@@ -1,5 +1,15 @@
 # Restricted demand handling versus the original AP contract
 
+The follow-up [restricted fact-management design](../design/bidirectional-restricted-fact-management-20261027.md)
+traces the static gap through nonstatic wrappers. It shows that a repair on
+static input/output bases alone does not suffice. Section 8 below describes
+the intended ordinary authority; it does not prove that current retained
+productive pairs are already complete after static erasure. The user has
+now selected [static demand closure and run-1 exit routing](../../spec/restricted-demand-static-closure.md).
+It completes guidance at handoff while retaining original AP demand gates.
+The observations below describe the reviewed implementation, which remains
+unchanged.
+
 Date: 27 October 2026. Source review and bounded AP controls. Analyzer
 implementation unchanged.
 Current checkout: `a2882fa9db18690b43659b8080ab0cba30036743`;

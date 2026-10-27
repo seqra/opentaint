@@ -1,0 +1,612 @@
+{
+  "state": "SELECTED_STATIC_DEMAND_CLOSURE_DESIGN_CHECKED",
+  "runtime_core_tree": "57ca8d4940e8fb52e7eed6151928d4025c7d7ad9",
+  "selected_policy": "Original AP emission and C5 publication; frozen static demand closure; producer shortcut to post-return NormalExit rules and common summary emission",
+  "latest_referenced_project_iteration": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted_forward": "run-1"
+  },
+  "new_project_runs": 0,
+  "new_engine_iterations": 0,
+  "production_edits": 0,
+  "formal": {
+    "source": "spec/lean/proposals/restricted-demand/StaticClosure.lean",
+    "source_sha256": "82e2ebdc71f0544a362d864ea76241395ac4648fdb6dd074a85d0ee46976bb3a",
+    "import": "Init",
+    "command": [
+      "lean",
+      "-j",
+      "1",
+      "-M",
+      "512",
+      "proposals/restricted-demand/StaticClosure.lean"
+    ],
+    "working_directory": "spec/lean",
+    "exit_code": 0,
+    "seconds": 0.7293460518121719,
+    "audited_declarations": 18,
+    "observed_axioms": [
+      "propext",
+      "Quot.sound"
+    ],
+    "core_equivalence_and_least_closure_axioms": [],
+    "output": "'StaticDemandClosure.eager_iff_factored' does not depend on any axioms\n'StaticDemandClosure.least' does not depend on any axioms\n'StaticDemandClosure.factor' does not depend on any axioms\n'StaticDemandClosure.expand' does not depend on any axioms\n'StaticDemandClosure.staticComposition' depends on axioms: [propext]\n'StaticDemandClosure.transitiveCaller' depends on axioms: [propext]\n'StaticDemandClosure.writerStaticReader' depends on axioms: [propext]\n'StaticDemandClosure.executableFactoredWitness' depends on axioms: [propext]\n'StaticDemandClosure.joinMark_sound' depends on axioms: [propext]\n'StaticDemandClosure.joinMarkWitness' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.distinct_marks_do_not_join' does not depend on any axioms\n'StaticDemandClosure.flow_keeps_mark_relation' does not depend on any axioms\n'StaticDemandClosure.marked_round_trip_stays_mapped' depends on axioms: [propext]\n'StaticDemandClosure.mapped_is_not_flow' does not depend on any axioms\n'StaticDemandClosure.queued_exit_is_normal' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.no_exit_has_no_summary' does not depend on any axioms\n'StaticDemandClosure.no_direct_summary_bypass' depends on axioms: [propext, Quot.sound]\n'StaticDemandClosure.exit_handler_kill_is_kept' depends on axioms: [propext, Quot.sound]\n",
+    "scope": "Least guidance closure equals factored seed paths, with executable conversions; symbolic mark joins and generic exit-handler laws. Not a whole JVM iteration, AP geometry, FULL/GROUP adapter or complete producer-coverage theorem."
+  },
+  "finite_design_oracle": {
+    "source": "spec/lean/proposals/restricted-demand/closure_oracle.py",
+    "source_sha256": "b09393ab8947f05e6e201e93da7caa467ee040a151f15bf7106740ef80360ebe",
+    "command": [
+      "python3",
+      "spec/lean/proposals/restricted-demand/closure_oracle.py",
+      "/tmp/static-closure-results.json"
+    ],
+    "working_directory": ".",
+    "exit_code": 0,
+    "state": "PASS_FINITE_DESIGN_ORACLES",
+    "seed": 20261027,
+    "graph_cases": 91,
+    "random_cases": 80,
+    "exit_pipeline_controls": 3,
+    "rows": [
+      {
+        "case": "siblings+transitive-caller+writer-reader",
+        "seed_rows": 4,
+        "completed_rows": 15,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "setter-wrapper",
+        "seed_rows": 2,
+        "completed_rows": 3,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "marked-cleaner-through-FLOW-reader",
+        "seed_rows": 2,
+        "completed_rows": 4,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "incompatible-marks",
+        "seed_rows": 2,
+        "completed_rows": 2,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "marked-round-trip-stays-colored",
+        "seed_rows": 3,
+        "completed_rows": 4,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "recursive-call-graph-and-static-cycle",
+        "seed_rows": 4,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "ordinary-middles-do-not-compose",
+        "seed_rows": 2,
+        "completed_rows": 2,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "callee-ordinary-facts-not-imported",
+        "seed_rows": 2,
+        "completed_rows": 3,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "unrelated-method-effects-not-imported",
+        "seed_rows": 3,
+        "completed_rows": 3,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "zero-only-from-a-real-zero-origin",
+        "seed_rows": 3,
+        "completed_rows": 4,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "exact-class-marker-is-not-a-field",
+        "seed_rows": 2,
+        "completed_rows": 2,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-00",
+        "seed_rows": 12,
+        "completed_rows": 26,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-01",
+        "seed_rows": 12,
+        "completed_rows": 21,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-02",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-03",
+        "seed_rows": 12,
+        "completed_rows": 46,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-04",
+        "seed_rows": 12,
+        "completed_rows": 33,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-05",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-06",
+        "seed_rows": 10,
+        "completed_rows": 21,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-07",
+        "seed_rows": 12,
+        "completed_rows": 62,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-08",
+        "seed_rows": 11,
+        "completed_rows": 25,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-09",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-10",
+        "seed_rows": 12,
+        "completed_rows": 27,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-11",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-12",
+        "seed_rows": 11,
+        "completed_rows": 18,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-13",
+        "seed_rows": 12,
+        "completed_rows": 35,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-14",
+        "seed_rows": 11,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-15",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-16",
+        "seed_rows": 12,
+        "completed_rows": 26,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-17",
+        "seed_rows": 12,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-18",
+        "seed_rows": 11,
+        "completed_rows": 29,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-19",
+        "seed_rows": 12,
+        "completed_rows": 14,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-20",
+        "seed_rows": 12,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-21",
+        "seed_rows": 12,
+        "completed_rows": 29,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-22",
+        "seed_rows": 12,
+        "completed_rows": 12,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-23",
+        "seed_rows": 12,
+        "completed_rows": 32,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-24",
+        "seed_rows": 12,
+        "completed_rows": 25,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-25",
+        "seed_rows": 11,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-26",
+        "seed_rows": 12,
+        "completed_rows": 36,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-27",
+        "seed_rows": 11,
+        "completed_rows": 39,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-28",
+        "seed_rows": 12,
+        "completed_rows": 20,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-29",
+        "seed_rows": 12,
+        "completed_rows": 24,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-30",
+        "seed_rows": 12,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-31",
+        "seed_rows": 12,
+        "completed_rows": 37,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-32",
+        "seed_rows": 12,
+        "completed_rows": 25,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-33",
+        "seed_rows": 12,
+        "completed_rows": 23,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-34",
+        "seed_rows": 11,
+        "completed_rows": 14,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-35",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-36",
+        "seed_rows": 11,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-37",
+        "seed_rows": 12,
+        "completed_rows": 41,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-38",
+        "seed_rows": 11,
+        "completed_rows": 20,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-39",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-40",
+        "seed_rows": 11,
+        "completed_rows": 18,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-41",
+        "seed_rows": 11,
+        "completed_rows": 20,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-42",
+        "seed_rows": 12,
+        "completed_rows": 21,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-43",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-44",
+        "seed_rows": 12,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-45",
+        "seed_rows": 11,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-46",
+        "seed_rows": 12,
+        "completed_rows": 23,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-47",
+        "seed_rows": 11,
+        "completed_rows": 25,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-48",
+        "seed_rows": 11,
+        "completed_rows": 28,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-49",
+        "seed_rows": 12,
+        "completed_rows": 23,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-50",
+        "seed_rows": 12,
+        "completed_rows": 28,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-51",
+        "seed_rows": 12,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-52",
+        "seed_rows": 12,
+        "completed_rows": 49,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-53",
+        "seed_rows": 12,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-54",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-55",
+        "seed_rows": 12,
+        "completed_rows": 61,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-56",
+        "seed_rows": 12,
+        "completed_rows": 47,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-57",
+        "seed_rows": 12,
+        "completed_rows": 38,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-58",
+        "seed_rows": 12,
+        "completed_rows": 21,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-59",
+        "seed_rows": 11,
+        "completed_rows": 37,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-60",
+        "seed_rows": 12,
+        "completed_rows": 34,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-61",
+        "seed_rows": 12,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-62",
+        "seed_rows": 12,
+        "completed_rows": 15,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-63",
+        "seed_rows": 12,
+        "completed_rows": 29,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-64",
+        "seed_rows": 12,
+        "completed_rows": 28,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-65",
+        "seed_rows": 12,
+        "completed_rows": 17,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-66",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-67",
+        "seed_rows": 12,
+        "completed_rows": 23,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-68",
+        "seed_rows": 12,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-69",
+        "seed_rows": 12,
+        "completed_rows": 13,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-70",
+        "seed_rows": 12,
+        "completed_rows": 23,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-71",
+        "seed_rows": 11,
+        "completed_rows": 29,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-72",
+        "seed_rows": 12,
+        "completed_rows": 33,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-73",
+        "seed_rows": 12,
+        "completed_rows": 22,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-74",
+        "seed_rows": 12,
+        "completed_rows": 40,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-75",
+        "seed_rows": 11,
+        "completed_rows": 16,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-76",
+        "seed_rows": 12,
+        "completed_rows": 90,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-77",
+        "seed_rows": 12,
+        "completed_rows": 19,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-78",
+        "seed_rows": 12,
+        "completed_rows": 35,
+        "eager_equals_factored": true
+      },
+      {
+        "case": "random-79",
+        "seed_rows": 12,
+        "completed_rows": 18,
+        "eager_equals_factored": true
+      }
+    ],
+    "scope": "Concept/factored closure and generic exit-handler controls. No Kotlin core, JVM frontend, method actor, project or benchmark is executed."
+  },
+  "implementation_acceptance_obligations": [
+    "Post-exit static seed capture and immediate real producer effects",
+    "MethodKey/call-binding preservation and complete resolved callee visibility",
+    "AP field/tail compatibility and FULL/GROUP demand adapter correspondence",
+    "Colored seeds and compositions retained beside FLOW",
+    "NormalExit work, late mark answers and notifications included in barrier",
+    "Original AP C2/C5 replay and unchanged ZERO, ND, seed, exclusion and record handling",
+    "Required run-1 producers decompose into retained W/B/R paths",
+    "Real analyzer regression suite and project campaign after implementation"
+  ]
+}
