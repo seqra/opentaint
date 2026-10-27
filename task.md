@@ -6,7 +6,7 @@ Our current goal: implement optimization and repeat major testing on real projec
 Always cleanup memory snapshot/profiles from the previous runs.
 
 # Optimization:
-Implement optimization wrt the [bidirectional-correlated-concrete-implementation-20261026.md](docs/design/bidirectional-correlated-concrete-implementation-20261026.md)
+Implement optimization wrt the [restricted-demand-static-closure.md](spec/restricted-demand-static-closure.md)
 Commit after implementation.  
 Avoid changes in the analyzer core, that were not proposed and designed.
 If you have an optimization idea, write a proposal. Then we will include it into the next iteration.
@@ -19,17 +19,19 @@ Take the latest commit. Ignore reports for the previous commits as staled.
 Use `runProjectAnalyzer` gradle task directly, don't use the CLI.
 
 Measure:
-1) Reported vulnerability location, comparing to the main. Use main as a baseline. We should have no FN. We expect few FP, but not really many.
-2) Overall performance: OOM/timeout events, the time of each run iteration.
-3) Capture profile under the workload, we should understand our hot spots (possible performance optimization points). It is a good idea to measure for 30 sec after 1 minute of analysis (normal behavior), and close to the time limit
-4) Capture memory snapshots whenever MemoryManager reports OOM. Investigate the root cause of memory consumption
-5) The latest reached/complete analysis iteration (e.g. run-1, run-7, ...)
+1) Fix baseline -- analyzer at f945f92c5ae554ff4f5fc7696ee5a269210478bb . Resue report from the previous runs. Don't run the baseline again
+2) Reported vulnerability location, comparing to the baseline. We should have no FN. We expect few FP, but not really many.
+3) Overall performance: OOM/timeout events, the time of each run iteration.
+4) Capture profile under the workload, we should understand our hot spots (possible performance optimization points). It is a good idea to measure for 30 sec after 1 minute of analysis (normal behavior), and close to the time limit
+5) Capture memory snapshots whenever MemoryManager reports OOM. Investigate the root cause of memory consumption
+6) The latest reached/complete analysis iteration (e.g. run-1, run-7, ...)
 
 Our goal: for each selected project we should understand:
-1) Do we have FN, comparing to the main? If we have -- identify the root cause.
+1) Do we have FN, comparing to the baseline? If we have -- identify the root cause.
 2) What about performance. We have performance improvement or degradation?
-3) Can we optimize something? We have 3 main points here: 
+3) Can we optimize something? We have 4 main points here: 
    - How much time we spent on run-1.
+   - How much resources we spent on a transition from run-1 to run-2.
    - Where we spent time in the code. Maybe we have non-optimal implementation? Or we can observe some unexpected workload pattern (we spent a lot of time in the operation, which shouldn't be so expensive), maybe we shouldn't tune the analysis algorithm itself. 
    - If we have an OOM, what is the source of memory consumption?
 
