@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.TestInstance
 import org.junit.jupiter.api.TestInstance.Lifecycle.PER_CLASS
 import org.opentaint.semgrep.util.SampleBasedTest
+import org.opentaint.semgrep.util.TestAnalysisRunner
 import kotlin.test.Test
 
 @TestInstance(PER_CLASS)
@@ -114,8 +115,8 @@ class IssuesTest : SampleBasedTest() {
     @Test
     fun `issue chain-pattern split builder`() = runTest<issueChainSplitBuilder>(EXPECT_STATE_VAR)
 
-    @Test // todo: nested array element taint — element of a tainted array that is itself an array loses taint when indexed
-    fun `issue 98`() = runTest<issue98>()
+    @Test
+    fun `issue 98`() = runTest<issue98>(unrollStrategy = TestAnalysisRunner.AnyAccessorEnabled)
 
     @AfterAll
     fun close() {
