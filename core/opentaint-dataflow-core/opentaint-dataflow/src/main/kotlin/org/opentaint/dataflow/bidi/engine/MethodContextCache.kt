@@ -44,6 +44,11 @@ class RunMethodContext(
     val ops: ApOps get() = shared.ops
     val ap: ApManager get() = shared.ap
     val vulnerabilities: VulnerabilityStore get() = shared.vulnerabilities
+    /** The frontend's one post-return normal boundary, never a return transfer. */
+    val normalExit: CommonInst get() {
+        check(config.direction == Direction.FORWARD) { "Static shortcut is forward-only" }
+        return ends.singleOrNull() ?: error("Run-1 needs one normal exit boundary for $key")
+    }
     fun isEnd(n: CommonInst): Boolean = n in ends
     fun isExceptionalExit(n: CommonInst): Boolean = n in exceptionalExits
     fun forEachSuccessor(n: CommonInst, body: (CommonInst) -> Unit): Unit =

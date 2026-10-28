@@ -15,11 +15,11 @@ import org.opentaint.dataflow.configuration.CommonTaintConfigurationSinkMeta
 import kotlin.test.*
 
 class HandOffTest {
-    @Test fun `static query completion is attached only at the run1 to run2 boundary`(): Unit {
+    @Test fun `static carry and frozen completion are attached only at the run1 to run2 boundary`(): Unit {
         for (index in listOf(1, 2, 3, 4)) HandOffFixtures(index).use { f ->
             val handOff = HandOff.of(f.config, f.result(), f.report, f.shared)
-            assertEquals(if (index == 1) StaticQueryPolicy.COMPLETE_RUN1_STATIC_FIELDS else StaticQueryPolicy.ORDINARY,
-                handOff.demand.staticQueryPolicy, "Completed run-$index handoff")
+            assertEquals(index == 1, handOff.demand.hasSharedStaticCarry, "Completed run-$index handoff")
+            assertEquals(index == 1, handOff.demand.hasStaticCompletion, "Completed run-$index handoff")
             assertTrue(handOff.demandEdges.isEmpty(), "The policy creates no explicit demand pairs")
         }
     }
@@ -33,7 +33,8 @@ class HandOffTest {
      * with actual FULL inputs in ImplicitStaticGroupDemandTest and Run1OrdinaryStaticDefaultsTest. */
     private fun explicit(f: HandOffFixtures, handOff: HandOff, key: MethodKey): Set<DemandPattern> =
         bases.flatMap { handOff.demand.near(key, demandProbe(it)) }.filterTo(LinkedHashSet()) {
-            it != DemandPattern(f.manager.zero.toPattern(), null)
+            it != DemandPattern(f.manager.zero.toPattern(), null) &&
+                it != DemandPattern(demandProbe(STATIC), demandProbe(STATIC))
         }
 
     private fun rule(id: String): RuleId = object : CommonTaintConfigurationSink {
@@ -118,8 +119,8 @@ class HandOffTest {
     }
 
     @Test
-    fun `a selected normal conjunction creates one independent backward pattern for each full premise member`(): Unit {
-        HandOffFixtures().use { f ->
+    fun `a later forward normal conjunction creates one independent backward pattern for each full premise member`(): Unit {
+        HandOffFixtures(index = 3).use { f ->
             val key = f.key()
             val t = MarkSlot.Concrete(f.mark("T"))
             val u = MarkSlot.Concrete(f.mark("U"))

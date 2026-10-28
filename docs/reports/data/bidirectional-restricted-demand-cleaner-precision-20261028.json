@@ -1,0 +1,163 @@
+{
+  "status": "unchanged-extra-only-precision-residuals",
+  "source_scope": "Read-only archived JUnit XML; no test or runtime modifications",
+  "history_source": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261027/validation/fifth-suites.json",
+  "history_source_sha256": "eb6b4faace1887b2ec94a9a232b2949258391ce9ab0a15c7a78f4ebc6194c0ce",
+  "current_source": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-checks.json",
+  "failure_cases": 8,
+  "all_same_as_r27": true,
+  "missing_total": 0,
+  "extra_total": 26,
+  "cases": [
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+      "test": "1 simultaneous mark(s)",
+      "expected_count": 21,
+      "actual_count": 22,
+      "missing": [],
+      "extra": [
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark1"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest.xml",
+      "xml_sha256": "a305508f5bfd8e35a16392f15d63c3f5dad8f22ac316fb36a1236ac277003041"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+      "test": "2 simultaneous mark(s)",
+      "expected_count": 42,
+      "actual_count": 44,
+      "missing": [],
+      "extra": [
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark1",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark2"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest.xml",
+      "xml_sha256": "a305508f5bfd8e35a16392f15d63c3f5dad8f22ac316fb36a1236ac277003041"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+      "test": "3 simultaneous mark(s)",
+      "expected_count": 63,
+      "actual_count": 66,
+      "missing": [],
+      "extra": [
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark1",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark2",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark3"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest.xml",
+      "xml_sha256": "a305508f5bfd8e35a16392f15d63c3f5dad8f22ac316fb36a1236ac277003041"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+      "test": "4 simultaneous mark(s)",
+      "expected_count": 84,
+      "actual_count": 88,
+      "missing": [],
+      "extra": [
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark1",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark2",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark3",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark4"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest.xml",
+      "xml_sha256": "a305508f5bfd8e35a16392f15d63c3f5dad8f22ac316fb36a1236ac277003041"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest",
+      "test": "5 simultaneous mark(s)",
+      "expected_count": 105,
+      "actual_count": 110,
+      "missing": [],
+      "extra": [
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark1",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark2",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark3",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark4",
+        "cleaner-dsl-matrix-AnyField-Plain-Plain-field-depth0-mark5"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest.xml",
+      "xml_sha256": "a305508f5bfd8e35a16392f15d63c3f5dad8f22ac316fb36a1236ac277003041"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest",
+      "test": "cleaners on independent branch values do not cross-contaminate()",
+      "expected_count": 15,
+      "actual_count": 20,
+      "missing": [],
+      "extra": [
+        "independentLeftCleanedSink-m1",
+        "independentLeftCleanedSink-m2",
+        "independentLeftCleanedSink-m3",
+        "independentLeftCleanedSink-m4",
+        "independentLeftCleanedSink-m5"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest.xml",
+      "xml_sha256": "1353527133de1e9d8c052fca0c487198abba371c7534b323612d7d8f7e6dee78"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest",
+      "test": "different branch cleaners retain every mark surviving at least one path()",
+      "expected_count": 11,
+      "actual_count": 15,
+      "missing": [],
+      "extra": [
+        "convergentJoinSink-m1",
+        "convergentJoinSink-m2",
+        "convergentJoinSink-m5",
+        "divergentAfterM5Sink-m5"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest.xml",
+      "xml_sha256": "1353527133de1e9d8c052fca0c487198abba371c7534b323612d7d8f7e6dee78"
+    },
+    {
+      "class": "org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest",
+      "test": "AnyField mark exclusions follow one alias without leaking to sibling facts()",
+      "expected_count": 15,
+      "actual_count": 17,
+      "missing": [],
+      "extra": [
+        "reassignedOldSink-m1",
+        "reassignedOldSink-m2"
+      ],
+      "same_as_r27": true,
+      "xml": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/full-local-first-xml/application/TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest.xml",
+      "xml_sha256": "1353527133de1e9d8c052fca0c487198abba371c7534b323612d7d8f7e6dee78"
+    }
+  ],
+  "class_iteration_observations": {
+    "TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslAnalysisTest": {
+      "latest_reached_run": "run-9",
+      "latest_complete_run": "run-9",
+      "analysis_end_counts": {
+        "run-9:COMPLETE:POLICY": 7,
+        "run-1:COMPLETE:STOP_RULE": 7,
+        "run-3:COMPLETE:NO_DEMAND_EDGE": 11,
+        "run-3:COMPLETE:STOP_RULE": 2,
+        "run-5:COMPLETE:NO_DEMAND_EDGE": 1
+      },
+      "latest_accepted_forward_frontier": "run-9",
+      "frontier_evidence": "10:00:59.396 [Test worker] INFO org.opentaint.dataflow.bidi.driver.FrontierKt$frontierLogger$1 -- Run 9 (FORWARD) frontier: analysed 0, demand edges 0 in 0 method keys, left 0, record crossings 11, DEMAND 2, CONFIRMED 0, seeds 2, zero only 3 (19 edges)",
+      "latest_forward_frontier_occurrences": 7
+    },
+    "TEST-org.opentaint.jvm.sast.dataflow.BidiTreeCleanerDslControlFlowAnalysisTest": {
+      "latest_reached_run": "run-9",
+      "latest_complete_run": "run-9",
+      "analysis_end_counts": {
+        "run-3:COMPLETE:NO_DEMAND_EDGE": 3,
+        "run-9:COMPLETE:POLICY": 5,
+        "run-5:COMPLETE:NO_DEMAND_EDGE": 1
+      },
+      "latest_accepted_forward_frontier": "run-9",
+      "frontier_evidence": "10:01:02.626 [Test worker] INFO org.opentaint.dataflow.bidi.driver.FrontierKt$frontierLogger$1 -- Run 9 (FORWARD) frontier: analysed 0, demand edges 0 in 0 method keys, left 0, record crossings 22, DEMAND 5, CONFIRMED 0, seeds 5, zero only 3 (60 edges)",
+      "latest_forward_frontier_occurrences": 5
+    }
+  }
+}

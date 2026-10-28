@@ -42,7 +42,7 @@ class ModesTest {
         }
     }
 
-    @Test fun `actual restricted queries retain every supplied mark independently of older guidance`(): Unit {
+    @Test fun `restricted entries retain concrete intersections and share an abstract FLOW initial`(): Unit {
         val f = MethodAnalysisFixtures()
         f.shared.use {
             val field = f.field("f")
@@ -65,7 +65,7 @@ class ModesTest {
             val concrete = f.manager.initial(f.pattern(x, listOf(field), mark = mt))
             val flow = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))
             val currentU = f.manager.initial(f.pattern(x, listOf(g), mark = mu))
-            assertEquals(setOf(concrete, currentU, flow), core.initials.all().toSet())
+            assertEquals(setOf(concrete, flow), core.initials.all().toSet())
             assertEquals(setOf(Conclusion(PathFact(x, listOf(field), Tail.EXACT, mt), ExclusionSet.Empty, false)),
                 methodLeaves(f.ops, core.edges.edgesAt(f.inst(0), concrete).map { it.second }.toList()))
             assertEquals(setOf(Conclusion(PathFact(x, emptyList(), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)),
@@ -143,7 +143,7 @@ class ModesTest {
         }
     }
 
-    @Test fun `actual restricted queries start and publish even when prior guidance has no comparable entry`(): Unit {
+    @Test fun `restricted inputs without a matching entry do not start or publish`(): Unit {
         val f = MethodAnalysisFixtures()
         f.shared.use {
             val mt = MarkSlot.Concrete(f.mark("T"))
@@ -159,16 +159,12 @@ class ModesTest {
             core.addLink(caller.copy(premise = f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))),
                 Layer.NORMAL, f.fact(x, tail = Tail.STAR, mark = MarkSlot.STAR))
             f.drain(core)
-            val expected = setOf(
-                f.manager.initial(f.pattern(x, listOf(f.field("g")), mark = mt)),
-                f.manager.initial(f.pattern(x, listOf(f.field("f")), mark = mu)),
-                f.manager.initial(f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
-            assertEquals(expected, core.initials.all().toSet())
-            assertTrue(core.nonZeroInitial)
-            assertEquals(expected, core.summaries.all().map { it.first }.toSet())
-            assertEquals(expected, f.publications.flatten().map { it.premise }.toSet())
+            assertTrue(core.initials.all().isEmpty())
+            assertFalse(core.nonZeroInitial)
+            assertTrue(core.summaries.all().none())
+            assertTrue(f.publications.flatten().isEmpty())
             assertTrue(f.requests.isEmpty())
-            assertEquals(6L, core.edgeDeltas, "Three actual starts and three witnessed summaries")
+            assertEquals(0L, core.edgeDeltas, "No matching demand means no nonzero work")
             assertEquals(0L, core.demandLayerEdges)
         }
     }

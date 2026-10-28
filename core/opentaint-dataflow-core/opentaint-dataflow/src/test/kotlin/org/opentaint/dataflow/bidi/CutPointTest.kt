@@ -216,8 +216,8 @@ class CutPointTest {
             )
             assertEquals(expected, methodEntries(f.ops, core.summaries.all()))
             assertEquals(expected, methodEntries(f.ops, f.publications.flatten().asSequence().map { it.premise to it.conclusion }))
-            assertEquals(expected, methodEntries(f.ops, core.summaries.demandEdges()),
-                "Run-1 also retains normal rows as guidance")
+            assertEquals(expected.filter { it.second.demand }.toSet(), methodEntries(f.ops, core.summaries.demandEdges()),
+                "Only DEMAND rows are run-1 guidance; normal singletons remain record-only")
             assertEquals(1L, core.demandLayerEdges, "The boundary result adds a summary delta without a successor edge")
             assertTrue(f.cuts.none { it.first == Cut.STATEMENT })
             assertTrue(f.requests.isEmpty())

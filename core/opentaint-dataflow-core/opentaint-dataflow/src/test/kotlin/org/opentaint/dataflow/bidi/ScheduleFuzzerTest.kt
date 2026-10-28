@@ -130,7 +130,7 @@ class ScheduleFuzzerTest {
                 assertContains(actual.rawSummaries, ObservedEdge(caller, setOf(ZERO_PATTERN),
                     GroupedScalarMarks(f.ap.marks).conclusion(Conclusion(PathFact(returned, emptyList(), Tail.EXACT, t), ExclusionSet.Empty, false))))
                 assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty())
-                if (config.run1) assertEquals(actual.publications, actual.selectedDemand)
+                if (config.run1) assertEquals(actual.publications.filterTo(linkedSetOf()) { it.conclusion.demand }, actual.selectedDemand)
                 else assertTrue(actual.selectedDemand.isEmpty())
             }
     }
@@ -163,7 +163,7 @@ class ScheduleFuzzerTest {
                 assertContains(actual.links, ObservedLink(callee, caller, zero, layer, main.inst(1), layer,
                     if (index == 1) GroupedScalarMarks(f.ap.marks).pattern(expectedInput) else expectedInput))
                 assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty())
-                if (config.run1) assertEquals(actual.publications, actual.selectedDemand)
+                if (config.run1) assertEquals(actual.publications.filterTo(linkedSetOf()) { it.conclusion.demand }, actual.selectedDemand)
                 else assertTrue(actual.selectedDemand.isEmpty())
             }
         }
@@ -205,7 +205,7 @@ class ScheduleFuzzerTest {
             for (sameUnit in listOf(false, true)) {
                 val actual = ProductionSchedule(f, config, sameUnit, SchedulePolicy.SEEDED, seed,
                     quantum = 1 + (seed % 2).toInt(), duplicateDeliveries = true).run()
-                assertDirectStaticProtocol(actual, f.ap.marks)
+                assertDirectStaticProtocol(actual, f)
                 val policy = f.pattern(static, tail = Tail.STAR, mark = MarkSlot.STAR)
                 val positioned = f.pattern(static, path, Tail.STAR, MarkSlot.STAR)
                 for (key in listOf(middle, callee)) {

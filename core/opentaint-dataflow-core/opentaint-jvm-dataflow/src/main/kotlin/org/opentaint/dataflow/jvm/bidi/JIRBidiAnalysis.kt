@@ -137,13 +137,14 @@ class JIRBidiAnalysis internal constructor(
             cancellation, copied.lambdas, formReferences, run1Adjacency = copied.calls.adjacency)
         val interpreter = JIRInterpreter(ap, rules, copied.checker, callResolver,
             JIRMethodEntrypointResolver(graph), entries, params.defaultGetModel, copied.externalMethodTracker)
+        val staticCallGraph = org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.copyOf(copied.calls.adjacency, cancellation)
         copied.calls = ResolvedPrescanGraph.EMPTY
         val contexts = MethodContextCache(interpreter, JIRMethodContextCache(interpreter, entries))
         @Suppress("UNCHECKED_CAST")
         return SharedObjects(ap, ApOps(ap), interpreter, language, contexts, PersistentRecordStore(ap),
             ConcurrentVulnerabilityStore(ap), unitResolver as UnitResolver<CommonMethod>, refManager, cancellation,
             formStatistics = entries.formStatistics,
-            releaseRun1CatalogCoverage = entries::releaseRun1CatalogCoverage)
+            releaseRun1CatalogCoverage = entries::releaseRun1CatalogCoverage, staticCallGraph = staticCallGraph)
     }
 
     override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> {

@@ -158,8 +158,12 @@ internal class Run1PointResume(private val core: RunMethodAnalyzer) {
      * scalar relation belongs to the writer, independently of summary deltas. */
     fun localWrite(premise: PremiseKey, value: Facts) {
         check(value.base == STATIC)
+        // A completed local write already has its permitted concrete input.
+        // Supply the actual bounded output here, independently of outgoing exit
+        // rules or summary publication. FLOW writers remain registered below.
+        if (value is TaintTree) core.staticBatch.supplies += core.staticSlices(value)
         for (leaf in core.ops.leaves(value)) {
-            if (leaf.fact.path.size < 2) continue // exact class carriers keep their computed-supply route
+            if (leaf.fact.path.size < 2) continue // exact class markers have no FLOW writer
             val region = Run1StaticService.region(leaf)
             core.staticBatch.writes += region
             if (value !is FlowTree) continue

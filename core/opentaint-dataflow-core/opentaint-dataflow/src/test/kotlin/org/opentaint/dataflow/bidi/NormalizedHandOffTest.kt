@@ -17,8 +17,9 @@ class NormalizedHandOffTest {
         bases.flatMap { h.demand.near(method, demandProbe(it)) }.toSet()
 
     @Test
-    fun `forward selected abstract leaves normalize exactly once while distinct STAR exit field exclusions remain`(): Unit {
-        HandOffFixtures(index = 1, L = 1).use { f ->
+    fun `forward selected abstract leaves normalize once and merge ignored STAR exit field exclusions`(): Unit {
+        // Nonempty native field exclusions are legal after the E-free first run.
+        HandOffFixtures(index = 3).use { f ->
             val key = f.key()
             val a = f.field("a")
             val b = f.field("b")
@@ -38,14 +39,15 @@ class NormalizedHandOffTest {
             val selectedBefore = result.analyzers.single().summaries.demandEdges().toList()
             val h = HandOff.of(f.config, result, f.report, f.shared)
             val entry = f.pattern(resultBase, listOf(c), Tail.ANY, MarkSlot.STAR)
-            val expected = setOf(DemandPattern(entry, f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR, ExclusionSet.of(a))),
-                DemandPattern(entry, f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR, ExclusionSet.of(b))))
+            val expected = setOf(DemandPattern(entry, f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR)))
             assertEquals(expected, stored(h, key, resultBase))
-            assertEquals(mapOf(key to 2), h.demandEdges, "Count accepted normalized patterns, not three raw leaves")
+            assertEquals(mapOf(key to 1), h.demandEdges, "All three selected leaves normalize to one demand pair")
             assertEquals(rawBefore, result.analyzers.single().summaries.all().toList())
             assertEquals(selectedBefore, result.analyzers.single().summaries.demandEdges().toList())
             assertEquals(mxT, f.ops.leaves(rawBefore.single().second).single().fact.mark)
             assertEquals(ExclusionSet.of(b), f.ops.leaves(rawBefore.single().second).single().exclusion)
+            assertEquals(ExclusionSet.of(a), jA.exclusion)
+            assertEquals(ExclusionSet.of(b), jB.exclusion)
         }
     }
 
@@ -113,7 +115,7 @@ class NormalizedHandOffTest {
     }
 
     @Test
-    fun `backward selected abstract leaves normalize mark exclusions and retain STAR premise field E`(): Unit {
+    fun `backward selected abstract leaves normalize mark exclusions and ignore STAR demand field E`(): Unit {
         HandOffFixtures(index = 2, L = 1).use { f ->
             val key = f.key()
             val a = f.field("a")
@@ -130,11 +132,37 @@ class NormalizedHandOffTest {
             val rawBefore = result.analyzers.single().summaries.all().toList()
             val h = HandOff.of(f.config, result, f.report, f.shared)
             assertEquals(setOf(DemandPattern(f.pattern(y, listOf(b), Tail.ANY, MarkSlot.STAR),
-                f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR, ExclusionSet.of(b)))), stored(h, key, y))
+                f.pattern(x, listOf(a), Tail.STAR, MarkSlot.STAR))), stored(h, key, y))
             assertEquals(mapOf(key to 1), h.demandEdges)
             assertEquals(rawBefore, result.analyzers.single().summaries.all().toList())
             assertEquals(mxT, f.ops.leaves(rawBefore.single().second).single().fact.mark)
             assertEquals(ExclusionSet.of(a), f.ops.leaves(rawBefore.single().second).single().exclusion)
+            assertEquals(ExclusionSet.of(b), j.exclusion)
+        }
+    }
+
+    @Test
+    fun `both handoff directions retain concrete STAR field exclusions and full mark identities`(): Unit {
+        for (index in listOf(2, 3)) HandOffFixtures(index).use { f ->
+            val key = f.key()
+            val a = f.field("a")
+            val b = f.field("b")
+            val t = MarkSlot.Concrete(f.mark("T"))
+            val u = MarkSlot.Concrete(f.mark("U"))
+            val j = f.initial(x, listOf(a), Tail.STAR, t, ExclusionSet.of(b))
+            val native = f.fact(y, listOf(b), Tail.STAR, u, ExclusionSet.of(a))
+            f.raw(key, j, native)
+            f.selected(key, j, f.fact(y, listOf(b), Tail.STAR, u, ExclusionSet.of(a), Layer.DEMAND))
+            val result = f.result()
+            val rawBefore = result.analyzers.single().summaries.all().toList()
+            val handOff = HandOff.of(f.config, result, f.report, f.shared)
+            assertEquals(setOf(DemandPattern(f.pattern(y, listOf(b), Tail.STAR, u, ExclusionSet.of(a)),
+                j.toPattern())), stored(handOff, key, y))
+            assertEquals(mapOf(key to 1), handOff.demandEdges)
+            assertEquals(rawBefore, result.analyzers.single().summaries.all().toList())
+            assertEquals(Layer.NORMAL, native.layer)
+            assertEquals(ExclusionSet.of(a), f.ops.leaves(native).single().exclusion)
+            assertEquals(ExclusionSet.of(b), j.exclusion)
         }
     }
 

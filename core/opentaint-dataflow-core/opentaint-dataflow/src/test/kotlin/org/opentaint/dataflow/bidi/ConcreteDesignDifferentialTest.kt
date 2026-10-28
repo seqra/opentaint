@@ -26,7 +26,9 @@ class ConcreteDesignDifferentialTest {
     private fun actualHandOff(f: DriverFixtures, keys: List<MethodKey>, handOff: HandOff,
                               bases: List<AccessPathBase> = listOf(AccessPathBase.Zero, x, ret)): ProgramRunInputs {
         val demand = keys.flatMap { key -> bases.flatMap { base ->
-            handOff.demand.near(key, demandProbe(base)).map { key to it }
+            val probe = demandProbe(base)
+            val carry = if (handOff.demand.hasSharedStaticCarry && base == STATIC) DemandPattern(probe, probe) else null
+            handOff.demand.near(key, probe).filter { it != carry }.map { key to it }
         } }.toSet().toList()
         val seeds = keys.flatMap { key -> f.program.programMethod(key).successors.indices.flatMap { index ->
             handOff.seeds.at(key, f.program.inst(key, index))
@@ -38,7 +40,8 @@ class ConcreteDesignDifferentialTest {
                 }
             }.toList()
         } }.toSet().toList()
-        return ProgramRunInputs(emptyList(), demand, records, seeds)
+        return ProgramRunInputs(emptyList(), demand, records, seeds,
+            hasSharedStaticCarry = handOff.demand.hasSharedStaticCarry)
     }
 
     private fun compareHandOff(expected: ProgramRunInputs, actual: ProgramRunInputs, universe: BoundedDenotation,
@@ -367,7 +370,7 @@ class ConcreteDesignDifferentialTest {
         assertContains(old.runs[1].inputs.demand, callee to DemandPattern(
             f.program.pattern(x, tail = Tail.ANY, mark = excluded), f.program.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
         assertContains(current.runs[1].inputs.demand, callee to DemandPattern(
-            f.program.pattern(x, tail = Tail.ANY, mark = MarkSlot.STAR), f.program.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
+            f.program.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR), f.program.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR)))
         assertFalse(current.runs[1].inputs.demand.any { (_, d) ->
             (d.entry.fact.mark as? MarkSlot.Star)?.excluded?.isEmpty == false })
         assertTrue(old.runs[0].observation.requests.isEmpty(), "Earlier INSIDE selected cleaner does not request")

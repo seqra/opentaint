@@ -5,7 +5,9 @@ import org.opentaint.dataflow.bidi.ap.MarkMode
 import org.opentaint.dataflow.bidi.store.SinkWitness
 import org.opentaint.dataflow.bidi.store.VulnerabilityKey
 import org.opentaint.dataflow.bidi.store.VulnerabilityStore
+import org.opentaint.dataflow.bidi.store.FrozenCompletion
 import java.util.Collections
+import kotlin.time.Duration
 
 enum class RunStatus { COMPLETE, TIMEOUT, OOM, FAILED }
 
@@ -17,11 +19,14 @@ class RunResult<A : RunActor>(
     val direction: Direction,
     val vulnerabilities: VulnerabilityStore,
     val markMode: MarkMode? = null,
+    val joinedStaticBindingTime: Duration = Duration.ZERO,
+    val staticCompletion: FrozenCompletion? = null,
 ) {
     val analyzers: List<A> = Collections.unmodifiableList(ArrayList(analyzers))
 
     init {
         check(status == RunStatus.COMPLETE || this.analyzers.isEmpty())
+        check(status == RunStatus.COMPLETE || staticCompletion == null) { "Incomplete guidance is not exported" }
     }
 
     fun witnessesByKey(): Map<VulnerabilityKey, List<SinkWitness>> =

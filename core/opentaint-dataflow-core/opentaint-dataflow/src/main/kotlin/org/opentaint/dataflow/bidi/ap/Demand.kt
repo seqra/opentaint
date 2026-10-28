@@ -61,8 +61,17 @@ internal fun restrictRaw(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): 
     return result.toList()
 }
 
-/** Exact-key packing preserves every reference leaf and its raw layer. */
+/** Restrict protected memberships with the same geometry as the ordinary result. */
 internal fun restrictFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): List<Facts> {
+    val out = CollectingOut()
+    ops.manager.transportProtection(g, out) { part, sink ->
+        for (value in restrictPlainFacts(ops, j, part, d)) sink.result(value)
+    }
+    return out.results
+}
+
+/** Exact-key packing preserves every reference leaf and its raw layer. */
+private fun restrictPlainFacts(ops: ApOps, j: InitialAp, g: Facts, d: DemandPattern): List<Facts> {
     val m = ops.manager
     val values = LinkedHashMap<GroupKey, Facts>()
     for (c in restrictRaw(ops, j, g, d)) {

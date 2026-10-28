@@ -253,7 +253,7 @@ class OneRunAcceptanceTest {
     }
 
     @Test
-    fun `actual current input authorizes a normal exact answer even when old exit guidance names another mark`(): Unit {
+    fun `restricted normal exact answers require the matching fixed exit mark`(): Unit {
         for (index in listOf(1, 3)) for (matchingExit in listOf(false, true)) FiniteProgramFixtures().use { f ->
             val callerMethod = f.method("publicationCaller", listOf(listOf(1), listOf(2), emptyList()), 2)
             val calleeMethod = f.method("publicationCallee", listOf(listOf(1), emptyList()), 1)
@@ -285,7 +285,7 @@ class OneRunAcceptanceTest {
             assertContains(actual.rawSummaries, expectedRaw)
             if (index == 1) assertContains(actual.selectedDemand, expectedRaw)
             else assertTrue(actual.selectedDemand.none { it.method == callee })
-            val publishes = true // actual input authorizes its response independently of the old exit guide
+            val publishes = index == 1 || matchingExit
             assertEquals(if (publishes) setOf(expectedRaw) else emptySet(),
                 actual.publications.filter { it.method == callee && it.conclusion.fact.base == returned }.toSet())
             assertEquals(if (publishes) setOf(selected(f, index, Conclusion(PathFact(y, listOf(field), Tail.EXACT, t),

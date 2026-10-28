@@ -18,6 +18,7 @@ import org.opentaint.dataflow.bidi.interp.DirectedForms
 import org.opentaint.dataflow.bidi.interp.RuleView
 import org.opentaint.dataflow.bidi.ap.MethodKey
 import org.opentaint.dataflow.bidi.ap.MarkMode
+import org.opentaint.dataflow.bidi.store.FrozenCompletion
 import org.opentaint.dataflow.ifds.UnitType
 import org.opentaint.dataflow.ifds.UnknownUnit
 import org.opentaint.dataflow.util.MemoryManager
@@ -179,15 +180,66 @@ class RunManager<A : RunActor>(
         }
 
         if (!joined) {
-            // Join is the sole override of an already selected terminal status.
+            // A failed join cannot export any runner-owned state.
             status.set(RunStatus.FAILED)
             shared.cancellation.cancel()
             completion.complete(RunStatus.FAILED)
         }
-        val end = checkNotNull(status.get())
-        staticService?.let { logger.info { "BIDI_STATIC_STATISTICS run=${config.index} status=$end totals=${it.statistics()} requests=${it.requestStatistics()}" } }
         val snapshot = synchronized(admission) { runners.values.toList() }
-        val analyzers = if (end == RunStatus.COMPLETE) snapshot.flatMap { it.analyzers() } else emptyList()
+        val joinedActors = if (joined) snapshot.flatMap { it.analyzers() } else emptyList()
+        var staticCompletion: FrozenCompletion? = null
+        var joinedStaticBindingTime = Duration.ZERO
+        if (joined && config.run1 && status.get() == RunStatus.COMPLETE) {
+            val started = TimeSource.Monotonic.markNow()
+            val resourceGate = Any()
+            var resourceActive = true
+            var guidance: JoinedStaticGuidance? = null
+            fun rejectGuidance(reason: RunStatus) = synchronized(resourceGate) {
+                check(reason != RunStatus.COMPLETE)
+                if (resourceActive && status.compareAndSet(RunStatus.COMPLETE, reason))
+                    shared.cancellation.cancel()
+            }
+            fun checkpoint() {
+                if (checkNotNull(deadline).remaining <= Duration.ZERO) rejectGuidance(RunStatus.TIMEOUT)
+                shared.cancellation.checkpoint()
+            }
+            try {
+                // The engine guard has ended; keep the same configured memory
+                // policy active while borrowing joined caller inputs.
+                withJoinedDeadline(remaining = { checkNotNull(deadline).remaining },
+                    onTimeout = { rejectGuidance(RunStatus.TIMEOUT) }) {
+                    MemoryManager(shared.refManager, OOM_THRESHOLD) { rejectGuidance(RunStatus.OOM) }
+                        .runWithMemoryManager {
+                            checkpoint()
+                            guidance = completeJoinedStaticGuidance(config, shared,
+                                joinedActors.filterIsInstance<RunMethodAnalyzer>(),
+                                storage = { method -> storages[method] }, checkpoint = ::checkpoint)
+                            checkpoint()
+                        }
+                }
+            } catch (error: Throwable) {
+                rejectGuidance(if (error is OutOfMemoryError) RunStatus.OOM else RunStatus.FAILED)
+                logger.error(error) { "Run ${config.index}: joined static writer completion failed" }
+            } finally {
+                // An already dispatched GC callback cannot reject the result
+                // after this completion phase has closed.
+                synchronized(resourceGate) { resourceActive = false }
+                joinedStaticBindingTime = started.elapsedNow()
+            }
+            if (status.get() == RunStatus.COMPLETE) staticCompletion = checkNotNull(guidance).completion
+            logger.info {
+                "BIDI_STATIC_WRITER_BIND run=${config.index} bindingTime=$joinedStaticBindingTime status=${status.get()} " +
+                    "observedCandidates=${guidance?.observedCandidates ?: 0} lostCandidates=${guidance?.lostCandidates ?: 0} " +
+                    "peakCandidateMemberships=${guidance?.peakCandidates ?: 0} " +
+                    "pruneTime=${guidance?.pruneTime ?: Duration.ZERO} " +
+                    "writerTime=${guidance?.writerTime ?: Duration.ZERO} " +
+                    "closureFreezeTime=${guidance?.closureFreezeTime ?: Duration.ZERO} " +
+                    "${guidance?.binding ?: "no-completed-binding"}"
+            }
+        }
+        val end = checkNotNull(status.get())
+        val analyzers = if (end == RunStatus.COMPLETE) joinedActors else emptyList()
+        staticService?.let { logger.info { "BIDI_STATIC_STATISTICS run=${config.index} status=$end totals=${it.statistics()} requests=${it.requestStatistics()}" } }
         var failure: Throwable? = null
         fun release(action: () -> Unit) {
             try { action() }
@@ -211,7 +263,8 @@ class RunManager<A : RunActor>(
             if (joined) staticService?.clear()
         }
         failure?.let { throw it }
-        return RunResult(end, analyzers, config.index, config.direction, shared.vulnerabilities, config.mode.markMode)
+        return RunResult(end, analyzers, config.index, config.direction, shared.vulnerabilities, config.mode.markMode,
+            joinedStaticBindingTime, staticCompletion)
     }
 
     private fun startRoots() {

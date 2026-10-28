@@ -7,11 +7,12 @@ import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import org.opentaint.dataflow.bidi.store.DemandStore
+import org.opentaint.dataflow.bidi.store.CallerRef
 import kotlin.test.*
 
 class StaticProducerGrammarTest {
     private fun demand(f: MethodAnalysisFixtures) =
-        DemandStore.Builder(f.manager).apply { completeRun1StaticFields() }.build()
+        DemandStore.Builder(f.manager).build()
 
     /** The backward source result is created inside this method, without an
      * added-link query or a static sink seed which could validate it first. */
@@ -64,14 +65,14 @@ class StaticProducerGrammarTest {
         }
     }
 
-    @Test fun `current named field results preserve MUST and field exclusion headers`() {
+    @Test fun `later forward named field results preserve MUST and field exclusion headers`() {
         MethodAnalysisFixtures().use { f ->
             val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
             val path = listOf(cls, f.field("f"))
             val mark = MarkSlot.Concrete(f.mark("T"))
             val input = f.fact(STATIC, path, Tail.ANY_TAINT, mark,
                 exclusion = ExclusionSet.of(f.field("excluded")))
-            val actor = f.core(f.config(index = 2, demand = demand(f)))
+            val actor = f.core(f.config(index = 3, demand = demand(f)))
             val premise = f.manager.initial(f.pattern(mark = mark))
             val bounded = ArrayList<Facts>()
             actor.cut(Cut.CALL, premise, input) { _, value -> bounded += value }
@@ -79,6 +80,95 @@ class StaticProducerGrammarTest {
             actor.summaryDelta(premise, input)
             assertEquals(listOf(input), actor.summaries.all().map { it.second }.toList(),
                 "Direct native/summary results keep their existing header too")
+        }
+    }
+    @Test fun `a demanded concrete static STAR result keeps its exclusion at the next run2 call`() {
+        for (hasNextDemand in listOf(true, false)) for (exclusionKind in 0..2) MethodAnalysisFixtures().use { f ->
+            val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
+            val mark = MarkSlot.Concrete(f.mark("T"))
+            val exclusion = when (exclusionKind) {
+                0 -> ExclusionSet.Empty
+                1 -> ExclusionSet.of(f.field("excluded"))
+                else -> ExclusionSet.of(intArrayOf(f.field("excluded"), f.field("other excluded")))
+            }
+            val entry = f.pattern(STATIC, path, Tail.STAR, mark, exclusion)
+            val callee = f.store.key("next static consumer")
+            val demand = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(entry, entry))
+                if (hasNextDemand) add(callee, DemandPattern(entry, entry))
+            }.build()
+            f.call(1, CallPlan(setOf(STATIC), listOf(CallStage.Callees(CallPoint.BEFORE,
+                CallPoint.AFTER, listOf(callee))), emptyList(), CallPoint.BEFORE, CallPoint.AFTER))
+            val config = f.config(index = 2, demand = demand)
+            val owner = f.core(config, callFactory = MethodCallServicesFactory(::RunMethodCallServices))
+            val next = f.core(config, key = callee)
+            f.onSubscribe = { }
+            f.onLink = { link -> next.addLink(link.ref, link.linkLayer, link.added) }
+            val input = f.fact(STATIC, path, Tail.ANY, mark, layer = Layer.DEMAND)
+            owner.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+            assertEquals(listOf(f.manager.initial(entry)), owner.initials.all().toList())
+            f.drain(owner)
+            assertTrue(f.sentLinks.any { it.callee == callee && f.ops.leaves(it.added).any { leaf ->
+                leaf == entry
+            } }, "Ordinary demanded execution keeps the complete STAR/E header at the call")
+            assertEquals(if (hasNextDemand) listOf(f.manager.initial(entry)) else emptyList(),
+                next.initials.all().toList(), "Accepted static inputs still need the callee's fixed demand")
+            assertEquals(Tail.ANY, f.ops.leaves(input).single().fact.tail, "The supplied value remains unchanged")
+        }
+    }
+
+    @Test fun `a valid run2 concrete STAR input cannot start without matching fixed demand`() {
+        for (wrongMark in listOf(false, true)) MethodAnalysisFixtures().use { f ->
+            val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
+            val actual = f.pattern(STATIC, path, Tail.STAR, MarkSlot.Concrete(f.mark("T")),
+                ExclusionSet.of(f.field("excluded")))
+            val demand = DemandStore.Builder(f.manager).apply {
+                if (wrongMark) {
+                    val other = actual.copy(fact = actual.fact.copy(mark = MarkSlot.Concrete(f.mark("U"))))
+                    add(f.key, DemandPattern(other, other))
+                }
+            }.build()
+            val actor = f.core(f.config(index = 2, demand = demand))
+            val input = f.fact(STATIC, path, Tail.STAR, actual.fact.mark, actual.exclusion, Layer.DEMAND)
+            actor.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+            f.drain(actor)
+            assertTrue(actor.initials.all().isEmpty())
+            assertTrue(actor.summaries.all().none())
+            assertTrue(f.sentLinks.isEmpty())
+            assertEquals(listOf(actual), f.ops.leaves(input).toList())
+        }
+    }
+
+    @Test fun `run2 concrete static input validation retains its geometry and tail rejections`() {
+        MethodAnalysisFixtures().use { f ->
+            val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
+            val path = listOf(cls, f.field("f"))
+            val excluded = ExclusionSet.of(f.field("excluded"))
+            val bad = buildList {
+                for (tail in listOf(Tail.EXACT, Tail.ANY, Tail.STAR)) add(f.pattern(STATIC, emptyList(), tail))
+                for (tail in listOf(Tail.ANY, Tail.STAR)) add(f.pattern(STATIC, listOf(cls), tail))
+                add(f.pattern(STATIC, listOf(cls), Tail.EXACT, exclusion = excluded))
+                for (tail in listOf(Tail.EXACT, Tail.ANY)) add(f.pattern(STATIC, path, tail, exclusion = excluded))
+                for (e in listOf(ExclusionSet.Empty, excluded)) add(f.pattern(STATIC, path, Tail.ANY_TAINT, exclusion = e))
+            }
+            for (input in bad) assertFailsWith<IllegalStateException>("Must reject $input") {
+                validateRun2StaticFullInput(f.manager, input)
+            }
+            val marker = f.pattern(STATIC, listOf(cls), Tail.EXACT)
+            assertFalse(validateRun2StaticFullInput(f.manager, marker), "The exact class marker is not a named field")
+            assertTrue(f.processed.isEmpty())
+        }
+    }
+
+    @Test fun `backward method inputs still reject a MUST fact before any initial starts`() {
+        MethodAnalysisFixtures().use { f ->
+            val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
+            val input = f.fact(STATIC, path, Tail.ANY_TAINT)
+            val actor = f.core(f.config(index = 2, demand = demand(f)))
+            assertFailsWith<IllegalStateException> {
+                actor.addLink(CallerRef(f.key, f.manager.zero, input.layer, f.inst(1)), input.layer, input)
+            }
+            assertTrue(actor.initials.all().isEmpty())
         }
     }
 }

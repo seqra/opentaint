@@ -52,14 +52,12 @@ class Run1OrdinaryStaticDefaultsTest {
             assertFalse(actor.nonZeroInitial, "A write target and an unused field do not seed an initial")
             assertTrue(actor.summaries.all().all { (premise, value) -> premise.isZero && value is Reach },
                 "A clear with no tainted RHS does not create a new static value or root default")
-            assertTrue(f.processed.none { row -> row.delta.facts.base == STATIC },
+            assertTrue(f.processed.filter { it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) },
                 "The global writer pool replaces static CFG relay through the call")
             assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule })
             val report = ReportBuilder().also { it.add(config, result) }
             val handoff = HandOff.of(config, result, report, f.shared)
-            val group = MarkSlot.Concrete(f.manager.marks.group(f.manager.marks.groupOf(t)))
-            val expected = DemandPattern(p.pattern(STATIC, tail = Tail.ANY, mark = group),
-                p.pattern(STATIC, tail = Tail.STAR, mark = group))
+            val expected = DemandPattern(Pattern(actual, ExclusionSet.Empty), Pattern(actual, ExclusionSet.Empty))
             for (method in listOf(root, callee, unseen)) {
                 assertContains(handoff.demand.near(method, Pattern(actual, ExclusionSet.Empty)), expected)
             }

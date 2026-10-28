@@ -15,6 +15,19 @@ class ProfileSummaryTest(unittest.TestCase):
         windows = phase_windows('00:00:10.000 |I| BIDI_RUN_START run=1 direction=FORWARD', 0, 25)
         self.assertEqual(windows, {'run-1': (10, 25)})
 
+    def test_joined_static_completion_samples_do_not_count_as_engine_work(self):
+        log = '\n'.join([
+            '00:00:10.000 |I| BIDI_RUN_START run=1 direction=FORWARD',
+            '00:01:20.500 |I| BIDI_STATIC_WRITER_BIND run=1 bindingTime=1m 2.5s status=COMPLETE',
+            '00:01:21.000 |I| BIDI_RUN_END run=1 status=COMPLETE engineTime=8.5s',
+        ])
+        windows = phase_windows(log, 0, 90)
+        self.assertEqual(windows['run-1'], (10, 18))
+        self.assertEqual(windows['run-1-static-completion'], (18, 80.5))
+        samples = [(17, ['engine']), (19, ['binding']), (81, ['release'])]
+        self.assertEqual(1, sample_window(samples, *windows['run-1'])['samples'])
+        self.assertEqual(1, sample_window(samples, *windows['run-1-static-completion'])['samples'])
+
     def test_midnight_rollover_keeps_phase_durations_and_samples(self):
         day_start = datetime(2026, 10, 12, tzinfo=timezone.utc).timestamp()
         next_day = day_start + 86400

@@ -118,7 +118,11 @@ class StaticCatalogIterationTest {
             marks.flatMap { mark ->
                 val initial = if (position.base == AccessPathBase.Zero) f.manager.zero
                             else f.manager.initial(demandProbe(position.base, position.path, mark))
-                config.demand?.covering(owner, initial).orEmpty().map { owner to it }
+                val probe = initial.toPattern()
+                // This is a family at the actual position, not a stored universal row.
+                val carry = if (config.demand?.hasSharedStaticCarry == true && probe.fact.base == STATIC)
+                    DemandPattern(probe, probe) else null
+                config.demand?.covering(owner, initial).orEmpty().filter { it != carry }.map { owner to it }
             }
         } }.distinct()
         val records = owners.flatMap { owner -> universe.positions.flatMap { position ->
@@ -129,7 +133,8 @@ class StaticCatalogIterationTest {
         val seeds = owners.flatMap { owner -> f.program.programMethod(owner).successors.indices.flatMap { index ->
             config.seeds.at(owner, f.program.inst(owner, index))
         } }
-        return ProgramRunInputs(p.roots, demands, records, seeds)
+        return ProgramRunInputs(p.roots, demands, records, seeds,
+            hasSharedStaticCarry = config.demand?.hasSharedStaticCarry == true)
     }
 
     @Test
@@ -142,7 +147,7 @@ class StaticCatalogIterationTest {
             for (policy in listOf(SchedulePolicy.REPLAY_FIRST, SchedulePolicy.NOTIFY_FIRST)) {
                 val actual = ProductionSchedule(f.program, forward, sameUnit, policy, quantum = 1,
                     duplicateDeliveries = true).run()
-                assertDirectStaticProtocol(actual, f.manager.marks)
+                assertDirectStaticProtocol(actual, f.program)
                 assertEquals(setOf(p.sink.rule), actual.witnesses.map { it.rule }.toSet())
                 assertEquals(setOf(1, 2), actual.witnesses.map { it.edges.size }.toSet())
                 assertEquals(2, actual.witnesses.map { it.proof }.toSet().size)
@@ -164,8 +169,15 @@ class StaticCatalogIterationTest {
                 p.fields + f.program.field("fresh"), (p.marks + fresh + (p.marks + fresh).map { f.manager.marks.group(f.manager.marks.groupOf(it)) } + TaintMark.ZERO).distinct(), 3)
             f.program.freshShared(sameUnit, freshVulnerabilities = true).use { owner ->
                 val configs = ArrayList<RunConfig>()
+                val replayInputs = LinkedHashMap<Int, ProgramRunInputs>()
                 val report = IterationDriver(FixedLimits(limits), owner, 20.seconds,
-                    invokeRun = { config, shared, timeout -> configs += config; f.run(config, shared, timeout) },
+                    invokeRun = { config, shared, timeout ->
+                        configs += config
+                        // Read views share the persistent owner. Freeze before this run's barrier
+                        // can add its own records; an after-analysis replay would see future records.
+                        if (!config.run1) replayInputs[config.index] = phaseInputs(f, p, config, universe)
+                        f.run(config, shared, timeout)
+                    },
                     guardBarrier = { _, body -> body() }).analyze(p.roots)
                 assertEquals(RunStatus.COMPLETE, report.end.status)
                 assertEquals(listOf(1, 2, 3), f.results.map { it.runIndex })
@@ -181,7 +193,7 @@ class StaticCatalogIterationTest {
                 }.mapTo(ArrayList()) { RawRecord(it.method, Direction.FORWARD, it.premise.single(), it.conclusion) }
                 for (index in 1 until configs.size) {
                     val config = configs[index]
-                    val input = phaseInputs(f, p, config, universe)
+                    val input = replayInputs.getValue(config.index)
                     val scalar = RawCurrentClosure(f.program, config, input).run()
                     val actual = retained(f.results[index], f.ops)
                     RunObservation(rawSummaries = scalar.rawSummaries, selectedDemand = scalar.selectedDemand,

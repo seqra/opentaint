@@ -65,7 +65,7 @@ class StaticGroupProtocolHandoffTest {
             // relation. Its complete original/output pair guides the next run.
             val original = p.pattern(STATIC, path, Tail.STAR, MarkSlot.STAR)
             val output = p.pattern(returned, tail = Tail.STAR, mark = MarkSlot.STAR)
-            val backwardEntry = output.copy(fact = output.fact.copy(tail = Tail.ANY))
+            val backwardEntry = output // STAR correlation survives handoff; no widening to ANY.
             for (method in listOf(getter, wrapper)) {
                 val actor = run1.analyzers.single { it.key == method }
                 val selected = actor.summaries.demandEdges().flatMap { (premise, facts) ->

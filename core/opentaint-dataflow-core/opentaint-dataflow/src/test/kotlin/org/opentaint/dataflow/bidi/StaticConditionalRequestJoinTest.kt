@@ -10,9 +10,9 @@ import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import kotlin.test.*
 
-/** Complete local admission precedes each atomic static publication and pending group supply. */
+/** Complete local admission precedes write-time supply; summary input joins remain orthogonal. */
 class StaticConditionalRequestJoinTest {
-    @Test fun `exact-field fallback joins admit complete guards then either contributing origin can supply the result`() {
+    @Test fun `complete exact-field guards supply at the write and retain every contributing original`() {
         for (nd in listOf(false, true)) for (supplyingMember in 0 until (if (nd) 2 else 1))
             for (supplyFirst in listOf(false, true))
             MethodAnalysisFixtures().use { f ->
@@ -22,9 +22,9 @@ class StaticConditionalRequestJoinTest {
                 val t = f.mark("T"); val u = f.mark("U"); val v = f.mark("V")
                 val g = f.manager.marks.groupOf(t); val h = f.manager.marks.groupOf(u)
                 val result = f.manager.marks.groupOf(v)
-                // This deliberately installs local input hypotheses before a pool answer.
-                // Canonical STAR GROUP originals now require an earlier answer; legal exact
-                // fields retain the delayed-input fallback which this scenario exercises.
+                // Exercise complete local guard admission at exact operation inputs.
+                // A completed write supplies its result immediately. Existing summary
+                // fallback input joins can complete independently afterward.
                 val members = listOf(f.manager.initial(f.run1Pattern(STATIC, left, Tail.EXACT, t))) +
                     if (nd) listOf(f.manager.initial(f.run1Pattern(STATIC, right, Tail.EXACT, u))) else emptyList()
                 val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
@@ -84,14 +84,17 @@ class StaticConditionalRequestJoinTest {
                 val expectedOrigins: Set<PremiseKey> = members.toSet()
                 assertEquals(expectedOrigins, published, "Every admitted original has an atomic result arm")
                 assertTrue(actor.summaries.all().none(),
-                    "Every static/static arm is erased after securing its delayed scalar input join")
+                    "Static/static exit arms stay private; their summary input joins are independent of write-time supply")
+                val expectedAnswer = listOf(f.manager.marks.atomsFor(GroupSet.of(result)))
+                assertEquals(expectedAnswer, answers().map { it.supply.groups },
+                    "The complete local write answers immediately without an additional input-pool join")
                 if (!supplyFirst) {
-                    assertTrue(answers().isEmpty())
                     commit(supplies(supplyingPath, wrongGroup))
-                    assertTrue(answers().isEmpty(), "A wrong group cannot supply either result arm")
+                    assertEquals(expectedAnswer, answers().map { it.supply.groups },
+                        "An unrelated input group does not repeat the completed write's answer")
                     commit(supplies(supplyingPath, supplyingGroup))
                 }
-                assertEquals(listOf(f.manager.marks.atomsFor(GroupSet.of(result))), answers().map { it.supply.groups })
+                assertEquals(expectedAnswer, answers().map { it.supply.groups })
                 assertEquals(if (nd) 1L else 0L, service.requestStatistics().pendingMemberships,
                     "An unanswered origin remains pending after the other arm supplies the result")
                 if (nd) {
@@ -152,7 +155,7 @@ class StaticConditionalRequestJoinTest {
                 actor.emitOperationResult(OperationInput(ResumeSite.StatementInput(operation), premise,
                     f.run1Fact(AccessPathBase.LocalVar(0), full = f.mark("V"))),
                     StaticOperation.Write(operation, f.ops.leaves(facts).single()), facts) { _, _ ->
-                    fail("The local static result must be published early")
+                    fail("The local static result must enter the normal-exit worklist")
                 }
             }
             val order = if (reverse) listOf(1, 0) else listOf(0, 1)
@@ -193,10 +196,13 @@ class StaticConditionalRequestJoinTest {
             actor.freeze()
             val handOff = HandOff.of(f.config(), RunResult(RunStatus.COMPLETE, listOf(actor), 1,
                 Direction.FORWARD, f.vulnerabilities), ReportBuilder(), f.shared)
-            assertTrue(handOff.demand.near(f.key, f.ops.leaves(value).single()).isEmpty(),
-                "Erased group-valued static/static pairs cannot reappear in the actual handoff")
-            assertEquals(org.opentaint.dataflow.bidi.store.StaticQueryPolicy.COMPLETE_RUN1_STATIC_FIELDS,
-                handOff.demand.staticQueryPolicy)
+            val target = org.opentaint.dataflow.bidi.store.guidancePattern(f.ops.leaves(value).single())
+            val guides = handOff.demand.near(f.key, target).toSet()
+            for (origin in expectedOrigins) assertTrue(DemandPattern(target,
+                org.opentaint.dataflow.bidi.store.guidancePattern((origin as InitialAp).toPattern())) in guides,
+                "Post-exit static pairs stay private in run-1 and guide the incoming run-2")
+            assertTrue(handOff.demand.hasSharedStaticCarry)
+            assertTrue(handOff.demand.hasStaticCompletion)
         }
     }
 }

@@ -47,7 +47,7 @@ class ProductionSchedule(
     private val shared = fixture.shared.let { source ->
         SharedObjects(source.ap, source.ops, source.interpreter, source.language, source.contexts,
             source.records, vulnerabilities, source.unitResolver, source.refManager,
-            source.cancellation, threads = 1,
+            source.cancellation, threads = 1, staticCallGraph = fixture.staticCallGraph(),
             )
     }
     private val staticService = if (config.run1) Run1StaticService(shared.ap, config.mode.markMode) else null

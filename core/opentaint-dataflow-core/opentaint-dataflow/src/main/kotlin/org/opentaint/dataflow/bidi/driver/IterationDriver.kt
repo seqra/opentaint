@@ -80,11 +80,15 @@ class IterationDriver internal constructor(
             logOptimizationStatistics(config, "END")
             throw error
         }
-        logger.info { "BIDI_RUN_END run=${config.index} status=${result.status} engineTime=${start.elapsedNow()}" }
+        val engineTime = (start.elapsedNow() - result.joinedStaticBindingTime).coerceAtLeast(Duration.ZERO)
+        logger.info { "BIDI_RUN_END run=${config.index} status=${result.status} engineTime=$engineTime" }
         if (config.run1 && config.mode.markMode == MarkMode.FULL && result.status == RunStatus.COMPLETE) {
             logger.info { "BIDI_FLOW_BACKED_STATISTICS run=${config.index} neutralBatches=${result.analyzers.sumOf { it.neutralBatchApplications }} neutralMemberships=${result.analyzers.sumOf { it.neutralBatchMemberships }} bulkStorePackets=${result.analyzers.sumOf { it.neutralBulkStorePackets }} bulkStoreMemberships=${result.analyzers.sumOf { it.neutralBulkStoreMemberships }} scalarStoreFallbackMemberships=${result.analyzers.sumOf { it.neutralScalarFallbackMemberships }}" }
         }
         logOptimizationStatistics(config, "END")
+        config.demand?.staticCompletionStatistics()?.let {
+            logger.info { "BIDI_STATIC_CLOSURE_LOOKUP run=${config.index} $it" }
+        }
         if (result.status != RunStatus.COMPLETE) return Next.End(result.status)
         val barrierStart = TimeSource.Monotonic.markNow()
         val next = try {

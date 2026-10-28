@@ -103,7 +103,7 @@ class EmptyStaticSummaryFallbackTest {
         }
     }
 
-    @Test fun `a derived static WRITE preserves conditional original and only rooted input supplies`() {
+    @Test fun `a derived static WRITE supplies its concrete value and preserves its original`() {
         for (rooted in listOf(false, true)) MethodAnalysisFixtures().use { f ->
             val field = f.field("f")
             val target = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("g"))
@@ -116,13 +116,19 @@ class EmptyStaticSummaryFallbackTest {
             val services = RunMethodCallServices(actor)
             val original = if (rooted) f.manager.zero else f.manager.initial(f.run1Pattern(x))
             resume(f, actor, services, original, f.run1Fact(x, listOf(field)))
+            assertTrue(actor.summaries.all().none(), "The candidate first enters NormalExit")
+            assertTrue(actor.staticBatch.supplies.isNotEmpty(),
+                "An executed concrete write supplies its mark before exit rules, for every admitted original")
+            assertTrue(actor.staticBatch.supplies.all {
+                it.region.fact.path == target && it.groups == MarkSet.of(f.groupMark().mark)
+            }, "The write supplies only its actual static image and mark")
+            assertTrue(actor.staticBatch.reads.isEmpty(), "WRITE metadata does not create a static read")
+            assertTrue(actor.edges.edgesAt(f.inst(2), original).any(), "Static output enters the normal boundary")
+            f.drain(actor)
             val raw = actor.summaries.all().filter { it.second.base == STATIC }.toList()
             assertTrue(raw.isNotEmpty())
             assertTrue(raw.all { (premise, value) -> premise === original && value.layer == Layer.DEMAND })
             assertEquals(setOf(target), raw.flatMap { f.ops.leaves(it.second).map { leaf -> leaf.fact.path }.toList() }.toSet())
-            assertEquals(rooted, actor.staticBatch.supplies.isNotEmpty())
-            assertTrue(actor.staticBatch.reads.isEmpty(), "WRITE metadata does not create a static read")
-            assertTrue(actor.edges.edgesAt(f.inst(2), original).none(), "A static effect does not enter ordinary successors")
             assertTrue(write.staticOperations.isEmpty())
             services.freeze()
         }

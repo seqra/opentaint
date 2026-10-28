@@ -8,14 +8,19 @@ import org.opentaint.dataflow.bidi.engine.RunStatus
 import org.opentaint.dataflow.bidi.engine.SharedObjects
 import org.opentaint.dataflow.bidi.interp.SinkRule
 import org.opentaint.dataflow.bidi.store.DemandStore
+import org.opentaint.dataflow.bidi.store.FrozenStaticCompletion
+import org.opentaint.dataflow.bidi.store.guidancePattern
 import org.opentaint.ir.api.common.cfg.CommonInst
 import java.util.Collections
+import mu.KotlinLogging
+import kotlin.time.TimeSource
 
 /** Immutable outgoing demand, seeds and accepted explicit-pattern counts. */
 class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<MethodKey, Int>) {
     val demandEdges: Map<MethodKey, Int> = Collections.unmodifiableMap(LinkedHashMap(demandEdges))
 
     companion object {
+        private val logger = KotlinLogging.logger {}
         fun of(config: RunConfig, result: RunResult<RunMethodAnalyzer>, report: ReportBuilder,
                shared: SharedObjects): HandOff {
             check(result.status == RunStatus.COMPLETE) { "A hand-off needs a complete run" }
@@ -43,19 +48,48 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
         private fun toBackward(result: RunResult<RunMethodAnalyzer>, report: ReportBuilder, shared: SharedObjects,
                                counts: MutableMap<MethodKey, Int>, run1: Boolean): Pair<DemandStore, SeedIndex> {
             val demand = DemandStore.Builder(shared.ap)
-            if (run1) {
-                demand.includeStaticGroups()
-                demand.completeRun1StaticFields()
+            val completionStart = TimeSource.Monotonic.markNow()
+            val joinedCompletion = if (run1) result.staticCompletion else null
+            val completion = if (run1 && joinedCompletion == null)
+                FrozenStaticCompletion.Builder(shared.ap, shared.staticCallGraph) else null
+            if (run1) demand.withSharedStaticCarry()
+            if (joinedCompletion != null) {
+                demand.withCompletion(joinedCompletion)
+                logger.info { "BIDI_STATIC_CLOSURE_HANDOFF run=1 source=JOINED ${joinedCompletion.statistics()}" }
             }
+            // Synthetic frozen RunResults in small tests have no runner-owned
+            // pre-release phase. Their fallback uses local seeds only; real
+            // RunManager results supply the joined completion above.
+            if (completion != null) {
+                for (actor in result.analyzers) {
+                    for (edge in actor.staticGuidanceSeeds.frozenRows()) {
+                        shared.cancellation.checkpoint()
+                        completion.addSeed(actor.key, edge)
+                    }
+                    for (key in actor.freezeStaticWriteCandidates().lostRows()) {
+                        shared.cancellation.checkpoint()
+                        completion.addSeed(actor.key, key.original.toPattern(), key.result)
+                    }
+                }
+            }
+            val seedCaptureTime = completionStart.elapsedNow()
+            val projectionStart = TimeSource.Monotonic.markNow()
             forEachDemandPiece(result, shared) { method, premise, piece ->
-                val entry = normalizeDemandMark(located(piece).let { p ->
-                    if (p.fact.tail == Tail.STAR) p.copy(fact = p.fact.copy(tail = Tail.ANY), exclusion = ExclusionSet.Empty) else p
-                })
+                val entry = guidancePattern(piece)
                 premise.forEachMember { member ->
                     shared.cancellation.checkpoint()
-                    val pattern = DemandPattern(entry, normalizeDemandMark(located(member.toPattern())))
+                    val from = guidancePattern(member.toPattern())
+                    completion?.addBoundary(method, from, entry)
+                    val pattern = DemandPattern(entry, from)
                     if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)
                 }
+            }
+            if (completion != null) {
+                val projectionTime = projectionStart.elapsedNow()
+                val indexStart = TimeSource.Monotonic.markNow()
+                val frozen = completion.build()
+                demand.withCompletion(frozen)
+                logger.info { "BIDI_STATIC_CLOSURE_FREEZE run=1 source=LOCAL_FROZEN_INPUT freezeTime=${completionStart.elapsedNow()} seedTime=$seedCaptureTime projectionTime=$projectionTime indexTime=${indexStart.elapsedNow()} ${frozen.statistics()}" }
             }
             val seeds = LinkedHashSet<Seed>()
             for (entry in report.demandEntries()) {
@@ -87,14 +121,6 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             return demand.build() to SeedIndex.of(seeds.toList())
         }
 
-        /** Must carries locations in backward demand, without its guarantee or exclusion. */
-        private fun located(pattern: Pattern): Pattern = if (pattern.fact.tail != Tail.ANY_TAINT) pattern
-            else Pattern(pattern.fact.copy(tail = Tail.ANY), ExclusionSet.Empty)
-
-        private fun normalizeDemandMark(pattern: Pattern): Pattern =
-            if (pattern.fact.mark !is MarkSlot.Star || pattern.fact.mark.excluded.isEmpty) pattern
-            else pattern.copy(fact = pattern.fact.copy(mark = MarkSlot.STAR))
-
         private fun withSinksAt(shared: SharedObjects, key: MethodKey, statement: CommonInst,
                                 use: (List<SinkRule>) -> Unit) {
             val forms = shared.contexts.forms(key)
@@ -111,8 +137,8 @@ class HandOff(val demand: DemandStore, val seeds: SeedIndex, demandEdges: Map<Me
             val demand = DemandStore.Builder(shared.ap)
             forEachDemandPiece(result, shared) { method, premise, piece ->
                 val pattern = when (premise) {
-                    is InitialAp -> DemandPattern(normalizeDemandMark(piece),
-                        if (premise.isZero) null else normalizeDemandMark(premise.toPattern()))
+                    is InitialAp -> DemandPattern(guidancePattern(piece),
+                        if (premise.isZero) null else guidancePattern(premise.toPattern()))
                     is PremiseSet -> error("The backward run has no multi-premise summary (ap.md §9.2)")
                 }
                 if (demand.add(method, pattern)) counts.merge(method, 1, Int::plus)

@@ -23,6 +23,7 @@ CLOCK = re.compile(r"(?<!\d)(\d{2}):(\d{2}):(\d{2})(?:\.(\d+))?")
 RUN_END = re.compile(r"BIDI_RUN_END run=(\d+) status=(\w+) engineTime=(.*)")
 RUN_START = re.compile(r"\bBIDI_RUN_START\s+run=(\d+)\s+direction=(\w+)\s+limit=(-?\d+)(?:\s+timeout=(.*))?")
 BARRIER = re.compile(r"BIDI_BARRIER_END run=(\d+) barrierTime=(.*?) iterationTime=(.*)")
+WRITER_BINDING = re.compile(r"BIDI_STATIC_WRITER_BIND run=(\d+) bindingTime=(.*?) status=(\w+)")
 ANALYSIS_END = re.compile(r"BIDI_ANALYSIS_END run=(\d+) status=(\w+) reason=(\w+) elapsed=(.*)")
 FRONTIER = re.compile(r"\bRun (\d+) \((FORWARD|BACKWARD)\) frontier:")
 ITERATION_FIELDS = ("latest_bidi_iteration", "latest_complete_bidi_iteration",
@@ -139,6 +140,24 @@ def log_evidence(log: str, summary: dict, side: str | None = None, log_available
             iterations.setdefault(int(index), {}).update(
                 run=int(index), barrier_time=elapsed, barrier_seconds=duration_seconds(elapsed),
                 iteration_time=total, iteration_seconds=duration_seconds(total), barrier_line=line)
+        match = WRITER_BINDING.search(line)
+        if match:
+            index, elapsed, binding_status = match.groups()
+            binding_row = iterations.setdefault(int(index), {})
+            binding_row.update(
+                run=int(index), joined_static_binding_time=elapsed,
+                joined_static_binding_seconds=duration_seconds(elapsed),
+                joined_static_binding_status=binding_status, joined_static_binding_line=line)
+            for field, key in (("pruneTime", "static_candidate_prune_seconds"),
+                               ("writerTime", "static_writer_apply_seconds"),
+                               ("closureFreezeTime", "static_closure_freeze_seconds")):
+                value = re.search(r'\b' + field + r'=([\d.]+\s*(?:ns|us|µs|ms|s|m|h|d)(?:\s+[\d.]+\s*(?:ns|us|µs|ms|s|m|h|d))*)', line)
+                if value:
+                    binding_row[key] = duration_seconds(value[1])
+            for field in ("observedCandidates", "lostCandidates", "peakCandidateMemberships"):
+                value = re.search(r'\b' + field + r'=(\d+)', line)
+                if value:
+                    binding_row[field] = int(value[1])
         match = FRONTIER.search(line)
         if match and int(match[1]) > 0 and match[2] == "FORWARD":
             # Frontier.log runs after Support.confirm/report.add. BARRIER_END is

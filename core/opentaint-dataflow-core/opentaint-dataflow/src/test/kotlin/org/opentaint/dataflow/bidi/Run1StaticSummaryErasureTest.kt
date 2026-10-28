@@ -49,7 +49,7 @@ class Run1StaticSummaryErasureTest {
             for (tail in listOf(Tail.EXACT, Tail.ANY, Tail.ANY_TAINT)) Fixture(mode).use { t ->
                 val premise = t.initial(if (exactClass) listOf(t.cls) else t.from,
                     if (exactClass) Tail.EXACT else Tail.STAR)
-                t.actor.promoteStaticSummary(premise, t.value(tail = tail))
+                t.actor.routeStaticResultToExit(premise, t.value(tail = tail))
                 t.assertNoRows()
                 assertTrue(t.actor.staticBatch.supplies.isNotEmpty())
                 val expected = t.actor.staticBatch.supplies.toList()
@@ -67,7 +67,7 @@ class Run1StaticSummaryErasureTest {
             val premise = t.initial(tail = Tail.EXACT)
             val actual = RegionGroups(t.f.pattern(STATIC, t.from, Tail.STAR, MarkSlot.STAR), MarkSet.of(t.input))
             if (supplyFirst) t.service.commit(StaticBatch().apply { supplies += actual })
-            repeat(3) { t.actor.promoteStaticSummary(premise, t.value()) }
+            repeat(3) { t.actor.routeStaticResultToExit(premise, t.value()) }
             assertEquals(1, t.actor.staticBatch.interests.size,
                 "Equal unanswered joins have one complete scalar payload and one interest")
             t.assertNoRows()
@@ -90,7 +90,7 @@ class Run1StaticSummaryErasureTest {
             assertEquals(listOf(MarkSet.of(t.output)), answers.map { it.supply.groups })
             t.assertNoRows()
             assertTrue(t.actor.work(1), "An answered input join has no retained work")
-            t.actor.promoteStaticSummary(premise, t.value())
+            t.actor.routeStaticResultToExit(premise, t.value())
             assertEquals(1, t.actor.staticBatch.interests.size,
                 "The answered join was removed; no completed scalar archive suppresses a new offer")
             t.f.drain(t.actor)
@@ -110,7 +110,8 @@ class Run1StaticSummaryErasureTest {
             val part = Subscription(t.f.store.key("set"),
                 CallerRef(t.actor.key, callerInitial, Layer.DEMAND, t.f.inst(1)), Layer.DEMAND, actual)
             // set(p) { C.target = p; } remains an ordinary nonstatic-to-static callee row.
-            t.actor.promoteStaticSummary(formal, t.value(atom = t.input))
+            t.actor.routeStaticResultToExit(formal, t.value(atom = t.input))
+            t.f.drain(t.actor)
             assertTrue(t.actor.summaries.all().any { it.first == formal })
             assertTrue(t.actor.staticBatch.supplies.isEmpty(), "A hypothetical formal is not a source")
             t.actor.applySummary(part, Publication(formal, t.value(atom = t.input)), 0)
@@ -170,11 +171,13 @@ class Run1StaticSummaryErasureTest {
             t.actor.localServices.conjunction(edge, localInitial,
                 t.f.fact(localPattern.fact.base, mark = localPattern.fact.mark, layer = Layer.DEMAND), t.f.inst(1), emit)
             assertEquals(setOf<PremiseKey>(staticInitial, localInitial), emitted)
+            assertTrue(t.actor.staticBatch.supplies.any { it.groups == MarkSet.of(t.output) })
+            assertTrue(t.actor.summaries.all().none(), "The summary waits for NormalExit")
+            t.f.drain(t.actor)
             assertEquals(setOf(localInitial), t.actor.summaries.all().map { it.first }.toSet())
             assertEquals(setOf(localInitial), t.actor.summaries.demandEdges().map { it.first }.toSet())
-            assertTrue(t.actor.staticBatch.supplies.any { it.groups == MarkSet.of(t.output) })
             assertTrue(t.actor.summaries.all().none { it.first.isZero || it.first is PremiseSet })
-            t.f.drain(t.actor)
+            assertTrue(t.actor.staticGuidanceSeeds.frozenRows().any())
             assertEquals(setOf(localInitial), t.f.publications.flatten().map { it.premise }.toSet())
         }
     }
@@ -246,7 +249,9 @@ class Run1StaticSummaryErasureTest {
             assertTrue(result.analyzers.single { it.key == reader }.summaries.all().none { (original, _) ->
                 original.members.any { it.base == STATIC }
             }, "The local value is not exported as a reader method summary")
-            assertTrue(f.processed.none { it.delta.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.delta.facts.base == STATIC }.all {
+                it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method)
+            }, "Static shortcut work reaches only the normal boundary")
         }
     }
 }

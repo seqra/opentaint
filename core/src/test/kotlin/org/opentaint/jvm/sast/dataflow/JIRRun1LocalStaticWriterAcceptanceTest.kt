@@ -101,7 +101,7 @@ class JIRRun1LocalStaticWriterAcceptanceTest : AnalysisTest() {
             edge.conclusion.value.base == AccessPathBase.ClassStatic && edge.premise.isNotEmpty() &&
                 edge.premise.all { it.base == AccessPathBase.ClassStatic }
         }, "Run-1 retains no static/static row after securing its producer effects")
-        assertEquals(true, f1.outgoingStaticGroupGuidance)
+        assertEquals(true, f1.outgoingStaticCarry)
         assertTrue(f1.initials.none { it.value.base == AccessPathBase.ClassStatic },
             "Run-1 static inputs resume at operations, not at method entry")
         assertTrue(f1.rawSummaries.none { edge -> edge.premise == setOf(zero) &&

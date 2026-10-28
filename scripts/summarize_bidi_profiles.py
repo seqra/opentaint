@@ -13,6 +13,11 @@ from pathlib import Path
 import re
 import subprocess
 
+try:
+    from .compare_bidi_projects import duration_seconds
+except ImportError:
+    from compare_bidi_projects import duration_seconds
+
 
 def ranking(counts, total):
     return [{'frame': name, 'weight': weight, 'percent': round(100 * weight / total, 2) if total else 0}
@@ -95,6 +100,16 @@ def phase_windows(log, day_start, recording_end):
         end = re.search(r'BIDI_RUN_END run=(\d+)', line)
         if start:
             active['run-' + start[1]] = timestamp
+        binding = re.search(r'BIDI_STATIC_WRITER_BIND run=(\d+) bindingTime=(.*?) status=\w+', line)
+        if binding:
+            elapsed = duration_seconds(binding[2])
+            name = 'run-' + binding[1]
+            if elapsed is not None:
+                binding_start = timestamp - elapsed
+                windows[name + '-static-completion'] = (binding_start, timestamp)
+                if name in active:
+                    engine_start = active.pop(name)
+                    windows[name] = (engine_start, max(engine_start, binding_start))
         if end:
             name = 'run-' + end[1]
             if name in active:

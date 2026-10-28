@@ -230,8 +230,9 @@ class ReferenceOperationsTest {
         assertNull(emit(demand, p(listOf(g), Tail.EXACT)))
         assertNull(emit(demand, p(listOf(f), Tail.EXACT, base = y)))
         val excluded = p(emptyList(), Tail.STAR, MarkSlot.STAR, ex(f))
-        assertNull(emit(excluded, p(listOf(f), Tail.EXACT)))
-        assertEquals(excluded, emit(excluded, p(listOf(g), Tail.EXACT)))
+        val normalized = p(emptyList(), Tail.STAR, MarkSlot.STAR)
+        assertEquals(normalized, emit(excluded, p(listOf(f), Tail.EXACT)))
+        assertEquals(normalized, emit(excluded, p(listOf(g), Tail.EXACT)))
     }
 
     @Test
@@ -253,8 +254,9 @@ class ReferenceOperationsTest {
             assertEquals(p(listOf(f), outputTail, exclusion = outputE),
                 emit(p(listOf(f), demandTail, exclusion = demandE), p(listOf(f), addedTail, exclusion = addedE)))
         }
-        assertFails { emit(p(listOf(f), Tail.STAR, exclusion = ex(h)),
-            p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g))) }
+        assertEquals(p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g, h)),
+            emit(p(listOf(f), Tail.STAR, exclusion = ex(h)),
+                p(listOf(f), Tail.ANY_TAINT, exclusion = ex(g))))
     }
 
     @Test
@@ -267,6 +269,26 @@ class ReferenceOperationsTest {
         assertSame(below, emit(demand, below))
         assertNull(emit(p(listOf(f), Tail.STAR, exclusion = ex(g)), below))
         assertNull(emit(p(listOf(f), Tail.EXACT), below))
+    }
+
+    @Test
+    fun `concrete STAR and must inputs rebase ancestor E before a deeper entry meet`() {
+        for (tail in listOf(Tail.STAR, Tail.ANY_TAINT)) {
+            val actual = p(emptyList(), tail, exclusion = ex(f))
+            // E is about the first accessor at x, not at x.g.  In particular x.g.f is allowed.
+            val result = emit(p(listOf(g), Tail.ANY), actual)
+            assertEquals(p(listOf(g), tail), result)
+            assertTrue(covers(requireNotNull(result), p(listOf(g, f), Tail.EXACT)))
+            assertNull(emit(p(listOf(f), Tail.ANY), actual))
+            val withEntryE = emit(p(listOf(g), Tail.STAR, exclusion = ex(h)), actual)
+            assertEquals(p(listOf(g), tail, exclusion = ex(h)), withEntryE)
+            assertTrue(covers(requireNotNull(withEntryE), p(listOf(g, f), Tail.EXACT)))
+            assertFalse(covers(withEntryE, p(listOf(g, h), Tail.EXACT)))
+            // Same-path intersection still reads the actual E; descent does not mutate it.
+            assertEquals(p(emptyList(), tail, exclusion = ex(f, h)),
+                emit(p(emptyList(), Tail.STAR, exclusion = ex(h)), actual))
+            assertEquals(ex(f), actual.exclusion)
+        }
     }
 
     @Test

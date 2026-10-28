@@ -101,6 +101,27 @@ class CalleeSubscriptions(private val ops: ApOps, private val statistics: N2Stat
         }
     }
 
+    /** The manager calls this only after all runner jobs join, before clear().
+     * No caller input can grow, so visit one current value at a time without a
+     * second Facts snapshot directory. Candidate indexes are the live protocol's. */
+    internal fun visitJoinedCandidates(pub: Publication, mode: ApMode, visit: (Subscription) -> Unit) {
+        check(mode.run1 && pub.premise is InitialAp) { "Joined writer binding is a run-1 singleton operation" }
+        check(!visitingQuestion) { "A joined borrow cannot overlap a live request visit" }
+        val initial = pub.premise
+        val ids = LinkedHashSet<Int>()
+        ids += index.lookupExtensions(initial.base, initial.pathData)
+        ids += index.lookupPrefixes(initial.base, initial.pathData)
+        for (id in ids) {
+            ops.manager.cancellation.checkpoint()
+            val value = values.snapshot(id)
+            visit(Subscription(callees[id], value.ref, value.group.layer, value.facts))
+        }
+        if (initial.isZero) for (part in zeroParts.values) {
+            ops.manager.cancellation.checkpoint()
+            visit(part)
+        }
+    }
+
     /** A genuine run-1 ZERO control port is a view of the existing caller input. */
     internal fun staticControlCandidates(): List<Subscription> {
         ops.manager.cancellation.checkpoint()

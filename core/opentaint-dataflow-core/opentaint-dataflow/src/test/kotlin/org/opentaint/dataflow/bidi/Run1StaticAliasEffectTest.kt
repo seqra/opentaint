@@ -6,6 +6,7 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
+import org.opentaint.dataflow.bidi.store.CallerRef
 import kotlin.test.*
 
 /** Real actor protocol for the value-only descriptors supplied by JVM alias lowering. */
@@ -25,7 +26,7 @@ class Run1StaticAliasEffectTest {
             .filterIsInstance<StaticOwnerEffect.PointReady>().filter { it.id == Long.MAX_VALUE }.map { it.supply }
     }
 
-    @Test fun `local alias value preserves its conditional original and only ZERO supply grounds a group`() {
+    @Test fun `executed local alias supplies its mark and preserves the actual original`() {
         for (rooted in listOf(false, true)) MethodAnalysisFixtures().use { f ->
             val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
             val field = f.field("f")
@@ -43,18 +44,27 @@ class Run1StaticAliasEffectTest {
                 staticOperation(StaticOperation.Write(id(f, 1), Pattern(valueEdge.to, ExclusionSet.Empty), valueEdge))
             }.build())
             val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
-            actor.addInitial(initial)
+            if (rooted) actor.addInitial(initial) else {
+                // Production concretization: a committed request and an actual
+                // marked caller input admit the concrete nonstatic initial.
+                val flow = f.manager.initial(argument, null, Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)
+                actor.addMarkRequest(flow, (input.fact.mark as MarkSlot.Concrete).mark)
+                f.drain(actor)
+                val actual = f.manager.factsOf(input.fact, input.exclusion, Layer.DEMAND)
+                actor.addLink(CallerRef(f.store.key("actual caller"), f.manager.zero, Layer.DEMAND, f.inst(0)),
+                    actual.layer, actual)
+            }
             f.drain(actor)
-            val raw = actor.summaries.all().filter { it.second.base == STATIC }.toList()
+            val raw = actor.summaries.all().filter { it.second.base == STATIC && it.second is TaintTree }.toList()
             assertTrue(raw.isNotEmpty())
-            assertTrue(raw.all { it.first === initial }, "An alias does not reset a hypothetical original to ZERO")
+            assertTrue(raw.all { it.first === initial }, "An alias does not reset its admitted actual original to ZERO")
             assertTrue(raw.all { it.second is TaintTree && it.second.layer == Layer.DEMAND })
             assertEquals(setOf(target), raw.flatMap { f.ops.leaves(it.second).map { leaf -> leaf.fact.path }.toList() }.toSet())
-            assertEquals(rooted, pool(f, actor, target).isNotEmpty(),
-                "Only an actual ZERO-derived value supplies the global group pool")
+            assertTrue(pool(f, actor, target).isNotEmpty(),
+                "Each executed concrete alias write supplies its actual output mark")
             assertEquals(0, checkNotNull(actor.runnerPort.staticService).statistics().readDescriptors,
                 "An alias value publication does not register a static read")
-            assertTrue(f.processed.none { it.facts.base == STATIC }, "The effect leaves ordinary successor propagation")
+            assertTrue(f.processed.filter { it.facts.base == STATIC }.all { it.node === f.inst(f.normalExit) }, "The effect leaves ordinary successor propagation")
         }
     }
 
@@ -86,15 +96,24 @@ class Run1StaticAliasEffectTest {
             f.call(1, CallPlan(setOf(local), stages, emptyList(), CallPoint.BEFORE, CallPoint.AFTER))
             val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices),
                 callFactory = MethodCallServicesFactory(::RunMethodCallServices))
-            actor.addInitial(initial)
+            if (rooted) actor.addInitial(initial) else {
+                // Production concretization: a committed request and an actual
+                // marked caller input admit the concrete nonstatic initial.
+                val flow = f.manager.initial(argument, null, Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)
+                actor.addMarkRequest(flow, (input.fact.mark as MarkSlot.Concrete).mark)
+                f.drain(actor)
+                val actual = f.manager.factsOf(input.fact, input.exclusion, Layer.DEMAND)
+                actor.addLink(CallerRef(f.store.key("actual caller"), f.manager.zero, Layer.DEMAND, f.inst(0)),
+                    actual.layer, actual)
+            }
             f.drain(actor)
-            val raw = actor.summaries.all().filter { it.second.base == STATIC }.toList()
+            val raw = actor.summaries.all().filter { it.second.base == STATIC && it.second is TaintTree }.toList()
             assertTrue(raw.isNotEmpty())
             assertTrue(raw.all { it.first === initial && it.second.layer == Layer.DEMAND })
             assertEquals(setOf(target), raw.flatMap { f.ops.leaves(it.second).map { leaf -> leaf.fact.path }.toList() }.toSet())
-            assertEquals(rooted, pool(f, actor, target).isNotEmpty())
+            assertTrue(pool(f, actor, target).isNotEmpty())
             assertEquals(0, checkNotNull(actor.runnerPort.staticService).statistics().readDescriptors)
-            assertTrue(f.processed.none { it.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.facts.base == STATIC }.all { it.node === f.inst(f.normalExit) })
         }
     }
 

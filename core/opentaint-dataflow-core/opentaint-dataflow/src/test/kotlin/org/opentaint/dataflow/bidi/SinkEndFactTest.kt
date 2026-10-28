@@ -289,7 +289,7 @@ class SinkEndFactTest {
             val sink = localSink(listOf(answer.toPattern()), listOf(MicroEdge.of(PathEdge(ZERO_FACT, target, ExclusionSet.Empty))))
             f.exitRules(2, ExitRules(localRules(listOf(sink)), false, emptySet()))
             val demand = if (index == 1) null else DemandStore.Builder(f.manager).apply {
-                add(f.key, DemandPattern(f.pattern(argument, tail = Tail.ANY, mark = MarkSlot.STAR),
+                add(f.key, DemandPattern(f.pattern(argument, tail = Tail.ANY, mark = t),
                     f.pattern(argument, tail = Tail.ANY, mark = MarkSlot.STAR)))
             }.build()
             val core = f.core(index = index, L = if (index == 1) 1 else 2, demand = demand,
@@ -310,7 +310,7 @@ class SinkEndFactTest {
                 assertEquals(setOf(Conclusion(answer.toPattern().fact, ExclusionSet.Empty, true)),
                     methodLeaves(f.ops, listOf(witness.edges.single().facts)))
             } else {
-                assertEquals(setOf(answer), core.initials.all().toSet(), "The actual strong query carries T")
+                assertEquals(setOf(answer), core.initials.all().toSet(), "The matching concrete demand carries T")
                 assertTrue(f.processed.none { it.facts is FlowTree })
                 assertEquals(setOf(answer to Conclusion(answer.toPattern().fact, ExclusionSet.Empty, false)),
                     methodEntries(f.ops, core.summaries.all()))

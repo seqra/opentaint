@@ -130,9 +130,9 @@ fun recordLeafIdentity(v: RecordLeafView): Boolean = !v.result.demand && v.premi
 
 
 fun meet(a: Pattern, d: Pattern): Pair<Tail, ExclusionSet> {
-    // a STAR/E pattern is backward only; the backward run has no [any-taint] (W8 (d)): the cell does not occur
-    check(!(a.fact.tail == Tail.ANY_TAINT && d.fact.tail == Tail.STAR))
     return when {
+        a.fact.tail == Tail.ANY_TAINT && d.fact.tail == Tail.STAR ->
+            Tail.ANY_TAINT to a.exclusion.union(d.exclusion)
         a.fact.tail.isAny && d.fact.tail.isAny -> a.fact.tail to a.exclusion
         a.fact.tail.isAny -> d.fact.tail to d.exclusion
         d.fact.tail.isAny -> a.fact.tail to a.exclusion
@@ -141,10 +141,17 @@ fun meet(a: Pattern, d: Pattern): Pair<Tail, ExclusionSet> {
     }
 }
 
+/** Demand-only widening. Actual facts, native records and concrete demand retain field E. */
+fun normalizeDemandFieldExclusion(pattern: Pattern): Pattern =
+    if (pattern.fact.mark is MarkSlot.Star && pattern.fact.tail == Tail.STAR &&
+        pattern.exclusion != ExclusionSet.Empty) pattern.copy(exclusion = ExclusionSet.Empty)
+    else pattern
+
 fun emit(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
-    if (d.fact.mark == MarkSlot.STAR)
-        return if (overlap(d, a)) flowForm(d) else null
-    return commonPart(d, a, catalog)
+    val entry = normalizeDemandFieldExclusion(d)
+    if (entry.fact.mark == MarkSlot.STAR)
+        return if (overlap(entry, a)) flowForm(entry) else null
+    return commonPart(entry, a, catalog)
 }
 
 fun flowForm(d: Pattern): Pattern {
@@ -168,10 +175,11 @@ fun commonPart(d: Pattern, a: Pattern, catalog: MarkTable? = null): Pattern? {
             Pattern(a.fact.copy(tail = tail), excl)
         }
         p.startsWith(q) ->                                    // above: the demand chain, the meet of the tails
-            if (a.tailAdmits(p.drop(q.size))) {      // a concrete `a` has an any tail here (W2); reads E of `[any-taint]/E`
-                val (tail, excl) = meet(a, d)
-                Pattern(d.fact.copy(tail = tail, mark = a.fact.mark),
-                    if (tail.isAny) ExclusionSet.Empty else excl)    // every location below the chain is admitted
+            if (a.tailAdmits(p.drop(q.size))) {
+                // E excludes first accessors at q. After the admitted descent to p it has no effect there.
+                // Keep the demand's own E at p, including the MUST/STAR and correlated STAR cells.
+                val (tail, excl) = meet(a.copy(exclusion = ExclusionSet.Empty), d)
+                Pattern(d.fact.copy(tail = tail, mark = a.fact.mark), excl)
             } else null
         else -> null
     }
@@ -191,7 +199,10 @@ fun insideLoc(j: Pattern, d: Pattern): Boolean {
     return covers(d.copy(fact = d.fact.copy(mark = star)), j.copy(fact = j.fact.copy(mark = star)))
 }
 
-fun insideDemand(j: Pattern, d: Pattern, catalog: MarkTable? = null): Boolean = insideLoc(j, d) && markSub(d.fact.mark, j.fact.mark, catalog)
+fun insideDemand(j: Pattern, d: Pattern, catalog: MarkTable? = null): Boolean {
+    val entry = normalizeDemandFieldExclusion(d)
+    return insideLoc(j, entry) && markSub(entry.fact.mark, j.fact.mark, catalog)
+}
 
 fun marksMeet(dp: MarkSlot, c: MarkSlot, catalog: MarkTable? = null): Boolean = when {
     dp is MarkSlot.Concrete && c is MarkSlot.Concrete -> (catalog?.let { it.coversAtom(dp.mark, c.mark) || it.coversAtom(c.mark, dp.mark) } ?: (dp.mark == c.mark))
@@ -208,7 +219,7 @@ fun meetConclusion(sc: Conclusion, dp: Pattern): Conclusion = when {
 }
 
 fun restrict(sp: Pattern, sc: Conclusion, d: DemandPattern, catalog: MarkTable? = null): Conclusion? {
-    val dp = d.exit ?: return null                           // the demand does not reach the exit
+    val dp = normalizeDemandFieldExclusion(d.exit ?: return null) // the demand does not reach the exit
     if (!insideDemand(sp, d.entry, catalog)) return null              // the premise lies inside D-c: locations (reads Ej, §3.4)
                                                              // and marks
     if (!marksMeet(dp.fact.mark, sc.fact.mark, catalog)) return null  // the mark of the conclusion meets the mark of D-p

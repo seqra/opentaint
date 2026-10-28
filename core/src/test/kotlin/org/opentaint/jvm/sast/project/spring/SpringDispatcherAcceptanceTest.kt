@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test
 import org.opentaint.common.sast.dataflow.TaintAnalyzer
 import org.opentaint.common.sast.dataflow.TaintAnalyzerOptions
 import org.opentaint.dataflow.ap.ifds.MethodWithContext
+import org.opentaint.dataflow.ap.ifds.ResolvedPrescanGraph
+import org.opentaint.dataflow.bidi.ap.RawMarkDeclarations
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisManager
 import org.opentaint.dataflow.ap.ifds.TaintAnalysisUnitRunnerManager
 import org.opentaint.dataflow.ap.ifds.access.ApMode
@@ -73,7 +75,7 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
         // Construction is forced before analysis so the actual generated root is on the extended classpath.
         val dispatch = root
         JIRTaintAnalyzer(cp, provider(), projects, options(), analysisUnit = units,
-            bidiPolicy = FixedLimits(listOf(1, 2, 3))).use { analyzer ->
+            bidiPolicy = FixedLimits(listOf(1, 1, 2))).use { analyzer ->
             assertIs<JIRBidiAnalysis>(analyzer.bidiEntry())
             val (output, status) = analyzer.analyzeWithIfds(listOf(dispatch))
             assertEquals(TaintAnalysisUnitRunnerManager.Status.OK, status.analysisStatus)
@@ -89,7 +91,7 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
     }
 
     @Test
-    fun `real joined prescan and driver confirm the exact controller sink keys without an outside finding`(): Unit {
+    fun `real joined prescan and driver retain the exact controller sink keys without an outside finding`(): Unit {
         val dispatch = root
         val graph = runBlocking { JApplicationSingleExitGraph(JApplicationGraphImpl(cp, cp.usagesExt())) }
         val rules = provider()
@@ -100,10 +102,12 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
             override fun analysisManager() = JIRAnalysisManager(cp, refManager, rules, params = params)
             override fun unitResolver() = units
             override fun bidiEntry(): BidiEntry {
-                val actual = JIRBidiAnalysis(cp, graph, units, rules, params, FixedLimits(listOf(1, 2, 3)), refManager)
+                val actual = JIRBidiAnalysis(cp, graph, units, rules, params, FixedLimits(listOf(1, 1, 2)), refManager)
                 return object : BidiEntry {
                     override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>) =
-                        actual.gather(manager, startMethods)
+                        error("The real joined prescan graph must be supplied")
+                    override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>, graph: ResolvedPrescanGraph) =
+                        actual.gather(manager, startMethods, graph)
                     override fun run(budget: Duration): Report = actual.run(budget).also { report = it }
                     override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> = actual.toVulnerabilities(report)
                     override fun status(report: Report) = actual.status(report)
@@ -116,8 +120,9 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
             assertEquals(EXPECTED, output.map { it.vulnerability.ruleId }.toSet())
             val completed = assertNotNull(report)
             assertEquals(EXPECTED, completed.entries.map { it.key.rule.id }.toSet())
-            assertTrue(completed.entries.all { it.state == ReportState.CONFIRMED })
-            assertTrue(completed.entries.all { e -> e.witnesses.any { it.confirmed } })
+            assertTrue(completed.entries.all { it.state == ReportState.DEMAND },
+                "The selected minimal policy retains candidates without a completed trace proof")
+            assertTrue(completed.entries.all { e -> e.witnesses.any { !it.confirmed } })
             assertTrue(completed.entries.none { it.key.rule.id == "outside" })
             assertTrue(analyzer.ifdsEngine.allUnits().isEmpty())
             assertFailsWith<IllegalStateException> { analyzer.ifdsEngine.apManager }
@@ -149,6 +154,7 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
     private fun provider(): TaintRulesProvider {
         val mark = TaintMark("Spring dispatcher T")
         val delegate = object : TaintRulesProvider by AcceptanceEmptyRules {
+            override val markDeclarations = RawMarkDeclarations(setOf(mark.name), emptyMap(), emptyMap())
             override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) =
                 if (method == store) listOf(TaintEntryPointSource(method, mkTrue(), listOf(AssignMark(mark, Argument(0))),
                     null, "controller-entry")) else emptyList()
@@ -182,6 +188,7 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
 }
 
 private object AcceptanceEmptyRules : TaintRulesProvider {
+    override val markDeclarations = RawMarkDeclarations.EMPTY
     override fun entryPointRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = emptyList<TaintEntryPointSource>()
     override fun sourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = emptyList<TaintMethodSource>()
     override fun exitSourceRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = emptyList<TaintMethodExitSource>()

@@ -139,7 +139,15 @@ class DemandSelectionTest {
         val demand = DemandPattern(p(emptyList(), Tail.ANY), p(listOf(f), Tail.STAR, exclusion = ex(h), base = y))
         assertNull(ops.demandPart(single, normal, Direction.FORWARD))
         val narrowed = ops.restrict(single, normal, demand)
-        assertEquals(setOf(ex(h), ex(g, h)), narrowed.map { (it as TaintTree).exclusion }.toSet())
+        assertEquals(setOf(empty, ex(g)), narrowed.map { (it as TaintTree).exclusion }.toSet(),
+            "An abstract STAR exit demand ignores its field exclusion; raw result E remains")
+        val concreteDemand = DemandPattern(demand.entry,
+            p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(h), base = y))
+        assertEquals(setOf(ex(h), ex(g, h)),
+            ops.restrict(single, normal, concreteDemand).map { (it as TaintTree).exclusion }.toSet(),
+            "A concrete STAR exit keeps its exclusion and the original E meet")
+        assertEquals(ex(g), normal.exclusion)
+        assertEquals(ex(g), single.exclusion)
         for (piece in narrowed) {
             assertEquals(Layer.NORMAL, piece.layer)
             assertNull(ops.demandPart(single, piece, Direction.FORWARD))

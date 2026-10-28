@@ -39,7 +39,6 @@ class NaiveClosure(
     private val inputs = rawInputs ?: program.inputs(config)
     private val groups = if (selected && config.run1) GroupedScalarMarks(program.manager.marks) else null
     private val reached = LinkedHashSet<MethodKey>()
-    private val currentStarts = LinkedHashMap<MethodKey, MutableSet<Pattern>>()
     private val admittedRequests = LinkedHashMap<MethodKey, MutableMap<Pattern, MutableSet<TaintMark>>>()
     private val forward = config.direction == Direction.FORWARD
     private val zero = setOf(ZERO_PATTERN)
@@ -274,10 +273,13 @@ class NaiveClosure(
     }
 
     private fun publish(method: MethodKey, premise: Set<Pattern>, conclusion: Conclusion) {
-        val selected = (this.selected && config.run1) || conclusion.demand || premise.size > 1 || (!forward && isZero(premise))
-        val pieces = if (config.run1 || (!forward && isZero(premise)) || (this.selected && permitted(method, premise))) setOf(conclusion) else buildSet {
-            for (member in premise) for ((target, demand) in inputs.demand) if (target == method)
-                restrict(member, conclusion, demand)?.let { add(it) }
+        val selected = conclusion.demand || premise.size > 1 || (!forward && isZero(premise))
+        val pieces = if (config.run1 || (!forward && isZero(premise))) setOf(conclusion) else buildSet {
+            for (member in premise) {
+                val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(member))
+                for (demand in guides)
+                    restrict(member, conclusion, demand, if (this@NaiveClosure.selected) program.manager.marks else null)?.let { add(it) }
+            }
         }
         for (piece in pieces) {
             val pub = ObservedEdge(method, premise, piece)
@@ -550,33 +552,26 @@ class NaiveClosure(
         // identity summaries. Static permission is a later shared demand view.
         admittedRequests[method] = linkedMapOf()
     }
-    private fun permitted(method: MethodKey, premise: Set<Pattern>): Boolean {
-        val starts = currentStarts[method].orEmpty()
-        return if (isZero(premise)) starts.isNotEmpty() else premise.all { it in starts }
-    }
+    /** Selected original AP protocol: input intersects fixed demand; there is no actual-query authority. */
     private fun admitCurrent(method: MethodKey, actual: Pattern) {
+        if (actual.fact.base == AccessPathBase.Zero) {
+            addInitial(method, ZERO_PATTERN)
+            return
+        }
         val input = limit(normalize(actual.fact, actual.exclusion, demand = actual.fact.tail == Tail.ANY), config.fieldLimit)
         val leaf = Pattern(input.fact, input.exclusion)
-        val initial = if (leaf.fact.base == org.opentaint.dataflow.ap.ifds.AccessPathBase.Zero) ZERO_PATTERN else {
-            val query = Pattern(leaf.fact.copy(
-                tail = if (leaf.fact.tail == Tail.STAR || leaf.fact.tail == Tail.ANY_TAINT) Tail.ANY else leaf.fact.tail,
-                mark = if (leaf.fact.mark is MarkSlot.Star) MarkSlot.STAR else leaf.fact.mark),
-                if (leaf.fact.tail == Tail.EXACT) leaf.exclusion else ExclusionSet.Empty)
-            emit(query, leaf) ?: return
-        }
-        val candidates = linkedSetOf(initial)
-        // Guides may refine the actual concrete query; they never start FLOW.
-        for ((owner, guide) in inputs.demand) if (owner == method && guide.entry.fact.mark is MarkSlot.Concrete)
-            emit(guide.entry, leaf)?.let { answer ->
-                val bounded = limit(normalize(answer.fact, answer.exclusion, answer.fact.tail == Tail.ANY), config.fieldLimit)
-                candidates += Pattern(bounded.fact, bounded.exclusion)
-            }
-        val admitted = currentStarts.getOrPut(method) { linkedSetOf() }
-        val fresh = candidates.filter { admitted.add(it) }
-        if (fresh.isEmpty()) return
-        for (raw in rawSummaries.toList()) if (raw.method == method && permitted(method, raw.premise))
-            publish(method, raw.premise, raw.conclusion)
-        fresh.forEach { addInitial(method, it) }
+        val guides = inputs.demand.filter { it.first == method }.map { it.second } + listOfNotNull(staticCarry(leaf))
+        for (guide in guides)
+            emit(guide.entry, leaf, program.manager.marks)?.let { addInitial(method, it) }
+    }
+    /** A family is instantiated at this actual slot; a root probe is never a stored universal pair. */
+    private fun staticCarry(actual: Pattern): DemandPattern? {
+        if (!selected || !inputs.hasSharedStaticCarry || actual.fact.base != STATIC) return null
+        val located = if (actual.fact.tail == Tail.ANY_TAINT)
+            Pattern(actual.fact.copy(tail = Tail.ANY), ExclusionSet.Empty) else actual
+        val pattern = if (located.fact.mark is MarkSlot.Star)
+            located.copy(fact = located.fact.copy(mark = MarkSlot.STAR)) else located
+        return DemandPattern(pattern, pattern)
     }
     private fun origin(premise: Set<Pattern>): Pattern? {
         val p = premise.singleOrNull() ?: return null

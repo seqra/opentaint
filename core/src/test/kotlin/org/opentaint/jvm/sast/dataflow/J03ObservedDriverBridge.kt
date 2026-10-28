@@ -212,7 +212,7 @@ class J03ObservedDriverBridge {
             seedSnapshot(config.seeds), outgoing?.let { seedSnapshot(it.seeds) }, ownMap(counters),
             counters.values.sumOf { it.steps }, counters.values.sumOf { it.edgeDeltas },
             joined.result.demandLayerEdges, joined.result.recordCrossings, counters.values.sumOf { it.triggerSeeds },
-            ownSet(counters.filterValues { it.nonZeroInitial }.keys), ownMap(declaredGroups), outgoing?.demand?.let { field(it, "staticGroupsEnabled") as Boolean })
+            ownSet(counters.filterValues { it.nonZeroInitial }.keys), ownMap(declaredGroups), outgoing?.demand?.hasSharedStaticCarry)
     }
 
     private fun edges(ops: ApOps, key: MethodKey, premise: PremiseKey, facts: Facts,
