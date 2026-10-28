@@ -25,42 +25,47 @@ class GoDiscoveryTest(unittest.TestCase):
                         if p.is_file() and "__pycache__" not in p.parts}
             self.assertEqual(actual, expected, "checked-in skills differ from templates")
 
-            # The layout of a portable model: the Go project is copied under the model dir
-            # and `projectDir` is relative to it, as for the JVM `moduleClasses`.
-            project = root / "project"
-            source = ".opentaint/project/go_0/"
-            files = {
-                source + "go.mod": "module example.com/app\n\ngo 1.25.0\n",
-                source + "lib/lib.go": "package lib\nfunc Direct(string) {}\n"
-                                       "func Assigned(string) {}\nfunc Unused(string) {}\n"
-                                       "type Worker struct{}\nfunc (*Worker) Bound(string) {}\n",
-                source + "app.go": 'package app\nimport "example.com/app/lib"\n'
-                                   'func use(w *lib.Worker) {\n lib.Direct("value")\n'
-                                   ' get := lib.Assigned\n get("value")\n'
-                                   ' bound := w.Bound\n bound("value")\n}\n',
-                ".opentaint/tracking/state.yaml": "language: go\n",
-                ".opentaint/tracking/coverage.yaml": "packages: [example.com/app/lib]\n",
-                ".opentaint/tracking/rules/classification.yaml":
-                    "safe: [example.com/app/lib.Directargs:1]\n",
-                ".opentaint/project/project.yaml": "goProjects:\n  - projectDir: go_0\n",
-            }
-            for name, content in files.items():
-                path = project / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text(content)
-            for skill in ("appsec-agent", "orchestrate-stage"):
-                subprocess.run([sys.executable, str(generated / skill / "scripts/generate.py"),
-                                "partition", "discover"], cwd=project, check=True,
-                               capture_output=True, text=True)
-                plans = list((project / ".opentaint/tracking/rules/plans").glob("*.yaml"))
-                self.assertEqual(len(plans), 1)
-                plan = yaml.safe_load(plans[0].read_text())
-                self.assertIsNone(plan["source"])
-                rows = [row for scope in plan["scopes"].values() for row in scope]
-                self.assertEqual(rows, [
-                    {"method": "(*example.com/app/lib.Worker).Bound", "signature": "args:1"},
-                    {"method": "example.com/app/lib.Assigned", "signature": "args:1"},
-                ])
+            # A portable model copies the Go project under the model dir and writes `projectDir`
+            # relative to it, as for the JVM `moduleClasses`; `opentaint compile` writes it absolute.
+            for portable in (True, False):
+                with self.subTest(portable=portable):
+                    self._discover(generated, root / f"project-{portable}", portable)
+
+    def _discover(self, generated, project, portable):
+        source = ".opentaint/project/go_0/"
+        files = {
+            source + "go.mod": "module example.com/app\n\ngo 1.25.0\n",
+            source + "lib/lib.go": "package lib\nfunc Direct(string) {}\n"
+                                   "func Assigned(string) {}\nfunc Unused(string) {}\n"
+                                   "type Worker struct{}\nfunc (*Worker) Bound(string) {}\n",
+            source + "app.go": 'package app\nimport "example.com/app/lib"\n'
+                               'func use(w *lib.Worker) {\n lib.Direct("value")\n'
+                               ' get := lib.Assigned\n get("value")\n'
+                               ' bound := w.Bound\n bound("value")\n}\n',
+            ".opentaint/tracking/state.yaml": "language: go\n",
+            ".opentaint/tracking/coverage.yaml": "packages: [example.com/app/lib]\n",
+            ".opentaint/tracking/rules/classification.yaml":
+                "safe: [example.com/app/lib.Directargs:1]\n",
+        }
+        project_dir = "go_0" if portable else str(project / ".opentaint/project/go_0")
+        files[".opentaint/project/project.yaml"] = f"goProjects:\n  - projectDir: {project_dir}\n"
+        for name, content in files.items():
+            path = project / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(content)
+        for skill in ("appsec-agent", "orchestrate-stage"):
+            subprocess.run([sys.executable, str(generated / skill / "scripts/generate.py"),
+                            "partition", "discover"], cwd=project, check=True,
+                           capture_output=True, text=True)
+            plans = list((project / ".opentaint/tracking/rules/plans").glob("*.yaml"))
+            self.assertEqual(len(plans), 1)
+            plan = yaml.safe_load(plans[0].read_text())
+            self.assertIsNone(plan["source"])
+            rows = [row for scope in plan["scopes"].values() for row in scope]
+            self.assertEqual(rows, [
+                {"method": "(*example.com/app/lib.Worker).Bound", "signature": "args:1"},
+                {"method": "example.com/app/lib.Assigned", "signature": "args:1"},
+            ])
 
 
 if __name__ == "__main__":

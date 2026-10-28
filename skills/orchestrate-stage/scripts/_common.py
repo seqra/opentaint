@@ -125,11 +125,10 @@ def strip_quotes(s):
 def fqn_base(s):
     """The method fqn without its signature/params — `a.b.C#m`."""
     s = strip_quotes(s)
-    # A Go method starts with its receiver, for example
-    # `(*example.com/lib.Type).Method`. The first parenthesis is part of
-    # the name, not an appended signature.
-    if s.startswith("("):
-        return s
+    # A Go name (no `#`) carries no appended signature: its parentheses belong to the name, as
+    # in a method `(*example.com/lib.Type).Method` or an instance `lib.Map[func(int) string]`.
+    if "#" not in s:
+        return s.strip()
     i = s.find("(")
     return (s[:i] if i != -1 else s).strip()
 
@@ -150,26 +149,47 @@ def member_key(item):
     return strip_quotes(item)
 
 
-def class_of(fqn):
-    base = fqn_base(fqn)
-    if "#" in base:
-        return base.split("#", 1)[0].strip()
+def _strip_type_args(name):
+    """`pkg.Box[string]` -> `pkg.Box`: drop each bracketed type-argument list of a Go name."""
+    out, depth = [], 0
+    for ch in name:
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+        elif depth == 0:
+            out.append(ch)
+    return "".join(out)
+
+
+def _go_owner(base):
+    """(owner, package) of a Go name: a method `(*import/path.Type).M` is owned by its
+    `import/path.Type`, a function `import/path.F` by its package. Type arguments are dropped."""
+    base = _strip_type_args(base)
     if base.startswith("("):
         end = base.find(").")
-        if end != -1:
-            return base[1:end].lstrip("*").strip()
-    # A Go package function has the form `import/path.Function`.
-    if "/" in base and "." in base:
-        return base.rsplit(".", 1)[0]
-    return base.strip()
+        owner = base[1:end].lstrip("*").strip() if end != -1 else base
+        return owner, owner.rsplit(".", 1)[0] if "." in owner else owner
+    package = base.rsplit(".", 1)[0] if "." in base else base
+    return package, package
+
+
+def is_go_name(fqn):
+    # a JVM member is always `owner#member`; a Go function or method never has a `#`
+    return "#" not in strip_quotes(fqn)
+
+
+def class_of(fqn):
+    base = fqn_base(fqn)
+    if is_go_name(fqn):
+        return _go_owner(base)[0]
+    return base.split("#", 1)[0].strip()
 
 
 def package_of(fqn):
+    if is_go_name(fqn):
+        return _go_owner(fqn_base(fqn))[1]
     cls = class_of(fqn)
-    if fqn_base(fqn).startswith("("):
-        return cls.rsplit(".", 1)[0] if "." in cls else cls
-    if "/" in cls:
-        return cls
     return cls.rsplit(".", 1)[0] if "." in cls else ""
 
 

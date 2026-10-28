@@ -31,7 +31,7 @@ from _common import (APPROX, DATAFLOW, DROPPED,
                      FINDINGS_TR, MODEL, PASS_THROUGH, RESULTS, RULES, RULES_TR,
                      SARIF, SINKS_TR, SOURCES_TR, TAGS, TRACKING,
                      builtin_rules_root, class_of, classified_keys,
-                     collect_lib_tags, dropped_entries, dump_yaml, fqn_base,
+                     collect_lib_tags, dropped_entries, dump_yaml, fqn_base, is_go_name,
                      git_head, ledger_verdicted_keys, load_yaml, member_key,
                      package_of, strip_quotes)
 
@@ -113,10 +113,14 @@ def regen_plans(out_dir):
 # ---- partition: shared bin-packing ----
 
 def root_of(fqn, depth=ROOT_DEPTH):
+    # JVM: the first dotted segments of the class (`com.google`); Go: the first import-path
+    # segments of the package (`net/http`, `github.com/acme`, `fmt`)
+    if is_go_name(fqn):
+        segs = package_of(fqn).split("/")
+        return "/".join(segs[:depth])
     cls = class_of(fqn)
-    separator = "/" if "/" in cls else "."
-    segs = cls.split(separator)
-    return separator.join(segs[:depth]) if len(segs) >= depth else cls
+    segs = cls.split(".")
+    return ".".join(segs[:depth]) if len(segs) >= depth else cls
 
 
 def in_packages(cls, prefixes):
@@ -286,7 +290,8 @@ def yaml_modules(model_yaml):
 
 
 def yaml_go_projects(model_yaml):
-    # each goProjects entry's projectDir; like moduleClasses it is relative to the model dir
+    # each goProjects entry's projectDir: absolute from `opentaint compile`, relative to the model
+    # dir in a portable model (`go_0`), as the engine resolves it
     doc = load_yaml(model_yaml, {}) or {}
     return [str(p["projectDir"]) for p in (doc.get("goProjects") or [])
             if isinstance(p, dict) and p.get("projectDir")]
@@ -338,19 +343,22 @@ def extract_jvm_usages():
 
 def extract_go_usages():
     # build the SSA form of each Go project (the form the engine reads) and collect the static
-    # callee of every call site with its `args:<count>` arity, named as the engine names it
+    # callee of every call site with its `args:<count>` arity, named as the engine names it.
+    # A project that cannot be read stops discovery: an empty result would read as "all done".
     helper = Path(__file__).resolve().parent / "go-usage"
     fqns = set()
     for entry in yaml_go_projects(MODEL / "project.yaml"):
         p = MODEL / entry
         if not p.is_dir():
-            continue
+            raise SystemExit(f"Go project directory not found: {p}")
         try:
-            out = subprocess.run(["go", "run", ".", "--dir", str(p.resolve())], cwd=helper,
-                                 stdout=subprocess.PIPE, text=True).stdout
-        except OSError:
-            continue
-        for row in json.loads(out or "[]"):
+            result = subprocess.run(["go", "run", ".", "--dir", str(p.resolve())], cwd=helper,
+                                    stdout=subprocess.PIPE, text=True)
+        except OSError as error:
+            raise SystemExit(f"cannot run the Go usage extractor: {error}") from error
+        if result.returncode != 0:
+            raise SystemExit(f"Go usage extraction failed for {p} (see the errors above)")
+        for row in json.loads(result.stdout or "[]"):
             fqns.add((row["method"], row["signature"]))
     return fqns
 
