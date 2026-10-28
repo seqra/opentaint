@@ -1,12 +1,14 @@
 # create-test-project — Go approximation test project
 
-Go test projects are source modules. The CLI's `test approximation init` scaffold and `test approximation run` bundled rule currently use Java `Taint` markers and `languages: [java]`. Their `--go-models` flag does not supply a Go harness. Create the module and explicit Go harness below, then use `test rule run` to verify the models.
+Language reference for a `dataflow` type, keyed to the body's steps.
 
-## Scaffold the sample module
+## Workflow
 
-Create `.opentaint/test-projects/<name>/go.mod` with `module test` and the target application's Go version. Pin each batch dependency at the target application's exact version, including any local `replace` directives. Write ordinary `.go` sample files so the Go project loader includes them; use `go build ./...` from this module to check types and dependency resolution.
+### 1. Scaffold the project
 
-Create `util/taint.go`:
+`opentaint test approximation init` scaffolds Java only, so write the Go project at `.opentaint/test-projects/<name>` by hand: a `go.mod` with `module test` and the app's Go version, the generic marker, and the fixed rule the samples run against. Require each lib at its exact version from the app's `go.mod` verbatim — including pseudo-versions and local `replace` directives — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
+
+`util/taint.go` — the generic marker:
 
 ```go
 package util
@@ -15,9 +17,7 @@ func Source() string { return "" }
 func Sink(string) {}
 ```
 
-The rule marks the `Source` return as tainted; the marker does not simulate runtime input. Adapt the marker types when the modeled callable takes or returns another type.
-
-Create `test-rules/go/approximation.yaml`:
+`test-rules/go/approximation.yaml` — the fixed rule, routing `util.Source()` to `util.Sink(...)`:
 
 ```yaml
 rules:
@@ -41,47 +41,56 @@ rules:
           - focus-metavariable: $VALUE
 ```
 
-## Write and register the samples
+### 2. Write the samples
 
-For target `example.com/library/text.Transform`, put a sample in `sample.go`:
+Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the fixed `approximation.yaml` is what the harness applies. The sample just routes `util.Source()` through the approximated callable into `util.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function.
+
+Mark each callable's test-project status (per Tracking): `done` once its sample is in the project. If no sample can be written for a callable, exclude it, mark it `failed`, and note it in the summary — don't let one unmodelable callable block the rest.
+
+Positive sample — routes `util.Source()` through the approximated callable into `util.Sink(...)`, one per callable being approximated. Start every sample with `tainted := util.Source()`. When the approximated callable takes or returns another type, add a marker of that type to `util` and to the rule — the analyzer tracks the fact, not the runtime value.
 
 ```go
 package test
 
 import (
-    "example.com/library/text"
-    "test/util"
+	"github.com/acme/library/text"
+	"test/util"
 )
 
-func Positive() { util.Sink(text.Transform(util.Source())) }
-func Negative() {
-    _ = text.Transform(util.Source())
-    util.Sink("independent")
+func TaintReachesSink() {
+	tainted := util.Source()
+	routed := text.Transform(tainted) // the approximated callable
+	util.Sink(routed)
 }
 ```
 
-Exercise each assigned callable, including the real receiver type and callback behavior. Add negatives for independent fields, inputs and outputs whenever the method preserves state. Register all verdicts in `rule-test.yaml` beside `go.mod`:
+Negative sample — only when the approximated callable stores its input in the object. The analyzer is field-sensitive: taint set on one field doesn't surface from another. Write a negative sample that stores tainted data into one field and reads a different one — a field-precise model keeps that read clean, so the sample must not fire. This is what forces a precise approximation instead of one that taints the whole object. For plain propagation the positive alone proves the model — skip the negative.
+
+```go
+func TaintStaysInItsField() {
+	var user text.User
+	user.SetName(util.Source()) // taint stored in the name field
+	util.Sink(user.Email())     // a different field — must stay clean
+}
+```
+
+Register the verdicts — write `rule-test.yaml` at the test-project root (next to `go.mod`), one entry under the fixed rule, listing each sample by its Go function name, `test.<Function>`. `positive` samples must flag, `negative` must not:
 
 ```yaml
 tests:
   - rule-id: go/approximation.yaml#approximation
     positive:
-      - test.Positive
+      - test.TaintReachesSink
     negative:
-      - test.Negative
+      - test.TaintStaysInItsField
 ```
 
-The entrypoint is the exact Go function name: `<import-path>.<function>` or `(*<import-path>.<Type>).<method>` for a pointer receiver. Use the model's `args:<count>` signature to shape calls, but do not put that signature in the entrypoint name.
+Note — a sample's receiver type fixes the dropped callable's name, and the later model targets that exact callable, so mirror the real call's receiver type. The same call off an interface-typed value (`var r io.Reader`, e.g. a parameter) resolves to `(io.Reader).Read`, off a concrete one (`bytes.NewBufferString(...)`) to `(*bytes.Buffer).Read` — match whichever the real flow uses.
 
-## Prepare and verify the project model
+When the approximated callable hands the data to a callback instead of returning it, put the sink inside the callback body: `text.Each(values, func(v string) { util.Sink(v) })`. Don't stash the value in a captured variable and sink it after the call.
 
-```bash
-opentaint compile .opentaint/test-projects/<name> \
-  -o .opentaint/test-compiled/<name>
-opentaint test rule run .opentaint/test-compiled/<name> \
-  --ruleset .opentaint/test-projects/<name>/test-rules \
-  --go-models .opentaint/dataflow/<name> \
-  -o .opentaint/test-results/<name>
-```
+## Constraints
 
-For Go, `compile` writes a `project.yaml` pointing to the source module. It does not freeze compiled sample bytecode. Keep the sample sources fixed during later model repair. Require every positive and negative to pass; check skipped and disabled entries as well as false positives and false negatives.
+- Write ordinary `.go` files, not `_test.go` files — the Go project loader skips test files
+- Diagnose a compile failure with `go build ./...` in the project
+- For Go, `opentaint compile` writes a project model that points to the sample sources, not a frozen build — keep the samples fixed after compiling
