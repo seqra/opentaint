@@ -103,7 +103,7 @@ class ReturnFullCleanupEngineTest {
         }
     }
 
-    @Test fun `static base mismatch promotes and consumes once and nonfixed inputs use scalar fallback`() {
+    @Test fun `static base mismatch routes once to the normal boundary and nonfixed inputs use scalar fallback`() {
         fun run(bulk: Boolean, kind: Int): Pair<Set<String>, Set<String>> = MethodAnalysisFixtures().use { f ->
             val raw = listOf(f.mark("T"), f.mark("U")).map { CleanStep.Clean(Cleaner(x, null, CleanReach.EXACT, it)) }
             f.call(1, plan(f, raw, bulk))
@@ -131,7 +131,10 @@ class ReturnFullCleanupEngineTest {
             val summaries = actor.summaries.all().flatMap { (premise, value) ->
                 encode(value).asSequence().map { "${premise.members.map { it.toPattern() }} -> $it" }
             }.toSet()
-            if (kind == 0) assertTrue(edges.isEmpty(), "The first cleaner must consume a static mismatch")
+            if (kind == 0) {
+                assertTrue(edges.isNotEmpty(), "The static mismatch is queued at NormalExit")
+                assertTrue(actor.edges.edgesAt(f.inst(2), original).all { it.second.base == STATIC })
+            }
             services.freeze()
             edges to summaries
         }

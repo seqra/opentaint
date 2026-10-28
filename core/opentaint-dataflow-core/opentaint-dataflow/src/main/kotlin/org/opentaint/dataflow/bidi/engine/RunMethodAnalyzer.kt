@@ -34,10 +34,17 @@ class RunMethodAnalyzer(
     val initials: InitialFactStore get() = checkNotNull(initialStore) { "The initial facts were released" }
     val summaries = RunSummaryStore(ap, flowBacked = true)
     val sourceHits: SourceHitStore? = if (forward) null else SourceHitStore()
-    private val currentQueries = if (config.restricted)
-        StrongQueries(ops, mode, checkNotNull(config.demand).staticQueryPolicy) else null
-    private val checkRun2StaticAnchors =
-        config.demand?.staticQueryPolicy == StaticQueryPolicy.COMPLETE_RUN1_STATIC_FIELDS
+    val staticGuidanceSeeds = StaticGuidanceSeedStore(ap, ops, port.shared.staticGuidanceInterner)
+    private val staticWriteCandidates = if (mode.run1)
+        KilledStaticWriteStore(key, ap, ops, port.shared.staticWriteKeyInterner) else null
+
+    /** Joined guidance completion only; raw observed rows still support ordinary call binding.
+     * This also works after actor freeze for existing synthetic handoff fixtures. */
+    fun freezeStaticWriteCandidates(): FrozenStaticWrites {
+        check(mode.run1) { "Static-write candidate guidance exists only for run-1" }
+        return checkNotNull(staticWriteCandidates).freeze(summaries.all(), staticGuidanceSeeds.frozenRows())
+    }
+    private val checkRun2StaticAnchors = config.index == 2
     private var temporary = RequestStorage()
     private var temporarySinceNanos = 0L
     private val staticSupplyProfile = if (config.run1 && config.direction == Direction.FORWARD &&
@@ -119,30 +126,25 @@ class RunMethodAnalyzer(
         // This is input presence for NO_DEMAND_EDGE, not a distinct retained-group count.
         if (added.layer == Layer.DEMAND && !sawDemandInput) { sawDemandInput = true; demandLayerEdges++ }
         if (config.run1) checkNotNull(abstraction).emit(ref, added) else {
-            val guides = sequence {
-                val found = LinkedHashSet<DemandPattern>()
-                for (leaf in ops.leaves(added)) {
-                    ap.cancellation.checkpoint()
-                    found += checkNotNull(config.demand).near(key, leaf)
+            // Demand is immutable for the run. A new actual input can start only
+            // intersections with its matching entries; it cannot authorize old
+            // raw answers or synthesize an actual-input query.
+            ops.limit(added, limit, object : ApOut {
+                override fun markRequest(mark: TaintMark) = error("A field cut cannot request a mark")
+                override fun result(f: Facts) {
+                    val candidates = LinkedHashSet<DemandPattern>()
+                    for (leaf in ops.leaves(f)) {
+                        ap.cancellation.checkpoint()
+                        if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf)
+                        candidates += checkNotNull(config.demand).near(key, leaf)
+                    }
+                    for (guide in candidates) {
+                        ap.cancellation.checkpoint()
+                        context.shared.abstractionStatistics?.intersection()
+                        for (initial in ops.emit(guide, f)) addInitial(initial)
+                    }
                 }
-                for (guide in found) {
-                    ap.cancellation.checkpoint()
-                    context.shared.abstractionStatistics?.intersection()
-                    yield(guide)
-                }
-            }
-            val starts = checkNotNull(currentQueries).admit(added, guides)
-            if (starts.isNotEmpty()) {
-                // A prior guide may already have completed this premise. Its raw
-                // summary remains available even if its old exit hint rejected it.
-                for ((premise, facts) in summaries.all()) {
-                    ap.cancellation.checkpoint()
-                    if (currentQueries.permits(premise)) queuePublications(premise, facts)
-                }
-                starts.forEach(::addInitial)
-            }
-            // Concrete guide intersections refine actual queries. Abstract
-            // guidance must not start a wider executable FLOW transfer here.
+            })
         }
     }
 
@@ -284,16 +286,30 @@ class RunMethodAnalyzer(
         val admitted = withoutDisabledStaticFields(value) ?: return
         val runtime = forceRun1Layer(at.premise, admitted)
         if (config.run1 && runtime.base == STATIC) {
+            val boundary = at.site as? ResumeSite.BoundaryInput
             if (operation != null) {
                 boundedSummaryResult(at.premise, runtime) { premise, bounded ->
-                    // Producer effects survive even when their static/static
-                    // summary is erased. Calls never create a local writer.
+                    if (boundary != null && !boundary.atStart &&
+                        context.isEnd(boundary.operation.form.statement) &&
+                        !context.isExceptionalExit(boundary.operation.form.statement)) {
+                        // The next exit-rule continuation can kill this executed
+                        // write before the final boundary result is available.
+                        checkNotNull(staticWriteCandidates).observe(premise, bounded)
+                    }
+                    // A real write becomes globally visible at the producer,
+                    // independently of its later exit rules and summary.
                     checkNotNull(pointResumes).localWrite(premise, bounded)
-                    retainSummary(premise, bounded)
+                    if (boundary != null && !boundary.atStart) sink(premise, bounded)
+                    else routeBoundedRun1StaticToExit(premise, bounded)
                 }
+            } else if (boundary != null && !boundary.atStart) {
+                // This value already belongs to an exit-rule pipeline. Finish
+                // its remaining rules; never schedule NormalExit again.
+                sink(at.premise, runtime)
             }
             return
         }
+
         sink(at.premise, runtime)
     }
 
@@ -420,7 +436,8 @@ class RunMethodAnalyzer(
                 when (val site = resume.site) {
                     is ResumeSite.StatementInput -> runStatement(EdgeDelta(resume.premise, site.operation.form.statement, resume.facts))
                     is ResumeSite.BoundaryInput -> if (site.atStart) startAt(resume.premise, site.operation.form.statement, resume.facts)
-                        else endAt(resume.premise, site.operation.form.statement, resume.facts, summary = true)
+                        else endAt(resume.premise, site.operation.form.statement, resume.facts,
+                            summary = !context.isExceptionalExit(site.operation.form.statement))
                     is ResumeSite.ReadOutput -> installPoint(resume.premise, resume.facts, site.input, resume.state)
                     is ResumeSite.CallStageInput, is ResumeSite.CleanerInput -> callServices.resumePoint(resume.premise, resume.facts, site, resume.state)
                 }
@@ -460,7 +477,9 @@ class RunMethodAnalyzer(
         ap.cancellation.checkpoint()
         steps++
         runnerPort.onProcess?.invoke(key, item)
-        if (context.callAt(item.node) != null) callServices.process(item) else runStatement(item)
+        if (config.run1 && item.facts.base == STATIC && context.isEnd(item.node))
+            endAt(item.premise, item.node, item.facts, summary = true)
+        else if (context.callAt(item.node) != null) callServices.process(item) else runStatement(item)
     }
 
     /** A batch can cross only a certified plain statement. Keep a remainder
@@ -543,7 +562,7 @@ class RunMethodAnalyzer(
 
     internal fun emitAfter(premise: PremiseKey, node: CommonInst, value: Facts) {
         checkPremise(premise)
-        if (config.run1 && value.base == STATIC) return // writes were retained at their logical operation output
+        if (config.run1 && value.base == STATIC && !context.isEnd(node)) return
         if (config.run1) ops.run1Cover(forceRun1Layer(premise, value)) { emitCovered(premise, node, it) }
         else emitCovered(premise, node, value)
     }
@@ -558,7 +577,7 @@ class RunMethodAnalyzer(
 
     internal fun emitUnchanged(item: EdgeDelta) {
         checkPremise(item.premise)
-        if (config.run1 && item.facts.base == STATIC) return
+        if (config.run1 && item.facts.base == STATIC && !context.isEnd(item.node)) return
         exitRulesAt(item.premise, item.node, item.facts)
         context.forEachSuccessor(item.node) { successor ->
             ap.cancellation.checkpoint()
@@ -647,12 +666,13 @@ class RunMethodAnalyzer(
     }
 
     private fun endAt(premise: PremiseKey, node: CommonInst, facts: Facts, summary: Boolean) {
+        if (config.run1 && summary) checkNotNull(staticWriteCandidates).observe(premise, facts)
         forms.withEndRules(key, node) { exit ->
             val work = RuleWorklist(exit.rules, node, if (forward) Cut.EXIT_RULES else Cut.ENTRY_RULES)
             work.input(premise, facts)
             work.drain { pr, value, triggers ->
                 if (!summary) return@drain
-                if (config.run1 && value.base == STATIC) return@drain
+                if (config.run1) checkNotNull(staticWriteCandidates).observe(pr, value)
                 var result: Facts? = value
                 if (exit.globalStateDrop && pr.isZero && value.base == AccessPathBase.ClassStatic)
                     for (part in triggers.parts) {
@@ -691,9 +711,19 @@ class RunMethodAnalyzer(
         return kept
     }
 
-    internal fun promoteStaticSummary(premise: PremiseKey, value: Facts) {
-        check(config.run1 && value.base == STATIC) { "Static promotion is a run-1 static-result boundary" }
-        boundedSummaryResult(premise, value, ::retainSummary)
+    /** A call result supplies its computed mark, but is not a new local writer. */
+    internal fun routeStaticResultToExit(premise: PremiseKey, value: Facts) {
+        check(config.run1 && value.base == STATIC) { "Static exit routing needs a run-1 static result" }
+        boundedSummaryResult(premise, value) { pr, bounded ->
+            checkNotNull(pointResumes).computedGroups(pr, bounded)
+            routeBoundedRun1StaticToExit(pr, bounded)
+        }
+    }
+
+    private fun routeBoundedRun1StaticToExit(premise: PremiseKey, bounded: Facts) {
+        check(config.run1 && bounded.base == STATIC)
+        val exit = context.normalExit
+        edges.add(exit, premise, bounded)?.let { push(EdgeDelta(premise, exit, it)) }
     }
 
     internal fun summaryDelta(premise: PremiseKey, value: Facts) =
@@ -709,8 +739,8 @@ class RunMethodAnalyzer(
             if (it.base == STATIC) it.withLayer(Layer.DEMAND) else it
         } else admitted
         if (config.run1) ops.run1Cover(runtime) { covered ->
-            // Early static publication bypasses the ordinary successor cut.
-            // Retain the existing bounded AP result before indexing the effect.
+            // Static producer routing bypasses the ordinary successor cut.
+            // Preserve the same bounded AP value at that boundary.
             ops.limit(covered, limit, collect(premise, covered, sink))
         }
         else {
@@ -724,11 +754,14 @@ class RunMethodAnalyzer(
     private fun retainSummary(premise: PremiseKey, facts: Facts) {
         checkKinds(premise, facts)
         if (!context.shared.interpreter.isSummaryBase(facts.base)) return
-        // A local producer or the first ordinary caller binding can supply
-        // the pool without retaining its static/static relation. Pending
-        // fixed-mark input joins own their scalar payload independently.
+        // Existing computed summary supplies are independent of local write
+        // effects. Pending fixed-mark joins own their scalar payload without
+        // retaining a static/static method summary.
         if (config.run1 && facts.base == STATIC) checkNotNull(pointResumes).computedGroups(premise, facts)
-        if (erasesRun1StaticSummary(premise, facts)) return
+        if (erasesRun1StaticSummary(premise, facts)) {
+            staticGuidanceSeeds.add(premise, facts)
+            return
+        }
         val delta = summaries.add(premise, facts)
         if (delta == null) return
         edgeDeltas++
@@ -741,7 +774,7 @@ class RunMethodAnalyzer(
             (0 until premise.size).all { premise.member(it).base == STATIC }
 
     private fun queuePublications(premise: PremiseKey, facts: Facts) {
-        val selected = config.run1 || ops.demandPart(premise, facts, config.direction) != null
+        val selected = ops.demandPart(premise, facts, config.direction) != null
         val publications = published(premise, facts)
         for (piece in publications) {
             ap.cancellation.checkpoint()
@@ -752,7 +785,7 @@ class RunMethodAnalyzer(
     }
 
     private fun published(premise: PremiseKey, facts: Facts): Collection<Facts> = when {
-        config.run1 || (!forward && premise.isZero) || currentQueries?.permits(premise) == true -> listOf(facts)
+        config.run1 || (!forward && premise.isZero) -> listOf(facts)
         else -> LinkedHashSet<Facts>().also { out ->
             premise.forEachMember { member ->
                 ap.cancellation.checkpoint()
@@ -823,7 +856,6 @@ class RunMethodAnalyzer(
             pending = ArrayList()
             edgeStore = null
             initialStore = null
-            currentQueries?.clear()
             temporary = RequestStorage()
         }
         failure?.let { throw it }

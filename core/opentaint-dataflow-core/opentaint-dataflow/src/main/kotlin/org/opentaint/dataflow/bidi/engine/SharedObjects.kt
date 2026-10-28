@@ -43,7 +43,13 @@ class SharedObjects(
     val n2Statistics: N2Statistics? = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) N2Statistics() else null,
     val requestBatchStatistics: RequestBatchStatistics? =
         if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics")) RequestBatchStatistics() else null,
+    staticCallGraph: org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph =
+        org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.EMPTY,
 ) : AutoCloseable {
+    val staticGuidanceInterner = org.opentaint.dataflow.bidi.store.StaticGuidanceInterner(ap)
+    val staticWriteKeyInterner = org.opentaint.dataflow.bidi.store.StaticWriteKeyInterner(ap)
+    var staticCallGraph = staticCallGraph
+        private set
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
     val dispatcher: ExecutorCoroutineDispatcher = newFixedThreadPoolContext(threads, "bidi-worker")
 
@@ -53,6 +59,9 @@ class SharedObjects(
         val release = releaseCoverage
         releaseCoverage = null
         release?.invoke()
+        staticGuidanceInterner.clear()
+        staticWriteKeyInterner.clear()
+        staticCallGraph = org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.EMPTY
     }
 
     val unresolvedObserver: UnresolvedCallObserver? get() = interpreter as? UnresolvedCallObserver

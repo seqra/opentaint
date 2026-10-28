@@ -20,15 +20,17 @@ internal fun directStaticRead(f: FiniteProgramFixtures, owner: MethodKey, node: 
 }
 
 /** Representation and layer laws only. Positive effects and finding identities are pinned by each scenario. */
-internal fun assertDirectStaticProtocol(actual: RunObservation, table: MarkTable) {
+internal fun assertDirectStaticProtocol(actual: RunObservation, fixture: FiniteProgramFixtures) {
     assertTrue(actual.initials.none { it.initial.fact.base == STATIC }, "Static descriptions never start a method analysis")
-    assertTrue(actual.processed.none { it.conclusion.fact.base == STATIC }, "Static effects never traverse ordinary successor queues")
+    assertTrue(actual.processed.filter { it.conclusion.fact.base == STATIC }.all {
+        it.node == fixture.inst(it.method, fixture.programMethod(it.method).normalExit)
+    }, "Static results go directly to NormalExit and never enter another statement queue")
     assertTrue(actual.requests.none { it.premise.fact.base == STATIC }, "Static interests do not enter ordinary R/P")
     assertTrue(actual.requests.none { it.kind is ReferenceRequestKind.Position })
     for (row in actual.processed + actual.rawSummaries + actual.publications) {
         val mark = row.conclusion.fact.mark as? MarkSlot.Concrete ?: continue
         if (mark.mark == TaintMark.ZERO) continue
-        assertTrue(table.isGroup(mark.mark), "Run-1 data uses catalog groups: $row")
+        assertTrue(fixture.ap.marks.isGroup(mark.mark), "Run-1 data uses catalog groups: $row")
         assertTrue(row.conclusion.demand, "Group data remains DEMAND: $row")
     }
 }

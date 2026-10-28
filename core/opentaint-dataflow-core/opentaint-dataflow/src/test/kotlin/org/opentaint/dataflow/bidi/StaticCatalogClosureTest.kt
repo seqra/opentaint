@@ -47,7 +47,7 @@ class StaticCatalogClosureTest {
         val scheduler = ProductionSchedule(f, config, sameUnit, policy, seed, quantum = 1,
             duplicateDeliveries = true)
         val actual = scheduler.run()
-        assertDirectStaticProtocol(actual, f.ap.marks)
+        assertDirectStaticProtocol(actual, f)
         expectedRoot?.let { assertContains(actual.rawSummaries, it, "The actual point protocol returns the wrapper value") }
         return actual
     }

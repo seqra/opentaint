@@ -67,8 +67,8 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
             .all { it.conclusion.layer == Layer.DEMAND }, "Every run-1 group-valued result is DEMAND")
         assertTrue(r.runs.first().processed.all { it.conclusion.value.exclusion.isEmpty() },
             "Run-1 surviving exclusion updates demote instead of retaining field E")
-        assertTrue(r.runs.drop(1).flatMap { it.initials }.all { it.value.base == AccessPathBase.Zero || it.value.mark != "*" },
-            "Strong phases start actual concrete queries and concrete guide intersections, never abstract FLOW guidance")
+        assertTrue(r.runs.drop(1).flatMap { it.initials }.all { it.value.mark !in r.runs.first().markGroups.values },
+            "Restricted runs use full concrete marks or shared FLOW, never run-1 group tokens")
         for ((previous, current) in r.runs.zipWithNext()) if (previous.direction == Direction.BACKWARD) {
             val supplied = assertNotNull(previous.outgoingSeeds).filterIsInstance<Seed.Source>().toSet()
             assertEquals(supplied, current.incomingSeeds.filterIsInstance<Seed.Source>().toSet(),
@@ -109,7 +109,7 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
         JvmObservedConclusion(JvmObservedPath(base, path, tail, mark, exclusion), Layer.NORMAL)
 
     @Test
-    fun `JVM getter refines its actual concrete query without an abstract backward record`(): Unit {
+    fun `JVM getter shares its abstract demand and persists a backward FLOW record`(): Unit {
         val config = SerializedTaintConfig(entryPoint = listOf(entry("getterFlow")),
             sink = listOf(sink("sinkAnyT", "j03-getter", whole = true)))
         val r = run(config, "getterFlow")
@@ -121,21 +121,18 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
         val forwardPr = JvmObservedPath(argument, tail = Tail.STAR, mark = "*")
         assertEquals(setOf(JvmObservedConclusion(JvmObservedPath(result, tail = Tail.ANY, mark = "*"), Layer.DEMAND)),
             r.raw(1, getter, result))
-        assertEquals(true, r.runs[0].outgoingStaticGroupGuidance)
+        assertEquals(true, r.runs[0].outgoingStaticCarry)
         assertContains(assertNotNull(r.runs[0].outgoingDemand), JvmObservedDemand(getter,
             JvmObservedPath(result, tail = Tail.ANY, mark = "*"), forwardPr))
-        val backwardPr = JvmObservedPath(result, tail = Tail.ANY, mark = t)
+        val backwardPr = JvmObservedPath(result, tail = Tail.STAR, mark = "*")
         assertEquals(setOf(zero, backwardPr), r.runs[1].initials.filter { it.method == getter }.mapTo(linkedSetOf()) { it.value })
+        val field = JvmObservedPath(argument, listOf("email"), Tail.STAR, "*")
         assertContains(r.runs[1].rawSummaries, JvmObservedEdge(getter, setOf(backwardPr),
-            JvmObservedConclusion(JvmObservedPath(argument, listOf("email"), Tail.ANY, t), Layer.DEMAND)))
-        assertTrue(r.runs[1].records.none { it.method == getter && it.direction == Direction.BACKWARD },
-            "The actual ANY query stays DEMAND; persisted forward FLOW does not become a backward result")
-        assertEquals(setOf(zero, JvmObservedPath(argument, tail = Tail.ANY_TAINT, mark = t),
-            JvmObservedPath(argument, listOf("email"), Tail.ANY_TAINT, t)),
-            r.runs[2].initials.filter { it.method == getter }.mapTo(linkedSetOf()) { it.value })
-        assertContains(r.runs[2].records, JvmObservedRecord(getter, Direction.FORWARD,
-            JvmObservedPath(argument, listOf("email"), Tail.ANY_TAINT, t),
-            normal(result, tail = Tail.ANY_TAINT)))
+            JvmObservedConclusion(field, Layer.NORMAL)))
+        assertContains(r.runs[1].records, JvmObservedRecord(getter, Direction.BACKWARD, backwardPr,
+            JvmObservedConclusion(field, Layer.NORMAL)))
+        assertEquals(setOf(zero), r.runs[2].initials.filter { it.method == getter }.mapTo(linkedSetOf()) { it.value },
+            "The native backward FLOW record handles actual T; no demand permits another body start")
         assertTrue(r.runs.all { it.requests.isEmpty() })
         assertEquals(EndReason.NO_DEMAND_EDGE, r.report.end.reason)
         assertEquals(0L, r.runs.last().demandLayerEdges,
@@ -154,9 +151,8 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
         assertContains(r.runs[0].requests, JvmObservedRequest(use,
             JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.STAR, mark = "*"), mark = group(r)))
         // Backward run-2 has limit 1. The array alternative reaches that limit at email.
-        // Forward run-3 keeps the exact value and its cut ANY_TAINT query at the same field.
+        // Forward run-3 intersects the field guide; it does not start the whole actual input.
         assertEquals(setOf(zero,
-            JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.ANY_TAINT, mark = t),
             JvmObservedPath(AccessPathBase.Argument(0), listOf("email"), Tail.EXACT, t),
             JvmObservedPath(AccessPathBase.Argument(0), listOf("email"), Tail.ANY_TAINT, t)),
             r.runs[2].initials.filter { it.method == use }.mapTo(linkedSetOf()) { it.value })
@@ -178,10 +174,13 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
                 setOf(JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.STAR, mark = "*")),
                 normal(AccessPathBase.Return, tail = Tail.STAR, mark = "*"))
             assertContains(r.runs[0].rawSummaries, guidance)
-            assertContains(r.runs[0].selected, guidance)
-            assertContains(r.runs[2].records, JvmObservedRecord(identity, Direction.FORWARD,
-                JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.ANY_TAINT, mark = t),
-                normal(AccessPathBase.Return, tail = Tail.ANY_TAINT)))
+            assertTrue(guidance !in r.runs[0].selected,
+                "A NORMAL singleton identity supplies its record; it is not selected demand")
+            assertContains(r.runs[0].records, JvmObservedRecord(identity, Direction.FORWARD,
+                JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.STAR, mark = "*"),
+                normal(AccessPathBase.Return, tail = Tail.STAR, mark = "*")))
+            assertTrue(r.runs[2].initials.filter { it.method == identity }.all { it.value == zero },
+                "The persisted FLOW identity answers without an unrequested concrete body analysis")
             assertEquals(1, r.frontiers.first().seeds,
                 "The F1 NORMAL witness remains a candidate and seeds backward refinement")
             assertEquals(EndReason.NO_DEMAND_EDGE, r.report.end.reason)
@@ -199,9 +198,9 @@ class JIRBidiSequenceAcceptanceTest : AnalysisTest() {
             assertEquals(listOf(1, 2, 3), r.runs.map { it.index })
             assertContains(r.raw(1, r.method("setter"), AccessPathBase.Return),
                 JvmObservedConclusion(JvmObservedPath(AccessPathBase.Return, tail = Tail.STAR, mark = "*"), Layer.DEMAND))
-            assertContains(r.runs[2].records, JvmObservedRecord(r.method("setter"), Direction.FORWARD,
-                JvmObservedPath(AccessPathBase.Argument(0), tail = Tail.ANY_TAINT, mark = t),
-                normal(AccessPathBase.Return, tail = Tail.ANY_TAINT, exclusion = setOf("name"))))
+            assertContains(r.runs[1].records, JvmObservedRecord(r.method("setter"), Direction.BACKWARD,
+                JvmObservedPath(AccessPathBase.Return, tail = Tail.STAR, mark = "*"),
+                normal(AccessPathBase.Argument(0), tail = Tail.STAR, mark = "*", exclusion = setOf("name"))))
             assertTrue(r.witnesses.any { it.run == 1 && it.rule.id == "j03-setter-blocked" },
                 "The F1 empty-E candidate is rejected by later strong field exclusion")
             assertTrue(r.runs.all { it.requests.isEmpty() })

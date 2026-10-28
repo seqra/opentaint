@@ -247,7 +247,7 @@ class LocalConjunctionTest {
             val sink = localSink(listOf(f.pattern(result, mark = v)))
             f.exitRules(2, ExitRules(localRules(listOf(sink)), false, emptySet()))
             val demand = if (index == 1) null else DemandStore.Builder(f.manager).apply {
-                add(f.key, DemandPattern(f.pattern(firstBase, tail = Tail.ANY, mark = MarkSlot.STAR),
+                add(f.key, DemandPattern(f.pattern(firstBase, tail = Tail.ANY, mark = t),
                     f.pattern(result, tail = Tail.ANY, mark = MarkSlot.STAR)))
             }.build()
             val seeds = SeedIndex.of(listOf(Seed.Source(f.key, f.inst(0), source.forward)))

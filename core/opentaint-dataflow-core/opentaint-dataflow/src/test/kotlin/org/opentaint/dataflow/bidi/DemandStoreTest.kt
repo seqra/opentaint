@@ -55,7 +55,7 @@ class DemandStoreTest {
         for (path in paths) for ((tail, mark) in listOf(Tail.EXACT to mt, Tail.ANY to mt,
             Tail.EXACT to mu, Tail.ANY to mu, Tail.ANY to star)) {
             val exits = listOf<Pattern?>(null, p(mark = star, base = y),
-                p(listOf(f), Tail.STAR, star, ex(g), y),
+                p(listOf(f), Tail.STAR, star, empty, y),
                 p(listOf(f), Tail.STAR, mt, ex(h), y),
                 p(listOf(cls, f), Tail.STAR, mu, ex(h), STATIC),
                 p(listOf(element), mark = star, base = y),
@@ -208,14 +208,13 @@ class DemandStoreTest {
     }
 
     @Test
-    fun `builder rejects unnormalized marks must tails STAR entries malformed field E and unpaired exact exits`() {
+    fun `builder accepts legal STAR entries and rejects unsupported marks tails exclusions and exact exits`() {
         val builder = DemandStore.Builder(m)
         val legal = d(listOf(f))
         val badEntries = listOf(
             p(listOf(f), Tail.ANY_TAINT, mt),
             p(listOf(f), Tail.ANY, MarkSlot.Star(marks(t.id))),
-            p(listOf(f), Tail.STAR, star), p(listOf(f), Tail.STAR, mt),
-            p(listOf(f), Tail.STAR, mt, ex(g)), p(listOf(f), Tail.EXACT, star),
+            p(listOf(f), Tail.EXACT, star),
             p(listOf(f), Tail.ANY, mt, ex(g)), p(listOf(f), Tail.EXACT, mt, ex(g)))
         for (entry in badEntries) assertFails { builder.add(methods[0], legal.copy(entry = entry)) }
         for (exit in listOf(p(listOf(g), Tail.ANY_TAINT, mu, base = y),
@@ -224,12 +223,13 @@ class DemandStoreTest {
             assertFails { builder.add(methods[0], legal.copy(exit = exit)) }
         assertFails { builder.add(methods[0], DemandPattern(p(listOf(f), Tail.ANY, star),
             p(listOf(g), Tail.EXACT, mu, base = y))) }
-        for (entry in listOf(p(listOf(f), Tail.EXACT, mt), p(listOf(f), Tail.ANY, mu), p(listOf(f), Tail.ANY, star))) {
+        for (entry in listOf(p(listOf(f), Tail.EXACT, mt), p(listOf(f), Tail.ANY, mu), p(listOf(f), Tail.ANY, star),
+            p(listOf(f), Tail.STAR, star), p(listOf(f), Tail.STAR, mt), p(listOf(f), Tail.STAR, mt, ex(g)))) {
             val exit = if (entry.fact.mark is MarkSlot.Concrete) p(listOf(g), Tail.EXACT, mu, base = y)
                 else p(listOf(g), Tail.STAR, star, ex(h), y)
             assertTrue(builder.add(methods[0], DemandPattern(entry, exit)))
         }
-        assertEquals(3, builder.build().near(methods[0], p(base = x)).toSet().size)
+        assertEquals(6, builder.build().near(methods[0], p(base = x)).toSet().size)
     }
 
     @Test

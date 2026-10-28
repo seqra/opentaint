@@ -461,8 +461,8 @@ class RequestJoinTest {
             val t = mark(f, "T")
             assertFails { request(actor, i, RequestKind.Mark(t)) }
             f.admit(actor, caller(f, flow = true), Layer.NORMAL, f.fact(tail = Tail.STAR, mark = MarkSlot.STAR))
-            assertEquals(setOf(i), actor.initials.all().toSet(),
-                "An actual later FLOW query starts without any old guide, but emits no mark requests")
+            assertTrue(actor.initials.all().isEmpty(),
+                "An actual later FLOW input has no matching demand and emits no mark requests")
             assertTrue(climbs(f).isEmpty())
             if (index == 2) assertNull(actor.localServices.conjunctions)
             else assertNotNull(actor.localServices.conjunctions)

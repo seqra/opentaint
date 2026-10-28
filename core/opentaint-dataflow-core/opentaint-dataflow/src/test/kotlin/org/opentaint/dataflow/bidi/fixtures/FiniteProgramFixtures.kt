@@ -36,7 +36,8 @@ data class ExitInput(val key: MethodKey, val index: Int, val rules: ExitRules)
 data class CallInput(val key: MethodKey, val index: Int, val plan: CallPlan, val expression: CommonCallExpr)
 data class RawRecord(val method: MethodKey, val direction: Direction, val premise: Pattern, val conclusion: Conclusion)
 data class ProgramRunInputs(val roots: List<MethodKey>, val demand: List<Pair<MethodKey, DemandPattern>>,
-                            val records: List<RawRecord>, val seeds: List<Seed>)
+                            val records: List<RawRecord>, val seeds: List<Seed>,
+                            val hasSharedStaticCarry: Boolean = false)
 
 private fun <T> ownedList(values: Collection<T>): List<T> = Collections.unmodifiableList(ArrayList(values))
 private fun ownPath(fact: PathFact): PathFact = fact.copy(path = ownedList(fact.path))
@@ -291,7 +292,7 @@ class FiniteProgramFixtures(val cancellation: Cancellation = Cancellation(), thr
     }
     private val sharedOwner = lazy {
         SharedObjects(ap, ops, interpreter, language, contexts, records, vulnerabilities, unitResolver,
-            refManager, cancellation, threads)
+            refManager, cancellation, threads, staticCallGraph = staticCallGraph())
     }
     val shared: SharedObjects get() = sharedOwner.value
     fun freshShared(sameUnit: Boolean = false, freshVulnerabilities: Boolean = true, threads: Int = 1,
@@ -299,7 +300,15 @@ class FiniteProgramFixtures(val cancellation: Cancellation = Cancellation(), thr
         SharedObjects(ap, ops, interpreter, language, contexts, records,
             if (freshVulnerabilities) ConcurrentVulnerabilityStore(ap) else vulnerabilities,
             if (sameUnit) UnitResolver<CommonMethod> { if (methodData.any { m -> m.method === it }) ProgramUnit("all") else UnknownUnit }
-            else unitResolver, refManager, cancellation, threads)
+            else unitResolver, refManager, cancellation, threads, staticCallGraph = staticCallGraph())
+
+    /** Fixture equivalent of the successfully resolved prescan graph. It owns no mutable call plans. */
+    fun staticCallGraph(): org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph {
+        val adjacency = methodData.associate { it.method to LinkedHashSet<CommonMethod>() }
+        for (call in calls) for (stage in call.plan.stages.filterIsInstance<CallStage.Callees>())
+            for (callee in stage.callees) adjacency.getValue(call.key.method).add(callee.method)
+        return org.opentaint.dataflow.bidi.store.DetachedStaticCallGraph.copyOf(adjacency, cancellation)
+    }
 
     /** Collect only explicit forward forms. The scalar oracle does not use this collector. */
     fun staticProfiles(): Run1StaticProfiles {

@@ -56,7 +56,7 @@ class StaticSummaryBoundTest {
             val supplied = pool(f, core, target)
             assertTrue(supplied.isNotEmpty())
             assertEquals(setOf(target), supplied.map { it.fact.path }.toSet())
-            assertTrue(f.processed.none { it.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.facts.base == STATIC }.all { it.node === f.inst(f.normalExit) })
         }
     }
 

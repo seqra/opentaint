@@ -293,6 +293,14 @@ class SubscriptionManager(port: SubscriptionPort) {
         }
     }
 
+    /** Joined, read-only view of the exact callee's existing current inputs.
+     * This path neither asks its port for a storage nor applies a live effect. */
+    internal fun visitJoinedInputs(callee: MethodKey, writer: Publication, mode: ApMode,
+                                   visit: (Subscription) -> Unit) {
+        checkNotNull(port) { "The caller subscriptions were already released" }
+        byCallee[callee]?.visitJoinedCandidates(writer, mode, visit)
+    }
+
     /** Joining ends all notifications before the owning runner calls this method. */
     fun freeze() {
         byCallee.values.forEach(CalleeSubscriptions::clear)

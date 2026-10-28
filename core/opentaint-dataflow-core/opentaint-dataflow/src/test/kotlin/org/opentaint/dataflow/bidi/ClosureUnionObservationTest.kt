@@ -89,7 +89,8 @@ class ClosureUnionObservationTest {
                     locations(it.added.fact, it.added.exclusion)
                 }.toSet(), "Added facts preserve the complete independent must union")
                 assertTrue(observation.requests.isEmpty() && observation.sourceHits.isEmpty())
-                assertEquals(observation.publications, observation.selectedDemand, "All F1 summaries are next-phase guidance")
+                assertEquals(observation.publications.filterTo(linkedSetOf()) { it.conclusion.demand },
+                    observation.selectedDemand, "Run-1 selects DEMAND; normal singletons supply records")
                 assertEquals(setOf(ObservedInitial(callee, f.pattern(x, tail = Tail.STAR, mark = MarkSlot.STAR))),
                     observation.initials.filter { it.method == callee && it.initial.fact.base == x }.toSet(),
                     "Run1 uses one canonical policy initial, independently of the concrete exclusions")

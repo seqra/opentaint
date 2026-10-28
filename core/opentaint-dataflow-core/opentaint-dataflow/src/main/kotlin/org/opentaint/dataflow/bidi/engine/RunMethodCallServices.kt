@@ -219,7 +219,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                                 statistics?.fullCleanupRequested(requested.size)
                                 core.needGroups(address, requested)
                             }, out = core.collect(address) { premise, result ->
-                                if (result.base == STATIC) core.promoteStaticSummary(premise, result)
+                                if (result.base == STATIC) core.routeStaticResultToExit(premise, result)
                                 else next += planFact(premise, result, input.identityCandidate)
                             })
                         if (statistics != null && current.size == 1 && input.facts is FlowTree &&
@@ -253,7 +253,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                         core.ops.clean(input.facts, input.premise, step.cleaner, core.mode,
                         core.collect(at(input, stepIndex, CleanerPhase.CLEAN)) { premise, result ->
                             if (core.config.run1 && result.base == STATIC) {
-                                core.promoteStaticSummary(premise, result)
+                                core.routeStaticResultToExit(premise, result)
                             } else next += planFact(premise, result, input.identityCandidate)
                         })
                     }
@@ -343,7 +343,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                 val results = ArrayList<PlanFact>()
                 if (part.zeroOnly) {
                     if (core.config.run1 && pub.conclusion.base == STATIC)
-                        core.promoteStaticSummary(part.ref.premise, pub.conclusion)
+                        core.routeStaticResultToExit(part.ref.premise, pub.conclusion)
                     else results += planFact(part.ref.premise, pub.conclusion, false)
                 }
                 else applyParts(part, premise, pub.conclusion, results)
@@ -504,7 +504,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             val at = OperationInput(ResumeSite.CallStageInput(core.operation(part.ref.call, part.ref.stageOrdinal)),
                 part.ref.premise, part.added, CallResumeState(part.ref.callerLayer, identity))
             core.ops.applySummary(part.added, premise, group, core.mode, core.collect(at) { pr, result ->
-                if (core.config.run1 && result.base == STATIC) core.promoteStaticSummary(pr, result)
+                if (core.config.run1 && result.base == STATIC) core.routeStaticResultToExit(pr, result)
                 else results += planFact(pr, result, identity)
             }, original = part.ref.premise)
         }
@@ -575,7 +575,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                     .map { it.id }.toIntArray())
                 protected = core.ap.selectedProtection(protected, restored)
             }
-            if (core.config.run1 && protected.base == STATIC) core.promoteStaticSummary(pr, protected)
+            if (core.config.run1 && protected.base == STATIC) core.routeStaticResultToExit(pr, protected)
             else results += planFact(pr, protected, false)
         })
         resumeCallees(ref, results)

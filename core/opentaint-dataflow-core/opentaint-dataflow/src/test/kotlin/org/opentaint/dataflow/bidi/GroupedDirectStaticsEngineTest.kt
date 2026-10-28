@@ -200,7 +200,7 @@ class GroupedDirectStaticsEngineTest {
                     f.ops.leaves(edge.facts).any { it.fact.mark == MarkSlot.Concrete(full) }
                 } }
             } }, "Later refinement checks the original full mark")
-            assertTrue(f.processed.none { it.run == 1 && it.delta.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
             assertTrue(f.results.first().analyzers.flatMap { it.summaries.all() }.none { (initial, _) ->
                 initial.isFlow && initial.member(0).base == STATIC && initial.member(0).path == null
             }, "There is no executable S-root default")
@@ -224,12 +224,12 @@ class GroupedDirectStaticsEngineTest {
             assertEquals(RunStatus.COMPLETE, result.status)
             assertTrue(result.witnessesByKey().any { it.key.rule == sink.rule })
             assertTrue(f.processed.any { it.run == 1 && it.delta.premise.members.any { member -> member.base == STATIC } && it.delta.facts.base == local })
-            assertTrue(f.processed.none { it.run == 1 && it.delta.facts.base == STATIC }, "Static values never traverse ordinary successor queues")
+            assertTrue(f.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) }, "Static values never traverse ordinary successor queues")
             assertTrue(result.analyzers.flatMap { it.summaries.all() }.any { (premise, value) -> premise.isZero && value.base == STATIC && value.layer == Layer.DEMAND })
         }
     }
 
-    @Test fun `a reached source publishes before return without static successor propagation`() {
+    @Test fun `a reached source supplies immediately and publishes through the normal boundary`() {
         DriverFixtures().use { f ->
             val p = f.program
             val m = p.method("early writer", listOf(listOf(1), listOf(2), emptyList()), 2).key()
@@ -242,7 +242,7 @@ class GroupedDirectStaticsEngineTest {
             val publications = result.analyzers.flatMap { it.summaries.all() }
             assertTrue(publications.any { (original, value) -> original.isZero && value.base == STATIC && value.layer == Layer.DEMAND })
             assertFalse(publications.any { (original, value) -> original.isFlow && value.base == STATIC })
-            assertTrue(f.processed.none { it.delta.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
         }
     }
 
@@ -310,7 +310,7 @@ class GroupedDirectStaticsEngineTest {
             assertTrue(result.analyzers.single { it.key == copy }.summaries.all().none { (original, value) ->
                 !original.isZero && original.members.all { it.base == STATIC } && value.base == STATIC
             }, "The actual copy supplies the observed sink without a retained static/static row")
-            assertTrue(f.processed.none { it.run == 1 && it.delta.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
         }
     }
 }

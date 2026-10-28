@@ -11,7 +11,7 @@ import kotlin.test.*
 
 class DemandLinkTest {
     @Test
-    fun `DLINK runs one through seven because the root exact cleaner creates a demand link despite normal run three edges`(): Unit {
+    fun `DLINK retains the run3 demand link and stops after demand-only refinement removes the coarse actual query`(): Unit {
         DriverFixtures().use { f ->
             val program = f.demandLink()
             val driver = f.driver(FixedLimits(listOf(1, 1, 2, 3, 4, 5, 6)))
@@ -19,9 +19,9 @@ class DemandLinkTest {
             val argument = AccessPathBase.Argument(0)
             val mark = MarkSlot.Concrete(program.mark)
             val coarseLink = Pattern(PathFact(argument, emptyList(), Tail.ANY_TAINT, mark), ExclusionSet.Empty)
-            val exactSink = Pattern(PathFact(argument, listOf(program.g, program.h), Tail.EXACT, mark), ExclusionSet.Empty)
-            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), f.configs.map { it.index })
-            assertEquals(listOf(1, 1, 2, 3, 4, 5, 6), f.configs.map { it.fieldLimit })
+            val refinedLink = Pattern(PathFact(argument, listOf(program.g), Tail.ANY_TAINT, mark), ExclusionSet.Empty)
+            assertEquals(listOf(1, 2, 3, 4, 5), f.configs.map { it.index })
+            assertEquals(listOf(1, 1, 2, 3, 4), f.configs.map { it.fieldLimit })
             assertTrue(f.results.all { it.status == RunStatus.COMPLETE })
             val runThree = f.results[2]
             val stored = f.processed.filter { it.run == 3 }
@@ -45,25 +45,20 @@ class DemandLinkTest {
             val coarseDemand = Pattern(PathFact(argument, listOf(program.q), Tail.ANY, mark), ExclusionSet.Empty)
             assertContains(f.configs[2].demand!!.near(program.reader, demandProbe(argument, listOf(program.q, program.r), mark))
                 .map { it.entry }, coarseDemand)
-            val preciseDemand = Pattern(PathFact(argument, listOf(program.q, program.r, program.g, program.h), Tail.EXACT, mark),
-                ExclusionSet.Empty)
-            assertContains(f.configs[6].demand!!.near(program.reader, preciseDemand)
-                .map { it.entry }, preciseDemand)
-            val mSeven = f.results[6].analyzers.single { it.key == program.sinkMethod }
-            assertTrue(f.links(7, mSeven.key).asSequence().any { link ->
-                link.linkLayer == Layer.NORMAL && link.addedFact == exactSink
-            }, "The precise descendant survives root EXACT cleaning in run 7")
-            assertTrue(f.results[6].witnessesByKey().getValue(key).all { !it.confirmed })
+            val finalRun = f.results.last()
+            val refined = finalRun.analyzers.single { it.key == program.sinkMethod }
+            assertTrue(f.links(5, refined.key).any { it.linkLayer == Layer.NORMAL && it.addedFact == refinedLink },
+                "The fixed guide starts the needed descendant must region without a root query")
+            assertTrue(f.links(5, refined.key).none { it.linkLayer == Layer.DEMAND && it.addedFact == coarseLink },
+                "No unconditional actual query keeps the earlier coarse demand link alive")
+            assertTrue(finalRun.witnessesByKey().getValue(key).all { !it.confirmed })
             assertEquals(ReportState.DEMAND, report.entries.single { it.key == key }.state)
-            assertEquals(7, report.entries.single { it.key == key }.run)
-            assertTrue(f.links(7, mSeven.key).any { it.linkLayer == Layer.DEMAND && it.addedFact == coarseLink },
-                "The actual broad query remains additive to the precise guide refinement")
-            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 7, Direction.FORWARD, EndReason.POLICY), report.end)
-            assertEquals(listOf(1, 2, 3, 4, 5, 6, 7), driver.frontiers.map { it.run })
+            assertEquals(5, report.entries.single { it.key == key }.run)
+            assertEquals(AnalysisEnd(RunStatus.COMPLETE, 5, Direction.FORWARD, EndReason.NO_DEMAND_EDGE), report.end)
+            assertEquals(listOf(1, 2, 3, 4, 5), driver.frontiers.map { it.run })
             assertEquals(1, driver.frontiers[2].demandVulnerabilities)
             assertEquals(1, driver.frontiers[2].seeds)
-            assertEquals(0, driver.frontiers[6].confirmedVulnerabilities)
-            assertEquals(1, driver.frontiers[6].seeds)
+            assertEquals(0, driver.frontiers.last().confirmedVulnerabilities)
         }
     }
 }

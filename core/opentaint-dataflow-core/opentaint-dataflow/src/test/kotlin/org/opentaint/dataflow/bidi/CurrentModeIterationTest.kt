@@ -46,7 +46,7 @@ class CurrentModeIterationTest {
         VulnerabilityKey(c.rules[index], c.root.method, c.sinks)
 
     @Test
-    fun `two marks retain separate actual backward queries and run three also crosses normal reversed records`(): Unit {
+    fun `two marks share one FLOW backward analysis and run three crosses normal reversed records`(): Unit {
         CurrentModeFixtures().use { f ->
             val c = f.sharedGetter()
             val driver = f.driver()
@@ -62,29 +62,18 @@ class CurrentModeIterationTest {
             assertContains(f.summaries(1, c.callee), forward)
             assertContains(f.summaries(1, c.callee, selected = true), forward)
             assertEquals(setOf(DemandPattern(mayOutput, flowInput)), f.patterns(2, c.callee, ret))
-            val concreteReturns = listOf(c.t, c.u).map { f.p(ret, mark = MarkSlot.Concrete(it)) }.toSet()
-            val boundReturns = listOf(c.outputs[0] to c.t, c.outputs[1] to c.u).map { (base, mark) ->
-                f.p(base, mark = MarkSlot.Concrete(mark))
-            }.toSet()
-            assertEquals(concreteReturns + boundReturns, f.premises(2, c.callee))
-            for (actualQuery in boundReturns) assertTrue(f.links.any {
-                it.run == 2 && it.callee == c.callee && it.added == actualQuery
-            }, "A query of another base must come from an actual full-key LinkIn")
-            for (mark in listOf(c.t, c.u)) {
-                val entry = f.p(ret, mark = MarkSlot.Concrete(mark))
-                val result = f.p(arg, c.fields, mark = MarkSlot.Concrete(mark))
-                assertContains(f.summaries(2, c.callee), CurrentSummary(setOf(entry),
-                    Conclusion(result.fact, ExclusionSet.Empty, false)))
-                normalBackwardRecord(f, c, entry, result)
-            }
+            assertEquals(setOf(flowReturn), f.premises(2, c.callee),
+                "The fixed abstract entry shares one FLOW execution across actual T and U")
+            assertContains(f.summaries(2, c.callee), backward)
+            normalBackwardRecord(f, c, flowReturn, flowField)
             assertTrue(f.summaries(2, c.callee, selected = true).none { it.conclusion.fact.base != AccessPathBase.Zero })
             assertTrue(f.patterns(3, c.callee, arg).isEmpty())
             assertTrue(f.patterns(3, c.callee, ret).isEmpty())
-            assertEquals(listOf(c.t, c.u).map { f.p(arg, tail = Tail.ANY_TAINT, mark = MarkSlot.Concrete(it)) }.toSet(),
-                f.premises(3, c.callee), "Actual inputs still start even after a native record is available")
-            assertTrue(f.actor(3, c.callee).nonZeroInitial)
+            assertTrue(f.premises(3, c.callee).isEmpty(),
+                "No selected demand remains; native records answer the actual marks")
+            assertFalse(f.actor(3, c.callee).nonZeroInitial)
             assertContains(driver.frontiers[1].analysed, c.callee)
-            assertContains(driver.frontiers[2].analysed, c.callee)
+            assertTrue(c.callee !in driver.frontiers[2].analysed)
             assertTrue(f.actual.results[2].recordCrossings >= 2)
             for (mark in listOf(c.t, c.u)) {
                 assertTrue(f.links.any { it.run == 1 && it.callee == c.callee && it.layer == Layer.DEMAND &&
@@ -129,11 +118,14 @@ class CurrentModeIterationTest {
             val boundU = f.p(c.outputs[1], mark = MarkSlot.Concrete(c.u))
             val retT = f.p(ret, mark = MarkSlot.Concrete(c.t))
             val boundT = f.p(c.outputs[0], mark = MarkSlot.Concrete(c.t))
-            assertEquals(setOf(retT, boundT, retU, boundU), f.premises(2, c.callee))
+            val sharedReturn = f.p(ret, tail = Tail.STAR)
+            assertEquals(setOf(sharedReturn, retT), f.premises(2, c.callee),
+                "The abstract demand shares FLOW; only the explicit T guide starts a concrete cleaner check")
             assertTrue(f.links.any { it.run == 2 && it.callee == c.callee && it.added == boundU })
-            normalBackwardRecord(f, c, retU, argU)
-            assertEquals(setOf(f.p(arg, tail = Tail.ANY_TAINT, mark = MarkSlot.Concrete(c.u))),
-                f.premises(3, c.callee))
+            val excludedFullT = MarkSlot.Star(f.manager.markSetOf(c.t))
+            normalBackwardRecord(f, c, sharedReturn, f.p(arg, c.fields, Tail.STAR, excludedFullT))
+            assertTrue(f.premises(3, c.callee).isEmpty(),
+                "The retained FLOW record passes U and excludes T without a new actual-input query")
             assertTrue(f.actual.results[2].recordCrossings > 0)
             assertEquals(setOf(CurrentRequest(1, c.callee, input, RequestKind.Mark(groupT.mark))), f.requests)
             val blocked = reportKey(c, 0)

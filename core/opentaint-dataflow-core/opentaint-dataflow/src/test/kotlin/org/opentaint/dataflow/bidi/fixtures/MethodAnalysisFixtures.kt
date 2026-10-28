@@ -269,7 +269,10 @@ class MethodAnalysisFixtures(
                 }
                 return true
             }
-            override fun post(event: RunEvent.Delivery): Boolean { events += event; return true }
+            override fun post(event: RunEvent.Delivery): Boolean {
+                events += event
+                return true
+            }
             override fun post(event: RunEvent.ChangedRequests): Boolean {
                 questionQueue += { questionManagers.getValue(actor).onRequests(event.callee, event.rows) }
                 onRequestNotification?.invoke(event)

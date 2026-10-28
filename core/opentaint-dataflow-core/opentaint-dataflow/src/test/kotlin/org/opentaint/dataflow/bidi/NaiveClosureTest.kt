@@ -222,12 +222,13 @@ class NaiveClosureTest {
             assertContains(actual.processed, ObservedEdge(caller, zero,
                 Conclusion(ZERO_FACT, ExclusionSet.Empty, false), main.inst(3)))
             assertTrue(actual.requests.isEmpty() && actual.sourceHits.isEmpty())
-            assertEquals(actual.publications, actual.selectedDemand, "Every F1 publication is guidance")
+            assertEquals(actual.publications.filter { it.conclusion.demand }.toSet(), actual.selectedDemand,
+                "Only DEMAND singleton publications supply F1 guidance")
         }
     }
 
     @Test
-    fun `restricted actual query preserves raw E without adding old exit-guide exclusions`(): Unit {
+    fun `paired restriction preserves raw E and applies exit exclusions only to publications`(): Unit {
         for (sameUnit in listOf(false, true)) FiniteProgramFixtures().use { f ->
             val main = f.method("mustCaller", listOf(listOf(1), listOf(2), listOf(3), emptyList()), 3)
             val getter = f.method("excludedGetter", listOf(listOf(1), emptyList()), 1)
@@ -253,9 +254,9 @@ class NaiveClosureTest {
             assertContains(actual.initials, ObservedInitial(callee, initial))
             assertContains(actual.rawSummaries, ObservedEdge(callee, setOf(initial),
                 Conclusion(PathFact(returned, emptyList(), Tail.ANY_TAINT, t), ExclusionSet.of(b), false)))
-            // Actual-current authorization publishes the complete computed result;
-            // prior exit guidance cannot add the unrelated exclusion a.
-            val outputExclusion = ExclusionSet.of(b)
+            // C5 narrows the published must region by the exit guard. Raw body
+            // storage above retains its own E without that exit-only exclusion.
+            val outputExclusion = ExclusionSet.of(intArrayOf(a, b))
             assertContains(actual.publications, ObservedEdge(callee, setOf(initial),
                 Conclusion(PathFact(returned, emptyList(), Tail.ANY_TAINT, t), outputExclusion, false)))
             assertContains(actual.rawSummaries, ObservedEdge(caller, zero,
@@ -338,7 +339,7 @@ class NaiveClosureTest {
                 val config = f.config(roots = listOf(caller))
                 val scalar = NaiveClosure(f, config, semantics = NaiveClosure.Semantics.HISTORICAL).run()
                 val actual = ProductionSchedule(f, config, sameUnit, policy, quantum = 1, duplicateDeliveries = true).run()
-                assertDirectStaticProtocol(actual, f.ap.marks)
+                assertDirectStaticProtocol(actual, f)
                 val policyInitial = f.pattern(static, tail = Tail.STAR, mark = MarkSlot.STAR)
                 val positionInitial = f.pattern(static, path, Tail.STAR, MarkSlot.STAR)
                 val position = RequestKind.Position(f.ap.path(path)!!)

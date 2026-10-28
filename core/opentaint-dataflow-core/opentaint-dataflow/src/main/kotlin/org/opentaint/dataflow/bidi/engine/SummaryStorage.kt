@@ -76,4 +76,15 @@ class SummaryStorage(
         synchronized(lock) { published.candidates(part, mode) }
 
     fun staticCandidates(): List<Pair<Publication, Int>> = synchronized(lock) { published.staticCandidates() }
+
+    /** Borrow the existing subscriber index only after all runners join. The
+     * storage lock is released before inspecting caller-owned immutable inputs. */
+    internal fun visitJoinedInputs(writer: Publication, mode: ApMode, visit: (Subscription) -> Unit) {
+        check(mode.run1 && writer.premise is org.opentaint.dataflow.bidi.ap.InitialAp)
+        val recipients = synchronized(lock) { subscribers.toList() }
+        for (subscriber in recipients) {
+            ap.cancellation.checkpoint()
+            subscriber.visitJoinedInputs(method, writer, mode, visit)
+        }
+    }
 }

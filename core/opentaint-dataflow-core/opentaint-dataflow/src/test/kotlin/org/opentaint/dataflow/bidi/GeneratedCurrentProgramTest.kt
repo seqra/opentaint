@@ -168,7 +168,7 @@ class GeneratedCurrentProgramTest {
             // compare the entire ordinary scalar closure with actual query admission.
             val actual = if (index == 1) ProductionSchedule(f, config, policy = SchedulePolicy.SEEDED,
                 seed = seed + 100L, quantum = 1, duplicateDeliveries = true).run().also {
-                assertDirectStaticProtocol(it, f.ap.marks)
+                assertDirectStaticProtocol(it, f)
             } else compare(f, config, seed + 100L, listOf(cls) + fields, listOf(t.mark, u.mark))
             // Run-1 field group answers use a STAR premise; later ZERO premises and exact results stay unchanged.
             if ((index == 1 && path.size == 2) || (index != 1 && !abstract)) assertContains(actual.rawSummaries, ObservedEdge(caller, if (index == 1) setOf(GroupedScalarMarks(f.ap.marks).pattern(f.pattern(STATIC, path.take(2), Tail.STAR, t))) else setOf(ZERO_PATTERN),
@@ -177,8 +177,8 @@ class GeneratedCurrentProgramTest {
                 "seed=$seed index=$index full static path=$path")
             if (index == 3 && abstract) {
                 assertTrue(actual.requests.isEmpty())
-                assertTrue(actual.rawSummaries.any { it.conclusion.fact.mark == u },
-                    "Actual concrete input authorizes the transfer independently of an abstract old guide")
+                assertTrue(actual.rawSummaries.none { it.conclusion.fact.mark == u },
+                    "An abstract demand starts FLOW, which cannot satisfy the concrete T-to-U transfer")
             }
         }
     }

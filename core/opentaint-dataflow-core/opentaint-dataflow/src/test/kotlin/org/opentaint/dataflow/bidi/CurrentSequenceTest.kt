@@ -81,7 +81,7 @@ class CurrentSequenceTest {
     }
 
     @Test
-    fun `WRAP uses concrete current queries while source cuts refine through five runs`(): Unit {
+    fun `WRAP reuses normal FLOW records while source cuts refine through five runs`(): Unit {
         DriverFixtures().use { f ->
             val p = f.program
             val root = p.method("WRAP root", straight(3), 2).key()
@@ -105,8 +105,8 @@ class CurrentSequenceTest {
             val from = p.pattern(argument, tail = Tail.STAR, mark = MarkSlot.STAR)
             val to = Conclusion(PathFact(returned, listOf(field), Tail.STAR, MarkSlot.STAR), ExclusionSet.Empty, false)
             assertContains(raw(f, f.results[0], wrap), setOf(from) to to)
-            assertEquals(raw(f, f.results[0], wrap), selected(f, f.results[0], wrap),
-                "F1 normal summaries remain candidate guidance while ordinary R1 persistence also applies")
+            assertTrue(selected(f, f.results[0], wrap).isEmpty(),
+                "Normal singleton FLOW summaries persist as records and are not selected demand")
             val scalar = DirectCurrentIteration(p, listOf(root), listOf(1, 1, 2, 3, 4)).run()
             assertEquals(f.results.map { it.runIndex }, scalar.runs.map { it.index })
             val bases = listOf(AccessPathBase.Zero, STATIC, argument, returned, x, r, z)
@@ -125,9 +125,9 @@ class CurrentSequenceTest {
                 if (actual.runIndex > 1) {
                     val inputs = f.processed.filter { it.run == actual.runIndex && it.method == wrap }
                     assertTrue(inputs.isNotEmpty())
-                    assertTrue(inputs.all { it.delta.premise.members.all { member -> member.isZero ||
-                        member.mark is MarkSlot.Concrete } }, "Strong production phases never execute FLOW guidance")
-                    assertContains(driver.frontiers[actual.runIndex - 1].analysed, wrap)
+                    assertTrue(inputs.all { it.delta.premise.members.all { member -> member.isZero } },
+                        "Only ZERO discovery enters the wrapper; records apply its completed FLOW relation")
+                    assertTrue(wrap !in driver.frontiers[actual.runIndex - 1].analysed)
                 }
             }
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, source))
@@ -142,7 +142,7 @@ class CurrentSequenceTest {
                         it.fact == to.fact && it.exclusion == to.exclusion
                     }
             }, "The eligible F1 NORMAL FLOW row is retained by the ordinary writer")
-            assertTrue(f.results.drop(1).all { result -> result.analyzers.any { it.key == wrap && it.nonZeroInitial } })
+            assertTrue(f.results.drop(1).all { result -> result.analyzers.none { it.key == wrap && it.nonZeroInitial } })
             assertTrue(f.results.filter { it.direction == Direction.BACKWARD }.all { it.witnessesByKey().isEmpty() })
         }
     }
@@ -354,9 +354,9 @@ class CurrentSequenceTest {
             val concreteReturn = p.pattern(returned, mark = t)
             assertEquals(normalReversal, f.records.byEntry(m, concreteReturn).any { it.direction == Direction.BACKWARD },
                 "Split literal branches cannot become independent normal records")
-            assertTrue(f.configs[2].demand!!.near(m, demandProbe(argument)).any { it.entry == required.first() },
-                "Run-2 limit-one DEMAND branches remain additive when a native NORMAL record also exists")
-            assertTrue(f.configs[2].demand!!.near(m, demandProbe(arg1)).any { it.entry == required.last() })
+            assertEquals(!normalReversal, f.configs[2].demand!!.near(m, demandProbe(argument)).any { it.entry == required.first() },
+                "DEMAND literal branches are selected; the normal-reversal control supplies native records only")
+            assertEquals(!normalReversal, f.configs[2].demand!!.near(m, demandProbe(arg1)).any { it.entry == required.last() })
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sa))
             assertTrue(f.configs[2].seeds.allowsSource(root, root.statement, sb))
             assertTrue(f.results[2].witnessesByKey().values.flatten().all { !it.confirmed })

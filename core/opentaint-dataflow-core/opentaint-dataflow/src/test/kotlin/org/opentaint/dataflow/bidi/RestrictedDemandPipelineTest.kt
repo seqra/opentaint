@@ -6,10 +6,11 @@ import org.opentaint.dataflow.bidi.engine.*
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.MicroEdgeBuilder
 import org.opentaint.dataflow.bidi.store.CallerRef
+import org.opentaint.dataflow.bidi.store.DemandStore
 import kotlin.test.*
 
-/** Exercise owner admission and actual retained/live publication, without a demand row. */
-class StrongQueryPipelineTest {
+/** Exercise fixed-demand admission and publication through the actual method owner. */
+class RestrictedDemandPipelineTest {
     private val arg = AccessPathBase.Argument(0)
     private val ret = AccessPathBase.Return
 
@@ -20,7 +21,7 @@ class StrongQueryPipelineTest {
     private fun ref(f: MethodAnalysisFixtures): CallerRef =
         CallerRef(f.store.key("caller"), f.manager.zero, Layer.NORMAL, f.inst(1))
 
-    @Test fun `later actual input starts absent guide and its computed opposite base is published`() {
+    @Test fun `later actual input with no guide cannot start a body or publish a response`() {
         method().use { f ->
             val t = f.mark("T")
             val input = f.fact(arg, mark = MarkSlot.Concrete(t))
@@ -29,20 +30,14 @@ class StrongQueryPipelineTest {
             assertTrue(actor.initials.all().isEmpty())
             assertTrue(actor.summaries.all().none())
             f.admit(actor, ref(f), input.layer, input)
-            val actual = f.manager.initial(f.pattern(arg, mark = MarkSlot.Concrete(t)))
-            assertContains(actor.initials.all(), actual)
+            assertTrue(actor.initials.all().isEmpty())
             f.drain(actor)
-            val expected = f.pattern(ret, mark = MarkSlot.Concrete(t))
-            assertTrue(f.publications.flatten().any { pub ->
-                pub.premise === actual && expected in f.ops.leaves(pub.conclusion).toList()
-            }, "Missing old exit demand cannot veto a proven current-query response")
-            assertTrue(actor.summaries.all().any { (premise, facts) ->
-                premise === actual && expected in f.ops.leaves(facts).toList()
-            })
+            assertTrue(f.publications.flatten().isEmpty())
+            assertTrue(actor.summaries.all().none())
         }
     }
 
-    @Test fun `actual input after a guide computation republishes existing raw answers without restarting the initial`() {
+    @Test fun `actual input after a raw computation cannot change fixed exit permission`() {
         method().use { f ->
             val t = f.mark("T")
             val actual = f.manager.initial(f.pattern(arg, mark = MarkSlot.Concrete(t)))
@@ -59,16 +54,17 @@ class StrongQueryPipelineTest {
             f.admit(actor, ref(f), input.layer, input)
             f.drain(actor)
             assertEquals(processed, actor.steps, "Raw response replay does not rerun the initial")
-            assertTrue(f.publications.flatten().any { pub ->
-                pub.premise === actual && expected in f.ops.leaves(pub.conclusion).toList()
-            })
+            assertTrue(f.publications.flatten().isEmpty(), "Later input cannot authorize an old raw answer")
         }
     }
 
-    @Test fun `nonreturning actual query has no manufactured answer`() {
+    @Test fun `nonreturning demanded initial has no manufactured answer`() {
         MethodAnalysisFixtures(successors = listOf(listOf(1), listOf(1), emptyList()), normalExit = 2).use { f ->
             val input = f.fact()
-            val actor = f.core(index = 3,
+            val demand = DemandStore.Builder(f.manager).apply {
+                add(f.key, DemandPattern(f.ops.leaves(input).single(), f.pattern(ret, tail = Tail.ANY)))
+            }.build()
+            val actor = f.core(index = 3, demand = demand,
                 localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
             f.admit(actor, ref(f), input.layer, input)
             f.drain(actor)

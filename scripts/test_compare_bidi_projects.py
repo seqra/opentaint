@@ -182,6 +182,41 @@ class CompareProjectsTest(unittest.TestCase):
         self.assertFalse(result["both_complete_without_prescan_error"])
         self.assertEqual("OOM", result["bidi"]["status"]["analysis_ends"][0]["status"])
 
+    def test_joined_writer_binding_time_is_separate_from_engine_and_barrier(self):
+        log = ("BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=100s\n"
+               "BIDI_STATIC_WRITER_BIND run=1 bindingTime=1m 2.5s status=COMPLETE "
+               "observedCandidates=8 lostCandidates=3 peakCandidateMemberships=8 "
+               "pruneTime=2ms writerTime=1m 2s closureFreezeTime=500us bound=4\n"
+               "BIDI_RUN_END run=1 status=COMPLETE engineTime=3.25s\n"
+               "BIDI_BARRIER_END run=1 barrierTime=4ms iterationTime=1m 5.754s\n")
+        result = log_evidence(log, {"status": "OK"}, side="bidi")
+        iteration = result["iterations"][0]
+        self.assertEqual(62.5, iteration["joined_static_binding_seconds"])
+        self.assertEqual("COMPLETE", iteration["joined_static_binding_status"])
+        self.assertEqual(3.25, iteration["engine_seconds"])
+        self.assertEqual(.004, iteration["barrier_seconds"])
+        self.assertEqual(.002, iteration["static_candidate_prune_seconds"])
+        self.assertEqual(62, iteration["static_writer_apply_seconds"])
+        self.assertEqual(.0005, iteration["static_closure_freeze_seconds"])
+        self.assertEqual(3, iteration["lostCandidates"])
+        self.assertEqual(8, iteration["peakCandidateMemberships"])
+        self.assertEqual("run-1", result["latest_complete_bidi_iteration"])
+        directory = self.root / "timing"
+        directory.mkdir()
+        path = directory / "analyzer.log"
+        path.write_text(log)
+        compact = bidi_iteration_summary(path, "bidi", "OK")
+        self.assertEqual(62.5, compact["bidi_iteration_progress"]["latest_complete_engine"]
+                         ["joined_static_binding_seconds"])
+
+    def test_failed_writer_binding_is_not_a_complete_engine(self):
+        result = log_evidence(
+            "BIDI_RUN_START run=1 direction=FORWARD limit=1 timeout=100s\n"
+            "BIDI_STATIC_WRITER_BIND run=1 bindingTime=2s status=TIMEOUT\n"
+            "BIDI_RUN_END run=1 status=TIMEOUT engineTime=3s\n", {"status": "TIMEOUT"}, side="bidi")
+        self.assertIsNone(result["latest_complete_bidi_iteration"])
+        self.assertEqual("TIMEOUT", result["iterations"][0]["joined_static_binding_status"])
+
     def test_rejected_location_explains_report_and_sarif_count_difference(self):
         self.bundle("main", [finding()])
         self.bundle("bidi", [finding()], log="Bidi analysis: 1 CONFIRMED, 1 DEMAND vulnerabilities\n"

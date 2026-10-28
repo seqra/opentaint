@@ -283,16 +283,19 @@ class PredicateClosureTest {
                 MarkSlot.Concrete(GroupedScalarMarks(f.manager.marks).atom(p.marks[1]))), ZERO_PATTERN)
             assertContains(rawDemand, earlierChild, "The independent scalar history contains the cut Y child")
             val explicitHandoff = (demand + earlierChild).toSet()
+            assertTrue(handoff.demand.hasSharedStaticCarry)
             val sharedStatic = listOf(p.root, p.callee).flatMap { method ->
-                bounded.marks.filter { f.manager.marks.fullId(it) != null }
-                    .map { f.manager.marks.group(f.manager.marks.groupOf(it)) }.distinct().map { atom ->
-                    val group = MarkSlot.Concrete(atom)
-                    method to DemandPattern(Pattern(PathFact(STATIC, emptyList(), Tail.ANY, group), ExclusionSet.Empty),
-                        Pattern(PathFact(STATIC, emptyList(), Tail.STAR, group), ExclusionSet.Empty))
+                bounded.positions.filter { it.base == STATIC }.flatMap { position ->
+                    val marks: List<MarkSlot> = listOf(MarkSlot.STAR) + bounded.marks
+                        .filter { f.manager.marks.fullId(it) != null }.map { MarkSlot.Concrete(it) }
+                    marks.map { mark ->
+                        val point = f.manager.initial(demandProbe(STATIC, position.path, mark)).toPattern()
+                        method to DemandPattern(point, point)
+                    }
                 }
             }
             val fullHandoff = explicitHandoff + sharedStatic
-            assertEquals(fullHandoff, observedDemand.toSet(), "Pin every explicit full row plus universal static Group permission")
+            assertEquals(fullHandoff, observedDemand.toSet(), "Pin explicit full rows plus same-actual-position static carry")
             assertEquals(explicitHandoff.groupingBy { it.first }.eachCount(), handoff.demandEdges)
             assertEquals(demandCells(rawDemand + sharedStatic), demandCells(observedDemand))
             val seed = Seed.PredicateSink(checkNotNull(p.sink.occurrenceId), p.callee, node)

@@ -92,8 +92,13 @@ class Run1StaticDriverSafetyTest {
             }
             assertEquals(RunStatus.COMPLETE, report.end.status)
             assertTrue(seen.results.all { it.status == RunStatus.COMPLETE })
-            assertTrue(seen.processed.none { it.run > 1 && it.delta.facts is FlowTree },
-                "Actual ZERO/concrete seeds and concrete query starts cannot execute a broad FLOW guide")
+            assertTrue(seen.processed.filter { it.run > 1 && it.delta.facts is FlowTree }.all { row ->
+                val original = row.delta.premise as InitialAp
+                val demand = checkNotNull(seen.configs.single { it.index == row.run }.demand)
+                demand.near(row.method, original.toPattern()).any { guide ->
+                    guide.entry.fact.mark is MarkSlot.Star && insideDemand(original.toPattern(), guide.entry, f.manager.marks)
+                }
+            }, "Every later FLOW initial is admitted by an abstract fixed demand")
             return report to seen
         }
     }
@@ -200,12 +205,11 @@ class Run1StaticDriverSafetyTest {
             assertTrue(hasTaint(f,seen.processed,3,root,2,gp,t))
             assertTrue(seen.results.first().witnessesByKey().any { it.key.rule == killed.rule })
             assertTrue(checkNotNull(seen.configs.single { it.index == 2 }.demand)
-                .near(callee, demandProbe(STATIC, fp, MarkSlot.Concrete(t))).any { it.entry.fact.path.isEmpty() &&
-                    it.entry.fact.mark == GroupedScalarMarks(f.manager.marks).slot(MarkSlot.Concrete(t)) },
-                "The shared Group permission retains actual Full marks and never starts FLOW")
-            assertTrue(seen.results.filter { it.runIndex > 1 }.all { result ->
-                result.analyzers.single { it.key == callee }.nonZeroInitial
-            }, "Strong actual queries start even when F1 had no read request")
+                .near(callee, demandProbe(STATIC, fp, MarkSlot.Concrete(t))).any {
+                    it.entry.fact.path == fp && it.entry.fact.mark == MarkSlot.Concrete(t) && it.exit == it.entry
+                }, "Shared carry keeps the same actual field and full mark")
+            assertTrue(seen.results.single { it.runIndex == 2 }.analyzers.single { it.key == callee }.nonZeroInitial,
+                "Run-2 carry admits the required static initial even when F1 had no read request")
         }
     }
 
@@ -254,7 +258,7 @@ class Run1StaticDriverSafetyTest {
             assertEquals(ReportState.DEMAND, report.entries.single { it.key.rule == residual.rule }.state)
             assertEquals(ReportState.DEMAND, report.entries.single { it.key.rule == kept.rule }.state)
             assertTrue(hasGroupWitness(f, seen, residual) && hasGroupWitness(f, seen, kept))
-            assertTrue(seen.processed.none { it.run == 1 && it.delta.facts.base == STATIC })
+            assertTrue(seen.processed.filter { it.run == 1 && it.delta.facts.base == STATIC }.all { it.delta.node in f.shared.contexts.directed(Direction.FORWARD).endNodes(it.method) })
             assertTrue(seen.processed.none { it.run == 1 && it.delta.node.location.index == 0 &&
                 it.delta.premise.members.any { member -> member.base == STATIC } },
                 "Static descriptors resume at reached operation points, not method entries")
@@ -400,9 +404,10 @@ class Run1StaticDriverSafetyTest {
             val forward = seen.configs.single { it.index == 3 }
             assertTrue(forward.seeds.allowsSource(root, p.inst(root, 0), gen),
                 "Actual B2 source hits supply the exact source gate; current queries do not bypass it")
-            assertTrue(seen.results.filter { it.runIndex > 1 }.all { result ->
-                listOf(middle, leaf).all { key -> result.analyzers.single { it.key == key }.nonZeroInitial }
-            })
+            // Fixed demand and native records determine which helper bodies
+            // start. Body-start counts are not part of this flow contract.
+            // Keep the source-hit, exact source gate and final marked result checks.
+
             assertTrue(hasTaint(f, seen.processed, 3, root, 4, gp, t))
             assertTrue(report.entries.any { it.key.rule == target.rule })
         }

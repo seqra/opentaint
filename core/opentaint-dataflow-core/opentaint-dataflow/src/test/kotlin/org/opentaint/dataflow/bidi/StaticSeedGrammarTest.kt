@@ -21,7 +21,7 @@ class StaticSeedGrammarTest {
     }
 
     private fun fire(f: MethodAnalysisFixtures, requirement: Pattern, emit: (Facts) -> Unit) {
-        val demand = DemandStore.Builder(f.manager).apply { completeRun1StaticFields() }.build()
+        val demand = DemandStore.Builder(f.manager).build()
         val seed = Seed.Sink(rule, f.key, f.inst(2), requirement)
         val core = f.core(f.config(index = 2, demand = demand, seeds = SeedIndex.of(listOf(seed))),
             localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
@@ -50,6 +50,18 @@ class StaticSeedGrammarTest {
             val emitted = ArrayList<Facts>()
             fire(f, requirement, emitted::add)
             assertEquals(listOf(requirement), emitted.flatMap { f.ops.leaves(it).toList() })
+        }
+    }
+
+    @Test fun `the input domain repair does not add STAR source or sink literal targets`() {
+        MethodAnalysisFixtures().use { f ->
+            val path = listOf(f.manager.accessors.index(ClassStaticAccessor("C")), f.field("f"))
+            val requirement = f.pattern(STATIC, path, Tail.STAR)
+            assertTrue(validateRun2StaticFullInput(f.manager, requirement), "A derived actual STAR value is legal")
+            val emitted = ArrayList<Facts>()
+            val failure = assertFailsWith<IllegalStateException> { fire(f, requirement, emitted::add) }
+            assertContains(checkNotNull(failure.message), "W7: a target must be concrete and exact or any")
+            assertTrue(emitted.isEmpty(), "Input validation does not change the literal target constructor")
         }
     }
 

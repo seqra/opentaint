@@ -71,8 +71,8 @@ data class CompleteJvmRun(
     val nonZeroInitials: Set<MethodKey>,
     /** Frozen test declaration snapshot: full name to encoded owning group. */
     val markGroups: Map<String, String> = emptyMap(),
-    /** Symbolic permission family; no runtime group enumeration is required. */
-    val outgoingStaticGroupGuidance: Boolean? = null,
+    /** Same-position static carry for the incoming run-2 boundary. */
+    val outgoingStaticCarry: Boolean? = null,
 )
 data class BidiAcceptanceResult(val output: List<VulnerabilityWithTrace>,
                                val report: Report, val runs: List<CompleteJvmRun>, val frontiers: List<Frontier>,

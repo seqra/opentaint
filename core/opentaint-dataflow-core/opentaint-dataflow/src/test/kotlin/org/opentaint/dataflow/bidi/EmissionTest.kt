@@ -242,7 +242,7 @@ class EmissionTest {
 
     @Test
     fun `generic representable STAR entry cells preserve reference exclusion and start semantics`() {
-        // These total-function cells are outside the stronger canonical typed demand-entry guard.
+        // Concrete STAR/E and abstract STAR/empty E are typed. Abstract STAR/nonempty E is generic here.
         for (entryMark in listOf(star, mt)) for (entryE in listOf(ExclusionSet.Empty, ex(g))) {
             val entry = pattern(p(f), Tail.STAR, entryMark, entryE)
             val inputs = listOf(pack(listOf(value(p(f), Tail.EXACT))),
@@ -265,7 +265,8 @@ class EmissionTest {
         assertFails { ops.emit(DemandPattern(abstractExact, null), input.facts) }
         val must = pack(listOf(value(p(f), Tail.ANY_TAINT, exclusion = ex(g))))
         val concreteStar = DemandPattern(pattern(p(f), Tail.STAR), null)
-        assertFails { ops.emit(concreteStar, must.facts) }
+        assertEquals(setOf(pattern(p(f), Tail.ANY_TAINT, exclusion = ex(g))),
+            ops.emit(concreteStar, must.facts).map { it.toPattern() }.toSet())
         assertTrue(ops.emit(DemandPattern(pattern(p(f, g), Tail.STAR), null), must.facts).isEmpty())
     }
 

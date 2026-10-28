@@ -957,6 +957,11 @@ This adapter mirrors the existing run-1 static-summary result lane,
 which routes STATIC output before the caller alias suffix. Do not add a
 new alias expansion here. Static writes produced by ordinary nonstatic
 call-result alias stages remain primitive run-1 write/candidate events.
+Keep raw FLOW mark exclusions until AP application finishes. That
+application can repeat a mark-request notification. The live exclusion
+producer already owns this request. The joined adapter ignores the repeated
+notification; it does not deliver a request or clear the exclusion before
+matching. A concrete input excluded by that FLOW relation still fails.
 ZERO W uses only a genuine reached ZERO call-control input. A resulting
 static original creates B; a nonstatic/ZERO original remains local W.
 Repeat fresh writer bindings and B inheritance to their finite fixed point.

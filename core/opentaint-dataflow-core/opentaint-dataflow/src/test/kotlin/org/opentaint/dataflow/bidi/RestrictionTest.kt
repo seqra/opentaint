@@ -135,6 +135,28 @@ class RestrictionTest {
     }
 
     @Test
+    fun `restriction moves protection with surviving paths tails and marks`() {
+        val initial = manager.initial(p(emptyList(), Tail.EXACT, MarkSlot.Concrete(t)))
+        val entry = p(emptyList(), Tail.ANY, MarkSlot.Concrete(t))
+        val input = taint(c(emptyList(), Tail.ANY, layer = Layer.DEMAND),
+            c(emptyList(), Tail.ANY, u, layer = Layer.DEMAND),
+            c(listOf(g), Tail.EXACT, u, layer = Layer.DEMAND), layer = Layer.DEMAND)
+        val mask = taint(c(emptyList(), Tail.ANY, layer = Layer.DEMAND),
+            c(listOf(g), Tail.EXACT, u, layer = Layer.DEMAND), layer = Layer.DEMAND)
+        for (exitTail in listOf(Tail.ANY, Tail.EXACT, Tail.STAR)) {
+            val exit = p(listOf(f), exitTail, MarkSlot.STAR, base = y)
+            val result = ops.restrict(initial, input.withProtection(mask.root), DemandPattern(entry, exit))
+            val expectedTail = if (exitTail == Tail.EXACT) Tail.EXACT else Tail.ANY
+            assertEquals(setOf(c(listOf(f), expectedTail, layer = Layer.DEMAND),
+                c(listOf(f), expectedTail, u, layer = Layer.DEMAND)), result.flatMap(::decode).toSet())
+            assertEquals(setOf(c(listOf(f), expectedTail, layer = Layer.DEMAND)),
+                result.filterIsInstance<TaintTree>().mapNotNull { it.protectedPart() }.flatMap(::decode).toSet())
+        }
+        val rejected = DemandPattern(entry, p(emptyList(), Tail.ANY, MarkSlot.Concrete(fresh), base = y))
+        assertTrue(ops.restrict(initial, input.withProtection(mask.root), rejected).isEmpty())
+    }
+
+    @Test
     fun `zero restriction preserves the raw layer and canonical reach packing`() {
         val zero = manager.zero.toPattern()
         val demand = DemandPattern(zero, zero)
@@ -189,8 +211,8 @@ class RestrictionTest {
         assertTrue(overlap(root.toPattern(), overlapping))
         assertTrue(check(root, conclusion, DemandPattern(overlapping, exit)).isEmpty())
         val must = manager.initial(p(emptyList(), Tail.ANY_TAINT, MarkSlot.Concrete(t), ex(g)))
-        for (entry in listOf(p(emptyList(), Tail.STAR, exclusion = ex(f)),
-            p(emptyList(), Tail.STAR, exclusion = ex(f, g)),
+        for (entry in listOf(p(emptyList(), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(f)),
+            p(emptyList(), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(f, g)),
             p(emptyList(), Tail.ANY, MarkSlot.Concrete(u)),
             p(emptyList(), Tail.ANY, MarkSlot.Star(marks(t.id)))))
             assertTrue(check(must, conclusion, DemandPattern(entry, exit)).isEmpty())
@@ -203,7 +225,7 @@ class RestrictionTest {
             check(moreExcluded, conclusion, DemandPattern(p(emptyList(), Tail.STAR, exclusion = ex(g)), exit)).toSet())
         assertTrue(check(root, conclusion, DemandPattern(p(emptyList(), Tail.ANY, MarkSlot.Concrete(t)), exit)).isEmpty())
         val underField = manager.initial(p(listOf(f), Tail.ANY_TAINT, MarkSlot.Concrete(t)))
-        assertTrue(check(underField, conclusion, DemandPattern(p(emptyList(), Tail.STAR, exclusion = ex(f)), exit)).isEmpty())
+        assertTrue(check(underField, conclusion, DemandPattern(p(emptyList(), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(f)), exit)).isEmpty())
     }
 
     @Test
@@ -212,7 +234,7 @@ class RestrictionTest {
         val entry = p(emptyList(), Tail.ANY)
         val input = taint(c(emptyList(), Tail.ANY_TAINT), c(listOf(f), Tail.ANY_TAINT),
             c(listOf(f, g), Tail.ANY_TAINT), c(listOf(g), Tail.ANY_TAINT), exclusion = ex(g))
-        val star = DemandPattern(entry, p(listOf(f), Tail.STAR, exclusion = ex(h), base = y))
+        val star = DemandPattern(entry, p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(h), base = y))
         assertEquals(setOf(c(listOf(f), Tail.ANY_TAINT, exclusion = ex(h)),
             c(listOf(f), Tail.ANY_TAINT, exclusion = ex(g, h)),
             c(listOf(f, g), Tail.ANY_TAINT, exclusion = ex(g))), check(initial, input, star).toSet())
@@ -254,13 +276,16 @@ class RestrictionTest {
     fun `packing groups complete annotation keys without cross E intersection or subsumption`() {
         val initial = manager.initial(p(emptyList(), Tail.EXACT, MarkSlot.Concrete(t)))
         val input = taint(c(emptyList(), Tail.ANY_TAINT), c(listOf(f), Tail.ANY_TAINT),
-            c(listOf(f), Tail.EXACT, u), exclusion = ex(g))
-        val demand = DemandPattern(p(emptyList(), Tail.ANY), p(listOf(f), Tail.STAR, exclusion = ex(h), base = y))
+            c(listOf(f), Tail.EXACT), c(listOf(f), Tail.EXACT, u), exclusion = ex(g))
+        // Concrete Dp retains E. The extra U leaf checks its unchanged concrete mark gate.
+        val demand = DemandPattern(p(emptyList(), Tail.ANY),
+            p(listOf(f), Tail.STAR, MarkSlot.Concrete(t), exclusion = ex(h), base = y))
         val raw = check(initial, input, demand)
         val packed = ops.restrict(initial, input, demand)
         assertEquals(3, raw.size)
         assertEquals(3, packed.size)
         assertEquals(setOf(empty, ex(h), ex(g, h)), packed.map { (it as TaintTree).exclusion }.toSet())
+        assertTrue(packed.flatMap { ops.leaves(it).toList() }.all { it.fact.mark == MarkSlot.Concrete(t) })
         val transfer = flow(emptyList(), listOf(f), exclusion = ex(g), mx = marks(u.id))
         val transferInitial = manager.initial(p(emptyList(), Tail.STAR))
         val exactExit = demand.copy(exit = p(listOf(f), Tail.EXACT, MarkSlot.Concrete(t), base = y))

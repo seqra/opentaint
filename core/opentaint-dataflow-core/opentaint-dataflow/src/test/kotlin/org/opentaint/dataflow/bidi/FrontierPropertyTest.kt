@@ -66,7 +66,7 @@ class FrontierPropertyTest {
         }
     }
 
-    @Test fun `actual current queries authorize demand publications independently of absent exit guidance`(): Unit {
+    @Test fun `late inputs cannot authorize demand publications without fixed exit guidance`(): Unit {
         HandOffFixtures(index = 3).use { f ->
             val t = MarkSlot.Concrete(f.mark("T"))
             f.finite.statement(1, summary(PathEdge(PathFact(x, emptyList(), Tail.EXACT, t),
@@ -86,12 +86,12 @@ class FrontierPropertyTest {
             assertEquals(3L, result.demandLayerEdges)
             assertEquals(3L, actor.edgeDeltas)
             assertEquals(setOf(first, second), f.links(actor).asSequence().map { it.caller }.toSet())
-            assertEquals(1, actor.summaries.demandEdges().count(), "The full current query authorizes its computed response without old exit demand")
+            assertEquals(0, actor.summaries.demandEdges().count(), "Raw demand without paired exit permission is not published")
             val handOff = HandOff.of(f.config, result, f.report, f.shared)
             val frontier = frontierOf(f.config, result, handOff, f.report)
             assertEquals(setOf(actor.key), frontier.analysed)
             assertTrue(frontier.zeroOnly.isEmpty())
-            assertEquals(mapOf(actor.key to 1), frontier.demandEdges)
+            assertEquals(emptyMap(), frontier.demandEdges)
             assertEquals(0L, frontier.zeroOnlyEdges)
             assertNull(frontier.demandByCause)
         }

@@ -4,69 +4,60 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*
 import java.util.Collections
 
-/** A boundary policy, with no per-method static relation or mark catalog. */
-enum class StaticQueryPolicy { ORDINARY, COMPLETE_RUN1_STATIC_FIELDS }
-
 /** Immutable demand snapshot. Tails, marks, exclusions and exits remain candidate payloads. */
 class DemandStore private constructor(
     private val byMethod: Map<MethodKey, PathTrie<DemandPattern>>,
     private val zeroDemand: DemandPattern,
     private val ap: ApManager,
-    private val staticGroupsEnabled: Boolean,
-    val staticQueryPolicy: StaticQueryPolicy,
+    val hasSharedStaticCarry: Boolean,
+    private val completion: FrozenCompletion?,
 ) {
+    val hasStaticCompletion: Boolean get() = completion != null
+    fun staticCompletionStatistics(): String? = completion?.statistics()
+
     /** Emission tests prefixes and extensions, with the implicit zero demand on the zero base. */
     fun near(method: MethodKey, actual: Pattern): List<DemandPattern> {
         ap.cancellation.checkpoint()
         val stored = byMethod[method]?.around(actual.fact.base, actual.fact.path.toIntArray()).orEmpty()
+        val completed = completion?.near(method, actual)?.toList().orEmpty()
         return when (actual.fact.base) {
-            AccessPathBase.Zero -> stored + zeroDemand
-            STATIC -> implicitStaticPair(actual)?.let { stored + it } ?: stored
-            else -> stored
-        }
+            AccessPathBase.Zero -> stored + completed + zeroDemand
+            STATIC -> staticCarry(actual)?.let { stored + completed + it } ?: (stored + completed)
+            else -> stored + completed
+        }.distinct()
     }
 
     /** Whole-premise restriction needs entry prefixes only. The implicit zero has no exit. */
     fun covering(method: MethodKey, initial: InitialAp): List<DemandPattern> {
         ap.cancellation.checkpoint()
         val stored = byMethod[method]?.lookupPrefixes(initial.base, initial.path?.toIntArray() ?: EMPTY_PATH).orEmpty()
-        return implicitStaticPair(initial.toPattern())?.let { stored + it } ?: stored
+        val completed = completion?.covering(method, initial)?.toList().orEmpty()
+        return (staticCarry(initial.toPattern())?.let { stored + completed + it } ?: (stored + completed)).distinct()
     }
 
-    /** Guidance only: select the pair from this actual FULL input or entry premise. */
-    private fun implicitStaticPair(actual: Pattern): DemandPattern? {
+    /** Same actual slot and mark only. This family does not connect different fields. */
+    private fun staticCarry(actual: Pattern): DemandPattern? {
         ap.cancellation.checkpoint()
-        if (!staticGroupsEnabled || actual.fact.base != STATIC) return null
-        val atom = (actual.fact.mark as? MarkSlot.Concrete)?.mark ?: return null
-        if (ap.marks.fullId(atom) == null) return null
-        val group = MarkSlot.Concrete(ap.marks.group(ap.marks.groupOf(atom)))
-        return DemandPattern(
-            Pattern(PathFact(STATIC, emptyList(), Tail.ANY, group), ExclusionSet.Empty),
-            Pattern(PathFact(STATIC, emptyList(), Tail.STAR, group), ExclusionSet.Empty),
-        )
+        if (!hasSharedStaticCarry || actual.fact.base != STATIC) return null
+        val pattern = guidancePattern(actual)
+        return DemandPattern(pattern, pattern)
     }
 
     class Builder(private val m: ApManager) {
         private val seen = LinkedHashSet<Pair<MethodKey, DemandPattern>>()
         private val zeroDemand = ownDemand(m, DemandPattern(m.zero.toPattern(), null))
-        private var staticGroupsEnabled = false
-        private var staticQueryPolicy = StaticQueryPolicy.ORDINARY
+        private var staticCarry = false
+        private var completion: FrozenCompletion? = null
 
-        /** Only the completed run-1 handoff selects this policy for incoming run-2 inputs. */
-        fun completeRun1StaticFields() {
-            staticQueryPolicy = StaticQueryPolicy.COMPLETE_RUN1_STATIC_FIELDS
-        }
-
-        /** One symbolic demand family. It stores no method-by-field product. */
-        fun includeStaticGroups() {
-            staticGroupsEnabled = true
-        }
+        /** Only the completed run-1 boundary installs these virtual guidance families. */
+        fun withCompletion(view: FrozenCompletion) { completion = view }
+        fun withSharedStaticCarry() { staticCarry = true }
 
         /** Count only a new exact normalized pattern. Validate the typed hand-off boundary. */
         fun add(method: MethodKey, d: DemandPattern): Boolean {
             m.cancellation.checkpoint()
-            val entry = d.entry
-            val exit = d.exit
+            val entry = normalizeDemandFieldExclusion(d.entry)
+            val exit = d.exit?.let(::normalizeDemandFieldExclusion)
             check(entry.fact.base !is AccessPathBase.CleanerTemporary && exit?.fact?.base !is AccessPathBase.CleanerTemporary) {
                 "A field-action temporary cannot enter a demand hand-off"
             }
@@ -76,17 +67,16 @@ class DemandStore private constructor(
             check(normalizedMarks(entry) && (exit == null || normalizedMarks(exit))) {
                 "Normalize mark exclusions at hand-off"
             }
-            check(entry.fact.tail != Tail.STAR) { "A canonical demand entry has a non-STAR tail" }
-            check(entry.fact.mark !is MarkSlot.Star || entry.fact.tail == Tail.ANY) {
-                "A canonical abstract demand entry has an ANY tail"
+            check(entry.fact.mark !is MarkSlot.Star || entry.fact.tail == Tail.ANY || entry.fact.tail == Tail.STAR) {
+                "A typed abstract demand entry has ANY or STAR tail"
             }
             check(exit?.fact?.tail != Tail.EXACT || entry.fact.mark is MarkSlot.Concrete) {
                 "A canonical exact exit demand has a concrete entry mark"
             }
             check(validFieldExclusion(entry) && (exit == null || validFieldExclusion(exit))) {
-                "Only a STAR demand exit can exclude fields"
+                "Only STAR demand endpoints can exclude fields"
             }
-            val owned = ownDemand(m, d)
+            val owned = ownDemand(m, DemandPattern(entry, exit))
             return owned != zeroDemand && seen.add(method to owned)
         }
 
@@ -99,8 +89,7 @@ class DemandStore private constructor(
                 byMethod.getOrPut(method) { PathTrie(m.cancellation) }
                     .add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), demand)
             }
-            return DemandStore(Collections.unmodifiableMap(byMethod), zeroDemand, m, staticGroupsEnabled,
-                staticQueryPolicy)
+            return DemandStore(Collections.unmodifiableMap(byMethod), zeroDemand, m, staticCarry, completion)
         }
     }
 }

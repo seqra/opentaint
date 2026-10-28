@@ -4,6 +4,7 @@ import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.bidi.engine.*
+import org.opentaint.dataflow.bidi.driver.SeedIndex
 import org.opentaint.dataflow.bidi.fixtures.MethodAnalysisFixtures
 import org.opentaint.dataflow.bidi.interp.*
 import kotlin.test.*
@@ -13,10 +14,10 @@ class OrdinaryStaticWriterTest {
     private fun operation(f: MethodAnalysisFixtures, index: Int): OperationId =
         OperationId(FormKey(FormOwner(), f.key.method, f.key, f.inst(index)))
 
-    @Test fun `static FLOW mx blocks actual pool application until a relaxed summary arrives`() {
+    @Test fun `FULL static FLOW mx blocks pool application and exit checks until a relaxed relation arrives`() {
         MethodAnalysisFixtures().use { f ->
             val full = f.mark("T")
-            val atom = (f.groupMark(full)).mark
+            val atom = full
             val cls = f.manager.accessors.index(ClassStaticAccessor("C"))
             val from = listOf(cls, f.field("from")); val target = listOf(cls, f.field("target"))
             val source = PathEdge(ZERO_FACT, f.pattern(STATIC, from, mark = MarkSlot.Concrete(full)).fact,
@@ -30,7 +31,11 @@ class OrdinaryStaticWriterTest {
             val checks = StatementSummary.EMPTY.withStaticOperations(listOf(
                 StaticOperation.MarkInput(operation(f, 2), wanted)))
             f.exitRules(2, ExitRules(RuleStatement(checks, StatementSummary.EMPTY, listOf(sink)), false, emptySet()))
-            val actor = f.core(localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
+            // GROUP checks deliberately ignore mx and can add a DEMAND
+            // candidate at the newly selected exit handler. Test the full
+            // concrete exclusion contract in FULL mode.
+            val actor = f.core(RunConfig(1, 1, null, f.records, SeedIndex.EMPTY, listOf(f.key),
+                run1MarkMode = MarkMode.FULL), localFactory = MethodLocalServicesFactory(::RunMethodLocalServices))
             val initial = f.manager.initial(STATIC, f.manager.path(from), Tail.STAR, ExclusionSet.Empty, MarkSlot.STAR)
             val input = f.fact(STATIC, from, Tail.STAR, MarkSlot.STAR, layer = Layer.DEMAND)
             val copyId = operation(f, 1)
@@ -54,7 +59,7 @@ class OrdinaryStaticWriterTest {
             f.drain(actor, quantum = 1)
             assertTrue(f.vulnerabilities.witnessesOf(1).any { it.first.rule == sink.rule },
                 "A fresh relaxed relation must reuse the old actual pool group")
-            assertTrue(f.processed.none { it.facts.base == STATIC })
+            assertTrue(f.processed.filter { it.facts.base == STATIC }.all { it.node === f.inst(f.normalExit) })
         }
     }
 

@@ -136,7 +136,7 @@ class Run1OperationWriterPipelineTest {
                         "Call composition does not turn static-origin inputs into another FLOW writer")
                     assertEquals(1, schedule.completedStaticStatistics!!.flowWriterRows,
                         "The setter's local Base/FLOW relation is the only FLOW writer")
-                    assertDirectStaticProtocol(result, f.ap.marks)
+                    assertDirectStaticProtocol(result, f)
                 }
     }
 }

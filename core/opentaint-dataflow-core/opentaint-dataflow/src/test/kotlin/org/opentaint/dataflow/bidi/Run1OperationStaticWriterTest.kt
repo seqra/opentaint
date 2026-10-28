@@ -55,7 +55,7 @@ class Run1OperationStaticWriterTest {
     }
 
     @Test fun `static FLOW promotion has no summary or writer effect`() = Fixture().use { t ->
-        t.actor.promoteStaticSummary(t.initial, t.flow())
+        t.actor.routeStaticResultToExit(t.initial, t.flow())
         assertTrue(t.actor.staticBatch.writes.isEmpty())
         assertTrue(t.actor.staticBatch.writers.isEmpty())
         assertTrue(t.actor.staticBatch.flowWriters.isEmpty())
@@ -69,7 +69,7 @@ class Run1OperationStaticWriterTest {
 
     @Test fun `a promoted summary cannot suppress the first equal local writer`() = Fixture().use { t ->
         val value = t.flow()
-        t.actor.promoteStaticSummary(t.initial, value)
+        t.actor.routeStaticResultToExit(t.initial, value)
         t.local(value)
         t.local(value)
         assertEquals(1, t.actor.staticBatch.writers.size, "Local directory deduplicates independently of summary delta")
@@ -80,9 +80,9 @@ class Run1OperationStaticWriterTest {
     @Test fun `local writer owns its bounded mx relation after a promoted merge removes the exact selector`() {
         for (promoteFirst in listOf(false, true)) for (supplyFirst in listOf(false, true)) Fixture().use { t ->
             val excluded = MarkExclusions.of(t.f.manager.marks, t.f.manager.marks.group(t.other))
-            if (promoteFirst) t.actor.promoteStaticSummary(t.initial, t.flow())
+            if (promoteFirst) t.actor.routeStaticResultToExit(t.initial, t.flow())
             t.local(t.flow(excluded))
-            if (!promoteFirst) t.actor.promoteStaticSummary(t.initial, t.flow())
+            if (!promoteFirst) t.actor.routeStaticResultToExit(t.initial, t.flow())
             t.f.drain(t.actor)
             assertTrue(t.actor.summaries.all().filter { it.first === t.initial }.none { (_, value) ->
                 value is FlowTree && value.markExclusion == excluded
@@ -101,7 +101,7 @@ class Run1OperationStaticWriterTest {
     @Test fun `promotion cannot relax the immutable local writer mark exclusions`() = Fixture().use { t ->
         val excluded = MarkExclusions.of(t.f.manager.marks, t.f.manager.marks.group(t.group))
         t.local(t.flow(excluded))
-        t.actor.promoteStaticSummary(t.initial, t.flow())
+        t.actor.routeStaticResultToExit(t.initial, t.flow())
         t.f.drain(t.actor)
         t.supply()
         t.request()
@@ -113,7 +113,7 @@ class Run1OperationStaticWriterTest {
     }
 
     @Test fun `promoted ZERO group results keep computed supply without a write point`() = Fixture().use { t ->
-        t.actor.promoteStaticSummary(t.f.manager.zero, t.f.run1Fact(STATIC, t.target))
+        t.actor.routeStaticResultToExit(t.f.manager.zero, t.f.run1Fact(STATIC, t.target))
         assertTrue(t.actor.staticBatch.writes.isEmpty())
         assertTrue(t.actor.staticBatch.writers.isEmpty())
         assertTrue(t.actor.staticBatch.flowWriters.isEmpty())
@@ -132,7 +132,7 @@ class Run1OperationStaticWriterTest {
             val premise = t.f.manager.initial(t.f.run1Pattern(STATIC, t.from, Tail.EXACT))
             val outFull = t.f.mark("output")
             val outGroup = t.f.manager.marks.groupOf(outFull)
-            t.actor.promoteStaticSummary(premise, t.f.run1Fact(STATIC, t.target, full = outFull))
+            t.actor.routeStaticResultToExit(premise, t.f.run1Fact(STATIC, t.target, full = outFull))
             assertTrue(t.actor.staticBatch.writes.isEmpty())
             assertTrue(t.actor.staticBatch.writers.isEmpty())
             assertTrue(t.actor.staticBatch.flowWriters.isEmpty())
@@ -150,7 +150,7 @@ class Run1OperationStaticWriterTest {
 
     @Test fun `nonstatic hypothetical group promotion cannot supply the static pool`() = Fixture().use { t ->
         val initial = t.f.manager.initial(t.f.run1Pattern(AccessPathBase.Argument(0), tail = Tail.STAR))
-        t.actor.promoteStaticSummary(initial, t.f.run1Fact(STATIC, t.target))
+        t.actor.routeStaticResultToExit(initial, t.f.run1Fact(STATIC, t.target))
         t.f.drain(t.actor)
         t.request()
         assertTrue(t.answers().isEmpty())
@@ -207,8 +207,8 @@ class Run1OperationStaticWriterTest {
                     "Only the completed action's matching descriptor, after its result filter, admits the write")
                 assertEquals(0, service.statistics().writerRows)
                 assertEquals(0, service.statistics().flowWriterRows)
-                assertEquals(0L, service.statistics().suppliedGroups,
-                    "Nonstatic hypothetical origins are not unconditional group sources")
+                assertEquals(if (matchingAction && !filtered) 1L else 0L, service.statistics().suppliedGroups,
+                    "A completed permitted local action supplies its output mark without another caller join")
             }
     }
 
