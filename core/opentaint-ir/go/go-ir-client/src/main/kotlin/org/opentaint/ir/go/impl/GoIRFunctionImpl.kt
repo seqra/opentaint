@@ -1,6 +1,5 @@
 package org.opentaint.ir.go.impl
 
-import org.opentaint.ir.go.client.GoIRBodyReader
 import org.opentaint.ir.go.client.GoIRBodyContext
 import org.opentaint.ir.go.api.GoIRBody
 import org.opentaint.ir.go.api.GoIRBodyUnavailableException
@@ -14,7 +13,7 @@ import org.opentaint.ir.go.api.GoIrFunctionReference
 import org.opentaint.ir.go.type.GoIRFuncType
 import org.opentaint.ir.go.type.GoIRType
 
-class GoIRFunctionImpl(
+open class GoIRFunctionImpl(
     override val name: String,
     override val fullName: String,
     override val pkg: GoIRPackage?,
@@ -33,7 +32,7 @@ class GoIRFunctionImpl(
     override val typeParams: List<GoIRTypeParamDecl> = emptyList(),
     override val originFullName: String? = null,
     override val typeArgs: List<GoIRType> = emptyList(),
-) : GoIRFunction, GoIRBodyReader {
+) : GoIRFunction {
 
     private var _body: GoIRBody? = null
     private var reader: ((GoIRFunction, GoIRBodyContext) -> GoIRBody)? = null
@@ -42,7 +41,8 @@ class GoIRFunctionImpl(
         this.reader = reader
     }
 
-    override fun readBody(owner: GoIRFunction, context: GoIRBodyContext): GoIRBody? =
+    /** Decodes this body for [owner], resolving its symbols through [context]. */
+    internal fun readBody(owner: GoIRFunction, context: GoIRBodyContext): GoIRBody? =
         reader?.invoke(owner, context) ?: _body
 
     private val resolvedBody by lazy { reader?.invoke(this, GoIRBodyContext()) }

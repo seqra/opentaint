@@ -164,18 +164,18 @@ class GoIRDeserializer {
     }
 
     internal data class DeserializedGoIRBuild(
-        val program: GoIRProgram,
+        val program: GoIRProgramImpl,
         val models: List<ProtoModelProgram>,
     )
 
     internal fun deserializeProgram(
         serializedProgram: ProtoProgram,
-    ): GoIRProgram {
+    ): GoIRProgramImpl {
 
         val resultPackages = hashMapOf<String, GoIRPackage>()
         val anonymousInterfaces = Int2ObjectOpenHashMap<GoIRAnonymousInterfaceType>()
         val result = GoIRProgramImpl(resultPackages, anonymousInterfaces)
-        programView = result
+        deserializedProgram = result
 
         val pkgInfo = deserializePackages(serializedProgram.packagesList)
         serializedProgram.packagesList.forEach { serializedPackage ->
@@ -1073,12 +1073,12 @@ class GoIRDeserializer {
     }
 
     private fun functionReference(function: GoIRFunction): GoIrFunctionReference =
-        function.reference().also { it.program = programView }
+        function.reference().also { it.program = deserializedProgram }
 
     private fun globalReference(id: Int): GoIRGlobalReference =
-        resolveGlobal(id).reference().also { it.program = programView }
+        resolveGlobal(id).reference().also { it.program = deserializedProgram }
 
-    private lateinit var programView: GoIRProgram
+    private lateinit var deserializedProgram: GoIRProgram
 
     private fun resolveGlobal(globalId: Int): GoIRGlobalImpl =
         globalsById.get(globalId)

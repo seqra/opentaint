@@ -2,7 +2,7 @@ package org.opentaint.ir.go.api
 
 import org.opentaint.ir.go.type.NamedTypeRef
 
-/** Symbol resolution in one program view. References cache only their own lookup result. */
+/** Symbol resolution in one program. References cache only their own lookup result. */
 interface GoIRLookup {
     fun function(reference: GoIrFunctionReference): GoIRFunction?
     fun namedType(reference: NamedTypeRef): GoIRNamedType?

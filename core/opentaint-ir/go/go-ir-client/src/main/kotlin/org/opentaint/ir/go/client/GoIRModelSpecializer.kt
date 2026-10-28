@@ -1,6 +1,8 @@
 package org.opentaint.ir.go.client
 
 import org.opentaint.ir.go.api.GoIRFunction
+import org.opentaint.ir.go.api.GoIRGlobalReference
+import org.opentaint.ir.go.api.GoIRPackage
 import org.opentaint.ir.go.api.GoIRParameter
 import org.opentaint.ir.go.api.GoIRFreeVar
 import org.opentaint.ir.go.api.GoIRProgram
@@ -13,6 +15,9 @@ import java.util.IdentityHashMap
 /** Substitutes concrete type arguments and closure lookups while reading a generic model body. */
 internal class GoIRModelSpecializer(
     private val program: GoIRProgram,
+    private val pkg: GoIRPackage,
+    private val model: GoIRBodyContext,
+    private val symbol: (String) -> String,
 ) {
     /** Returns the specialized root followed by its specialized anonymous functions. */
     fun specialize(modelRoot: GoIRFunction, target: GoIRFunction): List<GoIRFunction> {
@@ -24,7 +29,8 @@ internal class GoIRModelSpecializer(
         val typeArguments = modelRoot.typeParams.associate { parameter ->
             parameter.index to target.typeArgs[parameter.index]
         }
-        val specializeType = TypeSpecializer(typeArguments)
+        val specializer = TypeSpecializer(typeArguments)
+        fun specializeType(type: GoIRType) = specializer(model.type(type))
         val sourceFunctions = collectAnonymousFunctions(modelRoot)
         val suffix = target.name.removePrefix(modelRoot.name).ifEmpty {
             "#opentaint-model-${target.fullName.hashCode().toUInt()}"
@@ -33,14 +39,15 @@ internal class GoIRModelSpecializer(
         val anonymousRefs = IdentityHashMap<GoIRFunction, MutableList<GoIrFunctionReference>>()
 
         fun reference(function: GoIRFunction): GoIrFunctionReference =
-            GoIrFunctionReference(function.pkg?.importPath.orEmpty(), function.name, function.signature)
+            GoIrFunctionReference(pkg.importPath, function.name, function.signature)
                 .also { it.program = program }
 
         val rootRefs = mutableListOf<GoIrFunctionReference>()
-        val root = GoIRFunctionImpl(
+        val root = modelFunction(
+            original = target,
             name = target.name,
             fullName = target.fullName,
-            pkg = target.pkg,
+            pkg = pkg,
             signature = target.signature,
             params = target.params,
             freeVars = target.freeVars,
@@ -48,9 +55,8 @@ internal class GoIRModelSpecializer(
             isMethod = target.isMethod,
             isPointerReceiver = target.isPointerReceiver,
             isExported = target.isExported,
-            isSynthetic = true,
             syntheticKind = modelRoot.syntheticKind,
-            declaredHasBody = true,
+            hasBody = true,
             parent = target.parent,
             anonymousFunctions = rootRefs,
             typeParams = target.typeParams,
@@ -64,26 +70,27 @@ internal class GoIRModelSpecializer(
             val refs = mutableListOf<GoIrFunctionReference>()
             val parent = source.parent?.function?.let(functionMap::get)
                 ?: error("Go model anonymous function ${source.fullName} has no copied parent")
-            val signature = specializeType(source.signature) as GoIRFuncType
-            val copied = GoIRFunctionImpl(
+            val copied = modelFunction(
+                original = null,
                 name = source.name + suffix,
-                fullName = source.fullName + suffix,
-                pkg = target.pkg,
-                signature = signature,
+                fullName = symbol(source.fullName) + suffix,
+                pkg = pkg,
+                signature = specializeType(source.signature) as GoIRFuncType,
                 params = source.params.map { GoIRParameter(it.name, specializeType(it.type), it.index) },
                 freeVars = source.freeVars.map { GoIRFreeVar(it.name, specializeType(it.type), it.index) },
                 position = source.position,
                 isMethod = source.isMethod,
                 isPointerReceiver = source.isPointerReceiver,
                 isExported = source.isExported,
-                isSynthetic = true,
                 syntheticKind = source.syntheticKind,
-                declaredHasBody = true,
+                hasBody = true,
                 parent = reference(parent),
                 anonymousFunctions = refs,
                 typeParams = source.typeParams.map {
                     GoIRTypeParamDecl(it.name, it.index, specializeType(it.constraint))
                 },
+                originFullName = null,
+                typeArgs = emptyList(),
             )
             functionMap[source] = copied
             anonymousRefs[source] = refs
@@ -92,25 +99,23 @@ internal class GoIRModelSpecializer(
         (listOf(modelRoot) + sourceFunctions).forEach { source ->
             val refs = anonymousRefs.getValue(source)
             refs += source.anonymousFunctions.map { child ->
-                reference(functionMap[child.function] ?: child.function)
+                functionMap[child.function]?.let(::reference) ?: model.function(child)
             }
         }
 
+        val context = object : GoIRBodyContext() {
+            override fun type(type: GoIRType) = specializeType(type)
+            override fun function(reference: GoIrFunctionReference): GoIrFunctionReference =
+                reference.program.lookup.function(reference)?.let(functionMap::get)?.let(::reference)
+                    ?: model.function(reference)
+            override fun global(reference: GoIRGlobalReference) = model.global(reference)
+            override fun fieldIndex(type: GoIRType, index: Int, name: String) =
+                model.fieldIndex(type, index, name)
+        }
         (listOf(modelRoot) + sourceFunctions).forEach { source ->
-            val copied = functionMap.getValue(source)
-            val reader = source as? GoIRBodyReader
-                ?: error("Go model ${source.fullName} has no body reader")
-            copied.setBodyReader { owner, context ->
-                reader.readBody(owner, object : GoIRBodyContext() {
-                    override fun type(type: GoIRType) = context.type(specializeType(type))
-                    override fun function(ref: GoIrFunctionReference): GoIrFunctionReference {
-                        val replacement = functionMap[ref.function]
-                        return context.function(if (replacement == null) ref else reference(replacement))
-                    }
-                    override fun global(ref: org.opentaint.ir.go.api.GoIRGlobalReference) = context.global(ref)
-                    override fun fieldIndex(type: GoIRType, index: Int, name: String) =
-                        context.fieldIndex(specializeType(type), index, name)
-                }) ?: error("Go model ${source.fullName} has no body")
+            functionMap.getValue(source).setBodyReader { owner, _ ->
+                (source as GoIRFunctionImpl).readBody(owner, context)
+                    ?: error("Go model ${source.fullName} has no body")
             }
         }
         return listOf(root) + sourceFunctions.map(functionMap::getValue)

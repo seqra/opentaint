@@ -7,9 +7,10 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.opentaint.ir.go.api.GoIRApproximatedFunction
 import org.opentaint.ir.go.api.GoIRModelFunction
 import org.opentaint.ir.go.api.GoIRFunction
-import org.opentaint.ir.go.api.reference
+import org.opentaint.ir.go.api.GoIRPackage
 import org.opentaint.ir.go.api.GoIRTransformer
-import org.opentaint.ir.go.client.GoIRTransformerChain
+import org.opentaint.ir.go.impl.GoIRPackageImpl
+import org.opentaint.ir.go.impl.GoIRProgramImpl
 import org.opentaint.ir.go.cfg.GoIRCallTarget
 import org.opentaint.ir.go.client.GoIRLoadConfig
 import org.opentaint.ir.go.client.GoIRLoadMode
@@ -88,11 +89,9 @@ class ModelTests {
         assertThat(closureTarget.function).isSameAs(function)
         assertThat(function.body!!.function).isSameAs(function)
         assertThat(caller.body!!.instructions).allMatch { it.location.method === caller }
-        val originalCaller = program.originalProgram.findPackage(pkg.importPath)!!.functions.single { it.name == "Upper" }
-        val rawTarget = originalCaller.findInstructions<GoIRCall>().single().call.target as GoIRCallTarget.Function
-        assertThat(rawTarget.function).isSameAs((function as GoIRApproximatedFunction).original)
-        assertThat(rawTarget.function).isNotSameAs(function)
-
+        val original = (function as GoIRApproximatedFunction).original
+        assertThat(original).isNotSameAs(function)
+        assertThat(original.fullName).isEqualTo(function.fullName)
     }
 
     @Test
@@ -112,14 +111,13 @@ class ModelTests {
         val effectiveProgram = builder.buildFromDir(project, modelConfig(model))
         val effectivePackage = effectiveProgram.findPackage("example.com/original")!!
         val effectiveIdentity = effectivePackage.functions.single { it.name == "Identity" }
-        val originalProgram = effectiveProgram.originalProgram
-        val originalPackage = originalProgram.findPackage("example.com/original")!!
-        val originalIdentity = originalPackage.functions.single { it.name == "Identity" }
-
-        assertThat(originalProgram).isNotSameAs(effectiveProgram)
-        assertThat(effectiveIdentity.pkg).isSameAs(effectivePackage)
         assertThat(effectiveIdentity).isInstanceOf(GoIRApproximatedFunction::class.java)
-        assertThat((effectiveIdentity as GoIRApproximatedFunction).original).isSameAs(originalIdentity)
+        val originalIdentity = (effectiveIdentity as GoIRApproximatedFunction).original
+        val originalPackage = originalIdentity.pkg!!
+
+        assertThat(originalPackage).isNotSameAs(effectivePackage)
+        assertThat(effectiveIdentity.pkg).isSameAs(effectivePackage)
+        assertThat(originalPackage.functions.single { it.name == "Identity" }).isSameAs(originalIdentity)
         assertThat(effectiveIdentity.findInstructions<GoIRCall>())
             .anyMatch { it.call.target?.displayName == "example.com/original.helper" }
         assertThat(originalIdentity.isSynthetic).isFalse()
@@ -130,7 +128,7 @@ class ModelTests {
     }
 
     @Test
-    fun `model views keep identity consistent with the original Go IR`(builder: GoIRTestBuilder) {
+    fun `model packages keep identity consistent with the original Go IR`(builder: GoIRTestBuilder) {
         val project = project(
             "example.com/original",
             "package original\n" +
@@ -149,7 +147,7 @@ class ModelTests {
 
         val effectiveProgram = builder.buildFromDir(project, modelConfig(model))
         val effective = effectiveProgram.findPackage("example.com/original")!!
-        val original = effectiveProgram.originalProgram.findPackage("example.com/original")!!
+        val original = (effective.functions.single { it.name == "Identity" } as GoIRApproximatedFunction).original.pkg!!
         fun assertSameIdentity(first: Any, second: Any) {
             assertThat(first).isEqualTo(second)
             assertThat(second).isEqualTo(first)
@@ -221,7 +219,7 @@ class ModelTests {
         val receiverType = (put.params.first().type as GoIRPointerType).elem as GoIRNamedTypeRef
         assertThat(receiverType.namedType).isSameAs(box)
         assertThat(receiverType.namedType.pointerMethods.single { it.name == "Put" }).isSameAs(put)
-        assertThat(program.originalProgram.findPackage(targetPackage.importPath)!!.findNamedType("Box")!!.fields.map { it.name })
+        assertThat((put as GoIRApproximatedFunction).original.pkg!!.findNamedType("Box")!!.fields.map { it.name })
             .containsExactly("Original")
         val shadowAccess = put.findExpressions<GoIRFieldAddrExpr>().single { it.fieldName == "Shadow" }
         assertThat(shadowAccess.fieldIndex).isEqualTo(1)
@@ -643,7 +641,8 @@ class ModelTests {
         assertThat(program.findPackage("example.com/unrelated")).isNotNull()
         assertThat(program.findPackage("example.com/absent")).isNull()
         assertThat(program.findPackage("net/url")).isNull()
-        assertThat(program.packages.keys).containsExactlyInAnyOrderElementsOf(program.originalProgram.packages.keys)
+        val withoutModels = builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT))
+        assertThat(program.packages.keys).containsExactlyInAnyOrderElementsOf(withoutModels.packages.keys)
     }
 
     @Test
@@ -687,7 +686,7 @@ class ModelTests {
             .functions.single { it.name == "Identity" && it.parent == null }
         val call = identity.findInstructions<GoIRCall>().single()
 
-        assertThat(program.originalProgram.findPackage("net/url")).isNull()
+        assertThat(builder.buildFromDir(project, GoIRLoadConfig(mode = GoIRLoadMode.PROJECT)).findPackage("net/url")).isNull()
         assertThat(program.findPackage("net/url")).isNotNull()
         assertThat(call.call.target?.displayName).isEqualTo("net/url.QueryEscape")
     }
@@ -840,82 +839,26 @@ class ModelTests {
     }
 
     @Test
-    fun `transformers compose in order and resolve calls through one cached view`(builder: GoIRTestBuilder) {
-        val original = builder.buildFromSource("package p\nfunc Target() {}\nfunc Caller() { Target() }\n")
-        fun suffix(value: String) = object : GoIRTransformer {
-            override fun resolveFunction(
-                reference: org.opentaint.ir.go.api.GoIrFunctionReference,
-                next: () -> GoIRFunction?,
-            ): GoIRFunction? {
-                val function = next() ?: return null
-                return object : GoIRFunction by function {
-                    override val syntheticKind = function.syntheticKind.orEmpty() + value
-                }
-            }
-        }
-        val transformed = GoIRTransformerChain(original, listOf(suffix("first"), suffix("second")))
-        val pkg = transformed.packages.getValue("test/p")
-        val target = pkg.functions.single { it.name == "Target" }
-        val caller = pkg.functions.single { it.name == "Caller" }
-        assertThat(target.syntheticKind).isEqualTo("firstsecond")
-        val call = caller.findInstructions<GoIRCall>().single().call.target as GoIRCallTarget.Function
-        assertThat(call.function).isSameAs(target)
-        assertThat(transformed.allFunctions()).contains(target, caller)
-        assertThat(original.findPackage("test/p")!!.functions.single { it.name == "Target" }.syntheticKind).isNull()
-    }
-
-    @Test
-    fun `lookup interceptor can bypass later resolvers and leaves bodies unread`(builder: GoIRTestBuilder) {
-        val original = builder.buildFromSource("package p\nfunc Target() {}\nfunc Caller() { Target() }\n")
-        val target = original.findPackage("test/p")!!.functions.single { it.name == "Target" }
-        var ownedFallbacks = 0
-        var bodyReads = 0
-        val fallback = object : GoIRTransformer {
-            override fun resolveFunction(
-                reference: org.opentaint.ir.go.api.GoIrFunctionReference,
-                next: () -> GoIRFunction?,
-            ): GoIRFunction? {
-                if (reference.name == "Target") ownedFallbacks++
+    fun `package transformers intercept lookup in order and can bypass earlier resolvers`(builder: GoIRTestBuilder) {
+        val program = builder.buildFromSource("package p\nfunc Target() {}\nfunc Caller() { Target() }\n") as GoIRProgramImpl
+        val resolved = mutableListOf<String>()
+        fun recording(name: String) = object : GoIRTransformer {
+            override fun resolvePackage(importPath: String, next: () -> GoIRPackage?): GoIRPackage? {
+                if (importPath == "test/p") resolved += name
                 return next()
             }
         }
         val interceptor = object : GoIRTransformer {
-            override fun resolveFunction(
-                reference: org.opentaint.ir.go.api.GoIrFunctionReference,
-                next: () -> GoIRFunction?,
-            ): GoIRFunction? {
-                if (reference.name != "Target") return next()
-                return object : GoIRFunction by target {
-                    override val syntheticKind = "intercepted"
-                    override val body get() = target.body.also { bodyReads++ }
-                }
+            override fun resolvePackage(importPath: String, next: () -> GoIRPackage?): GoIRPackage? {
+                return if (importPath == "test/p") GoIRPackageImpl(importPath, "p") else next()
             }
         }
-        val program = GoIRTransformerChain(original, listOf(fallback, interceptor))
-        val pkg = program.findPackage("test/p")!!
-        val resolved = pkg.functions.single { it.name == "Target" }
-        val call = pkg.functions.single { it.name == "Caller" }
-            .findInstructions<GoIRCall>().single().call.target as GoIRCallTarget.Function
-        assertThat(resolved.syntheticKind).isEqualTo("intercepted")
-        assertThat(call.lookup.pkg).isEqualTo("test/p")
-        assertThat(call.function).isSameAs(resolved)
-        assertThat(call.function).isSameAs(resolved)
-        assertThat(ownedFallbacks).isZero()
-        assertThat(bodyReads).isZero()
-    }
+        program.install(listOf(recording("first"), interceptor, recording("last")))
 
-    @Test
-    fun `method and initializer lookup reuse package members`(builder: GoIRTestBuilder) {
-        val original = builder.buildFromSource(
-            "package p\ntype Box struct {}\nfunc (b *Box) Method() {}\nfunc init() {}\n",
-        )
-        val program = GoIRTransformerChain(original, emptyList())
         val pkg = program.findPackage("test/p")!!
-        val method = pkg.functions.single { it.name == "Method" }
-        assertThat(pkg.findNamedType("Box")!!.pointerMethods.single()).isSameAs(method)
-        val call = GoIRCallTarget.Function(method.reference().also { it.program = program })
-        assertThat(call.displayName).isEqualTo(method.fullName)
-        assertThat(pkg.initFunction).isSameAs(pkg.functions.single { it.name == "init" })
+        assertThat(pkg.functions).isEmpty()
+        assertThat(program.findPackage("test/p")).isSameAs(pkg)
+        assertThat(resolved).containsExactly("last")
     }
 
     private fun project(module: String, source: String): Path {
