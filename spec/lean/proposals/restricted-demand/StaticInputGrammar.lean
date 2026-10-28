@@ -1,4 +1,5 @@
-/- CANDIDATE, awaiting a behavior decision. No Kotlin change is authorized.
+/- Selected consistency repair for all-run concrete STAR preservation.
+   The old/candidate names below retain the historical domain comparison.
    Geometry closure only. The AP laws reuse selected correlated raw transfer.
    Caller supply, identity projection and accessor tags are explicit assumptions. -/
 import ApSpec.Run1CorrelatedConcreteInitials

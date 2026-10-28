@@ -1,0 +1,23 @@
+{
+  "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean",
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "512",
+    "proposals/restricted-demand/LocalStaticWriteSupply.lean"
+  ],
+  "environment_overrides": {
+    "LEAN_PATH": ".lake/build/lib/lean"
+  },
+  "memory_limit_mb": 512,
+  "worker_count": 1,
+  "exit_code": 0,
+  "audit_count": 14,
+  "stdout": "'RestrictedDemand.LocalStaticWriteSupply.currentRoot' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.supplyRoot' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.no_unentered_supply' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.supplyAtWrite' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.flow_writer_retained' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.concrete_write_keeps_flow_writers' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.concrete_write_supplies' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.repeated_write_idempotent' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.exit_independent' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.killed_exit_keeps_supply' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.no_new_normal_record' depends on axioms: [propext]\n'RestrictedDemand.LocalStaticWriteSupply.full_keeps_output_mark' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.group_keeps_output_group' does not depend on any axioms\n'RestrictedDemand.LocalStaticWriteSupply.color_change_output' depends on axioms: [propext]\n",
+  "stderr": "",
+  "scope": "Local production-admission witness and executed-write/pool boundary; actual AP/complete guard/source permission and fairness are adapter obligations; no whole-analyzer theorem.",
+  "source": "spec/lean/proposals/restricted-demand/LocalStaticWriteSupply.lean",
+  "source_sha256": "1f05d06404908cbd34c35727eee8a961bf133ddb843449437284e801a8210268"
+}

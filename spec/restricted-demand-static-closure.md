@@ -1,7 +1,7 @@
 # Restricted-run demand, static handoff closure and run-1 exit routing
 
-Date: 27 October 2026. Status: **selected design; implementation in progress**.
-This is the complete contract for the three selected changes. It replaces
+Date: 28 October 2026. Status: **final design; implementation in progress**.
+This is the complete contract for the selected iteration. It replaces
 the earlier partial description in this file. The original reference is
 [AP](ap.md), sections 6.3, 6.4, 8.5–8.7 and 9.2. The required behavior is
 restated below, so the reader does not need the preceding design discussion.
@@ -10,14 +10,19 @@ is supporting evidence, not an additional policy. Follow
 [proof-guide.md](proof-guide.md).
 
 The [implementation checks](../docs/reports/bidirectional-restricted-demand-validation-20261027.md)
-found three open correctness cases. The abstract STAR/nonempty-E producer
-guard is false. A concrete static STAR start can reach a validator which
-rejects it. An exit-killed static writer can still be required to guide a
-returned flow. The user decisions for these cases are pending. Do not
-treat their implementation or the full iteration proof as complete.
-The [candidate repair design](../docs/design/bidirectional-restricted-demand-open-contracts-20261027.md)
-states the proposed behavior, implementation routes, local proofs and
-remaining proof obligations. It does not select those repairs.
+found three correctness cases. On 28 October, the user selected Empty field
+exclusions for abstract STAR demand. Apply that rule to demand copies on
+both entry and exit; retain actual and native-record exclusions. This
+supersedes the exclusion-union candidate in the
+[earlier repair design](../docs/design/bidirectional-restricted-demand-open-contracts-20261027.md).
+The 28 October follow-up also selects immediate concrete supply at the
+executed write point, independent of summary processing. Keep its FLOW
+writer. Correct the stale named-field STAR validator and retain lost exit
+writers in a separate guidance store. The
+[follow-up review](../docs/design/bidirectional-restricted-demand-followup-20261028.md)
+records the history. The complete normative workflow is below. Finalizing
+this design does not mean that implementation or project acceptance is
+complete.
 
 The reviewed checkout is `e908c95899f98ef5ad60b24710aff72225021d18`;
 its runtime core is `57ca8d4940e8fb52e7eed6151928d4025c7d7ad9`.
@@ -42,12 +47,12 @@ run schedule remain in scope as stated below.
 | Summary permission | C5 for ordinary summaries; the original backward seed-return rule is separate | `currentQueries.permits` can additionally publish raw summaries | Restore C5 and retain the original backward seed-return route, explained in section 3.6 |
 | Later input after a raw result | Replay existing publications and applicable records | A new query can scan all raw summaries and republish permitted originals | Remove that scan; demand stays immutable |
 | Demand selection at handoff | DEMAND, normal ND, and normal backward-ZERO publications are selected; other normal singletons supply records | `config.run1 || ...` selects every run-1 publication | Restore original selection in every run, including run-1 |
-| Static/static relations in run-1 | Ordinary AP can retain and apply relations which reach the exit | Current special static path erases them before storage/publication | Keep thin post-exit seeds; do not publish them during run-1 |
+| Static/static relations in run-1 | Ordinary AP can retain and apply relations which reach the exit | Current special static path erases them before storage/publication | Keep thin post-exit and lost-exit guidance keys; do not publish them during run-1 |
 | Static-related missing guidance | Ordinary AP uses the guidance from its executed summaries | General SQ, an implicit group family and same-field ANY-to-EXACT completion cover more inputs | Complete static-related guidance once at run-1 → run-2; use original AP to execute it |
 | Static producer conclusion | Ordinary exit summaries pass exit rules | Local writes and call static results go to `retainSummary` immediately | Route them to the existing post-return NormalExit, then run exit rules and common summary emission |
-| Actual write visibility | A write is an effect at its operation | Producer effects are offered before static-summary erasure | Preserve immediate producer effects; do not delay them until exit |
+| Actual write visibility | A write is an effect at its operation | Nonstatic colored supply relied on outward caller application | Local executed write supplies its concrete output immediately; retain its FLOW writer; summary processing is independent |
 | NORMAL persistence | Persist eligible raw normal singleton summaries, with their legal exclusions | Raw persistence exists | Keep it; synthetic completion is never a record |
-| STAR in handoff | Keep STAR and legal field E; normalize mark exclusions separately | `HandOff.toBackward` changes a STAR result to ANY and clears E | Remove that widening; support the preserved STAR demand under the original emission guard |
+| STAR in handoff | Keep STAR and legal field E; normalize mark exclusions separately | `HandOff.toBackward` changes a STAR result to ANY and clears E | Keep STAR. For an abstract STAR demand endpoint, ignore field E. Keep concrete demand E and native-record E. |
 
 These changes restore the original authority of demand. They deliberately
 change the current executable initial set and publication set. They are not
@@ -250,21 +255,34 @@ test on every candidate. Union and deduplicate emitted initials.
 Do not enumerate full marks of a group. The existing selector relation
 tests actual membership. The abstract branch must not be filtered out.
 
-The generic original FLOW form is:
+Normalize the offered abstract STAR demand before entry emission and C5.
+Use the same endpoint rule for Dc and Dp:
 
-| Entry tail | FLOW initial tail |
+```kotlin
+fun normalizeDemandFieldExclusion(p: Pattern): Pattern =
+    if (p.fact.mark is MarkSlot.Star && p.fact.tail == Tail.STAR)
+        p.copy(exclusion = ExclusionSet.Empty)
+    else p
+```
+
+This is a demand-copy operation. Do not clear actual input E, ordinary
+transfer E, concrete demand E, or raw/native-record E. Keep existing mark
+exclusion normalization separate. Normalize before demand deduplication.
+Nonempty offered E is valid on an abstract STAR endpoint and is ignored;
+it is not an admission error or a reason to build an E-union initial.
+
+| Offered abstract entry tail | FLOW initial tail |
 |---|---|
-| EXACT | EXACT |
+| EXACT | Generic EXACT; forbidden as a typed FlowTree initial |
 | ANY | STAR with empty E |
-| STAR/E | STAR/E |
+| STAR/E, for any E | STAR with empty E |
 
-Keep entry base/path and mark `*`. The restored typed boundary accepts
-abstract ANY and abstract STAR with empty E; both give a legal STAR/FLOW
-initial with empty E. A preserved concrete STAR demand keeps its legal E.
-An abstract EXACT value from the generic algebra is not a legal typed
-FlowTree initial. The original C2 guard excludes an abstract STAR entry
-with nonempty E; do not silently widen such an entry to ANY. The producer
-shape invariant must establish this guard before the snapshot is accepted.
+Keep entry base/path and mark `*`. Both admitted abstract forms give one
+shared STAR/FLOW initial with empty E. The normalized entry satisfies the
+original C2 guard by construction; no producer invariant is required.
+A preserved concrete STAR demand keeps its legal E and uses the concrete
+intersection below. This is an explicit change from preserving abstract
+demand E. It does not change STAR into ANY or change field transfer.
 
 For a concrete entry with path p, intersect locations as follows:
 
@@ -310,12 +328,12 @@ x.g.f. This correction changes only the emitted intersection, not the
 stored incoming fact or its exclusion.
 
 C2 is the required coverage contract: for every common admitted location
-and mark of the actual input and Dc, emission supplies a satisfiable
-initial covering it, wholly inside Dc. C3 preserves the actual concrete
-mark for a concrete entry and emits `*` for an abstract entry. The generic
-C2 proof excludes an abstract STAR entry with nonempty E. Preserve that
-guard; the previous blanket ban on all STAR entries is removed. A violation
-is a construction/proof gap, not permission to weaken E automatically.
+and mark of the actual input and normalized Dc, emission supplies a
+satisfiable initial covering it, wholly inside normalized Dc. The offered
+abstract E is no longer a containment bound. C3 preserves the actual
+concrete mark for a concrete entry and emits `*` for an abstract entry.
+The original C2 guard holds for the normalized abstract entry. Actual E
+still rejects blocked descents during overlap and ordinary matching.
 For a concrete entry, this contract also requires concrete input eligibility.
 It does not promise specialization of an abstract actual input to T merely
 because a set-theoretic reading of that input includes T.
@@ -374,8 +392,9 @@ execute that FLOW body once per actual mark.
 ### 3.4 Paired summary restriction
 
 For a raw `J -> g`, try every member j of J against every candidate
-`(Dc,Dp?)`. `covering` supplies entry ancestors and the same path. Reject
-the candidate unless:
+`(Dc,Dp?)`. Normalize abstract STAR field E on both endpoints first.
+`covering` supplies entry ancestors and the same path. Reject the candidate
+unless:
 
 1. Dp exists.
 2. The **whole** j lies inside Dc in locations and marks, including legal E.
@@ -425,6 +444,11 @@ Reduce the permitted conclusion geometry as follows. Let p be Dp's path.
 | ANY | EXACT | ANY | ANY |
 | MUST/E | EXACT | MUST/(E union E2) | MUST/E |
 | STAR/E | STAR/E | STAR/E | STAR/E |
+
+Ignoring abstract STAR exit E can permit a raw result which the old Dp
+excluded. This is an explicit publication-permission widening. It adds no
+pair to the raw relation. Concrete Dp E and the raw conclusion E still use
+the table above; do not clear them.
 
 Preserve the original J, conclusion marks, layer and required protection.
 Union pieces from all successful members/patterns. An ND publication
@@ -557,14 +581,15 @@ its conclusion as entry and **no exit**. Keep the forward implicit ZERO
 entry. Backward seeds and forward source hits are separate from these
 summary pairs.
 
-Use the original AP normalization, including the selected MUST-location
-conversion, in both explicit and virtual patterns:
+Use the selected AP normalization, including the MUST-location conversion
+and the 28 October abstract-demand E rule, in explicit and virtual patterns:
 
 ```text
 MUST/E endpoint       -> ANY, empty E, without the must guarantee
 FLOW mark *∖X        -> FLOW mark *, without mark exclusions
 concrete mark         -> keep full identity or explicit group selector
-STAR endpoint         -> keep STAR and its legal field E on either side
+abstract STAR endpoint -> keep STAR; ignore field E on either side
+concrete STAR endpoint -> keep STAR and its legal field E on either side
 ```
 
 Remove the current blanket STAR-entry rejection. Abstract entries use ANY
@@ -582,10 +607,10 @@ canonical-shape theorems into assumptions about this extended producer set.
 
 The run-1 static completion below uses E-free run-1 endpoints and this
 same projection. Normal summaries and records retain all runtime E and
-mark exclusions. A generated abstract STAR/E with nonempty E needs a
-separate C2 proof/behavior decision; the original guard does not justify
-silently accepting or widening it. Establish the producer guard as an
-acceptance invariant, rather than hiding a failure with another cast.
+mark exclusions. A generated abstract STAR/E demand is accepted: its
+canonical demand copy uses Empty E. The source relation and actual input
+remain unchanged. The selected rule applies to both handoff directions.
+It replaces the false abstract-STAR producer guard.
 
 ## 4. Static endpoints and relation kinds
 
@@ -602,6 +627,21 @@ Keep its legal tail and mark information. A bare exact global marker is
 distinct from a field. It does not stand for every field of its class.
 There is no class-wide FULL mark or broad root FULL input.
 
+A bounded run-2 FULL named-field input can have EXACT, ANY or STAR/E.
+EXACT/ANY have Empty E; STAR keeps its legal concrete E. An exact class
+marker has EXACT/Empty E. Backward MUST is forbidden. The old validator's
+EXACT/ANY-only field test assumed concrete STAR-to-ANY starts; the selected
+all-run correlated-STAR change supersedes that assumption. Both first
+limits were already 1 when that old validator was added. A bounded C.f.*
+fact stays STAR at limit 1 or 2. The demand intersection then decides which
+initial can start; validation itself grants no new demand.
+
+This current-input domain does not add STAR source/sink rule literals or
+micro-edge target constructors. Their existing EXACT/ANY target grammar
+stays unchanged. A legal correlated STAR can arrive from ordinary execution
+and call transport without being a legal literal passed to targetTree.
+
+
 `x` and `y` are method boundary positions under a complete MethodKey. They
 can include an argument, receiver, return, exception or an actual ZERO
 endpoint where the existing rule permits it. They are not arbitrary locals.
@@ -615,11 +655,14 @@ B[M]  : static -> static
 O[M]  : other existing selected guidance relations
 ```
 
-W and R use the already propagated run-1 relations, including their actual
-caller bindings. B is retained without live caller propagation. Do not copy
+R uses the already propagated run-1 relations. W uses ordinary selected
+writers plus lost exit writers and their joined actual caller bindings.
+B includes retained/lost static copies and rows created by writer binding;
+it is retained without live caller propagation. Do not copy
 a callee's argument/return names into a caller during handoff.
 
-Collect W/R through the existing outgoing demand selection. Under the
+Collect ordinary W/R through the existing outgoing demand selection.
+Collect lost exit writer dependencies through section 6, as guidance only. Under the
 unchanged run-1 static layer policy these relations are DEMAND. A genuinely
 NORMAL singleton remains record-only; it is not a new ordinary demand seed.
 O contains selected guidance, not every raw NORMAL summary. Completion does
@@ -680,128 +723,76 @@ ordinary control flow and receive no shortcut.
 A frontend without its required normal boundary violates this contract.
 Diagnose it; do not silently drop the fact or create an IR return.
 
-### 5.2 Preserve producer effects at the producer
+### 5.2 Write points own immediate pool effects
 
-Moving summary insertion must not delay or remove a real write's global
-visibility. A static value can be consumed before the method's exit rules.
-
-```java
-C.f = sourceT();
-sinkT(C.f);
-// An exit cleaner can remove T later.
-```
-
-The write must supply T before the exit cleaner handles its outgoing
-summary candidate. Otherwise the earlier sink can lose its run-1 candidate.
+The executed static-write micro-edge owns write presence, FLOW writer
+registration and concrete pool supply. These effects do not await summary
+processing. Summary handling is orthogonal.
 
 ```kotlin
 fun onLocalStaticWrite(at: OperationInput, value: Facts, continueRules: ResultSink) {
     val bounded = existingRun1BoundAndChecks(at.premise, value) ?: return
-    staticEffects.localWrite(at, bounded)       // presence and FLOW writer
-    staticEffects.computedSupply(at.premise, bounded)
-    val site = at.site
-    if (site is ResumeSite.BoundaryInput && !site.atStart) {
-        continueRules(at.premise, bounded) // Finish the current boundary pipeline.
-    } else {
-        routeBoundedRun1StaticToExit(at.premise, bounded)
-    }
+    staticEffects.localWrite(at.premise, bounded)
+    // localWrite always admits actual write presence.
+    // FLOW: retain its exact existing request-producing writer relation.
+    // TAINT: offer the concrete bounded output marks to the pool immediately.
+    val boundary = at.site as? ResumeSite.BoundaryInput
+    if (boundary != null && !boundary.atStart) {
+        if (existingBoundaryHasNormalSummary(boundary))
+            killedStaticWrites.observeCandidate(at.premise, bounded)
+        continueRules(at.premise, bounded)
+    } else routeBoundedRun1StaticToExit(at.premise, bounded)
 }
+```
 
+For `C.f = p`, keep `p.*/FLOW -> C.f.*/FLOW` at the writer. A static T
+request uses that writer to request Base(p)/T. A matching actual caller
+input answers it and starts p/T. When the write produces
+`p.*/T -> C.f.*/T`, supply T immediately. A mark-changing executed write
+`p/T -> C.f/U` supplies U, not T.
+
+Run-1 nonstatic concrete initials are admitted from actual marked inputs
+by the existing abstraction/request join. Structural startup emits FLOW,
+not arbitrary p/T. Static concrete point initials require pool replies.
+Source actions still require their full existing guards; ZERO still needs
+a genuine permitted all-ZERO binding. No provenance flag or grounding
+store is added. Run-1 field/order/context approximation remains DEMAND.
+
+This explicitly replaces the older rule in grouped-run1-statics.md that
+a nonstatic concrete writer needs another outward caller-binding derivation
+before it supplies the pool. It does not change later FULL transfer or
+allow partial rule guards. Direct test injection of an arbitrary concrete
+initial is not proof of the production admission invariant.
+
+Do not fabricate a FLOW writer for a fixed-mark source action. Register
+FLOW writers only for actual FLOW write results. Do not retain answered
+non-FLOW writers as future request owners. Every supplied mark uses the
+executed bounded output region; global three-set admission stays idempotent.
+
+```kotlin
 fun onCallStaticConclusion(original: PremiseKey, value: Facts) {
     val bounded = existingRun1BoundAndChecks(original, value) ?: return
-    staticEffects.computedSupply(original, bounded)
-    // No localWrite registration for a summary application.
+    staticEffects.existingComputedSupply(original, bounded)
+    // No local write-point registration, producer index, or producer replay.
     routeBoundedRun1StaticToExit(original, bounded)
 }
 ```
 
-Reuse the current conditional-input joins and idempotent global supply
-admission. Do not register answered non-FLOW writes as future FLOW writers.
-Post-exit generated values still use their existing computed-supply path.
-Duplicate supply offers must not create duplicate reached memberships.
+Existing computed supplies from ordinary summary application remain valid
+and can offer duplicates. They are not a prerequisite for the local write
+supply. A killed outgoing summary cannot revoke or delay that earlier
+pool effect. Call application never registers a local write point.
 
-The shortcut replaces only the producer paths which currently insert or
-promote a static summary. Do not revive passive unchanged static copies
-discarded by the current read/operation path.
+Remove the newly added producer PublicationIndex, producer delivery kind,
+replay/notification/application methods and dedicated counters. Do not
+replace them with a live pre-exit writer publication directory. The
+killed-write store below supplies guidance only.
 
-#### Concrete producer dependencies with a nonstatic original
-
-A concrete write with a nonstatic original needs an actual caller binding
-before it can supply the global pool. Do not wait for its post-exit W
-summary to obtain that binding. An exit rule can kill the outgoing static
-value after an earlier local read has used the write.
-
-```java
-main() { setAndRead(sourceT()); }
-setAndRead(p) {
-    C.f = p;
-    v = C.f;
-    sinkT(v);
-    // NormalExit rule removes the outgoing C.f value.
-}
-```
-
-The local write must still make T available to the read. The existing
-`computedGroups` reducer handles ZERO and static originals. For a concrete
-nonstatic original, use a separate producer dependency index in the
-method's `SummaryStorage`. It holds the pre-exit relation and uses the
-existing caller subscriptions for its actual inputs. It retains no new
-caller input history and adds no global non-FLOW writer directory.
-
-```kotlin
-fun offerProducer(original: InitialAp, value: Facts) {
-    if (value is TaintTree && !original.isZero && original.base != STATIC) {
-        summaryStorage(method).publishProducers(Publication(original, value))
-    } else {
-        staticEffects.computedSupply(original, value)
-    }
-}
-
-fun bindProducer(subscription: Subscription, producer: Publication) {
-    val matched = ops.satisfying(subscription.added, producer.premise, mode)
-        ?: return
-    ops.applySummary(matched, producer.premise, producer.conclusion, mode) { value ->
-        // Static positions keep their coordinates at a call.
-        offerProducer(subscription.ref.premise, existingBound(value))
-    }
-}
-```
-
-Only concrete singleton nonstatic-to-static dependencies enter this index.
-The ordinary `Publication` value and AP equality remain unchanged. A
-separate delivery kind selects the producer index and callback. It is
-control metadata, not a new fact property. The callback supplies or relays
-only the producer effect. It does not execute the call suffix, a CFG
-instruction, exit rules, or common summary emission. It creates no record
-and no selected demand row. Local FLOW writer requests remain unchanged.
-
-The method index uses exact existing publication admission. A repeated
-relay adds no delta. A new caller subscription replays this index, so both
-input-first and producer-first orders use the same AP predicate. Retain
-unresolved dependency rows for the run; later actual inputs can still
-need them. Release the index with its existing run-owned SummaryStorage.
-The actor's ordinary outgoing W relation still goes through NormalExit.
-
-This route implements the producer visibility requirement above. It does
-not change field transfer or add GroundingSupport. Relative to the old
-early-W pool route, the actual input, premise satisfaction, mark mapping,
-field bound and caller original are the same at each relay. Only the
-consumer is different: the producer channel updates the pool and cannot
-publish a method summary.
-
-[StaticProducer.lean](lean/proposals/restricted-demand/StaticProducer.lean)
-checks the local route argument. Constructive recursion converts each
-finite old early-W actual-binding derivation to the producer derivation,
-and conversely. The base cases use the same existing ZERO/static reducer;
-the induction steps use the same AP binding. It also checks that the
-producer channel has no summary, record or CFG output, and that an exit
-kill does not cancel an already derived supply. Its seven audits use no
-axioms. The AP predicate, queued delivery fairness and bounded finite
-relation universe remain implementation obligations. This local model is
-not a whole-engine proof.
-
-Optional N2 counters report producer packet offers, fresh packet deltas and
-matched applications. They retain no per-input or per-event history.
+[LocalStaticWriteSupply.lean](lean/proposals/restricted-demand/LocalStaticWriteSupply.lean)
+checks the local admission/write contract, FLOW retention, mark identity,
+exit independence and idempotent pool union. It assumes the declared
+production admission and ordinary AP/complete-rule adapters. It adds no
+runtime support metadata or NORMAL record.
 
 ### 5.3 Common exit processing
 
@@ -845,7 +836,7 @@ Keep the producer's global write effect distinct from this outgoing relation.
 | Store | Contents and lifetime |
 |---|---|
 | Existing raw/selected summary stores | W, R and ordinary post-exit relations, owned by each run-1 method actor |
-| SummaryStorage producer dependency index | Concrete pre-exit nonstatic-to-static effects for actual caller joins; run-1 only; never a summary, record, handoff seed or global writer directory |
+| KilledStaticWriteStore | Thin STATIC dependencies not retained by exit processing; temporary candidates until survivor pruning; run-1 guidance only |
 | StaticGuidanceSeedStore | Post-exit B relation patterns and exact mark relation; run-1 only, frozen for handoff |
 | Detached caller graph | Method adjacency from successful prescan, without old runners, callbacks or fact stores |
 | Frozen completion graph | Shared seed IDs, owner memberships, caller reachability/SCC directory and method-local W/R attachments; incoming run-2 only |
@@ -882,6 +873,104 @@ executable-fact protection remains unchanged. Once a full marked relation
 is kept as a demand seed, the ordinary handoff does not need its protection
 bit in the final DemandPattern.
 
+### 6.1 Capture lost exit dependencies, including intermediate writes
+
+A post-exit-only inventory is incomplete. For `C.f=p; return C.f`, an
+exit cleaner can kill p-to-C.f while the returned dependency remains.
+Keep the lost writer as guidance so p-to-C.f-to-ret can compose.
+
+Use thin immutable original/output/mark keys and exact per-method ID sets.
+The complete MethodKey, genuine ZERO original and colored mark mapping
+are part of the key. No Facts, callback, statement, support tree or second
+caller-input history is retained. The B-only interner must not pretend
+that it can encode ZERO or nonstatic writer endpoints; use a compatible
+separate thin-key interner or explicitly generalize it.
+
+Observe these candidates:
+
+1. Every reached STATIC input to the normal exit pipeline, before rules.
+2. Every executed bounded static write in that pipeline, before its next
+   rule/cleaner continuation. This includes a new value which another exit
+   rule kills before the final drain callback.
+3. Static final results before common global-drop/removal filtering.
+
+Observe actual retained keys after common bounded summary handling,
+including private B storage. At joined quiescence, remove exactly equal
+surviving keys under the same complete original/owner/mark relation.
+Until then keep a pending thin candidate if its survivor stability is not
+proved. Raw writer packets are not stable: FLOW-backed storage can remove
+a concrete DEMAND row when a corresponding FLOW relation arrives. Do not
+permanently discard that candidate merely because the row once survived.
+The default algorithm prunes against the final available inventory.
+An earlier discard is permitted only under a proved stable-key or coverage
+contract. Late resumes are included before final pruning.
+An unmatched key is conservatively retained whole. Do not subtract by
+another original, merge a colored key into FLOW, or require a semantic
+set-difference operation on AP trees.
+
+The store temporarily contains possible lost keys, including surviving
+writer candidates until their final pruning. This is thin candidate
+membership, not a killed-only memory bound. Pack and share mark/geometry
+keys and measure peak candidate memberships. After pruning, the store
+means “not retained as an equal exit key,” not “a definite cleaner kill.”
+A partial, changed, demoted or unresolved exit result can leave extra
+DEMAND guidance. No new executable summary or source is created.
+
+```text
+observe exit input / executed intermediate write / pre-filter result
+    -> candidate key
+observe common retained W or private B key
+    -> survivor key
+joined final prune
+    -> keep candidates without an equal available survivor
+```
+
+This observes each existing transfer once. It does not rerun exit rules
+or wait for a missing group. An exit-rule write continues the current
+boundary pipeline and never schedules NormalExit again. An exceptional
+boundary keeps summary=false and creates no normal-exit guide inventory.
+
+### 6.2 Bind lost writers before releasing existing caller inputs
+
+A lost p_get-to-C.f row cannot be copied to a wrapper as an unbound formal.
+Use existing actual caller subscriptions, including their CallerRef,
+stage, layer and genuine ZERO controls, to produce p_wrap-to-C.f.
+A static/static row alone can use detached call-graph inheritance.
+
+Current RunManager releases these subscriptions before driver HandOff.
+Insert a joined read-only completion phase before actor freeze and runner
+release. It may borrow existing N2 candidates; it may not send new events,
+create SummaryStorage after completion, restart a method, or copy all
+caller inputs into a second store. Emit only thin completed guidance keys.
+
+Process primitive observed/post-exit W and recursively caller-bound W
+against matching actual subscriptions. Do not feed static-composition-only
+W rows back into this binding phase. Use the full
+ordinary AP matcher and summary composition, preserving raw binding data
+until that operation completes. Do not run call suffixes, exit rules,
+source hits, pool supply, write registration or normal publication.
+This adapter mirrors the existing run-1 static-summary result lane,
+which routes STATIC output before the caller alias suffix. Do not add a
+new alias expansion here. Static writes produced by ordinary nonstatic
+call-result alias stages remain primitive run-1 write/candidate events.
+ZERO W uses only a genuine reached ZERO call-control input. A resulting
+static original creates B; a nonstatic/ZERO original remains local W.
+Repeat fresh writer bindings and B inheritance to their finite fixed point.
+
+This is a separate writer-seed phase, before static composition. Its
+coverage argument factors a concrete required route at the static middle:
+retain its actual input binding, primitive writer image and inherited
+static suffix. This is witness coverage, not equality of AP tail keys for
+arbitrary reassociation of bind(W;B) and bind(W);B. Bound output can be cut;
+static guidance composition can retain a different conservative tail.
+No call graph edge can replace the nonstatic input-binding witness.
+
+Keep cancellation and the configured analysis resource limits active for
+this phase. If completion fails or stops, do not export a partial closure
+as an accepted complete handoff. Record its time separately from the run-1
+engine and ordinary report barrier. Freeze only after successful completion;
+release caller inputs and mutable collectors afterward on all exit paths.
+
 ## 7. Reference closure: the least fixed point
 
 Let `parent -> child` be a prescan call edge. Start with the collected B and
@@ -899,7 +988,23 @@ STATIC-MIDDLE:
   M has A -> B
 ```
 
-Only static/static rows use CALLER. Only a static middle uses composition.
+Before this closure, saturate the primitive writer seed inventory using:
+
+```text
+BIND-W (writer-seed phase only):
+  callee has primitive or caller-bound A -> C;
+  an existing reached call input matches A
+  ordinary AP application gives caller original X -> C'
+  ------------------------------------------------------
+  caller has X -> C' as guidance only
+```
+
+A is nonstatic or genuine ZERO. The actual binding retains its CallerRef,
+marks, stage and layer. Static output keeps its coordinates. A static X
+enters B. Freeze the bound seed inventory after this finite binding phase.
+The subsequent eager closure has only SEED, CALLER and STATIC-MIDDLE.
+It never applies AP caller binding to a composed guidance row. Only
+static/static rows use CALLER; only a static middle uses composition.
 Geometry and mark compatibility are part of the join. This produces all
 the selected cases:
 
@@ -916,7 +1021,20 @@ its own callers must also receive. Recursive call components need the same
 monotone rule and exact duplicate admission.
 
 ```kotlin
-fun offer(method: MethodId, edge: GuidanceEdge) {
+// Phase A. Only primitive W and recursively caller-bound W enter this queue.
+while (writerQueue.isNotEmpty()) {
+    val (method, writer) = writerQueue.removeFirst()
+    for (actual in joinedCallerInputs.matching(method, writer.from)) {
+        bindOrdinaryAPForGuidance(writer, actual)?.let { bound ->
+            if (bound.from.isStatic) offerStaticSeed(actual.ref.caller, bound)
+            else offerFreshWriterSeed(actual.ref.caller, bound)
+        }
+    }
+}
+freezeBoundSeedInventory()
+
+// Phase B. The exact eager reference for the factored static-path view.
+fun offer(method: MethodKey, edge: GuidanceEdge) {
     if (!relations[method].add(edge)) return
     outgoing[method].indexBySource(edge)
     incoming[method].indexByTarget(edge)
@@ -941,6 +1059,10 @@ while (queue.isNotEmpty()) {
 }
 ```
 
+The method owner in this pseudocode is a complete MethodKey. Only B
+visibility can use the coarser detached method graph. Never merge W/R
+owners through CommonMethod alone.
+
 This is the executable concept/oracle. Production need not materialize its
 method-by-endpoint-pair matrix.
 
@@ -953,8 +1075,9 @@ All ordinary selected pairs remain in the final demand. In particular,
 the completion cannot replace a pre-existing colored or full sink guide
 with a less specific FLOW guide. Newly composed nonstatic-to-nonstatic
 guidance stays at its exact method owner; it is not copied to callers as
-an unbound callee argument/return pair. Ordinary run-1 W/R propagation
-has already exposed its static boundary segments where callers need them.
+an unbound callee argument/return pair. Ordinary run-1 R propagation exposes reader segments. Ordinary W and
+joined BIND-W completion expose the needed writer segments. In particular,
+a killed callee W must not be assumed already present in its callers.
 
 ## 8. Mark and geometry composition
 
@@ -1064,8 +1187,10 @@ W[M] ; T[M]* ; R[M]
 ```
 
 `T*` includes zero static hops. It gives the direct x-to-C-to-y case. It does
-not import nonstatic names from a callee. Ordinary run-1 binding/propagation
-has already supplied the method's W/R rows.
+not import nonstatic names from a callee. Ordinary reader propagation and
+the joined writer-binding phase supply the method's W/R rows first. W
+includes lost exit rows, bound with actual callers. VisibleB includes
+post-exit and lost B, including B created by writer binding.
 
 Store static seeds once with owner memberships. Collapse call-graph SCCs or
 use equivalent frozen reachability. Equal seed/adjacency values can be
@@ -1100,20 +1225,18 @@ same finite Mapped(T,T) state, which remains distinct from FLOW.
 ## 10. Handoff and strict run-2 execution
 
 ```kotlin
-fun afterCompleteRun1(result: CompleteRun) {
-    joinAllExitRuleWorkAndPublications()
-    persistExistingEligibleRawNormalRecords()
-
-    val ordinary = projectExistingSelectedPairs()
-    val completion = freezeStaticCompletion(
-        staticGuidanceSeeds,
-        existingBoundaries = collectWandR(),
-        callers = detachedPrescanGraph,
+fun finishCompleteRun1() {
+    joinAllWorkersAndCountedEffects()
+    val completed = completeJoinedWriterBindingsAndStaticGuidance(
+        existingSelectedWandR(), privateB(), killedStaticWrites(),
+        borrowExistingActualCallerInputs(), detachedPrescanGraph,
     )
-    val demand = ordinary.withCompletion(completion).withSharedStaticCarry()
-    val seeds = existingFullSinkSeedProjection()
-    releaseRun1ActorsAndMutableCollectors()
-    startBackwardRun2(demand, seeds, records.readOnlyView())
+    // No caller-input borrow is allowed after this release.
+    freezeActorsAndReleaseRunners()
+    persistExistingEligibleRawNormalRecords()
+    val demand = projectExistingSelectedPairs()
+        .withCompletion(completed).withSharedStaticCarry()
+    startBackwardRun2(demand, existingFullSinkSeedProjection(), records.readOnlyView())
 }
 ```
 
@@ -1306,8 +1429,11 @@ There is no composition through ZERO as an internal vertex.
 
 ## 12. Termination, cost and safety properties
 
-The endpoint universe is finite for a completed bounded run-1. Composition
-does not invent paths, marks, methods or endpoint bases. A relation key has
+The endpoint universe is finite for a completed bounded run-1. It includes
+primitive endpoints, existing joined CallerRef originals and bounded AP
+images produced by the writer-seed binding phase. A bound source need not
+occur in the original callee seed list. After that phase, static closure
+does not invent endpoint paths, marks, methods or bases. A relation key has
 an owner, two endpoint classes and either FLOW or a finite mark pair. Set
 admission therefore reaches a fixed point. Graph cycles do not require an
 arbitrary iteration cap or a new pending-memory quota.
@@ -1346,9 +1472,10 @@ static shortcut, relative to the original AP operations and the following
 interfaces. It is not equivalence to the current broad SQ permission set.
 
 1. The completed, non-diagnostic run-1 retains every required primitive
-   static dependency as a post-exit B seed or a selected W/R boundary
-   relation. Ordinary local/call propagation has already applied nonstatic
-   bindings to W/R. Normal-record and sink/source seed routes remain valid.
+   static dependency as a post-exit W/R/B key or an observed lost exit key.
+   Joined BIND-W uses existing actual caller inputs before their release;
+   it supplies the needed nonstatic/ZERO caller writer bindings. Ordinary
+   R propagation, normal records and sink/source seed routes remain valid.
 2. The detached prescan graph contains every resolved call target. Its
    conservative method/context visibility is the selected run-1 contract.
 3. Endpoint compilation preserves every compatible concrete static location
@@ -1410,7 +1537,16 @@ Construct its eager completion witness:
 1. A local atom uses SEED.
 2. A callee static atom follows the finite resolved call path toward M,
    applying CALLER once per call. This gives a witness in M.
-3. A one-atom route is complete. For a longer route, complete its suffix
+3. A lost writer uses its observed exit key. Candidate-minus-survivor
+   coverage preserves that key in either the survivor inventory or the
+   killed store, including an intermediate executed exit-rule write.
+4. A nonstatic/ZERO callee writer follows actual caller bindings via
+   BIND-W. At each call retain the actual caller original and static image.
+   Factor a composed writer at its static middle; bind its writer prefix
+   and inherit its static suffix. This covers the required concrete
+   location/mark witness; AP cut tails need not be equal under arbitrary
+   binding/composition reassociation.
+5. A one-atom route is complete. For a longer route, complete its suffix
    recursively and apply STATIC-MIDDLE to the first atom and that suffix.
 
 This is a structural induction on the route. It covers all four requested
@@ -1435,6 +1571,10 @@ still decide which conclusions exist. The full original multi-run/JVM
 soundness theorem retains its existing assumptions and integration limits.
 
 ### 13.4 Eager closure equals the factored representation
+
+Fix the completed bound seed inventory from phase A. This theorem is for
+phase B's SEED/CALLER/STATIC-MIDDLE closure only. It is not an exact-key
+associativity theorem for AP binding and guidance composition.
 
 An eager SEED is one local factored atom. An eager CALLER step lifts each
 static atom of its child's path through that call. An eager composition
@@ -1532,7 +1672,47 @@ contains all outputs and source hashes. The
 records the history and the corrected scope. Neither the old non-STAR
 canonical-shape proof nor these scalar controls prove the full extended
 typed emitter. Acceptance must check the supported STAR-entry builder,
-MUST cell and packed/scalar correspondence under the stated producer guard.
+MUST cell and packed/scalar correspondence against normalized demand.
+
+The 28 October model
+[AbstractDemandEmptyExclusion.lean](lean/proposals/restricted-demand/AbstractDemandEmptyExclusion.lean)
+checks 19 local constructive results. They include demand widening and
+idempotence, concrete preservation, shared initial C2, whole-entry guard
+preservation, retained raw C5 pairs and layer, and actual-E-sensitive
+matching. The abstract exit-permission widening has an explicit witness.
+These local results replace reliance on a producer invariant. They do not
+prove the complete typed adapter, JVM, scheduler or iteration pipeline.
+
+The local scope witness
+[WriterBindingScope.lean](lean/proposals/restricted-demand/WriterBindingScope.lean)
+has six constructive audits. It checks an explicit counterexample to
+exact AP tail-key commutation and the distinction between seed binding
+and static closure. It supports the theorem scope above; it does not add
+an executable transfer rule.
+
+[KilledStaticWrites.lean](lean/proposals/restricted-demand/KilledStaticWrites.lean)
+has 25 constructive audits. Its executed trace observes exit input,
+intermediate produced static values and pre-filter output. Final partition
+returns the identical original/owner/color key in either available
+survivors or killed storage, even when survivor membership decreases.
+It constructs seed-only caller-binding witnesses from explicit actual
+binding steps, checks finite bound endpoint provenance, and transports
+static closure after the bound inventory freezes. Relational read/write
+and call-split witnesses preserve their concrete inputs and static middle.
+The [audit receipt](lean/proposals/restricted-demand/killed-static-writes-checks.json)
+records all commands, dependency hashes and limits. JVM observation,
+actual-binding export and bounded AP witness coverage remain production
+adapter acceptance gates; the model does not assume them proved by a
+method-level call graph.
+
+The selected local supply model
+[LocalStaticWriteSupply.lean](lean/proposals/restricted-demand/LocalStaticWriteSupply.lean)
+has 14 constructive audits. The selected static-domain repair model
+[StaticInputGrammar.lean](lean/proposals/restricted-demand/StaticInputGrammar.lean)
+has 15. Their receipts record commands, hashes and proof scope. Neither
+claims whole-JVM admission or compiler correctness. StaticProducer.lean
+and the exclusion-union candidate are historical superseded mechanisms,
+not selected runtime requirements.
 
 The finite oracle compares eager and factored results in 91 cases, including
 80 deterministic random graphs. Three generic exit-pipeline controls also
@@ -1548,14 +1728,20 @@ Before implementation acceptance, prove or test the following adapters:
 
 1. Every post-exit B row reaches the private seed store; none reaches live
    publication or executable NORMAL persistence.
-2. W/R collection preserves complete MethodKey endpoints and already applied
-   call bindings. Caller static visibility covers every resolved target.
+2. W/R and lost-key collection preserves complete MethodKey endpoints.
+   Joined BIND-W supplies real caller bindings before release. Include ZERO
+   returning wrappers and static originals created by binding. Only B uses
+   method-level inheritance; every resolved target is visible there.
 3. Complete AP slot/tail matching and FULL/GROUP mark projection refine the
    compatibility abstraction without dropping a required witness.
 4. Colored closure rows are never lost under FLOW normalization. Actual
    facts retain the existing protection and equality rules.
 5. New exit arrivals and late boundary mark answers stay counted until their
-   exit rules, summaries, writer effects and notifications complete.
+   exit rules, summaries, writer effects and notifications complete. Observe
+   intermediate executed static writes before another exit rule kills them.
+   Every required normalized key survives in final W/B or the killed store.
+   Prove early-discard survivor stability, or retain its pending candidate
+   until final pruning; do not assume mutable raw packet headers are stable.
 6. Ordinary C2 emission and C5 publication accept the newly completed pairs.
    Keep the baseline ZERO, ND, seeds, exclusions and native-record tests.
 7. A finite required static dependency can be decomposed into the retained
@@ -1589,8 +1775,8 @@ tested. No runtime code is changed by this document.
 | `DemandStore.Builder.completeRun1StaticFields()` and its handoff call | Remove | No flag can enable the removed query/EXACT mechanism |
 | Current `implicitStaticPair`, `staticGroupsEnabled`, `includeStaticGroups()` and its handoff call | Replace with the frozen same-position carry family and static completion view | The old root-wide, group-only helper does not define the required FLOW carry and completed productive pairs |
 | Query-policy constructor plumbing and checks in the above owners | Remove | The receiving run already has its index, direction and limit |
-| `HandOff.toBackward` STAR-to-ANY entry rewrite | Remove | Original handoff preserves STAR and field E; this is separate from mark-exclusion normalization |
-| `DemandStore.Builder` blanket non-STAR-entry and abstract-ANY-only checks | Replace with the restored guard | Allow concrete STAR/E and abstract STAR/empty E; retain the C2 guard and typed abstract-EXACT prohibition |
+| `HandOff.toBackward` STAR-to-ANY entry rewrite | Remove | Keep STAR. Normalize abstract STAR demand E to Empty; retain concrete E. Native records are unchanged. |
+| `DemandStore.Builder` blanket non-STAR-entry and abstract-ANY-only checks | Normalize abstract STAR demand E before validation | Accept offered abstract STAR/E, store Empty E, and keep concrete STAR/E and typed abstract-EXACT prohibition |
 | `validFieldExclusion` restricted to a STAR exit | Extend to legal STAR entries as well | E is legal on a preserved STAR endpoint on either side |
 
 Removing `StrongQueries` does not remove `ops.emit`, `ops.restrict`,
@@ -1612,6 +1798,12 @@ or turn field limiting into an extra actual-input initial.
 | `erasesRun1StaticSummary` as a drop-only predicate | Replace its behavior/name | Classify post-exit static/static results for the private seed archive |
 | Blanket run-1 STATIC returns in `emitAfter`, `emitUnchanged` and `endAt` | Replace only at NormalExit | The normal boundary runs exit rules and common emission; passive static propagation elsewhere stays suppressed |
 | Any exit-rule callback which re-enters the old early-promotion helper | Route its result to common post-exit emission instead | No exit-rule-to-exit-rule loop |
+| Newly added SummaryStorage producer PublicationIndex and producerCandidates/publishProducers | Remove | Concrete executed writes supply at their write point |
+| Producer delivery kind, notify/replay/applyStaticProducer callbacks and interface plumbing | Remove | No live pre-exit writer summary channel remains |
+| Dedicated producer packet/application counters | Remove | Measure local write supply and killed-key/binding/closure work instead |
+| StaticProducer.lean claims for outward producer replay | Retain only as historical evidence | Selected local write supply uses LocalStaticWriteSupply.lean |
+| False abstract STAR/Empty-E admission assertion and exclusion-union fallback candidate | Remove/reject | Offered E is ignored on abstract STAR demand copies |
+
 
 Keep `summaryDelta`, `boundedSummaryResult` and common `retainSummary`
 responsibilities for other summaries. Split or rename functions as needed;
@@ -1631,7 +1823,10 @@ preserved STAR demand; deleting SQ alone would not implement them.
 `validateRun2StaticFullInput` and `validateRun2StaticFullAnchor` currently
 share `StrongQueries.kt`. They enforce the selected grammar and are still
 needed. Move them to an AP/static-boundary validation file, for example
-`engine/StaticInputGrammar.kt`. Preserve their input/output behavior.
+`engine/StaticInputGrammar.kt`. Preserve static anchor checks and correct
+only the stale named-field tail domain: EXACT/ANY/STAR with legal STAR E.
+Do not add STAR rule literals, actual queries, new starts or broad FULL
+root/class inputs.
 
 Replace the obsolete policy test in `RunMethodAnalyzer.checkRun2StaticAnchors`
 and `RunMethodLocalServices.seedFact` with the actual boundary condition
@@ -1683,17 +1878,21 @@ and proof receipts as historical evidence, with their original scope.
    boundary, point admission, exit-rule handler and common summary emission.
 2. Extract producer effects from early summary insertion. Preserve immediate
    static supplies and write registrations; add the post-exit B seed store.
-3. Freeze the detached call graph and W/R/B seed inventory after complete
-   run-1. Implement the eager concept as a small-test oracle.
-4. Implement the equivalent frozen graph demand view. Match `near` and
+3. Add thin killed-key observation at exit input, actual intermediate writes
+   and final pre-filter output. Preserve candidate-or-survivor coverage.
+   Complete lost writer bindings through existing N2 after join and before
+   release. Include cancellation/resource failure and exact duplicate keys.
+4. Freeze the detached call graph and W/R/B/lost-key inventory. Compare the
+   eager reference including BIND-W with the factored representation.
+5. Implement the equivalent frozen graph demand view. Match `near` and
    `covering` against the oracle, including marks, class markers and cycles.
-5. Restore original restricted-run emission and C5 publication. Remove the
+6. Restore original restricted-run emission and C5 publication. Remove the
    broad query permission set/backfill and ANY-to-EXACT completion. Preserve
    STAR at handoff; update the typed demand guard and the concrete descent
    and MUST/STAR cells before switching off the old query path.
-6. Keep the shared static carry as a demand family. Exercise the getter,
+7. Keep the shared static carry as a demand family. Exercise the getter,
    setter, colored bridge, strong-kill and exit-rule cases end to end.
-7. Run the required common/JVM/driver checks and configured OWASP/project
+8. Run the required common/JVM/driver checks and configured OWASP/project
    campaign. Inspect run-1 exit-rule workload, handoff graph memory and
    run-2 concrete/FLOW queries. No unrelated core refactor is included.
 
@@ -1702,16 +1901,20 @@ Acceptance requires these behavior checks, beyond the finite design oracle:
 | Boundary | Required checks |
 |---|---|
 | Demand entry | No-demand/no-start; shared FLOW over several actual Ti; concrete mismatch; correct group/full selection; no ANY-to-EXACT start; legal E and MUST forward-only |
-| STAR demand | Preserved STAR handoff; ancestor E rebased on strict descent; MUST/STAR meets by E union; no unproved abstract STAR/nonempty-E entry; scalar/packed equality |
+| STAR demand | Keep STAR; ignore field E on abstract demand endpoints; concrete ancestor E rebases on strict descent; concrete MUST/STAR meets by E union; actual E remains effective; scalar/packed equality |
 | Restricted publication | Whole-member containment; exit mark mismatch; absent exit; retained full ND premise; raw NORMAL record distinct from restricted publication |
 | Arrival order | Answer-first and input-first give the same applied relations; later input never authorizes a raw-summary scan |
-| Static completion | All four compositions, arbitrary chain, siblings, transitive callers, call/static cycles, absent actors, exact MethodKey W/R ownership |
+| Static completion | Primitive/caller-bound writer saturation before static composition; all four static compositions; arbitrary chain; siblings; transitive callers; cycles; absent actors; exact MethodKey W/R ownership |
 | Marked completion | FLOW diagonal, incompatible full marks rejected, colored cycle retained beside FLOW, GROUP adapter preserves actual full identities |
 | Carry/grammar | Transparent wrappers, no cross-field carry or marker/field confusion, named-field and exact-marker validation retained |
-| Exit routing | Unique post-return normal boundary; no return transfer; one completed exit pipeline; late CM resumes; cleaner kill; genuine source/sink observations; immediate producer effect survives an exit kill |
+| Exit routing | Unique post-return normal boundary; no return transfer; one completed exit pipeline; late CM resumes; cleaner kill; genuine source/sink observations; immediate writer supply survives an exit kill |
+| Write-point pool supply | Retain p.* to C.f.* FLOW writer; immediate T/U supply for executed concrete writes in FULL/GROUP; complete guards; no dependency on an exit summary; no producer replay channel |
+| Killed-write guidance | Local/static-copy/ZERO writers; exit-generated intermediate writes killed later; one/two returning wrappers; late exit resumes and survivor pruning; joined N2 read before release; no normal record/pool effect from completion |
+
 | Other mechanisms | Real strong run-2 kills; full sink seeds; backward ZERO entry/return; source hits; normal records with nonempty legal E; unchanged run-1 origins and later ND guard support |
 
 Production acceptance compares complete semantic observations, not an OOM
 prefix or exact callback counts. Performance acceptance records run-1 engine
-time separately from handoff closure time, and records run-2 starts, memory
-and workload. This document supplies no new project performance result.
+time separately from joined binding, candidate pruning and handoff closure
+time. Record observed candidate/peak/final lost keys, bound writer keys,
+static bridge memberships and lookup work, plus run-2 starts and memory. This document supplies no new project performance result.

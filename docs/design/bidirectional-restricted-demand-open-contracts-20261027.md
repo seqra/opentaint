@@ -2,6 +2,14 @@
 
 Date: 27 October 2026. Status: **candidate design; user decisions pending**.
 
+Update, 28 October: the user selected ignoring field E on abstract STAR
+demand. Section 2's exclusion-union candidate is superseded; do not
+implement it. See the [follow-up review](bidirectional-restricted-demand-followup-20261028.md)
+and the updated selected spec. The previous live pre-exit writer-directory
+candidate is also under review in favor of a separate killed-write store
+used only during transition. The rest of this document is historical
+candidate evidence, not a new selection.
+
 This document makes the proposed repairs concrete for review. It does not
 select their behavior. The runtime remains at the intermediate state in
 [the validation report](../reports/bidirectional-restricted-demand-validation-20261027.md).

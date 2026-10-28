@@ -1,0 +1,13 @@
+{
+  "status": "SCOPE_REVIEW_WITNESS_PASS",
+  "source": "spec/lean/proposals/restricted-demand/WriterBindingScope.lean",
+  "source_sha256": "a11d6f7dcaee0059ae18e421a32e497dd60a7da37748f377f734f4285c118cc5",
+  "command": "LEAN_PATH=.lake/build/lib/lean lean -j 1 -M 2048 proposals/restricted-demand/WriterBindingScope.lean",
+  "exit_code": 0,
+  "audited_declarations": 6,
+  "audit_output": "'RestrictedDemand.WriterBindingScope.compatible_static_middle' does not depend on any axioms\n'RestrictedDemand.WriterBindingScope.actual_primitive_writer_binding' depends on axioms: [propext]\n'RestrictedDemand.WriterBindingScope.actual_binding_of_composed_permission_before_limit' depends on axioms: [propext]\n'RestrictedDemand.WriterBindingScope.composed_binding_is_ANY_after_limit' depends on axioms: [propext]\n'RestrictedDemand.WriterBindingScope.primitive_binding_then_permission_is_STAR' depends on axioms: [propext]\n'RestrictedDemand.WriterBindingScope.no_exact_header_commutation' depends on axioms: [propext]\n",
+  "purpose": "Exact AP header binding does not commute with outer-pattern static permission composition. The selected two-phase reference binds only primitive and recursively caller-bound writer seeds before static closure.",
+  "scope": "Concrete numeric AP witness; no whole-project observations, missing-demand claim or runtime change.",
+  "runtime_tests": 0,
+  "project_runs": 0
+}

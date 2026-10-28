@@ -1,6 +1,10 @@
 # Restricted demand and static closure
 
-Implementation is in progress. Three behavior decisions remain open in the
+Implementation is in progress. The 28 October user decision selects Empty
+field E for abstract STAR demand. The exclusion-union candidate below is
+superseded. See the [follow-up review](../../../../docs/design/bidirectional-restricted-demand-followup-20261028.md)
+for the STAR validator and killed-write/pool-supply distinctions. The
+27 October open cases are recorded in the
 [implementation checks](../../../../docs/reports/bidirectional-restricted-demand-validation-20261027.md).
 The [candidate repair design](../../../../docs/design/bidirectional-restricted-demand-open-contracts-20261027.md)
 makes these choices concrete. It does not select their behavior. The
@@ -71,31 +75,33 @@ results remain a subset of ordinary results. This is a local list model;
 the typed adapter is also checked by `RestrictionTest` with mixed marks and
 changed paths and tails. It does not prove the complete analyzer.
 
-`StaticProducer.lean` checks the separate pre-exit producer binding route.
+`StaticProducer.lean` is historical evidence for the removed pre-exit
+producer replay mechanism. It checks that former binding route.
 Its seven constructive audits use no axioms. The model relates each finite
 old early-W actual-binding derivation to the producer route with the same
 bindings. It also checks that producer delivery cannot emit an ordinary
 summary, record or CFG result. It assumes the existing actual AP binding
 contract; it does not prove the complete JVM interpreter or scheduler.
 
-`ExcludedFlowCandidate.lean` has six constructive audits for the pending
-excluded-STAR repair. It keeps a satisfied shared FLOW initial. For the
+`ExcludedFlowCandidate.lean` has six historical constructive audits for the
+unselected, now superseded excluded-STAR repair. It keeps a satisfied shared FLOW initial. For the
 remaining same-path STAR case, it unions the field exclusions. It reuses
 the original AP algebra. MUST projection, packed equivalence and complete
 iteration behavior remain separate obligations. The full local audit is
 in `excluded-flow-candidate-checks.json`.
 
-`StaticInputGrammar.lean` has 15 constructive audits for the pending
+`StaticInputGrammar.lean` has 15 constructive audits for the selected
 named-field STAR input-domain repair. It proves the local grammar
 extension and bounded STAR relay. Two laws reuse the correlated AP model
 for actual identity and field-limit operations. Caller supply, accessor
 tags and identity static projection are explicit assumptions. The full
-local audit is in `static-input-grammar-candidate-checks.json`. The first
+local selected audit is in `static-input-grammar-checks.json`; the earlier
+candidate receipt is historical. The first
 512 MiB proof attempt ran out of memory; the successful audit used 2 GiB.
 These proof-tool limits are not project-analysis configurations.
 
-`PreExitGuidanceCandidate.lean` has nine constructive audits for the
-pending pre-exit guidance repair. It transports finite routes when all
+`PreExitGuidanceCandidate.lean` has nine historical constructive audits
+for the superseded live pre-exit guidance candidate. It transports finite routes when all
 required primitive keys are captured. Actual caller bindings are explicit
 input to the model. It constructs local, two-wrapper and genuine ZERO
 witnesses, and checks relational call factorization. The key-coverage and
@@ -103,3 +109,31 @@ origin-factorization premises still need their production adapter proofs.
 The local model does not establish those premises, scheduling fairness,
 or whole-iteration completeness. The complete audit output is in
 `pre-exit-guidance-candidate-checks.json`.
+
+`AbstractDemandEmptyExclusion.lean` checks the selected 28 October rule in
+19 local constructive audits. Normalize abstract STAR demand copies on
+both entry and exit. Concrete E, actual E and native records remain
+unchanged. The model proves shared-start C2 against normalized demand,
+retained raw C5 pairs and layer, and actual-E-aware matching. It includes
+an explicit witness for widened abstract exit permission. It does not
+prove the complete typed adapter, JVM or iteration pipeline.
+
+`LocalStaticWriteSupply.lean` checks the selected write-point supply rule
+in 14 local audits. It preserves the FLOW writer and the actual output
+mark, checks exit independence and idempotent pool union, and introduces
+no NORMAL record or runtime support flag. The receipt is
+`local-static-write-supply-checks.json`.
+
+`KilledStaticWrites.lean` has 25 local audits for conservative pending-key
+capture and final pruning, including decreasing survivor membership.
+Caller binding uses only primitive/recursively bound seeds and explicit
+actual binding steps. Static closure transport follows the frozen seed
+inventory. Actual JVM observers and binding export remain production
+adapters, not conclusions of the local proof. The complete receipt is
+`killed-static-writes-checks.json`.
+
+`WriterBindingScope.lean` has six local audits showing why exact AP tail
+keys need not commute under binding/composition reassociation. This fixes
+the theorem scope: exact eager/factored equality is for static closure of
+the same frozen bound inventory. The receipt is
+`writer-binding-scope-checks.json`.

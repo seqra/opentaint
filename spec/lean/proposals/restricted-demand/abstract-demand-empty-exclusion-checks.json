@@ -1,0 +1,34 @@
+{
+  "status": "USER_SELECTED_DEMAND_BOUNDARY_POLICY",
+  "selected_at": "2026-10-28",
+  "source": "spec/lean/proposals/restricted-demand/AbstractDemandEmptyExclusion.lean",
+  "source_sha256": "a49a1d20a8933642bbf1894c3dea6a6003d31923efedc5305b80a59d14d08484",
+  "checked_at_utc": "2026-10-28T08:35:08.903786+00:00",
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "1536",
+    "proposals/restricted-demand/AbstractDemandEmptyExclusion.lean"
+  ],
+  "working_directory": "spec/lean",
+  "environment": {
+    "LEAN_PATH": ".lake/build/lib/lean"
+  },
+  "exit_code": 0,
+  "audited_declarations": 19,
+  "allowed_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "output": "'AbstractDemandEmptyExclusion.blocked_actual_star_still_rejected' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.blocked_actual_must_still_rejected' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.concrete_demand_cannot_obtain_T_from_FLOW' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.exit_normalization_widens_permission' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.inside_empty_star' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.whole_guard_preserved' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.old_required_pair_kept' depends on axioms: [propext, Quot.sound]\n'AbstractDemandEmptyExclusion.publication_has_only_raw_pairs' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.canonical_match_keeps_actual_E' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.annotated_actual_contract' depends on axioms: [propext, Quot.sound]\n'AbstractDemandEmptyExclusion.clear_covers' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.normalization_enlarges' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.concrete_unchanged' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.normalized_abstract_guard' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.normalization_idempotent' depends on axioms: [propext]\n'AbstractDemandEmptyExclusion.normalized_entry_contract' depends on axioms: [propext, Quot.sound]\n'AbstractDemandEmptyExclusion.old_common_location_kept' depends on axioms: [propext, Quot.sound]\n'AbstractDemandEmptyExclusion.typed_shared_initial_empty' depends on axioms: [propext, Quot.sound]\n'AbstractDemandEmptyExclusion.shared_initial_independent_of_actual' depends on axioms: [propext]\n",
+  "scope": "Local original AP demand normalization, C2/C5 and annotated canonical FLOW matching including actual MUST/E. Concrete endpoints unchanged; actual/native E not normalized. Does not prove packed adapter, JVM/scheduler, native reversal, complete iteration or campaign performance.",
+  "supersedes": "ExcludedFlowCandidate exclusion-union fallback; do not implement that candidate",
+  "new_project_runs": 0,
+  "latest_referenced_campaign": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted": "run-1"
+  }
+}

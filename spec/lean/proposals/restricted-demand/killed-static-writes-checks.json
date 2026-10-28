@@ -1,0 +1,65 @@
+{
+  "status": "PASS",
+  "utc": "2026-10-28T09:13:17.803645+00:00",
+  "scope": "Selected conservative pending/final partition; seed-only actual BIND; exact three-rule closure only after seeds freeze; concrete relational read/call factor witnesses. AP/JVM adapters remain obligations. No runtime or project tests.",
+  "latest_campaign_reached": "run-2; this proof run creates no new campaign measurement",
+  "source": "spec/lean/proposals/restricted-demand/KilledStaticWrites.lean",
+  "source_sha256": "0086b898cf01eb7a63ba0149d7fceeca3744a6e3ee5a55bff255206d047e4da1",
+  "cwd": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean",
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "512",
+    "proposals/restricted-demand/KilledStaticWrites.lean"
+  ],
+  "LEAN_PATH": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/killed-store-lean:.lake/build/lib/lean",
+  "lean_version": "Lean (version 4.35.0, x86_64-unknown-linux-gnu, commit eb6cafb7290e8bd5f2937522d8d804f58f02bafc, Release)",
+  "returncode": 0,
+  "axiom_audit_count": 25,
+  "axiom_audits": [
+    "'KilledStaticWrites.addPending_mem' depends on axioms: [propext]",
+    "'KilledStaticWrites.pending_exact' depends on axioms: [propext]",
+    "'KilledStaticWrites.final_killed_exact' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.before_covered' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.recover' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.killed_has_observed_owner' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.killed_disjoint_survivors' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.projected_coverage' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.readers_and_writers_covered' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.moveBound' depends on axioms: [propext]",
+    "'KilledStaticWrites.bound_finite_universe' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.bound_static_image' depends on axioms: [propext]",
+    "'KilledStaticWrites.frozenCapture' depends on axioms: [propext, Quot.sound]",
+    "'KilledStaticWrites.transportFrozenGuide' depends on axioms: [propext]",
+    "'KilledStaticWrites.moveEager' does not depend on any axioms",
+    "'KilledStaticWrites.transportFactored' does not depend on any axioms",
+    "'KilledStaticWrites.extendRead' does not depend on any axioms",
+    "'KilledStaticWrites.splitReadWrite' does not depend on any axioms",
+    "'KilledStaticWrites.splitCall' does not depend on any axioms",
+    "'KilledStaticWrites.changedBoundImage' depends on axioms: [propext]",
+    "'KilledStaticWrites.complete_exit_kill_keeps_key' depends on axioms: [propext]",
+    "'KilledStaticWrites.later_survivor_is_pruned' depends on axioms: [propext]",
+    "'KilledStaticWrites.intermediate_exit_write_is_kept' depends on axioms: [propext]",
+    "'KilledStaticWrites.owner_and_color_do_not_discharge_key' depends on axioms: [propext]",
+    "'KilledStaticWrites.nonmonotone_survivors_keep_candidate' depends on axioms: [propext]"
+  ],
+  "allowed_foundational_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "forbidden_axioms_found": false,
+  "log": "/drive-testcomp/opentaint-go-rules/restricted-demand-20261028/killed-static-writes-audit.log",
+  "log_sha256": "d5cfd08a4dd3e9e1059c6fbb189abdd7e5a6d20eaab576838404153532879543",
+  "dependency_source_sha256": {
+    "PreExitGuidanceCandidate.lean": "0d97e5080acf12364247c63b2f5ef28e9e18f5c8d891935daeebe440c672094e",
+    "StaticClosure.lean": "bec96f05c4a3eb1d6b8863fc61322ab2554a62bd9abd3cc4eb8bd42dc935aae8"
+  },
+  "not_proved": [
+    "Universal JVM adapter correctness",
+    "AP schema binding/composition reassociation",
+    "Actual binding inventory complete without the explicit export contract",
+    "Peak candidate-ID count improvement"
+  ]
+}
