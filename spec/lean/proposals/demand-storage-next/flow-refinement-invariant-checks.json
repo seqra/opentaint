@@ -1,0 +1,78 @@
+{
+  "status": "PROPOSAL_FLOW_REFINEMENT_INVARIANT_AUDIT_PASS",
+  "runtime_changed": false,
+  "source": "spec/lean/proposals/demand-storage-next/FlowRefinementInvariant.lean",
+  "source_sha256": "ec85d2c725a5e5b6f90e871d672b6856cf972b74ae42b308b7998d6e9f77890d",
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "configured_memory_limit_mib": 1024,
+  "parallel_workers": 1,
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "1024",
+    "proposals/demand-storage-next/FlowRefinementInvariant.lean"
+  ],
+  "working_directory": "spec/lean",
+  "exit_code": 0,
+  "seconds": 0.7274296879768372,
+  "output": "'DemandStorageNext.FlowRefinementInvariant.localReplay' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.replayChecked' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.serveOmittedMarked' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.reuseNeverCreatesFlowPeer' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.noPeerNoReuse' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.getterCertificate' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.echoCertificate' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.echoReplaysCallerT' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.genBlocksReuse' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.crossMarkBlocksReuse' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.protectedSameBlocksReuse' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.hiddenObservationBlocksReuse' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.backedCopyDoesNotHideEarlierSource' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.selectedUCanReplayT' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.completeTKillReplaysEmpty' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.belowTCleanerRetainsProtectedRoot' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.unrelatedCheckIsMarkSpecific' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.unknownAlwaysFallsBack' does not depend on any axioms\n'DemandStorageNext.FlowRefinementInvariant.exactMustAnyFallBack' does not depend on any axioms\n",
+  "audited_declarations": 19,
+  "expected_audit_declarations": 19,
+  "declarations": [
+    "DemandStorageNext.FlowRefinementInvariant.localReplay",
+    "DemandStorageNext.FlowRefinementInvariant.replayChecked",
+    "DemandStorageNext.FlowRefinementInvariant.serveOmittedMarked",
+    "DemandStorageNext.FlowRefinementInvariant.reuseNeverCreatesFlowPeer",
+    "DemandStorageNext.FlowRefinementInvariant.noPeerNoReuse",
+    "DemandStorageNext.FlowRefinementInvariant.getterCertificate",
+    "DemandStorageNext.FlowRefinementInvariant.echoCertificate",
+    "DemandStorageNext.FlowRefinementInvariant.echoReplaysCallerT",
+    "DemandStorageNext.FlowRefinementInvariant.genBlocksReuse",
+    "DemandStorageNext.FlowRefinementInvariant.crossMarkBlocksReuse",
+    "DemandStorageNext.FlowRefinementInvariant.protectedSameBlocksReuse",
+    "DemandStorageNext.FlowRefinementInvariant.hiddenObservationBlocksReuse",
+    "DemandStorageNext.FlowRefinementInvariant.backedCopyDoesNotHideEarlierSource",
+    "DemandStorageNext.FlowRefinementInvariant.selectedUCanReplayT",
+    "DemandStorageNext.FlowRefinementInvariant.completeTKillReplaysEmpty",
+    "DemandStorageNext.FlowRefinementInvariant.belowTCleanerRetainsProtectedRoot",
+    "DemandStorageNext.FlowRefinementInvariant.unrelatedCheckIsMarkSpecific",
+    "DemandStorageNext.FlowRefinementInvariant.unknownAlwaysFallsBack",
+    "DemandStorageNext.FlowRefinementInvariant.exactMustAnyFallBack"
+  ],
+  "observed_axioms": [],
+  "forbidden_source_matches": [],
+  "proved_scope": [
+    "A per-mark executable classification admits local copies/backed-copy cells, whole-region selected kills and unrelated selected operations; generation, relevant conversion/protected survivors/observations and UNKNOWN reject reuse.",
+    "Each accepted transfer commutes with caller mark instantiation, including modeled protection and observation payloads.",
+    "Constructive induction over the original finite operation order proves the accepted kernel execution equals instantiated generic execution, without AP reassociation.",
+    "Boundary-service transport for an omitted marked body requires an actually admitted same-geometry FLOW peer, supported STAR shape, complete actual effect/observation footprint and retained generic application plus handoff service.",
+    "Reuse cannot create a FLOW peer; empty admitted inventory prevents a reuse certificate.",
+    "Getter/echo positives; genuine GEN, cross-mark, protected same-mark and hidden-check negative controls; a backed copy cannot hide an earlier source.",
+    "Selected-U cleaner can replay T, a complete selected-T kill replays the empty result, a below-only T cleaner preserves a protected root that FLOW cannot reproduce.",
+    "UNKNOWN and EXACT/MUST/ANY initial cells conservatively fall back."
+  ],
+  "not_proved": [
+    "Completeness of production JVM effective-rule/callee/source/sink/cleaner/ND observation footprints, including operations not fired under FLOW.",
+    "Raw FLOW-backed cell certification, per-label owner visibility, current-state classification upgrades or producer/caller-binding coverage.",
+    "AP paths/tails/E/mx/layers/type/primitive/alias adapters; Geometry is an opaque exact-peer key in this kernel, not a replacement AP implementation.",
+    "Whole-engine source-hit/exit/ZERO protocol, FULL/GROUP selector coverage or incoming caller protection composition; these remain explicit retained-service duties.",
+    "Equality of old/new C2 initial sets or initial queues; the theorem is boundary service for omitted marked work.",
+    "Production semantic-body-reuse implementation, scheduler complexity, whole-JVM equivalence or measured savings."
+  ],
+  "related_graph_model": {
+    "source": "spec/lean/proposals/demand-storage-next/FlowOnlyCertificate.lean",
+    "purpose": "Separate last-residual factorization; not imported or counted among these 19 local kernel audits."
+  },
+  "new_runtime_edits": 0,
+  "new_runtime_tests": 0,
+  "new_project_runs": 0,
+  "measured_context": {
+    "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+    "thingsboard_latest_reached": "run-2",
+    "thingsboard_latest_complete": "run-1",
+    "thingsboard_latest_accepted_forward_report": "run-1",
+    "limit": "Prior fixed campaign only; no measurements for this proposal."
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "scope": "Proposal only; no runtime edits or project runs",
+  "date": "2026-10-28",
+  "command": "LEAN_PATH=.lake/build/lib/lean lean -j1 -M512 proposals/demand-storage-next/FlowOnlyCertificate.lean",
+  "workdir": "/drive-testcomp/opentaint-go-rules/opentaint-w3/spec/lean",
+  "exit_code": 0,
+  "audit_count": 5,
+  "all_axiom_free": true,
+  "audit_output": "'DemandStorageNext.FlowOnlyCertificate.split' does not depend on any axioms\n'DemandStorageNext.FlowOnlyCertificate.replayFromFlow' does not depend on any axioms\n'DemandStorageNext.FlowOnlyCertificate.replay_keeps_original_input' does not depend on any axioms\n'DemandStorageNext.FlowOnlyCertificate.no_hidden_observation' does not depend on any axioms\n'DemandStorageNext.FlowOnlyCertificate.residualRejects' does not depend on any axioms\n",
+  "lean_sha256": "0432c3a8c186d4b341d4271d58717973cac12a31d31e5734b160c2d0703bdb75",
+  "design_sha256": "d7adfcb7df6cd9c2e4c37b01684773e801c5bd451af5923b01a3da7648b2c901",
+  "adapter_limits": [
+    "Actual AP geometry/layer/E/mx/protection replay law",
+    "Complete raw residual classification before guidance normalization",
+    "Complete internal rule/ND/observation footprint or conservative keep",
+    "Complete local bound W and per-label visible B seed inventory",
+    "Finite BFS implements a conservative negative reachability certificate"
+  ]
+}

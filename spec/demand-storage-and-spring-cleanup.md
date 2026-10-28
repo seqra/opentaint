@@ -38,6 +38,7 @@ a speedup before implementation.
 | Restricted initial admission | Actor obtains paired demand candidates, then uses only each entry | Demand storage returns the same initial set from an entry view | Original AP C2; representation and work change only |
 | Restricted summary publication | Actor obtains paired candidates and applies AP restriction | Demand storage applies the same paired restriction and returns the result | Original AP C5; no relaxation |
 | Skipped run-1 statics | Both lookups can walk full paired closure | Entry-only traversal for C2; paired traversal for C5; skip virtual lookup when endpoint indexes prove it irrelevant | Same virtual demand relation |
+| Lookup order and C2 search | A lookup can start shared traversal before all local results are known | Check direct local rows, then local composition, then visible callee rows. For a FLOW reader, use bidirectional compatible-mark existence search | Same exact C2/C5 results; complete result coverage can stop search |
 | Run transition | Persist native records; build the next demand snapshot | Keep that order. Fill and seal the new storage during the transition | Existing behavior |
 
 The Spring model is a selected semantic boundary. It must not be hidden in
@@ -56,7 +57,8 @@ Keep the following mechanisms unchanged:
 - Alias closure, rule occurrence identities and complete method contexts.
 
 Do not add StrongQueries, grounding support, a new weak cache, a new static
-order approximation, or a new stopping rule. The writer-replay optimization
+order approximation, or a stopping rule that can omit a result. Exact
+result-coverage stopping is specified below. The writer-replay optimization
 from the previous proposal is not selected by this document. IR storage is
 outside the scope. Generated Spring instruction removal is inside the scope.
 
@@ -373,23 +375,21 @@ fun onArrived(arrived: Facts) {
 }
 
 fun initials(method: MethodKey, bounded: Facts): Set<InitialAp> {
-    val out = LinkedHashSet<InitialAp>()
-    val local = localDemand(method) // ordinary plus direct primitive seed views
-    val entries = LinkedHashSet<Pattern>()
-    for (leaf in ap.leaves(bounded)) {
-        entries += local.entryCandidates(leaf)
-        entries += existingImplicitZeroEntry(leaf)
-        entries += existingSameActualStaticCarryEntry(leaf)
-        if (skipped?.mayAffectEntry(method, leaf) == true)
-            entries += skipped.entryCandidates(method, leaf)
-    }
-    for (entry in entries) {
+    val query = InitialQuery(method, bounded) { entry ->
         // Same AP emit as before; Dp is irrelevant to this operation.
-        out += ap.emit(DemandPattern(entry, null), bounded)
+        ap.emit(DemandPattern(entry, null), bounded)
     }
-    return out
+    return lookup(query) // staged helper in demand-storage-lookup.md, section 2.0
 }
 ```
+
+`InitialQuery` checks direct local entries and the existing implicit entries
+for **all** actual leaves before starting composition. Its local BFS uses
+local W/R and own B. Only then can it enable inherited B visibility. Apply
+the emitter as each candidate arrives; deduplicate complete emitted initial
+keys. Stop when a conservative bound proves that no further key can be added.
+If the bound is not covered, complete the eligible search. The companion
+spec defines this bound and the exact state/visibility rules.
 
 Keep field limiting before candidate lookup. Preserve packed-fact leaves and
 the existing initial deduplication. An abstract demand emits the shared FLOW
@@ -404,21 +404,30 @@ other current AP intersection rows. There is no new EXACT/ANY/STAR rewrite.
 
 Start at primitive seed targets comparable with the actual location. Do not
 construct all `(D_c, D_p)` rows and discard `D_p` afterwards.
+For a reader R, offer its conclusion mark directly if it is mapped. A FLOW R
+offers T when a composable local W or visible B concludes T and reaches R
+through zero or more FLOW B edges. Use the conclusion selector, not R's input
+selector. Every offered entry still needs the unchanged actual-input AP test.
 
 ```text
-for each visible rightmost seed a -> b matching the actual target:
+for each eligible rightmost seed a -> b matching the actual target:
     if its relation is mapped T -> U:
         offer entry b/U
     if its relation is FLOW:
         offer abstract entry b/*
         if a is static:
-            traverse incoming FLOW-only static prefixes at a
-            collect the output U of each compatible mapped prefix
-            offer entry b/U for each distinct collected U
+            for the actual marked T only:
+                search backward from a and forward from marked static outputs
+                traverse only FLOW B between them
+                if a valid directed meeting exists: offer entry b/T
 ```
 
 Stop a color search at a mapped seed: that seed already fixes its output.
 Continue through FLOW prefixes because they transport a preceding color.
+This is a Boolean query for the actual T, not enumeration of all colors.
+The forward frontier holds static outputs; the backward frontier holds
+static inputs. They meet only at a valid output-to-input geometry join.
+Each transfer across an input and output requires a real FLOW B row.
 Use the current static-anchor, geometry-overlap and visibility conditions.
 Do not replace them with class or group equality alone. The visited state
 retains every geometry and owner coordinate needed by those conditions.
@@ -446,23 +455,23 @@ worklist keys are specified in [demand-storage-lookup.md](demand-storage-lookup.
 
 ```kotlin
 fun intersect(method: MethodKey, s: SummaryCandidate): List<SummaryCandidate> {
-    val kept = ProtectionPreservingResults() // exact payload dedup; union protection
-    val local = localDemand(method)
-    for (member in s.premise.members()) {
-        val query = PairQuery(member, s.conclusion)
-        for (pair in local.pairCandidates(query))
-            kept.addAll(ap.restrict(member, s.conclusion, pair))
-        for (pair in existingSameActualStaticCarryPairs(query))
-            kept.addAll(ap.restrict(member, s.conclusion, pair))
-        if (skipped?.mayAffectPair(method, query) == true) {
-            skipped.forEachRelevantPair(method, query) { pair ->
-                kept.addAll(ap.restrict(member, s.conclusion, pair))
-            }
-        }
+    val query = SummaryQuery(
+        method, s, results = ProtectionPreservingResults(),
+    ) { member, pair ->
+        ap.restrict(member, s.conclusion, pair)
     }
+    val kept = lookup(query)
     return kept.values().map { s.copy(conclusion = it) } // keep the original premise
 }
 ```
+
+`SummaryQuery` checks direct local pairs and static-carry pairs for all
+original members first. Then it runs local paired BFS. Only then can it
+enable visible inherited B rows. Every candidate keeps its original member
+and complete pair. Its result accumulator deduplicates exact payloads and
+unions protection. Whole-result coverage can stop further search only under
+the C5 output-bound rule in the companion spec. The C2 Boolean witness does
+not replace this paired walk.
 
 C5 uses complete `(D_c, D_p)` pairs. Its guard requires the whole member
 inside `D_c`, with the existing location and mark tests. Then intersect the
@@ -513,7 +522,11 @@ fixed speedup is claimed for C5.
 
 The complete decision tables and both traversal algorithms are specified in
 [demand-storage-lookup.md](demand-storage-lookup.md). They require the local
-primitive coverage invariant from section 5. Local lookup always runs.
+primitive coverage invariant from section 5. Check direct local rows for the
+whole query, then local composition by BFS, then inherited rows visible
+through the call graph. Stop when the exact result-coverage test succeeds.
+The last stage must also follow local links reached through inherited rows.
+Local exhaustion alone cannot prove a final negative result.
 
 For initial admission, a nonstatic fact needs additional lookup only if a
 local FLOW reader target can match it. A static fact needs additional lookup
@@ -631,6 +644,12 @@ Prove the following contracts constructively:
 8. **Finite query work.** On frozen bounded seed data, admit each complete
    query state once. Cycles cannot produce an unbounded worklist. Do not
    infer finiteness from a dedup key that omits a required semantic coordinate.
+   In staged search, track local and inherited expansion separately.
+9. **Staged and bidirectional lookup.** Prove that reordering local and
+   visible work preserves results. Prove that complete output coverage
+   permits stopping. For C2, a meeting must yield a real marked-prefix path;
+   a negative result needs complete eligible roots and adjacency. Keep the
+   Boolean C2 proof separate from the full C5 pair proof.
 
 The existing EntryProjection model has 20 audited declarations with no
 axioms. New local models for the cleanup kernel and query guards are stored
@@ -647,8 +666,10 @@ to make a proof pass.
 | [SpringCleanup.lean](lean/proposals/demand-storage-next/SpringCleanup.lean) | 11 | Atomic save/clear/restore value transfer and its backward converse; control, layers and instruction count | [Checks](lean/proposals/demand-storage-next/spring-cleanup-checks.json) |
 | [DemandQueries.lean](lean/proposals/demand-storage-next/DemandQueries.lean) | 31 | Endpoint-guard witnesses; explicit/lazy query result equivalence; targeted FLOW-prefix traversal; ordinary fallback; ZERO dispatch; pointwise protection union | [Checks](lean/proposals/demand-storage-next/demand-queries-checks.json) |
 | [LookupStrategies.lean](lean/proposals/demand-storage-next/LookupStrategies.lean) | 25 | Tighter local/transitive guards under primitive coverage; mapped-terminal locality; FLOW-actual shortcuts and edge cases | [Checks](lean/proposals/demand-storage-next/lookup-strategies-checks.json) |
+| [StagedDemandLookup.lean](lean/proposals/demand-storage-next/StagedDemandLookup.lean) | 25 | Local-first/full-path equivalence; exact output-bound stopping; positive witness and exhausted negative; mixed local/remote cases | [Checks](lean/proposals/demand-storage-next/staged-demand-lookup-checks.json) |
+| [BidirectionalDemandExists.lean](lean/proposals/demand-storage-next/BidirectionalDemandExists.lean) | 20 | Directed meeting witnesses, typed-frontier exhaustion, overlap and late inherited-join cases | [Checks](lean/proposals/demand-storage-next/bidirectional-demand-exists-checks.json) |
 
-All 67 audits in these three models pass without axioms. They import or use the earlier
+All 112 audits in these five models pass without axioms. They import or use the earlier
 constructive entry-projection kernel where stated. They do not execute the
 analyzer or establish a measured saving.
 
@@ -670,6 +691,9 @@ with their stated locality contracts, on both sides. It is not a proof of a
 new AP intersection table. The mask laws are pointwise OR; production tree
 mask transport, payload-key equality, visibility, index completeness, ZERO/carry
 adapters and worklist execution remain implementation proof obligations.
+The two new graph models establish 45 of these audits. They do not prove
+that a production BFS implements the declared adjacency, coverage bound or
+fair scheduling. Verify those adapters before enabling the optimized lookup.
 
 ## 10. Implementation order and checks
 
@@ -679,8 +703,11 @@ adapters and worklist execution remain implementation proof obligations.
    model. Test controller annotations, loops, initialization and return control.
 3. Introduce the demand API over the current implementation first. Check
    exact initial and publication sets. Then separate explicit entry/pair indexes.
-4. Add endpoint envelopes, target-directed entry queries and paired queries.
-   Compare each with finite explicit closure before replacing current lookup.
+4. Add endpoint envelopes and staged local/visible lookup. Use bidirectional
+   compatible-mark search for C2 FLOW readers and the paired walk for C5.
+   Compare exact results, including protection, with finite explicit closure.
+   Check local coverage stopping, inherited EXACT targets, mapped barriers,
+   remote joins between old frontiers and alternating local/remote paths.
 5. Commit selected runtime changes before the fixed project campaign. Reuse
    the saved baseline; do not add another analyzer configuration.
 

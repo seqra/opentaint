@@ -80,6 +80,123 @@ Both operations always query `Local(M)`. A transitive lookup adds candidates;
 it does not replace local lookup. A nonempty local result is not a stopping
 condition.
 
+### 2.0 Ordered stages and result coverage
+
+Use this order for the whole provided fact or summary:
+
+1. Check direct local demand, including direct local seed views and the
+   existing implicit families. Apply AP emission/restriction immediately.
+2. If the result is not complete, run query-specific local composition by
+   BFS. Use local W/R and own B only. Stop when result coverage is complete.
+3. Only then use call-graph transitive visibility for inherited B rows and
+   continue the query over the full eligible graph.
+
+```kotlin
+fun lookup(query): Results {
+    val results = query.emptyResults()
+    query.checkDirectLocal(results)
+    if (query.fullyCovered(results)) return results
+
+    val search = query.startLocalSearch()
+    search.runLocalBfs { candidate ->
+        query.applyExistingAp(candidate, results)
+        query.fullyCovered(results)
+    }
+    if (query.fullyCovered(results)) return results
+
+    search.enableInheritedRows() // call-graph work starts here
+    search.runVisibleBfs { candidate ->
+        query.applyExistingAp(candidate, results)
+        query.fullyCovered(results)
+    }
+    return results
+}
+```
+
+Complete coverage can stop a stage or the entire lookup. Exhausting local
+BFS means only “no more local results”; it is not a final negative answer.
+The previous endpoint tests still skip impossible work. They do not change
+the order or authorize a result.
+
+“Local composition” means the specified static-middle composition of frozen
+W/B/R guidance. Do not compose arbitrary ordinary demand pairs through
+nonstatic positions or bind a caller again. Own B uses common-method ownership,
+including the existing same-method rows from other contexts. W/R keep the
+complete MethodKey.
+
+#### Initial-result coverage
+
+For C2, coverage concerns exact emitted InitialAp keys: base, path, tail,
+E and mark. Use a conservative bound on the possible result keys from the
+relevant rightmost target geometries. It can inspect the frozen target index
+without resolving call-graph visibility or composing paths.
+
+For each such geometry, the bound considers the legal abstract entry, if
+the row family has one, and the compatible actual-mark entry. An actual FLOW
+input has no colored result. A mapped-only EXACT target has no abstract
+EXACT/FLOW entry. Do not manufacture one for the bound.
+
+```text
+actual: ret.* / T
+local entries: ret.* / FLOW, ret.* / T
+all possible matching rightmost targets have this same STAR geometry
+
+local results: I(ret.* / FLOW), I(ret.* / T)
+coverage: complete
+next action: return; no BFS and no call-graph search
+```
+
+Another possible `ret.f.*` target or an explicit EXACT target can add a
+different key. A STAR result does not cover those keys. For static inputs,
+include potential inherited B target geometries in the bound, with visibility
+ignored conservatively. Otherwise an inherited EXACT demand could be missed.
+
+Implement the bound as a short-circuit query over immutable geometry metadata,
+not a materialized set of all static combinations. Use non-interning potential
+keys; do not create hypothetical marked initials merely to test coverage.
+An over-approximate bound may delay stopping. It never authorizes emission,
+and lookup can still finish by exhaustive search without covering that bound.
+
+#### Summary-result coverage
+
+For C5, equal entry patterns alone do not prove completeness. Results must
+retain the full original J and all offered output memberships, with the same
+layer, E, mx, tails and protection.
+
+For a packet of STAR/EXACT output leaves, the existing restriction retains
+or rejects each typed leaf. Once accumulated results retain every raw leaf
+and its protection, further pairs cannot add an output. Use the same canonical
+payload representation for this test.
+
+For ANY/MUST leaves, another Dp can yield an EXACT or rebased output. Keep
+exhaustive lookup unless a separate conservative output-key bound proves
+those results covered too. `Facts.equals` does not compare protection and
+cannot serve as this completion test.
+
+#### Entering the call-graph stage
+
+Stage 3 uses M-to-callee reachability, transitively. It does not follow callers
+or import another method's formal W/R rows into M. Caller-bound W has already
+been attached at the completed transition.
+
+Preserve the local witnesses, either by keeping the states or by finding them
+again in a fresh visible search. Stage 3 must:
+
+- Admit newly visible marked-output producer roots.
+- Admit matching inherited B terminal rows, including direct mapped/EXACT rows.
+- Check inherited adjacency from states already reached during local BFS.
+- Apply local closure to every state newly reached through an inherited row.
+
+Track discovery separately from local/remote expansion, or restart the full
+visible search with a fresh visited set. Reusing a local visited set as
+“fully expanded” would lose remote paths. Each new state needs both eligible
+adjacency classes. A negative cache from stage 2 remains local-only.
+
+The call-graph query and producer/terminal admission can be lazy. A final
+negative answer requires all relevant pending roots, goals and visible
+adjacency to be exhausted. Do not return false merely because one queue
+is empty while eligible remote rows remain unexamined.
+
 Use location indexes for the cheap tests. Ignore marks, tails and exclusions
 in those tests. The complete query and AP operation apply them later.
 
@@ -204,8 +321,9 @@ fun localEntries(M, A): Sequence<Pattern> =
 ```
 
 Deduplicate complete entry patterns independently of Dp. Null Dp remains
-valid for C2. After local and any transitive candidates have been collected,
-run the unchanged AP emitter against the bounded actual packet.
+valid for C2. Run the unchanged AP emitter against the bounded actual packet
+as each stage supplies candidates. Accumulate its exact result keys before
+testing coverage; candidate presence alone does not prove coverage.
 
 Do not infer T from actual FLOW. Abstract Dc emits shared FLOW. A concrete
 or GROUP Dc must pass the existing directional actual-mark test.
@@ -231,9 +349,11 @@ not bind writers through callers again, run a CFG, evaluate rules, subscribe
 to the static pool or propagate a request.
 
 ```kotlin
-fun incoming(M, requiredStatic): Sequence<Seed> =
+fun incoming(M, requiredStatic, scope = VISIBLE): Sequence<Seed> =
     localWriters[M].byTarget.around(requiredStatic) +
-    sharedBridges.byTarget.around(requiredStatic).filter { visible(M, it) }
+    sharedBridges.byTarget.around(requiredStatic).filter {
+        if (scope == LOCAL) ownedBy(M.method, it) else visible(M, it)
+    }
 
 fun geometryJoins(left, current): Boolean =
     staticAnchor(left.to) == staticAnchor(current) &&
@@ -254,14 +374,48 @@ AP summary applications can be reassociated.
 Query method, direction and snapshot are fixed. W/R use complete MethodKey
 ownership. B visibility is checked per geometry/label row, not once for the
 union of all owners of that geometry. Share reachability scratch within
-the query.
+the query. The default VISIBLE scope describes the full reference relation.
+The local stage must pass LOCAL explicitly and perform no call-graph lookup.
 
 ## 5. Transitive lookup for initial admission
 
 C2 needs only a target entry. It must not enumerate all possible original
 sources and input marks for that target.
 
-### 5.1 Select rightmost seeds
+### 5.1 Reader mark rule
+
+Use the reader R, not the writer W, to select the output entry:
+
+```text
+R conclusion has selector T:
+    offer R.target/T directly
+
+R is FLOW:
+    offer its abstract target
+    offer R.target/T if a composable marked predecessor concludes T,
+    followed by zero or more FLOW B edges into R's input
+```
+
+T in this rule is the reader's **conclusion** selector. For a mapped reader
+`C.f/U -> ret/T`, offer `ret/T`. For `C.f/T -> ret/U`, offer `ret/U`, not T.
+The reader's concrete input mark does not determine the emitted output mark.
+
+The marked predecessor is a local W or visible B. A genuine
+`ZERO -> C.f/T` writer is valid. “Zero or more” counts FLOW edges; it does
+not exclude ZERO as a real writer origin. W/R retain complete MethodKey
+ownership; B uses the existing per-label owner visibility.
+
+This is conservative edge-based completion. It does not try to infer
+protected assignments, cleaner survival or internal observations from shape.
+It adds no residual classifier, rule-footprint census or permission to omit
+a genuinely new marked body.
+
+Offering an entry still uses the actual-input gate. If actual FLOW arrives,
+no colored entry emits a concrete initial. For actual full T, a marked output
+selector must accept T by the existing directional FULL/GROUP test. No actual
+T is manufactured merely because a predecessor mentions it.
+
+### 5.2 Select rightmost seeds
 
 For a nonstatic actual A, select local FLOW readers with targets near A.
 Their abstract entries already come from local lookup; search only for
@@ -300,7 +454,7 @@ fun transitiveEntries(M, A, emitEntry) {
 `withMark` changes only the target selector. Preserve its field chain, tail
 and E. ZERO output uses the existing ZERO adapter, not a new runtime mark.
 
-### 5.2 Find colors through FLOW prefixes
+### 5.3 Find colors through FLOW prefixes
 
 ```kotlin
 fun colorsBefore(M, startStatic, emitColor) {
@@ -344,10 +498,191 @@ Do not cache an incomplete or empty intermediate color set while a cycle
 is still being explored. Only reuse a completed result for the same snapshot,
 method and complete starting geometry.
 
+### 5.4 Query one actual mark and stop on a witness
+
+The preceding color-set walk defines all candidate entries. A query for one
+actual full T needs only the existence of a compatible predecessor. The
+following one-direction walk is a reference procedure; section 5.6 specifies
+the selected bidirectional implementation and the staged search order:
+
+```kotlin
+fun hasMarkedPrefixFor(M, startStatic, actualT): Boolean {
+    val pending = ArrayDeque<Pattern>()
+    val visited = CompleteGeometrySet()
+    pending.addLast(startStatic)
+
+    while (pending.isNotEmpty()) {
+        checkpoint()
+        val current = pending.removeFirst()
+        if (!visited.add(current)) continue
+        for (left in incoming(M, current)) {
+            if (!geometryJoins(left, current)) continue
+            when (val label = left.label) {
+                FLOW -> if (left.from.base == STATIC) pending.addLast(left.from)
+                is Mapped -> {
+                    if (coversAtom(label.output, actualT)) return true
+                    // Stop this branch even if its output does not match T.
+                }
+            }
+        }
+    }
+    return false
+}
+```
+
+`coversAtom` is directional selector acceptance. Do not substitute symmetric
+mapped-middle compatibility or same-group equality for this test. The static
+output selector is real; nullable ZERO selectors cannot occur at this output.
+
+For each complete reader target geometry, compute the potential T initial
+with the unchanged AP emitter. Skip the prefix query if that key set is empty
+or already included in the accumulated result. Otherwise stop after the first
+compatible witness and add those exact emitted keys. Keep the abstract entry
+separately. Distinct tails, paths and E require separate coverage checks.
+
+This optimization preserves the exact initial set. It stops redundant search;
+it does not discard the marked execution for a newly admitted T key.
+
+### 5.5 A mark-changing predecessor ends the color branch
+
+```text
+W: p/T -> C.f/T
+B: C.f/T -> C.g/U
+R: C.g/FLOW -> ret/FLOW
+```
+
+R can gain U from B's conclusion. It cannot gain T by continuing through
+that mapped B to W. The suffix from W to R contains a mark change, not only
+FLOW edges. A search for actual T stops at the incompatible U output; a
+search for U succeeds there. The T search still checks other predecessor
+branches. C5 can continue through B and W to obtain
+the complete pair `(ret/U, p/T)`.
+
+Without B's mark change, `W: p/T -> C.f/T` followed by a FLOW B chain and
+a FLOW reader offers ret/T. Without any compatible marked predecessor, the
+FLOW reader supplies only its abstract entry. This does not suppress a
+marked entry from another ordinary local demand.
+
+### 5.6 Bidirectional BFS for the Boolean reader query
+
+For a FLOW reader and an actual T, ask only:
+
+```text
+Does an eligible marked edge concluding T reach R.input
+through zero or more FLOW B edges?
+```
+
+Use two frontiers of complete static geometries:
+
+- Forward: output positions of eligible local W or visible B whose conclusion
+  selector accepts actual T. These are marked predecessor roots.
+- Backward: the FLOW reader's static input position.
+
+Mapped rows are roots only. Each traversal step uses a real FLOW B. The root's
+input color is not enumerated. Do not build a complete composed relation merely
+to decide this Boolean.
+
+```kotlin
+fun forwardStep(output, scope): Sequence<Pattern> =
+    flowBridgesByInput(scope, output)
+        .filter { joinEndpoints(output, it.from) }
+        .map { it.to }
+
+fun backwardStep(input, scope): Sequence<Pattern> =
+    flowBridgesByOutput(scope, input)
+        .filter { joinEndpoints(it.to, input) }
+        .map { it.from }
+
+fun meet(forwardOutput, backwardInput): Boolean =
+    joinEndpoints(forwardOutput, backwardInput)
+
+fun joinEndpoints(output, input): Boolean =
+    staticAnchor(output) == staticAnchor(input) &&
+    existingGeometryOverlap(output, input)
+```
+
+The helper takes two Pattern endpoints. It uses the same static-anchor
+and overlap test as the existing edge/current helper. The forward side always
+denotes an output; the backward side always denotes an input. A meeting must
+be one valid oriented output-to-input join. Do not join two inputs, two outputs,
+or an arbitrary chain of overlapping geometries without an intervening FLOW B.
+Use matching anchor buckets for meeting tests; do not form a frontier Cartesian
+product. No additional IR or stored port objects are required.
+
+```kotlin
+fun needsT(reader, actualT, scope): SearchResult {
+    val forward = OutputFrontier()
+    val backward = InputFrontier()
+    forward.openEligibleMarkedOutputs(scope, actualT) // lazy root iterator
+    backward.admit(reader.input)
+    if (frontiersHaveValidJoin()) return FOUND
+
+    while (hasPendingEligibleRootsOrExpandableFrontier(scope)) {
+        if (admitNextRootAndCheckJoins(scope)) return FOUND
+        if (!hasExpandableFrontier(scope)) continue // more roots may remain
+        val side = chooseSmallerExpandableFrontier()
+        val state = side.popFifo()
+        for (next in side.steps(state, scope)) {
+            if (side.discover(next) && joinsOppositeVisited(next)) return FOUND
+        }
+    }
+    return if (scope == LOCAL) LOCAL_NOT_FOUND else COMPLETE_NOT_FOUND
+}
+```
+
+This function shows a fresh search for one scope. A visible-stage restart
+may use it directly. A state-preserving implementation instead retains these
+frontiers and reactivates their inherited expansions as specified above.
+
+All admission routines check joins, including a root admitted after its
+opposite frontier was visited. Expand complete states once per side and
+adjacency phase. When stage 3 enables inherited rows, old local states gain
+their inherited expansions and new states receive local expansions too.
+The queue contract must account for that reactivation; a discovered bit
+alone is insufficient.
+
+The logical forward root set contains all eligible conclusions for this
+actual T in the selected scope. Use the existing output-selector index, not
+a scan of every mark. It can be represented lazily; a membership check against
+a backward-reached position can establish a witness before all roots are
+materialized. A negative result still needs complete root/adjoining-row
+coverage. Do not treat an unexamined root iterator as an empty source set.
+Root admission and expansion must both progress while work remains. For a
+backward state, first probe compatible marked outputs in its location bucket.
+This can answer the query without allocating all T roots. The logical root
+set is unchanged. The query does not build a retained per-T graph or enumerate
+all full marks or group members.
+
+The loop above is a complete reference scheduler. A stricter exhaustion
+certificate can stop it earlier: a fully closed backward frontier with
+complete producer-index probes has no matching root, or a fully closed
+forward frontier containing all eligible roots has no join to the reader.
+These certificates apply only to the current scope. An empty queue with
+pending eligible roots or unexpanded inherited adjacency is not a certificate.
+
+Choose the smaller frontier or lower estimated adjacency work to expand.
+No shortest path is required. Return true at the first verified meeting;
+the witnesses on its two sides form the required primitive path. A false
+answer is final only for the complete visible scope on the fixed snapshot.
+
+Local phase roots are local marked W and own marked B. Local transfer rows
+are own FLOW B. The call-graph phase adds visible inherited marked B roots
+and FLOW B transfers. Ordinary direct mapped readers still use their direct
+entry; inherited direct mapped B targets still use direct AP emission.
+Neither case needs this Boolean prefix search.
+
+For multiple readers or targets which can emit the same exact initial key,
+one witness is enough to admit that key. Keep target/key association when
+sharing work; another geometry may require a different initial. Check whole
+fact coverage before starting or resuming any remaining reader search.
+
 ## 6. Transitive lookup for summary restriction
 
 C5 needs the original source and target, so it follows both FLOW and mapped
-prefixes. It must not use the C2 stop-at-first-mapped rule.
+prefixes. It must not use the C2 stop-at-first-mapped rule or replace paired
+restriction with the unlabelled bidirectional Boolean. Use the same ordered
+direct-local, local-BFS, then visible-call-graph stages. Complete summary
+coverage can stop after any stage or accepted result.
 
 For each summary member j, start from:
 
@@ -365,12 +700,12 @@ data class PairState(
     val label: GuidanceMarks,
 )
 
-fun transitivePairs(M, j, G, emitPair) {
+fun transitivePairsReference(M, j, G, scope, emitPair) {
     val pending = ArrayDeque<PairState>()
     val visited = HashSet<PairState>()
 
     fun offer(s) { if (visited.add(s)) pending.addLast(s) }
-    for (last in rightmostReadersAndVisibleBridges(M, j))
+    for (last in rightmostReadersAndBridges(M, j, scope))
         offer(stateOf(last))
 
     while (pending.isNotEmpty()) {
@@ -380,7 +715,7 @@ fun transitivePairs(M, j, G, emitPair) {
         if (couldRestrict(j, G, pair)) emitPair(pair)
 
         if (state.from.base != STATIC) continue
-        for (left in incoming(M, state.from)) {
+        for (left in incoming(M, state.from, scope)) {
             if (!geometryJoins(left, state.from)) continue
             val label = composeMarks(left.label, state.label) ?: continue
             offer(stateWithEndpoints(left.from, state.target, label))
@@ -388,6 +723,12 @@ fun transitivePairs(M, j, G, emitPair) {
     }
 }
 ```
+
+This is the complete walk for one fixed scope. The staged implementation
+first runs it with LOCAL. If result coverage is incomplete, it enables the
+VISIBLE rows. Preserve states with separate expansion bits, or restart this
+reference walk with a fresh visited set. Stage 3 can use local and inherited
+rows in any order. A remote-only continuation is insufficient.
 
 `couldRestrict` can use the same complete AP tests as restriction, or a
 conservative prefilter. Every offered pair is still passed to the unchanged
@@ -532,6 +873,37 @@ It includes own-B, W-R-without-B, mapped-reader and carry witnesses.
 Local primitive coverage is an explicit assumption, not a fact inferred from
 an arbitrary partial index. AP geometry, visibility, ZERO/carry, mask transport
 and concrete worklist adapters remain production proof gates.
+
+**Staging and coverage.**
+[StagedDemandLookup.lean](lean/proposals/demand-storage-next/StagedDemandLookup.lean)
+has [25 axiom-free audits](lean/proposals/demand-storage-next/staged-demand-lookup-checks.json).
+It converts each mixed local/remote path constructively to initial local
+closure followed by repeated remote steps with local closure, and back.
+It proves equal result sets, safe stopping under a complete output-key bound,
+and the distinction between a first positive witness and an exhausted
+negative answer. Its finite examples show why remote images need local
+closure and why local discovery does not imply remote expansion.
+
+**Bidirectional existence.**
+[BidirectionalDemandExists.lean](lean/proposals/demand-storage-next/BidirectionalDemandExists.lean)
+has [20 axiom-free audits](lean/proposals/demand-storage-next/bidirectional-demand-exists-checks.json).
+The proof graph has directed output-to-input joins. Only a real FLOW B gives
+an input-to-output transfer. Append the forward witness, the meeting join,
+and the backward witness to obtain the required marked-output-to-reader path.
+Conversely, complete typed frontier closure reaches a meeting for every such
+path. A complete frontier with no valid meeting proves absence in that scope.
+The model includes an inherited join between previously reached local states
+and a negative example where undirected overlap would invent a false path.
+These logical proof ports require no new runtime representation.
+
+Each query has a finite set of roots and complete geometry states. Each side
+expands a state at most once per adjacency phase; a late visible phase can
+reactivate it once. Fair root admission and queue expansion therefore end.
+These are design obligations for the concrete BFS adapter, not claims that
+the local Lean graph models verify a production scheduler or index. The
+two-frontier search can reduce visited states before a witness. Its worst
+case can still visit the entire relevant component; no measured speedup is
+claimed.
 
 Required negative controls include: own FLOW B; W-R with empty B; mapped R
 local for C2 but transitive for C5; absent actual T; unrelated local G; unmatched
@@ -997,3 +1369,79 @@ Result: `{ I(ret.* / FLOW), I(ret.* / U) }`.
 For `ret.* / U -> p.* / T [D]`, the C5 walk also reaches W and keeps the
 summary. Its repeated FLOW state is suppressed. It does not store path length
 as a new state coordinate or enumerate an unbounded sequence of cycle paths.
+
+### 9.16 Direct local coverage stops the whole query
+
+```text
+actual: ret.* / T
+local demands: (ret.* / FLOW, p.* / FLOW), (ret.* / T, q.* / T)
+possible matching rightmost geometry: ret.* only
+```
+
+Direct AP emission gives `I(ret.* / FLOW)` and `I(ret.* / T)`.
+Those are all legal keys in this query's result bound. Return both. Do not
+start local composition, enumerate T producer roots or query the call graph.
+If another target geometry can emit a distinct initial, coverage is not
+complete and this stop is unavailable.
+
+### 9.17 A local bidirectional meeting
+
+```text
+W local: p.* / T -> C.a.* / T
+B own:   C.a.* / FLOW -> C.b.* / FLOW
+B own:   C.b.* / FLOW -> C.c.* / FLOW
+R local: C.c.* / FLOW -> ret.* / FLOW
+actual:  ret.* / T
+```
+
+1. Direct local R emits `I(ret.* / FLOW)`. The T key is still missing.
+2. The forward root is W's `C.a` output. The backward root is R's `C.c` input.
+3. A forward step through the first B reaches its `C.b` output. A backward
+   step through the second B reaches its `C.b` input.
+4. Their oriented geometry join is valid. The two path fragments give
+   `W; B; B; R`, so the reader offers T. AP emits `I(ret.* / T)`.
+5. If these two keys cover the bound, return. No call-graph query is needed.
+
+No composed W-B-B-R row is stored. The query needs only the witness and
+the resulting initial key.
+
+### 9.18 The visible stage must reuse local links
+
+```text
+W local:     p.* / T -> C.a.* / T
+B inherited: C.a.* / FLOW -> C.c.* / FLOW
+B own:       C.c.* / FLOW -> C.d.* / FLOW
+B inherited: C.d.* / FLOW -> C.e.* / FLOW
+R local:     C.e.* / FLOW -> ret.* / FLOW
+actual:      ret.* / T
+```
+
+Direct lookup emits the FLOW initial. Local BFS finds no T path. This is
+only `LOCAL_NOT_FOUND`.
+
+After inherited visibility is enabled, the forward search can reach C.c
+through the first inherited B. It must expand the own C.c-to-C.d B, then
+the second inherited B. The backward frontier can meet the C.e output.
+The result includes `I(ret.* / T)`. A remote-only continuation would miss
+the middle local link. A local visited bit must not suppress newly enabled
+inherited adjacency on an old state.
+
+### 9.19 A local STAR key does not cover an inherited EXACT target
+
+```text
+actual: C.g.* / T
+own B:       C.a.* / FLOW -> C.g.* / FLOW
+inherited B: C.b.* / U -> C.g.$ / T
+```
+
+1. Direct local demand and static carry emit the legal STAR initials,
+   including `I(C.g.* / FLOW)` and `I(C.g.* / T)`.
+2. Immutable target metadata also contains the distinct EXACT target C.g.$.
+   Its mapped row has a possible `I(C.g.$ / T)` result. The local keys do
+   not cover this key, so lookup cannot stop on STAR coverage.
+3. In the visible stage, the inherited row passes its owner test. Its direct
+   target offers T; AP emits `I(C.g.$ / T)` from the supplied actual STAR/T.
+
+The inherited row needs direct-target admission, not a Boolean search around
+an already known local R. No `C.g.$ / FLOW` key is invented for this mapped
+EXACT row.
