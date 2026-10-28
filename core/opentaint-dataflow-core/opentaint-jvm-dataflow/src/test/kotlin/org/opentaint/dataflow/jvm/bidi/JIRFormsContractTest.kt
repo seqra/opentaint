@@ -284,6 +284,12 @@ class JIRFormsContractTest : BidiJIRTestUtils() {
                     assertEquals(stage.steps.size, r.steps.size)
                     stage.steps.forEachIndexed { k, step -> action(step, r.steps[r.steps.lastIndex - k], i) }
                 }
+                is CallStage.Predefined -> {
+                    val r = assertIs<CallStage.Predefined>(back)
+                    assertSame(stage.target, r.target)
+                    assertSame(stage.model, r.model)
+                    reversedSummary(stage.summary, r.summary, Role.STAGE)
+                }
                 is CallStage.Callees -> {
                     val r = assertIs<CallStage.Callees>(back)
                     stage.callees.forEachIndexed { k, callee -> assertSame(callee, r.callees[k]) }

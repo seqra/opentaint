@@ -46,6 +46,7 @@ internal class SelectedScalarPlan(private val program: FiniteProgramFixtures) {
                         summary(n, step.write, reads = false)
                     }
                 }
+                is CallStage.Predefined -> error("Predefined models are outside this historical profile")
                 is CallStage.Callees -> for (callee in stage.callees) {
                     if (callee.method in values) calls.getValue(row.key.method) += callee.method
                     else n.writes = true

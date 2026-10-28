@@ -137,6 +137,7 @@ internal class FiniteStaticProfileLocal {
             is CallStage.Edges -> summary(stage.summary, valueReads = stage.kind != StageKind.ALIASES,
                 identityFieldReads = stage.kind == StageKind.UNRESOLVED)
             is CallStage.Actions -> stage.steps.forEach(::clean)
+            is CallStage.Predefined -> Unit // Immutable models have no read/write micro-operations.
             is CallStage.Callees -> stage.callees.forEach(callee)
         }
     }

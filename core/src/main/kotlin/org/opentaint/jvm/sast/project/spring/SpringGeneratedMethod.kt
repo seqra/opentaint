@@ -3,6 +3,8 @@ package org.opentaint.jvm.sast.project.spring
 import org.objectweb.asm.Opcodes
 import org.opentaint.dataflow.bidi.ap.Cleaner
 import org.opentaint.dataflow.bidi.interp.CallCleaners
+import org.opentaint.dataflow.bidi.interp.CompleteMethodSummary
+import org.opentaint.dataflow.bidi.interp.PredefinedSummaryMethod
 import org.opentaint.ir.api.jvm.TypeName
 import org.opentaint.ir.api.jvm.cfg.JIRInst
 import org.opentaint.ir.api.jvm.cfg.JIRInstList
@@ -19,13 +21,14 @@ class SpringGeneratedMethod(
     parameters: List<JIRVirtualParameter>,
     private val instructions: JIRInstList<JIRInst>,
     callCleaners: List<Cleaner> = emptyList(),
+    override val predefinedSummary: CompleteMethodSummary? = null,
 ) : JIRVirtualMethodImpl(
     name,
     access = Opcodes.ACC_PUBLIC or Opcodes.ACC_STATIC,
     returnType = returnType,
     parameters = parameters,
     description = description
-), CallCleaners {
+), CallCleaners, PredefinedSummaryMethod {
     override val callCleaners: List<Cleaner> = Collections.unmodifiableList(ArrayList(callCleaners))
 
     override val instList: JIRInstList<JIRInst> by lazy {

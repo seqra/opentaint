@@ -31,6 +31,7 @@ class RawPredicateIteration(private val program: FiniteProgramFixtures, private 
                 check(stage.kind != org.opentaint.dataflow.bidi.interp.StageKind.ALIASES)
                 check(stage.guard == null && stage.trigger == null)
             }
+            is org.opentaint.dataflow.bidi.interp.CallStage.Predefined -> error("Predefined models are outside this oracle")
             is org.opentaint.dataflow.bidi.interp.CallStage.Callees -> Unit
         }
         check(inputs.records.all { !it.conclusion.demand })

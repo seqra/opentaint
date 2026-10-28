@@ -49,6 +49,9 @@ class UnitRunner<A : RunActor> internal constructor(
 
     override fun subscribe(sub: Subscription) {
         check(!run.ended && !closed.get()) { "The runner is closed" }
+        check(org.opentaint.dataflow.bidi.interp.predefinedSummary(sub.callee.method) == null) {
+            "A complete predefined target has no summary subscription"
+        }
         shared.cancellation.checkpoint()
         val subscriptions = handler as? SubscriptionHandler
             ?: error("The runner handler does not support method subscriptions")
@@ -66,6 +69,9 @@ class UnitRunner<A : RunActor> internal constructor(
     override fun analyzer(key: MethodKey): A {
         check(!run.ended && !closed.get()) { "The runner is closed" }
         check(shared.unitResolver.resolve(key.method) == unit) { "$key is not in $unit" }
+        check(org.opentaint.dataflow.bidi.interp.predefinedSummary(key.method) == null) {
+            "A complete predefined target has no method actor: $key"
+        }
         return actors.getOrPut(key) {
             handler.createActor(key).also { check(it.key == key) { "The actor has a different method key" } }
         }

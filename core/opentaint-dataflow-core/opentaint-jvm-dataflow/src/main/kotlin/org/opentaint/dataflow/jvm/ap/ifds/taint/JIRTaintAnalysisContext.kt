@@ -172,6 +172,8 @@ class JIRTaintAnalysisContext(
         statement: JIRInst,
     ): List<RuleWithCondition<T>> {
         val method = statement.location.method
+        if (analysisContext.phase is Phase.Prescan &&
+            org.opentaint.dataflow.bidi.interp.predefinedSummary(method) != null) return emptyList()
         val valueResolver = CalleePositionToJIRValueResolver(method)
         val conditionRewriter = JIRMarkAwareConditionRewriter(
             valueResolver, analysisContext, statement

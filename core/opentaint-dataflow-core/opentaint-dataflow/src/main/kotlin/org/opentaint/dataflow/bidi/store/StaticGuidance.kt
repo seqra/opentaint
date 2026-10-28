@@ -11,13 +11,32 @@ import org.opentaint.dataflow.bidi.ap.*
 import org.opentaint.dataflow.util.Cancellation
 import org.opentaint.ir.api.common.CommonMethod
 import java.util.Collections
-import java.util.concurrent.atomic.AtomicLong
 
 /** Virtual demand only. A lookup neither starts a query nor changes publication permission. */
 interface FrozenCompletion {
     fun statistics(): String = "unavailable"
-    fun near(method: MethodKey, actual: Pattern): Sequence<DemandPattern>
-    fun covering(method: MethodKey, initial: InitialAp): Sequence<DemandPattern>
+
+    /** Immutable primitive seed indexes. LOCAL has own common-method B plus exact-context W/R. */
+    fun local(method: MethodKey): StaticDemandView
+    fun visible(method: MethodKey): StaticDemandView
+
+    /** Conservative target envelope: visibility can be ignored, emission cannot. */
+    fun visitPossibleTargets(method: MethodKey, actual: Pattern, visit: (Pattern, Boolean) -> Boolean): Boolean
+    fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>): Boolean
+    fun mayNeedInheritedPairs(method: MethodKey): Boolean
+}
+
+interface StaticDemandView {
+    fun entries(actual: Pattern): Sequence<Pattern>
+    fun targets(actual: Pattern, prefixesOnly: Boolean = false): Sequence<StaticGuidanceEdge>
+    fun flowTargets(actual: Pattern): Sequence<StaticGuidanceEdge>
+    fun pairs(initial: InitialAp, outputs: List<Pattern>): Sequence<StaticGuidanceEdge>
+    fun incoming(input: Pattern, flowOnly: Boolean = false): Sequence<StaticGuidanceEdge>
+    fun outgoing(output: Pattern): Sequence<StaticGuidanceEdge>
+    fun markedOutputs(mark: TaintMark): Sequence<Pattern>
+    fun estimatedMarkedOutputs(mark: TaintMark): Long
+    fun hasMarkedOutput(input: Pattern, mark: TaintMark): Boolean
+    fun hasComposedEndpoints(initial: InitialAp, outputs: List<Pattern>): Boolean
 }
 
 /** Handoff keeps STAR correlation. Only abstract demand drops its field exclusion. */
@@ -140,10 +159,10 @@ class StaticGuidanceSeedStore(
     }
 }
 
-private data class StaticAnchor(val owner: Int, val field: Int?)
+internal data class StaticAnchor(val owner: Int, val field: Int?)
 
 /** Exact class markers do not denote the fields of the class. Root/class FLOW is not a graph vertex. */
-private fun staticAnchor(ap: ApManager, pattern: Pattern): StaticAnchor? {
+internal fun staticAnchor(ap: ApManager, pattern: Pattern): StaticAnchor? {
     if (pattern.fact.base != STATIC) return null
     val path = pattern.fact.path
     if (path.isEmpty() || !path[0].isClass()) return null
@@ -211,111 +230,243 @@ class FrozenStaticCompletion private constructor(
     private val graph: DetachedStaticCallGraph,
     private val bridges: List<BridgeRows>,
     private val bridgeEnds: PathTrie<Int>,
+    private val bridgeStarts: PathTrie<Int>,
+    private val flowStarts: PathTrie<Int>,
+    private val flowEnds: PathTrie<Int>,
+    private val coloredBridgeOutputs: SelectorRows,
+    private val bridgeOwners: Set<CommonMethod>,
+    private val ownBridges: Map<CommonMethod, LongArray>,
+    private val bridgeEntryRows: List<EntryRows>,
+    private val bridgeEntries: PathTrie<Int>,
     private val locals: Map<MethodKey, Attachments>,
     val seedMemberships: Long,
     val writerAttachments: Long,
     val readerAttachments: Long,
 ) : FrozenCompletion {
-    private val counters = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
-        Array(3) { AtomicLong() } else null
     val seedKeys: Int get() = bridges.sumOf { it.labels.size }
     val seedGeometries: Int get() = bridges.size
-    override fun statistics(): String = "seedKeys=$seedKeys seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
+    override fun statistics(): String = "seedKeys=$seedKeys seedEntryKeys=${bridgeEntryRows.size} seedGeometries=$seedGeometries ownerMemberships=$seedMemberships " +
         "writerAttachments=$writerAttachments readerAttachments=$readerAttachments " +
-        "callMethods=${graph.methodCount} callEdges=${graph.edgeCount}" +
-        (counters?.let { " lookups=${it[0].get()} states=${it[1].get()} emitted=${it[2].get()}" } ?: "")
+        "callMethods=${graph.methodCount} callEdges=${graph.edgeCount} " +
+        "ownBridgeMemberships=${ownBridges.values.sumOf { it.size.toLong() }}"
     private class Owners(val graphIds: IntArray, val outsideGraph: Set<CommonMethod>)
     private class BridgeRows(val geometry: GuidanceGeometry, val labels: LongArray, val owners: List<Owners>)
-    private class Attachments(val writers: PathTrie<StaticGuidanceEdge>, val readers: PathTrie<StaticGuidanceEdge>)
-    private data class Walk(val current: Pattern, val target: Pattern, val marks: GuidanceMarks)
+    private class EntryRows(val entry: Pattern, val owners: Owners)
+    private class Attachments(
+        val writerRows: List<StaticGuidanceEdge>,
+        val writers: PathTrie<Int>,
+        val writerSources: PathTrie<Int>,
+        val readerRows: List<StaticGuidanceEdge>,
+        val readers: PathTrie<Int>,
+        val coloredOutputs: SelectorRows,
+        val writerEntries: PathTrie<Pattern>,
+        val readerEntries: PathTrie<Pattern>,
+        val flowReaders: PathTrie<Int>,
+        val readerSources: PathTrie<Int>,
+    )
+    /** Exact FULL and GROUP buckets do not need a group atom to probe an actual full mark. */
+    private class SelectorRows(private val ap: ApManager) {
+        private val exact = HashMap<TaintMark, LongArrayList>()
+        private val groups = HashMap<GroupId, LongArrayList>()
+        fun add(mark: TaintMark, row: Long) {
+            ap.cancellation.checkpoint()
+            if (mark == TaintMark.ZERO) return
+            val map = if (ap.marks.isGroup(mark)) null else exact.getOrPut(mark) { LongArrayList() }
+            if (map != null) map.add(row)
+            else groups.getOrPut(ap.marks.groupOf(mark)) { LongArrayList() }.add(row)
+        }
+        fun candidates(mark: TaintMark): Sequence<Long> = sequence {
+            if (mark == TaintMark.ZERO) return@sequence
+            for (rows in listOfNotNull(exact[mark], groups[ap.marks.groupOf(mark)])) {
+                val cursor = rows.iterator()
+                while (cursor.hasNext()) { ap.cancellation.checkpoint(); yield(cursor.nextLong()) }
+            }
+        }
+        fun estimate(mark: TaintMark): Long = if (mark == TaintMark.ZERO) 0 else
+            (exact[mark]?.size?.toLong() ?: 0) + (groups[ap.marks.groupOf(mark)]?.size?.toLong() ?: 0)
+    }
 
-    override fun near(method: MethodKey, actual: Pattern): Sequence<DemandPattern> = lookup(method, actual, false)
-    override fun covering(method: MethodKey, initial: InitialAp): Sequence<DemandPattern> = lookup(method, initial.toPattern(), true)
 
-    /** Reverse search starts at a forward result. Its finite state retains colored round trips beside FLOW. */
-    private fun lookup(method: MethodKey, actual: Pattern, prefixesOnly: Boolean): Sequence<DemandPattern> = sequence {
-        ap.cancellation.checkpoint()
-        counters?.get(0)?.incrementAndGet()
-        val reach = graph.scratch(method.method, ap.cancellation)
+    override fun local(method: MethodKey): StaticDemandView = View(method, false)
+    override fun visible(method: MethodKey): StaticDemandView = View(method, true)
+    override fun mayNeedInheritedPairs(method: MethodKey): Boolean =
+        bridgeOwners.isNotEmpty() && !(bridgeOwners.size == 1 && method.method in bridgeOwners)
+
+    override fun mayNeedInheritedEntries(method: MethodKey, actual: List<Pattern>): Boolean {
+        if (bridgeOwners.isEmpty() || bridgeOwners.size == 1 && method.method in bridgeOwners) return false
         val local = locals[method]
-        val pending = ArrayDeque<Walk>()
-        val visited = HashSet<Walk>()
-        val emitted = HashSet<DemandPattern>()
-        fun candidates(index: PathTrie<StaticGuidanceEdge>, pattern: Pattern): List<StaticGuidanceEdge> =
-            if (prefixesOnly) index.lookupPrefixes(pattern.fact.base, pattern.fact.path.toIntArray())
-            else index.around(pattern.fact.base, pattern.fact.path.toIntArray())
-        fun offer(edge: StaticGuidanceEdge) {
-            val state = Walk(edge.from, edge.to, edge.marks)
-            if (visited.add(state)) { pending += state; counters?.get(1)?.incrementAndGet() }
-        }
-        if (local != null) for (reader in candidates(local.readers, actual)) {
+        for (leaf in actual) {
             ap.cancellation.checkpoint()
-            offer(reader)
+            if (leaf.fact.base == STATIC) {
+                if (!bridgeEnds.visitAroundWhile(STATIC, leaf.fact.path.toIntArray()) { false }) return true
+            } else if (leaf.fact.mark is MarkSlot.Concrete && leaf.fact.mark.mark != TaintMark.ZERO && local != null) {
+                if (!local.readers.visitAroundWhile(leaf.fact.base, leaf.fact.path.toIntArray()) {
+                        local.readerRows[it].marks != GuidanceMarks.Flow
+                    }) return true
+            }
         }
-        fun bridgeRows(id: Int): Sequence<StaticGuidanceEdge> = sequence {
+        return false
+    }
+
+    override fun visitPossibleTargets(method: MethodKey, actual: Pattern, visit: (Pattern, Boolean) -> Boolean): Boolean {
+        val local = locals[method]
+        val localIndex = if (actual.fact.base == STATIC) local?.writerEntries else local?.readerEntries
+        if (localIndex != null && !localIndex.visitAroundWhile(actual.fact.base,
+                actual.fact.path.toIntArray()) { entry ->
+                visit(entry, entry.fact.mark is MarkSlot.Star)
+            }) return false
+        if (actual.fact.base != STATIC) return true
+        return bridgeEntries.visitAroundWhile(STATIC, actual.fact.path.toIntArray()) { id ->
+            val entry = bridgeEntryRows[id].entry
+            visit(entry, entry.fact.mark is MarkSlot.Star)
+        }
+    }
+
+    private inner class View(private val method: MethodKey, private val inherited: Boolean) : StaticDemandView {
+        private val reach by lazy { graph.scratch(method.method, ap.cancellation) }
+        private val ownId = graph.id(method.method)
+        private val local = locals[method]
+        private val ownRows = ownBridges[method.method] ?: LongArray(0)
+        private fun eligible(owners: Owners): Boolean = if (inherited)
+            method.method in owners.outsideGraph || reach.reachesAny(owners.graphIds)
+        else method.method in owners.outsideGraph || (ownId != null && owners.graphIds.binarySearch(ownId) >= 0)
+
+        private fun rows(id: Int, flowOnly: Boolean = false): Sequence<StaticGuidanceEdge> = sequence {
             val rows = bridges[id]
-            for (index in rows.labels.indices) {
+            for (i in rows.labels.indices) {
                 ap.cancellation.checkpoint()
-                val owned = rows.owners[index]
-                if (method.method in owned.outsideGraph || reach.reachesAny(owned.graphIds))
-                    yield(rows.geometry.edge(rows.labels[index]))
+                val allowed = if (inherited) eligible(rows.owners[i])
+                    else ownRows.binarySearch((id.toLong() shl 32) or i.toLong()) >= 0
+                if ((!flowOnly || rows.labels[i] == 0L) && allowed)
+                    yield(rows.geometry.edge(rows.labels[i]))
             }
         }
-        if (actual.fact.base == STATIC) {
-            val ids = if (prefixesOnly) bridgeEnds.lookupPrefixes(STATIC, actual.fact.path.toIntArray())
-                else bridgeEnds.around(STATIC, actual.fact.path.toIntArray())
-            for (id in ids) {
-                ap.cancellation.checkpoint()
-                for (edge in bridgeRows(id)) offer(edge)
+        private fun candidates(index: PathTrie<Int>, pattern: Pattern, prefixes: Boolean): List<Int> =
+            if (prefixes) index.lookupPrefixes(pattern.fact.base, pattern.fact.path.toIntArray())
+            else index.around(pattern.fact.base, pattern.fact.path.toIntArray())
+
+        override fun entries(actual: Pattern): Sequence<Pattern> = sequence {
+            val localEntries = if (actual.fact.base == STATIC) local?.writerEntries else local?.readerEntries
+            if (localEntries != null) for (entry in localEntries.around(actual.fact.base, actual.fact.path.toIntArray())) {
+                ap.cancellation.checkpoint(); yield(entry)
             }
-            if (local != null) for (writer in candidates(local.writers, actual)) {
-                ap.cancellation.checkpoint()
-                offer(writer)
+            if (actual.fact.base == STATIC) for (id in candidates(bridgeEntries, actual, false)) {
+                val entry = bridgeEntryRows[id]
+                if (eligible(entry.owners)) yield(entry.entry)
             }
         }
-        while (pending.isNotEmpty()) {
+
+        override fun targets(actual: Pattern, prefixesOnly: Boolean): Sequence<StaticGuidanceEdge> = sequence {
             ap.cancellation.checkpoint()
-            val state = pending.removeFirst()
-            val guide = DemandPattern(state.target, state.current)
-            if (emitted.add(guide)) { counters?.get(2)?.incrementAndGet(); yield(guide) }
-            if (state.current.fact.base != STATIC) continue
-            for (id in bridgeEnds.around(STATIC, state.current.fact.path.toIntArray())) {
-                ap.cancellation.checkpoint()
-                for (edge in bridgeRows(id)) compose(edge, state)?.let(::offer)
+            if (local != null) {
+                val index = if (actual.fact.base == STATIC) local.writers else local.readers
+                val rows = if (actual.fact.base == STATIC) local.writerRows else local.readerRows
+                for (id in candidates(index, actual, prefixesOnly)) { ap.cancellation.checkpoint(); yield(rows[id]) }
             }
-            if (local != null) for (writer in local.writers.around(STATIC, state.current.fact.path.toIntArray())) {
+            if (actual.fact.base == STATIC) for (id in candidates(bridgeEnds, actual, prefixesOnly)) yieldAll(rows(id))
+        }
+
+        override fun flowTargets(actual: Pattern): Sequence<StaticGuidanceEdge> = sequence {
+            ap.cancellation.checkpoint()
+            if (actual.fact.base == STATIC) {
+                for (id in candidates(flowEnds, actual, false)) yieldAll(rows(id, true))
+            } else if (local != null) for (id in candidates(local.flowReaders, actual, false)) {
+                ap.cancellation.checkpoint(); yield(local.readerRows[id])
+            }
+        }
+
+        override fun pairs(initial: InitialAp, outputs: List<Pattern>): Sequence<StaticGuidanceEdge> = sequence {
+            val path = initial.path?.toIntArray() ?: EMPTY_PATH
+            val sourceIds = HashSet<Int>()
+            if (local != null) {
+                // Each ID is scoped to exactly one backing row family; never intersect W and R IDs.
+                val sourceIndex = if (initial.base == STATIC) local.writerSources else local.readerSources
+                for (output in outputs) sourceIndex.visitAround(output.fact.base, output.fact.path.toIntArray()) {
+                    sourceIds += it
+                }
+                val targetIndex = if (initial.base == STATIC) local.writers else local.readers
+                val rows = if (initial.base == STATIC) local.writerRows else local.readerRows
+                for (id in targetIndex.lookupPrefixes(initial.base, path)) {
+                    ap.cancellation.checkpoint()
+                    if (id in sourceIds) yield(rows[id])
+                }
+            }
+            if (initial.base != STATIC) return@sequence
+            sourceIds.clear()
+            for (output in outputs) if (output.fact.base == STATIC)
+                bridgeStarts.visitAround(STATIC, output.fact.path.toIntArray()) { sourceIds += it }
+            for (id in bridgeEnds.lookupPrefixes(STATIC, path)) {
                 ap.cancellation.checkpoint()
-                compose(writer, state)?.let(::offer)
+                if (id in sourceIds) yieldAll(rows(id))
+            }
+        }
+
+        override fun incoming(input: Pattern, flowOnly: Boolean): Sequence<StaticGuidanceEdge> = sequence {
+            ap.cancellation.checkpoint()
+            if (input.fact.base != STATIC) return@sequence
+            val index = if (flowOnly) flowEnds else bridgeEnds
+            for (id in candidates(index, input, false)) yieldAll(rows(id, flowOnly))
+            if (!flowOnly && local != null) for (id in candidates(local.writers, input, false)) {
+                ap.cancellation.checkpoint(); yield(local.writerRows[id])
+            }
+        }
+
+        override fun outgoing(output: Pattern): Sequence<StaticGuidanceEdge> = sequence {
+            ap.cancellation.checkpoint()
+            for (id in candidates(flowStarts, output, false)) yieldAll(rows(id, true))
+        }
+
+        override fun markedOutputs(mark: TaintMark): Sequence<Pattern> = sequence {
+            ap.cancellation.checkpoint()
+            if (local != null) for (id in local.coloredOutputs.candidates(mark)) {
+                val output = local.writerRows[id.toInt()].to
+                if (ap.marks.coversAtom((output.fact.mark as MarkSlot.Concrete).mark, mark)) yield(output)
+            }
+            for (ref in coloredBridgeOutputs.candidates(mark)) {
+                ap.cancellation.checkpoint()
+                val rows = bridges[(ref ushr 32).toInt()]
+                val i = ref.toInt()
+                if (if (inherited) !eligible(rows.owners[i]) else ownRows.binarySearch(ref) < 0) continue
+                val output = rows.geometry.edge(rows.labels[i]).to
+                if (ap.marks.coversAtom((output.fact.mark as MarkSlot.Concrete).mark, mark)) yield(output)
+            }
+        }
+        override fun estimatedMarkedOutputs(mark: TaintMark): Long =
+            (local?.coloredOutputs?.estimate(mark) ?: 0) + coloredBridgeOutputs.estimate(mark)
+
+        override fun hasComposedEndpoints(initial: InitialAp, outputs: List<Pattern>): Boolean {
+            ap.cancellation.checkpoint()
+            val path = initial.path?.toIntArray() ?: EMPTY_PATH
+            val target = if (initial.base == STATIC)
+                bridgeEnds.lookupPrefixes(STATIC, path).any { rows(it).iterator().hasNext() }
+            else local?.readers?.lookupPrefixes(initial.base, path)?.isNotEmpty() == true
+            if (!target) return false
+            for (leaf in outputs) {
+                ap.cancellation.checkpoint()
+                if (leaf.fact.base == STATIC) {
+                    if (bridgeStarts.around(STATIC, leaf.fact.path.toIntArray()).any { rows(it).iterator().hasNext() }) return true
+                } else if (local?.writerSources?.around(leaf.fact.base, leaf.fact.path.toIntArray())?.isNotEmpty() == true)
+                    return true
+            }
+            return false
+        }
+
+        override fun hasMarkedOutput(input: Pattern, mark: TaintMark): Boolean {
+            if (mark == TaintMark.ZERO) return false
+            fun matches(output: Pattern): Boolean = output.fact.mark is MarkSlot.Concrete &&
+                ap.marks.coversAtom(output.fact.mark.mark, mark) && joins(output, input)
+            if (local != null && !local.writers.visitAroundWhile(STATIC, input.fact.path.toIntArray()) {
+                    !matches(local.writerRows[it].to)
+                }) return true
+            return !bridgeEnds.visitAroundWhile(STATIC, input.fact.path.toIntArray()) { id ->
+                for (edge in rows(id)) if (matches(edge.to)) return@visitAroundWhile false
+                true
             }
         }
     }
 
-    private fun compose(left: StaticGuidanceEdge, right: Walk): StaticGuidanceEdge? {
-        if (staticAnchor(ap, left.to) != staticAnchor(ap, right.current) || !overlap(left.to, right.current)) return null
-        val label = composeMarks(left.marks, right.marks) ?: return null
-        val fromMark = when (label) {
-            GuidanceMarks.Flow -> MarkSlot.STAR
-            is GuidanceMarks.Mapped -> if (left.from.fact.base == AccessPathBase.Zero) left.from.fact.mark
-                else MarkSlot.Concrete(checkNotNull(label.input))
-        }
-        val toMark = when (label) {
-            GuidanceMarks.Flow -> MarkSlot.STAR
-            is GuidanceMarks.Mapped -> if (right.target.fact.base == AccessPathBase.Zero) right.target.fact.mark
-                else MarkSlot.Concrete(checkNotNull(label.output))
-        }
-        return StaticGuidanceEdge(left.from.copy(fact = left.from.fact.copy(mark = fromMark)),
-            right.target.copy(fact = right.target.fact.copy(mark = toMark)), label)
-    }
-
-    private fun composeMarks(left: GuidanceMarks, right: GuidanceMarks): GuidanceMarks? = when (left) {
-        GuidanceMarks.Flow -> right
-        is GuidanceMarks.Mapped -> when (right) {
-            GuidanceMarks.Flow -> left
-            is GuidanceMarks.Mapped -> if (left.output != null && right.input != null &&
-                (ap.marks.coversAtom(left.output, right.input) || ap.marks.coversAtom(right.input, left.output)))
-                GuidanceMarks.Mapped(left.input, right.output) else null
-        }
-    }
+    internal fun joins(output: Pattern, input: Pattern): Boolean =
+        staticAnchor(ap, output) == staticAnchor(ap, input) && overlap(output, input)
 
     class Builder(private val ap: ApManager, private val graph: DetachedStaticCallGraph) {
         private val bridges = LinkedHashMap<GuidanceGeometry, Long2ObjectLinkedOpenHashMap<MutableSet<CommonMethod>>>()
@@ -358,6 +509,13 @@ class FrozenStaticCompletion private constructor(
             ap.cancellation.checkpoint()
             val frozenBridges = ArrayList<BridgeRows>()
             val ends = PathTrie<Int>(ap.cancellation)
+            val starts = PathTrie<Int>(ap.cancellation)
+            val flowStarts = PathTrie<Int>(ap.cancellation)
+            val flowEnds = PathTrie<Int>(ap.cancellation)
+            val coloredOutputs = SelectorRows(ap)
+            val bridgeOwners = LinkedHashSet<CommonMethod>()
+            val own = LinkedHashMap<CommonMethod, LongArrayList>()
+            val projectedEntries = LinkedHashMap<Pattern, MutableSet<CommonMethod>>()
             var memberships = 0L
             for ((geometry, rows) in bridges) {
                 ap.cancellation.checkpoint()
@@ -367,23 +525,66 @@ class FrozenStaticCompletion private constructor(
                     ap.cancellation.checkpoint()
                     labels[index] = row.longKey
                     val methods = row.value
+                    val entry = geometry.edge(row.longKey).to
+                    projectedEntries.getOrPut(entry) { LinkedHashSet() }.addAll(methods)
+                    bridgeOwners += methods
+                    for (method in methods) own.getOrPut(method) { LongArrayList() }
+                        .add((frozenBridges.size.toLong() shl 32) or index.toLong())
                     memberships += methods.size
                     owners += Owners(methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
                         methods.filterTo(LinkedHashSet()) { graph.id(it) == null })
+                    if (row.longKey == 0L) {
+                        flowStarts.add(STATIC, geometry.from.fact.path.toIntArray(), frozenBridges.size)
+                        flowEnds.add(STATIC, geometry.to.fact.path.toIntArray(), frozenBridges.size)
+                    } else {
+                        val output = (unpackBridgeMarks(row.longKey) as GuidanceMarks.Mapped).output!!
+                        coloredOutputs.add(output, (frozenBridges.size.toLong() shl 32) or index.toLong())
+                    }
                 }
                 ends.add(STATIC, geometry.to.fact.path.toIntArray(), frozenBridges.size)
+                starts.add(STATIC, geometry.from.fact.path.toIntArray(), frozenBridges.size)
                 frozenBridges += BridgeRows(geometry, labels, owners)
             }
             val locals = LinkedHashMap<MethodKey, Attachments>()
             for ((method, rows) in localRows) {
                 ap.cancellation.checkpoint()
-                val writers = PathTrie<StaticGuidanceEdge>(ap.cancellation)
-                val readers = PathTrie<StaticGuidanceEdge>(ap.cancellation)
-                for (row in rows.first) writers.add(STATIC, row.to.fact.path.toIntArray(), row)
-                for (row in rows.second) readers.add(row.to.fact.base, row.to.fact.path.toIntArray(), row)
-                locals[method] = Attachments(writers, readers)
+                val writers = PathTrie<Int>(ap.cancellation)
+                val writerSources = PathTrie<Int>(ap.cancellation)
+                val readers = PathTrie<Int>(ap.cancellation)
+                val colors = SelectorRows(ap)
+                val writerEntries = PathTrie<Pattern>(ap.cancellation)
+                val readerEntries = PathTrie<Pattern>(ap.cancellation)
+                val flowReaders = PathTrie<Int>(ap.cancellation)
+                val readerSources = PathTrie<Int>(ap.cancellation)
+                val writerRows = rows.first.toList()
+                val readerRows = rows.second.toList()
+                for ((id, row) in writerRows.withIndex()) {
+                    writers.add(STATIC, row.to.fact.path.toIntArray(), id)
+                    writerSources.add(row.from.fact.base, row.from.fact.path.toIntArray(), id)
+                    writerEntries.add(row.to.fact.base, row.to.fact.path.toIntArray(), row.to)
+                    (row.to.fact.mark as? MarkSlot.Concrete)?.let { colors.add(it.mark, id.toLong()) }
+                }
+                for ((id, row) in readerRows.withIndex()) {
+                    readers.add(row.to.fact.base, row.to.fact.path.toIntArray(), id)
+                    readerSources.add(row.from.fact.base, row.from.fact.path.toIntArray(), id)
+                    readerEntries.add(row.to.fact.base, row.to.fact.path.toIntArray(), row.to)
+                    if (row.marks == GuidanceMarks.Flow) flowReaders.add(row.to.fact.base, row.to.fact.path.toIntArray(), id)
+                }
+                locals[method] = Attachments(writerRows, writers, writerSources, readerRows, readers, colors,
+                    writerEntries, readerEntries, flowReaders, readerSources)
             }
-            return FrozenStaticCompletion(ap, graph, frozenBridges, ends, Collections.unmodifiableMap(locals),
+            val entryRows = ArrayList<EntryRows>()
+            val entryIndex = PathTrie<Int>(ap.cancellation)
+            for ((entry, methods) in projectedEntries) {
+                ap.cancellation.checkpoint()
+                entryIndex.add(entry.fact.base, entry.fact.path.toIntArray(), entryRows.size)
+                entryRows += EntryRows(entry, Owners(methods.mapNotNull { graph.id(it) }.toIntArray().also { it.sort() },
+                    methods.filterTo(LinkedHashSet()) { graph.id(it) == null }))
+            }
+            return FrozenStaticCompletion(ap, graph, frozenBridges, ends, starts, flowStarts, flowEnds, coloredOutputs,
+                Collections.unmodifiableSet(bridgeOwners), own.mapValues { it.value.toLongArray() },
+                entryRows, entryIndex,
+                Collections.unmodifiableMap(locals),
                 memberships, localRows.values.sumOf { it.first.size.toLong() },
                 localRows.values.sumOf { it.second.size.toLong() })
         }

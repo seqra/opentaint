@@ -51,30 +51,37 @@ class PathTrie<V : Any>(private val cancellation: Cancellation? = null) {
 
     /** Finite owner-local visit; the callback must not mutate this index or its owning directory. */
     fun visitAround(base: AccessPathBase, path: IntArray, visit: (V) -> Unit) {
+        visitAroundWhile(base, path) { visit(it); true }
+    }
+
+    /** A read-only query can stop at its first witness without allocating a candidate list. */
+    fun visitAroundWhile(base: AccessPathBase, path: IntArray, visit: (V) -> Boolean): Boolean {
         cancellation?.checkpoint()
-        var node = roots[base] ?: return
-        fun values(at: Node<V>) {
+        var node = roots[base] ?: return true
+        fun values(at: Node<V>): Boolean {
             for (value in at.values) {
                 cancellation?.checkpoint()
-                visit(value)
+                if (!visit(value)) return false
             }
+            return true
         }
         for (accessor in path) {
             cancellation?.checkpoint()
-            values(node)
-            node = node.child(accessor) ?: return
+            if (!values(node)) return false
+            node = node.child(accessor) ?: return true
         }
         val stack = ArrayDeque<Node<V>>()
         stack.addLast(node)
         while (stack.isNotEmpty()) {
             cancellation?.checkpoint()
             val at = stack.removeLast()
-            values(at)
+            if (!values(at)) return false
             at.children?.values?.forEach {
                 cancellation?.checkpoint()
                 stack.addLast(it)
             }
         }
+        return true
     }
 
     fun all(): Sequence<V> = sequence {

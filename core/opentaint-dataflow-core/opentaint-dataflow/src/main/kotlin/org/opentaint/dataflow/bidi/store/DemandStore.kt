@@ -6,33 +6,102 @@ import java.util.Collections
 
 /** Immutable demand snapshot. Tails, marks, exclusions and exits remain candidate payloads. */
 class DemandStore private constructor(
-    private val byMethod: Map<MethodKey, PathTrie<DemandPattern>>,
-    private val zeroDemand: DemandPattern,
+    private val byMethod: Map<MethodKey, MethodDemandIndex>,
+    internal val zeroDemand: DemandPattern,
     private val ap: ApManager,
     val hasSharedStaticCarry: Boolean,
-    private val completion: FrozenCompletion?,
+    internal val completion: FrozenCompletion?,
 ) {
+    private class MethodDemandIndex(val entries: PathTrie<Pattern>, val rows: List<DemandPattern>,
+                                   val byEntry: PathTrie<Int>, val byExit: PathTrie<Int>, val entryCount: Int)
+    private val statistics = if (java.lang.Boolean.getBoolean("org.opentaint.bidi.optimizationStatistics"))
+        DemandQueryStatistics() else null
     val hasStaticCompletion: Boolean get() = completion != null
-    fun staticCompletionStatistics(): String? = completion?.statistics()
+    fun staticCompletionStatistics(): String? = (completion?.statistics() ?: "localOnly=true") +
+        " entryRows=${byMethod.values.sumOf { it.entryCount.toLong() }}" +
+        " pairRows=${byMethod.values.sumOf { it.rows.size.toLong() }}" +
+        (statistics?.let { " $it" } ?: "")
 
-    /** Emission tests prefixes and extensions, with the implicit zero demand on the zero base. */
-    fun near(method: MethodKey, actual: Pattern): List<DemandPattern> {
+    /** C2 uses an entry-only index and never materializes origin products. */
+    fun initials(method: MethodKey, boundedActual: Facts): Set<InitialAp> {
         ap.cancellation.checkpoint()
-        val stored = byMethod[method]?.around(actual.fact.base, actual.fact.path.toIntArray()).orEmpty()
-        val completed = completion?.near(method, actual)?.toList().orEmpty()
-        return when (actual.fact.base) {
-            AccessPathBase.Zero -> stored + completed + zeroDemand
-            STATIC -> staticCarry(actual)?.let { stored + completed + it } ?: (stored + completed)
-            else -> stored + completed
-        }.distinct()
+        statistics?.add(0)
+        val ops = ApOps(ap)
+        val leaves = ops.leaves(boundedActual).toList()
+        val result = InitialDemandResults(ap)
+        val local = byMethod[method]
+        for (leaf in leaves) {
+            ap.cancellation.checkpoint()
+            local?.entries?.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { result.offer(it, leaf) }
+            if (leaf.fact.base == AccessPathBase.Zero) result.offer(zeroDemand.entry, leaf)
+            staticCarry(leaf)?.let { result.offer(it.entry, leaf) }
+        }
+        val skipped = completion ?: return result.initials // run-3 onward: local only
+        val query = StaticEntryLookup(ap, method, skipped, leaves, result, statistics)
+        query.directLocal()
+        // This query-local structural bound uses scalar emit only. No possible key is interned.
+        for (leaf in leaves) {
+            ap.cancellation.checkpoint()
+            local?.entries?.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) {
+                result.requireFamily(it, false, leaf)
+            }
+            skipped.visitPossibleTargets(method, leaf) { target, flow ->
+                result.requireFamily(target, flow, leaf); true
+            }
+        }
+        fun covered(): Boolean = result.fullyCovered
+        if (covered()) { statistics?.add(3); return result.initials }
+        query.search(visible = false, ::covered)
+        if (covered()) { statistics?.add(3); return result.initials }
+        if (!skipped.mayNeedInheritedEntries(method, leaves)) return result.initials
+        query.search(visible = true, ::covered)
+        return result.initials
     }
 
-    /** Whole-premise restriction needs entry prefixes only. The implicit zero has no exit. */
-    fun covering(method: MethodKey, initial: InitialAp): List<DemandPattern> {
+    /** C5 selects complete paired rows and preserves the whole original ND premise at the caller. */
+    fun intersect(method: MethodKey, original: PremiseKey, raw: Facts): List<Facts> {
         ap.cancellation.checkpoint()
-        val stored = byMethod[method]?.lookupPrefixes(initial.base, initial.path?.toIntArray() ?: EMPTY_PATH).orEmpty()
-        val completed = completion?.covering(method, initial)?.toList().orEmpty()
-        return (staticCarry(initial.toPattern())?.let { stored + completed + it } ?: (stored + completed)).distinct()
+        val ops = ApOps(ap)
+        val result = ExactDemandResults(ap, ops)
+        val local = byMethod[method]
+        val outputLeaves = ops.leaves(raw).toList()
+        fun offer(member: InitialAp, pair: DemandPattern) {
+            statistics?.add(7)
+            if (pair.exit == null) return
+            statistics?.add(9)
+            for (kept in ops.restrict(member, raw, pair)) result.add(kept)
+        }
+        val outputIds = HashSet<Int>()
+        if (local != null) for (leaf in outputLeaves)
+            local.byExit.visitAround(leaf.fact.base, leaf.fact.path.toIntArray()) { outputIds += it }
+        original.forEachMember { member ->
+            ap.cancellation.checkpoint()
+            if (local != null) for (id in local.byEntry.lookupPrefixes(member.base,
+                    member.path?.toIntArray() ?: EMPTY_PATH)) {
+                if (id in outputIds) offer(member, local.rows[id])
+            }
+            staticCarry(member.toPattern())?.let { offer(member, it) }
+        }
+        val skipped = completion ?: return result.all() // later snapshots have no graph lookup
+        // Primitive seed pairs use the same complete source/target row. They do not form a product.
+        val primitive = skipped.local(method)
+        original.forEachMember { member ->
+            for (edge in primitive.pairs(member, outputLeaves))
+                offer(member, DemandPattern(edge.to, edge.from))
+        }
+        if (result.covers(raw)) { statistics?.add(10); return result.all() }
+        val query = StaticPairLookup(ap, skipped, statistics)
+        query.walk(method, original, outputLeaves, visible = false, ::offer) { result.covers(raw) }
+        if (result.covers(raw)) { statistics?.add(10); return result.all() }
+        if (!skipped.mayNeedInheritedPairs(method)) return result.all()
+        query.walk(method, original, outputLeaves, visible = true, ::offer) { result.covers(raw) }
+        return result.all()
+    }
+
+    /** Immutable seed inspection for the finite explicit reference in tests. No closure is retained. */
+    internal fun explicitRows(method: MethodKey): List<DemandPattern> {
+        ap.cancellation.checkpoint()
+        return byMethod[method]?.rows.orEmpty()
     }
 
     /** Same actual slot and mark only. This family does not connect different fields. */
@@ -83,11 +152,24 @@ class DemandStore private constructor(
         /** The new index has no mutable alias in this builder or in earlier snapshots. */
         fun build(): DemandStore {
             m.cancellation.checkpoint()
-            val byMethod = LinkedHashMap<MethodKey, PathTrie<DemandPattern>>()
+            val grouped = LinkedHashMap<MethodKey, MutableList<DemandPattern>>()
             for ((method, demand) in seen) {
                 m.cancellation.checkpoint()
-                byMethod.getOrPut(method) { PathTrie(m.cancellation) }
-                    .add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), demand)
+                grouped.getOrPut(method) { ArrayList() } += demand
+            }
+            val byMethod = LinkedHashMap<MethodKey, MethodDemandIndex>()
+            for ((method, rows) in grouped) {
+                val entries = PathTrie<Pattern>(m.cancellation)
+                val byEntry = PathTrie<Int>(m.cancellation)
+                val byExit = PathTrie<Int>(m.cancellation)
+                var entryCount = 0
+                for ((id, demand) in rows.withIndex()) {
+                    m.cancellation.checkpoint()
+                    if (entries.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), demand.entry)) entryCount++
+                    byEntry.add(demand.entry.fact.base, demand.entry.fact.path.toIntArray(), id)
+                    demand.exit?.let { byExit.add(it.fact.base, it.fact.path.toIntArray(), id) }
+                }
+                byMethod[method] = MethodDemandIndex(entries, Collections.unmodifiableList(rows), byEntry, byExit, entryCount)
             }
             return DemandStore(Collections.unmodifiableMap(byMethod), zeroDemand, m, staticCarry, completion)
         }

@@ -69,6 +69,13 @@ class JIRMethodCallResolver(
         handler: MethodCallHandler,
         failureHandler: MethodAnalyzer.MethodCallResolutionFailureHandler
     ) {
+        val declared = callExpr.method.method
+        if (callerContext.phase is Phase.Prescan && callExpr is org.opentaint.ir.api.jvm.cfg.JIRStaticCallExpr &&
+            org.opentaint.dataflow.bidi.interp.predefinedSummary(declared) != null) {
+            runner.recordPredefinedPrescanCall(callerContext.methodEntryPoint.method, location, declared)
+            runner.getMethodAnalyzer(callerContext.methodEntryPoint).handlePredefinedPrescanCall(handler)
+            return
+        }
         val callees = callResolver.resolve(callExpr, location, callerContext)
 
         val analyzer = runner.getMethodAnalyzer(callerContext.methodEntryPoint)
@@ -92,7 +99,12 @@ class JIRMethodCallResolver(
             }
 
             is JIRCallResolver.MethodResolutionResult.ConcreteMethod -> {
-                analyzer.handleResolvedMethodCall(resolvedCallee.method, handler)
+                val method = resolvedCallee.method.method
+                if (callerContext.phase is Phase.Prescan &&
+                    org.opentaint.dataflow.bidi.interp.predefinedSummary(method) != null) {
+                    runner.recordPredefinedPrescanCall(callerContext.methodEntryPoint.method, location, method)
+                    analyzer.handlePredefinedPrescanCall(handler)
+                } else analyzer.handleResolvedMethodCall(resolvedCallee.method, handler)
             }
 
             is JIRCallResolver.MethodResolutionResult.Lambda -> {

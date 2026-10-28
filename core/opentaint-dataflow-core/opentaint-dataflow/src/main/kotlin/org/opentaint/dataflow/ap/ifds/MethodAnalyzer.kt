@@ -116,6 +116,11 @@ interface MethodAnalyzer {
 
     fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler)
 
+    /** Prescan metadata only: keep control/type information without loading a modeled body. */
+    fun handlePredefinedPrescanCall(handler: MethodCallHandler) {
+        error("This analyzer cannot receive a predefined prescan call")
+    }
+
     fun handleMethodCallResolutionFailure(
         callExpr: CommonCallExpr,
         handler: MethodCallResolutionFailureHandler
@@ -750,6 +755,16 @@ class NormalMethodAnalyzer(
 
     override fun handleResolvedMethodCall(entryPoint: MethodEntryPoint, handler: MethodCallHandler) {
         handleMethodCall(handler, entryPoint)
+    }
+
+    override fun handlePredefinedPrescanCall(handler: MethodCallHandler) {
+        val edge = when (handler) {
+            is MethodCallHandler.ZeroToZeroHandler -> handler.currentEdge
+            is MethodCallHandler.ZeroToFactHandler -> handler.currentEdge
+            is MethodCallHandler.FactToFactHandler -> handler.currentEdge
+            is MethodCallHandler.NDFactToFactHandler -> handler.currentEdge
+        }
+        handleUnchangedStatementEdge(edge)
     }
 
     private fun handleMethodCall(handler: MethodCallHandler, ep: MethodEntryPoint) = when (handler) {
@@ -1817,6 +1832,12 @@ class TimedMethodAnalyzer(
         category = OpCategory.CALL,
     ) {
         base.handleResolvedMethodCall(entryPoint, handler)
+    }
+
+    override fun handlePredefinedPrescanCall(handler: MethodCallHandler) = timeOperation(
+        operation = "handlePredefinedPrescanCall", category = OpCategory.CALL,
+    ) {
+        base.handlePredefinedPrescanCall(handler)
     }
 
     override fun handleMethodCallResolutionFailure(

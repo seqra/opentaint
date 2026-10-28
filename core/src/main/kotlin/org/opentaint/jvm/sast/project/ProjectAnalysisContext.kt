@@ -151,7 +151,7 @@ private fun AnalysisContextBuilder.createAnalysisContextWithCp(
 
     checkProjectModules(project, projectClasses)
 
-    val springContext = projectClasses.createSpringProjectContext()
+    val springContext = projectClasses.createSpringProjectContext(predefinedCleanup = options.common.ifdsBidirectional)
     springComponentsResolver.initialize(springContext)
 
     return ProjectAnalysisContext(

@@ -81,6 +81,13 @@ class TaintAnalysisUnitRunner(
 
     private var internalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
     private var externalMethodSummarySubscriptions = SummaryEdgeSubscriptionManager(manager, this)
+    private val predefinedPrescanCalls = LinkedHashSet<ResolvedPrescanCall>()
+    private val predefinedPrescanRoots = LinkedHashSet<CommonMethod>()
+
+    /** A modeled target has no summary subscription, but remains in the resolved graph. */
+    fun recordPredefinedPrescanCall(caller: CommonMethod, statement: CommonInst, callee: CommonMethod) {
+        predefinedPrescanCalls += ResolvedPrescanCall(caller, statement, callee)
+    }
 
     override fun cleanup() {
         resetQueue()
@@ -282,6 +289,13 @@ class TaintAnalysisUnitRunner(
     }
 
     private fun handleStartMethodEvent(method: MethodWithContext) {
+        val model = org.opentaint.dataflow.bidi.interp.predefinedSummary(method.method)
+        if (model != null) {
+            // A root has ZERO only. Supported models can return control but create
+            // no data or method-boundary observation. Do not resolve a body entry.
+            predefinedPrescanRoots += method.method
+            return
+        }
         val epResolver = analysisManager.getMethodEntrypointResolver(graph)
         for (start in epResolver.resolveEntryPoints(method.method, method.ctx)) {
             val methodEntryPoint = MethodEntryPoint(method.ctx, start)
@@ -493,6 +507,13 @@ class TaintAnalysisUnitRunner(
         }
         internalMethodSummarySubscriptions.copyResolvedCalls(cancellation) { calls.add(it) }
         externalMethodSummarySubscriptions.copyResolvedCalls(cancellation) { calls.add(it) }
+        methods.addAll(predefinedPrescanRoots)
+        for (call in predefinedPrescanCalls) {
+            cancellation.checkpoint()
+            calls += call
+            methods += call.caller
+            methods += call.callee
+        }
     }
 
     fun methodTraceResolver(methodEntryPoint: MethodEntryPoint): MethodTraceResolver {
