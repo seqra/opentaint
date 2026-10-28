@@ -1,0 +1,35 @@
+{
+  "status": "CANDIDATE_NOT_SELECTED",
+  "runtime_policy_changed": false,
+  "behavior_decision_pending": true,
+  "source": "spec/lean/proposals/restricted-demand/ExcludedFlowCandidate.lean",
+  "source_sha256": "14502c27e0008d7b97363b4dfac4a2eac56e75e45411c91549c0866ed62b6611",
+  "reviewed_head": "d8edf2b262dec9bd3c8563aa3255d05eba43553d",
+  "checked_at_utc": "2026-10-27T23:17:13.250069+00:00",
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "512",
+    "proposals/restricted-demand/ExcludedFlowCandidate.lean"
+  ],
+  "working_directory": "spec/lean",
+  "environment": {
+    "LEAN_PATH": ".lake/build/lib/lean"
+  },
+  "exit_code": 0,
+  "audited_declarations": 6,
+  "allowed_axioms": [
+    "propext",
+    "Quot.sound"
+  ],
+  "output": "'ExcludedFlowCandidate.candidate_star_contract' depends on axioms: [propext, Quot.sound]\n'ExcludedFlowCandidate.concrete_unchanged' depends on axioms: [propext, Quot.sound]\n'ExcludedFlowCandidate.no_exact_flow' depends on axioms: [propext]\n'ExcludedFlowCandidate.shared_satisfies_outside_same_star' depends on axioms: [propext, Quot.sound]\n'ExcludedFlowCandidate.same_star_union_contract' depends on axioms: [propext, Quot.sound]\n'ExcludedFlowCandidate.choose_contract' depends on axioms: [propext, Quot.sound]\n",
+  "scope": "Candidate local entry emission in original AP Kind algebra (EXACT/ANY/STAR). Constructive coverage and satisfaction witnesses, concrete operation equality, typed abstract no-EXACT result. Current MUST adapter, packed equivalence, call/iteration proof and runtime implementation are not proved by this receipt.",
+  "latest_referenced_project_campaign": {
+    "reached": "run-2",
+    "completed": "run-1",
+    "accepted": "run-1",
+    "new_project_runs": 0
+  }
+}

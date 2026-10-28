@@ -1,0 +1,24 @@
+{
+  "status": "candidate; not selected and no runtime changes",
+  "source": "spec/lean/proposals/restricted-demand/PreExitGuidanceCandidate.lean",
+  "source_sha256": "0d97e5080acf12364247c63b2f5ef28e9e18f5c8d891935daeebe440c672094e",
+  "lean_exit_code": 0,
+  "audited_declarations": 9,
+  "axioms": [
+    "propext"
+  ],
+  "scope": "finite inference closure and explicit actual-binding parameter; local constructive witnesses, not JVM/adapter/fairness proof",
+  "output": "proposals/restricted-demand/PreExitGuidanceCandidate.lean:78:0: warning: Definition `origin` is a proposition; use `theorem` instead of `def`\n\nNote: This linter can be disabled with `set_option linter.defProp false`\n'PreExitGuidanceCandidate.transport' depends on axioms: [propext]\n'PreExitGuidanceCandidate.static_source_only' depends on axioms: [propext]\n'PreExitGuidanceCandidate.origin' depends on axioms: [propext]\n'PreExitGuidanceCandidate.current_missing_arg_return' depends on axioms: [propext]\n'PreExitGuidanceCandidate.localReturn' depends on axioms: [propext]\n'PreExitGuidanceCandidate.twiceWrappedReturn' depends on axioms: [propext]\n'PreExitGuidanceCandidate.twiceWrappedZeroReturn' depends on axioms: [propext]\n'PreExitGuidanceCandidate.splitCall' does not depend on any axioms\n'PreExitGuidanceCandidate.joinCall' does not depend on any axioms\n",
+  "command": [
+    "lean",
+    "-j",
+    "1",
+    "-M",
+    "512",
+    "proposals/restricted-demand/PreExitGuidanceCandidate.lean"
+  ],
+  "working_directory": "spec/lean",
+  "environment": {
+    "LEAN_PATH": ".lake/build/lib/lean"
+  }
+}
