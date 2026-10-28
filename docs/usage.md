@@ -159,6 +159,8 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
 | `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
 
+`test rule run` also accepts `--dataflow-approximations` and `--go-models`, so rule tests can apply the models a rule depends on.
+
 #### Approximation tests
 
 ```bash

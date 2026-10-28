@@ -77,7 +77,7 @@ opentaint test approximation run .opentaint/test-compiled/<batch> \
   --dataflow-approximations .opentaint/dataflow/<batch>
 ```
 
-`test approximation run` applies its bundled source-to-sink rule. The CLI builds the approximation project with its pinned dependencies. The project `libs` directory supplies the name-patch annotations, `OpentaintNdUtil`, and `ArgumentTypeContext`. A build failure stops the test and reports the compiler errors. OpenTaint rebuilds only when the source or dependency pins change. Use this command to compile the project without a test:
+`test approximation run` applies its bundled source-to-sink rule. The CLI builds the approximation project with its pinned dependencies. The project `libs` directory supplies the name-patch annotations, `OpentaintNdUtil`, and `ArgumentTypeContext`. A build failure stops the test and reports the compiler errors. OpenTaint rebuilds only when the source, the dependency pins, or the compiler change. Use this command to compile the project without a test:
 
 ```bash
 opentaint compile approximations .opentaint/dataflow/<batch>

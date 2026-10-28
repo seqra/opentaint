@@ -14,4 +14,4 @@
 
 ## Constraints
 
-- For a Go project the analyzer treats every function and method with a body in the project's own packages, exported or not, as an entry point
+- For a Go project the analyzer treats every top-level function and method with a body in the project's own packages, exported or not, as an entry point; closures and generated wrappers are not entry points

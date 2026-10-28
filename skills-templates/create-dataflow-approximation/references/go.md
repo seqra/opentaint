@@ -62,7 +62,7 @@ opentaint test approximation run .opentaint/test-compiled/<batch> \
   --go-models .opentaint/dataflow/<batch>
 ```
 
-`test approximation run` applies its bundled Go source-to-sink rule. Go models are source modules: OpenTaint loads them with the target modules in one temporary Go workspace, so there is no `compile approximations` step and no Java support JAR. A model that does not type-check fails the run with exit code 252; the analyzer log names the type error.
+`test approximation run` applies its bundled Go source-to-sink rule. Go models are source modules: OpenTaint loads them with the target modules in one temporary Go workspace, so there is no `compile approximations` step and no Java support JAR. A model that does not type-check fails the run with exit code 252, the analyzer's generic unhandled-error code; the analyzer log names the type error.
 
 A positive sample is a `falseNegative` until the model propagates taint. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:
 
