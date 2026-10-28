@@ -496,3 +496,7 @@ The current campaign does not pass the no-FN or small-extra-result goals.
 Keep the three strict Stirling losses and the thingsboard candidate expansion
 as correctness and precision gates. Keep performance claims separate from
 those gates and from the unresolved first-loss evidence.
+
+The additional [field-limit schedule comparison](bidirectional-run-index-field-limits-performance-20261028.md)
+tests limits `1, 2, 3, ...` against this saved campaign. It contains the paired
+iteration times and demand frontiers. The saved campaign was not rerun.

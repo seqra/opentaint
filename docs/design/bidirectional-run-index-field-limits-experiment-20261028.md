@@ -1,6 +1,8 @@
 # Experiment: increase the field limit on every run
 
-Date: 28 October 2026. Status: selected experiment.
+Date: 28 October 2026. Status: measured. See the
+[iteration and frontier comparison](../reports/bidirectional-run-index-field-limits-performance-20261028.md).
+The default remains `REPEAT_RUN1`.
 
 Compare two schedules on the same four project inputs:
 
