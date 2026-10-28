@@ -35,6 +35,7 @@ class IterationDriver internal constructor(
         this(policy, shared, budget, ::runEngine, ::withBarrierGuard)
 
     private val run1MarkMode = readRun1MarkMode()
+    private val fieldLimitSchedule = policy.fieldLimitSchedule
     private val frontierLog = ArrayList<Frontier>()
     val frontiers: List<Frontier> get() = Collections.unmodifiableList(ArrayList(frontierLog))
 
@@ -48,10 +49,12 @@ class IterationDriver internal constructor(
                 if (index % 2 == 1) Direction.FORWARD else Direction.BACKWARD, reason, run1MarkMode))
         }
         try {
+            logger.info { "BIDI_FIELD_LIMIT_SCHEDULE schedule=$fieldLimitSchedule" }
             val firstLimit = policy.fieldLimit(1)
             require(firstLimit == 1) { "F78: selected run 1 needs field limit exactly 1" }
             var config = RunConfig(1, firstLimit, demand = null, records = shared.records.view(),
-                seeds = SeedIndex.EMPTY, roots = roots, run1MarkMode = run1MarkMode)
+                seeds = SeedIndex.EMPTY, roots = roots, run1MarkMode = run1MarkMode,
+                fieldLimitSchedule = fieldLimitSchedule)
             while (true) {
                 index = config.index
                 val selectedTimeout = policy.timeout(config, budget - start.elapsedNow())
@@ -147,7 +150,8 @@ class IterationDriver internal constructor(
         val index = config.index + 1
         val limit = policy.fieldLimit(index)
         require(limit >= config.fieldLimit) { "ap.md W3: the field limit must not decrease" }
-        return RunConfig(index, limit, handOff.demand, shared.records.view(), handOff.seeds, config.roots, run1MarkMode = run1MarkMode)
+        return RunConfig(index, limit, handOff.demand, shared.records.view(), handOff.seeds, config.roots,
+            run1MarkMode = run1MarkMode, fieldLimitSchedule = fieldLimitSchedule)
     }
 
     companion object : KLogging() {

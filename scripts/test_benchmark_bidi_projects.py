@@ -19,13 +19,13 @@ class AnalyzerConfigurationTest(unittest.TestCase):
         def capture(parser):
             args = parse(parser, ['--main', '/tmp/main', '--current', '/tmp/current',
                                   '--test', '/tmp/test', '--output', '/tmp/output'])
-            selected.append(args.run1_mark_mode)
+            selected.append((args.run1_mark_mode, args.field_limit_schedule))
             raise Parsed()
 
         with patch.object(argparse.ArgumentParser, 'parse_args', new=capture):
             with self.assertRaises(Parsed):
                 benchmark_bidi_projects.main()
-        self.assertEqual(['FULL'], selected)
+        self.assertEqual([('FULL', 'REPEAT_RUN1')], selected)
 
     def options(self, mode):
         return SimpleNamespace(run1_mark_mode=mode, heap_snapshots=True,
@@ -48,6 +48,17 @@ class AnalyzerConfigurationTest(unittest.TestCase):
         self.assertFalse(any('bidi.' in x for x in values))
         self.assertIn('-Dopentaint.memorySnapshotDir=/tmp/main-run', values)
         self.assertTrue(any(x.startswith('-Xlog:gc*:') for x in values))
+
+    def test_schedule_experiment_changes_only_schedule_in_analyzer_jvm(self):
+        options = self.options('FULL')
+        options.field_limit_schedule = 'REPEAT_RUN1'
+        current = analyzer_jvm_args(options, Path('/tmp/schedule'), 'bidi', '8g')
+        options.field_limit_schedule = 'RUN_INDEX'
+        experiment = analyzer_jvm_args(options, Path('/tmp/schedule'), 'bidi', '8g')
+        self.assertEqual([x for x in current if 'fieldLimitSchedule=' not in x],
+                         [x for x in experiment if 'fieldLimitSchedule=' not in x])
+        self.assertIn('-Dopentaint.bidi.fieldLimitSchedule=REPEAT_RUN1', current)
+        self.assertIn('-Dopentaint.bidi.fieldLimitSchedule=RUN_INDEX', experiment)
 
 
 if __name__ == '__main__':

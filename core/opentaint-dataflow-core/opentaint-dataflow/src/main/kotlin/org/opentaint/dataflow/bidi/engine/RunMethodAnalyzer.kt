@@ -134,7 +134,7 @@ class RunMethodAnalyzer(
                 override fun result(f: Facts) {
                     for (leaf in ops.leaves(f)) {
                         ap.cancellation.checkpoint()
-                        if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf)
+                        if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf, limit)
                     }
                     for (initial in checkNotNull(config.demand).initials(key, f)) {
                         ap.cancellation.checkpoint()

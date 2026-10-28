@@ -6,16 +6,18 @@ import org.opentaint.dataflow.bidi.ap.*
 /** Check bounded actual run-2 inputs. A correlated field STAR keeps its E.
  * Returns true for a named FULL field and false for an exact class marker.
  * Acceptance does not authorize an initial or add a source/sink literal shape. */
-internal fun validateRun2StaticFullInput(ap: ApManager, actual: Pattern): Boolean {
+internal fun validateRun2StaticFullInput(ap: ApManager, actual: Pattern, fieldLimit: Int = 1): Boolean {
+    require(fieldLimit >= 1) { "The field limit must be positive" }
     val field = validateRun2StaticFullAnchor(ap, actual) ?: return false
     val fact = actual.fact
-    val location = if (field) fact.path.size == 2 &&
+    val location = if (field) fact.path.drop(1).all { it.isCounted() } &&
+        fact.path.count { it.isCounted() } <= fieldLimit &&
         (fact.tail == Tail.EXACT || fact.tail == Tail.ANY || fact.tail == Tail.STAR)
     else fact.path.size == 1 && fact.tail == Tail.EXACT
     val exclusion = actual.exclusion == ExclusionSet.Empty || field && fact.tail == Tail.STAR
     check(location && exclusion) {
         "Unsupported run-2 concrete static input: $actual. " +
-            "Expected a named field with EXACT/ANY and empty field exclusions, " +
+            "Expected a named field within limit $fieldLimit with EXACT/ANY and empty field exclusions, " +
             "a named field with correlated STAR and its legal field exclusion, " +
             "or an EXACT class marker with empty field exclusions. Backward MUST is forbidden."
     }

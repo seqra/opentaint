@@ -329,7 +329,7 @@ class RunMethodLocalServices(core: RunMethodAnalyzer) : MethodLocalServices {
             if (core.config.index == 2) {
                 // A seed starts at its check, before any caller-input query gate.
                 // Validate the bounded value; a deeper named field is lawful before this cut.
-                for (leaf in core.ops.leaves(facts)) validateRun2StaticFullInput(core.ap, leaf)
+                for (leaf in core.ops.leaves(facts)) validateRun2StaticFullInput(core.ap, leaf, core.config.fieldLimit)
             }
             emit(facts)
             core.ap.cancellation.checkpoint()
