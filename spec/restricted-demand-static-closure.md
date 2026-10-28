@@ -9,6 +9,10 @@ The [earlier investigation](../docs/design/bidirectional-restricted-fact-managem
 is supporting evidence, not an additional policy. Follow
 [proof-guide.md](proof-guide.md).
 
+The [short modification summary](../docs/design/bidirectional-restricted-demand-summary-20261028.md)
+lists modified, added and removed parts, with before/after behavior and
+their original-AP, later-extension or new-logic basis.
+
 The [implementation checks](../docs/reports/bidirectional-restricted-demand-validation-20261027.md)
 found three correctness cases. On 28 October, the user selected Empty field
 exclusions for abstract STAR demand. Apply that rule to demand copies on
