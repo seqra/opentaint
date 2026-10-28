@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/seqra/opentaint/internal/approximation"
 	"github.com/seqra/opentaint/internal/testapprox"
 	"github.com/seqra/opentaint/internal/testproject"
 	"github.com/seqra/opentaint/internal/testrule"
@@ -57,6 +58,7 @@ Go, use module@version. Use the versions from the target application.`,
 		language := testProjectLanguage(initRuleLanguage)
 		for _, kind := range kinds {
 			dir := filepath.Join(args[0], kind)
+			rejectOtherTestProjectLanguage(dir, language)
 			switch language {
 			case "java":
 				if err := testproject.Bootstrap(dir, "opentaint-rule-test-"+kind, initRuleProjectDeps); err != nil {
@@ -106,7 +108,9 @@ Use --dependency to add each library the samples use. For Java, use Maven coordi
 Go, use module@version. Use the versions from the target application.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		switch testProjectLanguage(initApproxLanguage) {
+		language := testProjectLanguage(initApproxLanguage)
+		rejectOtherTestProjectLanguage(args[0], language)
+		switch language {
 		case "java":
 			if err := testproject.Bootstrap(args[0], "approximation-test-project", initApproxProjectDeps); err != nil {
 				out.Fatalf("Failed to bootstrap test project: %s", err)
@@ -135,6 +139,23 @@ func testProjectLanguage(value string) string {
 		out.Fatalf("Unsupported test project language %q. Use java or go", value)
 	}
 	return language
+}
+
+// rejectOtherTestProjectLanguage stops when dir already holds a test project in the other language.
+func rejectOtherTestProjectLanguage(dir, language string) {
+	if err := otherTestProjectLanguage(dir, language); err != nil {
+		out.Fatalf("%s", err)
+	}
+}
+
+func otherTestProjectLanguage(dir, language string) error {
+	switch {
+	case language == "java" && approximation.IsGoProject(dir):
+		return fmt.Errorf("the output directory already contains a Go test project: %s", dir)
+	case language == "go" && approximation.IsProject(dir):
+		return fmt.Errorf("the output directory already contains a Java test project: %s", dir)
+	}
+	return nil
 }
 
 func init() {
