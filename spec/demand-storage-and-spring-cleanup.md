@@ -585,6 +585,12 @@ For a fact at an unrelated local, skip the virtual component and use ordinary
 demand only. If a query has a real ordinary pair, it still works even when
 both virtual envelope tests are false.
 
+The [worked examples](demand-storage-lookup.md#9-worked-examples) specify full
+provided facts and summaries, local lookup, shared/transitive steps and final
+results. They include static carry deduplication, explicit EXACT demand,
+visibility, disconnected endpoints, mark mismatch, exclusions, ZERO, ND and
+cycles.
+
 ## 9. Correctness contracts and required proofs
 
 Use an explicit reference demand relation for each owner:
