@@ -6,61 +6,36 @@ Language reference for a `dataflow` type, keyed to the body's steps.
 
 ### 1. Scaffold the project
 
-`opentaint test approximation init` scaffolds Java only, so write the Go project at `.opentaint/test-projects/<name>` by hand: a `go.mod` with `module test` and the app's Go version, the generic marker, and the fixed rule the samples run against. Require each lib at its exact version from the app's `go.mod` verbatim — including pseudo-versions and local `replace` directives — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
+`opentaint test approximation init <project> --language go` scaffolds a Go module with module path `test`, the `taint` package (the fixed `taint.Source()` / `taint.Sink()`) and the fixed `approximation-rule.yaml` the harness applies. Pass each lib as a `--dependency` at its exact version from the app's `go.mod` verbatim — including pseudo-versions — not a guess. The model module scaffolded later takes the same pins, so the samples and the models they exercise build against one version.
 
-`util/taint.go` — the generic marker:
-
-```go
-package util
-
-func Source() string { return "" }
-func Sink(string) {}
+```bash
+opentaint test approximation init .opentaint/test-projects/<name> \
+  --language go \
+  --dependency github.com/acme/library@v1.2.3
 ```
 
-`test-rules/go/approximation.yaml` — the fixed rule, routing `util.Source()` to `util.Sink(...)`:
-
-```yaml
-rules:
-  - id: approximation
-    languages: [go]
-    mode: taint
-    severity: ERROR
-    message: Test input reaches the marker sink through a Go model
-    pattern-sources:
-      - patterns:
-          - pattern-inside: |
-              import "test/util"
-              ...
-          - pattern: util.Source()
-    pattern-sinks:
-      - patterns:
-          - pattern-inside: |
-              import "test/util"
-              ...
-          - pattern: util.Sink($VALUE)
-          - focus-metavariable: $VALUE
-```
+When the app replaces a module with a local directory, add the same replacement with `go mod edit -replace <module>=<dir>`.
 
 ### 2. Write the samples
 
-Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the fixed `approximation.yaml` is what the harness applies. The sample just routes `util.Source()` through the approximated callable into `util.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function.
+Write one sample per callable in the batch's `dataflow` bucket, across all its packages. Each `dataflow` entry records the callable's `signature` (`args:<count>`, the receiver excluded) — use it to shape the call. Look at how the callable is actually called in the project to shape the sample and pick the receiver type. Each sample is a plain exported function in `package test` at the module root — you don't author a rule; the scaffold's fixed `approximation-rule.yaml` is what the harness applies. The sample just routes `taint.Source()` through the approximated callable into `taint.Sink(...)`. Its verdict is recorded in `rule-test.yaml` (below), not on the function. After writing the samples, run `go mod tidy` in the project so their dependencies resolve.
 
 Mark each callable's test-project status (per Tracking): `done` once its sample is in the project. If no sample can be written for a callable, exclude it, mark it `failed`, and note it in the summary — don't let one unmodelable callable block the rest.
 
-Positive sample — routes `util.Source()` through the approximated callable into `util.Sink(...)`, one per callable being approximated. Start every sample with `tainted := util.Source()`. When the approximated callable takes or returns another type, add a marker of that type to `util` and to the rule — the analyzer tracks the fact, not the runtime value.
+Positive sample — routes `taint.Source()` through the approximated callable into `taint.Sink(...)`, one per callable being approximated. Start every sample with `tainted := taint.Source()`. When the approximated callable takes a non-string input, convert the tainted string to that type so the taint fact reaches the callable as the right type — the analyzer tracks the fact, not the runtime value.
 
 ```go
 package test
 
 import (
 	"github.com/acme/library/text"
-	"test/util"
+	"test/taint"
 )
 
 func TaintReachesSink() {
-	tainted := util.Source()
+	tainted := taint.Source()
 	routed := text.Transform(tainted) // the approximated callable
-	util.Sink(routed)
+	taint.Sink(routed)
 }
 ```
 
@@ -69,8 +44,8 @@ Negative sample — only when the approximated callable stores its input in the 
 ```go
 func TaintStaysInItsField() {
 	var user text.User
-	user.SetName(util.Source()) // taint stored in the name field
-	util.Sink(user.Email())     // a different field — must stay clean
+	user.SetName(taint.Source()) // taint stored in the name field
+	taint.Sink(user.Email())     // a different field — must stay clean
 }
 ```
 
@@ -78,7 +53,7 @@ Register the verdicts — write `rule-test.yaml` at the test-project root (next 
 
 ```yaml
 tests:
-  - rule-id: go/approximation.yaml#approximation
+  - rule-id: approximation-rule.yaml#approximation-rule
     positive:
       - test.TaintReachesSink
     negative:
@@ -87,7 +62,7 @@ tests:
 
 Note — a sample's receiver type fixes the dropped callable's name, and the later model targets that exact callable, so mirror the real call's receiver type. The same call off an interface-typed value (`var r io.Reader`, e.g. a parameter) resolves to `(io.Reader).Read`, off a concrete one (`bytes.NewBufferString(...)`) to `(*bytes.Buffer).Read` — match whichever the real flow uses.
 
-When the approximated callable hands the data to a callback instead of returning it, put the sink inside the callback body: `text.Each(values, func(v string) { util.Sink(v) })`. Don't stash the value in a captured variable and sink it after the call.
+When the approximated callable hands the data to a callback instead of returning it, put the sink inside the callback body: `text.Each(values, func(v string) { taint.Sink(v) })`. Don't stash the value in a captured variable and sink it after the call.
 
 ## Constraints
 

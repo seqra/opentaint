@@ -155,27 +155,43 @@ opentaint test rule reachability java/security/my-rule.yaml:my-rule --project-mo
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test rule init <output-dir> --language java` | Create source and sink test projects with annotated sample support |
+| `opentaint test rule init <output-dir> --language LANGUAGE` | Create source and sink test projects with annotated sample support |
 | `opentaint test rule run <project-model>` | Run detection-rule tests on a compiled project model |
 | `opentaint test rule reachability <rule-id> [source-path]` | Trace why a rule can or cannot reach its facts |
 
 #### Approximation tests
 
 ```bash
+# Java
 opentaint test approximation init .opentaint/test-projects/my-approximation \
   --language java \
   --dependency "io.projectreactor:reactor-core:3.8.5"
 opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
 opentaint test approximation run .opentaint/test-compiled/my-approximation \
   --dataflow-approximations .opentaint/dataflow/my-approximation
+
+# Go
+opentaint test approximation init .opentaint/test-projects/my-approximation \
+  --language go \
+  --dependency github.com/acme/library@v1.2.3
+# Write the samples, then resolve their dependencies.
+(cd .opentaint/test-projects/my-approximation && go mod tidy)
+opentaint compile .opentaint/test-projects/my-approximation -o .opentaint/test-compiled/my-approximation
+opentaint test approximation run .opentaint/test-compiled/my-approximation \
+  --go-models .opentaint/dataflow/my-approximation
 ```
 
 | Command | Description |
 |---------|-------------|
-| `opentaint test approximation init <output-dir> --language java` | Create a test project with a fixed `Taint.source()` to `Taint.sink(...)` harness |
+| `opentaint test approximation init <output-dir> --language LANGUAGE` | Create a test project with a fixed source-to-sink harness: `Taint.source()` to `Taint.sink(...)` for Java, `taint.Source()` to `taint.Sink(...)` for Go |
 | `opentaint test approximation run <project-model>` | Run dataflow approximation tests on a compiled project model |
 
-The bundled `test approximation init` scaffold and `test approximation run` harness target Java. For Go models, write a Go sample module with an explicit source-to-sink rule and `rule-test.yaml`, prepare it with `opentaint compile`, then run `opentaint test rule run <project-model> --ruleset <test-rules> --go-models <model-module>`. See [the Go test-project reference](../skills/create-test-project/references/go-approximation.md) for the layout. A Go project model points to the live sample sources; keep them fixed while repairing models.
+| Flag | Description |
+|------|-------------|
+| `--language` | Required test project language, `java` or `go` (`init` only) |
+| `--dependency` | Maven coordinate for Java or `module@version` for Go (repeatable, `init` only) |
+
+A Go test project is a Go module with module path `test`, so a sample function is named `test.<Function>` in `rule-test.yaml`. After you write the samples, run `go mod tidy` in the project to resolve their dependencies. `test approximation run` applies the harness rule for the project model's language. A Go project model points to the live sample sources; keep them fixed while repairing models.
 
 Rule and approximation test runs write `test-result.json` and `test-results.sarif` to the selected output directory.
 

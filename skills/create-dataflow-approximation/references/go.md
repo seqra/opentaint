@@ -54,16 +54,15 @@ func Each(values []string, fn func(string)) {
 
 ### 3. Test against the test project
 
-The bundled `test approximation run` harness is Java-only, so the Go test project carries its own source-to-sink rule under `test-rules/`. Run `test rule run` over the prepared test project applying this batch's models, iterate the models until the samples pass:
+Run `test approximation run` over the compiled test project applying this batch's models, iterate the models until the samples pass:
 
 ```bash
-opentaint test rule run .opentaint/test-compiled/<batch> \
-  --ruleset .opentaint/test-projects/<batch>/test-rules \
-  --go-models .opentaint/dataflow/<batch> \
-  -o .opentaint/test-results/<batch>
+opentaint test approximation run .opentaint/test-compiled/<batch> \
+  -o .opentaint/test-results/<batch> \
+  --go-models .opentaint/dataflow/<batch>
 ```
 
-Go models are source modules. OpenTaint loads them with the target modules in one temporary Go workspace; there is no `compile approximations` step and no Java support JAR.
+`test approximation run` applies its bundled Go source-to-sink rule. Go models are source modules: OpenTaint loads them with the target modules in one temporary Go workspace, so there is no `compile approximations` step and no Java support JAR. A model that does not type-check fails the run with exit code 252; the analyzer log names the type error.
 
 A positive sample is a `falseNegative` until the model propagates taint. Read the result with the bundled script — it prints the pass/fail counts and names each failing sample, so you don't parse the JSON by hand:
 
