@@ -1,15 +1,19 @@
+// go-usage is the Go counterpart of `javap -c`: it builds the SSA form of the project's packages
+// (the form the analyzer reads) and prints the static callee of every call site as JSON
+// {method, signature} rows, named the way the analyzer names an external method.
 package main
 
 import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"go/ast"
 	"go/types"
 	"os"
 	"sort"
 
 	"golang.org/x/tools/go/packages"
+	"golang.org/x/tools/go/ssa"
+	"golang.org/x/tools/go/ssa/ssautil"
 )
 
 type usage struct {
@@ -39,47 +43,46 @@ func main() {
 func extract(dir string) ([]usage, error) {
 	cfg := &packages.Config{
 		Mode: packages.NeedName | packages.NeedFiles | packages.NeedCompiledGoFiles |
-			packages.NeedImports | packages.NeedDeps | packages.NeedSyntax |
-			packages.NeedTypes | packages.NeedTypesInfo | packages.NeedModule,
+			packages.NeedImports | packages.NeedSyntax |
+			packages.NeedTypes | packages.NeedTypesInfo | packages.NeedTypesSizes,
 		Dir: dir,
 	}
 	loaded, err := packages.Load(cfg, "./...")
 	if err != nil {
 		return nil, fmt.Errorf("load Go packages: %w", err)
 	}
-	var loadErrors []error
-	packages.Visit(loaded, nil, func(pkg *packages.Package) {
-		for _, pkgErr := range pkg.Errors {
-			loadErrors = append(loadErrors, pkgErr)
+	// Like javap on an unreadable class, a package that does not type-check is skipped.
+	var project []*packages.Package
+	for _, pkg := range loaded {
+		if len(pkg.Errors) != 0 {
+			fmt.Fprintf(os.Stderr, "warning: skipping %s: %v\n", pkg.PkgPath, pkg.Errors[0])
+			continue
 		}
-	})
-	if len(loadErrors) != 0 {
-		return nil, fmt.Errorf("load Go packages: %v", loadErrors[0])
+		project = append(project, pkg)
+	}
+
+	prog, ssaPkgs := ssautil.Packages(project, ssa.BuilderMode(0))
+	prog.Build()
+	own := make(map[*ssa.Package]bool, len(ssaPkgs))
+	for _, pkg := range ssaPkgs {
+		own[pkg] = true
 	}
 
 	seen := make(map[usage]bool)
-	for _, pkg := range loaded {
-		for _, file := range pkg.Syntax {
-			ast.Inspect(file, func(node ast.Node) bool {
-				expr, ok := node.(ast.Expr)
+	for fn := range ssautil.AllFunctions(prog) {
+		if !own[fn.Package()] {
+			continue
+		}
+		for _, block := range fn.Blocks {
+			for _, instr := range block.Instrs {
+				call, ok := instr.(ssa.CallInstruction)
 				if !ok {
-					return true
+					continue
 				}
-				// Include references passed, stored, or called through function values.
-				fn := referencedFunction(expr, pkg.TypesInfo)
-				if fn == nil || fn.Pkg() == nil {
-					return true
+				if callee := calledFunction(call.Common()); callee != nil {
+					seen[usageOf(callee)] = true
 				}
-				sig, ok := fn.Type().(*types.Signature)
-				if !ok {
-					return true
-				}
-				seen[usage{
-					Method:    functionName(fn, sig),
-					Signature: fmt.Sprintf("args:%d", sig.Params().Len()),
-				}] = true
-				return true
-			})
+			}
 		}
 	}
 
@@ -96,33 +99,41 @@ func extract(dir string) ([]usage, error) {
 	return rows, nil
 }
 
-func referencedFunction(expr ast.Expr, info *types.Info) *types.Func {
-	switch value := expr.(type) {
-	case *ast.ParenExpr:
-		return referencedFunction(value.X, info)
-	case *ast.IndexExpr:
-		return referencedFunction(value.X, info)
-	case *ast.IndexListExpr:
-		return referencedFunction(value.X, info)
-	case *ast.Ident:
-		fn, _ := info.Uses[value].(*types.Func)
-		return fn
-	case *ast.SelectorExpr:
-		if selection := info.Selections[value]; selection != nil {
-			fn, _ := selection.Obj().(*types.Func)
-			return fn
-		}
-		fn, _ := info.Uses[value.Sel].(*types.Func)
-		return fn
-	default:
+// calledFunction is the declared function a call site reaches: the interface method of an
+// invoke, or the static callee with a generic instance, bound method or method expression
+// resolved to the function it wraps. Calls through function values have no static callee.
+func calledFunction(call *ssa.CallCommon) *types.Func {
+	if call.IsInvoke() {
+		return call.Method
+	}
+	callee := call.StaticCallee()
+	if callee == nil {
 		return nil
+	}
+	if origin := callee.Origin(); origin != nil {
+		callee = origin
+	}
+	fn, _ := callee.Object().(*types.Func)
+	return fn
+}
+
+// usageOf names a function as the analyzer does (`pkg.Func`, `(pkg.Type).Method`,
+// `(*pkg.Type).Method`) with the analyzer's `args:<count>` signature.
+func usageOf(fn *types.Func) usage {
+	sig := fn.Type().(*types.Signature)
+	return usage{
+		Method:    functionName(fn, sig),
+		Signature: fmt.Sprintf("args:%d", sig.Params().Len()),
 	}
 }
 
 func functionName(fn *types.Func, sig *types.Signature) string {
-	pkgPath := fn.Pkg().Path()
+	pkgPath := ""
+	if fn.Pkg() != nil {
+		pkgPath = fn.Pkg().Path() + "."
+	}
 	if sig.Recv() == nil {
-		return pkgPath + "." + fn.Name()
+		return pkgPath + fn.Name()
 	}
 
 	receiver := sig.Recv().Type()
@@ -133,11 +144,11 @@ func functionName(fn *types.Func, sig *types.Signature) string {
 	}
 	named, ok := receiver.(*types.Named)
 	if !ok {
-		return pkgPath + "." + fn.Name()
+		return pkgPath + fn.Name()
 	}
 	prefix := "("
 	if pointer {
 		prefix += "*"
 	}
-	return prefix + pkgPath + "." + named.Obj().Name() + ")." + fn.Name()
+	return prefix + pkgPath + named.Obj().Name() + ")." + fn.Name()
 }

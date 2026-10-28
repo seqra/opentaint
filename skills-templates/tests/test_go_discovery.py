@@ -25,22 +25,24 @@ class GoDiscoveryTest(unittest.TestCase):
                         if p.is_file() and "__pycache__" not in p.parts}
             self.assertEqual(actual, expected, "checked-in skills differ from templates")
 
+            # The layout of a portable model: the Go project is copied under the model dir
+            # and `projectDir` is relative to it, as for the JVM `moduleClasses`.
             project = root / "project"
+            source = ".opentaint/project/go_0/"
             files = {
-                "go.mod": "module example.com/app\n\ngo 1.25.0\n",
-                "lib/lib.go": "package lib\nfunc Direct(string) {}\n"
-                              "func Assigned(string) {}\nfunc Unused(string) {}\n"
-                              "type Worker struct{}\nfunc (*Worker) Bound(string) {}\n",
-                "app.go": 'package app\nimport "example.com/app/lib"\n'
-                          'func use(w *lib.Worker) {\n lib.Direct("value")\n'
-                          ' get := lib.Assigned\n get("value")\n'
-                          ' bound := w.Bound\n bound("value")\n}\n',
+                source + "go.mod": "module example.com/app\n\ngo 1.25.0\n",
+                source + "lib/lib.go": "package lib\nfunc Direct(string) {}\n"
+                                       "func Assigned(string) {}\nfunc Unused(string) {}\n"
+                                       "type Worker struct{}\nfunc (*Worker) Bound(string) {}\n",
+                source + "app.go": 'package app\nimport "example.com/app/lib"\n'
+                                   'func use(w *lib.Worker) {\n lib.Direct("value")\n'
+                                   ' get := lib.Assigned\n get("value")\n'
+                                   ' bound := w.Bound\n bound("value")\n}\n',
                 ".opentaint/tracking/state.yaml": "language: go\n",
                 ".opentaint/tracking/coverage.yaml": "packages: [example.com/app/lib]\n",
                 ".opentaint/tracking/rules/classification.yaml":
                     "safe: [example.com/app/lib.Directargs:1]\n",
-                ".opentaint/project/project.yaml":
-                    f"projectRoot: {project}\ngoProjects:\n  - projectDir: .\n",
+                ".opentaint/project/project.yaml": "goProjects:\n  - projectDir: go_0\n",
             }
             for name, content in files.items():
                 path = project / name

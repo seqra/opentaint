@@ -285,6 +285,13 @@ def yaml_modules(model_yaml):
     return mods
 
 
+def yaml_go_projects(model_yaml):
+    # each goProjects entry's projectDir; like moduleClasses it is relative to the model dir
+    doc = load_yaml(model_yaml, {}) or {}
+    return [str(p["projectDir"]) for p in (doc.get("goProjects") or [])
+            if isinstance(p, dict) and p.get("projectDir")]
+
+
 def is_project_class(cls, packages):
     # mirrors the engine's ProjectClasses.isModuleClass; empty packages = a project-only module
     return not packages or any(cls.startswith(p) for p in packages)
@@ -329,37 +336,22 @@ def extract_jvm_usages():
     return fqns
 
 
-def go_project_dirs(model_yaml):
-    doc = load_yaml(model_yaml, {}) or {}
-    project_root = Path(doc.get("projectRoot") or ".").resolve()
-    result = []
-    for project in doc.get("goProjects") or []:
-        if not isinstance(project, dict) or not project.get("projectDir"):
-            continue
-        path = Path(str(project["projectDir"]))
-        result.append(path if path.is_absolute() else project_root / path)
-    return result
-
-
 def extract_go_usages():
+    # build the SSA form of each Go project (the form the engine reads) and collect the static
+    # callee of every call site with its `args:<count>` arity, named as the engine names it
     helper = Path(__file__).resolve().parent / "go-usage"
     fqns = set()
-    for project_dir in go_project_dirs(MODEL / "project.yaml"):
+    for entry in yaml_go_projects(MODEL / "project.yaml"):
+        p = MODEL / entry
+        if not p.is_dir():
+            continue
         try:
-            result = subprocess.run(
-                ["go", "run", ".", "--dir", str(project_dir)],
-                cwd=helper,
-                capture_output=True,
-                text=True,
-                check=True,
-            )
-        except OSError as error:
-            raise SystemExit(f"cannot run the Go usage extractor: {error}") from error
-        except subprocess.CalledProcessError as error:
-            detail = error.stderr.strip() or error.stdout.strip() or str(error)
-            raise SystemExit(f"Go usage extraction failed: {detail}") from error
-        for row in json.loads(result.stdout or "[]"):
-            fqns.add((str(row["method"]), str(row["signature"])))
+            out = subprocess.run(["go", "run", ".", "--dir", str(p.resolve())], cwd=helper,
+                                 stdout=subprocess.PIPE, text=True).stdout
+        except OSError:
+            continue
+        for row in json.loads(out or "[]"):
+            fqns.add((row["method"], row["signature"]))
     return fqns
 
 

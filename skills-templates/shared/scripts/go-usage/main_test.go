@@ -9,7 +9,7 @@ import (
 	"testing"
 )
 
-func TestExtractFunctionReferences(t *testing.T) {
+func TestExtractCallSites(t *testing.T) {
 	dir := t.TempDir()
 	files := map[string]string{
 		"go.mod": "module example.com/app\n\ngo 1.25.0\n",
@@ -19,14 +19,18 @@ func Assigned(string) {}
 func Callback(string) {}
 func Generic[T any](T) {}
 func Unused(string) {}
+func Variadic(string, ...any) {}
 type Worker struct{}
 func (*Worker) Bound(string) {}
 func (Worker) Expression(string) {}
 `,
 		"app.go": `package app
-import "example.com/app/lib"
+import (
+    "example.com/app/lib"
+    "fmt"
+)
 var stored = lib.Callback
-func use(w *lib.Worker) {
+func use(w *lib.Worker, s fmt.Stringer) {
     lib.Direct("value")
     f := lib.Assigned
     f("value")
@@ -37,6 +41,8 @@ func use(w *lib.Worker) {
     expression := lib.Worker.Expression
     expression(*w, "value")
     stored("value")
+    lib.Variadic("value", 1, 2)
+    _ = s.String()
 }
 `,
 	}
@@ -53,13 +59,16 @@ func use(w *lib.Worker) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// A call through a package variable has no static callee, so Callback is absent; a
+	// variadic tail is one packed argument, as in the analyzer's `args:<count>`.
 	want := []usage{
 		{Method: "(*example.com/app/lib.Worker).Bound", Signature: "args:1"},
 		{Method: "(example.com/app/lib.Worker).Expression", Signature: "args:1"},
+		{Method: "(fmt.Stringer).String", Signature: "args:0"},
 		{Method: "example.com/app/lib.Assigned", Signature: "args:1"},
-		{Method: "example.com/app/lib.Callback", Signature: "args:1"},
 		{Method: "example.com/app/lib.Direct", Signature: "args:1"},
 		{Method: "example.com/app/lib.Generic", Signature: "args:1"},
+		{Method: "example.com/app/lib.Variadic", Signature: "args:2"},
 	}
 	if !reflect.DeepEqual(rows, want) {
 		t.Fatalf("usages = %#v, want %#v", rows, want)
