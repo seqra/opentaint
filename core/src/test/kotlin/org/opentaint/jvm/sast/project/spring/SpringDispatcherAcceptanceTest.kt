@@ -49,11 +49,12 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /** Whole generated dispatch, constructor, controller and cleanup execution through phase 3. */
-class SpringDispatcherAcceptanceTest : BasicTestUtils() {
+open class SpringDispatcherAcceptanceTest : BasicTestUtils() {
+    protected open val predefinedCleanup: Boolean = false
     override val sourceFileExtension = "java"
     private val store by lazy { findMethod(COMPONENT, "store") }
     private val read by lazy { findMethod(COMPONENT, "read") }
-    private val spring by lazy { SpringWebProjectContext(setOf(store, read), cp).also { it.addComponent(findClass(COMPONENT)) } }
+    private val spring by lazy { SpringWebProjectContext(setOf(store, read), cp, predefinedCleanup = predefinedCleanup).also { it.addComponent(findClass(COMPONENT)) } }
     private val root by lazy {
         val wrappers = listOf(wrapper(store), wrapper(read))
         val generate = Class.forName("org.opentaint.jvm.sast.project.spring.SpringWebProjectKt")
@@ -106,8 +107,16 @@ class SpringDispatcherAcceptanceTest : BasicTestUtils() {
                 return object : BidiEntry {
                     override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>) =
                         error("The real joined prescan graph must be supplied")
-                    override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>, graph: ResolvedPrescanGraph) =
+                    override fun gather(manager: TaintAnalysisManager, startMethods: List<MethodWithContext>, graph: ResolvedPrescanGraph) {
+                        if (predefinedCleanup) {
+                            val cleanup = spring.controllerDispatcherMethods.single {
+                                it.name == GeneratedSpringControllerDispatcherCleanupMethod
+                            }
+                            assertTrue(graph.calls.any { it.callee === cleanup }, "Modeled call must remain in prescan graph")
+                            assertTrue(graph.calls.none { it.caller === cleanup }, "Modeled body has no outgoing calls")
+                        }
                         actual.gather(manager, startMethods, graph)
+                    }
                     override fun run(budget: Duration): Report = actual.run(budget).also { report = it }
                     override fun toVulnerabilities(report: Report): List<VulnerabilityWithTrace> = actual.toVulnerabilities(report)
                     override fun status(report: Report) = actual.status(report)
@@ -199,4 +208,9 @@ private object AcceptanceEmptyRules : TaintRulesProvider {
     override fun cleanerRulesForMethod(method: CommonMethod, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = emptyList<TaintCleaner>()
     override fun sourceRulesForStaticField(field: JIRField, statement: CommonInst, fact: FactAp?, allRelevant: Boolean) = emptyList<TaintStaticFieldSource>()
     override fun selectRules(ruleIds: Set<String>) = Unit
+}
+
+/** The same end-to-end observations must hold with the selected complete cleanup model. */
+class SpringPredefinedDispatcherAcceptanceTest : SpringDispatcherAcceptanceTest() {
+    override val predefinedCleanup: Boolean = true
 }

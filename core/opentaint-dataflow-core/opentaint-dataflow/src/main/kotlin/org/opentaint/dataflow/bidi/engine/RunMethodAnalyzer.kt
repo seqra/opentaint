@@ -132,16 +132,14 @@ class RunMethodAnalyzer(
             ops.limit(added, limit, object : ApOut {
                 override fun markRequest(mark: TaintMark) = error("A field cut cannot request a mark")
                 override fun result(f: Facts) {
-                    val candidates = LinkedHashSet<DemandPattern>()
                     for (leaf in ops.leaves(f)) {
                         ap.cancellation.checkpoint()
                         if (checkRun2StaticAnchors) validateRun2StaticFullInput(ap, leaf)
-                        candidates += checkNotNull(config.demand).near(key, leaf)
                     }
-                    for (guide in candidates) {
+                    for (initial in checkNotNull(config.demand).initials(key, f)) {
                         ap.cancellation.checkpoint()
                         context.shared.abstractionStatistics?.intersection()
-                        for (initial in ops.emit(guide, f)) addInitial(initial)
+                        addInitial(initial)
                     }
                 }
             })
@@ -786,12 +784,7 @@ class RunMethodAnalyzer(
 
     private fun published(premise: PremiseKey, facts: Facts): Collection<Facts> = when {
         config.run1 || (!forward && premise.isZero) -> listOf(facts)
-        else -> LinkedHashSet<Facts>().also { out ->
-            premise.forEachMember { member ->
-                ap.cancellation.checkpoint()
-                out += restrictBy(ops, checkNotNull(config.demand), key, member, facts)
-            }
-        }
+        else -> checkNotNull(config.demand).intersect(key, premise, facts)
     }
 
     private fun flushPublications() {
@@ -861,10 +854,3 @@ class RunMethodAnalyzer(
         failure?.let { throw it }
     }
 }
-
-/** Index candidates do not replace AP's complete premise and mark/location test. */
-fun restrictBy(ops: ApOps, demand: DemandStore, key: MethodKey, initial: InitialAp, facts: Facts): Sequence<Facts> =
-    demand.covering(key, initial).asSequence().flatMap { pattern ->
-        ops.manager.cancellation.checkpoint()
-        ops.restrict(initial, facts, pattern)
-    }

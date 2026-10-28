@@ -292,10 +292,14 @@ class J03ObservedDriverBridge {
     @Suppress("UNCHECKED_CAST")
     private fun demandSnapshot(ap: ApManager, demand: DemandStore?): Set<JvmObservedDemand> {
         if (demand == null) return emptySet()
-        val byMethod = field(demand, "byMethod") as Map<MethodKey, PathTrie<DemandPattern>>
+        val byMethod = field(demand, "byMethod") as Map<MethodKey, Any>
         val out = LinkedHashSet<JvmObservedDemand>()
-        for ((key, trie) in byMethod) for (d in trie.all())
-            out += JvmObservedDemand(key, path(ap, d.entry), d.exit?.let { path(ap, it) })
+        // The snapshot has distinct C2 entries and correlated C5 pairs. Observe the
+        // complete explicit pair rows once; entry/exit indexes are query directories.
+        for ((key, index) in byMethod) {
+            val rows = field(index, "rows") as List<DemandPattern>
+            for (d in rows) out += JvmObservedDemand(key, path(ap, d.entry), d.exit?.let { path(ap, it) })
+        }
         return ownSet(out)
     }
 

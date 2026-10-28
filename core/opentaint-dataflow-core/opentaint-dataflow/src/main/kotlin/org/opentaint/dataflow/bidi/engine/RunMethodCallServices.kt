@@ -153,6 +153,20 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
                 core.ap.cancellation.checkpoint()
                 enterCallees(ctx, stage, fact)
             }
+            is CallStage.Predefined -> for (fact in facts) {
+                for (edge in stage.summary.edges) {
+                    core.ap.cancellation.checkpoint()
+                    core.ops.applyEdge(fact.facts, fact.premise, edge.edge, statementEdge = false,
+                        mode = core.mode, out = object : ApOut {
+                            override fun result(f: Facts) {
+                                if (core.config.run1 && f.base == STATIC) core.routeStaticResultToExit(fact.premise, f)
+                                else out += planFact(fact.premise, f, true)
+                            }
+                            override fun markRequest(mark: TaintMark): Nothing =
+                                error("A predefined identity cannot request a mark")
+                        }, ruleAssignment = false)
+                }
+            }
         }
         core.ap.cancellation.checkpoint()
         return out
@@ -313,7 +327,7 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
 
     private fun zeroAtCall(item: EdgeDelta, ctx: CallContext) {
         val core = active()
-        core.emitUnchanged(item)
+        if (ctx.plan.zeroCanReturn) core.emitUnchanged(item)
         if (!item.premise.isZero) { check(!core.forward); return }
         if (core.forward) {
             flow(ctx, ctx.plan.entry, listOf(planFact(item.premise, item.facts, null)))
@@ -329,6 +343,10 @@ class RunMethodCallServices(core: RunMethodAnalyzer) : MethodCallServices {
             core.runnerPort.subscribe(Subscription(callee, ref, item.facts.layer, item.facts, zeroOnly = true))
             core.ap.cancellation.checkpoint()
             core.runnerPort.send(RunEvent.ZeroIn(callee))
+        }
+        for (stage in ctx.plan.stages.filterIsInstance<CallStage.Predefined>()) {
+            val results = applyStage(ctx, stage, listOf(planFact(item.premise, item.facts, null)), Triggers.NONE)
+            if (results.isNotEmpty()) flow(ctx, stage.to, results)
         }
     }
 

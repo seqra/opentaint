@@ -424,6 +424,7 @@ class FiniteProgramFixtures(val cancellation: Cancellation = Cancellation(), thr
                     is Guard.SinkTriggered -> "SinkTriggered{${sink(g.sink)}}" } +
                 ", trigger=${s.trigger?.let(::sink)})"
             is CallStage.Actions -> "Actions(ordered=${s.steps.map(::action)})"
+            is CallStage.Predefined -> "Predefined(target=${s.target}, summary={${summary(s.summary)}})"
             is CallStage.Callees -> "Callees(keys=${s.callees.map(::key)})"
         }
         for (row in statementInputs) appendLine("statement ${key(row.key)}:${row.index} ${summary(row.summary)}")

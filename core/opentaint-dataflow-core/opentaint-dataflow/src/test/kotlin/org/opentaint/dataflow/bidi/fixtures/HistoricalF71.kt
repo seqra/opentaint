@@ -77,6 +77,7 @@ internal object HistoricalF71 {
                 is CallStage.Actions -> check(stage.steps.all { it is CleanStep.Clean }) {
                     "Ordered field/alias actions are covered by current-mode tests, outside this F71 domain"
                 }
+                is CallStage.Predefined -> error("Predefined models are outside F71")
                 is CallStage.Callees -> Unit
             }
         }

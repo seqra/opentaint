@@ -153,7 +153,10 @@ class FormsReference(
             val i = if (pendingDemotion && !run1AliasAdmission) input.copy(identityCandidate = false) else input
             when {
                 from != plan.entry -> start += i
-                i.c.fact.base == AccessPathBase.Zero -> { seen += plan.exit to finish(i); start += i }
+                i.c.fact.base == AccessPathBase.Zero -> {
+                    if (plan.zeroCanReturn) seen += plan.exit to finish(i)
+                    start += i
+                }
                 i.c.fact.base !in plan.touched -> seen += plan.exit to finish(i)
                 else -> start += i
             }
@@ -191,6 +194,11 @@ class FormsReference(
                     }
                     is CallStage.Actions -> out += cleanSteps(st.steps, items)
                     is CallStage.Callees -> for (i in items) out += hooks.callees(st, i)
+                    is CallStage.Predefined -> for (i in items) {
+                        applier.stage(st.summary, i.premise, i.c, at.copy(statementEdge = false, sources = false)) { pr, x, _ ->
+                            out += PlanItem(pr, x, true)
+                        }
+                    }
                 }
                 val next = if (st.to == plan.exit) out.map(::finish) else out
                 if (next.isNotEmpty()) work.addLast(st.to to next)

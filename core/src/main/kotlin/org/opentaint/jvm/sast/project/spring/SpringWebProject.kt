@@ -2,8 +2,11 @@ package org.opentaint.jvm.sast.project.spring
 
 import mu.KLogging
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
+import org.opentaint.dataflow.ap.ifds.ClassStaticAccessor
 import org.opentaint.dataflow.bidi.ap.Cleaner
 import org.opentaint.dataflow.bidi.ap.CleanReach
+import org.opentaint.dataflow.bidi.interp.CompleteMethodSummary
+import org.opentaint.dataflow.bidi.interp.SummarySchema
 import org.opentaint.dataflow.jvm.util.JIRInstListBuilder
 import org.opentaint.dataflow.jvm.util.typeName
 import org.opentaint.ir.api.jvm.JIRAnnotated
@@ -86,7 +89,7 @@ const val GeneratedSpringControllerDispatcherCleanupMethod = "__cleanup__"
 const val GeneratedSpringControllerDispatcherInitMethod = "__init__"
 const val GeneratedSpringControllerDispatcherSelectMethod = "__select__"
 
-fun ProjectClasses.createSpringProjectContext(): SpringWebProjectContext? {
+fun ProjectClasses.createSpringProjectContext(predefinedCleanup: Boolean = false): SpringWebProjectContext? {
     val springControllerMethods = allProjectClasses()
         .filter { it.matchedAnnotations(String::isSpringControllerClassAnnotation).isNotEmpty() }
         .flatMap { it.publicAndProtectedMethods() }
@@ -94,7 +97,7 @@ fun ProjectClasses.createSpringProjectContext(): SpringWebProjectContext? {
 
     if (springControllerMethods.isEmpty()) return null
 
-    val springCtx = SpringWebProjectContext(springControllerMethods, cp)
+    val springCtx = SpringWebProjectContext(springControllerMethods, cp, predefinedCleanup)
 
     val controllerEpGenerator = SpringControllerEntryPointGenerator(cp, this, springCtx)
 
@@ -147,7 +150,8 @@ fun SpringWebProjectContext.springWebProjectEntryPoints(): List<JIRMethod> {
 
 class SpringWebProjectContext(
     val controllers: Set<JIRMethod>,
-    cp: JIRClasspath
+    cp: JIRClasspath,
+    val predefinedCleanup: Boolean = false,
 ) {
     private val location = controllers.first().enclosingClass.declaration.location
 
@@ -308,7 +312,7 @@ private fun SpringWebProjectContext.ndMethodDispatch(
         blockStart to blockEnd
     }
 
-    val registry = componentRegistryField.values.sortedBy { it.name }
+    val registry = if (predefinedCleanup) emptyList() else componentRegistryField.values.sortedBy { it.name }
     val saved = registry.mapIndexed { i, field -> JIRLocalVar(1 + i, "%reg_${field.name}", field.type) }
     var firstSave: JIRInstLocation? = null
     for ((field, local) in registry.zip(saved)) instructions.addInstWithLocation(dispatcher) { loc ->
@@ -380,7 +384,14 @@ private fun SpringWebProjectContext.generateCleanup(): JIRMethod {
         description = methodDescription(emptyList(), returnType),
         parameters = emptyList(),
         instructions = instructions,
-        callCleaners = listOf(Cleaner(AccessPathBase.ClassStatic, null, CleanReach.AT_AND_BELOW, null)),
+        callCleaners = if (predefinedCleanup) emptyList() else
+            listOf(Cleaner(AccessPathBase.ClassStatic, null, CleanReach.AT_AND_BELOW, null)),
+        predefinedSummary = if (!predefinedCleanup) null else CompleteMethodSummary(
+            normal = listOf(SummarySchema.ZeroIdentity,
+                SummarySchema.PrefixFlowIdentity(AccessPathBase.ClassStatic,
+                    listOf(ClassStaticAccessor(GeneratedSpringRegistry)))),
+            touched = setOf(AccessPathBase.ClassStatic),
+        ),
     ).also {
         controllerDispatcherMethods += it
         it.bind(controllerDispatcher)

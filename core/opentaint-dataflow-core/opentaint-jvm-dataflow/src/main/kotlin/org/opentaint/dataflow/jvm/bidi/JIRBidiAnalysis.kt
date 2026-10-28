@@ -70,10 +70,15 @@ class JIRBidiAnalysis internal constructor(
 
     private val cancellation = Cancellation()
 
+    private sealed interface RootStart {
+        class Analyze(val entry: MethodEntryPoint) : RootStart
+        class Predefined(val model: org.opentaint.dataflow.bidi.interp.CompleteMethodSummary) : RootStart
+    }
+
     private class PrescanResult(
         val ruleIds: Set<String>,
         val lambdas: PrescanLambdas,
-        val roots: List<MethodEntryPoint>,
+        val roots: List<RootStart>,
         val checker: JIRFactTypeChecker,
         val externalMethodTracker: ExternalMethodTracker?,
         var calls: ResolvedPrescanGraph,
@@ -91,7 +96,11 @@ class JIRBidiAnalysis internal constructor(
         val source = manager as JIRAnalysisManager
         val resolver = JIRMethodEntrypointResolver(this.graph)
         val roots = startMethods.flatMap { start ->
-            resolver.resolveEntryPoints(start.method, start.ctx).map { MethodEntryPoint(start.ctx, it) }
+            val model = org.opentaint.dataflow.bidi.interp.predefinedSummary(start.method)
+            if (model != null) listOf(RootStart.Predefined(model))
+            else resolver.resolveEntryPoints(start.method, start.ctx).map {
+                RootStart.Analyze(MethodEntryPoint(start.ctx, it))
+            }
         }
         val ids = source.prescanRuleIds()
         val lambdas = source.prescanLambdas()
@@ -120,7 +129,16 @@ class JIRBidiAnalysis internal constructor(
     /** No PrescanResult or its duplicate lambda/rule-ID snapshots survive on the engine call stack. */
     private fun prepareRun(): PreparedRun {
         val copied = checkNotNull(prescan) { "gather() comes first" }.also { prescan = null }
-        return PreparedRun(copied.roots, prepareShared(copied))
+        val roots = copied.roots.mapNotNull { root -> when (root) {
+            is RootStart.Analyze -> root.entry
+            is RootStart.Predefined -> {
+                // Root input is ZERO. A partial identity model can only return control;
+                // it creates no data, observations, method entrypoint, or body actor.
+                root.model.zeroCanReturn
+                null
+            }
+        } }
+        return PreparedRun(roots, prepareShared(copied))
     }
 
     /** The preparation frame exits before the driver, so temporary metadata cannot pin run-1 profiles. */

@@ -9,6 +9,7 @@ import org.opentaint.dataflow.bidi.ap.GroupId
 import org.opentaint.dataflow.bidi.ap.Layer
 import org.opentaint.dataflow.bidi.ap.MarkTable
 import org.opentaint.dataflow.bidi.ap.MethodKey
+import org.opentaint.ir.api.common.CommonMethod
 import java.util.AbstractMap.SimpleImmutableEntry
 
 enum class CallPoint { BEFORE, BOUND, ADDED, RETURNED, REWRITTEN, AFTER }
@@ -221,6 +222,17 @@ sealed interface CallStage {
 
         override fun hashCode(): Int = (from.hashCode() * 31 + to.hashCode()) * 31 + callees.hashCode()
     }
+
+    /** The caller applies this complete relation without an actor or subscription. */
+    data class Predefined(
+        override val from: CallPoint,
+        override val to: CallPoint,
+        val target: CommonMethod,
+        val model: CompleteMethodSummary,
+        val summary: StatementSummary,
+    ) : CallStage {
+        override fun reversed(): Predefined = Predefined(to, from, target, model.reversed(), summary.reversed())
+    }
 }
 
 /** Cached call graph. passReads is observer metadata and does not affect propagation. */
@@ -231,6 +243,7 @@ class CallPlan(
     val entry: CallPoint,
     val exit: CallPoint,
     passReads: Set<AccessPathBase> = emptySet(),
+    val zeroCanReturn: Boolean = true,
 ) {
     val touched: Set<AccessPathBase> = ownedSet(touched)
     val stages: List<CallStage> = ownedList(stages)
@@ -268,6 +281,14 @@ class CallPlan(
                 }
             }
             is CallStage.Callees -> counts.include(stage.callees)
+            is CallStage.Predefined -> {
+                counts.include(stage.summary)
+                counts.include(stage.model.normal)
+                counts.include(stage.model.exceptional)
+                counts.include(stage.model.touched)
+                for (schema in stage.model.normal) if (schema is SummarySchema.PrefixFlowIdentity)
+                    counts.include(schema.prefix)
+            }
         }
         for (sink in sinks) counts.include(sink)
     }
@@ -282,7 +303,8 @@ class CallPlan(
             reversed += CallStage.Edges(CallPoint.AFTER, CallPoint.BEFORE, StageKind.PASS_OVER,
                 StatementSummary.identities(aliasBases))
         }
-        return CallPlan(touched + aliasBases, reversed, sinks, entry = exit, exit = entry, passReads = passReads)
+        return CallPlan(touched + aliasBases, reversed, sinks, entry = exit, exit = entry, passReads = passReads,
+            zeroCanReturn = zeroCanReturn)
     }
 }
 

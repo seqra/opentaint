@@ -81,9 +81,10 @@ internal class GroupRuleFixtureViews(private val marks: MarkTable, private val c
             is CallStage.Edges -> stage.copy(summary = summary(stage.summary),
                 guard = (stage.guard as? Guard.SinkTriggered)?.let { Guard.SinkTriggered(sink(it.sink)) } ?: stage.guard,
                 trigger = stage.trigger?.let(::sink))
+            is CallStage.Predefined -> stage
             is CallStage.Actions -> stage
             is CallStage.Callees -> stage
-        } }, full.sinks.map(::sink), full.entry, full.exit, full.passReads)
+        } }, full.sinks.map(::sink), full.entry, full.exit, full.passReads, full.zeroCanReturn)
     }
 
     fun forms(full: MethodForms): MethodForms = object : MethodForms by full {

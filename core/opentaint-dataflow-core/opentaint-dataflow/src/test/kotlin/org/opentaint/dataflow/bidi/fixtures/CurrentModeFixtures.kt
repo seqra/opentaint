@@ -1,5 +1,7 @@
 package org.opentaint.dataflow.bidi.fixtures
 
+import org.opentaint.dataflow.bidi.near
+
 import org.opentaint.dataflow.bidi.ap.ReferenceRequestKind as RequestKind
 import org.opentaint.dataflow.ap.ifds.AccessPathBase
 import org.opentaint.dataflow.bidi.ap.*

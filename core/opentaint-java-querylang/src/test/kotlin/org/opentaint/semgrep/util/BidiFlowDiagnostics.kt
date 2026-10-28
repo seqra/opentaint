@@ -98,6 +98,7 @@ class BidiFlowDiagnostics {
         val plan = shared.contexts.forms(key).call(config.direction, node, call)
         val stages = plan.stages.map { stage -> when (stage) {
             is CallStage.Edges -> "${stage.from}->${stage.to} ${stage.kind} ${summary(shared.ap, stage.summary)}"
+            is CallStage.Predefined -> "${stage.from}->${stage.to} PREDEFINED ${stage.target} ${summary(shared.ap, stage.summary)}"
             is CallStage.Callees -> "${stage.from}->${stage.to} CALLEES ${stage.callees}"
             is CallStage.Actions -> "${stage.from}->${stage.to} ACTIONS ${stage.steps.map { action(shared.ap, it) }}"
         } }

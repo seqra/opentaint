@@ -115,6 +115,7 @@ class CallPlanReversalTest {
                     assertTrue(edge.summary.typeFilters.isEmpty() && edge.summary.resultFilters.isEmpty())
                     assertTrue(edge.summary.conjunctions.isEmpty())
                 }
+                is CallStage.Predefined -> assertIs<CallStage.Predefined>(reversed)
                 is CallStage.Actions -> assertIs<CallStage.Actions>(reversed)
                 is CallStage.Callees -> assertEquals(native.callees, assertIs<CallStage.Callees>(reversed).callees)
             }

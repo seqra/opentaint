@@ -33,6 +33,9 @@ class PathTrieTest {
                 counts(trie.lookupExtensions(base, path.toIntArray())))
             assertEquals(counts(relevant.filter { prefixes(it.path, path) || prefixes(path, it.path) }.map { it.value }),
                 counts(trie.around(base, path.toIntArray())))
+            val visited = ArrayList<String>()
+            assertTrue(trie.visitAroundWhile(base, path.toIntArray()) { visited += it; true })
+            assertEquals(counts(trie.around(base, path.toIntArray())), counts(visited))
         }
         assertEquals(counts(entries.map { it.value }), counts(trie.all().toList()))
     }
@@ -81,7 +84,23 @@ class PathTrieTest {
         assertFails { trie.lookupPrefixes(x, intArrayOf(1)) }
         assertFails { trie.lookupExtensions(x, intArrayOf(1)) }
         assertFails { trie.around(x, intArrayOf(1)) }
+        assertFails { trie.visitAroundWhile(x, intArrayOf(1)) { true } }
         assertFails { trie.all().toList() }
+    }
+
+    @Test fun `witness visit stops before another value or descendant is observed`() {
+        val trie = PathTrie<String>()
+        trie.add(x, intArrayOf(), "root")
+        trie.add(x, intArrayOf(1), "parent")
+        trie.add(x, intArrayOf(1, 2), "target")
+        trie.add(x, intArrayOf(1, 2, 3), "descendant")
+        val visited = ArrayList<String>()
+        assertFalse(trie.visitAroundWhile(x, intArrayOf(1, 2)) {
+            visited += it
+            it != "parent"
+        })
+        assertEquals(listOf("root", "parent"), visited)
+        assertTrue(trie.visitAroundWhile(y, intArrayOf(1, 2)) { error("An absent base has no values") })
     }
 
     @Test fun `cancellation during iteration stops buffered values before the next emission`() {

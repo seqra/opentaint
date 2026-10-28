@@ -25,6 +25,10 @@ import org.opentaint.dataflow.bidi.interp.CallPoint.*
 import org.opentaint.dataflow.bidi.interp.CallStage.Actions
 import org.opentaint.dataflow.bidi.interp.CallStage.Callees
 import org.opentaint.dataflow.bidi.interp.CallStage.Edges
+import org.opentaint.dataflow.bidi.interp.CallStage.Predefined
+import org.opentaint.dataflow.bidi.interp.CompleteMethodSummary
+import org.opentaint.dataflow.bidi.interp.predefinedSummary
+import org.opentaint.dataflow.bidi.interp.compile
 import org.opentaint.dataflow.bidi.interp.CleanStep
 import org.opentaint.dataflow.bidi.interp.Guard
 import org.opentaint.dataflow.bidi.interp.MicroEdgeBuilder
@@ -108,7 +112,8 @@ internal class JIRCallPlanBuilder(
 
     fun build(): CallPlan {
         val sinks = sinks()
-        val (callees, unresolved) = resolve()
+        val (callees, models, unresolved) = resolve()
+        val zeroCanReturn = unresolved || callees.isNotEmpty() || models.any { it.second.zeroCanReturn }
         val back = bindBack()
         val stages = buildList {
             add(Edges(BEFORE, BOUND, BIND_IN, bindIn()))
@@ -116,14 +121,15 @@ internal class JIRCallPlanBuilder(
                 add(Edges(BOUND, REWRITTEN, END_FACTS, MicroEdgeBuilder().apply {
                     sink.endFacts.forEach { edge(it.edge) }
                 }.buildStage(), Guard.SinkTriggered(sink)))
-            add(Edges(BOUND, REWRITTEN, SOURCES, sources(sinks)))
+            add(Edges(BOUND, REWRITTEN, SOURCES, sources(sinks, zeroCanReturn)))
             add(Actions(BOUND, ADDED, cleanSteps()))
             if (callees.isNotEmpty()) add(Callees(ADDED, RETURNED, callees))
+            for ((target, model) in models) add(Predefined(ADDED, RETURNED, target, model, model.compile(manager)))
             if (unresolved) {
                 add(Edges(ADDED, RETURNED, UNRESOLVED, StatementSummary.identities(boundPositions())))
                 add(Edges(ADDED, RETURNED, UNRESOLVED, passRules()))
             }
-            if (callee.isConstructor)
+            if (callee.isConstructor && models.none { it.first === callee })
                 add(Edges(ADDED, REWRITTEN, CONSTRUCTOR, StatementSummary.identities(boundPositions())))
             val rewriterSteps = rewriterSteps()
             add(if (forms.isRun1GroupView) Actions.run1GroupReturnRewriter(rewriterSteps, manager.marks)
@@ -142,7 +148,8 @@ internal class JIRCallPlanBuilder(
                     }
                 }))
         }
-        return CallPlan(touched(), staged, sinks, entry = BEFORE, exit = AFTER, passReads = passReads)
+        return CallPlan(touched(), staged, sinks, entry = BEFORE, exit = AFTER, passReads = passReads,
+            zeroCanReturn = zeroCanReturn)
     }
 
     private fun sinks(): List<org.opentaint.dataflow.bidi.interp.SinkRule> {
@@ -201,8 +208,9 @@ internal class JIRCallPlanBuilder(
         }
     }.buildStage()
 
-    private fun sources(sinks: List<org.opentaint.dataflow.bidi.interp.SinkRule> = emptyList()): StatementSummary = MicroEdgeBuilder().apply {
-        keepZero()
+    private fun sources(sinks: List<org.opentaint.dataflow.bidi.interp.SinkRule> = emptyList(),
+                        keepControl: Boolean = true): StatementSummary = MicroEdgeBuilder().apply {
+        if (keepControl) keepZero()
         forms.sinkInputs(sinks).forEach(::staticOperation)
         for ((ordinal, rule) in forms.rules.sourceRulesForMethod(callee, s, fact = null).withIndex()) {
             if (!forms.valid(rule)) continue
@@ -256,18 +264,36 @@ internal class JIRCallPlanBuilder(
     }
 
     /** Expand frozen lambda targets before the common empty-target check. */
-    private fun resolve(): Pair<List<MethodKey>, Boolean> {
+    private data class Resolution(val callees: List<MethodKey>,
+                                  val models: List<Pair<JIRMethod, CompleteMethodSummary>>, val unresolved: Boolean)
+
+    private fun resolve(): Resolution {
+        // A direct registered model is valid even when the ordinary resolver
+        // would classify the generated method as external or unresolved.
+        if (call is org.opentaint.ir.api.jvm.cfg.JIRStaticCallExpr) predefinedSummary(callee)?.let { model ->
+            requireCatalogTarget(caller.method, callee)
+            return Resolution(emptyList(), listOf(callee to model), false)
+        }
         val context = object : JIRCallResolutionContext {
             override val methodEntryPoint = caller
             override val aliasAnalysis = this@JIRCallPlanBuilder.aliasAnalysis
         }
         val results = resolveCall(call, s, context)
-        if (results.isEmpty()) return emptyList<MethodKey>() to true
+        if (results.isEmpty()) return Resolution(emptyList(), emptyList(), true)
         val callees = LinkedHashSet<MethodKey>()
+        val models = ArrayList<Pair<JIRMethod, CompleteMethodSummary>>()
         var unresolved = false
         var hasNonemptyTarget = false
         fun add(method: MethodWithContext) {
-            if ((method.method as JIRMethod).instList.size == 0) return
+            val target = method.method as JIRMethod
+            val model = predefinedSummary(target)
+            if (model != null) {
+                requireCatalogTarget(caller.method, target)
+                hasNonemptyTarget = true
+                if (models.none { it.first === target }) models += target to model
+                return
+            }
+            if (target.instList.size == 0) return
             requireCatalogTarget(caller.method, method.method)
             hasNonemptyTarget = true
             callees += keys(method)
@@ -282,7 +308,7 @@ internal class JIRCallPlanBuilder(
             }
         }
         if (!hasNonemptyTarget) unresolved = true
-        return callees.toList() to unresolved
+        return Resolution(callees.toList(), models, unresolved)
     }
 
     private fun keys(method: MethodWithContext): List<MethodKey> =

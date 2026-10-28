@@ -752,6 +752,11 @@ class JIRCallTransferTest : BasicTestUtils() {
             for (stage in plan.stagesFrom[point].orEmpty()) {
                 val result = arrayListOf<TreeItem>()
                 when (stage) {
+                    is CallStage.Predefined -> for (i in items) {
+                        applier.stage(stage.summary, i.premise, i.facts, place.copy(statementEdge = false, sources = false)) { pr, f, _ ->
+                            result += TreeItem(pr, f, true)
+                        }
+                    }
                     is CallStage.Actions -> result += actions(stage.steps, items)
                     is CallStage.Callees -> for (i in items) for (r in raw(i))
                         result += stage.callees.flatMap { methodResult(it, r) }.map(::tree)

@@ -92,6 +92,7 @@ class SpringRuleProvider(
         allRelevant: Boolean
     ): Iterable<TaintCleaner> {
         if (method is SpringGeneratedMethod) {
+            if (method.predefinedSummary != null) return emptyList()
             if (method.name != GeneratedSpringControllerDispatcherCleanupMethod) {
                 return emptyList()
             }

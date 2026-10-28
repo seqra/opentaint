@@ -79,12 +79,20 @@ class JIRMethodEntries(
     private val byKey = ConcurrentHashMap<MethodKey, JIRMethodForms>()
 
     operator fun get(key: MethodKey): JIRMethodEntry = get(key.method as JIRMethod)
-    operator fun get(method: JIRMethod): JIRMethodEntry =
-        byMethod.computeIfAbsent(method) { JIRMethodEntry(it, this) }
+    operator fun get(method: JIRMethod): JIRMethodEntry {
+        check(org.opentaint.dataflow.bidi.interp.predefinedSummary(method) == null) {
+            "A complete predefined method has no body analyzer: $method"
+        }
+        return byMethod.computeIfAbsent(method) { JIRMethodEntry(it, this) }
+    }
 
     /** Both directions keep the same key owner; the method runner owns its form slots. */
-    fun forms(interp: JIRInterpreter, key: MethodKey): JIRMethodForms =
-        byKey.computeIfAbsent(key) { JIRMethodForms(interp, get(it), it) }
+    fun forms(interp: JIRInterpreter, key: MethodKey): JIRMethodForms {
+        check(org.opentaint.dataflow.bidi.interp.predefinedSummary(key.method) == null) {
+            "A complete predefined method has no body forms: $key"
+        }
+        return byKey.computeIfAbsent(key) { JIRMethodForms(interp, get(it), it) }
+    }
 
     /** Fastutil's wrapper protects its set but leaves hash-map entries mutable. */
     private class DetachedEntriesMap<V>(private val owned: Int2ObjectMap<V>) : AbstractInt2ObjectMap<V>() {
