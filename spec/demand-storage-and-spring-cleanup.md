@@ -320,6 +320,19 @@ The same API is used on later transitions, with ordinary inferred demand.
 Do not retain the old completion in all later snapshots without a new design.
 An incomplete run cannot replace the accepted snapshot or report.
 
+| Incoming run | Demand lookup |
+|---|---|
+| run-1 | No incoming demand snapshot |
+| run-2 | Method-local lookup, then lazy static composition/visibility lookup if needed |
+| run-3 and every later run | Method-local demand lookup only, for both static and nonstatic facts/summaries |
+
+The special static indexes are built at run-1-to-run-2. Their lazy queries
+run during run-2. At run-2-to-run-3 and every later transition, build a fresh
+local-only snapshot. Do not attach W/B/R completion or shared static carry.
+For both `initials` and `intersect`, return after direct local AP processing:
+no local composition BFS, inherited lookup, or call-graph search. Later
+inferred static demand rows are ordinary method-local rows.
+
 ## 5. Storage organization
 
 ```kotlin
@@ -543,6 +556,9 @@ whole query, then local composition by BFS, then inherited rows visible
 through the call graph. Stop when the exact result-coverage test succeeds.
 The last stage must also follow local links reached through inherited rows.
 Local exhaustion alone cannot prove a final negative result.
+
+These extra stages apply only to incoming run-2. For run-3 and later, both
+operations complete after their direct method-local lookup.
 
 For initial admission, a nonstatic fact needs additional lookup only if a
 local FLOW reader target can match it. A static fact needs additional lookup

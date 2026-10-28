@@ -74,6 +74,13 @@ Native records remain separate. Run-1 still has no incoming demand snapshot.
 In the current protocol, only incoming run-2 has the skipped-static component;
 later restricted runs use their new ordinary demand snapshots.
 
+All W/B/R composition and call-graph lookup in this document is specific to
+the snapshot built at run-1-to-run-2 and queried during run-2. From run-3
+onward, `Local(M)` contains only the new method-local inferred demand and
+the ordinary implicit ZERO family. Both operations return after direct local
+AP processing. They perform no static composition BFS or transitive lookup,
+even for static facts or summaries, and retain no old completion component.
+
 ## 2. Lookup strategy for each operation
 
 Both operations always query `Local(M)`. A transitive lookup adds candidates;
@@ -95,6 +102,7 @@ Use this order for the whole provided fact or summary:
 fun lookup(query): Results {
     val results = query.emptyResults()
     query.checkDirectLocal(results)
+    if (!query.hasStaticCompletion) return results // run-3 and later: local only
     if (query.fullyCovered(results)) return results
 
     val search = query.startLocalSearch()

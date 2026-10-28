@@ -128,6 +128,12 @@ Attach this skipped-static relation only to incoming run-2. Later snapshots
 use their new inferred demand. Same-actual-static-carry is a demand family,
 not an executable identity which can bypass a complete cleanup model.
 
+The special logic is exclusive to run-1-to-run-2: build its indexes at that
+transition and query them lazily during run-2. For run-3 and all later runs,
+both API operations use direct method-local demand only, including static
+demand rows. Do not run either local composition BFS or call-graph lookup.
+Do not retain W/B/R indexes or shared static carry in these later snapshots.
+
 ### 3.2 Public API and builder
 
 ```kotlin
@@ -340,6 +346,7 @@ backward bypass. A restricted result always retains the whole original premise.
 fun initials(M: MethodKey, A: Facts): Set<InitialAp> {
     val q = InitialQuery(M, A, localView(M), skipped)
     q.emitAllDirectLocal() // all leaves, ordinary + direct W/R/own B + implicit
+    if (skipped == null) return q.results // run-3 onward: direct local only
     if (q.fullyCovered()) return q.results
 
     q.searchLocalCompositions()
@@ -558,6 +565,7 @@ fun intersect(M: MethodKey, raw: SummaryCandidate): List<SummaryCandidate> {
         )) offer(j, local.pairs[id], raw.conclusion, out)
         offerImplicitCarry(j, raw.conclusion, out)
     }
+    if (skipped == null) return out.withOriginal(raw.premise) // run-3 onward
     if (summaryCovered(raw.conclusion, out)) return out.withOriginal(raw.premise)
 
     walkPairs(M, raw, LOCAL, out)
@@ -1129,6 +1137,8 @@ disconnected endpoints; per-label visibility; outside-graph owner
 cycles, late roots, multiple targets, both search directions
 C5 unmatched intermediate source must continue
 original ND J retained in later forward runs
+run-3 and later: static/nonstatic C2/C5 use local demand only; zero BFS/graph calls
+run-2-to-run-3 snapshot owns no previous W/B/R completion or static-carry family
 protection-only upgrade in both arrival orders
 ANY/MUST C5 exhaustive; STAR/EXACT completion includes masks/layers/E/mx
 ```
