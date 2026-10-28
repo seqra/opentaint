@@ -354,6 +354,13 @@ Keep local attachments under complete `MethodKey`; do not merge their contexts.
 Indexes locate candidates. AP intersection is the authority. Base/path
 compatibility alone does not decide mark, E, whole-entry containment or layer.
 
+The method-local query view includes ordinary inferred demand and direct
+projections of its frozen primitive W/R and own B seeds. Use references to
+shared rows; do not copy B to transitive callers. These primitive projections
+already belong to the specified demand relation. Indexing them locally adds
+no semantic demand. This coverage invariant is required by the precise lookup
+strategies in [demand-storage-lookup.md](demand-storage-lookup.md).
+
 ## 6. Operation 1: actual fact to initial facts
 
 ```kotlin
@@ -367,9 +374,10 @@ fun onArrived(arrived: Facts) {
 
 fun initials(method: MethodKey, bounded: Facts): Set<InitialAp> {
     val out = LinkedHashSet<InitialAp>()
+    val local = localDemand(method) // ordinary plus direct primitive seed views
     val entries = LinkedHashSet<Pattern>()
     for (leaf in ap.leaves(bounded)) {
-        entries += explicit.entryCandidates(method, leaf)
+        entries += local.entryCandidates(leaf)
         entries += existingImplicitZeroEntry(leaf)
         entries += existingSameActualStaticCarryEntry(leaf)
         if (skipped?.mayAffectEntry(method, leaf) == true)
@@ -429,18 +437,20 @@ marks. No global mark inventory or rule binding is needed for this traversal.
 
 The entry fixed-point model in
 [EntryProjection.lean](lean/proposals/restricted-demand-next/EntryProjection.lean)
-proves the nonzero symbolic projection. The target-directed scheduler above
-needs its own adapter/equivalence proof, including ZERO and AP geometry, before
-it replaces the current lookup. The model alone is not that proof.
+proves the nonzero symbolic projection. `DemandQueries.lean` also proves the
+symbolic target-directed traversal. Production scheduler, ZERO and AP-geometry
+adapters still need their own proofs. The exact local/transitive choice and
+worklist keys are specified in [demand-storage-lookup.md](demand-storage-lookup.md).
 
 ## 7. Operation 2: summary to restricted summaries
 
 ```kotlin
 fun intersect(method: MethodKey, s: SummaryCandidate): List<SummaryCandidate> {
     val kept = ProtectionPreservingResults() // exact payload dedup; union protection
+    val local = localDemand(method)
     for (member in s.premise.members()) {
         val query = PairQuery(member, s.conclusion)
-        for (pair in explicit.pairCandidates(method, query))
+        for (pair in local.pairCandidates(query))
             kept.addAll(ap.restrict(member, s.conclusion, pair))
         for (pair in existingSameActualStaticCarryPairs(query))
             kept.addAll(ap.restrict(member, s.conclusion, pair))
@@ -501,56 +511,35 @@ fixed speedup is claimed for C5.
 
 ## 8. Select normal or transitive lookup
 
-The cheap test is conservative. It can return true unnecessarily. A false
-answer must prove that the virtual component cannot add a useful candidate.
-It skips only that component; ordinary demand, implicit ZERO and static carry
-still apply.
+The complete decision tables and both traversal algorithms are specified in
+[demand-storage-lookup.md](demand-storage-lookup.md). They require the local
+primitive coverage invariant from section 5. Local lookup always runs.
 
-Build endpoint envelopes from frozen primitive seeds:
+For initial admission, a nonstatic fact needs additional lookup only if a
+local FLOW reader target can match it. A static fact needs additional lookup
+only if a shared B target can match it. Shared B includes own B: an own FLOW
+bridge can gain a concrete output color from an earlier writer.
+Apply the actual-FLOW shortcut first: a nonstatic FLOW input needs only local
+entries; a static FLOW input needs at most direct visible FLOW B entries.
+Neither case needs the transitive color traversal.
 
-```text
-Target envelope:
-    local W.to and local reader.to, under complete MethodKey
-    shared B.to, with a conservative owner test
+For summary restriction, test each original member. A new paired path must
+end at R or B and start at W or B. Both endpoint tests must succeed before
+transitive traversal. Use all R labels here, not only FLOW. A mapped reader
+can need an earlier writer for C5 even though its direct C2 entry is complete.
 
-Source envelope:
-    local W.from and local reader.from, under complete MethodKey
-    shared B.from, with a conservative owner test
-```
+The cheap tests are location-only and conservative. Negative tests skip only
+the transitive component; ordinary rows, direct seed views, implicit ZERO and
+static carry still apply. Positive tests do not authorize an initial or a
+summary. Complete visibility, mark, tail, E and AP tests remain mandatory.
 
-```kotlin
-fun mayAffectEntry(method, actual): Boolean =
-    targetEnvelope.hasComparableLocation(method, actual)
+If primitive local coverage is not established, retain the broader safe
+fallback: test all primitive target endpoints, and also source endpoints for
+C5. Do not apply the tighter negative decisions to a partial local view.
 
-fun mayAffectPair(method, q): Boolean =
-    targetEnvelope.mayContainWholeEntry(method, q.initial) &&
-    sourceEnvelope.mayOverlapConclusion(method, q.conclusion)
-```
-
-Ignore marks, tails and E in these boolean envelopes when that is needed for
-a conservative candidate test. A broad/root location must include its possible
-descendants. Exact class markers and named fields still have their distinct
-locations. The complete query applies visibility, tails, E and mark relations.
-Ignoring B ownership in the cheap test is safe but can cause extra lookups;
-ignoring ownership in the full query is not safe.
-
-Why this test works: a composed relation retains the rightmost seed's target
-geometry and the leftmost seed's source geometry. Composition changes its
-mark relation. It does not invent a new outer location. Thus, a useful pair
-has witnesses in both endpoint envelopes.
-
-```text
-p/T -> C.f/U -> ret/*
-```
-
-The primitive reader target is abstract. The composed `ret/U` entry is
-concrete. Testing only primitive target marks would miss it. Location-only
-envelopes avoid this error. A positive result is never a demand certificate.
-
-Shared visibility can use immutable per-method reachability or a proved SCC
-directory. It must keep current reachability, outside-graph owners and complete
-local contexts. Do not rebuild a whole graph DFS for every row if one query
-can share it. Do not materialize every method/seed pair at handoff.
+Share query reachability scratch. Do not materialize every method/seed pair
+or every static path at transition. Do not stop because local lookup already
+returned a result; a transitive path can add a different color or paired exit.
 
 ### 8.1 One query through a skipped path
 
@@ -606,7 +595,9 @@ D = ordinary inferred pairs
     union the existing run-1 skipped-static closure, when attached
 
 Initials(M, A) = union AP.emit(Dc, bounded(A)) for each applicable Dc in D
-Restricted(M, J, G) = union AP.restrict(J, G, (Dc,Dp)) for each pair in D
+Restricted(M, J, G) = union AP.restrict(j, G, (Dc,Dp))
+                     for each member j of J and each complete pair in D
+                     with the unchanged whole J reattached
 ```
 
 The production implementation need not enumerate D. The proof must not
@@ -649,8 +640,9 @@ to make a proof pass.
 |---|---:|---|---|
 | [SpringCleanup.lean](lean/proposals/demand-storage-next/SpringCleanup.lean) | 11 | Atomic save/clear/restore value transfer and its backward converse; control, layers and instruction count | [Checks](lean/proposals/demand-storage-next/spring-cleanup-checks.json) |
 | [DemandQueries.lean](lean/proposals/demand-storage-next/DemandQueries.lean) | 31 | Endpoint-guard witnesses; explicit/lazy query result equivalence; targeted FLOW-prefix traversal; ordinary fallback; ZERO dispatch; pointwise protection union | [Checks](lean/proposals/demand-storage-next/demand-queries-checks.json) |
+| [LookupStrategies.lean](lean/proposals/demand-storage-next/LookupStrategies.lean) | 25 | Tighter local/transitive guards under primitive coverage; mapped-terminal locality; FLOW-actual shortcuts and edge cases | [Checks](lean/proposals/demand-storage-next/lookup-strategies-checks.json) |
 
-All 42 new audits pass without axioms. They import or use the earlier
+All 67 audits in these three models pass without axioms. They import or use the earlier
 constructive entry-projection kernel where stated. They do not execute the
 analyzer or establish a measured saving.
 

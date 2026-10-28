@@ -1,0 +1,135 @@
+{
+  "status": "PROPOSAL_LOCAL_LOOKUP_STRATEGIES_AUDIT_PASS",
+  "runtime_changed": false,
+  "source": "spec/lean/proposals/demand-storage-next/LookupStrategies.lean",
+  "source_sha256": "a775d4048f75e92c7e66172eb78667ab0d6737096ce1e1aeaa47506171975e3a",
+  "dependencies": [
+    {
+      "source": "spec/lean/proposals/restricted-demand-next/EntryProjection.lean",
+      "source_sha256": "94205c551ad58a8d77924854b5901002c9ec7937cc573a4b90fca8200a2edc53"
+    },
+    {
+      "source": "spec/lean/proposals/demand-storage-next/DemandQueries.lean",
+      "source_sha256": "2dcdadab390c33273c23919af71baa7325550a62e09877801e030bca048aff27"
+    }
+  ],
+  "lean_version": "Lean (version 4.33.1, x86_64-unknown-linux-gnu, commit 819816b2e0a3bf405af45ae5c7af2491d8f5bee6, Release)",
+  "configured_memory_limit_mib": 1024,
+  "parallel_workers": 1,
+  "steps": [
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "1024",
+        "-o",
+        ".lake/build/lib/lean/proposals/restricted-demand-next/EntryProjection.olean",
+        "proposals/restricted-demand-next/EntryProjection.lean"
+      ],
+      "working_directory": "spec/lean",
+      "environment": {
+        "LEAN_PATH": ".lake/build/lib/lean"
+      },
+      "exit_code": 0,
+      "seconds": 0.748389258980751,
+      "output": "'RestrictedDemandNext.EntryProjection.transportGeneral' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.transportFlow' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.fullToEntry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.entryToFull' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.targetToEntry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.target_projection_equivalent' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.projectAdmission' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.expandAdmission' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.admission_equivalent' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.visibleTarget' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.invisible_seeds_give_no_entry' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.originGeneral' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.colorOrigin' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.full_group_entry_contract' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.same_group_distinct_full_not_compatible' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.full_group_middle_compatible' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.fullColoredReturn' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.projectedColoredReturn' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.bare_primitive_targets_miss_colored_return' does not depend on any axioms\n'RestrictedDemandNext.EntryProjection.flow_seed_has_no_concrete_enumeration' does not depend on any axioms\n"
+    },
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "1024",
+        "-o",
+        ".lake/build/lib/lean/proposals/demand-storage-next/DemandQueries.olean",
+        "proposals/demand-storage-next/DemandQueries.lean"
+      ],
+      "working_directory": "spec/lean",
+      "environment": {
+        "LEAN_PATH": ".lake/build/lib/lean"
+      },
+      "exit_code": 0,
+      "seconds": 0.7452956587076187,
+      "output": "'DemandStorageNext.DemandQueries.transferOutput' does not depend on any axioms\n'DemandStorageNext.DemandQueries.transferInput' does not depend on any axioms\n'DemandStorageNext.DemandQueries.lastSeed' does not depend on any axioms\n'DemandStorageNext.DemandQueries.firstSeed' does not depend on any axioms\n'DemandStorageNext.DemandQueries.any_member' does not depend on any axioms\n'DemandStorageNext.DemandQueries.visible_of_member' does not depend on any axioms\n'DemandStorageNext.DemandQueries.output_potential_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.input_potential_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.entry_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.source_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.entryToBack' does not depend on any axioms\n'DemandStorageNext.DemandQueries.backToEntry' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targeted_projection_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targetGuard' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initialToLazy' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initialToExplicit' does not depend on any axioms\n'DemandStorageNext.DemandQueries.initial_query_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.falseGuardInitialIsOrdinary' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summary_guard_sound' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summaryToLazy' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summaryToExplicit' does not depend on any axioms\n'DemandStorageNext.DemandQueries.summary_query_equivalent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.falseGuardSummaryIsOrdinary' does not depend on any axioms\n'DemandStorageNext.DemandQueries.forward_zero_does_not_bypass' does not depend on any axioms\n'DemandStorageNext.DemandQueries.only_genuine_backward_zero_bypasses' does not depend on any axioms\n'DemandStorageNext.DemandQueries.colored_suffix_needs_FLOW_TOP_guard' does not depend on any axioms\n'DemandStorageNext.DemandQueries.targetedColoredReturn' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_commutative' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_associative' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_idempotent' does not depend on any axioms\n'DemandStorageNext.DemandQueries.mask_merge_keeps_late_protection' does not depend on any axioms\n"
+    },
+    {
+      "command": [
+        "lean",
+        "-j",
+        "1",
+        "-M",
+        "1024",
+        "proposals/demand-storage-next/LookupStrategies.lean"
+      ],
+      "working_directory": "spec/lean",
+      "environment": {
+        "LEAN_PATH": ".lake/build/lib/lean"
+      },
+      "exit_code": 0,
+      "seconds": 0.5380750596523285,
+      "output": "'DemandStorageNext.LookupStrategies.nonstaticTargetLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.nonstaticSourceLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.lastFromStatic' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.firstToStatic' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.pairedTargetHit' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.pairedSourceHit' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.classifyPair' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.negativePairGateIsLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.flowReaderEntryHit' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.inheritedEntryHit' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.classifyEntry' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.fullEntryChoice' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.negativeEntryGateIsLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.mappedTerminalOutput' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.mappedTerminalLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.flowActualDirect' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.flowActualNonstaticLocal' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.flowReturnPath' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.writerReaderWithoutB' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.coloredNonstaticReturn' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.noPrimitiveColoredFlowReturn' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.mappedReturnPath' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.mappedReaderC2LocalButC5Transitive' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.unmatchedIntermediateMustExpand' does not depend on any axioms\n'DemandStorageNext.LookupStrategies.carryWithoutGraphNeedsNoSearch' does not depend on any axioms\n"
+    }
+  ],
+  "audited_declarations": 25,
+  "expected_audit_declarations": 25,
+  "source_named_theorem_count": 14,
+  "source_named_definition_count": 30,
+  "declarations": [
+    "DemandStorageNext.LookupStrategies.nonstaticTargetLocal",
+    "DemandStorageNext.LookupStrategies.nonstaticSourceLocal",
+    "DemandStorageNext.LookupStrategies.lastFromStatic",
+    "DemandStorageNext.LookupStrategies.firstToStatic",
+    "DemandStorageNext.LookupStrategies.pairedTargetHit",
+    "DemandStorageNext.LookupStrategies.pairedSourceHit",
+    "DemandStorageNext.LookupStrategies.classifyPair",
+    "DemandStorageNext.LookupStrategies.negativePairGateIsLocal",
+    "DemandStorageNext.LookupStrategies.flowReaderEntryHit",
+    "DemandStorageNext.LookupStrategies.inheritedEntryHit",
+    "DemandStorageNext.LookupStrategies.classifyEntry",
+    "DemandStorageNext.LookupStrategies.fullEntryChoice",
+    "DemandStorageNext.LookupStrategies.negativeEntryGateIsLocal",
+    "DemandStorageNext.LookupStrategies.mappedTerminalOutput",
+    "DemandStorageNext.LookupStrategies.mappedTerminalLocal",
+    "DemandStorageNext.LookupStrategies.flowActualDirect",
+    "DemandStorageNext.LookupStrategies.flowActualNonstaticLocal",
+    "DemandStorageNext.LookupStrategies.flowReturnPath",
+    "DemandStorageNext.LookupStrategies.writerReaderWithoutB",
+    "DemandStorageNext.LookupStrategies.coloredNonstaticReturn",
+    "DemandStorageNext.LookupStrategies.noPrimitiveColoredFlowReturn",
+    "DemandStorageNext.LookupStrategies.mappedReturnPath",
+    "DemandStorageNext.LookupStrategies.mappedReaderC2LocalButC5Transitive",
+    "DemandStorageNext.LookupStrategies.unmatchedIntermediateMustExpand",
+    "DemandStorageNext.LookupStrategies.carryWithoutGraphNeedsNoSearch"
+  ],
+  "observed_axioms": [],
+  "forbidden_source_matches": [],
+  "proved_scope": [
+    "Explicit local primitive coverage: omitted visible direct rows must be B; local W/R/ownB are production adapter obligations.",
+    "A composed paired relation has a primitive static-source last seed and static-target first seed, with their exact endpoints and symbolic mark bounds.",
+    "C5 either has an exact primitive local pair or both selected target/source endpoint gates are positive; a negative gate constructs the local pair witness.",
+    "C2 either has an exact primitive local entry or the selected FLOW-reader/shared-B target gate is positive; a negative gate constructs the local entry witness.",
+    "A mapped local terminal fixes the complete modeled target and output selector for C2, independent of the preceding relation.",
+    "Under the explicit colored-rejects-actual-FLOW emitter contract, every emitted static-guidance entry is directly abstract local or visible shared FLOW B; a nonstatic FLOW result is always local.",
+    "Finite witnesses: W-R needs no B; a mapped R is C2-local but its C5 source needs a writer prefix; a FLOW R gains a concrete nonstatic return only by prefix color transport; an unmatched intermediate source must not stop C5; carry works with no graph or positive gate."
+  ],
+  "not_proved": [
+    "Production AP path-index containment/near completeness, all-run tail/E/mx/limit transport, packed leaves or ND member union.",
+    "Construction of complete local W/R/ownB references and shared B visibility from exact MethodKey/CommonMethod ownership.",
+    "Concrete genuine ZERO selector/binding rules; the graph has ordinary/static vertices and the existing ZERO/carry adapters remain separate.",
+    "Actual worklist scheduler/fairness/termination-state adapter, unrestricted AP reassociation or full JVM equivalence.",
+    "Exact protection-mask payload keys, native persistence ownership, runtime implementation or measured performance savings."
+  ],
+  "new_runtime_edits": 0,
+  "new_runtime_tests": 0,
+  "new_project_runs": 0,
+  "measured_context": {
+    "runtime_revision": "53991b7483b062b0287152130cbbbfc87623093b",
+    "thingsboard_latest_reached": "run-2",
+    "thingsboard_latest_complete": "run-1",
+    "thingsboard_latest_accepted_forward_report": "run-1",
+    "limit": "Prior fixed campaign context only; no project measurement for this proposal."
+  }
+}
