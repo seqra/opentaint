@@ -23,14 +23,17 @@ func Variadic(string, ...any) {}
 type Worker struct{}
 func (*Worker) Bound(string) {}
 func (Worker) Expression(string) {}
+type Box[T any] struct{}
+func (*Box[T]) Get() {}
 `,
 		"app.go": `package app
 import (
     "example.com/app/lib"
     "fmt"
+    "io"
 )
 var stored = lib.Callback
-func use(w *lib.Worker, s fmt.Stringer) {
+func use(w *lib.Worker, s fmt.Stringer, rc io.ReadCloser, box *lib.Box[string]) {
     lib.Direct("value")
     f := lib.Assigned
     f("value")
@@ -43,6 +46,8 @@ func use(w *lib.Worker, s fmt.Stringer) {
     stored("value")
     lib.Variadic("value", 1, 2)
     _ = s.String()
+    _, _ = rc.Read(nil)
+    box.Get()
 }
 `,
 	}
@@ -60,18 +65,32 @@ func use(w *lib.Worker, s fmt.Stringer) {
 		t.Fatal(err)
 	}
 	// A call through a package variable has no static callee, so Callback is absent; a
-	// variadic tail is one packed argument, as in the analyzer's `args:<count>`.
+	// variadic tail is one packed argument, as in the analyzer's `args:<count>`. An interface call
+	// is named by the receiver's static type and a generic callee by its instance, as the analyzer
+	// names them.
 	want := []usage{
+		{Method: "(*example.com/app/lib.Box[string]).Get[string]", Signature: "args:0"},
 		{Method: "(*example.com/app/lib.Worker).Bound", Signature: "args:1"},
 		{Method: "(example.com/app/lib.Worker).Expression", Signature: "args:1"},
 		{Method: "(fmt.Stringer).String", Signature: "args:0"},
+		{Method: "(io.ReadCloser).Read", Signature: "args:1"},
 		{Method: "example.com/app/lib.Assigned", Signature: "args:1"},
 		{Method: "example.com/app/lib.Direct", Signature: "args:1"},
-		{Method: "example.com/app/lib.Generic", Signature: "args:1"},
+		{Method: "example.com/app/lib.Generic[string]", Signature: "args:1"},
 		{Method: "example.com/app/lib.Variadic", Signature: "args:2"},
 	}
 	if !reflect.DeepEqual(rows, want) {
 		t.Fatalf("usages = %#v, want %#v", rows, want)
+	}
+}
+
+func TestExtractRejectsNonModule(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "x.go"), []byte("package x\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := extract(dir); err == nil {
+		t.Fatal("extract succeeded on a directory without a Go module")
 	}
 }
 

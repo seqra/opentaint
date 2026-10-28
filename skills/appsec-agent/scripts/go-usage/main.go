@@ -10,6 +10,7 @@ import (
 	"go/types"
 	"os"
 	"sort"
+	"strings"
 
 	"golang.org/x/tools/go/packages"
 	"golang.org/x/tools/go/ssa"
@@ -60,8 +61,13 @@ func extract(dir string) ([]usage, error) {
 		}
 		project = append(project, pkg)
 	}
+	// With nothing readable, an empty result would read as "no usages".
+	if len(project) == 0 {
+		return nil, fmt.Errorf("no Go package in %s could be loaded", dir)
+	}
 
-	prog, ssaPkgs := ssautil.Packages(project, ssa.BuilderMode(0))
+	// The analyzer builds instantiated generics, so a generic callee is named by its instance.
+	prog, ssaPkgs := ssautil.Packages(project, ssa.InstantiateGenerics)
 	prog.Build()
 	own := make(map[*ssa.Package]bool, len(ssaPkgs))
 	for _, pkg := range ssaPkgs {
@@ -70,7 +76,7 @@ func extract(dir string) ([]usage, error) {
 
 	seen := make(map[usage]bool)
 	for fn := range ssautil.AllFunctions(prog) {
-		if !own[fn.Package()] {
+		if !own[declaringPackage(fn)] {
 			continue
 		}
 		for _, block := range fn.Blocks {
@@ -79,8 +85,8 @@ func extract(dir string) ([]usage, error) {
 				if !ok {
 					continue
 				}
-				if callee := calledFunction(call.Common()); callee != nil {
-					seen[usageOf(callee)] = true
+				if row, ok := calledFunction(call.Common()); ok {
+					seen[row] = true
 				}
 			}
 		}
@@ -99,32 +105,51 @@ func extract(dir string) ([]usage, error) {
 	return rows, nil
 }
 
-// calledFunction is the declared function a call site reaches: the interface method of an
-// invoke, or the static callee with a generic instance, bound method or method expression
-// resolved to the function it wraps. Calls through function values have no static callee.
-func calledFunction(call *ssa.CallCommon) *types.Func {
+// declaringPackage is the package of fn, or of its generic origin for an instance.
+func declaringPackage(fn *ssa.Function) *ssa.Package {
+	if fn.Package() == nil && fn.Origin() != nil {
+		return fn.Origin().Package()
+	}
+	return fn.Package()
+}
+
+// calledFunction names the function a call site reaches as the analyzer names it, with the
+// analyzer's `args:<count>` signature:
+//   - an invoke is the method of the receiver's static type, `(pkg.Interface).Method`;
+//   - a bound method or method expression is the method it wraps;
+//   - any other static callee is its SSA name, so a generic instance keeps its type arguments.
+//
+// Calls through function values have no static callee.
+func calledFunction(call *ssa.CallCommon) (usage, bool) {
 	if call.IsInvoke() {
-		return call.Method
+		sig := call.Method.Type().(*types.Signature)
+		return usage{
+			Method:    "(" + types.TypeString(call.Value.Type(), nil) + ")." + call.Method.Name(),
+			Signature: arity(sig),
+		}, true
 	}
 	callee := call.StaticCallee()
 	if callee == nil {
-		return nil
+		return usage{}, false
 	}
-	if origin := callee.Origin(); origin != nil {
-		callee = origin
+	switch {
+	case callee.Synthetic == "package initializer":
+		// Package initialization is not a call the analyzer reports.
+		return usage{}, false
+	case strings.HasPrefix(callee.Synthetic, "bound method wrapper"),
+		strings.HasPrefix(callee.Synthetic, "thunk"):
+		fn, ok := callee.Object().(*types.Func)
+		if !ok {
+			return usage{}, false
+		}
+		sig := fn.Type().(*types.Signature)
+		return usage{Method: functionName(fn, sig), Signature: arity(sig)}, true
 	}
-	fn, _ := callee.Object().(*types.Func)
-	return fn
+	return usage{Method: callee.String(), Signature: arity(callee.Signature)}, true
 }
 
-// usageOf names a function as the analyzer does (`pkg.Func`, `(pkg.Type).Method`,
-// `(*pkg.Type).Method`) with the analyzer's `args:<count>` signature.
-func usageOf(fn *types.Func) usage {
-	sig := fn.Type().(*types.Signature)
-	return usage{
-		Method:    functionName(fn, sig),
-		Signature: fmt.Sprintf("args:%d", sig.Params().Len()),
-	}
+func arity(sig *types.Signature) string {
+	return fmt.Sprintf("args:%d", sig.Params().Len())
 }
 
 func functionName(fn *types.Func, sig *types.Signature) string {
