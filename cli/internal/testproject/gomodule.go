@@ -3,6 +3,7 @@ package testproject
 import (
 	"fmt"
 	"go/version"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -23,9 +24,17 @@ func BootstrapGo(outputDir, modulePath string, dependencies []string) error {
 	})
 }
 
-// GoVersion is the language version for a generated go.mod: the version of the running toolchain.
+// GoVersion is the language version for a generated go.mod: the version of the local Go toolchain,
+// so the module builds with the toolchain that will build the samples. Without a local toolchain it
+// falls back to the version the CLI was built with.
 func GoVersion() string {
-	goVersion := runtime.Version()
+	goVersion := ""
+	if output, err := exec.Command("go", "env", "GOVERSION").Output(); err == nil {
+		goVersion = strings.TrimSpace(string(output))
+	}
+	if !version.IsValid(goVersion) {
+		goVersion = runtime.Version()
+	}
 	if !version.IsValid(goVersion) {
 		goVersion = "go1.25.0"
 	}
