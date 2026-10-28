@@ -1,0 +1,26 @@
+{
+  "status": "SELECTED_CONSISTENCY_REPAIR",
+  "scope": "FULL run-2 named-field concrete STAR/E input validation under the selected all-run correlated concrete representation",
+  "project_runs": 0,
+  "source": "spec/lean/proposals/restricted-demand/StaticInputGrammar.lean",
+  "source_sha256": "57b8da49ea6c69672c442558142719da39217d318e1eb43b961eb341902a8f43",
+  "command": "LEAN_PATH=.lake/build/lib/lean lean -j 1 -M 2048 proposals/restricted-demand/StaticInputGrammar.lean",
+  "exit_code": 0,
+  "audited_declarations": 15,
+  "audit_output": "'RestrictedDemand.StaticInputGrammar.field_star_is_candidate' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.field_star_is_rejected_by_old_domain' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.old_domain_in_candidate' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.candidate_rejects_root' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.candidate_rejects_class_wide' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.candidate_rejects_must' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.candidate_rejects_group_actual' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.same_slot_projection_preserves_all_headers' does not depend on any axioms\n'RestrictedDemand.StaticInputGrammar.same_slot_projection_closed' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.bounded_field_star_relay' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.bounded_field_star_relay_closed' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.overflow_field_relay_is_bounded' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.repeated_bounded_star_relay' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.actual_AP_identity_keeps_concrete_star' depends on axioms: [propext]\n'RestrictedDemand.StaticInputGrammar.actual_AP_limit1_keeps_named_star' depends on axioms: [propext]\n",
+  "adapter_check": {
+    "tests": 44,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "classes": [
+      "StaticProducerGrammarTest",
+      "StaticSeedGrammarTest",
+      "RestrictedDemandBoundaryTest",
+      "RestrictedDemandProtocolTest",
+      "FrozenStaticCompletionTest",
+      "CorrelatedConcreteEngineTest"
+    ]
+  },
+  "limits": "Local geometry, identity transfer and bound laws only; no JVM reachability or whole-analyzer theorem"
+}

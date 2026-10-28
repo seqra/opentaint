@@ -2,6 +2,12 @@
 
 Date: 27 October 2026. Status: **implementation in progress; not accepted**.
 
+Follow-up, 28 October: the user selected ignoring field exclusions on
+abstract STAR demand. This supersedes the exclusion-union candidate in
+the historical findings below. The [follow-up review](../design/bidirectional-restricted-demand-followup-20261028.md)
+also explains the stale STAR validator and separates immediate writer
+registration from the old pool-supply gate. No project scan has started.
+
 The selected contract is [restricted-demand-static-closure.md](../../spec/restricted-demand-static-closure.md).
 Implementation started at `d8edf2b262dec9bd3c8563aa3255d05eba43553d`.
 The changes are not committed. These checks do not describe a final runtime.
